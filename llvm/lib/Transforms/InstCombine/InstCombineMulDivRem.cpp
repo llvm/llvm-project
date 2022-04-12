@@ -1428,7 +1428,8 @@ Instruction *InstCombinerImpl::commonIRemTransforms(BinaryOperator &I) {
   // TODO: Adapt simplifyDivRemOfSelectWithZeroOp to allow this and other folds.
   if (match(Op0, m_ImmConstant()) &&
       match(Op1, m_Select(m_Value(), m_ImmConstant(), m_ImmConstant()))) {
-    if (Instruction *R = FoldOpIntoSelect(I, cast<SelectInst>(Op1)))
+    if (Instruction *R = FoldOpIntoSelect(I, cast<SelectInst>(Op1),
+                                          /*FoldWithMultiUse*/ true))
       return R;
   }
 

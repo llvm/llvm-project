@@ -230,7 +230,8 @@ func @wrong_int_attrs_type_fail() {
   "test.int_attrs"() {
     any_i32_attr = 5.0 : f32,
     si32_attr = 7 : si32,
-    ui32_attr = 6 : ui32
+    ui32_attr = 6 : ui32,
+    index_attr = 1 : index
   } : () -> ()
   return
 }

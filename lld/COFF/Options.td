@@ -166,7 +166,8 @@ def force_multiple : F<"force:multiple">,
     HelpText<"Allow multiply defined symbols when creating executables">;
 def force_multipleres : F<"force:multipleres">,
     HelpText<"Allow multiply defined resources when creating executables">;
-defm WX : B<"WX", "Treat warnings as errors", "Don't treat warnings as errors">;
+defm WX : B<"WX", "Treat warnings as errors",
+                  "Don't treat warnings as errors (default)">;
 
 defm allowbind : B<"allowbind", "Enable DLL binding (default)",
                    "Disable DLL binding">;

@@ -2644,7 +2644,7 @@ LogicalResult LLVMDialect::verifyStructAttr(Operation *op, Attribute attr,
 
 static LogicalResult verifyFuncOpInterfaceStructAttr(
     Operation *op, Attribute attr,
-    std::function<Type(FunctionOpInterface)> getAnnotatedType) {
+    const std::function<Type(FunctionOpInterface)> &getAnnotatedType) {
   if (auto funcOp = dyn_cast<FunctionOpInterface>(op))
     return LLVMDialect::verifyStructAttr(op, attr, getAnnotatedType(funcOp));
   return op->emitError() << "expected '"

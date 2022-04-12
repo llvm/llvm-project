@@ -3432,7 +3432,7 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
           << SourceRange(D.getName().TemplateId->LAngleLoc,
                          D.getName().TemplateId->RAngleLoc)
           << D.getName().TemplateId->LAngleLoc;
-      D.SetIdentifier(Name.getAsIdentifierInfo(), Loc);
+      D.SetIdentifier(II, Loc);
     }
 
     if (SS.isSet() && !SS.isInvalid()) {
@@ -17376,6 +17376,21 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
   for (unsigned I = 0, E = TryBlock->getNumHandlers(); I != E; ++I) {
     CXXCatchStmt *Handler = TryBlock->getHandler(I);
     SearchForReturnInStmt(*this, Handler);
+  }
+}
+
+void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc,
+                               FnBodyKind BodyKind) {
+  switch (BodyKind) {
+  case FnBodyKind::Delete:
+    SetDeclDeleted(D, Loc);
+    break;
+  case FnBodyKind::Default:
+    SetDeclDefaulted(D, Loc);
+    break;
+  case FnBodyKind::Other:
+    llvm_unreachable(
+        "Parsed function body should be '= delete;' or '= default;'");
   }
 }
 

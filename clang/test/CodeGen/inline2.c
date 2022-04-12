@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wno-strict-prototypes -O1 -fno-experimental-new-pass-manager -std=gnu89 -triple i386-apple-darwin9 -emit-llvm %s -o - | FileCheck -check-prefix CHECK-GNU89 %s
-// RUN: %clang_cc1 -Wno-strict-prototypes -O1 -fno-experimental-new-pass-manager -std=c99 -triple i386-apple-darwin9 -emit-llvm %s -o - | FileCheck -check-prefix CHECK-C99 %s
+// RUN: %clang_cc1 -Wno-strict-prototypes -O1 -disable-llvm-optzns -std=gnu89 -triple i386-apple-darwin9 -emit-llvm %s -o - | FileCheck -check-prefix CHECK-GNU89 %s
+// RUN: %clang_cc1 -Wno-strict-prototypes -O1 -disable-llvm-optzns -std=c99 -triple i386-apple-darwin9 -emit-llvm %s -o - | FileCheck -check-prefix CHECK-C99 %s
 
 // CHECK-GNU89-LABEL: define{{.*}} i32 @f0()
 // CHECK-C99-LABEL: define{{.*}} i32 @f0()

@@ -38,7 +38,7 @@
 ; CHECK-UNWINDER-NEXT:   77f->7c4:17
 
 
-; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling
+; clang -O3 -fuse-ld=lld -fpseudo-probe-for-profiling
 ; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls
 ; -fno-inline-functions -g test.c  -o a.out
 
