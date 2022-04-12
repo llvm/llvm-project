@@ -270,6 +270,7 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
         s = make<Defined>("<internal>", /*file=*/nullptr, referentIsec,
                           r.addend, /*size=*/0, /*isWeakDef=*/false,
                           /*isExternal=*/false, /*isPrivateExtern=*/false,
+                          /*includeInSymtab=*/true,
                           /*isThumb=*/false, /*isReferencedDynamically=*/false,
                           /*noDeadStrip=*/false);
         in.got->addEntry(s);

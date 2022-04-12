@@ -219,8 +219,8 @@ defm : X86WriteRes<WriteBitTestRegLd,    [Zn2ALU,Zn2AGU], 5, [1,1], 2>;
 defm : X86WriteRes<WriteBitTestSet,      [Zn2ALU], 2, [1], 2>;
 
 // Bit counts.
-defm : Zn2WriteResPair<WriteBSF, [Zn2ALU], 3>;
-defm : Zn2WriteResPair<WriteBSR, [Zn2ALU], 4>;
+defm : Zn2WriteResPair<WriteBSF, [Zn2ALU], 3, [12], 6, 4, 2>;
+defm : Zn2WriteResPair<WriteBSR, [Zn2ALU], 4, [16], 6, 4, 2>;
 defm : Zn2WriteResPair<WriteLZCNT,          [Zn2ALU], 1>;
 defm : Zn2WriteResPair<WriteTZCNT,          [Zn2ALU], 2>;
 defm : Zn2WriteResPair<WritePOPCNT,         [Zn2ALU], 1>;

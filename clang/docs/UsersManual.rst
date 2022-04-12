@@ -2576,12 +2576,6 @@ using the ``llvm-cxxmap`` and ``llvm-profdata merge`` tools.
 
 .. note::
 
-  Profile data remapping support is currently only implemented for LLVM's
-  new pass manager, which can be enabled with
-  ``-fexperimental-new-pass-manager``.
-
-.. note::
-
   Profile data remapping is currently only supported for C++ mangled names
   following the Itanium C++ ABI mangling scheme. This covers all C++ targets
   supported by Clang other than Windows.

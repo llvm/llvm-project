@@ -95,6 +95,13 @@ std::vector<std::string> ArgList::getAllArgValues(OptSpecifier Id) const {
   return std::vector<std::string>(Values.begin(), Values.end());
 }
 
+void ArgList::addOptInFlag(ArgStringList &Output, OptSpecifier Pos,
+                           OptSpecifier Neg) const {
+  if (Arg *A = getLastArg(Pos, Neg))
+    if (A->getOption().matches(Pos))
+      A->render(*this, Output);
+}
+
 void ArgList::AddAllArgsExcept(ArgStringList &Output,
                                ArrayRef<OptSpecifier> Ids,
                                ArrayRef<OptSpecifier> ExcludeIds) const {

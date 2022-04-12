@@ -42,7 +42,6 @@ TEST_F(RuntimeCallTest, genArgumentLen) {
 
 TEST_F(RuntimeCallTest, genEnvVariableValue) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Type intTy = firBuilder->getDefaultIntegerType();
   mlir::Type charTy = fir::BoxType::get(firBuilder->getNoneType());
   mlir::Value name = firBuilder->create<fir::UndefOp>(loc, charTy);
   mlir::Value value = firBuilder->create<fir::UndefOp>(loc, charTy);
@@ -56,7 +55,6 @@ TEST_F(RuntimeCallTest, genEnvVariableValue) {
 
 TEST_F(RuntimeCallTest, genEnvVariableLength) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Type intTy = firBuilder->getDefaultIntegerType();
   mlir::Type charTy = fir::BoxType::get(firBuilder->getNoneType());
   mlir::Value name = firBuilder->create<fir::UndefOp>(loc, charTy);
   mlir::Value trimName = firBuilder->create<fir::UndefOp>(loc, i1Ty);

@@ -196,9 +196,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
   SmallVector<Frame, 2> frames;
 
   // When we "recurse", we ensure the current frame is stored in `frames` and
-  // increment `level`. When we "tail recurse", we just increment `level`,
-  // without storing any frame. Accordingly, when we return, we return to the
-  // last level that has a frame associated with it.
+  // increment `level`. When we return, we decrement `level`.
   unsigned level = 1;
   while (level > 0) {
     if (level - 1 >= s.getNumDisjuncts()) {
@@ -266,10 +264,17 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       if (simplex.isEmpty()) {
         // b /\ s_i is empty, so b \ s_i = b. We move directly to i + 1.
         // We are ignoring level i completely, so we restore the state
-        // *before* going to the next level. We are "tail recursing", so
-        // we don't add a frame before going to the next level.
+        // *before* going to the next level.
         b.truncate(initBCounts);
         simplex.rollback(initialSnapshot);
+        // Recurse. We haven't processed any inequalities and
+        // we don't need to process anything when we return.
+        //
+        // TODO: consider supporting tail recursion directly if this becomes
+        // relevant for performance.
+        frames.push_back(Frame{initialSnapshot, initBCounts, sI,
+                               /*ineqsToProcess=*/{},
+                               /*lastIneqProcessed=*/{}});
         ++level;
         continue;
       }

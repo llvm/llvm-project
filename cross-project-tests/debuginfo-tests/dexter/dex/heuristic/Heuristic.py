@@ -98,6 +98,32 @@ def add_heuristic_tool_arguments(parser):
         metavar='<int>')
 
 
+class PenaltyLineRanges:
+    def __init__(self, first_step, penalty):
+        self.ranges = [(first_step, first_step)]
+        self.penalty = penalty
+
+    def add_step(self, next_step, penalty):
+        last_range = self.ranges[-1]
+        last_step = last_range[1]
+        if (next_step == last_step + 1):
+            self.ranges[-1] = (last_range[0], next_step)
+        else:
+            self.ranges.append((next_step, next_step))
+        self.penalty += penalty
+
+    def __str__(self):
+        range_to_str = lambda r: str(r[0]) if r[0] == r[1] else f'{r[0]}-{r[1]}'
+        if self.ranges[0][0] == self.ranges[-1][1]:
+            text = f'step {self.ranges[0][0]}'
+        else:
+            step_list = ', '.join([range_to_str(r) for r in self.ranges])
+            text = f'steps [{step_list}]'
+        if self.penalty:
+            text += ' <r>[-{}]</>'.format(self.penalty)
+        return text
+
+
 class Heuristic(object):
     def __init__(self, context, steps):
         self.context = context
@@ -456,11 +482,23 @@ class Heuristic(object):
             for category in sorted(pen_cmd.pen_dict):
                 lines.append('    <r>{}</>:\n'.format(category))
 
+                step_value_results = {}
+                for result, penalty in pen_cmd.pen_dict[category]:
+                    if not isinstance(result, StepValueInfo):
+                        continue
+                    if result.expected_value not in step_value_results:
+                        step_value_results[result.expected_value] = PenaltyLineRanges(result.step_index, penalty)
+                    else:
+                        step_value_results[result.expected_value].add_step(result.step_index, penalty)
+
+                for value, penalty_line_range in step_value_results.items():
+                    text = f'({value}): {penalty_line_range}'
+                    total_penalty += penalty_line_range.penalty
+                    lines.append('      {}\n'.format(text))
+
                 for result, penalty in pen_cmd.pen_dict[category]:
                     if isinstance(result, StepValueInfo):
-                        text = 'step {}'.format(result.step_index)
-                        if result.expected_value:
-                            text += ' ({})'.format(result.expected_value)
+                        continue
                     else:
                         text = str(result)
                     if penalty:

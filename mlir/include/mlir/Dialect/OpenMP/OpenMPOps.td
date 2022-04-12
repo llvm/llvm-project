@@ -883,6 +883,36 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
 }
 
 //===----------------------------------------------------------------------===//
+// [5.1] 2.21.2 threadprivate Directive
+//===----------------------------------------------------------------------===//
+
+def ThreadprivateOp : OpenMP_Op<"threadprivate"> {
+  let summary = "threadprivate directive";
+  let description = [{
+    The threadprivate directive specifies that variables are replicated, with
+    each thread having its own copy.
+
+    The current implementation uses the OpenMP runtime to provide thread-local
+    storage (TLS). Using the TLS feature of the LLVM IR will be supported in
+    future.
+
+    This operation takes in the address of a symbol that represents the original
+    variable and returns the address of its TLS. All occurrences of
+    threadprivate variables in a parallel region should use the TLS returned by
+    this operation.
+
+    The `sym_addr` refers to the address of the symbol, which is a pointer to
+    the original variable.
+  }];
+
+  let arguments = (ins OpenMP_PointerLikeType:$sym_addr);
+  let results = (outs OpenMP_PointerLikeType:$tls_addr);
+  let assemblyFormat = [{
+    $sym_addr `:` type($sym_addr) `->` type($tls_addr) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 

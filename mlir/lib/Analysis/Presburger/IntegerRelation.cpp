@@ -882,7 +882,7 @@ void IntegerRelation::gcdTightenInequalities() {
   unsigned numCols = getNumCols();
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
     // Normalize the constraint and tighten the constant term by the GCD.
-    uint64_t gcd = inequalities.normalizeRow(i, getNumCols() - 1);
+    int64_t gcd = inequalities.normalizeRow(i, getNumCols() - 1);
     if (gcd > 1)
       atIneq(i, numCols - 1) = mlir::floorDiv(atIneq(i, numCols - 1), gcd);
   }

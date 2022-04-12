@@ -761,14 +761,9 @@ OpFoldResult MinUIOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::MulFOp::fold(ArrayRef<Attribute> operands) {
-  APFloat floatValue(0.0f), inverseValue(0.0f);
   // mulf(x, 1) -> x
   if (matchPattern(getRhs(), m_OneFloat()))
     return getLhs();
-
-  // mulf(1, x) -> x
-  if (matchPattern(getLhs(), m_OneFloat()))
-    return getRhs();
 
   return constFoldBinaryOp<FloatAttr>(
       operands, [](const APFloat &a, const APFloat &b) { return a * b; });
@@ -779,7 +774,6 @@ OpFoldResult arith::MulFOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::DivFOp::fold(ArrayRef<Attribute> operands) {
-  APFloat floatValue(0.0f), inverseValue(0.0f);
   // divf(x, 1) -> x
   if (matchPattern(getRhs(), m_OneFloat()))
     return getLhs();
@@ -1875,7 +1869,7 @@ OpFoldResult arith::ShLIOp::fold(ArrayRef<Attribute> operands) {
   auto result = constFoldBinaryOp<IntegerAttr>(
       operands, [&](const APInt &a, const APInt &b) {
         bounded = b.ule(b.getBitWidth());
-        return std::move(a).shl(b);
+        return a.shl(b);
       });
   return bounded ? result : Attribute();
 }
@@ -1890,7 +1884,7 @@ OpFoldResult arith::ShRUIOp::fold(ArrayRef<Attribute> operands) {
   auto result = constFoldBinaryOp<IntegerAttr>(
       operands, [&](const APInt &a, const APInt &b) {
         bounded = b.ule(b.getBitWidth());
-        return std::move(a).lshr(b);
+        return a.lshr(b);
       });
   return bounded ? result : Attribute();
 }
@@ -1905,7 +1899,7 @@ OpFoldResult arith::ShRSIOp::fold(ArrayRef<Attribute> operands) {
   auto result = constFoldBinaryOp<IntegerAttr>(
       operands, [&](const APInt &a, const APInt &b) {
         bounded = b.ule(b.getBitWidth());
-        return std::move(a).ashr(b);
+        return a.ashr(b);
       });
   return bounded ? result : Attribute();
 }

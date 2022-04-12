@@ -288,7 +288,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #if _LIBCPP_STD_VER > 17
 # undef  __cpp_lib_array_constexpr
 # define __cpp_lib_array_constexpr                      201811L
-// # define __cpp_lib_assume_aligned                       201811L
+# define __cpp_lib_assume_aligned                       201811L
 # define __cpp_lib_atomic_flag_test                     201907L
 // # define __cpp_lib_atomic_float                         201711L
 # define __cpp_lib_atomic_lock_free_type_aliases        201907L
