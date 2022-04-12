@@ -266,7 +266,7 @@ def threads
     : P<"threads", "Number of threads. '1' disables multi-threading. By "
                    "default all available hardware threads are used">;
 def call_graph_ordering_file: P<
-    "call-graph-ordering-file", 
+    "call-graph-ordering-file",
     "Layout sections to optimize the given callgraph">;
 defm call_graph_profile_sort: B<
     "call-graph-profile-sort",
