@@ -4767,9 +4767,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         D.Diag(diag::err_drv_unsupported_embed_bitcode) << A->getSpelling();
 
     // Render the CodeGen options that need to be passed.
-    if (!Args.hasFlag(options::OPT_foptimize_sibling_calls,
-                      options::OPT_fno_optimize_sibling_calls, true))
-      CmdArgs.push_back("-mdisable-tail-calls");
+    Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,
+                       options::OPT_fno_optimize_sibling_calls);
 
     RenderFloatingPointOptions(TC, D, isOptimizationLevelFast(Args), Args,
                                CmdArgs, JA);
@@ -5150,9 +5149,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_strict_vtable_pointers);
   Args.addOptInFlag(CmdArgs, options::OPT_fforce_emit_vtables,
                     options::OPT_fno_force_emit_vtables);
-  if (!Args.hasFlag(options::OPT_foptimize_sibling_calls,
-                    options::OPT_fno_optimize_sibling_calls, true))
-    CmdArgs.push_back("-mdisable-tail-calls");
+  Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,
+                     options::OPT_fno_optimize_sibling_calls);
   Args.addOptOutFlag(CmdArgs, options::OPT_fescaping_block_tail_calls,
                      options::OPT_fno_escaping_block_tail_calls);
 
