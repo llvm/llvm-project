@@ -1442,7 +1442,6 @@ bool CursorVisitor::VisitTemplateParameters(
 bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation Loc) {
   switch (Name.getKind()) {
   case TemplateName::Template:
-  case TemplateName::UsingTemplate:
     return Visit(MakeCursorTemplateRef(Name.getAsTemplateDecl(), Loc, TU));
 
   case TemplateName::OverloadedTemplate:
