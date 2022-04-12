@@ -132,7 +132,7 @@ Changes in existing checks
   the vector is a member of a structure.
 
 - Fixed a false positive in :doc:`readability-non-const-parameter
-  <clang-tidy/checks/readability-non-const-parameter>` when the parameter is referenced by an lvalue
+  <clang-tidy/checks/readability-non-const-parameter>` when the parameter is referenced by an lvalue.
 
 - Fixed a crash in :doc:`readability-const-return-type
   <clang-tidy/checks/readability-const-return-type>` when a pure virtual function
@@ -149,6 +149,9 @@ Changes in existing checks
 
   Fixed an issue when there was already an initializer in the constructor and
   the check would try to create another initializer for the same member.
+
+- Fixed a false positive in :doc:`misc-redundant-expression <clang-tidy/checks/misc-redundant-expression>`
+  involving assignments in conditions. This fixes `Issue 35853 <https://github.com/llvm/llvm-project/issues/35853>`_.
 
 Removed checks
 ^^^^^^^^^^^^^^
