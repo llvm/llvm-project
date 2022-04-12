@@ -28,8 +28,8 @@ define i32 @foo() {
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @var1)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(ne), [[LOAD]](s32), [[C3]]
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[ICMP]](s32)
-  ; CHECK-NEXT:   G_BRCOND [[TRUNC]](s1), %bb.3
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:gpr(s32) = G_AND [[ICMP]], [[C3]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](s32), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.if.then:
@@ -84,8 +84,8 @@ define i32 @darwin_tls() {
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s32) from @var1)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(ne), [[LOAD]](s32), [[C1]]
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[ICMP]](s32)
-  ; CHECK-NEXT:   G_BRCOND [[TRUNC]](s1), %bb.3
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:gpr(s32) = G_AND [[ICMP]], [[C1]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](s32), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.if.then:

@@ -144,19 +144,19 @@ body:             |
 
     %0(s32) = COPY $w0
     %1(s32) = G_ICMP intpred(eq), %0, %0
-    %6(s1) = G_TRUNC %1(s32)
+    %6(s8) = G_TRUNC %1(s32)
     %9(s32) = G_ANYEXT %6
     $w0 = COPY %9(s32)
 
     %2(s64) = COPY $x0
     %3(s32) = G_ICMP intpred(uge), %2, %2
-    %7(s1) = G_TRUNC %3(s32)
+    %7(s8) = G_TRUNC %3(s32)
     %10(s32) = G_ANYEXT %7
     $w0 = COPY %10(s32)
 
     %4(p0) = COPY $x0
     %5(s32) = G_ICMP intpred(ne), %4, %4
-    %8(s1) = G_TRUNC %5(s32)
+    %8(s8) = G_TRUNC %5(s32)
     %11(s32) = G_ANYEXT %8
     $w0 = COPY %11(s32)
 ...
@@ -199,13 +199,13 @@ body:             |
 
     %0(s32) = COPY $s0
     %1(s32) = G_FCMP floatpred(one), %0, %0
-    %4(s1) = G_TRUNC %1(s32)
+    %4(s8) = G_TRUNC %1(s32)
     %6(s32) = G_ANYEXT %4
     $w0 = COPY %6(s32)
 
     %2(s64) = COPY $d0
     %3(s32) = G_FCMP floatpred(uge), %2, %2
-    %5(s1) = G_TRUNC %3(s32)
+    %5(s8) = G_TRUNC %3(s32)
     %7(s32) = G_ANYEXT %5
     $w0 = COPY %7(s32)
 
@@ -238,12 +238,11 @@ body:             |
     successors: %bb.1
     %0(s32) = COPY $s0
     %3:gpr(s32) = COPY $w0
-    %1(s1) = G_TRUNC %3
 
   bb.1:
     successors: %bb.1, %bb.2
     %2(s32) = PHI %0, %bb.0, %2, %bb.1
-    G_BRCOND %1, %bb.1
+    G_BRCOND %3, %bb.1
 
   bb.2:
     $s0 = COPY %2
@@ -258,7 +257,7 @@ regBankSelected: true
 tracksRegLiveness: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
 # CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
 # CHECK-NEXT:  - { id: 2, class: gpr32, preferred-register: '' }
 # CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
@@ -268,6 +267,7 @@ tracksRegLiveness: true
 # CHECK-NEXT:  - { id: 7, class: gpr64, preferred-register: '' }
 # CHECK-NEXT:  - { id: 8, class: gpr64, preferred-register: '' }
 # CHECK-NEXT:  - { id: 9, class: gpr64, preferred-register: '' }
+# CHECK-NEXT:  - { id: 10, class: gpr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -291,20 +291,19 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2
     %10:gpr(s32) = COPY $w0
-    %0(s1) = G_TRUNC %10
 
     %1(s32) = COPY $w1
     %2(s32) = COPY $w2
-    %3(s32) = G_SELECT %0, %1, %2
+    %3(s32) = G_SELECT %10, %1, %2
     $w0 = COPY %3(s32)
 
     %4(s64) = COPY $x0
     %5(s64) = COPY $x1
-    %6(s64) = G_SELECT %0, %4, %5
+    %6(s64) = G_SELECT %10, %4, %5
     $x0 = COPY %6(s64)
 
     %7(p0) = COPY $x0
     %8(p0) = COPY $x1
-    %9(p0) = G_SELECT %0, %7, %8
+    %9(p0) = G_SELECT %10, %7, %8
     $x0 = COPY %9(p0)
 ...

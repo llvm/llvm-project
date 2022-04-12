@@ -69,8 +69,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
   ; CHECK-NEXT:   [[MOVaddrJT:%[0-9]+]]:gpr64common = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
-  ; CHECK-NEXT:   early-clobber %18:gpr64, early-clobber %19:gpr64sp = JumpTableDest32 [[MOVaddrJT]], [[SUBREG_TO_REG]], %jump-table.0
-  ; CHECK-NEXT:   BR %18
+  ; CHECK-NEXT:   early-clobber %17:gpr64, early-clobber %18:gpr64sp = JumpTableDest32 [[MOVaddrJT]], [[SUBREG_TO_REG]], %jump-table.0
+  ; CHECK-NEXT:   BR %17
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.sw.bb:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
@@ -101,8 +101,7 @@ body:             |
     %3:gpr(s64) = G_ZEXT %2(s32)
     %5:gpr(s64) = G_ZEXT %4(s32)
     %14:gpr(s32) = G_ICMP intpred(ugt), %3(s64), %5
-    %6:gpr(s1) = G_TRUNC %14(s32)
-    G_BRCOND %6(s1), %bb.4
+    G_BRCOND %14, %bb.4
 
   bb.5.entry:
     successors: %bb.3, %bb.4, %bb.2

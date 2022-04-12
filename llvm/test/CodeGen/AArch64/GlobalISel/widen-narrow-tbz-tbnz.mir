@@ -5,69 +5,11 @@
 # or SUBREG_TO_REG.
 --- |
  @glob = external dso_local unnamed_addr global i1, align 4
- define void @s1_no_copy() { ret void }
- define void @s16_no_copy() { ret void }
  define void @p0_no_copy() { ret void }
  define void @widen_s32_to_s64() { ret void }
  define void @widen_s16_to_s64() { ret void }
  define void @narrow_s64_to_s32() { ret void }
 
-...
----
-name:            s1_no_copy
-alignment:       4
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  ; CHECK-LABEL: name: s1_no_copy
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %narrow:gpr32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   TBNZW %narrow, 0, %bb.1
-  ; CHECK-NEXT:   B %bb.0
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   RET_ReallyLR
-  bb.0:
-    successors: %bb.0, %bb.1
-    %narrow:gpr(s1) = G_IMPLICIT_DEF
-
-    ; There should be no copy here, because the s1 can be selected to a GPR32.
-    G_BRCOND %narrow(s1), %bb.1
-    G_BR %bb.0
-  bb.1:
-    RET_ReallyLR
-...
----
-name:            s16_no_copy
-alignment:       4
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  ; CHECK-LABEL: name: s16_no_copy
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %narrow:gpr32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   TBNZW %narrow, 0, %bb.1
-  ; CHECK-NEXT:   B %bb.0
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   RET_ReallyLR
-  bb.0:
-    successors: %bb.0, %bb.1
-    %narrow:gpr(s16) = G_IMPLICIT_DEF
-    %trunc:gpr(s1) = G_TRUNC %narrow(s16)
-
-    ; Look through the G_TRUNC to get the G_IMPLICIT_DEF. We don't need a
-    ; SUBREG_TO_REG here, because the s16 will end up on a 32-bit register.
-    G_BRCOND %trunc(s1), %bb.1
-    G_BR %bb.0
-  bb.1:
-    RET_ReallyLR
 ...
 ---
 name:            p0_no_copy
@@ -90,12 +32,11 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     %glob:gpr(p0) = G_GLOBAL_VALUE @glob
-    %load:gpr(s8) = G_LOAD %glob(p0) :: (dereferenceable load (s8) from @glob, align 4)
-    %trunc:gpr(s1) = G_TRUNC %load(s8)
+    %load:gpr(s32) = G_LOAD %glob(p0) :: (dereferenceable load (s8) from @glob, align 4)
 
     ; Look through G_TRUNC to get the load. The load is into a s8, which will
     ; be selected to a GPR32, so we don't need a copy.
-    G_BRCOND %trunc(s1), %bb.1
+    G_BRCOND %load, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -132,8 +73,7 @@ body:             |
 
     ; We should widen using a SUBREG_TO_REG here, because we need a TBZX to get
     ; bit 33. The subregister should be sub_32.
-    %trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -169,8 +109,7 @@ body:             |
     ; We should widen using a SUBREG_TO_REG here, because we need a TBZX to get
     ; bit 33. The subregister should be sub_32, because s16 will end up on a
     ; GPR32.
-    %trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    G_BRCOND %trunc(s1), %bb.1
+    G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR
@@ -201,8 +140,8 @@ body:             |
     %wide:gpr(s64) = COPY $x0
 
     ; We should narrow using a subregister copy here.
-    %trunc:gpr(s1) = G_TRUNC %wide(s64)
-    G_BRCOND %trunc(s1), %bb.1
+    %trunc:gpr(s32) = G_TRUNC %wide(s64)
+    G_BRCOND %trunc, %bb.1
     G_BR %bb.0
   bb.1:
     RET_ReallyLR

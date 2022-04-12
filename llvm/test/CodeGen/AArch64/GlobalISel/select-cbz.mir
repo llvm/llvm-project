@@ -24,8 +24,7 @@ body:             |
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 0
     %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
-    %3:gpr(s1) = G_TRUNC %2(s32)
-    G_BRCOND %3(s1), %bb.1
+    G_BRCOND %2, %bb.1
     G_BR %bb.0
 
   bb.1:
@@ -54,8 +53,7 @@ body:             |
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 0
     %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
-    %3:gpr(s1) = G_TRUNC %2(s32)
-    G_BRCOND %3(s1), %bb.1
+    G_BRCOND %2, %bb.1
     G_BR %bb.0
 
   bb.1:
@@ -84,8 +82,7 @@ body:             |
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 0
     %2:gpr(s32) = G_ICMP intpred(ne), %0, %1
-    %3:gpr(s1) = G_TRUNC %2(s32)
-    G_BRCOND %3(s1), %bb.1
+    G_BRCOND %2, %bb.1
     G_BR %bb.0
 
   bb.1:
@@ -114,8 +111,7 @@ body:             |
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 0
     %2:gpr(s32) = G_ICMP intpred(ne), %0, %1
-    %3:gpr(s1) = G_TRUNC %2(s32)
-    G_BRCOND %3(s1), %bb.1
+    G_BRCOND %2, %bb.1
     G_BR %bb.0
 
   bb.1:
@@ -150,8 +146,7 @@ body:             |
     %2:gpr(s64) = G_CONSTANT i64 0
     %1:gpr(p0) = G_INTTOPTR %2(s64)
     %4:gpr(s32) = G_ICMP intpred(eq), %0(p0), %1
-    %3:gpr(s1) = G_TRUNC %4(s32)
-    G_BRCOND %3(s1), %bb.3
+    G_BRCOND %4, %bb.3
 
   bb.2:
     %5:gpr(s64) = G_CONSTANT i64 0
@@ -194,8 +189,7 @@ body:             |
     %4:gpr(s64) = G_CONSTANT i64 0
     %1:gpr(s64) = G_LOAD %0(p0) :: (load (s64))
     %5:gpr(s32) = G_ICMP intpred(eq), %1(s64), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    G_BRCOND %3(s1), %bb.3
+    G_BRCOND %5, %bb.3
 
   bb.2:
     %6:gpr(s64) = G_CONSTANT i64 0
