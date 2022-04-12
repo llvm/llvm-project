@@ -119,25 +119,27 @@ raw_ostream &operator<<(raw_ostream &O, const CaseVector &C) {
 void FixPhis(
     BasicBlock *SuccBB, BasicBlock *OrigBB, BasicBlock *NewBB,
     const unsigned NumMergedCases = std::numeric_limits<unsigned>::max()) {
-  for (BasicBlock::iterator I = SuccBB->begin(),
-                            IE = SuccBB->getFirstNonPHI()->getIterator();
-       I != IE; ++I) {
-    PHINode *PN = cast<PHINode>(I);
+  for (auto &I : SuccBB->phis()) {
+    PHINode *PN = cast<PHINode>(&I);
 
-    // Only update the first occurrence.
+    // Only update the first occurrence if NewBB exists.
     unsigned Idx = 0, E = PN->getNumIncomingValues();
     unsigned LocalNumMergedCases = NumMergedCases;
-    for (; Idx != E; ++Idx) {
+    for (; Idx != E && NewBB; ++Idx) {
       if (PN->getIncomingBlock(Idx) == OrigBB) {
         PN->setIncomingBlock(Idx, NewBB);
         break;
       }
     }
 
+    // Skip the updated incoming block so that it will not be removed.
+    if (NewBB)
+      ++Idx;
+
     // Remove additional occurrences coming from condensed cases and keep the
     // number of incoming values equal to the number of branches to SuccBB.
     SmallVector<unsigned, 8> Indices;
-    for (++Idx; LocalNumMergedCases > 0 && Idx < E; ++Idx)
+    for (; LocalNumMergedCases > 0 && Idx < E; ++Idx)
       if (PN->getIncomingBlock(Idx) == OrigBB) {
         Indices.push_back(Idx);
         LocalNumMergedCases--;
@@ -194,6 +196,13 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
   // Make the conditional branch...
   BasicBlock *Succ = Leaf.BB;
   BranchInst::Create(Succ, Default, Comp, NewLeaf);
+
+  // Update the PHI incoming value/block for the default.
+  for (auto &I : Default->phis()) {
+    PHINode *PN = cast<PHINode>(&I);
+    auto *V = PN->getIncomingValueForBlock(OrigBlock);
+    PN->addIncoming(V, NewLeaf);
+  }
 
   // If there were any PHI nodes in this successor, rewrite one entry
   // from OrigBlock to come from NewLeaf.
@@ -494,19 +503,17 @@ void ProcessSwitchInst(SwitchInst *SI,
     Val = SI->getCondition();
   }
 
-  // Create a new, empty default block so that the new hierarchy of
-  // if-then statements go to this and the PHI nodes are happy.
-  BasicBlock *NewDefault = BasicBlock::Create(SI->getContext(), "NewDefault");
-  F->getBasicBlockList().insert(Default->getIterator(), NewDefault);
-  BranchInst::Create(Default, NewDefault);
-
   BasicBlock *SwitchBlock =
       SwitchConvert(Cases.begin(), Cases.end(), LowerBound, UpperBound, Val,
-                    OrigBlock, OrigBlock, NewDefault, UnreachableRanges);
+                    OrigBlock, OrigBlock, Default, UnreachableRanges);
 
-  // If there are entries in any PHI nodes for the default edge, make sure
-  // to update them as well.
-  FixPhis(Default, OrigBlock, NewDefault);
+  // We have added incoming values for newly-created predecessors in
+  // NewLeafBlock(). The only meaningful work we offload to FixPhis() is to
+  // remove the incoming values from OrigBlock. There might be a special case
+  // that SwitchBlock is the same as Default, under which the PHIs in Default
+  // are fixed inside SwitchConvert().
+  if (SwitchBlock != Default)
+    FixPhis(Default, OrigBlock, nullptr);
 
   // Branch to our shiny new if-then stuff...
   BranchInst::Create(SwitchBlock, OrigBlock);

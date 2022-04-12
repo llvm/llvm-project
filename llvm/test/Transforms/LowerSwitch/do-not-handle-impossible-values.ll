@@ -13,15 +13,13 @@ define i32 @test1(i32 %val) {
 ; CHECK-NEXT:    br i1 [[PIVOT]], label [[LEAFBLOCK:%.*]], label [[CASE_1:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i2 [[TRUNC]], -2
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       case.2:
 ; CHECK-NEXT:    [[RES2:%.*]] = call i32 @case2()
 ; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_D:%.*]]
 ; CHECK:       case.D:
 ; CHECK-NEXT:    [[RESD:%.*]] = call i32 @caseD()
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -59,22 +57,20 @@ exit:
 define i32 @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range !0
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    br label [[NODEBLOCK:%.*]]
 ; CHECK:       NodeBlock:
 ; CHECK-NEXT:    [[PIVOT:%.*]] = icmp slt i32 [[VAL]], 2
 ; CHECK-NEXT:    br i1 [[PIVOT]], label [[CASE_1:%.*]], label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VAL]], 2
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       case.2:
 ; CHECK-NEXT:    [[RES2:%.*]] = call i32 @case2()
 ; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_D:%.*]]
 ; CHECK:       case.D:
 ; CHECK-NEXT:    [[RESD:%.*]] = call i32 @caseD()
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -113,13 +109,11 @@ exit:
 define i32 @test3() {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range !1
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    br label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VAL]], 2
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_1:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_1:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -162,22 +156,20 @@ exit:
 define i32 @test4() {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range !2
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    br label [[NODEBLOCK:%.*]]
 ; CHECK:       NodeBlock:
 ; CHECK-NEXT:    [[PIVOT:%.*]] = icmp slt i32 [[VAL]], 2
 ; CHECK-NEXT:    br i1 [[PIVOT]], label [[CASE_1:%.*]], label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VAL]], 2
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       case.2:
 ; CHECK-NEXT:    [[RES2:%.*]] = call i32 @case2()
 ; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_D:%.*]]
 ; CHECK:       case.D:
 ; CHECK-NEXT:    [[RESD:%.*]] = call i32 @caseD()
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -219,21 +211,19 @@ define i32 @test5(i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       switch:
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range !1
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range [[RNG1]]
 ; CHECK-NEXT:    br label [[NODEBLOCK:%.*]]
 ; CHECK:       NodeBlock:
 ; CHECK-NEXT:    [[PIVOT:%.*]] = icmp slt i32 [[VAL]], 3
 ; CHECK-NEXT:    br i1 [[PIVOT]], label [[LEAFBLOCK:%.*]], label [[CASE_1:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VAL]], 1
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_1]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_1]], label [[CASE_D]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_D]]
 ; CHECK:       case.D:
-; CHECK-NEXT:    [[DELTA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 20, [[NEWDEFAULT]] ]
+; CHECK-NEXT:    [[DELTA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 20, [[LEAFBLOCK]] ]
 ; CHECK-NEXT:    [[RESD_TMP:%.*]] = call i32 @caseD()
 ; CHECK-NEXT:    [[RESD:%.*]] = add i32 [[RESD_TMP]], [[DELTA]]
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -277,13 +267,11 @@ define i32 @test6(i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       switch:
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range !1
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range [[RNG1]]
 ; CHECK-NEXT:    br label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VAL]], 2
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_1:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_1:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -336,7 +324,7 @@ define i32 @test7(i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       switch:
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range !1
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range [[RNG1]]
 ; CHECK-NEXT:    br label [[CASE_D]]
 ; CHECK:       case.D:
 ; CHECK-NEXT:    [[DELTA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 20, [[SWITCH]] ]
@@ -378,13 +366,11 @@ define i32 @test8(i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       switch:
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range !3
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @getVal(), !range [[RNG3:![0-9]+]]
 ; CHECK-NEXT:    br label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VAL]], 2
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_1:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_1:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -441,14 +427,12 @@ define i32 @test9(i1 %cond, i2 %val) {
 ; CHECK-NEXT:    br label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp sge i2 [[VAL:%.*]], 0
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_1:%.*]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_1:%.*]], label [[CASE_D]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_D]]
 ; CHECK:       case.D:
-; CHECK-NEXT:    [[DELTA:%.*]] = phi i32 [ 20, [[NEWDEFAULT]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[DELTA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 20, [[LEAFBLOCK]] ]
 ; CHECK-NEXT:    [[RESD_TMP:%.*]] = call i32 @caseD()
 ; CHECK-NEXT:    [[RESD:%.*]] = add i32 [[RESD_TMP]], [[DELTA]]
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -497,9 +481,7 @@ define i32 @test10() {
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[VAL_OFF:%.*]] = add i32 [[VAL]], -3
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp ule i32 [[VAL_OFF]], 1
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_1:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_1:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -560,15 +542,13 @@ define i32 @test11() {
 ; CHECK-NEXT:    br i1 [[PIVOT]], label [[CASE_1:%.*]], label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i64 [[VAL_ZEXT]], 1
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       case.2:
 ; CHECK-NEXT:    [[RES2:%.*]] = call i32 @case2()
 ; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_D:%.*]]
 ; CHECK:       case.D:
 ; CHECK-NEXT:    [[RESD:%.*]] = call i32 @caseD()
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -616,12 +596,10 @@ define void @test12() {
 ; CHECK-NEXT:    br i1 [[PIVOT]], label [[CASE_1:%.*]], label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[INDVAR]], 1
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[LATCH]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       case.2:
-; CHECK-NEXT:    br label [[LATCH]]
-; CHECK:       NewDefault:
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[INDVAR]], 1
@@ -666,22 +644,18 @@ define void @test13(i32 %val) {
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[TMP_OFF:%.*]] = add i32 [[TMP]], -2
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp ule i32 [[TMP_OFF]], 1
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[BB34:%.*]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[BB34:%.*]], label [[BB35:%.*]]
 ; CHECK:       bb34:
 ; CHECK-NEXT:    br label [[BB38:%.*]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[BB35:%.*]]
 ; CHECK:       bb35:
 ; CHECK-NEXT:    br label [[NODEBLOCK:%.*]]
 ; CHECK:       NodeBlock:
 ; CHECK-NEXT:    [[PIVOT:%.*]] = icmp slt i32 [[TMP]], 6
-; CHECK-NEXT:    br i1 [[PIVOT]], label [[LEAFBLOCK2:%.*]], label [[BB37:%.*]]
-; CHECK:       LeafBlock2:
-; CHECK-NEXT:    [[SWITCHLEAF3:%.*]] = icmp sle i32 [[TMP]], 1
-; CHECK-NEXT:    br i1 [[SWITCHLEAF3]], label [[BB37]], label [[NEWDEFAULT1:%.*]]
+; CHECK-NEXT:    br i1 [[PIVOT]], label [[LEAFBLOCK1:%.*]], label [[BB37:%.*]]
+; CHECK:       LeafBlock1:
+; CHECK-NEXT:    [[SWITCHLEAF2:%.*]] = icmp sle i32 [[TMP]], 1
+; CHECK-NEXT:    br i1 [[SWITCHLEAF2]], label [[BB37]], label [[BB38]]
 ; CHECK:       bb37:
-; CHECK-NEXT:    br label [[BB38]]
-; CHECK:       NewDefault1:
 ; CHECK-NEXT:    br label [[BB38]]
 ; CHECK:       bb38:
 ; CHECK-NEXT:    br label [[BB33]]
@@ -720,7 +694,7 @@ bb38:
 define i32 @test14() {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = call i32 @getVal(), !range !4
+; CHECK-NEXT:    [[TMP:%.*]] = call i32 @getVal(), !range [[RNG4:![0-9]+]]
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP]])
 ; CHECK-NEXT:    br label [[NODEBLOCK:%.*]]
 ; CHECK:       NodeBlock:
@@ -728,15 +702,13 @@ define i32 @test14() {
 ; CHECK-NEXT:    br i1 [[PIVOT]], label [[CASE_1:%.*]], label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VAL]], 1
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       case.2:
 ; CHECK-NEXT:    [[RES2:%.*]] = call i32 @case2()
 ; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_D:%.*]]
 ; CHECK:       case.D:
 ; CHECK-NEXT:    [[RESD:%.*]] = call i32 @caseD()
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -783,15 +755,13 @@ define i32 @test15() {
 ; CHECK-NEXT:    br i1 [[PIVOT]], label [[CASE_1:%.*]], label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VAL]], 1
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_D:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       case.2:
 ; CHECK-NEXT:    [[RES2:%.*]] = call i32 @case2()
 ; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_D:%.*]]
 ; CHECK:       case.D:
 ; CHECK-NEXT:    [[RESD:%.*]] = call i32 @caseD()
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -838,9 +808,7 @@ define i32 @test16(float %f) {
 ; CHECK-NEXT:    br label [[LEAFBLOCK:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp sge i64 [[CLAMP]], 2
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[NEWDEFAULT:%.*]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[CASE_1:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE_2:%.*]], label [[CASE_1:%.*]]
 ; CHECK:       case.1:
 ; CHECK-NEXT:    [[RES1:%.*]] = call i32 @case1()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
