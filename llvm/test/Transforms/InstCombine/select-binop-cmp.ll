@@ -648,10 +648,8 @@ define i32 @select_or_icmp_bad(i32 %x, i32 %y, i32 %z) {
 
 define i32 @select_lshr_icmp_const(i32 %x) {
 ; CHECK-LABEL: @select_lshr_icmp_const(
-; CHECK-NEXT:    [[A:%.*]] = icmp ugt i32 %x, 31
 ; CHECK-NEXT:    [[B:%.*]] = lshr i32 %x, 5
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 0
-; CHECK-NEXT:    ret i32 [[C]]
+; CHECK-NEXT:    ret i32 [[B]]
 ;
   %A = icmp ugt i32 %x, 31
   %B = lshr i32 %x, 5
@@ -661,10 +659,8 @@ define i32 @select_lshr_icmp_const(i32 %x) {
 
 define i32 @select_lshr_icmp_const_reordered(i32 %x) {
 ; CHECK-LABEL: @select_lshr_icmp_const_reordered(
-; CHECK-NEXT:    [[A:%.*]] = icmp ult i32 %x, 32
 ; CHECK-NEXT:    [[B:%.*]] = lshr i32 %x, 5
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 0, i32 [[B]]
-; CHECK-NEXT:    ret i32 [[C]]
+; CHECK-NEXT:    ret i32 [[B]]
 ;
   %A = icmp ult i32 %x, 32
   %B = lshr i32 %x, 5
@@ -674,10 +670,8 @@ define i32 @select_lshr_icmp_const_reordered(i32 %x) {
 
 define i32 @select_exact_lshr_icmp_const(i32 %x) {
 ; CHECK-LABEL: @select_exact_lshr_icmp_const(
-; CHECK-NEXT:    [[A:%.*]] = icmp ugt i32 %x, 31
-; CHECK-NEXT:    [[B:%.*]] = lshr exact i32 %x, 5
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 0
-; CHECK-NEXT:    ret i32 [[C]]
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 %x, 5
+; CHECK-NEXT:    ret i32 [[B]]
 ;
   %A = icmp ugt i32 %x, 31
   %B = lshr exact i32 %x, 5
