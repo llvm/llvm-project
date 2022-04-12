@@ -15,7 +15,7 @@
 #define AC(P, E, V, O, R, S) __opencl_atomic_compare_exchange_strong(P, E, V, O, R, S)
 #define AL(P, O, S) __opencl_atomic_load(P, O, S)
 
-extern float __llvm_amdgcn_global_atomic_fadd_f32_p1f32_f32(__global float *, float) __asm("llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32");
+extern float __llvm_amdgcn_global_atomic_fadd_f32_p1f32_f32(__global float *, float) __asm("llvm.amdgcn.global.atomic.fadd.f32.p1.f32");
 
 static void
 global_atomic_fadd(__global float *p, float v)
