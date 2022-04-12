@@ -18,12 +18,6 @@
 
 #include "cuda.h"
 
-// We need to know the CUDA version to determine how to map some of the runtime
-// calls below.
-#if !defined(CUDA_VERSION)
-#error "cuda.h did not define CUDA_VERSION"
-#endif
-
 #ifdef _WIN32
 #define MLIR_CUDA_WRAPPERS_EXPORT __declspec(dllexport)
 #else
@@ -140,28 +134,15 @@ extern MLIR_CUDA_WRAPPERS_EXPORT "C" void mgpuEventRecord(CUevent event,
   CUDA_REPORT_IF_ERROR(cuEventRecord(event, stream));
 }
 
-extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream stream) {
+extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/) {
   ScopedContext scopedContext;
   CUdeviceptr ptr;
-#if CUDA_VERSION >= 11020
-  // Use the async version that was available since CUDA 11.2.
-  CUDA_REPORT_IF_ERROR(cuMemAllocAsync(&ptr, sizeBytes, stream));
-#else
   CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
-  (void)stream;
-#endif
   return reinterpret_cast<void *>(ptr);
 }
 
-extern "C" void mgpuMemFree(void *ptr, CUstream stream) {
-#if CUDA_VERSION >= 11020
-  // Use the async version that was available since CUDA 11.2.
-  CUDA_REPORT_IF_ERROR(
-      cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(ptr), stream));
-#else
+extern "C" void mgpuMemFree(void *ptr, CUstream /*stream*/) {
   CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(ptr)));
-  (void)stream;
-#endif
 }
 
 extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
