@@ -1,4 +1,5 @@
 _GLOBAL_OFFSET_TABLE_ U
+_ZN11__sanitizer13internal_mmapEPvjiiiy U
 _ZN11__sanitizer13internal_mmapEPvmiiiy U
 _ZN11__sanitizer13internal_openEPKcij U
 _ZN11__sanitizer13internal_statEPKcPv U
