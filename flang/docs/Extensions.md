@@ -67,10 +67,9 @@ end
 * If both the `COUNT=` and the `COUNT_MAX=` optional arguments are
   present on the same call to the intrinsic subroutine `SYSTEM_CLOCK`,
   we require that their types have the same integer kind, since the
-  kind of these arguments is used to select the clock rate.
-  In common with some other compilers, the clock is in milliseconds
-  for kinds <= 4 and nanoseconds otherwise where the target system
-  supports these rates.
+  kind of these arguments is used to select the clock rate.  In common
+  with some other compilers, the clock rate varies from tenths of a
+  second to nanoseconds depending on argument kind and platform support.
 * If a dimension of a descriptor has zero extent in a call to
   `CFI_section`, `CFI_setpointer` or `CFI_allocate`, the lower
   bound on that dimension will be set to 1 for consistency with
