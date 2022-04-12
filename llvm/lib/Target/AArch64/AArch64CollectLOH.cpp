@@ -559,7 +559,7 @@ bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
     // Walk the basic block backwards and update the per register state machine
     // in the process.
     for (const MachineInstr &MI :
-         instructionsWithoutDebug(MBB.rbegin(), MBB.rend())) {
+         instructionsWithoutDebug(MBB.instr_rbegin(), MBB.instr_rend())) {
       unsigned Opcode = MI.getOpcode();
       switch (Opcode) {
       case AArch64::ADDXri:
