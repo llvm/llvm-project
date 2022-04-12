@@ -2136,14 +2136,14 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
   if (isa<CallInst>(Call) && cast<CallInst>(Call).cannotDuplicate())
     ContainsNoDuplicateCall = true;
 
-  Value *Callee = Call.getCalledOperand();
-  Function *F = dyn_cast_or_null<Function>(Callee);
+  Function *F = Call.getCalledFunction();
   bool IsIndirectCall = !F;
   if (IsIndirectCall) {
     // Check if this happens to be an indirect function call to a known function
     // in this inline context. If not, we've done all we can.
+    Value *Callee = Call.getCalledOperand();
     F = dyn_cast_or_null<Function>(SimplifiedValues.lookup(Callee));
-    if (!F) {
+    if (!F || F->getFunctionType() != Call.getFunctionType()) {
       onCallArgumentSetup(Call);
 
       if (!Call.onlyReadsMemory())
