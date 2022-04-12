@@ -524,7 +524,8 @@ to be aware of:
 
        auto Sym = ES.lookup({&JD1, &JD2}, ES.intern("_main"));
 
-  6. The removeModule/removeObject methods are replaced by ``ResourceTracker``s.
+  6. The removeModule/removeObject methods are replaced by
+     ``ResourceTracker::remove``.
      See the subsection `How to remove code`_.
 
 For code examples and suggestions of how to use the ORCv2 APIs, please see
