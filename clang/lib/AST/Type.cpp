@@ -3683,7 +3683,8 @@ TemplateSpecializationType::TemplateSpecializationType(
          "Use DependentTemplateSpecializationType for dependent template-name");
   assert((T.getKind() == TemplateName::Template ||
           T.getKind() == TemplateName::SubstTemplateTemplateParm ||
-          T.getKind() == TemplateName::SubstTemplateTemplateParmPack) &&
+          T.getKind() == TemplateName::SubstTemplateTemplateParmPack ||
+          T.getKind() == TemplateName::UsingTemplate) &&
          "Unexpected template name for TemplateSpecializationType");
 
   auto *TemplateArgs = reinterpret_cast<TemplateArgument *>(this + 1);
