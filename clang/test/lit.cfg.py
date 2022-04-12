@@ -185,10 +185,6 @@ if re.match(r'.*-(windows-msvc)$', config.target_triple):
 if not re.match(r'^x86_64.*-(windows-msvc|windows-gnu)$', config.target_triple):
     config.available_features.add('LP64')
 
-# [PR12920] "clang-driver" -- set if gcc driver is not used.
-if not re.match(r'.*-(cygwin)$', config.target_triple):
-    config.available_features.add('clang-driver')
-
 # Tests that are specific to the Apple Silicon macOS.
 if re.match(r'^arm64(e)?-apple-(macos|darwin)', config.target_triple):
     config.available_features.add('apple-silicon-mac')
