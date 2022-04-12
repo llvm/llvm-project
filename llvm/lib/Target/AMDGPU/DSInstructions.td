@@ -879,6 +879,15 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align16_local">;
 
 let SubtargetPredicate = HasUnalignedAccessMode in {
 
+// Select 64 bit loads and stores aligned less than 4 as a single ds_read_b64/
+// ds_write_b64 instruction as this is faster than ds_read2_b32/ds_write2_b32
+// which would be used otherwise. In this case a b32 access would still be
+// misaligned, but we will have 2 of them.
+foreach vt = VReg_64.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B64, vt, "load_align_less_than_4_local">;
+defm : DSWritePat_mc <DS_WRITE_B64, vt, "store_align_less_than_4_local">;
+}
+
 // Selection will split most of the unaligned 3 dword accesses due to performance
 // reasons when beneficial. Keep these two patterns for the rest of the cases.
 foreach vt = VReg_96.RegTypes in {
