@@ -150,7 +150,6 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
-  case TemplateName::UsingTemplate:
     break;
   }
 }
