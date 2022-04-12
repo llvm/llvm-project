@@ -28,8 +28,8 @@ unsigned long internal_stat(const char *path, void *buf);
 unsigned long internal_lstat(const char *path, void *buf);
 unsigned long internal_fstat(int fd, void *buf);
 size_t internal_strlen(const char *s);
-unsigned long internal_mmap(void *addr, unsigned long length, int prot,
-                            int flags, int fd, unsigned long long offset);
+unsigned long internal_mmap(void *addr, uintptr_t length, int prot, int flags,
+                            int fd, unsigned long long offset);
 void *internal_memcpy(void *dest, const void *src, unsigned long n);
 // Used to propagate errno.
 bool internal_iserror(uintptr_t retval, int *rverrno = 0);
@@ -155,8 +155,8 @@ size_t strlen(const char *s) { return __sanitizer::internal_strlen(s); }
 
 void *mmap(void *addr, size_t length, int prot, int flags, int fd,
            off_t offset) {
-  unsigned long res = __sanitizer::internal_mmap(
-      addr, (unsigned long)length, prot, flags, fd, (unsigned long long)offset);
+  unsigned long res =
+      __sanitizer::internal_mmap(addr, length, prot, flags, fd, offset);
   RETURN_OR_SET_ERRNO(void *, res);
 }
 

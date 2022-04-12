@@ -90,7 +90,7 @@ struct Options {
 
 struct CompileAndExecuteConfig {
   /// LLVM module transformer that is passed to ExecutionEngine.
-  llvm::function_ref<llvm::Error(llvm::Module *)> transformer;
+  std::function<llvm::Error(llvm::Module *)> transformer;
 
   /// A custom function that is passed to ExecutionEngine. It processes MLIR
   /// module and creates LLVM IR module.
@@ -205,7 +205,8 @@ static Error compileAndExecute(Options &options, ModuleOp module,
 
   mlir::ExecutionEngineOptions engineOptions;
   engineOptions.llvmModuleBuilder = config.llvmModuleBuilder;
-  engineOptions.transformer = config.transformer;
+  if (config.transformer)
+    engineOptions.transformer = config.transformer;
   engineOptions.jitCodeGenOptLevel = jitCodeGenOptLevel;
   engineOptions.sharedLibPaths = executionEngineLibs;
   engineOptions.enableObjectCache = true;
