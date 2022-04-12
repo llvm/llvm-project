@@ -2249,21 +2249,33 @@ protected:
   /// Indicate that the specified operation does not work with the specified
   /// type and indicate what to do about it. Note that VT may refer to either
   /// the type of a result or that of an operand of Op.
-  void setOperationAction(unsigned Op, MVT VT, LegalizeAction Action) {
-    assert(Op < array_lengthof(OpActions[0]) && "Table isn't big enough!");
-    OpActions[(unsigned)VT.SimpleTy][Op] = Action;
+  void setOperationAction(ArrayRef<unsigned> Ops, MVT VT,
+                          LegalizeAction Action) {
+    for (auto Op : Ops) {
+      assert(Op < array_lengthof(OpActions[0]) && "Table isn't big enough!");
+      OpActions[(unsigned)VT.SimpleTy][Op] = Action;
+    }
+  }
+  void setOperationAction(ArrayRef<unsigned> Ops, ArrayRef<MVT> VTs,
+                          LegalizeAction Action) {
+    for (auto VT : VTs)
+      setOperationAction(Ops, VT, Action);
   }
 
   /// Indicate that the specified load with extension does not work with the
   /// specified type and indicate what to do about it.
-  void setLoadExtAction(unsigned ExtType, MVT ValVT, MVT MemVT,
+  void setLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT, MVT MemVT,
                         LegalizeAction Action) {
-    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
-           MemVT.isValid() && "Table isn't big enough!");
-    assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
-    unsigned Shift = 4 * ExtType;
-    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &= ~((uint16_t)0xF << Shift);
-    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action << Shift;
+    for (auto ExtType : ExtTypes) {
+      assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
+             MemVT.isValid() && "Table isn't big enough!");
+      assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+      unsigned Shift = 4 * ExtType;
+      LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &=
+          ~((uint16_t)0xF << Shift);
+      LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action
+                                                        << Shift;
+    }
   }
 
   /// Indicate that the specified truncating store does not work with the
@@ -2313,17 +2325,24 @@ protected:
 
   /// Indicate that the specified condition code is or isn't supported on the
   /// target and indicate what to do about it.
-  void setCondCodeAction(ISD::CondCode CC, MVT VT,
+  void setCondCodeAction(ArrayRef<ISD::CondCode> CCs, MVT VT,
                          LegalizeAction Action) {
-    assert(VT.isValid() && (unsigned)CC < array_lengthof(CondCodeActions) &&
-           "Table isn't big enough!");
-    assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
-    /// The lower 3 bits of the SimpleTy index into Nth 4bit set from the 32-bit
-    /// value and the upper 29 bits index into the second dimension of the array
-    /// to select what 32-bit value to use.
-    uint32_t Shift = 4 * (VT.SimpleTy & 0x7);
-    CondCodeActions[CC][VT.SimpleTy >> 3] &= ~((uint32_t)0xF << Shift);
-    CondCodeActions[CC][VT.SimpleTy >> 3] |= (uint32_t)Action << Shift;
+    for (auto CC : CCs) {
+      assert(VT.isValid() && (unsigned)CC < array_lengthof(CondCodeActions) &&
+             "Table isn't big enough!");
+      assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+      /// The lower 3 bits of the SimpleTy index into Nth 4bit set from the
+      /// 32-bit value and the upper 29 bits index into the second dimension of
+      /// the array to select what 32-bit value to use.
+      uint32_t Shift = 4 * (VT.SimpleTy & 0x7);
+      CondCodeActions[CC][VT.SimpleTy >> 3] &= ~((uint32_t)0xF << Shift);
+      CondCodeActions[CC][VT.SimpleTy >> 3] |= (uint32_t)Action << Shift;
+    }
+  }
+  void setCondCodeAction(ArrayRef<ISD::CondCode> CCs, ArrayRef<MVT> VTs,
+                         LegalizeAction Action) {
+    for (auto VT : VTs)
+      setCondCodeAction(CCs, VT, Action);
   }
 
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
@@ -2344,14 +2363,11 @@ protected:
   /// Targets should invoke this method for each target independent node that
   /// they want to provide a custom DAG combiner for by implementing the
   /// PerformDAGCombine virtual method.
-  void setTargetDAGCombine(ISD::NodeType NT) {
-    assert(unsigned(NT >> 3) < array_lengthof(TargetDAGCombineArray));
-    TargetDAGCombineArray[NT >> 3] |= 1 << (NT&7);
-  }
-
   void setTargetDAGCombine(ArrayRef<ISD::NodeType> NTs) {
-    for (auto NT : NTs)
-      setTargetDAGCombine(NT);
+    for (auto NT : NTs) {
+      assert(unsigned(NT >> 3) < array_lengthof(TargetDAGCombineArray));
+      TargetDAGCombineArray[NT >> 3] |= 1 << (NT & 7);
+    }
   }
 
   /// Set the target's minimum function alignment.
@@ -2979,8 +2995,9 @@ public:
   //
 
   /// Rename the default libcall routine name for the specified libcall.
-  void setLibcallName(RTLIB::Libcall Call, const char *Name) {
-    LibcallRoutineNames[Call] = Name;
+  void setLibcallName(ArrayRef<RTLIB::Libcall> Calls, const char *Name) {
+    for (auto Call : Calls)
+      LibcallRoutineNames[Call] = Name;
   }
 
   /// Get the libcall routine name for the specified libcall.
