@@ -7976,7 +7976,6 @@ static void resolveZeroablesFromTargetShuffle(const SmallVectorImpl<int> &Mask,
 }
 
 // Forward declaration (for getFauxShuffleMask recursive check).
-// TODO: Use DemandedElts variant.
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    const SelectionDAG &DAG, unsigned Depth,
