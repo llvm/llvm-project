@@ -2386,7 +2386,9 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
-  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr);
+  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr,
+                          /*DiagnoseEmptyAttrs=*/false,
+                          /*WarnOnUnknownAttrs=*/true);
 
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
@@ -2453,7 +2455,9 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
   // We don't support any module import attributes yet.
-  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_import_attr);
+  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_import_attr,
+                          /*DiagnoseEmptyAttrs=*/false,
+                          /*WarnOnUnknownAttrs=*/true);
 
   if (PP.hadModuleLoaderFatalFailure()) {
     // With a fatal failure in the module loader, we abort parsing.
