@@ -56,7 +56,7 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_0(<vscale x 28 x i1> %in) {
   ret <vscale x 14 x i1> %res
 }
 
-define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) {
+define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) uwtable {
 ; CHECK-LABEL: extract_nxv14i1_nxv28i1_14:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -90,7 +90,10 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) {
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
   %res = call <vscale x 14 x i1> @llvm.experimental.vector.extract.nxv14i1.nxv28i1(<vscale x 28 x i1> %in, i64 14)
   ret <vscale x 14 x i1> %res
