@@ -212,8 +212,10 @@ Direction flippedDirection(Direction direction) {
 /// add these to the set of ignored columns and continue to the next row. If we
 /// run out of rows, then A*y is zero and we are done.
 MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::findRationalLexMin() {
-  if (restoreRationalConsistency().failed())
+  if (restoreRationalConsistency().failed()) {
+    markEmpty();
     return OptimumKind::Empty;
+  }
   return getRationalSample();
 }
 
@@ -679,16 +681,16 @@ LogicalResult LexSimplex::restoreRationalConsistency() {
 }
 
 // Move the row unknown to column orientation while preserving lexicopositivity
-// of the basis transform. The sample value of the row must be negative.
+// of the basis transform. The sample value of the row must be non-positive.
 //
 // We only consider pivots where the pivot element is positive. Suppose no such
 // pivot exists, i.e., some violated row has no positive coefficient for any
 // basis unknown. The row can be represented as (s + c_1*u_1 + ... + c_n*u_n)/d,
 // where d is the denominator, s is the sample value and the c_i are the basis
-// coefficients. Since any feasible assignment of the basis satisfies u_i >= 0
-// for all i, and we have s < 0 as well as c_i < 0 for all i, any feasible
-// assignment would violate this row and therefore the constraints have no
-// solution.
+// coefficients. If s != 0, then since any feasible assignment of the basis
+// satisfies u_i >= 0 for all i, and we have s < 0 as well as c_i < 0 for all i,
+// any feasible assignment would violate this row and therefore the constraints
+// have no solution.
 //
 // We can preserve lexicopositivity by picking the pivot column with positive
 // pivot element that makes the lexicographically smallest change to the sample
@@ -726,10 +728,10 @@ LogicalResult LexSimplex::restoreRationalConsistency() {
 // B'.col(k) = B.col(k) - B(i,k) * B.col(j) / B(i,j) for k != j
 // and similarly, s' = s - s_i * B.col(j) / B(i,j).
 //
-// Since the row is violated, we have s_i < 0, so the change in sample value
-// when pivoting with column a is lexicographically smaller than that when
-// pivoting with column b iff B.col(a) / B(i, a) is lexicographically smaller
-// than B.col(b) / B(i, b).
+// If s_i == 0, then the sample value remains unchanged. Otherwise, if s_i < 0,
+// the change in sample value when pivoting with column a is lexicographically
+// smaller than that when pivoting with column b iff B.col(a) / B(i, a) is
+// lexicographically smaller than B.col(b) / B(i, b).
 //
 // Since B(i, j) > 0, column j remains lexicopositive.
 //
@@ -749,10 +751,8 @@ LogicalResult LexSimplexBase::moveRowUnknownToColumn(unsigned row) {
         !maybeColumn ? col : getLexMinPivotColumn(row, *maybeColumn, col);
   }
 
-  if (!maybeColumn) {
-    markEmpty();
+  if (!maybeColumn)
     return failure();
-  }
 
   pivot(row, *maybeColumn);
   return success();

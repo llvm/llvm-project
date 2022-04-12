@@ -440,10 +440,9 @@ protected:
   void appendSymbol();
 
   /// Try to move the specified row to column orientation while preserving the
-  /// lexicopositivity of the basis transform. The row must have a negative
-  /// sample value. If this is not possible, return failure. This only occurs
-  /// when the constraints have no solution; the tableau will be marked empty in
-  /// such a case.
+  /// lexicopositivity of the basis transform. The row must have a non-positive
+  /// sample value. If this is not possible, return failure. This occurs when
+  /// the constraints have no solution or the sample value is zero.
   LogicalResult moveRowUnknownToColumn(unsigned row);
 
   /// Given a row that has a non-integer sample value, add an inequality to cut
