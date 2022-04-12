@@ -117,19 +117,32 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   size_t insn_len = decoded_trace_sp->GetInstructionsCount();
   size_t mem_used = decoded_trace_sp->CalculateApproximateMemoryUsage();
 
-  s.Format("  Raw trace size: {0} KiB\n", *raw_size / 1024);
   s.Format("  Total number of instructions: {0}\n", insn_len);
-  s.Format("  Total approximate memory usage: {0:2} KiB\n",
-           (double)mem_used / 1024);
+
+  s.PutCString("\n  Memory usage:\n");
+  s.Format("    Raw trace size: {0} KiB\n", *raw_size / 1024);
+  s.Format(
+      "    Total approximate memory usage (excluding raw trace): {0:2} KiB\n",
+      (double)mem_used / 1024);
   if (insn_len != 0)
-    s.Format("  Average memory usage per instruction: {0:2} bytes\n",
+    s.Format("    Average memory usage per instruction (excluding raw trace): "
+             "{0:2} bytes\n",
              (double)mem_used / insn_len);
 
+  s.PutCString("\n  Timing:\n");
+  GetTimer()
+      .ForThread(thread.GetID())
+      .ForEachTimedTask(
+          [&](const std::string &name, std::chrono::milliseconds duration) {
+            s.Format("    {0}: {1:2}s\n", name, duration.count() / 1000.0);
+          });
+
+  s.PutCString("\n  Errors:\n");
   const DecodedThread::LibiptErrors &tsc_errors =
       decoded_trace_sp->GetTscErrors();
-  s.Format("\n  Number of TSC decoding errors: {0}\n", tsc_errors.total_count);
+  s.Format("    Number of TSC decoding errors: {0}\n", tsc_errors.total_count);
   for (const auto &error_message_to_count : tsc_errors.libipt_errors) {
-    s.Format("    {0}: {1}\n", error_message_to_count.first,
+    s.Format("      {0}: {1}\n", error_message_to_count.first,
              error_message_to_count.second);
   }
 }
@@ -358,3 +371,5 @@ Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,
                                        OnBinaryDataReadCallback callback) {
   return OnThreadBinaryDataRead(tid, "threadTraceBuffer", callback);
 }
+
+TaskTimer &TraceIntelPT::GetTimer() { return m_task_timer; }
