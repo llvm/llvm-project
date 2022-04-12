@@ -1,4 +1,3 @@
-// REQUIRES: clang-driver
 
 // Check that we raise an error if we're trying to compile CUDA code but can't
 // find a CUDA install, unless -nocudainc was passed.

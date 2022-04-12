@@ -13,7 +13,6 @@
 // RUN: %clang %s -c -o %t.o -integrated-as -Wa,--no-warn 2>&1 | FileCheck -allow-empty --check-prefix=CHECK-AS-NOWARN %s
 // RUN: not %clang %s -c -o %t.o -integrated-as -Wa,--fatal-warnings 2>&1 | FileCheck --check-prefix=CHECK-AS-FATAL %s
 
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: system-linux
 

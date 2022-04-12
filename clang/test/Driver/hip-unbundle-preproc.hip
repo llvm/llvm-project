@@ -1,4 +1,4 @@
-// REQUIRES: clang-driver, amdgpu-registered-target
+// REQUIRES: amdgpu-registered-target
 
 // RUN: %clang -### -target x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx803 -nogpulib \

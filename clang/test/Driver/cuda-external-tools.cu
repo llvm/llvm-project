@@ -1,7 +1,6 @@
 // Tests that ptxas and fatbinary are invoked correctly during CUDA
 // compilation.
 //
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 

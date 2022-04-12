@@ -1,4 +1,3 @@
-// REQUIRES: clang-driver
 // REQUIRES: powerpc-registered-target
 // REQUIRES: nvptx-registered-target
 

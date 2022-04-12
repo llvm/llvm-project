@@ -1,4 +1,3 @@
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 //
 // RUN: %clang -miamcu -rtlib=platform -no-canonical-prefixes %s -### -o %t.o 2>&1 | FileCheck %s

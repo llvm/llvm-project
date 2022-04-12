@@ -1,4 +1,3 @@
-// REQUIRES: clang-driver
 // REQUIRES: amdgpu-registered-target
 
 // Make sure the appropriate device specific library is available.

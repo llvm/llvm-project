@@ -1,4 +1,4 @@
-// REQUIRES: clang-driver, x86-registered-target, amdgpu-registered-target
+// REQUIRES: x86-registered-target, amdgpu-registered-target
 
 // RUN: touch %T/libhipBundled.a
 
