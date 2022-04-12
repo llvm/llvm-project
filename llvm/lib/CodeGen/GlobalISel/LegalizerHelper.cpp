@@ -7257,25 +7257,32 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   Register Op2Reg = MI.getOperand(3).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT MaskTy = MRI.getType(MaskReg);
-  LLT Op1Ty = MRI.getType(Op1Reg);
   if (!DstTy.isVector())
     return UnableToLegalize;
 
-  // Vector selects can have a scalar predicate. If so, splat into a vector and
-  // finish for later legalization attempts to try again.
   if (MaskTy.isScalar()) {
+    // Turn the scalar condition into a vector condition mask.
+
     Register MaskElt = MaskReg;
-    if (MaskTy.getSizeInBits() < DstTy.getScalarSizeInBits())
-      MaskElt = MIRBuilder.buildSExt(DstTy.getElementType(), MaskElt).getReg(0);
-    // Generate a vector splat idiom to be pattern matched later.
+
+    // The condition was potentially zero extended before, but we want a sign
+    // extended boolean.
+    if (MaskTy.getSizeInBits() <= DstTy.getScalarSizeInBits() &&
+        MaskTy != LLT::scalar(1)) {
+      MaskElt = MIRBuilder.buildSExtInReg(MaskTy, MaskElt, 1).getReg(0);
+    }
+
+    // Continue the sign extension (or truncate) to match the data type.
+    MaskElt = MIRBuilder.buildSExtOrTrunc(DstTy.getElementType(),
+                                          MaskElt).getReg(0);
+
+    // Generate a vector splat idiom.
     auto ShufSplat = MIRBuilder.buildShuffleSplat(DstTy, MaskElt);
-    Observer.changingInstr(MI);
-    MI.getOperand(1).setReg(ShufSplat.getReg(0));
-    Observer.changedInstr(MI);
-    return Legalized;
+    MaskReg = ShufSplat.getReg(0);
+    MaskTy = DstTy;
   }
 
-  if (MaskTy.getSizeInBits() != Op1Ty.getSizeInBits()) {
+  if (MaskTy.getSizeInBits() != DstTy.getSizeInBits()) {
     return UnableToLegalize;
   }
 
