@@ -90,7 +90,7 @@ struct Options {
 
 struct CompileAndExecuteConfig {
   /// LLVM module transformer that is passed to ExecutionEngine.
-  llvm::function_ref<llvm::Error(llvm::Module *)> transformer;
+  std::function<llvm::Error(llvm::Module *)> transformer;
 
   /// A custom function that is passed to ExecutionEngine. It processes MLIR
   /// module and creates LLVM IR module.
