@@ -11,7 +11,7 @@ assert(!use_goma || goma_dir != "",
 
 template("unix_toolchain") {
   toolchain(target_name) {
-    # https://groups.google.com/a/chromium.org/d/msg/gn-dev/F_lv5T-tNDM
+    # https://groups.google.com/a/chromium.org/g/gn-dev/c/F_lv5T-tNDM
     forward_variables_from(invoker.toolchain_args, "*")
     not_needed("*")
 

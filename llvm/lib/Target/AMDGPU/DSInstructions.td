@@ -877,8 +877,8 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align16_local">;
 
 let SubtargetPredicate = HasUnalignedAccessMode in {
 
-// FIXME: From performance point of view, is ds_read_b96/ds_write_b96 better choice
-// for unaligned accesses?
+// Selection will split most of the unaligned 3 dword accesses due to performance
+// reasons when beneficial. Keep these two patterns for the rest of the cases.
 foreach vt = VReg_96.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B96, vt, "load_local">;
 defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_local">;
