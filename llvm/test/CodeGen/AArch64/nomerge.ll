@@ -7,6 +7,7 @@ define void @foo(i32 %i) uwtable {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    cmp w0, #7
 ; CHECK-NEXT:    b.eq .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %entry
@@ -15,11 +16,16 @@ define void @foo(i32 %i) uwtable {
 ; CHECK-NEXT:  // %bb.2: // %if.then
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    b bar
 ; CHECK-NEXT:  .LBB0_3: // %if.then2
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:  .LBB0_4: // %if.end3
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    b bar
 entry:
   switch i32 %i, label %if.end3 [

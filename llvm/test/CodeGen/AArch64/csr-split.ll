@@ -6,25 +6,33 @@
 
 @a = common dso_local local_unnamed_addr global i32 0, align 4
 
-define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
+define dso_local signext i32 @test1(i32* %b) local_unnamed_addr uwtable  {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    adrp x8, a
 ; CHECK-NEXT:    ldrsw x8, [x8, :lo12:a]
 ; CHECK-NEXT:    cmp x8, x0
 ; CHECK-NEXT:    b.eq .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %if.end
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: // %if.then
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    bl callVoid
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    b callNonVoid
 ;
 ; CHECK-APPLE-LABEL: test1:
@@ -36,6 +44,7 @@ define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
 ; CHECK-APPLE-NEXT:    .cfi_offset w19, -24
 ; CHECK-APPLE-NEXT:    .cfi_offset w20, -32
+; CHECK-APPLE-NEXT:    .cfi_remember_state
 ; CHECK-APPLE-NEXT:  Lloh0:
 ; CHECK-APPLE-NEXT:    adrp x8, _a@PAGE
 ; CHECK-APPLE-NEXT:  Lloh1:
@@ -45,13 +54,24 @@ define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-APPLE-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-APPLE-NEXT:    .cfi_restore w30
+; CHECK-APPLE-NEXT:    .cfi_restore w29
+; CHECK-APPLE-NEXT:    .cfi_restore w19
+; CHECK-APPLE-NEXT:    .cfi_restore w20
 ; CHECK-APPLE-NEXT:    ret
 ; CHECK-APPLE-NEXT:  LBB0_2: ; %if.then
+; CHECK-APPLE-NEXT:    .cfi_restore_state
 ; CHECK-APPLE-NEXT:    mov x19, x0
 ; CHECK-APPLE-NEXT:    bl _callVoid
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    mov x0, x19
 ; CHECK-APPLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-APPLE-NEXT:    .cfi_restore w30
+; CHECK-APPLE-NEXT:    .cfi_restore w29
+; CHECK-APPLE-NEXT:    .cfi_restore w19
+; CHECK-APPLE-NEXT:    .cfi_restore w20
 ; CHECK-APPLE-NEXT:    b _callNonVoid
 ; CHECK-APPLE-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 entry:
@@ -75,13 +95,14 @@ declare signext i32 @callVoid(...) local_unnamed_addr
 
 declare signext i32 @callNonVoid(i32*) local_unnamed_addr
 
-define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
+define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr uwtable  {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    cbz x0, .LBB1_3
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    adrp x8, a
@@ -93,10 +114,17 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-NEXT:    bl callVoid
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    b callNonVoid
 ; CHECK-NEXT:  .LBB1_3: // %return
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-APPLE-LABEL: test2:
@@ -108,6 +136,7 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
 ; CHECK-APPLE-NEXT:    .cfi_offset w19, -24
 ; CHECK-APPLE-NEXT:    .cfi_offset w20, -32
+; CHECK-APPLE-NEXT:    .cfi_remember_state
 ; CHECK-APPLE-NEXT:    cbz x0, LBB1_3
 ; CHECK-APPLE-NEXT:  ; %bb.1: ; %entry
 ; CHECK-APPLE-NEXT:  Lloh2:
@@ -122,11 +151,22 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    mov x0, x19
 ; CHECK-APPLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-APPLE-NEXT:    .cfi_restore w30
+; CHECK-APPLE-NEXT:    .cfi_restore w29
+; CHECK-APPLE-NEXT:    .cfi_restore w19
+; CHECK-APPLE-NEXT:    .cfi_restore w20
 ; CHECK-APPLE-NEXT:    b _callNonVoid
 ; CHECK-APPLE-NEXT:  LBB1_3: ; %return
+; CHECK-APPLE-NEXT:    .cfi_restore_state
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    mov w0, wzr
 ; CHECK-APPLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-APPLE-NEXT:    .cfi_restore w30
+; CHECK-APPLE-NEXT:    .cfi_restore w29
+; CHECK-APPLE-NEXT:    .cfi_restore w19
+; CHECK-APPLE-NEXT:    .cfi_restore w20
 ; CHECK-APPLE-NEXT:    ret
 ; CHECK-APPLE-NEXT:    .loh AdrpLdr Lloh2, Lloh3
 entry:
@@ -151,7 +191,7 @@ return:                                           ; preds = %if.end, %entry, %if
 }
 
 
-define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_addr  {
+define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_addr uwtable  {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
@@ -171,6 +211,10 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w20
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-APPLE-LABEL: test3:
@@ -193,6 +237,11 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    mov x0, x19
 ; CHECK-APPLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-APPLE-NEXT:    .cfi_restore w30
+; CHECK-APPLE-NEXT:    .cfi_restore w29
+; CHECK-APPLE-NEXT:    .cfi_restore w19
+; CHECK-APPLE-NEXT:    .cfi_restore w20
 ; CHECK-APPLE-NEXT:    ret
 entry:
   %0 = load i8*, i8** %p1, align 8, !tbaa !6

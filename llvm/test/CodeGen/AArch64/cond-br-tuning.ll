@@ -180,21 +180,26 @@ declare void @foo()
 declare void @bar(i32)
 
 ; Don't transform since the call will clobber the NZCV bits.
-define void @test_call_clobber(i32 %unused, i32 %a) {
+define void @test_call_clobber(i32 %unused, i32 %a) uwtable {
 ; CHECK-LABEL: test_call_clobber:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    and w19, w1, #0x6
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    cbnz w19, .LBB9_2
 ; CHECK-NEXT:  // %bb.1: // %if.end
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB9_2: // %if.then
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    bl foo
 entry:
   %c = and i32 %a, 6

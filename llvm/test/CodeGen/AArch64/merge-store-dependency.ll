@@ -6,7 +6,7 @@
 @gv0 = internal unnamed_addr global i32 0, align 4
 @gv1 = internal unnamed_addr global %struct1** null, align 8
 
-define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg)  {
+define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg) uwtable {
 ;CHECK-LABEL: test
 ; A53-LABEL: test:
 ; A53:       // %bb.0: // %entry
@@ -14,6 +14,7 @@ define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg
 ; A53-NEXT:    .cfi_def_cfa_offset 16
 ; A53-NEXT:    .cfi_offset w19, -8
 ; A53-NEXT:    .cfi_offset w30, -16
+; A53-NEXT:    .cfi_remember_state
 ; A53-NEXT:    movi v0.2d, #0000000000000000
 ; A53-NEXT:    mov x8, x0
 ; A53-NEXT:    mov x19, x8
@@ -46,10 +47,14 @@ define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg
 ; A53-NEXT:    adrp x8, gv1
 ; A53-NEXT:    str x0, [x8, :lo12:gv1]
 ; A53-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; A53-NEXT:    .cfi_def_cfa_offset 0
+; A53-NEXT:    .cfi_restore w19
+; A53-NEXT:    .cfi_restore w30
 ; A53-NEXT:    ret
 ; A53-NEXT:    .p2align 4, 0x0, 8
 ; A53-NEXT:  .LBB0_4: // %while.body.i.split
 ; A53-NEXT:    // =>This Inner Loop Header: Depth=1
+; A53-NEXT:    .cfi_restore_state
 ; A53-NEXT:    b .LBB0_4
 entry:
   %0 = bitcast %struct1* %fde to i8*

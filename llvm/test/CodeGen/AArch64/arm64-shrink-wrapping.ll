@@ -359,15 +359,16 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind uwtable {
 ; ENABLE-NEXT:    b.ne LBB4_2
 ; ENABLE-NEXT:  ; %bb.3: ; %for.end
 ; ENABLE-NEXT:    lsl w0, w19, #3
+; ENABLE-NEXT:    .cfi_def_cfa wsp, 32
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; ENABLE-NEXT:    .cfi_def_cfa_offset 0
+; ENABLE-NEXT:    .cfi_restore w30
+; ENABLE-NEXT:    .cfi_restore w29
+; ENABLE-NEXT:    .cfi_restore w19
+; ENABLE-NEXT:    .cfi_restore w20
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB4_4: ; %if.else
-; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
-; ENABLE-NEXT:    .cfi_same_value w30
-; ENABLE-NEXT:    .cfi_same_value w29
-; ENABLE-NEXT:    .cfi_same_value w19
-; ENABLE-NEXT:    .cfi_same_value w20
 ; ENABLE-NEXT:    lsl w0, w1, #1
 ; ENABLE-NEXT:    ret
 ;
@@ -399,8 +400,14 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind uwtable {
 ; DISABLE-NEXT:  LBB4_4: ; %if.else
 ; DISABLE-NEXT:    lsl w0, w1, #1
 ; DISABLE-NEXT:  LBB4_5: ; %if.end
+; DISABLE-NEXT:    .cfi_def_cfa wsp, 32
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; DISABLE-NEXT:    .cfi_def_cfa_offset 0
+; DISABLE-NEXT:    .cfi_restore w30
+; DISABLE-NEXT:    .cfi_restore w29
+; DISABLE-NEXT:    .cfi_restore w19
+; DISABLE-NEXT:    .cfi_restore w20
 ; DISABLE-NEXT:    ret
 entry:
   %tobool = icmp eq i32 %cond, 0
@@ -471,9 +478,9 @@ define i32 @variadicFunc(i32 %cond, i32 %count, ...) nounwind uwtable {
 ; ENABLE-NEXT:    b.ne LBB6_2
 ; ENABLE-NEXT:  LBB6_3: ; %for.end
 ; ENABLE-NEXT:    add sp, sp, #16
+; ENABLE-NEXT:    .cfi_def_cfa_offset 0
 ; ENABLE-NEXT:    ret
 ; ENABLE-NEXT:  LBB6_4: ; %if.else
-; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
 ; ENABLE-NEXT:    lsl w0, w1, #1
 ; ENABLE-NEXT:    ret
 ;
@@ -481,13 +488,13 @@ define i32 @variadicFunc(i32 %cond, i32 %count, ...) nounwind uwtable {
 ; DISABLE:       ; %bb.0: ; %entry
 ; DISABLE-NEXT:    sub sp, sp, #16
 ; DISABLE-NEXT:    .cfi_def_cfa_offset 16
-; DISABLE-NEXT:    cbz w0, LBB6_4
+; DISABLE-NEXT:    cbz w0, LBB6_3
 ; DISABLE-NEXT:  ; %bb.1: ; %if.then
 ; DISABLE-NEXT:    add x8, sp, #16
 ; DISABLE-NEXT:    cmp w1, #1
 ; DISABLE-NEXT:    str x8, [sp, #8]
 ; DISABLE-NEXT:    mov w0, wzr
-; DISABLE-NEXT:    b.lt LBB6_3
+; DISABLE-NEXT:    b.lt LBB6_4
 ; DISABLE-NEXT:  LBB6_2: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    ldr x8, [sp, #8]
@@ -497,12 +504,12 @@ define i32 @variadicFunc(i32 %cond, i32 %count, ...) nounwind uwtable {
 ; DISABLE-NEXT:    add w0, w0, w8
 ; DISABLE-NEXT:    subs w1, w1, #1
 ; DISABLE-NEXT:    b.ne LBB6_2
-; DISABLE-NEXT:  LBB6_3: ; %if.end
-; DISABLE-NEXT:    add sp, sp, #16
-; DISABLE-NEXT:    ret
-; DISABLE-NEXT:  LBB6_4: ; %if.else
+; DISABLE-NEXT:    b LBB6_4
+; DISABLE-NEXT:  LBB6_3: ; %if.else
 ; DISABLE-NEXT:    lsl w0, w1, #1
+; DISABLE-NEXT:  LBB6_4: ; %if.end
 ; DISABLE-NEXT:    add sp, sp, #16
+; DISABLE-NEXT:    .cfi_def_cfa_offset 0
 ; DISABLE-NEXT:    ret
 entry:
   %ap = alloca i8*, align 8
