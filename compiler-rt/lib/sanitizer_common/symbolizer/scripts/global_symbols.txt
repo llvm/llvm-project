@@ -8,7 +8,7 @@ _ZN11__sanitizer14internal_lstatEPKcPv U
 _ZN11__sanitizer15internal_strlenEPKc U
 _ZN11__sanitizer16internal_iserrorEjPi U
 _ZN11__sanitizer16internal_iserrorEmPi U
-_ZN11__sanitizer17internal_snprintfEPcjPKcz
+_ZN11__sanitizer17internal_snprintfEPcjPKcz U
 _ZN11__sanitizer17internal_snprintfEPcmPKcz U
 __ctype_b_loc U
 __ctype_get_mb_cur_max U
