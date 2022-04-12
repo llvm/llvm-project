@@ -152,3 +152,45 @@ EXIT:
   %r = phi i8 [poison, %A], [poison, %B]
   ret i8 %r
 }
+
+@g = extern_weak global i32
+
+define i64 @pr49839_with_poison(i1 %c) {
+; CHECK-LABEL: @pr49839_with_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i64 srem (i64 1, i64 ptrtoint (i32* @g to i64))
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i64 [ poison, %if ], [ srem (i64 1, i64 ptrtoint (i32* @g to i64)) , %entry ]
+  ret i64 %phi
+}
+
+define i64 @pr49839_without_poison(i1 %c) {
+; CHECK-LABEL: @pr49839_without_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i64 srem (i64 1, i64 ptrtoint (i32* @g to i64))
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i64 [ srem (i64 1, i64 ptrtoint (i32* @g to i64)), %if ], [ srem (i64 1, i64 ptrtoint (i32* @g to i64)) , %entry ]
+  ret i64 %phi
+}
