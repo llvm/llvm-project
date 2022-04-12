@@ -2570,7 +2570,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Similar situation exists for memcpy and memset.
   void visitMemMoveInst(MemMoveInst &I) {
-    getShadow(I.getArgOperand(1)); // Ensure shadow initialized
     IRBuilder<> IRB(&I);
     IRB.CreateCall(
         MS.MemmoveFn,
@@ -2585,7 +2584,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // FIXME: consider doing manual inline for small constant sizes and proper
   // alignment.
   void visitMemCpyInst(MemCpyInst &I) {
-    getShadow(I.getArgOperand(1)); // Ensure shadow initialized
     IRBuilder<> IRB(&I);
     IRB.CreateCall(
         MS.MemcpyFn,
