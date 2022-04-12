@@ -1359,10 +1359,13 @@ struct Attributor {
     // For now we ignore naked and optnone functions.
     bool Invalidate =
         Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID);
-    const Function *FnScope = IRP.getAnchorScope();
-    if (FnScope)
-      Invalidate |= FnScope->hasFnAttribute(Attribute::Naked) ||
-                    FnScope->hasFnAttribute(Attribute::OptimizeNone);
+    const Function *AnchorFn = IRP.getAnchorScope();
+    if (AnchorFn) {
+      Invalidate |=
+          AnchorFn->hasFnAttribute(Attribute::Naked) ||
+          AnchorFn->hasFnAttribute(Attribute::OptimizeNone) ||
+          (!isModulePass() && !getInfoCache().isInModuleSlice(*AnchorFn));
+    }
 
     // Avoid too many nested initializations to prevent a stack overflow.
     Invalidate |= InitializationChainLength > MaxInitializationChainLength;
@@ -1382,13 +1385,12 @@ struct Attributor {
       --InitializationChainLength;
     }
 
-    // Initialize and update is allowed for code outside of the current function
-    // set, but only if it is part of module slice we are allowed to look at.
-    if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
-      if (!getInfoCache().isInModuleSlice(*FnScope)) {
-        AA.getState().indicatePessimisticFixpoint();
-        return AA;
-      }
+    // We update only AAs associated with functions in the Functions set or
+    // call sites of them.
+    if ((AnchorFn && !Functions.count(const_cast<Function *>(AnchorFn))) &&
+        !Functions.count(IRP.getAssociatedFunction())) {
+      AA.getState().indicatePessimisticFixpoint();
+      return AA;
     }
 
     // If this is queried in the manifest stage, we force the AA to indicate

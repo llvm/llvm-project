@@ -110,12 +110,19 @@ entry:
 }
 
 define void @test8_2(i32* %p) {
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
-; CHECK-LABEL: define {{[^@]+}}@test8_2
-; CHECK-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 10, i32* [[P]], align 4
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test8_2
+; IS__TUNIT____-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR3]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    store i32 10, i32* [[P]], align 4
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test8_2
+; IS__CGSCC____-SAME: (i32* nofree writeonly [[P:%.*]]) #[[ATTR4:[0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    store i32 10, i32* [[P]], align 4
+; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
   %call = call i32* @test8_1(i32* %p)
@@ -129,11 +136,17 @@ declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>%val, <4 x i32*>, i32, 
 ; CHECK-NOT: readnone
 ; CHECK-NOT: readonly
 define void @test9(<4 x i32*> %ptrs, <4 x i32>%val) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
-; CHECK-LABEL: define {{[^@]+}}@test9
-; CHECK-SAME: (<4 x i32*> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL]], <4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>) #[[ATTR12:[0-9]+]]
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test9
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL]], <4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>) #[[ATTR12:[0-9]+]]
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test9
+; IS__CGSCC____-SAME: (<4 x i32*> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL]], <4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>) #[[ATTR13:[0-9]+]]
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>%val, <4 x i32*> %ptrs, i32 4, <4 x i1><i1 true, i1 false, i1 true, i1 false>)
   ret void
@@ -142,11 +155,17 @@ define void @test9(<4 x i32*> %ptrs, <4 x i32>%val) {
 ; CHECK: declare <4 x i32> @llvm.masked.gather
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
 define <4 x i32> @test10(<4 x i32*> %ptrs) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
-; CHECK-LABEL: define {{[^@]+}}@test10
-; CHECK-SAME: (<4 x i32*> [[PTRS:%.*]]) #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef) #[[ATTR13:[0-9]+]]
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test10
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]]) #[[ATTR6:[0-9]+]] {
+; IS__TUNIT____-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef) #[[ATTR13:[0-9]+]]
+; IS__TUNIT____-NEXT:    ret <4 x i32> [[RES]]
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test10
+; IS__CGSCC____-SAME: (<4 x i32*> [[PTRS:%.*]]) #[[ATTR7:[0-9]+]] {
+; IS__CGSCC____-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef) #[[ATTR14:[0-9]+]]
+; IS__CGSCC____-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1><i1 true, i1 false, i1 true, i1 false>, <4 x i32>undef)
   ret <4 x i32> %res
@@ -155,11 +174,17 @@ define <4 x i32> @test10(<4 x i32*> %ptrs) {
 ; CHECK: declare <4 x i32> @test11_1
 declare <4 x i32> @test11_1(<4 x i32*>) argmemonly nounwind readonly
 define <4 x i32> @test11_2(<4 x i32*> %ptrs) {
-; CHECK: Function Attrs: argmemonly nounwind readonly
-; CHECK-LABEL: define {{[^@]+}}@test11_2
-; CHECK-SAME: (<4 x i32*> [[PTRS:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x i32*> [[PTRS]]) #[[ATTR11:[0-9]+]]
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; IS__TUNIT____: Function Attrs: argmemonly nounwind readonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test11_2
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]]) #[[ATTR7:[0-9]+]] {
+; IS__TUNIT____-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x i32*> [[PTRS]]) #[[ATTR11:[0-9]+]]
+; IS__TUNIT____-NEXT:    ret <4 x i32> [[RES]]
+;
+; IS__CGSCC____: Function Attrs: argmemonly nounwind readonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test11_2
+; IS__CGSCC____-SAME: (<4 x i32*> [[PTRS:%.*]]) #[[ATTR8:[0-9]+]] {
+; IS__CGSCC____-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x i32*> [[PTRS]]) #[[ATTR12:[0-9]+]]
+; IS__CGSCC____-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @test11_1(<4 x i32*> %ptrs)
   ret <4 x i32> %res
@@ -168,22 +193,34 @@ define <4 x i32> @test11_2(<4 x i32*> %ptrs) {
 declare <4 x i32> @test12_1(<4 x i32*>) argmemonly nounwind
 ; CHECK-NOT: readnone
 define <4 x i32> @test12_2(<4 x i32*> %ptrs) {
-; CHECK: Function Attrs: argmemonly nounwind
-; CHECK-LABEL: define {{[^@]+}}@test12_2
-; CHECK-SAME: (<4 x i32*> [[PTRS:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x i32*> [[PTRS]]) #[[ATTR14:[0-9]+]]
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; IS__TUNIT____: Function Attrs: argmemonly nounwind
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test12_2
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]]) #[[ATTR8:[0-9]+]] {
+; IS__TUNIT____-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x i32*> [[PTRS]]) #[[ATTR14:[0-9]+]]
+; IS__TUNIT____-NEXT:    ret <4 x i32> [[RES]]
+;
+; IS__CGSCC____: Function Attrs: argmemonly nounwind
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test12_2
+; IS__CGSCC____-SAME: (<4 x i32*> [[PTRS:%.*]]) #[[ATTR9:[0-9]+]] {
+; IS__CGSCC____-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x i32*> [[PTRS]]) #[[ATTR15:[0-9]+]]
+; IS__CGSCC____-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @test12_1(<4 x i32*> %ptrs)
   ret <4 x i32> %res
 }
 
 define i32 @volatile_load(i32* %p) {
-; CHECK: Function Attrs: argmemonly nofree norecurse nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@volatile_load
-; CHECK-SAME: (i32* nofree noundef align 4 [[P:%.*]]) #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i32, i32* [[P]], align 4
-; CHECK-NEXT:    ret i32 [[LOAD]]
+; IS__TUNIT____: Function Attrs: argmemonly nofree norecurse nounwind willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@volatile_load
+; IS__TUNIT____-SAME: (i32* nofree noundef align 4 [[P:%.*]]) #[[ATTR9:[0-9]+]] {
+; IS__TUNIT____-NEXT:    [[LOAD:%.*]] = load volatile i32, i32* [[P]], align 4
+; IS__TUNIT____-NEXT:    ret i32 [[LOAD]]
+;
+; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nounwind willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@volatile_load
+; IS__CGSCC____-SAME: (i32* nofree noundef align 4 [[P:%.*]]) #[[ATTR10:[0-9]+]] {
+; IS__CGSCC____-NEXT:    [[LOAD:%.*]] = load volatile i32, i32* [[P]], align 4
+; IS__CGSCC____-NEXT:    ret i32 [[LOAD]]
 ;
   %load = load volatile i32, i32* %p
   ret i32 %load
@@ -257,11 +294,17 @@ define void @byval_not_readonly_2(i8* byval(i8) %written) readonly {
 }
 
 define void @byval_not_readnone_1(i8* byval(i8) %written) readnone {
-; CHECK: Function Attrs: readnone
-; CHECK-LABEL: define {{[^@]+}}@byval_not_readnone_1
-; CHECK-SAME: (i8* noalias nonnull byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR10:[0-9]+]] {
-; CHECK-NEXT:    call void @escape_i8(i8* nonnull dereferenceable(1) [[WRITTEN]])
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: readnone
+; IS__TUNIT____-LABEL: define {{[^@]+}}@byval_not_readnone_1
+; IS__TUNIT____-SAME: (i8* noalias nonnull byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR10:[0-9]+]] {
+; IS__TUNIT____-NEXT:    call void @escape_i8(i8* nonnull dereferenceable(1) [[WRITTEN]])
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: readnone
+; IS__CGSCC____-LABEL: define {{[^@]+}}@byval_not_readnone_1
+; IS__CGSCC____-SAME: (i8* noalias nonnull byval(i8) dereferenceable(1) [[WRITTEN:%.*]]) #[[ATTR11:[0-9]+]] {
+; IS__CGSCC____-NEXT:    call void @escape_i8(i8* nonnull dereferenceable(1) [[WRITTEN]])
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @escape_i8(i8* %written)
   ret void
@@ -301,7 +344,7 @@ define void @testbyval(i8* %read_only) {
 ; IS__CGSCC____-SAME: (i8* nocapture noundef nonnull readonly dereferenceable(1) [[READ_ONLY:%.*]]) {
 ; IS__CGSCC____-NEXT:    call void @byval_not_readonly_1(i8* noalias nocapture noundef nonnull readonly byval(i8) dereferenceable(1) [[READ_ONLY]]) #[[ATTR2]]
 ; IS__CGSCC____-NEXT:    call void @byval_not_readnone_1(i8* noalias nocapture noundef nonnull readnone byval(i8) dereferenceable(1) [[READ_ONLY]])
-; IS__CGSCC____-NEXT:    call void @byval_no_fnarg(i8* noalias nocapture nofree noundef nonnull readnone byval(i8) dereferenceable(1) [[READ_ONLY]]) #[[ATTR15:[0-9]+]]
+; IS__CGSCC____-NEXT:    call void @byval_no_fnarg(i8* noalias nocapture nofree noundef nonnull readnone byval(i8) dereferenceable(1) [[READ_ONLY]]) #[[ATTR16:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
   call void @byval_not_readonly_1(i8* byval(i8) %read_only)
@@ -318,12 +361,19 @@ declare i8 @maybe_returned_val(i8* %ptr) readonly nounwind
 declare void @val_use(i8 %ptr) readonly nounwind
 
 define void @ptr_uses(i8* %ptr) {
-; CHECK: Function Attrs: nounwind readonly
-; CHECK-LABEL: define {{[^@]+}}@ptr_uses
-; CHECK-SAME: (i8* nocapture readonly [[PTR:%.*]]) #[[ATTR11]] {
-; CHECK-NEXT:    [[CALL_PTR:%.*]] = call i8* @maybe_returned_ptr(i8* readonly [[PTR]]) #[[ATTR11]]
-; CHECK-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(i8* readonly [[CALL_PTR]]) #[[ATTR11]]
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nounwind readonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@ptr_uses
+; IS__TUNIT____-SAME: (i8* nocapture readonly [[PTR:%.*]]) #[[ATTR11]] {
+; IS__TUNIT____-NEXT:    [[CALL_PTR:%.*]] = call i8* @maybe_returned_ptr(i8* readonly [[PTR]]) #[[ATTR11]]
+; IS__TUNIT____-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(i8* readonly [[CALL_PTR]]) #[[ATTR11]]
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nounwind readonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@ptr_uses
+; IS__CGSCC____-SAME: (i8* nocapture readonly [[PTR:%.*]]) #[[ATTR12]] {
+; IS__CGSCC____-NEXT:    [[CALL_PTR:%.*]] = call i8* @maybe_returned_ptr(i8* readonly [[PTR]]) #[[ATTR12]]
+; IS__CGSCC____-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(i8* readonly [[CALL_PTR]]) #[[ATTR12]]
+; IS__CGSCC____-NEXT:    ret void
 ;
   %call_ptr = call i8* @maybe_returned_ptr(i8* %ptr)
   %call_val = call i8 @maybe_returned_val(i8* %call_ptr)
@@ -371,20 +421,38 @@ define i32 @read_only_constant_mem() {
   ret i32 %l
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn writeonly }
-; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CHECK: attributes #[[ATTR2]] = { readonly }
-; CHECK: attributes #[[ATTR3]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn writeonly }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind readonly willreturn }
-; CHECK: attributes #[[ATTR6]] = { nofree norecurse nosync nounwind readonly willreturn }
-; CHECK: attributes #[[ATTR7]] = { argmemonly nounwind readonly }
-; CHECK: attributes #[[ATTR8]] = { argmemonly nounwind }
-; CHECK: attributes #[[ATTR9]] = { argmemonly nofree norecurse nounwind willreturn }
-; CHECK: attributes #[[ATTR10]] = { readnone }
-; CHECK: attributes #[[ATTR11]] = { nounwind readonly }
-; CHECK: attributes #[[ATTR12]] = { willreturn writeonly }
-; CHECK: attributes #[[ATTR13]] = { readonly willreturn }
-; CHECK: attributes #[[ATTR14]] = { nounwind }
-; CHECK: attributes #[[ATTR15:[0-9]+]] = { nounwind writeonly }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR2]] = { readonly }
+; IS__TUNIT____: attributes #[[ATTR3]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind readonly willreturn }
+; IS__TUNIT____: attributes #[[ATTR6]] = { nofree norecurse nosync nounwind readonly willreturn }
+; IS__TUNIT____: attributes #[[ATTR7]] = { argmemonly nounwind readonly }
+; IS__TUNIT____: attributes #[[ATTR8]] = { argmemonly nounwind }
+; IS__TUNIT____: attributes #[[ATTR9]] = { argmemonly nofree norecurse nounwind willreturn }
+; IS__TUNIT____: attributes #[[ATTR10]] = { readnone }
+; IS__TUNIT____: attributes #[[ATTR11]] = { nounwind readonly }
+; IS__TUNIT____: attributes #[[ATTR12]] = { willreturn writeonly }
+; IS__TUNIT____: attributes #[[ATTR13]] = { readonly willreturn }
+; IS__TUNIT____: attributes #[[ATTR14]] = { nounwind }
+; IS__TUNIT____: attributes #[[ATTR15]] = { nounwind writeonly }
+;.
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { readonly }
+; IS__CGSCC____: attributes #[[ATTR3]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR4]] = { argmemonly nofree nosync nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR8]] = { argmemonly nounwind readonly }
+; IS__CGSCC____: attributes #[[ATTR9]] = { argmemonly nounwind }
+; IS__CGSCC____: attributes #[[ATTR10]] = { argmemonly nofree norecurse nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR11]] = { readnone }
+; IS__CGSCC____: attributes #[[ATTR12]] = { nounwind readonly }
+; IS__CGSCC____: attributes #[[ATTR13]] = { willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR14]] = { readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR15]] = { nounwind }
+; IS__CGSCC____: attributes #[[ATTR16]] = { nounwind writeonly }
 ;.
