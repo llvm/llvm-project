@@ -116,7 +116,7 @@ static bool hasaUniqueDim(ArrayRef<AffineMap> maps, unsigned testMapLocation) {
     if (expr != nullptr)
       dimsToCheck.insert(expr.getPosition());
   }
-  for (auto It : llvm::enumerate(maps)) {
+  for (const auto &It : llvm::enumerate(maps)) {
     if (It.index() == testMapLocation)
       continue;
     auto map = It.value();
