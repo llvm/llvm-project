@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <inttypes.h>
 #include <stdio.h>
 
 #include <string>
@@ -41,7 +42,7 @@ static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
 }
 
 namespace __sanitizer {
-int internal_snprintf(char *buffer, unsigned long length, const char *format,
+int internal_snprintf(char *buffer, uintptr_t length, const char *format,
                       ...);
 }  // namespace __sanitizer
 

@@ -13,6 +13,7 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -31,7 +32,7 @@ unsigned long internal_mmap(void *addr, unsigned long length, int prot,
                             int flags, int fd, unsigned long long offset);
 void *internal_memcpy(void *dest, const void *src, unsigned long n);
 // Used to propagate errno.
-bool internal_iserror(unsigned long retval, int *rverrno = 0);
+bool internal_iserror(uintptr_t retval, int *rverrno = 0);
 }  // namespace __sanitizer
 
 namespace {
