@@ -14,7 +14,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 class ObjCDataFormatterKVO(ObjCDataFormatterTestCase):
 
-    @expectedFailureAll(remote=True)
     def test_kvo_with_run_command(self):
         """Test the behavior of formatters when KVO is in use."""
         self.build()
