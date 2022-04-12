@@ -354,9 +354,9 @@ void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
 @ingroup PARALLEL
 @param loc source location information
 @param global_tid global thread number
-@param num_teams_lo lower bound on number of teams requested for the teams
+@param num_teams_lb lower bound on number of teams requested for the teams
 construct
-@param num_teams_up upper bound on number of teams requested for the teams
+@param num_teams_ub upper bound on number of teams requested for the teams
 construct
 @param num_threads number of threads per team requested for the teams construct
 
