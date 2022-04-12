@@ -178,6 +178,11 @@ TEST(CrashRecoveryTest, UnixCRCReturnCode) {
   int Res = setenv("LLVM_CRC_UNIXCRCRETURNCODE", "1", 0);
   ASSERT_EQ(Res, 0);
 
+  Res = unsetenv("GTEST_SHARD_INDEX");
+  ASSERT_EQ(Res, 0);
+  Res = unsetenv("GTEST_TOTAL_SHARDS");
+  ASSERT_EQ(Res, 0);
+
   std::string Error;
   bool ExecutionFailed;
   int RetCode = ExecuteAndWait(Executable, argv, {}, {}, 0, 0, &Error,

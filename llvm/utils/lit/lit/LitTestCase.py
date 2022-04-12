@@ -52,6 +52,7 @@ def load_test_suite(inputs):
         noExecute=False,
         debug=False,
         isWindows=windows,
+        order='smart',
         params={})
 
     # Perform test discovery.

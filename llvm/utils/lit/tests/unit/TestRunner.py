@@ -34,6 +34,7 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
                                              debug=False,
                                              isWindows=(
                                                platform.system() == 'Windows'),
+                                             order='smart',
                                              params={})
         TestIntegratedTestKeywordParser.litConfig = lit_config
         # Perform test discovery.
