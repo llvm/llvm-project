@@ -1869,7 +1869,7 @@ OpFoldResult arith::ShLIOp::fold(ArrayRef<Attribute> operands) {
   auto result = constFoldBinaryOp<IntegerAttr>(
       operands, [&](const APInt &a, const APInt &b) {
         bounded = b.ule(b.getBitWidth());
-        return std::move(a).shl(b);
+        return a.shl(b);
       });
   return bounded ? result : Attribute();
 }
@@ -1884,7 +1884,7 @@ OpFoldResult arith::ShRUIOp::fold(ArrayRef<Attribute> operands) {
   auto result = constFoldBinaryOp<IntegerAttr>(
       operands, [&](const APInt &a, const APInt &b) {
         bounded = b.ule(b.getBitWidth());
-        return std::move(a).lshr(b);
+        return a.lshr(b);
       });
   return bounded ? result : Attribute();
 }
@@ -1899,7 +1899,7 @@ OpFoldResult arith::ShRSIOp::fold(ArrayRef<Attribute> operands) {
   auto result = constFoldBinaryOp<IntegerAttr>(
       operands, [&](const APInt &a, const APInt &b) {
         bounded = b.ule(b.getBitWidth());
-        return std::move(a).ashr(b);
+        return a.ashr(b);
       });
   return bounded ? result : Attribute();
 }
