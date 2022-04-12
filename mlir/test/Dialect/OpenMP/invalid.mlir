@@ -980,3 +980,70 @@ func @omp_single(%data_var : memref<i32>) -> () {
   }) {operand_segment_sizes = dense<[1,0]> : vector<2xi32>} : (memref<i32>) -> ()
   return
 }
+
+// -----
+
+func @omp_task(%ptr: !llvm.ptr<f32>) {
+  // expected-error @below {{op expected symbol reference @add_f32 to point to a reduction declaration}}
+  omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr<f32>) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+}
+
+// -----
+
+omp.reduction.declare @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func @omp_task(%ptr: !llvm.ptr<f32>) {
+  // expected-error @below {{op accumulator variable used more than once}}
+  omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr<f32>, @add_f32 -> %ptr : !llvm.ptr<f32>) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+}
+
+// -----
+
+omp.reduction.declare @add_i32 : i32
+init {
+^bb0(%arg: i32):
+  %0 = arith.constant 0 : i32
+  omp.yield (%0 : i32)
+}
+combiner {
+^bb1(%arg0: i32, %arg1: i32):
+  %1 = arith.addi %arg0, %arg1 : i32
+  omp.yield (%1 : i32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr<i32>, %arg3: !llvm.ptr<i32>):
+  %2 = llvm.load %arg3 : !llvm.ptr<i32>
+  llvm.atomicrmw add %arg2, %2 monotonic : i32
+  omp.yield
+}
+
+func @omp_task(%mem: memref<1xf32>) {
+  // expected-error @below {{op expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr<i32>')}}
+  omp.task in_reduction(@add_i32 -> %mem : memref<1xf32>) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
