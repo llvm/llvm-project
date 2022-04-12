@@ -626,9 +626,8 @@ Optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
   return TTIImpl->getVScaleForTuning();
 }
 
-bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  return TTIImpl->shouldMaximizeVectorBandwidth(K);
+bool TargetTransformInfo::shouldMaximizeVectorBandwidth() const {
+  return TTIImpl->shouldMaximizeVectorBandwidth();
 }
 
 ElementCount TargetTransformInfo::getMinimumVF(unsigned ElemWidth,

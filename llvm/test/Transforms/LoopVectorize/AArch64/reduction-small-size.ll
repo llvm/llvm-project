@@ -123,16 +123,16 @@ for.body:
 ; }
 ;
 ; CHECK: vector.body:
-; CHECK:   phi <16 x i16>
-; CHECK:   [[Ld1:%[a-zA-Z0-9.]+]] = load <16 x i8>
-; CHECK:   zext <16 x i8> [[Ld1]] to <16 x i16>
-; CHECK:   [[Ld2:%[a-zA-Z0-9.]+]] = load <16 x i8>
-; CHECK:   zext <16 x i8> [[Ld2]] to <16 x i16>
-; CHECK:   add <16 x i16>
-; CHECK:   add <16 x i16>
+; CHECK:   phi <8 x i16>
+; CHECK:   [[Ld1:%[a-zA-Z0-9.]+]] = load <8 x i8>
+; CHECK:   zext <8 x i8> [[Ld1]] to <8 x i16>
+; CHECK:   [[Ld2:%[a-zA-Z0-9.]+]] = load <8 x i8>
+; CHECK:   zext <8 x i8> [[Ld2]] to <8 x i16>
+; CHECK:   add <8 x i16>
+; CHECK:   add <8 x i16>
 ;
 ; CHECK: middle.block:
-; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16>
+; CHECK:   [[Rdx:%[a-zA-Z0-9.]+]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16>
 ; CHECK:   zext i16 [[Rdx]] to i32
 ;
 define i16 @reduction_i16_2(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %n) {

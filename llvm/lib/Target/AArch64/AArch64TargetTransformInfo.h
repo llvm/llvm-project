@@ -135,8 +135,6 @@ public:
     return ST->getVScaleForTuning();
   }
 
-  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const;
-
   /// Try to return an estimate cost factor that can be used as a multiplier
   /// when scalarizing an operation for a vector with ElementCount \p VF.
   /// For scalable vectors this currently takes the most pessimistic view based
