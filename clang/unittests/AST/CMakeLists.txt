@@ -43,11 +43,11 @@ clang_target_link_libraries(ASTTests
   clangFrontend
   clangLex
   clangSerialization
-  clangTesting
   clangTooling
   )
 
 target_link_libraries(ASTTests
   PRIVATE
+  clangTesting
   LLVMTestingSupport
 )

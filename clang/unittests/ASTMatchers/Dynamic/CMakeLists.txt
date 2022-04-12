@@ -17,6 +17,10 @@ clang_target_link_libraries(DynamicASTMatchersTests
   clangDynamicASTMatchers
   clangFrontend
   clangSerialization
-  clangTesting
   clangTooling
+  )
+
+target_link_libraries(DynamicASTMatchersTests
+  PRIVATE
+  clangTesting
   )
