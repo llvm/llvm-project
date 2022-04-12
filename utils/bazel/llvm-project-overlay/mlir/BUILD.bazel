@@ -952,6 +952,7 @@ td_library(
     name = "OpBaseTdFiles",
     srcs = [
         "include/mlir/IR/AttrTypeBase.td",
+        "include/mlir/IR/DialectBase.td",
         "include/mlir/IR/EnumAttr.td",
         "include/mlir/IR/OpAsmInterface.td",
         "include/mlir/IR/OpBase.td",
