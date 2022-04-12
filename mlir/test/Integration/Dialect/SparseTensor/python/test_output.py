@@ -6,7 +6,6 @@ import os
 import sys
 import tempfile
 
-from mlir import execution_engine
 from mlir import ir
 from mlir import runtime as rt
 
@@ -49,13 +48,10 @@ def expected():
 """
 
 
-def build_compile_and_run_output(attr: st.EncodingAttr, support_lib: str,
-                                 compiler):
+def build_compile_and_run_output(attr: st.EncodingAttr, compiler):
   # Build and Compile.
   module = ir.Module.parse(boilerplate(attr))
-  compiler(module)
-  engine = execution_engine.ExecutionEngine(
-      module, opt_level=0, shared_libs=[support_lib])
+  engine = compiler.compile_and_jit(module)
 
   # Invoke the kernel and compare output.
   with tempfile.TemporaryDirectory() as test_dir:
@@ -88,12 +84,13 @@ def main():
         ir.AffineMap.get_permutation([1, 0])
     ]
     bitwidths = [8, 16, 32, 64]
+    compiler = sparse_compiler.SparseCompiler(
+        options='', opt_level=2, shared_libs=[support_lib])
     for level in levels:
       for ordering in orderings:
         for bwidth in bitwidths:
           attr = st.EncodingAttr.get(level, ordering, bwidth, bwidth)
-          compiler = sparse_compiler.SparseCompiler(options='')
-          build_compile_and_run_output(attr, support_lib, compiler)
+          build_compile_and_run_output(attr, compiler)
           count = count + 1
 
   # CHECK: Passed 16 tests
