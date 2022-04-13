@@ -93,9 +93,9 @@
   !6 = !{i32 1, !"static_rwdata", i32 1}
   !7 = !{i32 1, !"enumsize_buildattr", i32 2}
   !8 = !{i32 1, !"armlib_unavailable", i32 0}
-  !9 = !{i32 1, !"branch-target-enforcement", i32 0}
-  !10 = !{i32 1, !"sign-return-address", i32 0}
-  !11 = !{i32 1, !"sign-return-address-all", i32 0}
+  !9 = !{i32 8, !"branch-target-enforcement", i32 0}
+  !10 = !{i32 8, !"sign-return-address", i32 0}
+  !11 = !{i32 8, !"sign-return-address-all", i32 0}
   !12 = !{!"Component: ARM Compiler 6.17.0.0 (permissive) Tool: armclang [00000000]"}
   !13 = distinct !DISubprogram(name: "arm_max_no_idx_f32", scope: !1, file: !1, line: 5, type: !14, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !23)
   !14 = !DISubroutineType(types: !15)
