@@ -212,8 +212,6 @@ class Symbolizer final {
     ~SymbolizerScope();
    private:
     const Symbolizer *sym_;
-
-    ScopedDisableMallocHooks disable_hooks_;  // Symbolizer can malloc.
   };
 };
 
