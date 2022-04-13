@@ -66,8 +66,8 @@ void test(fmt)        // both-warning {{a function declaration without a prototy
 // comes from merging the function declarations together. The second is the
 // point at which we know the behavior has changed (because we can see the
 // previous declaration at that point), but we've already issued the type
-// warning by that point. It's not ideal to be this chatty, but this situation
+// error by that point. It's not ideal to be this chatty, but this situation
 // should be pretty rare.
-void blapp(int);
-void blapp() { } // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}} \
+void blapp(int); // both-note {{previous declaration is here}}
+void blapp() { } // both-error {{conflicting types for 'blapp'}} \
                  // strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}

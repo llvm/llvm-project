@@ -144,6 +144,10 @@ Improvements to Clang's diagnostics
   cases where the deprecated declarations or definitions of a function without
   a prototype will change behavior in C2x. This diagnostic is grouped under the
   ``-Wstrict-prototypes`` warning group, but is enabled by default.
+- Clang now appropriately issues an error in C when a definition of a function
+  without a prototype and with no arguments is an invalid redeclaration of a
+  function with a prototype. e.g., ``void f(int); void f() {}`` is now properly
+  diagnosed.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
