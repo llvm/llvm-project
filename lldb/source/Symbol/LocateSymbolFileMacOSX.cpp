@@ -40,8 +40,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static CFURLRef (*g_dlsym_DBGCopyFullDSYMURLForUUID)(CFUUIDRef uuid, CFURLRef exec_url) = nullptr;
-static CFDictionaryRef (*g_dlsym_DBGCopyDSYMPropertyLists)(CFURLRef dsym_url) = nullptr;
+static CFURLRef (*g_dlsym_DBGCopyFullDSYMURLForUUID)(
+    CFUUIDRef uuid, CFURLRef exec_url) = nullptr;
+static CFDictionaryRef (*g_dlsym_DBGCopyDSYMPropertyLists)(CFURLRef dsym_url) =
+    nullptr;
 
 int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                                        ModuleSpec &return_module_spec) {
@@ -70,10 +72,15 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 
   if (g_dlsym_DBGCopyFullDSYMURLForUUID == nullptr ||
       g_dlsym_DBGCopyDSYMPropertyLists == nullptr) {
-    void *handle = dlopen ("/System/Library/PrivateFrameworks/DebugSymbols.framework/DebugSymbols", RTLD_LAZY | RTLD_LOCAL);
+    void *handle = dlopen(
+        "/System/Library/PrivateFrameworks/DebugSymbols.framework/DebugSymbols",
+        RTLD_LAZY | RTLD_LOCAL);
     if (handle) {
-      g_dlsym_DBGCopyFullDSYMURLForUUID = (CFURLRef (*)(CFUUIDRef, CFURLRef)) dlsym (handle, "DBGCopyFullDSYMURLForUUID");
-      g_dlsym_DBGCopyDSYMPropertyLists = (CFDictionaryRef (*)(CFURLRef)) dlsym (handle, "DBGCopyDSYMPropertyLists");
+      g_dlsym_DBGCopyFullDSYMURLForUUID =
+          (CFURLRef(*)(CFUUIDRef, CFURLRef))dlsym(handle,
+                                                  "DBGCopyFullDSYMURLForUUID");
+      g_dlsym_DBGCopyDSYMPropertyLists = (CFDictionaryRef(*)(CFURLRef))dlsym(
+          handle, "DBGCopyDSYMPropertyLists");
     }
   }
 
@@ -103,8 +110,8 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                 FALSE));
         }
 
-        CFCReleaser<CFURLRef> dsym_url(
-            g_dlsym_DBGCopyFullDSYMURLForUUID(module_uuid_ref.get(), exec_url.get()));
+        CFCReleaser<CFURLRef> dsym_url(g_dlsym_DBGCopyFullDSYMURLForUUID(
+            module_uuid_ref.get(), exec_url.get()));
         char path[PATH_MAX];
 
         if (dsym_url.get()) {
@@ -612,8 +619,8 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
             &signo,          // Signal int *
             &command_output, // Command output
             std::chrono::seconds(
-               640), // Large timeout to allow for long dsym download times
-            false);  // Don't run in a shell (we don't need shell expansion)
+                640), // Large timeout to allow for long dsym download times
+            false);   // Don't run in a shell (we don't need shell expansion)
         if (error.Success() && exit_status == 0 && !command_output.empty()) {
           CFCData data(CFDataCreateWithBytesNoCopy(
               NULL, (const UInt8 *)command_output.data(), command_output.size(),
