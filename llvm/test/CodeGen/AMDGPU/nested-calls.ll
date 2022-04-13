@@ -13,8 +13,9 @@ declare void @external_void_func_i32(i32) #0
 ; Spill CSR VGPR used for SGPR spilling
 ; GCN: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
-; GCN-DAG: v_writelane_b32 v40, s33, 2
+; GCN-DAG: v_writelane_b32 v41, s33, 0
 ; GCN-DAG: s_mov_b32 s33, s32
 ; GCN-DAG: s_addk_i32 s32, 0x400
 ; GCN-DAG: v_writelane_b32 v40, s30, 0
@@ -26,9 +27,10 @@ declare void @external_void_func_i32(i32) #0
 ; GCN: v_readlane_b32 s30, v40, 0
 
 ; GCN-NEXT: s_addk_i32 s32, 0xfc00
-; GCN-NEXT: v_readlane_b32 s33, v40, 2
+; GCN-NEXT: v_readlane_b32 s33, v41, 0
 ; GCN: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[30:31]

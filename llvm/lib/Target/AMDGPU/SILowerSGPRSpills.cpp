@@ -296,7 +296,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
 
         int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
         assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
-        if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI)) {
+        if (FuncInfo->allocateSGPRSpillToVGPRLane(MF, FI)) {
           NewReservedRegs = true;
           bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
               MI, FI, nullptr, Indexes, LIS);

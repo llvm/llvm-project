@@ -69,25 +69,7 @@ static void getVGPRSpillLaneOrTempRegister(MachineFunction &MF,
 
   // We need to save and restore the current FP/BP.
 
-  // 1: If there is already a VGPR with free lanes, use it. We
-  // may already have to pay the penalty for spilling a CSR VGPR.
-  if (MFI->haveFreeLanesForSGPRSpill(MF, 1)) {
-    int NewFI = FrameInfo.CreateStackObject(4, Align(4), true, nullptr,
-                                            TargetStackID::SGPRSpill);
-
-    if (!MFI->allocateSGPRSpillToVGPR(MF, NewFI))
-      llvm_unreachable("allocate SGPR spill should have worked");
-
-    FrameIndex = NewFI;
-
-    LLVM_DEBUG(auto Spill = MFI->getSGPRToVGPRSpills(NewFI).front();
-               dbgs() << "Spilling " << (IsFP ? "FP" : "BP") << " to  "
-                      << printReg(Spill.VGPR, TRI) << ':' << Spill.Lane
-                      << '\n');
-    return;
-  }
-
-  // 2: Next, try to save the FP/BP in an unused SGPR.
+  // 1: Try to save the FP/BP in an unused SGPR.
   TempSGPR = findScratchNonCalleeSaveRegister(
       MF.getRegInfo(), LiveRegs, AMDGPU::SReg_32_XM0_XEXECRegClass, true);
 
@@ -95,21 +77,20 @@ static void getVGPRSpillLaneOrTempRegister(MachineFunction &MF,
     int NewFI = FrameInfo.CreateStackObject(4, Align(4), true, nullptr,
                                             TargetStackID::SGPRSpill);
 
-    if (TRI->spillSGPRToVGPR() && MFI->allocateSGPRSpillToVGPR(MF, NewFI)) {
-      // 3: There's no free lane to spill, and no free register to save FP/BP,
+    if (TRI->spillSGPRToVGPR() && MFI->allocateSGPRSpillToVGPRLane(
+                                      MF, NewFI, /* IsPrologEpilog */ true)) {
+      // 2: There's no free lane to spill, and no free register to save FP/BP,
       // so we're forced to spill another VGPR to use for the spill.
-      auto Spill = MFI->getSGPRToVGPRSpills(NewFI).front();
-      MFI->allocateWWMSpill(MF, Spill.VGPR);
-
       FrameIndex = NewFI;
 
       LLVM_DEBUG(
+          auto Spill = MFI->getPrologEpilogSGPRSpillToVGPRLanes(NewFI).front();
           dbgs() << (IsFP ? "FP" : "BP") << " requires fallback spill to "
                  << printReg(Spill.VGPR, TRI) << ':' << Spill.Lane << '\n';);
     } else {
       // Remove dead <NewFI> index
       MF.getFrameInfo().RemoveStackObject(NewFI);
-      // 4: If all else fails, spill the FP/BP to memory.
+      // 3: If all else fails, spill the FP/BP to memory.
       FrameIndex = FrameInfo.CreateSpillStackObject(4, Align(4));
       LLVM_DEBUG(dbgs() << "Reserved FI " << FrameIndex << " for spilling "
                         << (IsFP ? "FP" : "BP") << '\n');
@@ -822,7 +803,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
     ArrayRef<SIRegisterInfo::SpilledReg> Spill =
-        FuncInfo->getSGPRToVGPRSpills(FI);
+        FuncInfo->getPrologEpilogSGPRSpillToVGPRLanes(FI);
     assert(Spill.size() == 1);
 
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[0].VGPR)
@@ -1020,7 +1001,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   auto RestoreSGPRFromVGPRLane = [&](Register Reg, const int FI) {
     assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
     ArrayRef<SIRegisterInfo::SpilledReg> Spill =
-        FuncInfo->getSGPRToVGPRSpills(FI);
+        FuncInfo->getPrologEpilogSGPRSpillToVGPRLanes(FI);
     assert(Spill.size() == 1);
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), Reg)
         .addReg(Spill[0].VGPR)
@@ -1266,13 +1247,6 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
     }
   }
 
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto &Reg : MFI->getWWMSpills())
-      MBB.addLiveIn(Reg.first);
-
-    MBB.sortUniqueLiveIns();
-  }
-
   // Ignore the SGPRs the default implementation found.
   SavedVGPRs.clearBitsNotInMask(TRI->getAllVectorRegMask());
 
@@ -1317,6 +1291,14 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
            !MFI->BasePointerSaveIndex && "Re-reserving spill slot for BP");
     getVGPRSpillLaneOrTempRegister(MF, LiveRegs, MFI->SGPRForBPSaveRestoreCopy,
                                    MFI->BasePointerSaveIndex, false);
+  }
+
+  // Mark all lane VGPRs as BB LiveIns.
+  for (MachineBasicBlock &MBB : MF) {
+    for (auto &Reg : MFI->getWWMSpills())
+      MBB.addLiveIn(Reg.first);
+
+    MBB.sortUniqueLiveIns();
   }
 }
 
