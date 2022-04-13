@@ -9,7 +9,7 @@ func.func @l0() {
     %2 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
     %3 = cir.cst(0 : i32) : i32
     cir.store %3, %2 : i32, cir.ptr <i32>
-    cir.loop(cond :  {
+    cir.loop for(cond :  {
       %4 = cir.load %2 : cir.ptr <i32>, i32
       %5 = cir.cst(10 : i32) : i32
       %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
@@ -28,11 +28,50 @@ func.func @l0() {
       cir.yield
     }
   }
+  cir.scope {
+    %2 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
+    %3 = cir.cst(0 : i32) : i32
+    cir.store %3, %2 : i32, cir.ptr <i32>
+    cir.loop while(cond :  {
+      %4 = cir.load %2 : cir.ptr <i32>, i32
+      %5 = cir.cst(10 : i32) : i32
+      %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+      cir.yield loopcondition %6 : !cir.bool
+    }, step :  {
+      cir.yield
+    })  {
+      %4 = cir.load %0 : cir.ptr <i32>, i32
+      %5 = cir.cst(1 : i32) : i32
+      %6 = cir.binop(add, %4, %5) : i32
+      cir.store %6, %0 : i32, cir.ptr <i32>
+      cir.yield
+    }
+  }
+
+  cir.scope {
+    %2 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
+    %3 = cir.cst(0 : i32) : i32
+    cir.store %3, %2 : i32, cir.ptr <i32>
+    cir.loop dowhile(cond :  {
+      %4 = cir.load %2 : cir.ptr <i32>, i32
+      %5 = cir.cst(10 : i32) : i32
+      %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+      cir.yield loopcondition %6 : !cir.bool
+    }, step :  {
+      cir.yield
+    })  {
+      %4 = cir.load %0 : cir.ptr <i32>, i32
+      %5 = cir.cst(1 : i32) : i32
+      %6 = cir.binop(add, %4, %5) : i32
+      cir.store %6, %0 : i32, cir.ptr <i32>
+      cir.yield
+    }
+  }
   cir.return
 }
 
 // CHECK: func @l0
-// CHECK: cir.loop(cond :  {
+// CHECK: cir.loop for(cond :  {
 // CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
 // CHECK-NEXT:     %5 = cir.cst(10 : i32) : i32
 // CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
@@ -50,3 +89,33 @@ func.func @l0() {
 // CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT: }
+
+// CHECK:        cir.loop while(cond :  {
+// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %5 = cir.cst(10 : i32) : i32
+// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+// CHECK-NEXT:     cir.yield loopcondition %6 : !cir.bool
+// CHECK-NEXT:   }, step :  {
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   })  {
+// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %5 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
+// CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   }
+
+// CHECK:        cir.loop dowhile(cond :  {
+// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %5 = cir.cst(10 : i32) : i32
+// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+// CHECK-NEXT:     cir.yield loopcondition %6 : !cir.bool
+// CHECK-NEXT:   }, step :  {
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   })  {
+// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %5 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
+// CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   }

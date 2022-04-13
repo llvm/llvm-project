@@ -773,10 +773,14 @@ void SwitchOp::build(
 //===----------------------------------------------------------------------===//
 
 void LoopOp::build(OpBuilder &builder, OperationState &result,
+                   cir::LoopOpKind kind,
                    function_ref<void(OpBuilder &, Location)> condBuilder,
                    function_ref<void(OpBuilder &, Location)> bodyBuilder,
                    function_ref<void(OpBuilder &, Location)> stepBuilder) {
   OpBuilder::InsertionGuard guard(builder);
+  ::mlir::cir::LoopOpKindAttr kindAttr =
+      cir::LoopOpKindAttr::get(builder.getContext(), kind);
+  result.addAttribute("kind", kindAttr);
 
   Region *condRegion = result.addRegion();
   builder.createBlock(condRegion);

@@ -8,7 +8,7 @@ void l0() {
 }
 
 // CHECK: func @l0
-// CHECK: cir.loop(cond :  {
+// CHECK: cir.loop for(cond :  {
 // CHECK-NEXT:   %0 = cir.cst(true) : !cir.bool
 // CHECK-NEXT:   cir.yield loopcondition %0 : !cir.bool
 // CHECK-NEXT: }, step :  {
@@ -25,7 +25,7 @@ void l1() {
 }
 
 // CHECK: func @l1
-// CHECK: cir.loop(cond :  {
+// CHECK: cir.loop for(cond :  {
 // CHECK-NEXT:   %4 = cir.load %2 : cir.ptr <i32>, i32
 // CHECK-NEXT:   %5 = cir.cst(10 : i32) : i32
 // CHECK-NEXT:   %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
@@ -59,7 +59,7 @@ void l2(bool cond) {
 
 // CHECK: func @l2
 // CHECK:         cir.scope {
-// CHECK-NEXT:     cir.loop(cond :  {
+// CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %3 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
 // CHECK-NEXT:       cir.yield loopcondition %3 : !cir.bool
 // CHECK-NEXT:     }, step :  {
@@ -73,7 +73,7 @@ void l2(bool cond) {
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT:   cir.scope {
-// CHECK-NEXT:     cir.loop(cond :  {
+// CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %3 = cir.cst(true) : !cir.bool
 // CHECK-NEXT:       cir.yield loopcondition %3 : !cir.bool
 // CHECK-NEXT:     }, step :  {
@@ -87,7 +87,7 @@ void l2(bool cond) {
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT:   cir.scope {
-// CHECK-NEXT:     cir.loop(cond :  {
+// CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %3 = cir.cst(1 : i32) : i32
 // CHECK-NEXT:       %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
 // CHECK-NEXT:       cir.yield loopcondition %4 : !cir.bool
@@ -117,7 +117,7 @@ void l3(bool cond) {
 
 // CHECK: func @l3
 // CHECK: cir.scope {
-// CHECK-NEXT:   cir.loop(cond :  {
+// CHECK-NEXT:   cir.loop dowhile(cond :  {
 // CHECK-NEXT:   %3 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
 // CHECK-NEXT:   cir.yield loopcondition %3 : !cir.bool
 // CHECK-NEXT:   }, step :  {
@@ -131,7 +131,7 @@ void l3(bool cond) {
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: cir.scope {
-// CHECK-NEXT:   cir.loop(cond :  {
+// CHECK-NEXT:   cir.loop dowhile(cond :  {
 // CHECK-NEXT:   %3 = cir.cst(true) : !cir.bool
 // CHECK-NEXT:   cir.yield loopcondition %3 : !cir.bool
 // CHECK-NEXT:   }, step :  {
@@ -145,7 +145,7 @@ void l3(bool cond) {
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: cir.scope {
-// CHECK-NEXT:   cir.loop(cond :  {
+// CHECK-NEXT:   cir.loop dowhile(cond :  {
 // CHECK-NEXT:   %3 = cir.cst(1 : i32) : i32
 // CHECK-NEXT:   %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
 // CHECK-NEXT:   cir.yield loopcondition %4 : !cir.bool
