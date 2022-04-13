@@ -189,7 +189,17 @@ llvm::Value *CodeGenFunction::EvaluateExprAsBool(const Expr *E) {
 /// ignoring the result.
 void CodeGenFunction::EmitIgnoredExpr(const Expr *E) {
   if (E->isPRValue())
-    return (void) EmitAnyExpr(E, AggValueSlot::ignored(), true);
+    return (void)EmitAnyExpr(E, AggValueSlot::ignored(), true);
+
+  // if this is a bitfield-resulting conditional operator, we can special case
+  // emit this. The normal 'EmitLValue' version of this is particularly
+  // difficult to codegen for, since creating a single "LValue" for two
+  // different sized arguments here is not particularly doable.
+  if (const auto *CondOp = dyn_cast<AbstractConditionalOperator>(
+          E->IgnoreParenNoopCasts(getContext()))) {
+    if (CondOp->getObjectKind() == OK_BitField)
+      return EmitIgnoredConditionalOperator(CondOp);
+  }
 
   // Just emit it as an l-value and drop the result.
   EmitLValue(E);
@@ -4570,8 +4580,99 @@ static Optional<LValue> EmitLValueOrThrowExpression(CodeGenFunction &CGF,
   return CGF.EmitLValue(Operand);
 }
 
-LValue CodeGenFunction::
-EmitConditionalOperatorLValue(const AbstractConditionalOperator *expr) {
+namespace {
+// Handle the case where the condition is a constant evaluatable simple integer,
+// which means we don't have to separately handle the true/false blocks.
+llvm::Optional<LValue> HandleConditionalOperatorLValueSimpleCase(
+    CodeGenFunction &CGF, const AbstractConditionalOperator *E) {
+  const Expr *condExpr = E->getCond();
+  bool CondExprBool;
+  if (CGF.ConstantFoldsToSimpleInteger(condExpr, CondExprBool)) {
+    const Expr *Live = E->getTrueExpr(), *Dead = E->getFalseExpr();
+    if (!CondExprBool)
+      std::swap(Live, Dead);
+
+    if (!CGF.ContainsLabel(Dead)) {
+      // If the true case is live, we need to track its region.
+      if (CondExprBool)
+        CGF.incrementProfileCounter(E);
+      // If a throw expression we emit it and return an undefined lvalue
+      // because it can't be used.
+      if (auto *ThrowExpr = dyn_cast<CXXThrowExpr>(Live->IgnoreParens())) {
+        CGF.EmitCXXThrowExpr(ThrowExpr);
+        llvm::Type *ElemTy = CGF.ConvertType(Dead->getType());
+        llvm::Type *Ty = llvm::PointerType::getUnqual(ElemTy);
+        return CGF.MakeAddrLValue(
+            Address(llvm::UndefValue::get(Ty), ElemTy, CharUnits::One()),
+            Dead->getType());
+      }
+      return CGF.EmitLValue(Live);
+    }
+  }
+  return llvm::None;
+}
+struct ConditionalInfo {
+  llvm::BasicBlock *lhsBlock, *rhsBlock;
+  Optional<LValue> LHS, RHS;
+};
+
+// Create and generate the 3 blocks for a conditional operator.
+// Leaves the 'current block' in the continuation basic block.
+template<typename FuncTy>
+ConditionalInfo EmitConditionalBlocks(CodeGenFunction &CGF,
+                                      const AbstractConditionalOperator *E,
+                                      const FuncTy &BranchGenFunc) {
+  ConditionalInfo Info{CGF.createBasicBlock("cond.true"),
+                       CGF.createBasicBlock("cond.false")};
+  llvm::BasicBlock *endBlock = CGF.createBasicBlock("cond.end");
+
+  CodeGenFunction::ConditionalEvaluation eval(CGF);
+  CGF.EmitBranchOnBoolExpr(E->getCond(), Info.lhsBlock, Info.rhsBlock,
+                           CGF.getProfileCount(E));
+
+  // Any temporaries created here are conditional.
+  CGF.EmitBlock(Info.lhsBlock);
+  CGF.incrementProfileCounter(E);
+  eval.begin(CGF);
+  Info.LHS = BranchGenFunc(CGF, E->getTrueExpr());
+  eval.end(CGF);
+  Info.lhsBlock = CGF.Builder.GetInsertBlock();
+
+  if (Info.LHS)
+    CGF.Builder.CreateBr(endBlock);
+
+  // Any temporaries created here are conditional.
+  CGF.EmitBlock(Info.rhsBlock);
+  eval.begin(CGF);
+  Info.RHS = BranchGenFunc(CGF, E->getFalseExpr());
+  eval.end(CGF);
+  Info.rhsBlock = CGF.Builder.GetInsertBlock();
+  CGF.EmitBlock(endBlock);
+
+  return Info;
+}
+} // namespace
+
+void CodeGenFunction::EmitIgnoredConditionalOperator(
+    const AbstractConditionalOperator *E) {
+  if (!E->isGLValue()) {
+    // ?: here should be an aggregate.
+    assert(hasAggregateEvaluationKind(E->getType()) &&
+           "Unexpected conditional operator!");
+    return (void)EmitAggExprToLValue(E);
+  }
+
+  OpaqueValueMapping binding(*this, E);
+  if (HandleConditionalOperatorLValueSimpleCase(*this, E))
+    return;
+
+  EmitConditionalBlocks(*this, E, [](CodeGenFunction &CGF, const Expr *E) {
+    CGF.EmitIgnoredExpr(E);
+    return LValue{};
+  });
+}
+LValue CodeGenFunction::EmitConditionalOperatorLValue(
+    const AbstractConditionalOperator *expr) {
   if (!expr->isGLValue()) {
     // ?: here should be an aggregate.
     assert(hasAggregateEvaluationKind(expr->getType()) &&
@@ -4580,84 +4681,38 @@ EmitConditionalOperatorLValue(const AbstractConditionalOperator *expr) {
   }
 
   OpaqueValueMapping binding(*this, expr);
+  if (llvm::Optional<LValue> Res =
+          HandleConditionalOperatorLValueSimpleCase(*this, expr))
+    return *Res;
 
-  const Expr *condExpr = expr->getCond();
-  bool CondExprBool;
-  if (ConstantFoldsToSimpleInteger(condExpr, CondExprBool)) {
-    const Expr *live = expr->getTrueExpr(), *dead = expr->getFalseExpr();
-    if (!CondExprBool) std::swap(live, dead);
+  ConditionalInfo Info = EmitConditionalBlocks(
+      *this, expr, [](CodeGenFunction &CGF, const Expr *E) {
+        return EmitLValueOrThrowExpression(CGF, E);
+      });
 
-    if (!ContainsLabel(dead)) {
-      // If the true case is live, we need to track its region.
-      if (CondExprBool)
-        incrementProfileCounter(expr);
-      // If a throw expression we emit it and return an undefined lvalue
-      // because it can't be used.
-      if (auto *ThrowExpr = dyn_cast<CXXThrowExpr>(live->IgnoreParens())) {
-        EmitCXXThrowExpr(ThrowExpr);
-        llvm::Type *ElemTy = ConvertType(dead->getType());
-        llvm::Type *Ty = llvm::PointerType::getUnqual(ElemTy);
-        return MakeAddrLValue(
-            Address(llvm::UndefValue::get(Ty), ElemTy, CharUnits::One()),
-            dead->getType());
-      }
-      return EmitLValue(live);
-    }
-  }
-
-  llvm::BasicBlock *lhsBlock = createBasicBlock("cond.true");
-  llvm::BasicBlock *rhsBlock = createBasicBlock("cond.false");
-  llvm::BasicBlock *contBlock = createBasicBlock("cond.end");
-
-  ConditionalEvaluation eval(*this);
-  EmitBranchOnBoolExpr(condExpr, lhsBlock, rhsBlock, getProfileCount(expr));
-
-  // Any temporaries created here are conditional.
-  EmitBlock(lhsBlock);
-  incrementProfileCounter(expr);
-  eval.begin(*this);
-  Optional<LValue> lhs =
-      EmitLValueOrThrowExpression(*this, expr->getTrueExpr());
-  eval.end(*this);
-
-  if (lhs && !lhs->isSimple())
+  if ((Info.LHS && !Info.LHS->isSimple()) ||
+      (Info.RHS && !Info.RHS->isSimple()))
     return EmitUnsupportedLValue(expr, "conditional operator");
 
-  lhsBlock = Builder.GetInsertBlock();
-  if (lhs)
-    Builder.CreateBr(contBlock);
-
-  // Any temporaries created here are conditional.
-  EmitBlock(rhsBlock);
-  eval.begin(*this);
-  Optional<LValue> rhs =
-      EmitLValueOrThrowExpression(*this, expr->getFalseExpr());
-  eval.end(*this);
-  if (rhs && !rhs->isSimple())
-    return EmitUnsupportedLValue(expr, "conditional operator");
-  rhsBlock = Builder.GetInsertBlock();
-
-  EmitBlock(contBlock);
-
-  if (lhs && rhs) {
-    Address lhsAddr = lhs->getAddress(*this);
-    Address rhsAddr = rhs->getAddress(*this);
+  if (Info.LHS && Info.RHS) {
+    Address lhsAddr = Info.LHS->getAddress(*this);
+    Address rhsAddr = Info.RHS->getAddress(*this);
     llvm::PHINode *phi = Builder.CreatePHI(lhsAddr.getType(), 2, "cond-lvalue");
-    phi->addIncoming(lhsAddr.getPointer(), lhsBlock);
-    phi->addIncoming(rhsAddr.getPointer(), rhsBlock);
+    phi->addIncoming(lhsAddr.getPointer(), Info.lhsBlock);
+    phi->addIncoming(rhsAddr.getPointer(), Info.rhsBlock);
     Address result(phi, lhsAddr.getElementType(),
                    std::min(lhsAddr.getAlignment(), rhsAddr.getAlignment()));
     AlignmentSource alignSource =
-      std::max(lhs->getBaseInfo().getAlignmentSource(),
-               rhs->getBaseInfo().getAlignmentSource());
+        std::max(Info.LHS->getBaseInfo().getAlignmentSource(),
+                 Info.RHS->getBaseInfo().getAlignmentSource());
     TBAAAccessInfo TBAAInfo = CGM.mergeTBAAInfoForConditionalOperator(
-        lhs->getTBAAInfo(), rhs->getTBAAInfo());
+        Info.LHS->getTBAAInfo(), Info.RHS->getTBAAInfo());
     return MakeAddrLValue(result, expr->getType(), LValueBaseInfo(alignSource),
                           TBAAInfo);
   } else {
-    assert((lhs || rhs) &&
+    assert((Info.LHS || Info.RHS) &&
            "both operands of glvalue conditional are throw-expressions?");
-    return lhs ? *lhs : *rhs;
+    return Info.LHS ? *Info.LHS : *Info.RHS;
   }
 }
 

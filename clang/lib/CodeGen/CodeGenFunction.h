@@ -3915,6 +3915,7 @@ public:
   LValue EmitObjCIsaExpr(const ObjCIsaExpr *E);
   LValue EmitCompoundLiteralLValue(const CompoundLiteralExpr *E);
   LValue EmitInitListLValue(const InitListExpr *E);
+  void EmitIgnoredConditionalOperator(const AbstractConditionalOperator *E);
   LValue EmitConditionalOperatorLValue(const AbstractConditionalOperator *E);
   LValue EmitCastLValue(const CastExpr *E);
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
