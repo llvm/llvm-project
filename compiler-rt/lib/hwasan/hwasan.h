@@ -172,14 +172,15 @@ void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
 
 }  // namespace __hwasan
 
-#define HWASAN_MALLOC_HOOK(ptr, size)       \
+#define HWASAN_MALLOC_HOOK(ptr, size)     \
   do {                                    \
     if (&__sanitizer_malloc_hook) {       \
       __sanitizer_malloc_hook(ptr, size); \
     }                                     \
     RunMallocHooks(ptr, size);            \
   } while (false)
-#define HWASAN_FREE_HOOK(ptr)       \
+
+#define HWASAN_FREE_HOOK(ptr)     \
   do {                            \
     if (&__sanitizer_free_hook) { \
       __sanitizer_free_hook(ptr); \

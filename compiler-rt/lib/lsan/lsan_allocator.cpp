@@ -104,7 +104,8 @@ void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
   if (cleared && allocator.FromPrimary(p))
     memset(p, 0, size);
   RegisterAllocation(stack, p, size);
-  if (&__sanitizer_malloc_hook) __sanitizer_malloc_hook(p, size);
+  if (&__sanitizer_malloc_hook)
+    __sanitizer_malloc_hook(p, size);
   RunMallocHooks(p, size);
   return p;
 }
@@ -120,7 +121,8 @@ static void *Calloc(uptr nmemb, uptr size, const StackTrace &stack) {
 }
 
 void Deallocate(void *p) {
-  if (&__sanitizer_free_hook) __sanitizer_free_hook(p);
+  if (&__sanitizer_free_hook)
+    __sanitizer_free_hook(p);
   RunFreeHooks(p);
   RegisterDeallocation(p);
   allocator.Deallocate(GetAllocatorCache(), p);

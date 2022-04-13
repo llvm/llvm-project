@@ -84,6 +84,7 @@ void *MemprofDlSymNext(const char *sym);
       __sanitizer_malloc_hook(ptr, size);                                      \
     RunMallocHooks(ptr, size);                                                 \
   } while (false)
+
 #define MEMPROF_FREE_HOOK(ptr)                                                 \
   do {                                                                         \
     if (&__sanitizer_free_hook)                                                \
