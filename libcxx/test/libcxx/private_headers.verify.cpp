@@ -301,6 +301,7 @@ END-SCRIPT
 #include <__iterator/iterator_traits.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iterator_traits.h'}}
 #include <__iterator/mergeable.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/mergeable.h'}}
 #include <__iterator/move_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_iterator.h'}}
+#include <__iterator/move_sentinel.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_sentinel.h'}}
 #include <__iterator/next.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/next.h'}}
 #include <__iterator/ostream_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/ostream_iterator.h'}}
 #include <__iterator/ostreambuf_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/ostreambuf_iterator.h'}}

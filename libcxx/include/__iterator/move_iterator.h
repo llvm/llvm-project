@@ -33,7 +33,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 template<class _Iter, class = void>
 struct __move_iter_category_base {};
 
@@ -51,16 +51,16 @@ template<class _Iter, class _Sent>
 concept __move_iter_comparable = requires {
     { declval<const _Iter&>() == declval<_Sent>() } -> convertible_to<bool>;
 };
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
 template <class _Iter>
 class _LIBCPP_TEMPLATE_VIS move_iterator
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
     : public __move_iter_category_base<_Iter>
 #endif
 {
 public:
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
     using iterator_type = _Iter;
     using iterator_concept = input_iterator_tag;
     // iterator_category is inherited and not always present
@@ -90,9 +90,9 @@ public:
     typedef typename iterator_traits<iterator_type>::reference reference;
 #endif
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
     _LIBCPP_HIDE_FROM_ABI constexpr
     explicit move_iterator(_Iter __i) : __current_(std::move(__i)) {}
 
@@ -172,7 +172,7 @@ public:
     move_iterator& operator++() { ++__current_; return *this; }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     move_iterator operator++(int) { move_iterator __tmp(*this); ++__current_; return __tmp; }
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     move_iterator& operator--() { --__current_; return *this; }
@@ -187,7 +187,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     move_iterator& operator-=(difference_type __n) { __current_ -= __n; return *this; }
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
     template<sentinel_for<_Iter> _Sent>
     friend _LIBCPP_HIDE_FROM_ABI constexpr
     bool operator==(const move_iterator& __x, const move_sentinel<_Sent>& __y)
@@ -224,7 +224,7 @@ public:
     {
         return ranges::iter_swap(__x.__current_, __y.__current_);
     }
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
 private:
     template<class _It2> friend class move_iterator;
@@ -277,11 +277,7 @@ bool operator>=(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& _
 }
 
 #if _LIBCPP_STD_VER > 17
-# ifdef _LIBCPP_HAS_NO_CONCEPTS
-template <class _Iter1, class _Iter2>
-# else
 template <class _Iter1, three_way_comparable_with<_Iter1> _Iter2>
-# endif // _LIBCPP_HAS_NO_CONCEPTS
 inline _LIBCPP_HIDE_FROM_ABI constexpr
 auto operator<=>(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y)
     -> compare_three_way_result_t<_Iter1, _Iter2>
@@ -306,9 +302,9 @@ operator-(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y)
 {
     return __x.base() - __y.base();
 }
-#endif
+#endif // !_LIBCPP_CXX03_LANG
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#if _LIBCPP_STD_VER > 17
 template <class _Iter>
 inline _LIBCPP_HIDE_FROM_ABI constexpr
 move_iterator<_Iter> operator+(iter_difference_t<_Iter> __n, const move_iterator<_Iter>& __x)
@@ -324,7 +320,7 @@ operator+(typename move_iterator<_Iter>::difference_type __n, const move_iterato
 {
     return move_iterator<_Iter>(__x.base() + __n);
 }
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+#endif // _LIBCPP_STD_VER > 17
 
 template <class _Iter>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
