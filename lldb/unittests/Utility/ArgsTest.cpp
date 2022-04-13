@@ -328,14 +328,25 @@ TEST(ArgsTest, GetShellSafeArgument) {
   // Normal characters and expressions that shouldn't be escaped.
   EXPECT_EQ(Args::GetShellSafeArgument(zsh, "aA$1*"), "aA$1*");
 
-  // String that doesn't need to be escaped
-  EXPECT_EQ(Args::GetShellSafeArgument(bash, "a"), "a");
+  // Test escaping bash special characters.
+  EXPECT_EQ(Args::GetShellSafeArgument(bash, R"( '"<>()&;)"),
+            R"(\ \'\"\<\>\(\)\&\;)");
+  // Normal characters and globbing expressions that shouldn't be escaped.
+  EXPECT_EQ(Args::GetShellSafeArgument(bash, "aA$1*"), "aA$1*");
 
-  // Try escaping with tcsh and the tcsh-specific "$" escape.
+  // Test escaping tcsh special characters.
   FileSpec tcsh("/bin/tcsh", FileSpec::Style::posix);
-  EXPECT_EQ(Args::GetShellSafeArgument(tcsh, "a$b"), "a\\$b");
-  // Bash however doesn't need escaping for "$".
-  EXPECT_EQ(Args::GetShellSafeArgument(bash, "a$b"), "a$b");
+  EXPECT_EQ(Args::GetShellSafeArgument(tcsh, R"( '"<>()&$;)"),
+            R"(\ \'\"\<\>\(\)\&\$\;)");
+  // Normal characters and globbing expressions that shouldn't be escaped.
+  EXPECT_EQ(Args::GetShellSafeArgument(tcsh, "aA1*"), "aA1*");
+
+  // Test escaping sh special characters.
+  FileSpec sh("/bin/sh", FileSpec::Style::posix);
+  EXPECT_EQ(Args::GetShellSafeArgument(sh, R"( '"<>()&;)"),
+            R"(\ \'\"\<\>\(\)\&\;)");
+  // Normal characters and globbing expressions that shouldn't be escaped.
+  EXPECT_EQ(Args::GetShellSafeArgument(sh, "aA$1*"), "aA$1*");
 
   // Try escaping with an unknown shell.
   FileSpec unknown_shell("/bin/unknown_shell", FileSpec::Style::posix);
