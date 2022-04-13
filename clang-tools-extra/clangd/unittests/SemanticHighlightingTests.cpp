@@ -795,7 +795,19 @@ sizeof...($TemplateParameter[[Elements]]);
         typedef int $Primitive_decl[[MyTypedef]];
         enum $Enum_decl[[MyEnum]] : $Primitive[[MyTypedef]] {};
       )cpp",
-  };
+      // Issue 1096
+      R"cpp(
+        void $Function_decl[[Foo]]();
+        // Use <: :> digraphs for deprecated attribute to avoid conflict with annotation syntax
+        <:<:deprecated:>:> void $Function_decl_deprecated[[Foo]](int* $Parameter_decl[[x]]);
+        void $Function_decl[[Foo]](int $Parameter_decl[[x]]);
+        template <typename $TemplateParameter_decl[[T]]>
+        void $Function_decl[[Bar]]($TemplateParameter[[T]] $Parameter_decl[[x]]) {
+            $Function_deprecated[[Foo]]($Parameter[[x]]); 
+            $Function_deprecated[[Foo]]($Parameter[[x]]); 
+            $Function_deprecated[[Foo]]($Parameter[[x]]); 
+        }
+      )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.
     // They're tested separately.
