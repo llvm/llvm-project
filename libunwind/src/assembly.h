@@ -209,7 +209,7 @@
 #if defined(__powerpc64__)
 #define VBYTE_LEN 8
 #define CSECT_ALIGN 3
-#elif defined(__ppc__)
+#else
 #define VBYTE_LEN 4
 #define CSECT_ALIGN 2
 #endif
