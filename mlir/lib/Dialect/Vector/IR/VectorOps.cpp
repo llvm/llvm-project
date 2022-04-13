@@ -4320,6 +4320,10 @@ LogicalResult vector::TransposeOp::verify() {
   return success();
 }
 
+Optional<SmallVector<int64_t, 4>> TransposeOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getResultType().getShape());
+}
+
 namespace {
 
 // Rewrites two back-to-back TransposeOp operations into a single TransposeOp.

@@ -2217,6 +2217,7 @@ def Vector_CreateMaskOp :
 
 def Vector_TransposeOp :
   Vector_Op<"transpose", [NoSideEffect,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyVector:$vector, I64ArrayAttr:$transp)>,
