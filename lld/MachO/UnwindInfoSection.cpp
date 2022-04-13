@@ -95,14 +95,43 @@ using namespace lld::macho;
 // TODO(gkm): prune __eh_frame entries superseded by __unwind_info, PR50410
 // TODO(gkm): how do we align the 2nd-level pages?
 
-template <class Ptr> struct CompactUnwindLayout {
-  Ptr functionAddress;
+// The offsets of various fields in the on-disk representation of each compact
+// unwind entry.
+struct CompactUnwindOffsets {
+  uint32_t functionAddress;
   uint32_t functionLength;
-  compact_unwind_encoding_t encoding;
-  Ptr personality;
-  Ptr lsda;
+  uint32_t encoding;
+  uint32_t personality;
+  uint32_t lsda;
+
+  CompactUnwindOffsets(size_t wordSize) {
+    if (wordSize == 8)
+      init<uint64_t>();
+    else {
+      assert(wordSize == 4);
+      init<uint32_t>();
+    }
+  }
+
+private:
+  template <class Ptr> void init() {
+    functionAddress = offsetof(Layout<Ptr>, functionAddress);
+    functionLength = offsetof(Layout<Ptr>, functionLength);
+    encoding = offsetof(Layout<Ptr>, encoding);
+    personality = offsetof(Layout<Ptr>, personality);
+    lsda = offsetof(Layout<Ptr>, lsda);
+  }
+
+  template <class Ptr> struct Layout {
+    Ptr functionAddress;
+    uint32_t functionLength;
+    compact_unwind_encoding_t encoding;
+    Ptr personality;
+    Ptr lsda;
+  };
 };
 
+// LLD's internal representation of a compact unwind entry.
 struct CompactUnwindEntry {
   uint64_t functionAddress;
   uint32_t functionLength;
@@ -122,16 +151,24 @@ struct SecondLevelPage {
   EncodingMap localEncodingIndexes;
 };
 
-template <class Ptr>
+// UnwindInfoSectionImpl allows us to avoid cluttering our header file with a
+// lengthy definition of UnwindInfoSection.
 class UnwindInfoSectionImpl final : public UnwindInfoSection {
 public:
-  void prepareRelocations(ConcatInputSection *) override;
-  void relocateCompactUnwind(std::vector<CompactUnwindEntry> &);
-  void encodePersonalities();
+  UnwindInfoSectionImpl() : cuOffsets(target->wordSize) {}
+  uint64_t getSize() const override { return unwindInfoSize; }
+  void prepareRelocations() override;
   void finalize() override;
   void writeTo(uint8_t *buf) const override;
 
 private:
+  void prepareRelocations(ConcatInputSection *);
+  void relocateCompactUnwind(std::vector<CompactUnwindEntry> &);
+  void encodePersonalities();
+
+  uint64_t unwindInfoSize = 0;
+  std::vector<decltype(symbols)::value_type> symbolsVec;
+  CompactUnwindOffsets cuOffsets;
   std::vector<std::pair<compact_unwind_encoding_t, size_t>> commonEncodings;
   EncodingMap commonEncodingIndexes;
   // The entries here will be in the same order as their originating symbols
@@ -153,15 +190,6 @@ private:
 UnwindInfoSection::UnwindInfoSection()
     : SyntheticSection(segment_names::text, section_names::unwindInfo) {
   align = 4;
-}
-
-void UnwindInfoSection::prepareRelocations() {
-  // This iteration needs to be deterministic, since prepareRelocations may add
-  // entries to the GOT. Hence the use of a MapVector for
-  // UnwindInfoSection::symbols.
-  for (const Defined *d : make_second_range(symbols))
-    if (d->unwindEntry)
-      prepareRelocations(d->unwindEntry);
 }
 
 // Record function symbols that may need entries emitted in __unwind_info, which
@@ -189,13 +217,21 @@ void UnwindInfoSection::addSymbol(const Defined *d) {
   }
 }
 
+void UnwindInfoSectionImpl::prepareRelocations() {
+  // This iteration needs to be deterministic, since prepareRelocations may add
+  // entries to the GOT. Hence the use of a MapVector for
+  // UnwindInfoSection::symbols.
+  for (const Defined *d : make_second_range(symbols))
+    if (d->unwindEntry)
+      prepareRelocations(d->unwindEntry);
+}
+
 // Compact unwind relocations have different semantics, so we handle them in a
 // separate code path from regular relocations. First, we do not wish to add
 // rebase opcodes for __LD,__compact_unwind, because that section doesn't
 // actually end up in the final binary. Second, personality pointers always
 // reside in the GOT and must be treated specially.
-template <class Ptr>
-void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
+void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
   assert(!isec->shouldOmitFromOutput() &&
          "__compact_unwind section should not be omitted");
 
@@ -212,7 +248,7 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
     // compact unwind entries that references them, and thus appear as section
     // relocs. There is no need to prepare them. We only prepare relocs for
     // personality functions.
-    if (r.offset != offsetof(CompactUnwindLayout<Ptr>, personality))
+    if (r.offset != cuOffsets.personality)
       continue;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
@@ -285,8 +321,7 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
 // before converting it to post-link form. There should only be absolute
 // relocations here: since we are not emitting the pre-link CU section, there
 // is no source address to make a relative location meaningful.
-template <class Ptr>
-void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
+void UnwindInfoSectionImpl::relocateCompactUnwind(
     std::vector<CompactUnwindEntry> &cuEntries) {
   parallelForEachN(0, symbolsVec.size(), [&](size_t i) {
     CompactUnwindEntry &cu = cuEntries[i];
@@ -296,15 +331,14 @@ void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
       return;
 
     auto buf = reinterpret_cast<const uint8_t *>(d->unwindEntry->data.data()) -
-               sizeof(Ptr);
-    cu.functionLength = support::endian::read32le(
-        buf + offsetof(CompactUnwindLayout<Ptr>, functionLength));
-    cu.encoding = support::endian::read32le(
-        buf + offsetof(CompactUnwindLayout<Ptr>, encoding));
+               target->wordSize;
+    cu.functionLength =
+        support::endian::read32le(buf + cuOffsets.functionLength);
+    cu.encoding = support::endian::read32le(buf + cuOffsets.encoding);
     for (const Reloc &r : d->unwindEntry->relocs) {
-      if (r.offset == offsetof(CompactUnwindLayout<Ptr>, personality)) {
+      if (r.offset == cuOffsets.personality) {
         cu.personality = r.referent.get<Symbol *>();
-      } else if (r.offset == offsetof(CompactUnwindLayout<Ptr>, lsda)) {
+      } else if (r.offset == cuOffsets.lsda) {
         if (auto *referentSym = r.referent.dyn_cast<Symbol *>())
           cu.lsda = cast<Defined>(referentSym)->isec;
         else
@@ -316,7 +350,7 @@ void UnwindInfoSectionImpl<Ptr>::relocateCompactUnwind(
 
 // There should only be a handful of unique personality pointers, so we can
 // encode them as 2-bit indices into a small array.
-template <class Ptr> void UnwindInfoSectionImpl<Ptr>::encodePersonalities() {
+void UnwindInfoSectionImpl::encodePersonalities() {
   for (size_t idx : cuIndices) {
     CompactUnwindEntry &cu = cuEntries[idx];
     if (cu.personality == nullptr)
@@ -366,7 +400,7 @@ static bool canFoldEncoding(compact_unwind_encoding_t encoding) {
 
 // Scan the __LD,__compact_unwind entries and compute the space needs of
 // __TEXT,__unwind_info and __TEXT,__eh_frame.
-template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
+void UnwindInfoSectionImpl::finalize() {
   if (symbols.empty())
     return;
 
@@ -520,8 +554,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
 
 // All inputs are relocated and output addresses are known, so write!
 
-template <class Ptr>
-void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
+void UnwindInfoSectionImpl::writeTo(uint8_t *buf) const {
   assert(!cuIndices.empty() && "call only if there is unwind info");
 
   // section header
@@ -631,8 +664,5 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
 }
 
 UnwindInfoSection *macho::makeUnwindInfoSection() {
-  if (target->wordSize == 8)
-    return make<UnwindInfoSectionImpl<uint64_t>>();
-  else
-    return make<UnwindInfoSectionImpl<uint32_t>>();
+  return make<UnwindInfoSectionImpl>();
 }

@@ -23,19 +23,15 @@ public:
   // If all functions are free of unwind info, we can omit the unwind info
   // section entirely.
   bool isNeeded() const override { return !allEntriesAreOmitted; }
-  uint64_t getSize() const override { return unwindInfoSize; }
   void addSymbol(const Defined *);
-  void prepareRelocations();
+  virtual void prepareRelocations() = 0;
 
 protected:
   UnwindInfoSection();
-  virtual void prepareRelocations(ConcatInputSection *) = 0;
 
   llvm::MapVector<std::pair<const InputSection *, uint64_t /*Defined::value*/>,
                   const Defined *>
       symbols;
-  std::vector<decltype(symbols)::value_type> symbolsVec;
-  uint64_t unwindInfoSize = 0;
   bool allEntriesAreOmitted = true;
 };
 
