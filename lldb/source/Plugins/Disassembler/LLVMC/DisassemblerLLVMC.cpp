@@ -10,6 +10,7 @@
 
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -22,6 +23,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
@@ -1177,12 +1179,13 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       features_str += "+dspr2,";
   }
 
-  // If any AArch64 variant, enable latest ISA with any optional
-  // extensions like MTE.
+  // If any AArch64 variant, enable latest ISA with all extensions.
   if (triple.isAArch64()) {
-    features_str += "+v9.3a,+mte,+sm4,+sha2,+sha3,+aes,+fp16fml,+sve2-aes,+"
-                    "sve2-sm4,+sve2-sha3,+sve2-bitperm,+f32mm,+f64mm,+tme,+"
-                    "ls64,+sme,+sme-f64,+sme-i64,+spe,+rand,+brbe";
+    features_str += "+v9.3a,";
+    std::vector<llvm::StringRef> features;
+    // Get all possible features
+    llvm::AArch64::getExtensionFeatures(-1, features);
+    features_str += llvm::join(features, ",");
 
     if (triple.getVendor() == llvm::Triple::Apple)
       cpu = "apple-latest";

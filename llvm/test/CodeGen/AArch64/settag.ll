@@ -116,12 +116,13 @@ entry:
   ret void
 }
 
-define void @stg_alloca1() {
+define void @stg_alloca1() uwtable {
 ; CHECK-LABEL: stg_alloca1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    stg sp, [sp], #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %a = alloca i8, i32 16, align 16
@@ -129,7 +130,7 @@ entry:
   ret void
 }
 
-define void @stg_alloca5() {
+define void @stg_alloca5() uwtable {
 ; CHECK-LABEL: stg_alloca5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #80
@@ -137,6 +138,7 @@ define void @stg_alloca5() {
 ; CHECK-NEXT:    st2g sp, [sp, #32]
 ; CHECK-NEXT:    stg sp, [sp, #64]
 ; CHECK-NEXT:    st2g sp, [sp], #80
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %a = alloca i8, i32 80, align 16
@@ -144,7 +146,7 @@ entry:
   ret void
 }
 
-define void @stg_alloca17() {
+define void @stg_alloca17() uwtable {
 ; CHECK-LABEL: stg_alloca17:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #288
@@ -159,7 +161,10 @@ define void @stg_alloca17() {
 ; CHECK-NEXT:    cbnz x8, .LBB11_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    stg sp, [sp], #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
 entry:
   %a = alloca i8, i32 272, align 16
