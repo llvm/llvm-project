@@ -13,91 +13,91 @@ declare i64 @strnlen(i8*, i64)
 @s7 = constant [8 x i8] c"1234567\00"
 
 
-; Fold strnlen (%0 ? s3 : s5, 0) to 0.
+; Fold strnlen (C ? s3 : s5, 0) to 0.
 
-define i64 @fold_strnlen_s3_s5_0(i1 %0) {
+define i64 @fold_strnlen_s3_s5_0(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_0(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[TMP0:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 ; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 0)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %ptr = select i1 %0, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+  %ptr = select i1 %C, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 
   %len = call i64 @strnlen(i8* %ptr, i64 0)
   ret i64 %len
 }
 
 
-; Fold strnlen (%0 ? s3 : s5, 1) to 1.
+; Fold strnlen (C ? s3 : s5, 1) to 1.
 
-define i64 @fold_strnlen_s3_s5_1(i1 %0) {
+define i64 @fold_strnlen_s3_s5_1(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_1(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[TMP0:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 ; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 1)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %ptr = select i1 %0, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+  %ptr = select i1 %C, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 
   %len = call i64 @strnlen(i8* %ptr, i64 1)
   ret i64 %len
 }
 
 
-; Fold strnlen (%0 ? s3 : s5, 3) to 3.
+; Fold strnlen (C ? s3 : s5, 3) to 3.
 
-define i64 @fold_strnlen_s3_s5_3(i1 %0) {
+define i64 @fold_strnlen_s3_s5_3(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_3(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[TMP0:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 ; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 3)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %ptr = select i1 %0, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+  %ptr = select i1 %C, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 
   %len = call i64 @strnlen(i8* %ptr, i64 3)
   ret i64 %len
 }
 
 
-; Fold strnlen (%0 ? s3 : s5, 4) to %0 ? 3 : 4.
+; Fold strnlen (C ? s3 : s5, 4) to C ? 3 : 4.
 
-define i64 @fold_strnlen_s3_s5_4(i1 %0) {
+define i64 @fold_strnlen_s3_s5_4(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_4(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[TMP0:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 ; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 4)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %ptr = select i1 %0, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+  %ptr = select i1 %C, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 
   %len = call i64 @strnlen(i8* %ptr, i64 4)
   ret i64 %len
 }
 
 
-; Fold strnlen (%0 ? s3 : s5, 5) to %0 ? 3 : 5.
+; Fold strnlen (C ? s3 : s5, 5) to C ? 3 : 5.
 
-define i64 @fold_strnlen_s3_s5_5(i1 %0) {
+define i64 @fold_strnlen_s3_s5_5(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_5(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[TMP0:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 ; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 5)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %ptr = select i1 %0, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+  %ptr = select i1 %C, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 
   %len = call i64 @strnlen(i8* %ptr, i64 5)
   ret i64 %len
 }
 
 
-; Fold strnlen (%0 ? s3 : s5, 6) to %0 ? 3 : 5.
+; Fold strnlen (C ? s3 : s5, 6) to C ? 3 : 5.
 
-define i64 @fold_strnlen_s5_6(i1 %0) {
+define i64 @fold_strnlen_s5_6(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s5_6(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[TMP0:%.*]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 ; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 6)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
-  %ptr = select i1 %0, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
+  %ptr = select i1 %C, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 
   %len = call i64 @strnlen(i8* %ptr, i64 6)
   ret i64 %len
@@ -107,22 +107,22 @@ define i64 @fold_strnlen_s5_6(i1 %0) {
 ; Fold strnlen(E, N) with E being two conditional expressions:
 ;   strlen (x == 3 ? s3 : x == 5 ? s5 : s7, 4) to x == 3 ? 3 : 4.
 
-define i64 @fold_strnlen_s3_s5_s7_4(i32 %0) {
+define i64 @fold_strnlen_s3_s5_s7_4(i32 %X) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_s7_4(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 5
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i64 @strnlen(i8* [[TMP5]], i64 4)
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[X_EQ_3:%.*]] = icmp eq i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[X_EQ_5:%.*]] = icmp eq i32 [[X]], 5
+; CHECK-NEXT:    [[SEL_X_EQ_5:%.*]] = select i1 [[X_EQ_5]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
+; CHECK-NEXT:    [[SEL_X_EQ_3:%.*]] = select i1 [[X_EQ_3]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* [[SEL_X_EQ_5]]
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* [[SEL_X_EQ_3]], i64 4)
+; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
-  %2 = icmp eq i32 %0, 3
-  %3 = icmp eq i32 %0, 5
-  %4 = select i1 %3, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
-  %5 = select i1 %2, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* %4
-  %6 = tail call i64 @strnlen(i8* %5, i64 4)
-  ret i64 %6
+  %x_eq_3 = icmp eq i32 %X, 3
+  %x_eq_5 = icmp eq i32 %X, 5
+  %sel_x_eq_5 = select i1 %x_eq_5, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
+  %sel_x_eq_3 = select i1 %x_eq_3, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* %sel_x_eq_5
+  %len = tail call i64 @strnlen(i8* %sel_x_eq_3, i64 4)
+  ret i64 %len
 }
 
 
@@ -130,22 +130,22 @@ define i64 @fold_strnlen_s3_s5_s7_4(i32 %0) {
 ; but with N == 6:
 ;   strlen (x == 3 ? s3 : x == 5 ? s5 : s7, 6) to x == 3 ? 3 : x == 5 ? 5 : 6.
 
-define i64 @fold_strnlen_s3_s5_s7_6(i32 %0) {
+define i64 @fold_strnlen_s3_s5_s7_6(i32 %X) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_s7_6(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 5
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i64 @strnlen(i8* [[TMP5]], i64 6)
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[X_EQ_3:%.*]] = icmp eq i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[X_EQ_5:%.*]] = icmp eq i32 [[X]], 5
+; CHECK-NEXT:    [[SEL_X_EQ_5:%.*]] = select i1 [[X_EQ_5]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
+; CHECK-NEXT:    [[SEL_X_EQ_3:%.*]] = select i1 [[X_EQ_3]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* [[SEL_X_EQ_5]]
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* [[SEL_X_EQ_3]], i64 6)
+; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
-  %2 = icmp eq i32 %0, 3
-  %3 = icmp eq i32 %0, 5
-  %4 = select i1 %3, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
-  %5 = select i1 %2, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* %4
-  %6 = tail call i64 @strnlen(i8* %5, i64 6)
-  ret i64 %6
+  %x_eq_3 = icmp eq i32 %X, 3
+  %x_eq_5 = icmp eq i32 %X, 5
+  %sel_x_eq_5 = select i1 %x_eq_5, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
+  %sel_x_eq_3 = select i1 %x_eq_3, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* %sel_x_eq_5
+  %len = tail call i64 @strnlen(i8* %sel_x_eq_3, i64 6)
+  ret i64 %len
 }
 
 
@@ -153,20 +153,20 @@ define i64 @fold_strnlen_s3_s5_s7_6(i32 %0) {
 ; but with N == 8:
 ;   strlen (x == 3 ? s3 : x == 5 ? s5 : s7, 8) to x == 3 ? 3 : x == 5 ? 5 : 7.
 
-define i64 @fold_strnlen_s3_s5_s7_8(i32 %0) {
+define i64 @fold_strnlen_s3_s5_s7_8(i32 %X) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_s7_8(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 5
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i64 @strnlen(i8* [[TMP5]], i64 8)
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[X_EQ_3:%.*]] = icmp eq i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[X_EQ_5:%.*]] = icmp eq i32 [[X]], 5
+; CHECK-NEXT:    [[SEL_X_EQ_5:%.*]] = select i1 [[X_EQ_5]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
+; CHECK-NEXT:    [[SEL_X_EQ_3:%.*]] = select i1 [[X_EQ_3]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* [[SEL_X_EQ_5]]
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* [[SEL_X_EQ_3]], i64 8)
+; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
-  %2 = icmp eq i32 %0, 3
-  %3 = icmp eq i32 %0, 5
-  %4 = select i1 %3, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
-  %5 = select i1 %2, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* %4
-  %6 = tail call i64 @strnlen(i8* %5, i64 8)
-  ret i64 %6
+  %x_eq_3 = icmp eq i32 %X, 3
+  %x_eq_5 = icmp eq i32 %X, 5
+  %sel_x_eq_5 = select i1 %x_eq_5, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr ([8 x i8], [8 x i8]* @s7, i64 0, i64 0)
+  %sel_x_eq_3 = select i1 %x_eq_3, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* %sel_x_eq_5
+  %len = tail call i64 @strnlen(i8* %sel_x_eq_3, i64 8)
+  ret i64 %len
 }
