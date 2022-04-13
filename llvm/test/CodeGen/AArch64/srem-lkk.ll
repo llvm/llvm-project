@@ -91,45 +91,6 @@ define i32 @combine_srem_sdiv(i32 %x) {
   ret i32 %3
 }
 
-; Don't fold for divisors that are a power of two.
-define i32 @dont_fold_srem_power_of_two(i32 %x) {
-; CHECK-LABEL: dont_fold_srem_power_of_two:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #63
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel w8, w8, w0, lt
-; CHECK-NEXT:    and w8, w8, #0xffffffc0
-; CHECK-NEXT:    sub w0, w0, w8
-; CHECK-NEXT:    ret
-  %1 = srem i32 %x, 64
-  ret i32 %1
-}
-
-; Don't fold if the divisor is one.
-define i32 @dont_fold_srem_one(i32 %x) {
-; CHECK-LABEL: dont_fold_srem_one:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
-  %1 = srem i32 %x, 1
-  ret i32 %1
-}
-
-; Don't fold if the divisor is 2^31.
-define i32 @dont_fold_srem_i32_smax(i32 %x) {
-; CHECK-LABEL: dont_fold_srem_i32_smax:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    add w8, w0, w8
-; CHECK-NEXT:    csel w8, w8, w0, lt
-; CHECK-NEXT:    and w8, w8, #0x80000000
-; CHECK-NEXT:    add w0, w0, w8
-; CHECK-NEXT:    ret
-  %1 = srem i32 %x, 2147483648
-  ret i32 %1
-}
-
 ; Don't fold i64 srem
 define i64 @dont_fold_srem_i64(i64 %x) {
 ; CHECK-LABEL: dont_fold_srem_i64:
