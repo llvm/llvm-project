@@ -30,7 +30,7 @@ define internal fastcc void @csr_vgpr_spill_fp_callee() #0 {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    v_writelane_b32 v1, s33, 2
+; CHECK-NEXT:    s_mov_b32 s6, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0x400
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
@@ -51,7 +51,7 @@ define internal fastcc void @csr_vgpr_spill_fp_callee() #0 {
 ; CHECK-NEXT:    v_readlane_b32 s30, v1, 0
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
-; CHECK-NEXT:    v_readlane_b32 s33, v1, 2
+; CHECK-NEXT:    s_mov_b32 s33, s6
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
@@ -155,7 +155,7 @@ define hidden i32 @caller_save_vgpr_spill_fp_tail_call() #0 {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    v_writelane_b32 v1, s33, 2
+; CHECK-NEXT:    s_mov_b32 s6, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v1, s30, 0
@@ -171,7 +171,7 @@ define hidden i32 @caller_save_vgpr_spill_fp_tail_call() #0 {
 ; CHECK-NEXT:    v_readlane_b32 s31, v1, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v1, 0
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
-; CHECK-NEXT:    v_readlane_b32 s33, v1, 2
+; CHECK-NEXT:    s_mov_b32 s33, s6
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
@@ -189,7 +189,7 @@ define hidden i32 @caller_save_vgpr_spill_fp() #0 {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    v_writelane_b32 v2, s33, 2
+; CHECK-NEXT:    s_mov_b32 s7, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v2, s30, 0
@@ -205,7 +205,7 @@ define hidden i32 @caller_save_vgpr_spill_fp() #0 {
 ; CHECK-NEXT:    v_readlane_b32 s31, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v2, 0
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
-; CHECK-NEXT:    v_readlane_b32 s33, v2, 2
+; CHECK-NEXT:    s_mov_b32 s33, s7
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
