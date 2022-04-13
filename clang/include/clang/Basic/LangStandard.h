@@ -12,6 +12,10 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
+namespace llvm {
+class Triple;
+}
+
 namespace clang {
 
 /// The language for the input, used to select and validate the language
@@ -137,6 +141,9 @@ public:
   static const LangStandard &getLangStandardForKind(Kind K);
   static const LangStandard *getLangStandardForName(StringRef Name);
 };
+
+LangStandard::Kind getDefaultLanguageStandard(clang::Language Lang,
+                                              const llvm::Triple &T);
 
 }  // end namespace clang
 
