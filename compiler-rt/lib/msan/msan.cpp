@@ -69,8 +69,6 @@ THREADLOCAL u64 __msan_va_arg_overflow_size_tls;
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u32 __msan_origin_tls;
 
-static THREADLOCAL int is_in_symbolizer;
-
 extern "C" SANITIZER_WEAK_ATTRIBUTE const int __msan_track_origins;
 
 int __msan_get_track_origins() {
@@ -81,15 +79,19 @@ extern "C" SANITIZER_WEAK_ATTRIBUTE const int __msan_keep_going;
 
 namespace __msan {
 
-void EnterSymbolizer() { ++is_in_symbolizer; }
-void ExitSymbolizer()  { --is_in_symbolizer; }
-bool IsInSymbolizer() { return is_in_symbolizer; }
+static THREADLOCAL int is_in_symbolizer_or_unwinder;
+static void EnterSymbolizerOrUnwider() { ++is_in_symbolizer_or_unwinder; }
+static void ExitSymbolizerOrUnwider() { --is_in_symbolizer_or_unwinder; }
+bool IsInSymbolizerOrUnwider() { return is_in_symbolizer_or_unwinder; }
+
+struct UnwinderScope {
+  UnwinderScope() { EnterSymbolizerOrUnwider(); }
+  ~UnwinderScope() { ExitSymbolizerOrUnwider(); }
+};
 
 static Flags msan_flags;
 
-Flags *flags() {
-  return &msan_flags;
-}
+Flags *flags() { return &msan_flags; }
 
 int msan_inited = 0;
 bool msan_init_is_running;
@@ -301,7 +303,7 @@ u32 ChainOrigin(u32 id, StackTrace *stack) {
   return chained.raw_id();
 }
 
-} // namespace __msan
+}  // namespace __msan
 
 void __sanitizer::BufferedStackTrace::UnwindImpl(
     uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
@@ -309,7 +311,7 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
   MsanThread *t = GetCurrentThread();
   if (!t || !StackTrace::WillUseFastUnwind(request_fast)) {
     // Block reports from our interceptors during _Unwind_Backtrace.
-    SymbolizerScope sym_scope;
+    UnwinderScope sym_scope;
     return Unwind(max_depth, pc, bp, context, t ? t->stack_top() : 0,
                   t ? t->stack_bottom() : 0, false);
   }
@@ -462,7 +464,8 @@ void __msan_init() {
     Die();
   }
 
-  Symbolizer::GetOrInit()->AddHooks(EnterSymbolizer, ExitSymbolizer);
+  Symbolizer::GetOrInit()->AddHooks(EnterSymbolizerOrUnwider,
+                                    ExitSymbolizerOrUnwider);
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
 
