@@ -250,9 +250,12 @@ protected:
   }
 
   // Check if the given clause is present in the current context
-  const PC *FindClause(C type) {
-    auto it{GetContext().clauseInfo.find(type)};
-    if (it != GetContext().clauseInfo.end()) {
+  const PC *FindClause(C type) { return FindClause(GetContext(), type); }
+
+  // Check if the given clause is present in the given context
+  const PC *FindClause(DirectiveContext &context, C type) {
+    auto it{context.clauseInfo.find(type)};
+    if (it != context.clauseInfo.end()) {
       return it->second;
     }
     return nullptr;

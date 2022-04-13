@@ -27,6 +27,7 @@ program omp_doOrdered
   !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do ordered(2)
   do i = 1,10
+    !ERROR: An ORDERED directive without the DEPEND clause must be closely nested in a worksharing-loop (or worksharing-loop SIMD) region with ORDERED clause without the parameter
     !$omp ordered
     do j = 1, 10
        print *, "hello"
@@ -48,6 +49,7 @@ program omp_doOrdered
   !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
   !$omp do ordered(2) collapse(1)
   do i = 1,10
+    !ERROR: An ORDERED directive without the DEPEND clause must be closely nested in a worksharing-loop (or worksharing-loop SIMD) region with ORDERED clause without the parameter
     !$omp ordered
     do j = 1, 10
        print *, "hello"
