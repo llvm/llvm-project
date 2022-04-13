@@ -60,13 +60,13 @@
   #define _LIBUNWIND_EXPORT
   #define _LIBUNWIND_HIDDEN
 #else
-#if !defined(__ELF__) && !defined(__MACH__) && !defined(_AIX)
-#define _LIBUNWIND_EXPORT __declspec(dllexport)
-#define _LIBUNWIND_HIDDEN
-#else
-#define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
-#define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
-#endif
+  #if !defined(__ELF__) && !defined(__MACH__) && !defined(_AIX)
+    #define _LIBUNWIND_EXPORT __declspec(dllexport)
+    #define _LIBUNWIND_HIDDEN
+  #else
+    #define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
+    #define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
+  #endif
 #endif
 
 #define STR(a) #a
