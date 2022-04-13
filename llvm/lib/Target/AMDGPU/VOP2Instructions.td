@@ -664,9 +664,6 @@ def V_MADAK_F16 : VOP2_Pseudo <"v_madak_f16", VOP_MADAK_F16, [], "">;
 }
 
 } // End FPDPRounding = 1
-defm V_ADD_U16 : VOP2Inst <"v_add_u16", VOP_I16_I16_I16_ARITH, add>;
-defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP_I16_I16_I16_ARITH, sub>;
-defm V_SUBREV_U16 : VOP2Inst <"v_subrev_u16", VOP_I16_I16_I16_ARITH, null_frag, "v_sub_u16">;
 defm V_MUL_LO_U16 : VOP2Inst <"v_mul_lo_u16", VOP_I16_I16_I16, mul>;
 defm V_MAX_F16 : VOP2Inst <"v_max_f16", VOP_F16_F16_F16, fmaxnum_like>;
 defm V_MIN_F16 : VOP2Inst <"v_min_f16", VOP_F16_F16_F16, fminnum_like>;
@@ -674,6 +671,12 @@ defm V_MAX_U16 : VOP2Inst <"v_max_u16", VOP_I16_I16_I16, umax>;
 defm V_MAX_I16 : VOP2Inst <"v_max_i16", VOP_I16_I16_I16, smax>;
 defm V_MIN_U16 : VOP2Inst <"v_min_u16", VOP_I16_I16_I16, umin>;
 defm V_MIN_I16 : VOP2Inst <"v_min_i16", VOP_I16_I16_I16, smin>;
+
+let SubtargetPredicate = isGFX8GFX9 in {
+  defm V_ADD_U16 : VOP2Inst <"v_add_u16", VOP_I16_I16_I16_ARITH, add>;
+  defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP_I16_I16_I16_ARITH, sub>;
+  defm V_SUBREV_U16 : VOP2Inst <"v_subrev_u16", VOP_I16_I16_I16_ARITH, null_frag, "v_sub_u16">;
+}
 
 let Constraints = "$vdst = $src2", DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1 in {
@@ -857,7 +860,7 @@ def : GCNPat <
 >;
 }
 
-let Predicates = [Has16BitInsts] in {
+let Predicates = [Has16BitInsts, isGFX8GFX9] in {
 
 // Undo sub x, c -> add x, -c canonicalization since c is more likely
 // an inline immediate than -c.
@@ -866,9 +869,6 @@ def : GCNPat<
   (add i16:$src0, (i16 NegSubInlineIntConst16:$src1)),
   (V_SUB_U16_e64 VSrc_b16:$src0, NegSubInlineIntConst16:$src1)
 >;
-
-
-let Predicates = [Has16BitInsts, isGFX7GFX8GFX9] in {
 
 def : GCNPat<
   (i32 (zext (add i16:$src0, (i16 NegSubInlineIntConst16:$src1)))),
@@ -885,7 +885,10 @@ defm : Arithmetic_i16_0Hi_Pats<umax, V_MAX_U16_e64>;
 defm : Arithmetic_i16_0Hi_Pats<clshl_rev_16, V_LSHLREV_B16_e64>;
 defm : Arithmetic_i16_0Hi_Pats<clshr_rev_16, V_LSHRREV_B16_e64>;
 defm : Arithmetic_i16_0Hi_Pats<cashr_rev_16, V_ASHRREV_I16_e64>;
-}  // End Predicates = [Has16BitInsts, isGFX7GFX8GFX9]
+
+}  // End Predicates = [Has16BitInsts, isGFX8GFX9]
+
+let Predicates = [Has16BitInsts] in {
 
 def : ZExt_i16_i1_Pat<zext>;
 def : ZExt_i16_i1_Pat<anyext>;
