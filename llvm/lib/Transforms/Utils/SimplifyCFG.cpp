@@ -5680,47 +5680,43 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
 
 // Helper function that checks if it is possible to transform a switch with only
 // two cases (or two cases + default) that produces a result into a select.
-// Example:
-// switch (a) {
-//   case 10:                %0 = icmp eq i32 %a, 10
-//     return 10;            %1 = select i1 %0, i32 10, i32 4
-//   case 20:        ---->   %2 = icmp eq i32 %a, 20
-//     return 2;             %3 = select i1 %2, i32 2, i32 %1
-//   default:
-//     return 4;
-// }
 // TODO: Handle switches with more than 2 cases that map to the same result.
 static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
                                  Constant *DefaultResult, Value *Condition,
                                  IRBuilder<> &Builder) {
   // If we are selecting between only two cases transform into a simple
   // select or a two-way select if default is possible.
+  // Example:
+  // switch (a) {                  %0 = icmp eq i32 %a, 10
+  //   case 10: return 42;         %1 = select i1 %0, i32 42, i32 4
+  //   case 20: return 2;   ---->  %2 = icmp eq i32 %a, 20
+  //   default: return 4;          %3 = select i1 %2, i32 2, i32 %1
+  // }
   if (ResultVector.size() == 2 && ResultVector[0].second.size() == 1 &&
       ResultVector[1].second.size() == 1) {
-    ConstantInt *const FirstCase = ResultVector[0].second[0];
-    ConstantInt *const SecondCase = ResultVector[1].second[0];
-
-    bool DefaultCanTrigger = DefaultResult;
+    ConstantInt *FirstCase = ResultVector[0].second[0];
+    ConstantInt *SecondCase = ResultVector[1].second[0];
     Value *SelectValue = ResultVector[1].first;
-    if (DefaultCanTrigger) {
-      Value *const ValueCompare =
+    if (DefaultResult) {
+      Value *ValueCompare =
           Builder.CreateICmpEQ(Condition, SecondCase, "switch.selectcmp");
       SelectValue = Builder.CreateSelect(ValueCompare, ResultVector[1].first,
                                          DefaultResult, "switch.select");
     }
-    Value *const ValueCompare =
+    Value *ValueCompare =
         Builder.CreateICmpEQ(Condition, FirstCase, "switch.selectcmp");
     return Builder.CreateSelect(ValueCompare, ResultVector[0].first,
                                 SelectValue, "switch.select");
   }
 
-  // Handle the degenerate case where two cases have the same value.
+  // Handle the degenerate case where two cases have the same result value.
   if (ResultVector.size() == 1 && ResultVector[0].second.size() == 2 &&
       DefaultResult) {
-    Value *Cmp1 = Builder.CreateICmpEQ(
-        Condition, ResultVector[0].second[0], "switch.selectcmp.case1");
-    Value *Cmp2 = Builder.CreateICmpEQ(
-        Condition, ResultVector[0].second[1], "switch.selectcmp.case2");
+    ArrayRef<ConstantInt *> CaseValues = ResultVector[0].second;
+    Value *Cmp1 = Builder.CreateICmpEQ(Condition, CaseValues[0],
+                                       "switch.selectcmp.case1");
+    Value *Cmp2 = Builder.CreateICmpEQ(Condition, CaseValues[1],
+                                       "switch.selectcmp.case2");
     Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
     return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
   }
