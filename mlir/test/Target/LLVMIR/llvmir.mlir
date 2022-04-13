@@ -129,6 +129,13 @@ llvm.mlir.global @has_dso_local(42 : i64) {dso_local} : i64
 // CHECK: @has_dso_local = dso_local global i64 42
 
 //
+// thr_local attribute.
+//
+
+llvm.mlir.global thread_local @has_thr_local(42 : i64) : i64
+// CHECK: @has_thr_local = thread_local global i64 42
+
+//
 // Section attribute.
 //
 
