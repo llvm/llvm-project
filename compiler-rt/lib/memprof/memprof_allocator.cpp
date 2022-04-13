@@ -430,7 +430,9 @@ struct Allocator {
       CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
       reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
     }
-    MEMPROF_MALLOC_HOOK(res, size);
+    if (&__sanitizer_malloc_hook)
+      __sanitizer_malloc_hook(res, size);
+    RunMallocHooks(res, size);
     return res;
   }
 
@@ -440,7 +442,9 @@ struct Allocator {
     if (p == 0)
       return;
 
-    MEMPROF_FREE_HOOK(ptr);
+    if (&__sanitizer_free_hook)
+      __sanitizer_free_hook(ptr);
+    RunFreeHooks(ptr);
 
     uptr chunk_beg = p - kChunkHeaderSize;
     MemprofChunk *m = reinterpret_cast<MemprofChunk *>(chunk_beg);

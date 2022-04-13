@@ -199,7 +199,9 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
     }
   }
 
-  HWASAN_MALLOC_HOOK(user_ptr, size);
+  if (&__sanitizer_malloc_hook)
+    __sanitizer_malloc_hook(user_ptr, size);
+  RunMallocHooks(user_ptr, size);
   return user_ptr;
 }
 
@@ -226,7 +228,9 @@ static bool CheckInvalidFree(StackTrace *stack, void *untagged_ptr,
 
 static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
   CHECK(tagged_ptr);
-  HWASAN_FREE_HOOK(tagged_ptr);
+  if (&__sanitizer_free_hook)
+    __sanitizer_free_hook(tagged_ptr);
+  RunFreeHooks(tagged_ptr);
 
   bool in_taggable_region =
       InTaggableRegion(reinterpret_cast<uptr>(tagged_ptr));
