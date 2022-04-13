@@ -876,7 +876,9 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   Value *SrcStr = CI->getArgOperand(0);
   Value *Size = CI->getArgOperand(2);
-  annotateNonNullAndDereferenceable(CI, 0, Size, DL);
+  if (isKnownNonZero(Size, DL))
+    annotateNonNullNoUndefBasedOnAccess(CI, 0);
+
   Value *CharVal = CI->getArgOperand(1);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   ConstantInt *LenC = dyn_cast<ConstantInt>(Size);
