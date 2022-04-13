@@ -2010,7 +2010,8 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     return DescriptorMapUpdateResult::Fail();
 
   // The number of entries to pre-allocate room for.
-  const uint32_t max_num_classes = 256 * 1024;
+  // Each entry is (addrsize + 4) bytes
+  const uint32_t max_num_classes = 163840;
 
   UtilityFunction *get_class_info_code = GetClassInfoUtilityFunction(exe_ctx);
   if (!get_class_info_code) {
@@ -2340,14 +2341,14 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
   Debugger &debugger(GetProcess()->GetTarget().GetDebugger());
   switch (reason) {
   case SharedCacheWarningReason::eNotEnoughClassesRead:
-    Debugger::ReportWarning("warning: could not find Objective-C class data in "
+    Debugger::ReportWarning("could not find Objective-C class data in "
                             "the process. This may reduce the quality of type "
                             "information available.\n",
                             debugger.GetID(), &m_no_classes_cached_warning);
     break;
   case SharedCacheWarningReason::eExpressionExecutionFailure:
     Debugger::ReportWarning(
-        "warning: could not execute support code to read "
+        "could not execute support code to read "
         "Objective-C class data in the process. This may "
         "reduce the quality of type information available.\n",
         debugger.GetID(), &m_no_classes_cached_warning);
@@ -2372,7 +2373,7 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   std::string buffer;
   llvm::raw_string_ostream os(buffer);
 
-  os << "warning: libobjc.A.dylib is being read from process memory. This "
+  os << "libobjc.A.dylib is being read from process memory. This "
         "indicates that LLDB could not ";
   if (PlatformSP platform_sp = target.GetPlatform()) {
     if (platform_sp->IsHost()) {
@@ -2762,11 +2763,10 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
   }
 
   uint64_t data_payload =
-      (((uint64_t)unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
+      ((unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
        m_objc_debug_taggedpointer_payload_rshift);
   int64_t data_payload_signed =
-      ((int64_t)((int64_t)unobfuscated
-                 << m_objc_debug_taggedpointer_payload_lshift) >>
+      ((int64_t)(unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
        m_objc_debug_taggedpointer_payload_rshift);
   return ClassDescriptorSP(new ClassDescriptorV2Tagged(
       actual_class_descriptor_sp, data_payload, data_payload_signed));

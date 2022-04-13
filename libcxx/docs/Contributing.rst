@@ -67,10 +67,9 @@ Post-release check list
 After branching for an LLVM release:
 
 1. Update ``_LIBCPP_VERSION`` in ``libcxx/include/__config``
-2. Update the ``libcxx/include/__libcpp_version`` file
-3. Update the version number in ``libcxx/docs/conf.py``
-4. Update ``_LIBCPPABI_VERSION`` in ``libcxxabi/include/cxxabi.h``
-5. Update ``_LIBUNWIND_VERSION`` in ``libunwind/include/__libunwind_config.h``
+2. Update the version number in ``libcxx/docs/conf.py``
+3. Update ``_LIBCPPABI_VERSION`` in ``libcxxabi/include/cxxabi.h``
+4. Update ``_LIBUNWIND_VERSION`` in ``libunwind/include/__libunwind_config.h``
 
 Exporting new symbols from the library
 ======================================

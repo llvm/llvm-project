@@ -215,8 +215,7 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
            "Specify if buffers should be deallocated. For compatibility with "
            "core bufferization passes.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",
-               "Restrict bufferization to ops from these dialects.",
-               "llvm::cl::MiscFlags::CommaSeparated">,
+               "Restrict bufferization to ops from these dialects.">,
     Option<"fullyDynamicLayoutMaps", "fully-dynamic-layout-maps", "bool",
            /*default=*/"true",
            "Generate MemRef types with dynamic offset+strides by default.">,

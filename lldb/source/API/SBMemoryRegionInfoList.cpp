@@ -21,8 +21,7 @@ class MemoryRegionInfoListImpl {
 public:
   MemoryRegionInfoListImpl() : m_regions() {}
 
-  MemoryRegionInfoListImpl(const MemoryRegionInfoListImpl &rhs)
-      : m_regions(rhs.m_regions) {}
+  MemoryRegionInfoListImpl(const MemoryRegionInfoListImpl &rhs) = default;
 
   MemoryRegionInfoListImpl &operator=(const MemoryRegionInfoListImpl &rhs) {
     if (this == &rhs)

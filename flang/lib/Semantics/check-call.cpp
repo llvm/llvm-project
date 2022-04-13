@@ -401,8 +401,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // 15.5.2.6 -- dummy is ALLOCATABLE
   bool dummyIsAllocatable{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
-  bool actualIsAllocatable{
-      actualLastSymbol && IsAllocatable(*actualLastSymbol)};
+  bool actualIsAllocatable{evaluate::IsAllocatableDesignator(actual)};
   if (dummyIsAllocatable) {
     if (!actualIsAllocatable) {
       messages.Say(
@@ -472,6 +471,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               "POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind"_err_en_US);
         }
       }
+      // 15.5.2.5(4)
       if (const auto *derived{
               evaluate::GetDerivedTypeSpec(actualType.type())}) {
         if (!DefersSameTypeParameters(
@@ -479,6 +479,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           messages.Say(
               "Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE"_err_en_US);
         }
+      } else if (dummy.type.type().HasDeferredTypeParameter() !=
+          actualType.type().HasDeferredTypeParameter()) {
+        messages.Say(
+            "Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE"_err_en_US);
       }
     }
   }

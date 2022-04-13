@@ -36,7 +36,7 @@ using namespace lldb_private;
 class CommandObjectSourceInfo : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -623,7 +623,7 @@ protected:
 class CommandObjectSourceList : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -755,7 +755,7 @@ protected:
     SourceInfo(ConstString name, const LineEntry &line_entry)
         : function(name), line_entry(line_entry) {}
 
-    SourceInfo() {}
+    SourceInfo() = default;
 
     bool IsValid() const { return (bool)function && line_entry.IsValid(); }
 

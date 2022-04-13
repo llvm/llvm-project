@@ -1936,7 +1936,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -2841,7 +2841,7 @@ class CommandObjectTargetModulesList : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -3183,7 +3183,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 

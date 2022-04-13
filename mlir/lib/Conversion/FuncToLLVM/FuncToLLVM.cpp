@@ -86,7 +86,7 @@ prependResAttrsToArgAttrs(OpBuilder &builder,
   auto allAttrs = SmallVector<Attribute>(
       numArguments + 1, DictionaryAttr::get(builder.getContext()));
   NamedAttribute *argAttrs = nullptr;
-  for (auto it = attributes.begin(); it != attributes.end();) {
+  for (auto *it = attributes.begin(); it != attributes.end();) {
     if (it->getName() == FunctionOpInterface::getArgDictAttrName()) {
       auto arrayAttrs = it->getValue().cast<ArrayAttr>();
       assert(arrayAttrs.size() == numArguments &&
@@ -113,7 +113,6 @@ prependResAttrsToArgAttrs(OpBuilder &builder,
     return;
   }
   *argAttrs = newArgAttrs;
-  return;
 }
 
 /// Creates an auxiliary function with pointer-to-memref-descriptor-struct
@@ -600,7 +599,8 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
       for (auto it : llvm::zip(op->getOperands(), adaptor.getOperands())) {
         Type oldTy = std::get<0>(it).getType();
         Value newOperand = std::get<1>(it);
-        if (oldTy.isa<MemRefType>()) {
+        if (oldTy.isa<MemRefType>() && getTypeConverter()->canConvertToBarePtr(
+                                           oldTy.cast<BaseMemRefType>())) {
           MemRefDescriptor memrefDesc(newOperand);
           newOperand = memrefDesc.alignedPtr(rewriter, loc);
         } else if (oldTy.isa<UnrankedMemRefType>()) {

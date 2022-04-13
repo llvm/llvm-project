@@ -277,7 +277,7 @@ void BinaryEmitter::emitFunctions() {
 }
 
 bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
-  if (Function.size() == 0)
+  if (Function.size() == 0 && !Function.hasIslandsInfo())
     return false;
 
   if (Function.getState() == BinaryFunction::State::Empty)

@@ -27,37 +27,34 @@ class SetCoalescer;
 /// the same PresburgerSpace with support for union, intersection, subtraction,
 /// and complement operations, as well as sampling.
 ///
-/// The IntegerRelations (relations) are stored in a vector, and the set
+/// The IntegerRelations (disjuncts) are stored in a vector, and the set
 /// represents the union of these relations. An empty list corresponds to
 /// the empty set.
 ///
-/// Note that there are no invariants guaranteed on the list of relations
+/// Note that there are no invariants guaranteed on the list of disjuncts
 /// other than that they are all in the same PresburgerSpace. For example, the
 /// relations may overlap with each other.
 class PresburgerRelation : public PresburgerSpace {
 public:
   /// Return a universe set of the specified type that contains all points.
-  static PresburgerRelation getUniverse(unsigned numDomain, unsigned numRange,
-                                        unsigned numSymbols);
+  static PresburgerRelation getUniverse(const PresburgerSpace &space);
 
   /// Return an empty set of the specified type that contains no points.
-  static PresburgerRelation getEmpty(unsigned numDomain = 0,
-                                     unsigned numRange = 0,
-                                     unsigned numSymbols = 0);
+  static PresburgerRelation getEmpty(const PresburgerSpace &space);
 
   explicit PresburgerRelation(const IntegerRelation &disjunct);
 
-  /// Return the number of Disjuncts in the union.
+  /// Return the number of disjuncts in the union.
   unsigned getNumDisjuncts() const;
 
-  /// Return a reference to the list of IntegerRelations.
+  /// Return a reference to the list of disjuncts.
   ArrayRef<IntegerRelation> getAllDisjuncts() const;
 
-  /// Return the IntegerRelation at the specified index.
+  /// Return the disjunct at the specified index.
   const IntegerRelation &getDisjunct(unsigned index) const;
 
   /// Mutate this set, turning it into the union of this set and the given
-  /// IntegerRelation.
+  /// disjunct.
   void unionInPlace(const IntegerRelation &disjunct);
 
   /// Mutate this set, turning it into the union of this set and the given set.
@@ -119,12 +116,14 @@ public:
 protected:
   /// Construct an empty PresburgerRelation with the specified number of
   /// dimension and symbols.
-  PresburgerRelation(unsigned numDomain = 0, unsigned numRange = 0,
-                     unsigned numSymbols = 0)
-      : PresburgerSpace(numDomain, numRange, numSymbols, /*numLocals=*/0) {}
+  explicit PresburgerRelation(const PresburgerSpace &space)
+      : PresburgerSpace(space) {
+    assert(space.getNumLocalIds() == 0 &&
+           "PresburgerRelation cannot have local ids.");
+  }
 
   /// The list of disjuncts that this set is the union of.
-  SmallVector<IntegerRelation, 2> integerRelations;
+  SmallVector<IntegerRelation, 2> disjuncts;
 
   friend class SetCoalescer;
 };
@@ -132,11 +131,10 @@ protected:
 class PresburgerSet : public PresburgerRelation {
 public:
   /// Return a universe set of the specified type that contains all points.
-  static PresburgerSet getUniverse(unsigned numDims = 0,
-                                   unsigned numSymbols = 0);
+  static PresburgerSet getUniverse(const PresburgerSpace &space);
 
   /// Return an empty set of the specified type that contains no points.
-  static PresburgerSet getEmpty(unsigned numDims = 0, unsigned numSymbols = 0);
+  static PresburgerSet getEmpty(const PresburgerSpace &space);
 
   /// Create a set from a relation.
   explicit PresburgerSet(const IntegerPolyhedron &disjunct);
@@ -154,8 +152,12 @@ public:
 protected:
   /// Construct an empty PresburgerRelation with the specified number of
   /// dimension and symbols.
-  PresburgerSet(unsigned numDims = 0, unsigned numSymbols = 0)
-      : PresburgerRelation(/*numDomain=*/0, numDims, numSymbols) {}
+  explicit PresburgerSet(const PresburgerSpace &space)
+      : PresburgerRelation(space) {
+    assert(space.getNumDomainIds() == 0 && "Set type cannot have domain ids.");
+    assert(space.getNumLocalIds() == 0 &&
+           "PresburgerRelation cannot have local ids.");
+  }
 };
 
 } // namespace presburger

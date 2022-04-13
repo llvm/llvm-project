@@ -679,7 +679,7 @@ AffineMap mlir::inversePermutation(AffineMap map) {
   return AffineMap::get(map.getNumResults(), 0, seenExprs, map.getContext());
 }
 
-AffineMap mlir::inverseAndBroadcastProjectedPermuation(AffineMap map) {
+AffineMap mlir::inverseAndBroadcastProjectedPermutation(AffineMap map) {
   assert(map.isProjectedPermutation(/*allowZeroInResults=*/true));
   MLIRContext *context = map.getContext();
   AffineExpr zero = mlir::getAffineConstantExpr(0, context);

@@ -283,11 +283,10 @@ void macho::PriorityBuilder::extractCallGraphProfile() {
              entry.toIndex < obj->symbols.size());
       auto *fromSym = dyn_cast_or_null<Defined>(obj->symbols[entry.fromIndex]);
       auto *toSym = dyn_cast_or_null<Defined>(obj->symbols[entry.toIndex]);
-      if (!fromSym || !toSym ||
-          (hasOrderFile &&
-           (getSymbolPriority(fromSym) || getSymbolPriority(toSym))))
-        continue;
-      callGraphProfile[{fromSym->isec, toSym->isec}] += entry.count;
+      if (fromSym && toSym &&
+          (!hasOrderFile ||
+           (!getSymbolPriority(fromSym) && !getSymbolPriority(toSym))))
+        callGraphProfile[{fromSym->isec, toSym->isec}] += entry.count;
     }
   }
 }

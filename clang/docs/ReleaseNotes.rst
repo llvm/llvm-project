@@ -97,6 +97,8 @@ Bug Fixes
 - The builtin function __builtin_dump_struct would crash clang when the target 
   struct contains a bitfield. It now correctly handles bitfields.
   This fixes Issue `Issue 54462 <https://github.com/llvm/llvm-project/issues/54462>`_.
+- Statement expressions are now disabled in default arguments in general.
+  This fixes Issue `Issue 53488 <https://github.com/llvm/llvm-project/issues/53488>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -110,6 +112,9 @@ Improvements to Clang's diagnostics
   <https://github.com/llvm/llvm-project/issues/50794>`_.
 - ``-Wunused-but-set-variable`` now also warns if the variable is only used
   by unary operators.
+- ``-Wunused-variable`` no longer warn for references extending the lifetime
+  of temporaries with side effects. This fixes `Issue 54489
+  <https://github.com/llvm/llvm-project/issues/54489>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -117,6 +122,7 @@ Non-comprehensive list of changes in this release
   - Support bitfields in struct and union.
   - Improve the dump format, dump both bitwidth(if its a bitfield) and field value.
   - Remove anonymous tag locations.
+  - Beautify dump format, add indent for nested struct and struct members.
 
 New Compiler Flags
 ------------------
@@ -194,6 +200,13 @@ C++20 Feature Support
   `Issue 54578 <https://github.com/llvm/llvm-project/issues/54578>`_.
 
 - Implemented `__builtin_source_location()` which enables library support for std::source_location.
+
+- The mangling scheme for C++20 modules has incompatibly changed. The
+  initial mangling was discovered not to be reversible, and the weak
+  ownership design decision did not give the backwards compatibility
+  that was hoped for. C++20 since added ``extern "C++"`` semantics
+  that can be used for such compatibility. The demangler now demangles
+  symbols with named module attachment.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

@@ -2348,6 +2348,15 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static bool isADDLike(SDValue V, const SelectionDAG &DAG) {
+  unsigned Opcode = V.getOpcode();
+  if (Opcode == ISD::OR)
+    return DAG.haveNoCommonBitsSet(V.getOperand(0), V.getOperand(1));
+  if (Opcode == ISD::XOR)
+    return isMinSignedConstant(V.getOperand(1));
+  return false;
+}
+
 /// Try to fold a node that behaves like an ADD (note that N isn't necessarily
 /// an ISD::ADD here, it could for example be an ISD::OR if we know that there
 /// are no common bits set in the operands).
@@ -2423,9 +2432,10 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
     // Fold (add (or x, c0), c1) -> (add x, (c0 + c1)) if (or x, c0) is
     // equivalent to (add x, c0).
-    if (N0.getOpcode() == ISD::OR &&
-        isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true) &&
-        DAG.haveNoCommonBitsSet(N0.getOperand(0), N0.getOperand(1))) {
+    // Fold (add (xor x, c0), c1) -> (add x, (c0 + c1)) if (xor x, c0) is
+    // equivalent to (add x, c0).
+    if (isADDLike(N0, DAG) && 
+        isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
       if (SDValue Add0 = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT,
                                                     {N1, N0.getOperand(1)}))
         return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), Add0);
@@ -2442,10 +2452,11 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
     // Reassociate (add (or x, c), y) -> (add add(x, y), c)) if (or x, c) is
     // equivalent to (add x, c).
+    // Reassociate (add (xor x, c), y) -> (add add(x, y), c)) if (xor x, c) is
+    // equivalent to (add x, c).
     auto ReassociateAddOr = [&](SDValue N0, SDValue N1) {
-      if (N0.getOpcode() == ISD::OR && N0.hasOneUse() &&
-          isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true) &&
-          DAG.haveNoCommonBitsSet(N0.getOperand(0), N0.getOperand(1))) {
+      if (isADDLike(N0, DAG) && N0.hasOneUse() &&
+          isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
         return DAG.getNode(ISD::ADD, DL, VT,
                            DAG.getNode(ISD::ADD, DL, VT, N1, N0.getOperand(0)),
                            N0.getOperand(1));
@@ -6056,27 +6067,25 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (ISD::isConstantSplatVectorAllOnes(N1.getNode()))
       return N0;
 
-    // fold (and (masked_load) (build_vec (x, ...))) to zext_masked_load
+    // fold (and (masked_load) (splat_vec (x, ...))) to zext_masked_load
     auto *MLoad = dyn_cast<MaskedLoadSDNode>(N0);
-    auto *BVec = dyn_cast<BuildVectorSDNode>(N1);
-    if (MLoad && BVec && MLoad->getExtensionType() == ISD::EXTLOAD &&
-        N0.hasOneUse() && N1.hasOneUse()) {
+    ConstantSDNode *Splat = isConstOrConstSplat(N1, true, true);
+    if (MLoad && MLoad->getExtensionType() == ISD::EXTLOAD && N0.hasOneUse() &&
+        Splat && N1.hasOneUse()) {
       EVT LoadVT = MLoad->getMemoryVT();
       EVT ExtVT = VT;
       if (TLI.isLoadExtLegal(ISD::ZEXTLOAD, ExtVT, LoadVT)) {
         // For this AND to be a zero extension of the masked load the elements
         // of the BuildVec must mask the bottom bits of the extended element
         // type
-        if (ConstantSDNode *Splat = BVec->getConstantSplatNode()) {
-          uint64_t ElementSize =
-              LoadVT.getVectorElementType().getScalarSizeInBits();
-          if (Splat->getAPIntValue().isMask(ElementSize)) {
-            return DAG.getMaskedLoad(
-                ExtVT, SDLoc(N), MLoad->getChain(), MLoad->getBasePtr(),
-                MLoad->getOffset(), MLoad->getMask(), MLoad->getPassThru(),
-                LoadVT, MLoad->getMemOperand(), MLoad->getAddressingMode(),
-                ISD::ZEXTLOAD, MLoad->isExpandingLoad());
-          }
+        uint64_t ElementSize =
+            LoadVT.getVectorElementType().getScalarSizeInBits();
+        if (Splat->getAPIntValue().isMask(ElementSize)) {
+          return DAG.getMaskedLoad(
+              ExtVT, SDLoc(N), MLoad->getChain(), MLoad->getBasePtr(),
+              MLoad->getOffset(), MLoad->getMask(), MLoad->getPassThru(),
+              LoadVT, MLoad->getMemOperand(), MLoad->getAddressingMode(),
+              ISD::ZEXTLOAD, MLoad->isExpandingLoad());
         }
       }
     }
@@ -8296,6 +8305,13 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // reassociate xor
   if (SDValue RXOR = reassociateOps(ISD::XOR, DL, N0, N1, N->getFlags()))
     return RXOR;
+
+  // look for 'add-like' folds:
+  // XOR(N0,MIN_SIGNED_VALUE) == ADD(N0,MIN_SIGNED_VALUE)
+  if ((!LegalOperations || TLI.isOperationLegal(ISD::ADD, VT)) &&
+      isMinSignedConstant(N1))
+    if (SDValue Combined = visitADDLike(N))
+      return Combined;
 
   // fold !(x cc y) -> (x !cc y)
   unsigned N0Opcode = N0.getOpcode();
@@ -19458,8 +19474,9 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     // EXTRACT_VECTOR_ELT may widen the extracted vector.
     SDValue InOp = VecOp.getOperand(0);
     if (InOp.getValueType() != ScalarVT) {
-      assert(InOp.getValueType().isInteger() && ScalarVT.isInteger());
-      return DAG.getSExtOrTrunc(InOp, DL, ScalarVT);
+      assert(InOp.getValueType().isInteger() && ScalarVT.isInteger() &&
+             InOp.getValueType().bitsGT(ScalarVT));
+      return DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, InOp);
     }
     return InOp;
   }
@@ -22677,6 +22694,11 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   if (N0.isUndef() && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N1.getOperand(1) == N2 && N1.getOperand(0).getValueType() == VT)
     return N1.getOperand(0);
+
+  // Simplify scalar inserts into an undef vector:
+  // insert_subvector undef, (splat X), N2 -> splat X
+  if (N0.isUndef() && N1.getOpcode() == ISD::SPLAT_VECTOR)
+    return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, N1.getOperand(0));
 
   // If we are inserting a bitcast value into an undef, with the same
   // number of elements, just use the bitcast input of the extract.

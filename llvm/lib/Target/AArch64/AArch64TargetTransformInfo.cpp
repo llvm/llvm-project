@@ -50,6 +50,12 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
+bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
+    TargetTransformInfo::RegisterKind K) const {
+  assert(K != TargetTransformInfo::RGK_Scalar);
+  return K == TargetTransformInfo::RGK_FixedWidthVector;
+}
+
 /// Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
@@ -1289,26 +1295,32 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   // "long" (e.g., usubl) and "wide" (e.g., usubw) versions of the
   // instructions.
   //
-  // TODO: Add additional widening operations (e.g., mul, shl, etc.) once we
+  // TODO: Add additional widening operations (e.g., shl, etc.) once we
   //       verify that their extending operands are eliminated during code
   //       generation.
   switch (Opcode) {
   case Instruction::Add: // UADDL(2), SADDL(2), UADDW(2), SADDW(2).
   case Instruction::Sub: // USUBL(2), SSUBL(2), USUBW(2), SSUBW(2).
+  case Instruction::Mul: // SMULL(2), UMULL(2)
     break;
   default:
     return false;
   }
 
   // To be a widening instruction (either the "wide" or "long" versions), the
-  // second operand must be a sign- or zero extend having a single user. We
-  // only consider extends having a single user because they may otherwise not
-  // be eliminated.
+  // second operand must be a sign- or zero extend.
   if (Args.size() != 2 ||
-      (!isa<SExtInst>(Args[1]) && !isa<ZExtInst>(Args[1])) ||
-      !Args[1]->hasOneUse())
+      (!isa<SExtInst>(Args[1]) && !isa<ZExtInst>(Args[1])))
     return false;
   auto *Extend = cast<CastInst>(Args[1]);
+  auto *Arg0 = dyn_cast<CastInst>(Args[0]);
+
+  // A mul only has a mull version (not like addw). Both operands need to be
+  // extending and the same type.
+  if (Opcode == Instruction::Mul &&
+      (!Arg0 || Arg0->getOpcode() != Extend->getOpcode() ||
+       Arg0->getOperand(0)->getType() != Extend->getOperand(0)->getType()))
+    return false;
 
   // Legalize the destination type and ensure it can be used in a widening
   // operation.
@@ -1346,7 +1358,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
-  if (I && I->hasOneUse()) {
+  if (I && I->hasOneUser()) {
     auto *SingleUser = cast<Instruction>(*I->user_begin());
     SmallVector<const Value *, 4> Operands(SingleUser->operand_values());
     if (isWideningInstruction(Dst, SingleUser->getOpcode(), Operands)) {
@@ -1765,24 +1777,12 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
-
-  // If the instruction is a widening instruction (e.g., uaddl, saddw, etc.),
-  // add in the widening overhead specified by the sub-target. Since the
-  // extends feeding widening instructions are performed automatically, they
-  // aren't present in the generated code and have a zero cost. By adding a
-  // widening overhead here, we attach the total cost of the combined operation
-  // to the widening instruction.
-  InstructionCost Cost = 0;
-  if (isWideningInstruction(Ty, Opcode, Args))
-    Cost += ST->getWideningBaseCost();
-
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   switch (ISD) {
   default:
-    return Cost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                                Opd2Info,
-                                                Opd1PropInfo, Opd2PropInfo);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                         Opd2Info, Opd1PropInfo, Opd2PropInfo);
   case ISD::SDIV:
     if (Opd2Info == TargetTransformInfo::OK_UniformConstantValue &&
         Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
@@ -1790,26 +1790,22 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       // normally expanded to the sequence ADD + CMP + SELECT + SRA.
       // The OperandValue properties many not be same as that of previous
       // operation; conservatively assume OP_None.
-      Cost += getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
+      InstructionCost Cost = getArithmeticInstrCost(
+          Instruction::Add, Ty, CostKind, Opd1Info, Opd2Info,
+          TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind, Opd1Info,
+                                     Opd2Info, TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
-                                     TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::Select, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
-                                     TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
-                                     Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
+      Cost += getArithmeticInstrCost(
+          Instruction::Select, Ty, CostKind, Opd1Info, Opd2Info,
+          TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+      Cost += getArithmeticInstrCost(Instruction::AShr, Ty, CostKind, Opd1Info,
+                                     Opd2Info, TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
       return Cost;
     }
     LLVM_FALLTHROUGH;
-  case ISD::UDIV:
+  case ISD::UDIV: {
     if (Opd2Info == TargetTransformInfo::OK_UniformConstantValue) {
       auto VT = TLI->getValueType(DL, Ty);
       if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
@@ -1829,9 +1825,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       }
     }
 
-    Cost += BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                          Opd2Info,
-                                          Opd1PropInfo, Opd2PropInfo);
+    InstructionCost Cost = BaseT::getArithmeticInstrCost(
+        Opcode, Ty, CostKind, Opd1Info, Opd2Info, Opd1PropInfo, Opd2PropInfo);
     if (Ty->isVectorTy()) {
       // On AArch64, vector divisions are not supported natively and are
       // expanded into scalar divisions of each pair of elements.
@@ -1846,20 +1841,21 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       Cost += Cost;
     }
     return Cost;
-
+  }
   case ISD::MUL:
-    if (LT.second != MVT::v2i64)
-      return (Cost + 1) * LT.first;
     // Since we do not have a MUL.2d instruction, a mul <2 x i64> is expensive
     // as elements are extracted from the vectors and the muls scalarized.
     // As getScalarizationOverhead is a bit too pessimistic, we estimate the
     // cost for a i64 vector directly here, which is:
-    // - four i64 extracts,
-    // - two i64 inserts, and
-    // - two muls.
-    // So, for a v2i64 with LT.First = 1 the cost is 8, and for a v4i64 with
-    // LT.first = 2 the cost is 16.
-    return LT.first * 8;
+    // - four 2-cost i64 extracts,
+    // - two 2-cost i64 inserts, and
+    // - two 1-cost muls.
+    // So, for a v2i64 with LT.First = 1 the cost is 14, and for a v4i64 with
+    // LT.first = 2 the cost is 28. If both operands are extensions it will not
+    // need to scalarize so the cost can be cheaper (smull or umull).
+    if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, Args))
+      return LT.first;
+    return LT.first * 14;
   case ISD::ADD:
   case ISD::XOR:
   case ISD::OR:
@@ -1869,7 +1865,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::SHL:
     // These nodes are marked as 'custom' for combining purposes only.
     // We know that they are legal. See LowerAdd in ISelLowering.
-    return (Cost + 1) * LT.first;
+    return LT.first;
 
   case ISD::FADD:
   case ISD::FSUB:
@@ -1879,11 +1875,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // These nodes are marked as 'custom' just to lower them to SVE.
     // We know said lowering will incur no additional cost.
     if (!Ty->getScalarType()->isFP128Ty())
-      return (Cost + 2) * LT.first;
+      return 2 * LT.first;
 
-    return Cost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                                Opd2Info,
-                                                Opd1PropInfo, Opd2PropInfo);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                         Opd2Info, Opd1PropInfo, Opd2PropInfo);
   }
 }
 

@@ -69,9 +69,7 @@ public:
     }
   }
 
-  ValueImpl(const ValueImpl &rhs)
-      : m_valobj_sp(rhs.m_valobj_sp), m_use_dynamic(rhs.m_use_dynamic),
-        m_use_synthetic(rhs.m_use_synthetic), m_name(rhs.m_name) {}
+  ValueImpl(const ValueImpl &rhs) = default;
 
   ValueImpl &operator=(const ValueImpl &rhs) {
     if (this != &rhs) {

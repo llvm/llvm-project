@@ -31,13 +31,13 @@ contains
 ! -----------------------------------------------------------------------------
 
   ! CHECK-LABEL: func @_QMmPfoo
-  ! CHECK-SAME: !fir.ref<!fir.type<_QMmTtK7K12{c:!fir.array<12x!fir.char<1,?>>
+  ! CHECK-SAME: !fir.ref<!fir.type<_QMmTtK7K12{c:!fir.array<12x!fir.char<1,7>>
   subroutine foo(at)
     type(t(k2=12)) :: at
   end subroutine
 
   ! CHECK-LABEL: func @_QMmPfoo2
-  ! CHECK-SAME: !fir.ref<!fir.type<_QMmTt2K12K13{at:!fir.type<_QMmTtK15K17{c:!fir.array<17x!fir.char<1,?>>}>}>>
+  ! CHECK-SAME: !fir.ref<!fir.type<_QMmTt2K12K13{at:!fir.type<_QMmTtK15K17{c:!fir.array<17x!fir.char<1,15>>}>}>>
   subroutine foo2(at2)
     type(t2(12, 13)) :: at2
   end subroutine

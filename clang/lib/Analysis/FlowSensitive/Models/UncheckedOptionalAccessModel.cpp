@@ -121,6 +121,43 @@ auto isStdSwapCall() {
                   hasArgument(1, hasOptionalType()));
 }
 
+constexpr llvm::StringLiteral ValueOrCallID = "ValueOrCall";
+
+auto isValueOrStringEmptyCall() {
+  // `opt.value_or("").empty()`
+  return cxxMemberCallExpr(
+      callee(cxxMethodDecl(hasName("empty"))),
+      onImplicitObjectArgument(ignoringImplicit(
+          cxxMemberCallExpr(on(expr(unless(cxxThisExpr()))),
+                            callee(cxxMethodDecl(hasName("value_or"),
+                                                 ofClass(optionalClass()))),
+                            hasArgument(0, stringLiteral(hasSize(0))))
+              .bind(ValueOrCallID))));
+}
+
+auto isValueOrNotEqX() {
+  auto ComparesToSame = [](ast_matchers::internal::Matcher<Stmt> Arg) {
+    return hasOperands(
+        ignoringImplicit(
+            cxxMemberCallExpr(on(expr(unless(cxxThisExpr()))),
+                              callee(cxxMethodDecl(hasName("value_or"),
+                                                   ofClass(optionalClass()))),
+                              hasArgument(0, Arg))
+                .bind(ValueOrCallID)),
+        ignoringImplicit(Arg));
+  };
+
+  // `opt.value_or(X) != X`, for X is `nullptr`, `""`, or `0`. Ideally, we'd
+  // support this pattern for any expression, but the AST does not have a
+  // generic expression comparison facility, so we specialize to common cases
+  // seen in practice.  FIXME: define a matcher that compares values across
+  // nodes, which would let us generalize this to any `X`.
+  return binaryOperation(hasOperatorName("!="),
+                         anyOf(ComparesToSame(cxxNullPtrLiteralExpr()),
+                               ComparesToSame(stringLiteral(hasSize(0))),
+                               ComparesToSame(integerLiteral(equals(0)))));
+}
+
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the
 /// symbolic value of its "has_value" property.
 StructValue &createOptionalValue(Environment &Env, BoolValue &HasValueVal) {
@@ -218,6 +255,69 @@ void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
     State.Env.setValue(CallExprLoc, *HasValueVal);
     State.Env.setStorageLocation(*CallExpr, CallExprLoc);
   }
+}
+
+/// `ModelPred` builds a logical formula relating the predicate in
+/// `ValueOrPredExpr` to the optional's `has_value` property.
+void transferValueOrImpl(const clang::Expr *ValueOrPredExpr,
+                         const MatchFinder::MatchResult &Result,
+                         LatticeTransferState &State,
+                         BoolValue &(*ModelPred)(Environment &Env,
+                                                 BoolValue &ExprVal,
+                                                 BoolValue &HasValueVal)) {
+  auto &Env = State.Env;
+
+  const auto *ObjectArgumentExpr =
+      Result.Nodes.getNodeAs<clang::CXXMemberCallExpr>(ValueOrCallID)
+          ->getImplicitObjectArgument();
+
+  auto *OptionalVal = cast_or_null<StructValue>(
+      Env.getValue(*ObjectArgumentExpr, SkipPast::ReferenceThenPointer));
+  if (OptionalVal == nullptr)
+    return;
+  auto *HasValueVal = getHasValue(OptionalVal);
+  assert(HasValueVal != nullptr);
+
+  auto *ExprValue = cast_or_null<BoolValue>(
+      State.Env.getValue(*ValueOrPredExpr, SkipPast::None));
+  if (ExprValue == nullptr) {
+    auto &ExprLoc = State.Env.createStorageLocation(*ValueOrPredExpr);
+    ExprValue = &State.Env.makeAtomicBoolValue();
+    State.Env.setValue(ExprLoc, *ExprValue);
+    State.Env.setStorageLocation(*ValueOrPredExpr, ExprLoc);
+  }
+
+  Env.addToFlowCondition(ModelPred(Env, *ExprValue, *HasValueVal));
+}
+
+void transferValueOrStringEmptyCall(const clang::Expr *ComparisonExpr,
+                                    const MatchFinder::MatchResult &Result,
+                                    LatticeTransferState &State) {
+  return transferValueOrImpl(ComparisonExpr, Result, State,
+                             [](Environment &Env, BoolValue &ExprVal,
+                                BoolValue &HasValueVal) -> BoolValue & {
+                               // If the result is *not* empty, then we know the
+                               // optional must have been holding a value. If
+                               // `ExprVal` is true, though, we don't learn
+                               // anything definite about `has_value`, so we
+                               // don't add any corresponding implications to
+                               // the flow condition.
+                               return Env.makeImplication(Env.makeNot(ExprVal),
+                                                          HasValueVal);
+                             });
+}
+
+void transferValueOrNotEqX(const Expr *ComparisonExpr,
+                           const MatchFinder::MatchResult &Result,
+                           LatticeTransferState &State) {
+  transferValueOrImpl(ComparisonExpr, Result, State,
+                      [](Environment &Env, BoolValue &ExprVal,
+                         BoolValue &HasValueVal) -> BoolValue & {
+                        // We know that if `(opt.value_or(X) != X)` then
+                        // `opt.hasValue()`, even without knowing further
+                        // details about the contents of `opt`.
+                        return Env.makeImplication(ExprVal, HasValueVal);
+                      });
 }
 
 void assignOptionalValue(const Expr &E, LatticeTransferState &State,
@@ -438,6 +538,12 @@ auto buildTransferMatchSwitch(
 
       // std::swap
       .CaseOf<CallExpr>(isStdSwapCall(), transferStdSwapCall)
+
+      // opt.value_or("").empty()
+      .CaseOf<Expr>(isValueOrStringEmptyCall(), transferValueOrStringEmptyCall)
+
+      // opt.value_or(X) != X
+      .CaseOf<Expr>(isValueOrNotEqX(), transferValueOrNotEqX)
 
       .Build();
 }

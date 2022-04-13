@@ -372,7 +372,7 @@ Block &SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
     std::shared_ptr<InlineSite> inline_site = m_inline_sites[opaque_block_uid];
     Block &parent_block = GetOrCreateBlock(inline_site->parent_id);
     parent_block.AddChild(child_block);
-
+    m_ast->GetOrCreateInlinedFunctionDecl(block_id);
     // Copy ranges from InlineSite to Block.
     for (size_t i = 0; i < inline_site->ranges.GetSize(); ++i) {
       auto *entry = inline_site->ranges.GetEntryAtIndex(i);
@@ -1742,8 +1742,7 @@ size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
   case S_BLOCK32:
     break;
   case S_INLINESITE:
-    // TODO: Handle inline site case.
-    return 0;
+    break;
   default:
     lldbassert(false && "Symbol is not a block!");
     return 0;
@@ -1770,8 +1769,10 @@ size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
     PdbCompilandSymId child_sym_id(block_id.modi, record_offset);
     ++iter;
 
-    // If this is a block, recurse into its children and then skip it.
-    if (variable_cvs.kind() == S_BLOCK32) {
+    // If this is a block or inline site, recurse into its children and then
+    // skip it.
+    if (variable_cvs.kind() == S_BLOCK32 ||
+        variable_cvs.kind() == S_INLINESITE) {
       uint32_t block_end = getScopeEndOffset(variable_cvs);
       count += ParseVariablesForBlock(child_sym_id);
       iter = syms.at(block_end);

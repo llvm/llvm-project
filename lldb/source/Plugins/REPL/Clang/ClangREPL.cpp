@@ -19,7 +19,7 @@ ClangREPL::ClangREPL(lldb::LanguageType language, Target &target)
     : REPL(eKindClang, target), m_language(language),
       m_implicit_expr_result_regex("\\$[0-9]+") {}
 
-ClangREPL::~ClangREPL() {}
+ClangREPL::~ClangREPL() = default;
 
 void ClangREPL::Initialize() {
   LanguageSet languages;

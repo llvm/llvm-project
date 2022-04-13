@@ -1128,3 +1128,93 @@ bb:
   %tmp28 = extractelement <16 x i32> %tmp27, i64 0
   ret i32 %tmp28
 }
+
+; This test contains two absolute difference patterns joined by an add. The result of that add is then reduced to a single element.
+; SelectionDAGBuilder should tag the joining add as a vector reduction. We neeed to recognize that both sides can use psadbw.
+define dso_local i32 @sad_double_reduction_abs(<16 x i8>* %arg, <16 x i8>* %arg1, <16 x i8>* %arg2, <16 x i8>* %arg3) {
+; SSE2-LABEL: sad_double_reduction_abs:
+; SSE2:       # %bb.0: # %bb
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    movdqu (%rsi), %xmm1
+; SSE2-NEXT:    psadbw %xmm0, %xmm1
+; SSE2-NEXT:    movdqu (%rdx), %xmm0
+; SSE2-NEXT:    movdqu (%rcx), %xmm2
+; SSE2-NEXT:    psadbw %xmm0, %xmm2
+; SSE2-NEXT:    paddd %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    por %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: sad_double_reduction_abs:
+; AVX1:       # %bb.0: # %bb
+; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX1-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX1-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: sad_double_reduction_abs:
+; AVX2:       # %bb.0: # %bb
+; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX2-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX2-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX2-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: sad_double_reduction_abs:
+; AVX512:       # %bb.0: # %bb
+; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX512-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    retq
+bb:
+  %tmp = load <16 x i8>, <16 x i8>* %arg, align 1
+  %tmp4 = load <16 x i8>, <16 x i8>* %arg1, align 1
+  %tmp5 = zext <16 x i8> %tmp to <16 x i32>
+  %tmp6 = zext <16 x i8> %tmp4 to <16 x i32>
+  %tmp7 = sub nsw <16 x i32> %tmp5, %tmp6
+  %tmp10 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %tmp7, i1 false)
+  %tmp11 = load <16 x i8>, <16 x i8>* %arg2, align 1
+  %tmp12 = load <16 x i8>, <16 x i8>* %arg3, align 1
+  %tmp13 = zext <16 x i8> %tmp11 to <16 x i32>
+  %tmp14 = zext <16 x i8> %tmp12 to <16 x i32>
+  %tmp15 = sub nsw <16 x i32> %tmp13, %tmp14
+  %tmp18 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %tmp15, i1 false)
+  %tmp19 = add nuw nsw <16 x i32> %tmp18, %tmp10
+  %tmp20 = shufflevector <16 x i32> %tmp19, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp21 = add <16 x i32> %tmp19, %tmp20
+  %tmp22 = shufflevector <16 x i32> %tmp21, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp23 = add <16 x i32> %tmp21, %tmp22
+  %tmp24 = shufflevector <16 x i32> %tmp23, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp25 = add <16 x i32> %tmp23, %tmp24
+  %tmp26 = shufflevector <16 x i32> %tmp25, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp27 = add <16 x i32> %tmp25, %tmp26
+  %tmp28 = extractelement <16 x i32> %tmp27, i64 0
+  ret i32 %tmp28
+}
+
+; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+declare <16 x i32> @llvm.abs.v16i32(<16 x i32>, i1 immarg) #0
+attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }

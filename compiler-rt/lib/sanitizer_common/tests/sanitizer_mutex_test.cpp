@@ -155,6 +155,15 @@ TEST(SanitizerCommon, Mutex) {
   for (int i = 0; i < kThreads; i++) PTHREAD_JOIN(threads[i], 0);
 }
 
+TEST(SanitizerCommon, MutexTry) {
+  Mutex mtx;
+  TestData<Mutex> data(&mtx);
+  pthread_t threads[kThreads];
+  for (int i = 0; i < kThreads; i++)
+    PTHREAD_CREATE(&threads[i], 0, try_thread<Mutex>, &data);
+  for (int i = 0; i < kThreads; i++) PTHREAD_JOIN(threads[i], 0);
+}
+
 struct SemaphoreData {
   Semaphore *sem;
   bool done;

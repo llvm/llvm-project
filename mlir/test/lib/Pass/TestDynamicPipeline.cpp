@@ -20,6 +20,8 @@ namespace {
 class TestDynamicPipelinePass
     : public PassWrapper<TestDynamicPipelinePass, OperationPass<>> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDynamicPipelinePass)
+
   StringRef getArgument() const final { return "test-dynamic-pipeline"; }
   StringRef getDescription() const final {
     return "Tests the dynamic pipeline feature by applying "
@@ -99,7 +101,7 @@ public:
       llvm::cl::desc("The pipeline description that "
                      "will run on the filtered function.")};
   ListOption<std::string> opNames{
-      *this, "op-name", llvm::cl::MiscFlags::CommaSeparated,
+      *this, "op-name",
       llvm::cl::desc("List of function name to apply the pipeline to")};
 };
 } // namespace

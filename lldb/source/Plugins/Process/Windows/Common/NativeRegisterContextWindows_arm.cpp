@@ -560,7 +560,7 @@ Status NativeRegisterContextWindows_arm::WriteRegister(
 }
 
 Status NativeRegisterContextWindows_arm::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   const size_t data_size = REG_CONTEXT_SIZE;
   data_sp = std::make_shared<DataBufferHeap>(data_size, 0);
   ::CONTEXT tls_context;

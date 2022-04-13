@@ -1,3 +1,4 @@
+XFAIL: system-aix
 ## Test inserting files after a file.
 
 RUN: touch %t1.txt

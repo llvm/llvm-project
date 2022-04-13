@@ -26,7 +26,7 @@ MachThreadList::MachThreadList()
     : m_threads(), m_threads_mutex(PTHREAD_MUTEX_RECURSIVE),
       m_is_64_bit(false) {}
 
-MachThreadList::~MachThreadList() {}
+MachThreadList::~MachThreadList() = default;
 
 nub_state_t MachThreadList::GetState(nub_thread_t tid) {
   MachThreadSP thread_sp(GetThreadByID(tid));

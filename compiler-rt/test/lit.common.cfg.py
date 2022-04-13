@@ -613,8 +613,8 @@ if platform.system() == 'Darwin':
   # Only run up to 3 processes that require shadow memory simultaneously on
   # 64-bit Darwin. Using more scales badly and hogs the system due to
   # inefficient handling of large mmap'd regions (terabytes) by the kernel.
-  elif config.target_arch in ['x86_64', 'x86_64h']:
-    lit_config.warning('Throttling sanitizer tests that require shadow memory on Darwin 64bit')
+  else:
+    lit_config.warning('Throttling sanitizer tests that require shadow memory on Darwin')
     lit_config.parallelism_groups['shadow-memory'] = 3
 
 # Multiple substitutions are necessary to support multiple shared objects used

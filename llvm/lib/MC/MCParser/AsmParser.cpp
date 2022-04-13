@@ -3573,8 +3573,8 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     if (HasMD5) {
       MD5::MD5Result Sum;
       for (unsigned i = 0; i != 8; ++i) {
-        Sum.Bytes[i] = uint8_t(MD5Hi >> ((7 - i) * 8));
-        Sum.Bytes[i + 8] = uint8_t(MD5Lo >> ((7 - i) * 8));
+        Sum[i] = uint8_t(MD5Hi >> ((7 - i) * 8));
+        Sum[i + 8] = uint8_t(MD5Lo >> ((7 - i) * 8));
       }
       CKMem = Sum;
     }

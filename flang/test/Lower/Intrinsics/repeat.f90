@@ -18,7 +18,7 @@ subroutine repeat_test(c, n)
   ! CHECK-DAG: fir.box_elesize
   ! CHECK: fir.call @{{.*}}bar_repeat_test
   call bar_repeat_test(repeat(c,n))
-  ! CHECK: fir.freemem %[[tmpAddr]] : <!fir.char<1,?>>
+  ! CHECK: fir.freemem %[[tmpAddr]] : !fir.heap<!fir.char<1,?>>
   return
 end subroutine
 

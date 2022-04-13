@@ -157,6 +157,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} argc 'int'
 // CHECK-NEXT: | `-ParmVarDecl {{.*}} argv 'char **'
 // CHECK-NEXT: |-FunctionDecl {{.*}} __scrt_common_main_seh 'int ()' static 
+// CHECK-NEXT: |-FunctionDecl {{.*}} invoke_main 'int ()' inline
 // CHECK-NEXT: `-FunctionDecl {{.*}} Function 'int (int, char)'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} Param1 'int'
 // CHECK-NEXT:   `-ParmVarDecl {{.*}} Param2 'char'

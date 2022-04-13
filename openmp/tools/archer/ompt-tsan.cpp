@@ -686,10 +686,10 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
 #endif
     assert(Data->RefCount == 1 &&
            "All tasks should have finished at the implicit barrier!");
-    Data->Delete();
     if (type & ompt_task_initial) {
-      ToParallelData(parallel_data)->Delete();
+      Data->Team->Delete();
     }
+    Data->Delete();
     TsanFuncExit();
     break;
   }

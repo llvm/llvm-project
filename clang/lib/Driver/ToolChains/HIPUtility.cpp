@@ -53,8 +53,6 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   // ToDo: Remove the dummy host binary entry which is required by
   // clang-offload-bundler.
   std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux";
-  std::string BundlerInputArg = "-inputs=" NULL_FILE;
-
   // AMDGCN:
   // For code object version 2 and 3, the offload kind in bundle ID is 'hip'
   // for backward compatibility. For code object version 4 and greater, the
@@ -70,14 +68,20 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
         "," + OffloadKind + "-" + normalizeForBundler(TT, !ArchStr.empty());
     if (!ArchStr.empty())
       BundlerTargetArg += "-" + ArchStr.str();
-    BundlerInputArg = BundlerInputArg + "," + II.getFilename();
   }
   BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
+
+  // Use a NULL file as input for the dummy host binary entry
+  std::string BundlerInputArg = "-input=" NULL_FILE;
   BundlerArgs.push_back(Args.MakeArgString(BundlerInputArg));
+  for (const auto &II : Inputs) {
+    BundlerInputArg = std::string("-input=") + II.getFilename();
+    BundlerArgs.push_back(Args.MakeArgString(BundlerInputArg));
+  }
 
   std::string Output = std::string(OutputFileName);
   auto *BundlerOutputArg =
-      Args.MakeArgString(std::string("-outputs=").append(Output));
+      Args.MakeArgString(std::string("-output=").append(Output));
   BundlerArgs.push_back(BundlerOutputArg);
 
   const char *Bundler = Args.MakeArgString(

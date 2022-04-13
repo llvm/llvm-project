@@ -1933,7 +1933,7 @@ def fglobal_isel : Flag<["-"], "fglobal-isel">, Group<f_clang_Group>,
 def fexperimental_isel : Flag<["-"], "fexperimental-isel">, Group<f_clang_Group>,
   Alias<fglobal_isel>;
 defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
-  CodeGenOpts<"LegacyPassManager">, Default<"!static_cast<unsigned>(LLVM_ENABLE_NEW_PASS_MANAGER)">,
+  CodeGenOpts<"LegacyPassManager">, DefaultFalse,
   PosFlag<SetTrue, [], "Use the legacy pass manager in LLVM (deprecated, to be removed in a future release)">,
   NegFlag<SetFalse, [], "Use the new pass manager in LLVM">,
   BothFlags<[CC1Option]>>, Group<f_clang_Group>;
@@ -2363,7 +2363,6 @@ defm use_cxa_atexit : BoolFOption<"use-cxa-atexit",
   CodeGenOpts<"CXAAtExit">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option], "Don't use __cxa_atexit for calling destructors">,
   PosFlag<SetTrue>>;
-def fno_unit_at_a_time : Flag<["-"], "fno-unit-at-a-time">, Group<f_Group>;
 def fno_unwind_tables : Flag<["-"], "fno-unwind-tables">, Group<f_Group>;
 def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Group<f_Group>, Flags<[CC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
@@ -2787,7 +2786,6 @@ def ftrapv_handler : Separate<["-"], "ftrapv-handler">, Group<f_Group>, Flags<[C
 def ftrap_function_EQ : Joined<["-"], "ftrap-function=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Issue call to specified function rather than a trap instruction">,
   MarshallingInfoString<CodeGenOpts<"TrapFuncName">>;
-def funit_at_a_time : Flag<["-"], "funit-at-a-time">, Group<f_Group>;
 def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Flags<[CC1Option]>;
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
@@ -4184,8 +4182,6 @@ def _output_class_directory_EQ : Joined<["--"], "output-class-directory=">, Alia
 def _output_class_directory : Separate<["--"], "output-class-directory">, Alias<foutput_class_dir_EQ>;
 def _output_EQ : Joined<["--"], "output=">, Alias<o>;
 def _output : Separate<["--"], "output">, Alias<o>;
-def _overlay_platform_toolchain_EQ : Joined<["--"], "overlay-platform-toolchain=">;
-def _overlay_platform_toolchain : Separate<["--"], "overlay-platform-toolchain">, Alias<_overlay_platform_toolchain_EQ>;
 def _param : Separate<["--"], "param">, Group<CompileOnly_Group>;
 def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
 def _precompile : Flag<["--"], "precompile">, Flags<[NoXarchOption]>,
@@ -4609,6 +4605,7 @@ defm tree_salias : BooleanFFlag<"tree-salias">, Group<clang_ignored_f_Group>;
 defm tree_ter : BooleanFFlag<"tree-ter">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm tree_vectorizer_verbose : BooleanFFlag<"tree-vectorizer-verbose">, Group<clang_ignored_f_Group>;
 defm tree_vrp : BooleanFFlag<"tree-vrp">, Group<clang_ignored_gcc_optimization_f_Group>;
+defm : BooleanFFlag<"unit-at-a-time">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm unroll_all_loops : BooleanFFlag<"unroll-all-loops">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm unsafe_loop_optimizations : BooleanFFlag<"unsafe-loop-optimizations">,
     Group<clang_ignored_gcc_optimization_f_Group>;
@@ -5507,6 +5504,13 @@ defm enable_noundef_analysis : BoolOption<"",
   PosFlag<SetTrue, [], "Enable">,
   NegFlag<SetFalse, [], "Disable">,
   BothFlags<[], " analyzing function argument and return types for mandatory definedness">>;
+defm opaque_pointers : BoolOption<"",
+  "opaque-pointers",
+  CodeGenOpts<"OpaquePointers">,
+  DefaultFalse,
+  PosFlag<SetTrue, [], "Enable">,
+  NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[], " opaque pointers">>;
 def discard_value_names : Flag<["-"], "discard-value-names">,
   HelpText<"Discard value names in LLVM IR">,
   MarshallingInfoFlag<CodeGenOpts<"DiscardValueNames">>;

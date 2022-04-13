@@ -36,4 +36,8 @@ let Definition = "interpreter" in {
     Global,
     DefaultTrue,
     Desc<"If true, LLDB will repeat the previous command if no command was passed to the interpreter. If false, LLDB won't repeat the previous command but only return a new prompt.">;
+  def RequireCommandOverwrite: Property<"require-overwrite", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, require --overwrite in 'command script add' before overwriting existing user commands.">;
 }

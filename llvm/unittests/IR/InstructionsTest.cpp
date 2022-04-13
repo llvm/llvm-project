@@ -17,6 +17,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -507,6 +508,59 @@ TEST(InstructionsTest, FPMathOperator) {
   I->deleteValue();
 }
 
+TEST(InstructionTest, ConstrainedTrans) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context),
+                        {Type::getFloatTy(Context), Type::getFloatTy(Context),
+                         Type::getInt32Ty(Context)},
+                        false);
+  auto *F = Function::Create(FTy, Function::ExternalLinkage, "", M.get());
+  auto *BB = BasicBlock::Create(Context, "bb", F);
+  IRBuilder<> Builder(Context);
+  Builder.SetInsertPoint(BB);
+  auto *Arg0 = F->arg_begin();
+  auto *Arg1 = F->arg_begin() + 1;
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateFAdd(Arg0, Arg1));
+    EXPECT_EQ(Intrinsic::experimental_constrained_fadd,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(
+        Builder.CreateFPToSI(Arg0, Type::getInt32Ty(Context)));
+    EXPECT_EQ(Intrinsic::experimental_constrained_fptosi,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateIntrinsic(
+        Intrinsic::ceil, {Type::getFloatTy(Context)}, {Arg0}));
+    EXPECT_EQ(Intrinsic::experimental_constrained_ceil,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateFCmpOEQ(Arg0, Arg1));
+    EXPECT_EQ(Intrinsic::experimental_constrained_fcmp,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *Arg2 = F->arg_begin() + 2;
+    auto *I = cast<Instruction>(Builder.CreateAdd(Arg2, Arg2));
+    EXPECT_EQ(Intrinsic::not_intrinsic, getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateConstrainedFPBinOp(
+        Intrinsic::experimental_constrained_fadd, Arg0, Arg0));
+    EXPECT_EQ(Intrinsic::not_intrinsic, getConstrainedIntrinsicID(*I));
+  }
+}
 
 TEST(InstructionsTest, isEliminableCastPair) {
   LLVMContext C;

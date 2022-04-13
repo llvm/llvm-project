@@ -600,7 +600,7 @@ public:
 protected:
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -692,7 +692,7 @@ public:
 protected:
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1315,7 +1315,7 @@ protected:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1679,7 +1679,7 @@ class CommandObjectPlatformShell : public CommandObjectRaw {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 

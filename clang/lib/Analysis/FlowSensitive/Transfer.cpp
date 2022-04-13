@@ -21,6 +21,8 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -35,6 +37,26 @@ static const Expr *skipExprWithCleanups(const Expr *E) {
   if (auto *C = dyn_cast_or_null<ExprWithCleanups>(E))
     return C->getSubExpr();
   return E;
+}
+
+static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
+                                          Environment &Env) {
+  // Equality of booleans involves implicit integral casts. Ignore these casts
+  // for now and focus on the values associated with the wrapped expressions.
+  // FIXME: Consider changing this once the framework offers better support for
+  // integral casts.
+  const Expr *LHSNorm = LHS.IgnoreCasts();
+  const Expr *RHSNorm = RHS.IgnoreCasts();
+  assert(LHSNorm != nullptr);
+  assert(RHSNorm != nullptr);
+
+  if (auto *LHSValue = dyn_cast_or_null<BoolValue>(
+          Env.getValue(*LHSNorm, SkipPast::Reference)))
+    if (auto *RHSValue = dyn_cast_or_null<BoolValue>(
+            Env.getValue(*RHSNorm, SkipPast::Reference)))
+      return Env.makeIff(*LHSValue, *RHSValue);
+
+  return Env.makeAtomicBoolValue();
 }
 
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
@@ -83,8 +105,16 @@ public:
         Env.setValue(Loc, Env.makeOr(LHSVal, RHSVal));
       break;
     }
+    case BO_NE:
+    case BO_EQ: {
+      auto &LHSEqRHSValue = evaluateBooleanEquality(*LHS, *RHS, Env);
+      auto &Loc = Env.createStorageLocation(*S);
+      Env.setStorageLocation(*S, Loc);
+      Env.setValue(Loc, S->getOpcode() == BO_EQ ? LHSEqRHSValue
+                                                : Env.makeNot(LHSEqRHSValue));
+      break;
+    }
     default:
-      // FIXME: Add support for BO_EQ, BO_NE.
       break;
     }
   }
@@ -169,6 +199,22 @@ public:
     assert(SubExpr != nullptr);
 
     switch (S->getCastKind()) {
+    case CK_IntegralToBoolean: {
+      // This cast creates a new, boolean value from the integral value. We
+      // model that with a fresh value in the environment, unless it's already a
+      // boolean.
+      auto &Loc = Env.createStorageLocation(*S);
+      Env.setStorageLocation(*S, Loc);
+      if (auto *SubExprVal = dyn_cast_or_null<BoolValue>(
+              Env.getValue(*SubExpr, SkipPast::Reference)))
+        Env.setValue(Loc, *SubExprVal);
+      else
+        // FIXME: If integer modeling is added, then update this code to create
+        // the boolean based on the integer model.
+        Env.setValue(Loc, Env.makeAtomicBoolValue());
+      break;
+    }
+
     case CK_LValueToRValue: {
       auto *SubExprVal = Env.getValue(*SubExpr, SkipPast::Reference);
       if (SubExprVal == nullptr)
@@ -179,6 +225,13 @@ public:
       Env.setValue(ExprLoc, *SubExprVal);
       break;
     }
+
+    case CK_IntegralCast:
+      // FIXME: This cast creates a new integral value from the
+      // subexpression. But, because we don't model integers, we don't
+      // distinguish between this new value and the underlying one. If integer
+      // modeling is added, then update this code to create a fresh location and
+      // value.
     case CK_UncheckedDerivedToBase:
     case CK_ConstructorConversion:
     case CK_UserDefinedConversion:
@@ -415,6 +468,9 @@ public:
   }
 
   void VisitCallExpr(const CallExpr *S) {
+    // Of clang's builtins, only `__builtin_expect` is handled explicitly, since
+    // others (like trap, debugtrap, and unreachable) are handled by CFG
+    // construction.
     if (S->isCallToStdMove()) {
       assert(S->getNumArgs() == 1);
 
@@ -425,6 +481,18 @@ public:
       if (ArgLoc == nullptr)
         return;
 
+      Env.setStorageLocation(*S, *ArgLoc);
+    } else if (S->getDirectCallee() != nullptr &&
+               S->getDirectCallee()->getBuiltinID() ==
+                   Builtin::BI__builtin_expect) {
+      assert(S->getNumArgs() > 0);
+      assert(S->getArg(0) != nullptr);
+      // `__builtin_expect` returns by-value, so strip away any potential
+      // references in the argument.
+      auto *ArgLoc = Env.getStorageLocation(
+          *S->getArg(0)->IgnoreParenImpCasts(), SkipPast::Reference);
+      if (ArgLoc == nullptr)
+        return;
       Env.setStorageLocation(*S, *ArgLoc);
     }
   }

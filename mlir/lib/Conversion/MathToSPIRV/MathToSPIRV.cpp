@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "math-to-spirv-pattern"
@@ -30,14 +31,74 @@ using namespace mlir;
 // normal RewritePattern.
 
 namespace {
+/// Converts math.copysign to SPIR-V ops.
+class CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(math::CopySignOp copySignOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto type = getTypeConverter()->convertType(copySignOp.getType());
+    if (!type)
+      return failure();
+
+    FloatType floatType;
+    if (auto scalarType = copySignOp.getType().dyn_cast<FloatType>()) {
+      floatType = scalarType;
+    } else if (auto vectorType = copySignOp.getType().dyn_cast<VectorType>()) {
+      floatType = vectorType.getElementType().cast<FloatType>();
+    } else {
+      return failure();
+    }
+
+    Location loc = copySignOp.getLoc();
+    int bitwidth = floatType.getWidth();
+    Type intType = rewriter.getIntegerType(bitwidth);
+
+    Value signMask = rewriter.create<spirv::ConstantOp>(
+        loc, intType, rewriter.getIntegerAttr(intType, (1u << (bitwidth - 1))));
+    Value valueMask = rewriter.create<spirv::ConstantOp>(
+        loc, intType,
+        rewriter.getIntegerAttr(intType, (1u << (bitwidth - 1)) - 1u));
+
+    if (auto vectorType = copySignOp.getType().dyn_cast<VectorType>()) {
+      assert(vectorType.getRank() == 1);
+      int count = vectorType.getNumElements();
+      intType = VectorType::get(count, intType);
+
+      SmallVector<Value> signSplat(count, signMask);
+      signMask =
+          rewriter.create<spirv::CompositeConstructOp>(loc, intType, signSplat);
+
+      SmallVector<Value> valueSplat(count, valueMask);
+      valueMask = rewriter.create<spirv::CompositeConstructOp>(loc, intType,
+                                                               valueSplat);
+    }
+
+    Value lhsCast =
+        rewriter.create<spirv::BitcastOp>(loc, intType, adaptor.getLhs());
+    Value rhsCast =
+        rewriter.create<spirv::BitcastOp>(loc, intType, adaptor.getRhs());
+
+    Value value = rewriter.create<spirv::BitwiseAndOp>(
+        loc, intType, ValueRange{lhsCast, valueMask});
+    Value sign = rewriter.create<spirv::BitwiseAndOp>(
+        loc, intType, ValueRange{rhsCast, signMask});
+
+    Value result = rewriter.create<spirv::BitwiseOrOp>(loc, intType,
+                                                       ValueRange{value, sign});
+    rewriter.replaceOpWithNewOp<spirv::BitcastOp>(copySignOp, type, result);
+    return success();
+  }
+};
+
 /// Converts math.expm1 to SPIR-V ops.
 ///
 /// SPIR-V does not have a direct operations for exp(x)-1. Explicitly lower to
 /// these operations.
 template <typename ExpOp>
-class ExpM1OpPattern final : public OpConversionPattern<math::ExpM1Op> {
-public:
-  using OpConversionPattern<math::ExpM1Op>::OpConversionPattern;
+struct ExpM1OpPattern final : public OpConversionPattern<math::ExpM1Op> {
+  using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(math::ExpM1Op operation, OpAdaptor adaptor,
@@ -57,9 +118,8 @@ public:
 /// SPIR-V does not have a direct operations for log(1+x). Explicitly lower to
 /// these operations.
 template <typename LogOp>
-class Log1pOpPattern final : public OpConversionPattern<math::Log1pOp> {
-public:
-  using OpConversionPattern<math::Log1pOp>::OpConversionPattern;
+struct Log1pOpPattern final : public OpConversionPattern<math::Log1pOp> {
+  using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(math::Log1pOp operation, OpAdaptor adaptor,
@@ -83,6 +143,8 @@ public:
 namespace mlir {
 void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                  RewritePatternSet &patterns) {
+  // Core patterns
+  patterns.add<CopySignPattern>(typeConverter, patterns.getContext());
 
   // GLSL patterns
   patterns

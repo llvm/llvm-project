@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -45,6 +46,10 @@ EnablePCRelLinkerOpt("ppc-pcrel-linker-opt", cl::Hidden, cl::init(true),
 static cl::opt<bool>
 RunPreEmitPeephole("ppc-late-peephole", cl::Hidden, cl::init(true),
                    cl::desc("Run pre-emit peephole optimizations."));
+
+static cl::opt<uint64_t>
+DSCRValue("ppc-set-dscr", cl::Hidden,
+          cl::desc("Set the Data Stream Control Register."));
 
 namespace {
 
@@ -407,6 +412,38 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
+      // If the user wants to set the DSCR using command-line options,
+      // load in the specified value at the start of main.
+      if (DSCRValue.getNumOccurrences() > 0 && MF.getName().equals("main") &&
+          MF.getFunction().hasExternalLinkage()) {
+        DSCRValue = (uint32_t)(DSCRValue & 0x01FFFFFF); // 25-bit DSCR mask
+        RegScavenger RS;
+        MachineBasicBlock &MBB = MF.front();
+        // Find an unused GPR according to register liveness
+        RS.enterBasicBlock(MBB);
+        unsigned InDSCR = RS.FindUnusedReg(&PPC::GPRCRegClass);
+        if (InDSCR) {
+          const PPCInstrInfo *TII =
+              MF.getSubtarget<PPCSubtarget>().getInstrInfo();
+          DebugLoc dl;
+          MachineBasicBlock::iterator IP = MBB.begin(); // Insert Point
+          // Copy the 32-bit DSCRValue integer into the GPR InDSCR using LIS and
+          // ORI, then move to DSCR. If the requested DSCR value is contained
+          // in a 16-bit signed number, we can emit a single `LI`, but the
+          // impact of saving one instruction in one function does not warrant
+          // any additional complexity in the logic here.
+          BuildMI(MBB, IP, dl, TII->get(PPC::LIS), InDSCR)
+              .addImm(DSCRValue >> 16);
+          BuildMI(MBB, IP, dl, TII->get(PPC::ORI), InDSCR)
+              .addReg(InDSCR)
+              .addImm(DSCRValue & 0xFFFF);
+          BuildMI(MBB, IP, dl, TII->get(PPC::MTUDSCR))
+              .addReg(InDSCR, RegState::Kill);
+        } else
+          errs() << "Warning: Ran out of registers - Unable to set DSCR as "
+                    "requested";
+      }
+
       if (skipFunction(MF.getFunction()) || !RunPreEmitPeephole) {
         // Remove UNENCODED_NOP even when this pass is disabled.
         // This needs to be done unconditionally so we don't emit zeros

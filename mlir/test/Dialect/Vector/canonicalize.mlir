@@ -762,6 +762,34 @@ func @extract_strided_broadcast2(%arg0: vector<4xf16>) -> vector<2x2xf16> {
 
 // -----
 
+// CHECK-LABEL: func @extract_strided_broadcast3
+//  CHECK-SAME: (%[[ARG:.+]]: vector<1xf32>)
+//       CHECK: %[[V:.+]] = vector.broadcast %[[ARG]] : vector<1xf32> to vector<1x4xf32>
+//       CHECK: return %[[V]]
+func @extract_strided_broadcast3(%arg0: vector<1xf32>) -> vector<1x4xf32> {
+ %0 = vector.broadcast %arg0 : vector<1xf32> to vector<1x8xf32>
+ %1 = vector.extract_strided_slice %0
+      {offsets = [0, 4], sizes = [1, 4], strides = [1, 1]}
+      : vector<1x8xf32> to vector<1x4xf32>
+  return %1 : vector<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_strided_broadcast4
+//  CHECK-SAME: (%[[ARG:.+]]: f32)
+//       CHECK: %[[V:.+]] = vector.broadcast %[[ARG]] : f32 to vector<1x4xf32>
+//       CHECK: return %[[V]]
+func @extract_strided_broadcast4(%arg0: f32) -> vector<1x4xf32> {
+ %0 = vector.broadcast %arg0 : f32 to vector<1x8xf32>
+ %1 = vector.extract_strided_slice %0
+      {offsets = [0, 4], sizes = [1, 4], strides = [1, 1]}
+      : vector<1x8xf32> to vector<1x4xf32>
+  return %1 : vector<1x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: consecutive_shape_cast
 //       CHECK:   %[[C:.*]] = vector.shape_cast %{{.*}} : vector<16xf16> to vector<4x4xf16>
 //  CHECK-NEXT:   return %[[C]] : vector<4x4xf16>
@@ -1275,4 +1303,97 @@ func @shuffle_1d() -> vector<4xi32> {
   %v1 = arith.constant dense<[3, 4, 5]> : vector<3xi32>
   %shuffle = vector.shuffle %v0, %v1 [3, 2, 5, 1] : vector<3xi32>, vector<3xi32>
   return %shuffle : vector<4xi32>
+}
+
+// CHECK-LABEL: func @shuffle_fold1
+//       CHECK:   %arg0 : vector<4xi32>
+func @shuffle_fold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<4xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3] : vector<4xi32>, vector<2xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// CHECK-LABEL: func @shuffle_fold2
+//       CHECK:   %arg1 : vector<2xi32>
+func @shuffle_fold2(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, 5] : vector<4xi32>, vector<2xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// CHECK-LABEL: func @shuffle_fold3
+//       CHECK:   return %arg0 : vector<4x5x6xi32>
+func @shuffle_fold3(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> vector<4x5x6xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3] : vector<4x5x6xi32>, vector<2x5x6xi32>
+  return %shuffle : vector<4x5x6xi32>
+}
+
+// CHECK-LABEL: func @shuffle_fold4
+//       CHECK:   return %arg1 : vector<2x5x6xi32>
+func @shuffle_fold4(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> vector<2x5x6xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, 5] : vector<4x5x6xi32>, vector<2x5x6xi32>
+  return %shuffle : vector<2x5x6xi32>
+}
+
+// CHECK-LABEL: func @shuffle_nofold1
+//       CHECK:   %[[V:.+]] = vector.shuffle %arg0, %arg1 [0, 1, 2, 3, 4] : vector<4xi32>, vector<2xi32>
+//       CHECK:   return %[[V]]
+func @shuffle_nofold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<5xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3, 4] : vector<4xi32>, vector<2xi32>
+  return %shuffle : vector<5xi32>
+}
+
+// CHECK-LABEL: func @shuffle_nofold2
+//       CHECK:   %[[V:.+]] = vector.shuffle %arg0, %arg1 [0, 1, 2, 3] : vector<[4]xi32>, vector<[2]xi32>
+//       CHECK:   return %[[V]]
+func @shuffle_nofold2(%v0 : vector<[4]xi32>, %v1 : vector<[2]xi32>) -> vector<4xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3] : vector<[4]xi32>, vector<[2]xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @transpose_scalar_broadcast1
+//  CHECK-SAME: (%[[ARG:.+]]: vector<1xf32>)
+//       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<1xf32> to vector<1x8xf32>
+//       CHECK:   return %[[V]] : vector<1x8xf32>
+func @transpose_scalar_broadcast1(%value: vector<1xf32>) -> vector<1x8xf32> {
+  %bcast = vector.broadcast %value : vector<1xf32> to vector<8x1xf32>
+  %t = vector.transpose %bcast, [1, 0] : vector<8x1xf32> to vector<1x8xf32>
+  return %t : vector<1x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @transpose_scalar_broadcast2
+//  CHECK-SAME: (%[[ARG:.+]]: f32)
+//       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : f32 to vector<1x8xf32>
+//       CHECK:   return %[[V]] : vector<1x8xf32>
+func @transpose_scalar_broadcast2(%value: f32) -> vector<1x8xf32> {
+  %bcast = vector.broadcast %value : f32 to vector<8x1xf32>
+  %t = vector.transpose %bcast, [1, 0] : vector<8x1xf32> to vector<1x8xf32>
+  return %t : vector<1x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_element_fold
+//       CHECK:   %[[V:.+]] = arith.constant dense<[0, 1, 7, 3]> : vector<4xi32>
+//       CHECK:   return %[[V]]
+func @insert_element_fold() -> vector<4xi32> {
+  %v = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
+  %s = arith.constant 7 : i32
+  %i = arith.constant 2 : i32
+  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
+  return %1 : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_element_fold
+//       CHECK:   %[[C:.+]] = arith.constant 5 : i32
+//       CHECK:   return %[[C]]
+func @extract_element_fold() -> i32 {
+  %v = arith.constant dense<[1, 3, 5, 7]> : vector<4xi32>
+  %i = arith.constant 2 : i32
+  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
+  return %1 : i32
 }

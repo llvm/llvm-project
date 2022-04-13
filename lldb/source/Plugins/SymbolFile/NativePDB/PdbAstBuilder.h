@@ -61,6 +61,8 @@ public:
   clang::DeclContext *GetParentDeclContext(PdbSymUid uid);
 
   clang::FunctionDecl *GetOrCreateFunctionDecl(PdbCompilandSymId func_id);
+  clang::FunctionDecl *
+  GetOrCreateInlinedFunctionDecl(PdbCompilandSymId inlinesite_id);
   clang::BlockDecl *GetOrCreateBlockDecl(PdbCompilandSymId block_id);
   clang::VarDecl *GetOrCreateVariableDecl(PdbCompilandSymId scope_id,
                                           PdbCompilandSymId var_id);
@@ -116,7 +118,13 @@ private:
 
   clang::NamespaceDecl *GetOrCreateNamespaceDecl(const char *name,
                                                  clang::DeclContext &context);
-
+  clang::FunctionDecl *CreateFunctionDeclFromId(PdbTypeSymId func_tid,
+                                                PdbCompilandSymId func_sid);
+  clang::FunctionDecl *
+  CreateFunctionDecl(PdbCompilandSymId func_id, llvm::StringRef func_name,
+                     TypeIndex func_ti, CompilerType func_ct,
+                     uint32_t param_count, clang::StorageClass func_storage,
+                     bool is_inline, clang::DeclContext *parent);
   void ParseAllNamespacesPlusChildrenOf(llvm::Optional<llvm::StringRef> parent);
   void ParseDeclsForSimpleContext(clang::DeclContext &context);
   void ParseBlockChildren(PdbCompilandSymId block_id);

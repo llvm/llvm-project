@@ -1431,8 +1431,10 @@ void UnwrappedLineFormatter::formatFirstToken(
   if (Newlines)
     Indent = NewlineIndent;
 
-  // Preprocessor directives get indented before the hash only if specified
-  if (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+  // Preprocessor directives get indented before the hash only if specified. In
+  // Javascript import statements are indented like normal statements.
+  if (!Style.isJavaScript() &&
+      Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
       (Line.Type == LT_PreprocessorDirective ||
        Line.Type == LT_ImportStatement))
     Indent = 0;

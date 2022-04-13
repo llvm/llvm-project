@@ -640,8 +640,7 @@ define { i64, i1 } @addcarry_fake_carry(i64 %a, i64 %b, i1 %carryin) {
 ; CHECK-LABEL: addcarry_fake_carry:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    andb $1, %dl
-; CHECK-NEXT:    addb $-1, %dl
+; CHECK-NEXT:    btl $0, %edx
 ; CHECK-NEXT:    adcq %rsi, %rax
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    retq

@@ -1029,12 +1029,12 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     if (Writer.WritingModule &&
         !D->getDescribedVarTemplate() && !D->getMemberSpecializationInfo() &&
         !isa<VarTemplateSpecializationDecl>(D)) {
-      // When building a C++ Modules TS module interface unit, a strong
-      // definition in the module interface is provided by the compilation of
-      // that module interface unit, not by its users. (Inline variables are
-      // still emitted in module users.)
+      // When building a C++20 module interface unit or a partition unit, a
+      // strong definition in the module interface is provided by the
+      // compilation of that unit, not by its users. (Inline variables are still
+      // emitted in module users.)
       ModulesCodegen =
-          (Writer.WritingModule->Kind == Module::ModuleInterfaceUnit ||
+          (Writer.WritingModule->isInterfaceOrPartition() ||
            (D->hasAttr<DLLExportAttr>() &&
             Writer.Context->getLangOpts().BuildingPCHWithObjectFile)) &&
           Writer.Context->GetGVALinkageForVariable(D) == GVA_StrongExternal;
@@ -2470,11 +2470,11 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   if (!FD->isDependentContext()) {
     Optional<GVALinkage> Linkage;
     if (Writer->WritingModule &&
-        Writer->WritingModule->Kind == Module::ModuleInterfaceUnit) {
-      // When building a C++ Modules TS module interface unit, a strong
-      // definition in the module interface is provided by the compilation of
-      // that module interface unit, not by its users. (Inline functions are
-      // still emitted in module users.)
+        Writer->WritingModule->isInterfaceOrPartition()) {
+      // When building a C++20 module interface unit or a partition unit, a
+      // strong definition in the module interface is provided by the
+      // compilation of that unit, not by its users. (Inline functions are still
+      // emitted in module users.)
       Linkage = Writer->Context->GetGVALinkageForFunction(FD);
       ModulesCodegen = *Linkage == GVA_StrongExternal;
     }

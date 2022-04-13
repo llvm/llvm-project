@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
+#include "Arch/CSKY.h"
 #include "Arch/M68k.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
@@ -383,6 +384,9 @@ static void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::ve:
     ve::getVETargetFeatures(D, Args, Features);
     break;
+  case llvm::Triple::csky:
+    csky::getCSKYTargetFeatures(D, Triple, Args, CmdArgs, Features);
+    break;
   }
 
   for (auto Feature : unifyTargetFeatures(Features)) {
@@ -547,6 +551,7 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
   case llvm::Triple::riscv64:
   case llvm::Triple::amdgcn:
   case llvm::Triple::r600:
+  case llvm::Triple::csky:
     return !areOptimizationsEnabled(Args);
   default:
     break;
@@ -6731,14 +6736,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fno-dollars-in-identifiers");
   }
 
-  // -funit-at-a-time is default, and we don't support -fno-unit-at-a-time for
-  // practical purposes.
-  if (Arg *A = Args.getLastArg(options::OPT_funit_at_a_time,
-                               options::OPT_fno_unit_at_a_time)) {
-    if (A->getOption().matches(options::OPT_fno_unit_at_a_time))
-      D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
-  }
-
   if (Args.hasFlag(options::OPT_fapple_pragma_pack,
                    options::OPT_fno_apple_pragma_pack, false))
     CmdArgs.push_back("-fapple-pragma-pack");
@@ -8036,8 +8033,10 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
   // The bundling command looks like this:
   // clang-offload-bundler -type=bc
   //   -targets=host-triple,openmp-triple1,openmp-triple2
-  //   -outputs=input_file
-  //   -inputs=unbundle_file_host,unbundle_file_tgt1,unbundle_file_tgt2"
+  //   -output=output_file
+  //   -input=unbundle_file_host
+  //   -input=unbundle_file_tgt1
+  //   -input=unbundle_file_tgt2
 
   ArgStringList CmdArgs;
 
@@ -8098,14 +8097,12 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Get bundled file command.
   CmdArgs.push_back(
-      TCArgs.MakeArgString(Twine("-outputs=") + Output.getFilename()));
+      TCArgs.MakeArgString(Twine("-output=") + Output.getFilename()));
 
   // Get unbundled files command.
-  SmallString<128> UB;
-  UB += "-inputs=";
   for (unsigned I = 0; I < Inputs.size(); ++I) {
-    if (I)
-      UB += ',';
+    SmallString<128> UB;
+    UB += "-input=";
 
     // Find ToolChain for this input.
     const ToolChain *CurTC = &getToolChain();
@@ -8120,9 +8117,8 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     } else {
       UB += CurTC->getInputFilename(Inputs[I]);
     }
+    CmdArgs.push_back(TCArgs.MakeArgString(UB));
   }
-  CmdArgs.push_back(TCArgs.MakeArgString(UB));
-
   // All the inputs are encoded as commands.
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
@@ -8140,8 +8136,10 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   // The unbundling command looks like this:
   // clang-offload-bundler -type=bc
   //   -targets=host-triple,openmp-triple1,openmp-triple2
-  //   -inputs=input_file
-  //   -outputs=unbundle_file_host,unbundle_file_tgt1,unbundle_file_tgt2"
+  //   -input=input_file
+  //   -output=unbundle_file_host
+  //   -output=unbundle_file_tgt1
+  //   -output=unbundle_file_tgt2
   //   -unbundle
 
   ArgStringList CmdArgs;
@@ -8193,17 +8191,15 @@ void OffloadBundler::ConstructJobMultipleOutputs(
 
   // Get bundled file command.
   CmdArgs.push_back(
-      TCArgs.MakeArgString(Twine("-inputs=") + Input.getFilename()));
+      TCArgs.MakeArgString(Twine("-input=") + Input.getFilename()));
 
   // Get unbundled files command.
-  SmallString<128> UB;
-  UB += "-outputs=";
   for (unsigned I = 0; I < Outputs.size(); ++I) {
-    if (I)
-      UB += ',';
+    SmallString<128> UB;
+    UB += "-output=";
     UB += DepInfo[I].DependentToolChain->getInputFilename(Outputs[I]);
+    CmdArgs.push_back(TCArgs.MakeArgString(UB));
   }
-  CmdArgs.push_back(TCArgs.MakeArgString(UB));
   CmdArgs.push_back("-unbundle");
   CmdArgs.push_back("-allow-missing-bundles");
 

@@ -596,11 +596,12 @@ static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
 }
 
 static LinkageInfo getInternalLinkageFor(const NamedDecl *D) {
-  // Internal linkage declarations within a module interface unit are modeled
-  // as "module-internal linkage", which means that they have internal linkage
-  // formally but can be indirectly accessed from outside the module via inline
-  // functions and templates defined within the module.
-  if (isInModulePurview(D))
+  // (for the modules ts) Internal linkage declarations within a module
+  // interface unit are modeled as "module-internal linkage", which means that
+  // they have internal linkage formally but can be indirectly accessed from
+  // outside the module via inline functions and templates defined within the
+  // module.
+  if (isInModulePurview(D) && D->getASTContext().getLangOpts().ModulesTS)
     return LinkageInfo(ModuleInternalLinkage, DefaultVisibility, false);
 
   return LinkageInfo::internal();

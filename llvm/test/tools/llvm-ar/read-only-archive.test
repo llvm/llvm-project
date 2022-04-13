@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 ## Test that read-only archives cannot be edited
 
 # RUN: rm -rf %t && mkdir -p %t

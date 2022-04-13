@@ -1534,6 +1534,9 @@ void BinaryContext::preprocessDebugInfo() {
 }
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
+  if (Function.isPseudo())
+    return false;
+
   if (opts::processAllFunctions())
     return true;
 

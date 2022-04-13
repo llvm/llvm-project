@@ -176,7 +176,8 @@ public:
 
   /// Wraps up getting a CFI index and building a MachineInstr for it.
   void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;
+                const DebugLoc &DL, const MCCFIInstruction &CFIInst,
+                MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 
   /// Sets up EBP and optionally ESI based on the incoming EBP value.  Only
   /// needed for 32-bit. Used in funclet prologues and at catchret destinations.

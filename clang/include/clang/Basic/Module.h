@@ -71,8 +71,8 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
     return Value;
   }
 
-  static ASTFileSignature create(StringRef Bytes) {
-    return create(Bytes.bytes_begin(), Bytes.bytes_end());
+  static ASTFileSignature create(std::array<uint8_t, 20> Bytes) {
+    return ASTFileSignature(std::move(Bytes));
   }
 
   static ASTFileSignature createDISentinel() {
@@ -529,6 +529,10 @@ public:
 
   /// Is this module a header unit.
   bool isHeaderUnit() const { return Kind == ModuleHeaderUnit; }
+  // Is this a C++20 module interface or a partition.
+  bool isInterfaceOrPartition() const {
+    return Kind == ModuleInterfaceUnit || isModulePartition();
+  }
 
   /// Get the primary module interface name from a partition.
   StringRef getPrimaryModuleInterfaceName() const {

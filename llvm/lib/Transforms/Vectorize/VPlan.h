@@ -352,6 +352,9 @@ struct VPTransformState {
   /// Holds recipes that may generate a poison value that is used after
   /// vectorization, even when their operands are not poison.
   SmallPtrSet<VPRecipeBase *, 16> MayGeneratePoisonRecipes;
+
+  /// The loop object for the current parent region, or nullptr.
+  Loop *CurrentVectorLoop = nullptr;
 };
 
 /// VPUsers instance used by VPBlockBase to manage CondBit and the block

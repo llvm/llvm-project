@@ -37,6 +37,7 @@ def section_mapping : FF<"section-mapping", "Display the section to segment mapp
 def section_mapping_EQ_false : FF<"section-mapping=false", "Don't display the section to segment mapping">, Flags<[HelpHidden]>;
 def section_relocations : FF<"section-relocations", "Display relocations for each section shown. This option has no effect for GNU style output">;
 def section_symbols : FF<"section-symbols", "Display symbols for each section shown. This option has no effect for GNU style output">;
+defm sort_symbols : Eq<"sort-symbols", "Specify the keys to sort the symbols before displaying symtab">;
 def stack_sizes : FF<"stack-sizes", "Display contents of all stack sizes sections. This option has no effect for GNU style output">;
 def stackmap : FF<"stackmap", "Display contents of stackmap section">;
 defm string_dump : Eq<"string-dump", "Display the specified section(s) as a list of strings">, MetaVarName<"<name or index>">;

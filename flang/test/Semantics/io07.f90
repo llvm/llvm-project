@@ -5,8 +5,8 @@
      format(A)
 
 2001 format(3I8, 3Z8)
-2002 format(3I8, Z8)
-2003 format(  3  I  8  ,  3  Z  8  )
+2002 format(DC, F8.2, 3I8, Z8)
+2003 format(  D C , F 8 . 2 , 3  I  8  ,  3  Z  8  )
 2004 format(20PF10.2)
 2005 format(20P,F10.2)
 2006 format(20P7F10.2)

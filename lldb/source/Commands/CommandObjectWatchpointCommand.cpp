@@ -313,7 +313,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 

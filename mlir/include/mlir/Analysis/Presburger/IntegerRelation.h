@@ -57,9 +57,8 @@ public:
   /// of constraints and identifiers.
   IntegerRelation(unsigned numReservedInequalities,
                   unsigned numReservedEqualities, unsigned numReservedCols,
-                  unsigned numDomain, unsigned numRange, unsigned numSymbols,
-                  unsigned numLocals)
-      : PresburgerSpace(numDomain, numRange, numSymbols, numLocals),
+                  const PresburgerSpace &space)
+      : PresburgerSpace(space),
         equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
         inequalities(0, getNumIds() + 1, numReservedInequalities,
                      numReservedCols) {
@@ -67,20 +66,15 @@ public:
   }
 
   /// Constructs a relation with the specified number of dimensions and symbols.
-  IntegerRelation(unsigned numDomain = 0, unsigned numRange = 0,
-                  unsigned numSymbols = 0, unsigned numLocals = 0)
+  explicit IntegerRelation(const PresburgerSpace &space)
       : IntegerRelation(/*numReservedInequalities=*/0,
                         /*numReservedEqualities=*/0,
-                        /*numReservedCols=*/numDomain + numRange + numSymbols +
-                            numLocals + 1,
-                        numDomain, numRange, numSymbols, numLocals) {}
+                        /*numReservedCols=*/space.getNumIds() + 1, space) {}
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
-  static IntegerRelation getUniverse(unsigned numDomain = 0,
-                                     unsigned numRange = 0,
-                                     unsigned numSymbols = 0) {
-    return IntegerRelation(numDomain, numRange, numSymbols);
+  static IntegerRelation getUniverse(const PresburgerSpace &space) {
+    return IntegerRelation(space);
   }
 
   /// Return the kind of this IntegerRelation.
@@ -415,6 +409,8 @@ public:
   /// O(VC) time.
   void removeRedundantConstraints();
 
+  void removeDuplicateDivs();
+
   /// Converts identifiers of kind srcKind in the range [idStart, idLimit) to
   /// variables of kind dstKind and placed after all the other variables of kind
   /// dstKind. The internal ordering among the moved variables is preserved.
@@ -540,6 +536,7 @@ protected:
   Matrix inequalities;
 };
 
+struct SymbolicLexMin;
 /// An IntegerPolyhedron is a PresburgerSpace subject to affine
 /// constraints. Affine constraints can be inequalities or equalities in the
 /// form:
@@ -562,25 +559,24 @@ public:
   /// of constraints and identifiers.
   IntegerPolyhedron(unsigned numReservedInequalities,
                     unsigned numReservedEqualities, unsigned numReservedCols,
-                    unsigned numDims, unsigned numSymbols, unsigned numLocals)
+                    const PresburgerSpace &space)
       : IntegerRelation(numReservedInequalities, numReservedEqualities,
-                        numReservedCols, /*numDomain=*/0, /*numRange=*/numDims,
-                        numSymbols, numLocals) {}
+                        numReservedCols, space) {
+    assert(space.getNumDomainIds() == 0 &&
+           "Number of domain id's should be zero in Set kind space.");
+  }
 
-  /// Constructs a relation with the specified number of dimensions and symbols.
-  IntegerPolyhedron(unsigned numDims = 0, unsigned numSymbols = 0,
-                    unsigned numLocals = 0)
+  /// Constructs a relation with the specified number of dimensions and
+  /// symbols.
+  explicit IntegerPolyhedron(const PresburgerSpace &space)
       : IntegerPolyhedron(/*numReservedInequalities=*/0,
                           /*numReservedEqualities=*/0,
-                          /*numReservedCols=*/numDims + numSymbols + numLocals +
-                              1,
-                          numDims, numSymbols, numLocals) {}
+                          /*numReservedCols=*/space.getNumIds() + 1, space) {}
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
-  static IntegerPolyhedron getUniverse(unsigned numDims = 0,
-                                       unsigned numSymbols = 0) {
-    return IntegerPolyhedron(numDims, numSymbols);
+  static IntegerPolyhedron getUniverse(const PresburgerSpace &space) {
+    return IntegerPolyhedron(space);
   }
 
   /// Return the kind of this IntegerRelation.
@@ -598,6 +594,28 @@ public:
   /// column position (i.e., not relative to the kind of identifier) of the
   /// first added identifier.
   unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
+
+  /// Compute the symbolic integer lexmin of the polyhedron.
+  /// This finds, for every assignment to the symbols, the lexicographically
+  /// minimum value attained by the dimensions. For example, the symbolic lexmin
+  /// of the set
+  ///
+  /// (x, y)[a, b, c] : (a <= x, b <= x, x <= c)
+  ///
+  /// can be written as
+  ///
+  /// x = a if b <= a, a <= c
+  /// x = b if a <  b, b <= c
+  ///
+  /// This function is stored in the `lexmin` function in the result.
+  /// Some assignments to the symbols might make the set empty.
+  /// Such points are not part of the function's domain.
+  /// In the above example, this happens when max(a, b) > c.
+  ///
+  /// For some values of the symbols, the lexmin may be unbounded.
+  /// `SymbolicLexMin` stores these parts of the symbolic domain in a separate
+  /// `PresburgerSet`, `unboundedDomain`.
+  SymbolicLexMin findSymbolicIntegerLexMin() const;
 };
 
 } // namespace presburger

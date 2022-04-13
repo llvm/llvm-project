@@ -15,7 +15,7 @@
 
 int printf(__constant const char *st, ...);
 
-void foo() {
+void foo(void) {
   NO_VAR_FUNC(1, 2, 3);
   VAR_FUNC(1, 2, 3);
 #if !__OPENCL_CPP_VERSION__

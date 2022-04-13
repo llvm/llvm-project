@@ -291,7 +291,7 @@ struct DWARFTypePrinter {
       }
       Word = true;
       StringRef Name = NamePtr;
-      static constexpr StringRef MangledPrefix = "_STN";
+      static constexpr StringRef MangledPrefix = "_STN|";
       if (Name.startswith(MangledPrefix)) {
         Name = Name.drop_front(MangledPrefix.size());
         auto Separator = Name.find('|');
@@ -397,27 +397,10 @@ struct DWARFTypePrinter {
         DWARFDie T = resolveReferencedType(C);
         Sep();
         if (T.getTag() == DW_TAG_enumeration_type) {
-          auto V = C.find(DW_AT_const_value);
-          bool FoundEnumerator = false;
-          for (const DWARFDie &Enumerator : T) {
-            auto EV = Enumerator.find(DW_AT_const_value);
-            if (V && EV &&
-                V->getAsSignedConstant() == EV->getAsSignedConstant()) {
-              if (T.find(DW_AT_enum_class)) {
-                appendQualifiedName(T);
-                OS << "::";
-              } else
-                appendScopes(T.getParent());
-              OS << Enumerator.getShortName();
-              FoundEnumerator = true;
-              break;
-            }
-          }
-          if (FoundEnumerator)
-            continue;
           OS << '(';
           appendQualifiedName(T);
           OS << ')';
+          auto V = C.find(DW_AT_const_value);
           OS << to_string(*V->getAsSignedConstant());
           continue;
         }

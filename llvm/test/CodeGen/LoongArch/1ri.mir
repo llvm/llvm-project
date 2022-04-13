@@ -29,7 +29,7 @@ body: |
 name: test_LU32I_D
 body: |
   bb.0:
-    $r4 = LU32I_D 196
+    $r4 = LU32I_D $r4, 196
 ...
 ---
 # CHECK-LABEL: test_PCADDI:

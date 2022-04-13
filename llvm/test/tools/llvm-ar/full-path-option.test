@@ -1,3 +1,4 @@
+XFAIL: system-aix
 # Note: many of these tests depend on relative paths, so we have to cd to a
 # test directory first.
 RUN: mkdir -p %t && cd %t

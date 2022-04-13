@@ -345,6 +345,11 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
   CurrentIndex = 0;
   bool ColdLayoutDone = false;
   for (BinaryFunction *Func : SortedFunctions) {
+    if (!BC.shouldEmit(*Func)) {
+      HotAddresses[Func] = Func->getAddress();
+      continue;
+    }
+
     if (!ColdLayoutDone && CurrentIndex >= LastHotIndex) {
       DotAddress =
           tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);

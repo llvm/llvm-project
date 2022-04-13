@@ -425,8 +425,7 @@ func @shuffle_1D_direct(%arg0: vector<2xf32>, %arg1: vector<2xf32>) -> vector<2x
 // CHECK-LABEL: @shuffle_1D_direct(
 // CHECK-SAME: %[[A:.*]]: vector<2xf32>,
 // CHECK-SAME: %[[B:.*]]: vector<2xf32>)
-//       CHECK:   %[[s:.*]] = llvm.shufflevector %[[A]], %[[B]] [0, 1] : vector<2xf32>, vector<2xf32>
-//       CHECK:   return %[[s]] : vector<2xf32>
+//       CHECK:   return %[[A:.*]]: vector<2xf32>
 
 // -----
 
@@ -437,11 +436,7 @@ func @shuffle_1D_index_direct(%arg0: vector<2xindex>, %arg1: vector<2xindex>) ->
 // CHECK-LABEL: @shuffle_1D_index_direct(
 // CHECK-SAME: %[[A:.*]]: vector<2xindex>,
 // CHECK-SAME: %[[B:.*]]: vector<2xindex>)
-//       CHECK-DAG:   %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<2xindex> to vector<2xi64>
-//       CHECK-DAG:   %[[T1:.*]] = builtin.unrealized_conversion_cast %[[B]] : vector<2xindex> to vector<2xi64>
-//       CHECK:   %[[T2:.*]] = llvm.shufflevector %[[T0]], %[[T1]] [0, 1] : vector<2xi64>, vector<2xi64>
-//       CHECK:   %[[T3:.*]] = builtin.unrealized_conversion_cast %[[T2]] : vector<2xi64> to vector<2xindex>
-//       CHECK:   return %[[T3]] : vector<2xindex>
+//       CHECK:   return  %[[A:.*]]: vector<2xindex>
 
 // -----
 

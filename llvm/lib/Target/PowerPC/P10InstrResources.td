@@ -1372,7 +1372,7 @@ def : InstRW<[P10W_LD_6C, P10W_DISP_EVEN, P10W_DISP_ANY, P10LD_Read, P10LD_Read]
     LDCIX,
     LHZCIX,
     LWZCIX,
-    MTSPR, MTSPR8, MTSR, MTVRSAVE, MTVRSAVEv
+    MTSPR, MTSPR8, MTSR, MTUDSCR, MTVRSAVE, MTVRSAVEv
 )>;
 
 // Expand instructions
@@ -1469,7 +1469,7 @@ def : InstRW<[P10W_LD_6C, P10W_DISP_PAIR, P10W_SX_3C],
 // 13 Cycles Unknown operations, 1 input operands
 def : InstRW<[P10W_MFL_13C, P10W_DISP_EVEN, P10W_DISP_ANY],
       (instrs
-    MFSPR, MFSPR8, MFSR, MFTB8, MFVRSAVE, MFVRSAVEv
+    MFSPR, MFSPR8, MFSR, MFTB8, MFUDSCR, MFVRSAVE, MFVRSAVEv
 )>;
 
 // 10 Cycles SIMD Matrix Multiply Engine operations, 0 input operands

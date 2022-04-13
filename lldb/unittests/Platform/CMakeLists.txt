@@ -3,6 +3,7 @@ add_lldb_unittest(LLDBPlatformTests
   PlatformDarwinTest.cpp
   PlatformMacOSXTest.cpp
   PlatformSiginfoTest.cpp
+  PlatformTest.cpp
 
   LINK_LIBS
     lldbPluginPlatformFreeBSD

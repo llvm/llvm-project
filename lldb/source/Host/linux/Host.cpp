@@ -135,7 +135,8 @@ static ArchSpec GetELFProcessCPUType(llvm::StringRef exe_path) {
 
   uint8_t exe_class =
       llvm::object::getElfArchType(
-          {buffer_sp->GetChars(), size_t(buffer_sp->GetByteSize())})
+          {reinterpret_cast<const char *>(buffer_sp->GetBytes()),
+           size_t(buffer_sp->GetByteSize())})
           .first;
 
   switch (exe_class) {

@@ -146,7 +146,7 @@ define dso_local void @fprs_gprs_vecregs() {
 ; ASM32-DAG:     lwz 14, -216(1)                         # 4-byte Folded Reload
 ; ASM32:         blr
 
-; ASM64-LABEL    .fprs_gprs_vecregs:
+; ASM64-LABEL:    .fprs_gprs_vecregs:
 
 ; ASM64-DAG:     std 14, -288(1)                         # 8-byte Folded Spill
 ; ASM64-DAG:     std 25, -200(1)                         # 8-byte Folded Spill

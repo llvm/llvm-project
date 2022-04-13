@@ -27,7 +27,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include <deque>
-#include <functional> // For std::function
 
 #define DEBUG_TYPE "float2int"
 
@@ -235,116 +234,111 @@ void Float2IntPass::walkBackwards() {
   }
 }
 
+// Calculate result range from operand ranges.
+// Return None if the range cannot be calculated yet.
+Optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
+  SmallVector<ConstantRange, 4> OpRanges;
+  for (Value *O : I->operands()) {
+    if (Instruction *OI = dyn_cast<Instruction>(O)) {
+      auto OpIt = SeenInsts.find(OI);
+      assert(OpIt != SeenInsts.end() && "def not seen before use!");
+      if (OpIt->second == unknownRange())
+        return None; // Wait until operand range has been calculated.
+      OpRanges.push_back(OpIt->second);
+    } else if (ConstantFP *CF = dyn_cast<ConstantFP>(O)) {
+      // Work out if the floating point number can be losslessly represented
+      // as an integer.
+      // APFloat::convertToInteger(&Exact) purports to do what we want, but
+      // the exactness can be too precise. For example, negative zero can
+      // never be exactly converted to an integer.
+      //
+      // Instead, we ask APFloat to round itself to an integral value - this
+      // preserves sign-of-zero - then compare the result with the original.
+      //
+      const APFloat &F = CF->getValueAPF();
+
+      // First, weed out obviously incorrect values. Non-finite numbers
+      // can't be represented and neither can negative zero, unless
+      // we're in fast math mode.
+      if (!F.isFinite() ||
+          (F.isZero() && F.isNegative() && isa<FPMathOperator>(I) &&
+           !I->hasNoSignedZeros()))
+        return badRange();
+
+      APFloat NewF = F;
+      auto Res = NewF.roundToIntegral(APFloat::rmNearestTiesToEven);
+      if (Res != APFloat::opOK || NewF != F)
+        return badRange();
+
+      // OK, it's representable. Now get it.
+      APSInt Int(MaxIntegerBW+1, false);
+      bool Exact;
+      CF->getValueAPF().convertToInteger(Int,
+                                         APFloat::rmNearestTiesToEven,
+                                         &Exact);
+      OpRanges.push_back(ConstantRange(Int));
+    } else {
+      llvm_unreachable("Should have already marked this as badRange!");
+    }
+  }
+
+  switch (I->getOpcode()) {
+  // FIXME: Handle select and phi nodes.
+  default:
+  case Instruction::UIToFP:
+  case Instruction::SIToFP:
+    llvm_unreachable("Should have been handled in walkForwards!");
+
+  case Instruction::FNeg: {
+    assert(OpRanges.size() == 1 && "FNeg is a unary operator!");
+    unsigned Size = OpRanges[0].getBitWidth();
+    auto Zero = ConstantRange(APInt::getZero(Size));
+    return Zero.sub(OpRanges[0]);
+  }
+
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul: {
+    assert(OpRanges.size() == 2 && "its a binary operator!");
+    auto BinOp = (Instruction::BinaryOps) I->getOpcode();
+    return OpRanges[0].binaryOp(BinOp, OpRanges[1]);
+  }
+
+  //
+  // Root-only instructions - we'll only see these if they're the
+  //                          first node in a walk.
+  //
+  case Instruction::FPToUI:
+  case Instruction::FPToSI: {
+    assert(OpRanges.size() == 1 && "FPTo[US]I is a unary operator!");
+    // Note: We're ignoring the casts output size here as that's what the
+    // caller expects.
+    auto CastOp = (Instruction::CastOps)I->getOpcode();
+    return OpRanges[0].castOp(CastOp, MaxIntegerBW+1);
+  }
+
+  case Instruction::FCmp:
+    assert(OpRanges.size() == 2 && "FCmp is a binary operator!");
+    return OpRanges[0].unionWith(OpRanges[1]);
+  }
+}
+
 // Walk forwards down the list of seen instructions, so we visit defs before
 // uses.
 void Float2IntPass::walkForwards() {
-  for (auto &It : reverse(SeenInsts)) {
-    if (It.second != unknownRange())
-      continue;
+  std::deque<Instruction *> Worklist;
+  for (const auto &Pair : SeenInsts)
+    if (Pair.second == unknownRange())
+      Worklist.push_back(Pair.first);
 
-    Instruction *I = It.first;
-    std::function<ConstantRange(ArrayRef<ConstantRange>)> Op;
-    switch (I->getOpcode()) {
-      // FIXME: Handle select and phi nodes.
-    default:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-      llvm_unreachable("Should have been handled in walkForwards!");
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.back();
+    Worklist.pop_back();
 
-    case Instruction::FNeg:
-      Op = [](ArrayRef<ConstantRange> Ops) {
-        assert(Ops.size() == 1 && "FNeg is a unary operator!");
-        unsigned Size = Ops[0].getBitWidth();
-        auto Zero = ConstantRange(APInt::getZero(Size));
-        return Zero.sub(Ops[0]);
-      };
-      break;
-
-    case Instruction::FAdd:
-    case Instruction::FSub:
-    case Instruction::FMul:
-      Op = [I](ArrayRef<ConstantRange> Ops) {
-        assert(Ops.size() == 2 && "its a binary operator!");
-        auto BinOp = (Instruction::BinaryOps) I->getOpcode();
-        return Ops[0].binaryOp(BinOp, Ops[1]);
-      };
-      break;
-
-    //
-    // Root-only instructions - we'll only see these if they're the
-    //                          first node in a walk.
-    //
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-      Op = [I](ArrayRef<ConstantRange> Ops) {
-        assert(Ops.size() == 1 && "FPTo[US]I is a unary operator!");
-        // Note: We're ignoring the casts output size here as that's what the
-        // caller expects.
-        auto CastOp = (Instruction::CastOps)I->getOpcode();
-        return Ops[0].castOp(CastOp, MaxIntegerBW+1);
-      };
-      break;
-
-    case Instruction::FCmp:
-      Op = [](ArrayRef<ConstantRange> Ops) {
-        assert(Ops.size() == 2 && "FCmp is a binary operator!");
-        return Ops[0].unionWith(Ops[1]);
-      };
-      break;
-    }
-
-    bool Abort = false;
-    SmallVector<ConstantRange,4> OpRanges;
-    for (Value *O : I->operands()) {
-      if (Instruction *OI = dyn_cast<Instruction>(O)) {
-        assert(SeenInsts.find(OI) != SeenInsts.end() &&
-               "def not seen before use!");
-        OpRanges.push_back(SeenInsts.find(OI)->second);
-      } else if (ConstantFP *CF = dyn_cast<ConstantFP>(O)) {
-        // Work out if the floating point number can be losslessly represented
-        // as an integer.
-        // APFloat::convertToInteger(&Exact) purports to do what we want, but
-        // the exactness can be too precise. For example, negative zero can
-        // never be exactly converted to an integer.
-        //
-        // Instead, we ask APFloat to round itself to an integral value - this
-        // preserves sign-of-zero - then compare the result with the original.
-        //
-        const APFloat &F = CF->getValueAPF();
-
-        // First, weed out obviously incorrect values. Non-finite numbers
-        // can't be represented and neither can negative zero, unless
-        // we're in fast math mode.
-        if (!F.isFinite() ||
-            (F.isZero() && F.isNegative() && isa<FPMathOperator>(I) &&
-             !I->hasNoSignedZeros())) {
-          seen(I, badRange());
-          Abort = true;
-          break;
-        }
-
-        APFloat NewF = F;
-        auto Res = NewF.roundToIntegral(APFloat::rmNearestTiesToEven);
-        if (Res != APFloat::opOK || NewF != F) {
-          seen(I, badRange());
-          Abort = true;
-          break;
-        }
-        // OK, it's representable. Now get it.
-        APSInt Int(MaxIntegerBW+1, false);
-        bool Exact;
-        CF->getValueAPF().convertToInteger(Int,
-                                           APFloat::rmNearestTiesToEven,
-                                           &Exact);
-        OpRanges.push_back(ConstantRange(Int));
-      } else {
-        llvm_unreachable("Should have already marked this as badRange!");
-      }
-    }
-
-    // Reduce the operands' ranges to a single range and return.
-    if (!Abort)
-      seen(I, Op(OpRanges));
+    if (Optional<ConstantRange> Range = calcRange(I))
+      seen(I, *Range);
+    else
+      Worklist.push_front(I); // Reprocess later.
   }
 }
 

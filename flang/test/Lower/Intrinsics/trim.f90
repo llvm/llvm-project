@@ -15,7 +15,7 @@ subroutine trim_test(c)
   ! CHECK-DAG: fir.box_elesize
   ! CHECK: fir.call @{{.*}}bar_trim_test
   call bar_trim_test(trim(c))
-  ! CHECK: fir.freemem %[[tmpAddr]] : <!fir.char<1,?>>
+  ! CHECK: fir.freemem %[[tmpAddr]] : !fir.heap<!fir.char<1,?>>
   return
 end subroutine
 

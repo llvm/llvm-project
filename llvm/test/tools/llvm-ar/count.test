@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 # Test the 'N' count parameter.
 
 # Get a temp clean cwd to extract into.

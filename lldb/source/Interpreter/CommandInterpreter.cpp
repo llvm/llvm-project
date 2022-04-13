@@ -244,6 +244,12 @@ bool CommandInterpreter::GetRepeatPreviousCommand() const {
       nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
+bool CommandInterpreter::GetRequireCommandOverwrite() const {
+  const uint32_t idx = ePropertyRequireCommandOverwrite;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+}
+
 void CommandInterpreter::Initialize() {
   LLDB_SCOPED_TIMER();
 
@@ -1439,7 +1445,7 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
     result.AppendMessage("Current user-defined container commands:");
     result.AppendMessage("");
     max_len = FindLongestCommandWord(m_user_mw_dict);
-    for (pos = m_user_dict.begin(); pos != m_user_mw_dict.end(); ++pos) {
+    for (pos = m_user_mw_dict.begin(); pos != m_user_mw_dict.end(); ++pos) {
       OutputFormattedHelpText(result.GetOutputStream(), pos->first, "--",
                               pos->second->GetHelp(), max_len);
     }

@@ -52,6 +52,10 @@ add_subdirectory(stdio)
 add_subdirectory(threads)
 add_subdirectory(time)
 
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(pthread)
+endif()
+
 set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_api_test.cpp)
 
 set(entrypoints_name_list "")

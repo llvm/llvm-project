@@ -504,7 +504,7 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
     //   readType = VectorType::get({}, bbarg.getType());
     // } else {
     if (opOperand->getOperandNumber() < linalgOp.getNumInputs()) {
-      map = inverseAndBroadcastProjectedPermuation(
+      map = inverseAndBroadcastProjectedPermutation(
           linalgOp.getTiedIndexingMap(opOperand));
       readType = VectorType::get(commonVectorShape,
                                  getElementTypeOrSelf(opOperand->get()));

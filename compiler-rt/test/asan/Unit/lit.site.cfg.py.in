@@ -62,5 +62,5 @@ if config.enable_per_target_runtime_dir and config.target_arch != config.host_ar
 # Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
 push_ld_library_path(config, config.compiler_rt_libdir)
 
-if config.host_os == 'Darwin':
-  config.parallelism_group = config.darwin_sanitizer_parallelism_group_func
+if not config.parallelism_group:
+  config.parallelism_group = 'shadow-memory'

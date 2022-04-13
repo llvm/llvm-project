@@ -6,7 +6,7 @@
 set -e
 
 cd $(dirname $0)
-HDRS="ItaniumDemangle.h StringView.h Utility.h"
+HDRS="ItaniumDemangle.h ItaniumNodes.def StringView.h Utility.h"
 LLVM_DEMANGLE_DIR=$1
 
 if [[ -z "$LLVM_DEMANGLE_DIR" ]]; then
@@ -28,7 +28,7 @@ if [[ $ANSWER =~ ^[Yy]$ ]]; then
 	rm -f $LLVM_DEMANGLE_DIR/$I
 	dash=$(echo "$I---------------------------" | cut -c -27 |\
 		   sed 's|[^-]*||')
-	sed -e '1s|^//=*-* .*\.h -*.*=*// *$|//===--- '"$I $dash"'-*- mode:c++;eval:(read-only-mode) -*-===//|' \
+	sed -e '1s|^//=*-* .*\..* -*.*=*// *$|//===--- '"$I $dash"'-*- mode:c++;eval:(read-only-mode) -*-===//|' \
 	    -e '2s|^// *$|//       Do not edit! See README.txt.|' \
 	    $I >$LLVM_DEMANGLE_DIR/$I
 	chmod -w $LLVM_DEMANGLE_DIR/$I

@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_THREADS_LINUX_THREAD_UTILS_H
 #define LLVM_LIBC_SRC_THREADS_LINUX_THREAD_UTILS_H
 
-#include "thread_start_args.h"
-
 #include <stdint.h>
 
 namespace __llvm_libc {

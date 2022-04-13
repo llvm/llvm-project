@@ -1169,6 +1169,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // memory operations.
   MPM.addPass(RecomputeGlobalsAAPass());
 
+  for (auto &C : OptimizerEarlyEPCallbacks)
+    C(MPM, Level);
+
   FunctionPassManager OptimizePM;
   OptimizePM.addPass(Float2IntPass());
   OptimizePM.addPass(LowerConstantIntrinsicsPass());
@@ -1809,6 +1812,10 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
     if (!FPM.isEmpty())
       MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
+
+  for (auto &C : OptimizerEarlyEPCallbacks)
+    C(MPM, Level);
+
   if (!VectorizerStartEPCallbacks.empty()) {
     FunctionPassManager FPM;
     for (auto &C : VectorizerStartEPCallbacks)

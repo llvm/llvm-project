@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_LOONGARCH_LOONGARCHINSTRINFO_H
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHINSTRINFO_H
 
+#include "LoongArchRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
@@ -25,6 +26,10 @@ class LoongArchSubtarget;
 class LoongArchInstrInfo : public LoongArchGenInstrInfo {
 public:
   explicit LoongArchInstrInfo(LoongArchSubtarget &STI);
+
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                   const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
+                   bool KillSrc) const override;
 };
 
 } // end namespace llvm

@@ -57,8 +57,9 @@ class TestCmdContainer(TestBase):
         self.expect("test-multi test-multi-sub welcome friend", "Test command works",
                     substrs=["Hello friend, welcome to LLDB"])
 
-        # Make sure overwriting works, first the leaf command:
-        # We should not be able to remove extant commands by default:
+        # Make sure overwriting works on the leaf command.  First using the
+        # explicit option so we should not be able to remove extant commands by default:
+
         self.expect("command script add -c welcome.WelcomeCommand2 test-multi test-multi-sub welcome",
                     "overwrite command w/o -o",
                     substrs=["cannot add command: sub-command already exists"], error=True)
@@ -67,8 +68,16 @@ class TestCmdContainer(TestBase):
         # Make sure we really did overwrite:
         self.expect("test-multi test-multi-sub welcome friend", "Used the new command class",
                     substrs=["Hello friend, welcome again to LLDB"])
-
         self.expect("apropos welcome", "welcome should show up in apropos", substrs=["A docstring for the second Welcome"])
+        self.expect("help test-multi test-multi-sub welcome", "welcome should show up in help", substrs=["A docstring for the second Welcome"])
+        self.expect("help", "test-multi should show up in help", substrs=["test-multi"])
+                    
+        # Now switch the default and make sure we can now delete w/o the overwrite option:
+        self.runCmd("settings set interpreter.require-overwrite 0")
+        self.runCmd("command script add -c welcome.WelcomeCommand test-multi test-multi-sub welcome")
+        # Make sure we really did overwrite:
+        self.expect("test-multi test-multi-sub welcome friend", "Used the new command class",
+                    substrs=["Hello friend, welcome to LLDB"])
         
         # Make sure we give good errors when the input is wrong:
         self.expect("command script delete test-mult test-multi-sub welcome", "Delete script command - wrong first path component",

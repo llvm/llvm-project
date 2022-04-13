@@ -109,8 +109,10 @@ llvm::Expected<InvocationListTy> parseInvocationList(
     StringRef FileContent,
     llvm::sys::path::Style PathStyle = llvm::sys::path::Style::posix);
 
-// Returns true if the variable or any field of a record variable is const.
-bool containsConst(const VarDecl *VD, const ASTContext &ACtx);
+/// Returns true if it makes sense to import a foreign variable definition.
+/// For instance, we don't want to import variables that have non-trivial types
+/// because the constructor might have side-effects.
+bool shouldImport(const VarDecl *VD, const ASTContext &ACtx);
 
 /// This class is used for tools that requires cross translation
 ///        unit capability.
@@ -226,7 +228,7 @@ private:
               StringRef InvocationListFilePath);
 
     /// Load the ASTUnit by its identifier found in the index file. If the
-    /// indentifier is suffixed with '.ast' it is considered a dump. Otherwise
+    /// identifier is suffixed with '.ast' it is considered a dump. Otherwise
     /// it is treated as source-file, and on-demand parsed. Relative paths are
     /// prefixed with CTUDir.
     LoadResultTy load(StringRef Identifier);

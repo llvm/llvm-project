@@ -24,7 +24,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-CommandObjectExpression::CommandOptions::CommandOptions() {}
+CommandObjectExpression::CommandOptions::CommandOptions() = default;
 
 CommandObjectExpression::CommandOptions::~CommandOptions() = default;
 

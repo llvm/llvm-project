@@ -72,6 +72,13 @@ namespace {
 
 static constexpr int kColWidth = 1025;
 
+/// A version of `operator*` on `uint64_t` which checks for overflows.
+static inline uint64_t checkedMul(uint64_t lhs, uint64_t rhs) {
+  assert((lhs == 0 || rhs <= std::numeric_limits<uint64_t>::max() / lhs) &&
+         "Integer overflow");
+  return lhs * rhs;
+}
+
 /// A sparse tensor element in coordinate scheme (value and indices).
 /// For example, a rank-1 vector element would look like
 ///   ({i}, a[i])
@@ -255,12 +262,14 @@ public:
     for (uint64_t r = 0; r < rank; r++)
       rev[perm[r]] = r;
     // Provide hints on capacity of pointers and indices.
-    // TODO: needs fine-tuning based on sparsity
+    // TODO: needs much fine-tuning based on actual sparsity; currently
+    //       we reserve pointer/index space based on all previous dense
+    //       dimensions, which works well up to first sparse dim; but
+    //       we should really use nnz and dense/sparse distribution.
     bool allDense = true;
     uint64_t sz = 1;
     for (uint64_t r = 0; r < rank; r++) {
       assert(sizes[r] > 0 && "Dimension size zero has trivial storage");
-      sz *= sizes[r];
       if (sparsity[r] == DimLevelType::kCompressed) {
         pointers[r].reserve(sz + 1);
         indices[r].reserve(sz);
@@ -273,6 +282,7 @@ public:
       } else {
         assert(sparsity[r] == DimLevelType::kDense &&
                "singleton not yet supported");
+        sz = checkedMul(sz, sizes[r]);
       }
     }
     // Then assign contents from coordinate scheme tensor if provided.
@@ -336,9 +346,9 @@ public:
     // Sort.
     std::sort(added, added + count);
     // Restore insertion path for first insert.
-    uint64_t rank = getRank();
+    const uint64_t lastDim = getRank() - 1;
     uint64_t index = added[0];
-    cursor[rank - 1] = index;
+    cursor[lastDim] = index;
     lexInsert(cursor, values[index]);
     assert(filled[index]);
     values[index] = 0;
@@ -347,10 +357,10 @@ public:
     for (uint64_t i = 1; i < count; i++) {
       assert(index < added[i] && "non-lexicographic insertion");
       index = added[i];
-      cursor[rank - 1] = index;
-      insPath(cursor, rank - 1, added[i - 1] + 1, values[index]);
+      cursor[lastDim] = index;
+      insPath(cursor, lastDim, added[i - 1] + 1, values[index]);
       assert(filled[index]);
-      values[index] = 0.0;
+      values[index] = 0;
       filled[index] = false;
     }
   }
@@ -358,7 +368,7 @@ public:
   /// Finalizes lexicographic insertions.
   void endInsert() override {
     if (values.empty())
-      endDim(0);
+      finalizeSegment(0);
     else
       endPath(0);
   }
@@ -400,7 +410,6 @@ public:
         assert(shape[r] == 0 || shape[r] == tensor->getSizes()[perm[r]]);
       n = new SparseTensorStorage<P, I, V>(tensor->getSizes(), perm, sparsity,
                                            tensor);
-      delete tensor;
     } else {
       std::vector<uint64_t> permsz(rank);
       for (uint64_t r = 0; r < rank; r++) {
@@ -413,23 +422,40 @@ public:
   }
 
 private:
-  /// Appends the next free position of `indices[d]` to `pointers[d]`.
-  /// Thus, when called after inserting the last element of a segment,
-  /// it will append the position where the next segment begins.
-  inline void appendPointer(uint64_t d) {
-    assert(isCompressedDim(d)); // Entails `d < getRank()`.
-    uint64_t p = indices[d].size();
-    assert(p <= std::numeric_limits<P>::max() &&
+  /// Appends an arbitrary new position to `pointers[d]`.  This method
+  /// checks that `pos` is representable in the `P` type; however, it
+  /// does not check that `pos` is semantically valid (i.e., larger than
+  /// the previous position and smaller than `indices[d].capacity()`).
+  inline void appendPointer(uint64_t d, uint64_t pos, uint64_t count = 1) {
+    assert(isCompressedDim(d));
+    assert(pos <= std::numeric_limits<P>::max() &&
            "Pointer value is too large for the P-type");
-    pointers[d].push_back(p); // Here is where we convert to `P`.
+    pointers[d].insert(pointers[d].end(), count, static_cast<P>(pos));
   }
 
-  /// Appends the given index to `indices[d]`.
-  inline void appendIndex(uint64_t d, uint64_t i) {
-    assert(isCompressedDim(d)); // Entails `d < getRank()`.
-    assert(i <= std::numeric_limits<I>::max() &&
-           "Index value is too large for the I-type");
-    indices[d].push_back(i); // Here is where we convert to `I`.
+  /// Appends index `i` to dimension `d`, in the semantically general
+  /// sense.  For non-dense dimensions, that means appending to the
+  /// `indices[d]` array, checking that `i` is representable in the `I`
+  /// type; however, we do not verify other semantic requirements (e.g.,
+  /// that `i` is in bounds for `sizes[d]`, and not previously occurring
+  /// in the same segment).  For dense dimensions, this method instead
+  /// appends the appropriate number of zeros to the `values` array,
+  /// where `full` is the number of "entries" already written to `values`
+  /// for this segment (aka one after the highest index previously appended).
+  void appendIndex(uint64_t d, uint64_t full, uint64_t i) {
+    if (isCompressedDim(d)) {
+      assert(i <= std::numeric_limits<I>::max() &&
+             "Index value is too large for the I-type");
+      indices[d].push_back(static_cast<I>(i));
+    } else { // Dense dimension.
+      assert(i >= full && "Index was already filled");
+      if (i == full)
+        return; // Short-circuit, since it'll be a nop.
+      if (d + 1 == getRank())
+        values.insert(values.end(), i - full, 0);
+      else
+        finalizeSegment(d + 1, 0, i - full);
+    }
   }
 
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
@@ -458,29 +484,14 @@ private:
       while (seg < hi && elements[seg].indices[d] == i)
         seg++;
       // Handle segment in interval for sparse or dense dimension.
-      if (isCompressedDim(d)) {
-        appendIndex(d, i);
-      } else {
-        // For dense storage we must fill in all the zero values between
-        // the previous element (when last we ran this for-loop) and the
-        // current element.
-        for (; full < i; full++)
-          endDim(d + 1);
-        full++;
-      }
+      appendIndex(d, full, i);
+      full = i + 1;
       fromCOO(elements, lo, seg, d + 1);
       // And move on to next segment in interval.
       lo = seg;
     }
     // Finalize the sparse pointer structure at this dimension.
-    if (isCompressedDim(d)) {
-      appendPointer(d);
-    } else {
-      // For dense storage we must fill in all the zero values after
-      // the last element.
-      for (uint64_t sz = sizes[d]; full < sz; full++)
-        endDim(d + 1);
-    }
+    finalizeSegment(d, full);
   }
 
   /// Stores the sparse tensor storage scheme into a memory-resident sparse
@@ -506,16 +517,26 @@ private:
     }
   }
 
-  /// Ends a deeper, never seen before dimension.
-  void endDim(uint64_t d) {
-    assert(d <= getRank());
-    if (d == getRank()) {
-      values.push_back(0);
-    } else if (isCompressedDim(d)) {
-      appendPointer(d);
-    } else {
-      for (uint64_t full = 0, sz = sizes[d]; full < sz; full++)
-        endDim(d + 1);
+  /// Finalize the sparse pointer structure at this dimension.
+  void finalizeSegment(uint64_t d, uint64_t full = 0, uint64_t count = 1) {
+    if (count == 0)
+      return; // Short-circuit, since it'll be a nop.
+    if (isCompressedDim(d)) {
+      appendPointer(d, indices[d].size(), count);
+    } else { // Dense dimension.
+      const uint64_t sz = sizes[d];
+      assert(sz >= full && "Segment is overfull");
+      // Assuming we checked for overflows in the constructor, then this
+      // multiply will never overflow.
+      count *= (sz - full);
+      // For dense storage we must enumerate all the remaining coordinates
+      // in this dimension (i.e., coordinates after the last non-zero
+      // element), and either fill in their zero values or else recurse
+      // to finalize some deeper dimension.
+      if (d + 1 == getRank())
+        values.insert(values.end(), count, 0);
+      else
+        finalizeSegment(d + 1, 0, count);
     }
   }
 
@@ -524,13 +545,8 @@ private:
     uint64_t rank = getRank();
     assert(diff <= rank);
     for (uint64_t i = 0; i < rank - diff; i++) {
-      uint64_t d = rank - i - 1;
-      if (isCompressedDim(d)) {
-        appendPointer(d);
-      } else {
-        for (uint64_t full = idx[d] + 1, sz = sizes[d]; full < sz; full++)
-          endDim(d + 1);
-      }
+      const uint64_t d = rank - i - 1;
+      finalizeSegment(d, idx[d] + 1);
     }
   }
 
@@ -540,12 +556,7 @@ private:
     assert(diff < rank);
     for (uint64_t d = diff; d < rank; d++) {
       uint64_t i = cursor[d];
-      if (isCompressedDim(d)) {
-        appendIndex(d, i);
-      } else {
-        for (uint64_t full = top; full < i; full++)
-          endDim(d + 1);
-      }
+      appendIndex(d, top, i);
       top = 0;
       idx[d] = i;
     }
@@ -748,7 +759,6 @@ static void outSparseTensor(void *tensor, void *dest, bool sort) {
   file.flush();
   file.close();
   assert(file.good());
-  delete coo;
 }
 
 /// Initializes sparse tensor from an external COO-flavored format.
@@ -780,17 +790,19 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
 #endif
 
   // Convert external format to internal COO.
-  auto *tensor = SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm, nse);
+  auto *coo = SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm, nse);
   std::vector<uint64_t> idx(rank);
   for (uint64_t i = 0, base = 0; i < nse; i++) {
     for (uint64_t r = 0; r < rank; r++)
       idx[perm[r]] = indices[base + r];
-    tensor->add(idx, values[i]);
+    coo->add(idx, values[i]);
     base += rank;
   }
   // Return sparse tensor storage format as opaque pointer.
-  return SparseTensorStorage<uint64_t, uint64_t, V>::newSparseTensor(
-      rank, shape, perm, sparsity, tensor);
+  auto *tensor = SparseTensorStorage<uint64_t, uint64_t, V>::newSparseTensor(
+      rank, shape, perm, sparsity, coo);
+  delete coo;
+  return tensor;
 }
 
 /// Converts a sparse tensor to an external COO-flavored format.
@@ -847,28 +859,31 @@ extern "C" {
 
 #define CASE(p, i, v, P, I, V)                                                 \
   if (ptrTp == (p) && indTp == (i) && valTp == (v)) {                          \
-    SparseTensorCOO<V> *tensor = nullptr;                                      \
+    SparseTensorCOO<V> *coo = nullptr;                                         \
     if (action <= Action::kFromCOO) {                                          \
       if (action == Action::kFromFile) {                                       \
         char *filename = static_cast<char *>(ptr);                             \
-        tensor = openSparseTensorCOO<V>(filename, rank, shape, perm);          \
+        coo = openSparseTensorCOO<V>(filename, rank, shape, perm);             \
       } else if (action == Action::kFromCOO) {                                 \
-        tensor = static_cast<SparseTensorCOO<V> *>(ptr);                       \
+        coo = static_cast<SparseTensorCOO<V> *>(ptr);                          \
       } else {                                                                 \
         assert(action == Action::kEmpty);                                      \
       }                                                                        \
-      return SparseTensorStorage<P, I, V>::newSparseTensor(rank, shape, perm,  \
-                                                           sparsity, tensor);  \
+      auto *tensor = SparseTensorStorage<P, I, V>::newSparseTensor(            \
+          rank, shape, perm, sparsity, coo);                                   \
+      if (action == Action::kFromFile)                                         \
+        delete coo;                                                            \
+      return tensor;                                                           \
     }                                                                          \
     if (action == Action::kEmptyCOO)                                           \
       return SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm);        \
-    tensor = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);    \
+    coo = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);       \
     if (action == Action::kToIterator) {                                       \
-      tensor->startIterator();                                                 \
+      coo->startIterator();                                                    \
     } else {                                                                   \
       assert(action == Action::kToCOO);                                        \
     }                                                                          \
-    return tensor;                                                             \
+    return coo;                                                                \
   }
 
 #define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
@@ -924,10 +939,8 @@ extern "C" {
     const uint64_t isize = iref->sizes[0];                                     \
     auto iter = static_cast<SparseTensorCOO<V> *>(tensor);                     \
     const Element<V> *elem = iter->getNext();                                  \
-    if (elem == nullptr) {                                                     \
-      delete iter;                                                             \
+    if (elem == nullptr)                                                       \
       return false;                                                            \
-    }                                                                          \
     for (uint64_t r = 0; r < isize; r++)                                       \
       indx[r] = elem->indices[r];                                              \
     *value = elem->value;                                                      \
@@ -1207,6 +1220,19 @@ void endInsert(void *tensor) {
 void delSparseTensor(void *tensor) {
   delete static_cast<SparseTensorStorageBase *>(tensor);
 }
+
+/// Releases sparse tensor coordinate scheme.
+#define IMPL_DELCOO(VNAME, V)                                                  \
+  void delSparseTensorCOO##VNAME(void *coo) {                                  \
+    delete static_cast<SparseTensorCOO<V> *>(coo);                             \
+  }
+IMPL_DELCOO(F64, double)
+IMPL_DELCOO(F32, float)
+IMPL_DELCOO(I64, int64_t)
+IMPL_DELCOO(I32, int32_t)
+IMPL_DELCOO(I16, int16_t)
+IMPL_DELCOO(I8, int8_t)
+#undef IMPL_DELCOO
 
 /// Initializes sparse tensor from a COO-flavored format expressed using C-style
 /// data structures. The expected parameters are:

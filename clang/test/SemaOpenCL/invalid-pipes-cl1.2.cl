@@ -25,7 +25,7 @@ typedef int pipe;
 // expected-warning@-6 {{typedef requires a name}}
 #endif
 
-void bar() {
+void bar(void) {
  reserve_id_t r;
 #if defined(__OPENCL_C_VERSION__)
 // expected-error@-2 {{use of undeclared identifier 'reserve_id_t'}}

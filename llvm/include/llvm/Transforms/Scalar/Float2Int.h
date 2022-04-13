@@ -25,6 +25,7 @@ class DominatorTree;
 class Function;
 class Instruction;
 class LLVMContext;
+template <typename T> class Optional;
 class Type;
 class Value;
 
@@ -41,6 +42,7 @@ private:
   ConstantRange badRange();
   ConstantRange unknownRange();
   ConstantRange validateRange(ConstantRange R);
+  Optional<ConstantRange> calcRange(Instruction *I);
   void walkBackwards();
   void walkForwards();
   bool validateAndTransform();

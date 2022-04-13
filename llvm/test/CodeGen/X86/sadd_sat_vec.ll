@@ -433,7 +433,7 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; SSE-NEXT:    movb (%rsi), %cl
 ; SSE-NEXT:    leal (%rax,%rcx), %esi
 ; SSE-NEXT:    sarb $7, %sil
-; SSE-NEXT:    xorb $-128, %sil
+; SSE-NEXT:    addb $-128, %sil
 ; SSE-NEXT:    addb %cl, %al
 ; SSE-NEXT:    movzbl %al, %eax
 ; SSE-NEXT:    movzbl %sil, %ecx
@@ -447,7 +447,7 @@ define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; AVX-NEXT:    movb (%rsi), %cl
 ; AVX-NEXT:    leal (%rax,%rcx), %esi
 ; AVX-NEXT:    sarb $7, %sil
-; AVX-NEXT:    xorb $-128, %sil
+; AVX-NEXT:    addb $-128, %sil
 ; AVX-NEXT:    addb %cl, %al
 ; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    movzbl %sil, %ecx
@@ -1232,8 +1232,8 @@ define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm0, %k1
 ; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
 ; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm2, %k2
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm0 = [9223372036854775808,9223372036854775808]
-; AVX512BW-NEXT:    vmovdqa64 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k2}
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [9223372036854775808,9223372036854775808]
+; AVX512BW-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k2}
 ; AVX512BW-NEXT:    vmovdqa64 %xmm0, %xmm1 {%k1}
 ; AVX512BW-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512BW-NEXT:    retq

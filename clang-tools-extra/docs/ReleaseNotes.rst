@@ -99,6 +99,12 @@ Improvements to clang-tidy
 - Added trace code to help narrow down any checks and the relevant source code
   that result in crashes.
 
+- Clang-tidy now consideres newlines as separators of single elements in the `Checks` section in
+  `.clang-tidy` configuration files. Where previously a comma had to be used to distinguish elements in
+  this list from each other, newline characters now also work as separators in the parsed YAML. That
+  means it is advised to use YAML's block style initiated by the pipe character `|` for the `Checks`
+  section in order to benefit from the easier syntax that works without commas.
+
 New checks
 ^^^^^^^^^^
 
@@ -106,8 +112,17 @@ New checks
 
   Finds initializations of C++ shared pointers to non-array type that are initialized with an array.
 
+- New :doc:`modernize-macro-to-enum
+  <clang-tidy/checks/modernize-macro-to-enum>` check.
+
+  Replaces groups of adjacent macros with an unscoped anonymous enum.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cppcoreguidelines-macro-to-enum
+  <clang-tidy/checks/cppcoreguidelines-macro-to-enum>` to :doc:`modernize-macro-to-enum
+  <clang-tidy/checks/modernize-macro-to-enum>` was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

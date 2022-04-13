@@ -1953,7 +1953,7 @@ Status Thread::StepOver(bool source_step,
   return error;
 }
 
-Status Thread::StepOut() {
+Status Thread::StepOut(uint32_t frame_idx) {
   Status error;
   Process *process = GetProcess().get();
   if (StateIsStoppedState(process->GetState(), true)) {
@@ -1963,7 +1963,7 @@ Status Thread::StepOut() {
 
     ThreadPlanSP new_plan_sp(QueueThreadPlanForStepOut(
         abort_other_plans, nullptr, first_instruction, stop_other_threads,
-        eVoteYes, eVoteNoOpinion, 0, error));
+        eVoteYes, eVoteNoOpinion, frame_idx, error));
 
     new_plan_sp->SetIsControllingPlan(true);
     new_plan_sp->SetOkayToDiscard(false);

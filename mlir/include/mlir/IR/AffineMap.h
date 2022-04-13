@@ -480,7 +480,7 @@ AffineMap inversePermutation(AffineMap map);
 /// ```mlir
 ///    affine_map<(d0, d1) -> (d0, 0, 0)>
 /// ```
-AffineMap inverseAndBroadcastProjectedPermuation(AffineMap map);
+AffineMap inverseAndBroadcastProjectedPermutation(AffineMap map);
 
 /// Concatenates a list of `maps` into a single AffineMap, stepping over
 /// potentially empty maps. Assumes each of the underlying map has 0 symbols.

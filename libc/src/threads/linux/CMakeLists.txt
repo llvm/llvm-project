@@ -1,13 +1,3 @@
-add_gen_header(
-  thread_start_args_h
-  DEF_FILE thread_start_args.h.def
-  GEN_HDR thread_start_args.h
-  PARAMS
-    thread_start_args=${LIBC_TARGET_ARCHITECTURE}/thread_start_args.h.in
-  DATA_FILES
-    ${LIBC_TARGET_ARCHITECTURE}/thread_start_args.h.in
-)
-
 add_entrypoint_object(
   call_once
   SRCS
@@ -29,7 +19,6 @@ add_header_library(
     Futex.h
     Thread.h
   DEPENDS
-    .thread_start_args_h
     libc.include.sys_syscall
     libc.include.threads
     libc.src.__support.CPP.atomic
@@ -46,12 +35,11 @@ add_entrypoint_object(
   DEPENDS
     .threads_utils
     libc.include.errno
+    libc.include.sys_mman
     libc.include.sys_syscall
     libc.include.threads
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
-    libc.src.sys.mman.mmap
   COMPILE_OPTIONS
     -O3
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
@@ -71,7 +59,6 @@ add_entrypoint_object(
     libc.src.__support.CPP.atomic
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil
-    libc.src.sys.mman.munmap
 )
 
 add_entrypoint_object(

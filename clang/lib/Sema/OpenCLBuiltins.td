@@ -1698,7 +1698,9 @@ let Extension = FuncExtKhrSubgroups in {
 // --- Table 28.2.2 ---
 let Extension = FuncExtKhrSubgroups in {
   def : Builtin<"sub_group_barrier", [Void, MemFenceFlags], Attr.Convergent>;
-  def : Builtin<"sub_group_barrier", [Void, MemFenceFlags, MemoryScope], Attr.Convergent>;
+  let MinVersion = CL20 in {
+    def : Builtin<"sub_group_barrier", [Void, MemFenceFlags, MemoryScope], Attr.Convergent>;
+  }
 }
 
 // --- Table 28.2.4 ---

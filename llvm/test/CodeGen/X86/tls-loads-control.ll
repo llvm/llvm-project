@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --tls-load-hoist=optimize --stop-after=tlshoist -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --tls-load-hoist=true --stop-after=tlshoist -o - %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --stop-after=tlshoist -o - %s | FileCheck %s
 
 ; This test come from compiling clang/test/CodeGen/intel/tls_loads.cpp with:

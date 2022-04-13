@@ -4586,33 +4586,42 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
+let Uses = [FRM], mayRaiseFPException = true in {
 defm PseudoVFADD  : VPseudoVALU_VV_VF;
 defm PseudoVFSUB  : VPseudoVALU_VV_VF;
 defm PseudoVFRSUB : VPseudoVALU_VF;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
+let Uses = [FRM], mayRaiseFPException = true in {
 defm PseudoVFWADD : VPseudoVFWALU_VV_VF;
 defm PseudoVFWSUB : VPseudoVFWALU_VV_VF;
 defm PseudoVFWADD : VPseudoVFWALU_WV_WF;
 defm PseudoVFWSUB : VPseudoVFWALU_WV_WF;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 //===----------------------------------------------------------------------===//
+let Uses = [FRM], mayRaiseFPException = true in {
 defm PseudoVFMUL  : VPseudoVFMUL_VV_VF;
 defm PseudoVFDIV  : VPseudoVFDIV_VV_VF;
 defm PseudoVFRDIV : VPseudoVFRDIV_VF;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.5. Vector Widening Floating-Point Multiply
 //===----------------------------------------------------------------------===//
+let Uses = [FRM], mayRaiseFPException = true in {
 defm PseudoVFWMUL : VPseudoVWMUL_VV_VF;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
 //===----------------------------------------------------------------------===//
+let Uses = [FRM], mayRaiseFPException = true in {
 defm PseudoVFMACC  : VPseudoVMAC_VV_VF_AAXA;
 defm PseudoVFNMACC : VPseudoVMAC_VV_VF_AAXA;
 defm PseudoVFMSAC  : VPseudoVMAC_VV_VF_AAXA;
@@ -4621,35 +4630,43 @@ defm PseudoVFMADD  : VPseudoVMAC_VV_VF_AAXA;
 defm PseudoVFNMADD : VPseudoVMAC_VV_VF_AAXA;
 defm PseudoVFMSUB  : VPseudoVMAC_VV_VF_AAXA;
 defm PseudoVFNMSUB : VPseudoVMAC_VV_VF_AAXA;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 //===----------------------------------------------------------------------===//
+let Uses = [FRM], mayRaiseFPException = true in {
 defm PseudoVFWMACC  : VPseudoVWMAC_VV_VF;
 defm PseudoVFWNMACC : VPseudoVWMAC_VV_VF;
 defm PseudoVFWMSAC  : VPseudoVWMAC_VV_VF;
 defm PseudoVFWNMSAC : VPseudoVWMAC_VV_VF;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.8. Vector Floating-Point Square-Root Instruction
 //===----------------------------------------------------------------------===//
+let Uses = [FRM], mayRaiseFPException = true in
 defm PseudoVFSQRT : VPseudoVSQR_V;
 
 //===----------------------------------------------------------------------===//
 // 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
 //===----------------------------------------------------------------------===//
+let mayRaiseFPException = true in
 defm PseudoVFRSQRT7 : VPseudoVRCP_V;
 
 //===----------------------------------------------------------------------===//
 // 14.10. Vector Floating-Point Reciprocal Estimate Instruction
 //===----------------------------------------------------------------------===//
+let Uses = [FRM], mayRaiseFPException = true in
 defm PseudoVFREC7 : VPseudoVRCP_V;
 
 //===----------------------------------------------------------------------===//
 // 14.11. Vector Floating-Point Min/Max Instructions
 //===----------------------------------------------------------------------===//
+let mayRaiseFPException = true in {
 defm PseudoVFMIN : VPseudoVMAX_VV_VF;
 defm PseudoVFMAX : VPseudoVMAX_VV_VF;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.12. Vector Floating-Point Sign-Injection Instructions
@@ -4661,12 +4678,14 @@ defm PseudoVFSGNJX : VPseudoVSGNJ_VV_VF;
 //===----------------------------------------------------------------------===//
 // 14.13. Vector Floating-Point Compare Instructions
 //===----------------------------------------------------------------------===//
+let mayRaiseFPException = true in {
 defm PseudoVMFEQ : VPseudoVCMPM_VV_VF;
 defm PseudoVMFNE : VPseudoVCMPM_VV_VF;
 defm PseudoVMFLT : VPseudoVCMPM_VV_VF;
 defm PseudoVMFLE : VPseudoVCMPM_VV_VF;
 defm PseudoVMFGT : VPseudoVCMPM_VF;
 defm PseudoVMFGE : VPseudoVCMPM_VF;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.14. Vector Floating-Point Classify Instruction
@@ -4743,15 +4762,21 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
+let Uses = [FRM], mayRaiseFPException = true in {
 defm PseudoVFREDOSUM : VPseudoVFREDO_VS;
 defm PseudoVFREDUSUM : VPseudoVFRED_VS;
+}
+let mayRaiseFPException = true in {
 defm PseudoVFREDMIN  : VPseudoVFRED_VS;
 defm PseudoVFREDMAX  : VPseudoVFRED_VS;
+}
 
 //===----------------------------------------------------------------------===//
 // 15.4. Vector Widening Floating-Point Reduction Instructions
 //===----------------------------------------------------------------------===//
-let IsRVVWideningReduction = 1 in {
+let IsRVVWideningReduction = 1,
+    Uses = [FRM],
+    mayRaiseFPException = true in {
 defm PseudoVFWREDUSUM  : VPseudoVFWRED_VS;
 defm PseudoVFWREDOSUM  : VPseudoVFWRED_VS;
 }

@@ -747,6 +747,40 @@ TEST(DiagnosticsTest, RecursivePreambleIfndefGuard) {
   EXPECT_THAT(TU.build().getLocalTopLevelDecls(), SizeIs(1));
 }
 
+TEST(DiagnosticsTest, PreambleWithPragmaAssumeNonnull) {
+  auto TU = TestTU::withCode(R"cpp(
+#pragma clang assume_nonnull begin
+void foo(int *x);
+#pragma clang assume_nonnull end
+)cpp");
+  auto AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
+  const auto *X = cast<FunctionDecl>(findDecl(AST, "foo")).getParamDecl(0);
+  ASSERT_TRUE(X->getOriginalType()->getNullability(X->getASTContext()) ==
+              NullabilityKind::NonNull);
+}
+
+TEST(DiagnosticsTest, PreambleHeaderWithBadPragmaAssumeNonnull) {
+  Annotations Header(R"cpp(
+#pragma clang assume_nonnull begin  // error-ok
+void foo(int *X);
+)cpp");
+  auto TU = TestTU::withCode(R"cpp(
+#include "foo.h"  // unterminated assume_nonnull should not affect bar.
+void bar(int *Y);
+)cpp");
+  TU.AdditionalFiles = {{"foo.h", std::string(Header.code())}};
+  auto AST = TU.build();
+  EXPECT_THAT(*AST.getDiagnostics(),
+              ElementsAre(diagName("pp_eof_in_assume_nonnull")));
+  const auto *X = cast<FunctionDecl>(findDecl(AST, "foo")).getParamDecl(0);
+  ASSERT_TRUE(X->getOriginalType()->getNullability(X->getASTContext()) ==
+              NullabilityKind::NonNull);
+  const auto *Y = cast<FunctionDecl>(findDecl(AST, "bar")).getParamDecl(0);
+  ASSERT_FALSE(
+      Y->getOriginalType()->getNullability(X->getASTContext()).hasValue());
+}
+
 TEST(DiagnosticsTest, InsideMacros) {
   Annotations Test(R"cpp(
     #define TEN 10

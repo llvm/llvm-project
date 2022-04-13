@@ -154,6 +154,7 @@ MachineInstr *X86FastTileConfig::getKeyAMXInstr(MachineInstr *MI) {
 
     if (isAMXInstr(*II)) {
       assert((KeyAMXNum == 0) && "Too many Key AMX instruction!");
+      (void) KeyAMXNum;
       KeyAMXNum++;
       KeyMI = &*II;
     }

@@ -840,11 +840,11 @@ def VK16Pair : RegisterOperand<VK16PAIR, "printVKPair"> {
 // Define X86-specific addressing mode.
 def addr      : ComplexPattern<iPTR, 5, "selectAddr", [], [SDNPWantParent]>;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
-                               [add, sub, mul, X86mul_imm, shl, or, frameindex],
+                               [add, sub, mul, X86mul_imm, shl, or, xor, frameindex],
                                []>;
 // In 64-bit mode 32-bit LEAs can use RIP-relative addressing.
 def lea64_32addr : ComplexPattern<i32, 5, "selectLEA64_32Addr",
-                                  [add, sub, mul, X86mul_imm, shl, or,
+                                  [add, sub, mul, X86mul_imm, shl, or, xor,
                                    frameindex, X86WrapperRIP],
                                   []>;
 
@@ -855,7 +855,7 @@ def tls32baseaddr : ComplexPattern<i32, 5, "selectTLSADDRAddr",
                                [tglobaltlsaddr], []>;
 
 def lea64addr : ComplexPattern<i64, 5, "selectLEAAddr",
-                        [add, sub, mul, X86mul_imm, shl, or, frameindex,
+                        [add, sub, mul, X86mul_imm, shl, or, xor, frameindex,
                          X86WrapperRIP], []>;
 
 def tls64addr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
@@ -2851,7 +2851,7 @@ let SchedRW = [WriteSystem] in {
     def TPAUSE : I<0xAE, MRM6r,
                      (outs), (ins GR32orGR64:$src), "tpause\t$src",
                      [(set EFLAGS, (X86tpause GR32orGR64:$src, EDX, EAX))]>,
-                     PD, Requires<[HasWAITPKG]>, NotMemoryFoldable;
+                     PD, Requires<[HasWAITPKG]>;
   }
 } // SchedRW
 
@@ -3124,7 +3124,7 @@ def CLFLUSHOPT : I<0xAE, MRM7m, (outs), (ins i8mem:$src),
 
 let Predicates = [HasCLWB], SchedRW = [WriteLoad] in
 def CLWB       : I<0xAE, MRM6m, (outs), (ins i8mem:$src), "clwb\t$src",
-                   [(int_x86_clwb addr:$src)]>, PD, NotMemoryFoldable;
+                   [(int_x86_clwb addr:$src)]>, PD;
 
 let Predicates = [HasCLDEMOTE], SchedRW = [WriteLoad] in
 def CLDEMOTE : I<0x1C, MRM0m, (outs), (ins i8mem:$src), "cldemote\t$src",

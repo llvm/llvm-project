@@ -142,9 +142,9 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   clonedShapes.reserve(producer.getNumInputsAndOutputs());
 
   // Compute subranges for all tensor input/output operands.
-  clonedShapes.append(makeTiledShapes(b, loc, producer,
-                                      getTiledOperands(producer), ivs,
-                                      tileSizes, sizeBounds));
+  clonedShapes.append(makeTiledShapes(
+      b, loc, producer, getTiledOperands(producer), ivs, tileSizes, sizeBounds,
+      /**omitPartialTileCheck=*/false));
 
   // Iterate over the results in order.
   // Extract the subtensor type from the linearized range.

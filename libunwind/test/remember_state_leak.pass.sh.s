@@ -1,4 +1,16 @@
+#===------------------------------------------------------------------------===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===------------------------------------------------------------------------===#
+
 # REQUIRES: target={{x86_64-.+-linux-gnu}}
+
+# Inline assembly isn't supported by Memory Sanitizer
+# UNSUPPORTED: msan
+
 # RUN: %{build} -no-pie
 # RUN: %{run}
 

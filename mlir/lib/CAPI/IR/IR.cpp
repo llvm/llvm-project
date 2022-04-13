@@ -634,6 +634,11 @@ void mlirBlockInsertOwnedOperationBefore(MlirBlock block,
 
 void mlirBlockDestroy(MlirBlock block) { delete unwrap(block); }
 
+void mlirBlockDetach(MlirBlock block) {
+  Block *b = unwrap(block);
+  b->getParent()->getBlocks().remove(b);
+}
+
 intptr_t mlirBlockGetNumArguments(MlirBlock block) {
   return static_cast<intptr_t>(unwrap(block)->getNumArguments());
 }
@@ -785,18 +790,6 @@ bool mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other) {
 
 MlirStringRef mlirIdentifierStr(MlirIdentifier ident) {
   return wrap(unwrap(ident).strref());
-}
-
-//===----------------------------------------------------------------------===//
-// TypeID API.
-//===----------------------------------------------------------------------===//
-
-bool mlirTypeIDEqual(MlirTypeID typeID1, MlirTypeID typeID2) {
-  return unwrap(typeID1) == unwrap(typeID2);
-}
-
-size_t mlirTypeIDHashValue(MlirTypeID typeID) {
-  return hash_value(unwrap(typeID));
 }
 
 //===----------------------------------------------------------------------===//

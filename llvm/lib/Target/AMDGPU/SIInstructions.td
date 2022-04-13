@@ -520,6 +520,7 @@ def : GCNPat<
 def SI_CALL : SPseudoInstSI <
   (outs SReg_64:$dst), (ins SSrc_b64:$src0, unknown:$callee)> {
   let Size = 4;
+  let FixedSize = 1;
   let isCall = 1;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteBranch];
@@ -532,6 +533,7 @@ def SI_TCRETURN : SPseudoInstSI <(outs),
   (ins SReg_64:$src0, unknown:$callee, i32imm:$fpdiff),
   [(AMDGPUtc_return i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
   let Size = 4;
+  let FixedSize = 1;
   let isCall = 1;
   let isTerminator = 1;
   let isReturn = 1;

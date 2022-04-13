@@ -236,7 +236,7 @@ emitDialectDecl(Dialect &dialect,
     os << "};\n";
   }
   if (!dialect.getCppNamespace().empty())
-    os << "DECLARE_EXPLICIT_TYPE_ID(" << dialect.getCppNamespace()
+    os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << dialect.getCppNamespace()
        << "::" << dialect.getCppClassName() << ")\n";
 }
 
@@ -273,7 +273,7 @@ static const char *const dialectDestructorStr = R"(
 static void emitDialectDef(Dialect &dialect, raw_ostream &os) {
   // Emit the TypeID explicit specializations to have a single symbol def.
   if (!dialect.getCppNamespace().empty())
-    os << "DEFINE_EXPLICIT_TYPE_ID(" << dialect.getCppNamespace()
+    os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << dialect.getCppNamespace()
        << "::" << dialect.getCppClassName() << ")\n";
 
   // Emit all nested namespaces.

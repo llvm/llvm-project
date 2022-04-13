@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
@@ -255,7 +254,7 @@ bool MSP430DAGToDAGISel::SelectAddr(SDValue N,
   Base = (AM.BaseType == MSP430ISelAddressMode::FrameIndexBase)
              ? CurDAG->getTargetFrameIndex(
                    AM.Base.FrameIndex,
-                   getTargetLowering()->getPointerTy(CurDAG->getDataLayout()))
+                   N.getValueType())
              : AM.Base.Reg;
 
   if (AM.GV)

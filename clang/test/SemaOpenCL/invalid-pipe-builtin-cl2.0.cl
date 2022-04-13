@@ -60,7 +60,7 @@ void test2(write_only pipe int p, global int* ptr){
   sub_group_commit_read_pipe(p, tmp);    // expected-error{{invalid pipe access modifier (expecting read_only)}}
 }
 
-void test3(){
+void test3(void){
   int tmp;
   get_pipe_num_packets(tmp);    // expected-error {{first argument to 'get_pipe_num_packets' must be a pipe type}}
   get_pipe_max_packets(tmp);    // expected-error {{first argument to 'get_pipe_max_packets' must be a pipe type}}

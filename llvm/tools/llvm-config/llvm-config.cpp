@@ -201,7 +201,7 @@ static std::vector<std::string> ComputeLibsForComponents(
 
 /* *** */
 
-static void usage() {
+static void usage(bool ExitWithFailure = true) {
   errs() << "\
 usage: llvm-config <OPTION>... [<COMPONENT>...]\n\
 \n\
@@ -212,37 +212,39 @@ LLVM.  Typically called from 'configure' scripts.  Examples:\n\
   llvm-config --libs engine bcreader scalaropts\n\
 \n\
 Options:\n\
-  --version         Print LLVM version.\n\
-  --prefix          Print the installation prefix.\n\
-  --src-root        Print the source root LLVM was built from.\n\
-  --obj-root        Print the object root used to build LLVM.\n\
-  --bindir          Directory containing LLVM executables.\n\
-  --includedir      Directory containing LLVM headers.\n\
-  --libdir          Directory containing LLVM libraries.\n\
-  --cmakedir        Directory containing LLVM cmake modules.\n\
-  --cppflags        C preprocessor flags for files that include LLVM headers.\n\
-  --cflags          C compiler flags for files that include LLVM headers.\n\
-  --cxxflags        C++ compiler flags for files that include LLVM headers.\n\
-  --ldflags         Print Linker flags.\n\
-  --system-libs     System Libraries needed to link against LLVM components.\n\
-  --libs            Libraries needed to link against LLVM components.\n\
-  --libnames        Bare library names for in-tree builds.\n\
-  --libfiles        Fully qualified library filenames for makefile depends.\n\
-  --components      List of all possible components.\n\
-  --targets-built   List of all targets currently built.\n\
-  --host-target     Target triple used to configure LLVM.\n\
-  --build-mode      Print build mode of LLVM tree (e.g. Debug or Release).\n\
   --assertion-mode  Print assertion mode of LLVM tree (ON or OFF).\n\
-  --build-system    Print the build system used to build LLVM (always cmake).\n\
+  --bindir          Directory containing LLVM executables.\n\
+  --build-mode      Print build mode of LLVM tree (e.g. Debug or Release).\n\
+  --build-system    Print the build system used to build LLVM (e.g. `cmake` or `gn`).\n\
+  --cflags          C compiler flags for files that include LLVM headers.\n\
+  --cmakedir        Directory containing LLVM CMake modules.\n\
+  --components      List of all possible components.\n\
+  --cppflags        C preprocessor flags for files that include LLVM headers.\n\
+  --cxxflags        C++ compiler flags for files that include LLVM headers.\n\
   --has-rtti        Print whether or not LLVM was built with rtti (YES or NO).\n\
-  --shared-mode     Print how the provided components can be collectively linked (`shared` or `static`).\n\
+  --help            Print a summary of llvm-config arguments.\n\
+  --host-target     Target triple used to configure LLVM.\n\
+  --ignore-libllvm  Ignore libLLVM and link component libraries instead.\n\
+  --includedir      Directory containing LLVM headers.\n\
+  --ldflags         Print Linker flags.\n\
+  --libdir          Directory containing LLVM libraries.\n\
+  --libfiles        Fully qualified library filenames for makefile depends.\n\
+  --libnames        Bare library names for in-tree builds.\n\
+  --libs            Libraries needed to link against LLVM components.\n\
   --link-shared     Link the components as shared libraries.\n\
   --link-static     Link the component libraries statically.\n\
-  --ignore-libllvm  Ignore libLLVM and link component libraries instead.\n\
+  --obj-root        Print the object root used to build LLVM.\n\
+  --prefix          Print the installation prefix.\n\
+  --shared-mode     Print how the provided components can be collectively linked (`shared` or `static`).\n\
+  --src-root        Print the source root LLVM was built from.\n\
+  --system-libs     System Libraries needed to link against LLVM components.\n\
+  --targets-built   List of all targets currently built.\n\
+  --version         Print LLVM version.\n\
 Typical components:\n\
   all               All LLVM libraries (default).\n\
   engine            Either a native JIT or a bitcode interpreter.\n";
-  exit(1);
+  if (ExitWithFailure)
+    exit(1);
 }
 
 /// Compute the path to the main executable.
@@ -598,6 +600,8 @@ int main(int argc, char **argv) {
         LinkMode = LinkModeShared;
       } else if (Arg == "--link-static") {
         LinkMode = LinkModeStatic;
+      } else if (Arg == "--help") {
+        usage(false);
       } else {
         usage();
       }

@@ -39,10 +39,9 @@ MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
   Variable::RangeList result;
   while (!gaps.empty()) {
     const LocalVariableAddrGap &gap = gaps.front();
-
-    lldb::addr_t size = gap.GapStartOffset - start;
-    result.Append(start, size);
-    start += gap.Range;
+    lldb::addr_t gap_start = start + gap.GapStartOffset;
+    result.Append(start, gap_start - start);
+    start = gap_start + gap.Range;
     gaps = gaps.drop_front();
   }
 

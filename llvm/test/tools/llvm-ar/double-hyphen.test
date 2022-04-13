@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 ## Test the use of "--" on the commandline
 
 # RUN: echo contents > %t.txt

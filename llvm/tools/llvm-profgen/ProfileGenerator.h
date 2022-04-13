@@ -33,11 +33,18 @@ class ProfileGeneratorBase {
 
 public:
   ProfileGeneratorBase(ProfiledBinary *Binary,
-                       const ContextSampleCounterMap &Counters)
+                       const ContextSampleCounterMap *Counters)
       : Binary(Binary), SampleCounters(Counters){};
+  ProfileGeneratorBase(ProfiledBinary *Binary,
+                       const SampleProfileMap &&Profiles)
+      : Binary(Binary), ProfileMap(std::move(Profiles)){};
+
   virtual ~ProfileGeneratorBase() = default;
   static std::unique_ptr<ProfileGeneratorBase>
-  create(ProfiledBinary *Binary, const ContextSampleCounterMap &SampleCounters,
+  create(ProfiledBinary *Binary, const ContextSampleCounterMap *Counters,
+         bool ProfileIsCSFlat);
+  static std::unique_ptr<ProfileGeneratorBase>
+  create(ProfiledBinary *Binary, const SampleProfileMap &&ProfileMap,
          bool ProfileIsCSFlat);
   virtual void generateProfile() = 0;
   void write();
@@ -113,20 +120,22 @@ protected:
 
   uint64_t ColdCountThreshold;
 
+  ProfiledBinary *Binary = nullptr;
+
   // Used by SampleProfileWriter
   SampleProfileMap ProfileMap;
 
-  ProfiledBinary *Binary = nullptr;
-
-  const ContextSampleCounterMap &SampleCounters;
+  const ContextSampleCounterMap *SampleCounters = nullptr;
 };
 
 class ProfileGenerator : public ProfileGeneratorBase {
 
 public:
   ProfileGenerator(ProfiledBinary *Binary,
-                   const ContextSampleCounterMap &Counters)
+                   const ContextSampleCounterMap *Counters)
       : ProfileGeneratorBase(Binary, Counters){};
+  ProfileGenerator(ProfiledBinary *Binary, const SampleProfileMap &&Profiles)
+      : ProfileGeneratorBase(Binary, std::move(Profiles)){};
   void generateProfile() override;
 
 private:
@@ -143,9 +152,10 @@ private:
   void populateBodySamplesForAllFunctions(const RangeSample &RangeCounter);
   void
   populateBoundarySamplesForAllFunctions(const BranchSample &BranchCounters);
-  void populateBodySamplesWithProbesForAllFunctions(const RangeSample &RangeCounter);
   void
-  populateBoundarySamplesWithProbesForAllFunctions(const BranchSample &BranchCounters);
+  populateBodySamplesWithProbesForAllFunctions(const RangeSample &RangeCounter);
+  void populateBoundarySamplesWithProbesForAllFunctions(
+      const BranchSample &BranchCounters);
   void postProcessProfiles();
   void trimColdProfiles(const SampleProfileMap &Profiles,
                         uint64_t ColdCntThreshold);
@@ -154,9 +164,10 @@ private:
 class CSProfileGenerator : public ProfileGeneratorBase {
 public:
   CSProfileGenerator(ProfiledBinary *Binary,
-                     const ContextSampleCounterMap &Counters)
+                     const ContextSampleCounterMap *Counters)
       : ProfileGeneratorBase(Binary, Counters){};
-
+  CSProfileGenerator(ProfiledBinary *Binary, const SampleProfileMap &&Profiles)
+      : ProfileGeneratorBase(Binary, std::move(Profiles)){};
   void generateProfile() override;
 
   // Trim the context stack at a given depth.

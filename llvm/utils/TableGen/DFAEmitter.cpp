@@ -305,6 +305,7 @@ void Automaton::emit(raw_ostream &OS) {
   }
   LLVM_DEBUG(dbgs() << "  NFA automaton has " << SeenStates.size()
                     << " states with " << NumTransitions << " transitions.\n");
+  (void) NumTransitions;
 
   const auto &ActionTypes = Transitions.back().getTypes();
   OS << "// The type of an action in the " << Name << " automaton.\n";

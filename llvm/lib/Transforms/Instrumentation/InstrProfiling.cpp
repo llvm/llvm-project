@@ -558,20 +558,16 @@ bool InstrProfiling::run(
   TT = Triple(M.getTargetTriple());
 
   bool MadeChange = false;
-  bool NeedsRuntimeHook = needsRuntimeHookUnconditionally(TT);
-  if (NeedsRuntimeHook)
+
+  // Emit the runtime hook even if no counters are present.
+  if (needsRuntimeHookUnconditionally(TT))
     MadeChange = emitRuntimeHook();
 
+  // Improve compile time by avoiding linear scans when there is no work.
   GlobalVariable *CoverageNamesVar =
       M.getNamedGlobal(getCoverageUnusedNamesVarName());
-  // Improve compile time by avoiding linear scans when there is no work.
-  // When coverage is enabled on code that is eliminated by the front-end,
-  // e.g. unused functions with internal linkage, and the target does not
-  // require pulling in profile runtime, there is no need to do further work.
-  if (!containsProfilingIntrinsics(M) &&
-      (!CoverageNamesVar || !NeedsRuntimeHook)) {
+  if (!containsProfilingIntrinsics(M) && !CoverageNamesVar)
     return MadeChange;
-  }
 
   // We did not know how many value sites there would be inside
   // the instrumented function. This is counting the number of instrumented

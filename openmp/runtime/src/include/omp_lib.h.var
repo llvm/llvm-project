@@ -574,6 +574,26 @@
           integer (kind=omp_integer_kind) omp_get_max_task_priority
         end function omp_get_max_task_priority
 
+        subroutine omp_init_lock_with_hint(svar, hint) bind(c)
+          import
+          integer (kind=omp_lock_kind) svar
+          integer (kind=omp_lock_hint_kind), value :: hint
+        end subroutine omp_init_lock_with_hint
+
+        subroutine omp_init_nest_lock_with_hint(nvar, hint) bind(c)
+          import
+          integer (kind=omp_nest_lock_kind) nvar
+          integer (kind=omp_lock_hint_kind), value :: hint
+        end subroutine omp_init_nest_lock_with_hint
+
+        function omp_control_tool(command, modifier, arg) bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_control_tool
+          integer (kind=omp_control_tool_kind), value :: command
+          integer (kind=omp_control_tool_kind), value :: modifier
+          integer (kind=kmp_pointer_kind), optional :: arg
+        end function omp_control_tool
+
         function omp_init_allocator(memspace, ntraits, traits)
           import
           integer (omp_allocator_handle_kind) omp_init_allocator
@@ -948,27 +968,6 @@
 
         subroutine kmp_set_warnings_off() bind(c)
         end subroutine kmp_set_warnings_off
-
-        subroutine omp_init_lock_with_hint(svar, hint) bind(c)
-          import
-          integer (kind=omp_lock_kind) svar
-          integer (kind=omp_lock_hint_kind), value :: hint
-        end subroutine omp_init_lock_with_hint
-
-        subroutine omp_init_nest_lock_with_hint(nvar, hint) bind(c)
-          import
-          integer (kind=omp_nest_lock_kind) nvar
-          integer (kind=omp_lock_hint_kind), value :: hint
-        end subroutine omp_init_nest_lock_with_hint
-
-        function omp_control_tool(command, modifier, arg) bind(c)
-          import
-          integer (kind=omp_integer_kind) omp_control_tool
-          integer (kind=omp_control_tool_kind), value :: command
-          integer (kind=omp_control_tool_kind), value :: modifier
-          integer (kind=kmp_pointer_kind), optional :: arg
-        end function omp_control_tool
-
       end interface
 
 !DIR$ IF DEFINED (__INTEL_OFFLOAD)

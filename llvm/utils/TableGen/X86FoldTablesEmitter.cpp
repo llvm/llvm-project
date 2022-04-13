@@ -52,27 +52,32 @@ const char *ExplicitUnalign[] = {"MOVDQU", "MOVUPS", "MOVUPD",
 
 // For manually mapping instructions that do not match by their encoding.
 const ManualMapEntry ManualMapSet[] = {
-    { "ADD16ri_DB",       "ADD16mi",         NO_UNFOLD  },
-    { "ADD16ri8_DB",      "ADD16mi8",        NO_UNFOLD  },
-    { "ADD16rr_DB",       "ADD16mr",         NO_UNFOLD  },
-    { "ADD32ri_DB",       "ADD32mi",         NO_UNFOLD  },
-    { "ADD32ri8_DB",      "ADD32mi8",        NO_UNFOLD  },
-    { "ADD32rr_DB",       "ADD32mr",         NO_UNFOLD  },
-    { "ADD64ri32_DB",     "ADD64mi32",       NO_UNFOLD  },
-    { "ADD64ri8_DB",      "ADD64mi8",        NO_UNFOLD  },
-    { "ADD64rr_DB",       "ADD64mr",         NO_UNFOLD  },
-    { "ADD8ri_DB",        "ADD8mi",          NO_UNFOLD  },
-    { "ADD8rr_DB",        "ADD8mr",          NO_UNFOLD  },
-    { "ADD16rr_DB",       "ADD16rm",         NO_UNFOLD  },
-    { "ADD32rr_DB",       "ADD32rm",         NO_UNFOLD  },
-    { "ADD64rr_DB",       "ADD64rm",         NO_UNFOLD  },
-    { "ADD8rr_DB",        "ADD8rm",          NO_UNFOLD  },
-    { "PUSH16r",          "PUSH16rmm",       UNFOLD },
-    { "PUSH32r",          "PUSH32rmm",       UNFOLD },
-    { "PUSH64r",          "PUSH64rmm",       UNFOLD },
-    { "TAILJMPr",         "TAILJMPm",        UNFOLD },
-    { "TAILJMPr64",       "TAILJMPm64",      UNFOLD },
-    { "TAILJMPr64_REX",   "TAILJMPm64_REX",  UNFOLD },
+    { "ADD16ri_DB",         "ADD16mi",         NO_UNFOLD  },
+    { "ADD16ri8_DB",        "ADD16mi8",        NO_UNFOLD  },
+    { "ADD16rr_DB",         "ADD16mr",         NO_UNFOLD  },
+    { "ADD32ri_DB",         "ADD32mi",         NO_UNFOLD  },
+    { "ADD32ri8_DB",        "ADD32mi8",        NO_UNFOLD  },
+    { "ADD32rr_DB",         "ADD32mr",         NO_UNFOLD  },
+    { "ADD64ri32_DB",       "ADD64mi32",       NO_UNFOLD  },
+    { "ADD64ri8_DB",        "ADD64mi8",        NO_UNFOLD  },
+    { "ADD64rr_DB",         "ADD64mr",         NO_UNFOLD  },
+    { "ADD8ri_DB",          "ADD8mi",          NO_UNFOLD  },
+    { "ADD8rr_DB",          "ADD8mr",          NO_UNFOLD  },
+    { "ADD16rr_DB",         "ADD16rm",         NO_UNFOLD  },
+    { "ADD32rr_DB",         "ADD32rm",         NO_UNFOLD  },
+    { "ADD64rr_DB",         "ADD64rm",         NO_UNFOLD  },
+    { "ADD8rr_DB",          "ADD8rm",          NO_UNFOLD  },
+    { "MMX_MOVD64from64rr", "MMX_MOVQ64mr",    UNFOLD },
+    { "MMX_MOVD64grr",      "MMX_MOVD64mr",    UNFOLD },
+    { "MOVLHPSrr",          "MOVHPSrm",        NO_UNFOLD  },
+    { "PUSH16r",            "PUSH16rmm",       UNFOLD },
+    { "PUSH32r",            "PUSH32rmm",       UNFOLD },
+    { "PUSH64r",            "PUSH64rmm",       UNFOLD },
+    { "TAILJMPr",           "TAILJMPm",        UNFOLD },
+    { "TAILJMPr64",         "TAILJMPm64",      UNFOLD },
+    { "TAILJMPr64_REX",     "TAILJMPm64_REX",  UNFOLD },
+    { "VMOVLHPSZrr",        "VMOVHPSZ128rm",   NO_UNFOLD  },
+    { "VMOVLHPSrr",         "VMOVHPSrm",       NO_UNFOLD  },
 };
 
 
@@ -252,10 +257,11 @@ getAltRegInst(const CodeGenInstruction *I, const RecordKeeper &Records,
 // matches the EVEX instruction of this object.
 class IsMatch {
   const CodeGenInstruction *MemInst;
+  unsigned Variant;
 
 public:
-  IsMatch(const CodeGenInstruction *Inst, const RecordKeeper &Records)
-      : MemInst(Inst) {}
+  IsMatch(const CodeGenInstruction *Inst, unsigned V)
+      : MemInst(Inst), Variant(V) {}
 
   bool operator()(const CodeGenInstruction *RegInst) {
     X86Disassembler::RecognizableInstrBase RegRI(*RegInst);
@@ -270,6 +276,16 @@ public:
     // Instruction's format - The register form's "Form" field should be
     // the opposite of the memory form's "Form" field.
     if (!areOppositeForms(RegRI.Form, MemRI.Form))
+      return false;
+
+    // X86 encoding is crazy, e.g
+    //
+    // f3 0f c7 30       vmxon   (%rax)
+    // f3 0f c7 f0       senduipi        %rax
+    //
+    // This two instruction have similiar encoding fields but are unrelated
+    if (X86Disassembler::getMnemonic(MemInst, Variant) !=
+        X86Disassembler::getMnemonic(RegInst, Variant))
       return false;
 
     // Return false if one (at least) of the encoding fields of both
@@ -533,6 +549,8 @@ void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
     }
   }
 
+  Record *AsmWriter = Target.getAsmWriter();
+  unsigned Variant = AsmWriter->getValueAsInt("Variant");
   // For each memory form instruction, try to find its register form
   // instruction.
   for (const CodeGenInstruction *MemInst : MemInsts) {
@@ -548,7 +566,7 @@ void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
     // opcode.
     std::vector<const CodeGenInstruction *> &OpcRegInsts = RegInstsIt->second;
 
-    auto Match = find_if(OpcRegInsts, IsMatch(MemInst, Records));
+    auto Match = find_if(OpcRegInsts, IsMatch(MemInst, Variant));
     if (Match != OpcRegInsts.end()) {
       const CodeGenInstruction *RegInst = *Match;
       // If the matched instruction has it's "FoldGenRegForm" set, map the

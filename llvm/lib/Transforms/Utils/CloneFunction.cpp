@@ -322,6 +322,9 @@ struct PruningFunctionCloner {
   bool ModuleLevelChanges;
   const char *NameSuffix;
   ClonedCodeInfo *CodeInfo;
+  bool HostFuncIsStrictFP;
+
+  Instruction *cloneInstruction(BasicBlock::const_iterator II);
 
 public:
   PruningFunctionCloner(Function *newFunc, const Function *oldFunc,
@@ -329,7 +332,10 @@ public:
                         const char *nameSuffix, ClonedCodeInfo *codeInfo)
       : NewFunc(newFunc), OldFunc(oldFunc), VMap(valueMap),
         ModuleLevelChanges(moduleLevelChanges), NameSuffix(nameSuffix),
-        CodeInfo(codeInfo) {}
+        CodeInfo(codeInfo) {
+    HostFuncIsStrictFP =
+        newFunc->getAttributes().hasFnAttr(Attribute::StrictFP);
+  }
 
   /// The specified block is found to be reachable, clone it and
   /// anything that it can reach.
@@ -337,6 +343,89 @@ public:
                   std::vector<const BasicBlock *> &ToClone);
 };
 } // namespace
+
+static bool hasRoundingModeOperand(Intrinsic::ID CIID) {
+  switch (CIID) {
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
+  case Intrinsic::INTRINSIC:                                                   \
+    return ROUND_MODE == 1;
+#define FUNCTION INSTRUCTION
+#include "llvm/IR/ConstrainedOps.def"
+  default:
+    llvm_unreachable("Unexpected constrained intrinsic id");
+  }
+}
+
+Instruction *
+PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
+  const Instruction &OldInst = *II;
+  Instruction *NewInst = nullptr;
+  if (HostFuncIsStrictFP) {
+    Intrinsic::ID CIID = getConstrainedIntrinsicID(OldInst);
+    if (CIID != Intrinsic::not_intrinsic) {
+      // Instead of cloning the instruction, a call to constrained intrinsic
+      // should be created.
+      // Assume the first arguments of constrained intrinsics are the same as
+      // the operands of original instruction.
+
+      // Determine overloaded types of the intrinsic.
+      SmallVector<Type *, 2> TParams;
+      SmallVector<Intrinsic::IITDescriptor, 8> Descriptor;
+      getIntrinsicInfoTableEntries(CIID, Descriptor);
+      for (unsigned I = 0, E = Descriptor.size(); I != E; ++I) {
+        Intrinsic::IITDescriptor Operand = Descriptor[I];
+        switch (Operand.Kind) {
+        case Intrinsic::IITDescriptor::Argument:
+          if (Operand.getArgumentKind() !=
+              Intrinsic::IITDescriptor::AK_MatchType) {
+            if (I == 0)
+              TParams.push_back(OldInst.getType());
+            else
+              TParams.push_back(OldInst.getOperand(I - 1)->getType());
+          }
+          break;
+        case Intrinsic::IITDescriptor::SameVecWidthArgument:
+          ++I;
+          break;
+        default:
+          break;
+        }
+      }
+
+      // Create intrinsic call.
+      LLVMContext &Ctx = NewFunc->getContext();
+      Function *IFn =
+          Intrinsic::getDeclaration(NewFunc->getParent(), CIID, TParams);
+      SmallVector<Value *, 4> Args;
+      unsigned NumOperands = OldInst.getNumOperands();
+      if (isa<CallInst>(OldInst))
+        --NumOperands;
+      for (unsigned I = 0; I < NumOperands; ++I) {
+        Value *Op = OldInst.getOperand(I);
+        Args.push_back(Op);
+      }
+      if (const auto *CmpI = dyn_cast<FCmpInst>(&OldInst)) {
+        FCmpInst::Predicate Pred = CmpI->getPredicate();
+        StringRef PredName = FCmpInst::getPredicateName(Pred);
+        Args.push_back(MetadataAsValue::get(Ctx, MDString::get(Ctx, PredName)));
+      }
+
+      // The last arguments of a constrained intrinsic are metadata that
+      // represent rounding mode (absents in some intrinsics) and exception
+      // behavior. The inlined function uses default settings.
+      if (hasRoundingModeOperand(CIID))
+        Args.push_back(
+            MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.tonearest")));
+      Args.push_back(
+          MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore")));
+
+      NewInst = CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
+    }
+  }
+  if (!NewInst)
+    NewInst = II->clone();
+  return NewInst;
+}
 
 /// The specified block is found to be reachable, clone it and
 /// anything that it can reach.
@@ -377,7 +466,14 @@ void PruningFunctionCloner::CloneBlock(
   for (BasicBlock::const_iterator II = StartingInst, IE = --BB->end(); II != IE;
        ++II) {
 
-    Instruction *NewInst = II->clone();
+    Instruction *NewInst = cloneInstruction(II);
+
+    if (HostFuncIsStrictFP) {
+      // All function calls in the inlined function must get 'strictfp'
+      // attribute to prevent undesirable optimizations.
+      if (auto *Call = dyn_cast<CallInst>(NewInst))
+        Call->addFnAttr(Attribute::StrictFP);
+    }
 
     // Eagerly remap operands to the newly cloned instruction, except for PHI
     // nodes for which we defer processing until we update the CFG.

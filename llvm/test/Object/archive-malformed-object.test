@@ -1,3 +1,4 @@
+# XFAIL: system-aix
 ## Show that the archive library emits error messages when adding malformed
 ## objects.
 

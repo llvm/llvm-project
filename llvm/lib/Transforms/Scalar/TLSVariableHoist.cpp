@@ -40,16 +40,10 @@ using namespace tlshoist;
 
 #define DEBUG_TYPE "tlshoist"
 
-// TODO: Support "strict" model if we need to strictly load TLS address,
-// because "non-optimize" may also do some optimization in other passes.
-static cl::opt<std::string> TLSLoadHoist(
-    "tls-load-hoist",
-    cl::desc(
-        "hoist the TLS loads in PIC model: "
-        "tls-load-hoist=optimize: Eleminate redundant TLS load(s)."
-        "tls-load-hoist=strict: Strictly load TLS address before every use."
-        "tls-load-hoist=non-optimize: Generally load TLS before use(s)."),
-    cl::init("non-optimize"), cl::Hidden);
+static cl::opt<bool> TLSLoadHoist(
+    "tls-load-hoist", cl::init(false), cl::Hidden,
+    cl::desc("hoist the TLS loads in PIC model to eliminate redundant "
+             "TLS address calculation."));
 
 namespace {
 
@@ -282,8 +276,7 @@ bool TLSVariableHoistPass::runImpl(Function &Fn, DominatorTree &DT,
   if (Fn.hasOptNone())
     return false;
 
-  if (TLSLoadHoist != "optimize" &&
-      !Fn.getAttributes().hasFnAttr("tls-load-hoist"))
+  if (!TLSLoadHoist && !Fn.getAttributes().hasFnAttr("tls-load-hoist"))
     return false;
 
   this->LI = &LI;

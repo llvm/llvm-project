@@ -29,6 +29,8 @@ namespace {
 /// Checks for out of bound memref access subscripts..
 struct TestMemRefBoundCheck
     : public PassWrapper<TestMemRefBoundCheck, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMemRefBoundCheck)
+
   StringRef getArgument() const final { return "test-memref-bound-check"; }
   StringRef getDescription() const final {
     return "Check memref access bounds";

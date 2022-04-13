@@ -157,19 +157,35 @@ TEST(PWMAFunction, valueAt) {
 }
 
 TEST(PWMAFunction, removeIdRangeRegressionTest) {
-  PWMAFunction pwafA = parsePWMAF(
+  PWMAFunction pwmafA = parsePWMAF(
       /*numInputs=*/2, /*numOutputs=*/1,
       {
           {"(x, y) : (x == 0, y == 0, x - 2*(x floordiv 2) == 0, y - 2*(y "
            "floordiv 2) == 0)",
            {{0, 0, 0, 0, 0}}} // (0, 0)
       });
-  PWMAFunction pwafB = parsePWMAF(
+  PWMAFunction pwmafB = parsePWMAF(
       /*numInputs=*/2, /*numOutputs=*/1,
       {
           {"(x, y) : (x - 11*y == 0, 11*x - y == 0, x - 2*(x floordiv 2) == 0, "
            "y - 2*(y floordiv 2) == 0)",
            {{0, 0, 0, 0, 0}}} // (0, 0)
       });
-  EXPECT_TRUE(pwafA.isEqual(pwafB));
+  EXPECT_TRUE(pwmafA.isEqual(pwmafB));
+}
+
+TEST(PWMAFunction, eliminateRedundantLocalIdRegressionTest) {
+  PWMAFunction pwmafA = parsePWMAF(
+      /*numInputs=*/2, /*numOutputs=*/1,
+      {
+          {"(x, y) : (x - 2*(x floordiv 2) == 0, x - 2*y == 0)",
+           {{0, 1, 0, 0}}} // (0, 0)
+      });
+  PWMAFunction pwmafB = parsePWMAF(
+      /*numInputs=*/2, /*numOutputs=*/1,
+      {
+          {"(x, y) : (x - 2*(x floordiv 2) == 0, x - 2*y == 0)",
+           {{1, -1, 0, 0}}} // (0, 0)
+      });
+  EXPECT_TRUE(pwmafA.isEqual(pwmafB));
 }

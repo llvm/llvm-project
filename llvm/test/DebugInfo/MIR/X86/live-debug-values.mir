@@ -200,53 +200,53 @@ body:             |
     $edi = MOV32ri 2
     CMP32ri8 killed $eax, 2, implicit-def $eflags, debug-location !26
     JCC_1 %bb.2.if.end, 5, implicit $eflags
-  
+
   bb.1.if.else:
     successors: %bb.2.if.end(0)
     liveins: $rsi
-  
+
     DBG_VALUE $rsi, _, !13, !20, debug-location !22
     $rdi = MOV64rm killed $rsi, 1, _, 8, _, debug-location !27 :: (load (s64) from %ir.arrayidx, !tbaa !28)
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !32
     CALL64pcrel32 @atoi, csr_64, implicit $rsp, implicit $rdi, implicit $al, implicit-def $rsp, implicit-def $eax, debug-location !32
     $edi = MOV32rr $eax, debug-location !32
     DBG_VALUE $edi, _, !14, !20, debug-location !33
-  
+
   bb.2.if.end:
     successors: %bb.3.if.then.3(16), %bb.4.if.else.5(16)
     liveins: $edi
-  
+
     CALL64pcrel32 @change, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax, debug-location !34
     $ebx = MOV32rr $eax, debug-location !34
     DBG_VALUE $ebx, _, !14, !20, debug-location !33
     CMP32ri8 $ebx, 11, implicit-def $eflags, debug-location !37
     JCC_1 %bb.4.if.else.5, 12, implicit killed $eflags, debug-location !37
-  
+
   bb.3.if.then.3:
     successors: %bb.5.if.end.7(0)
     liveins: $ebx
-  
+
     DBG_VALUE $ebx, _, !14, !20, debug-location !33
     $edi = MOV32rr $ebx, debug-location !38
     CALL64pcrel32 @modify, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax, debug-location !38
     $ecx = MOV32rr $eax, debug-location !38
     $ecx = ADD32rr killed $ecx, killed $ebx, implicit-def dead $eflags, debug-location !40
     JMP_1 %bb.5.if.end.7
-  
+
   bb.4.if.else.5:
     successors: %bb.5.if.end.7(0)
     liveins: $ebx
-  
+
     DBG_VALUE $ebx, _, !14, !20, debug-location !33
     $edi = MOV32rr killed $ebx, debug-location !42
     CALL64pcrel32 @inc, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax, debug-location !42
     $ecx = MOV32rr $eax, debug-location !42
-  
+
   bb.5.if.end.7:
     liveins: $ecx
-  
+
     MOV32mr $rip, 1, _, @m, _, $ecx, debug-location !43 :: (store (s32) into @m, !tbaa !44)
-    dead undef $edi = MOV32ri @.str, implicit-def $rdi, debug-location !46
+    dead $edi = MOV32ri @.str, implicit-def $rdi, debug-location !46
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !47
     $esi = MOV32rr killed $ecx, debug-location !46
     CALL64pcrel32 @printf, csr_64, implicit $rsp, implicit $rdi, implicit $esi, implicit $al, implicit-def $rsp, implicit-def dead $eax, debug-location !46

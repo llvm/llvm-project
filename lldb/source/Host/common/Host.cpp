@@ -56,7 +56,6 @@
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -525,11 +524,13 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
             error.SetErrorStringWithFormat(
                 "shell command output is too large to fit into a std::string");
           } else {
-            auto Buffer =
-                FileSystem::Instance().CreateDataBuffer(output_file_spec);
+            WritableDataBufferSP Buffer =
+                FileSystem::Instance().CreateWritableDataBuffer(
+                    output_file_spec);
             if (error.Success())
-              command_output_ptr->assign(Buffer->GetChars(),
-                                         Buffer->GetByteSize());
+              command_output_ptr->assign(
+                  reinterpret_cast<char *>(Buffer->GetBytes()),
+                  Buffer->GetByteSize());
           }
         }
       }

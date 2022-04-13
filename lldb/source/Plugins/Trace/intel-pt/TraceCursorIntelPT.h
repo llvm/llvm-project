@@ -20,7 +20,7 @@ public:
   TraceCursorIntelPT(lldb::ThreadSP thread_sp,
                      DecodedThreadSP decoded_thread_sp);
 
-  size_t Seek(int64_t offset, SeekType origin) override;
+  uint64_t Seek(int64_t offset, SeekType origin) override;
 
   virtual bool Next() override;
 
@@ -35,6 +35,10 @@ public:
 
   bool IsError() override;
 
+  bool GoToId(lldb::user_id_t id) override;
+
+  lldb::user_id_t GetId() const override;
+
 private:
   size_t GetInternalInstructionSize();
 
@@ -42,6 +46,8 @@ private:
   DecodedThreadSP m_decoded_thread_sp;
   /// Internal instruction index currently pointing at.
   size_t m_pos;
+  /// Tsc range covering the current instruction.
+  llvm::Optional<DecodedThread::TscRange> m_tsc_range;
 };
 
 } // namespace trace_intel_pt

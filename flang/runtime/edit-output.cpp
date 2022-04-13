@@ -57,7 +57,7 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     return EditCharacterOutput(
         io, edit, reinterpret_cast<char *>(&n), sizeof n);
   default:
-    io.GetIoErrorHandler().Crash(
+    io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with an INTEGER data item",
         edit.descriptor);
     return false;

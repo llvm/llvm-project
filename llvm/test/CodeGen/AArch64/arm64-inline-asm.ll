@@ -494,7 +494,6 @@ define void @test_vector_too_large_r_m(<9 x float>* nocapture readonly %0) {
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
-; CHECK-DAG   stp [[Q0]], [[Q1]], [sp]
 entry:
   %m.addr = alloca <9 x float>, align 16
   %m = load <9 x float>, <9 x float>* %0, align 16

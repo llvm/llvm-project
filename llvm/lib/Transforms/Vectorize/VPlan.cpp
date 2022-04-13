@@ -317,11 +317,23 @@ void VPBasicBlock::execute(VPTransformState *State) {
     State->Builder.SetInsertPoint(NewBB);
     // Temporarily terminate with unreachable until CFG is rewired.
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
-    State->Builder.SetInsertPoint(Terminator);
     // Register NewBB in its loop. In innermost loops its the same for all BB's.
-    Loop *L = State->LI->getLoopFor(State->CFG.PrevBB);
-    L->addBasicBlockToLoop(NewBB, *State->LI);
+    State->CurrentVectorLoop->addBasicBlockToLoop(NewBB, *State->LI);
+    State->Builder.SetInsertPoint(Terminator);
     State->CFG.PrevBB = NewBB;
+  } else {
+    // If the current VPBB is re-using the header block from skeleton creation,
+    // move it to the new vector loop.
+    VPBasicBlock *HeaderVPBB =
+        getPlan()->getVectorLoopRegion()->getEntryBasicBlock();
+    if (EnableVPlanNativePath)
+      HeaderVPBB = cast<VPBasicBlock>(HeaderVPBB->getSingleSuccessor());
+    if (this == HeaderVPBB) {
+      assert(State->CurrentVectorLoop);
+      State->LI->removeBlock(State->CFG.PrevBB);
+      State->CurrentVectorLoop->addBasicBlockToLoop(State->CFG.PrevBB,
+                                                    *State->LI);
+    }
   }
 
   // 2. Fill the IR basic block with IR instructions.
@@ -448,6 +460,18 @@ void VPRegionBlock::execute(VPTransformState *State) {
   ReversePostOrderTraversal<VPBlockBase *> RPOT(Entry);
 
   if (!isReplicator()) {
+    // Create and register the new vector loop.
+    Loop *PrevLoop = State->CurrentVectorLoop;
+    State->CurrentVectorLoop = State->LI->AllocateLoop();
+    Loop *ParentLoop = State->LI->getLoopFor(State->CFG.VectorPreHeader);
+
+    // Insert the new loop into the loop nest and register the new basic blocks
+    // before calling any utilities such as SCEV that require valid LoopInfo.
+    if (ParentLoop)
+      ParentLoop->addChildLoop(State->CurrentVectorLoop);
+    else
+      State->LI->addTopLevelLoop(State->CurrentVectorLoop);
+
     // Visit the VPBlocks connected to "this", starting from it.
     for (VPBlockBase *Block : RPOT) {
       if (EnableVPlanNativePath) {
@@ -467,6 +491,8 @@ void VPRegionBlock::execute(VPTransformState *State) {
       LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
       Block->execute(State);
     }
+
+    State->CurrentVectorLoop = PrevLoop;
     return;
   }
 
@@ -858,7 +884,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   // Check if the backedge taken count is needed, and if so build it.
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+    IRBuilder<> Builder(State.CFG.VectorPreHeader->getTerminator());
     auto *TCMO = Builder.CreateSub(TripCountV,
                                    ConstantInt::get(TripCountV->getType(), 1),
                                    "trip.count.minus.1");
@@ -899,17 +925,16 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// LoopVectorBody basic-block was created for this. Introduce additional
 /// basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
-  // 0. Set the reverse mapping from VPValues to Values for code generation.
+  // Set the reverse mapping from VPValues to Values for code generation.
   for (auto &Entry : Value2VPValue)
     State->VPValue2Value[Entry.second] = Entry.first;
 
-  BasicBlock *VectorPreHeaderBB = State->CFG.PrevBB;
-  State->CFG.VectorPreHeader = VectorPreHeaderBB;
-  BasicBlock *VectorHeaderBB = VectorPreHeaderBB->getSingleSuccessor();
-  assert(VectorHeaderBB && "Loop preheader does not have a single successor.");
-
-  Loop *L = State->LI->getLoopFor(VectorHeaderBB);
-  State->CFG.ExitBB = L->getExitBlock();
+  // Initialize CFG state.
+  State->CFG.PrevVPBB = nullptr;
+  BasicBlock *VectorHeaderBB = State->CFG.VectorPreHeader->getSingleSuccessor();
+  State->CFG.PrevBB = VectorHeaderBB;
+  State->CFG.ExitBB = VectorHeaderBB->getSingleSuccessor();
+  State->CurrentVectorLoop = State->LI->getLoopFor(VectorHeaderBB);
 
   // Remove the edge between Header and Latch to allow other connections.
   // Temporarily terminate with unreachable until CFG is rewired.
@@ -921,9 +946,6 @@ void VPlan::execute(VPTransformState *State) {
   State->Builder.SetInsertPoint(Terminator);
 
   // Generate code in loop body.
-  State->CFG.PrevVPBB = nullptr;
-  State->CFG.PrevBB = VectorHeaderBB;
-
   for (VPBlockBase *Block : depth_first(Entry))
     Block->execute(State);
 
@@ -1007,7 +1029,7 @@ void VPlan::execute(VPTransformState *State) {
   // We do not attempt to preserve DT for outer loop vectorization currently.
   if (!EnableVPlanNativePath)
     updateDominatorTree(State->DT, VectorHeaderBB, VectorLatchBB,
-                        L->getExitBlock());
+                        State->CFG.ExitBB);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1543,7 +1565,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
       ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), State.VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
-  assert(State.LI->getLoopFor(HeaderBB)->getHeader() == HeaderBB &&
+  assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
          "recipe must be in the vector loop header");
   unsigned LastPartForNewPhi = isOrdered() ? 1 : State.UF;
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
@@ -1688,7 +1710,7 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
 VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
                                                  InterleavedAccessInfo &IAI) {
   Old2NewTy Old2New;
-  visitRegion(cast<VPRegionBlock>(Plan.getEntry()), Old2New, IAI);
+  visitRegion(Plan.getVectorLoopRegion(), Old2New, IAI);
 }
 
 void VPSlotTracker::assignSlot(const VPValue *V) {

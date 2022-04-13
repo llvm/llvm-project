@@ -4431,8 +4431,11 @@ SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
           SDValue Off = DAG.getConstant(j, dl, PtrVT);
           Addr = DAG.getNode(ISD::ADD, dl, Off.getValueType(), Addr, Off);
         }
-        SDValue Store = DAG.getStore(Val.getValue(1), dl, Val, Addr,
-                                     MachinePointerInfo(&*FuncArg, j));
+        unsigned StoreSizeInBits = std::min(PtrByteSize, (ObjSize - j)) * 8;
+        EVT ObjType = EVT::getIntegerVT(*DAG.getContext(), StoreSizeInBits);
+        SDValue Store =
+            DAG.getTruncStore(Val.getValue(1), dl, Val, Addr,
+                              MachinePointerInfo(&*FuncArg, j), ObjType);
         MemOps.push_back(Store);
         ++GPR_idx;
       }
@@ -6269,8 +6272,11 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
         SDValue Const = DAG.getConstant(j, dl, PtrOff.getValueType());
         SDValue AddArg = DAG.getNode(ISD::ADD, dl, PtrVT, Arg, Const);
         if (GPR_idx != NumGPRs) {
-          SDValue Load =
-              DAG.getLoad(PtrVT, dl, Chain, AddArg, MachinePointerInfo());
+          unsigned LoadSizeInBits = std::min(PtrByteSize, (Size - j)) * 8;
+          EVT ObjType = EVT::getIntegerVT(*DAG.getContext(), LoadSizeInBits);
+          SDValue Load = DAG.getExtLoad(ISD::EXTLOAD, dl, PtrVT, Chain, AddArg,
+                                        MachinePointerInfo(), ObjType);
+
           MemOpChains.push_back(Load.getValue(1));
           RegsToPass.push_back(std::make_pair(GPR[GPR_idx++], Load));
           ArgOffset += PtrByteSize;
@@ -10557,6 +10563,30 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                     dl, SDValue());
     return Result.first;
   }
+  case Intrinsic::ppc_maxfe:
+  case Intrinsic::ppc_maxfl:
+  case Intrinsic::ppc_maxfs:
+  case Intrinsic::ppc_minfe:
+  case Intrinsic::ppc_minfl:
+  case Intrinsic::ppc_minfs: {
+    EVT VT = Op.getValueType();
+    assert(
+        all_of(Op->ops().drop_front(4),
+               [VT](const SDUse &Use) { return Use.getValueType() == VT; }) &&
+        "ppc_[max|min]f[e|l|s] must have uniform type arguments");
+    ISD::CondCode CC = ISD::SETGT;
+    if (IntrinsicID == Intrinsic::ppc_minfe ||
+        IntrinsicID == Intrinsic::ppc_minfl ||
+        IntrinsicID == Intrinsic::ppc_minfs)
+      CC = ISD::SETLT;
+    unsigned I = Op.getNumOperands() - 2, Cnt = I;
+    SDValue Res = Op.getOperand(I);
+    for (--I; Cnt != 0; --Cnt, I = (--I == 0 ? (Op.getNumOperands() - 1) : I)) {
+      Res =
+          DAG.getSelectCC(dl, Res, Op.getOperand(I), Res, Op.getOperand(I), CC);
+    }
+    return Res;
+  }
   }
 
   // If this is a lowered altivec predicate compare, CompareOpc is set to the
@@ -11217,6 +11247,8 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::ppcf128,
                                     N->getOperand(2), N->getOperand(1)));
       break;
+    case Intrinsic::ppc_maxfe:
+    case Intrinsic::ppc_minfe:
     case Intrinsic::ppc_fnmsub:
     case Intrinsic::ppc_convert_f128_to_ppcf128:
       Results.push_back(LowerINTRINSIC_WO_CHAIN(SDValue(N, 0), DAG));

@@ -3,7 +3,6 @@
 
 %struct.va_list = type { i8* }
 
-; CHECK-LABEL test:
 define i32 @test(i32 %X, ...) {
   ; Initialize variable argument processing
 ; CHECK-LABEL: test:

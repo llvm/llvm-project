@@ -1,5 +1,4 @@
-; RUN: opt -S -mtriple=x86_64-unknown-unknown -tlshoist --relocation-model=pic --tls-load-hoist=optimize -o - %s | FileCheck %s --check-prefix=HOIST0
-; RUN: opt -S -mtriple=x86_64-unknown-unknown -tlshoist --relocation-model=pic --tls-load-hoist=non-optimize -o - %s | FileCheck %s --check-prefix=HOIST2
+; RUN: opt -S -mtriple=x86_64-unknown-unknown -tlshoist --relocation-model=pic --tls-load-hoist=true -o - %s | FileCheck %s --check-prefix=HOIST0
 ; RUN: opt -S -mtriple=x86_64-unknown-unknown -tlshoist --relocation-model=pic -o - %s | FileCheck %s --check-prefix=HOIST2
 
 $_ZTW5thl_x = comdat any

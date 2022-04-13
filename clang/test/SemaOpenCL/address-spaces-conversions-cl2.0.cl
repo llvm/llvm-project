@@ -385,7 +385,7 @@ void test_conversion(__global int *arg_glob, __local int *arg_loc,
 #endif
 }
 
-void test_ternary() {
+void test_ternary(void) {
   AS int *var_cond;
   __generic int *var_gen;
   __global int *var_glob;
@@ -500,7 +500,7 @@ void test_ternary() {
 #endif
 }
 
-void test_pointer_chains() {
+void test_pointer_chains(void) {
   AS int *AS *var_as_as_int;
   AS int *AS_COMP *var_asc_as_int;
   AS_INCOMP int *AS_COMP *var_asc_asn_int;

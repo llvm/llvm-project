@@ -21,11 +21,13 @@ add_clang_library(clangDaemonTweaks OBJECT
   ExpandMacro.cpp
   ExtractFunction.cpp
   ExtractVariable.cpp
+  MemberwiseConstructor.cpp
   ObjCLocalizeStringLiteral.cpp
   ObjCMemberwiseInitializer.cpp
   PopulateSwitch.cpp
   RawStringLiteral.cpp
   RemoveUsingNamespace.cpp
+  SpecialMembers.cpp
   SwapIfBranches.cpp
 
   LINK_LIBS

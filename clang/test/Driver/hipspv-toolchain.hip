@@ -27,7 +27,7 @@
 
 // CHECK: {{".*clang-offload-bundler"}} "-type=o" "-bundle-align=4096"
 // CHECK-SAME: "-targets=host-x86_64-unknown-linux,hip-spirv64----generic"
-// CHECK-SAME: "-inputs={{.*}},[[SPIRV_OUT]]" "-outputs=[[BUNDLE:.*hipfb]]"
+// CHECK-SAME: "-input={{.*}}" "-input=[[SPIRV_OUT]]" "-output=[[BUNDLE:.*hipfb]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" {{".*"}} "-aux-triple" "spirv64"
 // CHECK-SAME: "-emit-obj"

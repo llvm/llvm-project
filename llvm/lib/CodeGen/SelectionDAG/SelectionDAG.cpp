@@ -5058,6 +5058,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::FREEZE:
     assert(VT == Operand.getValueType() && "Unexpected VT!");
+    if (isGuaranteedNotToBeUndefOrPoison(Operand))
+      return Operand;
     break;
   case ISD::TokenFactor:
   case ISD::MERGE_VALUES:
@@ -10397,6 +10399,11 @@ bool llvm::isAllOnesConstant(SDValue V) {
 bool llvm::isOneConstant(SDValue V) {
   ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
   return Const != nullptr && Const->isOne();
+}
+
+bool llvm::isMinSignedConstant(SDValue V) {
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
+  return Const != nullptr && Const->isMinSignedValue();
 }
 
 SDValue llvm::peekThroughBitcasts(SDValue V) {

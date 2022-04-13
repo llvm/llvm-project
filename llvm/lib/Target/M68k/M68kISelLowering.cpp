@@ -173,7 +173,7 @@ MVT M68kTargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
   if (Ty.isSimple()) {
     return Ty.getSimpleVT();
   }
-  return MVT::getIntegerVT(8 * DL.getPointerSize(0));
+  return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
 #include "M68kGenCallingConv.inc"

@@ -18,7 +18,7 @@ _f6: b _fn6
 ## Currently leaves 12 bytes for one thunk, so 36 bytes.
 ## Uses < instead of <=, so 40 bytes.
 
-.global _spacer1, _spacer1
+.global _spacer1, _spacer2
 ## 0x8000000 is 128 MiB, one more than the forward branch limit,
 ## distributed over two functions since our thunk insertion algorithm
 ## can't deal with a single function that's 128 MiB.

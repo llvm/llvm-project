@@ -549,9 +549,19 @@ TEST(SimplexTest, addDivisionVariable) {
   EXPECT_EQ((*sample)[0] / 2, (*sample)[1]);
 }
 
-TEST(LexSimplexTest, addEquality) {
-  IntegerRelation rel(/*numDomain=*/0, /*numRange=*/1);
-  rel.addEquality({1, 0});
-  LexSimplex simplex(rel);
-  EXPECT_EQ(simplex.getNumConstraints(), 1u);
+TEST(SimplexTest, LexIneqType) {
+  LexSimplex simplex(/*nVar=*/1);
+  simplex.addInequality({2, -1}); // x >= 1/2.
+
+  // Redundant inequality x >= 2/3.
+  EXPECT_TRUE(simplex.isRedundantInequality({3, -2}));
+  EXPECT_FALSE(simplex.isSeparateInequality({3, -2}));
+
+  // Separate inequality x <= 2/3.
+  EXPECT_FALSE(simplex.isRedundantInequality({-3, 2}));
+  EXPECT_TRUE(simplex.isSeparateInequality({-3, 2}));
+
+  // Cut inequality x <= 1.
+  EXPECT_FALSE(simplex.isRedundantInequality({-1, 1}));
+  EXPECT_FALSE(simplex.isSeparateInequality({-1, 1}));
 }

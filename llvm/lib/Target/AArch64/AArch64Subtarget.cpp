@@ -79,14 +79,17 @@ void AArch64Subtarget::initializeProperties() {
     CacheLineSize = 64;
     break;
   case CortexA35:
-    break;
   case CortexA53:
   case CortexA55:
     PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 4;
+    MaxBytesForLoopAlignment = 8;
     break;
   case CortexA57:
     MaxInterleaveFactor = 4;
     PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 4;
+    MaxBytesForLoopAlignment = 8;
     break;
   case CortexA65:
     PrefFunctionLogAlignment = 3;
@@ -94,6 +97,10 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA72:
   case CortexA73:
   case CortexA75:
+    PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 4;
+    MaxBytesForLoopAlignment = 8;
+    break;
   case CortexA76:
   case CortexA77:
   case CortexA78:
@@ -102,12 +109,21 @@ void AArch64Subtarget::initializeProperties() {
   case CortexX1:
   case CortexX1C:
     PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 5;
+    MaxBytesForLoopAlignment = 16;
     break;
   case CortexA510:
+    PrefFunctionLogAlignment = 4;
+    VScaleForTuning = 1;
+    PrefLoopLogAlignment = 4;
+    MaxBytesForLoopAlignment = 8;
+    break;
   case CortexA710:
   case CortexX2:
     PrefFunctionLogAlignment = 4;
     VScaleForTuning = 1;
+    PrefLoopLogAlignment = 5;
+    MaxBytesForLoopAlignment = 16;
     break;
   case A64FX:
     CacheLineSize = 256;

@@ -34,8 +34,10 @@ class LAInst<dag outs, dag ins, string asmstr, list<dag> pattern = []>
 }
 
 // Pseudo instructions
-class Pseudo<dag outs, dag ins, string asmstr> : LAInst<outs, ins, asmstr> {
+class Pseudo<dag outs, dag ins, list<dag> pattern = [], string asmstr = "">
+    : LAInst<outs, ins, asmstr, pattern> {
   let isPseudo = 1;
+  let isCodeGenOnly = 1;
 }
 
 // 2R-type

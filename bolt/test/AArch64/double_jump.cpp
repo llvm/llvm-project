@@ -52,4 +52,4 @@ unsigned long foo(unsigned long count) {
   return count;
 }
 
-int main(int argc, const char *argv[]) { return foo(38); }
+extern "C" int _start() { return foo(38); }

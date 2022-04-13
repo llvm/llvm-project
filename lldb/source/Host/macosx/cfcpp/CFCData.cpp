@@ -12,7 +12,7 @@
 CFCData::CFCData(CFDataRef data) : CFCReleaser<CFDataRef>(data) {}
 
 // CFCData copy constructor
-CFCData::CFCData(const CFCData &rhs) : CFCReleaser<CFDataRef>(rhs) {}
+CFCData::CFCData(const CFCData &rhs) = default;
 
 // CFCData copy constructor
 CFCData &CFCData::operator=(const CFCData &rhs)

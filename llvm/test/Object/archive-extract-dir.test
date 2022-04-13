@@ -1,3 +1,5 @@
+XFAIL: system-aix
+
 RUN: mkdir -p %t
 RUN: cd %t
 RUN: rm -rf foo

@@ -900,13 +900,13 @@ define i1 @is_pow2or0_ctpop_wrong_pred1(i32 %x) {
 define i1 @is_pow2or0_ctpop_wrong_pred2_logical(i32 %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop_wrong_pred2_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 1
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
-  %cmp = icmp eq i32 %t0, 1
+  %cmp = icmp ne i32 %t0, 1
   %iszero = icmp ne i32 %x, 0
   %r = select i1 %iszero, i1 true, i1 %cmp
   ret i1 %r
@@ -1092,13 +1092,13 @@ define i1 @isnot_pow2nor0_ctpop_wrong_pred1(i32 %x) {
 define i1 @isnot_pow2nor0_ctpop_wrong_pred2_logical(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_ctpop_wrong_pred2_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 1
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
-  %cmp = icmp ne i32 %t0, 1
+  %cmp = icmp eq i32 %t0, 1
   %notzero = icmp eq i32 %x, 0
   %r = select i1 %notzero, i1 %cmp, i1 false
   ret i1 %r

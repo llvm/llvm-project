@@ -28,6 +28,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectUpdater.h"
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -495,7 +496,7 @@ public:
     if (use_blue_background)
       ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
     while (!string.empty()) {
-      size_t esc_pos = string.find('\x1b');
+      size_t esc_pos = string.find(ANSI_ESC_START);
       if (esc_pos == StringRef::npos) {
         string = string.substr(skip_first_count);
         if (!string.empty()) {
@@ -517,36 +518,36 @@ public:
           string = string.drop_front(esc_pos);
         }
       }
-      bool consumed = string.consume_front("\x1b");
+      bool consumed = string.consume_front(ANSI_ESC_START);
       assert(consumed);
       UNUSED_IF_ASSERT_DISABLED(consumed);
       // This is written to match our Highlighter classes, which seem to
       // generate only foreground color escape sequences. If necessary, this
       // will need to be extended.
-      if (!string.consume_front("[")) {
-        llvm::errs() << "Missing '[' in color escape sequence.\n";
-        continue;
-      }
-      // Only 8 basic foreground colors and reset, our Highlighter doesn't use
-      // anything else.
+      // Only 8 basic foreground colors, underline and reset, our Highlighter
+      // doesn't use anything else.
       int value;
       if (!!string.consumeInteger(10, value) || // Returns false on success.
-          !(value == 0 || (value >= 30 && value <= 37))) {
+          !(value == 0 || value == ANSI_CTRL_UNDERLINE ||
+            (value >= ANSI_FG_COLOR_BLACK && value <= ANSI_FG_COLOR_WHITE))) {
         llvm::errs() << "No valid color code in color escape sequence.\n";
         continue;
       }
-      if (!string.consume_front("m")) {
-        llvm::errs() << "Missing 'm' in color escape sequence.\n";
+      if (!string.consume_front(ANSI_ESC_END)) {
+        llvm::errs() << "Missing '" << ANSI_ESC_END
+                     << "' in color escape sequence.\n";
         continue;
       }
       if (value == 0) { // Reset.
         wattr_set(m_window, saved_attr, saved_pair, nullptr);
         if (use_blue_background)
           ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
+      } else if (value == ANSI_CTRL_UNDERLINE) {
+        ::wattron(m_window, A_UNDERLINE);
       } else {
         // Mapped directly to first 16 color pairs (black/blue background).
-        ::wattron(m_window,
-                  COLOR_PAIR(value - 30 + 1 + (use_blue_background ? 8 : 0)));
+        ::wattron(m_window, COLOR_PAIR(value - ANSI_FG_COLOR_BLACK + 1 +
+                                       (use_blue_background ? 8 : 0)));
       }
     }
     wattr_set(m_window, saved_attr, saved_pair, nullptr);
@@ -2282,7 +2283,7 @@ protected:
 
 class FormDelegate {
 public:
-  FormDelegate() {}
+  FormDelegate() = default;
 
   virtual ~FormDelegate() = default;
 
@@ -3644,7 +3645,7 @@ protected:
 
 class SearcherDelegate {
 public:
-  SearcherDelegate() {}
+  SearcherDelegate() = default;
 
   virtual ~SearcherDelegate() = default;
 
@@ -5015,8 +5016,7 @@ class FrameTreeDelegate : public TreeDelegate {
 public:
   FrameTreeDelegate() : TreeDelegate() {
     FormatEntity::Parse(
-        "frame #${frame.index}: {${function.name}${function.pc-offset}}}",
-        m_format);
+        "#${frame.index}: {${function.name}${function.pc-offset}}}", m_format);
   }
 
   ~FrameTreeDelegate() override = default;
@@ -6402,8 +6402,11 @@ public:
       if (exe_ctx.HasThreadScope()) {
         Process *process = exe_ctx.GetProcessPtr();
         if (process && process->IsAlive() &&
-            StateIsStoppedState(process->GetState(), true))
-          exe_ctx.GetThreadRef().StepOut();
+            StateIsStoppedState(process->GetState(), true)) {
+          Thread *thread = exe_ctx.GetThreadPtr();
+          uint32_t frame_idx = thread->GetSelectedFrameIndex();
+          exe_ctx.GetThreadRef().StepOut(frame_idx);
+        }
       }
     }
       return MenuActionResult::Handled;
@@ -6977,9 +6980,6 @@ public:
         }
       }
 
-      const attr_t selected_highlight_attr = A_REVERSE;
-      const attr_t pc_highlight_attr = COLOR_PAIR(BlackOnBlue);
-
       for (size_t i = 0; i < num_visible_lines; ++i) {
         const uint32_t curr_line = m_first_visible_line + i;
         if (curr_line < num_source_lines) {
@@ -6987,14 +6987,13 @@ public:
           window.MoveCursor(1, line_y);
           const bool is_pc_line = curr_line == m_pc_line;
           const bool line_is_selected = m_selected_line == curr_line;
-          // Highlight the line as the PC line first, then if the selected
-          // line isn't the same as the PC line, highlight it differently
+          // Highlight the line as the PC line first (done by passing
+          // argument to OutputColoredStringTruncated()), then if the selected
+          // line isn't the same as the PC line, highlight it differently.
           attr_t highlight_attr = 0;
           attr_t bp_attr = 0;
-          if (is_pc_line)
-            highlight_attr = pc_highlight_attr;
-          else if (line_is_selected)
-            highlight_attr = selected_highlight_attr;
+          if (line_is_selected && !is_pc_line)
+            highlight_attr = A_REVERSE;
 
           if (bp_lines.find(curr_line + 1) != bp_lines.end())
             bp_attr = COLOR_PAIR(BlackOnWhite);
@@ -7018,14 +7017,19 @@ public:
             window.AttributeOn(highlight_attr);
 
           StreamString lineStream;
-          m_file_sp->DisplaySourceLines(curr_line + 1, {}, 0, 0, &lineStream);
+
+          llvm::Optional<size_t> column;
+          if (is_pc_line && m_sc.line_entry.IsValid() && m_sc.line_entry.column)
+            column = m_sc.line_entry.column - 1;
+          m_file_sp->DisplaySourceLines(curr_line + 1, column, 0, 0,
+                                        &lineStream);
           StringRef line = lineStream.GetString();
           if (line.endswith("\n"))
             line = line.drop_back();
           bool wasWritten = window.OutputColoredStringTruncated(
-              1, line, m_first_visible_column, line_is_selected);
-          if (line_is_selected && !wasWritten) {
-            // Draw an empty space to show the selected line if empty,
+              1, line, m_first_visible_column, is_pc_line);
+          if (!wasWritten && (line_is_selected || is_pc_line)) {
+            // Draw an empty space to show the selected/PC line if empty,
             // or draw '<' if nothing is visible because of scrolling too much
             // to the right.
             window.PutCStringTruncated(
@@ -7360,7 +7364,9 @@ public:
             m_debugger.GetCommandInterpreter().GetExecutionContext();
         if (exe_ctx.HasThreadScope() &&
             StateIsStoppedState(exe_ctx.GetProcessRef().GetState(), true)) {
-          exe_ctx.GetThreadRef().StepOut();
+          Thread *thread = exe_ctx.GetThreadPtr();
+          uint32_t frame_idx = thread->GetSelectedFrameIndex();
+          exe_ctx.GetThreadRef().StepOut(frame_idx);
         }
       }
       return eKeyHandled;
@@ -7664,14 +7670,6 @@ void IOHandlerCursesGUI::Activate() {
         new TreeWindowDelegate(m_debugger, thread_delegate_sp)));
     status_window_sp->SetDelegate(
         WindowDelegateSP(new StatusBarWindowDelegate(m_debugger)));
-
-    // Show the main help window once the first time the curses GUI is
-    // launched
-    static bool g_showed_help = false;
-    if (!g_showed_help) {
-      g_showed_help = true;
-      main_window_sp->CreateHelpSubwindow();
-    }
 
     // All colors with black background.
     init_pair(1, COLOR_BLACK, COLOR_BLACK);

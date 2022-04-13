@@ -63,6 +63,10 @@
 ; RUN:     -passes='lto-pre-link<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-LTO,CHECK-O3,%llvmcheckext,CHECK-EP-PIPELINE-START,CHECK-O23SZ
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
+; RUN:     -passes-ep-optimizer-early='no-op-module' \
+; RUN:     -passes='default<O3>' -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,%llvmcheckext,CHECK-EP-OPTIMIZER-EARLY,CHECK-O23SZ
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes-ep-optimizer-last='no-op-module' \
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,%llvmcheckext,CHECK-EP-OPTIMIZER-LAST,CHECK-O23SZ
@@ -217,6 +221,7 @@
 ; CHECK-LTO-NOT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: RecomputeGlobalsAAPass
+; CHECK-EP-OPTIMIZER-EARLY: Running pass: NoOpModulePass
 ; CHECK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-MATRIX: Running pass: LowerMatrixIntrinsicsPass on f

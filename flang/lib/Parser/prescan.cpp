@@ -144,6 +144,10 @@ void Prescanner::Statement() {
   case LineClassification::Kind::Source:
     BeginStatementAndAdvance();
     if (inFixedForm_) {
+      if (features_.IsEnabled(LanguageFeature::OldDebugLines) &&
+          (*at_ == 'D' || *at_ == 'd')) {
+        NextChar();
+      }
       LabelField(tokens);
     } else if (skipLeadingAmpersand_) {
       skipLeadingAmpersand_ = false;

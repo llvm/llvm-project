@@ -29,7 +29,7 @@ declare void @empty()
 
 ; PEI-LABEL: name: test1_nofp
 ; PEI:         $esp = frame-setup SUB32ri8 $esp, 12, implicit-def dead $eflags
-; PEI-NEXT:    {{^ +}}CFI_INSTRUCTION def_cfa_offset 16
+; PEI-NEXT:    frame-setup CFI_INSTRUCTION def_cfa_offset 16
 ; PEI-NOT:     frame-setup CFI_INSTRUCTION
 ; PEI:         ...
 define void @test1_nofp() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

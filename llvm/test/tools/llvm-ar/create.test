@@ -1,3 +1,4 @@
+XFAIL: system-aix
 ## Test the creation warning and supression of that warning.
 
 RUN: touch %t1.txt

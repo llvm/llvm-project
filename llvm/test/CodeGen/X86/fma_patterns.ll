@@ -1481,7 +1481,8 @@ define <2 x double> @test_v2f64_interp(<2 x double> %x, <2 x double> %y, <2 x do
 ;
 ; AVX512-INFS-LABEL: test_v2f64_interp:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vmovapd {{.*#+}} xmm3 = [1.0E+0,1.0E+0]
+; AVX512-INFS-NEXT:    vmovddup {{.*#+}} xmm3 = [1.0E+0,1.0E+0]
+; AVX512-INFS-NEXT:    # xmm3 = mem[0,0]
 ; AVX512-INFS-NEXT:    vsubpd %xmm2, %xmm3, %xmm3
 ; AVX512-INFS-NEXT:    vmulpd %xmm3, %xmm1, %xmm1
 ; AVX512-INFS-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm1

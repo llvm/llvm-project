@@ -112,17 +112,16 @@ constexpr trace::Metric PreambleBuildFilesystemLatencyRatio(
 
 void reportPreambleBuild(const PreambleBuildStats &Stats,
                          bool IsFirstPreamble) {
-  static llvm::once_flag OnceFlag;
-  llvm::call_once(OnceFlag, [&] {
-    PreambleBuildFilesystemLatency.record(Stats.FileSystemTime, "first_build");
-  });
+  auto RecordWithLabel = [&Stats](llvm::StringRef Label) {
+    PreambleBuildFilesystemLatency.record(Stats.FileSystemTime, Label);
+    if (Stats.TotalBuildTime > 0) // Avoid division by zero.
+      PreambleBuildFilesystemLatencyRatio.record(
+          Stats.FileSystemTime / Stats.TotalBuildTime, Label);
+  };
 
-  const std::string Label =
-      IsFirstPreamble ? "first_build_for_file" : "rebuild";
-  PreambleBuildFilesystemLatency.record(Stats.FileSystemTime, Label);
-  if (Stats.TotalBuildTime > 0) // Avoid division by zero.
-    PreambleBuildFilesystemLatencyRatio.record(
-        Stats.FileSystemTime / Stats.TotalBuildTime, Label);
+  static llvm::once_flag OnceFlag;
+  llvm::call_once(OnceFlag, [&] { RecordWithLabel("first_build"); });
+  RecordWithLabel(IsFirstPreamble ? "first_build_for_file" : "rebuild");
 }
 
 class ASTWorker;

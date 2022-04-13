@@ -515,10 +515,6 @@ CUDA offloading device architecture (e.g. sm\_35), or HIP offloading target ID i
 
 Specify comma-separated list of offloading target triples (CUDA and HIP only)
 
-.. option:: --overlay-platform-toolchain=<arg>
-
-Specify a toolchain with higher priority than sysroot in search paths.
-
 .. option:: -p, --profile
 
 .. option:: -pagezero\_size<arg>

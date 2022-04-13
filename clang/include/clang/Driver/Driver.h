@@ -149,9 +149,6 @@ public:
   typedef SmallVector<std::string, 4> prefix_list;
   prefix_list PrefixDirs;
 
-  /// Alternative toolchain path used prior to sysroot.
-  std::string OverlayToolChainPath;
-
   /// sysroot, if present
   std::string SysRoot;
 

@@ -1545,11 +1545,47 @@ let IntrProperties =
 }
 
 // Casts.
+def int_vp_trunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                            [ llvm_anyvector_ty,
+                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                              llvm_i32_ty]>;
+def int_vp_zext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                            [ llvm_anyvector_ty,
+                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                              llvm_i32_ty]>;
+def int_vp_sext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                            [ llvm_anyvector_ty,
+                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                              llvm_i32_ty]>;
+def int_vp_fptrunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                            [ llvm_anyvector_ty,
+                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                              llvm_i32_ty]>;
+def int_vp_fpext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                            [ llvm_anyvector_ty,
+                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                              llvm_i32_ty]>;
+def int_vp_fptoui : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                            [ llvm_anyvector_ty,
+                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                              llvm_i32_ty]>;
 def int_vp_fptosi : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                             [ llvm_anyvector_ty,
                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                               llvm_i32_ty]>;
+def int_vp_uitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                            [ llvm_anyvector_ty,
+                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                              llvm_i32_ty]>;
 def int_vp_sitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                            [ llvm_anyvector_ty,
+                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                              llvm_i32_ty]>;
+def int_vp_ptrtoint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                            [ llvm_anyvector_ty,
+                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                              llvm_i32_ty]>;
+def int_vp_inttoptr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                             [ llvm_anyvector_ty,
                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                               llvm_i32_ty]>;

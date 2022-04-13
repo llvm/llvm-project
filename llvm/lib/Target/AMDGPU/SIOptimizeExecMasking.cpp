@@ -322,24 +322,42 @@ findInstrBackwards(MachineInstr &Origin,
   return nullptr;
 }
 
+
 // Determine if a register Reg is not re-defined and still in use
-// in the range (Stop..BB.end].
+// in the range (Stop..Start].
 // It does so by backwards calculating liveness from the end of the BB until
 // either Stop or the beginning of the BB is reached.
 // After liveness is calculated, we can determine if Reg is still in use and not
 // defined inbetween the instructions.
-static bool isRegisterInUseAfter(MachineInstr &Stop, MCRegister Reg,
-                                 const SIRegisterInfo *TRI,
-                                 MachineRegisterInfo &MRI) {
+static bool isRegisterInUseBetween(MachineInstr &Stop, MachineInstr &Start,
+                                   MCRegister Reg, const SIRegisterInfo *TRI,
+                                   MachineRegisterInfo &MRI,
+                                   bool useLiveOuts = false,
+                                   bool ignoreStart = false) {
   LivePhysRegs LR(*TRI);
-  LR.addLiveOuts(*Stop.getParent());
+  if (useLiveOuts)
+    LR.addLiveOuts(*Stop.getParent());
 
-  for (auto A = Stop.getParent()->rbegin();
-       A != Stop.getParent()->rend() && A != Stop; ++A) {
+  MachineBasicBlock::reverse_iterator A(Start);
+  MachineBasicBlock::reverse_iterator E(Stop);
+
+  if (ignoreStart)
+    ++A;
+
+  for (; A != Stop.getParent()->rend() && A != Stop; ++A) {
     LR.stepBackward(*A);
   }
 
   return !LR.available(MRI, Reg);
+}
+
+// Determine if a register Reg is not re-defined and still in use
+// in the range (Stop..BB.end].
+static bool isRegisterInUseAfter(MachineInstr &Stop, MCRegister Reg,
+                                 const SIRegisterInfo *TRI,
+                                 MachineRegisterInfo &MRI) {
+  return isRegisterInUseBetween(Stop, *Stop.getParent()->rbegin(), Reg, TRI,
+                                MRI, true);
 }
 
 // Tries to find a possibility to optimize a v_cmp ..., s_and_saveexec sequence
@@ -396,9 +414,11 @@ static MachineInstr *findPossibleVCMPVCMPXOptimization(
   if (isLiveOut(*VCmp->getParent(), VCmpDest->getReg()))
     return nullptr;
 
-  // If the v_cmp target is in use after the s_and_saveexec, skip the
-  // optimization.
-  if (isRegisterInUseAfter(SaveExec, VCmpDest->getReg(), TRI, MRI))
+  // If the v_cmp target is in use between v_cmp and s_and_saveexec or after the
+  // s_and_saveexec, skip the optimization.
+  if (isRegisterInUseBetween(*VCmp, SaveExec, VCmpDest->getReg(), TRI, MRI,
+                             false, true) ||
+      isRegisterInUseAfter(SaveExec, VCmpDest->getReg(), TRI, MRI))
     return nullptr;
 
   // Try to determine if there is a write to any of the VCmp
