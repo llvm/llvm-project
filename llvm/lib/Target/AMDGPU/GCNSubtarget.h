@@ -96,8 +96,8 @@ protected:
 
   // Subtarget statically properties set by tablegen
   bool FP64 = false;
-  bool FMA;
-  bool MIMG_R128;
+  bool FMA = false;
+  bool MIMG_R128 = false;
   bool CIInsts = false;
   bool GFX8Insts = false;
   bool GFX9Insts = false;
