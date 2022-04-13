@@ -1529,6 +1529,92 @@ mlir::LogicalResult CIRGenModule::buildSwitchStmt(const SwitchStmt &S) {
   return mlir::success();
 }
 
+// Add terminating yield on body regions (loops, ...) in case there are
+// not other terminators used.
+// FIXME: make terminateCaseRegion use this too.
+static void terminateBody(mlir::OpBuilder &builder, mlir::Region &r,
+                          mlir::Location loc) {
+  if (r.empty())
+    return;
+
+  SmallVector<mlir::Block *, 4> eraseBlocks;
+  unsigned numBlocks = r.getBlocks().size();
+  for (auto &block : r.getBlocks()) {
+    // Already cleanup after return operations, which might create
+    // empty blocks if emitted as last stmt.
+    if (numBlocks != 1 && block.empty() && block.hasNoPredecessors() &&
+        block.hasNoSuccessors())
+      eraseBlocks.push_back(&block);
+
+    if (block.empty() ||
+        !block.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+      mlir::OpBuilder::InsertionGuard guardCase(builder);
+      builder.setInsertionPointToEnd(&block);
+      builder.create<YieldOp>(loc);
+    }
+  }
+
+  for (auto *b : eraseBlocks)
+    b->erase();
+}
+
+mlir::LogicalResult CIRGenModule::buildWhileStmt(const WhileStmt &S) {
+  mlir::cir::LoopOp loopOp;
+
+  // TODO: pass in array of attributes.
+  auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
+    auto forRes = mlir::success();
+
+    loopOp = builder.create<LoopOp>(
+        getLoc(S.getSourceRange()),
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // TODO: branch weigths, likelyhood, profile counter, etc.
+          mlir::Value condVal;
+          // If the for statement has a condition scope,
+          // emit the local variable declaration.
+          if (S.getConditionVariable())
+            buildDecl(*S.getConditionVariable());
+          // C99 6.8.5p2/p4: The first substatement is executed if the
+          // expression compares unequal to 0. The condition must be a
+          // scalar type.
+          condVal = evaluateExprAsBool(S.getCond());
+          b.create<YieldOp>(loc, condVal);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          if (buildStmt(S.getBody(), /*useCurrentScope=*/true).failed())
+            forRes = mlir::failure();
+          builder.create<YieldOp>(loc);
+        },
+        /*stepBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          builder.create<YieldOp>(loc);
+        });
+    return forRes;
+  };
+
+  auto res = mlir::success();
+  auto scopeLoc = getLoc(S.getSourceRange());
+  builder.create<mlir::cir::ScopeOp>(
+      scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto fusedLoc = loc.cast<mlir::FusedLoc>();
+        auto scopeLocBegin = fusedLoc.getLocations()[0];
+        auto scopeLocEnd = fusedLoc.getLocations()[1];
+        LexicalScopeContext lexScope{scopeLocBegin, scopeLocEnd,
+                                     builder.getInsertionBlock()};
+        LexicalScopeGuard lexForScopeGuard{*this, &lexScope};
+        res = whileStmtBuilder();
+      });
+
+  if (res.failed())
+    return res;
+
+  terminateBody(builder, loopOp.getBody(), getLoc(S.getEndLoc()));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRGenModule::buildForStmt(const ForStmt &S) {
   mlir::cir::LoopOp loopOp;
 
@@ -1597,35 +1683,7 @@ mlir::LogicalResult CIRGenModule::buildForStmt(const ForStmt &S) {
   if (res.failed())
     return res;
 
-  // Add terminating yield on loop body region in case there are not
-  // other terminators used.
-  // FIXME: unify this with terminateCaseRegion.
-  auto terminateLoopBody = [&](mlir::Region &r, mlir::Location loc) {
-    if (r.empty())
-      return;
-
-    SmallVector<mlir::Block *, 4> eraseBlocks;
-    unsigned numBlocks = r.getBlocks().size();
-    for (auto &block : r.getBlocks()) {
-      // Already cleanup after return operations, which might create
-      // empty blocks if emitted as last stmt.
-      if (numBlocks != 1 && block.empty() && block.hasNoPredecessors() &&
-          block.hasNoSuccessors())
-        eraseBlocks.push_back(&block);
-
-      if (block.empty() ||
-          !block.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-        mlir::OpBuilder::InsertionGuard guardCase(builder);
-        builder.setInsertionPointToEnd(&block);
-        builder.create<YieldOp>(loc);
-      }
-    }
-
-    for (auto *b : eraseBlocks)
-      b->erase();
-  };
-  terminateLoopBody(loopOp.getBody(), getLoc(S.getEndLoc()));
-
+  terminateBody(builder, loopOp.getBody(), getLoc(S.getEndLoc()));
   return mlir::success();
 }
 
@@ -1765,8 +1823,12 @@ mlir::LogicalResult CIRGenModule::buildStmt(const Stmt *S,
     if (buildForStmt(cast<ForStmt>(*S)).failed())
       return mlir::failure();
     break;
-  case Stmt::IndirectGotoStmtClass:
   case Stmt::WhileStmtClass:
+    if (buildWhileStmt(cast<WhileStmt>(*S)).failed())
+      return mlir::failure();
+    break;
+
+  case Stmt::IndirectGotoStmtClass:
   case Stmt::DoStmtClass:
   case Stmt::ReturnStmtClass:
   // When implemented, GCCAsmStmtClass should fall-through to MSAsmStmtClass.
