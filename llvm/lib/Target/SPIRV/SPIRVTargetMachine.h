@@ -13,12 +13,13 @@
 #ifndef LLVM_LIB_TARGET_SPIRV_SPIRVTARGETMACHINE_H
 #define LLVM_LIB_TARGET_SPIRV_SPIRVTARGETMACHINE_H
 
-#include "llvm/IR/DataLayout.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 class SPIRVTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
+  SPIRVSubtarget Subtarget;
 
 public:
   SPIRVTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -26,7 +27,16 @@ public:
                      Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
                      CodeGenOpt::Level OL, bool JIT);
 
+  const SPIRVSubtarget *getSubtargetImpl() const { return &Subtarget; }
+
+  const SPIRVSubtarget *getSubtargetImpl(const Function &) const override {
+    return &Subtarget;
+  }
+
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
+
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
+  bool usesPhysRegsForValues() const override { return false; }
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
@@ -34,4 +44,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVTARGETMACHINE_H

@@ -11,10 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVTargetMachine.h"
+#include "SPIRV.h"
+#include "SPIRVTargetObjectFile.h"
+#include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Pass.h"
+#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -41,6 +53,9 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return *RM;
 }
 
+// Pin SPIRVTargetObjectFile's vtables to this file.
+SPIRVTargetObjectFile::~SPIRVTargetObjectFile() {}
+
 SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
@@ -50,8 +65,13 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
+      Subtarget(TT, CPU.str(), FS.str(), *this) {
   initAsmInfo();
+  setGlobalISel(true);
+  setFastISel(false);
+  setO0WantsFastISel(false);
+  setRequiresStructuredCFG(false);
 }
 
 namespace {
@@ -64,9 +84,78 @@ public:
   SPIRVTargetMachine &getSPIRVTargetMachine() const {
     return getTM<SPIRVTargetMachine>();
   }
+  void addIRPasses() override;
+  void addISelPrepare() override;
+
+  bool addIRTranslator() override;
+  bool addLegalizeMachineIR() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
+
+  FunctionPass *createTargetRegisterAllocator(bool) override;
+  void addFastRegAlloc() override {}
+  void addOptimizedRegAlloc() override {}
+
+  void addPostRegAlloc() override;
 };
 } // namespace
 
+// We do not use physical registers, and maintain virtual registers throughout
+// the entire pipeline, so return nullptr to disable register allocation.
+FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
+  return nullptr;
+}
+
+// Disable passes that break from assuming no virtual registers exist.
+void SPIRVPassConfig::addPostRegAlloc() {
+  // Do not work with vregs instead of physical regs.
+  disablePass(&MachineCopyPropagationID);
+  disablePass(&PostRAMachineSinkingID);
+  disablePass(&PostRASchedulerID);
+  disablePass(&FuncletLayoutID);
+  disablePass(&StackMapLivenessID);
+  disablePass(&PatchableFunctionID);
+  disablePass(&ShrinkWrapID);
+  disablePass(&LiveDebugValuesID);
+
+  // Do not work with OpPhi.
+  disablePass(&BranchFolderPassID);
+  disablePass(&MachineBlockPlacementID);
+
+  TargetPassConfig::addPostRegAlloc();
+}
+
+TargetTransformInfo
+SPIRVTargetMachine::getTargetTransformInfo(const Function &F) const {
+  return TargetTransformInfo(SPIRVTTIImpl(this, F));
+}
+
 TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new SPIRVPassConfig(*this, PM);
+}
+
+void SPIRVPassConfig::addIRPasses() { TargetPassConfig::addIRPasses(); }
+
+void SPIRVPassConfig::addISelPrepare() { TargetPassConfig::addISelPrepare(); }
+
+bool SPIRVPassConfig::addIRTranslator() {
+  addPass(new IRTranslator(getOptLevel()));
+  return false;
+}
+
+// Use a default legalizer.
+bool SPIRVPassConfig::addLegalizeMachineIR() {
+  addPass(new Legalizer());
+  return false;
+}
+
+// Do not add a RegBankSelect pass, as we only ever need virtual registers.
+bool SPIRVPassConfig::addRegBankSelect() {
+  disablePass(&RegBankSelect::ID);
+  return false;
+}
+
+bool SPIRVPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelect(getOptLevel()));
+  return false;
 }
