@@ -92,3 +92,55 @@ class DebuggerAPITestCase(TestBase):
 
         # Test the local property again, is it set to new_cache_line_size?
         self.assertEqual(get_cache_line_size(), new_cache_line_size)
+
+    def test_CreateTarget_platform(self):
+        exe = self.getBuildArtifact("a.out")
+        self.yaml2obj("elf.yaml", exe)
+        error = lldb.SBError()
+        target1 = self.dbg.CreateTarget(exe, None, "remote-linux",
+                False, error)
+        self.assertSuccess(error)
+        platform1 = target1.GetPlatform()
+        platform1.SetWorkingDirectory("/foo/bar")
+
+        # Reuse a platform if it matches the currently selected one...
+        target2 = self.dbg.CreateTarget(exe, None, "remote-linux",
+                False, error)
+        self.assertSuccess(error)
+        platform2 = target2.GetPlatform()
+        self.assertEqual(platform2.GetWorkingDirectory(), "/foo/bar")
+
+        # ... but create a new one if it doesn't.
+        self.dbg.SetSelectedPlatform(lldb.SBPlatform("remote-windows"))
+        target3 = self.dbg.CreateTarget(exe, None, "remote-linux",
+                False, error)
+        self.assertSuccess(error)
+        platform3 = target3.GetPlatform()
+        self.assertIsNone(platform3.GetWorkingDirectory())
+
+    def test_CreateTarget_arch(self):
+        exe = self.getBuildArtifact("a.out")
+        if lldbplatformutil.getHostPlatform() == 'linux':
+            self.yaml2obj("macho.yaml", exe)
+            arch = "x86_64-apple-macosx"
+        else:
+            self.yaml2obj("elf.yaml", exe)
+            arch = "x86_64-pc-linux"
+
+        fbsd = lldb.SBPlatform("remote-freebsd")
+        self.dbg.SetSelectedPlatform(fbsd)
+
+        error = lldb.SBError()
+        target1 = self.dbg.CreateTarget(exe, arch, None, False, error)
+        self.assertSuccess(error)
+        platform1 = target1.GetPlatform()
+        self.assertEqual(platform1.GetName(), "remote-macosx")
+        platform1.SetWorkingDirectory("/foo/bar")
+
+        # Reuse a platform even if it is not currently selected.
+        self.dbg.SetSelectedPlatform(fbsd)
+        target2 = self.dbg.CreateTarget(exe, arch, None, False, error)
+        self.assertSuccess(error)
+        platform2 = target2.GetPlatform()
+        self.assertEqual(platform2.GetName(), "remote-macosx")
+        self.assertEqual(platform2.GetWorkingDirectory(), "/foo/bar")
