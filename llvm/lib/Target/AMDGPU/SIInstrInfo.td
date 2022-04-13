@@ -2159,6 +2159,12 @@ class getHasDPP <int NumSrcArgs> {
                 1);
 }
 
+class getHasExt32BitDPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
+                 ValueType Src1VT = i32> {
+  bit ret = !and(getHasDPP<NumSrcArgs>.ret,
+                 !not(getHas64BitOps<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret));
+}
+
 class getHasExt64BitDPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32> {
   bit ret = !and(getHasDPP<NumSrcArgs>.ret,
@@ -2273,6 +2279,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
 
   field bit HasExt = getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtDPP = getHasDPP<NumSrcArgs>.ret;
+  field bit HasExt32BitDPP = getHasExt32BitDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExt64BitDPP = getHasExt64BitDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtSDWA = getHasSDWA<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtSDWA9 = HasExtSDWA;
@@ -2344,6 +2351,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
 class VOP_NO_EXT <VOPProfile p> : VOPProfile <p.ArgVT> {
   let HasExt = 0;
   let HasExtDPP = 0;
+  let HasExt32BitDPP = 0;
   let HasExt64BitDPP = 0;
   let HasExtSDWA = 0;
   let HasExtSDWA9 = 0;

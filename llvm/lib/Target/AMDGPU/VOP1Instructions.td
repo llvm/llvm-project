@@ -571,13 +571,13 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
     }
   }
   multiclass VOP1_Real_dpp_gfx10<bits<9> op> {
-    foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
+    foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExt32BitDPP>.ret in
     def _dpp_gfx10 : VOP1_DPP16<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")> {
       let DecoderNamespace = "SDWA10";
     }
   }
   multiclass VOP1_Real_dpp8_gfx10<bits<9> op> {
-    foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
+    foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExt32BitDPP>.ret in
     def _dpp8_gfx10 : VOP1_DPP8<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")> {
       let DecoderNamespace = "DPP8";
     }
