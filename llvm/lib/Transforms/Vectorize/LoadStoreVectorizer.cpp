@@ -1297,10 +1297,16 @@ bool Vectorizer::vectorizeLoadChain(
     CV->replaceAllUsesWith(V);
   }
 
-  // Bitcast might not be an Instruction, if the value being loaded is a
-  // constant. In that case, no need to reorder anything.
-  if (Instruction *BitcastInst = dyn_cast<Instruction>(Bitcast))
-    reorder(BitcastInst);
+  // Since we might have opaque pointers we might end up using the pointer
+  // operand of the first load (wrt. memory loaded) for the vector load. Since
+  // this first load might not be the first in the block we potentially need to
+  // reorder the pointer operand (and its operands). If we have a bitcast though
+  // it might be before the load and should be the reorder start instruction.
+  // "Might" because for opaque pointers the "bitcast" is just the first loads
+  // pointer operand, as oppposed to something we inserted at the right position
+  // ourselves.
+  Instruction *BCInst = dyn_cast<Instruction>(Bitcast);
+  reorder((BCInst && BCInst != L0->getPointerOperand()) ? BCInst : LI);
 
   eraseInstructions(Chain);
 
