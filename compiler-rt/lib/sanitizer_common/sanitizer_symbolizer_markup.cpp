@@ -126,6 +126,7 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
 void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   CHECK_GE(max_depth, 2);
   size = 0;
+  ScopedDisableMallocHooks disable_hooks;  // libunwind can malloc.
   UnwindTraceArg arg = {this, Min(max_depth + 1, kStackTraceMax)};
   _Unwind_Backtrace(Unwind_Trace, &arg);
   CHECK_GT(size, 0);
