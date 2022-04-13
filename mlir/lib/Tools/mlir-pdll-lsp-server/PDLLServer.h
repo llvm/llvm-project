@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include <memory>
+#include <string>
 
 namespace mlir {
 namespace lsp {
