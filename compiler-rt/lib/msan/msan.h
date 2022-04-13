@@ -314,14 +314,7 @@ void InstallAtExitHandler();
 
 const char *GetStackOriginDescr(u32 id, uptr *pc);
 
-void EnterSymbolizer();
-void ExitSymbolizer();
-bool IsInSymbolizer();
-
-struct SymbolizerScope {
-  SymbolizerScope() { EnterSymbolizer(); }
-  ~SymbolizerScope() { ExitSymbolizer(); }
-};
+bool IsInSymbolizerOrUnwider();
 
 void PrintWarning(uptr pc, uptr bp);
 void PrintWarningWithOrigin(uptr pc, uptr bp, u32 origin);
