@@ -8888,22 +8888,35 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   }
 
   // fold (shl (sr[la] exact X,  C1), C2) -> (shl    X, (C2-C1)) if C1 <= C2
-  // fold (shl (sr[la] exact X,  C1), C2) -> (sr[la] X, (C2-C1)) if C1  > C2
-  // TODO - support non-uniform vector shift amounts.
-  ConstantSDNode *N1C = isConstOrConstSplat(N1);
-  if (N1C && (N0.getOpcode() == ISD::SRL || N0.getOpcode() == ISD::SRA) &&
+  // fold (shl (sr[la] exact X,  C1), C2) -> (sr[la] X, (C2-C1)) if C1 >= C2
+  if ((N0.getOpcode() == ISD::SRL || N0.getOpcode() == ISD::SRA) &&
       N0->getFlags().hasExact()) {
-    if (ConstantSDNode *N0C1 = isConstOrConstSplat(N0.getOperand(1))) {
-      uint64_t C1 = N0C1->getZExtValue();
-      uint64_t C2 = N1C->getZExtValue();
+    auto MatchShiftAmount = [OpSizeInBits](ConstantSDNode *LHS,
+                                           ConstantSDNode *RHS) {
+      const APInt &LHSC = LHS->getAPIntValue();
+      const APInt &RHSC = RHS->getAPIntValue();
+      return LHSC.ult(OpSizeInBits) && RHSC.ult(OpSizeInBits) &&
+             LHSC.getZExtValue() <= RHSC.getZExtValue();
+    };
+    if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchShiftAmount,
+                                  /*AllowUndefs*/ false,
+                                  /*AllowTypeMismatch*/ true)) {
       SDLoc DL(N);
-      if (C1 <= C2)
-        return DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0),
-                           DAG.getConstant(C2 - C1, DL, ShiftVT));
-      return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0),
-                         DAG.getConstant(C1 - C2, DL, ShiftVT));
+      SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+      SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N1, N01);
+      return DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0), Diff);
+    }
+    if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchShiftAmount,
+                                  /*AllowUndefs*/ false,
+                                  /*AllowTypeMismatch*/ true)) {
+      SDLoc DL(N);
+      SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+      SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N01, N1);
+      return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0), Diff);
     }
   }
+
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
 
   // fold (shl (srl x, c1), c2) -> (and (shl x, (sub c2, c1), MASK) or
   //                               (and (srl x, (sub c1, c2), MASK)

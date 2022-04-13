@@ -464,6 +464,91 @@ def YieldOp : OpenMP_Op<"yield",
 }
 
 //===----------------------------------------------------------------------===//
+// 2.10.1 task Construct
+//===----------------------------------------------------------------------===//
+
+def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
+                       OutlineableOpenMPOpInterface, AutomaticAllocationScope,
+                       ReductionClauseInterface]> {
+  let summary = "task construct";
+  let description = [{
+    The task construct defines an explicit task.
+
+    For definitions of "undeferred task", "included task", "final task" and
+    "mergeable task", please check OpenMP Specification.
+
+    When an `if` clause is present on a task construct, and the value of
+    `if_expr` evaluates to `false`, an "undeferred task" is generated, and the
+    encountering thread must suspend the current task region, for which
+    execution cannot be resumed until execution of the structured block that is
+    associated with the generated task is completed.
+
+    When a `final` clause is present on a task construct and the `final_expr`
+    evaluates to `true`, the generated task will be a "final task". All task
+    constructs encountered during execution of a final task will generate final
+    and included tasks.
+
+    If the `untied` clause is present on a task construct, any thread in the
+    team can resume the task region after a suspension. The `untied` clause is
+    ignored if a `final` clause is present on the same task construct and the
+    `final_expr` evaluates to `true`, or if a task is an included task.
+
+    When the `mergeable` clause is present on a task construct, the generated
+    task is a "mergeable task".
+
+    The `in_reduction` clause specifies that this particular task (among all the
+    tasks in current taskgroup, if any) participates in a reduction.
+
+    The `priority` clause is a hint for the priority of the generated task.
+    The `priority` is a non-negative integer expression that provides a hint for
+    task execution order. Among all tasks ready to be executed, higher priority
+    tasks (those with a higher numerical value in the priority clause
+    expression) are recommended to execute before lower priority ones. The
+    default priority-value when no priority clause is specified should be
+    assumed to be zero (the lowest priority).
+
+    The `allocators_vars` and `allocate_vars` parameters are a variadic list of
+    values that specify the memory allocator to be used to obtain storage for
+    private values.
+
+  }];
+
+  // TODO: depend, affinity and detach clauses
+  let arguments = (ins Optional<I1>:$if_expr,
+                       Optional<I1>:$final_expr,
+                       UnitAttr:$untied,
+                       UnitAttr:$mergeable,
+                       Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$in_reductions,
+                       Optional<I32>:$priority,
+                       Variadic<AnyType>:$allocate_vars,
+                       Variadic<AnyType>:$allocators_vars);
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = [{
+    oilist(`if` `(` $if_expr `)`
+          |`final` `(` $final_expr `)`
+          |`untied` $untied
+          |`mergeable` $mergeable
+          |`in_reduction` `(`
+              custom<ReductionVarList>(
+                $in_reduction_vars, type($in_reduction_vars), $in_reductions
+              ) `)`
+          |`priority` `(` $priority `)`
+          |`allocate` `(`
+              custom<AllocateAndAllocator>(
+                $allocate_vars, type($allocate_vars),
+                $allocators_vars, type($allocators_vars)
+              ) `)`
+    ) $region attr-dict
+  }];
+  let extraClassDeclaration = [{
+    /// Returns the reduction variables
+    operand_range getReductionVars() { return in_reduction_vars(); }
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.10.4 taskyield Construct
 //===----------------------------------------------------------------------===//
 

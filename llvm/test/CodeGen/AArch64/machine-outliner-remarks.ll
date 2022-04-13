@@ -102,7 +102,7 @@ define void @bar() #0 !dbg !27 {
   ret void
 }
 
-attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="none" "target-cpu"="cyclone" }
+attributes #0 = { noredzone nounwind ssp uwtable minsize "frame-pointer"="none" "target-cpu"="cyclone" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

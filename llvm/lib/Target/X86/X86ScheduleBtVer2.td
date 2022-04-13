@@ -840,8 +840,8 @@ def JWriteMASKMOVDQU: SchedWriteRes<[JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JAL
   let ResourceCycles = [1, 1, 2, 2, 2, 16, 42];
   let NumMicroOps = 63;
 }
-def : InstRW<[JWriteMASKMOVDQU], (instrs MASKMOVDQU, MASKMOVDQU64, MASKMOVDQUX32,
-                                         VMASKMOVDQU, VMASKMOVDQU64, VMASKMOVDQUX32)>;
+def : InstRW<[JWriteMASKMOVDQU], (instrs MASKMOVDQU, MASKMOVDQU64,
+                                         VMASKMOVDQU, VMASKMOVDQU64)>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  SchedWriteVariant definitions.
