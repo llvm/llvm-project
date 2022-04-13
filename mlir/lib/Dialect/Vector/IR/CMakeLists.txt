@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRVector
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
+  MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRDialectUtils
   MLIRIR
