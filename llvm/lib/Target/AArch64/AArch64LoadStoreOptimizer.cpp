@@ -9,6 +9,12 @@
 // This file contains a pass that performs load / store related peephole
 // optimizations. This pass should be run after register allocation.
 //
+// The pass runs after the PrologEpilogInserter where we emit the CFI
+// instructions. In order to preserve the correctness of the unwind informaiton,
+// the pass should not change the order of any two instructions, one of which
+// has the FrameSetup/FrameDestroy flag or, alternatively, apply an add-hoc fix
+// to unwind information.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AArch64InstrInfo.h"
@@ -31,6 +37,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -1762,6 +1769,26 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   return E;
 }
 
+static MachineBasicBlock::iterator
+maybeMoveCFI(MachineInstr &MI, MachineBasicBlock::iterator MaybeCFI) {
+  if (MaybeCFI->getOpcode() != TargetOpcode::CFI_INSTRUCTION ||
+      !(MI.getFlag(MachineInstr::FrameSetup) ||
+        MI.getFlag(MachineInstr::FrameDestroy)) ||
+      getLdStBaseOp(MI).getReg() != AArch64::SP)
+    return MI.getParent()->end();
+
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  unsigned CFIIndex = MaybeCFI->getOperand(0).getCFIIndex();
+  const MCCFIInstruction &CFI = MF.getFrameInstructions()[CFIIndex];
+  switch (CFI.getOperation()) {
+  case MCCFIInstruction::OpDefCfa:
+  case MCCFIInstruction::OpDefCfaOffset:
+    return MaybeCFI;
+  default:
+    return MI.getParent()->end();
+  }
+}
+
 MachineBasicBlock::iterator
 AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
                                      MachineBasicBlock::iterator Update,
@@ -1771,6 +1798,12 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
          "Unexpected base register update instruction to merge!");
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
+
+  // If updating the SP and the following instruction is CFA offset related CFI
+  // instruction move it after the merged instruction.
+  MachineBasicBlock::iterator CFI =
+      IsPreIdx ? maybeMoveCFI(*Update, next_nodbg(Update, E)) : E;
+
   // Return the instruction following the merged instruction, which is
   // the instruction following our unmerged load. Unless that's the add/sub
   // instruction we're merging, in which case it's the one after that.
@@ -1808,7 +1841,10 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
               .setMemRefs(I->memoperands())
               .setMIFlags(I->mergeFlagsWith(*Update));
   }
-  (void)MIB;
+  if (CFI != E) {
+    MachineBasicBlock *MBB = I->getParent();
+    MBB->splice(std::next(MIB.getInstr()->getIterator()), MBB, CFI);
+  }
 
   if (IsPreIdx) {
     ++NumPreFolded;
