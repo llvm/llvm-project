@@ -427,6 +427,7 @@ if (current_toolchain == default_toolchain) {
       "__ranges/empty_view.h",
       "__ranges/enable_borrowed_range.h",
       "__ranges/enable_view.h",
+      "__ranges/filter_view.h",
       "__ranges/iota_view.h",
       "__ranges/join_view.h",
       "__ranges/lazy_split_view.h",
