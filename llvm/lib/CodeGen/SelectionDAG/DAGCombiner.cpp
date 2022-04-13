@@ -8887,10 +8887,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
     }
   }
 
-  // fold (shl (sr[la] exact X,  C1), C2) -> (shl    X, (C2-C1)) if C1 <= C2
-  // fold (shl (sr[la] exact X,  C1), C2) -> (sr[la] X, (C2-C1)) if C1 >= C2
-  if ((N0.getOpcode() == ISD::SRL || N0.getOpcode() == ISD::SRA) &&
-      N0->getFlags().hasExact()) {
+  if (N0.getOpcode() == ISD::SRL || N0.getOpcode() == ISD::SRA) {
     auto MatchShiftAmount = [OpSizeInBits](ConstantSDNode *LHS,
                                            ConstantSDNode *RHS) {
       const APInt &LHSC = LHS->getAPIntValue();
@@ -8898,54 +8895,55 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       return LHSC.ult(OpSizeInBits) && RHSC.ult(OpSizeInBits) &&
              LHSC.getZExtValue() <= RHSC.getZExtValue();
     };
-    if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchShiftAmount,
-                                  /*AllowUndefs*/ false,
-                                  /*AllowTypeMismatch*/ true)) {
-      SDLoc DL(N);
-      SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
-      SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N1, N01);
-      return DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0), Diff);
-    }
-    if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchShiftAmount,
-                                  /*AllowUndefs*/ false,
-                                  /*AllowTypeMismatch*/ true)) {
-      SDLoc DL(N);
-      SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
-      SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N01, N1);
-      return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0), Diff);
-    }
-  }
 
-  ConstantSDNode *N1C = isConstOrConstSplat(N1);
+    SDLoc DL(N);
 
-  // fold (shl (srl x, c1), c2) -> (and (shl x, (sub c2, c1), MASK) or
-  //                               (and (srl x, (sub c1, c2), MASK)
-  // Only fold this if the inner shift has no other uses -- if it does, folding
-  // this will increase the total number of instructions.
-  // TODO - drop hasOneUse requirement if c1 == c2?
-  // TODO - support non-uniform vector shift amounts.
-  if (N1C && N0.getOpcode() == ISD::SRL && N0.hasOneUse() &&
-      TLI.shouldFoldConstantShiftPairToMask(N, Level)) {
-    if (ConstantSDNode *N0C1 = isConstOrConstSplat(N0.getOperand(1))) {
-      if (N0C1->getAPIntValue().ult(OpSizeInBits)) {
-        uint64_t c1 = N0C1->getZExtValue();
-        uint64_t c2 = N1C->getZExtValue();
-        APInt Mask = APInt::getHighBitsSet(OpSizeInBits, OpSizeInBits - c1);
-        SDValue Shift;
-        if (c2 > c1) {
-          Mask <<= c2 - c1;
-          SDLoc DL(N);
-          Shift = DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0),
-                              DAG.getConstant(c2 - c1, DL, ShiftVT));
-        } else {
-          Mask.lshrInPlace(c1 - c2);
-          SDLoc DL(N);
-          Shift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0),
-                              DAG.getConstant(c1 - c2, DL, ShiftVT));
-        }
-        SDLoc DL(N0);
-        return DAG.getNode(ISD::AND, DL, VT, Shift,
-                           DAG.getConstant(Mask, DL, VT));
+    // fold (shl (sr[la] exact X,  C1), C2) -> (shl    X, (C2-C1)) if C1 <= C2
+    // fold (shl (sr[la] exact X,  C1), C2) -> (sr[la] X, (C2-C1)) if C1 >= C2
+    if (N0->getFlags().hasExact()) {
+      if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchShiftAmount,
+                                    /*AllowUndefs*/ false,
+                                    /*AllowTypeMismatch*/ true)) {
+        SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+        SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N1, N01);
+        return DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0), Diff);
+      }
+      if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchShiftAmount,
+                                    /*AllowUndefs*/ false,
+                                    /*AllowTypeMismatch*/ true)) {
+        SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+        SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N01, N1);
+        return DAG.getNode(N0.getOpcode(), DL, VT, N0.getOperand(0), Diff);
+      }
+    }
+
+    // fold (shl (srl x, c1), c2) -> (and (shl x, (sub c2, c1), MASK) or
+    //                               (and (srl x, (sub c1, c2), MASK)
+    // Only fold this if the inner shift has no other uses -- if it does,
+    // folding this will increase the total number of instructions.
+    // TODO - drop hasOneUse requirement if c1 == c2?
+    if (N0.getOpcode() == ISD::SRL && N0.hasOneUse() &&
+        TLI.shouldFoldConstantShiftPairToMask(N, Level)) {
+      if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchShiftAmount,
+                                    /*AllowUndefs*/ false,
+                                    /*AllowTypeMismatch*/ true)) {
+        SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+        SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N01, N1);
+        SDValue Mask = DAG.getAllOnesConstant(DL, VT);
+        Mask = DAG.getNode(ISD::SHL, DL, VT, Mask, N01);
+        Mask = DAG.getNode(ISD::SRL, DL, VT, Mask, Diff);
+        SDValue Shift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), Diff);
+        return DAG.getNode(ISD::AND, SDLoc(N0), VT, Shift, Mask);
+      }
+      if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchShiftAmount,
+                                    /*AllowUndefs*/ false,
+                                    /*AllowTypeMismatch*/ true)) {
+        SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+        SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N1, N01);
+        SDValue Mask = DAG.getAllOnesConstant(DL, VT);
+        Mask = DAG.getNode(ISD::SHL, DL, VT, Mask, N1);
+        SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0), Diff);
+        return DAG.getNode(ISD::AND, SDLoc(N0), VT, Shift, Mask);
       }
     }
   }
@@ -8984,6 +8982,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       return DAG.getNode(ISD::MUL, SDLoc(N), VT, N0.getOperand(0), Shl);
   }
 
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
   if (N1C && !N1C->isOpaque())
     if (SDValue NewSHL = visitShiftByConstant(N))
       return NewSHL;
