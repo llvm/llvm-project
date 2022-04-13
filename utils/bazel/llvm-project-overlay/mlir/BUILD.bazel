@@ -3172,6 +3172,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":LLVMDialectAttributesIncGen",
         ":LLVMDialectInterfaceIncGen",
+        ":LLVMIntrinsicOpsIncGen",
         ":LLVMOpsIncGen",
         ":SideEffectInterfaces",
         ":Support",
@@ -3436,6 +3437,7 @@ cc_library(
 td_library(
     name = "LLVMOpsTdFiles",
     srcs = [
+        "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td",
         "include/mlir/Dialect/LLVMIR/LLVMOpBase.td",
         "include/mlir/Dialect/LLVMIR/LLVMOps.td",
         "include/mlir/Dialect/LLVMIR/LLVMOpsInterfaces.td",
@@ -3785,6 +3787,24 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "LLVMIntrinsicOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td",
+    deps = [":LLVMOpsTdFiles"],
+)
+
+gentbl_cc_library(
     name = "LLVMConversionIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
@@ -3803,6 +3823,20 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/LLVMOps.td",
+    deps = [":LLVMOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "LLVMIntrinsicConversionIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-llvmir-conversions"],
+            "include/mlir/Dialect/LLVMIR/LLVMIntrinsicConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td",
     deps = [":LLVMOpsTdFiles"],
 )
 
@@ -5587,6 +5621,7 @@ cc_library(
         ":LLVMConversionIncGen",
         ":LLVMDialect",
         ":LLVMIRTransforms",
+        ":LLVMIntrinsicConversionIncGen",
         ":OpenMPDialect",
         ":Support",
         "//llvm:Core",
@@ -5696,6 +5731,7 @@ cc_library(
         ":IR",
         ":LLVMConversionIncGen",
         ":LLVMDialect",
+        ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":ToLLVMIRTranslation",
         "//llvm:Core",

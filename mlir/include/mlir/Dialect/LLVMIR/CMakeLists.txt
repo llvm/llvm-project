@@ -14,7 +14,13 @@ mlir_tablegen(LLVMOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(LLVMOpsEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRLLVMOpsIncGen)
 
+set(LLVM_TARGET_DEFINITIONS LLVMIntrinsicOps.td)
+mlir_tablegen(LLVMIntrinsicOps.h.inc -gen-op-decls)
+mlir_tablegen(LLVMIntrinsicOps.cpp.inc -gen-op-defs)
+add_public_tablegen_target(MLIRLLVMIntrinsicOpsIncGen)
+
 add_mlir_doc(LLVMOps LLVMOps Dialects/ -gen-op-doc)
+add_mlir_doc(LLVMIntrinsicOps LLVMIntrinsicOps Dialects/ -gen-op-doc)
 
 set(LLVM_TARGET_DEFINITIONS LLVMOpsInterfaces.td)
 mlir_tablegen(LLVMOpsInterfaces.h.inc -gen-op-interface-decls)
@@ -28,6 +34,10 @@ mlir_tablegen(LLVMConversions.inc -gen-llvmir-conversions)
 mlir_tablegen(LLVMConversionEnumsToLLVM.inc -gen-enum-to-llvmir-conversions)
 mlir_tablegen(LLVMConversionEnumsFromLLVM.inc -gen-enum-from-llvmir-conversions)
 add_public_tablegen_target(MLIRLLVMConversionsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS LLVMIntrinsicOps.td)
+mlir_tablegen(LLVMIntrinsicConversions.inc -gen-llvmir-conversions)
+add_public_tablegen_target(MLIRLLVMIntrinsicConversionsIncGen)
 
 add_mlir_dialect(NVVMOps nvvm)
 add_mlir_doc(NVVMOps NVVMDialect Dialects/ -gen-dialect-doc -dialect=nvvm)

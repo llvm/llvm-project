@@ -2600,6 +2600,9 @@ void LLVMDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/LLVMOps.cpp.inc"
+      ,
+#define GET_OP_LIST
+#include "mlir/Dialect/LLVMIR/LLVMIntrinsicOps.cpp.inc"
       >();
 
   // Support unknown operations because not all LLVM operations are registered.
@@ -2700,7 +2703,7 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
 
   return op->emitOpError() << "expected '"
                            << LLVM::LLVMDialect::getDataLayoutAttrName()
-                           << "' to be a string attribute";
+                           << "' to be a string attributes";
 }
 
 LogicalResult LLVMDialect::verifyStructAttr(Operation *op, Attribute attr,

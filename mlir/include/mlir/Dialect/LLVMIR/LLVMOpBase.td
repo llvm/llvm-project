@@ -366,38 +366,47 @@ class LLVM_VectorReductionAcc<string mnem>
   }];
 }
 
-// LLVM vector predication intrinsics.
-class LLVM_VPBinaryBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
-      Arguments<(ins LLVM_VectorOf<element>:$lhs, LLVM_VectorOf<element>:$rhs,
-                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+def LLVM_OneResultOpBuilder :
+  OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  [{
+    if (resultType) $_state.addTypes(resultType);
+    $_state.addOperands(operands);
+    for (auto namedAttr : attributes)
+      $_state.addAttribute(namedAttr.getName(), namedAttr.getValue());
+  }]>;
 
-class LLVM_VPBinaryI<string mnem> : LLVM_VPBinaryBase<mnem, AnyInteger>;
+def LLVM_ZeroResultOpBuilder :
+  OpBuilder<(ins "ValueRange":$operands,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  [{
+    $_state.addOperands(operands);
+    for (auto namedAttr : attributes)
+      $_state.addAttribute(namedAttr.getName(), namedAttr.getValue());
+  }]>;
 
-class LLVM_VPBinaryF<string mnem> : LLVM_VPBinaryBase<mnem, AnyFloat>;
+// Compatibility builder that takes an instance of wrapped llvm::VoidType
+// to indicate no result.
+def LLVM_VoidResultTypeOpBuilder :
+  OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  [{
+    assert(isCompatibleType(resultType) && "result must be an LLVM type");
+    assert(resultType.isa<LLVMVoidType>() &&
+           "for zero-result operands, only 'void' is accepted as result type");
+    build($_builder, $_state, operands, attributes);
+  }]>;
 
-class LLVM_VPUnaryBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
-      Arguments<(ins LLVM_VectorOf<element>:$op,
-                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
-class LLVM_VPUnaryF<string mnem> : LLVM_VPUnaryBase<mnem, AnyFloat>;
+// Opaque builder used for terminator operations that contain successors.
+def LLVM_TerminatorPassthroughOpBuilder :
+  OpBuilder<(ins "ValueRange":$operands, "SuccessorRange":$destinations,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  [{
+    $_state.addOperands(operands);
+    $_state.addSuccessors(destinations);
+    $_state.addAttributes(attributes);
+  }]>;
 
-class LLVM_VPTernaryBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
-      Arguments<(ins LLVM_VectorOf<element>:$op1, LLVM_VectorOf<element>:$op2,
-                     LLVM_VectorOf<element>:$op3, LLVM_VectorOf<I1>:$mask,
-                     I32:$evl)>;
-
-class LLVM_VPTernaryF<string mnem> : LLVM_VPTernaryBase<mnem, AnyFloat>;
-
-class LLVM_VPReductionBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp.reduce." # mnem, [], [1], [NoSideEffect]>,
-      Arguments<(ins element:$satrt_value, LLVM_VectorOf<element>:$val,
-                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
-
-class LLVM_VPReductionI<string mnem> : LLVM_VPReductionBase<mnem, AnyInteger>;
-
-class LLVM_VPReductionF<string mnem> : LLVM_VPReductionBase<mnem, AnyFloat>;
 
 #endif  // LLVMIR_OP_BASE
