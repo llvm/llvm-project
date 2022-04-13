@@ -2404,50 +2404,57 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
     }
 
     MCSymbol *ReferencedSymbol = nullptr;
-    if (!IsSectionRelocation) {
+    if (!IsSectionRelocation)
       if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
         ReferencedSymbol = BD->getSymbol();
-    }
 
-    // PC-relative relocations from data to code are tricky since the original
-    // information is typically lost after linking even with '--emit-relocs'.
-    // They are normally used by PIC-style jump tables and reference both
-    // the jump table and jump destination by computing the difference
-    // between the two. If we blindly apply the relocation it will appear
-    // that it references an arbitrary location in the code, possibly even
-    // in a different function from that containing the jump table.
+    ErrorOr<BinarySection &> ReferencedSection =
+        BC->getSectionForAddress(SymbolAddress);
+
+    const bool IsToCode = ReferencedSection && ReferencedSection->isText();
+
+    // Special handling of PC-relative relocations.
     if (!IsAArch64 && Relocation::isPCRelative(RType)) {
-      // For relocations against non-code sections, just register the fact that
-      // we have a PC-relative relocation at a given address. The actual
-      // referenced label/address cannot be determined from linker data alone.
-      if (!IsFromCode)
+      if (!IsFromCode && IsToCode) {
+        // PC-relative relocations from data to code are tricky since the
+        // original information is typically lost after linking, even with
+        // '--emit-relocs'. Such relocations are normally used by PIC-style
+        // jump tables and they reference both the jump table and jump
+        // targets by computing the difference between the two. If we blindly
+        // apply the relocation, it will appear that it references an arbitrary
+        // location in the code, possibly in a different function from the one
+        // containing the jump table.
+        //
+        // For that reason, we only register the fact that there is a
+        // PC-relative relocation at a given address against the code.
+        // The actual referenced label/address will be determined during jump
+        // table analysis.
         BC->addPCRelativeDataRelocation(Rel.getOffset());
-      else if (!IsSectionRelocation && ReferencedSymbol)
+      } else if (ContainingBF && !IsSectionRelocation && ReferencedSymbol) {
+        // If we know the referenced symbol, register the relocation from
+        // the code. It's required  to properly handle cases where
+        // "symbol + addend" references an object different from "symbol".
         ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
                                     Addend, ExtractedValue);
-      else
+      } else {
         LLVM_DEBUG(
             dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at 0x"
                    << Twine::utohexstr(Rel.getOffset()) << " for " << SymbolName
                    << "\n");
+      }
+
       continue;
     }
 
     bool ForceRelocation = BC->forceSymbolRelocations(SymbolName);
-    ErrorOr<BinarySection &> RefSection =
-        std::make_error_code(std::errc::bad_address);
-    if (BC->isAArch64() && Relocation::isGOT(RType)) {
+    if (BC->isAArch64() && Relocation::isGOT(RType))
       ForceRelocation = true;
-    } else {
-      RefSection = BC->getSectionForAddress(SymbolAddress);
-      if (!RefSection && !ForceRelocation) {
-        LLVM_DEBUG(
-            dbgs() << "BOLT-DEBUG: cannot determine referenced section.\n");
-        continue;
-      }
-    }
 
-    const bool IsToCode = RefSection && RefSection->isText();
+    if (!ReferencedSection && !ForceRelocation) {
+      LLVM_DEBUG(
+          dbgs() << "BOLT-DEBUG: cannot determine referenced section.\n");
+      continue;
+    }
 
     // Occasionally we may see a reference past the last byte of the function
     // typically as a result of __builtin_unreachable(). Check it here.
@@ -2474,8 +2481,8 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
         }
       }
     } else if (ReferencedBF) {
-      assert(RefSection && "section expected for section relocation");
-      if (*ReferencedBF->getOriginSection() != *RefSection) {
+      assert(ReferencedSection && "section expected for section relocation");
+      if (*ReferencedBF->getOriginSection() != *ReferencedSection) {
         LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring false function reference\n");
         ReferencedBF = nullptr;
       }
@@ -2643,7 +2650,7 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
               NumDataRelocations < opts::MaxDataRelocations);
     };
 
-    if ((RefSection && refersToReorderedSection(RefSection)) ||
+    if ((ReferencedSection && refersToReorderedSection(ReferencedSection)) ||
         (opts::ForceToDataRelocations && checkMaxDataRelocations()))
       ForceRelocation = true;
 
