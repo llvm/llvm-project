@@ -6,7 +6,8 @@ gpu.module @test_module {
   // CHECK32-LABEL: func @gpu_index_ops()
   func.func @gpu_index_ops()
       -> (index, index, index, index, index, index,
-          index, index, index, index, index, index) {
+          index, index, index, index, index, index,
+          index) {
     // CHECK32-NOT: = llvm.sext %{{.*}} : i32 to i64
 
     // CHECK: = nvvm.read.ptx.sreg.tid.x : i32
@@ -49,10 +50,17 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %gDimZ = gpu.grid_dim z
 
+
+    // CHECK: = nvvm.read.ptx.sreg.laneid : i32
+    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    %laneId = gpu.lane_id
+
     func.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
-               %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ
+               %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ,
+               %laneId
         : index, index, index, index, index, index,
-          index, index, index, index, index, index
+          index, index, index, index, index, index,
+          index
   }
 }
 
