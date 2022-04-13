@@ -266,6 +266,7 @@ public:
     ELF,
     GOFF,
     MachO,
+    SPIRV,
     Wasm,
     XCOFF,
   };

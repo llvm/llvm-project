@@ -792,6 +792,10 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   case MCContext::IsGOFF:
     PlatformParser.reset(createGOFFAsmParser());
     break;
+  case MCContext::IsSPIRV:
+    report_fatal_error(
+        "Need to implement createSPIRVAsmParser for SPIRV format.");
+    break;
   case MCContext::IsWasm:
     PlatformParser.reset(createWasmAsmParser());
     break;
