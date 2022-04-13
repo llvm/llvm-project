@@ -176,9 +176,19 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
     }
     if (next && *next == '(') { // NaN(...)
-      while (next && *next != ')') {
+      Put('(');
+      int depth{1};
+      do {
         next = io.NextInField(remaining, edit);
-      }
+        if (!next) {
+          break;
+        } else if (*next == '(') {
+          ++depth;
+        } else if (*next == ')') {
+          --depth;
+        }
+        Put(*next);
+      } while (depth > 0);
     }
     exponent = 0;
   } else if (first == decimal || (first >= '0' && first <= '9') ||
@@ -225,7 +235,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     exponent = -edit.modes.scale;
     if (next &&
         (*next == '-' || *next == '+' || (*next >= '0' && *next <= '9') ||
-            (bzMode && (*next == ' ' || *next == '\t')))) {
+            *next == ' ' || *next == '\t')) {
       bool negExpo{*next == '-'};
       if (negExpo || *next == '+') {
         next = io.NextInField(remaining, edit);
@@ -233,8 +243,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       for (exponent = 0; next; next = io.NextInField(remaining, edit)) {
         if (*next >= '0' && *next <= '9') {
           exponent = 10 * exponent + *next - '0';
-        } else if (bzMode && (*next == ' ' || *next == '\t')) {
-          exponent = 10 * exponent;
+        } else if (*next == ' ' || *next == '\t') {
+          if (bzMode) {
+            exponent = 10 * exponent;
+          }
         } else {
           break;
         }
@@ -328,11 +340,19 @@ static bool TryFastPathRealInput(
   if (converted.flags & decimal::Invalid) {
     return false;
   }
-  if (edit.digits.value_or(0) != 0 &&
-      std::memchr(str, '.', p - str) == nullptr) {
-    // No explicit decimal point, and edit descriptor is Fw.d (or other)
-    // with d != 0, which implies scaling.
-    return false;
+  if (edit.digits.value_or(0) != 0) {
+    // Edit descriptor is Fw.d (or other) with d != 0, which
+    // implies scaling
+    const char *q{str};
+    for (; q < limit; ++q) {
+      if (*q == '.' || *q == 'n' || *q == 'N') {
+        break;
+      }
+    }
+    if (q == limit) {
+      // No explicit decimal point, and not NaN/Inf.
+      return false;
+    }
   }
   for (; p < limit && (*p == ' ' || *p == '\t'); ++p) {
   }
@@ -421,6 +441,10 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   if (hadExtra) {
     converted.flags = static_cast<enum decimal::ConversionResultFlags>(
         converted.flags | decimal::Inexact);
+  }
+  if (*p) { // unprocessed junk after value
+    io.GetIoErrorHandler().SignalError(IostatBadRealInput);
+    return false;
   }
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<binaryPrecision> *>(n) =
       converted.binary;
