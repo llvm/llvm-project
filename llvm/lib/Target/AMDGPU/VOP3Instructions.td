@@ -610,6 +610,20 @@ let SubtargetPredicate = isGFX10Plus in {
   def : PermlaneDiscardVDstIn<
     BoundControlOrFetchInvalidPermlane<int_amdgcn_permlanex16>,
     V_PERMLANEX16_B32_e64>;
+
+  defm V_ADD_NC_U16 : VOP3Inst <"v_add_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, add>;
+  defm V_SUB_NC_U16 : VOP3Inst <"v_sub_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, sub>;
+
+  def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_e64>;
+  def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_e64>;
+
+  // Undo sub x, c -> add x, -c canonicalization since c is more likely
+  // an inline immediate than -c.
+  def : GCNPat<
+    (add i16:$src0, (i16 NegSubInlineIntConst16:$src1)),
+    (V_SUB_NC_U16_e64 0, VSrc_b16:$src0, 0, NegSubInlineIntConst16:$src1, 0, 0)
+  >;
+
 } // End SubtargetPredicate = isGFX10Plus
 
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
@@ -792,10 +806,11 @@ defm V_MAD_I16 :
 defm V_DIV_FIXUP_F16 :
   VOP3OpSel_Real_gfx10_with_name<0x35f, "V_DIV_FIXUP_F16_gfx9", "v_div_fixup_f16">;
 
+defm V_ADD_NC_U16      : VOP3OpSel_Real_gfx10<0x303>;
+defm V_SUB_NC_U16      : VOP3OpSel_Real_gfx10<0x304>;
+
 // FIXME-GFX10-OPSEL: Need to add "selective" opsel support to some of these
 // (they do not support SDWA or DPP).
-defm V_ADD_NC_U16      : VOP3_Real_gfx10_with_name<0x303, "V_ADD_U16", "v_add_nc_u16">;
-defm V_SUB_NC_U16      : VOP3_Real_gfx10_with_name<0x304, "V_SUB_U16", "v_sub_nc_u16">;
 defm V_MUL_LO_U16      : VOP3_Real_gfx10_with_name<0x305, "V_MUL_LO_U16", "v_mul_lo_u16">;
 defm V_LSHRREV_B16     : VOP3_Real_gfx10_with_name<0x307, "V_LSHRREV_B16", "v_lshrrev_b16">;
 defm V_ASHRREV_I16     : VOP3_Real_gfx10_with_name<0x308, "V_ASHRREV_I16", "v_ashrrev_i16">;
