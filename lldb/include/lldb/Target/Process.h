@@ -1329,14 +1329,13 @@ public:
   ///
   /// @param [in] module
   ///     The affected Module.
-  void PrintWarningCantLoadSwiftModule(const Module &module,
-                                       std::string details);
+  void PrintWarningCantLoadSwiftModule(Module &module, std::string details);
 
   /// Print a user-visible warning about Swift CUs compiled with a
   /// different Swift compiler than the one embedded in LLDB.
   void PrintWarningToolchainMismatch(const SymbolContext &sc);
 #endif
-  
+
   /// Print a user-visible warning about a function written in a
   /// language that this version of LLDB doesn't support.
   ///
