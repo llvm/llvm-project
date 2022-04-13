@@ -1001,6 +1001,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     StrAttr:$sym_name,
     Linkage:$linkage,
     UnitAttr:$dso_local,
+    UnitAttr:$thread_local_,
     OptionalAttr<AnyAttr>:$value,
     OptionalAttr<I64Attr>:$alignment,
     DefaultValuedAttr<Confined<I32Attr, [IntNonNegative]>, "0">:$addr_space,
@@ -1112,6 +1113,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       CArg<"uint64_t", "0">:$alignment,
       CArg<"unsigned", "0">:$addrSpace,
       CArg<"bool", "false">:$dsoLocal,
+      CArg<"bool", "false">:$thread_local_,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
