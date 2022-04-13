@@ -26,6 +26,7 @@ add_clang_library(clangCIR
   TargetInfo.cpp
 
   DEPENDS
+  MLIRCIR
   MLIRCIROpsIncGen
 
   LINK_LIBS
