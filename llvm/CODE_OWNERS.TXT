@@ -248,3 +248,7 @@ D: MinGW
 N: Zi Xuan Wu (Zeson)
 E: zixuan.wu@linux.alibaba.com
 D: C-SKY backend (lib/Target/CSKY/*)
+
+N: Ilia Diachkov
+E: iliya.diyachkov@intel.com
+D: SPIR-V backend (lib/Target/SPIRV/*)
