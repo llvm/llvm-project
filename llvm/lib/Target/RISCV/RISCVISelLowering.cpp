@@ -6635,9 +6635,12 @@ static SDValue customLegalizeToWOpByIntr(SDNode *N, SelectionDAG &DAG,
                                          unsigned IntNo) {
   SDLoc DL(N);
   RISCVISD::NodeType WOpcode = getRISCVWOpcodeByIntr(IntNo);
-  SDValue NewOp1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-  SDValue NewOp2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-  SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp1, NewOp2);
+  // Deal with the Instruction Operands
+  SmallVector<SDValue, 3> NewOps;
+  for (SDValue Op : drop_begin(N->ops()))
+    // Promote the operand to i64 type
+    NewOps.push_back(DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op));
+  SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOps);
   // ReplaceNodeResults requires we maintain the same type for the return value.
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
 }
@@ -7153,25 +7156,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
     case Intrinsic::riscv_bcompress:
     case Intrinsic::riscv_bdecompress:
-    case Intrinsic::riscv_bfp: {
-      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-             "Unexpected custom legalisation");
-      Results.push_back(customLegalizeToWOpByIntr(N, DAG, IntNo));
-      break;
-    }
+    case Intrinsic::riscv_bfp:
     case Intrinsic::riscv_fsl:
     case Intrinsic::riscv_fsr: {
       assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
              "Unexpected custom legalisation");
-      SDValue NewOp1 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue NewOp2 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      SDValue NewOp3 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3));
-      unsigned Opc = getRISCVWOpcodeByIntr(IntNo);
-      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp1, NewOp2, NewOp3);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      Results.push_back(customLegalizeToWOpByIntr(N, DAG, IntNo));
       break;
     }
     case Intrinsic::riscv_orc_b: {
