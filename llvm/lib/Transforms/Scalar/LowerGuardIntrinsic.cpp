@@ -48,9 +48,13 @@ static bool lowerGuardIntrinsic(Function &F) {
     return false;
 
   SmallVector<CallInst *, 8> ToLower;
-  for (auto &I : instructions(F))
-    if (isGuard(&I))
-      ToLower.push_back(cast<CallInst>(&I));
+  // Traverse through the users of GuardDecl.
+  // This is presumably cheaper than traversing all instructions in the
+  // function.
+  for (auto *U : GuardDecl->users())
+    if (auto *CI = dyn_cast<CallInst>(U))
+      if (CI->getFunction() == &F)
+        ToLower.push_back(CI);
 
   if (ToLower.empty())
     return false;
