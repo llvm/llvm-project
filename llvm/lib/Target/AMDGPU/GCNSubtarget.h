@@ -190,8 +190,8 @@ protected:
   bool HasFlatSegmentOffsetBug = false;
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
-  bool HasGFX11ExtraVGPRs;
-  bool HasVOPDInsts;
+  bool HasGFX11ExtraVGPRs = false;
+  bool HasVOPDInsts = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
