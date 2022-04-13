@@ -2105,7 +2105,6 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
     assert(builder.getInsertionBlock() && "Should be valid");
   }
 
-  function.dump();
   if (mlir::failed(function.verifyBody()))
     return nullptr;
   theModule.push_back(function);
