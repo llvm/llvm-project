@@ -66,3 +66,202 @@ return:
   %retval.0 = phi i32 [ 4, %sw.epilog ], [ 10, %sw.bb ]
   ret i32 %retval.0
 }
+
+
+define i1 @switch_to_and0(i8 %0) {
+; CHECK-LABEL: @switch_to_and0(
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i8 [[TMP0:%.*]], 43
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i8 [[TMP0]], 45
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %0, label %2 [
+  i8 43, label %3
+  i8 45, label %3
+  ]
+
+2:
+  br label %3
+
+3:
+  %4 = phi i1 [ false, %2 ], [ true, %1 ], [ true, %1 ]
+  ret i1 %4
+}
+
+
+define i1 @switch_to_and1(i32 %i) {
+; CHECK-LABEL: @switch_to_and1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
+; CHECK-NEXT:    i32 0, label [[LOR_END:%.*]]
+; CHECK-NEXT:    i32 2, label [[LOR_END]]
+; CHECK-NEXT:    i32 4, label [[LOR_END]]
+; CHECK-NEXT:    i32 6, label [[LOR_END]]
+; CHECK-NEXT:    ]
+; CHECK:       lor.rhs:
+; CHECK-NEXT:    br label [[LOR_END]]
+; CHECK:       lor.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[TMP0]]
+;
+entry:
+  switch i32 %i, label %lor.rhs [
+  i32 0, label %lor.end
+  i32 2, label %lor.end
+  i32 4, label %lor.end
+  i32 6, label %lor.end
+  ]
+
+lor.rhs:
+  br label %lor.end
+
+lor.end:
+  %0 = phi i1 [ true, %entry ], [ false, %lor.rhs ], [ true, %entry ], [ true, %entry ], [ true, %entry ]
+  ret i1 %0
+}
+
+define i1 @switch_to_and2(i32 %i) {
+; CHECK-LABEL: @switch_to_and2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
+; CHECK-NEXT:    i32 0, label [[LOR_END:%.*]]
+; CHECK-NEXT:    i32 2, label [[LOR_END]]
+; CHECK-NEXT:    i32 8, label [[LOR_END]]
+; CHECK-NEXT:    i32 10, label [[LOR_END]]
+; CHECK-NEXT:    ]
+; CHECK:       lor.rhs:
+; CHECK-NEXT:    br label [[LOR_END]]
+; CHECK:       lor.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[TMP0]]
+;
+entry:
+  switch i32 %i, label %lor.rhs [
+  i32 0, label %lor.end
+  i32 2, label %lor.end
+  i32 8, label %lor.end
+  i32 10, label %lor.end
+  ]
+
+lor.rhs:
+  br label %lor.end
+
+lor.end:
+  %0 = phi i1 [ true, %entry ], [ false, %lor.rhs ], [ true, %entry ], [ true, %entry ], [ true, %entry ]
+  ret i1 %0
+}
+
+define i1 @switch_to_and3(i32 %i) {
+; CHECK-LABEL: @switch_to_and3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
+; CHECK-NEXT:    i32 2, label [[LOR_END:%.*]]
+; CHECK-NEXT:    i32 4, label [[LOR_END]]
+; CHECK-NEXT:    i32 10, label [[LOR_END]]
+; CHECK-NEXT:    i32 12, label [[LOR_END]]
+; CHECK-NEXT:    ]
+; CHECK:       lor.rhs:
+; CHECK-NEXT:    br label [[LOR_END]]
+; CHECK:       lor.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[TMP0]]
+;
+entry:
+  switch i32 %i, label %lor.rhs [
+  i32 2, label %lor.end
+  i32 4, label %lor.end
+  i32 10, label %lor.end
+  i32 12, label %lor.end
+  ]
+
+lor.rhs:
+  br label %lor.end
+
+lor.end:
+  %0 = phi i1 [ true, %entry ], [ false, %lor.rhs ], [ true, %entry ], [ true, %entry ], [ true, %entry ]
+  ret i1 %0
+}
+
+define i8 @switch_to_and4_negcase(i32 %i) {
+; CHECK-LABEL: @switch_to_and4_negcase(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i32 [[I:%.*]], -3
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i32 [[I]], -5
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[SWITCH_SELECTCMP]], i8 3, i8 42
+; CHECK-NEXT:    ret i8 [[TMP0]]
+;
+entry:
+  switch i32 %i, label %default [
+  i32 -3, label %end
+  i32 -5, label %end
+  ]
+
+default:
+  br label %end
+
+end:
+  %t0 = phi i8 [ 42, %default ], [ 3, %entry ], [ 3, %entry ]
+  ret i8 %t0
+}
+
+define i1 @negative_switch_to_and0(i32 %i) {
+; CHECK-LABEL: @negative_switch_to_and0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
+; CHECK-NEXT:    i32 1, label [[LOR_END:%.*]]
+; CHECK-NEXT:    i32 4, label [[LOR_END]]
+; CHECK-NEXT:    i32 10, label [[LOR_END]]
+; CHECK-NEXT:    i32 12, label [[LOR_END]]
+; CHECK-NEXT:    ]
+; CHECK:       lor.rhs:
+; CHECK-NEXT:    br label [[LOR_END]]
+; CHECK:       lor.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[TMP0]]
+;
+entry:
+  switch i32 %i, label %lor.rhs [
+  i32 1, label %lor.end
+  i32 4, label %lor.end
+  i32 10, label %lor.end
+  i32 12, label %lor.end
+  ]
+
+lor.rhs:
+  br label %lor.end
+
+lor.end:
+  %0 = phi i1 [ true, %entry ], [ false, %lor.rhs ], [ true, %entry ], [ true, %entry ], [ true, %entry ]
+  ret i1 %0
+}
+
+define i1 @negative_switch_to_and1(i32 %i) {
+; CHECK-LABEL: @negative_switch_to_and1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
+; CHECK-NEXT:    i32 0, label [[LOR_END:%.*]]
+; CHECK-NEXT:    i32 2, label [[LOR_END]]
+; CHECK-NEXT:    i32 4, label [[LOR_END]]
+; CHECK-NEXT:    ]
+; CHECK:       lor.rhs:
+; CHECK-NEXT:    br label [[LOR_END]]
+; CHECK:       lor.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[TMP0]]
+;
+entry:
+  switch i32 %i, label %lor.rhs [
+  i32 0, label %lor.end
+  i32 2, label %lor.end
+  i32 4, label %lor.end
+  ]
+
+lor.rhs:
+  br label %lor.end
+
+lor.end:
+  %0 = phi i1 [ true, %entry ], [ false, %lor.rhs ], [ true, %entry ], [ true, %entry ]
+  ret i1 %0
+}
