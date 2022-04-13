@@ -609,6 +609,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   liveins: $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   JCC_1 %bb.2, 15, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.3
@@ -659,6 +660,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $al = SETCCr 4, implicit $eflags
   ; CHECK-NEXT: {{  $}}
@@ -725,6 +727,8 @@ body: |
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $eflags
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $al = SETCCr 14, implicit $eflags
   bb.0:
     %0:gr64 = COPY $rsi

@@ -116,6 +116,8 @@ body:             |
 # CHECK:       stackSize: 48
 
 # CHECK:      bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $sp = frame-setup STRXpre killed $[[SCRATCH:[a-z0-9]+]], $sp, -32
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 32
 # CHECK-NEXT: frame-setup STPXi killed $x21, killed $x20, $sp, 2
@@ -194,6 +196,8 @@ body:             |
 # CHECK:       stackSize: 32
 
 # CHECK:      bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: $fp = frame-setup ADDXri $sp, 0, 0
@@ -257,6 +261,8 @@ body:             |
 # CHECK:       stackSize: 32
 
 # CHECK:      bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $sp = frame-setup STRXpre killed $[[SCRATCH:[a-z0-9]+]], $sp, -16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
@@ -338,6 +344,8 @@ body:             |
 # CHECK:       stackSize: 32
 
 # CHECK:      bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: $fp = frame-setup ADDXri $sp, 0, 0
@@ -414,6 +422,8 @@ body:             |
 # CHECK:       stackSize: 32
 
 # CHECK:      bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $sp = frame-setup STRXpre killed $[[SCRATCH:[a-z0-9]+]], $sp, -16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
@@ -485,6 +495,8 @@ body:             |
 # CHECK:       stackSize: 16
 
 # CHECK:      bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $sp = frame-setup STRXpre killed $[[SCRATCH:[a-z0-9]+]], $sp, -16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
@@ -617,6 +629,8 @@ body:             |
 
 # CHECK-LABEL: name: test_address_gpr_vla
 # CHECK: bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -4
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 32
 # CHECK-NEXT: frame-setup STRXui killed $x19, $sp, 2
@@ -1165,6 +1179,8 @@ body:             |
 # CHECK-NEXT:       stack-id: default, callee-saved-register: '$fp',
 #
 # CHECK:      bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $sp = frame-setup STRXpre killed $[[SCRATCH:[a-z0-9]+]], $sp, -16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
