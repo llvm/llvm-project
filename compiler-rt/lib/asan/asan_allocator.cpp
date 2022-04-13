@@ -597,7 +597,9 @@ struct Allocator {
       CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
       reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
     }
-    ASAN_MALLOC_HOOK(res, size);
+    if (&__sanitizer_malloc_hook)
+      __sanitizer_malloc_hook(res, size);
+    RunMallocHooks(res, size);
     return res;
   }
 
@@ -678,7 +680,9 @@ struct Allocator {
       return;
     }
 
-    ASAN_FREE_HOOK(ptr);
+    if (&__sanitizer_free_hook)
+      __sanitizer_free_hook(ptr);
+    RunFreeHooks(ptr);
 
     // Must mark the chunk as quarantined before any changes to its metadata.
     // Do not quarantine given chunk if we failed to set CHUNK_QUARANTINE flag.

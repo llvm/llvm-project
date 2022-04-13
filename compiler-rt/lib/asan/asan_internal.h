@@ -125,22 +125,6 @@ bool HandleDlopenInit();
 
 void InstallAtExitCheckLeaks();
 
-// Add convenient macro for interface functions that may be represented as
-// weak hooks.
-#define ASAN_MALLOC_HOOK(ptr, size)       \
-  do {                                    \
-    if (&__sanitizer_malloc_hook)         \
-      __sanitizer_malloc_hook(ptr, size); \
-    RunMallocHooks(ptr, size);            \
-  } while (false)
-
-#define ASAN_FREE_HOOK(ptr)       \
-  do {                            \
-    if (&__sanitizer_free_hook)   \
-      __sanitizer_free_hook(ptr); \
-    RunFreeHooks(ptr);            \
-  } while (false)
-
 #define ASAN_ON_ERROR() \
   if (&__asan_on_error) \
   __asan_on_error()
