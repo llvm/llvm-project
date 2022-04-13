@@ -43,6 +43,9 @@
   // For ARM EHABI, Bionic didn't implement dl_iterate_phdr until API 21. After
   // API 21, dl_iterate_phdr exists, but dl_unwind_find_exidx is much faster.
   #define _LIBUNWIND_USE_DL_UNWIND_FIND_EXIDX 1
+#elif defined(_AIX)
+// The traceback table at the end of each function is used for unwinding.
+#define _LIBUNWIND_SUPPORT_TBTAB_UNWIND 1
 #else
   // Assume an ELF system with a dl_iterate_phdr function.
   #define _LIBUNWIND_USE_DL_ITERATE_PHDR 1
@@ -57,13 +60,13 @@
   #define _LIBUNWIND_EXPORT
   #define _LIBUNWIND_HIDDEN
 #else
-  #if !defined(__ELF__) && !defined(__MACH__)
-    #define _LIBUNWIND_EXPORT __declspec(dllexport)
-    #define _LIBUNWIND_HIDDEN
-  #else
-    #define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
-    #define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
-  #endif
+#if !defined(__ELF__) && !defined(__MACH__) && !defined(_AIX)
+#define _LIBUNWIND_EXPORT __declspec(dllexport)
+#define _LIBUNWIND_HIDDEN
+#else
+#define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
+#define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
+#endif
 #endif
 
 #define STR(a) #a
@@ -80,7 +83,7 @@
   __asm__(".globl " SYMBOL_NAME(aliasname));                                   \
   __asm__(SYMBOL_NAME(aliasname) " = " SYMBOL_NAME(name));                     \
   _LIBUNWIND_ALIAS_VISIBILITY(SYMBOL_NAME(aliasname))
-#elif defined(__ELF__)
+#elif defined(__ELF__) || defined(_AIX)
 #define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
   extern "C" _LIBUNWIND_EXPORT __typeof(name) aliasname                        \
       __attribute__((weak, alias(#name)));
