@@ -39,6 +39,9 @@ typedef struct {
     ulong slots[64][8];
 } payload_t;
 
+// Note: Hostcall buffer struct defined here is not an exact
+// match of runtime buffer layout but matches its prefix that
+// this code tries to access.
 typedef struct {
     __global header_t *headers;
     __global payload_t *payloads;
