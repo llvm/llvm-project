@@ -36,6 +36,7 @@ class Loop;
 class Module;
 class Type;
 class Value;
+class StructType;
 
 /// A cache for the CodeExtractor analysis. The operation \ref
 /// CodeExtractor::extractCodeRegion is guaranteed not to invalidate this
@@ -100,14 +101,21 @@ public:
     // If true, varargs functions can be extracted.
     bool AllowVarArgs;
 
+    /// If true, copies the code into the extracted function instead of moving
+    /// it.
+    bool KeepOldBlocks;
+
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
     Type *RetTy;
 
-    // Mapping from the original exit blocks, to the new blocks inside
-    // the function.
-    SmallVector<BasicBlock *, 4> OldTargets;
+    /// Lists of blocks that are branched from the code region to be extracted.
+    /// Each block is contained at most once. Its order defines the return value
+    /// of the extracted function, when leaving the extracted function via the
+    /// first block it returns 0. When leaving via the second entry it returns
+    /// 1, etc.
+    SmallVector<BasicBlock *> SwitchCases;
 
     // Suffix to use when creating extracted function (appended to the original
     // function name + "."). If empty, the default is to use the entry block
@@ -128,13 +136,18 @@ public:
     /// Any new allocations will be placed in the AllocationBlock, unless
     /// it is null, in which case it will be placed in the entry block of
     /// the function from which the code is being extracted.
+    ///
+    /// If KeepOldBlocks is true, the original instances of the extracted region
+    /// remains in the original function so they can still be branched to from
+    /// non-extracted blocks. However, only branches to the first block will
+    /// call the extracted function.
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                   bool AllowAlloca = false,
                   BasicBlock *AllocationBlock = nullptr,
-                  std::string Suffix = "");
+                  std::string Suffix = "", bool KeepOldBlocks = false);
 
     /// Create a code extractor for a loop body.
     ///
@@ -241,26 +254,57 @@ public:
     getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                        Instruction *Addr, BasicBlock *ExitBlock) const;
 
-    void severSplitPHINodesOfEntry(BasicBlock *&Header);
-    void severSplitPHINodesOfExits(const SmallPtrSetImpl<BasicBlock *> &Exits);
-    void splitReturnBlocks();
+    /// Updates the list of exit blocks (OldTargets and ExitBlocks) after
+    /// changes of the control flow or the Blocks list.
+    void recomputeExitBlocks();
 
-    Function *constructFunction(const ValueSet &inputs,
-                                const ValueSet &outputs,
-                                BasicBlock *header,
-                                BasicBlock *newRootNode, BasicBlock *newHeader,
-                                Function *oldFunction, Module *M);
+    void severSplitPHINodesOfEntry(BasicBlock *&Header);
+    void severSplitPHINodesOfExits();
+    void splitReturnBlocks();
 
     void moveCodeToFunction(Function *newFunction);
 
     void calculateNewCallTerminatorWeights(
         BasicBlock *CodeReplacer,
-        DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
+        const DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
 
-    CallInst *emitCallAndSwitchStatement(Function *newFunction,
-                                         BasicBlock *newHeader,
-                                         ValueSet &inputs, ValueSet &outputs);
+    /// Normalizes the control flow of the extracted regions, such as ensuring
+    /// that the extracted region does not contain a return instruction.
+    void normalizeCFGForExtraction(BasicBlock *&header);
+
+    /// Generates the function declaration for the function containing the
+    /// extracted code.
+    Function *constructFunctionDeclaration(const ValueSet &inputs,
+                                           const ValueSet &outputs,
+                                           BlockFrequency EntryFreq,
+                                           const Twine &Name,
+                                           ValueSet &StructValues,
+                                           StructType *&StructTy);
+
+    /// Generates the code for the extracted function. That is: a prolog, the
+    /// moved or copied code from the original function, and epilogs for each
+    /// exit.
+    void emitFunctionBody(const ValueSet &inputs, const ValueSet &outputs,
+                          const ValueSet &StructValues, Function *newFunction,
+                          StructType *StructArgTy, BasicBlock *header,
+                          const ValueSet &SinkingCands);
+
+    /// Generates a Basic Block that calls the extracted function.
+    CallInst *emitReplacerCall(const ValueSet &inputs, const ValueSet &outputs,
+                               const ValueSet &StructValues,
+                               Function *newFunction, StructType *StructArgTy,
+                               Function *oldFunction, BasicBlock *ReplIP,
+                               BlockFrequency EntryFreq,
+                               ArrayRef<Value *> LifetimesStart,
+                               std::vector<Value *> &Reloads);
+
+    /// Connects the basic block containing the call to the extracted function
+    /// into the original function's control flow.
+    void insertReplacerCall(
+        Function *oldFunction, BasicBlock *header, BasicBlock *codeReplacer,
+        const ValueSet &outputs, ArrayRef<Value *> Reloads,
+        const DenseMap<BasicBlock *, BlockFrequency> &ExitWeights);
   };
 
 } // end namespace llvm
