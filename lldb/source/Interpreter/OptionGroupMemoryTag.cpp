@@ -13,25 +13,26 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionGroupMemoryTag::OptionGroupMemoryTag() : m_show_tags(false, false) {}
-
 static const uint32_t SHORT_OPTION_SHOW_TAGS = 0x54414753; // 'tags'
 
-static constexpr OptionDefinition g_option_table[] = {
-    {LLDB_OPT_SET_1,
-     false,
-     "show-tags",
-     SHORT_OPTION_SHOW_TAGS,
-     OptionParser::eNoArgument,
-     nullptr,
-     {},
-     0,
-     eArgTypeNone,
-     "Include memory tags in output (does not apply to binary output)."},
-};
+OptionGroupMemoryTag::OptionGroupMemoryTag(bool note_binary /*=false*/)
+    : m_show_tags(false, false), m_option_definition{
+                                     LLDB_OPT_SET_1,
+                                     false,
+                                     "show-tags",
+                                     SHORT_OPTION_SHOW_TAGS,
+                                     OptionParser::eNoArgument,
+                                     nullptr,
+                                     {},
+                                     0,
+                                     eArgTypeNone,
+                                     note_binary
+                                         ? "Include memory tags in output "
+                                           "(does not apply to binary output)."
+                                         : "Include memory tags in output."} {}
 
 llvm::ArrayRef<OptionDefinition> OptionGroupMemoryTag::GetDefinitions() {
-  return llvm::makeArrayRef(g_option_table);
+  return llvm::makeArrayRef(m_option_definition);
 }
 
 Status
@@ -40,7 +41,7 @@ OptionGroupMemoryTag::SetOptionValue(uint32_t option_idx,
                                      ExecutionContext *execution_context) {
   assert(option_idx == 0 && "Only one option in memory tag group!");
 
-  switch (g_option_table[0].short_option) {
+  switch (m_option_definition.short_option) {
   case SHORT_OPTION_SHOW_TAGS:
     m_show_tags.SetCurrentValue(true);
     m_show_tags.SetOptionWasSet();

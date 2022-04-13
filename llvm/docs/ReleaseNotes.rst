@@ -176,6 +176,9 @@ Changes to LLDB
   memory regions (including unmapped ranges). This is the equivalent
   of using address 0 then repeating the command until all regions
   have been listed.
+* Added "--show-tags" option to the "memory find" command. This is off by default.
+  When enabled, if the target value is found in tagged memory, the tags for that
+  memory will be shown inline with the memory contents.
 
 Changes to Sanitizers
 ---------------------
