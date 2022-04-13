@@ -716,6 +716,17 @@ def BrOp : CIR_Op<"br",
 // LoopOp
 //===----------------------------------------------------------------------===//
 
+def LoopOpKind_For : I32EnumAttrCase<"For", 1, "for">;
+def LoopOpKind_While : I32EnumAttrCase<"While", 2, "while">;
+def LoopOpKind_DoWhile : I32EnumAttrCase<"DoWhile", 3, "dowhile">;
+
+def LoopOpKind : I32EnumAttr<
+    "LoopOpKind",
+    "Loop kind",
+    [LoopOpKind_For, LoopOpKind_While, LoopOpKind_DoWhile]> {
+  let cppNamespace = "::mlir::cir";
+}
+
 def LoopOp : CIR_Op<"loop",
       [DeclareOpInterfaceMethods<LoopLikeOpInterface>,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
@@ -723,10 +734,13 @@ def LoopOp : CIR_Op<"loop",
   let summary = "loop operation";
   let description = [{
   }];
+
+  let arguments = (ins Arg<LoopOpKind, "loop kind">:$kind);
   let regions = (region SizedRegion<1>:$cond, AnyRegion:$body,
                         SizedRegion<1>:$step);
 
   let assemblyFormat = [{
+    $kind
     `(`
     `cond` `:` $cond `,`
     `step` `:` $step
@@ -738,6 +752,7 @@ def LoopOp : CIR_Op<"loop",
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins
+      "cir::LoopOpKind":$kind,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "nullptr">:$condBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",
