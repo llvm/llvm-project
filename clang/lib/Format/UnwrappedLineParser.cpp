@@ -2603,6 +2603,7 @@ void UnwrappedLineParser::parseTryCatch() {
       nextToken();
     }
     NeedsUnwrappedLine = false;
+    Line->MustBeDeclaration = false;
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock();
     if (Style.BraceWrapping.BeforeCatch)
