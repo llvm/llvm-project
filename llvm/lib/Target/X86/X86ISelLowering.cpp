@@ -21238,7 +21238,10 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (SrcVT == MVT::i64 && DstVT == MVT::f64 && Subtarget.hasSSE2() &&
       !IsStrict)
     return LowerUINT_TO_FP_i64(Op, DAG, Subtarget);
-  if (SrcVT == MVT::i32 && Subtarget.hasSSE2() && DstVT != MVT::f80)
+  // The transform for i32->f64/f32 isn't correct for 0 when rounding to
+  // negative infinity. So disable under strictfp. Using FILD instead.
+  if (SrcVT == MVT::i32 && Subtarget.hasSSE2() && DstVT != MVT::f80 &&
+      !IsStrict)
     return LowerUINT_TO_FP_i32(Op, DAG, Subtarget);
   if (Subtarget.is64Bit() && SrcVT == MVT::i64 &&
       (DstVT == MVT::f32 || DstVT == MVT::f64))

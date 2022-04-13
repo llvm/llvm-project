@@ -485,17 +485,23 @@ define float @uitofp_i16tof32(i16 %x) #0 {
 define float @uitofp_i32tof32(i32 %x) #0 {
 ; SSE-X86-LABEL: uitofp_i32tof32:
 ; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    pushl %eax
+; SSE-X86-NEXT:    pushl %ebp
 ; SSE-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-X86-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; SSE-X86-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; SSE-X86-NEXT:    cvtsd2ss %xmm0, %xmm0
-; SSE-X86-NEXT:    movss %xmm0, (%esp)
-; SSE-X86-NEXT:    flds (%esp)
+; SSE-X86-NEXT:    .cfi_offset %ebp, -8
+; SSE-X86-NEXT:    movl %esp, %ebp
+; SSE-X86-NEXT:    .cfi_def_cfa_register %ebp
+; SSE-X86-NEXT:    andl $-8, %esp
+; SSE-X86-NEXT:    subl $16, %esp
+; SSE-X86-NEXT:    movl 8(%ebp), %eax
+; SSE-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    fildll {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    wait
-; SSE-X86-NEXT:    popl %eax
-; SSE-X86-NEXT:    .cfi_def_cfa_offset 4
+; SSE-X86-NEXT:    movl %ebp, %esp
+; SSE-X86-NEXT:    popl %ebp
+; SSE-X86-NEXT:    .cfi_def_cfa %esp, 4
 ; SSE-X86-NEXT:    retl
 ;
 ; SSE-X64-LABEL: uitofp_i32tof32:
@@ -506,17 +512,23 @@ define float @uitofp_i32tof32(i32 %x) #0 {
 ;
 ; AVX1-X86-LABEL: uitofp_i32tof32:
 ; AVX1-X86:       # %bb.0:
-; AVX1-X86-NEXT:    pushl %eax
+; AVX1-X86-NEXT:    pushl %ebp
 ; AVX1-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX1-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-X86-NEXT:    vorpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; AVX1-X86-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; AVX1-X86-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; AVX1-X86-NEXT:    vmovss %xmm0, (%esp)
-; AVX1-X86-NEXT:    flds (%esp)
+; AVX1-X86-NEXT:    .cfi_offset %ebp, -8
+; AVX1-X86-NEXT:    movl %esp, %ebp
+; AVX1-X86-NEXT:    .cfi_def_cfa_register %ebp
+; AVX1-X86-NEXT:    andl $-8, %esp
+; AVX1-X86-NEXT:    subl $16, %esp
+; AVX1-X86-NEXT:    movl 8(%ebp), %eax
+; AVX1-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; AVX1-X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; AVX1-X86-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX1-X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX1-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX1-X86-NEXT:    wait
-; AVX1-X86-NEXT:    popl %eax
-; AVX1-X86-NEXT:    .cfi_def_cfa_offset 4
+; AVX1-X86-NEXT:    movl %ebp, %esp
+; AVX1-X86-NEXT:    popl %ebp
+; AVX1-X86-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX1-X86-NEXT:    retl
 ;
 ; AVX1-X64-LABEL: uitofp_i32tof32:
@@ -1162,12 +1174,13 @@ define double @uitofp_i32tof64(i32 %x) #0 {
 ; SSE-X86-NEXT:    movl %esp, %ebp
 ; SSE-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; SSE-X86-NEXT:    andl $-8, %esp
-; SSE-X86-NEXT:    subl $8, %esp
-; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-X86-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; SSE-X86-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; SSE-X86-NEXT:    movsd %xmm0, (%esp)
-; SSE-X86-NEXT:    fldl (%esp)
+; SSE-X86-NEXT:    subl $16, %esp
+; SSE-X86-NEXT:    movl 8(%ebp), %eax
+; SSE-X86-NEXT:    movl %eax, (%esp)
+; SSE-X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    fildll (%esp)
+; SSE-X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    movl %ebp, %esp
 ; SSE-X86-NEXT:    popl %ebp
@@ -1188,12 +1201,13 @@ define double @uitofp_i32tof64(i32 %x) #0 {
 ; AVX1-X86-NEXT:    movl %esp, %ebp
 ; AVX1-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX1-X86-NEXT:    andl $-8, %esp
-; AVX1-X86-NEXT:    subl $8, %esp
-; AVX1-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-X86-NEXT:    vorpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; AVX1-X86-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; AVX1-X86-NEXT:    vmovsd %xmm0, (%esp)
-; AVX1-X86-NEXT:    fldl (%esp)
+; AVX1-X86-NEXT:    subl $16, %esp
+; AVX1-X86-NEXT:    movl 8(%ebp), %eax
+; AVX1-X86-NEXT:    movl %eax, (%esp)
+; AVX1-X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; AVX1-X86-NEXT:    fildll (%esp)
+; AVX1-X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; AVX1-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; AVX1-X86-NEXT:    wait
 ; AVX1-X86-NEXT:    movl %ebp, %esp
 ; AVX1-X86-NEXT:    popl %ebp
