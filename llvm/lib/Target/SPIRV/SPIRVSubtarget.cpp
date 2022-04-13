@@ -12,6 +12,8 @@
 
 #include "SPIRVSubtarget.h"
 #include "SPIRV.h"
+#include "SPIRVGlobalRegistry.h"
+#include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVTargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -43,8 +45,13 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
       PointerSize(computePointerSize(TT)), SPIRVVersion(0), InstrInfo(),
       FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
-  CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo);
+  GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
+  CallLoweringInfo =
+      std::make_unique<SPIRVCallLowering>(TLInfo, *this, GR.get());
+  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
   RegBankInfo = std::make_unique<SPIRVRegisterBankInfo>();
+  InstSelector.reset(
+      createSPIRVInstructionSelector(TM, *this, *RegBankInfo.get()));
 }
 
 SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,

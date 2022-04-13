@@ -15,13 +15,17 @@ add_public_tablegen_target(SPIRVCommonTableGen)
 add_llvm_target(SPIRVCodeGen
   SPIRVAsmPrinter.cpp
   SPIRVCallLowering.cpp
+  SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
+  SPIRVInstructionSelector.cpp
   SPIRVISelLowering.cpp
+  SPIRVLegalizerInfo.cpp
   SPIRVMCInstLower.cpp
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
+  SPIRVUtils.cpp
 
   LINK_COMPONENTS
   Analysis

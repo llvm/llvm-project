@@ -16,6 +16,13 @@
 namespace llvm {
 class SPIRVTargetMachine;
 class SPIRVSubtarget;
+class InstructionSelector;
+class RegisterBankInfo;
+
+InstructionSelector *
+createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
+                               const SPIRVSubtarget &Subtarget,
+                               const RegisterBankInfo &RBI);
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRV_H
