@@ -5868,11 +5868,10 @@ void Process::PrintWarningOptimization(const SymbolContext &sc) {
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-void Process::PrintWarningCantLoadSwiftModule(const Module &module,
+void Process::PrintWarningCantLoadSwiftModule(Module &module,
                                               std::string details) {
-  PrintWarning(Process::Warnings::eWarningsSwiftImport, (void *)&module,
-               "%s: Cannot load Swift type information; %s\n",
-               module.GetFileSpec().GetCString(), details.c_str());
+  module.ReportWarningCantLoadSwiftModule(std::move(details),
+                                          GetTarget().GetDebugger().GetID());
 }
 
 void Process::PrintWarningToolchainMismatch(const SymbolContext &sc) {
@@ -5890,22 +5889,8 @@ void Process::PrintWarningToolchainMismatch(const SymbolContext &sc) {
     return;
   if (sc.GetLanguage() != eLanguageTypeSwift)
     return;
-  if (SymbolFile *sym_file = sc.module_sp->GetSymbolFile()) {
-    llvm::VersionTuple sym_file_version =
-        sym_file->GetProducerVersion(*sc.comp_unit);
-    llvm::VersionTuple swift_version =
-        swift::version::Version::getCurrentCompilerVersion();
-    if (sym_file_version != swift_version)
-      PrintWarning(
-          Process::Warnings::eWarningsToolchainMismatch, sc.module_sp.get(),
-          "%s was compiled with a different Swift compiler "
-          "(version '%s') than the Swift compiler integrated into LLDB "
-          "(version '%s'). Swift expression evaluation requires a matching "
-          "compiler and debugger from the same toolchain.",
-          sc.module_sp->GetFileSpec().GetFilename().GetCString(),
-          sym_file_version.getAsString().c_str(),
-          swift_version.getAsString().c_str());
-  }
+  sc.module_sp->ReportWarningToolchainMismatch(
+      *sc.comp_unit, GetTarget().GetDebugger().GetID());
 }
 #endif
 

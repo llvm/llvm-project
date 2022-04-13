@@ -823,6 +823,15 @@ public:
   ReportWarningUnsupportedLanguage(lldb::LanguageType language,
                                    llvm::Optional<lldb::user_id_t> debugger_id);
 
+#ifdef LLDB_ENABLE_SWIFT
+  void
+  ReportWarningCantLoadSwiftModule(std::string details,
+                                   llvm::Optional<lldb::user_id_t> debugger_id);
+  void
+  ReportWarningToolchainMismatch(CompileUnit &comp_unit,
+                                 llvm::Optional<lldb::user_id_t> debugger_id);
+#endif
+
   // Return true if the file backing this module has changed since the module
   // was originally created  since we saved the initial file modification time
   // when the module first gets created.
@@ -1073,6 +1082,10 @@ protected:
 
   std::once_flag m_optimization_warning;
   std::once_flag m_language_warning;
+#ifdef LLDB_ENABLE_SWIFT
+  std::once_flag m_swift_import_warning;
+  std::once_flag m_toolchain_mismatch_warning;
+#endif
 
   /// Resolve a file or load virtual address.
   ///
