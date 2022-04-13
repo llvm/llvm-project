@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+fullfp16,-neon < %s | FileCheck %s --check-prefix NEON-DISABLED
 ; Note: We need to use -filetype=obj to trigger verifyInstructionPredicates()
 ; checks since it is not called when emitting assembly output.
-; FIXME: llc -mtriple=aarch64 -mattr=+fullfp16,-neon -o /dev/null %s -filetype=obj
+; RUN: llc -mtriple=aarch64 -mattr=+fullfp16,-neon -o /dev/null %s -filetype=obj
 
 declare half @llvm.fabs.f16(half)
 declare float @llvm.fabs.f32(float)
@@ -19,7 +19,8 @@ define half @fabd16(half %f1, half %f2) {
 ;
 ; NEON-DISABLED-LABEL: fabd16:
 ; NEON-DISABLED:       // %bb.0:
-; NEON-DISABLED-NEXT:    fabd h0, h0, h1
+; NEON-DISABLED-NEXT:    fsub h0, h0, h1
+; NEON-DISABLED-NEXT:    fabs h0, h0
 ; NEON-DISABLED-NEXT:    ret
   %sub = fsub half %f1, %f2
   %abs = tail call half @llvm.fabs.f16(half %sub)
@@ -34,7 +35,8 @@ define float @fabd32(float %f1, float %f2) {
 ;
 ; NEON-DISABLED-LABEL: fabd32:
 ; NEON-DISABLED:       // %bb.0:
-; NEON-DISABLED-NEXT:    fabd s0, s0, s1
+; NEON-DISABLED-NEXT:    fsub s0, s0, s1
+; NEON-DISABLED-NEXT:    fabs s0, s0
 ; NEON-DISABLED-NEXT:    ret
   %sub = fsub float %f1, %f2
   %abs = tail call float @llvm.fabs.f32(float %sub)
@@ -49,7 +51,8 @@ define double @fabd64(double %f1, double %f2) {
 ;
 ; NEON-DISABLED-LABEL: fabd64:
 ; NEON-DISABLED:       // %bb.0:
-; NEON-DISABLED-NEXT:    fabd d0, d0, d1
+; NEON-DISABLED-NEXT:    fsub d0, d0, d1
+; NEON-DISABLED-NEXT:    fabs d0, d0
 ; NEON-DISABLED-NEXT:    ret
   %sub = fsub double %f1, %f2
   %abs = tail call double @llvm.fabs.f64(double %sub)
