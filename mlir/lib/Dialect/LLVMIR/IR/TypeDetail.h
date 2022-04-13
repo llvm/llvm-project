@@ -382,7 +382,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// Storage type for LLVM dialect pointer types. These are uniqued by a pair of
-/// element type and address space.
+/// element type and address space. The element type may be null indicating that
+/// the pointer is opaque.
 struct LLVMPointerTypeStorage : public TypeStorage {
   using KeyTy = std::tuple<Type, unsigned>;
 

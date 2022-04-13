@@ -73,6 +73,10 @@ func @ptr() {
   "some.op"() : () -> !llvm.ptr<i8, 42>
   // CHECK: !llvm.ptr<ptr<i8, 42>, 9>
   "some.op"() : () -> !llvm.ptr<ptr<i8, 42>, 9>
+  // CHECK: !llvm.ptr
+  "some.op"() : () -> !llvm.ptr
+  // CHECK: !llvm.ptr<42>
+  "some.op"() : () -> !llvm.ptr<42>
   return
 }
 

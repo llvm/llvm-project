@@ -97,10 +97,11 @@ def LLVM_AnyPointer : Type<CPred<"$_self.isa<::mlir::LLVM::LLVMPointerType>()">,
 // on the element type.
 class LLVM_PointerTo<Type pointee> : Type<
   And<[LLVM_AnyPointer.predicate,
-       SubstLeaves<
-         "$_self",
-         "$_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType()",
-         pointee.predicate>]>,
+       Or<[CPred<"$_self.cast<::mlir::LLVM::LLVMPointerType>().isOpaque()">,
+           SubstLeaves<
+             "$_self",
+             "$_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType()",
+             pointee.predicate>]>]>,
   "LLVM pointer to " # pointee.summary>;
 
 // Type constraints accepting LLVM pointer type to integer of a specific width.

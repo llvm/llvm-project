@@ -42,6 +42,7 @@ using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 
 static constexpr const char kVolatileAttrName[] = "volatile_";
 static constexpr const char kNonTemporalAttrName[] = "nontemporal";
+static constexpr const char kElemTypeAttrName[] = "elem_type";
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.cpp.inc"
@@ -180,11 +181,13 @@ ParseResult FCmpOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::AllocaOp.
+// Printing, parsing and verification for LLVM::AllocaOp.
 //===----------------------------------------------------------------------===//
 
 void AllocaOp::print(OpAsmPrinter &p) {
-  auto elemTy = getType().cast<LLVM::LLVMPointerType>().getElementType();
+  Type elemTy = getType().cast<LLVM::LLVMPointerType>().getElementType();
+  if (!elemTy)
+    elemTy = *getElemType();
 
   auto funcTy =
       FunctionType::get(getContext(), {getArraySize().getType()}, {getType()});
@@ -193,7 +196,8 @@ void AllocaOp::print(OpAsmPrinter &p) {
   if (getAlignment().hasValue() && *getAlignment() != 0)
     p.printOptionalAttrDict((*this)->getAttrs());
   else
-    p.printOptionalAttrDict((*this)->getAttrs(), {"alignment"});
+    p.printOptionalAttrDict((*this)->getAttrs(),
+                            {"alignment", kElemTypeAttrName});
   p << " : " << funcTy;
 }
 
@@ -232,8 +236,35 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.resolveOperand(arraySize, funcType.getInput(0), result.operands))
     return failure();
 
+  Type resultType = funcType.getResult(0);
+  if (auto ptrResultType = resultType.dyn_cast<LLVMPointerType>()) {
+    if (ptrResultType.isOpaque())
+      result.addAttribute(kElemTypeAttrName, TypeAttr::get(elemType));
+  }
+
   result.addTypes({funcType.getResult(0)});
   return success();
+}
+
+/// Checks that the elemental type is present in either the pointer type or
+/// the attribute, but not both.
+static LogicalResult verifyOpaquePtr(Operation *op, LLVMPointerType ptrType,
+                                     Optional<Type> ptrElementType) {
+  if (ptrType.isOpaque() && !ptrElementType.hasValue()) {
+    return op->emitOpError() << "expected '" << kElemTypeAttrName
+                             << "' attribute if opaque pointer type is used";
+  }
+  if (!ptrType.isOpaque() && ptrElementType.hasValue()) {
+    return op->emitOpError()
+           << "unexpected '" << kElemTypeAttrName
+           << "' attribute when non-opaque pointer type is used";
+  }
+  return success();
+}
+
+LogicalResult AllocaOp::verify() {
+  return verifyOpaquePtr(getOperation(), getType().cast<LLVMPointerType>(),
+                         getElemType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -402,20 +433,12 @@ static void recordStructIndices(Type type, unsigned currentIndex,
 /// provided, it is populated with sizes of the indexed structs for bounds
 /// verification purposes.
 static void
-findKnownStructIndices(Type baseGEPType, SmallVectorImpl<unsigned> &indices,
+findKnownStructIndices(Type sourceElementType,
+                       SmallVectorImpl<unsigned> &indices,
                        SmallVectorImpl<unsigned> *structSizes = nullptr) {
-  Type type = baseGEPType;
-  if (auto vectorType = type.dyn_cast<VectorType>())
-    type = vectorType.getElementType();
-  if (auto scalableVectorType = type.dyn_cast<LLVMScalableVectorType>())
-    type = scalableVectorType.getElementType();
-  if (auto fixedVectorType = type.dyn_cast<LLVMFixedVectorType>())
-    type = fixedVectorType.getElementType();
-
-  Type pointeeType = type.cast<LLVMPointerType>().getElementType();
   SmallPtrSet<Type, 4> visited;
-  recordStructIndices(pointeeType, /*currentIndex=*/1, indices, structSizes,
-                      visited);
+  recordStructIndices(sourceElementType, /*currentIndex=*/1, indices,
+                      structSizes, visited);
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
@@ -426,6 +449,17 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
         attributes);
 }
 
+/// Returns the elemental type of any LLVM-compatible vector type or self.
+static Type extractVectorElementType(Type type) {
+  if (auto vectorType = type.dyn_cast<VectorType>())
+    return vectorType.getElementType();
+  if (auto scalableVectorType = type.dyn_cast<LLVMScalableVectorType>())
+    return scalableVectorType.getElementType();
+  if (auto fixedVectorType = type.dyn_cast<LLVMFixedVectorType>())
+    return fixedVectorType.getElementType();
+  return type;
+}
+
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Value basePtr, ValueRange indices,
                   ArrayRef<int32_t> structIndices,
@@ -434,7 +468,10 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   SmallVector<int32_t> updatedStructIndices(structIndices.begin(),
                                             structIndices.end());
   SmallVector<unsigned> structRelatedPositions;
-  findKnownStructIndices(basePtr.getType(), structRelatedPositions);
+  auto ptrType =
+      extractVectorElementType(basePtr.getType()).cast<LLVMPointerType>();
+  assert(!ptrType.isOpaque() && "expected non-opaque pointer");
+  findKnownStructIndices(ptrType.getElementType(), structRelatedPositions);
 
   SmallVector<unsigned> operandsToErase;
   for (unsigned pos : structRelatedPositions) {
@@ -523,9 +560,15 @@ static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
 }
 
 LogicalResult LLVM::GEPOp::verify() {
+  if (failed(verifyOpaquePtr(
+          getOperation(),
+          extractVectorElementType(getType()).cast<LLVMPointerType>(),
+          getElemType())))
+    return failure();
+
   SmallVector<unsigned> indices;
   SmallVector<unsigned> structSizes;
-  findKnownStructIndices(getBase().getType(), indices, &structSizes);
+  findKnownStructIndices(getSourceElementType(), indices, &structSizes);
   DenseIntElementsAttr structIndices = getStructIndices();
   for (unsigned i : llvm::seq<unsigned>(0, indices.size())) {
     unsigned index = indices[i];
@@ -542,6 +585,15 @@ LogicalResult LLVM::GEPOp::verify() {
                            << " indexing a struct is out of bounds";
   }
   return success();
+}
+
+Type LLVM::GEPOp::getSourceElementType() {
+  if (Optional<Type> elemType = getElemType())
+    return *elemType;
+
+  return extractVectorElementType(getBase().getType())
+      .cast<LLVMPointerType>()
+      .getElementType();
 }
 
 //===----------------------------------------------------------------------===//
@@ -637,22 +689,28 @@ void LoadOp::print(OpAsmPrinter &p) {
   if (getVolatile_())
     p << "volatile ";
   p << getAddr();
-  p.printOptionalAttrDict((*this)->getAttrs(), {kVolatileAttrName});
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {kVolatileAttrName, kElemTypeAttrName});
   p << " : " << getAddr().getType();
+  if (getAddr().getType().cast<LLVMPointerType>().isOpaque())
+    p << " -> " << getType();
 }
 
-// Extract the pointee type from the LLVM pointer type wrapped in MLIR.  Return
-// the resulting type wrapped in MLIR, or nullptr on error.
-static Type getLoadStoreElementType(OpAsmParser &parser, Type type,
-                                    SMLoc trailingTypeLoc) {
+// Extract the pointee type from the LLVM pointer type wrapped in MLIR. Return
+// the resulting type if any, null type if opaque pointers are used, and None
+// if the given type is not the pointer type.
+static Optional<Type> getLoadStoreElementType(OpAsmParser &parser, Type type,
+                                              SMLoc trailingTypeLoc) {
   auto llvmTy = type.dyn_cast<LLVM::LLVMPointerType>();
-  if (!llvmTy)
-    return parser.emitError(trailingTypeLoc, "expected LLVM pointer type"),
-           nullptr;
+  if (!llvmTy) {
+    parser.emitError(trailingTypeLoc, "expected LLVM pointer type");
+    return llvm::None;
+  }
   return llvmTy.getElementType();
 }
 
 // <operation> ::= `llvm.load` `volatile` ssa-use attribute-dict? `:` type
+//                 (`->` type)?
 ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::UnresolvedOperand addr;
   Type type;
@@ -667,9 +725,19 @@ ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperand(addr, type, result.operands))
     return failure();
 
-  Type elemTy = getLoadStoreElementType(parser, type, trailingTypeLoc);
+  Optional<Type> elemTy =
+      getLoadStoreElementType(parser, type, trailingTypeLoc);
+  if (!elemTy)
+    return failure();
+  if (*elemTy) {
+    result.addTypes(*elemTy);
+    return success();
+  }
 
-  result.addTypes(elemTy);
+  Type trailingType;
+  if (parser.parseArrow() || parser.parseType(trailingType))
+    return failure();
+  result.addTypes(trailingType);
   return success();
 }
 
@@ -698,11 +766,14 @@ void StoreOp::print(OpAsmPrinter &p) {
     p << "volatile ";
   p << getValue() << ", " << getAddr();
   p.printOptionalAttrDict((*this)->getAttrs(), {kVolatileAttrName});
-  p << " : " << getAddr().getType();
+  p << " : ";
+  if (getAddr().getType().cast<LLVMPointerType>().isOpaque())
+    p << getValue().getType() << ", ";
+  p << getAddr().getType();
 }
 
 // <operation> ::= `llvm.store` `volatile` ssa-use `,` ssa-use
-//                 attribute-dict? `:` type
+//                 attribute-dict? `:` type (`,` type)?
 ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::UnresolvedOperand addr, value;
   Type type;
@@ -717,11 +788,20 @@ ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type))
     return failure();
 
-  Type elemTy = getLoadStoreElementType(parser, type, trailingTypeLoc);
-  if (!elemTy)
-    return failure();
+  Type operandType;
+  if (succeeded(parser.parseOptionalComma())) {
+    operandType = type;
+    if (parser.parseType(type))
+      return failure();
+  } else {
+    Optional<Type> maybeOperandType =
+        getLoadStoreElementType(parser, type, trailingTypeLoc);
+    if (!maybeOperandType)
+      return failure();
+    operandType = *maybeOperandType;
+  }
 
-  if (parser.resolveOperand(value, elemTy, result.operands) ||
+  if (parser.resolveOperand(value, operandType, result.operands) ||
       parser.resolveOperand(addr, type, result.operands))
     return failure();
 
