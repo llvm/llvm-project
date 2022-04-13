@@ -42,7 +42,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
@@ -312,39 +311,6 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   MPM.run(Mod, MAM);
 }
 
-static void runOldPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
-                           bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
-                           const ModuleSummaryIndex *ImportSummary) {
-  legacy::PassManager passes;
-  passes.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
-
-  PassManagerBuilder PMB;
-  PMB.LibraryInfo = new TargetLibraryInfoImpl(Triple(TM->getTargetTriple()));
-  if (Conf.Freestanding)
-    PMB.LibraryInfo->disableAllFunctions();
-  PMB.Inliner = createFunctionInliningPass();
-  PMB.ExportSummary = ExportSummary;
-  PMB.ImportSummary = ImportSummary;
-  // Unconditionally verify input since it is not verified before this
-  // point and has unknown origin.
-  PMB.VerifyInput = true;
-  PMB.VerifyOutput = !Conf.DisableVerify;
-  PMB.LoopVectorize = true;
-  PMB.SLPVectorize = true;
-  PMB.OptLevel = Conf.OptLevel;
-  PMB.PGOSampleUse = Conf.SampleProfile;
-  PMB.EnablePGOCSInstrGen = Conf.RunCSIRInstr;
-  if (!Conf.RunCSIRInstr && !Conf.CSIRProfile.empty()) {
-    PMB.EnablePGOCSInstrUse = true;
-    PMB.PGOInstrUse = Conf.CSIRProfile;
-  }
-  if (IsThinLTO)
-    PMB.populateThinLTOPassManager(passes);
-  else
-    PMB.populateLTOPassManager(passes);
-  passes.run(Mod);
-}
-
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
@@ -367,12 +333,8 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
                                /*Cmdline*/ CmdArgs);
   }
   // FIXME: Plumb the combined index into the new pass manager.
-  if (Conf.UseNewPM || !Conf.OptPipeline.empty()) {
-    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                   ImportSummary);
-  } else {
-    runOldPMPasses(Conf, Mod, TM, IsThinLTO, ExportSummary, ImportSummary);
-  }
+  runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
+                 ImportSummary);
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
