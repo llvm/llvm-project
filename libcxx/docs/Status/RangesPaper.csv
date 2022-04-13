@@ -151,7 +151,7 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.iota] <https://wg21.link/range.iota>`_,`iota_view <https://llvm.org/D107396>`_,[range.all],Zoe Carver,✅
 `[range.all] <https://wg21.link/range.all>`_,`view::all <https://llvm.org/D102028>`_,"[range.subrange], [range.view.ref]",Zoe Carver,✅
 `[range.ref.view] <https://wg21.link/range.ref.view>`_,`ref_view <https://llvm.org/D102020>`_,[view.interface],Zoe Carver,✅
-`[range.filter] <https://wg21.link/range.filter>`_,`filter_view <https://llvm.org/D109086>`_,[range.all],Louis Dionne,Under review
+`[range.filter] <https://wg21.link/range.filter>`_,`filter_view <https://llvm.org/D109086>`_,[range.all],Louis Dionne,✅
 `[range.transform] <https://wg21.link/range.transform>`_,`transform_view <https://llvm.org/D103056>`_,[range.all],Zoe Carver,✅
 `[range.take] <https://wg21.link/range.take>`_,`take_view <https://llvm.org/D106507>`_,[range.all],Zoe Carver,✅
 `[range.join] <https://wg21.link/range.join>`_,`join_view <https://llvm.org/D107671>`_,[range.all],Zoe Carver,✅

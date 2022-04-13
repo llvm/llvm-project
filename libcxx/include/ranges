@@ -150,6 +150,15 @@ namespace std::ranges {
   template<class T>
     inline constexpr bool enable_borrowed_range<owning_view<T>> = enable_borrowed_range<T>;
 
+  // [range.filter], filter view
+  template<input_range V, indirect_unary_predicate<iterator_t<V>> Pred>
+    requires view<V> && is_object_v<Pred>
+  class filter_view;
+
+  namespace views {
+    inline constexpr unspecified filter = unspecified;
+  }
+
   // [range.drop], drop view
   template<view V>
     class drop_view;
@@ -266,6 +275,7 @@ namespace std {
 #include <__ranges/empty_view.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
+#include <__ranges/filter_view.h>
 #include <__ranges/iota_view.h>
 #include <__ranges/join_view.h>
 #include <__ranges/lazy_split_view.h>

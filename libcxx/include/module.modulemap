@@ -849,6 +849,7 @@ module std [system] {
       module empty_view             { private header "__ranges/empty_view.h" }
       module enable_borrowed_range  { private header "__ranges/enable_borrowed_range.h" }
       module enable_view            { private header "__ranges/enable_view.h" }
+      module filter_view            { private header "__ranges/filter_view.h" }
       module iota_view              { private header "__ranges/iota_view.h" }
       module join_view              { private header "__ranges/join_view.h" }
       module lazy_split_view        { private header "__ranges/lazy_split_view.h" }
