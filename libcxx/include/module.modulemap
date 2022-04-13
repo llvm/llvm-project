@@ -661,6 +661,7 @@ module std [system] {
       module iterator_traits       { private header "__iterator/iterator_traits.h" }
       module mergeable             { private header "__iterator/mergeable.h" }
       module move_iterator         { private header "__iterator/move_iterator.h" }
+      module move_sentinel         { private header "__iterator/move_sentinel.h" }
       module next                  { private header "__iterator/next.h" }
       module ostream_iterator      { private header "__iterator/ostream_iterator.h" }
       module ostreambuf_iterator   {
