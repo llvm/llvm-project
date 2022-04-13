@@ -18,7 +18,8 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-namespace PS4cpu {
+namespace PScpu {
+// Functions/classes in this namespace support both PS4 and PS5.
 
 void addProfileRTArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
@@ -28,7 +29,7 @@ void addSanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
 class LLVM_LIBRARY_VISIBILITY Assemble : public Tool {
 public:
-  Assemble(const ToolChain &TC) : Tool("PS4cpu::Assemble", "assembler", TC) {}
+  Assemble(const ToolChain &TC) : Tool("PScpu::Assemble", "assembler", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -40,7 +41,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Link : public Tool {
 public:
-  Link(const ToolChain &TC) : Tool("PS4cpu::Link", "linker", TC) {}
+  Link(const ToolChain &TC) : Tool("PScpu::Link", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
@@ -50,7 +51,7 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
-} // end namespace PS4cpu
+} // namespace PScpu
 } // namespace tools
 
 namespace toolchains {
@@ -109,7 +110,6 @@ public:
   virtual const char *getProfileRTLibName() const = 0;
 
 protected:
-  Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
 };
 
@@ -135,6 +135,34 @@ public:
   const char *getProfileRTLibName() const override {
     return "libclang_rt.profile-x86_64.a";
   }
+
+protected:
+  Tool *buildAssembler() const override;
+};
+
+// PS5-specific Toolchain class.
+class LLVM_LIBRARY_VISIBILITY PS5CPU : public PS4PS5Base {
+public:
+  PS5CPU(const Driver &D, const llvm::Triple &Triple,
+         const llvm::opt::ArgList &Args);
+
+  unsigned GetDefaultDwarfVersion() const override { return 5; }
+
+  SanitizerMask getSupportedSanitizers() const override;
+
+  const char *getLinkerBaseName() const override { return "lld"; }
+  std::string qualifyPSCmdName(StringRef CmdName) const override {
+    return Twine("prospero-", CmdName).str();
+  }
+  void addSanitizerArgs(const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs, const char *Prefix,
+                        const char *Suffix) const override;
+  const char *getProfileRTLibName() const override {
+    return "libclang_rt.profile-x86_64_nosubmission.a";
+  }
+
+protected:
+  Tool *buildAssembler() const override;
 };
 
 } // end namespace toolchains

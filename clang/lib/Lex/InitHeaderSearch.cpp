@@ -239,6 +239,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     case llvm::Triple::OpenBSD:
     case llvm::Triple::NaCl:
     case llvm::Triple::PS4:
+    case llvm::Triple::PS5:
     case llvm::Triple::ELFIAMCU:
     case llvm::Triple::Fuchsia:
       break;
@@ -351,11 +352,14 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   case llvm::Triple::ELFIAMCU:
   case llvm::Triple::Fuchsia:
     break;
-  case llvm::Triple::PS4: {
+  case llvm::Triple::PS4:
+  case llvm::Triple::PS5: {
     // <isysroot> gets prepended later in AddPath().
     std::string BaseSDKPath;
     if (!HasSysroot) {
-      const char *envValue = getenv("SCE_ORBIS_SDK_DIR");
+      const char *EnvVar = (os == llvm::Triple::PS4) ? "SCE_ORBIS_SDK_DIR"
+                                                     : "SCE_PROSPERO_SDK_DIR";
+      const char *envValue = getenv(EnvVar);
       if (envValue)
         BaseSDKPath = envValue;
       else {
@@ -370,8 +374,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
       }
     }
     AddPath(BaseSDKPath + "/target/include", System, false);
-    if (triple.isPS4())
-      AddPath(BaseSDKPath + "/target/include_common", System, false);
+    AddPath(BaseSDKPath + "/target/include_common", System, false);
     break;
   }
   default:

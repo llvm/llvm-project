@@ -5541,11 +5541,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
 
-  // Add runtime flag for PS4 when PGO, coverage, or sanitizers are enabled.
-  if (RawTriple.isPS4() &&
+  // Add runtime flag for PS4/PS5 when PGO, coverage, or sanitizers are enabled.
+  if (RawTriple.isPS() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    PS4cpu::addProfileRTArgs(TC, Args, CmdArgs);
-    PS4cpu::addSanitizerArgs(TC, Args, CmdArgs);
+    PScpu::addProfileRTArgs(TC, Args, CmdArgs);
+    PScpu::addSanitizerArgs(TC, Args, CmdArgs);
   }
 
   // Pass options for controlling the default header search paths.
