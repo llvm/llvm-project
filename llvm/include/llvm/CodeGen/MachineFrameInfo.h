@@ -359,6 +359,7 @@ public:
   /// This object is used for SjLj exceptions.
   int getFunctionContextIndex() const { return FunctionContextIdx; }
   void setFunctionContextIndex(int I) { FunctionContextIdx = I; }
+  bool hasFunctionContextIndex() const { return FunctionContextIdx != -1; }
 
   /// This method may be called any time after instruction
   /// selection is complete to determine if there is a call to
