@@ -605,9 +605,10 @@ Out:
 define void @test_sink_store_only() writeonly {
 ; CHECK-LABEL: @test_sink_store_only(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GLB_PROMOTED:%.*]] = load i8, i8* @glb, align 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ poison, [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ [[GLB_PROMOTED]], [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[I]], 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
@@ -663,58 +664,6 @@ loop:
   store i8 %div, i8* @glb, align 1
   %add = add i8 %i, 4
   br i1 %cmp, label %loop, label %exit
-
-exit:
-  ret void
-}
-
-define void @sink_store_lcssa_phis(i32* %ptr, i1 %c) {
-; CHECK-LABEL: @sink_store_lcssa_phis(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
-; CHECK:       loop.1.header:
-; CHECK-NEXT:    br label [[LOOP_2_HEADER:%.*]]
-; CHECK:       loop.2.header:
-; CHECK-NEXT:    br i1 false, label [[LOOP_3_HEADER_PREHEADER:%.*]], label [[LOOP_1_LATCH:%.*]]
-; CHECK:       loop.3.header.preheader:
-; CHECK-NEXT:    br label [[LOOP_3_HEADER:%.*]]
-; CHECK:       loop.3.header:
-; CHECK-NEXT:    [[I_11:%.*]] = phi i32 [ [[I_1:%.*]], [[LOOP_3_LATCH:%.*]] ], [ poison, [[LOOP_3_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[I_1]] = phi i32 [ 1, [[LOOP_3_LATCH]] ], [ 0, [[LOOP_3_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br i1 true, label [[LOOP_3_LATCH]], label [[LOOP_2_LATCH:%.*]]
-; CHECK:       loop.3.latch:
-; CHECK-NEXT:    br label [[LOOP_3_HEADER]]
-; CHECK:       loop.2.latch:
-; CHECK-NEXT:    [[I_11_LCSSA:%.*]] = phi i32 [ [[I_11]], [[LOOP_3_HEADER]] ]
-; CHECK-NEXT:    store i32 [[I_11_LCSSA]], i32* [[PTR:%.*]], align 4
-; CHECK-NEXT:    br label [[LOOP_2_HEADER]]
-; CHECK:       loop.1.latch:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_1_HEADER]], label [[EXIT:%.*]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret void
-;
-entry:
-  br label %loop.1.header
-
-loop.1.header:
-  br label %loop.2.header
-
-loop.2.header:
-  br i1 false, label %loop.3.header, label %loop.1.latch
-
-loop.3.header:
-  %i.1 = phi i32 [ 1, %loop.3.latch ], [ 0, %loop.2.header ]
-  br i1 true, label %loop.3.latch, label %loop.2.latch
-
-loop.3.latch:
-  store i32 %i.1, i32* %ptr, align 4
-  br label %loop.3.header
-
-loop.2.latch:
-  br label %loop.2.header
-
-loop.1.latch:
-  br i1 %c, label %loop.1.header, label %exit
 
 exit:
   ret void
