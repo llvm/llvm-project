@@ -597,8 +597,6 @@ struct Allocator {
       CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
       reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
     }
-    if (&__sanitizer_malloc_hook)
-      __sanitizer_malloc_hook(res, size);
     RunMallocHooks(res, size);
     return res;
   }
@@ -680,8 +678,6 @@ struct Allocator {
       return;
     }
 
-    if (&__sanitizer_free_hook)
-      __sanitizer_free_hook(ptr);
     RunFreeHooks(ptr);
 
     // Must mark the chunk as quarantined before any changes to its metadata.
@@ -1221,16 +1217,3 @@ int __asan_update_allocation_context(void* addr) {
   GET_STACK_TRACE_MALLOC;
   return instance.UpdateAllocationStack((uptr)addr, &stack);
 }
-
-#if !SANITIZER_SUPPORTS_WEAK_HOOKS
-// Provide default (no-op) implementation of malloc hooks.
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_malloc_hook,
-                             void *ptr, uptr size) {
-  (void)ptr;
-  (void)size;
-}
-
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
-  (void)ptr;
-}
-#endif
