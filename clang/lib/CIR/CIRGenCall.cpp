@@ -159,6 +159,14 @@ void ClangToCIRArgMapping::construct(const ASTContext &Context,
 
 } // namespace
 
+static bool hasInAllocaArgs(CIRGenModule &CGM, CallingConv ExplicitCC,
+                            ArrayRef<QualType> ArgTypes) {
+  assert(ExplicitCC != CC_Swift && ExplicitCC != CC_SwiftAsync && "Swift NYI");
+  assert(!CGM.getTarget().getCXXABI().isMicrosoft() && "MSABI NYI");
+
+  return false;
+}
+
 mlir::FunctionType CIRGenTypes::GetFunctionType(clang::GlobalDecl GD) {
   const CIRGenFunctionInfo &FI = arrangeGlobalDeclaration(GD);
   return GetFunctionType(FI);
@@ -489,4 +497,80 @@ RValue CIRGenFunction::buildAnyExprToTemp(const Expr *E) {
 
   assert(!hasAggregateEvaluationKind(E->getType()) && "aggregate args NYI");
   return buildAnyExpr(E, AggSlot);
+}
+
+void CIRGenFunction::buildCallArgs(
+    CallArgList &Args, PrototypeWrapper Prototype,
+    llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
+    AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order) {
+
+  llvm::SmallVector<QualType, 16> ArgTypes;
+
+  assert((ParamsToSkip == 0 || Prototype.P) &&
+         "Can't skip parameters if type info is not provided");
+
+  // This variable only captures *explicitly* written conventions, not those
+  // applied by default via command line flags or target defaults, such as
+  // thiscall, appcs, stdcall via -mrtd, etc. Computing that correctly would
+  // require knowing if this is a C++ instance method or being able to see
+  // unprotyped FunctionTypes.
+  CallingConv ExplicitCC = CC_C;
+
+  // First, if a prototype was provided, use those argument types.
+  bool IsVariadic = false;
+  if (Prototype.P) {
+    const auto *MD = Prototype.P.dyn_cast<const ObjCMethodDecl *>();
+    assert(!MD && "ObjCMethodDecl NYI");
+
+    const auto *FPT = Prototype.P.get<const FunctionProtoType *>();
+    IsVariadic = FPT->isVariadic();
+    assert(!IsVariadic && "Variadic functions NYI");
+    ExplicitCC = FPT->getExtInfo().getCC();
+    ArgTypes.assign(FPT->param_type_begin() + ParamsToSkip,
+                    FPT->param_type_end());
+  }
+
+  // If we still have any arguments, emit them using the type of the argument.
+  for (auto *A : llvm::drop_begin(ArgRange, ArgTypes.size())) {
+    assert(!IsVariadic && "Variadic functions NYI");
+    ArgTypes.push_back(A->getType());
+  };
+  assert((int)ArgTypes.size() == (ArgRange.end() - ArgRange.begin()));
+
+  // We must evaluate arguments from right to left in the MS C++ ABI, because
+  // arguments are destroyed left to right in the callee. As a special case,
+  // there are certain language constructs taht require left-to-right
+  // evaluation, and in those cases we consider the evaluation order requirement
+  // to trump the "destruction order is reverse construction order" guarantee.
+  bool LeftToRight = true;
+  assert(!CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee() &&
+         "MSABI NYI");
+  assert(!hasInAllocaArgs(CGM, ExplicitCC, ArgTypes) && "NYI");
+
+  // Evaluate each argument in the appropriate order.
+  size_t CallArgsStart = Args.size();
+  for (unsigned I = 0, E = ArgTypes.size(); I != E; ++I) {
+    unsigned Idx = LeftToRight ? I : E - I - 1;
+    CallExpr::const_arg_iterator Arg = ArgRange.begin() + Idx;
+    unsigned InitialArgSize = Args.size();
+    assert(!isa<ObjCIndirectCopyRestoreExpr>(*Arg) && "NYI");
+    assert(!isa<ObjCMethodDecl>(AC.getDecl()) && "NYI");
+
+    buildCallArg(Args, *Arg, ArgTypes[Idx]);
+    // In particular, we depend on it being the last arg in Args, and the
+    // objectsize bits depend on there only being one arg if !LeftToRight.
+    assert(InitialArgSize + 1 == Args.size() &&
+           "The code below depends on only adding one arg per buildCallArg");
+    (void)InitialArgSize;
+    // Since pointer argument are never emitted as LValue, it is safe to emit
+    // non-null argument check for r-value only.
+    assert(!SanOpts.has(SanitizerKind::NonnullAttribute) && "Sanitizers NYI");
+    assert(!SanOpts.has(SanitizerKind::NullabilityArg) && "Sanitizers NYI");
+  }
+
+  if (!LeftToRight) {
+    // Un-reverse the arguments we just evaluated so they match up with the CIR
+    // function.
+    std::reverse(Args.begin() + CallArgsStart, Args.end());
+  }
 }
