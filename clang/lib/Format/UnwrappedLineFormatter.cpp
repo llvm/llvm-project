@@ -308,7 +308,7 @@ private:
           // Find the last line with lower level.
           auto J = I - 1;
           for (; J != AnnotatedLines.begin(); --J)
-            if ((*J)->Level < TheLine->Level)
+            if (!(*J)->InPPDirective && (*J)->Level < TheLine->Level)
               break;
           if ((*J)->Level >= TheLine->Level)
             return false;
