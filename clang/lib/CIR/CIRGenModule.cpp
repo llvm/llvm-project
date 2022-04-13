@@ -1558,6 +1558,57 @@ static void terminateBody(mlir::OpBuilder &builder, mlir::Region &r,
     b->erase();
 }
 
+mlir::LogicalResult CIRGenModule::buildDoStmt(const DoStmt &S) {
+  mlir::cir::LoopOp loopOp;
+
+  // TODO: pass in array of attributes.
+  auto doStmtBuilder = [&]() -> mlir::LogicalResult {
+    auto forRes = mlir::success();
+
+    loopOp = builder.create<LoopOp>(
+        getLoc(S.getSourceRange()),
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // TODO: branch weigths, likelyhood, profile counter, etc.
+          // C99 6.8.5p2/p4: The first substatement is executed if the
+          // expression compares unequal to 0. The condition must be a
+          // scalar type.
+          mlir::Value condVal = evaluateExprAsBool(S.getCond());
+          b.create<YieldOp>(loc, condVal);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          if (buildStmt(S.getBody(), /*useCurrentScope=*/true).failed())
+            forRes = mlir::failure();
+        },
+        /*stepBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          builder.create<YieldOp>(loc);
+        });
+    return forRes;
+  };
+
+  auto res = mlir::success();
+  auto scopeLoc = getLoc(S.getSourceRange());
+  builder.create<mlir::cir::ScopeOp>(
+      scopeLoc, mlir::TypeRange(), /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto fusedLoc = loc.cast<mlir::FusedLoc>();
+        auto scopeLocBegin = fusedLoc.getLocations()[0];
+        auto scopeLocEnd = fusedLoc.getLocations()[1];
+        LexicalScopeContext lexScope{scopeLocBegin, scopeLocEnd,
+                                     builder.getInsertionBlock()};
+        LexicalScopeGuard lexForScopeGuard{*this, &lexScope};
+        res = doStmtBuilder();
+      });
+
+  if (res.failed())
+    return res;
+
+  terminateBody(builder, loopOp.getBody(), getLoc(S.getEndLoc()));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRGenModule::buildWhileStmt(const WhileStmt &S) {
   mlir::cir::LoopOp loopOp;
 
@@ -1825,9 +1876,12 @@ mlir::LogicalResult CIRGenModule::buildStmt(const Stmt *S,
     if (buildWhileStmt(cast<WhileStmt>(*S)).failed())
       return mlir::failure();
     break;
+  case Stmt::DoStmtClass:
+    if (buildDoStmt(cast<DoStmt>(*S)).failed())
+      return mlir::failure();
+    break;
 
   case Stmt::IndirectGotoStmtClass:
-  case Stmt::DoStmtClass:
   case Stmt::ReturnStmtClass:
   // When implemented, GCCAsmStmtClass should fall-through to MSAsmStmtClass.
   case Stmt::GCCAsmStmtClass:

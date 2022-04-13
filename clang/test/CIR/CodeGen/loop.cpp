@@ -101,3 +101,61 @@ void l2(bool cond) {
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
+
+void l3(bool cond) {
+  int i = 0;
+  do {
+    i = i + 1;
+  } while (cond);
+  do {
+    i = i + 1;
+  } while (true);
+  do {
+    i = i + 1;
+  } while (1);
+}
+
+// CHECK: func @l3
+// CHECK: cir.scope {
+// CHECK-NEXT:   cir.loop(cond :  {
+// CHECK-NEXT:   %3 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
+// CHECK-NEXT:   cir.yield loopcondition %3 : !cir.bool
+// CHECK-NEXT:   }, step :  {
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   })  {
+// CHECK-NEXT:   %3 = cir.load %1 : cir.ptr <i32>, i32
+// CHECK-NEXT:   %4 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:   %5 = cir.binop(add, %3, %4) : i32
+// CHECK-NEXT:   cir.store %5, %1 : i32, cir.ptr <i32>
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT:   cir.loop(cond :  {
+// CHECK-NEXT:   %3 = cir.cst(true) : !cir.bool
+// CHECK-NEXT:   cir.yield loopcondition %3 : !cir.bool
+// CHECK-NEXT:   }, step :  {
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   })  {
+// CHECK-NEXT:   %3 = cir.load %1 : cir.ptr <i32>, i32
+// CHECK-NEXT:   %4 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:   %5 = cir.binop(add, %3, %4) : i32
+// CHECK-NEXT:   cir.store %5, %1 : i32, cir.ptr <i32>
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT:   cir.loop(cond :  {
+// CHECK-NEXT:   %3 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:   %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
+// CHECK-NEXT:   cir.yield loopcondition %4 : !cir.bool
+// CHECK-NEXT:   }, step :  {
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   })  {
+// CHECK-NEXT:   %3 = cir.load %1 : cir.ptr <i32>, i32
+// CHECK-NEXT:   %4 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:   %5 = cir.binop(add, %3, %4) : i32
+// CHECK-NEXT:   cir.store %5, %1 : i32, cir.ptr <i32>
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
