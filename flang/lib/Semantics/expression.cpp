@@ -693,10 +693,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   if (std::optional<int> kind{IsImpliedDo(n.source)}) {
     return AsMaybeExpr(ConvertToKind<TypeCategory::Integer>(
         *kind, AsExpr(ImpliedDoIndex{n.source})));
-  } else if (context_.HasError(n)) {
-    return std::nullopt;
-  } else if (!n.symbol) {
-    SayAt(n, "Internal error: unresolved name '%s'"_err_en_US, n.source);
+  }
+  if (context_.HasError(n.symbol)) { // includes case of no symbol
     return std::nullopt;
   } else {
     const Symbol &ultimate{n.symbol->GetUltimate()};

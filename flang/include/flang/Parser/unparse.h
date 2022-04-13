@@ -27,6 +27,7 @@ class ProcedureRef;
 namespace Fortran::parser {
 
 struct Program;
+struct Expr;
 
 // A function called before each Statement is unparsed.
 using preStatementType =
@@ -43,11 +44,19 @@ struct AnalyzedObjectsAsFortran {
   std::function<void(llvm::raw_ostream &, const evaluate::ProcedureRef &)> call;
 };
 
-// Converts parsed program to out as Fortran.
-void Unparse(llvm::raw_ostream &out, const Program &program,
+// Converts parsed program (or fragment) to out as Fortran.
+template <typename A>
+void Unparse(llvm::raw_ostream &out, const A &root,
     Encoding encoding = Encoding::UTF_8, bool capitalizeKeywords = true,
     bool backslashEscapes = true, preStatementType *preStatement = nullptr,
     AnalyzedObjectsAsFortran * = nullptr);
+
+extern template void Unparse(llvm::raw_ostream &out, const Program &program,
+    Encoding encoding, bool capitalizeKeywords, bool backslashEscapes,
+    preStatementType *preStatement, AnalyzedObjectsAsFortran *);
+extern template void Unparse(llvm::raw_ostream &out, const Expr &expr,
+    Encoding encoding, bool capitalizeKeywords, bool backslashEscapes,
+    preStatementType *preStatement, AnalyzedObjectsAsFortran *);
 } // namespace Fortran::parser
 
 #endif

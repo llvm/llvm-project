@@ -380,6 +380,9 @@ llvm::raw_ostream &operator<<(
   DumpList(os, "shape", x.shape());
   DumpList(os, "coshape", x.coshape());
   DumpExpr(os, "init", x.init_);
+  if (x.unanalyzedPDTComponentInit()) {
+    os << " (has unanalyzedPDTComponentInit)";
+  }
   return os;
 }
 
