@@ -15,7 +15,6 @@ clang_target_link_libraries(ClangPseudoTests
   PRIVATE
   clangBasic
   clangLex
-  clangTesting
   )
 
 target_link_libraries(ClangPseudoTests

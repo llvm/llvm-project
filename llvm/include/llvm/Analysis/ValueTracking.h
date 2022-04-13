@@ -340,7 +340,9 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
 
   /// If we can compute the length of the string pointed to by the specified
   /// pointer, return 'len+1'.  If we can't, return 0.
-  uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
+  uint64_t GetStringLength(const Value *V,
+                           const TargetLibraryInfo *TLI = nullptr,
+                           unsigned CharSize = 8);
 
   /// This function returns call pointer argument that is considered the same by
   /// aliasing rules. You CAN'T use it to replace one value with another. If

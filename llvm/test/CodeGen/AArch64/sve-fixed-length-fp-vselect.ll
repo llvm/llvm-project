@@ -312,4 +312,4 @@ define void @select_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
   ret void
 }
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" uwtable }

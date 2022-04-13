@@ -1271,8 +1271,6 @@ let OtherPredicates = [HasExtendedImageInsts] in {
 defm IMAGE_SAMPLE_CL            : MIMG_Sampler_WQM <mimgopc<0x40, 0x21>, AMDGPUSample_cl>;
 defm IMAGE_SAMPLE_D             : MIMG_Sampler <mimgopc<0x1c, 0x22>, AMDGPUSample_d>;
 defm IMAGE_SAMPLE_D_CL          : MIMG_Sampler <mimgopc<0x41, 0x23>, AMDGPUSample_d_cl>;
-defm IMAGE_SAMPLE_D_G16         : MIMG_Sampler <mimgopc<0x39, 0xa2>, AMDGPUSample_d, 0, 1>;
-defm IMAGE_SAMPLE_D_CL_G16      : MIMG_Sampler <mimgopc<0x5f, 0xa3>, AMDGPUSample_d_cl, 0, 1>;
 defm IMAGE_SAMPLE_L             : MIMG_Sampler <mimgopc<0x1d, 0x24>, AMDGPUSample_l>;
 defm IMAGE_SAMPLE_B             : MIMG_Sampler_WQM <mimgopc<0x1e, 0x25>, AMDGPUSample_b>;
 defm IMAGE_SAMPLE_B_CL          : MIMG_Sampler_WQM <mimgopc<0x42, 0x26>, AMDGPUSample_b_cl>;
@@ -1281,8 +1279,6 @@ defm IMAGE_SAMPLE_C             : MIMG_Sampler_WQM <mimgopc<0x20, 0x28>, AMDGPUS
 defm IMAGE_SAMPLE_C_CL          : MIMG_Sampler_WQM <mimgopc<0x43, 0x29>, AMDGPUSample_c_cl>;
 defm IMAGE_SAMPLE_C_D           : MIMG_Sampler <mimgopc<0x21, 0x2a>, AMDGPUSample_c_d>;
 defm IMAGE_SAMPLE_C_D_CL        : MIMG_Sampler <mimgopc<0x44, 0x2b>, AMDGPUSample_c_d_cl>;
-defm IMAGE_SAMPLE_C_D_G16       : MIMG_Sampler <mimgopc<0x3a, 0xaa>, AMDGPUSample_c_d, 0, 1>;
-defm IMAGE_SAMPLE_C_D_CL_G16    : MIMG_Sampler <mimgopc<0x54, 0xab>, AMDGPUSample_c_d_cl, 0, 1>;
 defm IMAGE_SAMPLE_C_L           : MIMG_Sampler <mimgopc<0x22, 0x2c>, AMDGPUSample_c_l>;
 defm IMAGE_SAMPLE_C_B           : MIMG_Sampler_WQM <mimgopc<0x23, 0x2d>, AMDGPUSample_c_b>;
 defm IMAGE_SAMPLE_C_B_CL        : MIMG_Sampler_WQM <mimgopc<0x45, 0x2e>, AMDGPUSample_c_b_cl>;
@@ -1291,8 +1287,6 @@ defm IMAGE_SAMPLE_O             : MIMG_Sampler_WQM <mimgopc<0x25, 0x30>, AMDGPUS
 defm IMAGE_SAMPLE_CL_O          : MIMG_Sampler_WQM <mimgopc<0x46, 0x31>, AMDGPUSample_cl_o>;
 defm IMAGE_SAMPLE_D_O           : MIMG_Sampler <mimgopc<0x26, 0x32>, AMDGPUSample_d_o>;
 defm IMAGE_SAMPLE_D_CL_O        : MIMG_Sampler <mimgopc<0x47, 0x33>, AMDGPUSample_d_cl_o>;
-defm IMAGE_SAMPLE_D_O_G16       : MIMG_Sampler <mimgopc<0x3b, 0xb2>, AMDGPUSample_d_o, 0, 1>;
-defm IMAGE_SAMPLE_D_CL_O_G16    : MIMG_Sampler <mimgopc<0x55, 0xb3>, AMDGPUSample_d_cl_o, 0, 1>;
 defm IMAGE_SAMPLE_L_O           : MIMG_Sampler <mimgopc<0x27, 0x34>, AMDGPUSample_l_o>;
 defm IMAGE_SAMPLE_B_O           : MIMG_Sampler_WQM <mimgopc<0x28, 0x35>, AMDGPUSample_b_o>;
 defm IMAGE_SAMPLE_B_CL_O        : MIMG_Sampler_WQM <mimgopc<0x48, 0x36>, AMDGPUSample_b_cl_o>;
@@ -1301,8 +1295,6 @@ defm IMAGE_SAMPLE_C_O           : MIMG_Sampler_WQM <mimgopc<0x2a, 0x38>, AMDGPUS
 defm IMAGE_SAMPLE_C_CL_O        : MIMG_Sampler_WQM <mimgopc<0x49, 0x39>, AMDGPUSample_c_cl_o>;
 defm IMAGE_SAMPLE_C_D_O         : MIMG_Sampler <mimgopc<0x2b, 0x3a>, AMDGPUSample_c_d_o>;
 defm IMAGE_SAMPLE_C_D_CL_O      : MIMG_Sampler <mimgopc<0x4a, 0x3b>, AMDGPUSample_c_d_cl_o>;
-defm IMAGE_SAMPLE_C_D_O_G16     : MIMG_Sampler <mimgopc<0x3c, 0xba>, AMDGPUSample_c_d_o, 0, 1>;
-defm IMAGE_SAMPLE_C_D_CL_O_G16  : MIMG_Sampler <mimgopc<0x56, 0xbb>, AMDGPUSample_c_d_cl_o, 0, 1>;
 defm IMAGE_SAMPLE_C_L_O         : MIMG_Sampler <mimgopc<0x2c, 0x3c>, AMDGPUSample_c_l_o>;
 defm IMAGE_SAMPLE_C_B_CL_O      : MIMG_Sampler_WQM <mimgopc<0x4b, 0x3e>, AMDGPUSample_c_b_cl_o>;
 defm IMAGE_SAMPLE_C_B_O         : MIMG_Sampler_WQM <mimgopc<0x2d, 0x3d>, AMDGPUSample_c_b_o>;
@@ -1343,6 +1335,17 @@ defm IMAGE_SAMPLE_CD_O          : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6c>, AMDGPUS
 defm IMAGE_SAMPLE_CD_CL_O       : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6d>, AMDGPUSample_cd_cl_o>;
 defm IMAGE_SAMPLE_C_CD_O        : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6e>, AMDGPUSample_c_cd_o>;
 defm IMAGE_SAMPLE_C_CD_CL_O     : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6f>, AMDGPUSample_c_cd_cl_o>;
+} // End OtherPredicates = [HasExtendedImageInsts]
+
+let OtherPredicates = [HasExtendedImageInsts,HasG16] in {
+defm IMAGE_SAMPLE_D_G16         : MIMG_Sampler <mimgopc<0x39, 0xa2>, AMDGPUSample_d, 0, 1>;
+defm IMAGE_SAMPLE_D_CL_G16      : MIMG_Sampler <mimgopc<0x5f, 0xa3>, AMDGPUSample_d_cl, 0, 1>;
+defm IMAGE_SAMPLE_C_D_G16       : MIMG_Sampler <mimgopc<0x3a, 0xaa>, AMDGPUSample_c_d, 0, 1>;
+defm IMAGE_SAMPLE_C_D_CL_G16    : MIMG_Sampler <mimgopc<0x54, 0xab>, AMDGPUSample_c_d_cl, 0, 1>;
+defm IMAGE_SAMPLE_D_O_G16       : MIMG_Sampler <mimgopc<0x3b, 0xb2>, AMDGPUSample_d_o, 0, 1>;
+defm IMAGE_SAMPLE_D_CL_O_G16    : MIMG_Sampler <mimgopc<0x55, 0xb3>, AMDGPUSample_d_cl_o, 0, 1>;
+defm IMAGE_SAMPLE_C_D_O_G16     : MIMG_Sampler <mimgopc<0x3c, 0xba>, AMDGPUSample_c_d_o, 0, 1>;
+defm IMAGE_SAMPLE_C_D_CL_O_G16  : MIMG_Sampler <mimgopc<0x56, 0xbb>, AMDGPUSample_c_d_cl_o, 0, 1>;
 defm IMAGE_SAMPLE_CD_G16        : MIMG_Sampler <mimgopc<MIMG.NOP, 0xe8>, AMDGPUSample_cd, 0, 1>;
 defm IMAGE_SAMPLE_CD_CL_G16     : MIMG_Sampler <mimgopc<MIMG.NOP, 0xe9>, AMDGPUSample_cd_cl, 0, 1>;
 defm IMAGE_SAMPLE_C_CD_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, 0xea>, AMDGPUSample_c_cd, 0, 1>;
@@ -1351,7 +1354,8 @@ defm IMAGE_SAMPLE_CD_O_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, 0xec>, AMDGPUS
 defm IMAGE_SAMPLE_CD_CL_O_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, 0xed>, AMDGPUSample_cd_cl_o, 0, 1>;
 defm IMAGE_SAMPLE_C_CD_O_G16    : MIMG_Sampler <mimgopc<MIMG.NOP, 0xee>, AMDGPUSample_c_cd_o, 0, 1>;
 defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, 0xef>, AMDGPUSample_c_cd_cl_o, 0, 1>;
-} // End OtherPredicates = [HasExtendedImageInsts]
+} // End OtherPredicates = [HasExtendedImageInsts,HasG16]
+
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", mimgopc<0x7e>>;
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", mimgopc<0x7f>>;
 

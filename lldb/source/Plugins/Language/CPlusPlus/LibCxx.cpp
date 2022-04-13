@@ -578,16 +578,20 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   uint64_t size_mode_value = 0;
 
   if (layout == eLibcxxStringLayoutModeDSC) {
-    ValueObjectSP size_mode(D->GetChildAtIndexPath({1, 1, 0}));
+    llvm::SmallVector<size_t, 3> size_mode_locations[] = {
+        {1, 2}, // Post-c3d0205ee771 layout
+        {1, 1, 0},
+        {1, 1, 1},
+    };
+    ValueObjectSP size_mode;
+    for (llvm::ArrayRef<size_t> loc : size_mode_locations) {
+      size_mode = D->GetChildAtIndexPath(loc);
+      if (size_mode && size_mode->GetName() == g_size_name)
+        break;
+    }
+
     if (!size_mode)
       return {};
-
-    if (size_mode->GetName() != g_size_name) {
-      // we are hitting the padding structure, move along
-      size_mode = D->GetChildAtIndexPath({1, 1, 1});
-      if (!size_mode)
-        return {};
-    }
 
     size_mode_value = (size_mode->GetValueAsUnsigned(0));
     short_mode = ((size_mode_value & 0x80) == 0);

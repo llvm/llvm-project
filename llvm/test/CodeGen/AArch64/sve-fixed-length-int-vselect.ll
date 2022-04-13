@@ -130,7 +130,11 @@ define void @select_v32i8(<32 x i8>* %a, <32 x i8>* %b, <32 x i1>* %c) #0 {
 ; CHECK-NEXT:    sel z0.b, p1, z1.b, z2.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:   .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
   %mask = load <32 x i1>, <32 x i1>* %c
   %op1 = load <32 x i8>, <32 x i8>* %a
@@ -290,7 +294,11 @@ define void @select_v64i8(<64 x i8>* %a, <64 x i8>* %b, <64 x i1>* %c) #0 {
 ; VBITS_GE_512-NEXT:    sel z0.b, p1, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_512-NEXT:    mov sp, x29
+; VBITS_GE_512-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_512-NEXT:    .cfi_restore w30
+; VBITS_GE_512-NEXT:    .cfi_restore w29
 ; VBITS_GE_512-NEXT:    ret
   %mask = load <64 x i1>, <64 x i1>* %c
   %op1 = load <64 x i8>, <64 x i8>* %a
@@ -579,7 +587,11 @@ define void @select_v128i8(<128 x i8>* %a, <128 x i8>* %b, <128 x i1>* %c) #0 {
 ; VBITS_GE_1024-NEXT:    sel z0.b, p1, z1.b, z2.b
 ; VBITS_GE_1024-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_1024-NEXT:    mov sp, x29
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_1024-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_1024-NEXT:    .cfi_restore w30
+; VBITS_GE_1024-NEXT:    .cfi_restore w29
 ; VBITS_GE_1024-NEXT:    ret
   %mask = load <128 x i1>, <128 x i1>* %c
   %op1 = load <128 x i8>, <128 x i8>* %a
@@ -1126,7 +1138,11 @@ define void @select_v256i8(<256 x i8>* %a, <256 x i8>* %b, <256 x i1>* %c) #0 {
 ; VBITS_GE_2048-NEXT:    sel z0.b, p1, z1.b, z2.b
 ; VBITS_GE_2048-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_2048-NEXT:    mov sp, x29
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_2048-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_2048-NEXT:    .cfi_restore w30
+; VBITS_GE_2048-NEXT:    .cfi_restore w29
 ; VBITS_GE_2048-NEXT:    ret
   %mask = load <256 x i1>, <256 x i1>* %c
   %op1 = load <256 x i8>, <256 x i8>* %a
@@ -1215,7 +1231,11 @@ define void @select_v16i16(<16 x i16>* %a, <16 x i16>* %b, <16 x i1>* %c) #0 {
 ; CHECK-NEXT:    sel z0.h, p1, z1.h, z2.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
   %mask = load <16 x i1>, <16 x i1>* %c
   %op1 = load <16 x i16>, <16 x i16>* %a
@@ -1311,7 +1331,11 @@ define void @select_v32i16(<32 x i16>* %a, <32 x i16>* %b, <32 x i1>* %c) #0 {
 ; VBITS_GE_512-NEXT:    sel z0.h, p1, z1.h, z2.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    mov sp, x29
+; VBITS_GE_512-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_512-NEXT:    .cfi_restore w30
+; VBITS_GE_512-NEXT:    .cfi_restore w29
 ; VBITS_GE_512-NEXT:    ret
   %mask = load <32 x i1>, <32 x i1>* %c
   %op1 = load <32 x i16>, <32 x i16>* %a
@@ -1471,7 +1495,11 @@ define void @select_v64i16(<64 x i16>* %a, <64 x i16>* %b, <64 x i1>* %c) #0 {
 ; VBITS_GE_1024-NEXT:    sel z0.h, p1, z1.h, z2.h
 ; VBITS_GE_1024-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_1024-NEXT:    mov sp, x29
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_1024-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_1024-NEXT:    .cfi_restore w30
+; VBITS_GE_1024-NEXT:    .cfi_restore w29
 ; VBITS_GE_1024-NEXT:    ret
   %mask = load <64 x i1>, <64 x i1>* %c
   %op1 = load <64 x i16>, <64 x i16>* %a
@@ -1760,7 +1788,11 @@ define void @select_v128i16(<128 x i16>* %a, <128 x i16>* %b, <128 x i1>* %c) #0
 ; VBITS_GE_2048-NEXT:    sel z0.h, p1, z1.h, z2.h
 ; VBITS_GE_2048-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_2048-NEXT:    mov sp, x29
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_2048-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_2048-NEXT:    .cfi_restore w30
+; VBITS_GE_2048-NEXT:    .cfi_restore w29
 ; VBITS_GE_2048-NEXT:    ret
   %mask = load <128 x i1>, <128 x i1>* %c
   %op1 = load <128 x i16>, <128 x i16>* %a
@@ -1829,7 +1861,11 @@ define void @select_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %c) #0 {
 ; CHECK-NEXT:    sel z0.s, p1, z1.s, z2.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
   %mask = load <8 x i1>, <8 x i1>* %c
   %op1 = load <8 x i32>, <8 x i32>* %a
@@ -1885,7 +1921,11 @@ define void @select_v16i32(<16 x i32>* %a, <16 x i32>* %b, <16 x i1>* %c) #0 {
 ; VBITS_GE_512-NEXT:    sel z0.s, p1, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    mov sp, x29
+; VBITS_GE_512-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_512-NEXT:    .cfi_restore w30
+; VBITS_GE_512-NEXT:    .cfi_restore w29
 ; VBITS_GE_512-NEXT:    ret
   %mask = load <16 x i1>, <16 x i1>* %c
   %op1 = load <16 x i32>, <16 x i32>* %a
@@ -1965,7 +2005,11 @@ define void @select_v32i32(<32 x i32>* %a, <32 x i32>* %b, <32 x i1>* %c) #0 {
 ; VBITS_GE_1024-NEXT:    sel z0.s, p1, z1.s, z2.s
 ; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_1024-NEXT:    mov sp, x29
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_1024-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_1024-NEXT:    .cfi_restore w30
+; VBITS_GE_1024-NEXT:    .cfi_restore w29
 ; VBITS_GE_1024-NEXT:    ret
   %mask = load <32 x i1>, <32 x i1>* %c
   %op1 = load <32 x i32>, <32 x i32>* %a
@@ -2093,7 +2137,11 @@ define void @select_v64i32(<64 x i32>* %a, <64 x i32>* %b, <64 x i1>* %c) #0 {
 ; VBITS_GE_2048-NEXT:    sel z0.s, p1, z1.s, z2.s
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_2048-NEXT:    mov sp, x29
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_2048-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_2048-NEXT:    .cfi_restore w30
+; VBITS_GE_2048-NEXT:    .cfi_restore w29
 ; VBITS_GE_2048-NEXT:    ret
   %mask = load <64 x i1>, <64 x i1>* %c
   %op1 = load <64 x i32>, <64 x i32>* %a
@@ -2160,7 +2208,11 @@ define void @select_v4i64(<4 x i64>* %a, <4 x i64>* %b, <4 x i1>* %c) #0 {
 ; CHECK-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
   %mask = load <4 x i1>, <4 x i1>* %c
   %op1 = load <4 x i64>, <4 x i64>* %a
@@ -2211,7 +2263,11 @@ define void @select_v8i64(<8 x i64>* %a, <8 x i64>* %b, <8 x i1>* %c) #0 {
 ; VBITS_GE_512-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    mov sp, x29
+; VBITS_GE_512-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_512-NEXT:    .cfi_restore w30
+; VBITS_GE_512-NEXT:    .cfi_restore w29
 ; VBITS_GE_512-NEXT:    ret
   %mask = load <8 x i1>, <8 x i1>* %c
   %op1 = load <8 x i64>, <8 x i64>* %a
@@ -2282,7 +2338,11 @@ define void @select_v16i64(<16 x i64>* %a, <16 x i64>* %b, <16 x i1>* %c) #0 {
 ; VBITS_GE_1024-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; VBITS_GE_1024-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_1024-NEXT:    mov sp, x29
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_1024-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_1024-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_1024-NEXT:    .cfi_restore w30
+; VBITS_GE_1024-NEXT:    .cfi_restore w29
 ; VBITS_GE_1024-NEXT:    ret
   %mask = load <16 x i1>, <16 x i1>* %c
   %op1 = load <16 x i64>, <16 x i64>* %a
@@ -2424,7 +2484,11 @@ define void @select_v32i64(<32 x i64>* %a, <32 x i64>* %b, <32 x i1>* %c) #0 {
 ; VBITS_GE_2048-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; VBITS_GE_2048-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_2048-NEXT:    mov sp, x29
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa wsp, 16
 ; VBITS_GE_2048-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_2048-NEXT:    .cfi_def_cfa_offset 0
+; VBITS_GE_2048-NEXT:    .cfi_restore w30
+; VBITS_GE_2048-NEXT:    .cfi_restore w29
 ; VBITS_GE_2048-NEXT:    ret
   %mask = load <32 x i1>, <32 x i1>* %c
   %op1 = load <32 x i64>, <32 x i64>* %a
@@ -2434,4 +2498,4 @@ define void @select_v32i64(<32 x i64>* %a, <32 x i64>* %b, <32 x i1>* %c) #0 {
   ret void
 }
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" uwtable }
