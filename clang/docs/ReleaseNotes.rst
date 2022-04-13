@@ -117,6 +117,8 @@ Bug Fixes
   `C++20 [dcl.fct.def.general]p2 <https://timsong-cpp.github.io/cppwp/n4868/dcl.fct.def#general-2.sentence-3>`_,
   Clang should not diagnose incomplete types in function definitions if the function body is "= delete;".
   This fixes Issue `Issue 52802 <https://github.com/llvm/llvm-project/issues/52802>`_.
+- Unknown type attributes with a ``[[]]`` spelling are no longer diagnosed twice.
+  This fixes Issue `Issue 54817 <https://github.com/llvm/llvm-project/issues/54817>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

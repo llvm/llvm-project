@@ -5,7 +5,7 @@
 @B = external dso_local local_unnamed_addr global [8 x [8 x i64]], align 8
 @C = external dso_local local_unnamed_addr global [8 x [8 x i64]], align 8
 
-define dso_local void @run_test() local_unnamed_addr #0 {
+define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-LABEL: run_test:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #96
@@ -170,6 +170,15 @@ define dso_local void @run_test() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stp q6, q5, [x8, #400]
 ; CHECK-NEXT:    str q2, [x8, #496]
 ; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore b8
+; CHECK-NEXT:    .cfi_restore b9
+; CHECK-NEXT:    .cfi_restore b10
+; CHECK-NEXT:    .cfi_restore b11
+; CHECK-NEXT:    .cfi_restore b12
+; CHECK-NEXT:    .cfi_restore b13
+; CHECK-NEXT:    .cfi_restore b14
+; CHECK-NEXT:    .cfi_restore b15
 ; CHECK-NEXT:    ret
 ; CH`ECK-NEXT:    .cfi_offset b9, -16
 entry:
