@@ -108,7 +108,8 @@ class DebuggerAPITestCase(TestBase):
                 False, error)
         self.assertSuccess(error)
         platform2 = target2.GetPlatform()
-        self.assertEqual(platform2.GetWorkingDirectory(), "/foo/bar")
+        self.assertTrue(platform2.GetWorkingDirectory().endswith("bar"),
+                platform2.GetWorkingDirectory())
 
         # ... but create a new one if it doesn't.
         self.dbg.SetSelectedPlatform(lldb.SBPlatform("remote-windows"))
@@ -123,9 +124,11 @@ class DebuggerAPITestCase(TestBase):
         if lldbplatformutil.getHostPlatform() == 'linux':
             self.yaml2obj("macho.yaml", exe)
             arch = "x86_64-apple-macosx"
+            expected_platform = "remote-macosx"
         else:
             self.yaml2obj("elf.yaml", exe)
             arch = "x86_64-pc-linux"
+            expected_platform = "remote-linux"
 
         fbsd = lldb.SBPlatform("remote-freebsd")
         self.dbg.SetSelectedPlatform(fbsd)
@@ -134,7 +137,7 @@ class DebuggerAPITestCase(TestBase):
         target1 = self.dbg.CreateTarget(exe, arch, None, False, error)
         self.assertSuccess(error)
         platform1 = target1.GetPlatform()
-        self.assertEqual(platform1.GetName(), "remote-macosx")
+        self.assertEqual(platform1.GetName(), expected_platform)
         platform1.SetWorkingDirectory("/foo/bar")
 
         # Reuse a platform even if it is not currently selected.
@@ -142,5 +145,6 @@ class DebuggerAPITestCase(TestBase):
         target2 = self.dbg.CreateTarget(exe, arch, None, False, error)
         self.assertSuccess(error)
         platform2 = target2.GetPlatform()
-        self.assertEqual(platform2.GetName(), "remote-macosx")
-        self.assertEqual(platform2.GetWorkingDirectory(), "/foo/bar")
+        self.assertEqual(platform2.GetName(), expected_platform)
+        self.assertTrue(platform2.GetWorkingDirectory().endswith("bar"),
+                platform2.GetWorkingDirectory())
