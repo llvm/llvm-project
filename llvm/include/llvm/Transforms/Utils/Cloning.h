@@ -114,8 +114,8 @@ struct ClonedCodeInfo {
 /// parameter.
 ///
 /// If you would like to clone only a subset of instructions in the basic block,
-/// you can specify a callback returning true only for those instructions that
-/// are to be cloned.
+/// you can specify a callback that returns true only for those instructions
+/// that are to be cloned with the optional seventh paramter.
 BasicBlock *
 CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                 const Twine &NameSuffix = "", Function *F = nullptr,

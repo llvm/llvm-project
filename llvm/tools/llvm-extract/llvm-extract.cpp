@@ -85,7 +85,7 @@ static cl::list<std::string> ExtractBlocks(
         "Specify <function, basic block1[;basic block2...]> pairs to extract.\n"
         "Each pair will create a function.\n"
         "If multiple basic blocks are specified in one pair,\n"
-        "the first block in the sequence should dominate the rest (Unlsess "
+        "the first block in the sequence should dominate the rest (Unless "
         "using --bb-keep-blocks).\n"
         "eg:\n"
         "  --bb=f:bb1;bb2 will extract one function with both bb1 and bb2;\n"
