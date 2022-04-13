@@ -165,6 +165,32 @@ namespace ranges {
            indirect_unary_predicate<projected<iterator_t<R>, Proj>> Pred>
     constexpr range_difference_t<R>
       count_if(R&& r, Pred pred, Proj proj = {});                                   // since C++20
+
+  template<class T, class Proj = identity,
+           indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+    constexpr ranges::minmax_result<const T&>
+      minmax(const T& a, const T& b, Comp comp = {}, Proj proj = {});                     // since C++20
+
+  template<copyable T, class Proj = identity,
+           indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+    constexpr ranges::minmax_result<T>
+      minmax(initializer_list<T> r, Comp comp = {}, Proj proj = {});                      // since C++20
+
+  template<input_range R, class Proj = identity,
+           indirect_strict_weak_order<projected<iterator_t<R>, Proj>> Comp = ranges::less>
+    requires indirectly_copyable_storable<iterator_t<R>, range_value_t<R>*>
+    constexpr ranges::minmax_result<range_value_t<R>>
+      minmax(R&& r, Comp comp = {}, Proj proj = {});                                      // since C++20
+
+  template<forward_iterator I, sentinel_for<I> S, class Proj = identity,
+           indirect_strict_weak_order<projected<I, Proj>> Comp = ranges::less>
+    constexpr ranges::minmax_element_result<I>
+      minmax_element(I first, S last, Comp comp = {}, Proj proj = {});                    // since C++20
+
+  template<forward_range R, class Proj = identity,
+           indirect_strict_weak_order<projected<iterator_t<R>, Proj>> Comp = ranges::less>
+    constexpr ranges::minmax_element_result<borrowed_iterator_t<R>>
+      minmax_element(R&& r, Comp comp = {}, Proj proj = {});                              // since C++20
 }
 
     constexpr bool     // constexpr in C++20
@@ -891,6 +917,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_max_element.h>
 #include <__algorithm/ranges_min.h>
 #include <__algorithm/ranges_min_element.h>
+#include <__algorithm/ranges_minmax.h>
+#include <__algorithm/ranges_minmax_element.h>
 #include <__algorithm/ranges_mismatch.h>
 #include <__algorithm/ranges_swap_ranges.h>
 #include <__algorithm/ranges_transform.h>

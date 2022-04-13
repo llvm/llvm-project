@@ -19,6 +19,15 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+struct __identity {
+  template <class _Tp>
+  _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR _Tp&& operator()(_Tp&& __t) const _NOEXCEPT {
+    return std::forward<_Tp>(__t);
+  }
+
+  using is_transparent = void;
+};
+
 #if _LIBCPP_STD_VER > 17
 
 struct identity {

@@ -139,7 +139,7 @@
 "`3144 <https://wg21.link/LWG3144>`__","``span``\  does not have a ``const_pointer``\  typedef","Kona","|Complete|",""
 "`3173 <https://wg21.link/LWG3173>`__","Enable CTAD for ``ref-view``\ ","Kona","","","|ranges|"
 "`3179 <https://wg21.link/LWG3179>`__","``subrange``\  should always model ``Range``\ ","Kona","","","|ranges|"
-"`3180 <https://wg21.link/LWG3180>`__","Inconsistently named return type for ``ranges::minmax_element``\ ","Kona","","","|ranges|"
+"`3180 <https://wg21.link/LWG3180>`__","Inconsistently named return type for ``ranges::minmax_element``\ ","Kona","|Complete|","15.0","|ranges|"
 "`3182 <https://wg21.link/LWG3182>`__","Specification of ``Same``\  could be clearer","Kona","",""
 "","","","",""
 "`2899 <https://wg21.link/LWG2899>`__","``is_(nothrow_)move_constructible``\  and ``tuple``\ , ``optional``\  and ``unique_ptr``\ ","Cologne","",""
