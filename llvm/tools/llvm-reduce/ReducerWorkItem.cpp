@@ -40,8 +40,14 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
         Register SrcReg = DMO.getReg();
         if (Register::isPhysicalRegister(SrcReg))
           continue;
-        auto SrcRC = SrcMRI->getRegClass(SrcReg);
-        auto DstReg = DstMRI->createVirtualRegister(SrcRC);
+        Register DstReg = DstMRI->createIncompleteVirtualRegister(
+            SrcMRI->getVRegName(SrcReg));
+        DstMRI->setRegClassOrRegBank(DstReg,
+                                     SrcMRI->getRegClassOrRegBank(SrcReg));
+
+        LLT RegTy = SrcMRI->getType(SrcReg);
+        if (RegTy.isValid())
+          DstMRI->setType(DstReg, RegTy);
         Src2DstReg[SrcReg] = DstReg;
       }
     }

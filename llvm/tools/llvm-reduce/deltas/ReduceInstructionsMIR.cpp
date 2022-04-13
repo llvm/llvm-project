@@ -23,7 +23,7 @@ using namespace llvm;
 
 static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
                                     MachineBasicBlock::reverse_iterator &RI,
-                                    const TargetRegisterClass *RC,
+                                    const RegClassOrRegBank &RC,
                                     SetVector<MachineInstr *> &ExcludeMIs) {
   auto MRI = &MBB.getParent()->getRegInfo();
   for (MachineBasicBlock::reverse_instr_iterator E = MBB.instr_rend(); RI != E;
@@ -37,7 +37,8 @@ static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
       if (Register::isPhysicalRegister(Reg))
         continue;
 
-      if (MRI->getRegClass(Reg) == RC && !ExcludeMIs.count(MO.getParent()))
+      if (MRI->getRegClassOrRegBank(Reg) == RC &&
+          !ExcludeMIs.count(MO.getParent()))
         return Reg;
     }
   }
@@ -79,7 +80,7 @@ static void extractInstrFromModule(Oracle &O, MachineFunction &MF) {
       auto UI = MRI->use_begin(Reg);
       auto UE = MRI->use_end();
 
-      auto RegRC = MRI->getRegClass(Reg);
+      const auto &RegRC = MRI->getRegClassOrRegBank(Reg);
       Register NewReg = 0;
       // If this is not a physical register and there are some uses.
       if (UI != UE) {
@@ -101,7 +102,7 @@ static void extractInstrFromModule(Oracle &O, MachineFunction &MF) {
       // If no dominating definition was found then add an implicit one to the
       // first instruction in the entry block.
       if (!NewReg && TopMI) {
-        NewReg = MRI->createVirtualRegister(RegRC);
+        NewReg = MRI->cloneVirtualRegister(Reg);
         TopMI->addOperand(MachineOperand::CreateReg(
             NewReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
       }
