@@ -404,6 +404,7 @@ END-SCRIPT
 #include <__ranges/enable_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_view.h'}}
 #include <__ranges/iota_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/iota_view.h'}}
 #include <__ranges/join_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/join_view.h'}}
+#include <__ranges/lazy_split_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/lazy_split_view.h'}}
 #include <__ranges/non_propagating_cache.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/non_propagating_cache.h'}}
 #include <__ranges/owning_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/owning_view.h'}}
 #include <__ranges/range_adaptor.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/range_adaptor.h'}}
