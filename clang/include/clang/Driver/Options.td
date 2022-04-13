@@ -5533,7 +5533,7 @@ defm enable_noundef_analysis : BoolOption<"",
 defm opaque_pointers : BoolOption<"",
   "opaque-pointers",
   CodeGenOpts<"OpaquePointers">,
-  Default<"CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL">,
+  DefaultTrue,
   PosFlag<SetTrue, [], "Enable">,
   NegFlag<SetFalse, [], "Disable">,
   BothFlags<[], " opaque pointers">>;
