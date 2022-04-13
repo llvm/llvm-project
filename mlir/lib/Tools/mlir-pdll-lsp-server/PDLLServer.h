@@ -28,7 +28,14 @@ class URIForFile;
 /// separate from the logic that involves LSP server/client communication.
 class PDLLServer {
 public:
-  PDLLServer();
+  struct Options {
+    Options(const std::vector<std::string> &extraDirs) : extraDirs(extraDirs){};
+
+    /// Additional list of include directories to search.
+    const std::vector<std::string> &extraDirs;
+  };
+
+  PDLLServer(const Options &options);
   ~PDLLServer();
 
   /// Add or update the document, with the provided `version`, at the given URI.
@@ -69,7 +76,6 @@ public:
 
 private:
   struct Impl;
-
   std::unique_ptr<Impl> impl;
 };
 

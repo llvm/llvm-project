@@ -51,7 +51,11 @@ LogicalResult mlir::MlirPdllLspServerMain(int argc, char **argv) {
       llvm::cl::desc("Pretty-print JSON output"),
       llvm::cl::init(false),
   };
-  llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR LSP Language Server");
+  llvm::cl::list<std::string> extraIncludeDirs(
+      "I", llvm::cl::desc("Extra directory of include files"),
+      llvm::cl::value_desc("directory"), llvm::cl::Prefix);
+
+  llvm::cl::ParseCommandLineOptions(argc, argv, "PDLL LSP Language Server");
 
   if (litTest) {
     inputStyle = JSONStreamStyle::Delimited;
@@ -67,6 +71,7 @@ LogicalResult mlir::MlirPdllLspServerMain(int argc, char **argv) {
   JSONTransport transport(stdin, llvm::outs(), inputStyle, prettyPrint);
 
   // Configure the servers and start the main language server.
-  PDLLServer server;
+  PDLLServer::Options options(extraIncludeDirs);
+  PDLLServer server(options);
   return runPdllLSPServer(server, transport);
 }

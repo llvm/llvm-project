@@ -238,6 +238,7 @@ namespace {
 /// document.
 struct PDLDocument {
   PDLDocument(const lsp::URIForFile &uri, StringRef contents,
+              const std::vector<std::string> &extraDirs,
               std::vector<lsp::Diagnostic> &diagnostics);
   PDLDocument(const PDLDocument &) = delete;
   PDLDocument &operator=(const PDLDocument &) = delete;
@@ -315,6 +316,7 @@ struct PDLDocument {
 } // namespace
 
 PDLDocument::PDLDocument(const lsp::URIForFile &uri, StringRef contents,
+                         const std::vector<std::string> &extraDirs,
                          std::vector<lsp::Diagnostic> &diagnostics)
     : astContext(odsContext) {
   auto memBuffer = llvm::MemoryBuffer::getMemBufferCopy(contents, uri.file());
@@ -327,6 +329,7 @@ PDLDocument::PDLDocument(const lsp::URIForFile &uri, StringRef contents,
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
   includeDirs.push_back(uriDirectory.str().str());
+  includeDirs.insert(includeDirs.end(), extraDirs.begin(), extraDirs.end());
 
   sourceMgr.setIncludeDirs(includeDirs);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
@@ -991,8 +994,10 @@ namespace {
 struct PDLTextFileChunk {
   PDLTextFileChunk(uint64_t lineOffset, const lsp::URIForFile &uri,
                    StringRef contents,
+                   const std::vector<std::string> &extraDirs,
                    std::vector<lsp::Diagnostic> &diagnostics)
-      : lineOffset(lineOffset), document(uri, contents, diagnostics) {}
+      : lineOffset(lineOffset),
+        document(uri, contents, extraDirs, diagnostics) {}
 
   /// Adjust the line number of the given range to anchor at the beginning of
   /// the file, instead of the beginning of this chunk.
@@ -1020,7 +1025,8 @@ namespace {
 class PDLTextFile {
 public:
   PDLTextFile(const lsp::URIForFile &uri, StringRef fileContents,
-              int64_t version, std::vector<lsp::Diagnostic> &diagnostics);
+              int64_t version, const std::vector<std::string> &extraDirs,
+              std::vector<lsp::Diagnostic> &diagnostics);
 
   /// Return the current version of this text file.
   int64_t getVersion() const { return version; }
@@ -1064,6 +1070,7 @@ private:
 
 PDLTextFile::PDLTextFile(const lsp::URIForFile &uri, StringRef fileContents,
                          int64_t version,
+                         const std::vector<std::string> &extraDirs,
                          std::vector<lsp::Diagnostic> &diagnostics)
     : contents(fileContents.str()), version(version), totalNumLines(0) {
   // Split the file into separate PDL documents.
@@ -1073,13 +1080,13 @@ PDLTextFile::PDLTextFile(const lsp::URIForFile &uri, StringRef fileContents,
   SmallVector<StringRef, 8> subContents;
   StringRef(contents).split(subContents, "// -----");
   chunks.emplace_back(std::make_unique<PDLTextFileChunk>(
-      /*lineOffset=*/0, uri, subContents.front(), diagnostics));
+      /*lineOffset=*/0, uri, subContents.front(), extraDirs, diagnostics));
 
   uint64_t lineOffset = subContents.front().count('\n');
   for (StringRef docContents : llvm::drop_begin(subContents)) {
     unsigned currentNumDiags = diagnostics.size();
-    auto chunk = std::make_unique<PDLTextFileChunk>(lineOffset, uri,
-                                                    docContents, diagnostics);
+    auto chunk = std::make_unique<PDLTextFileChunk>(
+        lineOffset, uri, docContents, extraDirs, diagnostics);
     lineOffset += docContents.count('\n');
 
     // Adjust locations used in diagnostics to account for the offset from the
@@ -1218,6 +1225,11 @@ PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
 //===----------------------------------------------------------------------===//
 
 struct lsp::PDLLServer::Impl {
+  explicit Impl(const Options &options) : options(options) {}
+
+  /// PDLL LSP options.
+  const Options &options;
+
   /// The files held by the server, mapped by their URI file name.
   llvm::StringMap<std::unique_ptr<PDLTextFile>> files;
 };
@@ -1226,14 +1238,15 @@ struct lsp::PDLLServer::Impl {
 // PDLLServer
 //===----------------------------------------------------------------------===//
 
-lsp::PDLLServer::PDLLServer() : impl(std::make_unique<Impl>()) {}
+lsp::PDLLServer::PDLLServer(const Options &options)
+    : impl(std::make_unique<Impl>(options)) {}
 lsp::PDLLServer::~PDLLServer() = default;
 
 void lsp::PDLLServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
     std::vector<Diagnostic> &diagnostics) {
-  impl->files[uri.file()] =
-      std::make_unique<PDLTextFile>(uri, contents, version, diagnostics);
+  impl->files[uri.file()] = std::make_unique<PDLTextFile>(
+      uri, contents, version, impl->options.extraDirs, diagnostics);
 }
 
 Optional<int64_t> lsp::PDLLServer::removeDocument(const URIForFile &uri) {
