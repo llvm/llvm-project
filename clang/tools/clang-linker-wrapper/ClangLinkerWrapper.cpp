@@ -1513,7 +1513,16 @@ int main(int argc, const char **argv) {
   auto FileOrErr = wrapDeviceImages(LinkedImages);
   if (!FileOrErr)
     return reportError(FileOrErr.takeError());
-  LinkerArgs.append(*FileOrErr);
+
+  // We need to insert the new files next to the old ones to make sure they're
+  // linked with the same libraries / arguments.
+  if (!FileOrErr->empty()) {
+    auto FirstInput = std::next(llvm::find_if(LinkerArgs, [](StringRef Str) {
+      return sys::fs::exists(Str) && !sys::fs::is_directory(Str) &&
+             Str != ExecutableName;
+    }));
+    LinkerArgs.insert(FirstInput, FileOrErr->begin(), FileOrErr->end());
+  }
 
   // Run the host linking job.
   if (Error Err = runLinker(LinkerUserPath, LinkerArgs))

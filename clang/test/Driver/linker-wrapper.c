@@ -60,3 +60,14 @@
 
 // STATIC-LIBRARY: nvlink{{.*}} -arch sm_70
 // STATIC-LIBRARY-NOT: nvlink{{.*}} -arch sm_50
+
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,cuda,nvptx64-nvida-cuda,sm_70 \
+// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,nvptx64-nvida-cuda,sm_70 \
+// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,cuda,nvptx64-nvida-cuda,sm_52
+// RUN: clang-linker-wrapper --dry-run --host-triple x86_64-unknown-linux-gnu -linker-path \
+// RUN:   /usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CUDA
+
+// CUDA: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_70 {{.*}}.o {{.*}}.o
+// CUDA: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_52 {{.*}}.o
+// CUDA: fatbinary{{.*}}-64 --create {{.*}}.fatbin --image=profile=sm_70,file={{.*}}.out  --image=profile=sm_52,file={{.*}}.out
