@@ -336,8 +336,8 @@ TEST(ArgsTest, GetShellSafeArgument) {
 
   // Test escaping tcsh special characters.
   FileSpec tcsh("/bin/tcsh", FileSpec::Style::posix);
-  EXPECT_EQ(Args::GetShellSafeArgument(tcsh, R"( '"<>()&$;)"),
-            R"(\ \'\"\<\>\(\)\&\$\;)");
+  EXPECT_EQ(Args::GetShellSafeArgument(tcsh, R"( '"<>()&;)"),
+            R"(\ \'\"\<\>\(\)\&\;)");
   // Normal characters and globbing expressions that shouldn't be escaped.
   EXPECT_EQ(Args::GetShellSafeArgument(tcsh, "aA1*"), "aA1*");
 
