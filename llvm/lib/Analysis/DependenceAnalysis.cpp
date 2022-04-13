@@ -3349,12 +3349,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
     return false;
   }
 
-  Value *SrcBasePtr = SrcGEP->getOperand(0);
-  Value *DstBasePtr = DstGEP->getOperand(0);
-  while (auto *PCast = dyn_cast<BitCastInst>(SrcBasePtr))
-    SrcBasePtr = PCast->getOperand(0);
-  while (auto *PCast = dyn_cast<BitCastInst>(DstBasePtr))
-    DstBasePtr = PCast->getOperand(0);
+  Value *SrcBasePtr = SrcGEP->getOperand(0)->stripPointerCasts();
+  Value *DstBasePtr = DstGEP->getOperand(0)->stripPointerCasts();
 
   // Check that for identical base pointers we do not miss index offsets
   // that have been added before this GEP is applied.
