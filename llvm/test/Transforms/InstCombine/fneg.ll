@@ -730,6 +730,19 @@ define float @fnabs(float %a) {
   ret float %fneg1
 }
 
+define float @fnabs_1(float %a) {
+; CHECK-LABEL: @fnabs_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nsz float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FNEG1:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    ret float [[FNEG1]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp olt float %a, %fneg
+  %sel = select nsz i1 %cmp, float %fneg, float %a
+  %fneg1 = fneg float %sel
+  ret float %fneg1
+}
+
 define float @select_fneg_both(float %x, float %y, i1 %b) {
 ; CHECK-LABEL: @select_fneg_both(
 ; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[B:%.*]], float [[X:%.*]], float [[Y:%.*]]
