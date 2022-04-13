@@ -22,7 +22,7 @@ using namespace cir;
 using namespace clang;
 
 CIRGenFunction::CIRGenFunction(CIRGenModule &CGM)
-    : CGM{CGM}, SanOpts(CGM.getLangOpts().Sanitize) {}
+    : CGM{CGM}, CurFuncDecl(nullptr), SanOpts(CGM.getLangOpts().Sanitize) {}
 
 clang::ASTContext &CIRGenFunction::getContext() const {
   return CGM.getASTContext();
