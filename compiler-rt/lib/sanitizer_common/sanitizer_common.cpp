@@ -311,11 +311,7 @@ struct MallocFreeHook {
 
 static MallocFreeHook MFHooks[kMaxMallocFreeHooks];
 
-static THREADLOCAL int disable_malloc_hooks;
-
 void RunMallocHooks(void *ptr, uptr size) {
-  if (disable_malloc_hooks)
-    return;
   __sanitizer_malloc_hook(ptr, size);
   for (int i = 0; i < kMaxMallocFreeHooks; i++) {
     auto hook = MFHooks[i].malloc_hook;
@@ -326,8 +322,6 @@ void RunMallocHooks(void *ptr, uptr size) {
 }
 
 void RunFreeHooks(void *ptr) {
-  if (disable_malloc_hooks)
-    return;
   __sanitizer_free_hook(ptr);
   for (int i = 0; i < kMaxMallocFreeHooks; i++) {
     auto hook = MFHooks[i].free_hook;
@@ -335,11 +329,6 @@ void RunFreeHooks(void *ptr) {
       break;
     hook(ptr);
   }
-}
-
-ScopedDisableMallocHooks::ScopedDisableMallocHooks() { ++disable_malloc_hooks; }
-ScopedDisableMallocHooks::~ScopedDisableMallocHooks() {
-  --disable_malloc_hooks;
 }
 
 static int InstallMallocFreeHooks(void (*malloc_hook)(const void *, uptr),

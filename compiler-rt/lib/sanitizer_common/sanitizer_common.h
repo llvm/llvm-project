@@ -170,17 +170,8 @@ void SetShadowRegionHugePageMode(uptr addr, uptr length);
 bool DontDumpShadowMemory(uptr addr, uptr length);
 // Check if the built VMA size matches the runtime one.
 void CheckVMASize();
-
 void RunMallocHooks(void *ptr, uptr size);
 void RunFreeHooks(void *ptr);
-
-// Prevents RunMallocHooks and RunFreeHooks. Can be used in places where hooks
-// are undesirable, like in symbolizer or unwinder.
-class ScopedDisableMallocHooks {
- public:
-  ScopedDisableMallocHooks();
-  ~ScopedDisableMallocHooks();
-};
 
 class ReservedAddressRange {
  public:
