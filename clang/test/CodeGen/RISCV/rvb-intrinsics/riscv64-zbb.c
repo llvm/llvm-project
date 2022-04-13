@@ -25,3 +25,27 @@ int orc_b_32(int a) {
 long orc_b_64(long a) {
   return __builtin_riscv_orc_b_64(a);
 }
+
+// RV64ZBB-LABEL: @clz_32(
+// RV64ZBB-NEXT:  entry:
+// RV64ZBB-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// RV64ZBB-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
+// RV64ZBB-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_ADDR]], align 4
+// RV64ZBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
+// RV64ZBB-NEXT:    ret i32 [[TMP1]]
+//
+int clz_32(int a) {
+  return __builtin_riscv_clz_32(a);
+}
+
+// RV64ZBB-LABEL: @clz_64(
+// RV64ZBB-NEXT:  entry:
+// RV64ZBB-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+// RV64ZBB-NEXT:    store i64 [[A:%.*]], i64* [[A_ADDR]], align 8
+// RV64ZBB-NEXT:    [[TMP0:%.*]] = load i64, i64* [[A_ADDR]], align 8
+// RV64ZBB-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[TMP0]], i1 false)
+// RV64ZBB-NEXT:    ret i64 [[TMP1]]
+//
+long clz_64(long a) {
+  return __builtin_riscv_clz_64(a);
+}
