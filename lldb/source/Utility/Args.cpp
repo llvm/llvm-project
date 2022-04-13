@@ -384,10 +384,10 @@ std::string Args::GetShellSafeArgument(const FileSpec &shell,
     llvm::StringRef m_escapables;
   };
 
-  static ShellDescriptor g_Shells[] = {{ConstString("bash"), " '\"<>()&"},
-                                       {ConstString("tcsh"), " '\"<>()&$"},
+  static ShellDescriptor g_Shells[] = {{ConstString("bash"), " '\"<>()&;"},
+                                       {ConstString("tcsh"), " '\"<>()&$;"},
                                        {ConstString("zsh"), " '\"<>()&;\\|"},
-                                       {ConstString("sh"), " '\"<>()&"}};
+                                       {ConstString("sh"), " '\"<>()&;"}};
 
   // safe minimal set
   llvm::StringRef escapables = " '\"";
