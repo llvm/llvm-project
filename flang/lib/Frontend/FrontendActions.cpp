@@ -33,6 +33,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -470,6 +471,48 @@ void EmitLLVMAction::ExecuteAction() {
     return;
   }
   llvmModule->print(*os, /*AssemblyAnnotationWriter=*/nullptr);
+}
+
+void EmitLLVMBitcodeAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+  // Generate an LLVM module if it's not already present (it will already be
+  // present if the input file is an LLVM IR/BC file).
+  if (!llvmModule)
+    GenerateLLVMIR();
+
+  // Create and configure `Target`
+  std::string error;
+  std::string theTriple = llvmModule->getTargetTriple();
+  const llvm::Target *theTarget =
+      llvm::TargetRegistry::lookupTarget(theTriple, error);
+  assert(theTarget && "Failed to create Target");
+
+  // Create and configure `TargetMachine`
+  std::unique_ptr<llvm::TargetMachine> TM(
+      theTarget->createTargetMachine(theTriple, /*CPU=*/"",
+          /*Features=*/"", llvm::TargetOptions(), llvm::None));
+  assert(TM && "Failed to create TargetMachine");
+  llvmModule->setDataLayout(TM->createDataLayout());
+
+  // Generate an output file
+  std::unique_ptr<llvm::raw_ostream> os = ci.CreateDefaultOutputFile(
+      /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName(), "bc");
+  if (!os) {
+    unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "failed to create the output file");
+    ci.diagnostics().Report(diagID);
+    return;
+  }
+
+  // Set-up the pass manager
+  llvm::ModulePassManager MPM;
+  llvm::ModuleAnalysisManager MAM;
+  llvm::PassBuilder PB(TM.get());
+  PB.registerModuleAnalyses(MAM);
+  MPM.addPass(llvm::BitcodeWriterPass(*os));
+
+  // Run the passes
+  MPM.run(*llvmModule, MAM);
 }
 
 void EmitMLIRAction::ExecuteAction() {
