@@ -95,7 +95,7 @@ void foo(int param) { // expected-note 1+ {{previous declaration is here}}
 #ifdef AVOID
   auto l4 = [var = param] (int param) { ; }; // no warning
 #else
-  auto l4 = [var = param](int param) { ; }; // expected-warning 2{{declaration shadows a local variable}}
+  auto l4 = [var = param] (int param) { ; }; // expected-warning {{declaration shadows a local variable}}
 #endif
 
   // Make sure that inner lambdas work as well.
