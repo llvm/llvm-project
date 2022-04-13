@@ -11,16 +11,16 @@ declare i8* @memrchr(i8*, i32, i64)
 @a123123 = constant [6 x i8] c"\01\02\03\01\02\03"
 
 
-; Fold memrchr(ax, c, 0) to null.
+; Fold memrchr(ax, C, 0) to null.
 
-define i8* @fold_memrchr_ax_c_0(i32 %0) {
+define i8* @fold_memrchr_ax_c_0(i32 %C) {
 ; CHECK-LABEL: @fold_memrchr_ax_c_0(
 ; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i32 [[TMP0:%.*]], i64 0)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
-  %ret = call i8* @memrchr(i8* %ptr, i32 %0, i64 0)
+  %ret = call i8* @memrchr(i8* %ptr, i32 %C, i64 0)
   ret i8* %ret
 }
 
@@ -91,15 +91,15 @@ define i8* @fold_memrchr_a123123_3_1() {
 }
 
 
-; Fold memrchr(ax, c, 1) to *ax == c ? ax : null.
+; Fold memrchr(ax, C, 1) to *ax == C ? ax : null.
 
-define i8* @fold_memrchr_ax_c_1(i32 %0) {
+define i8* @fold_memrchr_ax_c_1(i32 %C) {
 ; CHECK-LABEL: @fold_memrchr_ax_c_1(
 ; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i32 [[TMP0:%.*]], i64 1)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
-  %ret = call i8* @memrchr(i8* %ptr, i32 %0, i64 1)
+  %ret = call i8* @memrchr(i8* %ptr, i32 %C, i64 1)
   ret i8* %ret
 }
 
@@ -174,16 +174,16 @@ define i8* @fold_memrchr_a12345_2_5() {
 }
 
 
-; Fold memrchr(a12345, 0, %0) to null.
+; Fold memrchr(a12345, 0, %N) to null.
 
-define i8* @fold_memrchr_a12345_0_n(i64 %0) {
+define i8* @fold_memrchr_a12345_0_n(i64 %N) {
 ; CHECK-LABEL: @fold_memrchr_a12345_0_n(
 ; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 0, i64 [[TMP0:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
-  %ret = call i8* @memrchr(i8* %ptr, i32 0, i64 %0)
+  %ret = call i8* @memrchr(i8* %ptr, i32 0, i64 %N)
   ret i8* %ret
 }
 
