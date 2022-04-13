@@ -64,8 +64,9 @@ bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
 
 class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
-  CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback)
-      : File(File), ParsedCallback(ParsedCallback) {}
+  CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback,
+                           PreambleBuildStats *Stats)
+      : File(File), ParsedCallback(ParsedCallback), Stats(Stats) {}
 
   IncludeStructure takeIncludes() { return std::move(Includes); }
 
@@ -88,6 +89,25 @@ public:
     IsMainFileIncludeGuarded =
         CI.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
             MainFE);
+
+    if (Stats) {
+      const ASTContext &AST = CI.getASTContext();
+      Stats->BuildSize = AST.getASTAllocatedMemory();
+      Stats->BuildSize += AST.getSideTableAllocatedMemory();
+      Stats->BuildSize += AST.Idents.getAllocator().getTotalMemory();
+      Stats->BuildSize += AST.Selectors.getTotalMemory();
+
+      Stats->BuildSize += AST.getSourceManager().getContentCacheSize();
+      Stats->BuildSize += AST.getSourceManager().getDataStructureSizes();
+      Stats->BuildSize +=
+          AST.getSourceManager().getMemoryBufferSizes().malloc_bytes;
+
+      const Preprocessor &PP = CI.getPreprocessor();
+      Stats->BuildSize += PP.getTotalMemory();
+      if (PreprocessingRecord *PRec = PP.getPreprocessingRecord())
+        Stats->BuildSize += PRec->getTotalMemory();
+      Stats->BuildSize += PP.getHeaderSearchInfo().getTotalMemory();
+    }
   }
 
   void BeforeExecute(CompilerInstance &CI) override {
@@ -135,6 +155,7 @@ private:
   std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
+  PreambleBuildStats *Stats;
 };
 
 // Represents directives other than includes, where basic textual information is
@@ -456,7 +477,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // to read back. We rely on dynamic index for the comments instead.
   CI.getPreprocessorOpts().WriteCommentListToPCH = false;
 
-  CppFilePreambleCallbacks CapturedInfo(FileName, PreambleCallback);
+  CppFilePreambleCallbacks CapturedInfo(FileName, PreambleCallback, Stats);
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::SmallString<32> AbsFileName(FileName);
   VFS->makeAbsolute(AbsFileName);
@@ -476,6 +497,12 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // bodies.
   CI.getFrontendOpts().SkipFunctionBodies = false;
 
+  if (Stats != nullptr) {
+    Stats->TotalBuildTime = PreambleTimer.getTime();
+    Stats->FileSystemTime = TimedFS->getTime();
+    Stats->SerializedSize = BuiltPreamble ? BuiltPreamble->getSize() : 0;
+  }
+
   if (BuiltPreamble) {
     vlog("Built preamble of size {0} for file {1} version {2} in {3} seconds",
          BuiltPreamble->getSize(), FileName, Inputs.Version,
@@ -491,10 +518,6 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     Result->CanonIncludes = CapturedInfo.takeCanonicalIncludes();
     Result->StatCache = std::move(StatCache);
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
-    if (Stats != nullptr) {
-      Stats->TotalBuildTime = PreambleTimer.getTime();
-      Stats->FileSystemTime = TimedFS->getTime();
-    }
     return Result;
   }
 
