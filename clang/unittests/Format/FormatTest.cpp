@@ -23606,6 +23606,11 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
 
   // Don't use the helpers here, since 'mess up' will change the whitespace
   // and these are all whitespace sensitive by definition
+
+  // Newlines are important here.
+  EXPECT_EQ("FOO(1+2  );\n", format("FOO(1+2  );\n", Style));
+  EXPECT_EQ("FOO(1+2  )\n", format("FOO(1+2  )\n", Style));
+
   EXPECT_EQ("FOO(String-ized&Messy+But(: :Still)=Intentional);",
             format("FOO(String-ized&Messy+But(: :Still)=Intentional);", Style));
   EXPECT_EQ(
