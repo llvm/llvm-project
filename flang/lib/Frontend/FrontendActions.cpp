@@ -555,9 +555,9 @@ void BackendAction::ExecuteAction() {
   assert(theTarget && "Failed to create Target");
 
   // Create `TargetMachine`
-  std::unique_ptr<llvm::TargetMachine> TM;
-  TM.reset(theTarget->createTargetMachine(theTriple, /*CPU=*/"",
-      /*Features=*/"", llvm::TargetOptions(), llvm::None));
+  std::unique_ptr<llvm::TargetMachine> TM(
+      theTarget->createTargetMachine(theTriple, /*CPU=*/"",
+          /*Features=*/"", llvm::TargetOptions(), llvm::None));
   assert(TM && "Failed to create TargetMachine");
   llvmModule->setDataLayout(TM->createDataLayout());
 
