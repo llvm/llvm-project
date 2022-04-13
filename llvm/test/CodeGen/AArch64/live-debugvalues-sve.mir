@@ -69,10 +69,10 @@
   !3 = !{i32 7, !"Dwarf Version", i32 4}
   !4 = !{i32 2, !"Debug Info Version", i32 3}
   !5 = !{i32 1, !"wchar_size", i32 4}
-  !6 = !{i32 1, !"branch-target-enforcement", i32 0}
-  !7 = !{i32 1, !"sign-return-address", i32 0}
-  !8 = !{i32 1, !"sign-return-address-all", i32 0}
-  !9 = !{i32 1, !"sign-return-address-with-bkey", i32 0}
+  !6 = !{i32 8, !"branch-target-enforcement", i32 0}
+  !7 = !{i32 8, !"sign-return-address", i32 0}
+  !8 = !{i32 8, !"sign-return-address-all", i32 0}
+  !9 = !{i32 8, !"sign-return-address-with-bkey", i32 0}
   !10 = !{!"clang version 12.0.0 (https://github.com/llvm/llvm-project.git b19275ba870a06c5ef0428af6264ffd28c7cde9e)"}
   !11 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 6, type: !12, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !26)
   !12 = !DISubroutineType(types: !13)

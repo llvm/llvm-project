@@ -60,9 +60,9 @@ declare dso_local i32 @_Z1giPi(i32, i32*) local_unnamed_addr
 
 !llvm.module.flags = !{!0, !1, !2}
 
-!0 = !{i32 1, !"branch-target-enforcement", i32 0}
-!1 = !{i32 1, !"sign-return-address", i32 1}
-!2 = !{i32 1, !"sign-return-address-all", i32 0}
+!0 = !{i32 8, !"branch-target-enforcement", i32 0}
+!1 = !{i32 8, !"sign-return-address", i32 1}
+!2 = !{i32 8, !"sign-return-address-all", i32 0}
 
 ; UNWIND-LABEL:        FunctionAddress: 0x0
 ; UNWIND:          0x97      ; vsp = r7

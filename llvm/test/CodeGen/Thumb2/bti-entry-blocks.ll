@@ -19,4 +19,4 @@ entry:
 }
 
 !llvm.module.flags = !{!1}
-!1 = !{i32 1, !"branch-target-enforcement", i32 1}
+!1 = !{i32 8, !"branch-target-enforcement", i32 1}
