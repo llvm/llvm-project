@@ -191,17 +191,6 @@ def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
-def StrCaseA: StrEnumAttrCase<"A">;
-def StrCaseB: StrEnumAttrCase<"B">;
-
-def SomeStrEnum: StrEnumAttr<
-  "SomeStrEnum", "", [StrCaseA, StrCaseB]>;
-
-def StrEnumAttrOp : TEST_Op<"str_enum_attr"> {
-  let arguments = (ins SomeStrEnum:$attr);
-  let results = (outs I32:$val);
-}
-
 def I32Case5:  I32EnumAttrCase<"case5", 5>;
 def I32Case10: I32EnumAttrCase<"case10", 10>;
 
@@ -1260,8 +1249,6 @@ def : Pat<(OpAttrMatch3 $attr), (OpAttrMatch4 ConstUnitAttr, $attr)>;
 def OpC : TEST_Op<"op_c">, Arguments<(ins I32)>, Results<(outs I32)>;
 def : Pat<(OpC $input), (OpB $input, ConstantAttr<I32Attr, "17">:$attr)>;
 
-// Test string enum attribute in rewrites.
-def : Pat<(StrEnumAttrOp StrCaseA), (StrEnumAttrOp StrCaseB)>;
 // Test integer enum attribute in rewrites.
 def : Pat<(I32EnumAttrOp I32Case5), (I32EnumAttrOp I32Case10)>;
 def : Pat<(I64EnumAttrOp I64Case5), (I64EnumAttrOp I64Case10)>;
@@ -1568,11 +1555,8 @@ def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "66">:$attr),
 // Test Legalization
 //===----------------------------------------------------------------------===//
 
-def Test_LegalizerEnum_Success : StrEnumAttrCase<"Success">;
-def Test_LegalizerEnum_Failure : StrEnumAttrCase<"Failure">;
-
-def Test_LegalizerEnum : StrEnumAttr<"Success", "Failure",
-  [Test_LegalizerEnum_Success, Test_LegalizerEnum_Failure]>;
+def Test_LegalizerEnum_Success : ConstantStrAttr<StrAttr, "Success">;
+def Test_LegalizerEnum_Failure : ConstantStrAttr<StrAttr, "Failure">;
 
 def ILLegalOpA : TEST_Op<"illegal_op_a">, Results<(outs I32)>;
 def ILLegalOpB : TEST_Op<"illegal_op_b">, Results<(outs I32)>;
@@ -1582,7 +1566,7 @@ def ILLegalOpE : TEST_Op<"illegal_op_e">, Results<(outs I32)>;
 def ILLegalOpF : TEST_Op<"illegal_op_f">, Results<(outs I32)>;
 def ILLegalOpG : TEST_Op<"illegal_op_g">, Results<(outs I32)>;
 def LegalOpA : TEST_Op<"legal_op_a">,
-  Arguments<(ins Test_LegalizerEnum:$status)>, Results<(outs I32)>;
+  Arguments<(ins StrAttr:$status)>, Results<(outs I32)>;
 def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
 def LegalOpC : TEST_Op<"legal_op_c">,
   Arguments<(ins I32)>, Results<(outs I32)>;
