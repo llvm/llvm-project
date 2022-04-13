@@ -52,7 +52,7 @@ LogicalResult mlir::MlirPdllLspServerMain(int argc, char **argv) {
       llvm::cl::init(false),
   };
   llvm::cl::list<std::string> extraIncludeDirs(
-      "I", llvm::cl::desc("Extra directory of include files"),
+      "pdll-extra-dir", llvm::cl::desc("Extra directory of include files"),
       llvm::cl::value_desc("directory"), llvm::cl::Prefix);
 
   llvm::cl::ParseCommandLineOptions(argc, argv, "PDLL LSP Language Server");
