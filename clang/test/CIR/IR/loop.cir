@@ -13,7 +13,7 @@ func @l0() {
       %4 = cir.load %2 : cir.ptr <i32>, i32
       %5 = cir.cst(10 : i32) : i32
       %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
-      cir.yield
+      cir.yield loopcondition %6 : !cir.bool
     }, step :  {
       %4 = cir.load %2 : cir.ptr <i32>, i32
       %5 = cir.cst(1 : i32) : i32
@@ -36,7 +36,7 @@ func @l0() {
 // CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
 // CHECK-NEXT:     %5 = cir.cst(10 : i32) : i32
 // CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
-// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:     cir.yield loopcondition %6 : !cir.bool
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
 // CHECK-NEXT:     %5 = cir.cst(1 : i32) : i32

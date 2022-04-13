@@ -353,11 +353,12 @@ def IfOp : CIR_Op<"if",
 
 def YieldOpKind_BK : I32EnumAttrCase<"Break", 1, "break">;
 def YieldOpKind_FT : I32EnumAttrCase<"Fallthrough", 2, "fallthrough">;
+def YieldOpKind_LC : I32EnumAttrCase<"Loopcondition", 3, "loopcondition">;
 
 def YieldOpKind : I32EnumAttr<
     "YieldOpKind",
     "yield kind",
-    [YieldOpKind_BK, YieldOpKind_FT]> {
+    [YieldOpKind_BK, YieldOpKind_FT, YieldOpKind_LC]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -378,6 +379,9 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     2. `cir.yield fallthrough` means the next region in the case list should
     be executed.
 
+    `cir.yield loopcondition %val` is another form that must terminate cond
+    regions within `cir.loop`s.
+
     The `cir.yield` must be explicitly used whenever a region has more than
     one block, or within `cir.switch` regions not `cir.return` terminated.
 
@@ -394,15 +398,29 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
         cir.yield fallthrough
       }, ...
     ]
+
+    cir.loop (cond : {
+      ...
+      %4 = ... : cir.bool
+      cir.yield loopcondition %4
+    } ... ) {}
     ```
   }];
 
   let arguments = (ins OptionalAttr<YieldOpKind>:$kind,
-                       Variadic<AnyType>:$results);
-  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+                       Variadic<AnyType>:$args);
+  let builders = [
+    OpBuilder<(ins), [{ /* nothing to do */ }]>,
+    OpBuilder<(ins "Value":$cond), [{
+      $_state.addOperands(cond);
+      mlir::cir::YieldOpKindAttr kind = mlir::cir::YieldOpKindAttr::get(
+                $_builder.getContext(), mlir::cir::YieldOpKind::Loopcondition);
+      $_state.addAttribute(getKindAttrName($_state.name), kind);
+    }]>
+  ];
 
   let assemblyFormat = [{
-    ($kind^)? ($results^ `:` type($results))? attr-dict
+    ($kind^)? ($args^ `:` type($args))? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -415,6 +433,9 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     }
     bool isBreak() {
       return !isPlain() && *getKind() == YieldOpKind::Break;
+    }
+    bool isLoopCondition() {
+      return !isPlain() && *getKind() == YieldOpKind::Loopcondition;
     }
   }];
 
