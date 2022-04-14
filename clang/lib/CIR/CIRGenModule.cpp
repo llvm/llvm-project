@@ -41,9 +41,11 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/LowerToLLVM.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -84,12 +86,13 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &CGM) {
 
 CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
-                           const clang::CodeGenOptions &CGO)
+                           const clang::CodeGenOptions &CGO,
+                           DiagnosticsEngine &Diags)
     : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
-      codeGenOpts(CGO),
-      theModule{mlir::ModuleOp::create(builder.getUnknownLoc())},
-      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)),
-      genTypes{*this} {}
+      codeGenOpts(CGO), theModule{mlir::ModuleOp::create(
+                            builder.getUnknownLoc())},
+      Diags(Diags), target(astCtx.getTargetInfo()),
+      ABI(createCXXABI(*this)), genTypes{*this} {}
 
 CIRGenModule::~CIRGenModule() {}
 
