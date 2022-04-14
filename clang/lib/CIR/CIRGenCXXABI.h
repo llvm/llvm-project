@@ -34,6 +34,8 @@ protected:
   CIRGenCXXABI(CIRGenModule &CGM)
       : CGM{CGM}, MangleCtx(CGM.getASTContext().createMangleContext()) {}
 
+  clang::ASTContext &getContext() const { return CGM.getASTContext(); }
+
 public:
   /// Similar to AddedStructorArgs, but only notes the number of additional
   /// arguments.
