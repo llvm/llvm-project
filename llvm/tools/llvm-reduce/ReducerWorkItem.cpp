@@ -230,6 +230,36 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
     }
   }
 
+  DstMF->setAlignment(SrcMF->getAlignment());
+  DstMF->setExposesReturnsTwice(SrcMF->exposesReturnsTwice());
+  DstMF->setHasInlineAsm(SrcMF->hasInlineAsm());
+  DstMF->setHasWinCFI(SrcMF->hasWinCFI());
+
+  DstMF->getProperties().reset().set(SrcMF->getProperties());
+
+  if (!SrcMF->getFrameInstructions().empty() ||
+      !SrcMF->getLongjmpTargets().empty() ||
+      !SrcMF->getCatchretTargets().empty())
+    report_fatal_error("cloning not implemented for machine function property");
+
+  DstMF->setCallsEHReturn(SrcMF->callsEHReturn());
+  DstMF->setCallsUnwindInit(SrcMF->callsUnwindInit());
+  DstMF->setHasEHCatchret(SrcMF->hasEHCatchret());
+  DstMF->setHasEHScopes(SrcMF->hasEHScopes());
+  DstMF->setHasEHFunclets(SrcMF->hasEHFunclets());
+
+  if (!SrcMF->getLandingPads().empty() ||
+      !SrcMF->getCodeViewAnnotations().empty() ||
+      !SrcMF->getTypeInfos().empty() ||
+      !SrcMF->getFilterIds().empty() ||
+      SrcMF->hasAnyWasmLandingPadIndex() ||
+      SrcMF->hasAnyCallSiteLandingPad() ||
+      SrcMF->hasAnyCallSiteLabel() ||
+      !SrcMF->getCallSitesInfo().empty())
+    report_fatal_error("cloning not implemented for machine function property");
+
+  DstMF->setDebugInstrNumberingCount(SrcMF->DebugInstrNumberingCount);
+
   DstMF->verify(nullptr, "", /*AbortOnError=*/true);
   return DstMF;
 }

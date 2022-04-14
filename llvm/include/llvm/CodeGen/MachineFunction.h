@@ -1110,6 +1110,11 @@ public:
   /// Map the landing pad's EH symbol to the call site indexes.
   void setCallSiteLandingPad(MCSymbol *Sym, ArrayRef<unsigned> Sites);
 
+  /// Return if there is any wasm exception handling.
+  bool hasAnyWasmLandingPadIndex() const {
+    return !WasmLPadToIndexMap.empty();
+  }
+
   /// Map the landing pad to its index. Used for Wasm exception handling.
   void setWasmLandingPadIndex(const MachineBasicBlock *LPad, unsigned Index) {
     WasmLPadToIndexMap[LPad] = Index;
@@ -1126,6 +1131,10 @@ public:
     return WasmLPadToIndexMap.lookup(LPad);
   }
 
+  bool hasAnyCallSiteLandingPad() const {
+    return !LPadToCallSiteMap.empty();
+  }
+
   /// Get the call site indexes for a landing pad EH symbol.
   SmallVectorImpl<unsigned> &getCallSiteLandingPad(MCSymbol *Sym) {
     assert(hasCallSiteLandingPad(Sym) &&
@@ -1136,6 +1145,10 @@ public:
   /// Return true if the landing pad Eh symbol has an associated call site.
   bool hasCallSiteLandingPad(MCSymbol *Sym) {
     return !LPadToCallSiteMap[Sym].empty();
+  }
+
+  bool hasAnyCallSiteLabel() const {
+    return !CallSiteMap.empty();
   }
 
   /// Map the begin label for a call site.
