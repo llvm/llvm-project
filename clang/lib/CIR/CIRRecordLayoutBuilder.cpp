@@ -38,6 +38,7 @@ struct CIRRecordLowering final {
   void lower(bool nonVirtualBaseType);
 
   void accumulateFields();
+  void accumulateVBases();
 
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
@@ -118,7 +119,9 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
            "Inheritance NYI");
 
     assert(!members.empty() && "Empty CXXRecordDecls NYI");
-    assert(!nonVirtualBaseType && "non-irtual base type handling NYI");
+
+    if (!nonVirtualBaseType)
+      accumulateVBases();
   }
 
   llvm::stable_sort(members);
@@ -128,6 +131,13 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   // TODO: support zeroInit
   fillOutputFields();
   // TODO: implement volatile bit fields
+}
+
+void CIRRecordLowering::accumulateVBases() {
+  if (astRecordLayout.hasOwnVFPtr())
+    llvm_unreachable("NYI");
+  if (astRecordLayout.hasOwnVBPtr())
+    llvm_unreachable("NYI");
 }
 
 void CIRRecordLowering::fillOutputFields() {
