@@ -19,6 +19,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -173,6 +174,8 @@ public:
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 
   mlir::Value GetGlobalValue(const clang::Decl *D);
+  std::nullptr_t getModuleDebugInfo() { return nullptr; }
+
 
   void emitError(const llvm::Twine &message) { theModule.emitError(message); }
 
