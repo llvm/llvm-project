@@ -92,9 +92,9 @@ private:
   /// -------
 
 public:
-  mlir::ModuleOp getModule() { return theModule; }
+  mlir::ModuleOp getModule() const { return theModule; }
   mlir::OpBuilder &getBuilder() { return builder; }
-  clang::ASTContext &getASTContext() { return astCtx; }
+  clang::ASTContext &getASTContext() const { return astCtx; }
   const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
   clang::DiagnosticsEngine &getDiags() const { return Diags; }
