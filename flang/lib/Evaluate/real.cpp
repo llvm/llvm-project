@@ -639,6 +639,9 @@ template <typename W, int P> std::string Real<W, P>::DumpHexadecimal() const {
     }
     result += 'p';
     int exponent = Exponent() - exponentBias;
+    if (intPart == '0') {
+      exponent += 1;
+    }
     result += Integer<32>{exponent}.SignedDecimal();
     return result;
   }
