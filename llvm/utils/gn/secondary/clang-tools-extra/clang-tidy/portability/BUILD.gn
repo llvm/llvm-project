@@ -15,6 +15,5 @@ static_library("portability") {
     "PortabilityTidyModule.cpp",
     "RestrictSystemIncludesCheck.cpp",
     "SIMDIntrinsicsCheck.cpp",
-    "StdAllocatorConstCheck.cpp",
   ]
 }
