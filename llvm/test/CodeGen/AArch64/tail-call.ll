@@ -36,7 +36,6 @@ define fastcc void @caller_to8_from0() #0 {
   ret void
 
 ; COMMON: str {{x[0-9]+}}, [sp, #-16]!
-; COMMON-NEXT: .cfi_def_cfa_offset 16
 ; COMMON-NEXT: b callee_stack8
 }
 
