@@ -114,12 +114,16 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       isPacked{isPacked} {}
 
 void CIRRecordLowering::lower(bool nonVirtualBaseType) {
-  assert(!recordDecl->isUnion() && "NYI");
+  if (recordDecl->isUnion()) {
+    llvm_unreachable("NYI");
+  }
+
   CharUnits Size = nonVirtualBaseType ? astRecordLayout.getNonVirtualSize()
                                       : astRecordLayout.getSize();
 
   accumulateFields();
 
+  // RD implies C++
   if (cxxRecordDecl) {
     assert(!astRecordLayout.hasOwnVFPtr() && "accumulateVPtrs() NYI");
     assert(cxxRecordDecl->bases().begin() == cxxRecordDecl->bases().end() &&
