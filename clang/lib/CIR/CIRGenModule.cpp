@@ -224,6 +224,7 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
   const auto *Global = cast<ValueDecl>(GD.getDecl());
 
   assert(!Global->hasAttr<WeakRefAttr>() && "NYI");
+  assert(!Global->hasAttr<AliasAttr>() && "NYI");
   assert(!Global->hasAttr<IFuncAttr>() && "NYI");
   assert(!Global->hasAttr<CPUDispatchAttr>() && "NYI");
   assert(!langOpts.CUDA && "NYI");
