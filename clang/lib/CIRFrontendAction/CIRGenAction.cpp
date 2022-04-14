@@ -90,13 +90,10 @@ public:
         headerSearchOptions(headerSearchOptions),
         codeGenOptions(codeGenOptions), targetOptions(targetOptions),
         langOptions(langOptions), feOptions(feOptions),
+
         outputStream(std::move(os)),
-        gen(std::make_unique<CIRGenerator>(codeGenOptions)) {
-    // This is required to match the constructors used during
-    // CodeGenAction. Ultimately, this is required because we want to use
-    // the same utility functions in BackendUtil.h for handling llvm
-    // optimization and codegen
-    (void)this->codeGenOptions;
+
+        gen(std::make_unique<CIRGenerator>(diagnosticsEngine, codeGenOptions)) {
   }
 
   void Initialize(ASTContext &ctx) override {

@@ -36,8 +36,10 @@ class CIRGenModule;
 class CIRGenTypes;
 
 class CIRGenerator : public clang::ASTConsumer {
+  clang::DiagnosticsEngine &Diags;
 public:
-  CIRGenerator(const clang::CodeGenOptions &CGO);
+  CIRGenerator(clang::DiagnosticsEngine &diags,
+               const clang::CodeGenOptions &CGO);
   ~CIRGenerator();
   void Initialize(clang::ASTContext &Context) override;
   bool EmitFunction(const clang::FunctionDecl *FD);
