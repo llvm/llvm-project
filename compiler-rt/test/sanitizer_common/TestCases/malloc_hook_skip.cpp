@@ -3,6 +3,7 @@
 // Test requires platform with thread local support with no dependency on malloc.
 // UNSUPPORTED: android
 // UNSUPPORTED: ios
+// UNSUPPORTED: darwin
 
 #include <assert.h>
 #include <sanitizer/allocator_interface.h>
