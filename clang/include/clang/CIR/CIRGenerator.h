@@ -15,6 +15,7 @@
 #define CLANG_CIRGENERATOR_H_
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/CodeGenOptions.h"
 
 #include "llvm/Support/ToolOutputFile.h"
@@ -44,11 +45,32 @@ class CIRGenerator : public clang::ASTConsumer {
 
   const clang::CodeGenOptions codeGenOpts; // Intentionally copied in.
 
+  unsigned HandlingTopLevelDecls;
+
+  /// Use this when emitting decls to block re-entrant decl emission. It will
+  /// emit all deferred decls on scope exit. Set EmitDeferred to false if decl
+  /// emission must be deferred longer, like at the end of a tag definition.
+  struct HandlingTopLevelDeclRAII {
+    CIRGenerator &Self;
+    bool EmitDeferred;
+    HandlingTopLevelDeclRAII(CIRGenerator &Self, bool EmitDeferred = true)
+        : Self{Self}, EmitDeferred{EmitDeferred} {
+      ++Self.HandlingTopLevelDecls;
+    }
+    ~HandlingTopLevelDeclRAII() {
+      unsigned Level = --Self.HandlingTopLevelDecls;
+      if (Level == 0 && EmitDeferred)
+        Self.buildDeferredDecls();
+    }
+  };
+
 protected:
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
   std::unique_ptr<CIRGenModule> CGM;
 
 private:
+  llvm::SmallVector<clang::FunctionDecl *, 8> DeferredInlineMemberFuncDefs;
+
 public:
   CIRGenerator(clang::DiagnosticsEngine &diags,
                const clang::CodeGenOptions &CGO);
@@ -69,6 +91,7 @@ public:
 
   void verifyModule();
 
+  void buildDeferredDecls();
 };
 
 } // namespace cir
