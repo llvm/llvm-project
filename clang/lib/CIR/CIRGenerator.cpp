@@ -71,6 +71,10 @@ bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef D) {
 }
 
 void CIRGenerator::HandleTranslationUnit(ASTContext &C) {
+  // Release the Builder when there is no error.
+  if (!Diags.hasErrorOccurred() && CGM)
+    CGM->Release();
+
   // If there are errors before or when releasing the CGM, reset the module to
   // stop here before invoking the backend.
   if (Diags.hasErrorOccurred()) {

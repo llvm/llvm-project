@@ -447,3 +447,50 @@ mlir::Location CIRGenModule::getLoc(mlir::Location lhs, mlir::Location rhs) {
   assert(CurCGF);
   return CurCGF->getLoc(lhs, rhs);
 }
+
+void CIRGenModule::Release() {
+  // TODO: buildVTablesOpportunistically();
+  // TODO: applyGlobalValReplacements();
+  // TODO: applyReplacements();
+  // TODO: checkAliases();
+  // TODO: buildMultiVersionFunctions();
+  // TODO: buildCXXGlobalInitFunc();
+  // TODO: buildCXXGlobalCleanUpFunc();
+  // TODO: registerGlobalDtorsWithAtExit();
+  // TODO: buildCXXThreadLocalInitFunc();
+  // TODO: ObjCRuntime
+  if (astCtx.getLangOpts().CUDA) {
+    llvm_unreachable("NYI");
+  }
+  // TODO: OpenMPRuntime
+  // TODO: PGOReader
+  // TODO: buildCtorList(GlobalCtors);
+  // TODO: builtCtorList(GlobalDtors);
+  // TODO: buildGlobalAnnotations();
+  // TODO: buildDeferredUnusedCoverageMappings();
+  // TODO: CIRGenPGO
+  // TODO: CoverageMapping
+  if (getCodeGenOpts().SanitizeCfiCrossDso) {
+    llvm_unreachable("NYI");
+  }
+  // TODO: buildAtAvailableLinkGuard();
+  if (astCtx.getTargetInfo().getTriple().isWasm() &&
+      !astCtx.getTargetInfo().getTriple().isOSEmscripten()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Emit reference of __amdgpu_device_library_preserve_asan_functions to
+  // preserve ASAN functions in bitcode libraries.
+  if (getLangOpts().Sanitize.has(SanitizerKind::Address)) {
+    llvm_unreachable("NYI");
+  }
+
+  // TODO: buildLLVMUsed();
+  // TODO: SanStats
+
+  if (getCodeGenOpts().Autolink) {
+    // TODO: buildModuleLinkOptions
+  }
+
+  // TODO: FINISH THE REST OF THIS
+}
