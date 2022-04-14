@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectX.h"
+#include "PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
@@ -25,6 +26,7 @@
 #define DEBUG_TYPE "dxil-prepare"
 
 using namespace llvm;
+using namespace llvm::dxil;
 
 namespace {
 
@@ -78,8 +80,27 @@ constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
 }
 
 class DXILPrepareModule : public ModulePass {
+
+  static Value *maybeGenerateBitcast(IRBuilder<> &Builder,
+                                     PointerTypeMap &PointerTypes,
+                                     Instruction &Inst, Value *Operand,
+                                     Type *Ty) {
+    // Omit bitcasts if the incoming value matches the instruction type.
+    auto It = PointerTypes.find(Operand);
+    if (It != PointerTypes.end())
+      if (cast<TypedPointerType>(It->second)->getElementType() == Ty)
+        return nullptr;
+    // Insert bitcasts where we are removing the instruction.
+    Builder.SetInsertPoint(&Inst);
+    // This code only gets hit in opaque-pointer mode, so the type of the
+    // pointer doesn't matter.
+    return Builder.Insert(CastInst::Create(Instruction::BitCast, Operand,
+                                           Builder.getInt8PtrTy()));
+  }
+
 public:
   bool runOnModule(Module &M) override {
+    PointerTypeMap PointerTypes = PointerTypeAnalysis::run(M);
     AttributeMask AttrMask;
     for (Attribute::AttrKind I = Attribute::None; I != Attribute::EndAttrKinds;
          I = Attribute::AttrKind(I + 1)) {
@@ -89,7 +110,7 @@ public:
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
       F.removeRetAttrs(AttrMask);
-      for (size_t Idx = 0; Idx < F.arg_size(); ++Idx)
+      for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
       for (auto &BB : F) {
@@ -101,6 +122,41 @@ public:
             Value *Zero = ConstantFP::get(In->getType(), -0.0);
             I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
             I.eraseFromParent();
+            continue;
+          }
+          // Only insert bitcasts if the IR is using opaque pointers.
+          if (!M.getContext().hasSetOpaquePointersValue())
+            continue;
+
+          // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
+          // unmodified as it reserves instruction IDs during contruction.
+          if (auto LI = dyn_cast<LoadInst>(&I)) {
+            if (Value *NoOpBitcast = maybeGenerateBitcast(
+                    Builder, PointerTypes, I, LI->getPointerOperand(),
+                    LI->getType())) {
+              LI->replaceAllUsesWith(
+                  Builder.CreateLoad(LI->getType(), NoOpBitcast));
+              LI->eraseFromParent();
+            }
+            continue;
+          }
+          if (auto SI = dyn_cast<StoreInst>(&I)) {
+            if (Value *NoOpBitcast = maybeGenerateBitcast(
+                    Builder, PointerTypes, I, SI->getPointerOperand(),
+                    SI->getValueOperand()->getType())) {
+
+              SI->replaceAllUsesWith(
+                  Builder.CreateStore(SI->getValueOperand(), NoOpBitcast));
+              SI->eraseFromParent();
+            }
+            continue;
+          }
+          if (auto GEP = dyn_cast<GetElementPtrInst>(&I)) {
+            if (Value *NoOpBitcast = maybeGenerateBitcast(
+                    Builder, PointerTypes, I, GEP->getPointerOperand(),
+                    GEP->getResultElementType()))
+              GEP->setOperand(0, NoOpBitcast);
+            continue;
           }
         }
       }
