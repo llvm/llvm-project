@@ -16,9 +16,9 @@ using namespace clang;
 
 CIRGenFunctionInfo *CIRGenFunctionInfo::create(
     unsigned cirCC, bool instanceMethod, bool chainCall,
-    const clang::FunctionType::ExtInfo &info,
-    llvm::ArrayRef<ExtParameterInfo> paramInfos, clang::CanQualType resultType,
-    llvm::ArrayRef<clang::CanQualType> argTypes, RequiredArgs required) {
+    const FunctionType::ExtInfo &info,
+    llvm::ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
+    llvm::ArrayRef<CanQualType> argTypes, RequiredArgs required) {
   assert(paramInfos.empty() || paramInfos.size() == argTypes.size());
   assert(!required.allowsOptionalArgs() ||
          required.getNumRequiredArgs() <= argTypes.size());
@@ -167,7 +167,7 @@ static bool hasInAllocaArgs(CIRGenModule &CGM, CallingConv ExplicitCC,
   return false;
 }
 
-mlir::FunctionType CIRGenTypes::GetFunctionType(clang::GlobalDecl GD) {
+mlir::FunctionType CIRGenTypes::GetFunctionType(GlobalDecl GD) {
   const CIRGenFunctionInfo &FI = arrangeGlobalDeclaration(GD);
   return GetFunctionType(FI);
 }
@@ -244,8 +244,8 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  const CIRGenCallee &Callee,
                                  ReturnValueSlot ReturnValue,
                                  const CallArgList &CallArgs,
-                                 mlir::func::CallOp &callOrInvoke,
-                                 bool IsMustTail, clang::SourceLocation Loc) {
+                                 mlir::func::CallOp &callOrInvoke, bool IsMustTail,
+                                 SourceLocation Loc) {
   // FIXME: We no longer need the types from CallArgs; lift up and simplify
 
   assert(Callee.isOrdinary() || Callee.isVirtual());
