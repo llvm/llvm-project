@@ -33,5 +33,6 @@
 // CHECK-NEXT: tensor
 // CHECK-NEXT: test
 // CHECK-NEXT: tosa
+// CHECK-NEXT: transform
 // CHECK-NEXT: vector
 // CHECK-NEXT: x86vector

@@ -30,6 +30,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestPass
     MLIRTestReducer
     MLIRTestRewrite
+    MLIRTestTransformDialect
     MLIRTestTransforms
     MLIRVectorTestPasses
     )

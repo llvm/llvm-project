@@ -51,6 +51,7 @@
 #include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
@@ -92,6 +93,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   shape::ShapeDialect,
                   sparse_tensor::SparseTensorDialect,
                   tensor::TensorDialect,
+                  transform::TransformDialect,
                   tosa::TosaDialect,
                   x86vector::X86VectorDialect>();
   // clang-format on
