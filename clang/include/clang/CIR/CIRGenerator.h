@@ -16,7 +16,9 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/CodeGenOptions.h"
+
 #include "llvm/Support/ToolOutputFile.h"
+
 #include <memory>
 
 namespace mlir {
@@ -36,7 +38,17 @@ class CIRGenModule;
 class CIRGenTypes;
 
 class CIRGenerator : public clang::ASTConsumer {
+  virtual void anchor();
   clang::DiagnosticsEngine &Diags;
+  clang::ASTContext *astCtx;
+
+  const clang::CodeGenOptions codeGenOpts; // Intentionally copied in.
+
+protected:
+  std::unique_ptr<mlir::MLIRContext> mlirCtx;
+  std::unique_ptr<CIRGenModule> CGM;
+
+private:
 public:
   CIRGenerator(clang::DiagnosticsEngine &diags,
                const clang::CodeGenOptions &CGO);
@@ -54,13 +66,6 @@ public:
 
   void verifyModule();
 
-private:
-  std::unique_ptr<mlir::MLIRContext> mlirCtx;
-  std::unique_ptr<CIRGenModule> CGM;
-
-  const clang::CodeGenOptions codeGenOpts; // Intentionally copied in.
-
-  clang::ASTContext *astCtx;
 };
 
 } // namespace cir
