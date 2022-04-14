@@ -99,6 +99,12 @@ void CIRGenerator::HandleInlineFunctionDefinition(FunctionDecl *D) {
   //     void foo() { bar(); }
   //   } A;
   DeferredInlineMemberFuncDefs.push_back(D);
+
+  // Provide some coverage mapping even for methods that aren't emitted.
+  // Don't do this for templated classes though, as they may not be
+  // instantiable.
+  if (!D->getLexicalDeclContext()->isDependentContext())
+    CGM->AddDeferredUnusedCoverageMapping(D);
 }
 
 void CIRGenerator::buildDeferredDecls() {
