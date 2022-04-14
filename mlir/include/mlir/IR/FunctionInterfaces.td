@@ -86,8 +86,11 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
       if ($_op.isExternal())
         return success();
       ArrayRef<Type> fnInputTypes = $_op.getArgumentTypes();
-      Block &entryBlock = $_op.front();
-    
+      // NOTE: This should just be $_op.front() but access generically
+      // because the interface methods defined here may be shadowed in
+      // arbitrary ways. https://github.com/llvm/llvm-project/issues/54807
+      Block &entryBlock = $_op->getRegion(0).front();
+
       unsigned numArguments = fnInputTypes.size();
       if (entryBlock.getNumArguments() != numArguments)
         return $_op.emitOpError("entry block must have ")
@@ -146,7 +149,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
       bodyRegion->push_back(body);
       for (Type input : inputTypes)
         body->addArgument(input, state.location);
-    } 
+    }
   }];
   let extraSharedClassDeclaration = [{
     /// Block list iterator types.
@@ -157,7 +160,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// Block argument iterator types.
     using BlockArgListType = Region::BlockArgListType;
     using args_iterator = BlockArgListType::iterator;
-    
+
     //===------------------------------------------------------------------===//
     // Body Handling
     //===------------------------------------------------------------------===//
@@ -204,7 +207,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
       assert(empty() && "function already has an entry block");
       Block *entry = new Block();
       push_back(entry);
-      
+
       // FIXME: Allow for passing in locations for these arguments instead of using
       // the operations location.
       ArrayRef<Type> inputTypes = $_op.getArgumentTypes();
