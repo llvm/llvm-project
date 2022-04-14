@@ -7,7 +7,6 @@ add_clang_library(clangTidyPortabilityModule
   PortabilityTidyModule.cpp
   RestrictSystemIncludesCheck.cpp
   SIMDIntrinsicsCheck.cpp
-  StdAllocatorConstCheck.cpp
 
   LINK_LIBS
   clangTidy

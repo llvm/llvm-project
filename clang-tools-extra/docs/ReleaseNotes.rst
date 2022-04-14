@@ -117,14 +117,6 @@ New checks
 
   Replaces groups of adjacent macros with an unscoped anonymous enum.
 
-- New :doc:`portability-std-allocator-const <clang-tidy/checks/portability-std-allocator-const>` check.
-
-  Report use of ``std::vector<const T>`` (and similar containers of const
-  elements). These are not allowed in standard C++ due to undefined
-  ``std::allocator<const T>``. They do not compile with libstdc++ or MSVC.
-  Future libc++ will remove the extension (`D120996
-  <https://reviews.llvm.org/D120996>`).
-
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
