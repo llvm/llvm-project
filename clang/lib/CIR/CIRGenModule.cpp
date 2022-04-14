@@ -241,15 +241,24 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
     llvm_unreachable("NYI");
   }
 
-  assert(MustBeEmitted(Global) ||
-         MayBeEmittedEagerly(Global) && "Delayed emission NYI");
+  // Defer code generation to first use when possible, e.g. if this is an inline
+  // function. If the global mjust always be emitted, do it eagerly if possible
+  // to benefit from cache locality.
+  if (MustBeEmitted(Global) && MayBeEmittedEagerly(Global)) {
+    CIRGenFunction CGF{*this, builder};
+    CurCGF = &CGF;
+    auto fn = CGF.buildFunction(cast<FunctionDecl>(GD.getDecl()));
+    theModule.push_back(fn);
+    CurCGF = nullptr;
+    return;
+  }
 
-  CIRGenFunction CGF{*this, builder};
-  CurCGF = &CGF;
-  auto fn = CGF.buildFunction(cast<FunctionDecl>(GD.getDecl()));
-  theModule.push_back(fn);
-  CurCGF = nullptr;
-  return;
+  // If we're deferring emission of a C++ variable with an initializer, remember
+  // the order in which it appeared on the file.
+  if (getLangOpts().CPlusPlus && isa<VarDecl>(Global) &&
+      cast<VarDecl>(Global)->hasInit()) {
+    llvm_unreachable("NYI");
+  }
 }
 
 // buildTopLevelDecl - Emit code for a single top level declaration.
