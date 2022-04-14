@@ -37,7 +37,7 @@ class CIRBasedWarnings {
 private:
   Sema &S;
   AnalysisBasedWarnings::Policy DefaultPolicy;
-  std::unique_ptr<cir::CIRGenerator> CIRGen;
+  // std::unique_ptr<cir::CIRGenerator> CIRGen;
 
   //class InterProceduralData;
   //std::unique_ptr<InterProceduralData> IPData;
