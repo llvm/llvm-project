@@ -1,5 +1,33 @@
 // RUN: mlir-opt %s -canonicalize --split-input-file -allow-unregistered-dialect | FileCheck %s
 
+// Fold all the gpu.wait ops as they are redundant.
+// CHECK-LABEL: func @fold_wait_op_test1
+func @fold_wait_op_test1() {
+  %1 = gpu.wait async
+  gpu.wait []
+  %3 = gpu.wait async
+  gpu.wait [%3]
+  return
+}
+// CHECK-NOT: gpu.wait
+
+// Replace uses of gpu.wait op with its async dependency.
+// CHECK-LABEL: func @fold_wait_op_test2
+func @fold_wait_op_test2(%arg0: i1) -> (memref<5xf16>, memref<5xf16>) {
+  %0 = gpu.wait async
+  %memref, %asyncToken = gpu.alloc async [%0] () : memref<5xf16>
+  gpu.wait [%0]
+  %1 = gpu.wait async [%0]
+  %memref_0, %asyncToken_0 = gpu.alloc async [%1] () : memref<5xf16>
+  gpu.wait [%1]
+  return %memref, %memref_0 : memref<5xf16>, memref<5xf16>
+}
+// CHECK-NEXT: %[[TOKEN0:.*]] = gpu.wait async
+// CHECK-NEXT: gpu.alloc async [%[[TOKEN0]]] ()
+// CHECK-NEXT: %[[TOKEN1:.*]] = gpu.wait async
+// CHECK-NEXT: gpu.alloc async [%[[TOKEN1]]] ()
+// CHECK-NEXT: return
+
 // CHECK-LABEL: @memcpy_after_cast
 func @memcpy_after_cast(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
   // CHECK-NOT: memref.cast
