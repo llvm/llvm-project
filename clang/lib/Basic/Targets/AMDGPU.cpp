@@ -407,6 +407,9 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     }
   }
 
+  if (AllowAMDGPUUnsafeFPAtomics)
+    Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
+
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
   // removed in the near future.
   if (hasFMAF())
