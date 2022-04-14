@@ -595,9 +595,13 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
         },
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // FIXME: in C we need to open a new scope here. Do we also need it
-          // for C++ in case it's a compound statement?
-          if (buildStmt(S.getBody(), /*useCurrentScope=*/true).failed())
+          // https://en.cppreference.com/w/cpp/language/for
+          // While in C++, the scope of the init-statement and the scope of
+          // statement are one and the same, in C the scope of statement is
+          // nested within the scope of init-statement.
+          bool useCurrentScope =
+              CGM.getASTContext().getLangOpts().CPlusPlus ? true : false;
+          if (buildStmt(S.getBody(), useCurrentScope).failed())
             forRes = mlir::failure();
         },
         /*stepBuilder=*/
