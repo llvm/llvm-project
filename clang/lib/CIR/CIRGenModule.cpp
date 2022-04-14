@@ -230,11 +230,15 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
   assert(!langOpts.CUDA && "NYI");
   assert(!langOpts.OpenMP && "NYI");
 
-  const auto *FD = dyn_cast<FunctionDecl>(Global);
-  assert(FD && "Only FunctionDecl supported as of here");
-  if (!FD->doesThisDeclarationHaveABody()) {
-    assert(!FD->doesDeclarationForceExternallyVisibleDefinition() && "NYI");
-    return;
+  // Ignore declarations, they will be emitted on their first use.
+  if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
+    // Forward declarations are emitted lazily on first use.
+    if (!FD->doesThisDeclarationHaveABody()) {
+      if (!FD->doesDeclarationForceExternallyVisibleDefinition())
+        return;
+    }
+  } else {
+    llvm_unreachable("NYI");
   }
 
   assert(MustBeEmitted(Global) ||
@@ -245,6 +249,7 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
   auto fn = CGF.buildFunction(cast<FunctionDecl>(GD.getDecl()));
   theModule.push_back(fn);
   CurCGF = nullptr;
+  return;
 }
 
 // buildTopLevelDecl - Emit code for a single top level declaration.
@@ -553,4 +558,3 @@ void CIRGenModule::UpdateCompletedType(const TagDecl *TD) {
   // Make sure that this type is translated.
   genTypes.UpdateCompletedType(TD);
 }
-
