@@ -52,6 +52,7 @@ using MessageFixedText = parser::MessageFixedText;
 using MessageFormattedText = parser::MessageFormattedText;
 
 class ResolveNamesVisitor;
+class ScopeHandler;
 
 // ImplicitRules maps initial character of identifier to the DeclTypeSpec
 // representing the implicit type; std::nullopt if none.
@@ -320,6 +321,18 @@ public:
   void Post(const parser::TypeGuardStmt &);
   void Post(const parser::TypeSpec &);
 
+  // Walk the parse tree of a type spec and return the DeclTypeSpec for it.
+  template <typename T>
+  const DeclTypeSpec *ProcessTypeSpec(const T &x, bool allowForward = false) {
+    auto restorer{common::ScopedSet(state_, State{})};
+    set_allowForwardReferenceToDerivedType(allowForward);
+    BeginDeclTypeSpec();
+    Walk(x);
+    const auto *type{GetDeclTypeSpec()};
+    EndDeclTypeSpec();
+    return type;
+  }
+
 protected:
   struct State {
     bool expectDeclTypeSpec{false}; // should see decl-type-spec only when true
@@ -336,18 +349,6 @@ protected:
   }
   void set_allowForwardReferenceToDerivedType(bool yes) {
     state_.allowForwardReferenceToDerivedType = yes;
-  }
-
-  // Walk the parse tree of a type spec and return the DeclTypeSpec for it.
-  template <typename T>
-  const DeclTypeSpec *ProcessTypeSpec(const T &x, bool allowForward = false) {
-    auto restorer{common::ScopedSet(state_, State{})};
-    set_allowForwardReferenceToDerivedType(allowForward);
-    BeginDeclTypeSpec();
-    Walk(x);
-    const auto *type{GetDeclTypeSpec()};
-    EndDeclTypeSpec();
-    return type;
   }
 
   const DeclTypeSpec *GetDeclTypeSpec();
@@ -448,6 +449,42 @@ private:
   ArraySpec attrCoarraySpec_;
 
   void PostAttrSpec();
+};
+
+// Manages a stack of function result information.  We defer the processing
+// of a type specification that appears in the prefix of a FUNCTION statement
+// until the function result variable appears in the specification part
+// or the end of the specification part.  This allows for forward references
+// in the type specification to resolve to local names.
+class FuncResultStack {
+public:
+  explicit FuncResultStack(ScopeHandler &scopeHandler)
+      : scopeHandler_{scopeHandler} {}
+  ~FuncResultStack();
+
+  struct FuncInfo {
+    // Parse tree of the type specification in the FUNCTION prefix
+    const parser::DeclarationTypeSpec *parsedType{nullptr};
+    // Name of the function RESULT in the FUNCTION suffix, if any
+    const parser::Name *resultName{nullptr};
+    // Result symbol
+    Symbol *resultSymbol{nullptr};
+    std::optional<SourceName> source;
+    bool inFunctionStmt{false}; // true between Pre/Post of FunctionStmt
+  };
+
+  // Completes the definition of the top function's result.
+  void CompleteFunctionResultType();
+  // Completes the definition of a symbol if it is the top function's result.
+  void CompleteTypeIfFunctionResult(Symbol &);
+
+  FuncInfo *Top() { return stack_.empty() ? nullptr : &stack_.back(); }
+  FuncInfo &Push() { return stack_.emplace_back(); }
+  void Pop() { stack_.pop_back(); }
+
+private:
+  ScopeHandler &scopeHandler_;
+  std::vector<FuncInfo> stack_;
 };
 
 // Manage a stack of Scopes
@@ -587,6 +624,8 @@ public:
   void MakeExternal(Symbol &);
 
 protected:
+  FuncResultStack &funcResultStack() { return funcResultStack_; }
+
   // Apply the implicit type rules to this symbol.
   void ApplyImplicitRules(Symbol &, bool allowForwardReference = false);
   bool ImplicitlyTypeForwardRef(Symbol &);
@@ -630,6 +669,7 @@ protected:
 
 private:
   Scope *currScope_{nullptr};
+  FuncResultStack funcResultStack_{*this};
 };
 
 class ModuleVisitor : public virtual ScopeHandler {
@@ -746,7 +786,6 @@ private:
 
 class SubprogramVisitor : public virtual ScopeHandler, public InterfaceVisitor {
 public:
-  ~SubprogramVisitor();
   bool HandleStmtFunction(const parser::StmtFunctionStmt &);
   bool Pre(const parser::SubroutineStmt &);
   void Post(const parser::SubroutineStmt &);
@@ -768,22 +807,10 @@ public:
   void EndSubprogram();
 
 protected:
-  void FinishFunctionResult();
   // Set when we see a stmt function that is really an array element assignment
   bool badStmtFuncFound_{false};
 
 private:
-  // Info about the current function: parse tree of the type in the PrefixSpec;
-  // name and symbol of the function result from the Suffix; source location.
-  struct FuncInfo {
-    const parser::DeclarationTypeSpec *parsedType{nullptr};
-    const parser::Name *resultName{nullptr};
-    Symbol *resultSymbol{nullptr};
-    std::optional<SourceName> source;
-    bool inFunctionStmt{false}; // true between Pre/Post of FunctionStmt
-  };
-  std::vector<FuncInfo> funcInfoStack_;
-
   // Edits an existing symbol created for earlier calls to a subprogram or ENTRY
   // so that it can be replaced by a later definition.
   bool HandlePreviousCalls(const parser::Name &, Symbol &, Symbol::Flag);
@@ -1967,6 +1994,37 @@ void ArraySpecVisitor::PostAttrSpec() {
   }
 }
 
+// FuncResultStack implementation
+
+FuncResultStack::~FuncResultStack() { CHECK(stack_.empty()); }
+
+void FuncResultStack::CompleteFunctionResultType() {
+  // If the function has a type in the prefix, process it now.
+  if (IsFunction(scopeHandler_.currScope())) {
+    FuncInfo &info{DEREF(Top())};
+    if (info.parsedType) {
+      scopeHandler_.messageHandler().set_currStmtSource(info.source);
+      if (const auto *type{
+              scopeHandler_.ProcessTypeSpec(*info.parsedType, true)}) {
+        if (!scopeHandler_.context().HasError(info.resultSymbol)) {
+          info.resultSymbol->SetType(*type);
+        }
+      }
+      info.parsedType = nullptr;
+    }
+  }
+}
+
+// Called from ConvertTo{Object/Proc}Entity to cope with any appearance
+// of the function result in a specification expression.
+void FuncResultStack::CompleteTypeIfFunctionResult(Symbol &symbol) {
+  if (FuncInfo * info{Top()}) {
+    if (info->resultSymbol == &symbol) {
+      CompleteFunctionResultType();
+    }
+  }
+}
+
 // ScopeHandler implementation
 
 void ScopeHandler::SayAlreadyDeclared(const parser::Name &name, Symbol &prev) {
@@ -2224,6 +2282,7 @@ static bool NeedsType(const Symbol &symbol) {
 
 void ScopeHandler::ApplyImplicitRules(
     Symbol &symbol, bool allowForwardReference) {
+  funcResultStack_.CompleteTypeIfFunctionResult(symbol);
   if (context().HasError(symbol) || !NeedsType(symbol)) {
     return;
   }
@@ -2332,6 +2391,7 @@ bool ScopeHandler::ConvertToObjectEntity(Symbol &symbol) {
   } else if (symbol.has<UnknownDetails>()) {
     symbol.set_details(ObjectEntityDetails{});
   } else if (auto *details{symbol.detailsIf<EntityDetails>()}) {
+    funcResultStack_.CompleteTypeIfFunctionResult(symbol);
     symbol.set_details(ObjectEntityDetails{std::move(*details)});
   } else if (auto *useDetails{symbol.detailsIf<UseDetails>()}) {
     return useDetails->symbol().has<ObjectEntityDetails>();
@@ -2347,6 +2407,7 @@ bool ScopeHandler::ConvertToProcEntity(Symbol &symbol) {
   } else if (symbol.has<UnknownDetails>()) {
     symbol.set_details(ProcEntityDetails{});
   } else if (auto *details{symbol.detailsIf<EntityDetails>()}) {
+    funcResultStack_.CompleteTypeIfFunctionResult(symbol);
     symbol.set_details(ProcEntityDetails{std::move(*details)});
     if (symbol.GetType() && !symbol.test(Symbol::Flag::Implicit)) {
       CHECK(!symbol.test(Symbol::Flag::Subroutine));
@@ -3027,8 +3088,6 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
 
 // SubprogramVisitor implementation
 
-SubprogramVisitor::~SubprogramVisitor() { CHECK(funcInfoStack_.empty()); }
-
 // Return false if it is actually an assignment statement.
 bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
   const auto &name{std::get<parser::Name>(x.t)};
@@ -3085,10 +3144,9 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
 bool SubprogramVisitor::Pre(const parser::Suffix &suffix) {
   if (suffix.resultName) {
     if (IsFunction(currScope())) {
-      if (!funcInfoStack_.empty()) {
-        FuncInfo &info{funcInfoStack_.back()};
-        if (info.inFunctionStmt) {
-          info.resultName = &suffix.resultName.value();
+      if (FuncResultStack::FuncInfo * info{funcResultStack().Top()}) {
+        if (info->inFunctionStmt) {
+          info->resultName = &suffix.resultName.value();
         } else {
           // will check the result name in Post(EntryStmt)
         }
@@ -3107,8 +3165,7 @@ bool SubprogramVisitor::Pre(const parser::Suffix &suffix) {
 bool SubprogramVisitor::Pre(const parser::PrefixSpec &x) {
   // Save this to process after UseStmt and ImplicitPart
   if (const auto *parsedType{std::get_if<parser::DeclarationTypeSpec>(&x.u)}) {
-    CHECK(!funcInfoStack_.empty());
-    FuncInfo &info{funcInfoStack_.back()};
+    FuncResultStack::FuncInfo &info{DEREF(funcResultStack().Top())};
     if (info.parsedType) { // C1543
       Say(currStmtSource().value(),
           "FUNCTION prefix cannot specify the type more than once"_err_en_US);
@@ -3120,23 +3177,6 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec &x) {
     }
   } else {
     return true;
-  }
-}
-
-void SubprogramVisitor::FinishFunctionResult() {
-  // If the function has a type in the prefix, process it now.
-  if (IsFunction(currScope())) {
-    CHECK(!funcInfoStack_.empty());
-    FuncInfo &info{funcInfoStack_.back()};
-    if (info.parsedType) {
-      messageHandler().set_currStmtSource(info.source);
-      if (const auto *type{ProcessTypeSpec(*info.parsedType, true)}) {
-        if (!context().HasError(info.resultSymbol)) {
-          info.resultSymbol->SetType(*type);
-        }
-      }
-      info.parsedType = nullptr;
-    }
   }
 }
 
@@ -3161,8 +3201,7 @@ bool SubprogramVisitor::Pre(const parser::SubroutineStmt &) {
   return BeginAttrs();
 }
 bool SubprogramVisitor::Pre(const parser::FunctionStmt &) {
-  CHECK(!funcInfoStack_.empty());
-  FuncInfo &info{funcInfoStack_.back()};
+  FuncResultStack::FuncInfo &info{DEREF(funcResultStack().Top())};
   CHECK(!info.inFunctionStmt);
   info.inFunctionStmt = true;
   return BeginAttrs();
@@ -3190,8 +3229,7 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
     details.add_dummyArg(dummy);
   }
   const parser::Name *funcResultName;
-  CHECK(!funcInfoStack_.empty());
-  FuncInfo &info{funcInfoStack_.back()};
+  FuncResultStack::FuncInfo &info{DEREF(funcResultStack().Top())};
   CHECK(info.inFunctionStmt);
   info.inFunctionStmt = false;
   if (info.resultName && info.resultName->source != name.source) {
@@ -3208,9 +3246,9 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
     // add function result to function scope
     EntityDetails funcResultDetails;
     funcResultDetails.set_funcResult(true);
-    funcInfoStack_.back().resultSymbol =
-        &MakeSymbol(*funcResultName, std::move(funcResultDetails));
-    details.set_result(*funcInfoStack_.back().resultSymbol);
+    Symbol &result{MakeSymbol(*funcResultName, std::move(funcResultDetails))};
+    info.resultSymbol = &result;
+    details.set_result(result);
   }
   // C1560.
   if (info.resultName && info.resultName->source == name.source) {
@@ -3229,14 +3267,6 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   // Clear the RESULT() name now in case an ENTRY statement in the implicit-part
   // has a RESULT() suffix.
   info.resultName = nullptr;
-  // If there was a type on the function statement, and it is an intrinsic
-  // type, process that type now so that inquiries in specification expressions
-  // will work.  Derived types are deferred to the end of the specification part
-  // so that they can resolve to a locally declared type.
-  if (info.parsedType &&
-      std::holds_alternative<parser::IntrinsicTypeSpec>(info.parsedType->u)) {
-    FinishFunctionResult();
-  }
 }
 
 SubprogramDetails &SubprogramVisitor::PostSubprogramStmt(
@@ -3408,7 +3438,7 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
     SetScope(DEREF(symbol->scope()));
     symbol->get<SubprogramDetails>().set_isInterface(false);
     if (IsFunction(*symbol)) {
-      funcInfoStack_.emplace_back(); // just to be popped later
+      funcResultStack().Push(); // just to be popped later
     }
   } else {
     // Copy the interface into a new subprogram scope.
@@ -3427,7 +3457,7 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
     if (details.isFunction()) {
       currScope().erase(symbol->name());
       newDetails.set_result(*currScope().CopySymbol(details.result()));
-      funcInfoStack_.emplace_back(); // just to be popped later
+      funcResultStack().Push(); // just to be popped later
     }
   }
   return true;
@@ -3471,14 +3501,14 @@ bool SubprogramVisitor::BeginSubprogram(
     }
   }
   if (IsFunction(currScope())) {
-    funcInfoStack_.emplace_back();
+    funcResultStack().Push();
   }
   return true;
 }
 
 void SubprogramVisitor::EndSubprogram() {
   if (IsFunction(currScope())) {
-    funcInfoStack_.pop_back();
+    funcResultStack().Pop();
   }
   PopScope();
 }
@@ -3868,7 +3898,7 @@ bool DeclarationVisitor::Pre(const parser::ExternalStmt &x) {
   HandleAttributeStmt(Attr::EXTERNAL, x.v);
   for (const auto &name : x.v) {
     auto *symbol{FindSymbol(name)};
-    if (!ConvertToProcEntity(*symbol)) {
+    if (!ConvertToProcEntity(DEREF(symbol))) {
       SayWithDecl(
           name, *symbol, "EXTERNAL attribute not allowed on '%s'"_err_en_US);
     } else if (symbol->attrs().test(Attr::INTRINSIC)) { // C840
@@ -6873,7 +6903,7 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
 void ResolveNamesVisitor::FinishSpecificationPart(
     const std::list<parser::DeclarationConstruct> &decls) {
   badStmtFuncFound_ = false;
-  FinishFunctionResult();
+  funcResultStack().CompleteFunctionResultType();
   CheckImports();
   bool inModule{currScope().kind() == Scope::Kind::Module};
   for (auto &pair : currScope()) {
