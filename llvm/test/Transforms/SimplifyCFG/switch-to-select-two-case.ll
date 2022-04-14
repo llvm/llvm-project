@@ -67,9 +67,29 @@ return:
   ret i32 %retval.0
 }
 
+define i1 @switch_to_select_same2_case_results_different_default(i8 %0) {
+; CHECK-LABEL: @switch_to_select_same2_case_results_different_default(
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i8 [[TMP0:%.*]], 4
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %0, label %2 [
+  i8 4, label %3
+  i8 0, label %3
+  ]
 
-define i1 @switch_to_and0(i8 %0) {
-; CHECK-LABEL: @switch_to_and0(
+2:
+  br label %3
+
+3:
+  %4 = phi i1 [ false, %2 ], [ true, %1 ], [ true, %1 ]
+  ret i1 %4
+}
+
+define i1 @switch_to_select_same2_case_results_different_default_and_positive_offset_for_case(i8 %0) {
+; CHECK-LABEL: @switch_to_select_same2_case_results_different_default_and_positive_offset_for_case(
 ; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i8 [[TMP0:%.*]], 43
 ; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i8 [[TMP0]], 45
 ; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
@@ -89,9 +109,31 @@ define i1 @switch_to_and0(i8 %0) {
   ret i1 %4
 }
 
+define i8 @switch_to_select_same2_case_results_different_default_and_negative_offset_for_case(i32 %i) {
+; CHECK-LABEL: @switch_to_select_same2_case_results_different_default_and_negative_offset_for_case(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i32 [[I:%.*]], -3
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i32 [[I]], -5
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[SWITCH_SELECTCMP]], i8 3, i8 42
+; CHECK-NEXT:    ret i8 [[TMP0]]
+;
+entry:
+  switch i32 %i, label %default [
+  i32 -3, label %end
+  i32 -5, label %end
+  ]
 
-define i1 @switch_to_and1(i32 %i) {
-; CHECK-LABEL: @switch_to_and1(
+default:
+  br label %end
+
+end:
+  %t0 = phi i8 [ 42, %default ], [ 3, %entry ], [ 3, %entry ]
+  ret i8 %t0
+}
+
+define i1 @switch_to_select_same4_case_results_different_default(i32 %i) {
+; CHECK-LABEL: @switch_to_select_same4_case_results_different_default(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[LOR_END:%.*]]
@@ -121,8 +163,8 @@ lor.end:
   ret i1 %0
 }
 
-define i1 @switch_to_and2(i32 %i) {
-; CHECK-LABEL: @switch_to_and2(
+define i1 @switch_to_select_same4_case_results_different_default_alt_bitmask(i32 %i) {
+; CHECK-LABEL: @switch_to_select_same4_case_results_different_default_alt_bitmask(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[LOR_END:%.*]]
@@ -152,8 +194,8 @@ lor.end:
   ret i1 %0
 }
 
-define i1 @switch_to_and3(i32 %i) {
-; CHECK-LABEL: @switch_to_and3(
+define i1 @switch_to_select_same4_case_results_different_default_positive_offset(i32 %i) {
+; CHECK-LABEL: @switch_to_select_same4_case_results_different_default_positive_offset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
 ; CHECK-NEXT:    i32 2, label [[LOR_END:%.*]]
@@ -183,31 +225,8 @@ lor.end:
   ret i1 %0
 }
 
-define i8 @switch_to_and4_negcase(i32 %i) {
-; CHECK-LABEL: @switch_to_and4_negcase(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i32 [[I:%.*]], -3
-; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i32 [[I]], -5
-; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[SWITCH_SELECTCMP]], i8 3, i8 42
-; CHECK-NEXT:    ret i8 [[TMP0]]
-;
-entry:
-  switch i32 %i, label %default [
-  i32 -3, label %end
-  i32 -5, label %end
-  ]
-
-default:
-  br label %end
-
-end:
-  %t0 = phi i8 [ 42, %default ], [ 3, %entry ], [ 3, %entry ]
-  ret i8 %t0
-}
-
-define i1 @negative_switch_to_and0(i32 %i) {
-; CHECK-LABEL: @negative_switch_to_and0(
+define i1 @switch_to_select_invalid_mask(i32 %i) {
+; CHECK-LABEL: @switch_to_select_invalid_mask(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[LOR_END:%.*]]
@@ -237,8 +256,8 @@ lor.end:
   ret i1 %0
 }
 
-define i1 @negative_switch_to_and1(i32 %i) {
-; CHECK-LABEL: @negative_switch_to_and1(
+define i1 @switch_to_select_nonpow2_cases(i32 %i) {
+; CHECK-LABEL: @switch_to_select_nonpow2_cases(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[LOR_END:%.*]]
@@ -264,4 +283,51 @@ lor.rhs:
 lor.end:
   %0 = phi i1 [ true, %entry ], [ false, %lor.rhs ], [ true, %entry ], [ true, %entry ]
   ret i1 %0
+}
+
+define i8 @switch_to_select_two_case_results_no_default(i32 %i) {
+; CHECK-LABEL: @switch_to_select_two_case_results_no_default(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[I:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[END:%.*]]
+; CHECK-NEXT:    i32 2, label [[END]]
+; CHECK-NEXT:    i32 4, label [[CASE3:%.*]]
+; CHECK-NEXT:    i32 6, label [[CASE4:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case3:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       case4:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       default:
+; CHECK-NEXT:    unreachable
+; CHECK:       end:
+; CHECK-NEXT:    [[T0:%.*]] = phi i8 [ 44, [[CASE3]] ], [ 44, [[CASE4]] ], [ 42, [[ENTRY:%.*]] ], [ 42, [[ENTRY]] ]
+; CHECK-NEXT:    ret i8 [[T0]]
+;
+entry:
+  switch i32 %i, label %default [
+  i32 0, label %case1
+  i32 2, label %case2
+  i32 4, label %case3
+  i32 6, label %case4
+  ]
+
+case1:
+  br label %end
+
+case2:
+  br label %end
+
+case3:
+  br label %end
+
+case4:
+  br label %end
+
+default:
+  unreachable
+
+end:
+  %t0 = phi i8 [ 42, %case1 ], [ 42, %case2 ], [ 44, %case3 ], [ 44, %case4 ]
+  ret i8 %t0
 }
