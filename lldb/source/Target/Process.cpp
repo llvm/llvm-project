@@ -436,8 +436,8 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_private_run_lock(), m_finalizing(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
-      m_can_interpret_function_calls(false), m_warnings_issued(),
-      m_run_thread_plan_lock(), m_can_jit(eCanJITDontKnow) {
+      m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
+      m_can_jit(eCanJITDontKnow) {
   CheckInWithManager();
 
   Log *log = GetLog(LLDBLog::Object);
@@ -5697,48 +5697,12 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
   }
 }
 
-void Process::PrintWarning(uint64_t warning_type, const void *repeat_key,
-                           const char *fmt, ...) {
-  bool print_warning = true;
-
-  StreamSP stream_sp = GetTarget().GetDebugger().GetAsyncOutputStream();
-  if (!stream_sp)
-    return;
-
-  if (repeat_key != nullptr) {
-    WarningsCollection::iterator it = m_warnings_issued.find(warning_type);
-    if (it == m_warnings_issued.end()) {
-      m_warnings_issued[warning_type] = WarningsPointerSet();
-      m_warnings_issued[warning_type].insert(repeat_key);
-    } else {
-      if (it->second.find(repeat_key) != it->second.end()) {
-        print_warning = false;
-      } else {
-        it->second.insert(repeat_key);
-      }
-    }
-  }
-
-  if (print_warning) {
-    va_list args;
-    va_start(args, fmt);
-    stream_sp->PrintfVarArg(fmt, args);
-    va_end(args);
-  }
-}
-
 void Process::PrintWarningOptimization(const SymbolContext &sc) {
   if (!GetWarningsOptimization())
     return;
-  if (!sc.module_sp)
+  if (!sc.module_sp || !sc.function || !sc.function->GetIsOptimized())
     return;
-  if (!sc.module_sp->GetFileSpec().GetFilename().IsEmpty() && sc.function &&
-      sc.function->GetIsOptimized()) {
-    PrintWarning(Process::Warnings::eWarningsOptimization, sc.module_sp.get(),
-                 "%s was compiled with optimization - stepping may behave "
-                 "oddly; variables may not be available.\n",
-                 sc.module_sp->GetFileSpec().GetFilename().GetCString());
-  }
+  sc.module_sp->ReportWarningOptimization(GetTarget().GetDebugger().GetID());
 }
 
 void Process::PrintWarningUnsupportedLanguage(const SymbolContext &sc) {
@@ -5751,13 +5715,10 @@ void Process::PrintWarningUnsupportedLanguage(const SymbolContext &sc) {
     return;
   LanguageSet plugins =
       PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
-  if (!plugins[language]) {
-    PrintWarning(Process::Warnings::eWarningsUnsupportedLanguage,
-                 sc.module_sp.get(),
-                 "This version of LLDB has no plugin for the language \"%s\". "
-                 "Inspection of frame variables will be limited.\n",
-                 Language::GetNameForLanguageType(language));
-  }
+  if (plugins[language])
+    return;
+  sc.module_sp->ReportWarningUnsupportedLanguage(
+      language, GetTarget().GetDebugger().GetID());
 }
 
 bool Process::GetProcessInfo(ProcessInstanceInfo &info) {

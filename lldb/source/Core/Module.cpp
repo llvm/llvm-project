@@ -1126,6 +1126,31 @@ bool Module::FileHasChanged() const {
   return m_file_has_changed;
 }
 
+void Module::ReportWarningOptimization(
+    llvm::Optional<lldb::user_id_t> debugger_id) {
+  ConstString file_name = GetFileSpec().GetFilename();
+  if (file_name.IsEmpty())
+    return;
+
+  StreamString ss;
+  ss << file_name.GetStringRef()
+     << " was compiled with optimization - stepping may behave "
+        "oddly; variables may not be available.";
+  Debugger::ReportWarning(std::string(ss.GetString()), debugger_id,
+                          &m_optimization_warning);
+}
+
+void Module::ReportWarningUnsupportedLanguage(
+    LanguageType language, llvm::Optional<lldb::user_id_t> debugger_id) {
+  StreamString ss;
+  ss << "This version of LLDB has no plugin for the language \""
+     << Language::GetNameForLanguageType(language)
+     << "\". "
+        "Inspection of frame variables will be limited.";
+  Debugger::ReportWarning(std::string(ss.GetString()), debugger_id,
+                          &m_language_warning);
+}
+
 void Module::ReportErrorIfModifyDetected(const char *format, ...) {
   if (!m_first_file_changed_log) {
     if (FileHasChanged()) {
