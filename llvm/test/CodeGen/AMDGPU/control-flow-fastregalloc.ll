@@ -10,7 +10,7 @@
 
 
 ; GCN-LABEL: {{^}}divergent_if_endif:
-; VGPR: workitem_private_segment_byte_size = 12{{$}}
+; VGPR: workitem_private_segment_byte_size = 16{{$}}
 
 
 ; GCN: {{^}}; %bb.0:
@@ -19,7 +19,7 @@
 
 ; Spill load
 ; GCN: buffer_store_dword [[LOAD0]], off, s[0:3], 0 offset:[[LOAD0_OFFSET:[0-9]+]] ; 4-byte Folded Spill
-; GCN: v_cmp_eq_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v0, s{{[0-9]+}}
+; GCN: v_cmp_eq_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v{{[0-9]+}}, s{{[0-9]+}}
 
 ; Spill saved exec
 ; GCN: s_mov_b64 s[[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]], exec
@@ -82,13 +82,13 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}divergent_loop:
-; VGPR: workitem_private_segment_byte_size = 16{{$}}
+; VGPR: workitem_private_segment_byte_size = 20{{$}}
 
 ; GCN: {{^}}; %bb.0:
 ; GCN-DAG: s_mov_b32 m0, -1
 ; GCN-DAG: v_mov_b32_e32 [[PTR0:v[0-9]+]], 0{{$}}
 ; GCN: ds_read_b32 [[LOAD0:v[0-9]+]], [[PTR0]]
-; GCN: v_cmp_eq_u32_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], v0, s{{[0-9]+}}
+; GCN: v_cmp_eq_u32_e64 [[CMP0:s\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, s{{[0-9]+}}
 
 ; Spill load
 ; GCN: buffer_store_dword [[LOAD0]], off, s[0:3], 0 offset:[[LOAD0_OFFSET:[0-9]+]] ; 4-byte Folded Spill
@@ -166,7 +166,7 @@ end:
 ; GCN: buffer_store_dword [[LOAD0]], off, s[0:3], 0 offset:[[LOAD0_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; GCN: s_mov_b32 [[ZERO:s[0-9]+]], 0
-; GCN: v_cmp_ne_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v0, [[ZERO]]
+; GCN: v_cmp_ne_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v{{[0-9]+}}, [[ZERO]]
 
 ; GCN: s_mov_b64 s[[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]], exec
 ; GCN: s_and_b64 s[[[ANDEXEC_LO:[0-9]+]]:[[ANDEXEC_HI:[0-9]+]]], s[[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]], [[CMP0]]
@@ -187,6 +187,7 @@ end:
 ; GCN-NEXT: s_branch [[ELSE:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: [[FLOW]]: ; %Flow
+; VGPR: buffer_load_dword
 ; GCN: buffer_load_dword [[FLOW_VAL:v[0-9]+]], off, s[0:3], 0 offset:[[FLOW_VAL_OFFSET:[0-9]+]] ; 4-byte Folded Reload
 ; VGPR: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_LO:[0-9]+]], [[SPILL_VGPR]], [[SAVEEXEC_LO_LANE]]
 ; VGPR: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_HI:[0-9]+]], [[SPILL_VGPR]], [[SAVEEXEC_HI_LANE]]
