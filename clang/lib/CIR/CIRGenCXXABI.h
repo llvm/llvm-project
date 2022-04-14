@@ -93,7 +93,7 @@ public:
 };
 
 /// Creates and Itanium-family ABI
-CIRGenCXXABI *CreateItaniumCXXABI(CIRGenModule &CGM);
+CIRGenCXXABI *CreateCIRGenItaniumCXXABI(CIRGenModule &CGM);
 
 } // namespace cir
 

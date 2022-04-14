@@ -78,7 +78,7 @@ using llvm::StringRef;
 static CIRGenCXXABI *createCXXABI(CIRGenModule &CGM) {
   switch (CGM.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
-    return CreateItaniumCXXABI(CGM);
+    return CreateCIRGenItaniumCXXABI(CGM);
   default:
     llvm_unreachable("invalid C++ ABI kind");
   }

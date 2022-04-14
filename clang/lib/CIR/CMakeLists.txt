@@ -20,6 +20,7 @@ add_clang_library(clangCIR
   CIRGenExprAgg.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
+  CIRGenItaniumCXXABI.cpp
   CIRGenModule.cpp
   CIRGenStmt.cpp
   CIRGenTBAA.cpp
@@ -27,7 +28,6 @@ add_clang_library(clangCIR
   CIRGenerator.cpp
   CIRPasses.cpp
   CIRRecordLayoutBuilder.cpp
-  ItaniumCXXABI.cpp
   LowerToLLVM.cpp
   TargetInfo.cpp
 
