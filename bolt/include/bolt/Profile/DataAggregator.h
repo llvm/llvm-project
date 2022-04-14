@@ -168,14 +168,15 @@ private:
   /// from the file name in BC.
   std::string BuildIDBinaryName;
 
-  /// Memory map info for a single file
+  /// Memory map info for a single file as recorded in perf.data
   struct MMapInfo {
-    uint64_t BaseAddress;
-    uint64_t Size;
-    uint64_t Offset;
-    int32_t PID{-1};
-    bool Forked{false};
-    uint64_t Time{0ULL}; // time in micro seconds
+    uint64_t BaseAddress{0}; /// Base address of the mapped binary.
+    uint64_t MMapAddress{0}; /// Address of the executable segment.
+    uint64_t Size{0};        /// Size of the mapping.
+    uint64_t Offset{0};      /// File offset of the mapped segment.
+    int32_t PID{-1};         /// Process ID.
+    bool Forked{false};      /// Was the process forked?
+    uint64_t Time{0ULL};     /// Time in micro seconds.
   };
 
   /// Per-PID map info for the binary
@@ -420,12 +421,8 @@ private:
   /// correspond to the binary allocated address space, are adjusted to avoid
   /// conflicts.
   void adjustAddress(uint64_t &Address, const MMapInfo &MMI) const {
-    if (Address >= MMI.BaseAddress && Address < MMI.BaseAddress + MMI.Size) {
-      // NOTE: Assumptions about the binary segment load table (PH for ELF)
-      //  Segment file offset equals virtual address (which is true for .so)
-      //  There aren't multiple executable segments loaded because MMapInfo
-      //  doesn't support them.
-      Address -= MMI.BaseAddress - MMI.Offset;
+    if (Address >= MMI.MMapAddress && Address < MMI.MMapAddress + MMI.Size) {
+      Address -= MMI.BaseAddress;
     } else if (Address < MMI.Size) {
       // Make sure the address is not treated as belonging to the binary.
       Address = (-1ULL);

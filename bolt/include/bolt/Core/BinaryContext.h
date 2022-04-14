@@ -970,6 +970,15 @@ public:
                                               Sections.end()));
   }
 
+  /// Return base address for the shared object or PIE based on the segment
+  /// mapping information. \p MMapAddress is an address where one of the
+  /// segments was mapped. \p FileOffset is the offset in the file of the
+  /// mapping. Note that \p FileOffset should be page-aligned and could be
+  /// different from the file offset of the segment which could be unaligned.
+  /// If no segment is found that matches \p FileOffset, return NoneType().
+  Optional<uint64_t> getBaseAddressForMapping(uint64_t MMapAddress,
+                                              uint64_t FileOffset) const;
+
   /// Check if the address belongs to this binary's static allocation space.
   bool containsAddress(uint64_t Address) const {
     return Address >= FirstAllocAddress && Address < LayoutStartAddress;
