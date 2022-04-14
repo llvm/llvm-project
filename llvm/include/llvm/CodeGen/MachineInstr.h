@@ -487,6 +487,8 @@ public:
 
   /// Return the referrer for this DBG_DEF instruction.
   const MachineOperand &getDebugReferrer() const;
+  /// Return the referrer for this DBG_DEF instruction.
+  MachineOperand &getDebugReferrer();
 
   /// Fetch the instruction number of this MachineInstr. If it does not have
   /// one already, a new and unique number will be assigned.

@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -stop-after=finalize-isel < %s | FileCheck --check-prefixes=COMMON,AFTER-ISEL %s
+; RUN: llc -O0 -stop-after=regallocfast < %s | FileCheck --check-prefixes=COMMON,AFTER-RA %s
 ; RUN: llc -O0 -stop-after=prologepilog < %s | FileCheck --check-prefixes=COMMON,AFTER-PEI %s
 ; RUN: llc -O0 -stop-after=livedebugvalues < %s | FileCheck --check-prefixes=COMMON,AFTER-LDV %s
 
@@ -8,6 +9,10 @@
 ; AFTER-ISEL-DAG: ![[ENTRY_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32)))
 ; AFTER-ISEL-DAG: ![[STACK_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32)))
 ; AFTER-ISEL-DAG: ![[STACK_LIFETIME_VAR_R:[0-9]+]] = distinct !DILifetime(object: ![[VAR_R]], location: !DIExpr(DIOpReferrer(i32)))
+
+; AFTER-RA-DAG: ![[ENTRY_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32)))
+; AFTER-RA-DAG: ![[STACK_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32)))
+; AFTER-RA-DAG: ![[STACK_LIFETIME_VAR_R:[0-9]+]] = distinct !DILifetime(object: ![[VAR_R]], location: !DIExpr(DIOpReferrer(i32)))
 
 ; AFTER-PEI-DAG: ![[ENTRY_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32)))
 ; AFTER-PEI-DAG: ![[STACK_LIFETIME_VAR_I:[0-9]+]] = distinct !DILifetime(object: ![[VAR_I]], location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpShr(), DIOpReinterpret(i32 addrspace(5)*), DIOpDeref(i32), DIOpConstant(i32 4), DIOpByteOffset(i32)))
@@ -32,9 +37,22 @@
 ; AFTER-ISEL: DBG_DEF ![[STACK_LIFETIME_VAR_R]], %stack.2.R
 ; AFTER-ISEL-NOT: DBG_
 
+; AFTER-RA-NOT: DBG_
+; AFTER-RA: renamable $vgpr[[#ARG_0_COPY_VGPR:]] = COPY killed $vgpr0
+; AFTER-RA-NOT: DBG_
+; AFTER-RA: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], renamable $vgpr[[#ARG_0_COPY_VGPR]]
+; AFTER-RA-NOT: DBG_
+; AFTER-RA: DBG_KILL ![[ENTRY_LIFETIME_VAR_I]]
+; AFTER-RA-NOT: DBG_
+; AFTER-RA: DBG_DEF ![[STACK_LIFETIME_VAR_I]], %stack.1.I.addr
+; AFTER-RA-NOT: DBG_
+; AFTER-RA: DBG_DEF ![[STACK_LIFETIME_VAR_R]], %stack.2.R
+; AFTER-RA-NOT: DBG_
+
 ; AFTER-PEI-NOT: DBG_
-; FIXME: Support non-stack-slot DBG_DEF referrers
-; AFTER-PEI: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], $noreg
+; AFTER-PEI: renamable $vgpr[[#ARG_0_COPY_VGPR:]] = COPY killed $vgpr0
+; AFTER-PEI-NOT: DBG_
+; AFTER-PEI: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], renamable $vgpr[[#ARG_0_COPY_VGPR]]
 ; AFTER-PEI-NOT: DBG_
 ; AFTER-PEI: DBG_KILL ![[ENTRY_LIFETIME_VAR_I]]
 ; AFTER-PEI-NOT: DBG_
@@ -44,7 +62,9 @@
 ; AFTER-PEI-NOT: DBG_
 
 ; AFTER-LDV-NOT: DBG_
-; AFTER-LDV: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], $noreg
+; AFTER-LDV: $vgpr[[#ARG_0_COPY_VGPR:]] = V_MOV_B32_e32 killed $vgpr0,
+; AFTER-LDV-NOT: DBG_
+; AFTER-LDV: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], renamable $vgpr[[#ARG_0_COPY_VGPR]]
 ; AFTER-LDV-NOT: DBG_
 ; AFTER-LDV: DBG_KILL ![[ENTRY_LIFETIME_VAR_I]]
 ; AFTER-LDV-NOT: DBG_

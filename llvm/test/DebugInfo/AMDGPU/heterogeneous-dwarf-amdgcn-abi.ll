@@ -221,9 +221,9 @@ entry:
 
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_StructNoCopyNoMove")
-; CHECK: DW_TAG_formal_parameter
-; FIXME: fix byval
-; CHECK: DW_AT_location (<empty>)
+; FIXME: An existing bug in DwarfUnit::constructSubprogramArguments leads to
+; this formal parameter not appearing at all in the resulting Dwarf.
+; CHECK-NOT: DW_TAG_formal_parameter
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z28Test_Func_StructNoCopyNoMove18StructNoCopyNoMove(ptr addrspace(5) noundef %0) #0 !dbg !154 {

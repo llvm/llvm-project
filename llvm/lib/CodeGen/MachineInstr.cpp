@@ -844,6 +844,11 @@ const MachineOperand &MachineInstr::getDebugReferrer() const {
   return getOperand(1);
 }
 
+MachineOperand &MachineInstr::getDebugReferrer() {
+  assert(isDebugDef() && "not a DBG_DEF");
+  return getOperand(1);
+}
+
 const MachineOperand &MachineInstr::getDebugVariableOp() const {
   assert((isDebugValue() || isDebugRef()) && "not a DBG_VALUE*");
   unsigned VariableOp = isDebugValueList() ? 0 : 2;
