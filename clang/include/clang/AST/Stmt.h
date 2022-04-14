@@ -1658,6 +1658,15 @@ public:
     return *getTrailingObjects<FPOptionsOverride>();
   }
 
+  /// Get FPOptions inside this statement. They may differ from the outer
+  /// options due to pragmas.
+  /// \param CurFPOptions FPOptions outside this statement.
+  FPOptions getNewFPOptions(FPOptions CurFPOptions) const {
+    return hasStoredFPFeatures()
+               ? getStoredFPFeatures().applyOverrides(CurFPOptions)
+               : CurFPOptions;
+  }
+
   using body_iterator = Stmt **;
   using body_range = llvm::iterator_range<body_iterator>;
 

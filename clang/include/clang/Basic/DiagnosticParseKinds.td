@@ -1266,9 +1266,6 @@ def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
 // The C standard 7.6.1p2 says "The [FENV_ACCESS] pragma shall occur either
 // outside external declarations or preceding all explicit declarations and
 // statements inside a compound statement.
-def warn_stdc_fenv_round_not_supported :
-   Warning<"pragma STDC FENV_ROUND is not supported">,
-   InGroup<UnknownPragmas>;
 def warn_stdc_unknown_rounding_mode : Warning<
   "invalid or unsupported rounding mode in '#pragma STDC FENV_ROUND' - ignored">,
   InGroup<IgnoredPragmas>;

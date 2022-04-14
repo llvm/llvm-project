@@ -486,6 +486,56 @@ bool CodeGenFunction::EmitSimpleStmt(const Stmt *S,
   return true;
 }
 
+namespace {
+/// Cleanup action that restores floating-point control modes upon leaving
+/// a scope.
+struct FPControlModesCleanup final : EHScopeStack::Cleanup {
+  llvm::Value *PreviousModes;
+  FPControlModesCleanup(llvm::Value *M) : PreviousModes(M) {}
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    CGF.Builder.CreateIntrinsic(llvm::Intrinsic::set_rounding, {},
+                                {PreviousModes});
+  }
+};
+} // namespace
+
+void CodeGenFunction::emitSetFPControlModes(FPOptions NewFP) {
+  if (NewFP == CurFPFeatures)
+    return;
+
+  // For now only rounding mode is handled.
+
+  // If the new rounding mode is unknown in compile-time, it means that the
+  // compound statement contains `#pragma STDC FENV_ACCESS ON`. In this case all
+  // manipulations on FP environment, including setting and restoring control
+  // modes are made by the user.
+  if (NewFP.isRoundingModeDynamic())
+    return;
+
+  llvm::RoundingMode OldConstRM = CurFPFeatures.getConstRoundingMode();
+  llvm::RoundingMode NewConstRM = NewFP.getConstRoundingMode();
+  if (OldConstRM == NewConstRM)
+    return;
+
+  llvm::RoundingMode OldRM = CurFPFeatures.getRoundingMode();
+  if (OldRM == NewConstRM)
+    return;
+
+  llvm::Value *PreviousRM = nullptr;
+  if (CurFPFeatures.isRoundingModeDynamic()) {
+    llvm::Function *FGetRound = CGM.getIntrinsic(llvm::Intrinsic::get_rounding);
+    PreviousRM = Builder.CreateCall(FGetRound);
+  } else {
+    PreviousRM = llvm::ConstantInt::get(Int32Ty, static_cast<uint64_t>(OldRM));
+  }
+
+  llvm::RoundingMode NewRM = NewFP.getRoundingMode();
+  Builder.CreateIntrinsic(
+      llvm::Intrinsic::set_rounding, {},
+      llvm::ConstantInt::get(Int32Ty, static_cast<uint64_t>(NewRM)));
+  EHStack.pushCleanup<FPControlModesCleanup>(NormalAndEHCleanup, PreviousRM);
+}
+
 /// EmitCompoundStmt - Emit a compound statement {..} node.  If GetLast is true,
 /// this captures the expression result of the last sub-statement and returns it
 /// (for use by the statement expression extension).
@@ -508,6 +558,12 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
   const Stmt *ExprResult = S.getStmtExprResult();
   assert((!GetLast || (GetLast && ExprResult)) &&
          "If GetLast is true then the CompoundStmt must have a StmtExprResult");
+
+  // Optionally set up the new FP environment, if the compound statement
+  // contains a pragma that modifies it.
+  FPOptions NewFP = S.getNewFPOptions(CurFPFeatures);
+  emitSetFPControlModes(NewFP);
+  CGFPOptionsRAII SavedFPFeatues(*this, NewFP);
 
   Address RetAlloca = Address::invalid();
 

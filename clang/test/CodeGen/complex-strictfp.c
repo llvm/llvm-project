@@ -17,16 +17,18 @@ double D;
 
 // CHECK-LABEL: @test3a(
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr @D, align 8
 // CHECK-NEXT:    [[CF_REAL:%.*]] = load float, ptr @cf, align 4
 // CHECK-NEXT:    [[CF_IMAG:%.*]] = load float, ptr getelementptr inbounds ({ float, float }, ptr @cf, i32 0, i32 1), align 4
-// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_REAL]], metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
-// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_IMAG]], metadata !"fpexcept.strict") #[[ATTR2]]
-// CHECK-NEXT:    [[ADD_R:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[CONV]], double [[TMP0]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
-// CHECK-NEXT:    [[CONV2:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[ADD_R]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
-// CHECK-NEXT:    [[CONV3:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[CONV1]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_REAL]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_IMAG]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CHECK-NEXT:    [[ADD_R:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[CONV]], double [[TMP0]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
+// CHECK-NEXT:    [[CONV2:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[ADD_R]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
+// CHECK-NEXT:    [[CONV3:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[CONV1]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    store float [[CONV2]], ptr @cf, align 4
 // CHECK-NEXT:    store float [[CONV3]], ptr getelementptr inbounds ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void test3a(void) {
@@ -35,13 +37,15 @@ void test3a(void) {
 
 // CHECK-LABEL: @test3b(
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3]]
 // CHECK-NEXT:    [[CF_REAL:%.*]] = load float, ptr @cf, align 4
 // CHECK-NEXT:    [[CF_IMAG:%.*]] = load float, ptr getelementptr inbounds ({ float, float }, ptr @cf, i32 0, i32 1), align 4
-// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_REAL]], metadata !"fpexcept.strict") #[[ATTR2]]
-// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_IMAG]], metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_REAL]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_IMAG]], metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr @D, align 8
-// CHECK-NEXT:    [[ADD_R:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP0]], double [[CONV]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[ADD_R:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP0]], double [[CONV]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    store double [[ADD_R]], ptr @D, align 8
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void test3b(void) {
@@ -50,19 +54,21 @@ void test3b(void) {
 
 // CHECK-LABEL: @test3c(
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3]]
 // CHECK-NEXT:    [[G1_REAL:%.*]] = load double, ptr @g1, align 8
 // CHECK-NEXT:    [[G1_IMAG:%.*]] = load double, ptr getelementptr inbounds ({ double, double }, ptr @g1, i32 0, i32 1), align 8
 // CHECK-NEXT:    [[CF_REAL:%.*]] = load float, ptr @cf, align 4
 // CHECK-NEXT:    [[CF_IMAG:%.*]] = load float, ptr getelementptr inbounds ({ float, float }, ptr @cf, i32 0, i32 1), align 4
-// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_REAL]], metadata !"fpexcept.strict") #[[ATTR2]]
-// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_IMAG]], metadata !"fpexcept.strict") #[[ATTR2]]
-// CHECK-NEXT:    [[CALL:%.*]] = call { double, double } @__divdc3(double noundef [[CONV]], double noundef [[CONV1]], double noundef [[G1_REAL]], double noundef [[G1_IMAG]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_REAL]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_IMAG]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CHECK-NEXT:    [[CALL:%.*]] = call { double, double } @__divdc3(double noundef [[CONV]], double noundef [[CONV1]], double noundef [[G1_REAL]], double noundef [[G1_IMAG]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { double, double } [[CALL]], 1
-// CHECK-NEXT:    [[CONV2:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP0]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
-// CHECK-NEXT:    [[CONV3:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP1]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[CONV2:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP0]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
+// CHECK-NEXT:    [[CONV3:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP1]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    store float [[CONV2]], ptr @cf, align 4
 // CHECK-NEXT:    store float [[CONV3]], ptr getelementptr inbounds ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void test3c(void) {
@@ -71,12 +77,14 @@ void test3c(void) {
 
 // CHECK-LABEL: @test3d(
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3]]
 // CHECK-NEXT:    [[G1_REAL:%.*]] = load double, ptr @g1, align 8
 // CHECK-NEXT:    [[G1_IMAG:%.*]] = load double, ptr getelementptr inbounds ({ double, double }, ptr @g1, i32 0, i32 1), align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr @D, align 8
-// CHECK-NEXT:    [[ADD_R:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[G1_REAL]], double [[TMP0]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[ADD_R:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[G1_REAL]], double [[TMP0]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    store double [[ADD_R]], ptr @g1, align 8
 // CHECK-NEXT:    store double [[G1_IMAG]], ptr getelementptr inbounds ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void test3d(void) {
@@ -85,12 +93,14 @@ void test3d(void) {
 
 // CHECK-LABEL: @test3e(
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr @D, align 8
 // CHECK-NEXT:    [[G1_REAL:%.*]] = load double, ptr @g1, align 8
 // CHECK-NEXT:    [[G1_IMAG:%.*]] = load double, ptr getelementptr inbounds ({ double, double }, ptr @g1, i32 0, i32 1), align 8
-// CHECK-NEXT:    [[ADD_R:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP0]], double [[G1_REAL]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[ADD_R:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP0]], double [[G1_REAL]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    store double [[ADD_R]], ptr @g1, align 8
 // CHECK-NEXT:    store double [[G1_IMAG]], ptr getelementptr inbounds ({ double, double }, ptr @g1, i32 0, i32 1), align 8
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void test3e(void) {
@@ -99,8 +109,10 @@ void test3e(void) {
 
 // CHECK-LABEL: @t1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double 4.000000e+00, metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3]]
+// CHECK-NEXT:    [[CONV:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double 4.000000e+00, metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    store float [[CONV]], ptr @cf, align 4
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void t1(void) {
@@ -109,8 +121,10 @@ void t1(void) {
 
 // CHECK-LABEL: @t2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CONV:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double 4.000000e+00, metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3]]
+// CHECK-NEXT:    [[CONV:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double 4.000000e+00, metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    store float [[CONV]], ptr getelementptr inbounds ({ float, float }, ptr @cf, i32 0, i32 1), align 4
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void t2(void) {
@@ -120,16 +134,18 @@ void t2(void) {
 // CHECK-LABEL: @t91(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[C:%.*]] = alloca [0 x i8], align 1
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3]]
 // CHECK-NEXT:    br i1 false, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // CHECK:       cond.true:
-// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float 2.000000e+00, metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float 2.000000e+00, metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    br label [[COND_END:%.*]]
 // CHECK:       cond.false:
-// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float 2.000000e+00, metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float 2.000000e+00, metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    br label [[COND_END]]
 // CHECK:       cond.end:
 // CHECK-NEXT:    [[COND_R:%.*]] = phi double [ [[CONV]], [[COND_TRUE]] ], [ [[CONV1]], [[COND_FALSE]] ]
 // CHECK-NEXT:    [[COND_I:%.*]] = phi double [ 0.000000e+00, [[COND_TRUE]] ], [ 0.000000e+00, [[COND_FALSE]] ]
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void t91(void) {
@@ -142,16 +158,18 @@ void t91(void) {
 // CHECK-LABEL: @t92(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[C:%.*]] = alloca [0 x i8], align 1
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3]]
 // CHECK-NEXT:    br i1 false, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // CHECK:       cond.true:
-// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float 2.000000e+00, metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float 2.000000e+00, metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    br label [[COND_END:%.*]]
 // CHECK:       cond.false:
-// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float 2.000000e+00, metadata !"fpexcept.strict") #[[ATTR2]]
+// CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float 2.000000e+00, metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    br label [[COND_END]]
 // CHECK:       cond.end:
 // CHECK-NEXT:    [[COND_R:%.*]] = phi double [ [[CONV]], [[COND_TRUE]] ], [ [[CONV1]], [[COND_FALSE]] ]
 // CHECK-NEXT:    [[COND_I:%.*]] = phi double [ 0.000000e+00, [[COND_TRUE]] ], [ 0.000000e+00, [[COND_FALSE]] ]
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void t92(void) {

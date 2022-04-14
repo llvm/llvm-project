@@ -3324,6 +3324,9 @@ public:
   /// Get the record field index as represented in debug info.
   unsigned getDebugInfoFIndex(const RecordDecl *Rec, unsigned FieldIndex);
 
+  /// Optionally emit code that sets required floating-point control modes and
+  /// creates corresponding cleanup action.
+  void emitSetFPControlModes(FPOptions NewFP);
 
   //===--------------------------------------------------------------------===//
   //                            Declaration Emission

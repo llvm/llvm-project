@@ -3463,9 +3463,6 @@ void PragmaSTDC_FENV_ROUNDHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  // Until the pragma is fully implemented, issue a warning.
-  PP.Diag(Tok.getLocation(), diag::warn_stdc_fenv_round_not_supported);
-
   MutableArrayRef<Token> Toks(PP.getPreprocessorAllocator().Allocate<Token>(1),
                               1);
   Toks[0].startToken();
