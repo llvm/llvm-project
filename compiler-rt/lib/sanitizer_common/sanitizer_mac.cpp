@@ -410,7 +410,6 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom) {
   CHECK(stack_top);
   CHECK(stack_bottom);
-  ScopedDisableMallocHooks disable_hooks;  // pthread can malloc.
   uptr stacksize = pthread_get_stacksize_np(pthread_self());
   // pthread_get_stacksize_np() returns an incorrect stack size for the main
   // thread on Mavericks. See

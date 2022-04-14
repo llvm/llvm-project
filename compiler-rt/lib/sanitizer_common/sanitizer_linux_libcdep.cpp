@@ -103,7 +103,6 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom) {
   CHECK(stack_top);
   CHECK(stack_bottom);
-  ScopedDisableMallocHooks disable_hooks;  // pthread can malloc.
   if (at_initialization) {
     // This is the main thread. Libpthread may not be initialized yet.
     struct rlimit rl;
