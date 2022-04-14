@@ -185,12 +185,12 @@ registers:
   - { id: 7, class: gpr }
 
 # CHECK:  body:
-# CHECK:    FCMPSrr %0, %0, implicit-def $nzcv
+# CHECK:    nofpexcept FCMPSrr %0, %0, implicit-def $nzcv
 # CHECK:    [[TST_MI:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 5, implicit $nzcv
 # CHECK:    [[TST_GT:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
 # CHECK:    %1:gpr32 = ORRWrr [[TST_MI]], [[TST_GT]]
 
-# CHECK:    FCMPDrr %2, %2, implicit-def $nzcv
+# CHECK:    nofpexcept FCMPDrr %2, %2, implicit-def $nzcv
 # CHECK:    %3:gpr32 = CSINCWr $wzr, $wzr, 4, implicit $nzcv
 
 body:             |
