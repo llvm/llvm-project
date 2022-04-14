@@ -1591,12 +1591,18 @@ public:
   /// kind?
   QualType::DestructionKind needsDestruction(const ASTContext &Ctx) const;
 
-  /// If this variable declares a struct with a flexible array member, and
-  /// the flexible array member is initialized with one or more elements,
-  /// compute the number of bytes necessary to store those elements.
+  /// Whether this variable has a flexible array member initialized with one
+  /// or more elements. This can only be called for declarations where
+  /// hasInit() is true.
   ///
   /// (The standard doesn't allow initializing flexible array members; this is
   /// a gcc/msvc extension.)
+  bool hasFlexibleArrayInit(const ASTContext &Ctx) const;
+
+  /// If hasFlexibleArrayInit is true, compute the number of additional bytes
+  /// necessary to store those elements. Otherwise, returns zero.
+  ///
+  /// This can only be called for declarations where hasInit() is true.
   CharUnits getFlexibleArrayInitChars(const ASTContext &Ctx) const;
 
   // Implement isa/cast/dyncast/etc.

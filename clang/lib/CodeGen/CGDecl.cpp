@@ -342,7 +342,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   if (!Init) {
     if (!getLangOpts().CPlusPlus)
       CGM.ErrorUnsupported(D.getInit(), "constant l-value expression");
-    else if (!D.getFlexibleArrayInitChars(getContext()).isZero())
+    else if (D.hasFlexibleArrayInit(getContext()))
       CGM.ErrorUnsupported(D.getInit(), "flexible array initializer");
     else if (HaveInsertPoint()) {
       // Since we have a static initializer, this global variable can't
@@ -354,17 +354,12 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
     return GV;
   }
 
-#if 0
-  // FIXME: The following check doesn't handle flexible array members
-  // inside tail padding (which don't actually increase the size of
-  // the struct).
 #ifndef NDEBUG
   CharUnits VarSize = CGM.getContext().getTypeSizeInChars(D.getType()) +
                       D.getFlexibleArrayInitChars(getContext());
   CharUnits CstSize = CharUnits::fromQuantity(
       CGM.getDataLayout().getTypeAllocSize(Init->getType()));
   assert(VarSize == CstSize && "Emitted constant has unexpected size");
-#endif
 #endif
 
   // The initializer may differ in type from the global. Rewrite
