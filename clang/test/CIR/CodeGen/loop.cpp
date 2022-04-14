@@ -159,3 +159,33 @@ void l3(bool cond) {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
+
+void l4() {
+  int i = 0, y = 100;
+  while (true) {
+    i = i + 1;
+    if (i < 10)
+      continue;
+    y = y - 20;
+  }
+}
+
+// CHECK: func @l4
+// CHECK: cir.loop while(cond :  {
+// CHECK-NEXT:   %4 = cir.cst(true) : !cir.bool
+// CHECK-NEXT:   cir.yield loopcondition %4 : !cir.bool
+// CHECK-NEXT: }, step :  {
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT: })  {
+// CHECK-NEXT:   %4 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:   %5 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : i32
+// CHECK-NEXT:   cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:   cir.scope {
+// CHECK-NEXT:     %10 = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:     %11 = cir.cst(10 : i32) : i32
+// CHECK-NEXT:     %12 = cir.cmp(lt, %10, %11) : i32, !cir.bool
+// CHECK-NEXT:     cir.if %12 {
+// CHECK-NEXT:       cir.yield continue
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }

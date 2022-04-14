@@ -432,6 +432,7 @@ public:
   mlir::LogicalResult buildLabelStmt(const clang::LabelStmt &S);
 
   mlir::LogicalResult buildBreakStmt(const clang::BreakStmt &S);
+  mlir::LogicalResult buildContinueStmt(const clang::ContinueStmt &S);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.

@@ -248,6 +248,8 @@ mlir::LogicalResult CIRGenFunction::buildSimpleStmt(const Stmt *S,
     return buildReturnStmt(cast<ReturnStmt>(*S));
   case Stmt::GotoStmtClass:
     return buildGotoStmt(cast<GotoStmt>(*S));
+  case Stmt::ContinueStmtClass:
+    return buildContinueStmt(cast<ContinueStmt>(*S));
 
   case Stmt::NullStmtClass:
     break;
@@ -265,7 +267,6 @@ mlir::LogicalResult CIRGenFunction::buildSimpleStmt(const Stmt *S,
     return buildBreakStmt(cast<BreakStmt>(*S));
 
   case Stmt::AttributedStmtClass:
-  case Stmt::ContinueStmtClass:
   case Stmt::SEHLeaveStmtClass:
     llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
                  << "' not implemented\n";
@@ -491,6 +492,16 @@ mlir::LogicalResult CIRGenFunction::buildLabel(const LabelDecl *D) {
   }
 
   //  FIXME: emit debug info for labels, incrementProfileCounter
+  return mlir::success();
+}
+
+mlir::LogicalResult
+CIRGenFunction::buildContinueStmt(const clang::ContinueStmt &S) {
+  builder.create<YieldOp>(
+      getLoc(S.getContinueLoc()),
+      mlir::cir::YieldOpKindAttr::get(builder.getContext(),
+                                      mlir::cir::YieldOpKind::Continue),
+      mlir::ValueRange({}));
   return mlir::success();
 }
 
