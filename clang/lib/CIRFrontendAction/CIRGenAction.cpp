@@ -12,8 +12,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Parser/Parser.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/Parser/Parser.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
@@ -112,9 +112,17 @@ public:
     return true;
   }
 
-  void HandleInlineFunctionDefinition(FunctionDecl *D) override {}
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *VD) override {
+    llvm_unreachable("NYI");
+  }
 
-  void HandleInterestingDecl(DeclGroupRef D) override { HandleTopLevelDecl(D); }
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override {
+    gen->HandleInlineFunctionDefinition(D);
+  }
+
+  void HandleInterestingDecl(DeclGroupRef D) override {
+    llvm_unreachable("NYI");
+  }
 
   void HandleTranslationUnit(ASTContext &C) override {
     gen->HandleTranslationUnit(C);
@@ -166,17 +174,30 @@ public:
     }
   }
 
-  void HandleTagDeclDefinition(TagDecl *D) override {}
+  void HandleTagDeclDefinition(TagDecl *D) override {
+    PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
+                                   astContext->getSourceManager(),
+                                   "CIR generation of declaration");
+    gen->HandleTagDeclDefinition(D);
+  }
 
-  void HandleTagDeclRequiredDefinition(const TagDecl *D) override {}
+  void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+    gen->HandleTagDeclRequiredDefinition(D);
+  }
 
-  void CompleteTentativeDefinition(VarDecl *D) override {}
+  void CompleteTentativeDefinition(VarDecl *D) override {
+    llvm_unreachable("NYI");
+  }
 
-  void CompleteExternalDeclaration(VarDecl *D) override {}
+  void CompleteExternalDeclaration(VarDecl *D) override {
+    llvm_unreachable("NYI");
+  }
 
-  void AssignInheritanceModel(CXXRecordDecl *RD) override {}
+  void AssignInheritanceModel(CXXRecordDecl *RD) override {
+    llvm_unreachable("NYI");
+  }
 
-  void HandleVTable(CXXRecordDecl *RD) override {}
+  void HandleVTable(CXXRecordDecl *RD) override { llvm_unreachable("NYI"); }
 };
 } // namespace cir
 
@@ -188,7 +209,14 @@ CIRGenAction::CIRGenAction(OutputType act, mlir::MLIRContext *_MLIRContext)
 
 CIRGenAction::~CIRGenAction() { mlirModule.reset(); }
 
-void CIRGenAction::EndSourceFileAction() {}
+void CIRGenAction::EndSourceFileAction() {
+  // If the consumer creation failed, do nothing.
+  if (!getCompilerInstance().hasASTConsumer())
+    return;
+
+  // TODO: pass the module around
+  // module = cgConsumer->takeModule();
+}
 
 static std::unique_ptr<raw_pwrite_stream>
 getOutputStream(CompilerInstance &ci, StringRef inFile,
@@ -214,10 +242,21 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &ci, StringRef inputFile) {
   auto out = ci.takeOutputStream();
   if (!out)
     out = getOutputStream(ci, inputFile, action);
-  return std::make_unique<cir::CIRGenConsumer>(
+
+  auto Result = std::make_unique<cir::CIRGenConsumer>(
       action, ci.getDiagnostics(), ci.getHeaderSearchOpts(),
       ci.getCodeGenOpts(), ci.getTargetOpts(), ci.getLangOpts(),
       ci.getFrontendOpts(), std::move(out));
+  cgConsumer = Result.get();
+
+  // Enable generating macro debug info only when debug info is not disabled and
+  // also macrod ebug info is enabled
+  if (ci.getCodeGenOpts().getDebugInfo() != llvm::codegenoptions::NoDebugInfo &&
+      ci.getCodeGenOpts().MacroDebugInfo) {
+    llvm_unreachable("NYI");
+  }
+
+  return std::move(Result);
 }
 
 mlir::OwningOpRef<mlir::ModuleOp>

@@ -58,6 +58,9 @@ public:
 
   bool HandleTopLevelDecl(clang::DeclGroupRef D) override;
   void HandleTranslationUnit(clang::ASTContext &Ctx) override;
+  void HandleInlineFunctionDefinition(clang::FunctionDecl *D) override;
+  void HandleTagDeclDefinition(clang::TagDecl *D) override;
+  void HandleTagDeclRequiredDefinition(const clang::TagDecl *D) override;
 
   mlir::ModuleOp getModule();
   std::unique_ptr<mlir::MLIRContext> takeContext() {
