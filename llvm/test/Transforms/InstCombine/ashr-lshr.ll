@@ -3,8 +3,8 @@
 
 define i32 @ashr_lshr_exact_ashr_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_lshr_exact_ashr_only(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[CMP12]]
 ;
   %cmp = icmp sgt i32 %x, -1
   %l = lshr i32 %x, %y
@@ -15,8 +15,8 @@ define i32 @ashr_lshr_exact_ashr_only(i32 %x, i32 %y) {
 
 define i32 @ashr_lshr_no_exact(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_lshr_no_exact(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[CMP12]]
 ;
   %cmp = icmp sgt i32 %x, -1
   %l = lshr i32 %x, %y
@@ -27,8 +27,8 @@ define i32 @ashr_lshr_no_exact(i32 %x, i32 %y) {
 
 define i32 @ashr_lshr_exact_both(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_lshr_exact_both(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr exact i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr exact i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[CMP12]]
 ;
   %cmp = icmp sgt i32 %x, -1
   %l = lshr exact i32 %x, %y
@@ -39,8 +39,8 @@ define i32 @ashr_lshr_exact_both(i32 %x, i32 %y) {
 
 define i32 @ashr_lshr_exact_lshr_only(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_lshr_exact_lshr_only(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[CMP12]]
 ;
   %cmp = icmp sgt i32 %x, -1
   %l = lshr exact i32 %x, %y
@@ -63,8 +63,8 @@ define i32 @ashr_lshr2(i32 %x, i32 %y) {
 
 define <2 x i32> @ashr_lshr_splat_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_splat_vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[CMP12]]
 ;
   %cmp = icmp sgt <2 x i32> %x, <i32 -1, i32 -1>
   %l = lshr <2 x i32> %x, %y
@@ -75,8 +75,8 @@ define <2 x i32> @ashr_lshr_splat_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @ashr_lshr_splat_vec2(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_splat_vec2(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr exact <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr exact <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[CMP12]]
 ;
   %cmp = icmp sgt <2 x i32> %x, <i32 -1, i32 -1>
   %l = lshr exact <2 x i32> %x, %y
@@ -87,8 +87,8 @@ define <2 x i32> @ashr_lshr_splat_vec2(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @ashr_lshr_splat_vec3(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_splat_vec3(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[CMP12]]
 ;
   %cmp = icmp sgt <2 x i32> %x, <i32 -1, i32 -1>
   %l = lshr exact <2 x i32> %x, %y
@@ -99,8 +99,8 @@ define <2 x i32> @ashr_lshr_splat_vec3(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @ashr_lshr_splat_vec4(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_splat_vec4(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[CMP12]]
 ;
   %cmp = icmp sgt <2 x i32> %x, <i32 -1, i32 -1>
   %l = lshr <2 x i32> %x, %y
@@ -171,8 +171,8 @@ define i32 @ashr_lshr_cst(i32 %x, i32 %y) {
 
 define i32 @ashr_lshr_cst2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_lshr_cst2(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr i32 [[X:%.*]], 8
-; CHECK-NEXT:    ret i32 [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr i32 [[X:%.*]], 8
+; CHECK-NEXT:    ret i32 [[CMP12]]
 ;
   %cmp = icmp sgt i32 %x, -1
   %l = lshr i32 %x, 8
@@ -231,8 +231,8 @@ define <2 x i32> @ashr_lshr_inv_nonsplat_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @ashr_lshr_vec_undef(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_vec_undef(
-; CHECK-NEXT:    [[CMP1:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[CMP1]]
+; CHECK-NEXT:    [[CMP12:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[CMP12]]
 ;
   %cmp = icmp sgt <2 x i32> %x, <i32 undef, i32 -1>
   %l = lshr <2 x i32> %x, %y
@@ -317,10 +317,10 @@ define i32 @ashr_lshr_shift_wrong_pred(i32 %x, i32 %y, i32 %z) {
 
 define i32 @ashr_lshr_shift_wrong_pred2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @ashr_lshr_shift_wrong_pred2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Z:%.*]], -1
 ; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[L]], i32 [[R]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[Z:%.*]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP1]], i32 [[R]], i32 [[L]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %cmp = icmp sge i32 %z, 0
@@ -332,10 +332,10 @@ define i32 @ashr_lshr_shift_wrong_pred2(i32 %x, i32 %y, i32 %z) {
 
 define i32 @ashr_lshr_wrong_operands(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_lshr_wrong_operands(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[R]], i32 [[L]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP1]], i32 [[L]], i32 [[R]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %cmp = icmp sge i32 %x, 0
@@ -347,10 +347,10 @@ define i32 @ashr_lshr_wrong_operands(i32 %x, i32 %y) {
 
 define i32 @ashr_lshr_no_ashr(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_lshr_no_ashr(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[L]], i32 [[R]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP1]], i32 [[R]], i32 [[L]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %cmp = icmp sge i32 %x, 0
@@ -362,10 +362,10 @@ define i32 @ashr_lshr_no_ashr(i32 %x, i32 %y) {
 
 define i32 @ashr_lshr_shift_amt_mismatch(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @ashr_lshr_shift_amt_mismatch(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[L]], i32 [[R]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP1]], i32 [[R]], i32 [[L]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %cmp = icmp sge i32 %x, 0
@@ -377,10 +377,10 @@ define i32 @ashr_lshr_shift_amt_mismatch(i32 %x, i32 %y, i32 %z) {
 
 define i32 @ashr_lshr_shift_base_mismatch(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @ashr_lshr_shift_base_mismatch(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[Z:%.*]], [[Y]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[L]], i32 [[R]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP1]], i32 [[R]], i32 [[L]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %cmp = icmp sge i32 %x, 0
@@ -392,10 +392,10 @@ define i32 @ashr_lshr_shift_base_mismatch(i32 %x, i32 %y, i32 %z) {
 
 define i32 @ashr_lshr_no_lshr(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_lshr_no_lshr(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[L:%.*]] = add i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[L]], i32 [[R]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP1]], i32 [[R]], i32 [[L]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %cmp = icmp sge i32 %x, 0
@@ -422,10 +422,10 @@ define <2 x i32> @ashr_lshr_vec_wrong_pred(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @ashr_lshr_inv_vec_wrong_pred(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_inv_vec_wrong_pred(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[L:%.*]] = lshr <2 x i32> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = lshr <2 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr <2 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[R]], <2 x i32> [[L]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> [[L]], <2 x i32> [[R]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %cmp = icmp sge <2 x i32> %x, zeroinitializer
