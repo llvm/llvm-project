@@ -478,10 +478,6 @@ protected:
   /// For example, foo(plt) instead of foo@plt.  Defaults to false.
   bool UseParensForSymbolVariant = false;
 
-  /// True if the target uses parens for symbol names starting with
-  /// '$' character to distinguish them from absolute names.
-  bool UseParensForDollarSignNames = true;
-
   /// True if the target supports flags in ".loc" directive, false if only
   /// location is allowed.
   bool SupportsExtendedDwarfLocDirective = true;
@@ -793,9 +789,6 @@ public:
   bool doDwarfFDESymbolsUseAbsDiff() const { return DwarfFDESymbolsUseAbsDiff; }
   bool useDwarfRegNumForCFI() const { return DwarfRegNumForCFI; }
   bool useParensForSymbolVariant() const { return UseParensForSymbolVariant; }
-  bool useParensForDollarSignNames() const {
-    return UseParensForDollarSignNames;
-  }
   bool supportsExtendedDwarfLocDirective() const {
     return SupportsExtendedDwarfLocDirective;
   }
