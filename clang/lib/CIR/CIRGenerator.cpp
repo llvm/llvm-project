@@ -19,17 +19,21 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/CIRGenerator.h"
 
 using namespace cir;
 using namespace clang;
 
-CIRGenerator::~CIRGenerator() = default;
 void CIRGenerator::anchor() {}
 
 CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
                            const CodeGenOptions &CGO)
-    : Diags(diags), codeGenOpts{CGO} {}
+    : Diags(diags), codeGenOpts{CGO}, HandlingTopLevelDecls(0) {}
+CIRGenerator::~CIRGenerator() {
+  // There should normally not be any leftover inline method definitions.
+  assert(DeferredInlineMemberFuncDefs.empty() || Diags.hasErrorOccurred());
+}
 
 void CIRGenerator::Initialize(ASTContext &astCtx) {
   using namespace llvm;
@@ -57,6 +61,8 @@ bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef D) {
   if (Diags.hasErrorOccurred())
     return true;
 
+  HandlingTopLevelDeclRAII HandlingDecl(*this);
+
   for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
     CGM->buildTopLevelDecl(*I);
   }
@@ -78,6 +84,30 @@ void CIRGenerator::HandleTranslationUnit(ASTContext &C) {
 void CIRGenerator::HandleInlineFunctionDefinition(FunctionDecl *D) {
   if (Diags.hasErrorOccurred())
     return;
+
+  assert(D->doesThisDeclarationHaveABody());
+
+  // We may want to emit this definition. However, that decision might be
+  // based on computing the linkage, and we have to defer that in case we are
+  // inside of something that will chagne the method's final linkage, e.g.
+  //   typedef struct {
+  //     void bar();
+  //     void foo() { bar(); }
+  //   } A;
+  DeferredInlineMemberFuncDefs.push_back(D);
+}
+
+void CIRGenerator::buildDeferredDecls() {
+  if (DeferredInlineMemberFuncDefs.empty())
+    return;
+
+  // Emit any deferred inline method definitions. Note that more deferred
+  // methods may be added during this loop, since ASTConsumer callbacks can be
+  // invoked if AST inspection results in declarations being added.
+  HandlingTopLevelDeclRAII HandlingDecls(*this);
+  for (unsigned I = 0; I != DeferredInlineMemberFuncDefs.size(); ++I)
+    CGM->buildTopLevelDecl(DeferredInlineMemberFuncDefs[I]);
+  DeferredInlineMemberFuncDefs.clear();
 }
 
 /// HandleTagDeclDefinition - This callback is invoked each time a TagDecl to
@@ -87,9 +117,27 @@ void CIRGenerator::HandleInlineFunctionDefinition(FunctionDecl *D) {
 void CIRGenerator::HandleTagDeclDefinition(TagDecl *D) {
   if (Diags.hasErrorOccurred())
     return;
+
+  // Don't allow re-entrant calls to CIRGen triggered by PCH deserialization to
+  // emit deferred decls.
+  HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
+
+  // For MSVC compatibility, treat declarations of static data members with
+  // inline initializers as definitions.
+  if (astCtx->getTargetInfo().getCXXABI().isMicrosoft()) {
+    llvm_unreachable("NYI");
+  }
+  // For OpenMP emit declare reduction functions, if required.
+  if (astCtx->getLangOpts().OpenMP) {
+    llvm_unreachable("NYI");
+  }
 }
 
 void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {
   if (Diags.hasErrorOccurred())
     return;
+
+  // Don't allow re-entrant calls to CIRGen triggered by PCH deserialization to
+  // emit deferred decls.
+  HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
 }
