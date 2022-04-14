@@ -829,6 +829,59 @@ multiclass VPatNarrowShiftSplatExt_WX<SDNode op, PatFrags extop, string instruct
   }
 }
 
+multiclass VPatMultiplyAddVL_VV_VX<SDNode op, string instruction_name> {
+  foreach vti = AllIntegerVectors in {
+    defvar suffix = vti.LMul.MX;
+    // NOTE: We choose VMADD because it has the most commuting freedom. So it
+    // works best with how TwoAddressInstructionPass tries commuting.
+    def : Pat<(vti.Vector
+             (op vti.RegClass:$rs2,
+                 (riscv_mul_vl_oneuse vti.RegClass:$rs1,
+                                      vti.RegClass:$rd,
+                                      (vti.Mask true_mask), VLOpFrag),
+                           (vti.Mask true_mask), VLOpFrag)),
+            (!cast<Instruction>(instruction_name#"_VV_"# suffix)
+                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    // The choice of VMADD here is arbitrary, vmadd.vx and vmacc.vx are equally
+    // commutable.
+    def : Pat<(vti.Vector
+             (op vti.RegClass:$rs2,
+                 (riscv_mul_vl_oneuse (SplatPat XLenVT:$rs1),
+                                       vti.RegClass:$rd,
+                                       (vti.Mask true_mask), VLOpFrag),
+                           (vti.Mask true_mask), VLOpFrag)),
+            (!cast<Instruction>(instruction_name#"_VX_" # suffix)
+                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
+
+multiclass VPatWidenMultiplyAddVL_VV_VX<PatFrag op1, string instruction_name> {
+  foreach vtiTowti = AllWidenableIntVectors in {
+    defvar vti = vtiTowti.Vti;
+    defvar wti = vtiTowti.Wti;
+      def : Pat<(wti.Vector
+             (riscv_add_vl wti.RegClass:$rd,
+                           (op1 vti.RegClass:$rs1,
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask true_mask), VLOpFrag),
+                          (vti.Mask true_mask), VLOpFrag)),
+            (!cast<Instruction>(instruction_name#"_VV_" # vti.LMul.MX)
+                 wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    def : Pat<(wti.Vector
+             (riscv_add_vl wti.RegClass:$rd,
+                          (op1 (SplatPat XLenVT:$rs1),
+                               (vti.Vector vti.RegClass:$rs2),
+                               (vti.Mask true_mask), VLOpFrag),
+                           (vti.Mask true_mask), VLOpFrag)),
+            (!cast<Instruction>(instruction_name#"_VX_" # vti.LMul.MX)
+                 wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -1008,111 +1061,16 @@ defm : VPatBinaryWVL_VV_VX<riscv_vwmulu_vl, "PseudoVWMULU">;
 defm : VPatBinaryWVL_VV_VX<riscv_vwmulsu_vl, "PseudoVWMULSU">;
 
 // 12.13 Vector Single-Width Integer Multiply-Add Instructions
-foreach vti = AllIntegerVectors in {
-  // NOTE: We choose VMADD because it has the most commuting freedom. So it
-  // works best with how TwoAddressInstructionPass tries commuting.
-  defvar suffix = vti.LMul.MX;
-  def : Pat<(vti.Vector
-             (riscv_add_vl vti.RegClass:$rs2,
-                           (riscv_mul_vl_oneuse vti.RegClass:$rs1,
-                                                vti.RegClass:$rd,
-                                                (vti.Mask true_mask), VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVMADD_VV_"# suffix)
-                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-  def : Pat<(vti.Vector
-             (riscv_sub_vl vti.RegClass:$rs2,
-                           (riscv_mul_vl_oneuse vti.RegClass:$rs1,
-                                                vti.RegClass:$rd,
-                                                (vti.Mask true_mask), VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVNMSUB_VV_"# suffix)
-                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-
-  // The choice of VMADD here is arbitrary, vmadd.vx and vmacc.vx are equally
-  // commutable.
-  def : Pat<(vti.Vector
-             (riscv_add_vl vti.RegClass:$rs2,
-                           (riscv_mul_vl_oneuse (SplatPat XLenVT:$rs1),
-                                                vti.RegClass:$rd,
-                                                (vti.Mask true_mask), VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVMADD_VX_" # suffix)
-                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-  def : Pat<(vti.Vector
-             (riscv_sub_vl vti.RegClass:$rs2,
-                           (riscv_mul_vl_oneuse (SplatPat XLenVT:$rs1),
-                                                vti.RegClass:$rd,
-                                                (vti.Mask true_mask),
-                                                VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVNMSUB_VX_" # suffix)
-                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-}
+defm : VPatMultiplyAddVL_VV_VX<riscv_add_vl, "PseudoVMADD">;
+defm : VPatMultiplyAddVL_VV_VX<riscv_sub_vl, "PseudoVNMSUB">;
 
 // 12.14. Vector Widening Integer Multiply-Add Instructions
+defm : VPatWidenMultiplyAddVL_VV_VX<riscv_vwmul_vl_oneuse, "PseudoVWMACC">;
+defm : VPatWidenMultiplyAddVL_VV_VX<riscv_vwmulu_vl_oneuse, "PseudoVWMACCU">;
+defm : VPatWidenMultiplyAddVL_VV_VX<riscv_vwmulsu_vl_oneuse, "PseudoVWMACCSU">;
 foreach vtiTowti = AllWidenableIntVectors in {
   defvar vti = vtiTowti.Vti;
   defvar wti = vtiTowti.Wti;
-  def : Pat<(wti.Vector
-             (riscv_add_vl wti.RegClass:$rd,
-                           (riscv_vwmul_vl_oneuse vti.RegClass:$rs1,
-                                                  (vti.Vector vti.RegClass:$rs2),
-                                                  (vti.Mask true_mask), VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACC_VV_" # vti.LMul.MX)
-                 wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-  def : Pat<(wti.Vector
-             (riscv_add_vl wti.RegClass:$rd,
-                           (riscv_vwmulu_vl_oneuse vti.RegClass:$rs1,
-                                                   (vti.Vector vti.RegClass:$rs2),
-                                                   (vti.Mask true_mask), VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACCU_VV_" # vti.LMul.MX)
-                 wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-  def : Pat<(wti.Vector
-             (riscv_add_vl wti.RegClass:$rd,
-                           (riscv_vwmulsu_vl_oneuse vti.RegClass:$rs1,
-                                                    (vti.Vector vti.RegClass:$rs2),
-                                                    (vti.Mask true_mask), VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACCSU_VV_" # vti.LMul.MX)
-                 wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-
-  def : Pat<(wti.Vector
-             (riscv_add_vl wti.RegClass:$rd,
-                           (riscv_vwmul_vl_oneuse (SplatPat XLenVT:$rs1),
-                                                  (vti.Vector vti.RegClass:$rs2),
-                                                  (vti.Mask true_mask), VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACC_VX_" # vti.LMul.MX)
-                 wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-  def : Pat<(wti.Vector
-             (riscv_add_vl wti.RegClass:$rd,
-                           (riscv_vwmulu_vl_oneuse (SplatPat XLenVT:$rs1),
-                                                   (vti.Vector vti.RegClass:$rs2),
-                                                   (vti.Mask true_mask), VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACCU_VX_" # vti.LMul.MX)
-                 wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-  def : Pat<(wti.Vector
-             (riscv_add_vl wti.RegClass:$rd,
-                           (riscv_vwmulsu_vl_oneuse (SplatPat XLenVT:$rs1),
-                                                    (vti.Vector vti.RegClass:$rs2),
-                                                    (vti.Mask true_mask), VLOpFrag),
-                           (vti.Mask true_mask), VLOpFrag)),
-            (!cast<Instruction>("PseudoVWMACCSU_VX_" # vti.LMul.MX)
-                 wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   def : Pat<(wti.Vector
              (riscv_add_vl wti.RegClass:$rd,
                            (riscv_vwmulsu_vl_oneuse (vti.Vector vti.RegClass:$rs1),
