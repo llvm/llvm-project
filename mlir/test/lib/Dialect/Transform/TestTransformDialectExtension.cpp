@@ -72,7 +72,7 @@ LogicalResult mlir::test::TestConsumeOperandIfMatchesParamOrFail::apply(
   ArrayRef<Operation *> payload = state.getPayloadOps(getOperand());
   assert(payload.size() == 1 && "expected a single target op");
   auto value = reinterpret_cast<intptr_t>(payload[0]);
-  if (value != parameter()) {
+  if (static_cast<uint64_t>(value) != parameter()) {
     return emitOpError() << "expected the operand to be associated with "
                          << parameter() << " got " << value;
   }
