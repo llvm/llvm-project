@@ -1769,7 +1769,7 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
     // Note that the array access to elseYield will not go out of bounds
     // since it must have the same length as thenYield, since they both
     // come from the same scf.if.
-    for (auto tup : llvm::enumerate(thenYield)) {
+    for (const auto &tup : llvm::enumerate(thenYield)) {
       if (tup.value().getDefiningOp() == nestedIf) {
         auto nestedIdx = tup.value().cast<OpResult>().getResultNumber();
         if (nestedIf.elseYield().getOperand(nestedIdx) !=
