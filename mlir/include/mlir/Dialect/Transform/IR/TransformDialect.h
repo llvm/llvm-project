@@ -69,7 +69,7 @@ protected:
       transformDialect->addOperations<OpTys...>();
 
 #ifndef NDEBUG
-      std::initializer_list<int>{
+      (void)std::initializer_list<int>{
           (detail::checkImplementsTransformInterface<OpTys>(
                transformDialect->getContext()),
            0)...};
