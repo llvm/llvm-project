@@ -1086,6 +1086,11 @@ public:
     IrrLoopHeaderWeight = Weight;
   }
 
+  /// Return probability of the edge from this block to MBB. This method should
+  /// NOT be called directly, but by using getEdgeProbability method from
+  /// MachineBranchProbabilityInfo class.
+  BranchProbability getSuccProbability(const_succ_iterator Succ) const;
+
 private:
   /// Return probability iterator corresponding to the I successor iterator.
   probability_iterator getProbabilityIterator(succ_iterator I);
@@ -1094,11 +1099,6 @@ private:
 
   friend class MachineBranchProbabilityInfo;
   friend class MIPrinter;
-
-  /// Return probability of the edge from this block to MBB. This method should
-  /// NOT be called directly, but by using getEdgeProbability method from
-  /// MachineBranchProbabilityInfo class.
-  BranchProbability getSuccProbability(const_succ_iterator Succ) const;
 
   // Methods used to maintain doubly linked list of blocks...
   friend struct ilist_callback_traits<MachineBasicBlock>;

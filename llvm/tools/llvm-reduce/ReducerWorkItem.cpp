@@ -125,8 +125,41 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
   auto *DstMRI = &DstMF->getRegInfo();
 
   // Clone blocks.
-  for (MachineBasicBlock &SrcMBB : *SrcMF)
-    Src2DstMBB[&SrcMBB] = DstMF->CreateMachineBasicBlock();
+  for (MachineBasicBlock &SrcMBB : *SrcMF) {
+    MachineBasicBlock *DstMBB =
+        DstMF->CreateMachineBasicBlock(SrcMBB.getBasicBlock());
+    Src2DstMBB[&SrcMBB] = DstMBB;
+
+    if (SrcMBB.hasAddressTaken())
+      DstMBB->setHasAddressTaken();
+
+    // FIXME: This is not serialized
+    if (SrcMBB.hasLabelMustBeEmitted())
+      DstMBB->setLabelMustBeEmitted();
+
+    DstMBB->setAlignment(SrcMBB.getAlignment());
+
+    // FIXME: This is not serialized
+    DstMBB->setMaxBytesForAlignment(SrcMBB.getMaxBytesForAlignment());
+
+    DstMBB->setIsEHPad(SrcMBB.isEHPad());
+    DstMBB->setIsEHScopeEntry(SrcMBB.isEHScopeEntry());
+    DstMBB->setIsEHCatchretTarget(SrcMBB.isEHCatchretTarget());
+    DstMBB->setIsEHFuncletEntry(SrcMBB.isEHFuncletEntry());
+
+    // FIXME: These are not serialized
+    DstMBB->setIsCleanupFuncletEntry(SrcMBB.isCleanupFuncletEntry());
+    DstMBB->setIsBeginSection(SrcMBB.isBeginSection());
+    DstMBB->setIsEndSection(SrcMBB.isEndSection());
+
+    DstMBB->setSectionID(SrcMBB.getSectionID());
+    DstMBB->setIsInlineAsmBrIndirectTarget(
+        SrcMBB.isInlineAsmBrIndirectTarget());
+
+    // FIXME: This is not serialized
+    if (Optional<uint64_t> Weight = SrcMBB.getIrrLoopHeaderWeight())
+      DstMBB->setIrrLoopHeaderWeight(*Weight);
+  }
 
   const MachineFrameInfo &SrcMFI = SrcMF->getFrameInfo();
   MachineFrameInfo &DstMFI = DstMF->getFrameInfo();
@@ -187,25 +220,36 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
     }
   }
 
+  const TargetSubtargetInfo &STI = DstMF->getSubtarget();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+
   // Link blocks.
   for (auto &SrcMBB : *SrcMF) {
     auto *DstMBB = Src2DstMBB[&SrcMBB];
     DstMF->push_back(DstMBB);
+
     for (auto It = SrcMBB.succ_begin(), IterEnd = SrcMBB.succ_end();
          It != IterEnd; ++It) {
       auto *SrcSuccMBB = *It;
       auto *DstSuccMBB = Src2DstMBB[SrcSuccMBB];
-      DstMBB->addSuccessor(DstSuccMBB);
+      DstMBB->addSuccessor(DstSuccMBB, SrcMBB.getSuccProbability(It));
     }
     for (auto &LI : SrcMBB.liveins())
       DstMBB->addLiveIn(LI);
+
+    // Make sure MRI knows about registers clobbered by unwinder.
+    if (DstMBB->isEHPad()) {
+      if (auto *RegMask = TRI->getCustomEHPadPreservedMask(*DstMF))
+        DstMRI->addPhysRegsUsedFromRegMask(RegMask);
+    }
   }
+
   // Clone instructions.
   for (auto &SrcMBB : *SrcMF) {
     auto *DstMBB = Src2DstMBB[&SrcMBB];
     for (auto &SrcMI : SrcMBB) {
-      const auto &MCID =
-          DstMF->getSubtarget().getInstrInfo()->get(SrcMI.getOpcode());
+      const auto &MCID = TII->get(SrcMI.getOpcode());
       auto *DstMI = DstMF->CreateMachineInstr(MCID, SrcMI.getDebugLoc(),
                                               /*NoImplicit=*/true);
       DstMBB->push_back(DstMI);
