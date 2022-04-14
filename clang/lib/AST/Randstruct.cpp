@@ -216,6 +216,7 @@ bool randomizeStructureLayout(const ASTContext &Context, StringRef Name,
 
   assert(TotalNumFields == FinalOrdering.size() &&
          "Decl count has been altered after Randstruct randomization!");
+  (void)TotalNumFields;
   return true;
 }
 
