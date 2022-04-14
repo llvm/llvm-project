@@ -82,6 +82,8 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
   // TODO: what about emitting lifetime markers for MSVC catch parameters?
   // TODO: something like @llvm.lifetime.start/end here? revisit this later.
   emission.Addr = Address{addr, alignment};
+
+  setAddrOfLocalVar(&D, emission.Addr);
   return emission;
 }
 
