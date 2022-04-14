@@ -195,6 +195,12 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.ExposesReturnsTwice = MF.exposesReturnsTwice();
   YamlMF.HasWinCFI = MF.hasWinCFI();
 
+  YamlMF.CallsEHReturn = MF.callsEHReturn();
+  YamlMF.CallsUnwindInit = MF.callsUnwindInit();
+  YamlMF.HasEHCatchret = MF.hasEHCatchret();
+  YamlMF.HasEHScopes = MF.hasEHScopes();
+  YamlMF.HasEHFunclets = MF.hasEHFunclets();
+
   YamlMF.Legalized = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::Legalized);
   YamlMF.RegBankSelected = MF.getProperties().hasProperty(
