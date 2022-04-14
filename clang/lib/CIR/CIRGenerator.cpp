@@ -75,3 +75,21 @@ void CIRGenerator::HandleTranslationUnit(ASTContext &C) {
   }
 }
 
+void CIRGenerator::HandleInlineFunctionDefinition(FunctionDecl *D) {
+  if (Diags.hasErrorOccurred())
+    return;
+}
+
+/// HandleTagDeclDefinition - This callback is invoked each time a TagDecl to
+/// (e.g. struct, union, enum, class) is completed. This allows the client hack
+/// on the type, which can occur at any point in the file (because these can be
+/// defined in declspecs).
+void CIRGenerator::HandleTagDeclDefinition(TagDecl *D) {
+  if (Diags.hasErrorOccurred())
+    return;
+}
+
+void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {
+  if (Diags.hasErrorOccurred())
+    return;
+}
