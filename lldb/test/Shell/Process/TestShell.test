@@ -1,8 +1,0 @@
-REQUIRES: shell, system-darwin
-RUN: %clang_host %p/Inputs/echo.c -o %t.out
-
-RUN: not %lldb %t.out -b -o 'process launch --shell=tcsh -- $NO_SUCH_SHELL_VARIABLE' 2>&1 | FileCheck --check-prefix=FAILURE %s
-RUN: %lldb %t.out -b -o 'process launch --shell=tcsh -- $HOME' 2>&1 | FileCheck --check-prefix=SUCCESS %s
-
-FAILURE: exited with status 1
-SUCCESS: exited with status = 0
