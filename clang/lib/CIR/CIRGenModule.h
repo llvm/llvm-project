@@ -191,6 +191,9 @@ public:
 
   mlir::Value GetGlobalValue(const clang::Decl *D);
 
+  // Make sure that this type is translated.
+  void UpdateCompletedType(const clang::TagDecl *TD);
+
   /// Stored a deferred empty coverage mapping for an unused and thus
   /// uninstrumented top level declaration.
   void AddDeferredUnusedCoverageMapping(clang::Decl *D);

@@ -132,6 +132,8 @@ void CIRGenerator::HandleTagDeclDefinition(TagDecl *D) {
   // emit deferred decls.
   HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
 
+  CGM->UpdateCompletedType(D);
+
   // For MSVC compatibility, treat declarations of static data members with
   // inline initializers as definitions.
   if (astCtx->getTargetInfo().getCXXABI().isMicrosoft()) {
