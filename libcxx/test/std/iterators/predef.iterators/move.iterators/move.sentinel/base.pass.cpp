@@ -14,8 +14,9 @@
 
 // constexpr S base() const;
 
-#include <iterator>
 #include <cassert>
+#include <iterator>
+#include <utility>
 
 #include "test_macros.h"
 
