@@ -103,6 +103,7 @@ protected:
   bool GFX90AInsts = false;
   bool GFX940Insts = false;
   bool GFX10Insts = false;
+  bool GFX11Insts = false;
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
   bool SGPRInitBug = false;
@@ -141,6 +142,7 @@ protected:
   bool HasDot5Insts = false;
   bool HasDot6Insts = false;
   bool HasDot7Insts = false;
+  bool HasDot8Insts = false;
   bool HasMAIInsts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFaddRtnInsts = false;
@@ -187,6 +189,7 @@ protected:
   bool HasFlatSegmentOffsetBug = false;
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
+  bool HasVOPDInsts = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -566,7 +569,7 @@ public:
     return hasFlatScratchInsts() && (hasGFX10_3Insts() || hasGFX940Insts());
   }
 
-  bool hasFlatScratchSVSMode() const { return GFX940Insts; }
+  bool hasFlatScratchSVSMode() const { return GFX940Insts || GFX11Insts; }
 
   bool hasScalarFlatScratchInsts() const {
     return ScalarFlatScratchInsts;
@@ -702,6 +705,10 @@ public:
     return HasDot7Insts;
   }
 
+  bool hasDot8Insts() const {
+    return HasDot8Insts;
+  }
+
   bool hasMAIInsts() const {
     return HasMAIInsts;
   }
@@ -820,6 +827,9 @@ public:
 
   /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
   bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
+
+  /// \returns true if the subtarget has the v_permlane64_b32 instruction.
+  bool hasPermLane64() const { return getGeneration() >= GFX11; }
 
   bool hasDPP() const {
     return HasDPP;
@@ -1001,8 +1011,34 @@ public:
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
 
+  bool hasVOP3DPP() const { return getGeneration() >= GFX11; }
+
+  bool hasLdsDirect() const { return getGeneration() >= GFX11; }
+
+  bool hasVALUPartialForwardingHazard() const {
+    return getGeneration() >= GFX11;
+  }
+
+  bool hasVALUTransUseHazard() const { return getGeneration() >= GFX11; }
+
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
+
+  /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
+  bool hasSPackHL() const { return GFX11Insts; }
+
+  /// Return true if the target's EXP instruction has the COMPR flag, which
+  /// affects the meaning of the EN (enable) bits.
+  bool hasCompressedExport() const { return !GFX11Insts; }
+
+  /// Return true if the target's EXP instruction supports the NULL export
+  /// target.
+  bool hasNullExportTarget() const { return !GFX11Insts; }
+
+  bool hasVOPDInsts() const { return HasVOPDInsts; }
+
+  /// Return true if the target has the S_DELAY_ALU instruction.
+  bool hasDelayAlu() const { return GFX11Insts; }
 
   bool hasPackedTID() const { return HasPackedTID; }
 
@@ -1040,6 +1076,9 @@ public:
   bool hasMergedShaders() const {
     return getGeneration() >= GFX9;
   }
+
+  // \returns true if the target supports the pre-NGG legacy geometry path.
+  bool hasLegacyGeometry() const { return getGeneration() < GFX11; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1221,6 +1260,10 @@ public:
 
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
                              SDep &Dep) const override;
+
+  // \returns true if it's beneficial on this subtarget for the scheduler to
+  // cluster stores as well as loads.
+  bool shouldClusterStores() const { return getGeneration() >= GFX11; }
 };
 
 } // end namespace llvm

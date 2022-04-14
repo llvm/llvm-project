@@ -2,6 +2,7 @@
 # RUN: llc -march=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX9 %s
 
 ---
 name: smax_neg_abs_pattern_s32_ss

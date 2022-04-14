@@ -17,7 +17,8 @@ class GCNPredicateControl : PredicateControl {
 }
 
 // Except for the NONE field, this must be kept in sync with the
-// SIEncodingFamily enum in AMDGPUInstrInfo.cpp
+// SIEncodingFamily enum in SIInstrInfo.cpp and the columns of the
+// getMCOpcodeGen table.
 def SIEncodingFamily {
   int NONE = -1;
   int SI = 0;
@@ -30,6 +31,7 @@ def SIEncodingFamily {
   int SDWA10 = 7;
   int GFX90A = 8;
   int GFX940 = 9;
+  int GFX11 = 10;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2579,6 +2581,7 @@ def getMCOpcodeGen : InstrMapping {
   let RowFields = ["PseudoInstr"];
   let ColFields = ["Subtarget"];
   let KeyCol = [!cast<string>(SIEncodingFamily.NONE)];
+  // These columns must be kept in sync with the SIEncodingFamily enumeration.
   let ValueCols = [[!cast<string>(SIEncodingFamily.SI)],
                    [!cast<string>(SIEncodingFamily.VI)],
                    [!cast<string>(SIEncodingFamily.SDWA)],
@@ -2592,7 +2595,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX10)],
                    [!cast<string>(SIEncodingFamily.SDWA10)],
                    [!cast<string>(SIEncodingFamily.GFX90A)],
-                   [!cast<string>(SIEncodingFamily.GFX940)]];
+                   [!cast<string>(SIEncodingFamily.GFX940)],
+                   [!cast<string>(SIEncodingFamily.GFX11)]];
 }
 
 // Get equivalent SOPK instruction.

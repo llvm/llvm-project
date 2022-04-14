@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -run-pass=instruction-select %s -o - | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=instruction-select %s -o - | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select %s -o - |  FileCheck -check-prefix=GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select %s -o - |  FileCheck -check-prefix=GFX10 %s
 
 ---
 name:            test_freeze_s1_vgpr_to_vgpr

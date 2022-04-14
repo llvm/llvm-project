@@ -1,4 +1,5 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=si-fold-operands,dead-mi-elimination -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=si-fold-operands,dead-mi-elimination -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: fold_vgpr_to_vgpr_copy
 # GCN:      %0:vreg_64 = IMPLICIT_DEF

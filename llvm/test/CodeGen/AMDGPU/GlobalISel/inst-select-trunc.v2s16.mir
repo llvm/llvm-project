@@ -3,6 +3,7 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs  %s -o - | FileCheck -check-prefix=GFX8 %s
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs  %s -o - | FileCheck -check-prefix=GFX8 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs  %s -o - | FileCheck -check-prefix=GFX8 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs  %s -o - | FileCheck -check-prefix=GFX11 %s
 
 ---
 
@@ -31,6 +32,15 @@ body: |
     ; GFX8: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
     ; GFX8: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_LSHL_B32_]], [[S_AND_B32_]], implicit-def $scc
     ; GFX8: S_ENDPGM 0, implicit [[S_OR_B32_]]
+    ; GFX11-LABEL: name: trunc_sgpr_v2s32_to_v2s16
+    ; GFX11: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX11: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
+    ; GFX11: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; GFX11: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY2]], 16, implicit-def $scc
+    ; GFX11: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
+    ; GFX11: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX11: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_LSHL_B32_]], [[S_AND_B32_]], implicit-def $scc
+    ; GFX11: S_ENDPGM 0, implicit [[S_OR_B32_]]
     %0:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
     %1:sgpr(<2 x s16>) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
@@ -60,6 +70,15 @@ body: |
     ; GFX8: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
     ; GFX8: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[COPY2]], 0, 5, 2, 4, implicit $exec, implicit [[COPY1]](tied-def 0)
     ; GFX8: S_ENDPGM 0, implicit [[V_MOV_B32_sdwa]]
+    ; GFX11-LABEL: name: trunc_vgpr_v2s32_to_v2s16
+    ; GFX11: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX11: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
+    ; GFX11: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
+    ; GFX11: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[COPY2]], implicit $exec
+    ; GFX11: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
+    ; GFX11: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[V_MOV_B32_e32_]], implicit $exec
+    ; GFX11: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_LSHLREV_B32_e64_]], [[V_AND_B32_e64_]], implicit $exec
+    ; GFX11: S_ENDPGM 0, implicit [[V_OR_B32_e64_]]
     %0:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:vgpr(<2 x s16>) = G_TRUNC %0
     S_ENDPGM 0, implicit %1

@@ -3,6 +3,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX90A %s
 # RUN: llc -march=amdgcn -mcpu=gfx940 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX940 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX10 %s
 
 ---
 name: copy_v64_to_v64

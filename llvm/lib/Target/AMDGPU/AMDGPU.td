@@ -325,6 +325,12 @@ def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
   "Additional instructions for GFX10+"
 >;
 
+def FeatureGFX11Insts : SubtargetFeature<"gfx11-insts",
+  "GFX11Insts",
+  "true",
+  "Additional instructions for GFX11+"
+>;
+
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
   "GFX10_3Insts",
   "true",
@@ -353,6 +359,12 @@ def Feature16BitInsts : SubtargetFeature<"16-bit-insts",
   "Has16BitInsts",
   "true",
   "Has i16/f16 instructions"
+>;
+
+def FeatureTrue16BitInsts : SubtargetFeature<"true16",
+  "HasTrue16BitInsts",
+  "true",
+  "True 16-bit operand instructions"
 >;
 
 def FeatureVOP3P : SubtargetFeature<"vop3p",
@@ -554,6 +566,13 @@ def FeatureDot7Insts : SubtargetFeature<"dot7-insts",
   "Has v_dot2_f32_f16, v_dot4_u32_u8, v_dot8_u32_u4 instructions"
 >;
 
+def FeatureDot8Insts : SubtargetFeature<"dot8-insts",
+  "HasDot8Insts",
+  "true",
+  "Has v_dot2_f16_f16, v_dot2_bf16_bf16, v_dot2_f32_bf16, "
+  "v_dot4_i32_iu8, v_dot8_i32_iu4 instructions"
+>;
+
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "HasMAIInsts",
   "true",
@@ -666,6 +685,12 @@ class SubtargetFeatureNSAMaxSize <int Value> : SubtargetFeature <
 
 def FeatureNSAMaxSize5 : SubtargetFeatureNSAMaxSize<5>;
 def FeatureNSAMaxSize13 : SubtargetFeatureNSAMaxSize<13>;
+
+def FeatureVOPD : SubtargetFeature<"vopd",
+  "HasVOPDInsts",
+  "true",
+  "Has VOPD dual issue wave32 instructions"
+>;
 
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
@@ -861,6 +886,25 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureGFX10A16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts
+  ]
+>;
+
+def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
+  "gfx11",
+  [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
+   FeatureFlatAddressSpace, Feature16BitInsts,
+   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
+   FeatureGFX10_AEncoding, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
+   FeatureGFX11Insts, FeatureVOP3P, FeatureVOPD, FeatureTrue16BitInsts,
+   FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
+   FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
+   FeatureAddNoCarryInsts, FeatureFmaMixInsts,
+   FeatureNoSdstCMPX, FeatureVscnt,
+   FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
+   FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
+   FeatureGFX10A16, FeatureFastDenormalF32, FeatureG16,
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
   ]
 >;
 
@@ -1197,6 +1241,33 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureWavefrontSize32,
    FeatureShaderCyclesRegister]>;
 
+def FeatureISAVersion11_Common : FeatureSet<
+  [FeatureGFX11,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureDot5Insts,
+   FeatureDot7Insts,
+   FeatureDot8Insts,
+   FeatureNSAEncoding,
+   FeatureNSAMaxSize5,
+   FeatureWavefrontSize32,
+   FeatureShaderCyclesRegister,
+   FeatureArchitectedFlatScratch,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureImageInsts,
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard]>;
+
+// Features for GFX 11.0.0 and 11.0.1
+def FeatureISAVersion11_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [])>;
+
+def FeatureISAVersion11_0_2 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [])>;
+
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
@@ -1249,7 +1320,6 @@ def SDWA9AsmParserVariant : AsmParserVariant {
   let Name = AMDGPUAsmVariants.SDWA9;
 }
 
-
 def DPPAsmParserVariant : AsmParserVariant {
   let Variant = AMDGPUAsmVariants.DPP_ID;
   let Name = AMDGPUAsmVariants.DPP;
@@ -1289,6 +1359,12 @@ def isGFX6GFX7GFX10 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
+  AssemblerPredicate<(all_of (not FeatureGCN3Encoding), (not FeatureGFX11Insts))>;
+
+def isGFX6GFX7GFX10Plus :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
+            "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of (not FeatureGCN3Encoding))>;
 
 def isGFX7Only :
@@ -1298,6 +1374,12 @@ def isGFX7Only :
 def isGFX7GFX10 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
+  AssemblerPredicate<(all_of (not FeatureGCN3Encoding), FeatureCIInsts, (not FeatureGFX11Insts))>;
+
+def isGFX7GFX10GFX11 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10 ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of (not FeatureGCN3Encoding), FeatureCIInsts)>;
 
 def isGFX7GFX8GFX9 :
@@ -1320,6 +1402,21 @@ def isGFX6GFX7GFX8GFX9NotGFX90A :
             " Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
             " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
   AssemblerPredicate<(all_of (not FeatureGFX10Insts), (not FeatureGFX90AInsts))>;
+
+def isGFX6GFX7GFX8GFX9GFX10 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
+  AssemblerPredicate<(all_of (not FeatureGFX11Insts))>;
+
+def isGFX7GFX8GFX9GFX10 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
+  AssemblerPredicate<(all_of FeatureCIInsts, (not FeatureGFX11Insts))>;
 
 def isGFX7Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS">,
@@ -1371,6 +1468,11 @@ def isGFX940Plus :
   Predicate<"Subtarget->hasGFX940Insts()">,
   AssemblerPredicate<(all_of FeatureGFX940Insts)>;
 
+def isGFX940GFX11Plus :
+  Predicate<"Subtarget->hasGFX940Insts() ||"
+            "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
+  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
+
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
             "(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
@@ -1382,6 +1484,10 @@ def isGFX8GFX9 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding)>;
 
+def isGFX10Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
+  AssemblerPredicate<(all_of FeatureGFX10Insts, (not FeatureGFX11Insts))>;
+
 def isGFX10Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of FeatureGFX10Insts)>;
@@ -1390,6 +1496,25 @@ def isGFX10Before1030 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX10 &&"
             "!Subtarget->hasGFX10_3Insts()">,
   AssemblerPredicate<(all_of FeatureGFX10Insts,(not FeatureGFX10_3Insts))>;
+
+def isGFX9GFX10 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX11Insts))>;
+
+def isGFX8GFX9GFX10 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
+  AssemblerPredicate<(all_of FeatureGFX8Insts, (not FeatureGFX11Insts))>;
+
+def isGFX11Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
+def isGFX11Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
@@ -1406,7 +1531,7 @@ def HasD16LoadStore : Predicate<"Subtarget->hasD16LoadStore()">,
 def HasFlatScratchSTMode : Predicate<"Subtarget->hasFlatScratchSTMode()">,
   AssemblerPredicate<(any_of FeatureGFX10_3Insts, FeatureGFX940Insts)>;
 def HasFlatScratchSVSMode : Predicate<"Subtarget->hasFlatScratchSVSMode()">,
-  AssemblerPredicate<(any_of FeatureGFX940Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
 
 def HasGFX10_AEncoding : Predicate<"Subtarget->hasGFX10_AEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX10_AEncoding)>;
@@ -1439,6 +1564,11 @@ def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">;
 
 def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
   AssemblerPredicate<(all_of Feature16BitInsts)>;
+
+def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
+def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
+
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 
@@ -1541,6 +1671,9 @@ def HasDot6Insts : Predicate<"Subtarget->hasDot6Insts()">,
 
 def HasDot7Insts : Predicate<"Subtarget->hasDot7Insts()">,
   AssemblerPredicate<(all_of FeatureDot7Insts)>;
+
+def HasDot8Insts : Predicate<"Subtarget->hasDot8Insts()">,
+  AssemblerPredicate<(all_of FeatureDot8Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;
