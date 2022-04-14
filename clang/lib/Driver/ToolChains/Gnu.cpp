@@ -2804,8 +2804,6 @@ bool Generic_GCC::isPICDefaultForced() const {
 
 bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   switch (getTriple().getArch()) {
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
   case llvm::Triple::arm:
@@ -2815,8 +2813,12 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   case llvm::Triple::bpfeb:
   case llvm::Triple::csky:
   case llvm::Triple::hexagon:
-  case llvm::Triple::thumb:
-  case llvm::Triple::thumbeb:
+  case llvm::Triple::m68k:
+  case llvm::Triple::mips:
+  case llvm::Triple::mipsel:
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+  case llvm::Triple::msp430:
   case llvm::Triple::ppc:
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
@@ -2827,13 +2829,11 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
   case llvm::Triple::systemz:
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-  case llvm::Triple::msp430:
-  case llvm::Triple::m68k:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
   case llvm::Triple::ve:
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
     return true;
   default:
     return false;
