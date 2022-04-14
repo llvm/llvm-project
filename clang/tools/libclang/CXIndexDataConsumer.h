@@ -362,9 +362,9 @@ public:
 
   void enteredMainFile(const FileEntry *File);
 
-  void ppIncludedFile(SourceLocation hashLoc,
-                      StringRef filename, const FileEntry *File,
-                      bool isImport, bool isAngled, bool isModuleImport);
+  void ppIncludedFile(SourceLocation hashLoc, StringRef filename,
+                      Optional<FileEntryRef> File, bool isImport, bool isAngled,
+                      bool isModuleImport);
 
   void importedModule(const ImportDecl *ImportD);
   void importedPCH(const FileEntry *File);
