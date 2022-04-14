@@ -2040,7 +2040,7 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
     // case this has no effect)
     rollback(snapshotStack.back());
     int64_t nextValue = nextValueStack.back();
-    nextValueStack.back()++;
+    ++nextValueStack.back();
     if (nextValue > upperBoundStack.back()) {
       // We have exhausted the range and found no solution. Pop the stack and
       // return up a level.
