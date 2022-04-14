@@ -130,7 +130,8 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
 
   if (FileSystem::Instance().Exists(dsym_yaa_fspec)) {
     ModuleSpec mutable_mod_spec = mod_spec;
-    if (Symbols::DownloadObjectAndSymbolFile(mutable_mod_spec, true) &&
+    Status error;
+    if (Symbols::DownloadObjectAndSymbolFile(mutable_mod_spec, error, true) &&
         FileSystem::Instance().Exists(mutable_mod_spec.GetSymbolFileSpec())) {
       dsym_fspec = mutable_mod_spec.GetSymbolFileSpec();
       return true;
@@ -390,7 +391,7 @@ FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &symfile_bundle,
 }
 
 bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
-                                          bool force_lookup) {
+                                          Status &error, bool force_lookup) {
   // Fill in the module_spec.GetFileSpec() for the object file and/or the
   // module_spec.GetSymbolFileSpec() for the debug symbols file.
   return false;

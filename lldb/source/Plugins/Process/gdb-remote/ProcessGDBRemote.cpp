@@ -591,8 +591,10 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
 
           if (!module_sp) {
             // Force a an external lookup, if that tool is available.
-            if (!module_spec.GetSymbolFileSpec())
-              Symbols::DownloadObjectAndSymbolFile(module_spec, true);
+            if (!module_spec.GetSymbolFileSpec()) {
+              Status error;
+              Symbols::DownloadObjectAndSymbolFile(module_spec, error, true);
+            }
 
             if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
               module_sp = std::make_shared<Module>(module_spec);

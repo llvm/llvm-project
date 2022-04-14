@@ -290,8 +290,11 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
                 }
               }
               if (!module_spec.GetSymbolFileSpec() ||
-                  !module_spec.GetSymbolFileSpec())
-                Symbols::DownloadObjectAndSymbolFile(module_spec, true);
+                  !module_spec.GetSymbolFileSpec()) {
+                Status symbl_error;
+                Symbols::DownloadObjectAndSymbolFile(module_spec, symbl_error,
+                                                     true);
+              }
 
               if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
                 ModuleSP module_sp(new Module(module_spec));
