@@ -69,9 +69,8 @@ return:
 
 define i1 @switch_to_select_same2_case_results_different_default(i8 %0) {
 ; CHECK-LABEL: @switch_to_select_same2_case_results_different_default(
-; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i8 [[TMP0:%.*]], 4
-; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i8 [[TMP0]], 0
-; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
+; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i8 [[TMP0:%.*]], -5
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i8 [[SWITCH_AND]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
@@ -90,11 +89,11 @@ define i1 @switch_to_select_same2_case_results_different_default(i8 %0) {
 
 define i1 @switch_to_select_same2_case_results_different_default_and_positive_offset_for_case(i8 %0) {
 ; CHECK-LABEL: @switch_to_select_same2_case_results_different_default_and_positive_offset_for_case(
-; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i8 [[TMP0:%.*]], 43
-; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i8 [[TMP0]], 45
-; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 [[TMP0:%.*]], 43
+; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i8 [[TMP2]], -3
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i8 [[SWITCH_AND]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   switch i8 %0, label %2 [
   i8 43, label %3
@@ -112,11 +111,11 @@ define i1 @switch_to_select_same2_case_results_different_default_and_positive_of
 define i8 @switch_to_select_same2_case_results_different_default_and_negative_offset_for_case(i32 %i) {
 ; CHECK-LABEL: @switch_to_select_same2_case_results_different_default_and_negative_offset_for_case(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i32 [[I:%.*]], -3
-; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i32 [[I]], -5
-; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[SWITCH_SELECTCMP]], i8 3, i8 42
-; CHECK-NEXT:    ret i8 [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[I:%.*]], -5
+; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i32 [[TMP0]], -3
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i32 [[SWITCH_AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SWITCH_SELECTCMP]], i8 3, i8 42
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
 entry:
   switch i32 %i, label %default [
@@ -135,16 +134,9 @@ end:
 define i1 @switch_to_select_same4_case_results_different_default(i32 %i) {
 ; CHECK-LABEL: @switch_to_select_same4_case_results_different_default(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LOR_END:%.*]]
-; CHECK-NEXT:    i32 2, label [[LOR_END]]
-; CHECK-NEXT:    i32 4, label [[LOR_END]]
-; CHECK-NEXT:    i32 6, label [[LOR_END]]
-; CHECK-NEXT:    ]
-; CHECK:       lor.rhs:
-; CHECK-NEXT:    br label [[LOR_END]]
-; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i32 [[I:%.*]], -7
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i32 [[SWITCH_AND]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
 ; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
@@ -166,16 +158,9 @@ lor.end:
 define i1 @switch_to_select_same4_case_results_different_default_alt_bitmask(i32 %i) {
 ; CHECK-LABEL: @switch_to_select_same4_case_results_different_default_alt_bitmask(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LOR_END:%.*]]
-; CHECK-NEXT:    i32 2, label [[LOR_END]]
-; CHECK-NEXT:    i32 8, label [[LOR_END]]
-; CHECK-NEXT:    i32 10, label [[LOR_END]]
-; CHECK-NEXT:    ]
-; CHECK:       lor.rhs:
-; CHECK-NEXT:    br label [[LOR_END]]
-; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i32 [[I:%.*]], -11
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i32 [[SWITCH_AND]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
 ; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
@@ -197,17 +182,11 @@ lor.end:
 define i1 @switch_to_select_same4_case_results_different_default_positive_offset(i32 %i) {
 ; CHECK-LABEL: @switch_to_select_same4_case_results_different_default_positive_offset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
-; CHECK-NEXT:    i32 2, label [[LOR_END:%.*]]
-; CHECK-NEXT:    i32 4, label [[LOR_END]]
-; CHECK-NEXT:    i32 10, label [[LOR_END]]
-; CHECK-NEXT:    i32 12, label [[LOR_END]]
-; CHECK-NEXT:    ]
-; CHECK:       lor.rhs:
-; CHECK-NEXT:    br label [[LOR_END]]
-; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[I:%.*]], 2
+; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i32 [[TMP0]], -11
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i32 [[SWITCH_AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
 entry:
   switch i32 %i, label %lor.rhs [
@@ -285,6 +264,7 @@ lor.end:
   ret i1 %0
 }
 
+; TODO: we can produce the optimal code when there is no default also
 define i8 @switch_to_select_two_case_results_no_default(i32 %i) {
 ; CHECK-LABEL: @switch_to_select_two_case_results_no_default(
 ; CHECK-NEXT:  entry:
