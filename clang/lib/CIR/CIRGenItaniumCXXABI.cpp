@@ -1,4 +1,4 @@
-//===------- ItaniumCXXABI.cpp - Emit CIR from ASTs for a Module ----------===//
+//===----- CIRGenItaniumCXXABI.cpp - Emit CIR from ASTs for a Module ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,15 +27,15 @@ using namespace cir;
 using namespace clang;
 
 namespace {
-class ItaniumCXXABI : public cir::CIRGenCXXABI {
+class CIRGenItaniumCXXABI : public cir::CIRGenCXXABI {
 protected:
   bool UseARMMethodPtrABI;
   bool UseARMGuardVarABI;
   bool Use32BitVTableOffsetABI;
 
 public:
-  ItaniumCXXABI(CIRGenModule &CGM, bool UseARMMethodPtrABI = false,
-                bool UseARMGuardVarABI = false)
+  CIRGenItaniumCXXABI(CIRGenModule &CGM, bool UseARMMethodPtrABI = false,
+                      bool UseARMGuardVarABI = false)
       : CIRGenCXXABI(CGM), UseARMMethodPtrABI{UseARMMethodPtrABI},
         UseARMGuardVarABI{UseARMGuardVarABI}, Use32BitVTableOffsetABI{false} {
     assert(!UseARMMethodPtrABI && "NYI");
@@ -53,7 +53,7 @@ public:
 };
 } // namespace
 
-CIRGenCXXABI::AddedStructorArgs ItaniumCXXABI::getImplicitConstructorArgs(
+CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
     CIRGenFunction &CGF, const CXXConstructorDecl *D, CXXCtorType Type,
     bool ForVirtualBase, bool Delegating) {
   assert(!NeedsVTTParameter(GlobalDecl(D, Type)) && "VTT NYI");
@@ -61,7 +61,7 @@ CIRGenCXXABI::AddedStructorArgs ItaniumCXXABI::getImplicitConstructorArgs(
   return {};
 }
 
-bool ItaniumCXXABI::NeedsVTTParameter(GlobalDecl GD) {
+bool CIRGenItaniumCXXABI::NeedsVTTParameter(GlobalDecl GD) {
   auto *MD = cast<CXXMethodDecl>(GD.getDecl());
 
   assert(!MD->getParent()->getNumVBases() && "virtual bases NYI");
@@ -76,17 +76,17 @@ bool ItaniumCXXABI::NeedsVTTParameter(GlobalDecl GD) {
   return false;
 }
 
-CIRGenCXXABI *cir::CreateItaniumCXXABI(CIRGenModule &CGM) {
+CIRGenCXXABI *cir::CreateCIRGenItaniumCXXABI(CIRGenModule &CGM) {
   switch (CGM.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
-    return new ItaniumCXXABI(CGM);
+    return new CIRGenItaniumCXXABI(CGM);
 
   default:
     llvm_unreachable("bad or NYI ABI kind");
   }
 }
 
-bool ItaniumCXXABI::classifyReturnType(CIRGenFunctionInfo &FI) const {
+bool CIRGenItaniumCXXABI::classifyReturnType(CIRGenFunctionInfo &FI) const {
   auto *RD = FI.getReturnType()->getAsCXXRecordDecl();
   assert(!RD && "RecordDecl return types NYI");
   return false;
