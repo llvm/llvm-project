@@ -694,3 +694,30 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeFreeFunctionCall(
   return arrangeFreeFunctionLikeCall(*this, CGM, args, fnType,
                                      ChainCall ? 1 : 0, ChainCall);
 }
+
+// UpdateCompletedType - When we find the full definition for a TagDecl,
+// replace the 'opaque' type we previously made for it if applicable.
+void CIRGenTypes::UpdateCompletedType(const TagDecl *TD) {
+  // If this is an enum being completed, then we flush all non-struct types
+  // from the cache. This allows function types and other things that may be
+  // derived from the enum to be recomputed.
+  if (const auto *ED = dyn_cast<EnumDecl>(TD)) {
+    llvm_unreachable("NYI");
+  }
+
+  // If we completed a RecordDecl that we previously used and converted to an
+  // anonymous type, then go ahead and complete it now.
+  const auto *RD = cast<RecordDecl>(TD);
+  if (RD->isDependentType())
+    return;
+
+  // Only complete if we converted it already. If we haven't converted it yet,
+  // we'll just do it lazily.
+  if (recordDeclTypes.count(Context.getTagDeclType(RD).getTypePtr()))
+    convertRecordDeclType(RD);
+
+  // If necessary, provide the full definition of a type only used with a
+  // declaration so far.
+  if (CGM.getModuleDebugInfo())
+    llvm_unreachable("NYI");
+}
