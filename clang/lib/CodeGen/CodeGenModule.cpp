@@ -4631,12 +4631,17 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       if (getLangOpts().CPlusPlus && !NeedsGlobalDtor)
         DelayedCXXInitPosition.erase(D);
 
+#if 0
+      // FIXME: The following check doesn't handle flexible array members
+      // inside tail padding (which don't actually increase the size of
+      // the struct).
 #ifndef NDEBUG
       CharUnits VarSize = getContext().getTypeSizeInChars(ASTTy) +
                           InitDecl->getFlexibleArrayInitChars(getContext());
       CharUnits CstSize = CharUnits::fromQuantity(
           getDataLayout().getTypeAllocSize(Init->getType()));
       assert(VarSize == CstSize && "Emitted constant has unexpected size");
+#endif
 #endif
     }
   }
