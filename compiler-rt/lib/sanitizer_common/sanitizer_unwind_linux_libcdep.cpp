@@ -126,6 +126,7 @@ void SanitizerInitializeUnwinder() {
 void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   CHECK_GE(max_depth, 2);
   size = 0;
+  ScopedDisableMallocHooks disable_hooks;  // libunwind can malloc.
   UnwindTraceArg arg = {this, Min(max_depth + 1, kStackTraceMax)};
   _Unwind_Backtrace(Unwind_Trace, &arg);
   // We need to pop a few frames so that pc is on top.
@@ -156,6 +157,7 @@ void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
     return;
   }
 
+  ScopedDisableMallocHooks disable_hooks;  // Maybe unneeded, but won't hurt.
   void *map = acquire_my_map_info_list();
   CHECK(map);
   InternalMmapVector<backtrace_frame_t> frames(kStackTraceMax);
