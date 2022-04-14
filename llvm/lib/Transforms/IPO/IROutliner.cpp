@@ -1737,10 +1737,6 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
     IncomingVal = findOutputMapping(OutputMappings, IncomingVal);
     Value *Val = Region.findCorrespondingValueIn(*FirstRegion, IncomingVal);
     assert(Val && "Value is nullptr?");
-    DenseMap<Value *, Value *>::iterator RemappedIt =
-        FirstRegion->RemappedArguments.find(Val);
-    if (RemappedIt != FirstRegion->RemappedArguments.end())
-      Val = RemappedIt->second;
     NewPN->setIncomingValue(Idx, Val);
   }
   return NewPN;
@@ -1784,8 +1780,6 @@ replaceArgumentUses(OutlinableRegion &Region,
                         << *Region.ExtractedFunction << " with " << *AggArg
                         << " in function " << *Group.OutlinedFunction << "\n");
       Arg->replaceAllUsesWith(AggArg);
-      Value *V = Region.Call->getArgOperand(ArgIdx);
-      Region.RemappedArguments.insert(std::make_pair(V, AggArg));
       continue;
     }
 
