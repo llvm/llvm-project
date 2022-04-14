@@ -481,7 +481,11 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     if (ArgType->isVariablyModifiedType())
       ArgType = getCanonicalParamType(Ctx, ArgType);
     VarDecl *Arg;
-    if (DebugFunctionDecl && (CapVar || I->capturesThis())) {
+    if (CapVar && (CapVar->getTLSKind() != clang::VarDecl::TLS_None)) {
+      Arg = ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr, FD->getLocation(),
+                                      II, ArgType,
+                                      ImplicitParamDecl::ThreadPrivateVar);
+    } else if (DebugFunctionDecl && (CapVar || I->capturesThis())) {
       Arg = ParmVarDecl::Create(
           Ctx, DebugFunctionDecl,
           CapVar ? CapVar->getBeginLoc() : FD->getBeginLoc(),
