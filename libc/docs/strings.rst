@@ -38,7 +38,7 @@ Primary memory functions
 
 
 =============  =========
-Function_Name  Available
+Function Name  Available
 =============  =========
 bzero          YES
 bcmp           YES

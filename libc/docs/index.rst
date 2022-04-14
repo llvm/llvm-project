@@ -84,3 +84,4 @@ Other Interesting Documentation
     source_layout
     strings
     runtimes_build
+    stdio
