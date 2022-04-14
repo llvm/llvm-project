@@ -2383,9 +2383,11 @@ namespace flexible_array {
   static_assert(b[2].x == 3, "");
   static_assert(b[2].arr[0], ""); // expected-error {{constant expression}} expected-note {{array member without known bound}}
 
-  // If we ever start to accept this, we'll need to ensure we can
-  // constant-evaluate it properly.
-  constexpr A c = {1, 2, 3}; // expected-error {{initialization of flexible array member}}
+  // Flexible array initialization is currently not supported by constant
+  // evaluation. Make sure we emit an error message, for now.
+  constexpr A c = {1, 2, 3}; // expected-error {{constexpr variable 'c' must be initialized by a constant expression}}
+  // expected-note@-1 {{flexible array initialization is not yet supported}}
+  // expected-warning@-2 {{flexible array initialization is a GNU extension}}
 }
 
 void local_constexpr_var() {

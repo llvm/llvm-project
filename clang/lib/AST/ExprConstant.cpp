@@ -9980,6 +9980,17 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
     ImplicitValueInitExpr VIE(HaveInit ? Info.Ctx.IntTy : Field->getType());
     const Expr *Init = HaveInit ? E->getInit(ElementNo++) : &VIE;
 
+    if (Field->getType()->isIncompleteArrayType()) {
+      if (auto *CAT = Info.Ctx.getAsConstantArrayType(Init->getType())) {
+        if (!CAT->getSize().isZero()) {
+          // Bail out for now. This might sort of "work", but the rest of the
+          // code isn't really prepared to handle it.
+          Info.FFDiag(Init, diag::note_constexpr_unsupported_flexible_array);
+          return false;
+        }
+      }
+    }
+
     // Temporarily override This, in case there's a CXXDefaultInitExpr in here.
     ThisOverrideRAII ThisOverride(*Info.CurrentCall, &This,
                                   isa<CXXDefaultInitExpr>(Init));
