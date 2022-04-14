@@ -96,6 +96,19 @@ def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
   }];
 }
 
+def GPU_LaneIdOp : GPU_Op<"lane_id", [NoSideEffect]> {
+  let description = [{
+    Returns the lane id within the subgroup (warp/wave).
+
+    Example:
+    ```mlir
+    %laneId = gpu.lane_id
+    ```
+  }];
+  let results = (outs Index:$result);
+  let assemblyFormat = "attr-dict";
+}
+
 def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [NoSideEffect]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
@@ -1351,6 +1364,60 @@ def GPU_DeviceAsyncWaitOp : GPU_Op<"device_async_wait", []> {
                        OptionalAttr<I32Attr>:$numGroups);
   let assemblyFormat = [{
     $asyncDependencies attr-dict
+  }];
+}
+
+def GPU_MmaLdMatrixOp : GPU_Op<"mma.ldmatrix", 
+                                [MemoryEffects<[MemRead]>]> {
+  let description = [{
+  The `gpu.mma.ldmatrix` op represents loading a matrix fragment from
+  memory. The load source and result type must be compatible with lowering 
+  to the `nvvm.ldmatrix` instruction. This op is meant to represent 
+  the distributed version of a `vector.transfer_read` as an intermediate 
+  step between lowering from `vector.transfer_read` to `nvvm.ldmatrix`.
+  
+  Example:
+
+  ```mlir
+  gpu.mma.ldmatrix %shm_buffer[%c0, %c0] : memref<16x16xf16, 3> -> vector<4x2xf16>
+  ```
+  }];                                
+
+  let arguments = (ins Arg<AnyMemRef, "", [MemRead]>:$srcMemref,
+                      Variadic<Index>:$indices, BoolAttr:$transpose,
+                      I32Attr:$numTiles);
+  let results = (outs AnyVector:$res);
+  let assemblyFormat = [{
+    $srcMemref`[` $indices `]` attr-dict `:` type($srcMemref) `->` type($res)
+  }];                      
+}
+
+def GPU_MmaSyncOp : GPU_Op<"mma.sync", [NoSideEffect]> {
+  let description = [{
+  The `gpu.mma.sync` op represents the distributed form of a collective
+  matrix-multiply-and-accumulate (mma) operation that is compatible with
+  `nvvm.mma.sync`. The operands and results are fragments of the full matrix 
+  operands. The full shape of the distributed mma operation is given by the
+  `mmaShape` attribute in the form of a list of dimensions `[m, n, k]`.  
+
+  This operation is meant to be lowered to the `nvvm.mma.sync` instruction, and
+  is an intermediate point between lowering from `vector.contract` to
+  `nvvm.mma.sync`.
+  
+  Example:
+
+  ```mlir
+  gpu.mma.sync (%a, %b, %c) : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  ```
+  }];   
+  let arguments = (ins AnyVector:$matrixA, AnyVector:$matrixB, AnyVector:$matrixC,
+    I64ArrayAttr:$mmaShape);
+
+  let results = (outs AnyVector:$res);
+
+  let assemblyFormat = [{
+    `(` $matrixA`,` $matrixB`,` $matrixC `)` attr-dict
+    `:` `(` type($matrixA) `,` type($matrixB) `,` type($matrixC) `)` `->` type($res)
   }];
 }
 
