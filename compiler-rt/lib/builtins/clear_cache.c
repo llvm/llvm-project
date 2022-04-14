@@ -176,12 +176,12 @@ void __clear_cache(void *start, void *end) {
   arg.len = (uintptr_t)end - (uintptr_t)start;
 
   sysarch(RISCV_SYNC_ICACHE, &arg);
+#elif defined(__ve__)
+  __asm__ volatile("fencec 2");
 #else
 #if __APPLE__
   // On Darwin, sys_icache_invalidate() provides this functionality
   sys_icache_invalidate(start, end - start);
-#elif defined(__ve__)
-  __asm__ volatile("fencec 2");
 #else
   compilerrt_abort();
 #endif
