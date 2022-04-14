@@ -143,6 +143,22 @@ public:
                                            LValueBaseInfo *BaseInfo = nullptr,
                                            bool forPointeeType = false);
 
+  /// A queue of (optional) vtables to consider emitting.
+  std::vector<const clang::CXXRecordDecl *> DeferredVTables;
+
+  /// This contains all the decls which have definitions but which are deferred
+  /// for emission and therefore should only be output if they are actually
+  /// used. If a decl is in this, then it is known to have not been referenced
+  /// yet.
+  std::map<llvm::StringRef, clang::GlobalDecl> DeferredDecls;
+
+  // This is a list of deferred decls which we have seen that *are* actually
+  // referenced. These get code generated when the module is done.
+  std::vector<clang::GlobalDecl> DeferredDeclsToEmit;
+  void addDeferredDeclToEmit(clang::GlobalDecl GD) {
+    DeferredDeclsToEmit.emplace_back(GD);
+  }
+
   void buildTopLevelDecl(clang::Decl *decl);
 
   /// Emit code for a single global function or var decl. Forward declarations
@@ -175,6 +191,9 @@ public:
 
   mlir::Value GetGlobalValue(const clang::Decl *D);
   std::nullptr_t getModuleDebugInfo() { return nullptr; }
+
+  /// Emit any needed decls for which code generation was deferred.
+  void buildDeferred();
 
   // Finalize CIR code generation.
   void Release();
