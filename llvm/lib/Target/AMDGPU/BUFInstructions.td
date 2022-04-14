@@ -1119,23 +1119,25 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 def BUFFER_WBINVL1 : MUBUF_Invalidate <"buffer_wbinvl1",
                                        int_amdgcn_buffer_wbinvl1>;
 
-let SubtargetPredicate = HasAtomicFaddInsts in {
-defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN <
+let SubtargetPredicate = HasAtomicFaddNoRtnInsts in
+defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN<
   "buffer_atomic_add_f32", VGPR_32, f32
 >;
+
+let SubtargetPredicate = HasAtomicPkFaddNoRtnInsts in
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_NO_RTN <
   "buffer_atomic_pk_add_f16", VGPR_32, v2f16
 >;
 
-let OtherPredicates = [isGFX90APlus] in {
-defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_RTN <
+let OtherPredicates = [HasAtomicFaddRtnInsts] in
+defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_RTN<
   "buffer_atomic_add_f32", VGPR_32, f32, atomic_load_fadd_global_32
 >;
+
+let OtherPredicates = [isGFX90APlus] in
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_RTN <
   "buffer_atomic_pk_add_f16", VGPR_32, v2f16, atomic_load_fadd_v2f16_global_32
 >;
-}
-} // End SubtargetPredicate = HasAtomicFaddInsts
 
 //===----------------------------------------------------------------------===//
 // MTBUF Instructions
@@ -1597,10 +1599,14 @@ multiclass BufferAtomicPatterns_NO_RTN<SDPatternOperator name, ValueType vt,
   >;
 }
 
-let SubtargetPredicate = HasAtomicFaddInsts in {
+let SubtargetPredicate = HasAtomicFaddNoRtnInsts in
 defm : BufferAtomicPatterns_NO_RTN<SIbuffer_atomic_fadd, f32, "BUFFER_ATOMIC_ADD_F32">;
+
+let SubtargetPredicate = HasAtomicPkFaddNoRtnInsts in
 defm : BufferAtomicPatterns_NO_RTN<SIbuffer_atomic_fadd, v2f16, "BUFFER_ATOMIC_PK_ADD_F16">;
-}
+
+let SubtargetPredicate = HasAtomicFaddRtnInsts in
+ defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32,   "BUFFER_ATOMIC_ADD_F32">;
 
 let SubtargetPredicate = isGFX90APlus in {
   defm : BufferAtomicIntrPat<"int_amdgcn_global_atomic_fadd", f64, "BUFFER_ATOMIC_ADD_F64">;
@@ -2634,12 +2640,12 @@ def BUFFER_WBINVL1_vi           : MUBUF_Real_vi <0x3e, BUFFER_WBINVL1>;
 def BUFFER_WBINVL1_VOL_vi       : MUBUF_Real_vi <0x3f, BUFFER_WBINVL1_VOL>;
 } // End AssemblerPredicate = isGFX8GFX9
 
-let SubtargetPredicate = HasAtomicFaddInsts in {
+let SubtargetPredicate = HasAtomicFaddNoRtnInsts in {
 
 defm BUFFER_ATOMIC_ADD_F32    : MUBUF_Real_Atomic_vi <0x4d>;
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Real_Atomic_vi <0x4e>;
 
-} // End SubtargetPredicate = HasAtomicFaddInsts
+} // End SubtargetPredicate = HasAtomicFaddNoRtnInsts
 
 let SubtargetPredicate = isGFX90APlus in {
   defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Real_Atomic_vi<0x4f>;
