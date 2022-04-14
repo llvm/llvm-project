@@ -6852,9 +6852,11 @@ public:
   ///
   ///  CodeGen handles emission of lambda captures, ignoring these dummy
   ///  variables appropriately.
-  VarDecl *createLambdaInitCaptureVarDecl(
-      SourceLocation Loc, QualType InitCaptureType, SourceLocation EllipsisLoc,
-      IdentifierInfo *Id, unsigned InitStyle, Expr *Init, DeclContext *DeclCtx);
+  VarDecl *createLambdaInitCaptureVarDecl(SourceLocation Loc,
+                                          QualType InitCaptureType,
+                                          SourceLocation EllipsisLoc,
+                                          IdentifierInfo *Id,
+                                          unsigned InitStyle, Expr *Init);
 
   /// Add an init-capture to a lambda scope.
   void addInitCapture(sema::LambdaScopeInfo *LSI, VarDecl *Var);
@@ -6863,28 +6865,21 @@ public:
   /// given lambda.
   void finishLambdaExplicitCaptures(sema::LambdaScopeInfo *LSI);
 
-  /// Deduce a block or lambda's return type based on the return
-  /// statements present in the body.
-  void deduceClosureReturnType(sema::CapturingScopeInfo &CSI);
-
-  /// Once the Lambdas capture are known, we can
-  /// start to create the closure, call operator method,
-  /// and keep track of the captures.
-  /// We do the capture lookup here, but they are not actually captured
-  /// until after we know what the qualifiers of the call operator are.
-  void ActOnLambdaIntroducer(LambdaIntroducer &Intro, Scope *CurContext);
-
-  /// This is called after parsing the explicit template parameter list
+  /// \brief This is called after parsing the explicit template parameter list
   /// on a lambda (if it exists) in C++2a.
-  void ActOnLambdaExplicitTemplateParameterList(LambdaIntroducer &Intro,
-                                                SourceLocation LAngleLoc,
+  void ActOnLambdaExplicitTemplateParameterList(SourceLocation LAngleLoc,
                                                 ArrayRef<NamedDecl *> TParams,
                                                 SourceLocation RAngleLoc,
                                                 ExprResult RequiresClause);
 
-  void ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
-                                    SourceLocation MutableLoc,
-                                    SourceLocation EndLoc, const DeclSpec &DS);
+  /// Introduce the lambda parameters into scope.
+  void addLambdaParameters(
+      ArrayRef<LambdaIntroducer::LambdaCapture> Captures,
+      CXXMethodDecl *CallOperator, Scope *CurScope);
+
+  /// Deduce a block or lambda's return type based on the return
+  /// statements present in the body.
+  void deduceClosureReturnType(sema::CapturingScopeInfo &CSI);
 
   /// ActOnStartOfLambdaDefinition - This is called just before we start
   /// parsing the body of a lambda; it analyzes the explicit captures and
