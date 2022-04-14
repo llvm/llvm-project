@@ -9,19 +9,22 @@ include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
-add_clang_library(
-  clangCIR
-  CIRGenCall.cpp
-  CIRGenerator.cpp
-  CIRGenCleanup.cpp
+add_clang_library(clangCIR
+  CIRGenCXX.cpp
   CIRGenCXXABI.cpp
+  CIRGenCall.cpp
+  CIRGenClass.cpp
+  CIRGenCleanup.cpp
   CIRGenDecl.cpp
   CIRGenExpr.cpp
+  CIRGenExprAgg.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenModule.cpp
   CIRGenStmt.cpp
+  CIRGenTBAA.cpp
   CIRGenTypes.cpp
+  CIRGenerator.cpp
   CIRPasses.cpp
   CIRRecordLayoutBuilder.cpp
   ItaniumCXXABI.cpp
