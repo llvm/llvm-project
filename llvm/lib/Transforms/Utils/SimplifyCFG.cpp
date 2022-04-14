@@ -169,7 +169,7 @@ static cl::opt<bool> EnableMergeCompatibleInvokes(
     cl::desc("Allow SimplifyCFG to merge invokes together when appropriate"));
 
 static cl::opt<unsigned> MaxSwitchCasesPerResult(
-    "max-switch-cases-per-result", cl::Hidden, cl::init(2),
+    "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
@@ -5710,15 +5710,46 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
   }
 
   // Handle the degenerate case where two cases have the same result value.
-  if (ResultVector.size() == 1 && ResultVector[0].second.size() == 2 &&
-      DefaultResult) {
+  if (ResultVector.size() == 1 && DefaultResult) {
     ArrayRef<ConstantInt *> CaseValues = ResultVector[0].second;
-    Value *Cmp1 = Builder.CreateICmpEQ(Condition, CaseValues[0],
-                                       "switch.selectcmp.case1");
-    Value *Cmp2 = Builder.CreateICmpEQ(Condition, CaseValues[1],
-                                       "switch.selectcmp.case2");
-    Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
-    return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+    unsigned CaseCount = CaseValues.size();
+    // n bits group cases map to the same result:
+    // case 0,4      -> Cond & 0b1..1011 == 0 ? result : default
+    // case 0,2,4,6  -> Cond & 0b1..1001 == 0 ? result : default
+    // case 0,2,8,10 -> Cond & 0b1..0101 == 0 ? result : default
+    if (isPowerOf2_32(CaseCount)) {
+      ConstantInt *MinCaseVal = CaseValues[0];
+      // Find mininal value.
+      for (auto Case : CaseValues)
+        if (Case->getValue().slt(MinCaseVal->getValue()))
+          MinCaseVal = Case;
+
+      // Mark the bits case number touched.
+      APInt BitMask = APInt::getZero(MinCaseVal->getBitWidth());
+      for (auto Case : CaseValues)
+        BitMask |= (Case->getValue() - MinCaseVal->getValue());
+
+      // Check if cases with the same result can cover all number
+      // in touched bits.
+      if (BitMask.countPopulation() == Log2_32(CaseCount)) {
+        if (!MinCaseVal->isNullValue())
+          Condition = Builder.CreateSub(Condition, MinCaseVal);
+        Value *And = Builder.CreateAnd(Condition, ~BitMask, "switch.and");
+        Value *Cmp = Builder.CreateICmpEQ(
+            And, Constant::getNullValue(And->getType()), "switch.selectcmp");
+        return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+      }
+    }
+
+    // Handle the degenerate case where two cases have the same value.
+    if (CaseValues.size() == 2) {
+      Value *Cmp1 = Builder.CreateICmpEQ(Condition, CaseValues[0],
+                                         "switch.selectcmp.case1");
+      Value *Cmp2 = Builder.CreateICmpEQ(Condition, CaseValues[1],
+                                         "switch.selectcmp.case2");
+      Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
+      return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+    }
   }
 
   return nullptr;
