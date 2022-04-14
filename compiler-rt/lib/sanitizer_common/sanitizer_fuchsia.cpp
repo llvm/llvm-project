@@ -75,7 +75,6 @@ void Abort() { abort(); }
 int Atexit(void (*function)(void)) { return atexit(function); }
 
 void GetThreadStackTopAndBottom(bool, uptr *stack_top, uptr *stack_bottom) {
-  ScopedDisableMallocHooks disable_hooks;  // pthread can malloc.
   pthread_attr_t attr;
   CHECK_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
   void *base;

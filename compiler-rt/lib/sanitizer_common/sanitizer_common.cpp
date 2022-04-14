@@ -310,23 +310,7 @@ struct MallocFreeHook {
 
 static MallocFreeHook MFHooks[kMaxMallocFreeHooks];
 
-#if !SANITIZER_SUPPORTS_THREADLOCAL || SANITIZER_GO || SANITIZER_MAC || \
-    SANITIZER_ANDROID
-// FIXME: Prevent hooks on other platforms.
-static constexpr int disable_malloc_hooks = 0;
-ScopedDisableMallocHooks::ScopedDisableMallocHooks() {}
-ScopedDisableMallocHooks::~ScopedDisableMallocHooks() {}
-#else
-static THREADLOCAL int disable_malloc_hooks = 0;
-ScopedDisableMallocHooks::ScopedDisableMallocHooks() { ++disable_malloc_hooks; }
-ScopedDisableMallocHooks::~ScopedDisableMallocHooks() {
-  --disable_malloc_hooks;
-}
-#endif
-
 void RunMallocHooks(void *ptr, uptr size) {
-  if (disable_malloc_hooks)
-    return;
   __sanitizer_malloc_hook(ptr, size);
   for (int i = 0; i < kMaxMallocFreeHooks; i++) {
     auto hook = MFHooks[i].malloc_hook;
@@ -337,8 +321,6 @@ void RunMallocHooks(void *ptr, uptr size) {
 }
 
 void RunFreeHooks(void *ptr) {
-  if (disable_malloc_hooks)
-    return;
   __sanitizer_free_hook(ptr);
   for (int i = 0; i < kMaxMallocFreeHooks; i++) {
     auto hook = MFHooks[i].free_hook;
