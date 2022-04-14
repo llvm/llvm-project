@@ -255,9 +255,11 @@ void AArch64::writePlt(uint8_t *buf, const Symbol &sym,
 bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
                          uint64_t branchAddr, const Symbol &s,
                          int64_t a) const {
-  // If s is an undefined weak symbol and does not have a PLT entry then it
-  // will be resolved as a branch to the next instruction.
-  if (s.isUndefWeak() && !s.isInPlt())
+  // If s is an undefined weak symbol and does not have a PLT entry then it will
+  // be resolved as a branch to the next instruction. If it is hidden, its
+  // binding has been converted to local, so we just check isUndefined() here. A
+  // undefined non-weak symbol will have been errored.
+  if (s.isUndefined() && !s.isInPlt())
     return false;
   // ELF for the ARM 64-bit architecture, section Call and Jump relocations
   // only permits range extension thunks for R_AARCH64_CALL26 and
