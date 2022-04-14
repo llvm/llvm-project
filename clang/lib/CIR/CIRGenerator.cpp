@@ -25,6 +25,8 @@ using namespace cir;
 using namespace clang;
 
 CIRGenerator::~CIRGenerator() = default;
+void CIRGenerator::anchor() {}
+
 CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
                            const CodeGenOptions &CGO)
     : Diags(diags), codeGenOpts{CGO} {}
