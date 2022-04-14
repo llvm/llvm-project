@@ -493,6 +493,16 @@ private:
   // frame, so save it here and add it to the RegScavenger later.
   Optional<int> ScavengeFI;
 
+private:
+  Register VGPRForAGPRCopy;
+
+public:
+  Register getVGPRForAGPRCopy() const {
+    assert(VGPRForAGPRCopy &&
+           "Valid VGPR for AGPR copy must have been identified by now");
+    return VGPRForAGPRCopy;
+  }
+
 public: // FIXME
   /// If this is set, an SGPR used for save/restore of the register used for the
   /// frame pointer.
