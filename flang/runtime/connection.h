@@ -47,7 +47,6 @@ struct ConnectionState : public ConnectionAttributes {
   void BeginRecord() {
     positionInRecord = 0;
     furthestPositionInRecord = 0;
-    leftTabLimit.reset();
   }
 
   std::optional<std::int64_t> EffectiveRecordLength() const {

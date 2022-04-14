@@ -199,17 +199,6 @@ MutableModes &ExternalIoStatementBase::mutableModes() { return unit_.modes; }
 
 ConnectionState &ExternalIoStatementBase::GetConnectionState() { return unit_; }
 
-void ExternalIoStatementBase::CompleteOperation() {
-  if (!completedOperation()) {
-    if (mutableModes().nonAdvancing) {
-      unit_.leftTabLimit = unit_.furthestPositionInRecord;
-    } else {
-      unit_.leftTabLimit.reset();
-    }
-    IoStatementBase::CompleteOperation();
-  }
-}
-
 int ExternalIoStatementBase::EndIoStatement() {
   CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
@@ -330,12 +319,15 @@ void ExternalIoStatementState<DIR>::CompleteOperation() {
       FinishReadingRecord();
     }
   } else {
-    if (!mutableModes().nonAdvancing) {
+    if (mutableModes().nonAdvancing) {
+      unit().leftTabLimit = unit().furthestPositionInRecord;
+    } else {
+      unit().leftTabLimit.reset();
       unit().AdvanceRecord(*this);
     }
     unit().FlushIfTerminal(*this);
   }
-  return ExternalIoStatementBase::CompleteOperation();
+  return IoStatementBase::CompleteOperation();
 }
 
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
@@ -1013,7 +1005,7 @@ void ExternalMiscIoStatementState::CompleteOperation() {
     ext.Rewind(*this);
     break;
   }
-  return ExternalIoStatementBase::CompleteOperation();
+  return IoStatementBase::CompleteOperation();
 }
 
 int ExternalMiscIoStatementState::EndIoStatement() {
