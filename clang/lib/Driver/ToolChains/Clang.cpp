@@ -3962,9 +3962,8 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
   if (Args.hasArg(options::OPT_fansi_escape_codes))
     CmdArgs.push_back("-fansi-escape-codes");
 
-  if (!Args.hasFlag(options::OPT_fshow_source_location,
-                    options::OPT_fno_show_source_location, true))
-    CmdArgs.push_back("-fno-show-source-location");
+  Args.addOptOutFlag(CmdArgs, options::OPT_fshow_source_location,
+                     options::OPT_fno_show_source_location);
 
   if (Args.hasArg(options::OPT_fdiagnostics_absolute_paths))
     CmdArgs.push_back("-fdiagnostics-absolute-paths");
@@ -3973,9 +3972,8 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
                     ColumnDefault))
     CmdArgs.push_back("-fno-show-column");
 
-  if (!Args.hasFlag(options::OPT_fspell_checking,
-                    options::OPT_fno_spell_checking, true))
-    CmdArgs.push_back("-fno-spell-checking");
+  Args.addOptOutFlag(CmdArgs, options::OPT_fspell_checking,
+                     options::OPT_fno_spell_checking);
 }
 
 enum class DwarfFissionKind { None, Split, Single };
@@ -5512,17 +5510,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fdata-sections");
   }
 
-  if (!Args.hasFlag(options::OPT_funique_section_names,
-                    options::OPT_fno_unique_section_names, true))
-    CmdArgs.push_back("-fno-unique-section-names");
-
-  if (Args.hasFlag(options::OPT_funique_internal_linkage_names,
-                   options::OPT_fno_unique_internal_linkage_names, false))
-    CmdArgs.push_back("-funique-internal-linkage-names");
-
-  if (Args.hasFlag(options::OPT_funique_basic_block_section_names,
-                   options::OPT_fno_unique_basic_block_section_names, false))
-    CmdArgs.push_back("-funique-basic-block-section-names");
+  Args.addOptOutFlag(CmdArgs, options::OPT_funique_section_names,
+                     options::OPT_fno_unique_section_names);
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
+                    options::OPT_fno_unique_internal_linkage_names);
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
+                    options::OPT_fno_unique_basic_block_section_names);
 
   if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
                                options::OPT_fno_split_machine_functions)) {
@@ -6050,9 +6043,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
                     options::OPT_fno_openmp_simd);
     Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
-    if (!Args.hasFlag(options::OPT_fopenmp_extensions,
-                      options::OPT_fno_openmp_extensions, /*Default=*/true))
-      CmdArgs.push_back("-fno-openmp-extensions");
+    Args.addOptOutFlag(CmdArgs, options::OPT_fopenmp_extensions,
+                       options::OPT_fno_openmp_extensions);
   }
 
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
@@ -6195,9 +6187,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-mstack-probe-size=0");
   }
 
-  if (!Args.hasFlag(options::OPT_mstack_arg_probe,
-                    options::OPT_mno_stack_arg_probe, true))
-    CmdArgs.push_back(Args.MakeArgString("-mno-stack-arg-probe"));
+  Args.addOptOutFlag(CmdArgs, options::OPT_mstack_arg_probe,
+                     options::OPT_mno_stack_arg_probe);
 
   if (Arg *A = Args.getLastArg(options::OPT_mrestrict_it,
                                options::OPT_mno_restrict_it)) {
@@ -6278,9 +6269,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
   RenderBuiltinOptions(TC, RawTriple, Args, CmdArgs);
 
-  if (!Args.hasFlag(options::OPT_fassume_sane_operator_new,
-                    options::OPT_fno_assume_sane_operator_new, true))
-    CmdArgs.push_back("-fno-assume-sane-operator-new");
+  Args.addOptOutFlag(CmdArgs, options::OPT_fassume_sane_operator_new,
+                     options::OPT_fno_assume_sane_operator_new);
 
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,
@@ -6307,15 +6297,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdouble_square_bracket_attributes,
                   options::OPT_fno_double_square_bracket_attributes);
 
-  // -faccess-control is default.
-  if (Args.hasFlag(options::OPT_fno_access_control,
-                   options::OPT_faccess_control, false))
-    CmdArgs.push_back("-fno-access-control");
-
-  // -felide-constructors is the default.
-  if (Args.hasFlag(options::OPT_fno_elide_constructors,
-                   options::OPT_felide_constructors, false))
-    CmdArgs.push_back("-fno-elide-constructors");
+  Args.addOptOutFlag(CmdArgs, options::OPT_faccess_control,
+                     options::OPT_fno_access_control);
+  Args.addOptOutFlag(CmdArgs, options::OPT_felide_constructors,
+                     options::OPT_fno_elide_constructors);
 
   ToolChain::RTTIMode RTTIMode = TC.getRTTIMode();
 
@@ -6344,10 +6329,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    RawTriple.isOSDarwin() && !KernelOrKext))
     CmdArgs.push_back("-fregister-global-dtors-with-atexit");
 
-  // -fno-use-line-directives is default.
-  if (Args.hasFlag(options::OPT_fuse_line_directives,
-                   options::OPT_fno_use_line_directives, false))
-    CmdArgs.push_back("-fuse-line-directives");
+  Args.addOptInFlag(CmdArgs, options::OPT_fuse_line_directives,
+                    options::OPT_fno_use_line_directives);
 
   // -fno-minimize-whitespace is default.
   if (Args.hasFlag(options::OPT_fminimize_whitespace,
@@ -6440,10 +6423,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(LanguageStandard.data());
   }
 
-  // -fno-borland-extensions is default.
-  if (Args.hasFlag(options::OPT_fborland_extensions,
-                   options::OPT_fno_borland_extensions, false))
-    CmdArgs.push_back("-fborland-extensions");
+  Args.addOptInFlag(CmdArgs, options::OPT_fborland_extensions,
+                    options::OPT_fno_borland_extensions);
 
   // -fno-declspec is default, except for PS4.
   if (Args.hasFlag(options::OPT_fdeclspec, options::OPT_fno_declspec,
@@ -6473,9 +6454,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fgnu_keywords,
                   options::OPT_fno_gnu_keywords);
 
-  if (Args.hasFlag(options::OPT_fgnu89_inline, options::OPT_fno_gnu89_inline,
-                   false))
-    CmdArgs.push_back("-fgnu89-inline");
+  Args.addOptInFlag(CmdArgs, options::OPT_fgnu89_inline,
+                    options::OPT_fno_gnu89_inline);
 
   const Arg *InlineArg = Args.getLastArg(options::OPT_finline_functions,
                                          options::OPT_finline_hint_functions,
@@ -6560,22 +6540,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // C++ "sane" operator new.
-  if (!Args.hasFlag(options::OPT_fassume_sane_operator_new,
-                    options::OPT_fno_assume_sane_operator_new, true))
-    CmdArgs.push_back("-fno-assume-sane-operator-new");
+  Args.addOptOutFlag(CmdArgs, options::OPT_fassume_sane_operator_new,
+                     options::OPT_fno_assume_sane_operator_new);
 
   // -frelaxed-template-template-args is off by default, as it is a severe
   // breaking change until a corresponding change to template partial ordering
   // is provided.
-  if (Args.hasFlag(options::OPT_frelaxed_template_template_args,
-                   options::OPT_fno_relaxed_template_template_args, false))
-    CmdArgs.push_back("-frelaxed-template-template-args");
+  Args.addOptInFlag(CmdArgs, options::OPT_frelaxed_template_template_args,
+                    options::OPT_fno_relaxed_template_template_args);
 
   // -fsized-deallocation is off by default, as it is an ABI-breaking change for
   // most platforms.
-  if (Args.hasFlag(options::OPT_fsized_deallocation,
-                   options::OPT_fno_sized_deallocation, false))
-    CmdArgs.push_back("-fsized-deallocation");
+  Args.addOptInFlag(CmdArgs, options::OPT_fsized_deallocation,
+                    options::OPT_fno_sized_deallocation);
 
   // -faligned-allocation is on by default in C++17 onwards and otherwise off
   // by default.
@@ -6603,10 +6580,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_mno_constant_cfstrings, true))
     CmdArgs.push_back("-fno-constant-cfstrings");
 
-  // -fno-pascal-strings is default, only pass non-default.
-  if (Args.hasFlag(options::OPT_fpascal_strings,
-                   options::OPT_fno_pascal_strings, false))
-    CmdArgs.push_back("-fpascal-strings");
+  Args.addOptInFlag(CmdArgs, options::OPT_fpascal_strings,
+                    options::OPT_fno_pascal_strings);
 
   // Honor -fpack-struct= and -fpack-struct, if given. Note that
   // -fno-pack-struct doesn't apply to -fpack-struct=.
@@ -6638,8 +6613,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-Qn");
 
   // -fno-common is the default, set -fcommon only when that flag is set.
-  if (Args.hasFlag(options::OPT_fcommon, options::OPT_fno_common, false))
-    CmdArgs.push_back("-fcommon");
+  Args.addOptInFlag(CmdArgs, options::OPT_fcommon, options::OPT_fno_common);
 
   // -fsigned-bitfields is default, and clang doesn't yet support
   // -funsigned-bitfields.
@@ -6671,10 +6645,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderDiagnosticsOptions(D, Args, CmdArgs);
 
-  // -fno-asm-blocks is default.
-  if (Args.hasFlag(options::OPT_fasm_blocks, options::OPT_fno_asm_blocks,
-                   false))
-    CmdArgs.push_back("-fasm-blocks");
+  Args.addOptInFlag(CmdArgs, options::OPT_fasm_blocks,
+                    options::OPT_fno_asm_blocks);
 
   // -fgnu-inline-asm is default.
   if (!Args.hasFlag(options::OPT_fgnu_inline_asm,
@@ -6715,9 +6687,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fno-dollars-in-identifiers");
   }
 
-  if (Args.hasFlag(options::OPT_fapple_pragma_pack,
-                   options::OPT_fno_apple_pragma_pack, false))
-    CmdArgs.push_back("-fapple-pragma-pack");
+  Args.addOptInFlag(CmdArgs, options::OPT_fapple_pragma_pack,
+                    options::OPT_fno_apple_pragma_pack);
 
   if (Args.hasFlag(options::OPT_fxl_pragma_pack,
                    options::OPT_fno_xl_pragma_pack, RawTriple.isOSAIX()))
@@ -6982,9 +6953,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Triple.isAMDGPU()) {
     handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
 
-    if (Args.hasFlag(options::OPT_munsafe_fp_atomics,
-                     options::OPT_mno_unsafe_fp_atomics, /*Default=*/false))
-      CmdArgs.push_back("-munsafe-fp-atomics");
+    Args.addOptInFlag(CmdArgs, options::OPT_munsafe_fp_atomics,
+                      options::OPT_mno_unsafe_fp_atomics);
   }
 
   // For all the host OpenMP offloading compile jobs we need to pass the targets
@@ -7104,13 +7074,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fforce-enable-int128");
   }
 
-  if (Args.hasFlag(options::OPT_fkeep_static_consts,
-                   options::OPT_fno_keep_static_consts, false))
-    CmdArgs.push_back("-fkeep-static-consts");
-
-  if (Args.hasFlag(options::OPT_fcomplete_member_pointers,
-                   options::OPT_fno_complete_member_pointers, false))
-    CmdArgs.push_back("-fcomplete-member-pointers");
+  Args.addOptInFlag(CmdArgs, options::OPT_fkeep_static_consts,
+                    options::OPT_fno_keep_static_consts);
+  Args.addOptInFlag(CmdArgs, options::OPT_fcomplete_member_pointers,
+                    options::OPT_fno_complete_member_pointers);
 
   if (!Args.hasFlag(options::OPT_fcxx_static_destructors,
                     options::OPT_fno_cxx_static_destructors, true))
