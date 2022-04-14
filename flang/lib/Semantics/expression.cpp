@@ -3199,7 +3199,7 @@ void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
           symbol->name())};
       if (subp->isFunction()) {
         const auto &result{subp->result().name()};
-        msg->Attach(result, "Function result is '%s'"_err_en_US, result);
+        msg->Attach(result, "Function result is '%s'"_en_US, result);
       }
     } else {
       context_.SayAt(x, "Assignment to constant '%s' is not allowed"_err_en_US,
