@@ -399,8 +399,8 @@ contains
 end
 !Expect: m7c.mod
 !module m7c
-! use m7b, only: g => g_real
 ! use m7a, only: g => g_integer
+! use m7b, only: g => g_real
 ! interface g
 !  procedure :: s
 ! end interface
@@ -481,8 +481,8 @@ contains
 end
 !Expect: m8c.mod
 !module m8c
-! use m8b, only: g
 ! use m8a, only: g
+! use m8b, only: g
 ! interface g
 !  procedure :: s
 ! end interface
@@ -579,8 +579,8 @@ module m10c
 end
 !Expect: m10c.mod
 !module m10c
-! use m10b,only:operator(.ne.)
 ! use m10a,only:operator(.ne.)
+! use m10b,only:operator(.ne.)
 ! interface operator(.ne.)
 ! end interface
 !end
@@ -592,8 +592,8 @@ module m10d
 end
 !Expect: m10d.mod
 !module m10d
-! use m10c,only:operator(.ne.)
 ! use m10a,only:operator(.ne.)
+! use m10c,only:operator(.ne.)
 ! interface operator(.ne.)
 ! end interface
 ! private::operator(.ne.)
