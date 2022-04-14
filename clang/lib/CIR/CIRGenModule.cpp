@@ -246,7 +246,17 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
   CurCGF = nullptr;
 }
 
+// buildTopLevelDecl - Emit code for a single top level declaration.
 void CIRGenModule::buildTopLevelDecl(Decl *decl) {
+  // Ignore dependent declarations
+  if (decl->isTemplated())
+    return;
+
+  // Consteval function shouldn't be emitted.
+  if (auto *FD = dyn_cast<FunctionDecl>(decl))
+    if (FD->isConsteval())
+      return;
+
   switch (decl->getKind()) {
   default:
     assert(false && "Not yet implemented");
