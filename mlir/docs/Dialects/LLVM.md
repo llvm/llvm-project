@@ -194,8 +194,8 @@ objects, the creation and manipulation of LLVM dialect types is thread-safe.
 MLIR does not support module-scoped named type declarations, e.g. `%s = type
 {i32, i32}` in LLVM IR. Instead, types must be fully specified at each use,
 except for recursive types where only the first reference to a named type needs
-to be fully specified. MLIR [type aliases](../LangRef.md/#type-aliases) can be used
-to achieve more compact syntax.
+to be fully specified. MLIR [type aliases](../LangRef.md/#type-aliases) can be
+used to achieve more compact syntax.
 
 The general syntax of LLVM dialect types is `!llvm.`, followed by a type kind
 identifier (e.g., `ptr` for pointer or `struct` for structure) and by an
@@ -257,17 +257,24 @@ the element type, which can be either compatible built-in or LLVM dialect types.
 
 Pointer types specify an address in memory.
 
-Pointer types are parametric types parameterized by the element type and the
-address space. The address space is an integer, but this choice may be
-reconsidered if MLIR implements named address spaces. Their syntax is as
-follows:
+Both opaque and type-parameterized pointer types are supported.
+[Opaque pointers](https://llvm.org/docs/OpaquePointers.html) do not indicate the
+type of the data pointed to, and are intended to simplify LLVM IR by encoding
+behavior relevant to the pointee type into operations rather than into types.
+Non-opaque pointer types carry the pointee type as a type parameter. Both kinds
+of pointers may be additionally parameterized by an address space. The address
+space is an integer, but this choice may be reconsidered if MLIR implements
+named address spaces. The syntax of pointer types is as follows:
 
 ```
-  llvm-ptr-type ::= `!llvm.ptr<` type (`,` integer-literal)? `>`
+  llvm-ptr-type ::= `!llvm.ptr` (`<` integer-literal `>`)?
+                  | `!llvm.ptr<` type (`,` integer-literal)? `>`
 ```
 
-where the optional integer literal corresponds to the memory space. Both cases
-are represented by `LLVMPointerType` internally.
+where the former case is the opaque pointer type and the latter case is the
+non-opaque pointer type; the optional group containing the integer literal
+corresponds to the memory space. All cases are represented by `LLVMPointerType`
+internally.
 
 #### Array Types
 

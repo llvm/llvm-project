@@ -293,12 +293,16 @@ class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
 // Memory-related operations.
 def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
   let arguments = (ins AnyInteger:$arraySize,
-                   OptionalAttr<I64Attr>:$alignment);
-  let results = (outs Res<LLVM_AnyPointer, "", [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
+                   OptionalAttr<I64Attr>:$alignment,
+                   OptionalAttr<TypeAttr>:$elem_type);
+  let results = (outs Res<LLVM_AnyPointer, "",
+                          [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
   string llvmBuilder = [{
     auto addrSpace = $_resultType->getPointerAddressSpace();
-    auto *inst = builder.CreateAlloca(
-        $_resultType->getPointerElementType(), addrSpace, $arraySize);
+    llvm::Type *elementType = moduleTranslation.convertType(
+        $elem_type ? *$elem_type
+                   : op.getType().cast<LLVMPointerType>().getElementType());
+    auto *inst = builder.CreateAlloca(elementType, addrSpace, $arraySize);
     }] # setAlignmentCode # [{
     $res = inst;
   }];
@@ -307,17 +311,20 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
       "unsigned":$alignment),
     [{
       if (alignment == 0)
-        return build($_builder, $_state, resultType, arraySize, IntegerAttr());
+        return build($_builder, $_state, resultType, arraySize, IntegerAttr(),
+                     TypeAttr());
       build($_builder, $_state, resultType, arraySize,
-        $_builder.getI64IntegerAttr(alignment));
+        $_builder.getI64IntegerAttr(alignment), TypeAttr());
   }]>];
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
                    Variadic<LLVM_ScalarOrVectorOf<AnyInteger>>:$indices,
-                   I32ElementsAttr:$structIndices);
+                   I32ElementsAttr:$structIndices,
+                   OptionalAttr<TypeAttr>:$elem_type);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
   let builders = [
@@ -337,16 +344,18 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
       else
         indices.push_back(builder.getInt32(structIndex));
     }
-    $res = builder.CreateGEP(
-      $base->getType()->getPointerElementType(), $base, indices);
+    Type baseElementType = op.getSourceElementType();
+    llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
+    $res = builder.CreateGEP(elementType, $base, indices);
   }];
   let assemblyFormat = [{
     $base `[` custom<GEPIndices>($indices, $structIndices) `]` attr-dict
-    `:` functional-type(operands, results)
+    `:` functional-type(operands, results) (`,` $elem_type^)?
   }];
 
   let extraClassDeclaration = [{
     constexpr static int kDynamicIndex = std::numeric_limits<int32_t>::min();
+    Type getSourceElementType();
   }];
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -361,8 +370,7 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_LoadableType:$res);
   string llvmBuilder = [{
-    auto *inst = builder.CreateLoad(
-      $addr->getType()->getPointerElementType(), $addr, $volatile_);
+    auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);
   }] # setAlignmentCode
      # setNonTemporalMetadataCode
      # setAccessGroupsMetadataCode
@@ -375,11 +383,13 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
       CArg<"bool", "false">:$isVolatile, CArg<"bool", "false">:$isNonTemporal),
     [{
       auto type = addr.getType().cast<LLVMPointerType>().getElementType();
+      assert(type && "must provide explicit element type to the constructor "
+                     "when the pointer type is opaque");
       build($_builder, $_state, type, addr, alignment, isVolatile, isNonTemporal);
     }]>,
     OpBuilder<(ins "Type":$t, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
-      CArg<"bool", "false">:$isNonTemporal)>];
+      CArg<"bool", "false">:$isNonTemporal)>,];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -1592,13 +1602,14 @@ def LLVM_vector_reduce_fmul : LLVM_VectorReductionAcc<"fmul">;
 def LLVM_MatrixColumnMajorLoadOp : LLVM_Op<"intr.matrix.column.major.load"> {
   let arguments = (ins LLVM_Type:$data, LLVM_Type:$stride, I1Attr:$isVolatile,
                    I32Attr:$rows, I32Attr:$columns);
-  let results = (outs LLVM_Type:$res);
+  let results = (outs LLVM_AnyVector:$res);
   let builders = [LLVM_OneResultOpBuilder];
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
     const llvm::DataLayout &dl =
       builder.GetInsertBlock()->getModule()->getDataLayout();
-    llvm::Type *ElemTy = $data->getType()->getPointerElementType();
+    llvm::Type *ElemTy = moduleTranslation.convertType(
+        getVectorElementType(op.getType()));
     llvm::Align align = dl.getABITypeAlign(ElemTy);
     $res = mb.CreateColumnMajorLoad(
       ElemTy, $data, align, $stride, $isVolatile, $rows,
@@ -1617,15 +1628,17 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_Op<"intr.matrix.column.major.load"> {
 /// columns    - Number of columns in matrix (must be a constant)
 /// stride     - Space between columns
 def LLVM_MatrixColumnMajorStoreOp : LLVM_Op<"intr.matrix.column.major.store"> {
-  let arguments = (ins LLVM_Type:$matrix, LLVM_Type:$data, LLVM_Type:$stride,
-                   I1Attr:$isVolatile, I32Attr:$rows, I32Attr:$columns);
+  let arguments = (ins LLVM_AnyVector:$matrix, LLVM_Type:$data,
+                   LLVM_Type:$stride, I1Attr:$isVolatile, I32Attr:$rows,
+                   I32Attr:$columns);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
     const llvm::DataLayout &dl =
       builder.GetInsertBlock()->getModule()->getDataLayout();
+    Type elementType = getVectorElementType(op.getMatrix().getType());
     llvm::Align align = dl.getABITypeAlign(
-      $data->getType()->getPointerElementType());
+      moduleTranslation.convertType(elementType));
     mb.CreateColumnMajorStore(
       $matrix, $data, align, $stride, $isVolatile,
       $rows, $columns);
@@ -1681,14 +1694,12 @@ def LLVM_GetActiveLaneMaskOp
 def LLVM_MaskedLoadOp : LLVM_Op<"intr.masked.load"> {
   let arguments = (ins LLVM_Type:$data, LLVM_Type:$mask,
                    Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment);
-  let results = (outs LLVM_Type:$res);
-  let builders = [LLVM_OneResultOpBuilder];
+  let results = (outs LLVM_AnyVector:$res);
   string llvmBuilder = [{
-    llvm::Type *Ty = $data->getType()->getPointerElementType();
     $res = $pass_thru.empty() ? builder.CreateMaskedLoad(
-      Ty, $data, llvm::Align($alignment), $mask) :
+        $_resultType, $data, llvm::Align($alignment), $mask) :
       builder.CreateMaskedLoad(
-        Ty, $data, llvm::Align($alignment), $mask, $pass_thru[0]);
+        $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
@@ -1709,19 +1720,15 @@ def LLVM_MaskedStoreOp : LLVM_Op<"intr.masked.store"> {
 
 /// Create a call to Masked Gather intrinsic.
 def LLVM_masked_gather : LLVM_Op<"intr.masked.gather"> {
-  let arguments = (ins LLVM_Type:$ptrs, LLVM_Type:$mask,
+  let arguments = (ins LLVM_AnyVector:$ptrs, LLVM_Type:$mask,
                    Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment);
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   string llvmBuilder = [{
-    llvm::VectorType *PtrVecTy = cast<llvm::VectorType>($ptrs->getType());
-    llvm::Type *Ty = llvm::VectorType::get(
-      PtrVecTy->getElementType()->getPointerElementType(),
-      PtrVecTy->getElementCount());
     $res = $pass_thru.empty() ? builder.CreateMaskedGather(
-      Ty, $ptrs, llvm::Align($alignment), $mask) :
+        $_resultType, $ptrs, llvm::Align($alignment), $mask) :
       builder.CreateMaskedGather(
-        Ty, $ptrs, llvm::Align($alignment), $mask, $pass_thru[0]);
+        $_resultType, $ptrs, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
