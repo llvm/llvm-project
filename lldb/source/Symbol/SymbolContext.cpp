@@ -960,8 +960,9 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
     // See if we can find the Module, if so stick it in the SymbolContext.
     FileSpec module_file_spec(spec_string);
     ModuleSpec module_spec(module_file_spec);
-    lldb::ModuleSP module_sp(
-        m_target_sp->GetImages().FindFirstModule(module_spec));
+    lldb::ModuleSP module_sp =
+        m_target_sp ? m_target_sp->GetImages().FindFirstModule(module_spec)
+                    : nullptr;
     m_type |= eModuleSpecified;
     if (module_sp)
       m_module_sp = module_sp;
