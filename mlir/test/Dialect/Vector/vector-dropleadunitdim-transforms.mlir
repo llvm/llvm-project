@@ -265,3 +265,42 @@ func @cast_away_elementwise_leading_one_dims(
   return %0, %1, %2, %3: vector<1x1x8xf32>, vector<1x4xi1>, vector<1x4xf32>, vector<1x4xf32>
 }
 
+// CHECK-LABEL: func @cast_away_insert_leading_one_dims_scalar
+//  CHECK-SAME: (%[[S:.+]]: f32, %[[V:.+]]: vector<1x1x4xf32>)
+//       CHECK:   %[[EXTRACT:.+]] = vector.extract %[[V]][0, 0] : vector<1x1x4xf32>
+//       CHECK:   %[[INSERT:.+]] = vector.insert %[[S]], %[[EXTRACT]] [0] : f32 into vector<4xf32>
+//       CHECK:   %[[BCAST:.+]] = vector.broadcast %[[INSERT]] : vector<4xf32> to vector<1x1x4xf32>
+//       CHECK:   return %[[BCAST]]
+func @cast_away_insert_leading_one_dims_scalar(%s: f32, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
+  %0 = vector.insert %s, %v [0, 0, 0] : f32 into vector<1x1x4xf32>
+  return %0: vector<1x1x4xf32>
+}
+
+// CHECK-LABEL: func @cast_away_insert_leading_one_dims_rank1
+//  CHECK-SAME: (%[[S:.+]]: vector<4xf32>, %[[V:.+]]: vector<1x1x4xf32>)
+//       CHECK:   %[[BCAST:.+]] = vector.broadcast %[[S]] : vector<4xf32> to vector<1x1x4xf32>
+//       CHECK:   return %[[BCAST]]
+func @cast_away_insert_leading_one_dims_rank1(%s: vector<4xf32>, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
+  %0 = vector.insert %s, %v [0, 0] : vector<4xf32> into vector<1x1x4xf32>
+  return %0: vector<1x1x4xf32>
+}
+
+// CHECK-LABEL: func @cast_away_insert_leading_one_dims_rank2
+//  CHECK-SAME: (%[[S:.+]]: vector<1x4xf32>, %[[V:.+]]: vector<1x1x4xf32>)
+//       CHECK:   %[[EXTRACT:.+]] = vector.extract %[[S]][0] : vector<1x4xf32>
+//       CHECK:   %[[BCAST:.+]] = vector.broadcast %[[EXTRACT]] : vector<4xf32> to vector<1x1x4xf32>
+//       CHECK:   return %[[BCAST]]
+func @cast_away_insert_leading_one_dims_rank2(%s: vector<1x4xf32>, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
+  %0 = vector.insert %s, %v [0] : vector<1x4xf32> into vector<1x1x4xf32>
+  return %0: vector<1x1x4xf32>
+}
+
+// CHECK-LABEL: func @cast_away_insert_leading_one_dims_non_one_dest
+//  CHECK-SAME: (%[[S:.+]]: vector<1x4xf32>, %[[V:.+]]: vector<8x1x4xf32>)
+//       CHECK:   %[[EXTRACT:.+]] = vector.extract %[[S]][0] : vector<1x4xf32>
+//       CHECK:   %[[INSERT:.+]] = vector.insert %[[EXTRACT]], %[[V]] [5, 0] : vector<4xf32> into vector<8x1x4xf32>
+//       CHECK:   return %[[INSERT]]
+func @cast_away_insert_leading_one_dims_non_one_dest(%s: vector<1x4xf32>, %v: vector<8x1x4xf32>) -> vector<8x1x4xf32> {
+  %0 = vector.insert %s, %v [5] : vector<1x4xf32> into vector<8x1x4xf32>
+  return %0: vector<8x1x4xf32>
+}
