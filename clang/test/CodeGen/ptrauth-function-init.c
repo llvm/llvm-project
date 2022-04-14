@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s       -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s
-// RUN: %clang_cc1 -xc++ %s -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s --check-prefixes=CHECK,CXX
+// RUN: %clang_cc1 -no-opaque-pointers %s       -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -xc++ %s -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics -disable-llvm-passes -emit-llvm -o- | FileCheck %s --check-prefixes=CHECK,CXX
 
 #ifdef __cplusplus
 extern "C" {

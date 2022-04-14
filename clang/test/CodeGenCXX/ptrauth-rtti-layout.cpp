@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -I%S -triple=arm64-apple-ios -fptrauth-calls -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -I%S -triple=arm64-apple-ios -fptrauth-calls -std=c++11 -emit-llvm -o - | FileCheck %s
 #include <typeinfo>
 
 struct A { int a; };

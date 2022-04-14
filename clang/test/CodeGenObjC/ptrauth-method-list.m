@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fptrauth-calls -fobjc-arc -fblocks -fobjc-runtime=ios-7 -triple arm64-apple-ios -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fptrauth-calls -fobjc-arc -fblocks -fobjc-runtime=ios-7 -triple arm64-apple-ios -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @"\01+[C pm1].ptrauth" = private constant { i8*, i32, i64, i64 } { i8* bitcast (void (i8*, i8*)* @"\01+[C pm1]" to i8*), i32 0, i64 ptrtoint (i8** getelementptr inbounds ({ i32, i32, [2 x %struct._objc_method] }, { i32, i32, [2 x %struct._objc_method] }* @"_OBJC_$_CLASS_METHODS_C", i32 0, i32 2, i32 0, i32 2) to i64), i64 0 }, section "llvm.ptrauth"
 // CHECK: @"\01+[C m1].ptrauth" = private constant { i8*, i32, i64, i64 } { i8* bitcast (void (i8*, i8*)* @"\01+[C m1]" to i8*), i32 0, i64 ptrtoint (i8** getelementptr inbounds ({ i32, i32, [2 x %struct._objc_method] }, { i32, i32, [2 x %struct._objc_method] }* @"_OBJC_$_CLASS_METHODS_C", i32 0, i32 2, i32 1, i32 2) to i64), i64 0 }, section "llvm.ptrauth"

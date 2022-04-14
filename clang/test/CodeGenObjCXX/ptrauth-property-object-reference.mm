@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple arm64-apple-ios11.0 -fobjc-runtime=ios-11.0 -fptrauth-calls -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple arm64-apple-ios11.0 -fobjc-runtime=ios-11.0 -fptrauth-calls -emit-llvm -o - | FileCheck %s
 
 extern int DEFAULT();
 

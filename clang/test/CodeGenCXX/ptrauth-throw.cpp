@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fcxx-exceptions -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios -fptrauth-calls -fcxx-exceptions -emit-llvm %s -o - | FileCheck %s
 
 class Foo {
  public:

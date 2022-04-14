@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
 // RUN:  | FileCheck %s --check-prefix=CXAATEXIT
 
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - \
 // RUN:    -fno-use-cxa-atexit \
 // RUN:  | FileCheck %s --check-prefix=ATEXIT
 
