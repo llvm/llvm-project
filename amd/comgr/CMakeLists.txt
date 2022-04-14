@@ -293,8 +293,13 @@ install(FILES
   "${AMD_COMGR_VERSION_PATH}"
   DESTINATION "${AMD_COMGR_PACKAGE_PREFIX}")
 
-set(CLANG_LIBS
-  clangFrontendTool)
+if(TARGET clangFrontendTool)
+  set(CLANG_LIBS
+    clangFrontendTool)
+else()
+  set(CLANG_LIBS
+    clang-cpp)
+endif()
 
 set(LLD_LIBS
   lldELF
