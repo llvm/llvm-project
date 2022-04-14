@@ -67,8 +67,8 @@ sema::CIRBasedWarnings::CIRBasedWarnings(Sema &s) : S(s) {
   DefaultPolicy.enableConsumedAnalysis =
       isEnabled(D, warn_use_in_invalid_state);
 
-  CIRGen = std::make_unique<cir::CIRGenerator>(CodeGenOptions());
-  CIRGen->Initialize(S.getASTContext());
+  // CIRGen = std::make_unique<cir::CIRGenerator>(D, CodeGenOptions());
+  // CIRGen->Initialize(S.getASTContext());
 }
 
 // We need this here for unique_ptr with forward declared class.
