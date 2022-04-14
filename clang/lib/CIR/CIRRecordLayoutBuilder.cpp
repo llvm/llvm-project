@@ -12,6 +12,7 @@
 #include <memory>
 
 using namespace cir;
+using namespace clang;
 
 namespace {
 struct CIRRecordLowering final {
@@ -20,25 +21,25 @@ struct CIRRecordLowering final {
   // member. In addition to the standard member types, there exists a sentinel
   // member type that ensures correct rounding.
   struct MemberInfo final {
-    clang::CharUnits offset;
+    CharUnits offset;
     enum class InfoKind { VFPtr, VBPtr, Field, Base, VBase, Scissor } kind;
     mlir::Type data;
-    const clang::FieldDecl *fieldDecl;
-    MemberInfo(clang::CharUnits offset, InfoKind kind, mlir::Type data,
-               const clang::FieldDecl *fieldDecl = nullptr)
+    const FieldDecl *fieldDecl;
+    MemberInfo(CharUnits offset, InfoKind kind, mlir::Type data,
+               const FieldDecl *fieldDecl = nullptr)
         : offset{offset}, kind{kind}, data{data}, fieldDecl{fieldDecl} {};
     bool operator<(const MemberInfo &other) const {
       return offset < other.offset;
     }
   };
-  CIRRecordLowering(CIRGenTypes &cirGenTypes,
-                    const clang::RecordDecl *recordDecl, bool isPacked);
+  CIRRecordLowering(CIRGenTypes &cirGenTypes, const RecordDecl *recordDecl,
+                    bool isPacked);
 
   void lower(bool nonVirtualBaseType);
 
   void accumulateFields();
 
-  clang::CharUnits bitsToCharUnits(uint64_t bitOffset) {
+  CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
   }
 
@@ -49,16 +50,16 @@ struct CIRRecordLowering final {
                                   astContext.getCharWidth());
   }
 
-  mlir::Type getByteArrayType(clang::CharUnits numberOfChars) {
+  mlir::Type getByteArrayType(CharUnits numberOfChars) {
     assert(!numberOfChars.isZero() && "Empty byte arrays aren't allowed.");
     mlir::Type type = getCharType();
-    return numberOfChars == clang::CharUnits::One()
+    return numberOfChars == CharUnits::One()
                ? type
                : mlir::RankedTensorType::get({0, numberOfChars.getQuantity()},
                                              type);
   }
 
-  mlir::Type getStorageType(const clang::FieldDecl *fieldDecl) {
+  mlir::Type getStorageType(const FieldDecl *fieldDecl) {
     auto type = cirGenTypes.convertTypeForMem(fieldDecl->getType());
     assert(!fieldDecl->isBitField() && "bit fields NYI");
     if (!fieldDecl->isBitField())
@@ -72,7 +73,7 @@ struct CIRRecordLowering final {
     llvm_unreachable("getStorageType only supports nonBitFields at this point");
   }
 
-  uint64_t getFieldBitOffset(const clang::FieldDecl *fieldDecl) {
+  uint64_t getFieldBitOffset(const FieldDecl *fieldDecl) {
     return astRecordLayout.getFieldOffset(fieldDecl->getFieldIndex());
   }
 
@@ -80,15 +81,15 @@ struct CIRRecordLowering final {
   void fillOutputFields();
 
   CIRGenTypes &cirGenTypes;
-  const clang::ASTContext &astContext;
-  const clang::RecordDecl *recordDecl;
-  const clang::CXXRecordDecl *cxxRecordDecl;
-  const clang::ASTRecordLayout &astRecordLayout;
+  const ASTContext &astContext;
+  const RecordDecl *recordDecl;
+  const CXXRecordDecl *cxxRecordDecl;
+  const ASTRecordLayout &astRecordLayout;
   // Helpful intermediate data-structures
   std::vector<MemberInfo> members;
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
-  llvm::DenseMap<const clang::FieldDecl *, unsigned> fields;
+  llvm::DenseMap<const FieldDecl *, unsigned> fields;
   bool isPacked : 1;
 
 private:
@@ -98,11 +99,11 @@ private:
 } // namespace
 
 CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
-                                     const clang::RecordDecl *recordDecl,
+                                     const RecordDecl *recordDecl,
                                      bool isPacked)
     : cirGenTypes{cirGenTypes}, astContext{cirGenTypes.getContext()},
-      recordDecl{recordDecl},
-      cxxRecordDecl{llvm::dyn_cast<clang::CXXRecordDecl>(recordDecl)},
+      recordDecl{recordDecl}, cxxRecordDecl{llvm::dyn_cast<CXXRecordDecl>(
+                                  recordDecl)},
       astRecordLayout{cirGenTypes.getContext().getASTRecordLayout(recordDecl)},
       isPacked{isPacked} {}
 
@@ -156,14 +157,17 @@ void CIRRecordLowering::accumulateFields() {
 }
 
 mlir::cir::StructType
-CIRGenTypes::computeRecordLayout(const clang::RecordDecl *recordDecl) {
+CIRGenTypes::computeRecordLayout(const RecordDecl *recordDecl) {
   CIRRecordLowering builder(*this, recordDecl, /*packed=*/false);
   builder.lower(/*nonVirtualBaseType=*/false);
 
-  if (llvm::isa<clang::CXXRecordDecl>(recordDecl)) {
-    assert(builder.astRecordLayout.getNonVirtualSize() ==
-               builder.astRecordLayout.getSize() &&
-           "Virtual base objects NYI");
+  // If we're in C++, compute the base subobject type.
+  if (llvm::isa<CXXRecordDecl>(recordDecl) && !recordDecl->isUnion() &&
+      !recordDecl->hasAttr<FinalAttr>()) {
+    if (builder.astRecordLayout.getNonVirtualSize() !=
+        builder.astRecordLayout.getSize()) {
+      llvm_unreachable("NYI");
+    }
   }
 
   assert(!builder.isPacked && "Packed structs NYI");
