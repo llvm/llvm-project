@@ -479,6 +479,13 @@ libclang
 
 Static Analyzer
 ---------------
+- `New CTU implementation
+  <https://discourse.llvm.org/t/rfc-much-faster-cross-translation-unit-ctu-analysis-implementation/61728>`_
+  that keeps the slow-down around 2x compared to the single-TU analysis, even
+  in case of complex C++ projects. Still, it finds the majority of the "old"
+  CTU findings. Besides, not more than ~3% of the bug reports are lost compared
+  to single-TU analysis, the lost reports are highly likely to be false
+  positives.
 
 - Added a new checker ``alpha.unix.cstring.UninitializedRead`` this will check for uninitialized reads
   from common memory copy/manipulation functions such as ``memcpy``, ``mempcpy``, ``memmove``, ``memcmp``, `

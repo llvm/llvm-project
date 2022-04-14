@@ -515,20 +515,28 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
       llvm::dbgs() << "Using autosynthesized body for " << FD->getName()
                    << "\n";
   });
-  if (Body) {
-    const Decl* Decl = AD->getDecl();
-    return RuntimeDefinition(Decl);
-  }
 
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
+  cross_tu::CrossTranslationUnitContext &CTUCtx =
+      *Engine.getCrossTranslationUnitContext();
+
   AnalyzerOptions &Opts = Engine.getAnalysisManager().options;
+
+  if (Body) {
+    const Decl* Decl = AD->getDecl();
+    if (Opts.IsNaiveCTUEnabled && CTUCtx.isImportedAsNew(Decl)) {
+      // A newly created definition, but we had error(s) during the import.
+      if (CTUCtx.hasError(Decl))
+        return {};
+      return RuntimeDefinition(Decl, /*Foreign=*/true);
+    }
+    return RuntimeDefinition(Decl, /*Foreign=*/false);
+  }
 
   // Try to get CTU definition only if CTUDir is provided.
   if (!Opts.IsNaiveCTUEnabled)
     return {};
 
-  cross_tu::CrossTranslationUnitContext &CTUCtx =
-      *Engine.getCrossTranslationUnitContext();
   llvm::Expected<const FunctionDecl *> CTUDeclOrError =
       CTUCtx.getCrossTUDefinition(FD, Opts.CTUDir, Opts.CTUIndexName,
                                   Opts.DisplayCTUProgress);
@@ -541,7 +549,7 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
     return {};
   }
 
-  return RuntimeDefinition(*CTUDeclOrError);
+  return RuntimeDefinition(*CTUDeclOrError, /*Foreign=*/true);
 }
 
 void AnyFunctionCall::getInitialStackFrameContents(
