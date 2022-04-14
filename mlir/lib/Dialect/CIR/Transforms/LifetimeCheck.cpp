@@ -343,6 +343,7 @@ void LifetimeCheckPass::joinPmaps(SmallVectorImpl<PMapType> &pmaps) {
 
 void LifetimeCheckPass::checkLoop(LoopOp loopOp) {
   // 2.4.9. Loops
+  //
   // A loop is treated as if it were the first two loop iterations unrolled
   // using an if. For example:
   //
@@ -356,6 +357,78 @@ void LifetimeCheckPass::checkLoop(LoopOp loopOp) {
   //  if (/*cond*/)
   //   { /*body*/ }
   //
+  // See checkIf for additional explanations.
+  SmallVector<PMapType, 4> pmapOps;
+  SmallVector<Region *, 4> regionsToCheck;
+
+  auto setupLoopRegionsToCheck = [&](bool isSubsequentTaken = false) {
+    regionsToCheck.clear();
+    switch (loopOp.getKind()) {
+    case LoopOpKind::For: {
+      regionsToCheck.push_back(&loopOp.getCond());
+      regionsToCheck.push_back(&loopOp.getBody());
+      if (!isSubsequentTaken)
+        regionsToCheck.push_back(&loopOp.getStep());
+      break;
+    }
+    case LoopOpKind::While: {
+      regionsToCheck.push_back(&loopOp.getCond());
+      regionsToCheck.push_back(&loopOp.getBody());
+      break;
+    }
+    case LoopOpKind::DoWhile: {
+      // Note this is the reverse order from While above.
+      regionsToCheck.push_back(&loopOp.getBody());
+      regionsToCheck.push_back(&loopOp.getCond());
+      break;
+    }
+    }
+  };
+
+  // From 2.4.9 "Note":
+  //
+  // There are only three paths to analyze:
+  // (1) never taken (the loop body was not entered)
+  pmapOps.push_back(getPmap());
+
+  // (2) first taken (the first pass through the loop body, which begins
+  // with the loop entry pmap)
+  PMapType loopExitPmap;
+  {
+    // Intentional copy from loop entry map
+    loopExitPmap = getPmap();
+    PmapGuard pmapGuard{*this, &loopExitPmap};
+    setupLoopRegionsToCheck();
+    for (auto *r : regionsToCheck)
+      checkRegion(*r);
+    pmapOps.push_back(loopExitPmap);
+  }
+
+  // (3) and subsequent taken (second or later iteration, which begins with the
+  // loop body exit pmap and so takes into account any invalidations performed
+  // in the loop body on any path that could affect the next loop).
+  //
+  // This ensures that a subsequent loop iteration does not use a Pointer that
+  // was invalidated during a previous loop iteration.
+  //
+  // Because this analysis gives the same answer for each block of code (always
+  // converges), all loop iterations after the first get the same answer and
+  // so we only need to consider the second iteration, and so the analysis
+  // algorithm remains linear, single-pass. As an optimization, if the loop
+  // entry pmap is the same as the first loop body exit pmap, there is no need
+  // to perform the analysis on the second loop iteration; the answer will be
+  // the same.
+  if (getPmap() != loopExitPmap) {
+    // Intentional copy from first taken loop exit pmap
+    PMapType otherTakenPmap = loopExitPmap;
+    PmapGuard pmapGuard{*this, &otherTakenPmap};
+    setupLoopRegionsToCheck(/*isSubsequentTaken=*/true);
+    for (auto *r : regionsToCheck)
+      checkRegion(*r);
+    pmapOps.push_back(otherTakenPmap);
+  }
+
+  joinPmaps(pmapOps);
 }
 
 void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
