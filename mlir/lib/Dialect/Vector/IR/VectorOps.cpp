@@ -4278,10 +4278,14 @@ void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(getTranspAttrStrName(), builder.getI64ArrayAttr(transp));
 }
 
-// Eliminates transpose operations, which produce values identical to their
-// input values. This happens when the dimensions of the input vector remain in
-// their original order after the transpose operation.
 OpFoldResult vector::TransposeOp::fold(ArrayRef<Attribute> operands) {
+  // Eliminate splat constant transpose ops.
+  if (auto attr = operands.front().dyn_cast_or_null<DenseElementsAttr>())
+    if (attr.isSplat())
+      return attr.reshape(getResultType());
+
+  // Eliminate identity transpose ops. This happens when the dimensions of the
+  // input vector remain in their original order after the transpose operation.
   SmallVector<int64_t, 4> transp;
   getTransp(transp);
 
