@@ -1793,9 +1793,8 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
       // If the then value is defined within the scf.if, bail.
       if (tup.value().getParentRegion() == &op.getThenRegion()) {
         return failure();
-      } else {
-        elseYieldsToUpgradeToSelect.push_back(tup.index());
       }
+      elseYieldsToUpgradeToSelect.push_back(tup.index());
     }
 
     Location loc = op.getLoc();
