@@ -11,12 +11,12 @@ define void @barrier_sync(i32 %id, i32 %cnt) {
 
   ; CHECK:  barrier.sync [[ID]], [[CNT]];
   call void @llvm.nvvm.barrier.sync.cnt(i32 %id, i32 %cnt)
-  ; CHECK:  barrier.sync [[ID]], 2;
-  call void @llvm.nvvm.barrier.sync.cnt(i32 %id, i32 2)
+  ; CHECK:  barrier.sync [[ID]], 32;
+  call void @llvm.nvvm.barrier.sync.cnt(i32 %id, i32 32)
   ; CHECK:  barrier.sync 3, [[CNT]];
   call void @llvm.nvvm.barrier.sync.cnt(i32 3, i32 %cnt)
-  ; CHECK:  barrier.sync 4, 5;
-  call void @llvm.nvvm.barrier.sync.cnt(i32 4, i32 5)
+  ; CHECK:  barrier.sync 4, 64;
+  call void @llvm.nvvm.barrier.sync.cnt(i32 4, i32 64)
 
   ; CHECK: barrier.sync [[ID]];
   call void @llvm.nvvm.barrier.sync(i32 %id)
