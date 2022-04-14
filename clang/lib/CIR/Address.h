@@ -18,22 +18,40 @@
 
 #include "llvm/IR/Constants.h"
 
+#include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/Value.h"
 
 namespace cir {
 
 class Address {
   mlir::Value Pointer;
+  mlir::Type ElementType;
   clang::CharUnits Alignment;
 
+protected:
+  Address(std::nullptr_t) : Pointer(nullptr), ElementType(nullptr) {}
+
 public:
+  Address(mlir::Value pointer, mlir::Type elementType,
+          clang::CharUnits alignment)
+      : Pointer(pointer), ElementType(elementType), Alignment(alignment) {
+    assert(pointer != nullptr && "Pointer cannot be null");
+    assert(elementType != nullptr && "Pointer cannot be null");
+    assert(pointer.getType().cast<mlir::cir::PointerType>().getPointee() ==
+               ElementType &&
+           "Incorrect pointer element type");
+    assert(!alignment.isZero() && "Alignment cannot be zero");
+  }
   Address(mlir::Value pointer, clang::CharUnits alignment)
-      : Pointer(pointer), Alignment(alignment) {
+      : Address(pointer,
+                pointer.getType().cast<mlir::cir::PointerType>().getPointee(),
+                alignment) {
+
     assert((!alignment.isZero() || pointer == nullptr) &&
            "creating valid address with invalid alignment");
   }
 
-  static Address invalid() { return Address(nullptr, clang::CharUnits()); }
+  static Address invalid() { return Address(nullptr); }
   bool isValid() const { return Pointer != nullptr; }
 
   mlir::Value getPointer() const {
@@ -45,6 +63,11 @@ public:
   clang::CharUnits getAlignment() const {
     // assert(isValid());
     return Alignment;
+  }
+
+  mlir::Type getElementType() const {
+    assert(isValid());
+    return ElementType;
   }
 };
 
