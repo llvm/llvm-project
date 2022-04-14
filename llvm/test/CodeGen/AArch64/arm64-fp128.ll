@@ -420,8 +420,8 @@ define dso_local void @test_extend() {
 define fp128 @test_neg(fp128 %in) {
 ; CHECK-LABEL: test_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str q0, [sp, #-16]!
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    str q0, [sp, #-16]!
 ; CHECK-NEXT:    ldrb w8, [sp, #15]
 ; CHECK-NEXT:    eor w8, w8, #0x80
 ; CHECK-NEXT:    strb w8, [sp, #15]

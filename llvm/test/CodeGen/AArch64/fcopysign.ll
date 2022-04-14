@@ -16,11 +16,11 @@ declare half @llvm.copysign.f16(half %a, half %b)
 define fp128 @copysign0() {
 ; CHECK-LABEL: copysign0:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    adrp x8, val_double
 ; CHECK-NEXT:    str q0, [sp, #-16]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr x8, [x8, :lo12:val_double]
 ; CHECK-NEXT:    ldrb w9, [sp, #15]
 ; CHECK-NEXT:    and x8, x8, #0x8000000000000000
@@ -32,11 +32,11 @@ define fp128 @copysign0() {
 ;
 ; CHECK-NONEON-LABEL: copysign0:
 ; CHECK-NONEON:       // %bb.0: // %entry
+; CHECK-NONEON-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NONEON-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NONEON-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
 ; CHECK-NONEON-NEXT:    adrp x8, val_double
 ; CHECK-NONEON-NEXT:    str q0, [sp, #-16]!
-; CHECK-NONEON-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NONEON-NEXT:    ldr x8, [x8, :lo12:val_double]
 ; CHECK-NONEON-NEXT:    ldrb w9, [sp, #15]
 ; CHECK-NONEON-NEXT:    and x8, x8, #0x8000000000000000
@@ -55,11 +55,11 @@ entry:
 define fp128@copysign1() {
 ; CHECK-LABEL: copysign1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    adrp x8, val_fp128
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:val_fp128]
 ; CHECK-NEXT:    adrp x8, val_float
 ; CHECK-NEXT:    str q0, [sp, #-16]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr w8, [x8, :lo12:val_float]
 ; CHECK-NEXT:    ldrb w9, [sp, #15]
 ; CHECK-NEXT:    and w8, w8, #0x80000000
@@ -71,11 +71,11 @@ define fp128@copysign1() {
 ;
 ; CHECK-NONEON-LABEL: copysign1:
 ; CHECK-NONEON:       // %bb.0: // %entry
+; CHECK-NONEON-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NONEON-NEXT:    adrp x8, val_fp128
 ; CHECK-NONEON-NEXT:    ldr q0, [x8, :lo12:val_fp128]
 ; CHECK-NONEON-NEXT:    adrp x8, val_float
 ; CHECK-NONEON-NEXT:    str q0, [sp, #-16]!
-; CHECK-NONEON-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NONEON-NEXT:    ldr w8, [x8, :lo12:val_float]
 ; CHECK-NONEON-NEXT:    ldrb w9, [sp, #15]
 ; CHECK-NONEON-NEXT:    and w8, w8, #0x80000000
