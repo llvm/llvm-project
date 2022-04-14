@@ -11590,6 +11590,12 @@ def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numt
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
 
+def err_hlsl_pointers_unsupported : Error<
+  "%select{pointers|references}0 are unsupported in HLSL">;
+
+def err_hlsl_operator_unsupported : Error<
+  "the '%select{&|*|->}0' operator is unsupported in HLSL">;
+
 // Layout randomization warning.
 def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;

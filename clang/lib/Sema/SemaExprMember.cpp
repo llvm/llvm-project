@@ -1736,6 +1736,9 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   DeclarationName Name = NameInfo.getName();
   bool IsArrow = (OpKind == tok::arrow);
 
+  if (getLangOpts().HLSL && IsArrow)
+    return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 2);
+
   NamedDecl *FirstQualifierInScope
     = (!SS.isSet() ? nullptr : FindFirstQualifierInScope(S, SS.getScopeRep()));
 
