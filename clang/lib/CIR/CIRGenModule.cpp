@@ -448,7 +448,43 @@ mlir::Location CIRGenModule::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return CurCGF->getLoc(lhs, rhs);
 }
 
+void CIRGenModule::buildDeferred() {
+  // Emit deferred declare target declarations
+  if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd)
+    llvm_unreachable("NYI");
+
+  // Emit code for any potentially referenced deferred decls. Since a previously
+  // unused static decl may become used during the generation of code for a
+  // static function, iterate until no changes are made.
+
+  if (!DeferredVTables.empty()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Emit CUDA/HIP static device variables referenced by host code only. Note we
+  // should not clear CUDADeviceVarODRUsedByHost since it is still needed for
+  // further handling.
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
+    llvm_unreachable("NYI");
+  }
+
+  // Stop if we're out of both deferred vtables and deferred declarations.
+  if (DeferredDeclsToEmit.empty())
+    return;
+
+  // Grab the list of decls to emit. If buildGlobalDefinition schedules more
+  // work, it will not interfere with this.
+  std::vector<GlobalDecl> CurDeclsToEmit;
+  CurDeclsToEmit.swap(DeferredDeclsToEmit);
+
+  for (auto &D : CurDeclsToEmit) {
+    (void)D;
+    llvm_unreachable("NYI");
+  }
+}
+
 void CIRGenModule::Release() {
+  buildDeferred();
   // TODO: buildVTablesOpportunistically();
   // TODO: applyGlobalValReplacements();
   // TODO: applyReplacements();
