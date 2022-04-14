@@ -1463,6 +1463,17 @@ func @transpose_scalar_broadcast2(%value: f32) -> vector<1x8xf32> {
 
 // -----
 
+// CHECK-LABEL: func @transpose_splat_constant
+//       CHECK:   %[[CST:.+]] = arith.constant dense<5.000000e+00> : vector<8x4xf32>
+//       CHECK:   return %[[CST]]
+func @transpose_splat_constant() -> vector<8x4xf32> {
+  %cst = arith.constant dense<5.0> : vector<4x8xf32>
+  %0 = vector.transpose %cst, [1, 0] : vector<4x8xf32> to vector<8x4xf32>
+  return %0 : vector<8x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_element_fold
 //       CHECK:   %[[V:.+]] = arith.constant dense<[0, 1, 7, 3]> : vector<4xi32>
 //       CHECK:   return %[[V]]

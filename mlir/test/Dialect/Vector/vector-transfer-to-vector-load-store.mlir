@@ -273,14 +273,13 @@ func @transfer_broadcasting_complex(%mem : memref<10x20x30x8x8xf32>, %i : index)
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>
 
 // CHECK-LABEL: func @transfer_read_permutations
-func @transfer_read_permutations(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?x?x?xf32>)
+func @transfer_read_permutations(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?x?x?xf32>, %m: i1)
     -> (vector<7x14x8x16xf32>, vector<7x14x8x16xf32>, vector<7x14x8x16xf32>,
        vector<7x14x8x16xf32>, vector<7x14x8x16xf32>, vector<7x14x8x16xf32>, vector<8xf32>) {
 // CHECK-DAG: %[[CF0:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %c0 = arith.constant 0 : index
-  %m = arith.constant 1 : i1
 
   %mask0 = vector.splat %m : vector<7x14xi1>
   %0 = vector.transfer_read %arg1[%c0, %c0, %c0, %c0], %cst, %mask0 {in_bounds = [true, false, true, true], permutation_map = #map0} : memref<?x?x?x?xf32>, vector<7x14x8x16xf32>
@@ -331,10 +330,9 @@ func @transfer_read_permutations(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?x?x?
 // CHECK-SAME:      %[[ARG1:.*]]: tensor<?x?x?x?xf32>
 func @transfer_write_permutations(
     %arg0 : memref<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?xf32>,
-    %v1 : vector<7x14x8x16xf32>, %v2 : vector<8x16xf32>) -> tensor<?x?x?x?xf32> {
+    %v1 : vector<7x14x8x16xf32>, %v2 : vector<8x16xf32>, %m: i1) -> tensor<?x?x?x?xf32> {
   // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
-  %m = arith.constant 1 : i1
 
   %mask0 = vector.splat %m : vector<7x14x8x16xi1>
   %0 = vector.transfer_write %v1, %arg1[%c0, %c0, %c0, %c0], %mask0 {in_bounds = [true, false, false, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3, d0)>} : vector<7x14x8x16xf32>, tensor<?x?x?x?xf32>
