@@ -116,6 +116,8 @@ main:                                   # @main
 	mov	dword ptr [rsp + 48], eax
 	.cv_loc	0 1 4 0                         # a.cpp:4:0
 	xor	eax, eax
+	# Use fake debug info to tests inline info.
+	.cv_loc	1 2 20 0
 	add	rsp, 56
 	ret
 .Ltmp7:
