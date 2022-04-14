@@ -530,3 +530,11 @@ void CIRGenModule::Release() {
 
   // TODO: FINISH THE REST OF THIS
 }
+void CIRGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
+  // Do we need to generate coverage mapping?
+  if (!codeGenOpts.CoverageMapping)
+    return;
+
+  llvm_unreachable("NYI");
+}
+

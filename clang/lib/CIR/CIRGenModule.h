@@ -190,6 +190,11 @@ public:
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 
   mlir::Value GetGlobalValue(const clang::Decl *D);
+
+  /// Stored a deferred empty coverage mapping for an unused and thus
+  /// uninstrumented top level declaration.
+  void AddDeferredUnusedCoverageMapping(clang::Decl *D);
+
   std::nullptr_t getModuleDebugInfo() { return nullptr; }
 
   /// Emit any needed decls for which code generation was deferred.
