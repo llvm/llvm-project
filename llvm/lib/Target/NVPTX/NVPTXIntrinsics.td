@@ -182,7 +182,7 @@ foreach sync = [false, true] in {
             foreach threadmask_imm = THREADMASK_INFO<sync>.ret in {
               def : SHFL_INSTR<sync, mode, regclass, return_pred,
                                offset_imm, mask_imm, threadmask_imm>,
-                    Requires<!if(sync, [hasSM30], [hasSM30, hasSHFL])>;
+                    Requires<!if(sync, [hasSM30, hasPTX60], [hasSM30, hasSHFL])>;
             }
           }
         }
