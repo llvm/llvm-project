@@ -12,10 +12,10 @@ add_llvm_target(DirectXCodeGen
   DXILPrepare.cpp
 
   LINK_COMPONENTS
-  Bitwriter
   Core
   Support
   DirectXInfo
+  DXILBitWriter
 
   ADD_TO_COMPONENT
   DirectX
@@ -23,3 +23,4 @@ add_llvm_target(DirectXCodeGen
 
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+add_subdirectory(DXILWriter)

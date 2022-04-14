@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
+#include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"
-#include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRPrintingPasses.h"
@@ -90,8 +90,8 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     PM.add(createPrintModulePass(Out, "", true));
     break;
   case CGFT_ObjectFile:
-    // TODO: Write DXIL instead of bitcode
-    PM.add(createBitcodeWriterPass(Out, true, false, false));
+    // TODO: Use MC Object streamer to write DXContainer
+    PM.add(createDXILWriterPass(Out));
     break;
   case CGFT_Null:
     break;
