@@ -10,6 +10,7 @@
 #include "TestingSupport.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
@@ -293,6 +294,164 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
                         Pair("p", HoldsFunctionCallLattice(HasCalledFunctions(
                                       UnorderedElementsAre("baz", "foo"))))));
   // FIXME: Called functions at point `p` should contain only "foo".
+}
+
+// Models an analysis that uses flow conditions.
+class SpecialBoolAnalysis
+    : public DataflowAnalysis<SpecialBoolAnalysis, NoopLattice> {
+public:
+  explicit SpecialBoolAnalysis(ASTContext &Context)
+      : DataflowAnalysis<SpecialBoolAnalysis, NoopLattice>(Context) {}
+
+  static NoopLattice initialElement() { return {}; }
+
+  void transfer(const Stmt *S, NoopLattice &, Environment &Env) {
+    auto SpecialBoolRecordDecl = recordDecl(hasName("SpecialBool"));
+    auto HasSpecialBoolType = hasType(SpecialBoolRecordDecl);
+
+    if (const auto *E = selectFirst<CXXConstructExpr>(
+            "call", match(cxxConstructExpr(HasSpecialBoolType).bind("call"), *S,
+                          getASTContext()))) {
+      auto &ConstructorVal = *cast<StructValue>(Env.createValue(E->getType()));
+      ConstructorVal.setProperty("is_set", Env.getBoolLiteralValue(false));
+      Env.setValue(*Env.getStorageLocation(*E, SkipPast::None), ConstructorVal);
+    } else if (const auto *E = selectFirst<CXXMemberCallExpr>(
+                   "call", match(cxxMemberCallExpr(callee(cxxMethodDecl(ofClass(
+                                                       SpecialBoolRecordDecl))))
+                                     .bind("call"),
+                                 *S, getASTContext()))) {
+      auto *Object = E->getImplicitObjectArgument();
+      assert(Object != nullptr);
+
+      auto *ObjectLoc =
+          Env.getStorageLocation(*Object, SkipPast::ReferenceThenPointer);
+      assert(ObjectLoc != nullptr);
+
+      auto &ConstructorVal =
+          *cast<StructValue>(Env.createValue(Object->getType()));
+      ConstructorVal.setProperty("is_set", Env.getBoolLiteralValue(true));
+      Env.setValue(*ObjectLoc, ConstructorVal);
+    }
+  }
+
+  bool compareEquivalent(QualType Type, const Value &Val1,
+                         const Environment &Env1, const Value &Val2,
+                         const Environment &Env2) final {
+    const auto *Decl = Type->getAsCXXRecordDecl();
+    if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
+        Decl->getName() != "SpecialBool")
+      return false;
+
+    auto *IsSet1 = cast_or_null<BoolValue>(
+        cast<StructValue>(&Val1)->getProperty("is_set"));
+    if (IsSet1 == nullptr)
+      return true;
+
+    auto *IsSet2 = cast_or_null<BoolValue>(
+        cast<StructValue>(&Val2)->getProperty("is_set"));
+    if (IsSet2 == nullptr)
+      return false;
+
+    return Env1.flowConditionImplies(*IsSet1) ==
+           Env2.flowConditionImplies(*IsSet2);
+  }
+
+  // Always returns `true` to accept the `MergedVal`.
+  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
+             const Value &Val2, const Environment &Env2, Value &MergedVal,
+             Environment &MergedEnv) final {
+    const auto *Decl = Type->getAsCXXRecordDecl();
+    if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
+        Decl->getName() != "SpecialBool")
+      return true;
+
+    auto *IsSet1 = cast_or_null<BoolValue>(
+        cast<StructValue>(&Val1)->getProperty("is_set"));
+    if (IsSet1 == nullptr)
+      return true;
+
+    auto *IsSet2 = cast_or_null<BoolValue>(
+        cast<StructValue>(&Val2)->getProperty("is_set"));
+    if (IsSet2 == nullptr)
+      return true;
+
+    auto &IsSet = MergedEnv.makeAtomicBoolValue();
+    cast<StructValue>(&MergedVal)->setProperty("is_set", IsSet);
+    if (Env1.flowConditionImplies(*IsSet1) &&
+        Env2.flowConditionImplies(*IsSet2))
+      MergedEnv.addToFlowCondition(IsSet);
+
+    return true;
+  }
+};
+
+class JoinFlowConditionsTest : public Test {
+protected:
+  template <typename Matcher>
+  void runDataflow(llvm::StringRef Code, Matcher Match) {
+    ASSERT_THAT_ERROR(
+        test::checkDataflow<SpecialBoolAnalysis>(
+            Code, "target",
+            [](ASTContext &Context, Environment &Env) {
+              return SpecialBoolAnalysis(Context);
+            },
+            [&Match](
+                llvm::ArrayRef<
+                    std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                    Results,
+                ASTContext &ASTCtx) { Match(Results, ASTCtx); },
+            {"-fsyntax-only", "-std=c++17"}),
+        llvm::Succeeded());
+  }
+};
+
+TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
+  std::string Code = R"(
+    struct SpecialBool {
+      SpecialBool() = default;
+      void set();
+    };
+
+    void target(bool Cond) {
+      SpecialBool Foo;
+      /*[[p1]]*/
+      if (Cond) {
+        Foo.set();
+        /*[[p2]]*/
+      } else {
+        Foo.set();
+        /*[[p3]]*/
+      }
+      (void)0;
+      /*[[p4]]*/
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p4", _), Pair("p3", _),
+                                                 Pair("p2", _), Pair("p1", _)));
+                const Environment &Env1 = Results[3].second.Env;
+                const Environment &Env2 = Results[2].second.Env;
+                const Environment &Env3 = Results[1].second.Env;
+                const Environment &Env4 = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                auto GetFooValue = [FooDecl](const Environment &Env) {
+                  return cast<BoolValue>(
+                      cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None))
+                          ->getProperty("is_set"));
+                };
+
+                EXPECT_FALSE(Env1.flowConditionImplies(*GetFooValue(Env1)));
+                EXPECT_TRUE(Env2.flowConditionImplies(*GetFooValue(Env2)));
+                EXPECT_TRUE(Env3.flowConditionImplies(*GetFooValue(Env3)));
+                EXPECT_TRUE(Env4.flowConditionImplies(*GetFooValue(Env3)));
+              });
 }
 
 class OptionalIntAnalysis
