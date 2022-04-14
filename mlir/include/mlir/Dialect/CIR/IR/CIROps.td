@@ -354,11 +354,12 @@ def IfOp : CIR_Op<"if",
 def YieldOpKind_BK : I32EnumAttrCase<"Break", 1, "break">;
 def YieldOpKind_FT : I32EnumAttrCase<"Fallthrough", 2, "fallthrough">;
 def YieldOpKind_LC : I32EnumAttrCase<"Loopcondition", 3, "loopcondition">;
+def YieldOpKind_CE : I32EnumAttrCase<"Continue", 4, "continue">;
 
 def YieldOpKind : I32EnumAttr<
     "YieldOpKind",
     "yield kind",
-    [YieldOpKind_BK, YieldOpKind_FT, YieldOpKind_LC]> {
+    [YieldOpKind_BK, YieldOpKind_FT, YieldOpKind_LC, YieldOpKind_CE]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -404,6 +405,11 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
       %4 = ... : cir.bool
       cir.yield loopcondition %4
     } ... ) {}
+
+    cir.loop (cond : {...}, step : {...}) {
+      ...
+      cir.yield continue
+    }
     ```
   }];
 
@@ -436,6 +442,9 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     }
     bool isLoopCondition() {
       return !isPlain() && *getKind() == YieldOpKind::Loopcondition;
+    }
+    bool isContinue() {
+      return !isPlain() && *getKind() == YieldOpKind::Continue;
     }
   }];
 

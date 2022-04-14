@@ -60,6 +60,16 @@ func.func @yieldbreak() {
 
 // -----
 
+func.func @yieldcontinue() {
+  %0 = cir.cst(true) : !cir.bool
+  cir.if %0 {
+    cir.yield continue // expected-error {{shall be dominated by 'cir.loop'}}
+  }
+  cir.return
+}
+
+// -----
+
 func.func @s0() {
   %1 = cir.cst(2 : i32) : i32
   cir.switch (%1 : i32) [
