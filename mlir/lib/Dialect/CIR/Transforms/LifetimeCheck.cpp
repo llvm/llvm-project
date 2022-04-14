@@ -32,6 +32,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   void checkIf(IfOp op);
   void checkSwitch(SwitchOp op);
+  void checkLoop(LoopOp op);
   void checkAlloca(AllocaOp op);
   void checkStore(StoreOp op);
   void checkLoad(LoadOp op);
@@ -340,6 +341,23 @@ void LifetimeCheckPass::joinPmaps(SmallVectorImpl<PMapType> &pmaps) {
   }
 }
 
+void LifetimeCheckPass::checkLoop(LoopOp loopOp) {
+  // 2.4.9. Loops
+  // A loop is treated as if it were the first two loop iterations unrolled
+  // using an if. For example:
+  //
+  //  for (/*init*/; /*cond*/; /*incr*/)
+  //   { /*body*/ }
+  //
+  // is treated as:
+  //
+  //  if (/*init*/; /*cond*/)
+  //   { /*body*/; /*incr*/ }
+  //  if (/*cond*/)
+  //   { /*body*/ }
+  //
+}
+
 void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
   // 2.4.7. A switch(cond) is treated as if it were an equivalent series of
   // non-nested if statements with single evaluation of cond; for example:
@@ -582,6 +600,8 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     return checkIf(ifOp);
   if (auto switchOp = dyn_cast<SwitchOp>(op))
     return checkSwitch(switchOp);
+  if (auto loopOp = dyn_cast<LoopOp>(op))
+    return checkLoop(loopOp);
   if (auto allocaOp = dyn_cast<AllocaOp>(op))
     return checkAlloca(allocaOp);
   if (auto storeOp = dyn_cast<StoreOp>(op))
