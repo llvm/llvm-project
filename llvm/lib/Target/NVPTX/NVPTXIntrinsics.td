@@ -1658,13 +1658,13 @@ defm INT_PTX_ATOM_LOAD_MAX_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".s32", ".max",
 defm INT_PTX_ATOM_LOAD_MAX_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global",
   ".s32", ".max", atomic_load_max_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_MAX_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".s64",
-  ".max", atomic_load_max_64_g, i64imm, imm>;
+  ".max", atomic_load_max_64_g, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_MAX_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".s64",
-  ".max", atomic_load_max_64_s, i64imm, imm>;
+  ".max", atomic_load_max_64_s, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_MAX_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".s64", ".max",
-  atomic_load_max_64_gen, i64imm, imm>;
+  atomic_load_max_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_MAX_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global",
-  ".s64", ".max", atomic_load_max_64_gen, i64imm, imm>;
+  ".s64", ".max", atomic_load_max_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_UMAX_G_32 : F_ATOMIC_2<Int32Regs, ".global", ".u32",
   ".max", atomic_load_umax_32_g, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_UMAX_S_32 : F_ATOMIC_2<Int32Regs, ".shared", ".u32",
@@ -1674,13 +1674,13 @@ defm INT_PTX_ATOM_LOAD_UMAX_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".u32", ".max",
 defm INT_PTX_ATOM_LOAD_UMAX_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global",
   ".u32", ".max", atomic_load_umax_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_UMAX_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".u64",
-  ".max", atomic_load_umax_64_g, i64imm, imm>;
+  ".max", atomic_load_umax_64_g, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_UMAX_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".u64",
-  ".max", atomic_load_umax_64_s, i64imm, imm>;
+  ".max", atomic_load_umax_64_s, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_UMAX_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".u64", ".max",
-  atomic_load_umax_64_gen, i64imm, imm>;
+  atomic_load_umax_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_UMAX_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global",
-  ".u64", ".max", atomic_load_umax_64_gen, i64imm, imm>;
+  ".u64", ".max", atomic_load_umax_64_gen, i64imm, imm, [hasSM32]>;
 
 // atom_min
 
@@ -1718,13 +1718,13 @@ defm INT_PTX_ATOM_LOAD_MIN_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".s32", ".min",
 defm INT_PTX_ATOM_LOAD_MIN_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global",
   ".s32", ".min", atomic_load_min_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_MIN_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".s64",
-  ".min", atomic_load_min_64_g, i64imm, imm>;
+  ".min", atomic_load_min_64_g, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_MIN_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".s64",
-  ".min", atomic_load_min_64_s, i64imm, imm>;
+  ".min", atomic_load_min_64_s, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_MIN_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".s64", ".min",
-  atomic_load_min_64_gen, i64imm, imm>;
+  atomic_load_min_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_MIN_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global",
-  ".s64", ".min", atomic_load_min_64_gen, i64imm, imm>;
+  ".s64", ".min", atomic_load_min_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_UMIN_G_32 : F_ATOMIC_2<Int32Regs, ".global", ".u32",
   ".min", atomic_load_umin_32_g, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_UMIN_S_32 : F_ATOMIC_2<Int32Regs, ".shared", ".u32",
@@ -1734,13 +1734,13 @@ defm INT_PTX_ATOM_LOAD_UMIN_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".u32", ".min",
 defm INT_PTX_ATOM_LOAD_UMIN_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global",
   ".u32", ".min", atomic_load_umin_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_UMIN_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".u64",
-  ".min", atomic_load_umin_64_g, i64imm, imm>;
+  ".min", atomic_load_umin_64_g, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_UMIN_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".u64",
-  ".min", atomic_load_umin_64_s, i64imm, imm>;
+  ".min", atomic_load_umin_64_s, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_UMIN_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".u64", ".min",
-  atomic_load_umin_64_gen, i64imm, imm>;
+  atomic_load_umin_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_LOAD_UMIN_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global",
-  ".u64", ".min", atomic_load_umin_64_gen, i64imm, imm>;
+  ".u64", ".min", atomic_load_umin_64_gen, i64imm, imm, [hasSM32]>;
 
 // atom_inc  atom_dec
 
@@ -1798,13 +1798,13 @@ defm INT_PTX_ATOM_AND_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".b32", ".and",
 defm INT_PTX_ATOM_AND_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global", ".b32",
   ".and", atomic_load_and_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_AND_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".b64", ".and",
-  atomic_load_and_64_g, i64imm, imm>;
+  atomic_load_and_64_g, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_AND_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".b64", ".and",
-  atomic_load_and_64_s, i64imm, imm>;
+  atomic_load_and_64_s, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_AND_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".b64", ".and",
-  atomic_load_and_64_gen, i64imm, imm>;
+  atomic_load_and_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_AND_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global", ".b64",
-  ".and", atomic_load_and_64_gen, i64imm, imm>;
+  ".and", atomic_load_and_64_gen, i64imm, imm, [hasSM32]>;
 
 // atom_or
 
@@ -1830,13 +1830,13 @@ defm INT_PTX_ATOM_OR_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global", ".b32",
 defm INT_PTX_ATOM_OR_S_32 : F_ATOMIC_2<Int32Regs, ".shared", ".b32", ".or",
   atomic_load_or_32_s, i32imm, imm>;
 defm INT_PTX_ATOM_OR_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".b64", ".or",
-  atomic_load_or_64_g, i64imm, imm>;
+  atomic_load_or_64_g, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_OR_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".b64", ".or",
-  atomic_load_or_64_gen, i64imm, imm>;
+  atomic_load_or_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_OR_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global", ".b64",
-  ".or", atomic_load_or_64_gen, i64imm, imm>;
+  ".or", atomic_load_or_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_OR_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".b64", ".or",
-  atomic_load_or_64_s, i64imm, imm>;
+  atomic_load_or_64_s, i64imm, imm, [hasSM32]>;
 
 // atom_xor
 
@@ -1862,13 +1862,13 @@ defm INT_PTX_ATOM_XOR_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".b32", ".xor",
 defm INT_PTX_ATOM_XOR_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global", ".b32",
   ".xor", atomic_load_xor_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_XOR_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".b64", ".xor",
-  atomic_load_xor_64_g, i64imm, imm>;
+  atomic_load_xor_64_g, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_XOR_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".b64", ".xor",
-  atomic_load_xor_64_s, i64imm, imm>;
+  atomic_load_xor_64_s, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_XOR_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".b64", ".xor",
-  atomic_load_xor_64_gen, i64imm, imm>;
+  atomic_load_xor_64_gen, i64imm, imm, [hasSM32]>;
 defm INT_PTX_ATOM_XOR_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global", ".b64",
-  ".xor", atomic_load_xor_64_gen, i64imm, imm>;
+  ".xor", atomic_load_xor_64_gen, i64imm, imm, [hasSM32]>;
 
 // atom_cas
 
