@@ -66,12 +66,14 @@ static bool equivalentValues(QualType Type, Value *Val1,
   return Model.compareEquivalent(Type, *Val1, Env1, *Val2, Env2);
 }
 
-/// Attempts to merge distinct values `Val1` and `Val1` in `Env1` and `Env2`,
+/// Attempts to merge distinct values `Val1` and `Val2` in `Env1` and `Env2`,
 /// respectively, of the same type `Type`. Merging generally produces a single
 /// value that (soundly) approximates the two inputs, although the actual
 /// meaning depends on `Model`.
-static Value *mergeDistinctValues(QualType Type, Value *Val1, Environment &Env1,
-                                  Value *Val2, const Environment &Env2,
+static Value *mergeDistinctValues(QualType Type, Value *Val1,
+                                  const Environment &Env1, Value *Val2,
+                                  const Environment &Env2,
+                                  Environment &MergedEnv,
                                   Environment::ValueModel &Model) {
   // Join distinct boolean values preserving information about the constraints
   // in the respective path conditions. Note: this construction can, in
@@ -94,19 +96,19 @@ static Value *mergeDistinctValues(QualType Type, Value *Val1, Environment &Env1,
   // have mutually exclusive conditions.
   if (auto *Expr1 = dyn_cast<BoolValue>(Val1)) {
     for (BoolValue *Constraint : Env1.getFlowConditionConstraints()) {
-      Expr1 = &Env1.makeAnd(*Expr1, *Constraint);
+      Expr1 = &MergedEnv.makeAnd(*Expr1, *Constraint);
     }
     auto *Expr2 = cast<BoolValue>(Val2);
     for (BoolValue *Constraint : Env2.getFlowConditionConstraints()) {
-      Expr2 = &Env1.makeAnd(*Expr2, *Constraint);
+      Expr2 = &MergedEnv.makeAnd(*Expr2, *Constraint);
     }
-    return &Env1.makeOr(*Expr1, *Expr2);
+    return &MergedEnv.makeOr(*Expr1, *Expr2);
   }
 
   // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
   // returns false to avoid storing unneeded values in `DACtx`.
-  if (Value *MergedVal = Env1.createValue(Type))
-    if (Model.merge(Type, *Val1, Env1, *Val2, Env2, *MergedVal, Env1))
+  if (Value *MergedVal = MergedEnv.createValue(Type))
+    if (Model.merge(Type, *Val1, Env1, *Val2, Env2, *MergedVal, MergedEnv))
       return MergedVal;
 
   return nullptr;
@@ -315,28 +317,26 @@ LatticeJoinEffect Environment::join(const Environment &Other,
 
   auto Effect = LatticeJoinEffect::Unchanged;
 
-  const unsigned DeclToLocSizeBefore = DeclToLoc.size();
-  DeclToLoc = intersectDenseMaps(DeclToLoc, Other.DeclToLoc);
-  if (DeclToLocSizeBefore != DeclToLoc.size())
+  Environment JoinedEnv(*DACtx);
+
+  JoinedEnv.DeclToLoc = intersectDenseMaps(DeclToLoc, Other.DeclToLoc);
+  if (DeclToLoc.size() != JoinedEnv.DeclToLoc.size())
     Effect = LatticeJoinEffect::Changed;
 
-  const unsigned ExprToLocSizeBefore = ExprToLoc.size();
-  ExprToLoc = intersectDenseMaps(ExprToLoc, Other.ExprToLoc);
-  if (ExprToLocSizeBefore != ExprToLoc.size())
+  JoinedEnv.ExprToLoc = intersectDenseMaps(ExprToLoc, Other.ExprToLoc);
+  if (ExprToLoc.size() != JoinedEnv.ExprToLoc.size())
     Effect = LatticeJoinEffect::Changed;
 
-  const unsigned MemberLocToStructSizeBefore = MemberLocToStruct.size();
-  MemberLocToStruct =
+  JoinedEnv.MemberLocToStruct =
       intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
-  if (MemberLocToStructSizeBefore != MemberLocToStruct.size())
+  if (MemberLocToStruct.size() != JoinedEnv.MemberLocToStruct.size())
     Effect = LatticeJoinEffect::Changed;
 
-  // Move `LocToVal` so that `Environment::ValueModel::merge` can safely assign
-  // values to storage locations while this code iterates over the current
-  // assignments.
-  llvm::DenseMap<const StorageLocation *, Value *> OldLocToVal =
-      std::move(LocToVal);
-  for (auto &Entry : OldLocToVal) {
+  // FIXME: set `Effect` as needed.
+  JoinedEnv.FlowConditionConstraints = joinConstraints(
+      DACtx, FlowConditionConstraints, Other.FlowConditionConstraints);
+
+  for (auto &Entry : LocToVal) {
     const StorageLocation *Loc = Entry.first;
     assert(Loc != nullptr);
 
@@ -349,19 +349,18 @@ LatticeJoinEffect Environment::join(const Environment &Other,
     assert(It->second != nullptr);
 
     if (Val == It->second) {
-      LocToVal.insert({Loc, Val});
+      JoinedEnv.LocToVal.insert({Loc, Val});
       continue;
     }
 
-    if (Value *MergedVal = mergeDistinctValues(Loc->getType(), Val, *this,
-                                               It->second, Other, Model))
-      LocToVal.insert({Loc, MergedVal});
+    if (Value *MergedVal = mergeDistinctValues(
+            Loc->getType(), Val, *this, It->second, Other, JoinedEnv, Model))
+      JoinedEnv.LocToVal.insert({Loc, MergedVal});
   }
-  if (OldLocToVal.size() != LocToVal.size())
+  if (LocToVal.size() != JoinedEnv.LocToVal.size())
     Effect = LatticeJoinEffect::Changed;
 
-  FlowConditionConstraints = joinConstraints(DACtx, FlowConditionConstraints,
-                                             Other.FlowConditionConstraints);
+  *this = std::move(JoinedEnv);
 
   return Effect;
 }
