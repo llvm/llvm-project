@@ -48,6 +48,7 @@
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-NEXT: -mllvm <value>         Additional arguments to forward to LLVM's option processing
+! HELP-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! HELP-NEXT: -o <file>              Write output to <file>
@@ -124,6 +125,7 @@
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -load <dsopath>        Load the named plugin (dynamic shared object)
 ! HELP-FC1-NEXT: -mllvm <value>         Additional arguments to forward to LLVM's option processing
+! HELP-FC1-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-FC1-NEXT: -module-suffix <suffix> Use <suffix> as the suffix for module files (the default value is `.mod`)
 ! HELP-FC1-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
