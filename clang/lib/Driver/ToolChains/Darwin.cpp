@@ -2554,11 +2554,11 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
       break;
 
     case options::OPT_fpascal_strings:
-      DAL->AddFlagArg(A, Opts.getOption(options::OPT_mpascal_strings));
+      DAL->AddFlagArg(A, Opts.getOption(options::OPT_fpascal_strings));
       break;
 
     case options::OPT_fno_pascal_strings:
-      DAL->AddFlagArg(A, Opts.getOption(options::OPT_mno_pascal_strings));
+      DAL->AddFlagArg(A, Opts.getOption(options::OPT_fno_pascal_strings));
       break;
     }
   }
