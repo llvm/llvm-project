@@ -1691,7 +1691,7 @@ public:
       else if (simplex.con[i + 1].orientation == Orientation::Column)
         dual.push_back(simplex.tableau(row, simplex.con[i + 1].pos));
       else
-        dual.push_back(0);
+        dual.emplace_back(0);
     }
     return *maybeWidth;
   }
@@ -1718,7 +1718,7 @@ private:
     coeffs.reserve(2 * dir.size());
     for (int64_t coeff : dir)
       coeffs.push_back(-coeff);
-    coeffs.push_back(0); // constant term
+    coeffs.emplace_back(0); // constant term
     return coeffs;
   }
 
@@ -1987,7 +1987,7 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
       // generalized basis reduction.
       SmallVector<int64_t, 8> basisCoeffs =
           llvm::to_vector<8>(basis.getRow(level));
-      basisCoeffs.push_back(0);
+      basisCoeffs.emplace_back(0);
 
       MaybeOptimum<int64_t> minRoundedUp, maxRoundedDown;
       std::tie(minRoundedUp, maxRoundedDown) =
@@ -2017,7 +2017,7 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
       if (*minRoundedUp < *maxRoundedDown) {
         reduceBasis(basis, level);
         basisCoeffs = llvm::to_vector<8>(basis.getRow(level));
-        basisCoeffs.push_back(0);
+        basisCoeffs.emplace_back(0);
         std::tie(minRoundedUp, maxRoundedDown) =
             computeIntegerBounds(basisCoeffs);
       }
