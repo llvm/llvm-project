@@ -758,10 +758,10 @@ define <2 x i16> @bitcast_vec_cond_commute3(<4 x i8> %cond, <2 x i16> %pc, <2 x 
 ; CHECK-LABEL: @bitcast_vec_cond_commute3(
 ; CHECK-NEXT:    [[C:%.*]] = mul <2 x i16> [[PC:%.*]], [[PC]]
 ; CHECK-NEXT:    [[D:%.*]] = mul <2 x i16> [[PD:%.*]], [[PD]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp sgt <4 x i8> [[COND:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[D]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[C]] to <4 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[DOTNOT]], <4 x i8> [[TMP2]], <4 x i8> [[TMP1]]
+; CHECK-NEXT:    [[DOTNOT2:%.*]] = icmp slt <4 x i8> [[COND:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[DOTNOT2]], <4 x i8> [[TMP1]], <4 x i8> [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[TMP3]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[TMP4]]
 ;
