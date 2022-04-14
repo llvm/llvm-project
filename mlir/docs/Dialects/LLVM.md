@@ -473,3 +473,12 @@ All operations in the LLVM IR dialect have a custom form in MLIR. The mnemonic
 of an operation is that used in LLVM IR prefixed with "`llvm.`".
 
 [include "Dialects/LLVMOps.md"]
+
+## Operations for LLVM IR Intrinsics
+
+MLIR operation system is open making it unnecessary to introduce a hard bound
+between "core" operations and "intrinsics". General LLVM IR intrinsics are
+modeled as first-class operations in the LLVM dialect. Target-specific LLVM IR
+intrinsics, e.g., NVVM or ROCDL, are modeled as separate dialects.
+
+[include "Dialects/LLVMIntrinsicOps.md"]
