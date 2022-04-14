@@ -19,7 +19,6 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/CIRGenerator.h"
 
 using namespace cir;
@@ -152,4 +151,7 @@ void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {
   // Don't allow re-entrant calls to CIRGen triggered by PCH deserialization to
   // emit deferred decls.
   HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
+
+  if (CGM->getModuleDebugInfo())
+    llvm_unreachable("NYI");
 }
