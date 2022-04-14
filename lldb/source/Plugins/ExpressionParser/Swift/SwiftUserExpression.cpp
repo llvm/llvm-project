@@ -155,9 +155,13 @@ findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
     info.is_metatype = true;
   }
 
+  info.swift_type = GetSwiftType(info.type).getPointer();
+  if (auto *dyn_self =
+          llvm::dyn_cast_or_null<swift::DynamicSelfType>(info.swift_type))
+    info.swift_type = dyn_self->getSelfType().getPointer();
+
   // 5) If the adjusted type isn't equal to the type according to the runtime,
   // switch it to the latter type.
-  info.swift_type = GetSwiftType(info.type).getPointer();
   if (info.swift_type && (info.swift_type != info.type.GetOpaqueQualType()))
     info.type = ToCompilerType(info.swift_type);
 
