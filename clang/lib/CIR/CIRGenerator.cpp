@@ -24,8 +24,10 @@
 using namespace cir;
 using namespace clang;
 
-CIRGenerator::CIRGenerator(const CodeGenOptions &CGO) : codeGenOpts{CGO} {}
 CIRGenerator::~CIRGenerator() = default;
+CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
+                           const CodeGenOptions &CGO)
+    : Diags(diags), codeGenOpts{CGO} {}
 
 void CIRGenerator::Initialize(ASTContext &astCtx) {
   using namespace llvm;
@@ -49,6 +51,9 @@ bool CIRGenerator::EmitFunction(const FunctionDecl *FD) {
 mlir::ModuleOp CIRGenerator::getModule() { return CGM->getModule(); }
 
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef D) {
+  if (Diags.hasErrorOccurred())
+    return true;
+
   for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
     CGM->buildTopLevelDecl(*I);
   }
@@ -56,4 +61,14 @@ bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef D) {
   return true;
 }
 
-void CIRGenerator::HandleTranslationUnit(ASTContext &C) {}
+void CIRGenerator::HandleTranslationUnit(ASTContext &C) {
+  // If there are errors before or when releasing the CGM, reset the module to
+  // stop here before invoking the backend.
+  if (Diags.hasErrorOccurred()) {
+    if (CGM)
+      // TODO: CGM->clear();
+      // TODO: M.reset();
+      return;
+  }
+}
+
