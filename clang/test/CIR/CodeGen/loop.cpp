@@ -189,3 +189,43 @@ void l4() {
 // CHECK-NEXT:       cir.yield continue
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
+
+void l5() {
+  do {
+  } while (0);
+}
+
+// CHECK: func @l5() {
+// CHECK-NEXT:   cir.scope {
+// CHECK-NEXT:     cir.loop dowhile(cond :  {
+// CHECK-NEXT:       %0 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:       %1 = cir.cast(int_to_bool, %0 : i32), !cir.bool
+// CHECK-NEXT:       cir.yield loopcondition %1 : !cir.bool
+// CHECK-NEXT:     }, step :  {
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     })  {
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }
+
+void l6() {
+  while (true) {
+    return;
+  }
+}
+
+// CHECK: func @l6() {
+// CHECK-NEXT:   cir.scope {
+// CHECK-NEXT:     cir.loop while(cond :  {
+// CHECK-NEXT:       %0 = cir.cst(true) : !cir.bool
+// CHECK-NEXT:       cir.yield loopcondition %0 : !cir.bool
+// CHECK-NEXT:     }, step :  {
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     })  {
+// CHECK-NEXT:       cir.return
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }
