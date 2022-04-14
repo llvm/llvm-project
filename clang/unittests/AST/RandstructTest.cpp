@@ -27,7 +27,6 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/ToolOutputFile.h"
 
 #include <vector>
 
@@ -37,7 +36,18 @@ using namespace clang::randstruct;
 
 using field_names = std::vector<std::string>;
 
-constexpr const char Seed[] = "1234567890abcdef";
+static std::unique_ptr<ASTUnit> makeAST(const std::string &SourceCode) {
+  std::vector<std::string> Args = getCommandLineArgsForTesting(Lang_C99);
+  Args.push_back("-frandomize-layout-seed=1234567890abcdef");
+
+  IgnoringDiagConsumer IgnoringConsumer = IgnoringDiagConsumer();
+
+  return tooling::buildASTFromCodeWithArgs(
+      SourceCode, Args, "input.c", "clang-tool",
+      std::make_shared<PCHContainerOperations>(),
+      tooling::getClangStripDependencyFileAdjuster(),
+      tooling::FileContentMappings(), &IgnoringConsumer);
+}
 
 static RecordDecl *getRecordDeclFromAST(const ASTContext &C,
                                         const std::string &Name) {
@@ -75,64 +85,10 @@ static bool isSubsequence(const field_names &Seq, const field_names &Subseq) {
   return IsSubseq;
 }
 
-static bool recordsEqual(const std::unique_ptr<ASTUnit> &LHS,
-                         const std::unique_ptr<ASTUnit> &RHS,
-                         const std::string &RecordName) {
-  const RecordDecl *LHSRD =
-      getRecordDeclFromAST(LHS->getASTContext(), RecordName);
-  const RecordDecl *RHSRD =
-      getRecordDeclFromAST(LHS->getASTContext(), RecordName);
-
-  return getFieldNamesFromRecord(LHSRD) == getFieldNamesFromRecord(RHSRD);
-}
-
-static std::unique_ptr<ASTUnit>
-makeAST(const std::string &SourceCode, bool ExpectError = false,
-        std::vector<std::string> RecordNames = std::vector<std::string>()) {
-  std::vector<std::string> Args = getCommandLineArgsForTesting(Lang_C99);
-  Args.push_back("-frandomize-layout-seed=" + std::string(Seed));
-
-  IgnoringDiagConsumer IgnoringConsumer = IgnoringDiagConsumer();
-
-  std::unique_ptr<ASTUnit> AST = tooling::buildASTFromCodeWithArgs(
-      SourceCode, Args, "input.c", "clang-tool",
-      std::make_shared<PCHContainerOperations>(),
-      tooling::getClangStripDependencyFileAdjuster(),
-      tooling::FileContentMappings(), &IgnoringConsumer);
-
-  int SeedFileFD = -1;
-  llvm::SmallString<256> SeedFilename;
-  EXPECT_FALSE(llvm::sys::fs::createTemporaryFile("seed", "rng", SeedFileFD,
-                                                  SeedFilename));
-  llvm::ToolOutputFile SeedFile(SeedFilename, SeedFileFD);
-  SeedFile.os() << Seed << "\n";
-
-  Args.clear();
-  Args = getCommandLineArgsForTesting(Lang_C99);
-  Args.push_back("-frandomize-layout-seed-file=" +
-                 SeedFile.getFilename().str());
-
-  std::unique_ptr<ASTUnit> ASTFileSeed = tooling::buildASTFromCodeWithArgs(
-      SourceCode, Args, "input.c", "clang-tool",
-      std::make_shared<PCHContainerOperations>(),
-      tooling::getClangStripDependencyFileAdjuster(),
-      tooling::FileContentMappings(), &IgnoringConsumer);
-
-  if (!ExpectError) {
-    if (RecordNames.empty())
-      RecordNames.push_back("test");
-
-    for (std::string Name : RecordNames)
-      EXPECT_TRUE(recordsEqual(AST, ASTFileSeed, Name));
-  }
-
-  return AST;
-}
-
 namespace clang {
 namespace ast_matchers {
 
-#define RANDSTRUCT_TEST_SUITE_TEST RecordLayoutRandomizationTestSuiteTest
+#define RANDSTRUCT_TEST_SUITE_TEST StructureLayoutRandomizationTestSuiteTest
 
 TEST(RANDSTRUCT_TEST_SUITE_TEST, CanDetermineIfSubsequenceExists) {
   const field_names Seq = {"a", "b", "c", "d"};
@@ -144,10 +100,10 @@ TEST(RANDSTRUCT_TEST_SUITE_TEST, CanDetermineIfSubsequenceExists) {
   EXPECT_FALSE(isSubsequence(Seq, {"a", "d"}));
 }
 
-#define RANDSTRUCT_TEST RecordLayoutRandomization
+#define RANDSTRUCT_TEST StructureLayoutRandomization
 
 TEST(RANDSTRUCT_TEST, UnmarkedStruct) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test {
         int bacon;
         long lettuce;
@@ -165,7 +121,7 @@ TEST(RANDSTRUCT_TEST, UnmarkedStruct) {
 }
 
 TEST(RANDSTRUCT_TEST, MarkedNoRandomize) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test {
         int bacon;
         long lettuce;
@@ -183,7 +139,7 @@ TEST(RANDSTRUCT_TEST, MarkedNoRandomize) {
 }
 
 TEST(RANDSTRUCT_TEST, MarkedRandomize) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test {
         int bacon;
         long lettuce;
@@ -201,7 +157,7 @@ TEST(RANDSTRUCT_TEST, MarkedRandomize) {
 }
 
 TEST(RANDSTRUCT_TEST, MismatchedAttrsDeclVsDef) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test __attribute__((randomize_layout));
     struct test {
         int bacon;
@@ -209,12 +165,11 @@ TEST(RANDSTRUCT_TEST, MismatchedAttrsDeclVsDef) {
         long long tomato;
         float mayonnaise;
     } __attribute__((no_randomize_layout));
-  )c",
-                                         true);
+  )c");
 
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
-  const DiagnosticsEngine &Diags = AST->getDiagnostics();
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
 
   EXPECT_FALSE(Diags.hasFatalErrorOccurred());
   EXPECT_FALSE(Diags.hasUncompilableErrorOccurred());
@@ -224,19 +179,18 @@ TEST(RANDSTRUCT_TEST, MismatchedAttrsDeclVsDef) {
 }
 
 TEST(RANDSTRUCT_TEST, MismatchedAttrsRandomizeVsNoRandomize) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
-    struct test {
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+    struct test2 {
         int bacon;
         long lettuce;
         long long tomato;
         float mayonnaise;
     } __attribute__((randomize_layout)) __attribute__((no_randomize_layout));
-  )c",
-                                         true);
+  )c");
 
   EXPECT_TRUE(AST->getDiagnostics().hasErrorOccurred());
 
-  const DiagnosticsEngine &Diags = AST->getDiagnostics();
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
 
   EXPECT_TRUE(Diags.hasUncompilableErrorOccurred());
   EXPECT_TRUE(Diags.hasUnrecoverableErrorOccurred());
@@ -245,19 +199,18 @@ TEST(RANDSTRUCT_TEST, MismatchedAttrsRandomizeVsNoRandomize) {
 }
 
 TEST(RANDSTRUCT_TEST, MismatchedAttrsNoRandomizeVsRandomize) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test3 {
         int bacon;
         long lettuce;
         long long tomato;
         float mayonnaise;
     } __attribute__((no_randomize_layout)) __attribute__((randomize_layout));
-  )c",
-                                         true);
+  )c");
 
   EXPECT_TRUE(AST->getDiagnostics().hasErrorOccurred());
 
-  const DiagnosticsEngine &Diags = AST->getDiagnostics();
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
 
   EXPECT_TRUE(Diags.hasUncompilableErrorOccurred());
   EXPECT_TRUE(Diags.hasUnrecoverableErrorOccurred());
@@ -266,7 +219,7 @@ TEST(RANDSTRUCT_TEST, MismatchedAttrsNoRandomizeVsRandomize) {
 }
 
 TEST(RANDSTRUCT_TEST, CheckAdjacentBitfieldsRemainAdjacentAfterRandomization) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test {
         int a;
         int b;
@@ -288,7 +241,7 @@ TEST(RANDSTRUCT_TEST, CheckAdjacentBitfieldsRemainAdjacentAfterRandomization) {
 }
 
 TEST(RANDSTRUCT_TEST, CheckVariableLengthArrayMemberRemainsAtEndOfStructure) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test {
         int a;
         double b;
@@ -305,8 +258,7 @@ TEST(RANDSTRUCT_TEST, CheckVariableLengthArrayMemberRemainsAtEndOfStructure) {
 }
 
 TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
-  std::unique_ptr<ASTUnit> AST =
-      makeAST(R"c(
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test_struct {
         char a;
         float b[3];
@@ -325,10 +277,7 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
         long long b;
         int c[];
     } __attribute__((packed, randomize_layout));
-  )c",
-              false,
-              std::vector<std::string>(
-                  {"test_struct", "another_struct", "last_struct"}));
+  )c");
 
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
@@ -367,7 +316,7 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
 }
 
 TEST(RANDSTRUCT_TEST, ZeroWidthBitfieldsSeparateAllocationUnits) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test {
         int a : 1;
         int   : 0;
@@ -383,8 +332,8 @@ TEST(RANDSTRUCT_TEST, ZeroWidthBitfieldsSeparateAllocationUnits) {
 }
 
 TEST(RANDSTRUCT_TEST, RandstructDoesNotRandomizeUnionFieldOrder) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
-    union test {
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+    union test_union {
         int a;
         int b;
         int c;
@@ -403,8 +352,8 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotRandomizeUnionFieldOrder) {
 }
 
 TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
-  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
-    struct test {
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+    struct test_struct {
         int a;
         struct sub_struct {
             int b;
@@ -435,7 +384,8 @@ TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
 
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
-  const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  const RecordDecl *RD =
+      getRecordDeclFromAST(AST->getASTContext(), "test_struct");
 
   EXPECT_TRUE(RD->isRandomized());
 
