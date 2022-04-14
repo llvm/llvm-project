@@ -105,7 +105,7 @@ public:
   virtual void addSanitizerArgs(const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs,
                                 const char *Prefix,
-                                const char *Suffic) const = 0;
+                                const char *Suffix) const = 0;
   virtual const char *getProfileRTLibName() const = 0;
 
 protected:
@@ -122,7 +122,7 @@ public:
   unsigned GetDefaultDwarfVersion() const override { return 4; }
 
   // PS4 toolchain uses legacy thin LTO API, which is not
-  // capable of unit splitt.
+  // capable of unit splitting.
   bool canSplitThinLTOUnit() const override { return false; }
 
   const char *getLinkerBaseName() const override { return "ld"; }
