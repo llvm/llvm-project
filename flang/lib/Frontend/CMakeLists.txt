@@ -32,13 +32,13 @@ add_flang_library(flangFrontend
   FIRBuilder
   FIRCodeGen
   FIRTransforms
-  LLVMPasses
   MLIRTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIRSCFToControlFlow
   ${dialect_libs}
 
   LINK_COMPONENTS
+  Passes
   Analysis
   Option
   Support
