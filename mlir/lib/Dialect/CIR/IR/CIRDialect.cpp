@@ -422,6 +422,15 @@ mlir::LogicalResult YieldOp::verify() {
     return false;
   };
 
+  auto isDominatedByLoop = [](Operation *parentOp) {
+    while (!llvm::isa<FuncOp>(parentOp)) {
+      if (llvm::isa<cir::LoopOp>(parentOp))
+        return true;
+      parentOp = parentOp->getParentOp();
+    }
+    return false;
+  };
+
   if (isBreak()) {
     if (!isDominatedByLoopOrSwitch(getOperation()->getParentOp()))
       return emitOpError()
@@ -429,9 +438,16 @@ mlir::LogicalResult YieldOp::verify() {
     return mlir::success();
   }
 
+  if (isContinue()) {
+    if (!isDominatedByLoop(getOperation()->getParentOp()))
+      return emitOpError() << "shall be dominated by 'cir.loop'";
+    return mlir::success();
+  }
+
   if (isFallthrough()) {
     if (!llvm::isa<SwitchOp>(getOperation()->getParentOp()))
-      return emitOpError() << "fallthrough only expected within 'cir.switch'";
+      return emitOpError()
+             << "fallthrough only expected within 'cir.switch'";
     return mlir::success();
   }
 
