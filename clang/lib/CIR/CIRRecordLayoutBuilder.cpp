@@ -81,6 +81,11 @@ struct CIRRecordLowering final {
   /// Fills out the structures that are ultimately consumed.
   void fillOutputFields();
 
+  void appendPaddingBytes(CharUnits Size) {
+    if (!Size.isZero())
+      fieldTypes.push_back(getByteArrayType(Size));
+  }
+
   CIRGenTypes &cirGenTypes;
   const ASTContext &astContext;
   const RecordDecl *recordDecl;
@@ -110,6 +115,8 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
 
 void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   assert(!recordDecl->isUnion() && "NYI");
+  CharUnits Size = nonVirtualBaseType ? astRecordLayout.getNonVirtualSize()
+                                      : astRecordLayout.getSize();
 
   accumulateFields();
 
@@ -118,7 +125,11 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
     assert(cxxRecordDecl->bases().begin() == cxxRecordDecl->bases().end() &&
            "Inheritance NYI");
 
-    assert(!members.empty() && "Empty CXXRecordDecls NYI");
+    if (members.empty()) {
+      appendPaddingBytes(Size);
+      // TODO: computeVolatileBitFields();
+      return;
+    }
 
     if (!nonVirtualBaseType)
       accumulateVBases();
