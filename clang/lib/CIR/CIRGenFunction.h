@@ -286,6 +286,11 @@ public:
   /// dropped.
   using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
   SymTableTy symbolTable;
+  using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
+  /// LocalDeclMap - This keeps track of the CIR allocas or globals for local C
+  /// delcs.
+  DeclMapTy LocalDeclMap;
+
 
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
@@ -315,6 +320,12 @@ public:
   // assert where we arne't doing things that we know we should and will crash
   // as soon as we add a DebugInfo type to this class.
   std::nullptr_t *getDebugInfo() { return nullptr; }
+
+  /// Set the address of a local variable.
+  void setAddrOfLocalVar(const clang::VarDecl *VD, Address Addr) {
+    assert(!LocalDeclMap.count(VD) && "Decl already exists in LocalDeclMap!");
+    LocalDeclMap.insert({VD, Addr});
+  }
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
