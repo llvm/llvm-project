@@ -95,15 +95,6 @@ mlir::Type CIRGenFunction::convertType(QualType T) {
   return CGM.getTypes().ConvertType(T);
 }
 
-mlir::LogicalResult CIRGenFunction::buildFunctionBody(const Stmt *Body) {
-  const CompoundStmt *S = dyn_cast<CompoundStmt>(Body);
-  assert(S && "expected compound stmt");
-
-  // We start with function level scope for variables.
-  SymTableScopeTy varScope(symbolTable);
-  return buildCompoundStmtWithoutScope(*S);
-}
-
 mlir::Location CIRGenFunction::getLoc(SourceLocation SLoc) {
   const SourceManager &SM = getContext().getSourceManager();
   PresumedLoc PLoc = SM.getPresumedLoc(SLoc);
@@ -367,6 +358,25 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp fn,
     return nullptr;
 
   return fn;
+}
+
+mlir::LogicalResult CIRGenFunction::buildFunctionBody(const clang::Stmt *Body) {
+  // TODO: incrementProfileCounter(Body);
+
+  // We start with function level scope for variables.
+  SymTableScopeTy varScope(symbolTable);
+
+  auto result = mlir::LogicalResult::success();
+  if (const CompoundStmt *S = dyn_cast<CompoundStmt>(Body))
+    result = buildCompoundStmtWithoutScope(*S);
+  else
+    result = buildStmt(Body, /*useCurrentScope*/ true);
+
+  // This is checked after emitting the function body so we know if there are
+  // any permitted infinite loops.
+  // TODO: if (checkIfFunctionMustProgress())
+  // CurFn->addFnAttr(llvm::Attribute::MustProgress);
+  return result;
 }
 
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl GD,
