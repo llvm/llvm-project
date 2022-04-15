@@ -565,8 +565,8 @@ func @func_variadic(...)
 
 // -----
 
-func @redef()  // expected-note {{see existing symbol definition here}}
-func @redef()  // expected-error {{redefinition of symbol named 'redef'}}
+func private @redef()  // expected-note {{see existing symbol definition here}}
+func private @redef()  // expected-error {{redefinition of symbol named 'redef'}}
 
 // -----
 

@@ -2780,4 +2780,16 @@ def TestEffectsRead : TEST_Op<"op_with_memread",
 def TestEffectsWrite : TEST_Op<"op_with_memwrite",
     [MemoryEffects<[MemWrite]>]>;
 
+//===----------------------------------------------------------------------===//
+// Test Ops with verifiers
+//===----------------------------------------------------------------------===//
+
+def TestVerifiersOp : TEST_Op<"verifiers",
+                              [SingleBlock, NoTerminator, IsolatedFromAbove]> {
+  let arguments = (ins I32:$input);
+  let regions = (region SizedRegion<1>:$region);
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+}
+
 #endif // TEST_OPS

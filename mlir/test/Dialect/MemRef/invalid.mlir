@@ -351,7 +351,7 @@ func @nonexistent_global_memref() {
 
 // -----
 
-func @foo()
+func private @foo()
 
 func @nonexistent_global_memref() {
   // expected-error @+1 {{'foo' does not reference a valid global memref}}

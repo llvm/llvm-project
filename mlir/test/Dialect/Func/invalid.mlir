@@ -8,7 +8,7 @@ func @unsupported_attribute() {
 
 // -----
 
-func @return_i32_f32() -> (i32, f32)
+func private @return_i32_f32() -> (i32, f32)
 
 func @call() {
   // expected-error @+3 {{op result type mismatch at index 0}}
