@@ -9,14 +9,9 @@ define i32 @bcmp8(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; X64-NEXT:    [[TMP2:%.*]] = bitcast i8* [[Y:%.*]] to i64*
 ; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]], align 1
 ; X64-NEXT:    [[TMP4:%.*]] = load i64, i64* [[TMP2]], align 1
-; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
-; X64-NEXT:    [[TMP6:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP4]])
-; X64-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP5]], [[TMP6]]
-; X64-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP5]], [[TMP6]]
-; X64-NEXT:    [[TMP9:%.*]] = zext i1 [[TMP7]] to i32
-; X64-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP8]] to i32
-; X64-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP9]], [[TMP10]]
-; X64-NEXT:    ret i32 [[TMP11]]
+; X64-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP3]], [[TMP4]]
+; X64-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i32
+; X64-NEXT:    ret i32 [[TMP6]]
 ;
   %call = tail call i32 @bcmp(i8* %x, i8* %y, i64 8)
   ret i32 %call
