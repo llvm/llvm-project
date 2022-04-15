@@ -22,3 +22,10 @@ void derp(x) int x; {}
 void garp(int);
 void garp();
 void garp(x) int x; {}
+
+// Ensure redeclarations that conflict with a builtin use a note which makes it
+// clear that the previous declaration was a builtin.
+float rintf() { // expected-error {{conflicting types for 'rintf'}} \
+                   expected-note {{'rintf' is a builtin with type 'float (float)'}}
+  return 1.0f;
+}
