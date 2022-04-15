@@ -1,4 +1,4 @@
-; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s
+; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
 declare i32 @strlen(i8* nocapture)

@@ -1,21 +1,12 @@
-; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-COMDAT
-; RUN: opt < %s -mtriple=x86_64-apple-darwin -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-DARWIN-LINKONCE
-
-; New PM
 ; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-COMDAT
 ; RUN: opt < %s -mtriple=x86_64-apple-darwin -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-DARWIN-LINKONCE
 
 ; RUN: llvm-profdata merge %S/Inputs/branch1.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
-
 ; RUN: llvm-profdata merge %S/Inputs/branch1_large_count.proftext -o %t.l.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.l.profdata -S | FileCheck %s --check-prefix=USE-LARGE
 
-; New PM
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.l.profdata -S | FileCheck %s --check-prefix=USE-LARGE
 
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -pass-remarks=pgo-instrumentation -pgo-emit-branch-prob -S 2>&1| FileCheck %s --check-prefix=ANALYSIS
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -pass-remarks=pgo-instrumentation -pgo-emit-branch-prob -S 2>&1| FileCheck %s --check-prefix=ANALYSIS
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

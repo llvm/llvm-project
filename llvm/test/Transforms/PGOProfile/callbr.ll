@@ -1,4 +1,4 @@
-; RUN: opt -pgo-instr-gen -S 2>&1 < %s | FileCheck %s
+; RUN: opt -passes=pgo-instr-gen -S 2>&1 < %s | FileCheck %s
 
 define i32 @a() {
 entry:

@@ -1,8 +1,6 @@
 ; Test that instrumentaiton works fine for the case of failing the split critical edges.
-; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
 ; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
 ; RUN: llvm-profdata merge %S/Inputs/PR41279.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 
 declare void @f3({ i8*, i64 }*, { i8*, i64 }*, i64)

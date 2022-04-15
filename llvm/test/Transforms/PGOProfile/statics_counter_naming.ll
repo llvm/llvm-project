@@ -1,4 +1,3 @@
-; RUN: opt %s -pgo-instr-gen -static-func-full-module-prefix=false -S | FileCheck %s --check-prefix=NOPATH
 ; RUN: opt %s -passes=pgo-instr-gen -static-func-full-module-prefix=false -S | FileCheck %s --check-prefix=NOPATH
 ; RUN: opt %s --pgo-instr-gen -static-func-strip-dirname-prefix=1000 -S | FileCheck %s --check-prefix=NOPATH
 ; RUN: opt %s -passes=pgo-instr-gen -static-func-strip-dirname-prefix=1000 -S | FileCheck %s --check-prefix=NOPATH

@@ -1,4 +1,4 @@
-; RUN: opt -S -pgo-icall-prom -icp-total-percent-threshold=0 < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=pgo-icall-prom -icp-total-percent-threshold=0 < %s 2>&1 | FileCheck %s
 
 ; Test that CallPromotionUtils will promote calls which require pointer cast
 ; safely, i.e. drop incompatible attributes.

@@ -2,9 +2,7 @@
 ; compilation for loops that exit to a catchswitch block. In this case, counters
 ; do not get promoted out of the loop body.
 
-; RUN: opt < %s -pgo-instr-gen -instrprof -pgo-instrument-entry=false -do-counter-promotion=true -S | FileCheck %s --check-prefixes=CHECK,NOTENTRY
 ; RUN: opt < %s -passes=pgo-instr-gen,instrprof -pgo-instrument-entry=false -do-counter-promotion=true -S | FileCheck %s --check-prefixes=CHECK,NOTENTRY
-; RUN: opt < %s -pgo-instr-gen -instrprof -pgo-instrument-entry=true -do-counter-promotion=true -S | FileCheck %s --check-prefixes=CHECK,ENTRY
 ; RUN: opt < %s -passes=pgo-instr-gen,instrprof -pgo-instrument-entry=true -do-counter-promotion=true -S | FileCheck %s --check-prefixes=CHECK,ENTRY
 
 ; Source used to create test:
