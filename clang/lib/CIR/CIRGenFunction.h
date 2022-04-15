@@ -261,6 +261,28 @@ public:
     ForceRightToLeft
   };
 
+  /// Situations in which we might emit a check for the suitability of a pointer
+  /// or glvalue. Needs to be kept in sync with ubsan_handlers.cpp in
+  /// compiler-rt.
+  enum TypeCheckKind {
+    /// Checking hte operand of a load. Must be suitably sized and aligned.
+    TCK_Load,
+    /// Checking the destination of a store. Must be suitably sized and aligned.
+    TCK_Store,
+    /// Checking the bound value in a reference binding. Must be suitably sized
+    /// and aligned, but is not required to refer to an object (until the
+    /// reference is used), per core issue 453.
+    TCK_ReferenceBinding,
+    /// Checking the object expression in a non-static data member access. Must
+    /// be an object within its lifetime.
+    TCK_MemberAccess,
+    /// Checking the 'this' pointer for a call to a non-static member function.
+    /// Must be an object within its lifetime.
+    TCK_MemberCall,
+    /// Checking the 'this' pointer for a constructor call.
+    TCK_ConstructorCall,
+  };
+
   /// CurGD - The GlobalDecl for the current function being compiled.
   clang::GlobalDecl CurGD;
 
@@ -332,6 +354,12 @@ public:
   /// Whether any type-checking sanitizers are enabled. If \c false, calls to
   /// buildTypeCheck can be skipped.
   bool sanitizePerformTypeCheck() const;
+
+  void buildTypeCheck(TypeCheckKind TCK, clang::SourceLocation Loc,
+                      mlir::Value V, clang::QualType Type,
+                      clang::CharUnits Alignment = clang::CharUnits::Zero(),
+                      clang::SanitizerSet SkippedChecks = clang::SanitizerSet(),
+                      std::optional<mlir::Value> ArraySize = std::nullopt);
 
   void buildAggExpr(const clang::Expr *E, AggValueSlot Slot);
 

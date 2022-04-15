@@ -157,6 +157,18 @@ bool CIRGenFunction::sanitizePerformTypeCheck() const {
          SanOpts.has(SanitizerKind::Vptr);
 }
 
+void CIRGenFunction::buildTypeCheck(TypeCheckKind TCK,
+                                    clang::SourceLocation Loc, mlir::Value V,
+                                    clang::QualType Type,
+                                    clang::CharUnits Alignment,
+                                    clang::SanitizerSet SkippedChecks,
+                                    std::optional<mlir::Value> ArraySize) {
+  if (!sanitizePerformTypeCheck())
+    return;
+
+  assert(false && "type check NYI");
+}
+
 /// If the specified expression does not fold
 /// to a constant, or if it does but contains a label, return false.  If it
 /// constant folds return true and set the folded value.
