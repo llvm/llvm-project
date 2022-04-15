@@ -292,6 +292,11 @@ public:
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *CurFuncDecl;
+  /// CurCodeDecl - This is the inner-most code context, which includes blocks.
+  const clang::Decl *CurCodeDecl;
+  const CIRGenFunctionInfo *CurFnInfo;
+  clang::QualType FnRetTy;
+  mlir::FuncOp CurFn = nullptr;
 
   // The CallExpr within the current statement that the musttail attribute
   // applies to. nullptr if there is no 'musttail' on the current statement.
@@ -319,6 +324,11 @@ public:
   /// LocalDeclMap - This keeps track of the CIR allocas or globals for local C
   /// delcs.
   DeclMapTy LocalDeclMap;
+
+  /// DidCallStackSave - Whether llvm.stacksave has been called. Used to avoid
+  /// calling llvm.stacksave for multiple VLAs in the same scope.
+  /// TODO: Translate to MLIR
+  bool DidCallStackSave = false;
 
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
@@ -633,6 +643,14 @@ public:
   /// Perform the usual unary conversions on the specified
   /// expression and compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *E);
+
+  /// Emit code for the start of a function.
+  /// \param Loc       The location to be associated with the function.
+  /// \param StartLoc  The location of the function body.
+  void StartFunction(clang::GlobalDecl GD, clang::QualType RetTy,
+                     mlir::FuncOp Fn, const CIRGenFunctionInfo &FnInfo,
+                     const FunctionArgList &Args, clang::SourceLocation Loc,
+                     clang::SourceLocation StartLoc);
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
