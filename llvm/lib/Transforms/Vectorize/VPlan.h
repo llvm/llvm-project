@@ -1799,8 +1799,10 @@ public:
            "Op must be an operand of the recipe");
 
     // Widened, consecutive memory operations only demand the first lane of
-    // their address.
-    return Op == getAddr() && isConsecutive();
+    // their address, unless the same operand is also stored. That latter can
+    // happen with opaque pointers.
+    return Op == getAddr() && isConsecutive() &&
+           (!isStore() || Op != getStoredValue());
   }
 };
 
