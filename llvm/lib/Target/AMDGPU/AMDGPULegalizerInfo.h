@@ -96,9 +96,13 @@ public:
                       const TargetRegisterClass *ArgRC, LLT ArgTy) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
+
   bool legalizePreloadedArgIntrin(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
+  bool legalizeWorkitemIDIntrinsic(
+      MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
+      unsigned Dim, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
   Register getKernargParameterPtr(MachineIRBuilder &B, int64_t Offset) const;
   bool legalizeKernargMemParameter(MachineInstr &MI, MachineIRBuilder &B,
