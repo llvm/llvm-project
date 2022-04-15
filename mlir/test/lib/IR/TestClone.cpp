@@ -19,6 +19,7 @@ namespace {
 /// takes the result of the first operation return as an input.
 struct ClonePass
     : public PassWrapper<ClonePass, InterfacePass<FunctionOpInterface>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ClonePass)
   StringRef getArgument() const final { return "test-clone"; }
   StringRef getDescription() const final { return "Test clone of op"; }
   void runOnOperation() override {
