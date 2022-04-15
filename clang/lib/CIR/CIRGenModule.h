@@ -219,10 +219,15 @@ public:
   /// Emit any needed decls for which code generation was deferred.
   void buildDeferred();
 
+  const llvm::Triple &getTriple() const { return target.getTriple(); }
+
   // Finalize CIR code generation.
   void Release();
 
   bool shouldEmitFunction(clang::GlobalDecl GD);
+
+  bool supportsCOMDAT() const;
+  void maybeSetTrivialComdat(const clang::Decl &D, mlir::Operation *Op);
 
   void emitError(const llvm::Twine &message) { theModule.emitError(message); }
 
