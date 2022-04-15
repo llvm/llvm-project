@@ -261,6 +261,9 @@ public:
     ForceRightToLeft
   };
 
+  /// CurGD - The GlobalDecl for the current function being compiled.
+  clang::GlobalDecl CurGD;
+
   clang::QualType FnRetQualTy;
   std::optional<mlir::Type> FnRetCIRTy;
   std::optional<mlir::Value> FnRetAlloca;
