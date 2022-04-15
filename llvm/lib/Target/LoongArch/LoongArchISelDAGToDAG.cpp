@@ -12,6 +12,7 @@
 
 #include "LoongArchISelDAGToDAG.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "MCTargetDesc/LoongArchMatInt.h"
 
 using namespace llvm;
 
@@ -28,11 +29,30 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
   // Instruction Selection not handled by the auto-generated tablegen selection
   // should be handled here.
   unsigned Opcode = Node->getOpcode();
+  MVT GRLenVT = Subtarget->getGRLenVT();
   SDLoc DL(Node);
 
   switch (Opcode) {
   default:
     break;
+  case ISD::Constant: {
+    int64_t Imm = cast<ConstantSDNode>(Node)->getSExtValue();
+    SDNode *Result = nullptr;
+    SDValue SrcReg = CurDAG->getRegister(LoongArch::R0, GRLenVT);
+
+    // The instructions in the sequence are handled here.
+    for (LoongArchMatInt::Inst &Inst : LoongArchMatInt::generateInstSeq(Imm)) {
+      SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, GRLenVT);
+      if (Inst.Opc == LoongArch::LU12I_W)
+        Result = CurDAG->getMachineNode(LoongArch::LU12I_W, DL, GRLenVT, SDImm);
+      else
+        Result = CurDAG->getMachineNode(Inst.Opc, DL, GRLenVT, SrcReg, SDImm);
+      SrcReg = SDValue(Result, 0);
+    }
+
+    ReplaceNode(Node, Result);
+    return;
+  }
     // TODO: Add selection nodes needed later.
   }
 
