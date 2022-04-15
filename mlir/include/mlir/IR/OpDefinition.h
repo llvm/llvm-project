@@ -1540,34 +1540,22 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands,
   // fail to fold this trait.
   return results.empty() ? Trait::foldTrait(op, operands, results) : failure();
 }
+template <typename Trait>
+static inline std::enable_if_t<!detect_has_any_fold_trait<Trait>::value,
+                               LogicalResult>
+foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
+  return failure();
+}
 
-/// The internal implementation of `foldTraits` below that returns the result of
-/// folding a set of trait types `Ts` that implement a `foldTrait` method.
+/// Given a tuple type containing a set of traits, return the result of folding
+/// the given operation.
 template <typename... Ts>
-static LogicalResult foldTraitsImpl(Operation *op, ArrayRef<Attribute> operands,
-                                    SmallVectorImpl<OpFoldResult> &results,
-                                    std::tuple<Ts...> *) {
+static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
+                                SmallVectorImpl<OpFoldResult> &results) {
   bool anyFolded = false;
   (void)std::initializer_list<int>{
       (anyFolded |= succeeded(foldTrait<Ts>(op, operands, results)), 0)...};
   return success(anyFolded);
-}
-
-/// Given a tuple type containing a set of traits that contain a `foldTrait`
-/// method, return the result of folding the given operation.
-template <typename TraitTupleT>
-static std::enable_if_t<std::tuple_size<TraitTupleT>::value != 0, LogicalResult>
-foldTraits(Operation *op, ArrayRef<Attribute> operands,
-           SmallVectorImpl<OpFoldResult> &results) {
-  return foldTraitsImpl(op, operands, results, (TraitTupleT *)nullptr);
-}
-/// A variant of the method above that is specialized when there are no traits
-/// that contain a `foldTrait` method.
-template <typename TraitTupleT>
-static std::enable_if_t<std::tuple_size<TraitTupleT>::value == 0, LogicalResult>
-foldTraits(Operation *op, ArrayRef<Attribute> operands,
-           SmallVectorImpl<OpFoldResult> &results) {
-  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1587,43 +1575,50 @@ template <typename T>
 using detect_has_verify_region_trait =
     llvm::is_detected<has_verify_region_trait, T>;
 
-/// The internal implementation of `verifyTraits` below that returns the result
-/// of verifying the current operation with all of the provided trait types
-/// `Ts`.
+/// Verify the given trait if it provides a verifier.
+template <typename T>
+std::enable_if_t<detect_has_verify_trait<T>::value, LogicalResult>
+verifyTrait(Operation *op) {
+  return T::verifyTrait(op);
+}
+template <typename T>
+inline std::enable_if_t<!detect_has_verify_trait<T>::value, LogicalResult>
+verifyTrait(Operation *) {
+  return success();
+}
+
+/// Given a set of traits, return the result of verifying the given operation.
 template <typename... Ts>
-static LogicalResult verifyTraitsImpl(Operation *op, std::tuple<Ts...> *) {
+LogicalResult verifyTraits(Operation *op) {
   LogicalResult result = success();
   (void)std::initializer_list<int>{
-      (result = succeeded(result) ? Ts::verifyTrait(op) : failure(), 0)...};
+      (result = succeeded(result) ? verifyTrait<Ts>(op) : failure(), 0)...};
   return result;
 }
 
-/// Given a tuple type containing a set of traits that contain a
-/// `verifyTrait` method, return the result of verifying the given operation.
-template <typename TraitTupleT>
-static LogicalResult verifyTraits(Operation *op) {
-  return verifyTraitsImpl(op, (TraitTupleT *)nullptr);
+/// Verify the given trait if it provides a region verifier.
+template <typename T>
+std::enable_if_t<detect_has_verify_region_trait<T>::value, LogicalResult>
+verifyRegionTrait(Operation *op) {
+  return T::verifyRegionTrait(op);
+}
+template <typename T>
+inline std::enable_if_t<!detect_has_verify_region_trait<T>::value,
+                        LogicalResult>
+verifyRegionTrait(Operation *) {
+  return success();
 }
 
-/// The internal implementation of `verifyRegionTraits` below that returns the
-/// result of verifying the current operation with all of the provided trait
-/// types `Ts`.
+/// Given a set of traits, return the result of verifying the regions of the
+/// given operation.
 template <typename... Ts>
-static LogicalResult verifyRegionTraitsImpl(Operation *op,
-                                            std::tuple<Ts...> *) {
+LogicalResult verifyRegionTraits(Operation *op) {
   (void)op;
   LogicalResult result = success();
   (void)std::initializer_list<int>{
-      (result = succeeded(result) ? Ts::verifyRegionTrait(op) : failure(),
+      (result = succeeded(result) ? verifyRegionTrait<Ts>(op) : failure(),
        0)...};
   return result;
-}
-
-/// Given a tuple type containing a set of traits that contain a
-/// `verifyTrait` method, return the result of verifying the given operation.
-template <typename TraitTupleT>
-static LogicalResult verifyRegionTraits(Operation *op) {
-  return verifyRegionTraitsImpl(op, (TraitTupleT *)nullptr);
 }
 } // namespace op_definition_impl
 
@@ -1733,18 +1728,6 @@ private:
       decltype(std::declval<T>().print(std::declval<OpAsmPrinter &>()));
   template <typename T>
   using detect_has_print = llvm::is_detected<has_print, T>;
-  /// A tuple type containing the traits that have a `foldTrait` function.
-  using FoldableTraitsTupleT = typename detail::FilterTypes<
-      op_definition_impl::detect_has_any_fold_trait,
-      Traits<ConcreteType>...>::type;
-  /// A tuple type containing the traits that have a verify function.
-  using VerifiableTraitsTupleT =
-      typename detail::FilterTypes<op_definition_impl::detect_has_verify_trait,
-                                   Traits<ConcreteType>...>::type;
-  /// A tuple type containing the region traits that have a verify function.
-  using VerifiableRegionTraitsTupleT = typename detail::FilterTypes<
-      op_definition_impl::detect_has_verify_region_trait,
-      Traits<ConcreteType>...>::type;
 
   /// Returns an interface map containing the interfaces registered to this
   /// operation.
@@ -1794,8 +1777,8 @@ private:
     return [](Operation *op, ArrayRef<Attribute> operands,
               SmallVectorImpl<OpFoldResult> &results) {
       // In this case, we only need to fold the traits of the operation.
-      return op_definition_impl::foldTraits<FoldableTraitsTupleT>(op, operands,
-                                                                  results);
+      return op_definition_impl::foldTraits<Traits<ConcreteType>...>(
+          op, operands, results);
     };
   }
   /// Return the result of folding a single result operation that defines a
@@ -1809,7 +1792,7 @@ private:
     // If the fold failed or was in-place, try to fold the traits of the
     // operation.
     if (!result || result.template dyn_cast<Value>() == op->getResult(0)) {
-      if (succeeded(op_definition_impl::foldTraits<FoldableTraitsTupleT>(
+      if (succeeded(op_definition_impl::foldTraits<Traits<ConcreteType>...>(
               op, operands, results)))
         return success();
       return success(static_cast<bool>(result));
@@ -1826,7 +1809,7 @@ private:
     // If the fold failed or was in-place, try to fold the traits of the
     // operation.
     if (failed(result) || results.empty()) {
-      if (succeeded(op_definition_impl::foldTraits<FoldableTraitsTupleT>(
+      if (succeeded(op_definition_impl::foldTraits<Traits<ConcreteType>...>(
               op, operands, results)))
         return success();
     }
@@ -1879,7 +1862,7 @@ private:
     static_assert(hasNoDataMembers(),
                   "Op class shouldn't define new data members");
     return failure(
-        failed(op_definition_impl::verifyTraits<VerifiableTraitsTupleT>(op)) ||
+        failed(op_definition_impl::verifyTraits<Traits<ConcreteType>...>(op)) ||
         failed(cast<ConcreteType>(op).verify()));
   }
   static OperationName::VerifyInvariantsFn getVerifyInvariantsFn() {
@@ -1889,9 +1872,10 @@ private:
   static LogicalResult verifyRegionInvariants(Operation *op) {
     static_assert(hasNoDataMembers(),
                   "Op class shouldn't define new data members");
-    return failure(failed(op_definition_impl::verifyRegionTraits<
-                          VerifiableRegionTraitsTupleT>(op)) ||
-                   failed(cast<ConcreteType>(op).verifyRegions()));
+    return failure(
+        failed(op_definition_impl::verifyRegionTraits<Traits<ConcreteType>...>(
+            op)) ||
+        failed(cast<ConcreteType>(op).verifyRegions()));
   }
   static OperationName::VerifyRegionInvariantsFn getVerifyRegionInvariantsFn() {
     return static_cast<LogicalResult (*)(Operation *)>(&verifyRegionInvariants);
