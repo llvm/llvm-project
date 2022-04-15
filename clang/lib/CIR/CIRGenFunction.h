@@ -17,13 +17,15 @@
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
 
-#include "mlir/IR/TypeRange.h"
-#include "mlir/IR/Value.h"
+#include "clang/AST/BaseSubobject.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/TargetInfo.h"
+
+#include "mlir/IR/TypeRange.h"
+#include "mlir/IR/Value.h"
 
 namespace clang {
 class Expr;
@@ -679,6 +681,25 @@ public:
   /// Perform the usual unary conversions on the specified
   /// expression and compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *E);
+
+  struct VPtr {
+    clang::BaseSubobject Base;
+    const clang::CXXRecordDecl *NearestVBase;
+    clang::CharUnits OffsetFromNearestVBase;
+    const clang::CXXRecordDecl *VTableClass;
+  };
+
+  using VisitedVirtualBasesSetTy =
+      llvm::SmallPtrSet<const clang::CXXRecordDecl *, 4>;
+
+  using VPtrsVector = llvm::SmallVector<VPtr, 4>;
+  VPtrsVector getVTablePointers(const clang::CXXRecordDecl *VTableClass);
+  void getVTablePointers(clang::BaseSubobject Base,
+                         const clang::CXXRecordDecl *NearestVBase,
+                         clang::CharUnits OffsetFromNearestVBase,
+                         bool BaseIsNonVirtualPrimaryBase,
+                         const clang::CXXRecordDecl *VTableClass,
+                         VisitedVirtualBasesSetTy &VBases, VPtrsVector &vptrs);
 
   /// Emit code for the start of a function.
   /// \param Loc       The location to be associated with the function.
