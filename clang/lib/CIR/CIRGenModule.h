@@ -246,6 +246,11 @@ public:
 
   bool shouldEmitFunction(clang::GlobalDecl GD);
 
+  // Produce code for this constructor/destructor. This method doesn't try to
+  // apply any ABI rules about which other constructors/destructors are needed
+  // or if they are alias to each other.
+  mlir::FuncOp codegenCXXStructor(clang::GlobalDecl GD);
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &D, mlir::Operation *Op);
 
