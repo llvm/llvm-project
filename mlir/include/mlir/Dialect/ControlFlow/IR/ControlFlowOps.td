@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECTS_CONTROLFLOW_IR_CONTROLFLOWOPS_TD
 #define MLIR_DIALECTS_CONTROLFLOW_IR_CONTROLFLOWOPS_TD
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
