@@ -687,6 +687,9 @@ public:
   /// expression and compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *E);
 
+  static bool
+  IsConstructorDelegationValid(const clang::CXXConstructorDecl *Ctor);
+
   struct VPtr {
     clang::BaseSubobject Base;
     const clang::CXXRecordDecl *NearestVBase;
