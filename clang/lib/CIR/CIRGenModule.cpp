@@ -466,11 +466,23 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
       llvm_unreachable("NYI");
   }
 
-  mlir::Value Entry = GetGlobalValue(GD.getDecl());
+  // Lookup the entry, lazily creating it if necessary.
+  mlir::Operation *Entry = GetGlobalValue(MangledName);
+  if (Entry) {
+    // TODO: WeakRefReferences
+    // TODO: Handle dropped DLL attributes.
+    // TODO: If there are two attempts to define the same mangled name, issue an
+    //       error.
 
-  if (Entry)
-    assert(false && "Code path NYI since we're not yet using this for "
-                    "generating fucntion decls");
+    auto Fn = cast<mlir::FuncOp>(Entry);
+    if (Fn && Fn.getFunctionType() == Ty) {
+      return Fn;
+    }
+    llvm_unreachable("NYI");
+
+    // TODO: clang checks here if this is a llvm::GlobalAlias... how will we
+    // support this?
+  }
 
   // This function doesn't have a complete type (for example, the return type is
   // an incompmlete struct). Use a fake type instead, and make sure not to try
