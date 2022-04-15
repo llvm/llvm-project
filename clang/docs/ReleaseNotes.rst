@@ -119,6 +119,10 @@ Bug Fixes
   This fixes Issue `Issue 52802 <https://github.com/llvm/llvm-project/issues/52802>`_.
 - Unknown type attributes with a ``[[]]`` spelling are no longer diagnosed twice.
   This fixes Issue `Issue 54817 <https://github.com/llvm/llvm-project/issues/54817>`_.
+- Clang should no longer incorrectly diagnose a variable declaration inside of
+  a lambda expression that shares the name of a variable in a containing
+  if/while/for/switch init statement as a redeclaration.
+  This fixes `Issue 54913 <https://github.com/llvm/llvm-project/issues/54913>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -251,6 +255,9 @@ C++2b Feature Support
 - Implemented `P2128R6: Multidimensional subscript operator <https://wg21.link/P2128R6>`_.
 - Implemented `P0849R8: auto(x): decay-copy in the language <https://wg21.link/P0849R8>`_.
 - Implemented `P2242R3: Non-literal variables (and labels and gotos) in constexpr functions	<https://wg21.link/P2242R3>`_.
+- Implemented `P2036R3: Change scope of lambda trailing-return-type <https://wg21.link/P2036R3>`_.
+  This proposal modifies how variables captured in lambdas can appear in trailing return type
+  expressions and how their types are deduced therein, in all C++ language versions.
 
 CUDA Language Changes in Clang
 ------------------------------

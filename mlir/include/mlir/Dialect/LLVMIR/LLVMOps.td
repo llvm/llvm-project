@@ -266,14 +266,29 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
   }];
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$arraySize,
-      "unsigned":$alignment),
+               "unsigned":$alignment),
     [{
+      assert(!resultType.cast<LLVMPointerType>().isOpaque() &&
+             "pass the allocated type explicitly if opaque pointers are used");
       if (alignment == 0)
         return build($_builder, $_state, resultType, arraySize, IntegerAttr(),
                      TypeAttr());
       build($_builder, $_state, resultType, arraySize,
         $_builder.getI64IntegerAttr(alignment), TypeAttr());
-  }]>];
+    }]>,
+    OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$arraySize,
+               CArg<"unsigned", "0">:$alignment),
+    [{
+      TypeAttr elemTypeAttr =
+          resultType.cast<LLVMPointerType>().isOpaque() ?
+          TypeAttr::get(elementType) : TypeAttr();
+      build($_builder, $_state, resultType, arraySize,
+            alignment == 0 ? IntegerAttr()
+                           : $_builder.getI64IntegerAttr(alignment),
+            elemTypeAttr);
+
+    }]>
+    ];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -291,6 +306,9 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
     OpBuilder<(ins "Type":$resultType, "Value":$basePtr, "ValueRange":$indices,
                "ArrayRef<int32_t>":$structIndices,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+               "ValueRange":$indices, "ArrayRef<int32_t>":$structIndices,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
   let llvmBuilder = [{
     SmallVector<llvm::Value *> indices;
@@ -313,7 +331,19 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
 
   let extraClassDeclaration = [{
     constexpr static int kDynamicIndex = std::numeric_limits<int32_t>::min();
+
+    /// Returns the type pointed to by the pointer argument of this GEP.
     Type getSourceElementType();
+
+    /// Populates `indices` with positions of GEP indices that correspond to
+    /// LLVMStructTypes potentially nested in the given `sourceElementType`,
+    /// which is the type pointed to by the pointer argument of a GEP. If
+    /// `structSizes` is provided, it is populated with sizes of the indexed
+    /// structs for bounds verification purposes.
+    static void findKnownStructIndices(
+        Type sourceElementType, SmallVectorImpl<unsigned> &indices,
+        SmallVectorImpl<unsigned> *structSizes = nullptr);
+
   }];
   let hasFolder = 1;
   let hasVerifier = 1;

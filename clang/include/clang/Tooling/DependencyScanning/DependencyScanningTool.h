@@ -56,10 +56,6 @@ struct FullDependencies {
 
   /// Get the full command line, excluding -fmodule-file=" arguments.
   std::vector<std::string> getCommandLineWithoutModulePaths() const;
-
-  /// Get additional arguments suitable for appending to the original Clang
-  /// command line, excluding "-fmodule-file=" arguments.
-  std::vector<std::string> getAdditionalArgsWithoutModulePaths() const;
 };
 
 struct FullDependenciesResult {
