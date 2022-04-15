@@ -2518,8 +2518,8 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   // the header is parseable. Emit a warning to make the user aware.
   if (IsObjCAtImport && AtLoc.isValid()) {
     auto &SrcMgr = PP.getSourceManager();
-    auto *FE = SrcMgr.getFileEntryForID(SrcMgr.getFileID(AtLoc));
-    if (FE && llvm::sys::path::parent_path(FE->getDir()->getName())
+    auto FE = SrcMgr.getFileEntryRefForID(SrcMgr.getFileID(AtLoc));
+    if (FE && llvm::sys::path::parent_path(FE->getDir().getName())
                   .endswith(".framework"))
       Diags.Report(AtLoc, diag::warn_atimport_in_framework_header);
   }
