@@ -6,10 +6,6 @@
 ; RUN: echo '!14 = !{!"%/t/function-numbering.ll", !0}' > %t/1
 ; RUN: cat %s %t/1 > %t/2
 
-; RUN: opt -insert-gcov-profiling -S < %t/2 | FileCheck --check-prefix GCDA %s
-; RUN: llvm-cov gcov -n -dump %t/function-numbering.gcno 2>&1 | FileCheck --check-prefix GCNO %s
-; RUNN: rm %t/function-numbering.gcno
-
 ; RUN: opt -passes=insert-gcov-profiling -S < %t/2 | FileCheck --check-prefix GCDA %s
 ; RUN: llvm-cov gcov -n -dump %t/function-numbering.gcno 2>&1 | FileCheck --check-prefix GCNO %s
 
