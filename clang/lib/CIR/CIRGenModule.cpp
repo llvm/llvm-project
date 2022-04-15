@@ -358,9 +358,10 @@ mlir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD,
   assert(!cast<FunctionDecl>(GD.getDecl())->isConsteval() &&
          "consteval function should never be emitted");
 
-  assert(!Ty && "No code paths implemented that have this set yet");
-  const auto *FD = cast<FunctionDecl>(GD.getDecl());
-  Ty = getTypes().ConvertType(FD->getType());
+  if (!Ty) {
+    const auto *FD = cast<FunctionDecl>(GD.getDecl());
+    Ty = getTypes().ConvertType(FD->getType());
+  }
 
   assert(!dyn_cast<CXXDestructorDecl>(GD.getDecl()) && "NYI");
 
