@@ -242,41 +242,6 @@ getFileDependencies(CXDependencyScannerWorker W, int argc,
 }
 
 CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v0(
-    CXDependencyScannerWorker W, int argc, const char *const *argv,
-    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
-    void *Context, CXString *error) {
-  return getFileDependencies(
-      W, argc, argv, WorkingDirectory, MDC, Context, error,
-      [](const FullDependencies &FD) {
-        return FD.getAdditionalArgsWithoutModulePaths();
-      },
-      [](const ModuleDeps &MD) {
-        return MD.getAdditionalArgsWithoutModulePaths();
-      });
-}
-
-CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v1(
-    CXDependencyScannerWorker W, int argc, const char *const *argv,
-    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
-    void *Context, CXString *error) {
-  return getFileDependencies(
-      W, argc, argv, WorkingDirectory, MDC, Context, error,
-      [](const FullDependencies &FD) {
-        return FD.getAdditionalArgsWithoutModulePaths();
-      },
-      [](const ModuleDeps &MD) {
-        std::vector<std::string> Args =
-            MD.getCanonicalCommandLineWithoutModulePaths();
-        llvm::remove_if(Args, [](const std::string &Arg) {
-          return Arg.find("-fmodule-map-file=") == 0;
-        });
-        return Args;
-      });
-}
-
-CXFileDependencies *
 clang_experimental_DependencyScannerWorker_getFileDependencies_v2(
     CXDependencyScannerWorker W, int argc, const char *const *argv,
     const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,

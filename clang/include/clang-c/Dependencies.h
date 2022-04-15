@@ -70,9 +70,8 @@ typedef struct {
   CXStringSet *ModuleDeps;
 
   /**
-   * The canonical command-line or additional arguments needed to build this
-   * module, excluding arguments containing modules-related paths:
-   * "-fmodule-file=", "-o", "-fmodule-map-file=".
+   * The canonical command line to build this module, excluding arguments
+   * containing modules-related paths: "-fmodule-file=", "-o".
    */
   CXStringSet *BuildArguments;
 } CXModuleDependency;
@@ -93,8 +92,8 @@ typedef struct {
   CXStringSet *ModuleDeps;
 
   /**
-   * Full or additional arguments needed to build this file, excluding
-   * `-fmodule-file=`.
+   * Full command line to build this file, excluding arguments containing
+   * modules-related paths: `-fmodule-file=`.
    */
   CXStringSet *BuildArguments;
 } CXFileDependencies;
@@ -184,7 +183,7 @@ CINDEX_LINKAGE void clang_experimental_DependencyScannerWorker_dispose_v0(
  * \c CXDependencyMode_Full mode.
  *
  * \param Context the context that was passed to
- *         \c clang_experimental_DependencyScannerWorker_getFileDependencies_v0.
+ *         \c clang_experimental_DependencyScannerWorker_getFileDependencies_vX.
  * \param MDS the list of discovered modules. Must be freed by calling
  *            \c clang_experimental_ModuleDependencySet_dispose.
  */
@@ -195,9 +194,7 @@ typedef void CXModuleDiscoveredCallback(void *Context,
  * Returns the list of file dependencies for a particular compiler invocation.
  *
  * \param argc the number of compiler invocation arguments (including argv[0]).
- * \param argv the compiler invocation arguments (including argv[0]).
- *             the invocation may be a -cc1 clang invocation or a driver
- *             invocation.
+ * \param argv the compiler driver invocation arguments (including argv[0]).
  * \param WorkingDirectory the directory in which the invocation runs.
  * \param MDC a callback that is called whenever a new module is discovered.
  *            This may receive the same module on different workers. This should
@@ -214,37 +211,13 @@ typedef void CXModuleDiscoveredCallback(void *Context,
  *          \c clang_experimental_FileDependencies_dispose.
  */
 CINDEX_LINKAGE CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v0(
-    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
-    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
-    void *Context, CXString *error);
-
-/**
- * Same as \c clang_experimental_DependencyScannerWorker_getFileDependencies_v0,
- * but \c BuildArguments of each \c CXModuleDependency passed to \c MDC contains
- * the canonical Clang command line, not just additional arguments.
- */
-CINDEX_LINKAGE CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v1(
-    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
-    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
-    void *Context, CXString *error);
-
-/**
- * Same as \c clang_experimental_DependencyScannerWorker_getFileDependencies_v1,
- * but \c BuildArguments of \c CXFileDependencies contains the full Clang
- * command line, not just additional arguments, and \c BuildArguments of each
- * \c CXModuleDependency now contain the necessary '-fmodule-map-file='
- * arguments.
- */
-CINDEX_LINKAGE CXFileDependencies *
 clang_experimental_DependencyScannerWorker_getFileDependencies_v2(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
     void *Context, CXString *error);
 
 /**
- * Same as \c clang_experimental_DependencyScannerWorker_getFileDependencies_v1,
+ * Same as \c clang_experimental_DependencyScannerWorker_getFileDependencies_v2,
  * but get the dependencies by module name alone.
  */
 CINDEX_LINKAGE CXFileDependencies *

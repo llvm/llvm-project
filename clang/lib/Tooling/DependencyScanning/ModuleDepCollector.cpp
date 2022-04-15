@@ -120,22 +120,6 @@ ModuleDeps::getCanonicalCommandLineWithoutModulePaths() const {
   return serializeCompilerInvocation(BuildInvocation);
 }
 
-std::vector<std::string>
-ModuleDeps::getAdditionalArgsWithoutModulePaths() const {
-  std::vector<std::string> Ret{
-    "-remove-preceeding-explicit-module-build-incompatible-options",
-    "-fno-implicit-modules", "-emit-module", "-fmodule-name=" + ID.ModuleName,
-  };
-
-  if (IsSystem)
-    Ret.push_back("-fsystem-module");
-
-  if (BuildInvocation.getLangOpts()->NeededByPCHOrCompilationUsesPCH)
-    Ret.push_back("-fmodule-related-to-pch");
-
-  return Ret;
-}
-
 void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
                                        FileChangeReason Reason,
                                        SrcMgr::CharacteristicKind FileType,
