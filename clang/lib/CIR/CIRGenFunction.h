@@ -407,6 +407,8 @@ public:
     PrototypeWrapper(const clang::ObjCMethodDecl *MD) : P(MD) {}
   };
 
+  bool LValueIsSuitableForInlineAtomic(LValue Src);
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -433,6 +435,18 @@ public:
     }
   };
 
+  RValue convertTempToRValue(Address addr, clang::QualType type,
+                             clang::SourceLocation Loc);
+
+  mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
+                                clang::SourceLocation Loc,
+                                LValueBaseInfo BaseInfo,
+                                bool isNontemporal = false);
+
+  /// buildLoadOfScalar - Load a scalar value from an address, taking care to
+  /// appropriately convert form the memory representation to the CIR value
+  /// representation. The l-value must be a simple l-value.
+  mlir::Value buildLoadOfScalar(LValue lvalue, clang::SourceLocation Loc);
   void buildCallArgs(
       CallArgList &Args, PrototypeWrapper Prototype,
       llvm::iterator_range<clang::CallExpr::const_arg_iterator> ArgRange,
@@ -503,6 +517,8 @@ public:
   /// void types so it just returns RValue::get(nullptr) but it'll need
   /// addressed later.
   RValue GetUndefRValue(clang::QualType Ty);
+
+  mlir::Value buildFromMemory(mlir::Value Value, clang::QualType Ty);
 
   mlir::Type convertType(clang::QualType T);
 
@@ -677,6 +693,16 @@ public:
   mlir::Value buildScalarConversion(mlir::Value Src, clang::QualType SrcTy,
                                     clang::QualType DstTy,
                                     clang::SourceLocation Loc);
+
+  LValue makeAddrLValue(Address Addr, clang::QualType T,
+                        LValueBaseInfo BaseInfo) {
+    return LValue::makeAddr(Addr, T, getContext(), BaseInfo);
+  }
+
+  LValue makeAddrLValue(Address Addr, clang::QualType T,
+                        AlignmentSource Source = AlignmentSource::Type) {
+    return LValue::makeAddr(Addr, T, getContext(), LValueBaseInfo(Source));
+  }
 
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
