@@ -384,11 +384,30 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
       buildAndUpdateRetAlloca(FnRetQualTy, FnEndLoc,
                               CGM.getNaturalTypeAlignment(FnRetQualTy));
 
-    // Emit the body of the function.
-    if (mlir::failed(buildFunctionBody(FD->getBody()))) {
-      Fn.erase();
-      return nullptr;
-    }
+    // Generate the body of the function.
+    // TODO: PGO.assignRegionCounters
+    if (isa<CXXDestructorDecl>(FD))
+      llvm_unreachable("NYI");
+    else if (isa<CXXConstructorDecl>(FD))
+      llvm_unreachable("NYI");
+    else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
+             FD->hasAttr<CUDAGlobalAttr>())
+      llvm_unreachable("NYI");
+    else if (isa<CXXMethodDecl>(FD) &&
+             cast<CXXMethodDecl>(FD)->isLambdaStaticInvoker()) {
+      llvm_unreachable("NYI");
+    } else if (FD->isDefaulted() && isa<CXXMethodDecl>(FD) &&
+               (cast<CXXMethodDecl>(FD)->isCopyAssignmentOperator() ||
+                cast<CXXMethodDecl>(FD)->isMoveAssignmentOperator())) {
+      llvm_unreachable("NYI");
+    } else if (Body) {
+      if (mlir::failed(buildFunctionBody(Body))) {
+        Fn.erase();
+        return nullptr;
+      }
+    } else
+      llvm_unreachable("no definition for emitted function");
+
     assert(builder.getInsertionBlock() && "Should be valid");
   }
 
