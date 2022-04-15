@@ -385,6 +385,10 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
       buildAndUpdateRetAlloca(FnRetQualTy, FnEndLoc,
                               CGM.getNaturalTypeAlignment(FnRetQualTy));
 
+    // Save parameters for coroutine function.
+    if (Body && isa_and_nonnull<CoroutineBodyStmt>(Body))
+      llvm_unreachable("Coroutines NYI");
+
     // Generate the body of the function.
     // TODO: PGO.assignRegionCounters
     if (isa<CXXDestructorDecl>(FD))
