@@ -80,3 +80,13 @@ void foo13(...) __attribute__((overloadable)) {}
 void foo14(void) {
   foo14_call(); // no-warning
 }
+
+// Ensure that redeclarations involving a typedef type work properly, even if
+// there are function attributes involved in the declaration.
+typedef void foo_t(unsigned val);
+__attribute__((noreturn)) foo_t foo15;
+foo_t foo15; // OK
+void foo15(unsigned val); // OK
+
+foo_t foo16;
+void foo16(unsigned val); // OK
