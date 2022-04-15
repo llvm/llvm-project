@@ -234,7 +234,19 @@ void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
     return;
   }
   case TEK_Aggregate:
-    assert(0 && "not implemented");
+    assert(!type->isAtomicType() && "NYI");
+    AggValueSlot::Overlap_t Overlap = AggValueSlot::MayOverlap;
+    if (isa<VarDecl>(D))
+      Overlap = AggValueSlot::DoesNotOverlap;
+    else if (auto *FD = dyn_cast<FieldDecl>(D))
+      assert(false && "Field decl NYI");
+    else
+      assert(false && "Only VarDecl implemented so far");
+    // TODO: how can we delay here if D is captured by its initializer?
+    buildAggExpr(init,
+                 AggValueSlot::forLValue(lvalue, AggValueSlot::IsDestructed,
+                                         AggValueSlot::DoesNotNeedGCBarriers,
+                                         AggValueSlot::IsNotAliased, Overlap));
     return;
   }
   llvm_unreachable("bad evaluation kind");

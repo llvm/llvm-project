@@ -333,6 +333,8 @@ public:
   /// buildTypeCheck can be skipped.
   bool sanitizePerformTypeCheck() const;
 
+  void buildAggExpr(const clang::Expr *E, AggValueSlot Slot);
+
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
   struct PrototypeWrapper {
