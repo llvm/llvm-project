@@ -730,6 +730,43 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl GD) {
   return true;
 }
 
+bool CIRGenModule::supportsCOMDAT() const {
+  return getTriple().supportsCOMDAT();
+}
+
+static bool shouldBeInCOMDAT(CIRGenModule &CGM, const Decl &D) {
+  if (!CGM.supportsCOMDAT())
+    return false;
+
+  if (D.hasAttr<SelectAnyAttr>())
+    return true;
+
+  GVALinkage Linkage;
+  if (auto *VD = dyn_cast<VarDecl>(&D))
+    Linkage = CGM.getASTContext().GetGVALinkageForVariable(VD);
+  else
+    Linkage =
+        CGM.getASTContext().GetGVALinkageForFunction(cast<FunctionDecl>(&D));
+
+  switch (Linkage) {
+  case clang::GVA_Internal:
+  case clang::GVA_AvailableExternally:
+  case clang::GVA_StrongExternal:
+    return false;
+  case clang::GVA_DiscardableODR:
+  case clang::GVA_StrongODR:
+    return true;
+  }
+  llvm_unreachable("No such linkage");
+}
+
+void CIRGenModule::maybeSetTrivialComdat(const Decl &D, mlir::Operation *Op) {
+  if (!shouldBeInCOMDAT(*this, D))
+    return;
+
+  // TODO: Op.setComdat
+}
+
 bool CIRGenModule::isInNoSanitizeList(SanitizerMask Kind, mlir::FuncOp Fn,
                                       SourceLocation Loc) const {
   const auto &NoSanitizeL = getASTContext().getNoSanitizeList();
