@@ -446,7 +446,7 @@ Expected<uint8_t> EHFrameEdgeFixer::readPointerEncoding(BinaryStreamReader &R,
 
   uint8_t PointerEncoding;
   if (auto Err = R.readInteger(PointerEncoding))
-    return Err;
+    return std::move(Err);
 
   bool Supported = true;
   switch (PointerEncoding & 0xf) {
@@ -525,7 +525,7 @@ Expected<Symbol *> EHFrameEdgeFixer::getOrCreateEncodedPointerEdge(
         dbgs() << "\n";
       });
       if (auto Err = skipEncodedPointer(PointerEncoding, RecordReader))
-        return Err;
+        return std::move(Err);
       return EdgeI->second.Target;
     }
   }
