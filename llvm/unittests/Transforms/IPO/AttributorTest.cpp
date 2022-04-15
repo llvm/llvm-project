@@ -57,7 +57,8 @@ TEST_F(AttributorTestBase, TestCast) {
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, nullptr);
-  Attributor A(Functions, InfoCache, CGUpdater);
+  AttributorConfig AC(CGUpdater);
+  Attributor A(Functions, InfoCache, AC);
 
   Function *F = M.getFunction("foo");
 
@@ -150,8 +151,9 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, nullptr);
-  Attributor A(Functions, InfoCache, CGUpdater, /* Allowed */ nullptr,
-               /*DeleteFns*/ false);
+  AttributorConfig AC(CGUpdater);
+  AC.DeleteFns = false;
+  Attributor A(Functions, InfoCache, AC);
 
   Function &F1 = *M.getFunction("func1");
   Function &F3 = *M.getFunction("func3");
