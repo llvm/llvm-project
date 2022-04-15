@@ -2129,6 +2129,11 @@ QualType Sema::BuildPointerType(QualType T,
     return QualType();
   }
 
+  if (getLangOpts().HLSL) {
+    Diag(Loc, diag::err_hlsl_pointers_unsupported) << 0;
+    return QualType();
+  }
+
   if (checkQualifiedFunction(*this, T, Loc, QFK_Pointer))
     return QualType();
 
@@ -2191,6 +2196,11 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
   //   is ill-formed.
   if (T->isVoidType()) {
     Diag(Loc, diag::err_reference_to_void);
+    return QualType();
+  }
+
+  if (getLangOpts().HLSL) {
+    Diag(Loc, diag::err_hlsl_pointers_unsupported) << 1;
     return QualType();
   }
 
@@ -2960,6 +2970,11 @@ QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
       !getOpenCLOptions().isAvailableOption("__cl_clang_function_pointers",
                                             getLangOpts())) {
     Diag(Loc, diag::err_opencl_function_pointer) << /*pointer*/ 0;
+    return QualType();
+  }
+
+  if (getLangOpts().HLSL) {
+    Diag(Loc, diag::err_hlsl_pointers_unsupported) << 0;
     return QualType();
   }
 
