@@ -1,4 +1,4 @@
-//===- TestSymbolUses.cpp - Pass to test symbol uselists ------------------===//
+//===- TestClone.cpp - Pass to test operation cloning  --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
