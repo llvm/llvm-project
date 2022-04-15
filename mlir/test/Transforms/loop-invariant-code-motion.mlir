@@ -157,10 +157,10 @@ func @invariant_affine_nested_if() {
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = 0 to 10 {
       affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
-          %cf9 = arith.addf %cf8, %cf8 : f32
-          affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
-            %cf10 = arith.addf %cf9, %cf9 : f32
-          }
+        %cf9 = arith.addf %cf8, %cf8 : f32
+        affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
+          %cf10 = arith.addf %cf9, %cf9 : f32
+        }
       }
     }
   }
@@ -168,12 +168,12 @@ func @invariant_affine_nested_if() {
   // CHECK: memref.alloc
   // CHECK-NEXT: arith.constant
   // CHECK-NEXT: affine.for
+  // CHECK-NEXT: }
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.if
   // CHECK-NEXT: arith.addf
   // CHECK-NEXT: affine.if
   // CHECK-NEXT: arith.addf
-  // CHECK-NEXT: }
   // CHECK-NEXT: }
   // CHECK-NEXT: }
 
@@ -319,6 +319,110 @@ func @nested_uses_inside(%lb: index, %ub: index, %step: index) {
       scf.yield %val2: index
     }
   }
-  return 
+  return
 }
 
+// -----
+
+// Test that two ops that feed into each other are moved without violating
+// dominance in non-graph regions.
+// CHECK-LABEL: func @invariant_subgraph
+// CHECK-SAME: %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %[[ARG:.*]]: i32
+func @invariant_subgraph(%lb: index, %ub: index, %step: index, %arg: i32) {
+  // CHECK:      %[[V0:.*]] = arith.addi %[[ARG]], %[[ARG]]
+  // CHECK-NEXT: %[[V1:.*]] = arith.addi %[[ARG]], %[[V0]]
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    // CHECK-NEXT: "test.sink"(%[[V1]])
+    %v0 = arith.addi %arg, %arg : i32
+    %v1 = arith.addi %arg, %v0 : i32
+    "test.sink"(%v1) : (i32) -> ()
+  }
+  return
+}
+
+// -----
+
+// Test invariant nested loop is hoisted.
+// CHECK-LABEL: func @test_invariant_nested_loop
+func @test_invariant_nested_loop() {
+  // CHECK: %[[C:.*]] = arith.constant
+  %0 = arith.constant 5 : i32
+  // CHECK: %[[V0:.*]] = arith.addi %[[C]], %[[C]]
+  // CHECK-NEXT: %[[V1:.*]] = arith.addi %[[V0]], %[[C]]
+  // CHECK-NEXT: test.graph_loop
+  // CHECK-NEXT: ^bb0(%[[ARG0:.*]]: i32)
+  // CHECK-NEXT: %[[V2:.*]] = arith.subi %[[ARG0]], %[[ARG0]]
+  // CHECK-NEXT: test.region_yield %[[V2]]
+  // CHECK: test.graph_loop
+  // CHECK-NEXT: test.region_yield %[[V1]]
+  test.graph_loop {
+    %1 = arith.addi %0, %0 : i32
+    %2 = arith.addi %1, %0 : i32
+    test.graph_loop {
+    ^bb0(%arg0: i32):
+      %3 = arith.subi %arg0, %arg0 : i32
+      test.region_yield %3 : i32
+    } : () -> ()
+    test.region_yield %2 : i32
+  } : () -> ()
+  return
+}
+
+
+// -----
+
+// Test ops in a graph region are hoisted.
+// CHECK-LABEL: func @test_invariants_in_graph_region
+func @test_invariants_in_graph_region() {
+  // CHECK: test.single_no_terminator_op
+  test.single_no_terminator_op : {
+    // CHECK-NEXT: %[[C:.*]] = arith.constant
+    // CHECK-NEXT: %[[V1:.*]] = arith.addi %[[C]], %[[C]]
+    // CHECK-NEXT: %[[V0:.*]] = arith.addi %[[C]], %[[V1]]
+    test.graph_loop {
+      %v0 = arith.addi %c0, %v1 : i32
+      %v1 = arith.addi %c0, %c0 : i32
+      %c0 = arith.constant 5 : i32
+      test.region_yield %v0 : i32
+    } : () -> ()
+  }
+  return
+}
+
+// -----
+
+// Test ops in a graph region are hoisted in topological order into non-graph
+// regions and that dominance is preserved.
+// CHECK-LABEL: func @test_invariant_backedge
+func @test_invariant_backedge() {
+  // CHECK-NEXT: %[[C:.*]] = arith.constant
+  // CHECK-NEXT: %[[V1:.*]] = arith.addi %[[C]], %[[C]]
+  // CHECK-NEXT: %[[V0:.*]] = arith.addi %[[C]], %[[V1]]
+  // CHECK-NEXT: test.graph_loop
+  test.graph_loop {
+    // CHECK-NEXT: test.region_yield %[[V0]]
+    %v0 = arith.addi %c0, %v1 : i32
+    %v1 = arith.addi %c0, %c0 : i32
+    %c0 = arith.constant 5 : i32
+    test.region_yield %v0 : i32
+  } : () -> ()
+  return
+}
+
+// -----
+
+// Test that cycles aren't hoisted from graph regions to non-graph regions.
+// CHECK-LABEL: func @test_invariant_cycle_not_hoisted
+func @test_invariant_cycle_not_hoisted() {
+  // CHECK: test.graph_loop
+  test.graph_loop {
+    // CHECK-NEXT: %[[A:.*]] = "test.a"(%[[B:.*]]) :
+    // CHECK-NEXT: %[[B]] = "test.b"(%[[A]]) :
+    // CHECK-NEXT: test.region_yield %[[A]]
+    %a = "test.a"(%b) : (i32) -> i32
+    %b = "test.b"(%a) : (i32) -> i32
+    test.region_yield %a : i32
+  } : () -> ()
+  return
+}
