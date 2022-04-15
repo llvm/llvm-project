@@ -7076,6 +7076,23 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
         Proto = FDecl->getType()->getAs<FunctionProtoType>();
     }
 
+    // If we still haven't found a prototype to use but there are arguments to
+    // the call, diagnose this as calling a function without a prototype.
+    // However, if we found a function declaration, check to see if
+    // -Wdeprecated-non-prototype was disabled where the function was declared.
+    // If so, we will silence the diagnostic here on the assumption that this
+    // interface is intentional and the user knows what they're doing. We will
+    // also silence the diagnostic if there is a function declaration but it
+    // was implicitly defined (the user already gets diagnostics about the
+    // creation of the implicit function declaration, so the additional warning
+    // is not helpful).
+    if (!Proto && !Args.empty() &&
+        (!FDecl || (!FDecl->isImplicit() &&
+                    !Diags.isIgnored(diag::warn_strict_uses_without_prototype,
+                                     FDecl->getLocation()))))
+      Diag(LParenLoc, diag::warn_strict_uses_without_prototype)
+          << (FDecl != nullptr) << FDecl;
+
     // Promote the arguments (C99 6.5.2.2p6).
     for (unsigned i = 0, e = Args.size(); i != e; i++) {
       Expr *Arg = Args[i];
