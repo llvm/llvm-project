@@ -186,6 +186,11 @@ public:
   const CIRGenFunctionInfo &
   arrangeFunctionDeclaration(const clang::FunctionDecl *FD);
 
+  const CIRGenFunctionInfo &arrangeCXXConstructorCall(
+      const CallArgList &Args, const clang::CXXConstructorDecl *D,
+      clang::CXXCtorType CtorKind, unsigned ExtraPrefixArgs,
+      unsigned ExtraSuffixArgs, bool PassProtoArgs = true);
+
   const CIRGenFunctionInfo &arrangeCXXStructorDeclaration(clang::GlobalDecl GD);
 
   const CIRGenFunctionInfo &
