@@ -329,6 +329,10 @@ public:
     LocalDeclMap.insert({VD, Addr});
   }
 
+  /// Whether any type-checking sanitizers are enabled. If \c false, calls to
+  /// buildTypeCheck can be skipped.
+  bool sanitizePerformTypeCheck() const;
+
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
   struct PrototypeWrapper {

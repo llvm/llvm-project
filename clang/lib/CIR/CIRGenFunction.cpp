@@ -150,6 +150,13 @@ bool CIRGenFunction::ContainsLabel(const Stmt *S, bool IgnoreCaseStmts) {
   return false;
 }
 
+bool CIRGenFunction::sanitizePerformTypeCheck() const {
+  return SanOpts.has(SanitizerKind::Null) ||
+         SanOpts.has(SanitizerKind::Alignment) ||
+         SanOpts.has(SanitizerKind::ObjectSize) ||
+         SanOpts.has(SanitizerKind::Vptr);
+}
+
 /// If the specified expression does not fold
 /// to a constant, or if it does but contains a label, return false.  If it
 /// constant folds return true and set the folded value.
