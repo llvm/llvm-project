@@ -459,6 +459,27 @@ EXTERN
 int32_t __kmpc_target_init_v1(ident_t *Ident, int8_t Mode,
                               int8_t UseGenericStateMachine,
                               int8_t RequiresFullRuntime) {
+
+  if (Mode & OMP_TGT_EXEC_MODE_SPMD) {
+    setExecutionParameters(OMP_TGT_EXEC_MODE_SPMD,
+
+                           OMP_TGT_RUNTIME_UNINITIALIZED);
+    int threadId = __kmpc_get_hardware_thread_id_in_block();
+    if (threadId == 0) {
+      parallelLevel[0] = 1 + (__kmpc_get_hardware_num_threads_in_block() > 1
+                                  ? OMP_ACTIVE_PARALLEL_LEVEL
+                                  : 0);
+    } else if (GetLaneId() == 0) {
+      parallelLevel[GetWarpId()] =
+          1 + (__kmpc_get_hardware_num_threads_in_block() > 1
+                   ? OMP_ACTIVE_PARALLEL_LEVEL
+                   : 0);
+    }
+    // Runtime is not required - exit.
+    __kmpc_impl_syncthreads();
+    return -1;
+  }
+
   return __kmpc_target_init(Ident, Mode, UseGenericStateMachine,
                             RequiresFullRuntime);
 }
