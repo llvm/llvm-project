@@ -277,6 +277,9 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
                                                  mlir::Operation *Op) {
   auto const *D = cast<FunctionDecl>(GD.getDecl());
 
+  // Compute the function info and CIR type.
+  const CIRGenFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+
   // TODO: setFunctionLinkage
   // TODO: setGVProperties
   // TODO: MaubeHandleStaticInExternC
@@ -285,8 +288,8 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
 
   CIRGenFunction CGF{*this, builder};
   CurCGF = &CGF;
-  auto fn = CGF.buildFunction(cast<FunctionDecl>(GD.getDecl()));
-  theModule.push_back(fn);
+  auto Fn = CGF.generateCode(GD, FI);
+  theModule.push_back(Fn);
   CurCGF = nullptr;
 
   // TODO: setNonAliasAttributes
