@@ -605,6 +605,10 @@ public:
 
   // TODO: this can also be abstrated into common AST helpers
   bool hasBooleanRepresentation(clang::QualType Ty);
+
+  /// ShouldInstrumentFunction - Return true if the current function should be
+  /// instrumented with __cyg_profile_func_* calls
+  bool ShouldInstrumentFunction();
 };
 
 } // namespace cir
