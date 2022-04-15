@@ -342,6 +342,8 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   if (!Init) {
     if (!getLangOpts().CPlusPlus)
       CGM.ErrorUnsupported(D.getInit(), "constant l-value expression");
+    else if (!D.getFlexibleArrayInitChars(getContext()).isZero())
+      CGM.ErrorUnsupported(D.getInit(), "flexible array initializer");
     else if (HaveInsertPoint()) {
       // Since we have a static initializer, this global variable can't
       // be constant.
@@ -351,6 +353,14 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
     }
     return GV;
   }
+
+#ifndef NDEBUG
+  CharUnits VarSize = CGM.getContext().getTypeSizeInChars(D.getType()) +
+                      D.getFlexibleArrayInitChars(getContext());
+  CharUnits CstSize = CharUnits::fromQuantity(
+      CGM.getDataLayout().getTypeAllocSize(Init->getType()));
+  assert(VarSize == CstSize && "Emitted constant has unexpected size");
+#endif
 
   // The initializer may differ in type from the global. Rewrite
   // the global to match the initializer.  (We have to do this
