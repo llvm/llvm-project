@@ -405,21 +405,32 @@ static std::string getMangledNameImpl(CIRGenModule &CGM, GlobalDecl GD,
 
   // TODO: support the module name hash
   auto ShouldMangle = MC.shouldMangleDeclName(ND);
-  assert(!ShouldMangle && "Mangling not actually implemented yet.");
 
-  auto *II = ND->getIdentifier();
-  assert(II && "Attempt to mangle unnamed decl.");
+  // Explicit ignore mangling for now
+  if (ShouldMangle && false) {
+    MC.mangleName(GD.getWithDecl(ND), Out);
+  } else {
+    auto *II = ND->getIdentifier();
+    assert(II && "Attempt to mangle unnamed decl.");
 
-  const auto *FD = dyn_cast<FunctionDecl>(ND);
-  assert(FD && "Only FunctionDecl supported");
-  assert(FD->getType()->castAs<FunctionType>()->getCallConv() !=
-             CC_X86RegCall &&
-         "NYI");
-  assert(!FD->hasAttr<CUDAGlobalAttr>() && "NYI");
+    const auto *FD = dyn_cast<FunctionDecl>(ND);
+    assert(FD && "Only FunctionDecl supported");
+    assert(FD->getType()->castAs<FunctionType>()->getCallConv() !=
+               CC_X86RegCall &&
+           "NYI");
+    assert(!FD->hasAttr<CUDAGlobalAttr>() && "NYI");
 
-  Out << II->getName();
+    Out << II->getName();
+  }
 
-  assert(!ShouldMangle && "Mangling not actually implemented yet.");
+  // Check if the module name hash should be appended for internal linkage
+  // symbols. This should come before multi-version target suffixes are
+  // appendded. This is to keep the name and module hash suffix of the internal
+  // linkage function together. The unique suffix should only be added when name
+  // mangling is done to make sure that the final name can be properly
+  // demangled. For example, for C functions without prototypes, name mangling
+  // is not done and the unique suffix should not be appended then.
+  // TODO: assert(!isUniqueInternalLinkageDecl(GD, CGM) && "NYI");
 
   if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
     assert(!FD->isMultiVersion() && "NYI");
