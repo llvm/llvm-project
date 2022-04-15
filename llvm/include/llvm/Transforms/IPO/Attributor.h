@@ -4293,9 +4293,8 @@ struct AAValueConstantRange
 /// that the target position can take). That never happens naturally, we only
 /// force it. As for the conditions under which we force it, see
 /// AAPotentialConstantValues.
-template <typename MemberTy, typename KeyInfo = DenseMapInfo<MemberTy>>
-struct PotentialValuesState : AbstractState {
-  using SetTy = DenseSet<MemberTy, KeyInfo>;
+template <typename MemberTy> struct PotentialValuesState : AbstractState {
+  using SetTy = SmallSetVector<MemberTy, 8>;
 
   PotentialValuesState() : IsValidState(true), UndefIsContained(false) {}
 
@@ -4354,7 +4353,7 @@ struct PotentialValuesState : AbstractState {
     return PotentialValuesState(true);
   }
 
-  static PotentialValuesState getBestState(PotentialValuesState &PVS) {
+  static PotentialValuesState getBestState(const PotentialValuesState &PVS) {
     return getBestState();
   }
 
@@ -4383,6 +4382,12 @@ struct PotentialValuesState : AbstractState {
     IsValidState &= PVS.IsValidState;
     unionAssumed(PVS);
     return *this;
+  }
+
+protected:
+  SetTy &getAssumedSet() {
+    assert(isValidState() && "This set shoud not be used when it is invalid!");
+    return Set;
   }
 
 private:
