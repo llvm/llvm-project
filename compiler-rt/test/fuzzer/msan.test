@@ -17,7 +17,7 @@ NO-REPORT: BINGO
 
 
 RUN: %msan_compiler %S/UseAfterDtor.cpp -o %t
-RUN: MSAN_OPTIONS=poison_in_dtor=1 not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=REPORT
+RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=REPORT
 
 RUN: %msan_compiler %S/UninitializedStrlen.cpp -o %t
 RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=REPORT

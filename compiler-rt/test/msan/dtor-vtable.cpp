@@ -1,16 +1,16 @@
-// RUN: %clangxx_msan %s -O0 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 %run %t
+// RUN: %clangxx_msan %s -O0 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && %run %t
 
-// RUN: %clangxx_msan %s -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 %run %t
+// RUN: %clangxx_msan %s -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && %run %t
 
-// RUN: %clangxx_msan %s -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 %run %t
+// RUN: %clangxx_msan %s -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && %run %t
 
-// RUN: %clangxx_msan %s -DVPTRA=1 -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 not %run %t
+// RUN: %clangxx_msan %s -DVPTRA=1 -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && not %run %t
 
-// RUN: %clangxx_msan %s -DVPTRCA=1 -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 not %run %t
+// RUN: %clangxx_msan %s -DVPTRCA=1 -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && not %run %t
 
-// RUN: %clangxx_msan %s -DVPTRCB=1 -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 not %run %t
+// RUN: %clangxx_msan %s -DVPTRCB=1 -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && not %run %t
 
-// RUN: %clangxx_msan %s -DVPTRC=1 -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 not %run %t
+// RUN: %clangxx_msan %s -DVPTRC=1 -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && not %run %t
 
 // Expected to quit due to invalid access when invoking
 // function using vtable.
