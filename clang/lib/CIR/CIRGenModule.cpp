@@ -502,18 +502,25 @@ mlir::Value CIRGenModule::GetGlobalValue(const Decl *D) {
 }
 
 mlir::Location CIRGenModule::getLoc(SourceLocation SLoc) {
-  assert(CurCGF);
-  return CurCGF->getLoc(SLoc);
+  const SourceManager &SM = astCtx.getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(SLoc);
+  StringRef Filename = PLoc.getFilename();
+  return mlir::FileLineColLoc::get(builder.getStringAttr(Filename),
+                                   PLoc.getLine(), PLoc.getColumn());
 }
 
 mlir::Location CIRGenModule::getLoc(SourceRange SLoc) {
-  assert(CurCGF);
-  return CurCGF->getLoc(SLoc);
+  mlir::Location B = getLoc(SLoc.getBegin());
+  mlir::Location E = getLoc(SLoc.getEnd());
+  SmallVector<mlir::Location, 2> locs = {B, E};
+  mlir::Attribute metadata;
+  return mlir::FusedLoc::get(locs, metadata, builder.getContext());
 }
 
 mlir::Location CIRGenModule::getLoc(mlir::Location lhs, mlir::Location rhs) {
-  assert(CurCGF);
-  return CurCGF->getLoc(lhs, rhs);
+  SmallVector<mlir::Location, 2> locs = {lhs, rhs};
+  mlir::Attribute metadata;
+  return mlir::FusedLoc::get(locs, metadata, builder.getContext());
 }
 
 void CIRGenModule::buildDeferred() {
