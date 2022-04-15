@@ -29,8 +29,8 @@ static const char *makeArgString(const ArgList &Args, const char *Prefix,
   return Args.MakeArgString(Twine(StringRef(Prefix), Base) + Suffix);
 }
 
-void tools::PS4cpu::addProfileRTArgs(const ToolChain &TC, const ArgList &Args,
-                                     ArgStringList &CmdArgs) {
+void tools::PScpu::addProfileRTArgs(const ToolChain &TC, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
   assert(TC.getTriple().isPS());
   auto &PSTC = static_cast<const toolchains::PS4PS5Base &>(TC);
 
@@ -54,11 +54,11 @@ void tools::PS4cpu::addProfileRTArgs(const ToolChain &TC, const ArgList &Args,
         Args, "--dependent-lib=", PSTC.getProfileRTLibName(), ""));
 }
 
-void tools::PS4cpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
-                                           const InputInfo &Output,
-                                           const InputInfoList &Inputs,
-                                           const ArgList &Args,
-                                           const char *LinkingOutput) const {
+void tools::PScpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
+                                          const InputInfo &Output,
+                                          const InputInfoList &Inputs,
+                                          const ArgList &Args,
+                                          const char *LinkingOutput) const {
   auto &TC = static_cast<const toolchains::PS4PS5Base &>(getToolChain());
   claimNoWarnArgs(Args);
   ArgStringList CmdArgs;
@@ -80,8 +80,8 @@ void tools::PS4cpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-void tools::PS4cpu::addSanitizerArgs(const ToolChain &TC, const ArgList &Args,
-                                     ArgStringList &CmdArgs) {
+void tools::PScpu::addSanitizerArgs(const ToolChain &TC, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
   assert(TC.getTriple().isPS());
   auto &PSTC = static_cast<const toolchains::PS4PS5Base &>(TC);
   PSTC.addSanitizerArgs(Args, CmdArgs, "--dependent-lib=lib", ".a");
@@ -101,11 +101,27 @@ void toolchains::PS4CPU::addSanitizerArgs(const ArgList &Args,
     CmdArgs.push_back(arg("SceDbgAddressSanitizer_stub_weak"));
 }
 
-void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
-                                       const InputInfo &Output,
-                                       const InputInfoList &Inputs,
-                                       const ArgList &Args,
-                                       const char *LinkingOutput) const {
+void toolchains::PS5CPU::addSanitizerArgs(const ArgList &Args,
+                                          ArgStringList &CmdArgs,
+                                          const char *Prefix,
+                                          const char *Suffix) const {
+  auto arg = [&](const char *Name) -> const char * {
+    return makeArgString(Args, Prefix, Name, Suffix);
+  };
+  const SanitizerArgs &SanArgs = getSanitizerArgs(Args);
+  if (SanArgs.needsUbsanRt())
+    CmdArgs.push_back(arg("SceUBSanitizer_nosubmission_stub_weak"));
+  if (SanArgs.needsAsanRt())
+    CmdArgs.push_back(arg("SceAddressSanitizer_nosubmission_stub_weak"));
+  if (SanArgs.needsTsanRt())
+    CmdArgs.push_back(arg("SceThreadSanitizer_nosubmission_stub_weak"));
+}
+
+void tools::PScpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
+                                      const InputInfo &Output,
+                                      const InputInfoList &Inputs,
+                                      const ArgList &Args,
+                                      const char *LinkingOutput) const {
   auto &TC = static_cast<const toolchains::PS4PS5Base &>(getToolChain());
   const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
@@ -228,12 +244,18 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
   getFilePaths().push_back(std::string(SDKLibDir.str()));
 }
 
-Tool *toolchains::PS4PS5Base::buildAssembler() const {
-  return new tools::PS4cpu::Assemble(*this);
+Tool *toolchains::PS4CPU::buildAssembler() const {
+  return new tools::PScpu::Assemble(*this);
+}
+
+Tool *toolchains::PS5CPU::buildAssembler() const {
+  // PS5 does not support an external assembler.
+  getDriver().Diag(clang::diag::err_no_external_assembler);
+  return nullptr;
 }
 
 Tool *toolchains::PS4PS5Base::buildLinker() const {
-  return new tools::PS4cpu::Link(*this);
+  return new tools::PScpu::Link(*this);
 }
 
 SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
@@ -242,6 +264,12 @@ SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Vptr;
+  return Res;
+}
+
+SanitizerMask toolchains::PS5CPU::getSupportedSanitizers() const {
+  SanitizerMask Res = PS4PS5Base::getSupportedSanitizers();
+  Res |= SanitizerKind::Thread;
   return Res;
 }
 
@@ -294,3 +322,8 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
 toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,
                            const llvm::opt::ArgList &Args)
     : PS4PS5Base(D, Triple, Args, "PS4", "SCE_ORBIS_SDK_DIR") {}
+
+// PS5 toolchain.
+toolchains::PS5CPU::PS5CPU(const Driver &D, const llvm::Triple &Triple,
+                           const llvm::opt::ArgList &Args)
+    : PS4PS5Base(D, Triple, Args, "PS5", "SCE_PROSPERO_SDK_DIR") {}
