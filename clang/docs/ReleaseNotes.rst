@@ -142,8 +142,12 @@ Improvements to Clang's diagnostics
   diagnostic remains off by default but is now enabled via ``-pedantic`` due to
   it being a deprecation warning. ``-Wdeprecated-non-prototype`` will diagnose
   cases where the deprecated declarations or definitions of a function without
-  a prototype will change behavior in C2x. This diagnostic is grouped under the
-  ``-Wstrict-prototypes`` warning group, but is enabled by default.
+  a prototype will change behavior in C2x. Additionally, it will diagnose calls
+  which pass arguments to a function without a prototype. This warning is
+  enabled only when the ``-Wdeprecated-non-prototype`` option is enabled at the
+  function declaration site, which allows a developer to disable the diagnostic
+  for all callers at the point of declaration. This diagnostic is grouped under
+  the ``-Wstrict-prototypes`` warning group, but is enabled by default.
 - Clang now appropriately issues an error in C when a definition of a function
   without a prototype and with no arguments is an invalid redeclaration of a
   function with a prototype. e.g., ``void f(int); void f() {}`` is now properly

@@ -5554,6 +5554,10 @@ def warn_missing_sentinel : Warning <
   InGroup<Sentinel>;
 def note_sentinel_here : Note<
   "%select{function|method|block}0 has been explicitly marked sentinel here">;
+def warn_strict_uses_without_prototype : Warning<
+  "passing arguments to %select{a function|%1}0 without a prototype is "
+  "deprecated in all versions of C and is not supported in C2x">,
+  InGroup<DeprecatedNonPrototype>;
 def warn_missing_prototype : Warning<
   "no previous prototype for function %0">,
   InGroup<DiagGroup<"missing-prototypes">>, DefaultIgnore;
