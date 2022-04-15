@@ -104,3 +104,20 @@ void CIRGenFunction::getVTablePointers(BaseSubobject Base,
   }
 }
 
+Address CIRGenFunction::LoadCXXThisAddress() {
+  assert(CurFuncDecl && "loading 'this' without a func declaration?");
+  assert(isa<CXXMethodDecl>(CurFuncDecl));
+
+  // Lazily compute CXXThisAlignment.
+  if (CXXThisAlignment.isZero()) {
+    // Just use the best known alignment for the parent.
+    // TODO: if we're currently emitting a complete-object ctor/dtor, we can
+    // always use the complete-object alignment.
+    auto RD = cast<CXXMethodDecl>(CurFuncDecl)->getParent();
+    CXXThisAlignment = CGM.getClassPointerAlignment(RD);
+  }
+
+  // Consider how to do this if we ever have multiple returns
+  auto Result = LoadCXXThis()->getOpResult(0);
+  return Address(Result, CXXThisAlignment);
+}
