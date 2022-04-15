@@ -294,6 +294,7 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
   const auto FD = cast<FunctionDecl>(GD.getDecl());
   CurGD = GD;
 
+  FnRetQualTy = FD->getReturnType();
   if (FD->isInlineBuiltinDeclaration()) {
     llvm_unreachable("NYI");
   } else {
