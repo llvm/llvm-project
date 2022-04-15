@@ -288,9 +288,44 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
   insertCleanupAndLeave(currBlock);
 }
 
-mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp fn,
+mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
                                           const CIRGenFunctionInfo &FnInfo) {
-  auto *FD = cast<FunctionDecl>(GD.getDecl());
+  assert(Fn && "generating code for a null function");
+  const auto FD = cast<FunctionDecl>(GD.getDecl());
+  if (FD->isInlineBuiltinDeclaration()) {
+    llvm_unreachable("NYI");
+  } else {
+    // Detect the unusual situation where an inline version is shadowed by a
+    // non-inline version. In that case we should pick the external one
+    // everywhere. That's GCC behavior too. Unfortunately, I cannot find a way
+    // to detect that situation before we reach codegen, so do some late
+    // replacement.
+    for (const auto *PD = FD->getPreviousDecl(); PD;
+         PD = PD->getPreviousDecl()) {
+      if (LLVM_UNLIKELY(PD->isInlineBuiltinDeclaration())) {
+        llvm_unreachable("NYI");
+      }
+    }
+  }
+
+  // Check if we should generate debug info for this function.
+  if (FD->hasAttr<NoDebugAttr>()) {
+    llvm_unreachable("NYI");
+  }
+
+  // If this is a function specialization then use the pattern body as the
+  // location for the function.
+  if (const auto *SpecDecl = FD->getTemplateInstantiationPattern())
+    llvm_unreachable("NYI");
+
+  Stmt *Body = FD->getBody();
+
+  if (Body) {
+    // Coroutines always emit lifetime markers
+    if (isa<CoroutineBodyStmt>(Body))
+      llvm_unreachable("Coroutines NYI");
+  }
+
   // Create a scope in the symbol table to hold variable declarations.
   SymTableScopeTy varScope(symbolTable);
 
@@ -305,7 +340,7 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp fn,
 
   // In MLIR the entry block of the function is special: it must have the
   // same argument list as the function itself.
-  mlir::Block *entryBlock = fn.addEntryBlock();
+  mlir::Block *entryBlock = Fn.addEntryBlock();
 
   // Set the insertion point in the builder to the beginning of the
   // function body, it will be used throughout the codegen to create
@@ -348,16 +383,16 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp fn,
 
     // Emit the body of the function.
     if (mlir::failed(buildFunctionBody(FD->getBody()))) {
-      fn.erase();
+      Fn.erase();
       return nullptr;
     }
     assert(builder.getInsertionBlock() && "Should be valid");
   }
 
-  if (mlir::failed(fn.verifyBody()))
+  if (mlir::failed(Fn.verifyBody()))
     return nullptr;
 
-  return fn;
+  return Fn;
 }
 
 /// ShouldInstrumentFunction - Return true if the current function should be
