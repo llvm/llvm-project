@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenFunction.h"
+#include "CIRGenCXXABI.h"
 #include "CIRGenModule.h"
 
 #include "clang/AST/ExprObjC.h"
@@ -372,4 +373,37 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD,
     return nullptr;
 
   return function;
+}
+
+clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl GD,
+                                                     FunctionArgList &Args) {
+  const auto *FD = cast<FunctionDecl>(GD.getDecl());
+  QualType ResTy = FD->getReturnType();
+
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (MD && MD->isInstance()) {
+    llvm_unreachable("NYI");
+  }
+
+  // The base version of an inheriting constructor whose constructed base is a
+  // virtual base is not passed any arguments (because it doesn't actually
+  // call the inherited constructor).
+  bool PassedParams = true;
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(FD))
+    llvm_unreachable("NYI");
+
+  if (PassedParams) {
+    for (auto *Param : FD->parameters()) {
+      Args.push_back(Param);
+      if (!Param->hasAttr<PassObjectSizeAttr>())
+        continue;
+
+      llvm_unreachable("PassObjectSizeAttr NYI");
+    }
+  }
+
+  if (MD && (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)))
+    llvm_unreachable("NYI");
+
+  return ResTy;
 }

@@ -500,6 +500,9 @@ public:
   mlir::FuncOp generateCode(clang::GlobalDecl GD,
                             const CIRGenFunctionInfo &FnInfo);
 
+  clang::QualType buildFunctionArgList(clang::GlobalDecl GD,
+                                       FunctionArgList &Args);
+
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
     /// The address of the alloca for languages with explicit address space
