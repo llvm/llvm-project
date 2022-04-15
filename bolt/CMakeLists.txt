@@ -59,30 +59,7 @@ if (BOLT_ENABLE_RUNTIME)
     COMPONENT bolt)
 endif()
 
-# Get the current git revision for BOLT.
-find_program(git_executable NAMES git git.exe git.cmd)
-if (git_executable)
-  execute_process(COMMAND ${git_executable} rev-parse HEAD
-    WORKING_DIRECTORY ${LLVM_MAIN_SRC_DIR}
-    TIMEOUT 5
-    RESULT_VARIABLE git_result
-    OUTPUT_VARIABLE git_output)
-  if( git_result EQUAL 0 )
-    string(STRIP "${git_output}" git_ref_id)
-    set(BOLT_REVISION "${git_ref_id}")
-  endif()
-endif()
-
 find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")
-
-# If we can't find a revision, set it to "<unknown>".
-if (NOT BOLT_REVISION)
-  set(BOLT_REVISION "<unknown>")
-endif()
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/bolt/Utils/BoltRevision.inc.in
-  ${CMAKE_CURRENT_BINARY_DIR}/include/bolt/Utils/BoltRevision.inc)
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
