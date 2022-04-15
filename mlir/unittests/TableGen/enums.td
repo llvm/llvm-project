@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 def CaseA: I32EnumAttrCase<"CaseA", 0>;
