@@ -1,3 +1,17 @@
+//===--- CIRGenCall.cpp - Encapsulate calling convention details ----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// These classes wrap the information about a call or function
+// definition used to handle ABI compliancy.
+//
+//===----------------------------------------------------------------------===//
+
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenTypes.h"
@@ -575,6 +589,87 @@ void CIRGenFunction::buildCallArgs(
   }
 }
 
+/// Returns the canonical formal type of the given C++ method.
+static CanQual<FunctionProtoType> GetFormalType(const CXXMethodDecl *MD) {
+  return MD->getType()
+      ->getCanonicalTypeUnqualified()
+      .getAs<FunctionProtoType>();
+}
+
+/// Adds the formal parameters in FPT to the given prefix. If any parameter in
+/// FPT has pass_object_size_attrs, then we'll add parameters for those, too.
+static void appendParameterTypes(
+    const CIRGenTypes &CGT, SmallVectorImpl<CanQualType> &prefix,
+    SmallVectorImpl<FunctionProtoType::ExtParameterInfo> &paramInfos,
+    CanQual<FunctionProtoType> FPT) {
+  // Fast path: don't touch param info if we don't need to.
+  if (!FPT->hasExtParameterInfos()) {
+    assert(paramInfos.empty() &&
+           "We have paramInfos, but the prototype doesn't?");
+    prefix.append(FPT->param_type_begin(), FPT->param_type_end());
+    return;
+  }
+
+  assert(false && "params NYI");
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
+  auto *MD = cast<CXXMethodDecl>(GD.getDecl());
+
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
+  argTypes.push_back(DeriveThisType(MD->getParent(), MD));
+
+  bool PassParams = true;
+
+  if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
+    // A base class inheriting constructor doesn't get forwarded arguments
+    // needed to construct a virtual base (or base class thereof)
+    assert(!CD->getInheritedConstructor() && "Inheritance NYI");
+  }
+
+  CanQual<FunctionProtoType> FTP = GetFormalType(MD);
+
+  if (PassParams)
+    appendParameterTypes(*this, argTypes, paramInfos, FTP);
+
+  assert(paramInfos.empty() && "NYI");
+
+  assert(!MD->isVariadic() && "Variadic fns NYI");
+  RequiredArgs required = RequiredArgs::All;
+  (void)required;
+
+  FunctionType::ExtInfo extInfo = FTP->getExtInfo();
+
+  assert(!TheCXXABI.HasThisReturn(GD) && "NYI");
+
+  CanQualType resultType = Context.VoidTy;
+  (void)resultType;
+
+  return arrangeCIRFunctionInfo(resultType, /*instanceMethod=*/true,
+                                /*chainCall=*/false, argTypes, extInfo,
+                                paramInfos, required);
+}
+
+/// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
+/// qualification. Either or both of RD and MD may be null. A null RD indicates
+/// that there is no meaningful 'this' type, and a null MD can occur when
+/// calling a method pointer.
+CanQualType CIRGenTypes::DeriveThisType(const CXXRecordDecl *RD,
+                                        const CXXMethodDecl *MD) {
+  QualType RecTy;
+  if (RD)
+    RecTy = getContext().getTagDeclType(RD)->getCanonicalTypeInternal();
+  else
+    assert(false && "CXXMethodDecl NYI");
+
+  if (MD)
+    RecTy = getContext().getAddrSpaceQualType(
+        RecTy, MD->getMethodQualifiers().getAddressSpace());
+  return getContext().getPointerType(CanQualType::CreateUnsafe(RecTy));
+}
+
 bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
                                          QualType ReturnType) {
   // We can't just disard the return value for a record type with a complex
@@ -586,5 +681,3 @@ bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
 
   return ReturnType.isTriviallyCopyableType(Context);
 }
-
-

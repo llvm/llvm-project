@@ -118,6 +118,11 @@ public:
   /// Convert clang calling convention to LLVM calling convention.
   unsigned ClangCallConvToCIRCallConv(clang::CallingConv CC);
 
+  /// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
+  /// qualification.
+  clang::CanQualType DeriveThisType(const clang::CXXRecordDecl *RD,
+                                    const clang::CXXMethodDecl *MD);
+
   /// This map keeps cache of llvm::Types and maps clang::Type to
   /// corresponding llvm::Type.
   using TypeCacheTy = llvm::DenseMap<const clang::Type *, mlir::Type>;
@@ -180,6 +185,8 @@ public:
   /// function pointer type.
   const CIRGenFunctionInfo &
   arrangeFunctionDeclaration(const clang::FunctionDecl *FD);
+
+  const CIRGenFunctionInfo &arrangeCXXStructorDeclaration(clang::GlobalDecl GD);
 
   const CIRGenFunctionInfo &
   arrangeFreeFunctionCall(const CallArgList &Args,
