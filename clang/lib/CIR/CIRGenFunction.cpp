@@ -292,6 +292,8 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
                                           const CIRGenFunctionInfo &FnInfo) {
   assert(Fn && "generating code for a null function");
   const auto FD = cast<FunctionDecl>(GD.getDecl());
+  CurGD = GD;
+
   if (FD->isInlineBuiltinDeclaration()) {
     llvm_unreachable("NYI");
   } else {
