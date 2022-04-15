@@ -1,4 +1,4 @@
-# REQUIRES: x86-registered-target
+# REQUIRES: x86-registered-target, asserts
 
 ## Check that --filter works properly.
 # RUN: cp -f %S/Inputs/x86-loopvectorize-costmodel.ll %t.ll && %update_analyze_test_checks --filter "LV: Found an estimated cost of [0-9]+ for VF [0-9]+ For instruction:\s*%v0 = load float, float\* %in0, align 4" %t.ll
