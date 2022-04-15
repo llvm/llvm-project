@@ -21,21 +21,45 @@ class TestingConfig(object):
             'LLVM_DISABLE_CRASH_REPORT' : '1',
             }
 
-        pass_vars = ['LIBRARY_PATH', 'LD_LIBRARY_PATH', 'SYSTEMROOT', 'TERM',
-                     'CLANG', 'LLDB', 'LD_PRELOAD', 'ASAN_OPTIONS',
-                     'UBSAN_OPTIONS', 'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL',
-                     'SSH_AUTH_SOCK', 'SANITIZER_IGNORE_CVE_2016_2143',
-                     'TMPDIR', 'TMP', 'TEMP', 'TEMPDIR', 'AVRLIT_BOARD',
-                     'AVRLIT_PORT', 'FILECHECK_OPTS', 'VCINSTALLDIR',
-                     'VCToolsinstallDir', 'VSINSTALLDIR', 'WindowsSdkDir',
-                     'WindowsSDKLibVersion', 'SOURCE_DATE_EPOCH','GTEST_FILTER']
+        pass_vars = [
+            'LIBRARY_PATH',
+            'LD_LIBRARY_PATH',
+            'SYSTEMROOT',
+            'TERM',
+            'CLANG',
+            'LLDB',
+            'LD_PRELOAD',
+            'ASAN_OPTIONS',
+            'UBSAN_OPTIONS',
+            'LSAN_OPTIONS',
+            'ADB',
+            'ANDROID_SERIAL',
+            'SSH_AUTH_SOCK',
+            'SANITIZER_IGNORE_CVE_2016_2143',
+            'TMPDIR',
+            'TMP',
+            'TEMP',
+            'TEMPDIR',
+            'AVRLIT_BOARD',
+            'AVRLIT_PORT',
+            'FILECHECK_OPTS',
+            'VCINSTALLDIR',
+            'VCToolsinstallDir',
+            'VSINSTALLDIR',
+            'WindowsSdkDir',
+            'WindowsSDKLibVersion',
+            'SOURCE_DATE_EPOCH',
+            'GTEST_FILTER',
+        ]
 
         if sys.platform == 'win32':
-            pass_vars.append('COMSPEC')
-            pass_vars.append('INCLUDE')
-            pass_vars.append('LIB')
-            pass_vars.append('PATHEXT')
-            pass_vars.append('USERPROFILE')
+            pass_vars += [
+                'COMSPEC',
+                'INCLUDE',
+                'LIB',
+                'PATHEXT',
+                'USERPROFILE',
+            ]
             environment['PYTHONBUFFERED'] = '1'
 
         for var in pass_vars:
