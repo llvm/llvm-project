@@ -291,7 +291,6 @@ public:
   /// delcs.
   DeclMapTy LocalDeclMap;
 
-
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
 
@@ -498,6 +497,9 @@ public:
                                        mlir::Type condType,
                                        mlir::cir::CaseAttr &caseEntry);
 
+  mlir::FuncOp generateCode(clang::GlobalDecl GD,
+                            const CIRGenFunctionInfo &FnInfo);
+
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
     /// The address of the alloca for languages with explicit address space
@@ -593,9 +595,6 @@ public:
   mlir::Value buildScalarConversion(mlir::Value Src, clang::QualType SrcTy,
                                     clang::QualType DstTy,
                                     clang::SourceLocation Loc);
-
-  // Emit a new function and add it to the MLIR module.
-  mlir::FuncOp buildFunction(const clang::FunctionDecl *FD);
 
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.

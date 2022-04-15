@@ -295,7 +295,9 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
   insertCleanupAndLeave(currBlock);
 }
 
-mlir::FuncOp CIRGenFunction::buildFunction(const FunctionDecl *FD) {
+mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD,
+                                          const CIRGenFunctionInfo &FnInfo) {
+  auto *FD = cast<FunctionDecl>(GD.getDecl());
   // Create a scope in the symbol table to hold variable declarations.
   SymTableScopeTy varScope(symbolTable);
 
