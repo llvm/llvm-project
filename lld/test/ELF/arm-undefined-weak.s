@@ -13,6 +13,9 @@
 
  .weak target
  .type target, %function
+ .weak undefweak2
+ .hidden undefweak2
+ .type undefweak2, %function
 
  .text
  .global _start
@@ -30,6 +33,9 @@ _start:
 /// R_ARM_REL32
  .word target - .
 
+bl_undefweak2:
+ bl undefweak2
+
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: 100100b4 <_start>:
@@ -39,3 +45,5 @@ _start:
 // CHECK-NEXT: 100100c0: movt    r0, #0
 // CHECK-NEXT: 100100c4: movw    r0, #0
 // CHECK:      100100c8: 00 00 00 00     .word   0x00000000
+// CHECK-LABEL: <bl_undefweak2>
+// CHECK-NEXT:    bl {{.*}} <bl_undefweak2+0x4>
