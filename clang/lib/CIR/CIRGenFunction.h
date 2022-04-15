@@ -698,6 +698,8 @@ public:
   void buildCtorPrologue(const clang::CXXConstructorDecl *CD,
                          clang::CXXCtorType Type, FunctionArgList &Args);
 
+  void buildConstructorBody(FunctionArgList &Args);
+
   static bool
   IsConstructorDelegationValid(const clang::CXXConstructorDecl *Ctor);
 

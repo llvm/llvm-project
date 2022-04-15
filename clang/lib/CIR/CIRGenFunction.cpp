@@ -549,6 +549,62 @@ void CIRGenFunction::buildCXXConstructorCall(
              "vtable assumption loads NYI");
 }
 
+void CIRGenFunction::buildConstructorBody(FunctionArgList &Args) {
+  // TODO: EmitAsanPrologueOrEpilogue(true);
+  const auto *Ctor = cast<CXXConstructorDecl>(CurGD.getDecl());
+  auto CtorType = CurGD.getCtorType();
+
+  assert((CGM.getTarget().getCXXABI().hasConstructorVariants() ||
+          CtorType == Ctor_Complete) &&
+         "can only generate complete ctor for this ABI");
+
+  // Before we go any further, try the complete->base constructor delegation
+  // optimization.
+  if (CtorType == Ctor_Complete && IsConstructorDelegationValid(Ctor) &&
+      CGM.getTarget().getCXXABI().hasConstructorVariants()) {
+    buildDelegateCXXConstructorCall(Ctor, Ctor_Base, Args, Ctor->getEndLoc());
+    return;
+  }
+
+  const FunctionDecl *Definition = nullptr;
+  Stmt *Body = Ctor->getBody(Definition);
+  assert(Definition == Ctor && "emitting wrong constructor body");
+
+  // Enter the function-try-block before the constructor prologue if
+  // applicable.
+  bool IsTryBody = (Body && isa<CXXTryStmt>(Body));
+  if (IsTryBody)
+    llvm_unreachable("NYI");
+
+  // TODO: incrementProfileCounter
+
+  // TODO: RunClenaupCcope RunCleanups(*this);
+
+  // TODO: in restricted cases, we can emit the vbase initializers of a
+  // complete ctor and then delegate to the base ctor.
+
+  // Emit the constructor prologue, i.e. the base and member initializers.
+  buildCtorPrologue(Ctor, CtorType, Args);
+
+  // Emit the body of the statement.
+  if (IsTryBody)
+    llvm_unreachable("NYI");
+  else {
+    // TODO: propagate this result via mlir::logical result. Just unreachable
+    // now just to have it handled.
+    if (mlir::failed(buildStmt(Body, true)))
+      llvm_unreachable("NYI");
+  }
+
+  // Emit any cleanup blocks associated with the member or base initializers,
+  // which inlcudes (along the exceptional path) the destructors for those
+  // members and bases that were fully constructed.
+  /// TODO: RunCleanups.ForceCleanup();
+
+  if (IsTryBody)
+    llvm_unreachable("NYI");
+}
+
 void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
                                    mlir::FuncOp Fn,
                                    const CIRGenFunctionInfo &FnInfo,
