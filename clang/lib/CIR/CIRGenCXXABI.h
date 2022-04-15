@@ -91,6 +91,14 @@ public:
   /// Gets the mangle context.
   clang::MangleContext &getMangleContext() { return *MangleCtx; }
 
+  /// Returns true if the given constructor or destructor is one of the kinds
+  /// that the ABI says returns 'this' (only applies when called non-virtually
+  /// for destructors).
+  ///
+  /// There currently is no way to indicate if a destructor returns 'this' when
+  /// called virtually, and CIR generation does not support this case.
+  virtual bool HasThisReturn(clang::GlobalDecl GD) const { return false; }
+
   virtual ~CIRGenCXXABI();
 };
 
