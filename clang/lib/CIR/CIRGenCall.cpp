@@ -16,6 +16,7 @@
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenTypes.h"
 
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/GlobalDecl.h"
 
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
@@ -737,7 +738,6 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
                                 /*chainCall=*/false, ArgTypes, Info, ParamInfos,
                                 Required);
 }
-
 
 bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
                                          QualType ReturnType) {
