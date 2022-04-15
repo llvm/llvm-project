@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes=pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 --pgo-memop-optimize-memcmp-bcmp -S | FileCheck %s --check-prefix=MEMOP_OPT
+; RUN: opt < %s -passes=pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=90 -pgo-memop-percent-threshold=15 -pgo-memop-optimize-memcmp-bcmp -pass-remarks-with-hotness -pass-remarks-output=%t.opt.yaml -S | FileCheck %s --check-prefix=MEMOP_OPT
 ; RUN: FileCheck %s -input-file=%t.opt.yaml --check-prefix=YAML
 ; RUN: FileCheck %s -input-file=%t.opt.yaml --check-prefix=YAML
 
