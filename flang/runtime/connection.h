@@ -34,6 +34,13 @@ struct ConnectionAttributes {
     // Formatted stream files are viewed as having records, at least on input
     return access != Access::Stream || !isUnformatted.value_or(true);
   }
+
+  template <typename CHAR = char> constexpr bool useUTF8() const {
+    // For wide CHARACTER kinds, always use UTF-8 for formatted I/O.
+    // For single-byte CHARACTER, encode characters >= 0x80 with
+    // UTF-8 iff the mode is set.
+    return sizeof(CHAR) > 1 || isUTF8;
+  }
 };
 
 struct ConnectionState : public ConnectionAttributes {

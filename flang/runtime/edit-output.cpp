@@ -506,7 +506,7 @@ bool ListDirectedCharacterOutput(IoStatementState &io,
     // Undelimited list-directed output
     ok = ok && list.EmitLeadingSpaceOrAdvance(io, length > 0 ? 1 : 0, true);
     std::size_t put{0};
-    std::size_t oneIfUTF8{connection.isUTF8 ? 1 : length};
+    std::size_t oneIfUTF8{connection.useUTF8<CHAR>() ? 1 : length};
     while (ok && put < length) {
       if (std::size_t chunk{std::min<std::size_t>(
               std::min<std::size_t>(length - put, oneIfUTF8),

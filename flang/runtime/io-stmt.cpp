@@ -477,7 +477,7 @@ bool IoStatementState::EmitEncoded(const CHAR *data0, std::size_t chars) {
   // Don't allow sign extension
   using UnsignedChar = std::make_unsigned_t<CHAR>;
   const UnsignedChar *data{reinterpret_cast<const UnsignedChar *>(data0)};
-  if (GetConnectionState().isUTF8) {
+  if (GetConnectionState().useUTF8<CHAR>()) {
     char buffer[256];
     std::size_t at{0};
     while (chars-- > 0) {
