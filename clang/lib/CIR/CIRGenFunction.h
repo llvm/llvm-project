@@ -336,6 +336,10 @@ public:
   /// potentially set the return value.
   bool SawAsmBlock = false;
 
+  /// In C++, whether we are code generating a thunk. This controls whether we
+  /// should emit cleanups.
+  bool CurFuncIsThunk = false;
+
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
 
@@ -449,6 +453,7 @@ public:
   /// appropriately convert form the memory representation to the CIR value
   /// representation. The l-value must be a simple l-value.
   mlir::Value buildLoadOfScalar(LValue lvalue, clang::SourceLocation Loc);
+
   void buildCallArgs(
       CallArgList &Args, PrototypeWrapper Prototype,
       llvm::iterator_range<clang::CallExpr::const_arg_iterator> ArgRange,
@@ -739,6 +744,12 @@ public:
            "Invalid argument to GetAddrOfLocalVar(), no decl!");
     return it->second;
   }
+
+  /// buildDelegatingCallArg - We are performing a delegate call; that is, the
+  /// current function is delegating to another one. Produce a r-value suitable
+  /// for passing the given parameter.
+  void buildDelegateCallArg(CallArgList &args, const clang::VarDecl *param,
+                            clang::SourceLocation loc);
 
   /// ShouldInstrumentFunction - Return true if the current function should be
   /// instrumented with __cyg_profile_func_* calls
