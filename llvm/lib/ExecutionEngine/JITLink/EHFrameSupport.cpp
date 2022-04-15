@@ -20,10 +20,12 @@ namespace llvm {
 namespace jitlink {
 
 EHFrameEdgeFixer::EHFrameEdgeFixer(StringRef EHFrameSectionName,
-                                   unsigned PointerSize, Edge::Kind Delta64,
-                                   Edge::Kind Delta32, Edge::Kind NegDelta32)
+                                   unsigned PointerSize, Edge::Kind Pointer32,
+                                   Edge::Kind Pointer64, Edge::Kind Delta32,
+                                   Edge::Kind Delta64, Edge::Kind NegDelta32)
     : EHFrameSectionName(EHFrameSectionName), PointerSize(PointerSize),
-      Delta64(Delta64), Delta32(Delta32), NegDelta32(NegDelta32) {}
+      Pointer32(Pointer32), Pointer64(Pointer64), Delta32(Delta32),
+      Delta64(Delta64), NegDelta32(NegDelta32) {}
 
 Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
   auto *EHFrame = G.findSectionByName(EHFrameSectionName);
@@ -84,10 +86,7 @@ Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
 
 Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
 
-  LLVM_DEBUG({
-    dbgs() << "  Processing block at " << formatv("{0:x16}", B.getAddress())
-           << "\n";
-  });
+  LLVM_DEBUG(dbgs() << "  Processing block at " << B.getAddress() << "\n");
 
   // eh-frame should not contain zero-fill blocks.
   if (B.isZeroFill())
@@ -121,7 +120,7 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
 
     LLVM_DEBUG({
       dbgs() << "    Processing CFI record at "
-             << formatv("{0:x16}", B.getAddress() + RecordStartOffset) << "\n";
+             << (B.getAddress() + RecordStartOffset) << "\n";
     });
 
     // Get the record length.
@@ -156,7 +155,7 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
     if (CIEDelta == 0) {
       if (auto Err = processCIE(PC, B, RecordStartOffset,
                                 CIEDeltaFieldOffset + RecordRemaining,
-                                CIEDeltaFieldOffset))
+                                CIEDeltaFieldOffset, BlockEdges))
         return Err;
     } else {
       if (auto Err = processFDE(PC, B, RecordStartOffset,
@@ -175,7 +174,8 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
 
 Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
                                    size_t RecordOffset, size_t RecordLength,
-                                   size_t CIEDeltaFieldOffset) {
+                                   size_t CIEDeltaFieldOffset,
+                                   const BlockEdgeMap &BlockEdges) {
 
   LLVM_DEBUG(dbgs() << "      Record is CIE\n");
 
@@ -234,66 +234,59 @@ Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
   if (auto Err = RecordReader.skip(1))
     return Err;
 
-  uint64_t AugmentationDataLength = 0;
-  if (auto Err = RecordReader.readULEB128(AugmentationDataLength))
-    return Err;
+  if (AugInfo->AugmentationDataPresent) {
 
-  uint32_t AugmentationDataStartOffset = RecordReader.getOffset();
+    CIEInfo.AugmentationDataPresent = true;
 
-  uint8_t *NextField = &AugInfo->Fields[0];
-  while (uint8_t Field = *NextField++) {
-    switch (Field) {
-    case 'L': {
-      CIEInfo.FDEsHaveLSDAField = true;
-      uint8_t LSDAPointerEncoding;
-      if (auto Err = RecordReader.readInteger(LSDAPointerEncoding))
-        return Err;
-      if (!isSupportedPointerEncoding(LSDAPointerEncoding))
-        return make_error<JITLinkError>(
-            "Unsupported LSDA pointer encoding " +
-            formatv("{0:x2}", LSDAPointerEncoding) + " in CIE at " +
-            formatv("{0:x16}", CIESymbol.getAddress()));
-      CIEInfo.LSDAPointerEncoding = LSDAPointerEncoding;
-      break;
+    uint64_t AugmentationDataLength = 0;
+    if (auto Err = RecordReader.readULEB128(AugmentationDataLength))
+      return Err;
+
+    uint32_t AugmentationDataStartOffset = RecordReader.getOffset();
+
+    uint8_t *NextField = &AugInfo->Fields[0];
+    while (uint8_t Field = *NextField++) {
+      switch (Field) {
+      case 'L':
+        CIEInfo.LSDAPresent = true;
+        if (auto PE = readPointerEncoding(RecordReader, B, "LSDA"))
+          CIEInfo.LSDAEncoding = *PE;
+        else
+          return PE.takeError();
+        break;
+      case 'P': {
+        auto PersonalityPointerEncoding =
+            readPointerEncoding(RecordReader, B, "personality");
+        if (!PersonalityPointerEncoding)
+          return PersonalityPointerEncoding.takeError();
+        if (auto Err =
+                getOrCreateEncodedPointerEdge(
+                    PC, BlockEdges, *PersonalityPointerEncoding, RecordReader,
+                    B, RecordOffset + RecordReader.getOffset(), "personality")
+                    .takeError())
+          return Err;
+        break;
+      }
+      case 'R':
+        if (auto PE = readPointerEncoding(RecordReader, B, "address")) {
+          CIEInfo.AddressEncoding = *PE;
+          if (CIEInfo.AddressEncoding == dwarf::DW_EH_PE_omit)
+            return make_error<JITLinkError>(
+                "Invalid address encoding DW_EH_PE_omit in CIE at " +
+                formatv("{0:x}", (B.getAddress() + RecordOffset).getValue()));
+        } else
+          return PE.takeError();
+        break;
+      default:
+        llvm_unreachable("Invalid augmentation string field");
+      }
     }
-    case 'P': {
-      uint8_t PersonalityPointerEncoding = 0;
-      if (auto Err = RecordReader.readInteger(PersonalityPointerEncoding))
-        return Err;
-      if (PersonalityPointerEncoding !=
-          (dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-           dwarf::DW_EH_PE_sdata4))
-        return make_error<JITLinkError>(
-            "Unspported personality pointer "
-            "encoding " +
-            formatv("{0:x2}", PersonalityPointerEncoding) + " in CIE at " +
-            formatv("{0:x16}", CIESymbol.getAddress()));
-      uint32_t PersonalityPointerAddress;
-      if (auto Err = RecordReader.readInteger(PersonalityPointerAddress))
-        return Err;
-      break;
-    }
-    case 'R': {
-      uint8_t FDEPointerEncoding;
-      if (auto Err = RecordReader.readInteger(FDEPointerEncoding))
-        return Err;
-      if (!isSupportedPointerEncoding(FDEPointerEncoding))
-        return make_error<JITLinkError>(
-            "Unsupported FDE pointer encoding " +
-            formatv("{0:x2}", FDEPointerEncoding) + " in CIE at " +
-            formatv("{0:x16}", CIESymbol.getAddress()));
-      CIEInfo.FDEPointerEncoding = FDEPointerEncoding;
-      break;
-    }
-    default:
-      llvm_unreachable("Invalid augmentation string field");
-    }
+
+    if (RecordReader.getOffset() - AugmentationDataStartOffset >
+        AugmentationDataLength)
+      return make_error<JITLinkError>("Read past the end of the augmentation "
+                                      "data while parsing fields");
   }
-
-  if (RecordReader.getOffset() - AugmentationDataStartOffset >
-      AugmentationDataLength)
-    return make_error<JITLinkError>("Read past the end of the augmentation "
-                                    "data while parsing fields");
 
   assert(!PC.CIEInfos.count(CIESymbol.getAddress()) &&
          "Multiple CIEs recorded at the same address?");
@@ -306,7 +299,7 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
                                    size_t RecordOffset, size_t RecordLength,
                                    size_t CIEDeltaFieldOffset,
                                    uint32_t CIEDelta,
-                                   BlockEdgeMap &BlockEdges) {
+                                   const BlockEdgeMap &BlockEdges) {
   LLVM_DEBUG(dbgs() << "      Record is FDE\n");
 
   orc::ExecutorAddr RecordAddress = B.getAddress() + RecordOffset;
@@ -334,8 +327,8 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
 
       LLVM_DEBUG({
         dbgs() << "        Adding edge at "
-               << formatv("{0:x16}", RecordAddress + CIEDeltaFieldOffset)
-               << " to CIE at: " << formatv("{0:x16}", CIEAddress) << "\n";
+               << (RecordAddress + CIEDeltaFieldOffset)
+               << " to CIE at: " << CIEAddress << "\n";
       });
       if (auto CIEInfoOrErr = PC.findCIEInfo(CIEAddress))
         CIEInfo = *CIEInfoOrErr;
@@ -347,8 +340,8 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
     } else {
       LLVM_DEBUG({
         dbgs() << "        Already has edge at "
-               << formatv("{0:x16}", RecordAddress + CIEDeltaFieldOffset)
-               << " to CIE at " << formatv("{0:x16}", CIEAddress) << "\n";
+               << (RecordAddress + CIEDeltaFieldOffset) << " to CIE at "
+               << CIEAddress << "\n";
       });
       auto &EI = CIEEdgeItr->second;
       if (EI.Addend)
@@ -363,107 +356,41 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
     }
   }
 
-  {
-    // Process the PC-Begin field.
-    Block *PCBeginBlock = nullptr;
-    orc::ExecutorAddrDiff PCBeginFieldOffset = RecordReader.getOffset();
-    auto PCEdgeItr = BlockEdges.find(RecordOffset + PCBeginFieldOffset);
-    if (PCEdgeItr == BlockEdges.end()) {
-      auto PCBeginPtrInfo =
-          readEncodedPointer(CIEInfo->FDEPointerEncoding,
-                             RecordAddress + PCBeginFieldOffset, RecordReader);
-      if (!PCBeginPtrInfo)
-        return PCBeginPtrInfo.takeError();
-      orc::ExecutorAddr PCBegin = PCBeginPtrInfo->first;
-      Edge::Kind PCBeginEdgeKind = PCBeginPtrInfo->second;
-      LLVM_DEBUG({
-        dbgs() << "        Adding edge at "
-               << (RecordAddress + PCBeginFieldOffset) << " to PC at "
-               << formatv("{0:x16}", PCBegin) << "\n";
-      });
-      auto PCBeginSym = getOrCreateSymbol(PC, PCBegin);
-      if (!PCBeginSym)
-        return PCBeginSym.takeError();
-      B.addEdge(PCBeginEdgeKind, RecordOffset + PCBeginFieldOffset, *PCBeginSym,
-                0);
-      PCBeginBlock = &PCBeginSym->getBlock();
-    } else {
-      auto &EI = PCEdgeItr->second;
-      LLVM_DEBUG({
-        dbgs() << "        Already has edge at "
-               << formatv("{0:x16}", RecordAddress + PCBeginFieldOffset)
-               << " to PC at " << formatv("{0:x16}", EI.Target->getAddress());
-        if (EI.Addend)
-          dbgs() << " + " << formatv("{0:x16}", EI.Addend);
-        dbgs() << "\n";
-      });
-
-      // Make sure the existing edge points at a defined block.
-      if (!EI.Target->isDefined()) {
-        auto EdgeAddr = RecordAddress + PCBeginFieldOffset;
-        return make_error<JITLinkError>("FDE edge at " +
-                                        formatv("{0:x16}", EdgeAddr) +
-                                        " points at external block");
-      }
-      PCBeginBlock = &EI.Target->getBlock();
-      if (auto Err = RecordReader.skip(
-              getPointerEncodingDataSize(CIEInfo->FDEPointerEncoding)))
-        return Err;
-    }
-
+  // Process the PC-Begin field.
+  LLVM_DEBUG({
+    dbgs() << "        Processing PC-begin at "
+           << (RecordAddress + RecordReader.getOffset()) << "\n";
+  });
+  if (auto PCBegin = getOrCreateEncodedPointerEdge(
+          PC, BlockEdges, CIEInfo->AddressEncoding, RecordReader, B,
+          RecordReader.getOffset(), "PC begin")) {
+    assert(*PCBegin && "PC-begin symbol not set");
     // Add a keep-alive edge from the FDE target to the FDE to ensure that the
     // FDE is kept alive if its target is.
-    assert(PCBeginBlock && "PC-begin block not recorded");
     LLVM_DEBUG({
       dbgs() << "        Adding keep-alive edge from target at "
-             << formatv("{0:x16}", PCBeginBlock->getAddress()) << " to FDE at "
-             << formatv("{0:x16}", RecordAddress) << "\n";
+             << (*PCBegin)->getBlock().getAddress() << " to FDE at "
+             << RecordAddress << "\n";
     });
-    PCBeginBlock->addEdge(Edge::KeepAlive, 0, FDESymbol, 0);
-  }
+    (*PCBegin)->getBlock().addEdge(Edge::KeepAlive, 0, FDESymbol, 0);
+  } else
+    return PCBegin.takeError();
 
   // Skip over the PC range size field.
-  if (auto Err = RecordReader.skip(
-          getPointerEncodingDataSize(CIEInfo->FDEPointerEncoding)))
+  if (auto Err = skipEncodedPointer(CIEInfo->AddressEncoding, RecordReader))
     return Err;
 
-  if (CIEInfo->FDEsHaveLSDAField) {
+  if (CIEInfo->AugmentationDataPresent) {
     uint64_t AugmentationDataSize;
     if (auto Err = RecordReader.readULEB128(AugmentationDataSize))
       return Err;
 
-    orc::ExecutorAddrDiff LSDAFieldOffset = RecordReader.getOffset();
-    auto LSDAEdgeItr = BlockEdges.find(RecordOffset + LSDAFieldOffset);
-    if (LSDAEdgeItr == BlockEdges.end()) {
-      auto LSDAPointerInfo =
-          readEncodedPointer(CIEInfo->LSDAPointerEncoding,
-                             RecordAddress + LSDAFieldOffset, RecordReader);
-      if (!LSDAPointerInfo)
-        return LSDAPointerInfo.takeError();
-      orc::ExecutorAddr LSDA = LSDAPointerInfo->first;
-      Edge::Kind LSDAEdgeKind = LSDAPointerInfo->second;
-      auto LSDASym = getOrCreateSymbol(PC, LSDA);
-      if (!LSDASym)
-        return LSDASym.takeError();
-      LLVM_DEBUG({
-        dbgs() << "        Adding edge at "
-               << formatv("{0:x16}", RecordAddress + LSDAFieldOffset)
-               << " to LSDA at " << formatv("{0:x16}", LSDA) << "\n";
-      });
-      B.addEdge(LSDAEdgeKind, RecordOffset + LSDAFieldOffset, *LSDASym, 0);
-    } else {
-      LLVM_DEBUG({
-        auto &EI = LSDAEdgeItr->second;
-        dbgs() << "        Already has edge at "
-               << formatv("{0:x16}", RecordAddress + LSDAFieldOffset)
-               << " to LSDA at " << formatv("{0:x16}", EI.Target->getAddress());
-        if (EI.Addend)
-          dbgs() << " + " << formatv("{0:x16}", EI.Addend);
-        dbgs() << "\n";
-      });
-      if (auto Err = RecordReader.skip(AugmentationDataSize))
+    if (CIEInfo->LSDAPresent)
+      if (auto Err = getOrCreateEncodedPointerEdge(
+                         PC, BlockEdges, CIEInfo->LSDAEncoding, RecordReader, B,
+                         RecordReader.getOffset(), "LSDA")
+                         .takeError())
         return Err;
-    }
   } else {
     LLVM_DEBUG(dbgs() << "        Record does not have LSDA field.\n");
   }
@@ -512,108 +439,155 @@ EHFrameEdgeFixer::parseAugmentationString(BinaryStreamReader &RecordReader) {
   return std::move(AugInfo);
 }
 
-bool EHFrameEdgeFixer::isSupportedPointerEncoding(uint8_t PointerEncoding) {
+Expected<uint8_t> EHFrameEdgeFixer::readPointerEncoding(BinaryStreamReader &R,
+                                                        Block &InBlock,
+                                                        const char *FieldName) {
   using namespace dwarf;
 
-  // We only support PC-rel for now.
-  if ((PointerEncoding & 0x70) != DW_EH_PE_pcrel)
-    return false;
+  uint8_t PointerEncoding;
+  if (auto Err = R.readInteger(PointerEncoding))
+    return Err;
 
-  // readEncodedPointer does not handle indirect.
-  if (PointerEncoding & DW_EH_PE_indirect)
-    return false;
-
-  // Supported datatypes.
+  bool Supported = true;
   switch (PointerEncoding & 0xf) {
-  case DW_EH_PE_absptr:
-  case DW_EH_PE_udata4:
-  case DW_EH_PE_udata8:
-  case DW_EH_PE_sdata4:
-  case DW_EH_PE_sdata8:
-    return true;
+  case DW_EH_PE_uleb128:
+  case DW_EH_PE_udata2:
+  case DW_EH_PE_sleb128:
+  case DW_EH_PE_sdata2:
+    Supported = false;
+    break;
+  }
+  if (Supported) {
+    switch (PointerEncoding & 0x70) {
+    case DW_EH_PE_textrel:
+    case DW_EH_PE_datarel:
+    case DW_EH_PE_funcrel:
+    case DW_EH_PE_aligned:
+      Supported = false;
+      break;
+    }
   }
 
-  return false;
+  if (Supported)
+    return PointerEncoding;
+
+  return make_error<JITLinkError>("Unsupported pointer encoding " +
+                                  formatv("{0:x2}", PointerEncoding) + " for " +
+                                  FieldName + "in CFI record at " +
+                                  formatv("{0:x16}", InBlock.getAddress()));
 }
 
-unsigned EHFrameEdgeFixer::getPointerEncodingDataSize(uint8_t PointerEncoding) {
+Error EHFrameEdgeFixer::skipEncodedPointer(uint8_t PointerEncoding,
+                                           BinaryStreamReader &RecordReader) {
   using namespace dwarf;
 
-  assert(isSupportedPointerEncoding(PointerEncoding) &&
-         "Unsupported pointer encoding");
+  // Switch absptr to corresponding udata encoding.
+  if ((PointerEncoding & 0xf) == DW_EH_PE_absptr)
+    PointerEncoding |= (PointerSize == 8) ? DW_EH_PE_udata8 : DW_EH_PE_udata4;
+
   switch (PointerEncoding & 0xf) {
-  case DW_EH_PE_absptr:
-    return PointerSize;
   case DW_EH_PE_udata4:
   case DW_EH_PE_sdata4:
-    return 4;
+    if (auto Err = RecordReader.skip(4))
+      return Err;
+    break;
   case DW_EH_PE_udata8:
   case DW_EH_PE_sdata8:
-    return 8;
+    if (auto Err = RecordReader.skip(8))
+      return Err;
+    break;
   default:
-    llvm_unreachable("Unsupported encoding");
+    llvm_unreachable("Unrecognized encoding");
   }
+  return Error::success();
 }
 
-Expected<std::pair<orc::ExecutorAddr, Edge::Kind>>
-EHFrameEdgeFixer::readEncodedPointer(uint8_t PointerEncoding,
-                                     orc::ExecutorAddr PointerFieldAddress,
-                                     BinaryStreamReader &RecordReader) {
-  assert(isSupportedPointerEncoding(PointerEncoding) &&
-         "Unsupported pointer encoding");
-
+Expected<Symbol *> EHFrameEdgeFixer::getOrCreateEncodedPointerEdge(
+    ParseContext &PC, const BlockEdgeMap &BlockEdges, uint8_t PointerEncoding,
+    BinaryStreamReader &RecordReader, Block &BlockToFix,
+    size_t PointerFieldOffset, const char *FieldName) {
   using namespace dwarf;
 
-  // Isolate data type, remap absptr to udata4 or udata8. This relies on us
-  // having verified that the graph uses 32-bit or 64-bit pointers only at the
-  // start of this pass.
-  uint8_t EffectiveType = PointerEncoding & 0xf;
-  if (EffectiveType == DW_EH_PE_absptr)
-    EffectiveType = (PointerSize == 8) ? DW_EH_PE_udata8 : DW_EH_PE_udata4;
+  if (PointerEncoding == DW_EH_PE_omit)
+    return nullptr;
 
-  orc::ExecutorAddr Addr;
-  Edge::Kind PointerEdgeKind = Edge::Invalid;
-  switch (EffectiveType) {
+  // If there's already an edge here then just skip the encoded pointer and
+  // return the edge's target.
+  {
+    auto EdgeI = BlockEdges.find(PointerFieldOffset);
+    if (EdgeI != BlockEdges.end()) {
+      LLVM_DEBUG({
+        dbgs() << "        Existing edge at "
+               << (BlockToFix.getAddress() + PointerFieldOffset) << " to "
+               << FieldName << " at " << EdgeI->second.Target->getAddress();
+        if (EdgeI->second.Target->hasName())
+          dbgs() << " (" << EdgeI->second.Target->getName() << ")";
+        dbgs() << "\n";
+      });
+      if (auto Err = skipEncodedPointer(PointerEncoding, RecordReader))
+        return Err;
+      return EdgeI->second.Target;
+    }
+  }
+
+  // Switch absptr to corresponding udata encoding.
+  if ((PointerEncoding & 0xf) == DW_EH_PE_absptr)
+    PointerEncoding |= (PointerSize == 8) ? DW_EH_PE_udata8 : DW_EH_PE_udata4;
+
+  // We need to create an edge. Start by reading the field value.
+  uint64_t FieldValue;
+  bool Is64Bit = false;
+  switch (PointerEncoding & 0xf) {
   case DW_EH_PE_udata4: {
     uint32_t Val;
     if (auto Err = RecordReader.readInteger(Val))
       return std::move(Err);
-    Addr = PointerFieldAddress + Val;
-    PointerEdgeKind = Delta32;
-    break;
-  }
-  case DW_EH_PE_udata8: {
-    uint64_t Val;
-    if (auto Err = RecordReader.readInteger(Val))
-      return std::move(Err);
-    Addr = PointerFieldAddress + Val;
-    PointerEdgeKind = Delta64;
+    FieldValue = Val;
     break;
   }
   case DW_EH_PE_sdata4: {
-    int32_t Val;
+    uint32_t Val;
     if (auto Err = RecordReader.readInteger(Val))
       return std::move(Err);
-    Addr = PointerFieldAddress + Val;
-    PointerEdgeKind = Delta32;
+    FieldValue = Val;
     break;
   }
-  case DW_EH_PE_sdata8: {
-    int64_t Val;
-    if (auto Err = RecordReader.readInteger(Val))
+  case DW_EH_PE_udata8:
+  case DW_EH_PE_sdata8:
+    Is64Bit = true;
+    if (auto Err = RecordReader.readInteger(FieldValue))
       return std::move(Err);
-    Addr = PointerFieldAddress + Val;
-    PointerEdgeKind = Delta64;
     break;
-  }
+  default:
+    llvm_unreachable("Unsupported encoding");
   }
 
-  if (PointerEdgeKind == Edge::Invalid)
-    return make_error<JITLinkError>(
-        "Unspported edge kind for encoded pointer at " +
-        formatv("{0:x}", PointerFieldAddress));
+  // Find the edge target and edge kind to use.
+  orc::ExecutorAddr Target;
+  Edge::Kind PtrEdgeKind = Edge::Invalid;
+  if ((PointerEncoding & 0x70) == DW_EH_PE_pcrel) {
+    Target = BlockToFix.getAddress() + PointerFieldOffset;
+    PtrEdgeKind = Is64Bit ? Delta64 : Delta32;
+  } else
+    PtrEdgeKind = Is64Bit ? Pointer64 : Pointer32;
+  Target += FieldValue;
 
-  return std::make_pair(Addr, Delta64);
+  // Find or create a symbol to point the edge at.
+  auto TargetSym = getOrCreateSymbol(PC, Target);
+  if (!TargetSym)
+    return TargetSym.takeError();
+  BlockToFix.addEdge(PtrEdgeKind, PointerFieldOffset, *TargetSym, 0);
+
+  LLVM_DEBUG({
+    dbgs() << "        Adding edge at "
+           << (BlockToFix.getAddress() + PointerFieldOffset) << " to "
+           << FieldName << " at " << TargetSym->getAddress();
+    if (TargetSym->hasName())
+      dbgs() << " (" << TargetSym->getName() << ")";
+    dbgs() << "\n";
+  });
+
+  return &*TargetSym;
 }
 
 Expected<Symbol &> EHFrameEdgeFixer::getOrCreateSymbol(ParseContext &PC,
