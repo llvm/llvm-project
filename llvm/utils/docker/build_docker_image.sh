@@ -27,19 +27,16 @@ Available options:
     -d|--docker-repository  docker repository for the image
     -t|--docker-tag         docker tag for the image
   Checkout arguments:
-    -b|--branch         svn branch to checkout, i.e. 'trunk',
-                        'branches/release_40'
-                        (default: 'trunk')
-    -r|--revision       svn revision to checkout
+    -b|--branch         git branch to checkout, i.e. 'main',
+                        'release/10.x'
+                        (default: 'main')
+    -r|--revision       git revision to checkout
     -c|--cherrypick     revision to cherry-pick. Can be specified multiple times.
                         Cherry-picks are performed in the sorted order using the
                         following command:
-                        'svn patch <(svn diff -c \$rev)'.
-    -p|--llvm-project   name of an svn project to checkout. Will also add the
-                        project to a list LLVM_ENABLE_PROJECTS, passed to CMake.
-                        For clang, please use 'clang', not 'cfe'.
-                        Project 'llvm' is always included and ignored, if
-                        specified.
+                        'git cherry-pick \$rev'.
+    -p|--llvm-project   Add the project to a list LLVM_ENABLE_PROJECTS, passed to
+                        CMake.
                         Can be specified multiple times.
     -c|--checksums      name of a file, containing checksums of llvm checkout.
                         Script will fail if checksums of the checkout do not
@@ -110,15 +107,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -p|--llvm-project)
       PROJ="$2"
-      if [ "$PROJ" == "cfe" ]; then
-        PROJ="clang"
-      fi
-
-      CHECKOUT_ARGS="$CHECKOUT_ARGS $1 $PROJ"
-      if [ "$PROJ" != "clang-tools-extra" ]; then
-        CMAKE_ENABLED_PROJECTS="$CMAKE_ENABLED_PROJECTS;$PROJ"
-      fi
-
+      CMAKE_ENABLED_PROJECTS="$CMAKE_ENABLED_PROJECTS;$PROJ"
       shift 2
       ;;
     -c|--checksums)

@@ -59,7 +59,8 @@ static bool equivalentValues(QualType Type, Value *Val1,
   if (auto *IndVal1 = dyn_cast<IndirectionValue>(Val1)) {
     auto *IndVal2 = cast<IndirectionValue>(Val2);
     assert(IndVal1->getKind() == IndVal2->getKind());
-    return &IndVal1->getPointeeLoc() == &IndVal2->getPointeeLoc();
+    if (&IndVal1->getPointeeLoc() == &IndVal2->getPointeeLoc())
+      return true;
   }
 
   return Model.compareEquivalent(Type, *Val1, Env1, *Val2, Env2);
@@ -88,6 +89,9 @@ static Value *mergeDistinctValues(QualType Type, Value *Val1, Environment &Env1,
   // depends on `FC1` and `FC2`) and modify `flowConditionImplies` to construct
   // a formula that includes the bi-conditionals for all flow condition atoms in
   // the transitive set, before invoking the solver.
+  //
+  // FIXME: Does not work for backedges, since the two (or more) paths will not
+  // have mutually exclusive conditions.
   if (auto *Expr1 = dyn_cast<BoolValue>(Val1)) {
     for (BoolValue *Constraint : Env1.getFlowConditionConstraints()) {
       Expr1 = &Env1.makeAnd(*Expr1, *Constraint);
@@ -285,9 +289,7 @@ bool Environment::equivalentTo(const Environment &Other,
   if (MemberLocToStruct != Other.MemberLocToStruct)
     return false;
 
-  if (LocToVal.size() != Other.LocToVal.size())
-    return false;
-
+  // Compare the contents for the intersection of their domains.
   for (auto &Entry : LocToVal) {
     const StorageLocation *Loc = Entry.first;
     assert(Loc != nullptr);
@@ -297,7 +299,7 @@ bool Environment::equivalentTo(const Environment &Other,
 
     auto It = Other.LocToVal.find(Loc);
     if (It == Other.LocToVal.end())
-      return false;
+      continue;
     assert(It->second != nullptr);
 
     if (!equivalentValues(Loc->getType(), Val, *this, It->second, Other, Model))
@@ -346,8 +348,7 @@ LatticeJoinEffect Environment::join(const Environment &Other,
       continue;
     assert(It->second != nullptr);
 
-    if (equivalentValues(Loc->getType(), Val, *this, It->second, Other,
-                         Model)) {
+    if (Val == It->second) {
       LocToVal.insert({Loc, Val});
       continue;
     }

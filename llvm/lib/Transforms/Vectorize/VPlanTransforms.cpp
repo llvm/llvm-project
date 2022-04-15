@@ -422,11 +422,9 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     const SCEV *StepSCEV = ID.getStep();
     VPValue *Step = nullptr;
     if (auto *E = dyn_cast<SCEVConstant>(StepSCEV)) {
-      Step = new VPValue(E->getValue());
-      Plan.addExternalDef(Step);
+      Step = Plan.getOrAddExternalDef(E->getValue());
     } else if (auto *E = dyn_cast<SCEVUnknown>(StepSCEV)) {
-      Step = new VPValue(E->getValue());
-      Plan.addExternalDef(Step);
+      Step = Plan.getOrAddExternalDef(E->getValue());
     } else {
       Step = new VPExpandSCEVRecipe(StepSCEV, SE);
     }

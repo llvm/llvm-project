@@ -4,12 +4,11 @@
 ; are not profitable.
 
 ; Test with a loop that contains memory accesses of i8 and i32 types. The
-; maximum VF for NEON is calculated by 128/size of smallest type in loop.
-; And while we don't have an instruction to  load 4 x i8, vectorization
-; might still be profitable.
+; default maximum VF for NEON is 4. And while we don't have an instruction to
+; load 4 x i8, vectorization might still be profitable.
 define void @test_load_i8_store_i32(i8* noalias %src, i32* noalias %dst, i32 %off, i64 %N) {
 ; CHECK-LABEL: @test_load_i8_store_i32(
-; CHECK:       <16 x i8>
+; CHECK:       <4 x i8>
 ;
 entry:
   br label %loop
@@ -33,7 +32,7 @@ exit:
 ; Same as test_load_i8_store_i32, but with types flipped for load and store.
 define void @test_load_i32_store_i8(i32* noalias %src, i8* noalias %dst, i32 %off, i64 %N) {
 ; CHECK-LABEL: @test_load_i32_store_i8(
-; CHECK:     <16 x i8>
+; CHECK:     <4 x i8>
 ;
 entry:
   br label %loop
@@ -85,7 +84,7 @@ exit:
 ; vectorization factor.
 define void @test_load_i8_store_i64_large(i8* noalias %src, i64* noalias %dst, i64* noalias %dst.2, i64* noalias %dst.3, i64* noalias %dst.4, i64* noalias %dst.5, i64%off, i64 %off.2, i64 %N) {
 ; CHECK-LABEL: @test_load_i8_store_i64_large
-; CHECK: <8 x i64>
+; CHECK: <2 x i64>
 ;
 entry:
   br label %loop

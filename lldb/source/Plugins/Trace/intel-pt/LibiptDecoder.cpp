@@ -290,8 +290,6 @@ CreateInstructionDecoder(DecodedThread &decoded_thread,
 void lldb_private::trace_intel_pt::DecodeTrace(DecodedThread &decoded_thread,
                                                TraceIntelPT &trace_intel_pt,
                                                ArrayRef<uint8_t> buffer) {
-  decoded_thread.SetRawTraceSize(buffer.size());
-
   Expected<PtInsnDecoderUP> decoder_up =
       CreateInstructionDecoder(decoded_thread, trace_intel_pt, buffer);
   if (!decoder_up)

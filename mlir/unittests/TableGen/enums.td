@@ -8,10 +8,10 @@
 
 include "mlir/IR/OpBase.td"
 
-def CaseA: StrEnumAttrCase<"CaseA">;
-def CaseB: StrEnumAttrCase<"CaseB", 10>;
+def CaseA: I32EnumAttrCase<"CaseA", 0>;
+def CaseB: I32EnumAttrCase<"CaseB", 1>;
 
-def StrEnum: StrEnumAttr<"StrEnum", "A test enum", [CaseA, CaseB]> {
+def FooEnum: I32EnumAttr<"FooEnum", "A test enum", [CaseA, CaseB]> {
   let cppNamespace = "Outer::Inner";
   let stringToSymbolFnName = "ConvertToEnum";
   let symbolToStringFnName = "ConvertToString";

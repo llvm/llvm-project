@@ -1,4 +1,4 @@
-// REQUIRES: clang-driver, x86-registered-target
+// REQUIRES: x86-registered-target
 
 // RUN: %clang -### -target x86_64-unknown-linux %s 2>&1 | FileCheck %s -check-prefix=TLSDIRECT
 // RUN: %clang -### -target x86_64-unknown-linux -mno-tls-direct-seg-refs -mtls-direct-seg-refs %s 2>&1 | FileCheck %s -check-prefix=TLSDIRECT

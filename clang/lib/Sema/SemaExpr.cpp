@@ -27,11 +27,13 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
@@ -5683,6 +5685,33 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
       OK = OK_VectorComponent;
 
     ResultType = VTy->getElementType();
+    QualType BaseType = BaseExpr->getType();
+    Qualifiers BaseQuals = BaseType.getQualifiers();
+    Qualifiers MemberQuals = ResultType.getQualifiers();
+    Qualifiers Combined = BaseQuals + MemberQuals;
+    if (Combined != MemberQuals)
+      ResultType = Context.getQualifiedType(ResultType, Combined);
+  } else if (LHSTy->isBuiltinType() &&
+             LHSTy->getAs<BuiltinType>()->isVLSTBuiltinType()) {
+    const BuiltinType *BTy = LHSTy->getAs<BuiltinType>();
+    if (BTy->isSVEBool())
+      return ExprError(Diag(LLoc, diag::err_subscript_svbool_t)
+                       << LHSExp->getSourceRange() << RHSExp->getSourceRange());
+
+    BaseExpr = LHSExp;
+    IndexExpr = RHSExp;
+    if (getLangOpts().CPlusPlus11 && LHSExp->isPRValue()) {
+      ExprResult Materialized = TemporaryMaterializationConversion(LHSExp);
+      if (Materialized.isInvalid())
+        return ExprError();
+      LHSExp = Materialized.get();
+    }
+    VK = LHSExp->getValueKind();
+    if (VK != VK_PRValue)
+      OK = OK_VectorComponent;
+
+    ResultType = BTy->getSveEltType(Context);
+
     QualType BaseType = BaseExpr->getType();
     Qualifiers BaseQuals = BaseType.getQualifiers();
     Qualifiers MemberQuals = ResultType.getQualifiers();
@@ -11447,6 +11476,97 @@ static QualType checkVectorShift(Sema &S, ExprResult &LHS, ExprResult &RHS,
   return LHSType;
 }
 
+static QualType checkSizelessVectorShift(Sema &S, ExprResult &LHS,
+                                         ExprResult &RHS, SourceLocation Loc,
+                                         bool IsCompAssign) {
+  if (!IsCompAssign) {
+    LHS = S.UsualUnaryConversions(LHS.get());
+    if (LHS.isInvalid())
+      return QualType();
+  }
+
+  RHS = S.UsualUnaryConversions(RHS.get());
+  if (RHS.isInvalid())
+    return QualType();
+
+  QualType LHSType = LHS.get()->getType();
+  const BuiltinType *LHSBuiltinTy = LHSType->getAs<BuiltinType>();
+  QualType LHSEleType = LHSType->isVLSTBuiltinType()
+                            ? LHSBuiltinTy->getSveEltType(S.getASTContext())
+                            : LHSType;
+
+  // Note that RHS might not be a vector
+  QualType RHSType = RHS.get()->getType();
+  const BuiltinType *RHSBuiltinTy = RHSType->getAs<BuiltinType>();
+  QualType RHSEleType = RHSType->isVLSTBuiltinType()
+                            ? RHSBuiltinTy->getSveEltType(S.getASTContext())
+                            : RHSType;
+
+  if ((LHSBuiltinTy && LHSBuiltinTy->isSVEBool()) ||
+      (RHSBuiltinTy && RHSBuiltinTy->isSVEBool())) {
+    S.Diag(Loc, diag::err_typecheck_invalid_operands)
+        << LHSType << RHSType << LHS.get()->getSourceRange();
+    return QualType();
+  }
+
+  if (!LHSEleType->isIntegerType()) {
+    S.Diag(Loc, diag::err_typecheck_expect_int)
+        << LHS.get()->getType() << LHS.get()->getSourceRange();
+    return QualType();
+  }
+
+  if (!RHSEleType->isIntegerType()) {
+    S.Diag(Loc, diag::err_typecheck_expect_int)
+        << RHS.get()->getType() << RHS.get()->getSourceRange();
+    return QualType();
+  }
+
+  if (LHSType->isVLSTBuiltinType() && RHSType->isVLSTBuiltinType() &&
+      (S.Context.getBuiltinVectorTypeInfo(LHSBuiltinTy).EC !=
+       S.Context.getBuiltinVectorTypeInfo(RHSBuiltinTy).EC)) {
+    S.Diag(Loc, diag::err_typecheck_invalid_operands)
+        << LHSType << RHSType << LHS.get()->getSourceRange()
+        << RHS.get()->getSourceRange();
+    return QualType();
+  }
+
+  if (!LHSType->isVLSTBuiltinType()) {
+    assert(RHSType->isVLSTBuiltinType());
+    if (IsCompAssign)
+      return RHSType;
+    if (LHSEleType != RHSEleType) {
+      LHS = S.ImpCastExprToType(LHS.get(), RHSEleType, clang::CK_IntegralCast);
+      LHSEleType = RHSEleType;
+    }
+    const llvm::ElementCount VecSize =
+        S.Context.getBuiltinVectorTypeInfo(RHSBuiltinTy).EC;
+    QualType VecTy =
+        S.Context.getScalableVectorType(LHSEleType, VecSize.getKnownMinValue());
+    LHS = S.ImpCastExprToType(LHS.get(), VecTy, clang::CK_VectorSplat);
+    LHSType = VecTy;
+  } else if (RHSBuiltinTy && RHSBuiltinTy->isVLSTBuiltinType()) {
+    if (S.Context.getTypeSize(RHSBuiltinTy) !=
+        S.Context.getTypeSize(LHSBuiltinTy)) {
+      S.Diag(Loc, diag::err_typecheck_vector_lengths_not_equal)
+          << LHSType << RHSType << LHS.get()->getSourceRange()
+          << RHS.get()->getSourceRange();
+      return QualType();
+    }
+  } else {
+    const llvm::ElementCount VecSize =
+        S.Context.getBuiltinVectorTypeInfo(LHSBuiltinTy).EC;
+    if (LHSEleType != RHSEleType) {
+      RHS = S.ImpCastExprToType(RHS.get(), LHSEleType, clang::CK_IntegralCast);
+      RHSEleType = LHSEleType;
+    }
+    QualType VecTy =
+        S.Context.getScalableVectorType(RHSEleType, VecSize.getKnownMinValue());
+    RHS = S.ImpCastExprToType(RHS.get(), VecTy, CK_VectorSplat);
+  }
+
+  return LHSType;
+}
+
 // C99 6.5.7
 QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
                                   SourceLocation Loc, BinaryOperatorKind Opc,
@@ -11472,7 +11592,7 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (LHS.get()->getType()->isVLSTBuiltinType() ||
       RHS.get()->getType()->isVLSTBuiltinType())
-    return InvalidOperands(Loc, LHS, RHS);
+    return checkSizelessVectorShift(*this, LHS, RHS, Loc, IsCompAssign);
 
   // Shifts don't perform usual arithmetic conversions, they just do integer
   // promotions on each operand. C99 6.5.7p3
@@ -15249,6 +15369,13 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     }
   }
 
+  if (getLangOpts().HLSL) {
+    if (Opc == UO_AddrOf)
+      return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 0);
+    if (Opc == UO_Deref)
+      return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 1);
+  }
+
   switch (Opc) {
   case UO_PreInc:
   case UO_PreDec:
@@ -17908,8 +18035,7 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
       }
     } else if (VarTarget == Sema::CVT_Device &&
                (UserTarget == Sema::CFT_Host ||
-                UserTarget == Sema::CFT_HostDevice) &&
-               !Var->hasExternalStorage()) {
+                UserTarget == Sema::CFT_HostDevice)) {
       // Record a CUDA/HIP device side variable if it is ODR-used
       // by host code. This is done conservatively, when the variable is
       // referenced in any of the following contexts:
@@ -17920,7 +18046,10 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
       // be visible in the device compilation for the compiler to be able to
       // emit template variables instantiated by host code only and to
       // externalize the static device side variable ODR-used by host code.
-      SemaRef.getASTContext().CUDADeviceVarODRUsedByHost.insert(Var);
+      if (!Var->hasExternalStorage())
+        SemaRef.getASTContext().CUDADeviceVarODRUsedByHost.insert(Var);
+      else if (SemaRef.LangOpts.GPURelocatableDeviceCode)
+        SemaRef.getASTContext().CUDAExternalDeviceDeclODRUsedByHost.insert(Var);
     }
   }
 

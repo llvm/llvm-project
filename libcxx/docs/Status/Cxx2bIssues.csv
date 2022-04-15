@@ -104,7 +104,7 @@
 `3123 <https://wg21.link/LWG3123>`__,"``duration`` constructor from representation shouldn't be effectively non-throwing","October 2021","","","|chrono|"
 `3146 <https://wg21.link/LWG3146>`__,"Excessive unwrapping in ``std::ref/cref``","October 2021","|Complete|","14.0"
 `3152 <https://wg21.link/LWG3152>`__,"``common_type`` and ``common_reference`` have flaws in common","October 2021","",""
-`3293 <https://wg21.link/LWG3293>`__,"``move_iterator operator+()`` has incorrect constraints","October 2021","","","|ranges|"
+`3293 <https://wg21.link/LWG3293>`__,"``move_iterator operator+()`` has incorrect constraints","October 2021","|Complete|","15.0","|ranges|"
 `3361 <https://wg21.link/LWG3361>`__,"``safe_range<SomeRange&>`` case","October 2021","|Nothing To Do|","","|ranges|"
 `3392 <https://wg21.link/LWG3392>`__,"``ranges::distance()`` cannot be used on a move-only iterator with a sized sentinel","October 2021","|Complete|","14.0","|ranges|"
 `3407 <https://wg21.link/LWG3407>`__,"Some problems with the wording changes of P1739R4","October 2021","","","|ranges|"

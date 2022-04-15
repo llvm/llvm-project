@@ -284,10 +284,13 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
       return EmitPrefix(edit, converted.length, editWidth) &&
           io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
     }
-    int scale{IsZero() ? 1 : edit.modes.scale}; // kP
-    int expo{converted.decimalExponent + scale};
+    int expo{converted.decimalExponent + edit.modes.scale /*kP*/};
     int signLength{*converted.str == '-' || *converted.str == '+' ? 1 : 0};
     int convertedDigits{static_cast<int>(converted.length) - signLength};
+    if (IsZero()) { // don't treat converted "0" as significant digit
+      expo = 0;
+      convertedDigits = 0;
+    }
     int trailingOnes{0};
     if (expo > extraDigits && extraDigits >= 0 && canIncrease) {
       extraDigits = expo;
@@ -506,7 +509,7 @@ bool ListDirectedCharacterOutput(IoStatementState &io,
     // Undelimited list-directed output
     ok = ok && list.EmitLeadingSpaceOrAdvance(io, length > 0 ? 1 : 0, true);
     std::size_t put{0};
-    std::size_t oneIfUTF8{connection.isUTF8 ? 1 : length};
+    std::size_t oneIfUTF8{connection.useUTF8<CHAR>() ? 1 : length};
     while (ok && put < length) {
       if (std::size_t chunk{std::min<std::size_t>(
               std::min<std::size_t>(length - put, oneIfUTF8),

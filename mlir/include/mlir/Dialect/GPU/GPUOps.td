@@ -96,6 +96,19 @@ def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
   }];
 }
 
+def GPU_LaneIdOp : GPU_Op<"lane_id", [NoSideEffect]> {
+  let description = [{
+    Returns the lane id within the subgroup (warp/wave).
+
+    Example:
+    ```mlir
+    %laneId = gpu.lane_id
+    ```
+  }];
+  let results = (outs Index:$result);
+  let assemblyFormat = "attr-dict";
+}
+
 def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [NoSideEffect]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
@@ -875,6 +888,8 @@ def GPU_WaitOp : GPU_Op<"wait", [GPU_AsyncOpInterface]> {
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) attr-dict
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def GPU_AllocOp : GPU_Op<"alloc", [

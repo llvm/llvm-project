@@ -314,8 +314,6 @@ static void emitUnderlyingToSymFnForIntEnum(const Record &enumDef,
 static void emitSpecializedAttrDef(const Record &enumDef, raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
-  StringRef symToStrFnName = enumAttr.getSymbolToStringFnName();
-  StringRef strToSymFnName = enumAttr.getStringToSymbolFnName();
   StringRef attrClassName = enumAttr.getSpecializedAttrClassName();
   llvm::Record *baseAttrDef = enumAttr.getBaseAttrClass();
   Attribute baseAttr(baseAttrDef);
@@ -341,28 +339,22 @@ static void emitSpecializedAttrDef(const Record &enumDef, raw_ostream &os) {
   os << formatv("{0} {0}::get(::mlir::MLIRContext *context, {1} val) {{\n",
                 attrClassName, enumName);
 
-  if (enumAttr.isSubClassOf("StrEnumAttr")) {
-    os << formatv("  ::mlir::StringAttr baseAttr = "
-                  "::mlir::StringAttr::get(context, {0}(val));\n",
-                  symToStrFnName);
-  } else {
-    StringRef underlyingType = enumAttr.getUnderlyingType();
+  StringRef underlyingType = enumAttr.getUnderlyingType();
 
-    // Assuming that it is IntegerAttr constraint
-    int64_t bitwidth = 64;
-    if (baseAttrDef->getValue("valueType")) {
-      auto *valueTypeDef = baseAttrDef->getValueAsDef("valueType");
-      if (valueTypeDef->getValue("bitwidth"))
-        bitwidth = valueTypeDef->getValueAsInt("bitwidth");
-    }
-
-    os << formatv("  ::mlir::IntegerType intType = "
-                  "::mlir::IntegerType::get(context, {0});\n",
-                  bitwidth);
-    os << formatv("  ::mlir::IntegerAttr baseAttr = "
-                  "::mlir::IntegerAttr::get(intType, static_cast<{0}>(val));\n",
-                  underlyingType);
+  // Assuming that it is IntegerAttr constraint
+  int64_t bitwidth = 64;
+  if (baseAttrDef->getValue("valueType")) {
+    auto *valueTypeDef = baseAttrDef->getValueAsDef("valueType");
+    if (valueTypeDef->getValue("bitwidth"))
+      bitwidth = valueTypeDef->getValueAsInt("bitwidth");
   }
+
+  os << formatv("  ::mlir::IntegerType intType = "
+                "::mlir::IntegerType::get(context, {0});\n",
+                bitwidth);
+  os << formatv("  ::mlir::IntegerAttr baseAttr = "
+                "::mlir::IntegerAttr::get(intType, static_cast<{0}>(val));\n",
+                underlyingType);
   os << formatv("  return baseAttr.cast<{0}>();\n", attrClassName);
 
   os << "}\n";
@@ -371,14 +363,8 @@ static void emitSpecializedAttrDef(const Record &enumDef, raw_ostream &os) {
 
   os << formatv("{0} {1}::getValue() const {{\n", enumName, attrClassName);
 
-  if (enumAttr.isSubClassOf("StrEnumAttr")) {
-    os << formatv("  const auto res = {0}(::mlir::StringAttr::getValue());\n",
-                  strToSymFnName);
-    os << "  return res.getValue();\n";
-  } else {
-    os << formatv("  return static_cast<{0}>(::mlir::IntegerAttr::getInt());\n",
-                  enumName);
-  }
+  os << formatv("  return static_cast<{0}>(::mlir::IntegerAttr::getInt());\n",
+                enumName);
 
   os << "}\n";
 }
@@ -483,8 +469,7 @@ public:
 )";
   if (enumAttr.genSpecializedAttr()) {
     StringRef attrClassName = enumAttr.getSpecializedAttrClassName();
-    StringRef baseAttrClassName =
-        enumAttr.isSubClassOf("StrEnumAttr") ? "StringAttr" : "IntegerAttr";
+    StringRef baseAttrClassName = "IntegerAttr";
     os << formatv(attrClassDecl, enumName, attrClassName, baseAttrClassName);
   }
 

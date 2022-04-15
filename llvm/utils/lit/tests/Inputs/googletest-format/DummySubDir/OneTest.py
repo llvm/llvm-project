@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
+import os
 import sys
 
-if len(sys.argv) != 2:
-    raise ValueError("unexpected number of args")
-
-if sys.argv[1] == "--gtest_list_tests":
+if len(sys.argv) == 3 and sys.argv[1] == "--gtest_list_tests":
+    if sys.argv[2] != '--gtest_filter=-*DISABLED_*':
+        raise ValueError("unexpected argument: %s" % (sys.argv[2]))
     print("""\
 FirstTest.
   subTestA
@@ -17,31 +17,88 @@ ParameterizedTest/0.
 ParameterizedTest/1.
   subTest""")
     sys.exit(0)
-elif not sys.argv[1].startswith("--gtest_filter="):
-    raise ValueError("unexpected argument: %r" % (sys.argv[1]))
+elif len(sys.argv) != 1:
+    # sharding and json output are specified using environment variables
+    raise ValueError("unexpected argument: %r" % (' '.join(sys.argv[1:])))
 
-test_name = sys.argv[1].split('=',1)[1]
-if test_name == 'FirstTest.subTestA':
-    print('I am subTest A, I PASS')
-    print('[  PASSED  ] 1 test.')
-    sys.exit(0)
-elif test_name == 'FirstTest.subTestB':
-    print('I am subTest B, I FAIL')
-    print('And I have two lines of output')
-    sys.exit(1)
-elif test_name == 'FirstTest.subTestC':
-    print('I am subTest C, I am SKIPPED')
-    print('[  PASSED  ] 0 tests.')
-    print('[  SKIPPED ] 1 test, listed below:')
-    print('[  SKIPPED ] FirstTest.subTestC')
-    sys.exit(0)
-elif test_name == 'FirstTest.subTestD':
-    print('I am subTest D, I am UNRESOLVED')
-    sys.exit(0)
-elif test_name in ('ParameterizedTest/0.subTest',
-                   'ParameterizedTest/1.subTest'):
-    print('I am a parameterized test, I also PASS')
-    print('[  PASSED  ] 1 test.')
-    sys.exit(0)
-else:
-    raise SystemExit("error: invalid test name: %r" % (test_name,))
+for e in ['GTEST_TOTAL_SHARDS', 'GTEST_SHARD_INDEX', 'GTEST_OUTPUT']:
+    if e not in os.environ:
+        raise ValueError("missing environment variables: " + e)
+
+if not os.environ['GTEST_OUTPUT'].startswith('json:'):
+    raise ValueError("must emit json output: " + os.environ['GTEST_OUTPUT'])
+
+output = """\
+{
+"random_seed": 123,
+"testsuites": [
+    {
+        "name": "FirstTest",
+        "testsuite": [
+            {
+                "name": "subTestA",
+                "result": "COMPLETED",
+                "time": "0.001s"
+            },
+            {
+                "name": "subTestB",
+                "result": "COMPLETED",
+                "time": "0.001s",
+                "failures": [
+                    {
+                        "failure": "I am subTest B, I FAIL\\nAnd I have two lines of output",
+                        "type": ""
+                    }
+                ]
+            },
+            {
+                "name": "subTestC",
+                "result": "SKIPPED",
+                "time": "0.001s"
+            },
+            {
+                "name": "subTestD",
+                "result": "UNRESOLVED",
+                "time": "0.001s"
+            }
+        ]
+    },
+    {
+        "name": "ParameterizedTest/0",
+        "testsuite": [
+            {
+                "name": "subTest",
+                "result": "COMPLETED",
+                "time": "0.001s"
+            }
+        ]
+    },
+    {
+        "name": "ParameterizedTest/1",
+        "testsuite": [
+            {
+                "name": "subTest",
+                "result": "COMPLETED",
+                "time": "0.001s"
+            }
+        ]
+    }
+]
+}"""
+
+dummy_output = """\
+{
+"testsuites": [
+]
+}"""
+
+json_filename = os.environ['GTEST_OUTPUT'].split(':', 1)[1]
+with open(json_filename, 'w') as f:
+    if os.environ['GTEST_SHARD_INDEX'] == '0':
+        f.write(output)
+        exit_code = 1
+    else:
+        f.write(dummy_output)
+        exit_code = 0
+
+sys.exit(exit_code)

@@ -1696,6 +1696,10 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc5,0x19,0xfb,0x28]
           vpsubq  (%rax), %xmm12, %xmm13
 
+// CHECK: vpsubq  (%esp), %xmm1, %xmm2
+// CHECK: encoding: [0x67,0xc5,0xf1,0xfb,0x14,0x24]
+          vpsubq  (%esp), %xmm1, %xmm2
+
 // CHECK: vpsubsb  %xmm11, %xmm12, %xmm13
 // CHECK: encoding: [0xc4,0x41,0x19,0xe8,0xeb]
           vpsubsb  %xmm11, %xmm12, %xmm13

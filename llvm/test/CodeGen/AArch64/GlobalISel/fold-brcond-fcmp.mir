@@ -20,7 +20,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 0, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -62,7 +62,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 12, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -104,7 +104,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 10, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -146,7 +146,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 4, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -188,7 +188,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 9, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -230,7 +230,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 4, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   Bcc 12, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
@@ -273,7 +273,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 7, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -315,7 +315,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 6, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -357,7 +357,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 0, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   Bcc 6, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
@@ -400,7 +400,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 8, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -442,7 +442,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 5, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -484,7 +484,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 11, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -526,7 +526,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 13, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -568,7 +568,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %cmp_lhs:fpr32 = COPY $s0
   ; CHECK-NEXT:   %cmp_rhs:fpr32 = COPY $s1
-  ; CHECK-NEXT:   FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+  ; CHECK-NEXT:   nofpexcept FCMPSrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 1, %bb.2, implicit $nzcv
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}

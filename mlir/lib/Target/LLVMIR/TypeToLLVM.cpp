@@ -106,6 +106,8 @@ private:
 
   /// Translates the given pointer type.
   llvm::Type *translate(LLVM::LLVMPointerType type) {
+    if (type.isOpaque())
+      return llvm::PointerType::get(context, type.getAddressSpace());
     return llvm::PointerType::get(translateType(type.getElementType()),
                                   type.getAddressSpace());
   }

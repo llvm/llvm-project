@@ -1,4 +1,3 @@
-; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
 ; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
 ; RUN: opt < %s -passes=pgo-instr-gen,instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=LOWER
 ; RUN: opt < %s -passes=pgo-instr-gen,instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=LOWER

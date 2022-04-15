@@ -817,9 +817,13 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
          "Missed a global variable");
   assert(GVVisiting.size() == 0 && "Did not fully process a global variable");
 
+  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+  const NVPTXSubtarget &STI =
+      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+
   // Print out module-level global variables in proper order
   for (unsigned i = 0, e = Globals.size(); i != e; ++i)
-    printModuleLevelGV(Globals[i], OS2);
+    printModuleLevelGV(Globals[i], OS2, /*processDemoted=*/false, STI);
 
   OS2 << '\n';
 
@@ -957,8 +961,8 @@ void NVPTXAsmPrinter::emitLinkageDirective(const GlobalValue *V,
 }
 
 void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
-                                         raw_ostream &O,
-                                         bool processDemoted) {
+                                         raw_ostream &O, bool processDemoted,
+                                         const NVPTXSubtarget &STI) {
   // Skip meta data
   if (GVar->hasSection()) {
     if (GVar->getSection() == "llvm.metadata")
@@ -1001,7 +1005,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     // (extern) declarations, no definition or initializer
     // Currently the only known declaration is for an automatic __local
     // (.shared) promoted to global.
-    emitPTXGlobalVariable(GVar, O);
+    emitPTXGlobalVariable(GVar, O, STI);
     O << ";\n";
     return;
   }
@@ -1095,6 +1099,10 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   emitPTXAddressSpace(PTy->getAddressSpace(), O);
 
   if (isManaged(*GVar)) {
+    if (STI.getPTXVersion() < 40 || STI.getSmVersion() < 30) {
+      report_fatal_error(
+          ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
+    }
     O << " .attribute(.managed)";
   }
 
@@ -1214,9 +1222,13 @@ void NVPTXAsmPrinter::emitDemotedVars(const Function *f, raw_ostream &O) {
 
   std::vector<const GlobalVariable *> &gvars = localDecls[f];
 
+  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+  const NVPTXSubtarget &STI =
+      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+
   for (const GlobalVariable *GV : gvars) {
     O << "\t// demoted variable\n\t";
-    printModuleLevelGV(GV, O, true);
+    printModuleLevelGV(GV, O, /*processDemoted=*/true, STI);
   }
 }
 
@@ -1282,7 +1294,8 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
 }
 
 void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
-                                            raw_ostream &O) {
+                                            raw_ostream &O,
+                                            const NVPTXSubtarget &STI) {
   const DataLayout &DL = getDataLayout();
 
   // GlobalVariables are always constant pointers themselves.
@@ -1290,8 +1303,13 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
 
   O << ".";
   emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
-  if (isManaged(*GVar))
+  if (isManaged(*GVar)) {
+    if (STI.getPTXVersion() < 40 || STI.getSmVersion() < 30) {
+      report_fatal_error(
+          ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
+    }
     O << " .attribute(.managed)";
+  }
   if (MaybeAlign A = GVar->getAlign())
     O << " .align " << A->value();
   else

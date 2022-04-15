@@ -12,3 +12,9 @@
 // RUN: %clang -target msp430 -### -c %s 2>&1 | FileCheck %s -check-prefix DEFAULT
 
 // DEFAULT-NOT: -no-integrated-as
+
+// RUN: %clang -target x86_64-sie-ps5 -### -no-integrated-as %s -c 2>&1 \
+// RUN:     | FileCheck %s -check-prefix PS5
+// RUN: %clang -target x86_64-sie-ps5 -### -no-integrated-as %s -c -x assembler 2>&1 \
+// RUN:     | FileCheck %s -check-prefix PS5
+// PS5: there is no external assembler that can be used on this platform

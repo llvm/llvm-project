@@ -1,8 +1,6 @@
 ; RUN: llvm-profdata merge %S/Inputs/diag.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-warn-missing-function=true -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-warn-missing-function=true -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s
 
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s --check-prefix=DEFAULT
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
 ; CHECK: warning: {{.+}}: no profile data available for function bar

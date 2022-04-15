@@ -1,6 +1,5 @@
 // Test clang driver bails out after one error during CUDA compilation.
 
-// REQUIRES: clang-driver
 // REQUIRES: powerpc-registered-target
 // REQUIRES: nvptx-registered-target
 

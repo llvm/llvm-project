@@ -6638,6 +6638,8 @@ def err_subscript_function_type : Error<
   "subscript of pointer to function type %0">;
 def err_subscript_incomplete_or_sizeless_type : Error<
   "subscript of pointer to %select{incomplete|sizeless}0 type %1">;
+def err_subscript_svbool_t : Error<
+  "subscript of svbool_t is not allowed">;
 def err_dereference_incomplete_type : Error<
   "dereference of pointer to incomplete type %0">;
 def ext_gnu_subscript_void_type : Extension<
@@ -11587,6 +11589,12 @@ def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in %
 def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numthreads attribute cannot exceed %1">;
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
+
+def err_hlsl_pointers_unsupported : Error<
+  "%select{pointers|references}0 are unsupported in HLSL">;
+
+def err_hlsl_operator_unsupported : Error<
+  "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
 // Layout randomization warning.
 def err_cast_from_randomized_struct : Error<

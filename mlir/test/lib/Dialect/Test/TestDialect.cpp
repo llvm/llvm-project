@@ -18,6 +18,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -1303,6 +1304,37 @@ void SingleNoTerminatorCustomAsmOp::print(OpAsmPrinter &printer) {
       // This op has a single block without terminators. But explicitly mark
       // as not printing block terminators for testing.
       /*printBlockTerminators=*/false);
+}
+
+//===----------------------------------------------------------------------===//
+// TestVerifiersOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestVerifiersOp::verify() {
+  if (!getRegion().hasOneBlock())
+    return emitOpError("`hasOneBlock` trait hasn't been verified");
+
+  Operation *definingOp = getInput().getDefiningOp();
+  if (definingOp && failed(mlir::verify(definingOp)))
+    return emitOpError("operand hasn't been verified");
+
+  emitRemark("success run of verifier");
+
+  return success();
+}
+
+LogicalResult TestVerifiersOp::verifyRegions() {
+  if (!getRegion().hasOneBlock())
+    return emitOpError("`hasOneBlock` trait hasn't been verified");
+
+  for (Block &block : getRegion())
+    for (Operation &op : block)
+      if (failed(mlir::verify(&op)))
+        return emitOpError("nested op hasn't been verified");
+
+  emitRemark("success run of region verifier");
+
+  return success();
 }
 
 #include "TestOpEnums.cpp.inc"

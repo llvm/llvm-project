@@ -1201,11 +1201,11 @@ bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
 }
 
 StreamSP Debugger::GetAsyncOutputStream() {
-  return std::make_shared<StreamAsynchronousIO>(*this, true);
+  return std::make_shared<StreamAsynchronousIO>(*this, true, GetUseColor());
 }
 
 StreamSP Debugger::GetAsyncErrorStream() {
-  return std::make_shared<StreamAsynchronousIO>(*this, false);
+  return std::make_shared<StreamAsynchronousIO>(*this, false, GetUseColor());
 }
 
 size_t Debugger::GetNumDebuggers() {

@@ -111,8 +111,8 @@ define i16 @testtrunclowhigh(i32 %add, i16 %low, i16 %high) {
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[ADD:%.*]], 128
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], 256
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[ADD]] to i16
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[ADD]], -1
-; CHECK-NEXT:    [[F:%.*]] = select i1 [[C]], i16 [[HIGH:%.*]], i16 [[LOW:%.*]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[ADD]], 0
+; CHECK-NEXT:    [[F:%.*]] = select i1 [[C1]], i16 [[LOW:%.*]], i16 [[HIGH:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i16 [[T]], i16 [[F]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;

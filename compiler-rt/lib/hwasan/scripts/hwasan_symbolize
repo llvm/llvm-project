@@ -146,7 +146,7 @@ class Symbolizer:
     file_name = re.sub(".*crtstuff.c:0", "???:0", file_name)
     return file_name
 
-  def __process_binary_name(self, name, buildid=None):
+  def __process_binary_name(self, name, buildid):
     if name.startswith('/'):
       name = name[1:]
     if buildid is not None and buildid in self.__index:
@@ -171,10 +171,10 @@ class Symbolizer:
       self.__warnings.add(name)
     return None
 
-  def iter_locals(self, binary, addr):
+  def iter_locals(self, binary, addr, buildid):
     self.__open_pipe()
     p = self.__pipe
-    binary = self.__process_binary_name(binary)
+    binary = self.__process_binary_name(binary, buildid)
     if not binary:
       return
     self.__write("FRAME %s %s" % (binary, addr))
@@ -219,8 +219,9 @@ class Symbolizer:
             self.__index[bid] = filename
 
 def symbolize_line(line, symbolizer_path):
-  #0 0x7f6e35cf2e45  (/blah/foo.so+0x11fe45)
-  match = re.match(r'^(.*?)#([0-9]+)( *)(0x[0-9a-f]*) *\((.*)\+(0x[0-9a-f]+)\)(?:\s*\(BuildId: ([0-9a-f]+)\))?', line, re.UNICODE)
+  #0 0x7f6e35cf2e45  (/blah/foo.so+0x11fe45) (BuildId: 4abce4cd41ea5c2f34753297b7e774d9)
+  match = re.match(r'^(.*?)#([0-9]+)( *)(0x[0-9a-f]*) *\((.*)\+(0x[0-9a-f]+)\)'
+                   r'(?:\s*\(BuildId: ([0-9a-f]+)\))?', line, re.UNICODE)
   if match:
     frameno = match.group(2)
     binary = match.group(5)
@@ -257,18 +258,20 @@ def process_stack_history(line, symbolizer, ignore_tags=False):
     return True
   pc_mask = (1 << 48) - 1
   fp_mask = (1 << 20) - 1
-  # record_addr:0x1234ABCD record:0x1234ABCD (/path/to/binary+0x1234ABCD)
-  match = re.match(r'^(.*?)record_addr:(0x[0-9a-f]+) +record:(0x[0-9a-f]+) +\((.*)\+(0x[0-9a-f]+)\)', line, re.UNICODE)
+  # record_addr:0x1234ABCD record:0x1234ABCD (/path/to/binary+0x1234ABCD) (BuildId: 4abce4cd41ea5c2f34753297b7e774d9)
+  match = re.match(r'^(.*?)record_addr:(0x[0-9a-f]+) +record:(0x[0-9a-f]+) +\((.*)\+(0x[0-9a-f]+)\)'
+                   r'(?:\s*\(BuildId: ([0-9a-f]+)\))?', line, re.UNICODE)
   if match:
     record_addr = int(match.group(2), 16)
     record = int(match.group(3), 16)
     binary = match.group(4)
     addr = int(match.group(5), 16)
+    buildid = match.group(6)
     base_tag = (record_addr >> 3) & 0xFF
     fp = (record >> 48) << 4
     pc = record & pc_mask
 
-    for local in symbolizer.iter_locals(binary, addr):
+    for local in symbolizer.iter_locals(binary, addr, buildid):
       frame_offset = local[3]
       size = local[4]
       if frame_offset is None or size is None:

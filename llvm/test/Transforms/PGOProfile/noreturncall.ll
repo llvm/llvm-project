@@ -1,5 +1,4 @@
 ; RUN: llvm-profdata merge %S/Inputs/noreturncall.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 ; REQUIRES: asserts
 

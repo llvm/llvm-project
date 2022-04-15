@@ -116,9 +116,9 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @add_d(
-; CHECK: load <8 x i16>
-; CHECK: add nsw <8 x i32>
-; CHECK: store <8 x i32>
+; CHECK: load <4 x i16>
+; CHECK: add nsw <4 x i32>
+; CHECK: store <4 x i32>
 define void @add_d(i16* noalias nocapture readonly %p, i32* noalias nocapture %q, i32 %len) #0 {
 entry:
   %cmp7 = icmp sgt i32 %len, 0

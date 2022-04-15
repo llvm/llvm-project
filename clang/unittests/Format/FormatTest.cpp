@@ -12766,6 +12766,13 @@ TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
                "};",
                MergeInlineOnly);
 
+  verifyFormat("class C {\n"
+               "#ifdef A\n"
+               "  int f() { return 42; }\n"
+               "#endif\n"
+               "};",
+               MergeInlineOnly);
+
   // Also verify behavior when BraceWrapping.AfterFunction = true
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Custom;
   MergeInlineOnly.BraceWrapping.AfterFunction = true;
