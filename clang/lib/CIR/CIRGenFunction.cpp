@@ -414,6 +414,13 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
   if (mlir::failed(Fn.verifyBody()))
     return nullptr;
 
+  // Emit the standard function epilogue.
+  // TODO: finishFunction(BodyRange.getEnd());
+
+  // If we haven't marked the function nothrow through other means, do a quick
+  // pass now to see if we can.
+  // TODO: if (!CurFn->doesNotThrow()) TryMarkNoThrow(CurFn);
+
   return Fn;
 }
 
