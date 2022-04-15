@@ -2175,53 +2175,53 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     return std::nullopt; // also handles null symbol
   }
   const Symbol &ultimate{DEREF(symbol).GetUltimate()};
-  if (ultimate.attrs().test(semantics::Attr::INTRINSIC)) {
-    if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
-            CallCharacteristics{ultimate.name().ToString(), isSubroutine},
-            arguments, GetFoldingContext())}) {
-      CheckBadExplicitType(*specificCall, *symbol);
-      return CalleeAndArguments{
-          ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
-          std::move(specificCall->arguments)};
-    }
-  } else {
-    CheckForBadRecursion(name.source, ultimate);
-    bool dueToNullActual{false};
-    if (ultimate.has<semantics::GenericDetails>()) {
-      ExpressionAnalyzer::AdjustActuals noAdjustment;
-      auto pair{ResolveGeneric(
-          *symbol, arguments, noAdjustment, mightBeStructureConstructor)};
-      symbol = pair.first;
-      dueToNullActual = pair.second;
-    }
-    if (symbol) {
-      if (symbol->GetUltimate().has<semantics::DerivedTypeDetails>()) {
-        if (mightBeStructureConstructor) {
-          return CalleeAndArguments{
-              semantics::SymbolRef{*symbol}, std::move(arguments)};
-        }
-      } else if (IsProcedure(*symbol)) {
+  CheckForBadRecursion(name.source, ultimate);
+  bool dueToNullActual{false};
+  bool isGenericInterface{ultimate.has<semantics::GenericDetails>()};
+  const Symbol *resolution{nullptr};
+  if (isGenericInterface) {
+    ExpressionAnalyzer::AdjustActuals noAdjustment;
+    auto pair{ResolveGeneric(
+        *symbol, arguments, noAdjustment, mightBeStructureConstructor)};
+    resolution = pair.first;
+    dueToNullActual = pair.second;
+  }
+  if (!resolution) {
+    // Not generic, or no resolution; may be intrinsic
+    if (!symbol->attrs().test(semantics::Attr::EXTERNAL)) {
+      if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
+              CallCharacteristics{ultimate.name().ToString(), isSubroutine},
+              arguments, GetFoldingContext())}) {
+        CheckBadExplicitType(*specificCall, *symbol);
         return CalleeAndArguments{
-            ProcedureDesignator{*symbol}, std::move(arguments)};
+            ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
+            std::move(specificCall->arguments)};
+      } else if (symbol->attrs().test(semantics::Attr::INTRINSIC)) {
+        return std::nullopt;
       }
-      if (!context_.HasError(*symbol)) {
-        AttachDeclaration(
-            Say(name.source, "'%s' is not a callable procedure"_err_en_US,
-                name.source),
-            *symbol);
-      }
-    } else if (std::optional<SpecificCall> specificCall{
-                   context_.intrinsics().Probe(
-                       CallCharacteristics{
-                           ultimate.name().ToString(), isSubroutine},
-                       arguments, GetFoldingContext())}) {
-      // Generics can extend intrinsics
-      return CalleeAndArguments{
-          ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
-          std::move(specificCall->arguments)};
-    } else {
-      EmitGenericResolutionError(*name.symbol, dueToNullActual);
     }
+    if (isGenericInterface) {
+      EmitGenericResolutionError(*symbol, dueToNullActual);
+      return std::nullopt;
+    } else {
+      // Neither a generic interface nor an intrinsic
+      resolution = symbol;
+    }
+  }
+  if (resolution->GetUltimate().has<semantics::DerivedTypeDetails>()) {
+    if (mightBeStructureConstructor) {
+      return CalleeAndArguments{
+          semantics::SymbolRef{*resolution}, std::move(arguments)};
+    }
+  } else if (IsProcedure(*resolution)) {
+    return CalleeAndArguments{
+        ProcedureDesignator{*resolution}, std::move(arguments)};
+  }
+  if (!context_.HasError(*resolution)) {
+    AttachDeclaration(
+        Say(name.source, "'%s' is not a callable procedure"_err_en_US,
+            name.source),
+        *resolution);
   }
   return std::nullopt;
 }
