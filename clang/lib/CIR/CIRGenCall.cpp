@@ -696,6 +696,48 @@ CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
                                   FTP);
 }
 
+/// Arrange a call to a C++ method, passing the given arguments.
+///
+/// ExtraPrefixArgs is the number of ABI-specific args passed after the `this`
+/// parameter.
+/// ExtraSuffixArgs is the number of ABI-specific args passed at the end of
+/// args.
+/// PassProtoArgs indicates whether `args` has args for the parameters in the
+/// given CXXConstructorDecl.
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
+    const CallArgList &Args, const CXXConstructorDecl *D, CXXCtorType CtorKind,
+    unsigned ExtraPrefixArgs, unsigned ExtraSuffixArgs, bool PassProtoArgs) {
+
+  // FIXME: Kill copy.
+  llvm::SmallVector<CanQualType, 16> ArgTypes;
+  for (const auto &Arg : Args)
+    ArgTypes.push_back(Context.getCanonicalParamType(Arg.Ty));
+
+  // +1 for implicit this, which should always be args[0]
+  unsigned TotalPrefixArgs = 1 + ExtraPrefixArgs;
+
+  CanQual<FunctionProtoType> FPT = GetFormalType(D);
+  RequiredArgs Required = PassProtoArgs
+                              ? RequiredArgs::forPrototypePlus(
+                                    FPT, TotalPrefixArgs + ExtraSuffixArgs)
+                              : RequiredArgs::All;
+
+  GlobalDecl GD(D, CtorKind);
+  assert(!TheCXXABI.HasThisReturn(GD) && "ThisReturn NYI");
+  assert(!TheCXXABI.hasMostDerivedReturn(GD) && "Most derived return NYI");
+  CanQualType ResultType = Context.VoidTy;
+
+  FunctionType::ExtInfo Info = FPT->getExtInfo();
+  llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> ParamInfos;
+  // If the prototype args are elided, we should onlyy have ABI-specific args,
+  // which never have param info.
+  assert(!FPT->hasExtParameterInfos() && "NYI");
+
+  return arrangeCIRFunctionInfo(ResultType, /*instanceMethod=*/true,
+                                /*chainCall=*/false, ArgTypes, Info, ParamInfos,
+                                Required);
+}
+
 
 bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
                                          QualType ReturnType) {
