@@ -695,6 +695,9 @@ public:
   /// expression and compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *E);
 
+  void buildCtorPrologue(const clang::CXXConstructorDecl *CD,
+                         clang::CXXCtorType Type, FunctionArgList &Args);
+
   static bool
   IsConstructorDelegationValid(const clang::CXXConstructorDecl *Ctor);
 
@@ -716,6 +719,24 @@ public:
                          bool BaseIsNonVirtualPrimaryBase,
                          const clang::CXXRecordDecl *VTableClass,
                          VisitedVirtualBasesSetTy &VBases, VPtrsVector &vptrs);
+
+  /// A scoep within which we are constructing the fields of an object which
+  /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
+  /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
+  class FieldConstructionScope {
+  public:
+    FieldConstructionScope(CIRGenFunction &CGF, Address This)
+        : CGF(CGF), OldCXXDefaultInitExprThis(CGF.CXXDefaultInitExprThis) {
+      CGF.CXXDefaultInitExprThis = This;
+    }
+    ~FieldConstructionScope() {
+      CGF.CXXDefaultInitExprThis = OldCXXDefaultInitExprThis;
+    }
+
+  private:
+    CIRGenFunction &CGF;
+    Address OldCXXDefaultInitExprThis;
+  };
 
   /// LoadCXXThis - Load the value for 'this'. This function is only valid while
   /// generating code for an C++ member function.
