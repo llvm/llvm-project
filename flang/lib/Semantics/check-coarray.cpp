@@ -64,7 +64,7 @@ private:
 
 template <typename T>
 static void CheckTeamType(SemanticsContext &context, const T &x) {
-  if (const auto *expr{GetExpr(x)}) {
+  if (const auto *expr{GetExpr(context, x)}) {
     if (!IsTeamType(evaluate::GetDerivedTypeSpec(expr->GetType()))) {
       context.Say(parser::FindSourceLocation(x), // C1114
           "Team value must be of type TEAM_TYPE from module ISO_FORTRAN_ENV"_err_en_US);

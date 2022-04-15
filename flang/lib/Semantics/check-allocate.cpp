@@ -187,7 +187,7 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
   }
 
   if (info.gotSource || info.gotMold) {
-    if (const auto *expr{GetExpr(DEREF(parserSourceExpr))}) {
+    if (const auto *expr{GetExpr(context, DEREF(parserSourceExpr))}) {
       parser::CharBlock at{parserSourceExpr->source};
       info.sourceExprType = expr->GetType();
       if (!info.sourceExprType) {

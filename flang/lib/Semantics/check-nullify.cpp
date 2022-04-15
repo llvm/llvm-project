@@ -40,7 +40,7 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
               }
             },
             [&](const parser::StructureComponent &structureComponent) {
-              if (const auto *checkedExpr{GetExpr(pointerObject)}) {
+              if (const auto *checkedExpr{GetExpr(context_, pointerObject)}) {
                 if (!IsPointer(*structureComponent.component.symbol)) { // C951
                   messages.Say(structureComponent.component.source,
                       "component in NULLIFY statement must have the POINTER attribute"_err_en_US);

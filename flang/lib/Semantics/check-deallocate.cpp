@@ -36,7 +36,7 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
             [&](const parser::StructureComponent &structureComponent) {
               // Only perform structureComponent checks it was successfully
               // analyzed in expression analysis.
-              if (GetExpr(allocateObject)) {
+              if (GetExpr(context_, allocateObject)) {
                 if (!IsAllocatableOrPointer(
                         *structureComponent.component.symbol)) { // C932
                   context_.Say(structureComponent.component.source,

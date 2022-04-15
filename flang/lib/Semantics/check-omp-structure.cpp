@@ -50,8 +50,8 @@ public:
   bool Pre(const parser::AssignmentStmt &assignment) {
     const auto &var{std::get<parser::Variable>(assignment.t)};
     const auto &expr{std::get<parser::Expr>(assignment.t)};
-    const auto *lhs{GetExpr(var)};
-    const auto *rhs{GetExpr(expr)};
+    const auto *lhs{GetExpr(context_, var)};
+    const auto *rhs{GetExpr(context_, expr)};
     if (lhs && rhs) {
       Tristate isDefined{semantics::IsDefinedAssignment(
           lhs->GetType(), lhs->Rank(), rhs->GetType(), rhs->Rank())};
@@ -65,7 +65,7 @@ public:
   }
 
   bool Pre(const parser::Expr &expr) {
-    if (const auto *e{GetExpr(expr)}) {
+    if (const auto *e{GetExpr(context_, expr)}) {
       for (const Symbol &symbol : evaluate::CollectSymbols(*e)) {
         const Symbol &root{GetAssociationRoot(symbol)};
         if (IsFunction(root) &&
@@ -1467,7 +1467,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
                   if (const auto *name =
                           std::get_if<Fortran::parser::Name>(&dataRef->u)) {
                     const auto &varSymbol = *name->symbol;
-                    if (const auto *e{GetExpr(expr)}) {
+                    if (const auto *e{GetExpr(context_, expr)}) {
                       for (const Symbol &symbol :
                           evaluate::CollectSymbols(*e)) {
                         if (symbol == varSymbol) {

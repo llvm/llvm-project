@@ -501,7 +501,7 @@ private:
 
   // Semantic checks for the limit and step expressions
   void CheckDoExpression(const parser::ScalarExpr &scalarExpression) {
-    if (const SomeExpr * expr{GetExpr(scalarExpression)}) {
+    if (const SomeExpr * expr{GetExpr(context_, scalarExpression)}) {
       if (!ExprHasTypeCategory(*expr, TypeCategory::Integer)) {
         // No warnings or errors for type INTEGER
         const parser::CharBlock &loc{scalarExpression.thing.value().source};
@@ -569,10 +569,10 @@ private:
     return symbols;
   }
 
-  static UnorderedSymbolSet GatherSymbolsFromExpression(
-      const parser::Expr &expression) {
+  UnorderedSymbolSet GatherSymbolsFromExpression(
+      const parser::Expr &expression) const {
     UnorderedSymbolSet result;
-    if (const auto *expr{GetExpr(expression)}) {
+    if (const auto *expr{GetExpr(context_, expression)}) {
       for (const Symbol &symbol : evaluate::CollectSymbols(*expr)) {
         result.insert(ResolveAssociations(symbol));
       }
@@ -1022,7 +1022,7 @@ void DoForallChecker::Enter(const parser::Expr &parsedExpr) { ++exprDepth_; }
 void DoForallChecker::Leave(const parser::Expr &parsedExpr) {
   CHECK(exprDepth_ > 0);
   if (--exprDepth_ == 0) { // Only check top level expressions
-    if (const SomeExpr * expr{GetExpr(parsedExpr)}) {
+    if (const SomeExpr * expr{GetExpr(context_, parsedExpr)}) {
       ActualArgumentSet argSet{CollectActualArguments(*expr)};
       for (const evaluate::ActualArgumentRef &argRef : argSet) {
         CheckIfArgIsDoVar(*argRef, parsedExpr.source, context_);
