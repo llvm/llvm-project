@@ -462,6 +462,93 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
   return Fn;
 }
 
+static bool isMemcpyEquivalentSpecialMember(const CXXMethodDecl *D) {
+  auto *CD = llvm::dyn_cast<CXXConstructorDecl>(D);
+  if (!(CD && CD->isCopyOrMoveConstructor()) &&
+      !D->isCopyAssignmentOperator() && !D->isMoveAssignmentOperator())
+    return false;
+
+  // We can emit a memcpy for a trivial copy or move constructor/assignment
+  if (D->isTrivial() && !D->getParent()->mayInsertExtraPadding())
+    return true;
+
+  if (D->getParent()->isUnion() && D->isDefaulted())
+    return true;
+
+  return false;
+}
+
+void CIRGenFunction::buildCXXConstructorCall(const clang::CXXConstructorDecl *D,
+                                             clang::CXXCtorType Type,
+                                             bool ForVirtualBase,
+                                             bool Delegating,
+                                             AggValueSlot ThisAVS,
+                                             const clang::CXXConstructExpr *E) {
+  CallArgList Args;
+  Address This = ThisAVS.getAddress();
+  LangAS SlotAS = ThisAVS.getQualifiers().getAddressSpace();
+  QualType ThisType = D->getThisType();
+  LangAS ThisAS = ThisType.getTypePtr()->getPointeeType().getAddressSpace();
+  mlir::Value ThisPtr = This.getPointer();
+
+  assert(SlotAS == ThisAS && "This edge case NYI");
+
+  Args.add(RValue::get(ThisPtr), D->getThisType());
+
+  assert(!isMemcpyEquivalentSpecialMember(D) && "NYI");
+
+  const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
+  EvaluationOrder Order = E->isListInitialization()
+                              ? EvaluationOrder::ForceLeftToRight
+                              : EvaluationOrder::Default;
+
+  buildCallArgs(Args, FPT, E->arguments(), E->getConstructor(),
+                /*ParamsToSkip*/ 0, Order);
+
+  buildCXXConstructorCall(D, Type, ForVirtualBase, Delegating, This, Args,
+                          ThisAVS.mayOverlap(), E->getExprLoc(),
+                          ThisAVS.isSanitizerChecked());
+}
+
+void CIRGenFunction::buildCXXConstructorCall(
+    const CXXConstructorDecl *D, CXXCtorType Type, bool ForVirtualBase,
+    bool Delegating, Address This, CallArgList &Args,
+    AggValueSlot::Overlap_t Overlap, SourceLocation Loc,
+    bool NewPointerIsChecked) {
+
+  const auto *ClassDecl = D->getParent();
+
+  if (!NewPointerIsChecked)
+    buildTypeCheck(CIRGenFunction::TCK_ConstructorCall, Loc, This.getPointer(),
+                   getContext().getRecordType(ClassDecl), CharUnits::Zero());
+
+  assert(!D->isTrivial() && "Trivial ctor decl NYI");
+
+  assert(!isMemcpyEquivalentSpecialMember(D) && "NYI");
+
+  bool PassPrototypeArgs = true;
+
+  assert(!D->getInheritedConstructor() && "inheritance NYI");
+
+  // Insert any ABI-specific implicit constructor arguments.
+  CIRGenCXXABI::AddedStructorArgCounts ExtraArgs =
+      CGM.getCXXABI().addImplicitConstructorArgs(*this, D, Type, ForVirtualBase,
+                                                 Delegating, Args);
+
+  // Emit the call.
+  auto CalleePtr = CGM.getAddrOfCXXStructor(GlobalDecl(D, Type));
+  const CIRGenFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
+      Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
+  CIRGenCallee Callee = CIRGenCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
+  mlir::func::CallOp C;
+  buildCall(Info, Callee, ReturnValueSlot(), Args, C, false, Loc);
+
+  assert(CGM.getCodeGenOpts().OptimizationLevel == 0 ||
+         ClassDecl->isDynamicClass() || Type == Ctor_Base ||
+         !CGM.getCodeGenOpts().StrictVTablePointers &&
+             "vtable assumption loads NYI");
+}
+
 void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
                                    mlir::FuncOp Fn,
                                    const CIRGenFunctionInfo &FnInfo,

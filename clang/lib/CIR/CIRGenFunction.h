@@ -381,6 +381,18 @@ public:
 
   void buildAggExpr(const clang::Expr *E, AggValueSlot Slot);
 
+  void buildCXXConstructorCall(const clang::CXXConstructorDecl *D,
+                               clang::CXXCtorType Type, bool ForVirtualBase,
+                               bool Delegating, AggValueSlot ThisAVS,
+                               const clang::CXXConstructExpr *E);
+
+  void buildCXXConstructorCall(const clang::CXXConstructorDecl *D,
+                               clang::CXXCtorType Type, bool ForVirtualBase,
+                               bool Delegating, Address This, CallArgList &Args,
+                               AggValueSlot::Overlap_t Overlap,
+                               clang::SourceLocation Loc,
+                               bool NewPointerIsChecked);
+
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
   struct PrototypeWrapper {
