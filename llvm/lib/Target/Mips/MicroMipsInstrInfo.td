@@ -163,10 +163,12 @@ def mem_mm_4sp : Operand<i32> {
 
 def jmptarget_mm : Operand<OtherVT> {
   let EncoderMethod = "getJumpTargetOpValueMM";
+  let PrintMethod = "printJumpOperand";
 }
 
 def calltarget_mm : Operand<iPTR> {
   let EncoderMethod = "getJumpTargetOpValueMM";
+  let PrintMethod = "printJumpOperand";
 }
 
 def brtarget7_mm : Operand<OtherVT> {
@@ -174,6 +176,7 @@ def brtarget7_mm : Operand<OtherVT> {
   let OperandType   = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget7MM";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def brtarget10_mm : Operand<OtherVT> {
@@ -181,6 +184,7 @@ def brtarget10_mm : Operand<OtherVT> {
   let OperandType   = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget10MM";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def brtarget_mm : Operand<OtherVT> {
@@ -188,6 +192,7 @@ def brtarget_mm : Operand<OtherVT> {
   let OperandType   = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTargetMM";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def simm23_lsl2 : Operand<i32> {
@@ -1320,6 +1325,7 @@ let EncodingPredicates = [InMicroMips] in {
                                      II_DIVU, 0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
 
   def : MipsInstAlias<"wait", (WAIT_MM 0x0), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"nop", (SLL ZERO, ZERO, 0), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"nop", (SLL_MM ZERO, ZERO, 0), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"nop", (MOVE16_MM ZERO, ZERO), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"ei", (EI_MM ZERO), 1>, ISA_MICROMIPS;

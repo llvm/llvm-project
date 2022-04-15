@@ -46,11 +46,11 @@
 # ASM-NEXT:              addiu   $3, $3, 32495
 # ASM-NEXT:              lw      $3, -32744($gp)
 # ASM-NEXT:              lw      $3, -32744($3)
-# ASM-NEXT:              beqz16  $6, -32
+# ASM-NEXT:              beqz16  $6, 0x20100
 # ASM-NEXT:              sll     $3, $fp, 0
-# ASM-NEXT:              b16     -40
+# ASM-NEXT:              b16     0x200fe
 # ASM-NEXT:              nop
-# ASM-NEXT:              b       -44
+# ASM-NEXT:              b       0x20100
 
 # ELF: Entry point address: 0x20111
 
