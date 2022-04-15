@@ -50,7 +50,7 @@ def get_run_handler(triple):
 
 def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, is_filtered):
   # Label format is based on iSel string.
-  check_label_format = '{} %s-LABEL: %s%s:'.format(comment_marker)
+  check_label_format = '{} %s-LABEL: %s%s%s'.format(comment_marker)
   global_vars_seen_dict = {}
   common.add_checks(output_lines, comment_marker, prefix_list, func_dict,
                     func_name, check_label_format, True, False,
