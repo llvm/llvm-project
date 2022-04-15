@@ -40,7 +40,10 @@ private:
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
   /// The input file originally provided on the command line.
-  std::vector<std::string> KnownInputFiles;
+  ///
+  /// This captures the spelling used to include the file and whether the
+  /// include is quoted or not.
+  SmallVector<std::pair<SmallString<32>, bool>> KnownInputFiles;
 
   /// Prepare to execute the action on the given CompilerInstance.
   ///
