@@ -584,13 +584,10 @@ define i1 @length64_eq_const(i8* %X) nounwind optsize {
 define i32 @bcmp_length2(i8* %X, i8* %Y) nounwind optsize {
 ; X64-LABEL: bcmp_length2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    movzwl (%rsi), %ecx
-; X64-NEXT:    rolw $8, %ax
-; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movzwl %cx, %ecx
-; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    movzwl (%rdi), %ecx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpw (%rsi), %cx
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %m = tail call i32 @bcmp(i8* %X, i8* %Y, i64 2) nounwind
   ret i32 %m
