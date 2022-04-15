@@ -575,6 +575,7 @@ public:
     return IsConstantImm && isUInt<N>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isUImm1() const { return IsUImm<1>(); }
   bool isUImm2() const { return IsUImm<2>(); }
   bool isUImm3() const { return IsUImm<3>(); }
   bool isUImm4() const { return IsUImm<4>(); }
@@ -1253,6 +1254,8 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
+  case Match_InvalidUImm1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 1) - 1);
   case Match_InvalidUImm2:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 2) - 1);
   case Match_InvalidUImm2Lsb0:
@@ -2932,6 +2935,26 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   RISCVII::VConstraintType Constraints = RISCVII::getConstraint(MCID.TSFlags);
   if (Constraints == RISCVII::NoConstraint)
     return false;
+
+  if (Opcode == RISCV::VC_V_XVW || Opcode == RISCV::VC_V_IVW ||
+      Opcode == RISCV::VC_V_FVW || Opcode == RISCV::VC_V_VVW) {
+    // Operands Opcode, Dst, uimm, Dst, Rs2, Rs1 for VC_V_XVW.
+    unsigned VCIXDst = Inst.getOperand(0).getReg();
+    SMLoc VCIXDstLoc = Operands[2]->getStartLoc();
+    if (Constraints & RISCVII::VS1Constraint) {
+      unsigned VCIXRs1 = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
+      if (VCIXDst == VCIXRs1)
+        return Error(VCIXDstLoc, "The destination vector register group cannot"
+                                 " overlap the source vector register group.");
+    }
+    if (Constraints & RISCVII::VS2Constraint) {
+      unsigned VCIXRs2 = Inst.getOperand(Inst.getNumOperands() - 2).getReg();
+      if (VCIXDst == VCIXRs2)
+        return Error(VCIXDstLoc, "The destination vector register group cannot"
+                                 " overlap the source vector register group.");
+    }
+    return false;
+  }
 
   unsigned DestReg = Inst.getOperand(0).getReg();
   // Operands[1] will be the first operand, DestReg.

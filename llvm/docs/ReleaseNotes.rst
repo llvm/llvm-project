@@ -149,6 +149,8 @@ Changes to the RISC-V Backend
   extension disassembler/assembler.
 * Added support for the vendor-defined XTHeadMemIdx (indexed memory operations)
   extension disassembler/assembler.
+* Added support for the vendor-defined Xsfvcp (SiFive VCIX) extension
+  disassembler/assembler.
 * Support for the now-ratified Zawrs extension is no longer experimental.
 * Adds support for the vendor-defined XTHeadCmo (cache management operations) extension.
 * Adds support for the vendor-defined XTHeadSync (multi-core synchronization instructions) extension.
