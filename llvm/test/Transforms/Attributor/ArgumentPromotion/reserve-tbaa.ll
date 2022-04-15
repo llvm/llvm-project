@@ -43,16 +43,27 @@ entry:
 }
 
 define i32 @main() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@main
-; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32**, i32*** @e, align 8, !tbaa [[TBAA5:![0-9]+]]
-; CHECK-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa [[TBAA5]]
-; CHECK-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    call fastcc void @fn() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    ret i32 0
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@main
+; IS__TUNIT____-SAME: () #[[ATTR0]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32**, i32*** @e, align 8, !tbaa [[TBAA5:![0-9]+]]
+; IS__TUNIT____-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa [[TBAA5]]
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa [[TBAA5]]
+; IS__TUNIT____-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa [[TBAA0]]
+; IS__TUNIT____-NEXT:    call fastcc void @fn() #[[ATTR1:[0-9]+]]
+; IS__TUNIT____-NEXT:    ret i32 0
+;
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@main
+; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32**, i32*** @e, align 8, !tbaa [[TBAA5:![0-9]+]]
+; IS__CGSCC____-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa [[TBAA5]]
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa [[TBAA5]]
+; IS__CGSCC____-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa [[TBAA0]]
+; IS__CGSCC____-NEXT:    call fastcc void @fn() #[[ATTR2:[0-9]+]]
+; IS__CGSCC____-NEXT:    ret i32 0
 ;
 entry:
   %0 = load i32**, i32*** @e, align 8, !tbaa !8
@@ -79,13 +90,14 @@ entry:
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nounwind willreturn }
 ;.
 ; CHECK: [[TBAA0]] = !{!1, !1, i64 0}
 ; CHECK: [[META1:![0-9]+]] = !{!"int", !2, i64 0}
 ; CHECK: [[META2:![0-9]+]] = !{!"omnipotent char", !3, i64 0}
 ; CHECK: [[META3:![0-9]+]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[TBAA4]] = !{!2, !2, i64 0}
-; CHECK: [[TBAA5]] = !{!6, !6, i64 0}
+; CHECK: [[META5:![0-9]+]] = !{!6, !6, i64 0}
 ; CHECK: [[META6:![0-9]+]] = !{!"any pointer", !2, i64 0}
 ;.

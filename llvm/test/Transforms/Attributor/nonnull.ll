@@ -31,27 +31,16 @@ define i8* @test2(i8* nonnull %p) {
 }
 
 define i8* @test2A(i1 %c, i8* %ret) {
-; NOT_CGSCC_NPM: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test2A
-; NOT_CGSCC_NPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2:[0-9]+]] {
-; NOT_CGSCC_NPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
-; NOT_CGSCC_NPM:       A:
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13:[0-9]+]] [ "nonnull"(i8* [[RET]]) ]
-; NOT_CGSCC_NPM-NEXT:    ret i8* [[RET]]
-; NOT_CGSCC_NPM:       B:
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]] [ "nonnull"(i8* [[RET]]) ]
-; NOT_CGSCC_NPM-NEXT:    ret i8* [[RET]]
-;
-; IS__CGSCC_NPM: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test2A
-; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
-; IS__CGSCC_NPM:       A:
-; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12:[0-9]+]] [ "nonnull"(i8* [[RET]]) ]
-; IS__CGSCC_NPM-NEXT:    ret i8* [[RET]]
-; IS__CGSCC_NPM:       B:
-; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "nonnull"(i8* [[RET]]) ]
-; IS__CGSCC_NPM-NEXT:    ret i8* [[RET]]
+; CHECK: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@test2A
+; CHECK-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13:[0-9]+]] [ "nonnull"(i8* [[RET]]) ]
+; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK:       B:
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]] [ "nonnull"(i8* [[RET]]) ]
+; CHECK-NEXT:    ret i8* [[RET]]
 ;
   br i1 %c, label %A, label %B
 A:
@@ -63,27 +52,16 @@ B:
 }
 
 define i8* @test2B(i1 %c, i8* %ret) {
-; NOT_CGSCC_NPM: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test2B
-; NOT_CGSCC_NPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2]] {
-; NOT_CGSCC_NPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
-; NOT_CGSCC_NPM:       A:
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
-; NOT_CGSCC_NPM-NEXT:    ret i8* [[RET]]
-; NOT_CGSCC_NPM:       B:
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
-; NOT_CGSCC_NPM-NEXT:    ret i8* [[RET]]
-;
-; IS__CGSCC_NPM: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test2B
-; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2]] {
-; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
-; IS__CGSCC_NPM:       A:
-; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
-; IS__CGSCC_NPM-NEXT:    ret i8* [[RET]]
-; IS__CGSCC_NPM:       B:
-; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
-; IS__CGSCC_NPM-NEXT:    ret i8* [[RET]]
+; CHECK: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@test2B
+; CHECK-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK:       B:
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; CHECK-NEXT:    ret i8* [[RET]]
 ;
   br i1 %c, label %A, label %B
 A:
@@ -315,21 +293,13 @@ define i8* @test9(i8* %a, i64 %n) {
 ; ATTRIBUTOR_OPM: define i8* @test10
 ; ATTRIBUTOR_NPM: define nonnull i8* @test10
 define i8* @test10(i8* %a, i64 %n) {
-; NOT_CGSCC_NPM: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test10
-; NOT_CGSCC_NPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR2]] {
-; NOT_CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp ne i64 [[N]], 0
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef [[CMP]]) #[[ATTR13]]
-; NOT_CGSCC_NPM-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
-; NOT_CGSCC_NPM-NEXT:    ret i8* [[B]]
-;
-; IS__CGSCC_NPM: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test10
-; IS__CGSCC_NPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR2]] {
-; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp ne i64 [[N]], 0
-; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef [[CMP]]) #[[ATTR12]]
-; IS__CGSCC_NPM-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
-; IS__CGSCC_NPM-NEXT:    ret i8* [[B]]
+; CHECK: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@test10
+; CHECK-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[N]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CMP]]) #[[ATTR13]]
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
+; CHECK-NEXT:    ret i8* [[B]]
 ;
   %cmp = icmp ne i64 %n, 0
   call void @llvm.assume(i1 %cmp)
@@ -405,17 +375,25 @@ define void @test13_helper() {
 }
 define internal void @test13(i8* %a, i8* %b, i8* %c) {
 ;
-; NOT_CGSCC_NPM: Function Attrs: nounwind
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test13
-; NOT_CGSCC_NPM-SAME: (i8* noalias nocapture nofree nonnull readnone [[A:%.*]], i8* noalias nocapture nofree readnone [[B:%.*]], i8* noalias nocapture nofree readnone [[C:%.*]]) #[[ATTR5]] {
-; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR5]]
-; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[B]]) #[[ATTR5]]
-; NOT_CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[C]]) #[[ATTR5]]
-; NOT_CGSCC_NPM-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nounwind
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test13
+; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull readnone [[A:%.*]], i8* noalias nocapture nofree readnone [[B:%.*]], i8* noalias nocapture nofree readnone [[C:%.*]]) #[[ATTR5]] {
+; IS__TUNIT____-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR5]]
+; IS__TUNIT____-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[B]]) #[[ATTR5]]
+; IS__TUNIT____-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[C]]) #[[ATTR5]]
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC_OPM: Function Attrs: nounwind
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test13
+; IS__CGSCC_OPM-SAME: (i8* nocapture nofree nonnull readnone [[A:%.*]], i8* nocapture nofree readnone [[B:%.*]], i8* nocapture nofree readnone [[C:%.*]]) #[[ATTR5]] {
+; IS__CGSCC_OPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR5]]
+; IS__CGSCC_OPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[B]]) #[[ATTR5]]
+; IS__CGSCC_OPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[C]]) #[[ATTR5]]
+; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM: Function Attrs: nounwind
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test13
-; IS__CGSCC_NPM-SAME: (i8* noalias nocapture nofree nonnull readnone [[A:%.*]], i8* noalias nocapture nofree readnone [[B:%.*]], i8* noalias nocapture nofree readnone [[C:%.*]]) #[[ATTR4]] {
+; IS__CGSCC_NPM-SAME: (i8* nocapture nofree nonnull readnone [[A:%.*]], i8* nocapture nofree readnone [[B:%.*]], i8* nocapture nofree readnone [[C:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR4]]
 ; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[B]]) #[[ATTR4]]
 ; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[C]]) #[[ATTR4]]
@@ -477,11 +455,11 @@ define internal i32* @f1(i32* %arg) {
 ; IS__CGSCC_NPM-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
 ; IS__CGSCC_NPM:       bb4:
 ; IS__CGSCC_NPM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 1
-; IS__CGSCC_NPM-NEXT:    [[TMP5B:%.*]] = tail call i32* @f3(i32* nofree nonnull readonly [[TMP5]]) #[[ATTR13:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[TMP5B:%.*]] = tail call i32* @f3(i32* nofree nonnull readonly [[TMP5]]) #[[ATTR14:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, i32* [[TMP5B]], i64 -1
 ; IS__CGSCC_NPM-NEXT:    br label [[BB9]]
 ; IS__CGSCC_NPM:       bb6:
-; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = tail call i32* @f2(i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    [[TMP7:%.*]] = tail call i32* @f2(i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    ret i32* [[TMP7]]
 ; IS__CGSCC_NPM:       bb9:
 ; IS__CGSCC_NPM-NEXT:    [[TMP10:%.*]] = phi i32* [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to i32*), [[BB:%.*]] ]
@@ -524,7 +502,7 @@ define internal i32* @f2(i32* %arg) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f2
 ; IS__CGSCC_NPM-SAME: (i32* nofree nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR5]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
-; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = tail call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = tail call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    ret i32* [[TMP]]
 ;
 bb:
@@ -545,7 +523,7 @@ define dso_local noalias i32* @f3(i32* %arg) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f3
 ; IS__CGSCC_NPM-SAME: (i32* nofree readonly [[ARG:%.*]]) #[[ATTR5]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
-; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR13]]
+; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = call i32* @f1(i32* nofree readonly [[ARG]]) #[[ATTR14]]
 ; IS__CGSCC_NPM-NEXT:    ret i32* [[TMP]]
 ;
 bb:
@@ -907,17 +885,11 @@ define i8 @parent6(i8* %a, i8* %b) {
 ; The nonnull callsite is guaranteed to execute, so the argument must be nonnull throughout the parent.
 
 define i8 @parent7(i8* %a) {
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@parent7
-; NOT_CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]]) {
-; NOT_CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* nonnull readonly [[A]]) #[[ATTR15:[0-9]+]]
-; NOT_CGSCC_NPM-NEXT:    call void @use1nonnull(i8* nonnull [[A]])
-; NOT_CGSCC_NPM-NEXT:    ret i8 [[RET]]
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@parent7
-; IS__CGSCC_NPM-SAME: (i8* nonnull [[A:%.*]]) {
-; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* nonnull readonly [[A]]) #[[ATTR14:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    call void @use1nonnull(i8* nonnull [[A]])
-; IS__CGSCC_NPM-NEXT:    ret i8 [[RET]]
+; CHECK-LABEL: define {{[^@]+}}@parent7
+; CHECK-SAME: (i8* nonnull [[A:%.*]]) {
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* nonnull readonly [[A]]) #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    call void @use1nonnull(i8* nonnull [[A]])
+; CHECK-NEXT:    ret i8 [[RET]]
 ;
 
 
@@ -1033,10 +1005,22 @@ define internal i32* @g2() {
 }
 
 define i32* @g1() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@g1
-; CHECK-SAME: () #[[ATTR1]] {
-; CHECK-NEXT:    ret i32* inttoptr (i64 4 to i32*)
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@g1
+; IS__TUNIT____-SAME: () #[[ATTR1]] {
+; IS__TUNIT____-NEXT:    ret i32* inttoptr (i64 4 to i32*)
+;
+; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@g1
+; IS__CGSCC_OPM-SAME: () #[[ATTR3]] {
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call noundef nonnull align 4 i32* @g2() #[[ATTR16:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    ret i32* [[C]]
+;
+; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@g1
+; IS__CGSCC_NPM-SAME: () #[[ATTR9:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call noundef nonnull align 4 i32* @g2() #[[ATTR16:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    ret i32* [[C]]
 ;
   %c = call i32* @g2()
   ret i32* %c
@@ -1044,15 +1028,21 @@ define i32* @g1() {
 
 declare void @use_i32_ptr(i32* readnone nocapture) nounwind
 define internal void @called_by_weak(i32* %a) {
-; NOT_CGSCC_NPM: Function Attrs: nounwind
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@called_by_weak
-; NOT_CGSCC_NPM-SAME: (i32* noalias nocapture nonnull readnone [[A:%.*]]) #[[ATTR5]] {
-; NOT_CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR5]]
-; NOT_CGSCC_NPM-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nounwind
+; IS__TUNIT____-LABEL: define {{[^@]+}}@called_by_weak
+; IS__TUNIT____-SAME: (i32* noalias nocapture nonnull readnone [[A:%.*]]) #[[ATTR5]] {
+; IS__TUNIT____-NEXT:    call void @use_i32_ptr(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR5]]
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC_OPM: Function Attrs: nounwind
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@called_by_weak
+; IS__CGSCC_OPM-SAME: (i32* nocapture nonnull readnone [[A:%.*]]) #[[ATTR5]] {
+; IS__CGSCC_OPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR5]]
+; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM: Function Attrs: nounwind
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@called_by_weak
-; IS__CGSCC_NPM-SAME: (i32* noalias nocapture nonnull readnone [[A:%.*]]) #[[ATTR4]] {
+; IS__CGSCC_NPM-SAME: (i32* nocapture nonnull readnone [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR4]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
@@ -1079,15 +1069,21 @@ define weak_odr void @weak_caller(i32* nonnull %a) {
 
 ; Expect nonnull
 define internal void @control(i32* dereferenceable(4) %a) {
-; NOT_CGSCC_NPM: Function Attrs: nounwind
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@control
-; NOT_CGSCC_NPM-SAME: (i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
-; NOT_CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR5]]
-; NOT_CGSCC_NPM-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nounwind
+; IS__TUNIT____-LABEL: define {{[^@]+}}@control
+; IS__TUNIT____-SAME: (i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+; IS__TUNIT____-NEXT:    call void @use_i32_ptr(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR5]]
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC_OPM: Function Attrs: nounwind
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@control
+; IS__CGSCC_OPM-SAME: (i32* nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+; IS__CGSCC_OPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR5]]
+; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM: Function Attrs: nounwind
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@control
-; IS__CGSCC_NPM-SAME: (i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
+; IS__CGSCC_NPM-SAME: (i32* nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR4]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
@@ -1096,17 +1092,11 @@ define internal void @control(i32* dereferenceable(4) %a) {
 }
 ; Avoid nonnull as we do not touch naked functions
 define internal void @naked(i32* dereferenceable(4) %a) naked {
-; NOT_CGSCC_NPM: Function Attrs: naked
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@naked
-; NOT_CGSCC_NPM-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR10:[0-9]+]] {
-; NOT_CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* [[A]])
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: naked
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@naked
-; IS__CGSCC_NPM-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR9:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* [[A]])
-; IS__CGSCC_NPM-NEXT:    ret void
+; CHECK: Function Attrs: naked
+; CHECK-LABEL: define {{[^@]+}}@naked
+; CHECK-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR10:[0-9]+]] {
+; CHECK-NEXT:    call void @use_i32_ptr(i32* [[A]])
+; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(i32* %a)
   ret void
@@ -1114,17 +1104,11 @@ define internal void @naked(i32* dereferenceable(4) %a) naked {
 ; Avoid nonnull as we do not touch optnone
 define internal void @optnone(i32* dereferenceable(4) %a) optnone noinline {
 ;
-; NOT_CGSCC_NPM: Function Attrs: noinline optnone
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@optnone
-; NOT_CGSCC_NPM-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
-; NOT_CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* [[A]])
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: noinline optnone
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@optnone
-; IS__CGSCC_NPM-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR10:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    call void @use_i32_ptr(i32* [[A]])
-; IS__CGSCC_NPM-NEXT:    ret void
+; CHECK: Function Attrs: noinline optnone
+; CHECK-LABEL: define {{[^@]+}}@optnone
+; CHECK-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
+; CHECK-NEXT:    call void @use_i32_ptr(i32* [[A]])
+; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(i32* %a)
   ret void
@@ -1523,23 +1507,14 @@ declare i8* @strrchr(i8* %0, i32 %1) nofree nounwind readonly willreturn
 
 ; We should not mark the return of @strrchr as `nonnull`, it may well be NULL!
 define i8* @mybasename(i8* nofree readonly %str) {
-; NOT_CGSCC_NPM: Function Attrs: nofree nounwind readonly willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@mybasename
-; NOT_CGSCC_NPM-SAME: (i8* nofree readonly [[STR:%.*]]) #[[ATTR12:[0-9]+]] {
-; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) #[[ATTR15]]
-; NOT_CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
-; NOT_CGSCC_NPM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
-; NOT_CGSCC_NPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
-; NOT_CGSCC_NPM-NEXT:    ret i8* [[COND]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree nounwind readonly willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@mybasename
-; IS__CGSCC_NPM-SAME: (i8* nofree readonly [[STR:%.*]]) #[[ATTR11:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) #[[ATTR14]]
-; IS__CGSCC_NPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
-; IS__CGSCC_NPM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
-; IS__CGSCC_NPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
-; IS__CGSCC_NPM-NEXT:    ret i8* [[COND]]
+; CHECK: Function Attrs: nofree nounwind readonly willreturn
+; CHECK-LABEL: define {{[^@]+}}@mybasename
+; CHECK-SAME: (i8* nofree readonly [[STR:%.*]]) #[[ATTR12:[0-9]+]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) #[[ATTR15]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
+; CHECK-NEXT:    ret i8* [[COND]]
 ;
   %call = call i8* @strrchr(i8* %str, i32 47)
   %tobool = icmp ne i8* %call, null
@@ -1565,7 +1540,7 @@ define void @nonnull_assume_pos(i8* %arg) {
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS__CGSCC_NPM-SAME: (i8* nocapture nofree nonnull readnone [[ARG:%.*]]) {
-; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "nonnull"(i8* [[ARG]]) ]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]] [ "nonnull"(i8* [[ARG]]) ]
 ; IS__CGSCC_NPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) #[[ATTR4]]
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -1663,22 +1638,40 @@ declare void @nonnull_callee(i8* nonnull %p)
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}
 ;.
-; NOT_CGSCC_NPM: attributes #[[ATTR0:[0-9]+]] = { inaccessiblememonly nocallback nofree nosync nounwind willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR2]] = { inaccessiblememonly nofree norecurse nosync nounwind willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR3]] = { nofree nosync nounwind readnone willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR4]] = { noreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR5]] = { nounwind }
-; NOT_CGSCC_NPM: attributes #[[ATTR6]] = { argmemonly nofree nosync nounwind readonly }
-; NOT_CGSCC_NPM: attributes #[[ATTR7]] = { nounwind willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR8:[0-9]+]] = { nounwind readonly willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR10]] = { naked }
-; NOT_CGSCC_NPM: attributes #[[ATTR11]] = { noinline optnone }
-; NOT_CGSCC_NPM: attributes #[[ATTR12]] = { nofree nounwind readonly willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR13]] = { willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR14]] = { nofree nosync nounwind readonly }
-; NOT_CGSCC_NPM: attributes #[[ATTR15]] = { readonly willreturn }
+; IS__TUNIT____: attributes #[[ATTR0:[0-9]+]] = { inaccessiblememonly nocallback nofree nosync nounwind willreturn }
+; IS__TUNIT____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR2]] = { inaccessiblememonly nofree norecurse nosync nounwind willreturn }
+; IS__TUNIT____: attributes #[[ATTR3]] = { nofree nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR4]] = { noreturn }
+; IS__TUNIT____: attributes #[[ATTR5]] = { nounwind }
+; IS__TUNIT____: attributes #[[ATTR6]] = { argmemonly nofree nosync nounwind readonly }
+; IS__TUNIT____: attributes #[[ATTR7]] = { nounwind willreturn }
+; IS__TUNIT____: attributes #[[ATTR8:[0-9]+]] = { nounwind readonly willreturn }
+; IS__TUNIT____: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR10]] = { naked }
+; IS__TUNIT____: attributes #[[ATTR11]] = { noinline optnone }
+; IS__TUNIT____: attributes #[[ATTR12]] = { nofree nounwind readonly willreturn }
+; IS__TUNIT____: attributes #[[ATTR13]] = { willreturn }
+; IS__TUNIT____: attributes #[[ATTR14]] = { nofree nosync nounwind readonly }
+; IS__TUNIT____: attributes #[[ATTR15]] = { readonly willreturn }
+;.
+; IS__CGSCC_OPM: attributes #[[ATTR0:[0-9]+]] = { inaccessiblememonly nocallback nofree nosync nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR2]] = { inaccessiblememonly nofree norecurse nosync nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR3]] = { nofree nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR4]] = { noreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR5]] = { nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR6]] = { argmemonly nofree nosync nounwind readonly }
+; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR8:[0-9]+]] = { nounwind readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR10]] = { naked }
+; IS__CGSCC_OPM: attributes #[[ATTR11]] = { noinline optnone }
+; IS__CGSCC_OPM: attributes #[[ATTR12]] = { nofree nounwind readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR13]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nofree nosync nounwind readonly }
+; IS__CGSCC_OPM: attributes #[[ATTR15]] = { readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR16]] = { readnone willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0:[0-9]+]] = { inaccessiblememonly nocallback nofree nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
@@ -1689,10 +1682,12 @@ attributes #1 = { nounwind willreturn}
 ; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR7:[0-9]+]] = { nounwind readonly willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR8]] = { nofree norecurse nosync nounwind null_pointer_is_valid readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR9]] = { naked }
-; IS__CGSCC_NPM: attributes #[[ATTR10]] = { noinline optnone }
-; IS__CGSCC_NPM: attributes #[[ATTR11]] = { nofree nounwind readonly willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR12]] = { willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR13]] = { nofree nosync nounwind readonly }
-; IS__CGSCC_NPM: attributes #[[ATTR14]] = { readonly willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR9]] = { nofree nosync nounwind readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR10]] = { naked }
+; IS__CGSCC_NPM: attributes #[[ATTR11]] = { noinline optnone }
+; IS__CGSCC_NPM: attributes #[[ATTR12]] = { nofree nounwind readonly willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR13]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR14]] = { nofree nosync nounwind readonly }
+; IS__CGSCC_NPM: attributes #[[ATTR15]] = { readonly willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR16]] = { readnone willreturn }
 ;.
