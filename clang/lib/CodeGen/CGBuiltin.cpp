@@ -9823,6 +9823,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, Metadata);
   }
 
+  if (BuiltinID == AArch64::BI__break) {
+    Expr::EvalResult Result;
+    if (!E->getArg(0)->EvaluateAsInt(Result, CGM.getContext()))
+      llvm_unreachable("Sema will ensure that the parameter is constant");
+
+    llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::aarch64_break);
+    return Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0))});
+  }
+
   if (BuiltinID == AArch64::BI__builtin_arm_clrex) {
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_clrex);
     return Builder.CreateCall(F);
