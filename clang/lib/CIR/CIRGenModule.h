@@ -27,6 +27,7 @@
 #include "mlir/Dialect/CIR/IR/CIRAttrs.h"
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -143,6 +144,16 @@ public:
                                            LValueBaseInfo *BaseInfo = nullptr,
                                            bool forPointeeType = false);
 
+  mlir::FuncOp getAddrOfCXXStructor(
+      clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
+      mlir::FunctionType FnType = nullptr, bool DontDefer = false,
+      ForDefinition_t IsForDefinition = NotForDefinition) {
+
+    return getAddrAndTypeOfCXXStructor(GD, FnInfo, FnType, DontDefer,
+                                       IsForDefinition)
+        .second;
+  }
+
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const clang::CXXRecordDecl *> DeferredVTables;
 
@@ -158,6 +169,11 @@ public:
   void addDeferredDeclToEmit(clang::GlobalDecl GD) {
     DeferredDeclsToEmit.emplace_back(GD);
   }
+
+  std::pair<mlir::FunctionType, mlir::FuncOp> getAddrAndTypeOfCXXStructor(
+      clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
+      mlir::FunctionType FnType = nullptr, bool Dontdefer = false,
+      ForDefinition_t IsForDefinition = NotForDefinition);
 
   void buildTopLevelDecl(clang::Decl *decl);
 

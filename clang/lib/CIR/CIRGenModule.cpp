@@ -384,6 +384,29 @@ void CIRGenModule::verifyModule() {
     theModule.emitError("module verification error");
 }
 
+std::pair<mlir::FunctionType, mlir::FuncOp>
+CIRGenModule::getAddrAndTypeOfCXXStructor(GlobalDecl GD,
+                                          const CIRGenFunctionInfo *FnInfo,
+                                          mlir::FunctionType FnType,
+                                          bool Dontdefer,
+                                          ForDefinition_t IsForDefinition) {
+  auto *MD = cast<CXXMethodDecl>(GD.getDecl());
+
+  assert(!isa<CXXDestructorDecl>(MD) && "Destructors NYI");
+
+  if (!FnType) {
+    if (!FnInfo)
+      FnInfo = &getTypes().arrangeCXXStructorDeclaration(GD);
+    FnType = getTypes().GetFunctionType(*FnInfo);
+  }
+
+  auto Fn = GetOrCreateCIRFunction(getMangledName(GD), FnType, GD,
+                                   /*ForVtable=*/false, Dontdefer,
+                                   /*IsThunk=*/false, IsForDefinition);
+
+  return {FnType, Fn};
+}
+
 mlir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD,
                                              mlir::Type Ty, bool ForVTable,
                                              bool DontDefer,
@@ -682,7 +705,8 @@ CIRGenModule::GetAddrOfGlobal(GlobalDecl GD, ForDefinition_t IsForDefinition) {
   const Decl *D = GD.getDecl();
 
   if (isa<CXXConstructorDecl>(D) || isa<CXXDestructorDecl>(D))
-    llvm_unreachable("NYI");
+    return getAddrOfCXXStructor(GD, /*FnInfo=*/nullptr, /*FnType=*/nullptr,
+                                /*DontDefer=*/false, IsForDefinition);
 
   llvm_unreachable("NYI");
 }
