@@ -110,6 +110,10 @@ public:
   virtual RecordArgABI
   getRecordArgABI(const clang::CXXRecordDecl *RD) const = 0;
 
+  /// Checks if ABI requires to initialize vptrs for given dynamic class.
+  virtual bool
+  doStructorsInitializeVPtrs(const clang::CXXRecordDecl *VTableClass) = 0;
+
   /// Returns true if the given constructor or destructor is one of the kinds
   /// that the ABI says returns 'this' (only applies when called non-virtually
   /// for destructors).

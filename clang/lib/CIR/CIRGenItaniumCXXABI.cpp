@@ -58,6 +58,9 @@ public:
   }
 
   bool classifyReturnType(CIRGenFunctionInfo &FI) const override;
+  bool doStructorsInitializeVPtrs(const CXXRecordDecl *VTableClass) override {
+    return true;
+  }
 };
 } // namespace
 
