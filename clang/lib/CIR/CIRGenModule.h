@@ -198,6 +198,7 @@ public:
 
   void buildGlobalDefinition(clang::GlobalDecl D,
                              mlir::Operation *Op = nullptr);
+  void buildGlobalFunctionDefinition(clang::GlobalDecl D, mlir::Operation *Op);
 
   /// Stored a deferred empty coverage mapping for an unused and thus
   /// uninstrumented top level declaration.
