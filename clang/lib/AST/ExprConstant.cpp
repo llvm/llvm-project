@@ -8295,9 +8295,10 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
 
 bool LValueExprEvaluator::VisitCallExpr(const CallExpr *E) {
   switch (unsigned BuiltinOp = E->getBuiltinCallee()) {
+  case Builtin::BIas_const:
+  case Builtin::BIforward:
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
-  case Builtin::BIforward:
     if (cast<FunctionDecl>(E->getCalleeDecl())->isConstexpr())
       return Visit(E->getArg(0));
     break;
@@ -9084,6 +9085,8 @@ static bool isOneByteCharacterType(QualType T) {
 bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                                 unsigned BuiltinOp) {
   switch (BuiltinOp) {
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
     return evaluateLValue(E->getArg(0), Result);
   case Builtin::BI__builtin_assume_aligned: {

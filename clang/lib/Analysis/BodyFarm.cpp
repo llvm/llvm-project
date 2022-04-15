@@ -713,9 +713,10 @@ Stmt *BodyFarm::getBody(const FunctionDecl *D) {
 
   if (unsigned BuiltinID = D->getBuiltinID()) {
     switch (BuiltinID) {
+    case Builtin::BIas_const:
+    case Builtin::BIforward:
     case Builtin::BImove:
     case Builtin::BImove_if_noexcept:
-    case Builtin::BIforward:
       FF = create_std_move_forward;
       break;
     default:

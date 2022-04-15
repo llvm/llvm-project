@@ -6587,7 +6587,7 @@ def warn_self_move : Warning<
   InGroup<SelfMove>, DefaultIgnore;
 
 def err_builtin_move_forward_unsupported : Error<
-  "unsupported signature for '%select{std::move|std::forward}0'">;
+  "unsupported signature for %q0">;
 def err_use_of_unaddressable_function : Error<
   "taking address of non-addressable standard library function">;
 // FIXME: This should also be in -Wc++23-compat once we have it.

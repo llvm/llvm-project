@@ -9277,9 +9277,12 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
     // No type checking whatsoever.
     return Ctx.getTargetInfo().getCXXABI().isMicrosoft();
 
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
+  case Builtin::BIforward:
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
-  case Builtin::BIforward: {
+  case Builtin::BIas_const: {
     // Ensure that we don't treat the algorithm
     //   OutputIt std::move(InputIt, InputIt, OutputIt)
     // as the builtin std::move.

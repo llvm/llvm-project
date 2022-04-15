@@ -2130,18 +2130,32 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
     TheCall->setType(Context.VoidPtrTy);
     break;
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
+  case Builtin::BIforward:
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
-  case Builtin::BIforward:
+  case Builtin::BIas_const: {
+    // These are all expected to be of the form
+    //   T &/&&/* f(U &/&&)
+    // where T and U only differ in qualification.
     if (checkArgCount(*this, TheCall, 1))
       return ExprError();
-    if (!Context.hasSameUnqualifiedType(TheCall->getType(),
-                                        TheCall->getArg(0)->getType())) {
+    QualType Param = FDecl->getParamDecl(0)->getType();
+    QualType Result = FDecl->getReturnType();
+    bool ReturnsPointer = BuiltinID == Builtin::BIaddressof ||
+                          BuiltinID == Builtin::BI__addressof;
+    if (!(Param->isReferenceType() &&
+          (ReturnsPointer ? Result->isPointerType()
+                          : Result->isReferenceType()) &&
+          Context.hasSameUnqualifiedType(Param->getPointeeType(),
+                                         Result->getPointeeType()))) {
       Diag(TheCall->getBeginLoc(), diag::err_builtin_move_forward_unsupported)
-          << (BuiltinID == Builtin::BIforward);
+          << FDecl;
       return ExprError();
     }
     break;
+  }
   // OpenCL v2.0, s6.13.16 - Pipe functions
   case Builtin::BIread_pipe:
   case Builtin::BIwrite_pipe:
