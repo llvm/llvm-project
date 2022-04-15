@@ -3921,7 +3921,8 @@ bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
     auto &symbol{DEREF(FindSymbol(name))};
     if (symbol.has<GenericDetails>()) {
       // Generic interface is extending intrinsic; ok
-    } else if (!ConvertToProcEntity(symbol)) {
+    } else if (!symbol.has<HostAssocDetails>() &&
+        !ConvertToProcEntity(symbol)) {
       SayWithDecl(
           name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
     } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
@@ -3965,8 +3966,24 @@ bool DeclarationVisitor::HandleAttributeStmt(
 }
 Symbol &DeclarationVisitor::HandleAttributeStmt(
     Attr attr, const parser::Name &name) {
-  if (attr == Attr::INTRINSIC && !IsIntrinsic(name.source, std::nullopt)) {
-    Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
+  if (attr == Attr::INTRINSIC) {
+    if (!IsIntrinsic(name.source, std::nullopt)) {
+      Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
+    } else if (currScope().kind() == Scope::Kind::Subprogram ||
+        currScope().kind() == Scope::Kind::Block) {
+      if (auto *symbol{FindSymbol(name)}) {
+        if (symbol->GetUltimate().has<GenericDetails>() &&
+            symbol->owner() != currScope()) {
+          // Declaring a name INTRINSIC when there is a generic
+          // interface of the same name in the host scope.
+          // Host-associate the generic and mark it INTRINSIC
+          // rather than completely overriding the generic.
+          symbol = &MakeHostAssocSymbol(name, *symbol);
+          symbol->attrs().set(Attr::INTRINSIC);
+          return *symbol;
+        }
+      }
+    }
   }
   auto *symbol{FindInScope(name)};
   if (attr == Attr::ASYNCHRONOUS || attr == Attr::VOLATILE) {
