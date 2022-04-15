@@ -245,11 +245,8 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
   // function. If the global mjust always be emitted, do it eagerly if possible
   // to benefit from cache locality.
   if (MustBeEmitted(Global) && MayBeEmittedEagerly(Global)) {
-    CIRGenFunction CGF{*this, builder};
-    CurCGF = &CGF;
-    auto fn = CGF.buildFunction(cast<FunctionDecl>(GD.getDecl()));
-    theModule.push_back(fn);
-    CurCGF = nullptr;
+    // Emit the definition if it can't be deferred.
+    buildGlobalDefinition(GD);
     return;
   }
 
@@ -273,6 +270,36 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
     // use of the mangled name will cause it to move into DeferredDeclsToEmit.
     DeferredDecls[MangledName] = GD;
   }
+}
+
+void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
+  const auto *D = cast<ValueDecl>(GD.getDecl());
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // At -O0, don't generate CIR for functions with available_externally
+    // linkage.
+    if (!shouldEmitFunction(GD))
+      return;
+
+    if (const auto *Method = dyn_cast<CXXMethodDecl>(D)) {
+      llvm_unreachable("NYI");
+    }
+
+    if (FD->isMultiVersion())
+      llvm_unreachable("NYI");
+
+    CIRGenFunction CGF{*this, builder};
+    CurCGF = &CGF;
+    auto fn = CGF.buildFunction(cast<FunctionDecl>(GD.getDecl()));
+    theModule.push_back(fn);
+    CurCGF = nullptr;
+    return;
+  }
+
+  if (const auto *VD = dyn_cast<VarDecl>(D))
+    llvm_unreachable("NYI");
+
+  llvm_unreachable("Invalid argument to buildGlobalDefinition()");
 }
 
 // buildTopLevelDecl - Emit code for a single top level declaration.
@@ -581,6 +608,12 @@ void CIRGenModule::Release() {
 
   // TODO: FINISH THE REST OF THIS
 }
+
+bool CIRGenModule::shouldEmitFunction(GlobalDecl GD) {
+  // TODO: implement this -- requires defining linkage for CIR
+  return true;
+}
+
 void CIRGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
   // Do we need to generate coverage mapping?
   if (!codeGenOpts.CoverageMapping)
