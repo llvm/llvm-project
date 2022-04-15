@@ -52,6 +52,256 @@ bool CIRGenFunction::IsConstructorDelegationValid(
   return true;
 }
 
+namespace {
+class FieldMemcpyizer {
+public:
+  FieldMemcpyizer(CIRGenFunction &CGF, const CXXRecordDecl *ClassDecl,
+                  const VarDecl *SrcRec)
+      : CGF(CGF), ClassDecl(ClassDecl),
+        // SrcRec(SrcRec),
+        RecLayout(CGF.getContext().getASTRecordLayout(ClassDecl)),
+        FirstField(nullptr), LastField(nullptr), FirstFieldOffset(0),
+        LastFieldOffset(0), LastAddedFieldIndex(0) {
+    (void)SrcRec;
+  }
+
+  bool isMemcpyableField(FieldDecl *F) const {
+    // Never memcpy fields when we are adding poised paddings.
+    if (CGF.getContext().getLangOpts().SanitizeAddressFieldPadding)
+      return false;
+    Qualifiers Qual = F->getType().getQualifiers();
+    if (Qual.hasVolatile() || Qual.hasObjCLifetime())
+      return false;
+
+    return true;
+  }
+
+  void addMemcpyableField(FieldDecl *F) {
+    if (F->isZeroSize(CGF.getContext()))
+      return;
+    if (!FirstField)
+      addInitialField(F);
+    else
+      addNextField(F);
+  }
+
+  CharUnits getMemcpySize(uint64_t FirstByteOffset) const {
+    ASTContext &Ctx = CGF.getContext();
+    unsigned LastFieldSize =
+        LastField->isBitField()
+            ? LastField->getBitWidthValue(Ctx)
+            : Ctx.toBits(
+                  Ctx.getTypeInfoDataSizeInChars(LastField->getType()).Width);
+    uint64_t MemcpySizeBits = LastFieldOffset + LastFieldSize -
+                              FirstByteOffset + Ctx.getCharWidth() - 1;
+    CharUnits MemcpySize = Ctx.toCharUnitsFromBits(MemcpySizeBits);
+    return MemcpySize;
+  }
+
+  void buildMemcpy() {
+    // Give the subclass a chance to bail out if it feels the memcpy isn't worth
+    // it (e.g. Hasn't aggregated enough data).
+    if (!FirstField) {
+      return;
+    }
+
+    llvm_unreachable("NYI");
+  }
+
+  void reset() { FirstField = nullptr; }
+
+protected:
+  CIRGenFunction &CGF;
+  const CXXRecordDecl *ClassDecl;
+
+private:
+  void buildMemcpyIR(Address DestPtr, Address SrcPtr, CharUnits Size) {
+    llvm_unreachable("NYI");
+  }
+
+  void addInitialField(FieldDecl *F) {
+    FirstField = F;
+    LastField = F;
+    FirstFieldOffset = RecLayout.getFieldOffset(F->getFieldIndex());
+    LastFieldOffset = FirstFieldOffset;
+    LastAddedFieldIndex = F->getFieldIndex();
+  }
+
+  void addNextField(FieldDecl *F) {
+    // For the most part, the following invariant will hold:
+    //   F->getFieldIndex() == LastAddedFieldIndex + 1
+    // The one exception is that Sema won't add a copy-initializer for an
+    // unnamed bitfield, which will show up here as a gap in the sequence.
+    assert(F->getFieldIndex() >= LastAddedFieldIndex + 1 &&
+           "Cannot aggregate fields out of order.");
+    LastAddedFieldIndex = F->getFieldIndex();
+
+    // The 'first' and 'last' fields are chosen by offset, rather than field
+    // index. This allows the code to support bitfields, as well as regular
+    // fields.
+    uint64_t FOffset = RecLayout.getFieldOffset(F->getFieldIndex());
+    if (FOffset < FirstFieldOffset) {
+      FirstField = F;
+      FirstFieldOffset = FOffset;
+    } else if (FOffset >= LastFieldOffset) {
+      LastField = F;
+      LastFieldOffset = FOffset;
+    }
+  }
+
+  // const VarDecl *SrcRec;
+  const ASTRecordLayout &RecLayout;
+  FieldDecl *FirstField;
+  FieldDecl *LastField;
+  uint64_t FirstFieldOffset, LastFieldOffset;
+  unsigned LastAddedFieldIndex;
+};
+
+class ConstructorMemcpyizer : public FieldMemcpyizer {
+private:
+  /// Get source argument for copy constructor. Returns null if not a copy
+  /// constructor.
+  static const VarDecl *getTrivialCopySource(CIRGenFunction &CGF,
+                                             const CXXConstructorDecl *CD,
+                                             FunctionArgList &Args) {
+    if (CD->isCopyOrMoveConstructor() && CD->isDefaulted())
+      llvm_unreachable("NYI");
+
+    return nullptr;
+  }
+
+  // Returns true if a CXXCtorInitializer represents a member initialization
+  // that can be rolled into a memcpy
+  bool isMemberInitMemcpyable(CXXCtorInitializer *MemberInit) const {
+    if (!MemcpyableCtor)
+      return false;
+
+    llvm_unreachable("NYI");
+  }
+
+public:
+  ConstructorMemcpyizer(CIRGenFunction &CGF, const CXXConstructorDecl *CD,
+                        FunctionArgList &Args)
+      : FieldMemcpyizer(CGF, CD->getParent(),
+                        getTrivialCopySource(CGF, CD, Args)),
+        MemcpyableCtor(CD->isDefaulted() && CD->isCopyOrMoveConstructor() &&
+                       CGF.getLangOpts().getGC() == LangOptions::NonGC) {}
+
+  void addMemberInitializer(CXXCtorInitializer *MemberInit) {
+    if (isMemberInitMemcpyable(MemberInit)) {
+      llvm_unreachable("NYI");
+    } else {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  void buildAggregatedInits() {
+    if (AggregatedInits.size() <= 1) {
+      // This memcpy is too small to be worthwhile. Fall back on default
+      // codegen.
+      if (!AggregatedInits.empty()) {
+        llvm_unreachable("NYI");
+      }
+      reset();
+      return;
+    }
+
+    pushEHDestructors();
+    buildMemcpy();
+    AggregatedInits.clear();
+  }
+
+  void pushEHDestructors() {
+    Address ThisPtr = CGF.LoadCXXThisAddress();
+    QualType RecordTy = CGF.getContext().getTypeDeclType(ClassDecl);
+    LValue LHS = CGF.makeAddrLValue(ThisPtr, RecordTy);
+    (void)LHS;
+
+    for (unsigned i = 0; i < AggregatedInits.size(); ++i) {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  void finish() { buildAggregatedInits(); }
+
+private:
+  bool MemcpyableCtor;
+  SmallVector<CXXCtorInitializer *, 16> AggregatedInits;
+};
+
+} // namespace
+
+/// buildCtorPrologue - This routine generates necessary code to initialize base
+/// classes and non-static data members belonging to this constructor.
+void CIRGenFunction::buildCtorPrologue(const CXXConstructorDecl *CD,
+                                       CXXCtorType CtorType,
+                                       FunctionArgList &Args) {
+  if (CD->isDelegatingConstructor())
+    llvm_unreachable("NYI");
+
+  const CXXRecordDecl *ClassDecl = CD->getParent();
+
+  CXXConstructorDecl::init_const_iterator B = CD->init_begin(),
+                                          E = CD->init_end();
+
+  // Virtual base initializers first, if any. They aren't needed if:
+  // - This is a base ctor variant
+  // - There are no vbases
+  // - The class is abstract, so a complete object of it cannot be constructed
+  //
+  // The check for an abstract class is necessary because sema may not have
+  // marked virtual base destructors referenced.
+  bool ConstructVBases = CtorType != Ctor_Base &&
+                         ClassDecl->getNumVBases() != 0 &&
+                         !ClassDecl->isAbstract();
+
+  // In the Microsoft C++ ABI, there are no constructor variants. Instead, the
+  // constructor of a class with virtual bases takes an additional parameter to
+  // conditionally construct the virtual bases. Emit that check here.
+  mlir::Block *BaseCtorContinueBB = nullptr;
+  if (ConstructVBases &&
+      !CGM.getTarget().getCXXABI().hasConstructorVariants()) {
+    llvm_unreachable("NYI");
+  }
+
+  mlir::Operation *const OldThis = CXXThisValue;
+  for (; B != E && (*B)->isBaseInitializer() && (*B)->isBaseVirtual(); B++) {
+    if (!ConstructVBases)
+      continue;
+    llvm_unreachable("NYI");
+  }
+
+  if (BaseCtorContinueBB) {
+    llvm_unreachable("NYI");
+  }
+
+  // Then, non-virtual base initializers.
+  for (; B != E && (*B)->isBaseInitializer(); B++) {
+    assert(!(*B)->isBaseVirtual());
+
+    if (CGM.getCodeGenOpts().StrictVTablePointers)
+      llvm_unreachable("NYI");
+
+    llvm_unreachable("NYI");
+  }
+
+  CXXThisValue = OldThis;
+
+  initializeVTablePointers(ClassDecl);
+
+  // And finally, initialize class members.
+  FieldConstructionScope FCS(*this, LoadCXXThisAddress());
+  ConstructorMemcpyizer CM(*this, CD, Args);
+  for (; B != E; B++) {
+    CXXCtorInitializer *Member = (*B);
+    assert(!Member->isBaseInitializer());
+    assert(Member->isAnyMemberInitializer() &&
+           "Delegating initializer on non-delegating constructor");
+    CM.addMemberInitializer(Member);
+  }
+  CM.finish();
+}
+
 void CIRGenFunction::initializeVTablePointers(const CXXRecordDecl *RD) {
   // Ignore classes without a vtable.
   if (!RD->isDynamicClass())
