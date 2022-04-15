@@ -345,6 +345,7 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
     auto FnBeginLoc = getLoc(FD->getBody()->getEndLoc());
     auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
 
+    assert(Fn.isDeclaration() && "Function already has body?");
     // In MLIR the entry block of the function is special: it must have the
     // same argument list as the function itself.
     mlir::Block *entryBlock = Fn.addEntryBlock();
