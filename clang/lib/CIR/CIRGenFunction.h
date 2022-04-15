@@ -766,6 +766,11 @@ public:
     return it->second;
   }
 
+  void buildDelegateCXXConstructorCall(const clang::CXXConstructorDecl *Ctor,
+                                       clang::CXXCtorType CtorType,
+                                       const FunctionArgList &Args,
+                                       clang::SourceLocation Loc);
+
   /// buildDelegatingCallArg - We are performing a delegate call; that is, the
   /// current function is delegating to another one. Produce a r-value suitable
   /// for passing the given parameter.
