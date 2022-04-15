@@ -750,3 +750,44 @@ bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
 
   return ReturnType.isTriviallyCopyableType(Context);
 }
+
+static bool isInAllocaArgument(CIRGenCXXABI &ABI, QualType type) {
+  const auto *RD = type->getAsCXXRecordDecl();
+  return RD &&
+         ABI.getRecordArgABI(RD) == CIRGenCXXABI::RecordArgABI::DirectInMemory;
+}
+
+void CIRGenFunction::buildDelegateCallArg(CallArgList &args,
+                                          const VarDecl *param,
+                                          SourceLocation loc) {
+  // StartFunction converted the ABI-lowered parameter(s) into a local alloca.
+  // We need to turn that into an r-value suitable for buildCall
+  Address local = GetAddrOfLocalVar(param);
+
+  QualType type = param->getType();
+
+  if (isInAllocaArgument(CGM.getCXXABI(), type)) {
+    llvm_unreachable("NYI");
+  }
+
+  // GetAddrOfLocalVar returns a pointer-to-pointer for references, but the
+  // argument needs to be the original pointer.
+  if (type->isReferenceType()) {
+
+    llvm_unreachable("NYI");
+  } else if (getLangOpts().ObjCAutoRefCount) {
+    llvm_unreachable("NYI");
+
+    // For the most part, we just need to load the alloca, except that aggregate
+    // r-values are actually pointers to temporaries.
+  } else {
+    args.add(convertTempToRValue(local, type, loc), type);
+  }
+
+  // Deactivate the cleanup for the callee-destructed param that was pushed.
+  if (type->isRecordType() && !CurFuncIsThunk &&
+      type->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee() &&
+      param->needsDestruction(getContext())) {
+    llvm_unreachable("NYI");
+  }
+}
