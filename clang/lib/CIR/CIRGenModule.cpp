@@ -259,6 +259,20 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
       cast<VarDecl>(Global)->hasInit()) {
     llvm_unreachable("NYI");
   }
+
+  llvm::StringRef MangledName = getMangledName(GD);
+  if (GetGlobalValue(MangledName) != nullptr) {
+    // The value has already been used and should therefore be emitted.
+    addDeferredDeclToEmit(GD);
+  } else if (MustBeEmitted(Global)) {
+    // The value must be emitted, but cannot be emitted eagerly.
+    assert(!MayBeEmittedEagerly(Global));
+    addDeferredDeclToEmit(GD);
+  } else {
+    // Otherwise, remember that we saw a deferred decl with this name. The first
+    // use of the mangled name will cause it to move into DeferredDeclsToEmit.
+    DeferredDecls[MangledName] = GD;
+  }
 }
 
 // buildTopLevelDecl - Emit code for a single top level declaration.
