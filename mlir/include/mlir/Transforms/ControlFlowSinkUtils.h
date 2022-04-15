@@ -17,6 +17,7 @@ class DominanceInfo;
 class Operation;
 class Region;
 class RegionBranchOpInterface;
+class RegionRange;
 
 /// Given a list of regions, perform control flow sinking on them. For each
 /// region, control-flow sinking moves operations that dominate the region but
@@ -61,7 +62,7 @@ class RegionBranchOpInterface;
 ///
 /// Returns the number of operations sunk.
 size_t
-controlFlowSink(ArrayRef<Region *> regions, DominanceInfo &domInfo,
+controlFlowSink(RegionRange regions, DominanceInfo &domInfo,
                 function_ref<bool(Operation *, Region *)> shouldMoveIntoRegion,
                 function_ref<void(Operation *, Region *)> moveIntoRegion);
 
