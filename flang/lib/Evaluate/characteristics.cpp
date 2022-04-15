@@ -72,7 +72,7 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
   return common::visit(
       common::visitors{
           [&](const semantics::ProcEntityDetails &proc) {
-            const semantics::ProcInterface &interface{proc.interface()};
+            const semantics::ProcInterface &interface { proc.interface() };
             if (interface.type()) {
               return Characterize(*interface.type(), context);
             } else if (interface.symbol()) {
@@ -367,6 +367,9 @@ static std::string GetSeenProcs(
 static std::optional<DummyArgument> CharacterizeDummyArgument(
     const semantics::Symbol &symbol, FoldingContext &context,
     semantics::UnorderedSymbolSet seenProcs);
+static std::optional<FunctionResult> CharacterizeFunctionResult(
+    const semantics::Symbol &symbol, FoldingContext &context,
+    semantics::UnorderedSymbolSet seenProcs);
 
 static std::optional<Procedure> CharacterizeProcedure(
     const semantics::Symbol &original, FoldingContext &context,
@@ -397,8 +400,8 @@ static std::optional<Procedure> CharacterizeProcedure(
           [&](const semantics::SubprogramDetails &subp)
               -> std::optional<Procedure> {
             if (subp.isFunction()) {
-              if (auto fr{
-                      FunctionResult::Characterize(subp.result(), context)}) {
+              if (auto fr{CharacterizeFunctionResult(
+                      subp.result(), context, seenProcs)}) {
                 result.functionResult = std::move(fr);
               } else {
                 return std::nullopt;
@@ -438,7 +441,7 @@ static std::optional<Procedure> CharacterizeProcedure(
               }
               return intrinsic;
             }
-            const semantics::ProcInterface &interface{proc.interface()};
+            const semantics::ProcInterface &interface { proc.interface() };
             if (const semantics::Symbol * interfaceSymbol{interface.symbol()}) {
               return CharacterizeProcedure(
                   *interfaceSymbol, context, seenProcs);
@@ -699,8 +702,9 @@ bool FunctionResult::operator==(const FunctionResult &that) const {
   return attrs == that.attrs && u == that.u;
 }
 
-std::optional<FunctionResult> FunctionResult::Characterize(
-    const Symbol &symbol, FoldingContext &context) {
+static std::optional<FunctionResult> CharacterizeFunctionResult(
+    const semantics::Symbol &symbol, FoldingContext &context,
+    semantics::UnorderedSymbolSet seenProcs) {
   if (symbol.has<semantics::ObjectEntityDetails>()) {
     if (auto type{TypeAndShape::Characterize(symbol, context)}) {
       FunctionResult result{std::move(*type)};
@@ -712,12 +716,19 @@ std::optional<FunctionResult> FunctionResult::Characterize(
           });
       return result;
     }
-  } else if (auto maybeProc{Procedure::Characterize(symbol, context)}) {
+  } else if (auto maybeProc{
+                 CharacterizeProcedure(symbol, context, seenProcs)}) {
     FunctionResult result{std::move(*maybeProc)};
     result.attrs.set(FunctionResult::Attr::Pointer);
     return result;
   }
   return std::nullopt;
+}
+
+std::optional<FunctionResult> FunctionResult::Characterize(
+    const Symbol &symbol, FoldingContext &context) {
+  semantics::UnorderedSymbolSet seenProcs;
+  return CharacterizeFunctionResult(symbol, context, seenProcs);
 }
 
 bool FunctionResult::IsAssumedLengthCharacter() const {
