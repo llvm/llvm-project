@@ -57,6 +57,19 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
     }
   }
 
+  // Copy register allocation hints.
+  for (std::pair<Register, Register> RegMapEntry : Src2DstReg) {
+    const auto &Hints = SrcMRI->getRegAllocationHints(RegMapEntry.first);
+    for (Register PrefReg : Hints.second) {
+      if (PrefReg.isVirtual()) {
+        auto PrefRegEntry = Src2DstReg.find(PrefReg);
+        assert(PrefRegEntry !=Src2DstReg.end());
+        DstMRI->addRegAllocationHint(RegMapEntry.second, PrefRegEntry->second);
+      } else
+        DstMRI->addRegAllocationHint(RegMapEntry.second, PrefReg);
+    }
+  }
+
   // Clone blocks.
   for (auto &SrcMBB : *SrcMF)
     Src2DstMBB[&SrcMBB] = DstMF->CreateMachineBasicBlock();
