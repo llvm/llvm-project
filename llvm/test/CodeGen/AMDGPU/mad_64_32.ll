@@ -209,6 +209,36 @@ define i63 @mad_i64_i32_sextops_i31_i63(i31 %arg0, i31 %arg1, i63 %arg2) #0 {
   ret i63 %mad
 }
 
+define i64 @mad_i64_i32_extops_i32_i64(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
+; CI-LABEL: mad_i64_i32_extops_i32_i64:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_ashrrev_i32_e32 v4, 31, v0
+; CI-NEXT:    v_mul_lo_u32 v4, v4, v1
+; CI-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v1, 0
+; CI-NEXT:    v_add_i32_e32 v1, vcc, v1, v4
+; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; CI-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
+; CI-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-LABEL: mad_i64_i32_extops_i32_i64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_ashrrev_i32_e32 v4, 31, v0
+; SI-NEXT:    v_mul_hi_u32 v5, v0, v1
+; SI-NEXT:    v_mul_lo_u32 v4, v4, v1
+; SI-NEXT:    v_mul_lo_u32 v0, v0, v1
+; SI-NEXT:    v_add_i32_e32 v1, vcc, v5, v4
+; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; SI-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+  %ext0 = sext i32 %arg0 to i64
+  %ext1 = zext i32 %arg1 to i64
+  %mul = mul i64 %ext0, %ext1
+  %mad = add i64 %mul, %arg2
+  ret i64 %mad
+}
+
 define i64 @mad_u64_u32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
 ; CI-LABEL: mad_u64_u32_bitops:
 ; CI:       ; %bb.0:
