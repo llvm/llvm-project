@@ -128,31 +128,18 @@ return:                                           ; No predecessors!
 ; }
 ;
 define i32 @multiple_noreturn_calls(i32 %a) #0 {
-; IS__TUNIT____: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone willreturn uwtable
-; IS__TUNIT____-LABEL: define {{[^@]+}}@multiple_noreturn_calls
-; IS__TUNIT____-SAME: (i32 [[A:%.*]]) #[[ATTR3:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
-; IS__TUNIT____-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-; IS__TUNIT____:       cond.true:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       cond.false:
-; IS__TUNIT____-NEXT:    unreachable
-; IS__TUNIT____:       cond.end:
-; IS__TUNIT____-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: nofree noinline noreturn nosync nounwind readnone willreturn uwtable
-; IS__CGSCC____-LABEL: define {{[^@]+}}@multiple_noreturn_calls
-; IS__CGSCC____-SAME: (i32 [[A:%.*]]) #[[ATTR1]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
-; IS__CGSCC____-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-; IS__CGSCC____:       cond.true:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       cond.false:
-; IS__CGSCC____-NEXT:    unreachable
-; IS__CGSCC____:       cond.end:
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone willreturn uwtable
+; CHECK-LABEL: define {{[^@]+}}@multiple_noreturn_calls
+; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    unreachable
+; CHECK:       cond.false:
+; CHECK-NEXT:    unreachable
+; CHECK:       cond.end:
+; CHECK-NEXT:    unreachable
 ;
 entry:
   %cmp = icmp eq i32 %a, 0
@@ -176,21 +163,13 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 ; FIXME: we should derive "UB" as an argument and report it to the user on request.
 
 define i32 @endless_loop_but_willreturn() willreturn {
-; IS__TUNIT____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@endless_loop_but_willreturn
-; IS__TUNIT____-SAME: () #[[ATTR4:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    br label [[WHILE_BODY:%.*]]
-; IS__TUNIT____:       while.body:
-; IS__TUNIT____-NEXT:    br label [[WHILE_BODY]]
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@endless_loop_but_willreturn
-; IS__CGSCC____-SAME: () #[[ATTR3:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    br label [[WHILE_BODY:%.*]]
-; IS__CGSCC____:       while.body:
-; IS__CGSCC____-NEXT:    br label [[WHILE_BODY]]
+; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@endless_loop_but_willreturn
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK:       while.body:
+; CHECK-NEXT:    br label [[WHILE_BODY]]
 ;
 entry:
   br label %while.body
@@ -201,17 +180,11 @@ while.body:                                       ; preds = %entry, %while.body
 
 ; TEST 6b: willreturn means *not* no-return or UB
 define i32 @UB_and_willreturn() willreturn {
-; IS__TUNIT____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@UB_and_willreturn
-; IS__TUNIT____-SAME: () #[[ATTR4]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@UB_and_willreturn
-; IS__CGSCC____-SAME: () #[[ATTR3]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@UB_and_willreturn
+; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    unreachable
 ;
 entry:
   unreachable
@@ -219,14 +192,9 @@ entry:
 
 attributes #0 = { noinline nounwind uwtable }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
-; IS__TUNIT____: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind readnone willreturn uwtable }
-; IS__TUNIT____: attributes #[[ATTR2]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; IS__TUNIT____: attributes #[[ATTR3]] = { nofree noinline norecurse noreturn nosync nounwind readnone willreturn uwtable }
-; IS__TUNIT____: attributes #[[ATTR4]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind readnone willreturn uwtable }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; IS__CGSCC____: attributes #[[ATTR3]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
+; CHECK: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind readnone willreturn uwtable }
+; CHECK: attributes #[[ATTR2]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
+; CHECK: attributes #[[ATTR3]] = { nofree noinline norecurse noreturn nosync nounwind readnone willreturn uwtable }
+; CHECK: attributes #[[ATTR4]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ;.

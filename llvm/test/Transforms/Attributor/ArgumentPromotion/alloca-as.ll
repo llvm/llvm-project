@@ -9,13 +9,13 @@ target datalayout = "A7"
 ; Make sure we create allocas in AS 7 and cast them properly.
 
 define i32 @bar(i32 %arg) {
-; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@bar
-; NOT_TUNIT_NPM-SAME: (i32 [[ARG:%.*]]) {
-; NOT_TUNIT_NPM-NEXT:  entry:
-; NOT_TUNIT_NPM-NEXT:    [[STACK:%.*]] = alloca i32, align 4
-; NOT_TUNIT_NPM-NEXT:    store i32 [[ARG]], i32* [[STACK]], align 4
-; NOT_TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @foo(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[STACK]])
-; NOT_TUNIT_NPM-NEXT:    ret i32 [[CALL]]
+; IS________OPM-LABEL: define {{[^@]+}}@bar
+; IS________OPM-SAME: (i32 [[ARG:%.*]]) {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    [[STACK:%.*]] = alloca i32, align 4
+; IS________OPM-NEXT:    store i32 [[ARG]], i32* [[STACK]], align 4
+; IS________OPM-NEXT:    [[CALL:%.*]] = call i32 @foo(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[STACK]])
+; IS________OPM-NEXT:    ret i32 [[CALL]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@bar
 ; IS__TUNIT_NPM-SAME: (i32 [[ARG:%.*]]) {
@@ -26,6 +26,14 @@ define i32 @bar(i32 %arg) {
 ; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @foo(i32 [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[CALL]]
 ;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC_NPM-SAME: (i32 [[ARG:%.*]]) {
+; IS__CGSCC_NPM-NEXT:  entry:
+; IS__CGSCC_NPM-NEXT:    [[STACK:%.*]] = alloca i32, align 4
+; IS__CGSCC_NPM-NEXT:    store i32 [[ARG]], i32* [[STACK]], align 4
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @foo(i32 [[ARG]])
+; IS__CGSCC_NPM-NEXT:    ret i32 [[CALL]]
+;
 entry:
   %stack = alloca i32
   store i32 %arg, i32* %stack
@@ -34,29 +42,22 @@ entry:
 }
 
 define internal i32 @foo(i32* %arg) {
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT_OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) {
-; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[L:%.*]] = load i32, i32* [[ARG]], align 4
-; IS__TUNIT_OPM-NEXT:    call void @use(i32 [[L]])
-; IS__TUNIT_OPM-NEXT:    ret i32 [[L]]
+; IS________OPM-LABEL: define {{[^@]+}}@foo
+; IS________OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    [[L:%.*]] = load i32, i32* [[ARG]], align 4
+; IS________OPM-NEXT:    call void @use(i32 [[L]])
+; IS________OPM-NEXT:    ret i32 [[L]]
 ;
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]]) {
-; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca i32, align 4, addrspace(7)
-; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32 addrspace(7)* [[ARG_PRIV]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = addrspacecast i32 addrspace(7)* [[ARG_PRIV]] to i32*
-; IS__TUNIT_NPM-NEXT:    [[L:%.*]] = load i32, i32* [[TMP1]], align 4
-; IS__TUNIT_NPM-NEXT:    call void @use(i32 [[L]])
-; IS__TUNIT_NPM-NEXT:    ret i32 [[L]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[L:%.*]] = load i32, i32* [[ARG]], align 4
-; IS__CGSCC____-NEXT:    call void @use(i32 [[L]])
-; IS__CGSCC____-NEXT:    ret i32 [[L]]
+; IS________NPM-LABEL: define {{[^@]+}}@foo
+; IS________NPM-SAME: (i32 [[TMP0:%.*]]) {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[ARG_PRIV:%.*]] = alloca i32, align 4, addrspace(7)
+; IS________NPM-NEXT:    store i32 [[TMP0]], i32 addrspace(7)* [[ARG_PRIV]], align 4
+; IS________NPM-NEXT:    [[TMP1:%.*]] = addrspacecast i32 addrspace(7)* [[ARG_PRIV]] to i32*
+; IS________NPM-NEXT:    [[L:%.*]] = load i32, i32* [[TMP1]], align 4
+; IS________NPM-NEXT:    call void @use(i32 [[L]])
+; IS________NPM-NEXT:    ret i32 [[L]]
 ;
 entry:
   %l = load i32, i32* %arg

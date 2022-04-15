@@ -21,18 +21,12 @@ bb:
 }
 
 define void @baz(<8 x i32> %arg) local_unnamed_addr {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@baz
-; IS__TUNIT____-SAME: (<8 x i32> [[ARG:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  bb:
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = extractvalue [[STRUCT_ZOT:%.*]] undef, 0, 0
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@baz
-; IS__CGSCC____-SAME: (<8 x i32> [[ARG:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:  bb:
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@baz
+; CHECK-SAME: (<8 x i32> [[ARG:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue [[STRUCT_ZOT:%.*]] undef, 0, 0
+; CHECK-NEXT:    ret void
 ;
 bb:
   %tmp = call %struct.zot @widget(<8 x i32> %arg)
@@ -40,8 +34,5 @@ bb:
   ret void
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

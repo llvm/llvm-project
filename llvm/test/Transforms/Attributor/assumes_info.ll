@@ -5,21 +5,13 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM
 
 define dso_local void @entry(i1 %cond) #0 {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@entry
-; IS__TUNIT____-SAME: (i1 [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    call void @foo(i1 [[COND]])
-; IS__TUNIT____-NEXT:    call void @bar()
-; IS__TUNIT____-NEXT:    call void @qux() #[[ATTR1:[0-9]+]]
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@entry
-; IS__CGSCC____-SAME: (i1 [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    call void @foo(i1 [[COND]]) #[[ATTR4:[0-9]+]]
-; IS__CGSCC____-NEXT:    call void @bar() #[[ATTR3:[0-9]+]]
-; IS__CGSCC____-NEXT:    call void @qux() #[[ATTR4]]
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@entry
+; CHECK-SAME: (i1 [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @foo(i1 [[COND]])
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    call void @qux() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @foo(i1 %cond)
@@ -29,17 +21,11 @@ entry:
 }
 
 define internal void @foo(i1 %cond) #1 {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT____-SAME: (i1 [[COND:%.*]]) #[[ATTR1]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    call void @baz(i1 [[COND]])
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: (i1 [[COND:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    call void @baz(i1 [[COND]]) #[[ATTR1]]
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: (i1 [[COND:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @baz(i1 [[COND]])
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @baz(i1 %cond)
@@ -59,29 +45,17 @@ entry:
 }
 
 define internal void @baz(i1 %Cond) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@baz
-; IS__TUNIT____-SAME: (i1 [[COND:%.*]]) #[[ATTR1]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[COND]], false
-; IS__TUNIT____-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    call void @baz(i1 noundef false)
-; IS__TUNIT____-NEXT:    br label [[IF_END]]
-; IS__TUNIT____:       if.end:
-; IS__TUNIT____-NEXT:    call void @qux()
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@baz
-; IS__CGSCC____-SAME: (i1 [[COND:%.*]]) {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[COND]], false
-; IS__CGSCC____-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    call void @baz(i1 noundef false)
-; IS__CGSCC____-NEXT:    br label [[IF_END]]
-; IS__CGSCC____:       if.end:
-; IS__CGSCC____-NEXT:    call void @qux()
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@baz
+; CHECK-SAME: (i1 [[COND:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[COND]], false
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @baz(i1 noundef false)
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @qux()
+; CHECK-NEXT:    ret void
 ;
 entry:
   %tobool = icmp ne i1 %Cond, 0
@@ -97,16 +71,11 @@ if.end:
 }
 
 define internal void @qux() {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@qux
-; IS__TUNIT____-SAME: () #[[ATTR1]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    call void @call()
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@qux() {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    call void @call()
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@qux
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @call()
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @call()
@@ -120,13 +89,7 @@ attributes #1 = { "llvm.assume"="B" }
 attributes #2 = { "llvm.assume"="B,C" }
 attributes #3 = { "llvm.assume"="B,C,A" }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { "llvm.assume"="A" }
-; IS__TUNIT____: attributes #[[ATTR1]] = { "llvm.assume"="B,A" }
-; IS__TUNIT____: attributes #[[ATTR2]] = { "llvm.assume"="B,C,A" }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { "llvm.assume"="A" }
-; IS__CGSCC____: attributes #[[ATTR1]] = { "llvm.assume"="B" }
-; IS__CGSCC____: attributes #[[ATTR2]] = { "llvm.assume"="B,C" }
-; IS__CGSCC____: attributes #[[ATTR3]] = { "llvm.assume"="B,C,A" }
-; IS__CGSCC____: attributes #[[ATTR4]] = { "llvm.assume"="B,A" }
+; CHECK: attributes #[[ATTR0]] = { "llvm.assume"="A" }
+; CHECK: attributes #[[ATTR1]] = { "llvm.assume"="B,A" }
+; CHECK: attributes #[[ATTR2]] = { "llvm.assume"="B,C,A" }
 ;.

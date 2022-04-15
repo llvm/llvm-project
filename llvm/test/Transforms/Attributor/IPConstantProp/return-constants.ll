@@ -61,17 +61,11 @@ F:                                                ; preds = %0
 }
 
 define %0 @caller(i1 %Q) {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT____-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR1:[0-9]+]]
-; IS__TUNIT____-NEXT:    ret [[TMP0]] [[X]]
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
-; IS__CGSCC____-SAME: (i1 [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR2:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret [[TMP0]] [[X]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@caller
+; CHECK-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    ret [[TMP0]] [[X]]
 ;
   %X = call %0 @foo(i1 %Q)
   %A = extractvalue %0 %X, 0
@@ -86,33 +80,19 @@ define %0 @caller(i1 %Q) {
 
 ; Similar to @caller but the result of both calls are actually used.
 define i32 @caller2(i1 %Q) {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@caller2
-; IS__TUNIT____-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR1]]
-; IS__TUNIT____-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] [[X]], 0
-; IS__TUNIT____-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
-; IS__TUNIT____-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]]) #[[ATTR1]]
-; IS__TUNIT____-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] [[Y]], 0
-; IS__TUNIT____-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
-; IS__TUNIT____-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]
-; IS__TUNIT____-NEXT:    [[N:%.*]] = add i32 [[B]], [[D]]
-; IS__TUNIT____-NEXT:    [[R:%.*]] = add i32 [[N]], [[M]]
-; IS__TUNIT____-NEXT:    ret i32 [[R]]
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@caller2
-; IS__CGSCC____-SAME: (i1 [[Q:%.*]]) #[[ATTR1]] {
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] [[X]], 0
-; IS__CGSCC____-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
-; IS__CGSCC____-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] [[Y]], 0
-; IS__CGSCC____-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
-; IS__CGSCC____-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]
-; IS__CGSCC____-NEXT:    [[N:%.*]] = add i32 [[B]], [[D]]
-; IS__CGSCC____-NEXT:    [[R:%.*]] = add i32 [[N]], [[M]]
-; IS__CGSCC____-NEXT:    ret i32 [[R]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@caller2
+; CHECK-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR1]]
+; CHECK-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] [[X]], 0
+; CHECK-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
+; CHECK-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]]) #[[ATTR1]]
+; CHECK-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] [[Y]], 0
+; CHECK-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
+; CHECK-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]
+; CHECK-NEXT:    [[N:%.*]] = add i32 [[B]], [[D]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[N]], [[M]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %X = call %0 @foo(i1 %Q)
   %A = extractvalue %0 %X, 0
@@ -131,6 +111,5 @@ define i32 @caller2(i1 %Q) {
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { readnone willreturn }
 ;.

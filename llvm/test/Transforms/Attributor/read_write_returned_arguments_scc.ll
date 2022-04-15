@@ -49,10 +49,10 @@ define i32* @external_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@external_ret2_nrw
 ; IS__CGSCC____-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[R0:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @internal_ret0_nw(i32* nofree [[N0]], i32* nofree [[W0]]) #[[ATTR2:[0-9]+]]
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @internal_ret1_rrw(i32* nofree align 4 [[R0]], i32* nofree align 4 [[R0]], i32* nofree [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree readonly [[R0]], i32* nofree writeonly [[W0]]) #[[ATTR3:[0-9]+]]
-; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32* @internal_ret1_rw(i32* nofree align 4 [[R0]], i32* nofree [[W0]]) #[[ATTR2]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @internal_ret0_nw(i32* nofree [[N0]], i32* nofree [[W0]]) #[[ATTR3:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @internal_ret1_rrw(i32* nofree align 4 [[R0]], i32* nofree align 4 [[R0]], i32* nofree [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree readonly [[R0]], i32* nofree writeonly "no-capture-maybe-returned" [[W0]]) #[[ATTR4:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32* @internal_ret1_rw(i32* nofree align 4 [[R0]], i32* nofree [[W0]]) #[[ATTR3]]
 ; IS__CGSCC____-NEXT:    ret i32* [[CALL3]]
 ;
 entry:
@@ -103,12 +103,12 @@ define internal i32* @internal_ret0_nw(i32* %n0, i32* %w0) {
 ; IS__CGSCC____-NEXT:    store i32 3, i32* [[R0]], align 4
 ; IS__CGSCC____-NEXT:    store i32 5, i32* [[R1]], align 4
 ; IS__CGSCC____-NEXT:    store i32 1, i32* [[W0]], align 4
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @internal_ret1_rrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
-; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R1]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
-; IS__CGSCC____-NEXT:    [[CALL5:%.*]] = call i32* @internal_ret0_nw(i32* nofree [[N0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @internal_ret1_rrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[W0]]) #[[ATTR4]]
+; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R1]], i32* nofree nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[W0]]) #[[ATTR4]]
+; IS__CGSCC____-NEXT:    [[CALL5:%.*]] = call i32* @internal_ret0_nw(i32* nofree [[N0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
 ; IS__CGSCC____-NEXT:    br label [[RETURN]]
 ; IS__CGSCC____:       return:
 ; IS__CGSCC____-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[N0]], [[IF_END]] ], [ [[N0]], [[IF_THEN]] ]
@@ -179,19 +179,19 @@ define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0) {
 ; IS__CGSCC____:       if.then:
 ; IS__CGSCC____-NEXT:    br label [[RETURN:%.*]]
 ; IS__CGSCC____:       if.end:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @internal_ret1_rw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree [[W0]]) #[[ATTR2]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @internal_ret1_rw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree [[W0]]) #[[ATTR3]]
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32, i32* [[R0]], align 4
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = load i32, i32* [[R1]], align 4
 ; IS__CGSCC____-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 ; IS__CGSCC____-NEXT:    store i32 [[ADD]], i32* [[W0]], align 4
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @internal_ret1_rw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32* @internal_ret0_nw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32* @internal_ret0_nw(i32* nofree nonnull align 4 dereferenceable(4) [[W0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call i32* @external_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL5:%.*]] = call i32* @external_ret2_nrw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL6:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[R1]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
-; IS__CGSCC____-NEXT:    [[CALL7:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
-; IS__CGSCC____-NEXT:    [[CALL8:%.*]] = call i32* @internal_ret0_nw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @internal_ret1_rw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32* @internal_ret0_nw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32* @internal_ret0_nw(i32* nofree nonnull align 4 dereferenceable(4) [[W0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call i32* @external_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL5:%.*]] = call i32* @external_ret2_nrw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL6:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[R1]], i32* nofree nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[W0]]) #[[ATTR4]]
+; IS__CGSCC____-NEXT:    [[CALL7:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[W0]]) #[[ATTR4]]
+; IS__CGSCC____-NEXT:    [[CALL8:%.*]] = call i32* @internal_ret0_nw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
 ; IS__CGSCC____-NEXT:    br label [[RETURN]]
 ; IS__CGSCC____:       return:
 ; IS__CGSCC____-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[R1]], [[IF_END]] ], [ [[R1]], [[IF_THEN]] ]
@@ -291,13 +291,13 @@ define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0) {
 ; IS__CGSCC____:       if.then:
 ; IS__CGSCC____-NEXT:    br label [[RETURN:%.*]]
 ; IS__CGSCC____:       if.end:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @internal_ret1_rrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree [[W0]]) #[[ATTR2]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @internal_ret1_rrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree [[W0]]) #[[ATTR3]]
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i32, i32* [[R0]], align 4
 ; IS__CGSCC____-NEXT:    store i32 [[TMP1]], i32* [[W0]], align 4
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @internal_ret0_nw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32* @internal_ret0_nw(i32* nofree nonnull align 4 dereferenceable(4) [[W0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
-; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call i32* @external_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @internal_ret0_nw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = call i32* @internal_ret0_nw(i32* nofree nonnull align 4 dereferenceable(4) [[W0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL3:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[W0]]) #[[ATTR4]]
+; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call i32* @external_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
 ; IS__CGSCC____-NEXT:    br label [[RETURN]]
 ; IS__CGSCC____:       return:
 ; IS__CGSCC____-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[CALL4]], [[IF_END]] ], [ [[W0]], [[IF_THEN]] ]
@@ -335,12 +335,12 @@ define i32* @external_source_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 ; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree [[R0]], i32* nofree [[W0]]) #[[ATTR3]]
 ; IS__TUNIT____-NEXT:    ret i32* [[CALL1]]
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind
+; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@external_source_ret2_nrw
-; IS__CGSCC____-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[R0:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[R0:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree readonly [[R0]], i32* nofree writeonly [[W0]]) #[[ATTR4:[0-9]+]]
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree [[R0]], i32* nofree [[W0]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree readonly [[R0]], i32* nofree writeonly "no-capture-maybe-returned" [[W0]]) #[[ATTR5:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree [[R0]], i32* nofree [[W0]]) #[[ATTR4]]
 ; IS__CGSCC____-NEXT:    ret i32* [[CALL1]]
 ;
 entry:
@@ -360,7 +360,8 @@ entry:
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree nosync nounwind }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree nosync nounwind }
-; IS__CGSCC____: attributes #[[ATTR3]] = { nounwind }
-; IS__CGSCC____: attributes #[[ATTR4]] = { nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { argmemonly nofree norecurse nosync nounwind }
+; IS__CGSCC____: attributes #[[ATTR3]] = { nofree nosync nounwind }
+; IS__CGSCC____: attributes #[[ATTR4]] = { nounwind }
+; IS__CGSCC____: attributes #[[ATTR5]] = { nounwind willreturn }
 ;.

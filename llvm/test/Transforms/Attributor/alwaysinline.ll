@@ -21,17 +21,11 @@ entry:
 }
 
 define void @outer1() {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@outer1
-; IS__TUNIT____-SAME: () #[[ATTR1:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@outer1
-; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@outer1
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @inner1()
@@ -51,17 +45,12 @@ entry:
 
 ; CHECK-NOT: Function Attrs
 define i32 @outer2() {
-; IS__TUNIT____: Function Attrs: norecurse
-; IS__TUNIT____-LABEL: define {{[^@]+}}@outer2
-; IS__TUNIT____-SAME: () #[[ATTR2:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[R:%.*]] = call i32 @inner2() #[[ATTR3:[0-9]+]]
-; IS__TUNIT____-NEXT:    ret i32 [[R]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@outer2() {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[R:%.*]] = call i32 @inner2() #[[ATTR2:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[R]]
+; CHECK: Function Attrs: norecurse
+; CHECK-LABEL: define {{[^@]+}}@outer2
+; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = call i32 @inner2() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
   %r = call i32 @inner2() alwaysinline
@@ -72,25 +61,15 @@ entry:
 ; it is `unexactly defined` and alwaysinline but cannot be inlined.
 ; so it will not be analyzed
 define linkonce i32 @inner3(i8* %addr) alwaysinline {
-; IS__TUNIT____: Function Attrs: alwaysinline
-; IS__TUNIT____-LABEL: define {{[^@]+}}@inner3
-; IS__TUNIT____-SAME: (i8* [[ADDR:%.*]]) #[[ATTR3]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    indirectbr i8* [[ADDR]], [label [[ONE:%.*]], label %two]
-; IS__TUNIT____:       one:
-; IS__TUNIT____-NEXT:    ret i32 42
-; IS__TUNIT____:       two:
-; IS__TUNIT____-NEXT:    ret i32 44
-;
-; IS__CGSCC____: Function Attrs: alwaysinline
-; IS__CGSCC____-LABEL: define {{[^@]+}}@inner3
-; IS__CGSCC____-SAME: (i8* [[ADDR:%.*]]) #[[ATTR2]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    indirectbr i8* [[ADDR]], [label [[ONE:%.*]], label %two]
-; IS__CGSCC____:       one:
-; IS__CGSCC____-NEXT:    ret i32 42
-; IS__CGSCC____:       two:
-; IS__CGSCC____-NEXT:    ret i32 44
+; CHECK: Function Attrs: alwaysinline
+; CHECK-LABEL: define {{[^@]+}}@inner3
+; CHECK-SAME: (i8* [[ADDR:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    indirectbr i8* [[ADDR]], [label [[ONE:%.*]], label %two]
+; CHECK:       one:
+; CHECK-NEXT:    ret i32 42
+; CHECK:       two:
+; CHECK-NEXT:    ret i32 44
 ;
 entry:
   indirectbr i8* %addr, [ label %one, label %two ]
@@ -103,20 +82,13 @@ two:
 }
 
 define i32 @outer3(i32 %x) {
-; IS__TUNIT____: Function Attrs: norecurse
-; IS__TUNIT____-LABEL: define {{[^@]+}}@outer3
-; IS__TUNIT____-SAME: (i32 [[X:%.*]]) #[[ATTR2]] {
-; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 42
-; IS__TUNIT____-NEXT:    [[ADDR:%.*]] = select i1 [[CMP]], i8* blockaddress(@inner3, [[ONE:%.*]]), i8* blockaddress(@inner3, [[TWO:%.*]])
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32 @inner3(i8* [[ADDR]])
-; IS__TUNIT____-NEXT:    ret i32 [[CALL]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@outer3
-; IS__CGSCC____-SAME: (i32 [[X:%.*]]) {
-; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 42
-; IS__CGSCC____-NEXT:    [[ADDR:%.*]] = select i1 [[CMP]], i8* blockaddress(@inner3, [[ONE:%.*]]), i8* blockaddress(@inner3, [[TWO:%.*]])
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @inner3(i8* [[ADDR]])
-; IS__CGSCC____-NEXT:    ret i32 [[CALL]]
+; CHECK: Function Attrs: norecurse
+; CHECK-LABEL: define {{[^@]+}}@outer3
+; CHECK-SAME: (i32 [[X:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 42
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[CMP]], i8* blockaddress(@inner3, [[ONE:%.*]]), i8* blockaddress(@inner3, [[TWO:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @inner3(i8* [[ADDR]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %cmp = icmp slt i32 %x, 42
   %addr = select i1 %cmp, i8* blockaddress(@inner3, %one), i8* blockaddress(@inner3, %two)
@@ -124,12 +96,8 @@ define i32 @outer3(i32 %x) {
   ret i32 %call
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { alwaysinline nofree norecurse nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR2]] = { norecurse }
-; IS__TUNIT____: attributes #[[ATTR3]] = { alwaysinline }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { alwaysinline nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { alwaysinline }
+; CHECK: attributes #[[ATTR0]] = { alwaysinline nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR2]] = { norecurse }
+; CHECK: attributes #[[ATTR3]] = { alwaysinline }
 ;.

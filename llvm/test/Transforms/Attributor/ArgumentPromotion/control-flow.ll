@@ -29,19 +29,12 @@ F:
 }
 
 define i32 @foo(i1 %C, i32* %P) {
-; IS__TUNIT____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT____-SAME: (i1 [[C:%.*]], i32* nocapture nofree readonly [[P:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[X:%.*]] = call i32 @callee(i1 [[C]], i32* nocapture nofree readonly [[P]]) #[[ATTR1:[0-9]+]]
-; IS__TUNIT____-NEXT:    ret i32 [[X]]
-;
-; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: (i1 [[C:%.*]], i32* nocapture nofree readonly [[P:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @callee(i1 [[C]], i32* nocapture nofree readonly [[P]]) #[[ATTR2:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[X]]
+; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: (i1 [[C:%.*]], i32* nocapture nofree readonly [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 [[C]], i32* nocapture nofree readonly [[P]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
   %X = call i32 @callee(i1 %C, i32* %P)
@@ -53,6 +46,5 @@ entry:
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readonly willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { readonly willreturn }
 ;.

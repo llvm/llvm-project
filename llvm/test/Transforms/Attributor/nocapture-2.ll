@@ -413,12 +413,12 @@ define void @test_not_captured_but_returned_calls(i64* %a) #0 {
 ; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call i64* @not_captured_but_returned_1(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree noinline nosync nounwind willreturn writeonly uwtable
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn writeonly uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_not_captured_but_returned_calls
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR5:[0-9]+]] {
+; IS__CGSCC____-SAME: (i64* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A]]) #[[ATTR10:[0-9]+]]
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A]]) #[[ATTR10]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR9:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
@@ -442,11 +442,11 @@ define i64* @negative_test_not_captured_but_returned_call_0a(i64* %a) #0 {
 ; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__TUNIT____-NEXT:    ret i64* [[A]]
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree noinline nosync nounwind willreturn writeonly uwtable
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn writeonly uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0a
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull returned writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+; IS__CGSCC____-SAME: (i64* nofree noundef nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A]]) #[[ATTR10]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    ret i64* [[A]]
 ;
 entry:
@@ -471,11 +471,11 @@ define void @negative_test_not_captured_but_returned_call_0b(i64* %a) #0 {
 ; IS__TUNIT____-NEXT:    store i64 [[TMP0]], i64* [[A]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree noinline nosync nounwind willreturn writeonly uwtable
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn writeonly uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0b
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A]]) #[[ATTR10]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree noundef nonnull writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = ptrtoint i64* [[A]] to i64
 ; IS__CGSCC____-NEXT:    store i64 [[TMP0]], i64* [[A]], align 8
 ; IS__CGSCC____-NEXT:    ret void
@@ -502,11 +502,11 @@ define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
 ; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noundef nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__TUNIT____-NEXT:    ret i64* [[CALL]]
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree noinline nosync nounwind willreturn writeonly uwtable
+; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn writeonly uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1a
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR5]] {
+; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noundef nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A]]) #[[ATTR10]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noundef nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    ret i64* [[CALL]]
 ;
 entry:
@@ -531,11 +531,11 @@ define void @negative_test_not_captured_but_returned_call_1b(i64* %a) #0 {
 ; IS__TUNIT____-NEXT:    store i64 [[TMP0]], i64* [[CALL]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nofree noinline nosync nounwind willreturn writeonly uwtable
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind willreturn writeonly uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1b
-; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR6:[0-9]+]] {
+; IS__CGSCC____-SAME: (i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) #[[ATTR5:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call align 8 i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) [[A]]) #[[ATTR10]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call align 8 i64* @not_captured_but_returned_1(i64* nofree noundef nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = ptrtoint i64* [[CALL]] to i64
 ; IS__CGSCC____-NEXT:    store i64 [[TMP0]], i64* [[CALL]], align 8
 ; IS__CGSCC____-NEXT:    ret void
@@ -621,19 +621,12 @@ r:
 declare i32* @readonly_unknown(i32*, i32*) readonly
 
 define void @not_captured_by_readonly_call(i32* %b) #0 {
-; IS__TUNIT____: Function Attrs: noinline nounwind readonly uwtable
-; IS__TUNIT____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call
-; IS__TUNIT____-SAME: (i32* nocapture readonly [[B:%.*]]) #[[ATTR7:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[B]]) #[[ATTR6:[0-9]+]]
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: noinline nounwind readonly uwtable
-; IS__CGSCC____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call
-; IS__CGSCC____-SAME: (i32* nocapture readonly [[B:%.*]]) #[[ATTR8:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[B]]) #[[ATTR7:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: noinline nounwind readonly uwtable
+; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[B]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret void
 ;
 entry:
   %call = call i32* @readonly_unknown(i32* %b, i32* %b)
@@ -646,19 +639,12 @@ entry:
 ; Make sure the returned flag on %r is strong enough to justify nocapture on %b but **not** on %r.
 ;
 define i32* @not_captured_by_readonly_call_not_returned_either1(i32* %b, i32* returned %r) {
-; IS__TUNIT____: Function Attrs: nounwind readonly
-; IS__TUNIT____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either1
-; IS__TUNIT____-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
-; IS__TUNIT____-NEXT:    ret i32* [[CALL]]
-;
-; IS__CGSCC____: Function Attrs: nounwind readonly
-; IS__CGSCC____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either1
-; IS__CGSCC____-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR9:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR9]]
-; IS__CGSCC____-NEXT:    ret i32* [[CALL]]
+; CHECK: Function Attrs: nounwind readonly
+; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either1
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
+; CHECK-NEXT:    ret i32* [[CALL]]
 ;
 entry:
   %call = call i32* @readonly_unknown(i32* %b, i32* %r) nounwind
@@ -667,19 +653,12 @@ entry:
 
 declare i32* @readonly_unknown_r1a(i32*, i32* returned) readonly
 define i32* @not_captured_by_readonly_call_not_returned_either2(i32* %b, i32* %r) {
-; IS__TUNIT____: Function Attrs: nounwind readonly
-; IS__TUNIT____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either2
-; IS__TUNIT____-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
-; IS__TUNIT____-NEXT:    ret i32* [[R]]
-;
-; IS__CGSCC____: Function Attrs: nounwind readonly
-; IS__CGSCC____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either2
-; IS__CGSCC____-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR9]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR9]]
-; IS__CGSCC____-NEXT:    ret i32* [[R]]
+; CHECK: Function Attrs: nounwind readonly
+; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either2
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
+; CHECK-NEXT:    ret i32* [[R]]
 ;
 entry:
   %call = call i32* @readonly_unknown_r1a(i32* %b, i32* %r) nounwind
@@ -688,19 +667,12 @@ entry:
 
 declare i32* @readonly_unknown_r1b(i32*, i32* returned) readonly nounwind
 define i32* @not_captured_by_readonly_call_not_returned_either3(i32* %b, i32* %r) {
-; IS__TUNIT____: Function Attrs: nounwind readonly
-; IS__TUNIT____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either3
-; IS__TUNIT____-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1b(i32* nocapture readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
-; IS__TUNIT____-NEXT:    ret i32* [[R]]
-;
-; IS__CGSCC____: Function Attrs: nounwind readonly
-; IS__CGSCC____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either3
-; IS__CGSCC____-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR9]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1b(i32* nocapture readonly [[B]], i32* readonly [[R]]) #[[ATTR9]]
-; IS__CGSCC____-NEXT:    ret i32* [[R]]
+; CHECK: Function Attrs: nounwind readonly
+; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either3
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1b(i32* nocapture readonly [[B]], i32* readonly [[R]]) #[[ATTR8]]
+; CHECK-NEXT:    ret i32* [[R]]
 ;
 entry:
   %call = call i32* @readonly_unknown_r1b(i32* %b, i32* %r)
@@ -708,19 +680,12 @@ entry:
 }
 
 define i32* @not_captured_by_readonly_call_not_returned_either4(i32* %b, i32* %r) nounwind {
-; IS__TUNIT____: Function Attrs: nounwind readonly
-; IS__TUNIT____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either4
-; IS__TUNIT____-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR6]]
-; IS__TUNIT____-NEXT:    ret i32* [[R]]
-;
-; IS__CGSCC____: Function Attrs: nounwind readonly
-; IS__CGSCC____-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either4
-; IS__CGSCC____-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR9]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR7]]
-; IS__CGSCC____-NEXT:    ret i32* [[R]]
+; CHECK: Function Attrs: nounwind readonly
+; CHECK-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either4
+; CHECK-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR8]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR6]]
+; CHECK-NEXT:    ret i32* [[R]]
 ;
 entry:
   %call = call i32* @readonly_unknown_r1a(i32* %b, i32* %r)
@@ -745,19 +710,12 @@ entry:
 
 declare i32* @readonly_i32p(i32*) readonly
 define void @nocapture_is_not_subsumed_2(i32* nocapture %b) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@nocapture_is_not_subsumed_2
-; IS__TUNIT____-SAME: (i32* nocapture [[B:%.*]]) {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @readonly_i32p(i32* readonly [[B]]) #[[ATTR6]]
-; IS__TUNIT____-NEXT:    store i32 0, i32* [[CALL]], align 4
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@nocapture_is_not_subsumed_2
-; IS__CGSCC____-SAME: (i32* nocapture [[B:%.*]]) {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @readonly_i32p(i32* readonly [[B]]) #[[ATTR7]]
-; IS__CGSCC____-NEXT:    store i32 0, i32* [[CALL]], align 4
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@nocapture_is_not_subsumed_2
+; CHECK-SAME: (i32* nocapture [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_i32p(i32* readonly [[B]]) #[[ATTR6]]
+; CHECK-NEXT:    store i32 0, i32* [[CALL]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %call = call i32* @readonly_i32p(i32* %b)
@@ -783,10 +741,9 @@ attributes #0 = { noinline nounwind uwtable }
 ; IS__CGSCC____: attributes #[[ATTR2]] = { nofree nosync nounwind readnone }
 ; IS__CGSCC____: attributes #[[ATTR3]] = { noinline nounwind uwtable }
 ; IS__CGSCC____: attributes #[[ATTR4]] = { argmemonly nofree noinline norecurse nosync nounwind willreturn writeonly uwtable }
-; IS__CGSCC____: attributes #[[ATTR5]] = { argmemonly nofree noinline nosync nounwind willreturn writeonly uwtable }
-; IS__CGSCC____: attributes #[[ATTR6]] = { nofree noinline nosync nounwind willreturn writeonly uwtable }
-; IS__CGSCC____: attributes #[[ATTR7]] = { readonly }
-; IS__CGSCC____: attributes #[[ATTR8]] = { noinline nounwind readonly uwtable }
-; IS__CGSCC____: attributes #[[ATTR9]] = { nounwind readonly }
-; IS__CGSCC____: attributes #[[ATTR10]] = { nounwind willreturn writeonly }
+; IS__CGSCC____: attributes #[[ATTR5]] = { nofree noinline norecurse nosync nounwind willreturn writeonly uwtable }
+; IS__CGSCC____: attributes #[[ATTR6]] = { readonly }
+; IS__CGSCC____: attributes #[[ATTR7]] = { noinline nounwind readonly uwtable }
+; IS__CGSCC____: attributes #[[ATTR8]] = { nounwind readonly }
+; IS__CGSCC____: attributes #[[ATTR9]] = { nounwind willreturn writeonly }
 ;.

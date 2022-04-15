@@ -26,18 +26,11 @@ entry:
 }
 
 define i32 @caller() {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret i32 0
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
-; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call noundef i32 @test() #[[ATTR2:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[X]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@caller
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %x = call i32 @test(i32** @G2)
@@ -45,9 +38,5 @@ entry:
 }
 
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

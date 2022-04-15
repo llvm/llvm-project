@@ -16,25 +16,16 @@ entry:
 }
 
 define void @encode(i32* %m, i32* %ts, i32* %new) nounwind {
-; IS__TUNIT____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@encode
-; IS__TUNIT____-SAME: (i32* nocapture nofree readnone [[M:%.*]], i32* nocapture nofree readnone [[TS:%.*]], i32* nocapture nofree readnone [[NEW:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    unreachable
-;
-; IS__CGSCC____: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@encode
-; IS__CGSCC____-SAME: (i32* nocapture nofree readnone [[M:%.*]], i32* nocapture nofree readnone [[TS:%.*]], i32* nocapture nofree readnone [[NEW:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    unreachable
+; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@encode
+; CHECK-SAME: (i32* nocapture nofree readnone [[M:%.*]], i32* nocapture nofree readnone [[TS:%.*]], i32* nocapture nofree readnone [[NEW:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    unreachable
 ;
 entry:
   %0 = call fastcc i32 @hash( i32* %ts, i32 0 ) nounwind		; <i32> [#uses=0]
   unreachable
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree noreturn nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ;.

@@ -62,17 +62,11 @@ entry:
 }
 
 define internal i32 @cb2(i32 %unknown) {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@cb2
-; IS__TUNIT____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret i32 [[UNKNOWN]]
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@cb2
-; IS__CGSCC____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i32 [[UNKNOWN]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@cb2
+; CHECK-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[UNKNOWN]]
 ;
 entry:
   %call = call i32 @cb0(i32 0)
@@ -127,10 +121,7 @@ declare !callback !3 void @broker(i32 (i32)*, i32 (i32)*, i32 (i32)*, i32, i32)
 !2 = !{i64 2, i64 3, i1 false}
 !3 = !{!0, !2, !1}
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!1, !2, !3}
 ; CHECK: [[META1:![0-9]+]] = !{i64 0, i64 3, i1 false}
