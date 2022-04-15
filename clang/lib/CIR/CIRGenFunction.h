@@ -606,6 +606,14 @@ public:
   // TODO: this can also be abstrated into common AST helpers
   bool hasBooleanRepresentation(clang::QualType Ty);
 
+  /// GetAddrOfLocalVar - Return the address of a local variable.
+  Address GetAddrOfLocalVar(const clang::VarDecl *VD) {
+    auto it = LocalDeclMap.find(VD);
+    assert(it != LocalDeclMap.end() &&
+           "Invalid argument to GetAddrOfLocalVar(), no decl!");
+    return it->second;
+  }
+
   /// ShouldInstrumentFunction - Return true if the current function should be
   /// instrumented with __cyg_profile_func_* calls
   bool ShouldInstrumentFunction();
