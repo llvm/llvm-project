@@ -317,6 +317,9 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
   if (!FnRetQualTy->isVoidType())
     FnRetCIRTy = getCIRType(FnRetQualTy);
 
+  FunctionArgList Args;
+  QualType ResTy = buildFunctionArgList(GD, Args);
+
   if (FD->isInlineBuiltinDeclaration()) {
     llvm_unreachable("NYI");
   } else {
@@ -338,6 +341,22 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
     llvm_unreachable("NYI");
   }
 
+  // The function might not have a body if we're generating thunks for a
+  // function declaration.
+  SourceRange BodyRange;
+  if (Stmt *Body = FD->getBody())
+    BodyRange = Body->getSourceRange();
+  else
+    BodyRange = FD->getLocation();
+  // TODO: CurEHLocation
+
+  // Use the location of the start of the function to determine where the
+  // function definition is located. By default we use the location of the
+  // declaration as the location for the subprogram. A function may lack a
+  // declaration in the source code if it is created by code gen. (examples:
+  // _GLOBAL__I_a, __cxx_global_array_dtor, thunk).
+  SourceLocation Loc = FD->getLocation();
+
   // If this is a function specialization then use the pattern body as the
   // location for the function.
   if (const auto *SpecDecl = FD->getTemplateInstantiationPattern())
@@ -354,59 +373,21 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
   // Create a scope in the symbol table to hold variable declarations.
   SymTableScopeTy varScope(symbolTable);
 
-  const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
-  assert(!MD && "methods not implemented");
-
-  FnRetQualTy = FD->getReturnType();
-  mlir::TypeRange FnTyRange = {};
-  if (!FnRetQualTy->isVoidType()) {
-    FnRetCIRTy = getCIRType(FnRetQualTy);
-  }
-
   {
     auto FnBeginLoc = getLoc(FD->getBody()->getEndLoc());
     auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
 
     assert(Fn.isDeclaration() && "Function already has body?");
-    // In MLIR the entry block of the function is special: it must have the
-    // same argument list as the function itself.
-    mlir::Block *entryBlock = Fn.addEntryBlock();
+    mlir::Block *EntryBB = Fn.addEntryBlock();
+    builder.setInsertionPointToStart(EntryBB);
 
-    // Set the insertion point in the builder to the beginning of the
-    // function body, it will be used throughout the codegen to create
-    // operations in this function.
-    builder.setInsertionPointToStart(entryBlock);
-
-    // Initialize lexical scope information.
-    LexicalScopeContext lexScope{FnBeginLoc, FnEndLoc,
-                                 builder.getInsertionBlock()};
+    LexicalScopeContext lexScope{FnBeginLoc, FnEndLoc, EntryBB};
     LexicalScopeGuard scopeGuard{*this, &lexScope};
 
-    // Declare all the function arguments in the symbol table.
-    for (const auto nameValue :
-         llvm::zip(FD->parameters(), entryBlock->getArguments())) {
-      auto *paramVar = std::get<0>(nameValue);
-      auto paramVal = std::get<1>(nameValue);
-      auto alignment = getContext().getDeclAlign(paramVar);
-      auto paramLoc = getLoc(paramVar->getSourceRange());
-      paramVal.setLoc(paramLoc);
+    // Emit the standard function prologue.
+    StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
 
-      mlir::Value addr;
-      if (failed(declare(paramVar, paramVar->getType(), paramLoc, alignment,
-                         addr, true /*param*/)))
-        return nullptr;
-      // Location of the store to the param storage tracked as beginning of
-      // the function body.
-      auto fnBodyBegin = getLoc(FD->getBody()->getBeginLoc());
-      builder.create<mlir::cir::StoreOp>(fnBodyBegin, paramVal, addr);
-    }
-    assert(builder.getInsertionBlock() && "Should be valid");
-
-    // When the current function is not void, create an address to store the
-    // result value.
-    if (FnRetCIRTy.has_value())
-      buildAndUpdateRetAlloca(FnRetQualTy, FnEndLoc,
-                              CGM.getNaturalTypeAlignment(FnRetQualTy));
+    // Initialize lexical scope information.
 
     // Save parameters for coroutine function.
     if (Body && isa_and_nonnull<CoroutineBodyStmt>(Body))
@@ -450,6 +431,251 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
   // TODO: if (!CurFn->doesNotThrow()) TryMarkNoThrow(CurFn);
 
   return Fn;
+}
+
+void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
+                                   mlir::FuncOp Fn,
+                                   const CIRGenFunctionInfo &FnInfo,
+                                   const FunctionArgList &Args,
+                                   SourceLocation Loc,
+                                   SourceLocation StartLoc) {
+  assert(!CurFn &&
+         "Do not use a CIRGenFunction object for more than one function");
+
+  const auto *D = GD.getDecl();
+
+  DidCallStackSave = false;
+  CurCodeDecl = D;
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
+  if (FD && FD->usesSEHTry())
+    llvm_unreachable("NYI");
+  CurFuncDecl = (D ? D->getNonClosureContext() : nullptr);
+  FnRetTy = RetTy;
+  CurFn = Fn;
+  CurFnInfo = &FnInfo;
+
+  // If this function is ignored for any of the enabled sanitizers, disable
+  // the sanitizer for the function.
+  do {
+#define SANITIZER(NAME, ID)                                                    \
+  if (SanOpts.empty())                                                         \
+    break;                                                                     \
+  if (SanOpts.has(SanitizerKind::ID))                                          \
+    if (CGM.isInNoSanitizeList(SanitizerKind::ID, Fn, Loc))                    \
+      SanOpts.set(SanitizerKind::ID, false);
+
+#include "clang/Basic/Sanitizers.def"
+#undef SANITIZER
+  } while (0);
+
+  if (D) {
+    bool NoSanitizeCoverage = false;
+    (void)NoSanitizeCoverage;
+
+    for (auto Attr : D->specific_attrs<NoSanitizeAttr>()) {
+      (void)Attr;
+      llvm_unreachable("NYI");
+    }
+
+    // SanitizeCoverage is not handled by SanOpts
+    if (NoSanitizeCoverage && CGM.getCodeGenOpts().hasSanitizeCoverage())
+      llvm_unreachable("NYI");
+  }
+
+  // Apply sanitizer attributes to the function.
+  if (SanOpts.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress |
+                       SanitizerKind::HWAddress |
+                       SanitizerKind::KernelHWAddress | SanitizerKind::MemTag |
+                       SanitizerKind::Thread | SanitizerKind::Memory |
+                       SanitizerKind::KernelMemory | SanitizerKind::SafeStack |
+                       SanitizerKind::ShadowCallStack | SanitizerKind::Fuzzer |
+                       SanitizerKind::FuzzerNoLink |
+                       SanitizerKind::CFIUnrelatedCast | SanitizerKind::Null))
+    llvm_unreachable("NYI");
+
+  // TODO: XRay
+  // TODO: PGO
+
+  unsigned Count, Offset;
+  if (const auto *Attr =
+          D ? D->getAttr<PatchableFunctionEntryAttr>() : nullptr) {
+    llvm_unreachable("NYI");
+  } else {
+    Count = CGM.getCodeGenOpts().PatchableFunctionEntryCount;
+    Offset = CGM.getCodeGenOpts().PatchableFunctionEntryOffset;
+  }
+  if (Count && Offset <= Count) {
+    llvm_unreachable("NYI");
+  }
+
+  // Add no-jump-tables value.
+  if (CGM.getCodeGenOpts().NoUseJumpTables)
+    llvm_unreachable("NYI");
+
+  // Add no-inline-line-tables value.
+  if (CGM.getCodeGenOpts().NoInlineLineTables)
+    llvm_unreachable("NYI");
+
+  // Add profile-sample-accurate value.
+  if (CGM.getCodeGenOpts().ProfileSampleAccurate)
+    llvm_unreachable("NYI");
+
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    llvm_unreachable("NYI");
+
+  if (D && D->hasAttr<CFICanonicalJumpTableAttr>())
+    llvm_unreachable("NYI");
+
+  if (D && D->hasAttr<NoProfileFunctionAttr>())
+    llvm_unreachable("NYI");
+
+  if (FD && getLangOpts().OpenCL) {
+    llvm_unreachable("NYI");
+  }
+
+  // If we are checking function types, emit a function type signature as
+  // prologue data.
+  if (FD && getLangOpts().CPlusPlus && SanOpts.has(SanitizerKind::Function)) {
+    llvm_unreachable("NYI");
+  }
+
+  // If we're checking nullability, we need to know whether we can check the
+  // return value. Initialize the falg to 'true' and refine it in
+  // buildParmDecl.
+  if (SanOpts.has(SanitizerKind::NullabilityReturn)) {
+    llvm_unreachable("NYI");
+  }
+
+  // If we're in C++ mode and the function name is "main", it is guaranteed to
+  // be norecurse by the standard (3.6.1.3 "The function main shall not be
+  // used within a program").
+  //
+  // OpenCL C 2.0 v2.2-11 s6.9.i:
+  //     Recursion is not supported.
+  //
+  // SYCL v1.2.1 s3.10:
+  //     kernels cannot include RTTI information, exception cases, recursive
+  //     code, virtual functions or make use of C++ libraries that are not
+  //     compiled for the device.
+  if (FD &&
+      ((getLangOpts().CPlusPlus && FD->isMain()) || getLangOpts().OpenCL ||
+       getLangOpts().SYCLIsDevice |
+           (getLangOpts().CUDA && FD->hasAttr<CUDAGlobalAttr>())))
+    ; // TODO: support norecurse attr
+
+  // TODO: rounding mode and strict floating point
+
+  // TODO: stackrealign attr
+
+  mlir::Block *EntryBB = &Fn.getBlocks().front();
+
+  // TODO: allocapt insertion? probably don't need for CIR
+
+  // TODO: return value checking
+
+  if (getDebugInfo()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (ShouldInstrumentFunction()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Since emitting the mcount call here impacts optimizations such as
+  // function inlining, we just add an attribute to insert a mcount call in
+  // backend. The attribute "counting-function" is set to mcount function name
+  // which is architecture dependent.
+  if (CGM.getCodeGenOpts().InstrumentForProfiling) {
+    llvm_unreachable("NYI");
+  }
+
+  if (CGM.getCodeGenOpts().PackedStack) {
+    llvm_unreachable("NYI");
+  }
+
+  if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX) {
+    llvm_unreachable("NYI");
+  }
+
+  // TODO: emitstartehspec
+
+  // TODO: prologuecleanupdepth
+
+  if (getLangOpts().OpenMP && CurCodeDecl)
+    llvm_unreachable("NYI");
+
+  // TODO: buildFunctionProlog
+
+  {
+    // Set the insertion point in the builder to the beginning of the
+    // function body, it will be used throughout the codegen to create
+    // operations in this function.
+    builder.setInsertionPointToStart(EntryBB);
+
+    // TODO: this should live in `buildFunctionProlog
+    // Declare all the function arguments in the symbol table.
+    for (const auto nameValue : llvm::zip(Args, EntryBB->getArguments())) {
+      auto *paramVar = std::get<0>(nameValue);
+      auto paramVal = std::get<1>(nameValue);
+      auto alignment = getContext().getDeclAlign(paramVar);
+      auto paramLoc = getLoc(paramVar->getSourceRange());
+      paramVal.setLoc(paramLoc);
+
+      mlir::Value addr;
+      if (failed(declare(paramVar, paramVar->getType(), paramLoc, alignment,
+                         addr, true /*param*/)))
+        return;
+
+      auto address = Address(addr, alignment);
+      setAddrOfLocalVar(paramVar, address);
+
+      // Location of the store to the param storage tracked as beginning of
+      // the function body.
+      auto fnBodyBegin = getLoc(FD->getBody()->getBeginLoc());
+      builder.create<mlir::cir::StoreOp>(fnBodyBegin, paramVal, addr);
+    }
+    assert(builder.getInsertionBlock() && "Should be valid");
+
+    auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
+
+    // When the current function is not void, create an address to store the
+    // result value.
+    if (FnRetCIRTy.has_value())
+      buildAndUpdateRetAlloca(FnRetQualTy, FnEndLoc,
+                              CGM.getNaturalTypeAlignment(FnRetQualTy));
+  }
+
+  if (D && isa<CXXMethodDecl>(D) && cast<CXXMethodDecl>(D)->isInstance()) {
+    llvm_unreachable("NYI");
+  }
+
+  // If any of the arguments have a variably modified type, make sure to emit
+  // the type size.
+  for (FunctionArgList::const_iterator i = Args.begin(), e = Args.end(); i != e;
+       ++i) {
+    const VarDecl *VD = *i;
+
+    // Dig out the type as written from ParmVarDecls; it's unclear whether the
+    // standard (C99 6.9.1p10) requires this, but we're following the
+    // precedent set by gcc.
+    QualType Ty;
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(VD))
+      Ty = PVD->getOriginalType();
+    else
+      Ty = VD->getType();
+
+    if (Ty->isVariablyModifiedType())
+      llvm_unreachable("NYI");
+  }
+  // Emit a location at the end of the prologue.
+  if (getDebugInfo())
+    llvm_unreachable("NYI");
+
+  // TODO: Do we need to handle this in two places like we do with
+  // target-features/target-cpu?
+  if (CurFuncDecl)
+    if (const auto *VecWidth = CurFuncDecl->getAttr<MinVectorWidthAttr>())
+      llvm_unreachable("NYI");
 }
 
 /// ShouldInstrumentFunction - Return true if the current function should be
