@@ -381,6 +381,9 @@ public:
 
   void buildAggExpr(const clang::Expr *E, AggValueSlot Slot);
 
+  void buildCXXConstructExpr(const clang::CXXConstructExpr *E,
+                             AggValueSlot Dest);
+
   void buildCXXConstructorCall(const clang::CXXConstructorDecl *D,
                                clang::CXXCtorType Type, bool ForVirtualBase,
                                bool Delegating, AggValueSlot ThisAVS,
