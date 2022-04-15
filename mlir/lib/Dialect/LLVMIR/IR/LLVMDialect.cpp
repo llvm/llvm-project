@@ -194,7 +194,7 @@ void AllocaOp::print(OpAsmPrinter &p) {
 
   p << ' ' << getArraySize() << " x " << elemTy;
   if (getAlignment().hasValue() && *getAlignment() != 0)
-    p.printOptionalAttrDict((*this)->getAttrs());
+    p.printOptionalAttrDict((*this)->getAttrs(), {kElemTypeAttrName});
   else
     p.printOptionalAttrDict((*this)->getAttrs(),
                             {"alignment", kElemTypeAttrName});
@@ -432,10 +432,9 @@ static void recordStructIndices(Type type, unsigned currentIndex,
 /// be either an LLVMPointer type or a vector thereof. If `structSizes` is
 /// provided, it is populated with sizes of the indexed structs for bounds
 /// verification purposes.
-static void
-findKnownStructIndices(Type sourceElementType,
-                       SmallVectorImpl<unsigned> &indices,
-                       SmallVectorImpl<unsigned> *structSizes = nullptr) {
+void GEPOp::findKnownStructIndices(Type sourceElementType,
+                                   SmallVectorImpl<unsigned> &indices,
+                                   SmallVectorImpl<unsigned> *structSizes) {
   SmallPtrSet<Type, 4> visited;
   recordStructIndices(sourceElementType, /*currentIndex=*/1, indices,
                       structSizes, visited);
@@ -464,14 +463,24 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Value basePtr, ValueRange indices,
                   ArrayRef<int32_t> structIndices,
                   ArrayRef<NamedAttribute> attributes) {
+  auto ptrType =
+      extractVectorElementType(basePtr.getType()).cast<LLVMPointerType>();
+  assert(!ptrType.isOpaque() &&
+         "expected non-opaque pointer, provide elementType explicitly when "
+         "opaque pointers are used");
+  build(builder, result, resultType, ptrType.getElementType(), basePtr, indices,
+        structIndices, attributes);
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Type elementType, Value basePtr, ValueRange indices,
+                  ArrayRef<int32_t> structIndices,
+                  ArrayRef<NamedAttribute> attributes) {
   SmallVector<Value> remainingIndices;
   SmallVector<int32_t> updatedStructIndices(structIndices.begin(),
                                             structIndices.end());
   SmallVector<unsigned> structRelatedPositions;
-  auto ptrType =
-      extractVectorElementType(basePtr.getType()).cast<LLVMPointerType>();
-  assert(!ptrType.isOpaque() && "expected non-opaque pointer");
-  findKnownStructIndices(ptrType.getElementType(), structRelatedPositions);
+  findKnownStructIndices(elementType, structRelatedPositions);
 
   SmallVector<unsigned> operandsToErase;
   for (unsigned pos : structRelatedPositions) {
@@ -517,6 +526,10 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   result.addAttributes(attributes);
   result.addAttribute("structIndices",
                       builder.getI32TensorAttr(updatedStructIndices));
+  if (extractVectorElementType(basePtr.getType())
+          .cast<LLVMPointerType>()
+          .isOpaque())
+    result.addAttribute(kElemTypeAttrName, TypeAttr::get(elementType));
   result.addOperands(basePtr);
   result.addOperands(remainingIndices);
 }
