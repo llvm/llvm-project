@@ -147,6 +147,14 @@ class Function;
 /// Abstract Attribute helper functions.
 namespace AA {
 
+/// Flags to distinguish intra-procedural queries from *potentially*
+/// inter-procedural queries. Not that information can be valid for both and
+/// therefore both bits might be set.
+enum ValueScope : uint8_t {
+  Intraprocedural = 1,
+  Interprocedural = 2,
+};
+
 /// Return true if \p I is a `nosync` instruction. Use generic reasoning and
 /// potentially the corresponding AANoSync.
 bool isNoSyncInst(Attributor &A, const Instruction &I,
@@ -203,7 +211,7 @@ bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
                                  const AbstractAttribute &QueryingAA,
                                  const Instruction *CtxI,
                                  bool &UsedAssumedInformation,
-                                 bool Intraprocedural = false);
+                                 AA::ValueScope VS = Interprocedural);
 
 /// Collect all potential values \p LI could read into \p PotentialValues. That
 /// is, the only values read by \p LI are assumed to be known and all are in

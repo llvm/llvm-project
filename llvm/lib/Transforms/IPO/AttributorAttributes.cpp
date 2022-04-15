@@ -262,8 +262,9 @@ static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
 /// once. Note that the value used for the callback may still be the value
 /// associated with \p IRP (due to PHIs). To limit how much effort is invested,
 /// we will never visit more values than specified by \p MaxValues.
-/// If \p Intraprocedural is set to true only values valid in the scope of
-/// \p CtxI will be visited and simplification into other scopes is prevented.
+/// If \p VS does not contain the Interprocedural bit, only values valid in the
+/// scope of \p CtxI will be visited and simplification into other scopes is
+/// prevented.
 template <typename StateTy>
 static bool genericValueTraversal(
     Attributor &A, IRPosition IRP, const AbstractAttribute &QueryingAA,
@@ -273,7 +274,7 @@ static bool genericValueTraversal(
     const Instruction *CtxI, bool &UsedAssumedInformation,
     bool UseValueSimplify = true, int MaxValues = 16,
     function_ref<Value *(Value *)> StripCB = nullptr,
-    bool Intraprocedural = false) {
+    AA::ValueScope VS = AA::Interprocedural) {
 
   struct LivenessInfo {
     const AAIsDead *LivenessAA = nullptr;
@@ -371,7 +372,7 @@ static bool genericValueTraversal(
     }
 
     if (auto *Arg = dyn_cast<Argument>(V)) {
-      if (!Intraprocedural && !Arg->hasPassPointeeByValueCopyAttr()) {
+      if ((VS & AA::Interprocedural) && !Arg->hasPassPointeeByValueCopyAttr()) {
         SmallVector<Item> CallSiteValues;
         bool UsedAssumedInformation = false;
         if (A.checkForAllCallSites(
@@ -398,7 +399,7 @@ static bool genericValueTraversal(
         continue;
       Value *NewV = SimpleV.getValue();
       if (NewV && NewV != V) {
-        if (!Intraprocedural || !CtxI ||
+        if ((VS & AA::Interprocedural) || !CtxI ||
             AA::isValidInScope(*NewV, CtxI->getFunction())) {
           Worklist.push_back({NewV, CtxI});
           continue;
@@ -425,7 +426,7 @@ static bool genericValueTraversal(
                 return AA::isDynamicallyUnique(A, QueryingAA, *PC);
               });
           if (DynamicallyUnique &&
-              (!Intraprocedural || !CtxI ||
+              ((VS & AA::Interprocedural) || !CtxI ||
                llvm::all_of(PotentialCopies, [CtxI](Value *PC) {
                  return AA::isValidInScope(*PC, CtxI->getFunction());
                }))) {
@@ -460,7 +461,7 @@ bool AA::getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
                                      const AbstractAttribute &QueryingAA,
                                      const Instruction *CtxI,
                                      bool &UsedAssumedInformation,
-                                     bool Intraprocedural) {
+                                     AA::ValueScope VS) {
   auto StripCB = [&](Value *V) { return getUnderlyingObject(V); };
   SmallPtrSet<Value *, 8> SeenObjects;
   auto VisitValueCB = [&SeenObjects](Value &Val, const Instruction *,
@@ -472,7 +473,7 @@ bool AA::getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
   };
   if (!genericValueTraversal<decltype(Objects)>(
           A, IRPosition::value(Ptr), QueryingAA, Objects, VisitValueCB, CtxI,
-          UsedAssumedInformation, true, 32, StripCB, Intraprocedural))
+          UsedAssumedInformation, true, 32, StripCB, VS))
     return false;
   return true;
 }
@@ -1927,7 +1928,7 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
         A, IRPosition::value(*Ret.getReturnValue()), *this, Ret, ReturnValueCB,
         &I, UsedAssumedInformation, /* UseValueSimplify */ true,
         /* MaxValues */ 16,
-        /* StripCB */ nullptr, /* Intraprocedural */ true);
+        /* StripCB */ nullptr, AA::Intraprocedural);
   };
 
   // Discover returned values from all live returned instructions in the
@@ -7971,7 +7972,7 @@ void AAMemoryLocationImpl::categorizePtrValue(
   bool UsedAssumedInformation = false;
   if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, *this, &I,
                                        UsedAssumedInformation,
-                                       /* Intraprocedural */ true)) {
+                                       AA::Intraprocedural)) {
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
     updateStateAndAccessesMap(State, NO_UNKOWN_MEM, &I, nullptr, Changed,
