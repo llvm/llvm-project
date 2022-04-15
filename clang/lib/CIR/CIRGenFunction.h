@@ -733,6 +733,8 @@ public:
     return LValue::makeAddr(Addr, T, getContext(), LValueBaseInfo(Source));
   }
 
+  void initializeVTablePointers(const clang::CXXRecordDecl *RD);
+
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
   bool isTrivialInitializer(const clang::Expr *Init);

@@ -52,6 +52,22 @@ bool CIRGenFunction::IsConstructorDelegationValid(
   return true;
 }
 
+void CIRGenFunction::initializeVTablePointers(const CXXRecordDecl *RD) {
+  // Ignore classes without a vtable.
+  if (!RD->isDynamicClass())
+    return;
+
+  // Initialize the vtable pointers for this class and all of its bases.
+  if (CGM.getCXXABI().doStructorsInitializeVPtrs(RD))
+    for (const auto &Vptr : getVTablePointers(RD)) {
+      llvm_unreachable("NYI");
+      (void)Vptr;
+    }
+
+  if (RD->getNumVBases())
+    llvm_unreachable("NYI");
+}
+
 CIRGenFunction::VPtrsVector
 CIRGenFunction::getVTablePointers(const CXXRecordDecl *VTableClass) {
   CIRGenFunction::VPtrsVector VPtrsResult;
