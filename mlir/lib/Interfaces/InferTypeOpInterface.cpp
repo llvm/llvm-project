@@ -191,6 +191,8 @@ LogicalResult mlir::detail::inferReturnTensorTypes(
     return failure();
   for (const auto &shapeAndType : retComponents) {
     assert(shapeAndType.getAttribute() == nullptr && "attribute not supported");
+    assert(shapeAndType.getElementType() &&
+           "element type required to construct tensor");
     if (shapeAndType.hasRank())
       inferredReturnTypes.push_back(RankedTensorType::get(
           shapeAndType.getDims(), shapeAndType.getElementType()));
