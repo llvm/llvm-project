@@ -562,6 +562,31 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
   return LValue::makeAddr(Address::invalid(), E->getType());
 }
 
+/// Given the address of a temporary variable, produce an r-value of its type.
+RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
+                                           clang::SourceLocation loc) {
+  LValue lvalue = makeAddrLValue(addr, type, AlignmentSource::Decl);
+  switch (getEvaluationKind(type)) {
+  case TEK_Complex:
+    llvm_unreachable("NYI");
+  case TEK_Aggregate:
+    llvm_unreachable("NYI");
+  case TEK_Scalar:
+    return RValue::get(buildLoadOfScalar(lvalue, loc));
+  }
+  llvm_unreachable("NYI");
+}
+
+/// An LValue is a candidate for having its loads and stores be made atomic if
+/// we are operating under /volatile:ms *and* the LValue itself is volatile and
+/// performing such an operation can be performed without a libcall.
+bool CIRGenFunction::LValueIsSuitableForInlineAtomic(LValue LV) {
+  if (!CGM.getLangOpts().MSVolatile)
+    return false;
+
+  llvm_unreachable("NYI");
+}
+
 /// Emit an if on a boolean condition to the specified blocks.
 /// FIXME: Based on the condition, this might try to simplify the codegen of
 /// the conditional based on the branch. TrueCount should be the number of
@@ -657,6 +682,50 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, InitStyle initStyle,
                                                initStyle, alignIntAttr);
   }
   return addr;
+}
+
+mlir::Value CIRGenFunction::buildLoadOfScalar(LValue lvalue,
+                                              SourceLocation Loc) {
+  return buildLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
+                           lvalue.getType(), Loc, lvalue.getBaseInfo(),
+                           lvalue.isNontemporal());
+}
+
+mlir::Value CIRGenFunction::buildFromMemory(mlir::Value Value, QualType Ty) {
+  // Bool has a different representation in memory than in registers.
+  if (hasBooleanRepresentation(Ty)) {
+    llvm_unreachable("NYI");
+  }
+
+  return Value;
+}
+
+mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
+                                              QualType Ty, SourceLocation Loc,
+                                              LValueBaseInfo BaseInfo,
+                                              bool isNontemporal) {
+  if (!CGM.getCodeGenOpts().PreserveVec3Type) {
+    llvm_unreachable("NYI");
+  }
+
+  // Atomic operations have to be done on integral types
+  LValue AtomicLValue = LValue::makeAddr(Addr, Ty, getContext(), BaseInfo);
+  if (Ty->isAtomicType() || LValueIsSuitableForInlineAtomic(AtomicLValue)) {
+    llvm_unreachable("NYI");
+  }
+
+  mlir::cir::LoadOp Load = builder.create<mlir::cir::LoadOp>(
+      getLoc(Loc), Addr.getElementType(), Addr.getPointer());
+
+  if (isNontemporal) {
+    llvm_unreachable("NYI");
+  }
+
+  // TODO: TBAA
+
+  // TODO: buildScalarRangeCheck
+
+  return buildFromMemory(Load, Ty);
 }
 
 void CIRGenFunction::buildCXXConstructExpr(const clang::CXXConstructExpr *E,
