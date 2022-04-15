@@ -297,7 +297,7 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
   insertCleanupAndLeave(currBlock);
 }
 
-mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD,
+mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp fn,
                                           const CIRGenFunctionInfo &FnInfo) {
   auto *FD = cast<FunctionDecl>(GD.getDecl());
   // Create a scope in the symbol table to hold variable declarations.
@@ -305,22 +305,16 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD,
 
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
   assert(!MD && "methods not implemented");
-  auto fnLoc = getLoc(FD->getSourceRange());
 
   FnRetQualTy = FD->getReturnType();
   mlir::TypeRange FnTyRange = {};
   if (!FnRetQualTy->isVoidType()) {
     FnRetCIRTy = getCIRType(FnRetQualTy);
   }
-  auto funcType = getTypes().GetFunctionType(GlobalDecl(FD));
-
-  mlir::FuncOp function = mlir::FuncOp::create(fnLoc, FD->getName(), funcType);
-  if (!function)
-    return nullptr;
 
   // In MLIR the entry block of the function is special: it must have the
   // same argument list as the function itself.
-  mlir::Block *entryBlock = function.addEntryBlock();
+  mlir::Block *entryBlock = fn.addEntryBlock();
 
   // Set the insertion point in the builder to the beginning of the
   // function body, it will be used throughout the codegen to create
@@ -363,16 +357,16 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD,
 
     // Emit the body of the function.
     if (mlir::failed(buildFunctionBody(FD->getBody()))) {
-      function.erase();
+      fn.erase();
       return nullptr;
     }
     assert(builder.getInsertionBlock() && "Should be valid");
   }
 
-  if (mlir::failed(function.verifyBody()))
+  if (mlir::failed(fn.verifyBody()))
     return nullptr;
 
-  return function;
+  return fn;
 }
 
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl GD,

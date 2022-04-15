@@ -279,6 +279,19 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
 
   // Compute the function info and CIR type.
   const CIRGenFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+  mlir::FunctionType Ty = getTypes().GetFunctionType(FI);
+
+  // Get or create the prototype for the function.
+  // if (!V || (V.getValueType() != Ty))
+  // TODO: Figure out what to do here? llvm uses a GlobalValue for the FuncOp in
+  // mlir
+  Op = GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/true,
+                         ForDefinition);
+
+  auto Fn = cast<mlir::FuncOp>(Op);
+  // Already emitted.
+  if (!Fn.isDeclaration())
+    return;
 
   // TODO: setFunctionLinkage
   // TODO: setGVProperties
@@ -288,8 +301,7 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
 
   CIRGenFunction CGF{*this, builder};
   CurCGF = &CGF;
-  auto Fn = CGF.generateCode(GD, FI);
-  theModule.push_back(Fn);
+  CGF.generateCode(GD, Fn, FI);
   CurCGF = nullptr;
 
   // TODO: setNonAliasAttributes
@@ -461,9 +473,9 @@ void CIRGenModule::setDSOLocal(mlir::Operation *Op) const {
   // TODO: Op->setDSOLocal
 }
 
-/// GetOrCreateCIRFunction - If the specified mangled name is not in the
-/// module, create and return a CIR Function with the specified type. If there
-/// is something in the module with the specified name, return it potentially
+/// GetOrCreateCIRFunction - If the specified mangled name is not in the module,
+/// create and return a CIR Function with the specified type. If there is
+/// something in the module with the specified name, return it potentially
 /// bitcasted to the right type.
 ///
 /// If D is non-null, it specifies a decl that corresponded to this. This is
@@ -523,6 +535,7 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   // TODO: CodeGen includeds the linkage (ExternalLinkage) and only passes the
   // mangledname if Entry is nullptr
   mlir::FuncOp F = mlir::FuncOp::create(fnLoc, MangledName, FTy);
+  theModule.push_back(F);
 
   if (Entry) {
     llvm_unreachable("NYI");
