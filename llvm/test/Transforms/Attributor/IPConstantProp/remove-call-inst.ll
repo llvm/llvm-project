@@ -11,18 +11,11 @@
 ; FIXME: Remove obsolete calls/instructions
 
 define i32 @main() noreturn nounwind {
-; IS__TUNIT____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@main
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret i32 123
-;
-; IS__CGSCC____: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@main
-; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL2:%.*]] = tail call noundef i32 @wwrite() #[[ATTR2:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[CALL2]]
+; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@main
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 123
 ;
 entry:
   %call2 = tail call i32 @wwrite(i64 0) nounwind
@@ -58,7 +51,6 @@ return:
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nounwind readnone willreturn }
 ;.

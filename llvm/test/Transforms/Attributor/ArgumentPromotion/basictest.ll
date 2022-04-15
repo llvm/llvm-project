@@ -6,13 +6,10 @@
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 define internal i32 @test(i32* %X, i32* %Y) {
-; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
-; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[A:%.*]] = load i32, i32* [[X]], align 4
-; IS__CGSCC____-NEXT:    [[B:%.*]] = load i32, i32* [[Y]], align 4
-; IS__CGSCC____-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
-; IS__CGSCC____-NEXT:    ret i32 [[C]]
+; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-NEXT:    ret i32 3
 ;
   %A = load i32, i32* %X
   %B = load i32, i32* %Y
@@ -21,13 +18,11 @@ define internal i32 @test(i32* %X, i32* %Y) {
 }
 
 define internal i32 @caller(i32* %B) {
-; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
-; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    store i32 1, i32* [[A]], align 4
-; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR3:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[C]]
+; IS__CGSCC____-NEXT:    ret i32 3
 ;
   %A = alloca i32
   store i32 1, i32* %A
@@ -36,19 +31,11 @@ define internal i32 @caller(i32* %B) {
 }
 
 define i32 @callercaller() {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@callercaller
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:    [[B:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    ret i32 3
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@callercaller
-; IS__CGSCC____-SAME: () #[[ATTR2:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    store i32 2, i32* [[B]], align 4
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR4:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[X]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@callercaller
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    ret i32 3
 ;
   %B = alloca i32
   store i32 2, i32* %B
@@ -57,11 +44,5 @@ define i32 @callercaller() {
 }
 
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR3]] = { readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR4]] = { nounwind willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

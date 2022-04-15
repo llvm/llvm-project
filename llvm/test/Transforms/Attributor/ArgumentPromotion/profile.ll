@@ -8,16 +8,10 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 ; Checks if !prof metadata is corret in deadargelim.
 
 define void @caller() #0 {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@caller() {
-; IS__TUNIT____-NEXT:    [[X:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    call void @promote_i32_ptr(), !prof [[PROF0:![0-9]+]]
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@caller() {
-; IS__CGSCC____-NEXT:    [[X:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    store i32 42, i32* [[X]], align 4
-; IS__CGSCC____-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X]]), !prof [[PROF0:![0-9]+]]
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@caller() {
+; CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @promote_i32_ptr(), !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    ret void
 ;
   %x = alloca i32
   store i32 42, i32* %x
@@ -26,15 +20,9 @@ define void @caller() #0 {
 }
 
 define internal void @promote_i32_ptr(i32* %xp) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@promote_i32_ptr() {
-; IS__TUNIT____-NEXT:    call void @use_i32(i32 noundef 42)
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@promote_i32_ptr
-; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[XP:%.*]]) {
-; IS__CGSCC____-NEXT:    [[X:%.*]] = load i32, i32* [[XP]], align 4
-; IS__CGSCC____-NEXT:    call void @use_i32(i32 [[X]])
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@promote_i32_ptr() {
+; CHECK-NEXT:    call void @use_i32(i32 noundef 42)
+; CHECK-NEXT:    ret void
 ;
   %x = load i32, i32* %xp
   call void @use_i32(i32 %x)
@@ -45,5 +33,5 @@ declare void @use_i32(i32)
 
 !0 = !{!"branch_weights", i32 30}
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!"branch_weights", i32 30}
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 30}
 ;.

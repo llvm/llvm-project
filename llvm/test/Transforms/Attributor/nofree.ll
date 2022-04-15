@@ -286,15 +286,15 @@ define void @f1() #0 {
 }
 
 define void @f2() #0 {
-; NOT_CGSCC_NPM: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@f2
-; NOT_CGSCC_NPM-SAME: () #[[ATTR4]] {
-; NOT_CGSCC_NPM-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
+; IS__TUNIT____-LABEL: define {{[^@]+}}@f2
+; IS__TUNIT____-SAME: () #[[ATTR4]] {
+; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f2
-; IS__CGSCC_NPM-SAME: () #[[ATTR5]] {
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
+; IS__CGSCC____-LABEL: define {{[^@]+}}@f2
+; IS__CGSCC____-SAME: () #[[ATTR3]] {
+; IS__CGSCC____-NEXT:    ret void
 ;
   tail call void @f1()
   ret void

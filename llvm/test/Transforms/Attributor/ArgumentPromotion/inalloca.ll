@@ -10,27 +10,16 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 ; Argpromote + sroa should change this to passing the two integers by value.
 define internal i32 @f(%struct.ss* inalloca(%struct.ss) %s) {
-; IS__TUNIT____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@f
-; IS__TUNIT____-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[S:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; IS__TUNIT____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__TUNIT____-NEXT:    [[A:%.*]] = load i32, i32* [[F0]], align 4
-; IS__TUNIT____-NEXT:    [[B:%.*]] = load i32, i32* [[F1]], align 4
-; IS__TUNIT____-NEXT:    [[R:%.*]] = add i32 [[A]], [[B]]
-; IS__TUNIT____-NEXT:    ret i32 [[R]]
-;
-; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@f
-; IS__CGSCC____-SAME: (%struct.ss* nocapture nofree noundef nonnull inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[S:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; IS__CGSCC____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__CGSCC____-NEXT:    [[A:%.*]] = load i32, i32* [[F0]], align 4
-; IS__CGSCC____-NEXT:    [[B:%.*]] = load i32, i32* [[F1]], align 4
-; IS__CGSCC____-NEXT:    [[R:%.*]] = add i32 [[A]], [[B]]
-; IS__CGSCC____-NEXT:    ret i32 [[R]]
+; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; CHECK-LABEL: define {{[^@]+}}@f
+; CHECK-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[S:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
+; CHECK-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[F0]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[F1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
   %f0 = getelementptr %struct.ss, %struct.ss* %s, i32 0, i32 0
@@ -42,29 +31,17 @@ entry:
 }
 
 define i32 @main() {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@main
-; IS__TUNIT____-SAME: () #[[ATTR1:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]], align 4
-; IS__TUNIT____-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; IS__TUNIT____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__TUNIT____-NEXT:    store i32 1, i32* [[F0]], align 4
-; IS__TUNIT____-NEXT:    store i32 2, i32* [[F1]], align 4
-; IS__TUNIT____-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR2:[0-9]+]]
-; IS__TUNIT____-NEXT:    ret i32 [[R]]
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@main
-; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]], align 4
-; IS__CGSCC____-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; IS__CGSCC____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__CGSCC____-NEXT:    store i32 1, i32* [[F0]], align 4
-; IS__CGSCC____-NEXT:    store i32 2, i32* [[F1]], align 4
-; IS__CGSCC____-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR3:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[R]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@main
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]], align 4
+; CHECK-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
+; CHECK-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
+; CHECK-NEXT:    store i32 1, i32* [[F0]], align 4
+; CHECK-NEXT:    store i32 2, i32* [[F1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
   %S = alloca inalloca %struct.ss
@@ -80,7 +57,7 @@ entry:
 define internal i1 @g(%struct.ss* %a, %struct.ss* inalloca(%struct.ss) %b) nounwind  {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@g
-; IS__CGSCC____-SAME: (%struct.ss* nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], %struct.ss* nocapture nofree nonnull writeonly inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; IS__CGSCC____-SAME: (%struct.ss* noalias nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], %struct.ss* noalias nocapture nofree nonnull writeonly inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[B:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i1 undef
 ;
@@ -90,17 +67,11 @@ entry:
 }
 
 define i32 @test() {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test
-; IS__TUNIT____-SAME: () #[[ATTR1]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret i32 0
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test
-; IS__CGSCC____-SAME: () #[[ATTR1]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i32 0
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@test
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %S = alloca inalloca %struct.ss
@@ -113,7 +84,6 @@ entry:
 ; IS__TUNIT____: attributes #[[ATTR2]] = { nofree nosync nounwind readonly willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR3]] = { readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { readonly willreturn }
 ;.

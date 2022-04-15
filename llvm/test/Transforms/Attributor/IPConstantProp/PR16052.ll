@@ -9,17 +9,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i64 @fn2() {
 ;
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@fn2
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret i64 poison
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2
-; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i64 poison
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@fn2
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i64 poison
 ;
 entry:
   %conv = sext i32 undef to i64
@@ -30,21 +24,13 @@ entry:
 
 define i64 @fn2b(i32 %arg) {
 ;
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@fn2b
-; IS__TUNIT____-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; IS__TUNIT____-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
-; IS__TUNIT____-NEXT:    ret i64 [[DIV]]
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2b
-; IS__CGSCC____-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; IS__CGSCC____-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
-; IS__CGSCC____-NEXT:    ret i64 [[DIV]]
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@fn2b
+; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
+; CHECK-NEXT:    ret i64 [[DIV]]
 ;
 entry:
   %conv = sext i32 %arg to i64
@@ -54,17 +40,11 @@ entry:
 }
 
 define i64 @fn2c() {
-; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@fn2c
-; IS__TUNIT____-SAME: () #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    ret i64 42
-;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2c
-; IS__CGSCC____-SAME: () #[[ATTR0]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i64 42
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-LABEL: define {{[^@]+}}@fn2c
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i64 42
 ;
 entry:
   %conv = sext i32 undef to i64
@@ -76,7 +56,7 @@ entry:
 define internal i64 @fn1(i64 %p1) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn1
-; IS__CGSCC____-SAME: (i64 returned [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-SAME: (i64 returned [[P1:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[TOBOOL:%.*]] = icmp ne i64 [[P1]], 0
 ; IS__CGSCC____-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i64 [[P1]], i64 [[P1]]
@@ -88,8 +68,5 @@ entry:
   ret i64 %cond
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
