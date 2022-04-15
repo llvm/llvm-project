@@ -11,8 +11,49 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenFunction.h"
+#include "CIRGenModule.h"
+#include "CIRGenTypes.h"
+#include "CIRGenValue.h"
+
+#include "clang/AST/StmtVisitor.h"
+
 using namespace cir;
 using namespace clang;
+
+namespace {
+class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
+  CIRGenFunction &CGF;
+  AggValueSlot Dest;
+  // bool IsResultUnused;
+
+  AggValueSlot EnsureSlot(QualType T) {
+    assert(!Dest.isIgnored() && "ignored slots NYI");
+    return Dest;
+  }
+
+public:
+  AggExprEmitter(CIRGenFunction &cgf, AggValueSlot Dest, bool IsResultUnused)
+      : CGF{cgf}, Dest(Dest)
+  // ,IsResultUnused(IsResultUnused)
+  {}
+
+  void Visit(Expr *E) {
+    // TODO: CodeGen does ApplyDebugLocation here
+    assert(cast<CXXConstructExpr>(E) && "Only CXXConstructExpr implemented");
+    StmtVisitor<AggExprEmitter>::Visit(E);
+  }
+
+  void VisitCXXConstructExpr(const CXXConstructExpr *E);
+};
+} // namespace
+
+void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
+  AggValueSlot Slot = EnsureSlot(E->getType());
+  llvm_unreachable("NYI");
+  (void)CGF;
+  (void)Slot;
+}
+
 void CIRGenFunction::buildAggExpr(const Expr *E, AggValueSlot Slot) {
   assert(E && CIRGenFunction::hasAggregateEvaluationKind(E->getType()) &&
          "Invalid aggregate expression to emit");
@@ -28,5 +69,5 @@ void CIRGenFunction::buildAggExpr(const Expr *E, AggValueSlot Slot) {
            "default constructors aren't expected here YET");
   }
 
-  llvm_unreachable("NYI");
+  AggExprEmitter(*this, Slot, Slot.isIgnored()).Visit(const_cast<Expr *>(E));
 }
