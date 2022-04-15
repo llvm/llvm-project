@@ -677,6 +677,16 @@ mlir::Operation *CIRGenModule::GetGlobalValue(StringRef Name) {
   return nullptr;
 }
 
+mlir::Operation *
+CIRGenModule::GetAddrOfGlobal(GlobalDecl GD, ForDefinition_t IsForDefinition) {
+  const Decl *D = GD.getDecl();
+
+  if (isa<CXXConstructorDecl>(D) || isa<CXXDestructorDecl>(D))
+    llvm_unreachable("NYI");
+
+  llvm_unreachable("NYI");
+}
+
 void CIRGenModule::Release() {
   buildDeferred();
   // TODO: buildVTablesOpportunistically();

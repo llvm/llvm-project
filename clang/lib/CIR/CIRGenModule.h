@@ -197,6 +197,10 @@ public:
                     bool ForVTable = false, bool Dontdefer = false,
                     ForDefinition_t IsForDefinition = NotForDefinition);
 
+  mlir::Operation *
+  GetAddrOfGlobal(clang::GlobalDecl GD,
+                  ForDefinition_t IsForDefinition = NotForDefinition);
+
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 
   mlir::Value GetGlobalValue(const clang::Decl *D);
