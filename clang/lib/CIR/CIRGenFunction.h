@@ -262,7 +262,7 @@ public:
   };
 
   clang::QualType FnRetQualTy;
-  std::optional<mlir::Type> FnRetTy;
+  std::optional<mlir::Type> FnRetCIRTy;
   std::optional<mlir::Value> FnRetAlloca;
 
   // Holds the Decl for the current outermost non-closure context
