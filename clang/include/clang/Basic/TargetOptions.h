@@ -110,8 +110,11 @@ public:
   /// The version of the darwin target variant SDK which was used during the
   /// compilation.
   llvm::VersionTuple DarwinTargetVariantSDKVersion;
+
+  /// The validator version for dxil.
+  std::string DxilValidatorVersion;
 };
 
-}  // end namespace clang
+} // end namespace clang
 
 #endif

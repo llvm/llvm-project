@@ -367,29 +367,28 @@ TEST(GetDriverMode, PrefersLastDriverMode) {
   EXPECT_EQ(getDriverMode(Args[0], llvm::makeArrayRef(Args).slice(1)), "bar");
 }
 
+struct SimpleDiagnosticConsumer : public DiagnosticConsumer {
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+    if (DiagLevel == DiagnosticsEngine::Level::Error) {
+      Errors.emplace_back();
+      Info.FormatDiagnostic(Errors.back());
+    } else {
+      Msgs.emplace_back();
+      Info.FormatDiagnostic(Msgs.back());
+    }
+  }
+  void clear() override {
+    Msgs.clear();
+    Errors.clear();
+    DiagnosticConsumer::clear();
+  }
+  std::vector<SmallString<32>> Msgs;
+  std::vector<SmallString<32>> Errors;
+};
+
 TEST(DxcModeTest, TargetProfileValidation) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  struct SimpleDiagnosticConsumer : public DiagnosticConsumer {
-    void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                          const Diagnostic &Info) override {
-      if (DiagLevel == DiagnosticsEngine::Level::Error) {
-        Errors.emplace_back();
-        Info.FormatDiagnostic(Errors.back());
-        Errors.back() += '\0';
-      } else {
-        Msgs.emplace_back();
-        Info.FormatDiagnostic(Msgs.back());
-        Msgs.back() += '\0';
-      }
-    }
-    void clear() override {
-      Msgs.clear();
-      Errors.clear();
-      DiagnosticConsumer::clear();
-    }
-    std::vector<SmallString<32>> Msgs;
-    std::vector<SmallString<32>> Errors;
-  };
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
@@ -474,7 +473,8 @@ TEST(DxcModeTest, TargetProfileValidation) {
   Triple = TC.ComputeEffectiveClangTriple(Args);
   EXPECT_STREQ(Triple.c_str(), "unknown-unknown-shadermodel");
   EXPECT_EQ(Diags.getNumErrors(), 1u);
-  EXPECT_STREQ(DiagConsumer->Errors.back().data(), "invalid profile : pss_6_1");
+  EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
+               "invalid profile : pss_6_1");
   Diags.Clear();
   DiagConsumer->clear();
 
@@ -483,7 +483,7 @@ TEST(DxcModeTest, TargetProfileValidation) {
   Triple = TC.ComputeEffectiveClangTriple(Args);
   EXPECT_STREQ(Triple.c_str(), "unknown-unknown-shadermodel");
   EXPECT_EQ(Diags.getNumErrors(), 2u);
-  EXPECT_STREQ(DiagConsumer->Errors.back().data(), "invalid profile : ps_6_x");
+  EXPECT_STREQ(DiagConsumer->Errors.back().c_str(), "invalid profile : ps_6_x");
   Diags.Clear();
   DiagConsumer->clear();
 
@@ -492,7 +492,8 @@ TEST(DxcModeTest, TargetProfileValidation) {
   Triple = TC.ComputeEffectiveClangTriple(Args);
   EXPECT_STREQ(Triple.c_str(), "unknown-unknown-shadermodel");
   EXPECT_EQ(Diags.getNumErrors(), 3u);
-  EXPECT_STREQ(DiagConsumer->Errors.back().data(), "invalid profile : lib_6_1");
+  EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
+               "invalid profile : lib_6_1");
   Diags.Clear();
   DiagConsumer->clear();
 
@@ -501,7 +502,110 @@ TEST(DxcModeTest, TargetProfileValidation) {
   Triple = TC.ComputeEffectiveClangTriple(Args);
   EXPECT_STREQ(Triple.c_str(), "unknown-unknown-shadermodel");
   EXPECT_EQ(Diags.getNumErrors(), 4u);
-  EXPECT_STREQ(DiagConsumer->Errors.back().data(), "invalid profile : foo");
+  EXPECT_STREQ(DiagConsumer->Errors.back().c_str(), "invalid profile : foo");
+  Diags.Clear();
+  DiagConsumer->clear();
+}
+
+TEST(DxcModeTest, ValidatorVersionValidation) {
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+
+  InMemoryFileSystem->addFile("foo.hlsl", 0,
+                              llvm::MemoryBuffer::getMemBuffer("\n"));
+
+  auto *DiagConsumer = new SimpleDiagnosticConsumer;
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
+  Driver TheDriver("/bin/clang", "", Diags, "", InMemoryFileSystem);
+  std::unique_ptr<Compilation> C(
+      TheDriver.BuildCompilation({"clang", "--driver-mode=dxc", "foo.hlsl"}));
+  EXPECT_TRUE(C);
+  EXPECT_TRUE(!C->containsError());
+
+  auto &TC = C->getDefaultToolChain();
+  bool ContainsError = false;
+  auto Args = TheDriver.ParseArgStrings({"-validator-version", "1.1"}, false,
+                                        ContainsError);
+  EXPECT_FALSE(ContainsError);
+  auto DAL = std::make_unique<llvm::opt::DerivedArgList>(Args);
+  for (auto *A : Args)
+    DAL->append(A);
+
+  auto *TranslatedArgs =
+      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  EXPECT_NE(TranslatedArgs, nullptr);
+  if (TranslatedArgs) {
+    auto *A = TranslatedArgs->getLastArg(
+        clang::driver::options::OPT_dxil_validator_version);
+    EXPECT_NE(A, nullptr);
+    if (A)
+      EXPECT_STREQ(A->getValue(), "1.1");
+  }
+  EXPECT_EQ(Diags.getNumErrors(), 0);
+
+  // Invalid tests.
+  Args = TheDriver.ParseArgStrings({"-validator-version", "0.1"}, false,
+                                   ContainsError);
+  EXPECT_FALSE(ContainsError);
+  DAL = std::make_unique<llvm::opt::DerivedArgList>(Args);
+  for (auto *A : Args)
+    DAL->append(A);
+
+  TranslatedArgs = TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  EXPECT_EQ(Diags.getNumErrors(), 1);
+  EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
+               "invalid validator version : 0.1\nIf validator major version is "
+               "0, minor version must also be 0.");
+  Diags.Clear();
+  DiagConsumer->clear();
+
+  Args = TheDriver.ParseArgStrings({"-validator-version", "1"}, false,
+                                   ContainsError);
+  EXPECT_FALSE(ContainsError);
+  DAL = std::make_unique<llvm::opt::DerivedArgList>(Args);
+  for (auto *A : Args)
+    DAL->append(A);
+
+  TranslatedArgs = TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  EXPECT_EQ(Diags.getNumErrors(), 2);
+  EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
+               "invalid validator version : 1\nFormat of validator version is "
+               "\"<major>.<minor>\" (ex:\"1.4\").");
+  Diags.Clear();
+  DiagConsumer->clear();
+
+  Args = TheDriver.ParseArgStrings({"-validator-version", "-Tlib_6_7"}, false,
+                                   ContainsError);
+  EXPECT_FALSE(ContainsError);
+  DAL = std::make_unique<llvm::opt::DerivedArgList>(Args);
+  for (auto *A : Args)
+    DAL->append(A);
+
+  TranslatedArgs = TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  EXPECT_EQ(Diags.getNumErrors(), 3);
+  EXPECT_STREQ(
+      DiagConsumer->Errors.back().c_str(),
+      "invalid validator version : -Tlib_6_7\nFormat of validator version is "
+      "\"<major>.<minor>\" (ex:\"1.4\").");
+  Diags.Clear();
+  DiagConsumer->clear();
+
+  Args = TheDriver.ParseArgStrings({"-validator-version", "foo"}, false,
+                                   ContainsError);
+  EXPECT_FALSE(ContainsError);
+  DAL = std::make_unique<llvm::opt::DerivedArgList>(Args);
+  for (auto *A : Args)
+    DAL->append(A);
+
+  TranslatedArgs = TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None);
+  EXPECT_EQ(Diags.getNumErrors(), 4);
+  EXPECT_STREQ(
+      DiagConsumer->Errors.back().c_str(),
+      "invalid validator version : foo\nFormat of validator version is "
+      "\"<major>.<minor>\" (ex:\"1.4\").");
   Diags.Clear();
   DiagConsumer->clear();
 }

@@ -108,6 +108,29 @@ std::string tryParseProfile(StringRef Profile) {
     return "";
 }
 
+bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {
+  VersionTuple Version;
+  if (Version.tryParse(ValVersionStr) || Version.getBuild() ||
+      Version.getSubminor() || !Version.getMinor()) {
+    D.Diag(diag::err_drv_invalid_format_dxil_validator_version)
+        << ValVersionStr;
+    return false;
+  }
+
+  uint64_t Major = Version.getMajor();
+  uint64_t Minor = Version.getMinor().getValue();
+  if (Major == 0 && Minor != 0) {
+    D.Diag(diag::err_drv_invalid_empty_dxil_validator_version) << ValVersionStr;
+    return false;
+  }
+  VersionTuple MinVer(1, 0);
+  if (Version < MinVer) {
+    D.Diag(diag::err_drv_invalid_range_dxil_validator_version) << ValVersionStr;
+    return false;
+  }
+  return true;
+}
+
 } // namespace
 
 /// DirectX Toolchain
@@ -130,4 +153,31 @@ HLSLToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
   } else {
     return ToolChain::ComputeEffectiveClangTriple(Args, InputType);
   }
+}
+
+DerivedArgList *
+HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
+                             Action::OffloadKind DeviceOffloadKind) const {
+  DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
+
+  const OptTable &Opts = getDriver().getOpts();
+
+  for (Arg *A : Args) {
+    if (A->getOption().getID() == options::OPT_dxil_validator_version) {
+      StringRef ValVerStr = A->getValue();
+      std::string ErrorMsg;
+      if (!isLegalValidatorVersion(ValVerStr, getDriver()))
+        continue;
+    }
+    DAL->append(A);
+  }
+  // Add default validator version if not set.
+  // TODO: remove this once read validator version from validator.
+  if (!DAL->hasArg(options::OPT_dxil_validator_version)) {
+    const StringRef DefaultValidatorVer = "1.7";
+    DAL->AddSeparateArg(nullptr,
+                        Opts.getOption(options::OPT_dxil_validator_version),
+                        DefaultValidatorVer);
+  }
+  return DAL;
 }
