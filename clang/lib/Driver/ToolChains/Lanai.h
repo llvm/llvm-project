@@ -29,8 +29,6 @@ public:
   void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override {}
-
-  bool IsIntegratedAssemblerDefault() const override { return true; }
 };
 
 } // end namespace toolchains

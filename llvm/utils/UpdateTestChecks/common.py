@@ -402,11 +402,12 @@ def do_scrub(body, scrubber, scrubber_args, extra):
 
 # Build up a dictionary of all the function bodies.
 class function_body(object):
-  def __init__(self, string, extra, args_and_sig, attrs):
+  def __init__(self, string, extra, args_and_sig, attrs, func_name_separator):
     self.scrub = string
     self.extrascrub = extra
     self.args_and_sig = args_and_sig
     self.attrs = attrs
+    self.func_name_separator = func_name_separator
   def is_same_except_arg_names(self, extrascrub, args_and_sig, attrs, is_backend):
     arg_names = set()
     def drop_arg_names(match):
@@ -484,6 +485,15 @@ class FunctionTestBuilder:
         continue
       func = m.group('func')
       body = m.group('body')
+      # func_name_separator is the string that is placed right after function name at the
+      # beginning of assembly function definition. In most assemblies, that is just a
+      # colon: `foo:`. But, for example, in nvptx it is a brace: `foo(`. If is_backend is
+      # False, just assume that separator is an empty string.
+      if is_backend:
+        # Use ':' as default separator.
+        func_name_separator = m.group('func_name_separator') if 'func_name_separator' in m.groupdict() else ':'
+      else:
+        func_name_separator = ''
       attrs = m.group('attrs') if self._check_attributes else ''
       # Determine if we print arguments, the opening brace, or nothing after the
       # function name
@@ -558,7 +568,7 @@ class FunctionTestBuilder:
               continue
 
         self._func_dict[prefix][func] = function_body(
-            scrubbed_body, scrubbed_extra, args_and_sig, attrs)
+            scrubbed_body, scrubbed_extra, args_and_sig, attrs, func_name_separator)
         self._func_order[prefix].append(func)
 
   def _get_failed_prefixes(self):
@@ -835,11 +845,12 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
         output_lines.append('%s %s: Function Attrs: %s' % (comment_marker, checkprefix, attrs))
       args_and_sig = str(func_dict[checkprefix][func_name].args_and_sig)
       args_and_sig = generalize_check_lines([args_and_sig], is_analyze, vars_seen, global_vars_seen)[0]
+      func_name_separator = func_dict[checkprefix][func_name].func_name_separator
       if '[[' in args_and_sig:
-        output_lines.append(check_label_format % (checkprefix, func_name, ''))
+        output_lines.append(check_label_format % (checkprefix, func_name, '', func_name_separator))
         output_lines.append('%s %s-SAME: %s' % (comment_marker, checkprefix, args_and_sig))
       else:
-        output_lines.append(check_label_format % (checkprefix, func_name, args_and_sig))
+        output_lines.append(check_label_format % (checkprefix, func_name, args_and_sig, func_name_separator))
       func_body = str(func_dict[checkprefix][func_name]).splitlines()
       if not func_body:
         # We have filtered everything.
@@ -912,13 +923,13 @@ def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict,
                   global_vars_seen_dict, is_filtered):
   # Label format is based on IR string.
   function_def_regex = 'define {{[^@]+}}' if function_sig else ''
-  check_label_format = '{} %s-LABEL: {}@%s%s'.format(comment_marker, function_def_regex)
+  check_label_format = '{} %s-LABEL: {}@%s%s%s'.format(comment_marker, function_def_regex)
   add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name,
              check_label_format, False, preserve_names, global_vars_seen_dict,
              is_filtered)
 
 def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, is_filtered):
-  check_label_format = '{} %s-LABEL: \'%s%s\''.format(comment_marker)
+  check_label_format = '{} %s-LABEL: \'%s%s%s\''.format(comment_marker)
   global_vars_seen_dict = {}
   add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name,
              check_label_format, False, True, global_vars_seen_dict,
