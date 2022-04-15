@@ -341,19 +341,20 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
     FnRetCIRTy = getCIRType(FnRetQualTy);
   }
 
-  // In MLIR the entry block of the function is special: it must have the
-  // same argument list as the function itself.
-  mlir::Block *entryBlock = Fn.addEntryBlock();
-
-  // Set the insertion point in the builder to the beginning of the
-  // function body, it will be used throughout the codegen to create
-  // operations in this function.
-  builder.setInsertionPointToStart(entryBlock);
-  auto FnBeginLoc = getLoc(FD->getBody()->getEndLoc());
-  auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
-
-  // Initialize lexical scope information.
   {
+    auto FnBeginLoc = getLoc(FD->getBody()->getEndLoc());
+    auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
+
+    // In MLIR the entry block of the function is special: it must have the
+    // same argument list as the function itself.
+    mlir::Block *entryBlock = Fn.addEntryBlock();
+
+    // Set the insertion point in the builder to the beginning of the
+    // function body, it will be used throughout the codegen to create
+    // operations in this function.
+    builder.setInsertionPointToStart(entryBlock);
+
+    // Initialize lexical scope information.
     LexicalScopeContext lexScope{FnBeginLoc, FnEndLoc,
                                  builder.getInsertionBlock()};
     LexicalScopeGuard scopeGuard{*this, &lexScope};
