@@ -394,6 +394,12 @@ bool SymbolicLexSimplex::isSymbolicSampleIntegral(unsigned row) const {
 /// column.
 LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
   int64_t d = tableau(row, 0);
+  if (isRangeDivisibleBy(tableau.getRow(row).slice(3, nSymbol), d)) {
+    // The coefficients of symbols in the symbol numerator are divisible
+    // by the denominator, so we can add the constraint directly,
+    // i.e., ignore the symbols and add a regular cut as in addCut().
+    return addCut(row);
+  }
 
   // Construct the division variable `q = ((-c%d) + sum_i (-a_i%d)s_i)/d`.
   SmallVector<int64_t, 8> divCoeffs;
@@ -403,13 +409,6 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
     divCoeffs.push_back(mod(-tableau(row, col), divDenom)); // (-a_i%d)s_i
   divCoeffs.push_back(mod(-tableau(row, 1), divDenom));     // -c%d.
   normalizeDiv(divCoeffs, divDenom);
-
-  if (divDenom == 1) {
-    // The symbolic sample numerator is divisible by the denominator,
-    // so the division isn't needed. We can add the constraint directly,
-    // i.e., ignore the symbols and add a regular cut as in addCut().
-    return addCut(row);
-  }
 
   domainSimplex.addDivisionVariable(divCoeffs, divDenom);
   domainPoly.addLocalFloorDiv(divCoeffs, divDenom);
