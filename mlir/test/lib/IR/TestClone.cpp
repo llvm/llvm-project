@@ -20,6 +20,7 @@ namespace {
 struct ClonePass
     : public PassWrapper<ClonePass, InterfacePass<FunctionOpInterface>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ClonePass)
+
   StringRef getArgument() const final { return "test-clone"; }
   StringRef getDescription() const final { return "Test clone of op"; }
   void runOnOperation() override {
@@ -34,7 +35,7 @@ struct ClonePass
       return;
 
     Block &regionEntry = region.front();
-    auto terminator = regionEntry.getTerminator();
+    Operation *terminator = regionEntry.getTerminator();
 
     // Only handle functions whose returns match the inputs.
     if (terminator->getNumOperands() != regionEntry.getNumArguments())
@@ -48,13 +49,13 @@ struct ClonePass
       map.map(std::get<1>(tup), std::get<0>(tup));
     }
 
-    OpBuilder B(op->getContext());
-    B.setInsertionPointToEnd(&regionEntry);
+    OpBuilder builder(op->getContext());
+    builder.setInsertionPointToEnd(&regionEntry);
     SmallVector<Operation *> toClone;
     for (Operation &inst : regionEntry)
       toClone.push_back(&inst);
     for (Operation *inst : toClone)
-      B.clone(*inst, map);
+      builder.clone(*inst, map);
     terminator->erase();
   }
 };
