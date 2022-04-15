@@ -523,7 +523,7 @@ public:
   void SayAlreadyDeclared(const SourceName &, Symbol &);
   void SayAlreadyDeclared(const SourceName &, const SourceName &);
   void SayWithReason(
-      const parser::Name &, Symbol &, MessageFixedText &&, MessageFixedText &&);
+      const parser::Name &, Symbol &, MessageFixedText &&, Message &&);
   void SayWithDecl(const parser::Name &, Symbol &, MessageFixedText &&);
   void SayLocalMustBeVariable(const parser::Name &, Symbol &);
   void SayDerivedType(const SourceName &, MessageFixedText &&, const Scope &);
@@ -2056,16 +2056,20 @@ void ScopeHandler::SayAlreadyDeclared(
 }
 
 void ScopeHandler::SayWithReason(const parser::Name &name, Symbol &symbol,
-    MessageFixedText &&msg1, MessageFixedText &&msg2) {
-  Say2(name, std::move(msg1), symbol, std::move(msg2));
+    MessageFixedText &&msg1, Message &&msg2) {
+  Say(name, std::move(msg1), symbol.name()).Attach(std::move(msg2));
   context().SetError(symbol, msg1.isFatal());
 }
 
 void ScopeHandler::SayWithDecl(
     const parser::Name &name, Symbol &symbol, MessageFixedText &&msg) {
-  SayWithReason(name, symbol, std::move(msg),
-      symbol.test(Symbol::Flag::Implicit) ? "Implicit declaration of '%s'"_en_US
-                                          : "Declaration of '%s'"_en_US);
+  Say(name, std::move(msg), symbol.name())
+      .Attach(Message{name.source,
+          symbol.test(Symbol::Flag::Implicit)
+              ? "Implicit declaration of '%s'"_en_US
+              : "Declaration of '%s'"_en_US,
+          name.source});
+  context().SetError(symbol, msg.isFatal());
 }
 
 void ScopeHandler::SayLocalMustBeVariable(
@@ -5379,8 +5383,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
         "Assumed size array '%s' not allowed in a locality-spec"_err_en_US);
     return false;
   }
-  if (std::optional<MessageFixedText> msg{
-          WhyNotModifiable(symbol, currScope())}) {
+  if (std::optional<Message> msg{WhyNotModifiable(symbol, currScope())}) {
     SayWithReason(name, symbol,
         "'%s' may not appear in a locality-spec because it is not "
         "definable"_err_en_US,
