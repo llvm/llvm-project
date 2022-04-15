@@ -1251,6 +1251,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
   CVSymbolArray scope =
       cii->m_debug_stream.getSymbolArrayForScope(func_id.offset);
 
+  scope.drop_front();
   auto begin = scope.begin();
   auto end = scope.end();
   std::vector<clang::ParmVarDecl *> params;
