@@ -36,10 +36,10 @@ Read-only,clamp,Not assigned,n/a,Not started
 Read-only,is_permutation,Not assigned,n/a,Not started
 Read-only,for_each,Not assigned,n/a,Not started
 Read-only,for_each_n,Not assigned,n/a,Not started
-Write,copy,Not assigned,n/a,Not started
-Write,copy_if,Not assigned,n/a,Not started
-Write,copy_n,Not assigned,n/a,Not started
-Write,copy_backward,Not assigned,n/a,Not started
+Write,copy,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
+Write,copy_if,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
+Write,copy_n,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
+Write,copy_backward,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,move,Not assigned,n/a,Not started
 Write,move_backward,Not assigned,n/a,Not started
 Write,fill,Not assigned,n/a,Not started
