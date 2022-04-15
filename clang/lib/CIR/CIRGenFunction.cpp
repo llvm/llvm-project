@@ -26,7 +26,7 @@ using namespace mlir::cir;
 
 CIRGenFunction::CIRGenFunction(CIRGenModule &CGM, mlir::OpBuilder &builder)
     : CGM{CGM}, builder(builder), CurFuncDecl(nullptr),
-      SanOpts(CGM.getLangOpts().Sanitize) {}
+      SanOpts(CGM.getLangOpts().Sanitize), ShouldEmitLifetimeMarkers(false) {}
 
 clang::ASTContext &CIRGenFunction::getContext() const {
   return CGM.getASTContext();

@@ -311,6 +311,10 @@ public:
   /// dropped.
   using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
   SymTableTy symbolTable;
+  /// True if we need to emit the life-time markers. This is initially set in
+  /// the constructor, but could be overwrriten to true if this is a coroutine.
+  bool ShouldEmitLifetimeMarkers;
+
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// LocalDeclMap - This keeps track of the CIR allocas or globals for local C
   /// delcs.
