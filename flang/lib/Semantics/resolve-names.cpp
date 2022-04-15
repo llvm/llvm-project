@@ -6888,31 +6888,45 @@ void ResolveNamesVisitor::CreateCommonBlockSymbols(
 
 void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
   auto info{GenericSpecInfo{x}};
-  const SourceName &symbolName{info.symbolName()};
+  SourceName symbolName{info.symbolName()};
   if (IsLogicalConstant(context(), symbolName)) {
     Say(symbolName,
         "Logical constant '%s' may not be used as a defined operator"_err_en_US);
     return;
   }
   GenericDetails genericDetails;
-  if (Symbol * existing{FindInScope(symbolName)}) {
-    if (existing->has<GenericDetails>()) {
-      info.Resolve(existing);
-      return; // already have generic, add to it
+  Symbol *existing{nullptr};
+  // Check all variants of names, e.g. "operator(.ne.)" for "operator(/=)"
+  for (const std::string &n : GetAllNames(context(), symbolName)) {
+    existing = currScope().FindSymbol(n);
+    if (existing) {
+      break;
     }
+  }
+  if (existing) {
     Symbol &ultimate{existing->GetUltimate()};
-    if (auto *ultimateDetails{ultimate.detailsIf<GenericDetails>()}) {
-      // convert a use-associated generic into a local generic
-      genericDetails.CopyFrom(*ultimateDetails);
-      AddGenericUse(genericDetails, existing->name(),
-          existing->get<UseDetails>().symbol());
-    } else if (ultimate.has<SubprogramDetails>() ||
+    if (const auto *existingGeneric{ultimate.detailsIf<GenericDetails>()}) {
+      if (&ultimate.owner() != &currScope()) {
+        // Create a local copy of a host or use associated generic so that
+        // it can be locally extended without corrupting the original.
+        genericDetails.CopyFrom(*existingGeneric);
+        if (const auto *use{existing->detailsIf<UseDetails>()}) {
+          AddGenericUse(genericDetails, existing->name(), use->symbol());
+          EraseSymbol(*existing);
+        }
+        existing = &MakeSymbol(symbolName, Attrs{}, std::move(genericDetails));
+      }
+      info.Resolve(existing);
+      return;
+    }
+    if (ultimate.has<SubprogramDetails>() ||
         ultimate.has<SubprogramNameDetails>()) {
       genericDetails.set_specific(ultimate);
     } else if (ultimate.has<DerivedTypeDetails>()) {
       genericDetails.set_derivedType(ultimate);
     } else {
       SayAlreadyDeclared(symbolName, *existing);
+      return;
     }
     EraseSymbol(*existing);
   }
