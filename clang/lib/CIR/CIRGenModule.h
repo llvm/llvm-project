@@ -171,6 +171,9 @@ public:
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const clang::ValueDecl *D);
 
+  bool isInNoSanitizeList(clang::SanitizerMask Kind, mlir::FuncOp Fn,
+                          clang::SourceLocation) const;
+
   /// Determine whether the definition can be emitted eagerly, or should be
   /// delayed until the end of the translation unit. This is relevant for
   /// definitions whose linkage can change, e.g. implicit function instantions

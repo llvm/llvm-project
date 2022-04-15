@@ -42,6 +42,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/LowerToLLVM.h"
@@ -89,10 +90,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            const clang::CodeGenOptions &CGO,
                            DiagnosticsEngine &Diags)
     : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
-      codeGenOpts(CGO), theModule{mlir::ModuleOp::create(
-                            builder.getUnknownLoc())},
-      Diags(Diags), target(astCtx.getTargetInfo()),
-      ABI(createCXXABI(*this)), genTypes{*this} {}
+      codeGenOpts(CGO),
+      theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
+      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)),
+      genTypes{*this} {}
 
 CIRGenModule::~CIRGenModule() {}
 
@@ -707,6 +708,30 @@ void CIRGenModule::Release() {
 bool CIRGenModule::shouldEmitFunction(GlobalDecl GD) {
   // TODO: implement this -- requires defining linkage for CIR
   return true;
+}
+
+bool CIRGenModule::isInNoSanitizeList(SanitizerMask Kind, mlir::FuncOp Fn,
+                                      SourceLocation Loc) const {
+  const auto &NoSanitizeL = getASTContext().getNoSanitizeList();
+  // NoSanitize by function name.
+  if (NoSanitizeL.containsFunction(Kind, Fn.getName()))
+    llvm_unreachable("NYI");
+  // NoSanitize by location.
+  if (Loc.isValid())
+    return NoSanitizeL.containsLocation(Kind, Loc);
+  // If location is unknown, this may be a compiler-generated function. Assume
+  // it's located in the main file.
+  auto &SM = getASTContext().getSourceManager();
+  FileEntryRef MainFile = *SM.getFileEntryRefForID(SM.getMainFileID());
+  if (NoSanitizeL.containsFile(Kind, MainFile.getName()))
+    return true;
+
+  // Check "src" prefix.
+  if (Loc.isValid())
+    return NoSanitizeL.containsLocation(Kind, Loc);
+  // If location is unknown, this may be a compiler-generated function. Assume
+  // it's located in the main file.
+  return NoSanitizeL.containsFile(Kind, MainFile.getName());
 }
 
 void CIRGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
