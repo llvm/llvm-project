@@ -35,6 +35,11 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
     for (auto &SrcMI : SrcMBB) {
       for (unsigned I = 0, E = SrcMI.getNumOperands(); I < E; ++I) {
         auto &DMO = SrcMI.getOperand(I);
+        if (DMO.isRegMask()) {
+          DstMRI->addPhysRegsUsedFromRegMask(DMO.getRegMask());
+          continue;
+        }
+
         if (!DMO.isReg())
           continue;
         Register SrcReg = DMO.getReg();
