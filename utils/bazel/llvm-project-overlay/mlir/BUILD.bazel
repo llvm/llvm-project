@@ -949,11 +949,18 @@ cc_binary(
 ##---------------------------------------------------------------------------##
 
 td_library(
-    name = "OpBaseTdFiles",
+    name = "AttrTdFiles",
     srcs = [
         "include/mlir/IR/AttrTypeBase.td",
-        "include/mlir/IR/DialectBase.td",
         "include/mlir/IR/EnumAttr.td",
+    ],
+    includes = ["include"],
+)
+
+td_library(
+    name = "OpBaseTdFiles",
+    srcs = [
+        "include/mlir/IR/DialectBase.td",
         "include/mlir/IR/OpAsmInterface.td",
         "include/mlir/IR/OpBase.td",
         "include/mlir/IR/PatternBase.td",
@@ -962,6 +969,9 @@ td_library(
         "include/mlir/IR/TensorEncoding.td",
     ],
     includes = ["include"],
+    deps = [
+        ":AttrTdFiles",
+    ],
 )
 
 td_library(
@@ -2066,6 +2076,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":AttrTdFiles",
         ":CallInterfacesTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
@@ -2800,6 +2811,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":AttrTdFiles",
         ":CallInterfacesTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
@@ -2840,7 +2852,10 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/ControlFlow/IR/ControlFlowOps.td",
-    deps = [":ControlFlowOpsTdFiles"],
+    deps = [
+        ":AttrTdFiles",
+        ":ControlFlowOpsTdFiles",
+    ],
 )
 
 cc_library(
@@ -3322,7 +3337,10 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/GPU/ParallelLoopMapperAttr.td",
-    deps = [":GPUOpsTdFiles"],
+    deps = [
+        ":AttrTdFiles",
+        ":GPUOpsTdFiles",
+    ],
 )
 
 gentbl_cc_library(
