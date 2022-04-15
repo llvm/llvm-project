@@ -10,6 +10,7 @@
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -20,15 +21,126 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
+// FIXME: Preserve frame index numbers. The numbering is off for fixed objects
+// since they are inserted at the beginning. This would avoid the need for the
+// Src2DstFrameIndex map and in the future target MFI code wouldn't need to
+// worry about it either.
+static void cloneFrameInfo(
+    MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> Src2DstMBB,
+    DenseMap<int, int> &Src2DstFrameIndex) {
+  DstMFI.setFrameAddressIsTaken(SrcMFI.isFrameAddressTaken());
+  DstMFI.setReturnAddressIsTaken(SrcMFI.isReturnAddressTaken());
+  DstMFI.setHasStackMap(SrcMFI.hasStackMap());
+  DstMFI.setHasPatchPoint(SrcMFI.hasPatchPoint());
+  DstMFI.setUseLocalStackAllocationBlock(
+      SrcMFI.getUseLocalStackAllocationBlock());
+  DstMFI.setOffsetAdjustment(SrcMFI.getOffsetAdjustment());
+
+  DstMFI.ensureMaxAlignment(SrcMFI.getMaxAlign());
+  assert(DstMFI.getMaxAlign() == SrcMFI.getMaxAlign() &&
+         "we need to set exact alignment");
+
+  DstMFI.setAdjustsStack(SrcMFI.adjustsStack());
+  DstMFI.setHasCalls(SrcMFI.hasCalls());
+  DstMFI.setHasOpaqueSPAdjustment(SrcMFI.hasOpaqueSPAdjustment());
+  DstMFI.setHasCopyImplyingStackAdjustment(
+      SrcMFI.hasCopyImplyingStackAdjustment());
+  DstMFI.setHasVAStart(SrcMFI.hasVAStart());
+  DstMFI.setHasMustTailInVarArgFunc(SrcMFI.hasMustTailInVarArgFunc());
+  DstMFI.setHasTailCall(SrcMFI.hasTailCall());
+  DstMFI.setMaxCallFrameSize(SrcMFI.getMaxCallFrameSize());
+
+  DstMFI.setCVBytesOfCalleeSavedRegisters(
+      SrcMFI.getCVBytesOfCalleeSavedRegisters());
+
+  if (MachineBasicBlock *SavePt = SrcMFI.getSavePoint())
+    DstMFI.setSavePoint(Src2DstMBB.find(SavePt)->second);
+  if (MachineBasicBlock *RestorePt = SrcMFI.getRestorePoint())
+    DstMFI.setRestorePoint(Src2DstMBB.find(RestorePt)->second);
+
+  for (int i = SrcMFI.getObjectIndexBegin(), e = SrcMFI.getObjectIndexEnd();
+       i != e; ++i) {
+    int NewFI;
+
+    if (SrcMFI.isFixedObjectIndex(i)) {
+      NewFI = DstMFI.CreateFixedObject(
+          SrcMFI.getObjectSize(i), SrcMFI.getObjectOffset(i),
+          SrcMFI.isImmutableObjectIndex(i), SrcMFI.isAliasedObjectIndex(i));
+    } else if (SrcMFI.isVariableSizedObjectIndex(i)) {
+      NewFI = DstMFI.CreateVariableSizedObject(SrcMFI.getObjectAlign(i),
+                                               SrcMFI.getObjectAllocation(i));
+    } else {
+      NewFI = DstMFI.CreateStackObject(
+          SrcMFI.getObjectSize(i), SrcMFI.getObjectAlign(i),
+          SrcMFI.isSpillSlotObjectIndex(i), SrcMFI.getObjectAllocation(i),
+          SrcMFI.getStackID(i));
+      DstMFI.setObjectOffset(NewFI, SrcMFI.getObjectOffset(i));
+    }
+
+    if (SrcMFI.isStatepointSpillSlotObjectIndex(i))
+      DstMFI.markAsStatepointSpillSlotObjectIndex(NewFI);
+    DstMFI.setObjectSSPLayout(NewFI, SrcMFI.getObjectSSPLayout(i));
+    DstMFI.setObjectZExt(NewFI, SrcMFI.isObjectZExt(i));
+    DstMFI.setObjectSExt(NewFI, SrcMFI.isObjectSExt(i));
+
+    Src2DstFrameIndex[i] = NewFI;
+  }
+
+  for (unsigned I = 0, E = SrcMFI.getLocalFrameObjectCount(); I < E; ++I) {
+    auto LocalObject = SrcMFI.getLocalFrameObjectMap(I);
+    DstMFI.mapLocalFrameObject(LocalObject.first, LocalObject.second);
+  }
+
+  // Remap the frame indexes in the CalleeSavedInfo
+  std::vector<CalleeSavedInfo> CalleeSavedInfos = SrcMFI.getCalleeSavedInfo();
+  for (CalleeSavedInfo &CSInfo : CalleeSavedInfos) {
+    if (!CSInfo.isSpilledToReg())
+      CSInfo.setFrameIdx(Src2DstFrameIndex[CSInfo.getFrameIdx()]);
+  }
+
+  DstMFI.setCalleeSavedInfo(std::move(CalleeSavedInfos));
+
+  if (SrcMFI.hasStackProtectorIndex()) {
+    DstMFI.setStackProtectorIndex(
+        Src2DstFrameIndex[SrcMFI.getStackProtectorIndex()]);
+  }
+
+  // FIXME: Needs test, missing MIR serialization.
+  if (SrcMFI.hasFunctionContextIndex()) {
+    DstMFI.setFunctionContextIndex(
+        Src2DstFrameIndex[SrcMFI.getFunctionContextIndex()]);
+  }
+}
+
 static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
   auto DstMF = std::make_unique<MachineFunction>(
       SrcMF->getFunction(), SrcMF->getTarget(), SrcMF->getSubtarget(),
       SrcMF->getFunctionNumber(), SrcMF->getMMI());
   DenseMap<MachineBasicBlock *, MachineBasicBlock *> Src2DstMBB;
   DenseMap<Register, Register> Src2DstReg;
+  DenseMap<int, int> Src2DstFrameIndex;
 
   auto *SrcMRI = &SrcMF->getRegInfo();
   auto *DstMRI = &DstMF->getRegInfo();
+
+  // Clone blocks.
+  for (MachineBasicBlock &SrcMBB : *SrcMF)
+    Src2DstMBB[&SrcMBB] = DstMF->CreateMachineBasicBlock();
+
+  const MachineFrameInfo &SrcMFI = SrcMF->getFrameInfo();
+  MachineFrameInfo &DstMFI = DstMF->getFrameInfo();
+
+  // Copy stack objects and other info
+  cloneFrameInfo(DstMFI, SrcMFI, Src2DstMBB, Src2DstFrameIndex);
+
+  // Remap the debug info frame index references.
+  DstMF->VariableDbgInfos = SrcMF->VariableDbgInfos;
+  for (MachineFunction::VariableDbgInfo &DbgInfo : DstMF->VariableDbgInfos)
+    DbgInfo.Slot = Src2DstFrameIndex[DbgInfo.Slot];
+
+  // FIXME: Need to clone MachineFunctionInfo, which may also depend on frame
+  // index and block mapping.
 
   // Create vregs.
   for (auto &SrcMBB : *SrcMF) {
@@ -75,9 +187,6 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
     }
   }
 
-  // Clone blocks.
-  for (auto &SrcMBB : *SrcMF)
-    Src2DstMBB[&SrcMBB] = DstMF->CreateMachineBasicBlock();
   // Link blocks.
   for (auto &SrcMBB : *SrcMF) {
     auto *DstMBB = Src2DstMBB[&SrcMBB];
@@ -110,7 +219,11 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
         // Update MBB.
         if (DstMO.isMBB()) {
           DstMO.setMBB(Src2DstMBB[DstMO.getMBB()]);
+        } else if (DstMO.isFI()) {
+          // Update frame indexes
+          DstMO.setIndex(Src2DstFrameIndex[DstMO.getIndex()]);
         }
+
         DstMI->addOperand(DstMO);
       }
       DstMI->setMemRefs(*DstMF, SrcMI.memoperands());
