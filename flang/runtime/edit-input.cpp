@@ -58,12 +58,15 @@ static inline char32_t GetDecimalPoint(const DataEdit &edit) {
 // Returns true if there's a '-' sign.
 static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
     std::optional<char32_t> &next, std::optional<int> &remaining) {
-  next = io.PrepareInput(edit, remaining);
+  bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
+  next = io.PrepareInput(edit, remaining, !bzMode);
   bool negative{false};
   if (next) {
     negative = *next == '-';
     if (negative || *next == '+') {
-      io.SkipSpaces(remaining);
+      if (!bzMode) {
+        io.SkipSpaces(remaining);
+      }
       next = io.NextInField(remaining, edit);
     }
   }
@@ -153,7 +156,8 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
   if (ScanNumericPrefix(io, edit, next, remaining)) {
     Put('-');
   }
-  if (next.value_or(' ') == ' ') { // empty/blank field means zero
+  bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
+  if (!next || (!bzMode && *next == ' ')) { // empty/blank field means zero
     remaining.reset();
     if (!io.GetConnectionState().IsAtEOF()) {
       Put('0');
@@ -181,10 +185,11 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     }
     exponent = 0;
   } else if (first == decimal || (first >= '0' && first <= '9') ||
-      first == 'E' || first == 'D' || first == 'Q') {
+      (bzMode && (first == ' ' || first == '\t')) || first == 'E' ||
+      first == 'D' || first == 'Q') {
     Put('.'); // input field is normalized to a fraction
     auto start{got};
-    bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
+    bool anyDigit{false};
     for (; next; next = io.NextInField(remaining, edit)) {
       char32_t ch{*next};
       if (ch == ' ' || ch == '\t') {
@@ -195,8 +200,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
         }
       }
       if (ch == '0' && got == start && !decimalPoint) {
+        anyDigit = true;
         // omit leading zeroes before the decimal
       } else if (ch >= '0' && ch <= '9') {
+        anyDigit = true;
         Put(ch);
       } else if (ch == decimal && !decimalPoint) {
         // the decimal point is *not* copied to the buffer
@@ -206,7 +213,11 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
     }
     if (got == start) {
-      Put('0'); // emit at least one digit
+      if (anyDigit) {
+        Put('0'); // emit at least one digit
+      } else {
+        return 0; // no digits, invalid input
+      }
     }
     if (next &&
         (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
@@ -372,7 +383,7 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
     return false;
   }
   if (got == 0) {
-    io.GetIoErrorHandler().SignalError("Bad REAL input value");
+    io.GetIoErrorHandler().SignalError(IostatBadRealInput);
     return false;
   }
   bool hadExtra{got > maxDigits};
