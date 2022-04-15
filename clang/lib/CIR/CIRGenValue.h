@@ -16,10 +16,14 @@
 
 #include "Address.h"
 
-#include "mlir/IR/Value.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
+
 #include "llvm/ADT/PointerIntPair.h"
+
+#include "mlir/Dialect/CIR/IR/CIRTypes.h"
+#include "mlir/IR/Value.h"
 
 namespace cir {
 
@@ -147,12 +151,24 @@ class LValue {
   clang::QualType Type;
   clang::Qualifiers Quals;
 
+  // This flag shows if a nontemporal load/stores should be used when accessing
+  // this lvalue.
+  bool Nontemporal : 1;
+
 private:
-  void Initialize(clang::CharUnits Alignment, clang::QualType Type,
-                  LValueBaseInfo BaseInfo) {
-    // assert((!Alignment.isZero()) && // || Type->isIncompleteType()) &&
-    //       "initializing l-value with zero alignment!");
+  void Initialize(clang::QualType Type, clang::Qualifiers Quals,
+                  clang::CharUnits Alignment, LValueBaseInfo BaseInfo) {
+    assert((!Alignment.isZero() || Type->isIncompleteType()) &&
+           "initializing l-value with zero alignment!");
+    if (isGlobalReg())
+      assert(ElementType == nullptr && "Glboal reg does not store elem type");
+    else
+      assert(V.getType().cast<mlir::cir::PointerType>().getPointee() ==
+                 ElementType &&
+             "Pointer element type mismatch");
+
     this->Type = Type;
+    this->Quals = Quals;
     // This flag shows if a nontemporal load/stores should be used when
     // accessing this lvalue.
     const unsigned MaxAlign = 1U << 31;
@@ -162,12 +178,17 @@ private:
     assert(this->Alignment == Alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
     this->BaseInfo = BaseInfo;
+
+    // TODO: ObjC flags
+    // Initialize Objective-C flags.
+    this->Nontemporal = false;
   }
 
   // The alignment to use when accessing this lvalue. (For vector elements,
   // this is the alignment of the whole vector)
   unsigned Alignment;
   mlir::Value V;
+  mlir::Type ElementType;
   LValueBaseInfo BaseInfo;
 
 public:
@@ -178,6 +199,10 @@ public:
   bool isGlobalReg() const { return LVType == GlobalReg; }
   bool isMatrixElt() const { return LVType == MatrixElt; }
 
+  bool isVolatile() const { return Quals.hasVolatile(); }
+
+  bool isNontemporal() const { return Nontemporal; }
+
   clang::QualType getType() const { return Type; }
 
   mlir::Value getPointer() const { return V; }
@@ -186,7 +211,9 @@ public:
     return clang::CharUnits::fromQuantity(Alignment);
   }
 
-  Address getAddress() const { return Address(getPointer(), getAlignment()); }
+  Address getAddress() const {
+    return Address(getPointer(), ElementType, getAlignment());
+  }
 
   LValueBaseInfo getBaseInfo() const { return BaseInfo; }
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
@@ -194,9 +221,11 @@ public:
   static LValue makeAddr(Address address, clang::QualType T,
                          AlignmentSource Source = AlignmentSource::Type) {
     LValue R;
-    R.V = address.getPointer();
-    R.Initialize(address.getAlignment(), T, LValueBaseInfo(Source));
     R.LVType = Simple;
+    R.V = address.getPointer();
+    R.ElementType = address.getElementType();
+    R.Initialize(T, T.getQualifiers(), address.getAlignment(),
+                 LValueBaseInfo(Source));
     return R;
   }
 
@@ -204,9 +233,25 @@ public:
   static LValue makeAddr(Address address, clang::QualType T,
                          LValueBaseInfo LBI) {
     LValue R;
-    R.V = address.getPointer();
-    R.Initialize(address.getAlignment(), T, LBI);
     R.LVType = Simple;
+    R.V = address.getPointer();
+    R.ElementType = address.getElementType();
+    R.Initialize(T, T.getQualifiers(), address.getAlignment(), LBI);
+    return R;
+  }
+
+  static LValue makeAddr(Address address, clang::QualType type,
+                         clang::ASTContext &Context, LValueBaseInfo BaseInfo) {
+    clang::Qualifiers qs = type.getQualifiers();
+    qs.setObjCGCAttr(Context.getObjCGCAttrKind(type));
+
+    LValue R;
+    R.LVType = Simple;
+    assert(address.getPointer().getType().cast<mlir::cir::PointerType>());
+    R.V = address.getPointer();
+    R.ElementType = address.getElementType();
+    R.Initialize(type, qs, address.getAlignment(),
+                 BaseInfo); // TODO: TBAAInfo);
     return R;
   }
 
