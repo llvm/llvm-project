@@ -1,7 +1,7 @@
 # clang-format off
 # REQUIRES: lld, x86
 
-# RUN: %clang_cl --target=i386-windows-msvc -c /Fo%t.obj %s
+# RUN: %clang_cl --target=i386-windows-msvc -c /Fo%t.obj -- %s
 # RUN: lld-link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe /base:0x400000
 # RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 # RUN:     %p/Inputs/subfield_register_simple_type.lldbinit 2>&1 | FileCheck %s
