@@ -439,22 +439,33 @@ llvm::Constant *ConstantAggregateBuilder::buildFrom(
     // Can't emit as an array, carry on to emit as a struct.
   }
 
+  // The size of the constant we plan to generate.  This is usually just
+  // the size of the initialized type, but in AllowOversized mode (i.e.
+  // flexible array init), it can be larger.
   CharUnits DesiredSize = Utils.getSize(DesiredTy);
+  if (Size > DesiredSize) {
+    assert(AllowOversized && "Elems are oversized");
+    DesiredSize = Size;
+  }
+
+  // The natural alignment of an unpacked LLVM struct with the given elements.
   CharUnits Align = CharUnits::One();
   for (llvm::Constant *C : Elems)
     Align = std::max(Align, Utils.getAlignment(C));
+
+  // The natural size of an unpacked LLVM struct with the given elements.
   CharUnits AlignedSize = Size.alignTo(Align);
 
   bool Packed = false;
   ArrayRef<llvm::Constant*> UnpackedElems = Elems;
   llvm::SmallVector<llvm::Constant*, 32> UnpackedElemStorage;
-  if ((DesiredSize < AlignedSize && !AllowOversized) ||
-      DesiredSize.alignTo(Align) != DesiredSize) {
-    // The natural layout would be the wrong size; force use of a packed layout.
+  if (DesiredSize < AlignedSize || DesiredSize.alignTo(Align) != DesiredSize) {
+    // The natural layout would be too big; force use of a packed layout.
     NaturalLayout = false;
     Packed = true;
   } else if (DesiredSize > AlignedSize) {
-    // The constant would be too small. Add padding to fix it.
+    // The natural layout would be too small. Add padding to fix it. (This
+    // is ignored if we choose a packed layout.)
     UnpackedElemStorage.assign(Elems.begin(), Elems.end());
     UnpackedElemStorage.push_back(Utils.getPadding(DesiredSize - Size));
     UnpackedElems = UnpackedElemStorage;
@@ -482,7 +493,7 @@ llvm::Constant *ConstantAggregateBuilder::buildFrom(
     // If we're using the packed layout, pad it out to the desired size if
     // necessary.
     if (Packed) {
-      assert((SizeSoFar <= DesiredSize || AllowOversized) &&
+      assert(SizeSoFar <= DesiredSize &&
              "requested size is too small for contents");
       if (SizeSoFar < DesiredSize)
         PackedElems.push_back(Utils.getPadding(DesiredSize - SizeSoFar));
