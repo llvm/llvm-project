@@ -521,6 +521,17 @@ func @fold_extract_broadcast(%a : f32) -> f32 {
 
 // -----
 
+// CHECK-LABEL: fold_extract_broadcast_negative
+//       CHECK:   vector.broadcast %{{.*}} : vector<1x1xf32> to vector<1x1x4xf32>
+//       CHECK:   vector.extract %{{.*}}[0, 0] : vector<1x1x4xf32>
+func @fold_extract_broadcast_negative(%a : vector<1x1xf32>) -> vector<4xf32> {
+  %b = vector.broadcast %a : vector<1x1xf32> to vector<1x1x4xf32>
+  %r = vector.extract %b[0, 0] : vector<1x1x4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: fold_extract_splat
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
