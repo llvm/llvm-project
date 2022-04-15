@@ -93,9 +93,27 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArrayType
+//===----------------------------------------------------------------------===//
+
+def CIR_ArrayType :
+    CIR_Type<"Array", "array"> {
+
+  let summary = "CIR array type";
+  let description = [{
+    `CIR.array` represents C/C++ constant arrays.
+  }];
+
+  let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // One type to bind them all
 //===----------------------------------------------------------------------===//
 
-def CIR_AnyCIRType : AnyTypeOf<[CIR_PointerType, CIR_BoolType, CIR_StructType]>;
+def CIR_AnyCIRType : AnyTypeOf<[CIR_PointerType, CIR_BoolType, CIR_StructType,
+                                CIR_ArrayType]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES
