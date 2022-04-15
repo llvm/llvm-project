@@ -9,6 +9,7 @@
 #ifndef ARITHMETIC_BASE
 #define ARITHMETIC_BASE
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 def Arithmetic_Dialect : Dialect {
