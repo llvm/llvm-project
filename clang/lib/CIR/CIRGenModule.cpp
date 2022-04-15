@@ -440,13 +440,12 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
 
   // Any attempts to use a MultiVersion function should result in retrieving the
   // iFunc instead. Name mangling will handle the rest of the changes.
-  auto const *FD = cast_or_null<FunctionDecl>(D);
-  assert(FD && "Only FD supported so far");
-
-  if (getLangOpts().OpenMP)
-    llvm_unreachable("NYI");
-  if (FD->isMultiVersion())
-    llvm_unreachable("NYI");
+  if (const auto *FD = cast_or_null<FunctionDecl>(D)) {
+    if (getLangOpts().OpenMP)
+      llvm_unreachable("open MP NYI");
+    if (FD->isMultiVersion())
+      llvm_unreachable("NYI");
+  }
 
   mlir::Value Entry = GetGlobalValue(GD.getDecl());
 
@@ -468,12 +467,16 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
     IsIncompleteFunction = true;
   }
 
+  auto *FD = llvm::cast<FunctionDecl>(D);
+  assert(FD && "Only FunctionDecl supported so far.");
   auto fnLoc = getLoc(FD->getSourceRange());
   // TODO: CodeGen includeds the linkage (ExternalLinkage) and only passes the
   // mangledname if Entry is nullptr
   mlir::FuncOp F = mlir::FuncOp::create(fnLoc, MangledName, FTy);
 
-  assert(!Entry && "NYI");
+  if (Entry) {
+    llvm_unreachable("NYI");
+  }
 
   // TODO: This might not be valid, seems the uniqueing system doesn't make
   // sense for MLIR
