@@ -1633,11 +1633,8 @@ void Attributor::runTillFixpoint() {
   // the abstract analysis.
 
   unsigned IterationCounter = 1;
-  unsigned MaxFixedPointIterations;
-  if (MaxFixpointIterations)
-    MaxFixedPointIterations = MaxFixpointIterations.getValue();
-  else
-    MaxFixedPointIterations = SetFixpointIterations;
+  unsigned MaxIterations =
+      Configuration.MaxFixpointIterations.getValueOr(SetFixpointIterations);
 
   SmallVector<AbstractAttribute *, 32> ChangedAAs;
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
@@ -1722,21 +1719,20 @@ void Attributor::runTillFixpoint() {
                     QueryAAsAwaitingUpdate.end());
     QueryAAsAwaitingUpdate.clear();
 
-  } while (!Worklist.empty() && (IterationCounter++ < MaxFixedPointIterations ||
-                                 VerifyMaxFixpointIterations));
+  } while (!Worklist.empty() &&
+           (IterationCounter++ < MaxIterations || VerifyMaxFixpointIterations));
 
-  if (IterationCounter > MaxFixedPointIterations && !Functions.empty()) {
+  if (IterationCounter > MaxIterations && !Functions.empty()) {
     auto Remark = [&](OptimizationRemarkMissed ORM) {
       return ORM << "Attributor did not reach a fixpoint after "
-                 << ore::NV("Iterations", MaxFixedPointIterations)
-                 << " iterations.";
+                 << ore::NV("Iterations", MaxIterations) << " iterations.";
     };
     Function *F = Functions.front();
     emitRemark<OptimizationRemarkMissed>(F, "FixedPoint", Remark);
   }
 
   LLVM_DEBUG(dbgs() << "\n[Attributor] Fixpoint iteration done after: "
-                    << IterationCounter << "/" << MaxFixpointIterations
+                    << IterationCounter << "/" << MaxIterations
                     << " iterations\n");
 
   // Reset abstract arguments not settled in a sound fixpoint by now. This
@@ -1770,11 +1766,9 @@ void Attributor::runTillFixpoint() {
              << " abstract attributes.\n";
   });
 
-  if (VerifyMaxFixpointIterations &&
-      IterationCounter != MaxFixedPointIterations) {
+  if (VerifyMaxFixpointIterations && IterationCounter != MaxIterations) {
     errs() << "\n[Attributor] Fixpoint iteration done after: "
-           << IterationCounter << "/" << MaxFixedPointIterations
-           << " iterations\n";
+           << IterationCounter << "/" << MaxIterations << " iterations\n";
     llvm_unreachable("The fixpoint was not reached with exactly the number of "
                      "specified iterations!");
   }
@@ -1863,7 +1857,7 @@ ChangeStatus Attributor::manifestAttributes() {
 
 void Attributor::identifyDeadInternalFunctions() {
   // Early exit if we don't intend to delete functions.
-  if (!DeleteFns)
+  if (!Configuration.DeleteFns)
     return;
 
   // Identify dead internal functions and delete them. This happens outside
@@ -2051,7 +2045,7 @@ ChangeStatus Attributor::cleanupIR() {
         assert(isRunOn(*I->getFunction()) &&
                "Cannot delete an instruction outside the current SCC!");
         if (!isa<IntrinsicInst>(CB))
-          CGUpdater.removeCallSite(*CB);
+          Configuration.CGUpdater.removeCallSite(*CB);
       }
       I->dropDroppableUses();
       CGModifiedFunctions.insert(I->getFunction());
@@ -2100,12 +2094,12 @@ ChangeStatus Attributor::cleanupIR() {
 
   for (Function *Fn : CGModifiedFunctions)
     if (!ToBeDeletedFunctions.count(Fn) && Functions.count(Fn))
-      CGUpdater.reanalyzeFunction(*Fn);
+      Configuration.CGUpdater.reanalyzeFunction(*Fn);
 
   for (Function *Fn : ToBeDeletedFunctions) {
     if (!Functions.count(Fn))
       continue;
-    CGUpdater.removeFunction(*Fn);
+    Configuration.CGUpdater.removeFunction(*Fn);
   }
 
   if (!ToBeChangedUses.empty())
@@ -2344,7 +2338,7 @@ bool Attributor::internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
 bool Attributor::isValidFunctionSignatureRewrite(
     Argument &Arg, ArrayRef<Type *> ReplacementTypes) {
 
-  if (!RewriteSignatures)
+  if (!Configuration.RewriteSignatures)
     return false;
 
   Function *Fn = Arg.getParent();
@@ -2636,13 +2630,13 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       assert(OldCB.getType() == NewCB.getType() &&
              "Cannot handle call sites with different types!");
       ModifiedFns.insert(OldCB.getFunction());
-      CGUpdater.replaceCallSite(OldCB, NewCB);
+      Configuration.CGUpdater.replaceCallSite(OldCB, NewCB);
       OldCB.replaceAllUsesWith(&NewCB);
       OldCB.eraseFromParent();
     }
 
     // Replace the function in the call graph (if any).
-    CGUpdater.replaceFunctionWith(*OldFn, *NewFn);
+    Configuration.CGUpdater.replaceFunctionWith(*OldFn, *NewFn);
 
     // If the old function was modified and needed to be reanalyzed, the new one
     // does now.
@@ -3153,7 +3147,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
                                      SetVector<Function *> &Functions,
                                      AnalysisGetter &AG,
                                      CallGraphUpdater &CGUpdater,
-                                     bool DeleteFns) {
+                                     bool DeleteFns, bool IsModulePass) {
   if (Functions.empty())
     return false;
 
@@ -3166,8 +3160,10 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
 
   // Create an Attributor and initially empty information cache that is filled
   // while we identify default attribute opportunities.
-  Attributor A(Functions, InfoCache, CGUpdater, /* Allowed */ nullptr,
-               DeleteFns);
+  AttributorConfig AC(CGUpdater);
+  AC.IsModulePass = IsModulePass;
+  AC.DeleteFns = DeleteFns;
+  Attributor A(Functions, InfoCache, AC);
 
   // Create shallow wrappers for all functions that are not IPO amendable
   if (AllowShallowWrappers)
@@ -3272,7 +3268,7 @@ PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
   if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
-                               /* DeleteFns */ true)) {
+                               /* DeleteFns */ true, /* IsModulePass */ true)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
   }
@@ -3300,7 +3296,8 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
   if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
-                               /* DeleteFns */ false)) {
+                               /* DeleteFns */ false,
+                               /* IsModulePass */ false)) {
     // FIXME: Think about passes we will preserve and add them here.
     PreservedAnalyses PA;
     PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
@@ -3376,7 +3373,8 @@ struct AttributorLegacyPass : public ModulePass {
     BumpPtrAllocator Allocator;
     InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
     return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
-                                    /* DeleteFns*/ true);
+                                    /* DeleteFns*/ true,
+                                    /* IsModulePass */ true);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -3413,7 +3411,8 @@ struct AttributorCGSCCLegacyPass : public CallGraphSCCPass {
     BumpPtrAllocator Allocator;
     InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
     return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
-                                    /* DeleteFns */ false);
+                                    /* DeleteFns */ false,
+                                    /* IsModulePass */ false);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

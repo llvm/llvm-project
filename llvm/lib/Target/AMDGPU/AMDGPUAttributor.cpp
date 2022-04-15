@@ -745,7 +745,12 @@ public:
         {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
          &AAAMDFlatWorkGroupSize::ID, &AACallEdges::ID, &AAPointerInfo::ID});
 
-    Attributor A(Functions, InfoCache, CGUpdater, &Allowed);
+    AttributorConfig AC(CGUpdater);
+    AC.Allowed = &Allowed;
+    AC.IsModulePass = true;
+    AC.DefaultInitializeLiveInternals = false;
+
+    Attributor A(Functions, InfoCache, AC);
 
     for (Function &F : M) {
       if (!F.isIntrinsic()) {
