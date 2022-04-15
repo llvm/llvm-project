@@ -77,6 +77,7 @@ class CIRGenTypes {
   clang::ASTContext &Context;
   mlir::OpBuilder &Builder;
   CIRGenModule &CGM;
+  const clang::TargetInfo &Target;
   CIRGenCXXABI &TheCXXABI;
 
   // This should not be moved earlier, since its initialization depends on some

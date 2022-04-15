@@ -25,7 +25,7 @@ unsigned CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &cgm)
     : Context(cgm.getASTContext()), Builder(cgm.getBuilder()), CGM{cgm},
-      TheCXXABI(cgm.getCXXABI()),
+      Target(cgm.getTarget()), TheCXXABI(cgm.getCXXABI()),
       TheABIInfo(cgm.getTargetCIRGenInfo().getABIInfo()) {}
 CIRGenTypes::~CIRGenTypes() {
   for (llvm::FoldingSet<CIRGenFunctionInfo>::iterator I = FunctionInfos.begin(),
