@@ -428,6 +428,30 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
   if (mlir::failed(Fn.verifyBody()))
     return nullptr;
 
+  // C++11 [stmt.return]p2:
+  //   Flowing off the end of a function [...] results in undefined behavior
+  //   in a value-returning function.
+  // C11 6.9.1p12:
+  //   If the '}' that terminates a function is reached, and the value of the
+  //   function call is used by the caller, the behavior is undefined.
+  if (getLangOpts().CPlusPlus && !FD->hasImplicitReturnZero() && !SawAsmBlock &&
+      !FD->getReturnType()->isVoidType() && builder.getInsertionBlock()) {
+    bool shouldEmitUnreachable =
+        CGM.getCodeGenOpts().StrictReturn ||
+        !CGM.MayDropFunctionReturn(FD->getASTContext(), FD->getReturnType());
+
+    if (SanOpts.has(SanitizerKind::Return)) {
+      llvm_unreachable("NYI");
+    } else if (shouldEmitUnreachable) {
+      if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+        ; // TODO: buildTrapCall(llvm::Intrinsic::trap);
+    }
+    if (SanOpts.has(SanitizerKind::Return) || shouldEmitUnreachable) {
+      // TODO: builder.createUnreachable();
+      builder.clearInsertionPoint();
+    }
+  }
+
   // Emit the standard function epilogue.
   // TODO: finishFunction(BodyRange.getEnd());
 

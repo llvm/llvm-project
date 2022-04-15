@@ -330,6 +330,10 @@ public:
   /// TODO: Translate to MLIR
   bool DidCallStackSave = false;
 
+  /// Whether we processed a Microsoft-style asm block during CIRGen. These can
+  /// potentially set the return value.
+  bool SawAsmBlock = false;
+
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
 

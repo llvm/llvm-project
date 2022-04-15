@@ -574,3 +574,17 @@ void CIRGenFunction::buildCallArgs(
     std::reverse(Args.begin() + CallArgsStart, Args.end());
   }
 }
+
+bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
+                                         QualType ReturnType) {
+  // We can't just disard the return value for a record type with a complex
+  // destructor or a non-trivially copyable type.
+  if (const RecordType *RT =
+          ReturnType.getCanonicalType()->getAs<RecordType>()) {
+    llvm_unreachable("NYI");
+  }
+
+  return ReturnType.isTriviallyCopyableType(Context);
+}
+
+

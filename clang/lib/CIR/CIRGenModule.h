@@ -173,6 +173,11 @@ public:
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const clang::ValueDecl *D);
 
+  /// Whether this function's return type has no side effects, and thus may be
+  /// trivially discared if it is unused.
+  bool MayDropFunctionReturn(const clang::ASTContext &Context,
+                             clang::QualType ReturnType);
+
   bool isInNoSanitizeList(clang::SanitizerMask Kind, mlir::FuncOp Fn,
                           clang::SourceLocation) const;
 
