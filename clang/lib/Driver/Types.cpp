@@ -332,6 +332,7 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
            .Case("c++m", TY_CXXModule)
            .Case("cppm", TY_CXXModule)
            .Case("cxxm", TY_CXXModule)
+           .Case("hlsl", TY_HLSL)
            .Default(TY_INVALID);
 }
 

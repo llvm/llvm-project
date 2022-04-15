@@ -300,6 +300,12 @@ TEST(ToolChainTest, GetTargetAndMode) {
   EXPECT_TRUE(Res.ModeSuffix == "clang-cl");
   EXPECT_STREQ(Res.DriverMode, "--driver-mode=cl");
   EXPECT_FALSE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName("clang-dxc");
+  EXPECT_TRUE(Res.TargetPrefix.empty());
+  EXPECT_TRUE(Res.ModeSuffix == "clang-dxc");
+  EXPECT_STREQ(Res.DriverMode, "--driver-mode=dxc");
+  EXPECT_FALSE(Res.TargetIsValid);
 }
 
 TEST(ToolChainTest, CommandOutput) {
@@ -359,6 +365,143 @@ TEST(GetDriverMode, PrefersLastDriverMode) {
   static constexpr const char *Args[] = {"clang-cl", "--driver-mode=foo",
                                          "--driver-mode=bar", "foo.cpp"};
   EXPECT_EQ(getDriverMode(Args[0], llvm::makeArrayRef(Args).slice(1)), "bar");
+}
+
+TEST(DxcModeTest, TargetProfileValidation) {
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct SimpleDiagnosticConsumer : public DiagnosticConsumer {
+    void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                          const Diagnostic &Info) override {
+      if (DiagLevel == DiagnosticsEngine::Level::Error) {
+        Errors.emplace_back();
+        Info.FormatDiagnostic(Errors.back());
+      } else {
+        Msgs.emplace_back();
+        Info.FormatDiagnostic(Msgs.back());
+      }
+    }
+    void clear() override {
+      Msgs.clear();
+      Errors.clear();
+      DiagnosticConsumer::clear();
+    }
+    std::vector<SmallString<32>> Msgs;
+    std::vector<SmallString<32>> Errors;
+  };
+
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+
+  InMemoryFileSystem->addFile("foo.hlsl", 0,
+                              llvm::MemoryBuffer::getMemBuffer("\n"));
+
+  auto *DiagConsumer = new SimpleDiagnosticConsumer;
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
+  Driver TheDriver("/bin/clang", "", Diags, "", InMemoryFileSystem);
+  std::unique_ptr<Compilation> C(
+      TheDriver.BuildCompilation({"clang", "--driver-mode=dxc", "foo.hlsl"}));
+  EXPECT_TRUE(C);
+  EXPECT_TRUE(!C->containsError());
+
+  auto &TC = C->getDefaultToolChain();
+  bool ContainsError = false;
+  auto Args = TheDriver.ParseArgStrings({"-Tvs_6_0"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  auto Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.0-vertex");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  Args = TheDriver.ParseArgStrings({"-Ths_6_1"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.1-hull");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  Args = TheDriver.ParseArgStrings({"-Tds_6_2"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.2-domain");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  Args = TheDriver.ParseArgStrings({"-Tds_6_2"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.2-domain");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  Args = TheDriver.ParseArgStrings({"-Tgs_6_3"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.3-geometry");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  Args = TheDriver.ParseArgStrings({"-Tps_6_4"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.4-pixel");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  Args = TheDriver.ParseArgStrings({"-Tcs_6_5"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.5-compute");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  Args = TheDriver.ParseArgStrings({"-Tms_6_6"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.6-mesh");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  Args = TheDriver.ParseArgStrings({"-Tas_6_7"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.7-amplification");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  Args = TheDriver.ParseArgStrings({"-Tlib_6_x"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "dxil--shadermodel6.15-library");
+  EXPECT_EQ(Diags.getNumErrors(), 0u);
+
+  // Invalid tests.
+  Args = TheDriver.ParseArgStrings({"-Tpss_6_1"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "unknown-unknown-shadermodel");
+  EXPECT_EQ(Diags.getNumErrors(), 1u);
+  EXPECT_STREQ(DiagConsumer->Errors.back().data(), "invalid profile : pss_6_1");
+  Diags.Clear();
+  DiagConsumer->clear();
+
+  Args = TheDriver.ParseArgStrings({"-Tps_6_x"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "unknown-unknown-shadermodel");
+  EXPECT_EQ(Diags.getNumErrors(), 2u);
+  EXPECT_STREQ(DiagConsumer->Errors.back().data(), "invalid profile : ps_6_x");
+  Diags.Clear();
+  DiagConsumer->clear();
+
+  Args = TheDriver.ParseArgStrings({"-Tlib_6_1"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "unknown-unknown-shadermodel");
+  EXPECT_EQ(Diags.getNumErrors(), 3u);
+  EXPECT_STREQ(DiagConsumer->Errors.back().data(), "invalid profile : lib_6_1");
+  Diags.Clear();
+  DiagConsumer->clear();
+
+  Args = TheDriver.ParseArgStrings({"-Tfoo"}, false, ContainsError);
+  EXPECT_FALSE(ContainsError);
+  Triple = TC.ComputeEffectiveClangTriple(Args);
+  EXPECT_STREQ(Triple.c_str(), "unknown-unknown-shadermodel");
+  EXPECT_EQ(Diags.getNumErrors(), 4u);
+  EXPECT_STREQ(DiagConsumer->Errors.back().data(), "invalid profile : foo");
+  Diags.Clear();
+  DiagConsumer->clear();
 }
 
 } // end anonymous namespace.
