@@ -99,6 +99,10 @@ public:
   /// called virtually, and CIR generation does not support this case.
   virtual bool HasThisReturn(clang::GlobalDecl GD) const { return false; }
 
+  virtual bool hasMostDerivedReturn(clang::GlobalDecl GD) const {
+    return false;
+  }
+
   virtual ~CIRGenCXXABI();
 };
 
