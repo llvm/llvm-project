@@ -354,7 +354,6 @@ mlir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD,
                                              bool DontDefer,
                                              ForDefinition_t IsForDefinition) {
   assert(!ForVTable && "NYI");
-  assert(!DontDefer && "NYI");
 
   assert(!cast<FunctionDecl>(GD.getDecl())->isConsteval() &&
          "consteval function should never be emitted");
@@ -486,7 +485,48 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
 
   // TODO: Handle extra attributes
 
-  assert(!DontDefer && "Only not DontDefer supported so far");
+  if (!DontDefer) {
+    // All MSVC dtors other than the base dtor are linkonce_odr and delegate to
+    // each other bottoming out wiht the base dtor. Therefore we emit non-base
+    // dtors on usage, even if there is no dtor definition in the TU.
+    if (D && isa<CXXDestructorDecl>(D))
+      llvm_unreachable("NYI");
+
+    // This is the first use or definition of a mangled name. If there is a
+    // deferred decl with this name, remember that we need to emit it at the end
+    // of the file.
+    auto DDI = DeferredDecls.find(MangledName);
+    if (DDI != DeferredDecls.end()) {
+      // Move the potentially referenced deferred decl to the
+      // DeferredDeclsToEmit list, and remove it from DeferredDecls (since we
+      // don't need it anymore).
+      addDeferredDeclToEmit(DDI->second);
+      DeferredDecls.erase(DDI);
+
+      // Otherwise, there are cases we have to worry about where we're using a
+      // declaration for which we must emit a definition but where we might not
+      // find a top-level definition.
+      //   - member functions defined inline in their classes
+      //   - friend functions defined inline in some class
+      //   - special member functions with implicit definitions
+      // If we ever change our AST traversal to walk into class methods, this
+      // will be unnecessary.
+      //
+      // We also don't emit a definition for a function if it's going to be an
+      // entry in a vtable, unless it's already marked as used.
+    } else if (getLangOpts().CPlusPlus && D) {
+      // Look for a declaration that's lexically in a record.
+      for (const auto *FD = cast<FunctionDecl>(D)->getMostRecentDecl(); FD;
+           FD = FD->getPreviousDecl()) {
+        if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+          if (FD->doesThisDeclarationHaveABody()) {
+            addDeferredDeclToEmit(GD.getWithDecl(FD));
+            break;
+          }
+        }
+      }
+    }
+  }
 
   if (!IsIncompleteFunction) {
     assert(F.getFunctionType() == Ty);
