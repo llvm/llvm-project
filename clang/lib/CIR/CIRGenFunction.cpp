@@ -360,6 +360,17 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp fn,
   return fn;
 }
 
+/// ShouldInstrumentFunction - Return true if the current function should be
+/// instrumented with __cyg_profile_func_* calls
+bool CIRGenFunction::ShouldInstrumentFunction() {
+  if (!CGM.getCodeGenOpts().InstrumentFunctions &&
+      !CGM.getCodeGenOpts().InstrumentFunctionsAfterInlining &&
+      !CGM.getCodeGenOpts().InstrumentFunctionEntryBare)
+    return false;
+
+  llvm_unreachable("NYI");
+}
+
 mlir::LogicalResult CIRGenFunction::buildFunctionBody(const clang::Stmt *Body) {
   // TODO: incrementProfileCounter(Body);
 
