@@ -293,6 +293,14 @@ public:
   std::optional<mlir::Value> FnRetAlloca;
 
   // Holds the Decl for the current outermost non-closure context
+  mlir::Operation *CXXThisValue = nullptr;
+  clang::CharUnits CXXThisAlignment;
+
+  /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
+  /// expression.
+  Address CXXDefaultInitExprThis = Address::invalid();
+
+  // CurFuncDecl - Holds the Decl for the current outermost non-closure context
   const clang::Decl *CurFuncDecl;
   /// CurCodeDecl - This is the inner-most code context, which includes blocks.
   const clang::Decl *CurCodeDecl;
@@ -708,6 +716,14 @@ public:
                          bool BaseIsNonVirtualPrimaryBase,
                          const clang::CXXRecordDecl *VTableClass,
                          VisitedVirtualBasesSetTy &VBases, VPtrsVector &vptrs);
+
+  /// LoadCXXThis - Load the value for 'this'. This function is only valid while
+  /// generating code for an C++ member function.
+  mlir::Operation *LoadCXXThis() {
+    assert(CXXThisValue && "no 'this' value for this function");
+    return CXXThisValue;
+  }
+  Address LoadCXXThisAddress();
 
   /// Emit code for the start of a function.
   /// \param Loc       The location to be associated with the function.
