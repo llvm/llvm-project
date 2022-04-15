@@ -99,22 +99,13 @@ class FileManagerTest : public ::testing::Test {
   FileManager manager;
 };
 
-// When a virtual file is added, its getDir() field is set correctly
-// (not NULL, correct name).
+// When a virtual file is added, its getDir() field has correct name.
 TEST_F(FileManagerTest, getVirtualFileSetsTheDirFieldCorrectly) {
-  const FileEntry *file = manager.getVirtualFile("foo.cpp", 42, 0);
-  ASSERT_TRUE(file != nullptr);
+  FileEntryRef file = manager.getVirtualFileRef("foo.cpp", 42, 0);
+  EXPECT_EQ(".", file.getDir().getName());
 
-  const DirectoryEntry *dir = file->getDir();
-  ASSERT_TRUE(dir != nullptr);
-  EXPECT_EQ(".", dir->getName());
-
-  file = manager.getVirtualFile("x/y/z.cpp", 42, 0);
-  ASSERT_TRUE(file != nullptr);
-
-  dir = file->getDir();
-  ASSERT_TRUE(dir != nullptr);
-  EXPECT_EQ("x/y", dir->getName());
+  file = manager.getVirtualFileRef("x/y/z.cpp", 42, 0);
+  EXPECT_EQ("x/y", file.getDir().getName());
 }
 
 // Before any virtual file is added, no virtual directory exists.
@@ -138,16 +129,16 @@ TEST_F(FileManagerTest, getVirtualFileCreatesDirectoryEntriesForAncestors) {
   manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
   ASSERT_FALSE(manager.getDirectory("virtual/dir/foo"));
 
-  auto dir = manager.getDirectory("virtual/dir");
-  ASSERT_TRUE(dir);
-  EXPECT_EQ("virtual/dir", (*dir)->getName());
+  auto dir = manager.getDirectoryRef("virtual/dir");
+  ASSERT_THAT_EXPECTED(dir, llvm::Succeeded());
+  EXPECT_EQ("virtual/dir", dir->getName());
 
-  dir = manager.getDirectory("virtual");
-  ASSERT_TRUE(dir);
-  EXPECT_EQ("virtual", (*dir)->getName());
+  dir = manager.getDirectoryRef("virtual");
+  ASSERT_THAT_EXPECTED(dir, llvm::Succeeded());
+  EXPECT_EQ("virtual", dir->getName());
 }
 
-// getFile() returns non-NULL if a real file exists at the given path.
+// getFileRef() succeeds if a real file exists at the given path.
 TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
   // Inject fake files into the file system.
   auto statCache = std::make_unique<FakeStatCache>();
@@ -163,37 +154,29 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
 
   manager.setStatCache(std::move(statCache));
 
-  auto file = manager.getFile("/tmp/test");
-  ASSERT_TRUE(file);
-  EXPECT_EQ("/tmp/test", (*file)->getName());
+  auto file = manager.getFileRef("/tmp/test");
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  EXPECT_EQ("/tmp/test", file->getName());
 
-  const DirectoryEntry *dir = (*file)->getDir();
-  ASSERT_TRUE(dir != nullptr);
-  EXPECT_EQ("/tmp", dir->getName());
+  EXPECT_EQ("/tmp", file->getDir().getName());
 
 #ifdef _WIN32
-  file = manager.getFile(FileName);
-  ASSERT_TRUE(file);
-
-  dir = (*file)->getDir();
-  ASSERT_TRUE(dir != NULL);
-  EXPECT_EQ(DirName, dir->getName());
+  file = manager.getFileRef(FileName);
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  EXPECT_EQ(DirName, file->getDir().getName());
 #endif
 }
 
-// getFile() returns non-NULL if a virtual file exists at the given path.
+// getFileRef() succeeds if a virtual file exists at the given path.
 TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingVirtualFile) {
   // Fake an empty real file system.
   manager.setStatCache(std::make_unique<FakeStatCache>());
 
   manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
-  auto file = manager.getFile("virtual/dir/bar.h");
-  ASSERT_TRUE(file);
-  EXPECT_EQ("virtual/dir/bar.h", (*file)->getName());
-
-  const DirectoryEntry *dir = (*file)->getDir();
-  ASSERT_TRUE(dir != nullptr);
-  EXPECT_EQ("virtual/dir", dir->getName());
+  auto file = manager.getFileRef("virtual/dir/bar.h");
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  EXPECT_EQ("virtual/dir/bar.h", file->getName());
+  EXPECT_EQ("virtual/dir", file->getDir().getName());
 }
 
 // getFile() returns different FileEntries for different paths when
