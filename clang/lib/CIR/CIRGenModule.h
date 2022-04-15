@@ -167,6 +167,8 @@ public:
 
   mlir::Type getCIRType(const clang::QualType &type);
 
+  void setDSOLocal(mlir::Operation *Op) const;
+
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const clang::ValueDecl *D);
