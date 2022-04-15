@@ -121,3 +121,35 @@ Address CIRGenFunction::LoadCXXThisAddress() {
   auto Result = LoadCXXThis()->getOpResult(0);
   return Address(Result, CXXThisAlignment);
 }
+
+void CIRGenFunction::buildDelegateCXXConstructorCall(
+    const CXXConstructorDecl *Ctor, CXXCtorType CtorType,
+    const FunctionArgList &Args, SourceLocation Loc) {
+  CallArgList DelegateArgs;
+
+  FunctionArgList::const_iterator I = Args.begin(), E = Args.end();
+  assert(I != E && "no parameters to constructor");
+
+  // this
+  Address This = LoadCXXThisAddress();
+  DelegateArgs.add(RValue::get(This.getPointer()), (*I)->getType());
+  ++I;
+
+  // FIXME: The location of the VTT parameter in the parameter list is specific
+  // to the Itanium ABI and shouldn't be hardcoded here.
+  if (CGM.getCXXABI().NeedsVTTParameter(CurGD)) {
+    llvm_unreachable("NYI");
+  }
+
+  // Explicit arguments.
+  for (; I != E; ++I) {
+    const VarDecl *param = *I;
+    // FIXME: per-argument source location
+    buildDelegateCallArg(DelegateArgs, param, Loc);
+  }
+
+  buildCXXConstructorCall(Ctor, CtorType, /*ForVirtualBase=*/false,
+                          /*Delegating=*/true, This, DelegateArgs,
+                          AggValueSlot::MayOverlap, Loc,
+                          /*NewPointerIsChecked=*/true);
+}
