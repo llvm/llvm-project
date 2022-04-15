@@ -423,9 +423,9 @@ StringRef CIRGenModule::getMangledName(GlobalDecl GD) {
   return MangledDeclNames[CanonicalGD] = Result.first->first();
 }
 
-/// GetOrCreateCIRFunction - If the specified mangled name is not in the module,
-/// create and return a CIR Function with the specified type. If there is
-/// something in the module with the specified name, return it potentially
+/// GetOrCreateCIRFunction - If the specified mangled name is not in the
+/// module, create and return a CIR Function with the specified type. If there
+/// is something in the module with the specified name, return it potentially
 /// bitcasted to the right type.
 ///
 /// If D is non-null, it specifies a decl that corresponded to this. This is
@@ -479,7 +479,9 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   // sense for MLIR
   // assert(F->getName().getStringRef() == MangledName && "name was uniqued!");
 
-  // TODO: set function attributes from the declaration
+  if (D)
+    ; // TODO: set function attributes from the declaration
+
   // TODO: set function attributes from the missing attributes param
 
   // TODO: Handle extra attributes
