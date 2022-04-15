@@ -302,6 +302,9 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
   CurGD = GD;
 
   FnRetQualTy = FD->getReturnType();
+  if (!FnRetQualTy->isVoidType())
+    FnRetCIRTy = getCIRType(FnRetQualTy);
+
   if (FD->isInlineBuiltinDeclaration()) {
     llvm_unreachable("NYI");
   } else {
