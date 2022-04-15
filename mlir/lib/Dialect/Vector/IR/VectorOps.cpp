@@ -1292,20 +1292,25 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   };
   unsigned broadcastSrcRank = getRank(source.getType());
   unsigned extractResultRank = getRank(extractOp.getType());
-  if (extractResultRank < broadcastSrcRank) {
-    auto extractPos = extractVector<int64_t>(extractOp.getPosition());
-    unsigned rankDiff = broadcastSrcRank - extractResultRank;
-    extractPos.erase(
-        extractPos.begin(),
-        std::next(extractPos.begin(), extractPos.size() - rankDiff));
-    extractOp.setOperand(source);
-    // OpBuilder is only used as a helper to build an I64ArrayAttr.
-    OpBuilder b(extractOp.getContext());
-    extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
-                       b.getI64ArrayAttr(extractPos));
-    return extractOp.getResult();
-  }
-  return Value();
+  if (extractResultRank >= broadcastSrcRank)
+    return Value();
+  // Check that the dimension of the result haven't been broadcasted.
+  auto extractVecType = extractOp.getType().dyn_cast<VectorType>();
+  auto broadcastVecType = source.getType().dyn_cast<VectorType>();
+  if (extractVecType && broadcastVecType &&
+      extractVecType.getShape() !=
+          broadcastVecType.getShape().take_back(extractResultRank))
+    return Value();
+  auto extractPos = extractVector<int64_t>(extractOp.getPosition());
+  unsigned rankDiff = broadcastSrcRank - extractResultRank;
+  extractPos.erase(extractPos.begin(),
+                   std::next(extractPos.begin(), extractPos.size() - rankDiff));
+  extractOp.setOperand(source);
+  // OpBuilder is only used as a helper to build an I64ArrayAttr.
+  OpBuilder b(extractOp.getContext());
+  extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
+                     b.getI64ArrayAttr(extractPos));
+  return extractOp.getResult();
 }
 
 // Fold extractOp with source coming from ShapeCast op.
