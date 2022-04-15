@@ -368,6 +368,11 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
     // Coroutines always emit lifetime markers
     if (isa<CoroutineBodyStmt>(Body))
       llvm_unreachable("Coroutines NYI");
+
+    // Initialize helper which will detect jumps which can cause invalid
+    // lifetime markers.
+    if (ShouldEmitLifetimeMarkers)
+      llvm_unreachable("Lifetime markers NYI");
   }
 
   // Create a scope in the symbol table to hold variable declarations.
