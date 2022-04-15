@@ -15,7 +15,7 @@ RUN grep deb /etc/apt/sources.list | \
 # Install compiler, python and subversion.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates gnupg \
-           build-essential cmake make python3 zlib1g wget subversion unzip && \
+           build-essential cmake make python3 zlib1g wget subversion unzip git && \
     rm -rf /var/lib/apt/lists/*
 # Install a newer ninja release. It seems the older version in the debian repos
 # randomly crashes when compiling llvm.
