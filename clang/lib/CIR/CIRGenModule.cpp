@@ -454,6 +454,10 @@ StringRef CIRGenModule::getMangledName(GlobalDecl GD) {
   return MangledDeclNames[CanonicalGD] = Result.first->first();
 }
 
+void CIRGenModule::setDSOLocal(mlir::Operation *Op) const {
+  // TODO: Op->setDSOLocal
+}
+
 /// GetOrCreateCIRFunction - If the specified mangled name is not in the
 /// module, create and return a CIR Function with the specified type. If there
 /// is something in the module with the specified name, return it potentially
