@@ -277,12 +277,6 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
 
-  // Unary encoding of basic block symbols is used to reduce size of ".strtab".
-  // Basic block number 'i' gets a prefix of length 'i'.  The ith character also
-  // denotes the type of basic block number 'i'.  Return blocks are marked with
-  // 'r', landing pads with 'l' and regular blocks with 'a'.
-  std::vector<char> BBSectionsSymbolPrefix;
-
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
 
@@ -1219,10 +1213,6 @@ public:
   /// of the instruction stream.
   void copyCallSiteInfo(const MachineInstr *Old,
                         const MachineInstr *New);
-
-  const std::vector<char> &getBBSectionsSymbolPrefix() const {
-    return BBSectionsSymbolPrefix;
-  }
 
   /// Move the call site info from \p Old to \New call site info. This function
   /// is used when we are replacing one call instruction with another one to
