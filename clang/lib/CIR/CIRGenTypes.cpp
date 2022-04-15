@@ -642,49 +642,6 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
   return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());
 }
 
-/// Adds the formal parameters in FPT to the given prefix. If any parameter in
-/// FPT has pass_object_size_attrs, then we'll add parameters for those, too.
-static void appendParameterTypes(
-    const CIRGenTypes &CGT, SmallVectorImpl<CanQualType> &prefix,
-    SmallVectorImpl<FunctionProtoType::ExtParameterInfo> &paramInfos,
-    CanQual<FunctionProtoType> FPT) {
-  // Fast path: don't touch param info if we don't need to.
-  if (!FPT->hasExtParameterInfos()) {
-    assert(paramInfos.empty() &&
-           "We have paramInfos, but the prototype doesn't?");
-    prefix.append(FPT->param_type_begin(), FPT->param_type_end());
-    return;
-  }
-
-  assert(false && "params NYI");
-}
-
-/// Arrange the CIR function layout for a value of the given function type, on
-/// top of any implicit parameters already stored.
-static const CIRGenFunctionInfo &
-arrangeCIRFunctionInfo(CIRGenTypes &CGT, bool instanceMethod,
-                       SmallVectorImpl<CanQualType> &prefix,
-                       CanQual<FunctionProtoType> FTP) {
-  SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
-  RequiredArgs Required = RequiredArgs::forPrototypePlus(FTP, prefix.size());
-  // FIXME: Kill copy. -- from codegen
-  appendParameterTypes(CGT, prefix, paramInfos, FTP);
-  CanQualType resultType = FTP->getReturnType().getUnqualifiedType();
-
-  return CGT.arrangeCIRFunctionInfo(resultType, instanceMethod,
-                                    /*chainCall=*/false, prefix,
-                                    FTP->getExtInfo(), paramInfos, Required);
-}
-
-/// Arrange the argument and result information for a value of the given
-/// freestanding function type.
-const CIRGenFunctionInfo &
-CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
-  SmallVector<CanQualType, 16> argTypes;
-  return ::arrangeCIRFunctionInfo(*this, /*instanceMethod=*/false, argTypes,
-                                  FTP);
-}
-
 /// Figure out the rules for calling a function with the given formal type using
 /// the given arguments. The arguments are necessary because the function might
 /// be unprototyped, in which case it's target-dependent in crazy ways.

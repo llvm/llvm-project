@@ -670,6 +670,33 @@ CanQualType CIRGenTypes::DeriveThisType(const CXXRecordDecl *RD,
   return getContext().getPointerType(CanQualType::CreateUnsafe(RecTy));
 }
 
+/// Arrange the CIR function layout for a value of the given function type, on
+/// top of any implicit parameters already stored.
+static const CIRGenFunctionInfo &
+arrangeCIRFunctionInfo(CIRGenTypes &CGT, bool instanceMethod,
+                       SmallVectorImpl<CanQualType> &prefix,
+                       CanQual<FunctionProtoType> FTP) {
+  SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
+  RequiredArgs Required = RequiredArgs::forPrototypePlus(FTP, prefix.size());
+  // FIXME: Kill copy. -- from codegen
+  appendParameterTypes(CGT, prefix, paramInfos, FTP);
+  CanQualType resultType = FTP->getReturnType().getUnqualifiedType();
+
+  return CGT.arrangeCIRFunctionInfo(resultType, instanceMethod,
+                                    /*chainCall=*/false, prefix,
+                                    FTP->getExtInfo(), paramInfos, Required);
+}
+
+/// Arrange the argument and result information for a value of the given
+/// freestanding function type.
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
+  SmallVector<CanQualType, 16> argTypes;
+  return ::arrangeCIRFunctionInfo(*this, /*instanceMethod=*/false, argTypes,
+                                  FTP);
+}
+
+
 bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
                                          QualType ReturnType) {
   // We can't just disard the return value for a record type with a complex
