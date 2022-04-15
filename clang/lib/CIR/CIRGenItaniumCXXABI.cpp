@@ -49,6 +49,14 @@ public:
 
   bool NeedsVTTParameter(GlobalDecl GD) override;
 
+  RecordArgABI getRecordArgABI(const clang::CXXRecordDecl *RD) const override {
+    // If C++ prohibits us from making a copy, pass by address.
+    if (!RD->canPassInRegisters())
+      return RecordArgABI::Indirect;
+    else
+      return RecordArgABI::Default;
+  }
+
   bool classifyReturnType(CIRGenFunctionInfo &FI) const override;
 };
 } // namespace
