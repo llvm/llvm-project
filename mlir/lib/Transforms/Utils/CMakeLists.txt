@@ -6,11 +6,13 @@ add_mlir_library(MLIRTransformUtils
   InliningUtils.cpp
   LoopInvariantCodeMotionUtils.cpp
   RegionUtils.cpp
+  SideEffectUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRLoopLikeInterface
   MLIRRewrite
   )
