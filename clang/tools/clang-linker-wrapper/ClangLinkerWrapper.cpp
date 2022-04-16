@@ -308,7 +308,7 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
             createOutputFile(Prefix + "-" + Kind + "-" + Binary.getTriple() +
                                  "-" + Binary.getArch(),
                              Suffix, TempFile))
-      return std::move(Err);
+      return Err;
 
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
         FileOutputBuffer::create(TempFile, Binary.getImage().size());
@@ -318,7 +318,7 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
     std::copy(Binary.getImage().bytes_begin(), Binary.getImage().bytes_end(),
               Output->getBufferStart());
     if (Error E = Output->commit())
-      return std::move(E);
+      return E;
 
     DeviceFiles.emplace_back(Kind, Binary.getTriple(), Binary.getArch(),
                              TempFile);
