@@ -776,8 +776,8 @@ static bool isWithinCatchScope(Scope *S) {
   //     }();
   //   }
   // }
-  while (S && !(S->getFlags() & Scope::FnScope)) {
-    if (S->getFlags() & Scope::CatchScope)
+  while (S && !S->isFunctionScope()) {
+    if (S->isCatchScope())
       return true;
     S = S->getParent();
   }
