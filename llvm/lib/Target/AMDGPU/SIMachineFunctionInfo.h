@@ -335,8 +335,6 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   friend class GCNTargetMachine;
 
-  Register TIDReg = AMDGPU::NoRegister;
-
   // Registers that may be reserved for spilling purposes. These may be the same
   // as the input registers.
   Register ScratchRSrcReg = AMDGPU::PRIVATE_RSRC_REG;
@@ -382,7 +380,6 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   std::unique_ptr<const AMDGPUGWSResourcePseudoSourceValue> GWSResourcePSV;
 
 private:
-  unsigned LDSWaveSpillSize = 0;
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
 
@@ -568,10 +565,6 @@ public:
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
   Optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
-
-  bool hasCalculatedTID() const { return TIDReg != 0; };
-  Register getTIDReg() const { return TIDReg; };
-  void setTIDReg(Register Reg) { TIDReg = Reg; }
 
   unsigned getBytesInStackArgArea() const {
     return BytesInStackArgArea;
@@ -910,10 +903,6 @@ public:
       return ArgInfo.WorkGroupIDZ.getRegister();
     }
     llvm_unreachable("unexpected dimension");
-  }
-
-  unsigned getLDSWaveSpillSize() const {
-    return LDSWaveSpillSize;
   }
 
   const AMDGPUBufferPseudoSourceValue *getBufferPSV(const SIInstrInfo &TII) {
