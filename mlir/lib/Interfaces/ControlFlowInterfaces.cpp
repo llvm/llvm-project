@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -19,7 +21,8 @@ using namespace mlir;
 #include "mlir/Interfaces/ControlFlowInterfaces.cpp.inc"
 
 SuccessorOperands::SuccessorOperands(MutableOperandRange forwardedOperands)
-    : producedOperandCount(0), forwardedOperands(forwardedOperands) {}
+    : producedOperandCount(0), forwardedOperands(std::move(forwardedOperands)) {
+}
 
 SuccessorOperands::SuccessorOperands(unsigned int producedOperandCount,
                                      MutableOperandRange forwardedOperands)
