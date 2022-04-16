@@ -453,6 +453,20 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   return HaveSGPRToMemory;
 }
 
+void SIMachineFunctionInfo::allocateWWMReservedSpillSlots(
+    MachineFrameInfo &MFI, const SIRegisterInfo &TRI) {
+  assert(WWMReservedFrameIndexes.empty());
+
+  WWMReservedFrameIndexes.resize(WWMReservedRegs.size());
+
+  int I = 0;
+  for (Register VGPR : WWMReservedRegs) {
+    const TargetRegisterClass *RC = TRI.getPhysRegClass(VGPR);
+    WWMReservedFrameIndexes[I++] = MFI.CreateSpillStackObject(
+        TRI.getSpillSize(*RC), TRI.getSpillAlign(*RC));
+  }
+}
+
 int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
                                          const SIRegisterInfo &TRI) {
   if (ScavengeFI)
