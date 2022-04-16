@@ -11602,9 +11602,7 @@ def err_hlsl_pointers_unsupported : Error<
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
-// Layout randomization diagnostics.
-def err_non_designated_init_used : Error<
-  "a randomized struct can only be initialized with a designated initializer">;
+// Layout randomization warning.
 def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 } // end of sema component.
