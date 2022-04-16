@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -Werror -frandomize-layout-seed=1234567890abcdef
+// RUN: %clang_cc1 %s -verify -fsyntax-only -frandomize-layout-seed=1234567890abcdef
 
 // Initializing a randomized structure requires a designated initializer,
 // otherwise the element ordering will be off. The only exceptions to this rule
