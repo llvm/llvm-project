@@ -1286,7 +1286,7 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
           type);
   llvm::ConstantInt *size = builder.getInt64(typeSize.getFixedSize());
   llvm::StringRef suffix = llvm::StringRef(".cache", 6);
-  llvm::Twine cacheName = Twine(global.getSymName()).concat(suffix);
+  std::string cacheName = (Twine(global.getSymName()).concat(suffix)).str();
   // Emit runtime function and bitcast its type (i8*) to real data type.
   llvm::Value *callInst =
       moduleTranslation.getOpenMPBuilder()->createCachedThreadPrivate(
