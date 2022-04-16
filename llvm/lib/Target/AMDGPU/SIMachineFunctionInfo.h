@@ -283,6 +283,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   // TODO: 10 may be a better default since it's the maximum.
   unsigned Occupancy = 0;
 
+  SmallVector<StringValue> WWMReservedRegs;
+
   StringValue ScratchRSrcReg = "$private_rsrc_reg";
   StringValue FrameOffsetReg = "$fp_reg";
   StringValue StackPtrOffsetReg = "$sp_reg";
@@ -324,6 +326,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
     YamlIO.mapOptional("occupancy", MFI.Occupancy, 0);
+    YamlIO.mapOptional("wwmReservedRegs", MFI.WWMReservedRegs);
     YamlIO.mapOptional("scavengeFI", MFI.ScavengeFI);
   }
 };

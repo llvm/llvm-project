@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after finalize-isel -o %t.mir %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=si-pre-allocate-wwm-regs -o %t.mir %s
 ; RUN: llc -run-pass=none -verify-machineinstrs %t.mir -o - | FileCheck %s
 
 ; Test that SIMachineFunctionInfo can be round trip serialized through
@@ -200,8 +200,25 @@ define amdgpu_ps void @high_address_bits() #4 {
   ret void
 }
 
+; CHECK-LABEL: {{^}}name: wwm_reserved_regs
+; CHECK: wwmReservedRegs:
+; CHECK-NEXT: - '$vgpr2'
+; CHECK-NEXT: - '$vgpr3'
+define amdgpu_cs void @wwm_reserved_regs(i32 addrspace(1)* %ptr, <4 x i32> inreg %tmp14) {
+  %ld0 = load volatile i32, i32 addrspace(1)* %ptr
+  %ld1 = load volatile i32, i32 addrspace(1)* %ptr
+  %inactive0 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %ld1, i32 0)
+  %inactive1 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %ld0, i32 0)
+  store volatile i32 %inactive0, i32 addrspace(1)* %ptr
+  store volatile i32 %inactive1, i32 addrspace(1)* %ptr
+  ret void
+}
+
+declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #5
+
 attributes #0 = { "no-signed-zeros-fp-math" = "true" }
 attributes #1 = { "amdgpu-dx10-clamp" = "false" }
 attributes #2 = { "amdgpu-ieee" = "false" }
 attributes #3 = { "amdgpu-dx10-clamp" = "false" "amdgpu-ieee" = "false" }
 attributes #4 = { "amdgpu-32bit-address-high-bits"="0xffff8000" }
+attributes #5 = { convergent nounwind readnone willreturn }
