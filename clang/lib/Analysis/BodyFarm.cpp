@@ -20,7 +20,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Analysis/CodeInjector.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -86,9 +85,6 @@ public:
   /// Create an implicit cast of the given type.
   ImplicitCastExpr *makeImplicitCast(const Expr *Arg, QualType Ty,
                                      CastKind CK = CK_LValueToRValue);
-
-  /// Create a cast to reference type.
-  CastExpr *makeReferenceCast(const Expr *Arg, QualType Ty);
 
   /// Create an Objective-C bool literal.
   ObjCBoolLiteralExpr *makeObjCBool(bool Val);
@@ -175,16 +171,6 @@ ImplicitCastExpr *ASTMaker::makeImplicitCast(const Expr *Arg, QualType Ty,
                                   /* CXXCastPath=*/nullptr,
                                   /* ExprValueKind=*/VK_PRValue,
                                   /* FPFeatures */ FPOptionsOverride());
-}
-
-CastExpr *ASTMaker::makeReferenceCast(const Expr *Arg, QualType Ty) {
-  assert(Ty->isReferenceType());
-  return CXXStaticCastExpr::Create(
-      C, Ty.getNonReferenceType(),
-      Ty->isLValueReferenceType() ? VK_LValue : VK_XValue, CK_NoOp,
-      const_cast<Expr *>(Arg), /*CXXCastPath=*/nullptr,
-      /*Written=*/C.getTrivialTypeSourceInfo(Ty), FPOptionsOverride(),
-      SourceLocation(), SourceLocation(), SourceRange());
 }
 
 Expr *ASTMaker::makeIntegralCast(const Expr *Arg, QualType Ty) {
@@ -308,22 +294,6 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
       /*ExprValueType=*/VK_PRValue,
       /*SourceLocation=*/SourceLocation(),
       /*FPFeatures=*/FPOptionsOverride());
-}
-
-/// Create a fake body for 'std::move' or 'std::forward'. This is just:
-///
-/// \code
-/// return static_cast<return_type>(param);
-/// \endcode
-static Stmt *create_std_move_forward(ASTContext &C, const FunctionDecl *D) {
-  LLVM_DEBUG(llvm::dbgs() << "Generating body for std::move / std::forward\n");
-
-  ASTMaker M(C);
-
-  QualType ReturnType = D->getType()->castAs<FunctionType>()->getReturnType();
-  Expr *Param = M.makeDeclRefExpr(D->getParamDecl(0));
-  Expr *Cast = M.makeReferenceCast(Param, ReturnType);
-  return M.makeReturn(Cast);
 }
 
 /// Create a fake body for std::call_once.
@@ -711,20 +681,8 @@ Stmt *BodyFarm::getBody(const FunctionDecl *D) {
 
   FunctionFarmer FF;
 
-  if (unsigned BuiltinID = D->getBuiltinID()) {
-    switch (BuiltinID) {
-    case Builtin::BIas_const:
-    case Builtin::BIforward:
-    case Builtin::BImove:
-    case Builtin::BImove_if_noexcept:
-      FF = create_std_move_forward;
-      break;
-    default:
-      FF = nullptr;
-      break;
-    }
-  } else if (Name.startswith("OSAtomicCompareAndSwap") ||
-             Name.startswith("objc_atomicCompareAndSwap")) {
+  if (Name.startswith("OSAtomicCompareAndSwap") ||
+      Name.startswith("objc_atomicCompareAndSwap")) {
     FF = create_OSAtomicCompareAndSwap;
   } else if (Name == "call_once" && D->getDeclContext()->isStdNamespace()) {
     FF = create_call_once;

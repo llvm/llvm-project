@@ -230,10 +230,7 @@ C2x Feature Support
 C++ Language Changes in Clang
 -----------------------------
 
-- Improved ``-O0`` code generation for calls to ``std::move``, ``std::forward``,
-  and ``std::move_if_noexcept``. These are now treated as compiler builtins and
-  implemented directly, rather than instantiating the definition from the
-  standard library.
+- ...
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

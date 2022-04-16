@@ -4566,8 +4566,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(Carry);
   }
-  case Builtin::BIaddressof:
-  case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
     return RValue::get(EmitLValue(E->getArg(0)).getPointer(*this));
   case Builtin::BI__builtin_function_start:
@@ -4727,12 +4725,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
     break;
 
-  // C++ std:: builtins.
-  case Builtin::BImove:
-  case Builtin::BImove_if_noexcept:
-  case Builtin::BIforward:
-  case Builtin::BIas_const:
-    return RValue::get(EmitLValue(E->getArg(0)).getPointer(*this));
   case Builtin::BI__GetExceptionInfo: {
     if (llvm::GlobalVariable *GV =
             CGM.getCXXABI().getThrowInfo(FD->getParamDecl(0)->getType()))

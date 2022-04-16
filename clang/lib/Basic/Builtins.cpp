@@ -48,22 +48,18 @@ void Builtin::Context::InitializeTarget(const TargetInfo &Target,
 }
 
 bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
-  bool InStdNamespace = FuncName.consume_front("std-");
-  for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin;
-       ++i) {
-    if (FuncName.equals(BuiltinInfo[i].Name) &&
-        (bool)strchr(BuiltinInfo[i].Attributes, 'z') == InStdNamespace)
+  for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin; ++i)
+    if (FuncName.equals(BuiltinInfo[i].Name))
       return strchr(BuiltinInfo[i].Attributes, 'f') != nullptr;
-  }
 
   return false;
 }
 
-/// Is this builtin supported according to the given language options?
-static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
-                               const LangOptions &LangOpts) {
+bool Builtin::Context::builtinIsSupported(const Builtin::Info &BuiltinInfo,
+                                          const LangOptions &LangOpts) {
   bool BuiltinsUnsupported =
-      LangOpts.NoBuiltin && strchr(BuiltinInfo.Attributes, 'f') != nullptr;
+      (LangOpts.NoBuiltin || LangOpts.isNoBuiltinFunc(BuiltinInfo.Name)) &&
+      strchr(BuiltinInfo.Attributes, 'f');
   bool CorBuiltinsUnsupported =
       !LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG);
   bool MathBuiltinsUnsupported =
@@ -115,19 +111,6 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
   for (unsigned i = 0, e = AuxTSRecords.size(); i != e; ++i)
     Table.get(AuxTSRecords[i].Name)
         .setBuiltinID(i + Builtin::FirstTSBuiltin + TSRecords.size());
-
-  // Step #4: Unregister any builtins specified by -fno-builtin-foo.
-  for (llvm::StringRef Name : LangOpts.NoBuiltinFuncs) {
-    bool InStdNamespace = Name.consume_front("std-");
-    auto NameIt = Table.find(Name);
-    if (NameIt != Table.end()) {
-      unsigned ID = NameIt->second->getBuiltinID();
-      if (ID != Builtin::NotBuiltin && isPredefinedLibFunction(ID) &&
-          isInStdNamespace(ID) == InStdNamespace) {
-        Table.get(Name).setBuiltinID(Builtin::NotBuiltin);
-      }
-    }
-  }
 }
 
 unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {
@@ -207,7 +190,8 @@ bool Builtin::Context::performsCallback(unsigned ID,
 }
 
 bool Builtin::Context::canBeRedeclared(unsigned ID) const {
-  return ID == Builtin::NotBuiltin || ID == Builtin::BI__va_start ||
-         (!hasReferenceArgsOrResult(ID) && !hasCustomTypechecking(ID)) ||
-         isInStdNamespace(ID);
+  return ID == Builtin::NotBuiltin ||
+         ID == Builtin::BI__va_start ||
+         (!hasReferenceArgsOrResult(ID) &&
+          !hasCustomTypechecking(ID));
 }
