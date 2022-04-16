@@ -26,7 +26,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 
