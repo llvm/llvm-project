@@ -20,9 +20,6 @@
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -118,14 +115,6 @@ struct HeaderFileInfo {
   /// If this header came from a framework include, this is the name
   /// of the framework.
   StringRef Framework;
-
-  /// List of aliases that this header is known as.
-  /// Most headers should only have at most one alias, but a handful
-  /// have two.
-  llvm::SetVector<llvm::SmallString<32>,
-                  llvm::SmallVector<llvm::SmallString<32>, 2>,
-                  llvm::SmallSet<llvm::SmallString<32>, 2>>
-      Aliases;
 
   HeaderFileInfo()
       : isImport(false), isPragmaOnce(false), DirInfo(SrcMgr::C_User),
@@ -526,10 +515,6 @@ public:
   /// \#pragma GCC system_header.
   void MarkFileSystemHeader(const FileEntry *File) {
     getFileInfo(File).DirInfo = SrcMgr::C_System;
-  }
-
-  void AddFileAlias(const FileEntry *File, StringRef Alias) {
-    getFileInfo(File).Aliases.insert(Alias);
   }
 
   /// Mark the specified file as part of a module.

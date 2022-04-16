@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LEX_LEXER_H
 #define LLVM_CLANG_LEX_LEXER_H
 
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/PreprocessorLexer.h"
@@ -752,7 +753,7 @@ private:
   /// Read a universal character name.
   ///
   /// \param StartPtr The position in the source buffer after the initial '\'.
-  ///                 If the UCN is syntactically well-formed (but not 
+  ///                 If the UCN is syntactically well-formed (but not
   ///                 necessarily valid), this parameter will be updated to
   ///                 point to the character after the UCN.
   /// \param SlashLoc The position in the source buffer of the '\'.

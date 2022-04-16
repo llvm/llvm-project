@@ -14,7 +14,6 @@
 #include "clang/Lex/Pragma.h"
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -37,12 +36,10 @@
 #include "clang/Lex/TokenLexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Timer.h"
@@ -503,86 +500,41 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
                         SrcMgr::C_System);
 }
 
-static llvm::Optional<Token> LexHeader(Preprocessor &PP,
-                                       Optional<FileEntryRef> &File,
-                                       bool SuppressIncludeNotFoundError) {
+/// HandlePragmaDependency - Handle \#pragma GCC dependency "foo" blah.
+void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
   Token FilenameTok;
-  if (PP.LexHeaderName(FilenameTok, /*AllowConcatenation*/ false))
-    return llvm::None;
+  if (LexHeaderName(FilenameTok, /*AllowConcatenation*/false))
+    return;
 
   // If the next token wasn't a header-name, diagnose the error.
   if (FilenameTok.isNot(tok::header_name)) {
-    PP.Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
-    return llvm::None;
+    Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
+    return;
   }
 
   // Reserve a buffer to get the spelling.
   SmallString<128> FilenameBuffer;
   bool Invalid = false;
-  StringRef Filename = PP.getSpelling(FilenameTok, FilenameBuffer, &Invalid);
+  StringRef Filename = getSpelling(FilenameTok, FilenameBuffer, &Invalid);
   if (Invalid)
-    return llvm::None;
+    return;
 
   bool isAngled =
-      PP.GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
+    GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
   if (Filename.empty())
-    return llvm::None;
+    return;
 
   // Search include directories for this file.
-  File = PP.LookupFile(FilenameTok.getLocation(), Filename, isAngled, nullptr,
-                       nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-                       nullptr);
+  Optional<FileEntryRef> File =
+      LookupFile(FilenameTok.getLocation(), Filename, isAngled, nullptr,
+                 nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   if (!File) {
     if (!SuppressIncludeNotFoundError)
-      PP.Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
-    return llvm::None;
-  }
-
-  return FilenameTok;
-}
-
-/// HandlePragmaIncludeInstead - Handle \#pragma clang include_instead(header).
-void Preprocessor::HandlePragmaIncludeInstead(Token &Tok) {
-  // Get the current file lexer we're looking at.  Ignore _Pragma 'files' etc.
-  PreprocessorLexer *TheLexer = getCurrentFileLexer();
-
-  if (!SourceMgr.isInSystemHeader(Tok.getLocation())) {
-    Diag(Tok, diag::err_pragma_include_instead_not_sysheader);
+      Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
     return;
   }
-
-  Lex(Tok);
-  if (Tok.isNot(tok::l_paren)) {
-    Diag(Tok, diag::err_expected) << "(";
-    return;
-  }
-
-  Optional<FileEntryRef> File;
-  llvm::Optional<Token> FilenameTok =
-      LexHeader(*this, File, SuppressIncludeNotFoundError);
-  if (!FilenameTok)
-    return;
-
-  Lex(Tok);
-  if (Tok.isNot(tok::r_paren)) {
-    Diag(Tok, diag::err_expected) << ")";
-    return;
-  }
-
-  SmallString<128> FilenameBuffer;
-  StringRef Filename = getSpelling(*FilenameTok, FilenameBuffer);
-  HeaderInfo.AddFileAlias(TheLexer->getFileEntry(), Filename);
-}
-
-/// HandlePragmaDependency - Handle \#pragma GCC dependency "foo" blah.
-void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
-  Optional<FileEntryRef> File;
-  llvm::Optional<Token> FilenameTok =
-      LexHeader(*this, File, SuppressIncludeNotFoundError);
-  if (!FilenameTok)
-    return;
 
   const FileEntry *CurFile = getCurrentFileLexer()->getFileEntry();
 
@@ -599,7 +551,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
     // Remove the trailing ' ' if present.
     if (!Message.empty())
       Message.erase(Message.end()-1);
-    Diag(*FilenameTok, diag::pp_out_of_date_dependency) << Message;
+    Diag(FilenameTok, diag::pp_out_of_date_dependency) << Message;
   }
 }
 
@@ -1071,18 +1023,6 @@ struct PragmaSystemHeaderHandler : public PragmaHandler {
                     Token &SHToken) override {
     PP.HandlePragmaSystemHeader(SHToken);
     PP.CheckEndOfDirective("pragma");
-  }
-};
-
-/// PragmaIncludeInsteadHandler - "\#pragma clang include_instead(header)" marks
-/// the current file as non-includable if the including header is not a system
-/// header.
-struct PragmaIncludeInsteadHandler : public PragmaHandler {
-  PragmaIncludeInsteadHandler() : PragmaHandler("include_instead") {}
-
-  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
-                    Token &IIToken) override {
-    PP.HandlePragmaIncludeInstead(IIToken);
   }
 };
 
@@ -2147,7 +2087,6 @@ void Preprocessor::RegisterBuiltinPragmas() {
   // #pragma clang ...
   AddPragmaHandler("clang", new PragmaPoisonHandler());
   AddPragmaHandler("clang", new PragmaSystemHeaderHandler());
-  AddPragmaHandler("clang", new PragmaIncludeInsteadHandler());
   AddPragmaHandler("clang", new PragmaDebugHandler());
   AddPragmaHandler("clang", new PragmaDependencyHandler());
   AddPragmaHandler("clang", new PragmaDiagnosticHandler("clang"));
