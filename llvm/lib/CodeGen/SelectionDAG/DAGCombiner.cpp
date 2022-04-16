@@ -2568,8 +2568,8 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     //   add (add x, y), 1
     // And if the target does not like this form then turn into:
     //   sub y, (xor x, -1)
-    if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.hasOneUse() &&
-        N0.getOpcode() == ISD::ADD) {
+    if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.getOpcode() == ISD::ADD &&
+        N0.hasOneUse()) {
       SDValue Not = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(0),
                                 DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(1), Not);
@@ -2577,7 +2577,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   }
 
   // (x - y) + -1  ->  add (xor y, -1), x
-  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB &&
+  if (N0.getOpcode() == ISD::SUB && N0.hasOneUse() &&
       isAllOnesOrAllOnesSplat(N1)) {
     SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1), N1);
     return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
@@ -2774,27 +2774,27 @@ SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
   //   add (add x, 1), y
   // And if the target does not like this form then turn into:
   //   sub y, (xor x, -1)
-  if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.hasOneUse() &&
-      N0.getOpcode() == ISD::ADD && isOneOrOneSplat(N0.getOperand(1))) {
+  if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.getOpcode() == ISD::ADD &&
+      N0.hasOneUse() && isOneOrOneSplat(N0.getOperand(1))) {
     SDValue Not = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(0),
                               DAG.getAllOnesConstant(DL, VT));
     return DAG.getNode(ISD::SUB, DL, VT, N1, Not);
   }
 
-  // Hoist one-use subtraction by non-opaque constant:
-  //   (x - C) + y  ->  (x + y) - C
-  // This is necessary because SUB(X,C) -> ADD(X,-C) doesn't work for vectors.
-  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB &&
-      isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true)) {
-    SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), N1);
-    return DAG.getNode(ISD::SUB, DL, VT, Add, N0.getOperand(1));
-  }
-  // Hoist one-use subtraction from non-opaque constant:
-  //   (C - x) + y  ->  (y - x) + C
-  if (N0.hasOneUse() && N0.getOpcode() == ISD::SUB &&
-      isConstantOrConstantVector(N0.getOperand(0), /*NoOpaques=*/true)) {
-    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N1, N0.getOperand(1));
-    return DAG.getNode(ISD::ADD, DL, VT, Sub, N0.getOperand(0));
+  if (N0.getOpcode() == ISD::SUB && N0.hasOneUse()) {
+    // Hoist one-use subtraction by non-opaque constant:
+    //   (x - C) + y  ->  (x + y) - C
+    // This is necessary because SUB(X,C) -> ADD(X,-C) doesn't work for vectors.
+    if (isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true)) {
+      SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), N1);
+      return DAG.getNode(ISD::SUB, DL, VT, Add, N0.getOperand(1));
+    }
+    // Hoist one-use subtraction from non-opaque constant:
+    //   (C - x) + y  ->  (y - x) + C
+    if (isConstantOrConstantVector(N0.getOperand(0), /*NoOpaques=*/true)) {
+      SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N1, N0.getOperand(1));
+      return DAG.getNode(ISD::ADD, DL, VT, Sub, N0.getOperand(0));
+    }
   }
 
   // If the target's bool is represented as 0/1, prefer to make this 'sub 0/1'
