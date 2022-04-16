@@ -88,9 +88,6 @@ FunctionPass *llvm::createSIPreAllocateWWMRegsPass() {
 }
 
 bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
-  if (!MO.isReg())
-    return false;
-
   Register Reg = MO.getReg();
   if (Reg.isPhysical())
     return false;
@@ -114,7 +111,6 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
   }
 
   llvm_unreachable("physreg not found for WWM expression");
-  return false;
 }
 
 void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
