@@ -2414,7 +2414,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
           "Cannot use intrinsic function '%s' as a subroutine"_err_en_US,
           call.name);
     }
-    return std::nullopt; // TODO
+    return std::nullopt;
   }
 
   // Helper to avoid emitting errors before it is sure there is no match
