@@ -12,6 +12,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "AMDGPU.h"
 
 namespace llvm {
 
@@ -25,11 +26,13 @@ protected:
   Align MaxKernArgAlign;        // Cache for this.
 
   /// Number of bytes in the LDS that are being used.
-  unsigned LDSSize = 0;
+  uint32_t LDSSize = 0;
+  uint32_t GDSSize = 0;
 
   /// Number of bytes in the LDS allocated statically. This field is only used
   /// in the instruction selector and not part of the machine function info.
-  unsigned StaticLDSSize = 0;
+  uint32_t StaticLDSSize = 0;
+  uint32_t StaticGDSSize = 0;
 
   /// Align for dynamic shared memory if any. Dynamic shared memory is
   /// allocated directly after the static one, i.e., LDSSize. Need to pad
@@ -67,6 +70,10 @@ public:
 
   uint32_t getLDSSize() const {
     return LDSSize;
+  }
+
+  uint32_t getGDSSize() const {
+    return GDSSize;
   }
 
   AMDGPU::SIModeRegisterDefaults getMode() const {

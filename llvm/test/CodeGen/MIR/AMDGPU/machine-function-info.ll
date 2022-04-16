@@ -53,7 +53,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: explicitKernArgSize: 0
 ; CHECK-NEXT: maxKernArgAlign: 4
 ; CHECK-NEXT: ldsSize: 0
-; CHECK-NEXT: gdsSize: 0
+; CHECK-NEXT: gdsSize: 512
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: noSignedZerosFPMath: false
@@ -80,6 +80,8 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: occupancy: 10
 ; CHECK-NEXT: body:
 define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
+  %gep = getelementptr inbounds [128 x i32], [128 x i32] addrspace(2)* @gds, i32 0, i32 %arg0
+  atomicrmw add i32 addrspace(2)* %gep, i32 8 seq_cst
   ret void
 }
 
