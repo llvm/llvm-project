@@ -296,6 +296,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   Optional<SIArgumentInfo> ArgInfo;
   SIMode Mode;
   Optional<FrameIndex> ScavengeFI;
+  StringValue VGPRForAGPRCopy;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -335,6 +336,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("occupancy", MFI.Occupancy, 0);
     YamlIO.mapOptional("wwmReservedRegs", MFI.WWMReservedRegs);
     YamlIO.mapOptional("scavengeFI", MFI.ScavengeFI);
+    YamlIO.mapOptional("vgprForAGPRCopy", MFI.VGPRForAGPRCopy,
+                       StringValue()); // Don't print out when it's empty.
   }
 };
 
@@ -518,8 +521,6 @@ private:
 
 public:
   Register getVGPRForAGPRCopy() const {
-    assert(VGPRForAGPRCopy &&
-           "Valid VGPR for AGPR copy must have been identified by now");
     return VGPRForAGPRCopy;
   }
 

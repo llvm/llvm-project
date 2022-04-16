@@ -36,6 +36,7 @@
 ; AFTER-PEI-NEXT: highBitsOf32BitAddress: 0
 ; AFTER-PEI-NEXT: occupancy: 5
 ; AFTER-PEI-NEXT: scavengeFI: '%fixed-stack.0'
+; AFTER-PEI-NEXT: vgprForAGPRCopy: ''
 ; AFTER-PEI-NEXT: body:
 define amdgpu_kernel void @scavenge_fi(i32 addrspace(1)* %out, i32 %in) #0 {
   %wide.sgpr0 = call <32 x i32>  asm sideeffect "; def $0", "=s" () #0

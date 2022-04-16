@@ -590,6 +590,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
   for (Register Reg : MFI.WWMReservedRegs)
     WWMReservedRegs.push_back(regToString(Reg, TRI));
 
+  if (MFI.getVGPRForAGPRCopy())
+    VGPRForAGPRCopy = regToString(MFI.getVGPRForAGPRCopy(), TRI);
   auto SFI = MFI.getOptionalScavengeFI();
   if (SFI)
     ScavengeFI = yaml::FrameIndex(*SFI, MF.getFrameInfo());
