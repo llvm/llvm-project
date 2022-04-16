@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/ControlFlowSinkUtils.h"
 #include "mlir/Transforms/Passes.h"
+#include "mlir/Transforms/SideEffectUtils.h"
 
 using namespace mlir;
 
@@ -28,31 +29,6 @@ struct ControlFlowSink : public ControlFlowSinkBase<ControlFlowSink> {
   void runOnOperation() override;
 };
 } // end anonymous namespace
-
-/// Returns true if the given operation is side-effect free as are all of its
-/// nested operations.
-static bool isSideEffectFree(Operation *op) {
-  if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
-    // If the op has side-effects, it cannot be moved.
-    if (!memInterface.hasNoEffect())
-      return false;
-    // If the op does not have recursive side effects, then it can be moved.
-    if (!op->hasTrait<OpTrait::HasRecursiveSideEffects>())
-      return true;
-  } else if (!op->hasTrait<OpTrait::HasRecursiveSideEffects>()) {
-    // Otherwise, if the op does not implement the memory effect interface and
-    // it does not have recursive side effects, then it cannot be known that the
-    // op is moveable.
-    return false;
-  }
-
-  // Recurse into the regions and ensure that all nested ops can also be moved.
-  for (Region &region : op->getRegions())
-    for (Operation &op : region.getOps())
-      if (!isSideEffectFree(&op))
-        return false;
-  return true;
-}
 
 void ControlFlowSink::runOnOperation() {
   auto &domInfo = getAnalysis<DominanceInfo>();

@@ -11,15 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "mlir/Transforms/Passes.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-
-#define DEBUG_TYPE "licm"
+#include "mlir/Transforms/SideEffectUtils.h"
 
 using namespace mlir;
 
@@ -35,10 +30,8 @@ void LoopInvariantCodeMotion::runOnOperation() {
   // Walk through all loops in a function in innermost-loop-first order. This
   // way, we first LICM from the inner loop, and place the ops in
   // the outer loop, which in turn can be further LICM'ed.
-  getOperation()->walk([&](LoopLikeOpInterface loopLike) {
-    LLVM_DEBUG(loopLike.print(llvm::dbgs() << "\nOriginal loop:\n"));
-    moveLoopInvariantCode(loopLike);
-  });
+  getOperation()->walk(
+      [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 }
 
 std::unique_ptr<Pass> mlir::createLoopInvariantCodeMotionPass() {
