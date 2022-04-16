@@ -44,7 +44,8 @@ MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
                                      StringRef MakeSmartPtrFunctionName)
     : ClangTidyCheck(Name, Context),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM)),
+                                        utils::IncludeSorter::IS_LLVM),
+               areDiagsSelfContained()),
       MakeSmartPtrFunctionHeader(
           Options.get("MakeSmartPtrFunctionHeader", "<memory>")),
       MakeSmartPtrFunctionName(

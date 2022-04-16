@@ -412,6 +412,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
+    CTContext->setSelfContainedDiags(true);
     CTChecks = CTFactories.createChecks(CTContext.getPointer());
     llvm::erase_if(CTChecks, [&](const auto &Check) {
       return !Check->isLanguageVersionSupported(CTContext->getLangOpts());

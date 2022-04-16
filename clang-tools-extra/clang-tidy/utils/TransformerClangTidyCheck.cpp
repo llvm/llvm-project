@@ -30,8 +30,8 @@ static void verifyRule(const RewriteRuleWith<std::string> &Rule) {
 TransformerClangTidyCheck::TransformerClangTidyCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      Inserter(
-          Options.getLocalOrGlobal("IncludeStyle", IncludeSorter::IS_LLVM)) {}
+      Inserter(Options.getLocalOrGlobal("IncludeStyle", IncludeSorter::IS_LLVM),
+               areDiagsSelfContained()) {}
 
 // This constructor cannot dispatch to the simpler one (below), because, in
 // order to get meaningful results from `getLangOpts` and `Options`, we need the

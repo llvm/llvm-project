@@ -59,7 +59,8 @@ public:
   /// using \code
   ///   Options.getLocalOrGlobal("IncludeStyle", <DefaultStyle>)
   /// \endcode
-  explicit IncludeInserter(IncludeSorter::IncludeStyle Style);
+  explicit IncludeInserter(IncludeSorter::IncludeStyle Style,
+                           bool SelfContainedDiags);
 
   /// Registers this with the Preprocessor \p PP, must be called before this
   /// class is used.
@@ -93,6 +94,7 @@ private:
   llvm::DenseMap<FileID, llvm::StringSet<>> InsertedHeaders;
   const SourceManager *SourceMgr{nullptr};
   const IncludeSorter::IncludeStyle Style;
+  const bool SelfContainedDiags;
   friend class IncludeInserterCallback;
 };
 

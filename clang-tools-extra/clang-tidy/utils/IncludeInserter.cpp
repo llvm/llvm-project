@@ -36,8 +36,9 @@ private:
   IncludeInserter *Inserter;
 };
 
-IncludeInserter::IncludeInserter(IncludeSorter::IncludeStyle Style)
-    : Style(Style) {}
+IncludeInserter::IncludeInserter(IncludeSorter::IncludeStyle Style,
+                                 bool SelfContainedDiags)
+    : Style(Style), SelfContainedDiags(SelfContainedDiags) {}
 
 void IncludeInserter::registerPreprocessor(Preprocessor *PP) {
   assert(PP && "PP shouldn't be null");
@@ -73,7 +74,9 @@ IncludeInserter::createIncludeInsertion(FileID FileID, llvm::StringRef Header) {
     return llvm::None;
   // We assume the same Header will never be included both angled and not
   // angled.
-  if (!InsertedHeaders[FileID].insert(Header).second)
+  // In self contained diags mode we don't track what headers we have already
+  // inserted.
+  if (!SelfContainedDiags && !InsertedHeaders[FileID].insert(Header).second)
     return llvm::None;
 
   return getOrCreate(FileID).createIncludeInsertion(Header, IsAngled);

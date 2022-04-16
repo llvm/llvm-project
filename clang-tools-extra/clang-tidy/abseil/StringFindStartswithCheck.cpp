@@ -27,7 +27,8 @@ StringFindStartswithCheck::StringFindStartswithCheck(StringRef Name,
       StringLikeClasses(utils::options::parseStringList(
           Options.get("StringLikeClasses", "::std::basic_string"))),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM)),
+                                               utils::IncludeSorter::IS_LLVM),
+                      areDiagsSelfContained()),
       AbseilStringsMatchHeader(
           Options.get("AbseilStringsMatchHeader", "absl/strings/match.h")) {}
 

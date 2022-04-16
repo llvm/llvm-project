@@ -306,10 +306,10 @@ void PreferMemberInitializerCheck::check(
                                       NewInit, AddComma ? "), " : ")"});
           Diag << FixItHint::CreateInsertion(InsertPos, Insertion,
                                              FirstToCtorInits);
+          FirstToCtorInits = areDiagsSelfContained();
         }
         Diag << FixItHint::CreateRemoval(
             CharSourceRange::getCharRange(S->getBeginLoc(), SemiColonEnd));
-        FirstToCtorInits = false;
       }
     }
   }
