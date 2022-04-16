@@ -171,7 +171,9 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
     out << formatv("// -----// IR Dump After {0} Failed", pass->getName());
     printIR(op, config->shouldPrintAtModuleScope(), out,
-            OpPrintingFlags().printGenericOpForm());
+            config->shouldPrintCustomFormOnFailure()
+                ? OpPrintingFlags()
+                : OpPrintingFlags().printGenericOpForm());
     out << "\n\n";
   });
 }
@@ -184,10 +186,12 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
 PassManager::IRPrinterConfig::IRPrinterConfig(bool printModuleScope,
                                               bool printAfterOnlyOnChange,
                                               bool printAfterOnlyOnFailure,
+                                              bool printCustomFormOnFailure,
                                               OpPrintingFlags opPrintingFlags)
     : printModuleScope(printModuleScope),
       printAfterOnlyOnChange(printAfterOnlyOnChange),
       printAfterOnlyOnFailure(printAfterOnlyOnFailure),
+      printCustomFormOnFailure(printCustomFormOnFailure),
       opPrintingFlags(opPrintingFlags) {}
 PassManager::IRPrinterConfig::~IRPrinterConfig() = default;
 
@@ -220,10 +224,11 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
       std::function<bool(Pass *, Operation *)> shouldPrintBeforePass,
       std::function<bool(Pass *, Operation *)> shouldPrintAfterPass,
       bool printModuleScope, bool printAfterOnlyOnChange,
-      bool printAfterOnlyOnFailure, OpPrintingFlags opPrintingFlags,
-      raw_ostream &out)
+      bool printAfterOnlyOnFailure, bool printCustomFormOnFailure,
+      OpPrintingFlags opPrintingFlags, raw_ostream &out)
       : IRPrinterConfig(printModuleScope, printAfterOnlyOnChange,
-                        printAfterOnlyOnFailure, opPrintingFlags),
+                        printAfterOnlyOnFailure, printCustomFormOnFailure,
+                        opPrintingFlags),
         shouldPrintBeforePass(std::move(shouldPrintBeforePass)),
         shouldPrintAfterPass(std::move(shouldPrintAfterPass)), out(out) {
     assert((this->shouldPrintBeforePass || this->shouldPrintAfterPass) &&
@@ -267,10 +272,10 @@ void PassManager::enableIRPrinting(
     std::function<bool(Pass *, Operation *)> shouldPrintBeforePass,
     std::function<bool(Pass *, Operation *)> shouldPrintAfterPass,
     bool printModuleScope, bool printAfterOnlyOnChange,
-    bool printAfterOnlyOnFailure, raw_ostream &out,
-    OpPrintingFlags opPrintingFlags) {
+    bool printAfterOnlyOnFailure, bool printCustomFormOnFailure,
+    raw_ostream &out, OpPrintingFlags opPrintingFlags) {
   enableIRPrinting(std::make_unique<BasicIRPrinterConfig>(
       std::move(shouldPrintBeforePass), std::move(shouldPrintAfterPass),
       printModuleScope, printAfterOnlyOnChange, printAfterOnlyOnFailure,
-      opPrintingFlags, out));
+      printCustomFormOnFailure, opPrintingFlags, out));
 }
