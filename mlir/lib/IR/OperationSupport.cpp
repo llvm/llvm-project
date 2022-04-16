@@ -633,8 +633,18 @@ llvm::hash_code OperationEquivalence::computeHash(
       op->getName(), op->getAttrDictionary(), op->getResultTypes());
 
   //   - Operands
-  for (Value operand : op->getOperands())
+  ValueRange operands = op->getOperands();
+  SmallVector<Value> operandStorage;
+  if (op->hasTrait<mlir::OpTrait::IsCommutative>()) {
+    operandStorage.append(operands.begin(), operands.end());
+    llvm::sort(operandStorage, [](Value a, Value b) -> bool {
+      return a.getAsOpaquePointer() < b.getAsOpaquePointer();
+    });
+    operands = operandStorage;
+  }
+  for (Value operand : operands)
     hash = llvm::hash_combine(hash, hashOperands(operand));
+
   //   - Operands
   for (Value result : op->getResults())
     hash = llvm::hash_combine(hash, hashResults(result));
@@ -710,6 +720,21 @@ bool OperationEquivalence::isEquivalentTo(
   if (!(flags & IgnoreLocations) && lhs->getLoc() != rhs->getLoc())
     return false;
 
+  ValueRange lhsOperands = lhs->getOperands(), rhsOperands = rhs->getOperands();
+  SmallVector<Value> lhsOperandStorage, rhsOperandStorage;
+  if (lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
+    lhsOperandStorage.append(lhsOperands.begin(), lhsOperands.end());
+    llvm::sort(lhsOperandStorage, [](Value a, Value b) -> bool {
+      return a.getAsOpaquePointer() < b.getAsOpaquePointer();
+    });
+    lhsOperands = lhsOperandStorage;
+
+    rhsOperandStorage.append(rhsOperands.begin(), rhsOperands.end());
+    llvm::sort(rhsOperandStorage, [](Value a, Value b) -> bool {
+      return a.getAsOpaquePointer() < b.getAsOpaquePointer();
+    });
+    rhsOperands = rhsOperandStorage;
+  }
   auto checkValueRangeMapping =
       [](ValueRange lhs, ValueRange rhs,
          function_ref<LogicalResult(Value, Value)> mapValues) {
@@ -724,8 +749,7 @@ bool OperationEquivalence::isEquivalentTo(
         return true;
       };
   // Check mapping of operands and results.
-  if (!checkValueRangeMapping(lhs->getOperands(), rhs->getOperands(),
-                              mapOperands))
+  if (!checkValueRangeMapping(lhsOperands, rhsOperands, mapOperands))
     return false;
   if (!checkValueRangeMapping(lhs->getResults(), rhs->getResults(), mapResults))
     return false;
