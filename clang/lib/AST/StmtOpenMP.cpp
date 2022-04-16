@@ -875,8 +875,8 @@ OMPAtomicDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   Dir->setUpdateExpr(Exprs.UE);
   Dir->setD(Exprs.D);
   Dir->setCond(Exprs.Cond);
-  Dir->IsXLHSInRHSPart = Exprs.IsXLHSInRHSPart;
-  Dir->IsPostfixUpdate = Exprs.IsPostfixUpdate;
+  Dir->Flags.IsXLHSInRHSPart = Exprs.IsXLHSInRHSPart ? 1 : 0;
+  Dir->Flags.IsPostfixUpdate = Exprs.IsPostfixUpdate ? 1 : 0;
   return Dir;
 }
 

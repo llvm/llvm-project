@@ -2827,25 +2827,28 @@ public:
 class OMPAtomicDirective : public OMPExecutableDirective {
   friend class ASTStmtReader;
   friend class OMPExecutableDirective;
-  /// Used for 'atomic update' or 'atomic capture' constructs. They may
-  /// have atomic expressions of forms
-  /// \code
-  /// x = x binop expr;
-  /// x = expr binop x;
-  /// \endcode
-  /// This field is true for the first form of the expression and false for the
-  /// second. Required for correct codegen of non-associative operations (like
-  /// << or >>).
-  bool IsXLHSInRHSPart = false;
-  /// Used for 'atomic update' or 'atomic capture' constructs. They may
-  /// have atomic expressions of forms
-  /// \code
-  /// v = x; <update x>;
-  /// <update x>; v = x;
-  /// \endcode
-  /// This field is true for the first(postfix) form of the expression and false
-  /// otherwise.
-  bool IsPostfixUpdate = false;
+
+  struct FlagTy {
+    /// Used for 'atomic update' or 'atomic capture' constructs. They may
+    /// have atomic expressions of forms:
+    /// \code
+    /// x = x binop expr;
+    /// x = expr binop x;
+    /// \endcode
+    /// This field is 1 for the first form of the expression and 0 for the
+    /// second. Required for correct codegen of non-associative operations (like
+    /// << or >>).
+    uint8_t IsXLHSInRHSPart : 1;
+    /// Used for 'atomic update' or 'atomic capture' constructs. They may
+    /// have atomic expressions of forms:
+    /// \code
+    /// v = x; <update x>;
+    /// <update x>; v = x;
+    /// \endcode
+    /// This field is 1 for the first(postfix) form of the expression and 0
+    /// otherwise.
+    uint8_t IsPostfixUpdate : 1;
+  } Flags;
 
   /// Build directive with the given start and end location.
   ///
@@ -2956,10 +2959,10 @@ public:
   /// Return true if helper update expression has form
   /// 'OpaqueValueExpr(x) binop OpaqueValueExpr(expr)' and false if it has form
   /// 'OpaqueValueExpr(expr) binop OpaqueValueExpr(x)'.
-  bool isXLHSInRHSPart() const { return IsXLHSInRHSPart; }
+  bool isXLHSInRHSPart() const { return Flags.IsXLHSInRHSPart; }
   /// Return true if 'v' expression must be updated to original value of
   /// 'x', false if 'v' must be updated to the new value of 'x'.
-  bool isPostfixUpdate() const { return IsPostfixUpdate; }
+  bool isPostfixUpdate() const { return Flags.IsPostfixUpdate; }
   /// Get 'v' part of the associated expression/statement.
   Expr *getV() {
     return cast_or_null<Expr>(Data->getChildren()[DataPositionTy::POS_V]);
