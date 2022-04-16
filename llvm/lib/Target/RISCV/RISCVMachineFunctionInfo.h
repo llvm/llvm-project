@@ -67,6 +67,11 @@ private:
 public:
   RISCVMachineFunctionInfo(const MachineFunction &MF) {}
 
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
+
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
 

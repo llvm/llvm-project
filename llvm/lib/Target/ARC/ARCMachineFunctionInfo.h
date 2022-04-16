@@ -34,8 +34,12 @@ public:
   explicit ARCFunctionInfo(MachineFunction &MF)
       : ReturnStackOffsetSet(false), VarArgsFrameIndex(0),
         ReturnStackOffset(-1U), MaxCallStackReq(0) {}
-
   ~ARCFunctionInfo() {}
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
 
   void setVarArgsFrameIndex(int off) { VarArgsFrameIndex = off; }
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }

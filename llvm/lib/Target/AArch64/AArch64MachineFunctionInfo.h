@@ -37,7 +37,7 @@ class MachineInstr;
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// Backreference to the machine function.
-  MachineFunction &MF;
+  MachineFunction *MF;
 
   /// Number of bytes of arguments this function has on the stack. If the callee
   /// is expected to restore the argument stack this should be a multiple of 16,
@@ -183,6 +183,11 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
 public:
   explicit AArch64FunctionInfo(MachineFunction &MF);
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
