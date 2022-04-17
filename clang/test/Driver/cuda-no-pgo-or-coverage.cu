@@ -1,7 +1,6 @@
 // Check that profiling/coverage arguments doen't get passed down to device-side
 // compilation.
 //
-// REQUIRES: clang-driver
 //
 // XRUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 \
 // XRUN:   -fprofile-generate %s 2>&1 | \
