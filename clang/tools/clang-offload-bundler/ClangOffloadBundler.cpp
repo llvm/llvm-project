@@ -63,26 +63,15 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 // and -help) will be hidden.
 static cl::OptionCategory
     ClangOffloadBundlerCategory("clang-offload-bundler options");
+
 static cl::list<std::string>
-    InputFileNames("input", cl::ZeroOrMore,
-                   cl::desc("Input file."
-                            " Can be specified multiple times "
-                            "for multiple input files."),
+    InputFileNames("inputs", cl::CommaSeparated, cl::OneOrMore,
+                   cl::desc("[<input file>,...]"),
                    cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    InputFileNamesDeprecatedOpt("inputs", cl::CommaSeparated, cl::ZeroOrMore,
-                                cl::desc("[<input file>,...] (deprecated)"),
-                                cl::cat(ClangOffloadBundlerCategory));
-static cl::list<std::string>
-    OutputFileNames("output", cl::ZeroOrMore,
-                    cl::desc("Output file."
-                             " Can be specified multiple times "
-                             "for multiple output files."),
+    OutputFileNames("outputs", cl::CommaSeparated,
+                    cl::desc("[<output file>,...]"),
                     cl::cat(ClangOffloadBundlerCategory));
-static cl::list<std::string>
-    OutputFileNamesDeprecatedOpt("outputs", cl::CommaSeparated, cl::ZeroOrMore,
-                                 cl::desc("[<output file>,...] (deprecated)"),
-                                 cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
     TargetNames("targets", cl::CommaSeparated,
                 cl::desc("[<offload kind>-<target triple>,...]"),
@@ -1542,38 +1531,6 @@ int main(int argc, const char **argv) {
     }
   };
 
-  auto warningOS = [argv]() -> raw_ostream & {
-    return WithColor::warning(errs(), StringRef(argv[0]));
-  };
-
-  if (InputFileNames.getNumOccurrences() != 0 &&
-      InputFileNamesDeprecatedOpt.getNumOccurrences() != 0) {
-    reportError(createStringError(
-        errc::invalid_argument,
-        "-inputs and -input cannot be used together, use only -input instead"));
-  }
-  if (InputFileNamesDeprecatedOpt.size()) {
-    warningOS() << "-inputs is deprecated, use -input instead\n";
-    // temporary hack to support -inputs
-    std::vector<std::string> &s = InputFileNames;
-    s.insert(s.end(), InputFileNamesDeprecatedOpt.begin(),
-             InputFileNamesDeprecatedOpt.end());
-  }
-
-  if (OutputFileNames.getNumOccurrences() != 0 &&
-      OutputFileNamesDeprecatedOpt.getNumOccurrences() != 0) {
-    reportError(createStringError(errc::invalid_argument,
-                                  "-outputs and -output cannot be used "
-                                  "together, use only -output instead"));
-  }
-  if (OutputFileNamesDeprecatedOpt.size()) {
-    warningOS() << "-outputs is deprecated, use -output instead\n";
-    // temporary hack to support -outputs
-    std::vector<std::string> &s = OutputFileNames;
-    s.insert(s.end(), OutputFileNamesDeprecatedOpt.begin(),
-             OutputFileNamesDeprecatedOpt.end());
-  }
-
   if (ListBundleIDs) {
     if (Unbundle) {
       reportError(
@@ -1610,9 +1567,10 @@ int main(int argc, const char **argv) {
     }
   }
 
-  if (OutputFileNames.size() == 0) {
-    reportError(
-        createStringError(errc::invalid_argument, "no output file specified!"));
+  if (OutputFileNames.getNumOccurrences() == 0) {
+    reportError(createStringError(
+        errc::invalid_argument,
+        "for the --outputs option: must be specified at least once!"));
   }
   if (TargetNames.getNumOccurrences() == 0) {
     reportError(createStringError(

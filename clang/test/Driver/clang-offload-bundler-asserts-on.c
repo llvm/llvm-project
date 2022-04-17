@@ -2,6 +2,8 @@
 // REQUIRES: asserts
 // UNSUPPORTED: darwin, aix
 
+// XFAIL: *
+
 // Generate the file we can bundle.
 // RUN: %clang -O0 -target %itanium_abi_triple %s -c -o %t.o
 
