@@ -1904,23 +1904,6 @@ bool AsmPrinter::doFinalization(Module &M) {
   // Emit bytes for llvm.commandline metadata.
   emitModuleCommandLines(M);
 
-  // Emit __morestack address if needed for indirect calls.
-  if (MMI->usesMorestackAddr()) {
-    Align Alignment(1);
-    MCSection *ReadOnlySection = getObjFileLowering().getSectionForConstant(
-        getDataLayout(), SectionKind::getReadOnly(),
-        /*C=*/nullptr, Alignment);
-    OutStreamer->SwitchSection(ReadOnlySection);
-
-    MCSymbol *AddrSymbol =
-        OutContext.getOrCreateSymbol(StringRef("__morestack_addr"));
-    OutStreamer->emitLabel(AddrSymbol);
-
-    unsigned PtrSize = MAI->getCodePointerSize();
-    OutStreamer->emitSymbolValue(GetExternalSymbolSymbol("__morestack"),
-                                 PtrSize);
-  }
-
   // Emit .note.GNU-split-stack and .note.GNU-no-split-stack sections if
   // split-stack is used.
   if (TM.getTargetTriple().isOSBinFormatELF() && HasSplitStack) {
