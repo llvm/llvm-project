@@ -685,6 +685,34 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
   return Result;
 }
 
+/// ParseCXXMaybeMutableAgnosticExpression - Handle expressions inside of
+/// sizeof, decltype, noexcept
+/// - unqualified-id
+/// - expression
+/// This serves to silence errors about captured variable referred in lambda
+/// parameter list, if they are used as the unqualified-id of a decltype,
+/// sizeof, or noexcept expression.
+ExprResult Parser::ParseCXXMaybeMutableAgnosticExpression() {
+
+  if (!getLangOpts().CPlusPlus11)
+    return ParseExpression();
+
+  if (Tok.is(tok::identifier) && NextToken().is(tok::r_paren)) {
+    UnqualifiedId Name;
+    CXXScopeSpec SS;
+    if (ParseUnqualifiedId(SS, /*ObjectType=*/nullptr,
+                           /*ObjectHadErrors=*/false,
+                           /*EnteringContext=*/false,
+                           /*AllowDestructorName=*/false,
+                           /*AllowConstructorName=*/false,
+                           /*AllowDeductionGuide=*/false,
+                           /*TemplateKWLoc=*/nullptr, Name))
+      return ExprError();
+    return Actions.ActOnMutableAgnosticIdExpression(getCurScope(), SS, Name);
+  }
+  return ParseExpression();
+}
+
 /// ParseLambdaExpression - Parse a C++11 lambda expression.
 ///
 ///       lambda-expression:

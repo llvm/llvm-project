@@ -1054,7 +1054,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
           Actions, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
           Sema::ExpressionEvaluationContextRecord::EK_Decltype);
       Result = Actions.CorrectDelayedTyposInExpr(
-          ParseExpression(), /*InitDecl=*/nullptr,
+          ParseCXXMaybeMutableAgnosticExpression(), /*InitDecl=*/nullptr,
           /*RecoverUncorrectedTypos=*/false,
           [](Expr *E) { return E->hasPlaceholderType() ? ExprError() : E; });
       if (Result.isInvalid()) {

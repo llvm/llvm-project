@@ -261,6 +261,8 @@ C++2b Feature Support
 - Implemented `P2036R3: Change scope of lambda trailing-return-type <https://wg21.link/P2036R3>`_.
   This proposal modifies how variables captured in lambdas can appear in trailing return type
   expressions and how their types are deduced therein, in all C++ language versions.
+  `CWG2569 <https://cplusplus.github.io/CWG/issues/2569.html>`_ is also partially implemented so that
+  `[x](decltype(x)){}` doesn't become ill-formed with the adoption of P2036R3.
 
 CUDA Language Changes in Clang
 ------------------------------

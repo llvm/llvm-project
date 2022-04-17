@@ -2698,6 +2698,18 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   return BuildDeclarationNameExpr(SS, R, ADL);
 }
 
+ExprResult Sema::ActOnMutableAgnosticIdExpression(Scope *S, CXXScopeSpec &SS,
+                                                  UnqualifiedId &Id) {
+  MutableAgnosticContextRAII Ctx(*this);
+  return ActOnIdExpression(S, SS, /*TemplateKwLoc*/
+                           SourceLocation(), Id,
+                           /*HasTrailingLParen*/ false,
+                           /*IsAddressOfOperand*/ false,
+                           /*CorrectionCandidateCallback*/ nullptr,
+                           /*IsInlineAsmIdentifier*/ false,
+                           /*KeywordReplacement*/ nullptr);
+}
+
 /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified
 /// declaration name, generally during template instantiation.
 /// There's a large number of things which don't need to be done along
@@ -18545,6 +18557,11 @@ static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
 static bool CheckCaptureUseBeforeLambdaQualifiers(Sema &S, VarDecl *Var,
                                                   SourceLocation ExprLoc,
                                                   LambdaScopeInfo *LSI) {
+
+  // Allow `[a = 1](decltype(a)) {}` as per CWG2569.
+  if (S.InMutableAgnosticContext)
+    return true;
+
   if (Var->isInvalidDecl())
     return false;
 
@@ -18627,7 +18644,7 @@ bool Sema::tryCaptureVariable(
       LSI = dyn_cast_or_null<LambdaScopeInfo>(
           FunctionScopes[FunctionScopesIndex]);
     if (LSI && LSI->BeforeLambdaQualifiersScope) {
-      if (isa<ParmVarDecl>(Var))
+      if (isa<ParmVarDecl>(Var) && !Var->getDeclContext()->isFunctionOrMethod())
         return true;
       IsInLambdaBeforeQualifiers = true;
       if (!CheckCaptureUseBeforeLambdaQualifiers(*this, Var, ExprLoc, LSI)) {
