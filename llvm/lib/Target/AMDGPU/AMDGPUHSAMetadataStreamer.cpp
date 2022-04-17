@@ -425,8 +425,12 @@ void MetadataStreamerV2::emitHiddenKernelArgs(const Function &Func,
   }
 
   // Emit the pointer argument for multi-grid object.
-  if (HiddenArgNumBytes >= 56)
-    emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenMultiGridSyncArg);
+  if (HiddenArgNumBytes >= 56) {
+    if (!Func.hasFnAttribute("amdgpu-no-multigrid-sync-arg"))
+      emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenMultiGridSyncArg);
+    else
+      emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenNone);
+  }
 }
 
 bool MetadataStreamerV2::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
@@ -801,6 +805,8 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
   auto &DL = M->getDataLayout();
   auto Int64Ty = Type::getInt64Ty(Func.getContext());
 
+  Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
+
   if (HiddenArgNumBytes >= 8)
     emitKernelArg(DL, Int64Ty, Align(8), "hidden_global_offset_x", Offset,
                   Args);
@@ -843,9 +849,14 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
   }
 
   // Emit the pointer argument for multi-grid object.
-  if (HiddenArgNumBytes >= 56)
-    emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg", Offset,
-                  Args);
+  if (HiddenArgNumBytes >= 56) {
+    if (!Func.hasFnAttribute("amdgpu-no-multigrid-sync-arg")) {
+      emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg", Offset,
+                    Args);
+    } else {
+      emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_none", Offset, Args);
+    }
+  }
 }
 
 msgpack::MapDocNode
@@ -973,6 +984,11 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
                                               msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  // No implicit kernel argument is used.
+  if (ST.getImplicitArgNumBytes(Func) == 0)
+    return;
+
   const Module *M = Func.getParent();
   auto &DL = M->getDataLayout();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
@@ -981,6 +997,7 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   auto Int32Ty = Type::getInt32Ty(Func.getContext());
   auto Int16Ty = Type::getInt16Ty(Func.getContext());
 
+  Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_x", Offset, Args);
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_y", Offset, Args);
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_z", Offset, Args);
@@ -1011,17 +1028,23 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   if (M->getNamedMetadata("llvm.printf.fmts")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,
                   Args);
-  } else
+  } else {
     Offset += 8; // Skipped.
+  }
 
   if (!Func.hasFnAttribute("amdgpu-no-hostcall-ptr")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_hostcall_buffer", Offset,
                   Args);
-  } else
+  } else {
     Offset += 8; // Skipped.
+  }
 
-  emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg", Offset,
+  if (!Func.hasFnAttribute("amdgpu-no-multigrid-sync-arg")) {
+    emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg", Offset,
                 Args);
+  } else {
+    Offset += 8; // Skipped.
+  }
 
   if (!Func.hasFnAttribute("amdgpu-no-heap-ptr"))
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_heap_v1", Offset, Args);
@@ -1033,8 +1056,9 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
                   Args);
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_completion_action", Offset,
                   Args);
-  } else
+  } else {
     Offset += 16; // Skipped.
+  }
 
   Offset += 72; // Reserved.
 
@@ -1043,8 +1067,9 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   if (!ST.hasApertureRegs()) {
     emitKernelArg(DL, Int32Ty, Align(4), "hidden_private_base", Offset, Args);
     emitKernelArg(DL, Int32Ty, Align(4), "hidden_shared_base", Offset, Args);
-  } else
+  } else {
     Offset += 8; // Skipped.
+  }
 
   if (MFI.hasQueuePtr())
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);

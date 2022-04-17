@@ -1344,6 +1344,9 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (SP->isRecursive())
     addFlag(SPDie, dwarf::DW_AT_recursive);
 
+  if (!SP->getTargetFuncName().empty())
+    addString(SPDie, dwarf::DW_AT_trampoline, SP->getTargetFuncName());
+
   if (DD->getDwarfVersion() >= 5 && SP->isDeleted())
     addFlag(SPDie, dwarf::DW_AT_deleted);
 }

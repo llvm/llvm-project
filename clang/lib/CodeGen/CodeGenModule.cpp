@@ -579,6 +579,30 @@ void CodeGenModule::Release() {
     }
   }
 
+  // Emit a global array containing all external kernels or device variables
+  // used by host functions and mark it as used for CUDA/HIP. This is necessary
+  // to get kernels or device variables in archives linked in even if these
+  // kernels or device variables are only used in host functions.
+  if (!Context.CUDAExternalDeviceDeclODRUsedByHost.empty()) {
+    SmallVector<llvm::Constant *, 8> UsedArray;
+    for (auto D : Context.CUDAExternalDeviceDeclODRUsedByHost) {
+      GlobalDecl GD;
+      if (auto *FD = dyn_cast<FunctionDecl>(D))
+        GD = GlobalDecl(FD, KernelReferenceKind::Kernel);
+      else
+        GD = GlobalDecl(D);
+      UsedArray.push_back(llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          GetAddrOfGlobal(GD), Int8PtrTy));
+    }
+
+    llvm::ArrayType *ATy = llvm::ArrayType::get(Int8PtrTy, UsedArray.size());
+
+    auto *GV = new llvm::GlobalVariable(
+        getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
+        llvm::ConstantArray::get(ATy, UsedArray), "gpu.used.external");
+    addCompilerUsedGlobal(GV);
+  }
+
   emitLLVMUsed();
   if (SanStats)
     SanStats->finish();
@@ -729,7 +753,10 @@ void CodeGenModule::Release() {
   // attributes, but we use module metadata to emit build attributes. This is
   // needed for LTO, where the function attributes are inside bitcode
   // serialised into a global variable by the time build attributes are
-  // emitted, so we can't access them.
+  // emitted, so we can't access them. LTO objects could be compiled with
+  // different flags therefore module flags are set to "Min" behavior to achieve
+  // the same end result of the normal build where e.g BTI is off if any object
+  // doesn't support it.
   if (Context.getTargetInfo().hasFeature("ptrauth") &&
       LangOpts.getSignReturnAddressScope() !=
           LangOptions::SignReturnAddressScopeKind::None)
@@ -743,16 +770,16 @@ void CodeGenModule::Release() {
       Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
       Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
       Arch == llvm::Triple::aarch64_be) {
-    getModule().addModuleFlag(llvm::Module::Error, "branch-target-enforcement",
+    getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
                               LangOpts.BranchTargetEnforcement);
 
-    getModule().addModuleFlag(llvm::Module::Error, "sign-return-address",
+    getModule().addModuleFlag(llvm::Module::Min, "sign-return-address",
                               LangOpts.hasSignReturnAddress());
 
-    getModule().addModuleFlag(llvm::Module::Error, "sign-return-address-all",
+    getModule().addModuleFlag(llvm::Module::Min, "sign-return-address-all",
                               LangOpts.isSignReturnAddressScopeAll());
 
-    getModule().addModuleFlag(llvm::Module::Error,
+    getModule().addModuleFlag(llvm::Module::Min,
                               "sign-return-address-with-bkey",
                               !LangOpts.isSignReturnAddressWithAKey());
   }
@@ -1376,10 +1403,10 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     }
 
   // Make unique name for device side static file-scope variable for HIP.
-  if (CGM.getContext().shouldExternalizeStaticVar(ND) &&
+  if (CGM.getContext().shouldExternalize(ND) &&
       CGM.getLangOpts().GPURelocatableDeviceCode &&
       CGM.getLangOpts().CUDAIsDevice && !CGM.getLangOpts().CUID.empty())
-    CGM.printPostfixForExternalizedStaticVar(Out);
+    CGM.printPostfixForExternalizedDecl(Out, ND);
   return std::string(Out.str());
 }
 
@@ -1446,8 +1473,7 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   // static device variable depends on whether the variable is referenced by
   // a host or device host function. Therefore the mangled name cannot be
   // cached.
-  if (!LangOpts.CUDAIsDevice ||
-      !getContext().mayExternalizeStaticVar(GD.getDecl())) {
+  if (!LangOpts.CUDAIsDevice || !getContext().mayExternalize(GD.getDecl())) {
     auto FoundName = MangledDeclNames.find(CanonicalGD);
     if (FoundName != MangledDeclNames.end())
       return FoundName->second;
@@ -1467,7 +1493,7 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   // directly between host- and device-compilations, the host- and
   // device-mangling in host compilation could help catching certain ones.
   assert(!isa<FunctionDecl>(ND) || !ND->hasAttr<CUDAGlobalAttr>() ||
-         getLangOpts().CUDAIsDevice ||
+         getContext().shouldExternalize(ND) || getLangOpts().CUDAIsDevice ||
          (getContext().getAuxTargetInfo() &&
           (getContext().getAuxTargetInfo()->getCXXABI() !=
            getContext().getTargetInfo().getCXXABI())) ||
@@ -4589,6 +4615,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         T = D->getType();
 
       if (getLangOpts().CPlusPlus) {
+        if (InitDecl->hasFlexibleArrayInit(getContext()))
+          ErrorUnsupported(D, "flexible array initializer");
         Init = EmitNullConstant(T);
         NeedsGlobalCtor = true;
       } else {
@@ -4602,6 +4630,14 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       // also don't need to register a destructor.
       if (getLangOpts().CPlusPlus && !NeedsGlobalDtor)
         DelayedCXXInitPosition.erase(D);
+
+#ifndef NDEBUG
+      CharUnits VarSize = getContext().getTypeSizeInChars(ASTTy) +
+                          InitDecl->getFlexibleArrayInitChars(getContext());
+      CharUnits CstSize = CharUnits::fromQuantity(
+          getDataLayout().getTypeAllocSize(Init->getType()));
+      assert(VarSize == CstSize && "Emitted constant has unexpected size");
+#endif
     }
   }
 
@@ -6772,7 +6808,8 @@ bool CodeGenModule::stopAutoInit() {
   return false;
 }
 
-void CodeGenModule::printPostfixForExternalizedStaticVar(
-    llvm::raw_ostream &OS) const {
-  OS << "__static__" << getContext().getCUIDHash();
+void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
+                                                    const Decl *D) const {
+  OS << (isa<VarDecl>(D) ? "__static__" : ".anon.")
+     << getContext().getCUIDHash();
 }

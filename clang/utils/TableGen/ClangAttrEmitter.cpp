@@ -1493,6 +1493,9 @@ writePrettyPrintFunction(const Record &R,
         Spelling += Namespace;
         Spelling += " ";
       }
+    } else if (Variety == "HLSLSemantic") {
+      Prefix = ":";
+      Suffix = "";
     } else {
       llvm_unreachable("Unknown attribute syntax variety!");
     }
@@ -3300,7 +3303,7 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   // Separate all of the attributes out into four group: generic, C++11, GNU,
   // and declspecs. Then generate a big switch statement for each of them.
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
-  std::vector<Record *> Declspec, Microsoft, GNU, Pragma;
+  std::vector<Record *> Declspec, Microsoft, GNU, Pragma, HLSLSemantic;
   std::map<std::string, std::vector<Record *>> CXX, C2x;
 
   // Walk over the list of all attributes, and split them out based on the
@@ -3321,6 +3324,8 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
         C2x[SI.nameSpace()].push_back(R);
       else if (Variety == "Pragma")
         Pragma.push_back(R);
+      else if (Variety == "HLSLSemantic")
+        HLSLSemantic.push_back(R);
     }
   }
 
@@ -3338,6 +3343,9 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "case AttrSyntax::Pragma:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(Pragma, OS, "Pragma");
+  OS << "case AttrSyntax::HLSLSemantic:\n";
+  OS << "  return llvm::StringSwitch<int>(Name)\n";
+  GenerateHasAttrSpellingStringSwitch(HLSLSemantic, OS, "HLSLSemantic");
   auto fn = [&OS](const char *Spelling, const char *Variety,
                   const std::map<std::string, std::vector<Record *>> &List) {
     OS << "case AttrSyntax::" << Variety << ": {\n";
@@ -4286,7 +4294,7 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   std::vector<StringMatcher::StringPair> GNU, Declspec, Microsoft, CXX11,
-      Keywords, Pragma, C2x;
+      Keywords, Pragma, C2x, HLSLSemantic;
   std::set<std::string> Seen;
   for (const auto *A : Attrs) {
     const Record &Attr = *A;
@@ -4338,6 +4346,8 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
           Matches = &Keywords;
         else if (Variety == "Pragma")
           Matches = &Pragma;
+        else if (Variety == "HLSLSemantic")
+          Matches = &HLSLSemantic;
 
         assert(Matches && "Unsupported spelling variety found");
 
@@ -4373,6 +4383,8 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
   StringMatcher("Name", Keywords, OS).Emit();
   OS << "  } else if (AttributeCommonInfo::AS_Pragma == Syntax) {\n";
   StringMatcher("Name", Pragma, OS).Emit();
+  OS << "  } else if (AttributeCommonInfo::AS_HLSLSemantic == Syntax) {\n";
+  StringMatcher("Name", HLSLSemantic, OS).Emit();
   OS << "  }\n";
   OS << "  return AttributeCommonInfo::UnknownAttribute;\n"
      << "}\n";
@@ -4482,7 +4494,7 @@ void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
   }
 }
 
-enum class SpellingKind {
+enum class SpellingKind : size_t {
   GNU,
   CXX11,
   C2x,
@@ -4490,8 +4502,10 @@ enum class SpellingKind {
   Microsoft,
   Keyword,
   Pragma,
+  HLSLSemantic,
+  NumSpellingKinds
 };
-static const size_t NumSpellingKinds = (size_t)SpellingKind::Pragma + 1;
+static const size_t NumSpellingKinds = (size_t)SpellingKind::NumSpellingKinds;
 
 class SpellingList {
   std::vector<std::string> Spellings[NumSpellingKinds];
@@ -4509,7 +4523,8 @@ public:
                             .Case("Declspec", SpellingKind::Declspec)
                             .Case("Microsoft", SpellingKind::Microsoft)
                             .Case("Keyword", SpellingKind::Keyword)
-                            .Case("Pragma", SpellingKind::Pragma);
+                            .Case("Pragma", SpellingKind::Pragma)
+                            .Case("HLSLSemantic", SpellingKind::HLSLSemantic);
     std::string Name;
     if (!Spelling.nameSpace().empty()) {
       switch (Kind) {
@@ -4610,8 +4625,8 @@ static void WriteDocumentation(RecordKeeper &Records,
   // List what spelling syntaxes the attribute supports.
   OS << ".. csv-table:: Supported Syntaxes\n";
   OS << "   :header: \"GNU\", \"C++11\", \"C2x\", \"``__declspec``\",";
-  OS << " \"Keyword\", \"``#pragma``\", \"``#pragma clang attribute``\"\n\n";
-  OS << "   \"";
+  OS << " \"Keyword\", \"``#pragma``\", \"``#pragma clang attribute``\",";
+  OS << " \"HLSL Semantic\"\n\n   \"";
   for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
     SpellingKind K = (SpellingKind)Kind;
     // TODO: List Microsoft (IDL-style attribute) spellings once we fully

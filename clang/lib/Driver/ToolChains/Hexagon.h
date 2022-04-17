@@ -94,9 +94,6 @@ public:
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
   StringRef GetGCCLibAndIncVersion() const { return GCCLibAndIncVersion.Text; }
-  bool IsIntegratedAssemblerDefault() const override {
-    return true;
-  }
 
   std::string getHexagonTargetDir(
       const std::string &InstalledDir,

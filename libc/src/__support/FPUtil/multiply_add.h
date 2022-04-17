@@ -22,9 +22,16 @@ template <typename T> static inline T multiply_add(T x, T y, T z) {
   return x * y + z;
 }
 
+} // namespace fputil
+} // namespace __llvm_libc
+
 #if defined(LIBC_TARGET_HAS_FMA)
+
 // FMA instructions are available.
 #include "FMA.h"
+
+namespace __llvm_libc {
+namespace fputil {
 
 template <> inline float multiply_add<float>(float x, float y, float z) {
   return fma(x, y, z);
@@ -33,9 +40,10 @@ template <> inline float multiply_add<float>(float x, float y, float z) {
 template <> inline double multiply_add<double>(double x, double y, double z) {
   return fma(x, y, z);
 }
-#endif // LIBC_TARGET_HAS_FMA
 
 } // namespace fputil
 } // namespace __llvm_libc
+
+#endif // LIBC_TARGET_HAS_FMA
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H

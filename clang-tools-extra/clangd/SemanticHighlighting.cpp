@@ -762,6 +762,7 @@ public:
     case TemplateName::QualifiedTemplate:
     case TemplateName::SubstTemplateTemplateParm:
     case TemplateName::SubstTemplateTemplateParmPack:
+    case TemplateName::UsingTemplate:
       // Names that could be resolved to a TemplateDecl are handled elsewhere.
       break;
     }
@@ -912,7 +913,7 @@ bool operator==(const HighlightingToken &L, const HighlightingToken &R) {
          std::tie(R.R, R.Kind, R.Modifiers);
 }
 bool operator<(const HighlightingToken &L, const HighlightingToken &R) {
-  return std::tie(L.R, L.Kind, R.Modifiers) <
+  return std::tie(L.R, L.Kind, L.Modifiers) <
          std::tie(R.R, R.Kind, R.Modifiers);
 }
 

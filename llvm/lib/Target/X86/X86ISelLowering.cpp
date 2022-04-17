@@ -7976,7 +7976,6 @@ static void resolveZeroablesFromTargetShuffle(const SmallVectorImpl<int> &Mask,
 }
 
 // Forward declaration (for getFauxShuffleMask recursive check).
-// TODO: Use DemandedElts variant.
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    const SelectionDAG &DAG, unsigned Depth,
@@ -21239,7 +21238,10 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (SrcVT == MVT::i64 && DstVT == MVT::f64 && Subtarget.hasSSE2() &&
       !IsStrict)
     return LowerUINT_TO_FP_i64(Op, DAG, Subtarget);
-  if (SrcVT == MVT::i32 && Subtarget.hasSSE2() && DstVT != MVT::f80)
+  // The transform for i32->f64/f32 isn't correct for 0 when rounding to
+  // negative infinity. So disable under strictfp. Using FILD instead.
+  if (SrcVT == MVT::i32 && Subtarget.hasSSE2() && DstVT != MVT::f80 &&
+      !IsStrict)
     return LowerUINT_TO_FP_i32(Op, DAG, Subtarget);
   if (Subtarget.is64Bit() && SrcVT == MVT::i64 &&
       (DstVT == MVT::f32 || DstVT == MVT::f64))
@@ -48881,9 +48883,10 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   }
 
   // Try to fold a VTRUNCUS or VTRUNCS into a truncating store.
-  if (!St->isTruncatingStore() && StoredVal.hasOneUse() &&
+  if (!St->isTruncatingStore() &&
       (StoredVal.getOpcode() == X86ISD::VTRUNCUS ||
        StoredVal.getOpcode() == X86ISD::VTRUNCS) &&
+      StoredVal.hasOneUse() &&
       TLI.isTruncStoreLegal(StoredVal.getOperand(0).getValueType(), VT)) {
     bool IsSigned = StoredVal.getOpcode() == X86ISD::VTRUNCS;
     return EmitTruncSStore(IsSigned, St->getChain(),
@@ -48892,15 +48895,15 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   }
 
   // Try to fold a extract_element(VTRUNC) pattern into a truncating store.
-  if (!St->isTruncatingStore() && StoredVal.hasOneUse()) {
+  if (!St->isTruncatingStore()) {
     auto IsExtractedElement = [](SDValue V) {
-      if (V.getOpcode() == ISD::TRUNCATE && V.getOperand(0).hasOneUse())
+      if (V.getOpcode() == ISD::TRUNCATE && V.hasOneUse())
         V = V.getOperand(0);
       unsigned Opc = V.getOpcode();
-      if (Opc == ISD::EXTRACT_VECTOR_ELT || Opc == X86ISD::PEXTRW) {
-        if (V.getOperand(0).hasOneUse() && isNullConstant(V.getOperand(1)))
-          return V.getOperand(0);
-      }
+      if ((Opc == ISD::EXTRACT_VECTOR_ELT || Opc == X86ISD::PEXTRW) &&
+          isNullConstant(V.getOperand(1)) && V.hasOneUse() &&
+          V.getOperand(0).hasOneUse())
+        return V.getOperand(0);
       return SDValue();
     };
     if (SDValue Extract = IsExtractedElement(StoredVal)) {
@@ -52441,15 +52444,13 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
   if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
     Y = Y.getOperand(0);
 
-  if (!Y.hasOneUse())
-    return SDValue();
-
   X86::CondCode CC;
   SDValue EFLAGS;
-  if (Y.getOpcode() == X86ISD::SETCC) {
+  if (Y.getOpcode() == X86ISD::SETCC && Y.hasOneUse()) {
     CC = (X86::CondCode)Y.getConstantOperandVal(0);
     EFLAGS = Y.getOperand(1);
-  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1))) {
+  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1)) &&
+             Y.hasOneUse()) {
     EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
   }
 
@@ -53770,18 +53771,21 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
         VT, SDLoc(N),
         InVec.getNode()->ops().slice(IdxVal, VT.getVectorNumElements()));
 
-  // If we are extracting from an insert into a zero vector, replace with a
-  // smaller insert into zero if we don't access less than the original
-  // subvector. Don't do this for i1 vectors.
+  // If we are extracting from an insert into a larger vector, replace with a
+  // smaller insert if we don't access less than the original subvector. Don't
+  // do this for i1 vectors.
+  // TODO: Relax the matching indices requirement?
   if (VT.getVectorElementType() != MVT::i1 &&
-      InVec.getOpcode() == ISD::INSERT_SUBVECTOR && IdxVal == 0 &&
-      InVec.hasOneUse() && isNullConstant(InVec.getOperand(2)) &&
-      ISD::isBuildVectorAllZeros(InVec.getOperand(0).getNode()) &&
+      InVec.getOpcode() == ISD::INSERT_SUBVECTOR && InVec.hasOneUse() &&
+      IdxVal == InVec.getConstantOperandVal(2) &&
       InVec.getOperand(1).getValueSizeInBits() <= SizeInBits) {
     SDLoc DL(N);
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
-                       getZeroVector(VT, Subtarget, DAG, DL),
-                       InVec.getOperand(1), InVec.getOperand(2));
+    SDValue NewExt = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT,
+                                 InVec.getOperand(0), N->getOperand(1));
+    unsigned NewIdxVal = InVec.getConstantOperandVal(2) - IdxVal;
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, NewExt,
+                       InVec.getOperand(1),
+                       DAG.getVectorIdxConstant(NewIdxVal, DL));
   }
 
   // If we're extracting an upper subvector from a broadcast we should just

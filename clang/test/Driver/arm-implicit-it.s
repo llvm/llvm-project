@@ -21,4 +21,4 @@
 // CHECK-THUMB: "-arm-implicit-it=thumb"
 // CHECK-NEVER: "-arm-implicit-it=never"
 // CHECK-ALWAYS: "-arm-implicit-it=always"
-// CHECK-INVALID: error: unsupported argument 'thisisnotavalidoption' to option 'mimplicit-it='
+// CHECK-INVALID: error: unsupported argument 'thisisnotavalidoption' to option '-mimplicit-it='

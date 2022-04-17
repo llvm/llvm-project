@@ -1,6 +1,5 @@
 // Tests CUDA compilation with -E.
 
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 

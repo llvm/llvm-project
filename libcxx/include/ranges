@@ -150,6 +150,15 @@ namespace std::ranges {
   template<class T>
     inline constexpr bool enable_borrowed_range<owning_view<T>> = enable_borrowed_range<T>;
 
+  // [range.filter], filter view
+  template<input_range V, indirect_unary_predicate<iterator_t<V>> Pred>
+    requires view<V> && is_object_v<Pred>
+  class filter_view;
+
+  namespace views {
+    inline constexpr unspecified filter = unspecified;
+  }
+
   // [range.drop], drop view
   template<view V>
     class drop_view;
@@ -204,6 +213,20 @@ namespace std::ranges {
   template<input_range V>
     requires view<V> && input_range<range_reference_t<V>>
   class join_view;
+
+  // [range.lazy.split], lazy split view
+  template<class R>
+    concept tiny-range = see below;   // exposition only
+
+  template<input_range V, forward_range Pattern>
+    requires view<V> && view<Pattern> &&
+             indirectly_comparable<iterator_t<V>, iterator_t<Pattern>, ranges::equal_to> &&
+             (forward_range<V> || tiny-range<Pattern>)
+  class lazy_split_view;
+
+  namespace views {
+    inline constexpr unspecified lazy_split = unspecified;
+  }
 }
 
 namespace std {
@@ -252,8 +275,10 @@ namespace std {
 #include <__ranges/empty_view.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
+#include <__ranges/filter_view.h>
 #include <__ranges/iota_view.h>
 #include <__ranges/join_view.h>
+#include <__ranges/lazy_split_view.h>
 #include <__ranges/rbegin.h>
 #include <__ranges/ref_view.h>
 #include <__ranges/rend.h>

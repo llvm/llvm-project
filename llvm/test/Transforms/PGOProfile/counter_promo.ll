@@ -1,6 +1,4 @@
-; RUN: opt < %s -pgo-instr-gen -instrprof -do-counter-promotion=true -skip-ret-exit-block=0 -S | FileCheck --check-prefix=PROMO --check-prefix=NONATOMIC_PROMO %s
 ; RUN: opt < %s --passes=pgo-instr-gen,instrprof -do-counter-promotion=true -skip-ret-exit-block=0 -S | FileCheck --check-prefix=PROMO --check-prefix=NONATOMIC_PROMO %s
-; RUN: opt < %s -pgo-instr-gen -instrprof -do-counter-promotion=true -atomic-counter-update-promoted -skip-ret-exit-block=0 -S | FileCheck --check-prefix=PROMO --check-prefix=ATOMIC_PROMO %s
 ; RUN: opt < %s --passes=pgo-instr-gen,instrprof -do-counter-promotion=true -atomic-counter-update-promoted -skip-ret-exit-block=0 -S | FileCheck --check-prefix=PROMO --check-prefix=ATOMIC_PROMO %s
 
 define void @foo(i32 %n, i32 %N) {

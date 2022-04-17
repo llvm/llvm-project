@@ -48,8 +48,8 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   // Create a transformer to run all LLVM optimization passes at the
   // specified optimization level.
   auto llvmOptLevel = static_cast<llvm::CodeGenOpt::Level>(optLevel);
-  auto transformer = mlir::makeLLVMPassesTransformer(
-      /*passes=*/{}, llvmOptLevel, /*targetMachine=*/tmOrError->get());
+  auto transformer = mlir::makeOptimizingTransformer(
+      llvmOptLevel, /*sizeLevel=*/0, /*targetMachine=*/tmOrError->get());
   ExecutionEngineOptions jitOptions;
   jitOptions.transformer = transformer;
   jitOptions.jitCodeGenOptLevel = llvmOptLevel;

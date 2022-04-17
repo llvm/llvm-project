@@ -356,13 +356,6 @@ func @testConstOpMatchNonConst(%arg0 : i32) -> (i32) {
 // Test Enum Attributes
 //===----------------------------------------------------------------------===//
 
-// CHECK-LABEL: verifyStrEnumAttr
-func @verifyStrEnumAttr() -> i32 {
-  // CHECK: "test.str_enum_attr"() {attr = "B"}
-  %0 = "test.str_enum_attr"() {attr = "A"} : () -> i32
-  return %0 : i32
-}
-
 // CHECK-LABEL: verifyI32EnumAttr
 func @verifyI32EnumAttr() -> i32 {
   // CHECK: "test.i32_enum_attr"() {attr = 10 : i32}

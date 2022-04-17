@@ -38,6 +38,7 @@ unwind_sources = [
   "UnwindLevel1.c",
   "UnwindRegistersRestore.S",
   "UnwindRegistersSave.S",
+  "Unwind_AIXExtras.cpp",
   "assembly.h",
   "cet_unwind.h",
   "config.h",

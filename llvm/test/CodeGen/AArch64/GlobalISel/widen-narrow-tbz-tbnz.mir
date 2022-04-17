@@ -22,12 +22,14 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: s1_no_copy
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   %narrow:gpr32 = IMPLICIT_DEF
-  ; CHECK:   TBNZW %narrow, 0, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %narrow:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   TBNZW %narrow, 0, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     %narrow:gpr(s1) = G_IMPLICIT_DEF
@@ -47,12 +49,14 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: s16_no_copy
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   %narrow:gpr32 = IMPLICIT_DEF
-  ; CHECK:   TBNZW %narrow, 0, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %narrow:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   TBNZW %narrow, 0, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     %narrow:gpr(s16) = G_IMPLICIT_DEF
@@ -74,13 +78,15 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: p0_no_copy
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   %glob:gpr64common = MOVaddr target-flags(aarch64-page) @glob, target-flags(aarch64-pageoff, aarch64-nc) @glob
-  ; CHECK:   %load:gpr32 = LDRBBui %glob, 0 :: (dereferenceable load (s8) from @glob, align 4)
-  ; CHECK:   TBNZW %load, 0, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %glob:gpr64common = MOVaddr target-flags(aarch64-page) @glob, target-flags(aarch64-pageoff, aarch64-nc) @glob
+  ; CHECK-NEXT:   %load:gpr32 = LDRBBui %glob, 0 :: (dereferenceable load (s8) from @glob, align 4)
+  ; CHECK-NEXT:   TBNZW %load, 0, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     %glob:gpr(p0) = G_GLOBAL_VALUE @glob
@@ -103,15 +109,17 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: widen_s32_to_s64
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $w0
-  ; CHECK:   %reg:gpr32all = COPY $w0
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, %reg, %subreg.sub_32
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
-  ; CHECK:   TBZX [[COPY]], 33, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %reg:gpr32all = COPY $w0
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, %reg, %subreg.sub_32
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
+  ; CHECK-NEXT:   TBZX [[COPY]], 33, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $w0
@@ -139,14 +147,16 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: widen_s16_to_s64
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   %reg:gpr32 = IMPLICIT_DEF
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, %reg, %subreg.sub_32
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
-  ; CHECK:   TBZX [[COPY]], 33, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %reg:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, %reg, %subreg.sub_32
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
+  ; CHECK-NEXT:   TBZX [[COPY]], 33, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     %reg:gpr(s16) = G_IMPLICIT_DEF
@@ -174,15 +184,17 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: narrow_s64_to_s32
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $x0
-  ; CHECK:   %wide:gpr64all = COPY $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32all = COPY %wide.sub_32
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-  ; CHECK:   TBNZW [[COPY1]], 0, %bb.1
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %wide:gpr64all = COPY $x0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %wide.sub_32
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+  ; CHECK-NEXT:   TBNZW [[COPY1]], 0, %bb.1
+  ; CHECK-NEXT:   B %bb.0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0

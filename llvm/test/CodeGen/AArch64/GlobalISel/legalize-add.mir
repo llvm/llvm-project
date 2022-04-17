@@ -6,13 +6,13 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_big
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
-    ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDO1]]
-    ; CHECK: $x0 = COPY [[UADDO]](s64)
-    ; CHECK: $x1 = COPY [[UADDE]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDO1]]
+    ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[UADDE]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -31,15 +31,15 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_big_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY1]]
-    ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY2]], [[UADDO1]]
-    ; CHECK: [[UADDE2:%[0-9]+]]:_(s64), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[COPY2]], [[COPY3]], [[UADDE1]]
-    ; CHECK: $x0 = COPY [[UADDO]](s64)
-    ; CHECK: $x1 = COPY [[UADDE]](s64)
-    ; CHECK: $x2 = COPY [[UADDE2]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY2]], [[UADDO1]]
+    ; CHECK-NEXT: [[UADDE2:%[0-9]+]]:_(s64), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[COPY2]], [[COPY3]], [[UADDE1]]
+    ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[UADDE]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[UADDE2]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -59,12 +59,12 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_small
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
-    ; CHECK: $x0 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s8) = G_TRUNC %0(s64)
@@ -80,13 +80,13 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_narrowing
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
-    ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDO1]]
-    ; CHECK: $x0 = COPY [[UADDO]](s64)
-    ; CHECK: $x1 = COPY [[UADDE]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDO1]]
+    ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[UADDE]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -108,13 +108,13 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_add_narrowing_s65
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
-    ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDO1]]
-    ; CHECK: $x0 = COPY [[UADDO]](s64)
-    ; CHECK: $x1 = COPY [[UADDE]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDO1]]
+    ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[UADDE]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -136,13 +136,13 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_add
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-    ; CHECK: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY]], [[COPY2]]
-    ; CHECK: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY1]], [[COPY3]]
-    ; CHECK: $q0 = COPY [[ADD]](<2 x s64>)
-    ; CHECK: $q1 = COPY [[ADD1]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY1]], [[COPY3]]
+    ; CHECK-NEXT: $q0 = COPY [[ADD]](<2 x s64>)
+    ; CHECK-NEXT: $q1 = COPY [[ADD1]](<2 x s64>)
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s64>) = COPY $q2
@@ -161,15 +161,15 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_add_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-    ; CHECK: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY]], [[COPY1]]
-    ; CHECK: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY1]], [[COPY2]]
-    ; CHECK: [[ADD2:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY2]], [[COPY3]]
-    ; CHECK: $q0 = COPY [[ADD]](<2 x s64>)
-    ; CHECK: $q1 = COPY [[ADD1]](<2 x s64>)
-    ; CHECK: $q2 = COPY [[ADD2]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: $q0 = COPY [[ADD]](<2 x s64>)
+    ; CHECK-NEXT: $q1 = COPY [[ADD1]](<2 x s64>)
+    ; CHECK-NEXT: $q2 = COPY [[ADD2]](<2 x s64>)
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s64>) = COPY $q2
@@ -193,11 +193,12 @@ body:             |
 
     ; CHECK-LABEL: name: add_v8i16
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ADD:%[0-9]+]]:_(<8 x s16>) = G_ADD [[COPY]], [[COPY1]]
-    ; CHECK: $q0 = COPY [[ADD]](<8 x s16>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<8 x s16>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ADD]](<8 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s16>) = G_ADD %0, %1
@@ -216,11 +217,12 @@ body:             |
 
     ; CHECK-LABEL: name: add_v16i8
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ADD:%[0-9]+]]:_(<16 x s8>) = G_ADD [[COPY]], [[COPY1]]
-    ; CHECK: $q0 = COPY [[ADD]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<16 x s8>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ADD]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s8>) = G_ADD %0, %1
@@ -239,11 +241,12 @@ body:             |
 
     ; CHECK-LABEL: name: add_v4i16
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ADD:%[0-9]+]]:_(<4 x s16>) = G_ADD [[COPY]], [[COPY1]]
-    ; CHECK: $d0 = COPY [[ADD]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<4 x s16>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ADD]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s16>) = G_ADD %0, %1
@@ -259,11 +262,12 @@ body:             |
 
     ; CHECK-LABEL: name: add_v8s8
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ADD:%[0-9]+]]:_(<8 x s8>) = G_ADD [[COPY]], [[COPY1]]
-    ; CHECK: $d0 = COPY [[ADD]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<8 x s8>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ADD]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s8>) = G_ADD %0, %1

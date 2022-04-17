@@ -23,8 +23,8 @@ OPTIONS
 -------
 
 If ``filename`` is "``-``" or omitted, :program:`llc` reads from standard input.
-Otherwise, it will from ``filename``.  Inputs can be in either the LLVM assembly
-language format (``.ll``) or the LLVM bitcode format (``.bc``).
+Otherwise, it will read from ``filename``.  Inputs can be in either the LLVM
+assembly language format (``.ll``) or the LLVM bitcode format (``.bc``).
 
 If the :option:`-o` option is omitted, then :program:`llc` will send its output
 to standard output if the input is from standard input.  If the :option:`-o`

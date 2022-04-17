@@ -13,7 +13,6 @@ b c.h:6
 b c.h:7
 b a.cpp:3
 b a.cpp:4
-b a.h:8
 
 image lookup -a 0x140001003 -v
 image lookup -a 0x140001004 -v

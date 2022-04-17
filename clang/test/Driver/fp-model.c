@@ -1,7 +1,6 @@
 // Test that incompatible combinations of -ffp-model= options
 // and other floating point options get a warning diagnostic.
 //
-// REQUIRES: clang-driver
 
 // RUN: %clang -### -ffp-model=fast -ffp-contract=off -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN %s

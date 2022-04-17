@@ -1,28 +1,28 @@
 // REQUIRES: x86-registered-target
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=full -O0 %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=full -O0 %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-FULL-O0
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=thin -O0 %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=thin -O0 %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-THIN-O0
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=full -O1 %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=full -O1 %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-FULL-OPTIMIZED
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=thin -O1 %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=thin -O1 %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-THIN-OPTIMIZED
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=full -O2 %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=full -O2 %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-FULL-OPTIMIZED
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=thin -O2 %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=thin -O2 %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-THIN-OPTIMIZED
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=full -O3 %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=full -O3 %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-FULL-OPTIMIZED
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=thin -O3 %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=thin -O3 %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-THIN-OPTIMIZED
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=full -Os %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=full -Os %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-FULL-OPTIMIZED
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=thin -Os %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=thin -Os %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-THIN-OPTIMIZED
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=full -Oz %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=full -Oz %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-FULL-OPTIMIZED
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fexperimental-new-pass-manager -fdebug-pass-manager -flto=thin -Oz %s 2>&1 | FileCheck %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null -mllvm -verify-cfg-preserved=0 -fdebug-pass-manager -flto=thin -Oz %s 2>&1 | FileCheck %s \
 // RUN:   -check-prefix=CHECK-THIN-OPTIMIZED
 
 // CHECK-FULL-O0: Running pass: AlwaysInlinerPass

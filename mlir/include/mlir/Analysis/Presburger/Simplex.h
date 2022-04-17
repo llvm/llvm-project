@@ -290,10 +290,6 @@ protected:
   /// Returns the index of the new Unknown in con.
   unsigned addRow(ArrayRef<int64_t> coeffs, bool makeRestricted = false);
 
-  /// Normalize the given row by removing common factors between the numerator
-  /// and the denominator.
-  void normalizeRow(unsigned row);
-
   /// Swap the two rows/columns in the tableau and associated data structures.
   void swapRows(unsigned i, unsigned j);
   void swapColumns(unsigned i, unsigned j);
@@ -444,10 +440,9 @@ protected:
   void appendSymbol();
 
   /// Try to move the specified row to column orientation while preserving the
-  /// lexicopositivity of the basis transform. The row must have a negative
-  /// sample value. If this is not possible, return failure. This only occurs
-  /// when the constraints have no solution; the tableau will be marked empty in
-  /// such a case.
+  /// lexicopositivity of the basis transform. The row must have a non-positive
+  /// sample value. If this is not possible, return failure. This occurs when
+  /// the constraints have no solution or the sample value is zero.
   LogicalResult moveRowUnknownToColumn(unsigned row);
 
   /// Given a row that has a non-integer sample value, add an inequality to cut
@@ -628,6 +623,10 @@ private:
   /// This is an affine expression in the symbols with integer coefficients.
   /// The last element is the constant term. This ignores the big M coefficient.
   SmallVector<int64_t, 8> getSymbolicSampleNumerator(unsigned row) const;
+
+  /// Get an affine inequality in the symbols with integer coefficients that
+  /// holds iff the symbolic sample of the specified row is non-negative.
+  SmallVector<int64_t, 8> getSymbolicSampleIneq(unsigned row) const;
 
   /// Return whether all the coefficients of the symbolic sample are integers.
   ///

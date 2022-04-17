@@ -519,8 +519,9 @@ void CGDebugInfo::CreateCompileUnit() {
   // a relative path, so we look into the actual file entry for the main
   // file to determine the real absolute path for the file.
   std::string MainFileDir;
-  if (const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID())) {
-    MainFileDir = std::string(MainFile->getDir()->getName());
+  if (Optional<FileEntryRef> MainFile =
+          SM.getFileEntryRefForID(SM.getMainFileID())) {
+    MainFileDir = std::string(MainFile->getDir().getName());
     if (!llvm::sys::path::is_absolute(MainFileName)) {
       llvm::SmallString<1024> MainFileDirSS(MainFileDir);
       llvm::sys::path::append(MainFileDirSS, MainFileName);

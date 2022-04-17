@@ -1,6 +1,5 @@
 // Tests that we trigger unused-arg warnings on CUDA flags appropriately.
 
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 

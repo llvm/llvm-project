@@ -73,18 +73,23 @@ def _check_expected_version(comparison, expected, actual):
 
 _re_pattern_type = type(re.compile(''))
 def _match_decorator_property(expected, actual):
-    if actual is None or expected is None:
+    if expected is None:
         return True
+
+    if actual is None :
+        return False
 
     if isinstance(expected, no_match):
         return not _match_decorator_property(expected.item, actual)
-    elif isinstance(expected, (_re_pattern_type,) + six.string_types):
+
+    if isinstance(expected, (_re_pattern_type,) + six.string_types):
         return re.search(expected, actual) is not None
-    elif hasattr(expected, "__iter__"):
+
+    if hasattr(expected, "__iter__"):
         return any([x is not None and _match_decorator_property(x, actual)
                     for x in expected])
-    else:
-        return expected == actual
+
+    return expected == actual
 
 
 def _compiler_supports(compiler,

@@ -92,6 +92,8 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
     // (We look for a CopyFromReg reading a virtual register that is used
     //  for the function live-in value of register Reg)
     SDValue Value = OutVals[I];
+    if (Value->getOpcode() == ISD::AssertZext)
+      Value = Value.getOperand(0);
     if (Value->getOpcode() != ISD::CopyFromReg)
       return false;
     Register ArgReg = cast<RegisterSDNode>(Value->getOperand(1))->getReg();
@@ -3873,6 +3875,72 @@ static SDValue foldSetCCWithRotate(EVT VT, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue foldSetCCWithFunnelShift(EVT VT, SDValue N0, SDValue N1,
+                                        ISD::CondCode Cond, const SDLoc &dl,
+                                        SelectionDAG &DAG) {
+  // If we are testing for all-bits-clear, we might be able to do that with
+  // less shifting since bit-order does not matter.
+  if (Cond != ISD::SETEQ && Cond != ISD::SETNE)
+    return SDValue();
+
+  auto *C1 = isConstOrConstSplat(N1, /* AllowUndefs */ true);
+  if (!C1 || !C1->isZero())
+    return SDValue();
+
+  if (!N0.hasOneUse() ||
+      (N0.getOpcode() != ISD::FSHL && N0.getOpcode() != ISD::FSHR))
+    return SDValue();
+
+  unsigned BitWidth = N0.getScalarValueSizeInBits();
+  auto *ShAmtC = isConstOrConstSplat(N0.getOperand(2));
+  if (!ShAmtC || ShAmtC->getAPIntValue().uge(BitWidth))
+    return SDValue();
+
+  // Canonicalize fshr as fshl to reduce pattern-matching.
+  unsigned ShAmt = ShAmtC->getZExtValue();
+  if (N0.getOpcode() == ISD::FSHR)
+    ShAmt = BitWidth - ShAmt;
+
+  // Match an 'or' with a specific operand 'Other' in either commuted variant.
+  SDValue X, Y;
+  auto matchOr = [&X, &Y](SDValue Or, SDValue Other) {
+    if (Or.getOpcode() != ISD::OR || !Or.hasOneUse())
+      return false;
+    if (Or.getOperand(0) == Other) {
+      X = Or.getOperand(0);
+      Y = Or.getOperand(1);
+      return true;
+    }
+    if (Or.getOperand(1) == Other) {
+      X = Or.getOperand(1);
+      Y = Or.getOperand(0);
+      return true;
+    }
+    return false;
+  };
+
+  EVT OpVT = N0.getValueType();
+  EVT ShAmtVT = N0.getOperand(2).getValueType();
+  SDValue F0 = N0.getOperand(0);
+  SDValue F1 = N0.getOperand(1);
+  if (matchOr(F0, F1)) {
+    // fshl (or X, Y), X, C ==/!= 0 --> or (shl Y, C), X ==/!= 0
+    SDValue NewShAmt = DAG.getConstant(ShAmt, dl, ShAmtVT);
+    SDValue Shift = DAG.getNode(ISD::SHL, dl, OpVT, Y, NewShAmt);
+    SDValue NewOr = DAG.getNode(ISD::OR, dl, OpVT, Shift, X);
+    return DAG.getSetCC(dl, VT, NewOr, N1, Cond);
+  }
+  if (matchOr(F1, F0)) {
+    // fshl X, (or X, Y), C ==/!= 0 --> or (srl Y, BW-C), X ==/!= 0
+    SDValue NewShAmt = DAG.getConstant(BitWidth - ShAmt, dl, ShAmtVT);
+    SDValue Shift = DAG.getNode(ISD::SRL, dl, OpVT, Y, NewShAmt);
+    SDValue NewOr = DAG.getNode(ISD::OR, dl, OpVT, Shift, X);
+    return DAG.getSetCC(dl, VT, NewOr, N1, Cond);
+  }
+
+  return SDValue();
+}
+
 /// Try to simplify a setcc built with the specified operands and cc. If it is
 /// unable to simplify it, return a null SDValue.
 SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
@@ -3887,13 +3955,17 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   if (SDValue Fold = DAG.FoldSetCC(VT, N0, N1, Cond, dl))
     return Fold;
 
+  bool N0ConstOrSplat =
+      isConstOrConstSplat(N0, /*AllowUndefs*/ false, /*AllowTruncate*/ true);
+  bool N1ConstOrSplat =
+      isConstOrConstSplat(N1, /*AllowUndefs*/ false, /*AllowTruncate*/ true);
+
   // Ensure that the constant occurs on the RHS and fold constant comparisons.
   // TODO: Handle non-splat vector constants. All undef causes trouble.
   // FIXME: We can't yet fold constant scalable vector splats, so avoid an
   // infinite loop here when we encounter one.
   ISD::CondCode SwappedCC = ISD::getSetCCSwappedOperands(Cond);
-  if (isConstOrConstSplat(N0) &&
-      (!OpVT.isScalableVector() || !isConstOrConstSplat(N1)) &&
+  if (N0ConstOrSplat && (!OpVT.isScalableVector() || !N1ConstOrSplat) &&
       (DCI.isBeforeLegalizeOps() ||
        isCondCodeLegal(SwappedCC, N0.getSimpleValueType())))
     return DAG.getSetCC(dl, VT, N1, N0, SwappedCC);
@@ -3902,7 +3974,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
   // -- but in reverse order -- then try to commute the operands of this setcc
   // to match. A matching pair of setcc (cmp) and sub may be combined into 1
   // instruction on some targets.
-  if (!isConstOrConstSplat(N0) && !isConstOrConstSplat(N1) &&
+  if (!N0ConstOrSplat && !N1ConstOrSplat &&
       (DCI.isBeforeLegalizeOps() ||
        isCondCodeLegal(SwappedCC, N0.getSimpleValueType())) &&
       DAG.doesNodeExist(ISD::SUB, DAG.getVTList(OpVT), {N1, N0}) &&
@@ -3910,6 +3982,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     return DAG.getSetCC(dl, VT, N1, N0, SwappedCC);
 
   if (SDValue V = foldSetCCWithRotate(VT, N0, N1, Cond, dl, DAG))
+    return V;
+
+  if (SDValue V = foldSetCCWithFunnelShift(VT, N0, N1, Cond, dl, DAG))
     return V;
 
   if (auto *N1C = isConstOrConstSplat(N1)) {
@@ -4833,13 +4908,14 @@ TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'o': // offsetable
     case 'V': // not offsetable
       return C_Memory;
+    case 'p': // Address.
+      return C_Address;
     case 'n': // Simple Integer
     case 'E': // Floating Point Constant
     case 'F': // Floating Point Constant
       return C_Immediate;
     case 'i': // Simple Integer or Relocatable Constant
     case 's': // Relocatable Constant
-    case 'p': // Address.
     case 'X': // Allow ANY value.
     case 'I': // Target registers.
     case 'J':
@@ -5213,6 +5289,7 @@ static unsigned getConstraintGenerality(TargetLowering::ConstraintType CT) {
   case TargetLowering::C_RegisterClass:
     return 2;
   case TargetLowering::C_Memory:
+  case TargetLowering::C_Address:
     return 3;
   }
   llvm_unreachable("Invalid constraint type");
@@ -5480,6 +5557,17 @@ SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.isIntDivCheap(N->getValueType(0), Attr))
     return SDValue(N, 0); // Lower SDIV as SDIV
+  return SDValue();
+}
+
+SDValue
+TargetLowering::BuildSREMPow2(SDNode *N, const APInt &Divisor,
+                              SelectionDAG &DAG,
+                              SmallVectorImpl<SDNode *> &Created) const {
+  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.isIntDivCheap(N->getValueType(0), Attr))
+    return SDValue(N, 0); // Lower SREM as SREM
   return SDValue();
 }
 

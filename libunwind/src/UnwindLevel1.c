@@ -484,11 +484,13 @@ _Unwind_GetLanguageSpecificData(struct _Unwind_Context *context) {
   _LIBUNWIND_TRACE_API(
       "_Unwind_GetLanguageSpecificData(context=%p) => 0x%" PRIxPTR,
       (void *)context, result);
+#if !defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
   if (result != 0) {
     if (*((uint8_t *)result) != 0xFF)
       _LIBUNWIND_DEBUG_LOG("lsda at 0x%" PRIxPTR " does not start with 0xFF",
                            result);
   }
+#endif
   return result;
 }
 

@@ -2,10 +2,10 @@
 // pipeline, at -O0 and above.
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null \
-// RUN:   -fexperimental-new-pass-manager -fdebug-pass-manager -fcoroutines-ts \
+// RUN:   -fdebug-pass-manager -fcoroutines-ts \
 // RUN:   -O0 %s 2>&1 | FileCheck %s --check-prefixes=CHECK-ALL
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null \
-// RUN:   -fexperimental-new-pass-manager -fdebug-pass-manager -fcoroutines-ts \
+// RUN:   -fdebug-pass-manager -fcoroutines-ts \
 // RUN:   -O1 %s 2>&1 | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-OPT
 //
 // CHECK-ALL: Running pass:{{.*}}CoroEarlyPass

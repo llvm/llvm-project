@@ -432,10 +432,11 @@ GlobalOp Importer::processGlobal(llvm::GlobalVariable *gv) {
     alignment = align.value();
   }
 
-  GlobalOp op =
-      b.create<GlobalOp>(UnknownLoc::get(context), type, gv->isConstant(),
-                         convertLinkageFromLLVM(gv->getLinkage()),
-                         gv->getName(), valueAttr, alignment);
+  GlobalOp op = b.create<GlobalOp>(
+      UnknownLoc::get(context), type, gv->isConstant(),
+      convertLinkageFromLLVM(gv->getLinkage()), gv->getName(), valueAttr,
+      alignment, /*addr_space=*/gv->getAddressSpace(),
+      /*dso_local=*/gv->isDSOLocal(), /*thread_local=*/gv->isThreadLocal());
 
   if (gv->hasInitializer() && !valueAttr) {
     Region &r = op.getInitializerRegion();
@@ -670,7 +671,6 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   case llvm::Instruction::And:
   case llvm::Instruction::Or:
   case llvm::Instruction::Xor:
-  case llvm::Instruction::Alloca:
   case llvm::Instruction::Load:
   case llvm::Instruction::Store:
   case llvm::Instruction::Ret:
@@ -708,6 +708,17 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Operation *op = b.create(state);
     if (!inst->getType()->isVoidTy())
       v = op->getResult(0);
+    return success();
+  }
+  case llvm::Instruction::Alloca: {
+    Value size = processValue(inst->getOperand(0));
+    if (!size)
+      return failure();
+
+    auto *allocaInst = cast<llvm::AllocaInst>(inst);
+    v = b.create<AllocaOp>(loc, processType(inst->getType()),
+                           processType(allocaInst->getAllocatedType()), size,
+                           allocaInst->getAlign().value());
     return success();
   }
   case llvm::Instruction::ICmp: {
@@ -858,18 +869,34 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   case llvm::Instruction::GetElementPtr: {
     // FIXME: Support inbounds GEPs.
     llvm::GetElementPtrInst *gep = cast<llvm::GetElementPtrInst>(inst);
-    SmallVector<Value, 4> ops;
-    for (auto *op : gep->operand_values()) {
-      Value value = processValue(op);
-      if (!value)
-        return failure();
-      ops.push_back(value);
+    Value basePtr = processValue(gep->getOperand(0));
+    SmallVector<int32_t> staticIndices;
+    SmallVector<Value> dynamicIndices;
+    Type sourceElementType = processType(gep->getSourceElementType());
+    SmallVector<unsigned> staticIndexPositions;
+    GEPOp::findKnownStructIndices(sourceElementType, staticIndexPositions);
+
+    for (const auto &en :
+         llvm::enumerate(llvm::drop_begin(gep->operand_values()))) {
+      llvm::Value *operand = en.value();
+      if (llvm::find(staticIndexPositions, en.index()) ==
+          staticIndexPositions.end()) {
+        staticIndices.push_back(GEPOp::kDynamicIndex);
+        dynamicIndices.push_back(processValue(operand));
+        if (!dynamicIndices.back())
+          return failure();
+      } else {
+        auto *constantInt = cast<llvm::ConstantInt>(operand);
+        staticIndices.push_back(
+            static_cast<int32_t>(constantInt->getValue().getZExtValue()));
+      }
     }
+
     Type type = processType(inst->getType());
     if (!type)
       return failure();
-    v = b.create<GEPOp>(loc, type, ops[0],
-                        llvm::makeArrayRef(ops).drop_front());
+    v = b.create<GEPOp>(loc, type, sourceElementType, basePtr, dynamicIndices,
+                        staticIndices);
     return success();
   }
   }

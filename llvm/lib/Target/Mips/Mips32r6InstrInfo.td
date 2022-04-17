@@ -39,6 +39,7 @@ def brtarget21 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget21";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def brtarget26 : Operand<OtherVT> {
@@ -46,6 +47,7 @@ def brtarget26 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget26";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def jmpoffset16 : Operand<OtherVT> {

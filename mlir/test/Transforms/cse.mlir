@@ -310,3 +310,15 @@ func @dont_remove_duplicated_read_op_with_sideeffecting() -> i32 {
   %2 = arith.addi %0, %1 : i32
   return %2 : i32
 }
+
+/// This test is checking that identical commutative operation are gracefully
+/// handled but the CSE pass.
+// CHECK-LABEL: func @check_cummutative_cse
+func @check_cummutative_cse(%a : i32, %b : i32) -> i32 {
+  // CHECK: %[[ADD1:.*]] = arith.addi %{{.*}}, %{{.*}} : i32
+  %1 = arith.addi %a, %b : i32
+  %2 = arith.addi %b, %a : i32
+  // CHECK-NEXT:  arith.muli %[[ADD1]], %[[ADD1]] : i32
+  %3 = arith.muli %1, %2 : i32
+  return %3 : i32
+}

@@ -7,17 +7,17 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: narrow_scalar_ssube_s128
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
-    ; CHECK: %carry_in:_(s1) = G_TRUNC [[COPY4]](s64)
-    ; CHECK: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY]], [[COPY2]], %carry_in
-    ; CHECK: %19:_(s64), %carry_out:_(s1) = G_SSUBE [[COPY1]], [[COPY3]], [[USUBE1]]
-    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
-    ; CHECK: $x0 = COPY [[USUBE]](s64)
-    ; CHECK: $x1 = COPY %19(s64)
-    ; CHECK: $x2 = COPY %carry_out_ext(s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
+    ; CHECK-NEXT: %carry_in:_(s1) = G_TRUNC [[COPY4]](s64)
+    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY]], [[COPY2]], %carry_in
+    ; CHECK-NEXT: %19:_(s64), %carry_out:_(s1) = G_SSUBE [[COPY1]], [[COPY3]], [[USUBE1]]
+    ; CHECK-NEXT: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK-NEXT: $x0 = COPY [[USUBE]](s64)
+    ; CHECK-NEXT: $x1 = COPY %19(s64)
+    ; CHECK-NEXT: $x2 = COPY %carry_out_ext(s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -40,19 +40,19 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: narrow_scalar_ssube_big_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
-    ; CHECK: %carry_in:_(s1) = G_TRUNC [[COPY4]](s64)
-    ; CHECK: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY]], [[COPY1]], %carry_in
-    ; CHECK: [[USUBE2:%[0-9]+]]:_(s64), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[COPY1]], [[COPY2]], [[USUBE1]]
-    ; CHECK: %24:_(s64), %carry_out:_(s1) = G_SSUBE [[COPY2]], [[COPY3]], [[USUBE3]]
-    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
-    ; CHECK: $x0 = COPY [[USUBE]](s64)
-    ; CHECK: $x1 = COPY [[USUBE2]](s64)
-    ; CHECK: $x2 = COPY %24(s64)
-    ; CHECK: $x3 = COPY %carry_out_ext(s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
+    ; CHECK-NEXT: %carry_in:_(s1) = G_TRUNC [[COPY4]](s64)
+    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY]], [[COPY1]], %carry_in
+    ; CHECK-NEXT: [[USUBE2:%[0-9]+]]:_(s64), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[COPY1]], [[COPY2]], [[USUBE1]]
+    ; CHECK-NEXT: %24:_(s64), %carry_out:_(s1) = G_SSUBE [[COPY2]], [[COPY3]], [[USUBE3]]
+    ; CHECK-NEXT: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK-NEXT: $x0 = COPY [[USUBE]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[USUBE2]](s64)
+    ; CHECK-NEXT: $x2 = COPY %24(s64)
+    ; CHECK-NEXT: $x3 = COPY %carry_out_ext(s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -76,20 +76,20 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: widen_scalar_ssube_s8
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: %carry_in:_(s1) = G_TRUNC [[COPY2]](s64)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC]], 8
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC1]], 8
-    ; CHECK: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[SEXT_INREG]], [[SEXT_INREG1]], %carry_in
-    ; CHECK: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[USUBE]], 8
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[USUBE]](s32), [[SEXT_INREG2]]
-    ; CHECK: %sub_ext:_(s64) = G_ANYEXT [[USUBE]](s32)
-    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT [[ICMP]](s32)
-    ; CHECK: $x0 = COPY %sub_ext(s64)
-    ; CHECK: $x1 = COPY %carry_out_ext(s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: %carry_in:_(s1) = G_TRUNC [[COPY2]](s64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC]], 8
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC1]], 8
+    ; CHECK-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[SEXT_INREG]], [[SEXT_INREG1]], %carry_in
+    ; CHECK-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[USUBE]], 8
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[USUBE]](s32), [[SEXT_INREG2]]
+    ; CHECK-NEXT: %sub_ext:_(s64) = G_ANYEXT [[USUBE]](s32)
+    ; CHECK-NEXT: %carry_out_ext:_(s64) = G_ANYEXT [[ICMP]](s32)
+    ; CHECK-NEXT: $x0 = COPY %sub_ext(s64)
+    ; CHECK-NEXT: $x1 = COPY %carry_out_ext(s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -109,13 +109,13 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_ssube_32
     ; CHECK: %lhs:_(s32) = COPY $w0
-    ; CHECK: %rhs:_(s32) = COPY $w1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: %carry_in:_(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK: %sub:_(s32), %carry_out:_(s1) = G_SSUBE %lhs, %rhs, %carry_in
-    ; CHECK: %carry_out_ext:_(s32) = G_ANYEXT %carry_out(s1)
-    ; CHECK: $w0 = COPY %sub(s32)
-    ; CHECK: $w1 = COPY %carry_out_ext(s32)
+    ; CHECK-NEXT: %rhs:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: %carry_in:_(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: %sub:_(s32), %carry_out:_(s1) = G_SSUBE %lhs, %rhs, %carry_in
+    ; CHECK-NEXT: %carry_out_ext:_(s32) = G_ANYEXT %carry_out(s1)
+    ; CHECK-NEXT: $w0 = COPY %sub(s32)
+    ; CHECK-NEXT: $w1 = COPY %carry_out_ext(s32)
     %lhs:_(s32) = COPY $w0
     %rhs:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2

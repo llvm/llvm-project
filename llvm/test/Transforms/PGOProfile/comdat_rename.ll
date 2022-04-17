@@ -1,6 +1,4 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -pgo-instr-gen -do-comdat-renaming=true -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=pgo-instr-gen -do-comdat-renaming=true -S | FileCheck %s
-; RUN: opt < %s -mtriple=x86_64-pc-win32-coff -pgo-instr-gen -do-comdat-renaming=true -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-pc-win32-coff -passes=pgo-instr-gen -do-comdat-renaming=true -S | FileCheck %s
 
 ; Rename Comdat group and its function.

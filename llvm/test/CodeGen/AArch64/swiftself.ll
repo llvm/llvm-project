@@ -51,10 +51,10 @@ define void @swiftself_passthrough(i8* swiftself %addr0) {
 ; CHECK-LABEL: swiftself_tail:
 ; OPTAARCH64: b {{_?}}swiftself_param
 ; OPTAARCH64-NOT: ret
-; OPTARM64_32: bl {{_?}}swiftself_param
+; OPTARM64_32: b {{_?}}swiftself_param
 define i8* @swiftself_tail(i8* swiftself %addr0) {
   call void asm sideeffect "", "~{x20}"()
-  %res = tail call i8* @swiftself_param(i8* swiftself %addr0)
+  %res = musttail call i8* @swiftself_param(i8* swiftself %addr0)
   ret i8* %res
 }
 

@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1529,6 +1530,36 @@ static Instruction *foldSelectZeroOrOnes(ICmpInst *Cmp, Value *TVal,
   return nullptr;
 }
 
+static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI) {
+  const APInt *CmpC;
+  Value *V;
+  CmpInst::Predicate Pred;
+  if (!match(ICI, m_ICmp(Pred, m_Value(V), m_APInt(CmpC))))
+    return nullptr;
+
+  BinaryOperator *BO;
+  const APInt *C;
+  CmpInst::Predicate CPred;
+  if (match(&SI, m_Select(m_Specific(ICI), m_APInt(C), m_BinOp(BO))))
+    CPred = ICI->getPredicate();
+  else if (match(&SI, m_Select(m_Specific(ICI), m_BinOp(BO), m_APInt(C))))
+    CPred = ICI->getInversePredicate();
+  else
+    return nullptr;
+
+  const APInt *BinOpC;
+  if (!match(BO, m_BinOp(m_Specific(V), m_APInt(BinOpC))))
+    return nullptr;
+
+  ConstantRange R = ConstantRange::makeExactICmpRegion(CPred, *CmpC)
+                        .binaryOp(BO->getOpcode(), *BinOpC);
+  if (R == *C) {
+    BO->dropPoisonGeneratingFlags();
+    return BO;
+  }
+  return nullptr;
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
@@ -1537,6 +1568,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
 
   if (Instruction *NewSPF = canonicalizeSPF(SI, *ICI, *this))
     return NewSPF;
+
+  if (Value *V = foldSelectInstWithICmpConst(SI, ICI))
+    return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeClampLike(SI, *ICI, Builder))
     return replaceInstUsesWith(SI, V);
@@ -1566,6 +1600,23 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
       SI.setOperand(2, CmpRHS);
       Changed = true;
     }
+  }
+
+  // Canonicalize a signbit condition to use zero constant by swapping:
+  // (CmpLHS > -1) ? TV : FV --> (CmpLHS < 0) ? FV : TV
+  // To avoid conflicts (infinite loops) with other canonicalizations, this is
+  // not applied with any constant select arm.
+  if (Pred == ICmpInst::ICMP_SGT && match(CmpRHS, m_AllOnes()) &&
+      !match(TrueVal, m_Constant()) && !match(FalseVal, m_Constant()) &&
+      ICI->hasOneUse()) {
+    InstCombiner::BuilderTy::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(&SI);
+    Value *IsNeg = Builder.CreateICmpSLT(
+        CmpLHS, ConstantInt::getNullValue(CmpLHS->getType()), ICI->getName());
+    replaceOperand(SI, 0, IsNeg);
+    SI.swapValues();
+    SI.swapProfMetadata();
+    return &SI;
   }
 
   // FIXME: This code is nearly duplicated in InstSimplify. Using/refactoring

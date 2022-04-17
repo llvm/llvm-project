@@ -198,8 +198,10 @@ static bool load_standalone_binary(UUID uuid, addr_t value,
 
     if (!module_sp.get()) {
       // Force a a dsymForUUID lookup, if that tool is available.
-      if (!module_spec.GetSymbolFileSpec())
-        Symbols::DownloadObjectAndSymbolFile(module_spec, true);
+      if (!module_spec.GetSymbolFileSpec()) {
+        Status error;
+        Symbols::DownloadObjectAndSymbolFile(module_spec, error, true);
+      }
 
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);

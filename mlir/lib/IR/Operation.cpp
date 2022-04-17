@@ -525,8 +525,10 @@ InFlightDiagnostic Operation::emitOpError(const Twine &message) {
 
 /// Create a deep copy of this operation but keep the operation regions empty.
 /// Operands are remapped using `mapper` (if present), and `mapper` is updated
-/// to contain the results.
-Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
+/// to contain the results. The `mapResults` flag specifies whether the results
+/// of the cloned operation should be added to the map.
+Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper,
+                                          bool mapResults) {
   SmallVector<Value, 8> operands;
   SmallVector<Block *, 2> successors;
 
@@ -545,8 +547,10 @@ Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
                        successors, getNumRegions());
 
   // Remember the mapping of any results.
-  for (unsigned i = 0, e = getNumResults(); i != e; ++i)
-    mapper.map(getResult(i), newOp->getResult(i));
+  if (mapResults) {
+    for (unsigned i = 0, e = getNumResults(); i != e; ++i)
+      mapper.map(getResult(i), newOp->getResult(i));
+  }
 
   return newOp;
 }
@@ -562,11 +566,14 @@ Operation *Operation::cloneWithoutRegions() {
 /// sub-operations to the corresponding operation that is copied, and adds
 /// those mappings to the map.
 Operation *Operation::clone(BlockAndValueMapping &mapper) {
-  auto *newOp = cloneWithoutRegions(mapper);
+  auto *newOp = cloneWithoutRegions(mapper, /*mapResults=*/false);
 
   // Clone the regions.
   for (unsigned i = 0; i != numRegions; ++i)
     getRegion(i).cloneInto(&newOp->getRegion(i), mapper);
+
+  for (unsigned i = 0, e = getNumResults(); i != e; ++i)
+    mapper.map(getResult(i), newOp->getResult(i));
 
   return newOp;
 }

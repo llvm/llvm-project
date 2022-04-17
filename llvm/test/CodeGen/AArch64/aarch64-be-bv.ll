@@ -1030,3 +1030,15 @@ define dso_local void @modimm_t12_call() {
 
   ret void
 }
+
+define <2 x double> @test_v1f64(<1 x double> %0, <2 x double>* %1) {
+; CHECK-LABEL: test_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvni v1.2s, #31, msl #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    ret
+  %vec = shufflevector <1 x double> <double 0xFFE00000FFE00000>, <1 x double> %0, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %vec
+}

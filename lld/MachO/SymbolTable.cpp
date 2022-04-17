@@ -103,8 +103,9 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                       !isPrivateExtern;
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
-      isPrivateExtern, isThumb, isReferencedDynamically, noDeadStrip,
-      overridesWeakDef, isWeakDefCanBeHidden, interposable);
+      isPrivateExtern, /*includeInSymtab=*/true, isThumb,
+      isReferencedDynamically, noDeadStrip, overridesWeakDef,
+      isWeakDefCanBeHidden, interposable);
   return defined;
 }
 
@@ -233,9 +234,9 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
   assert(!isec || !isec->getFile()); // See makeSyntheticInputSection().
   Defined *s =
       addDefined(name, /*file=*/nullptr, isec, value, /*size=*/0,
-                 /*isWeakDef=*/false, isPrivateExtern,
-                 /*isThumb=*/false, referencedDynamically,
-                 /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
+                 /*isWeakDef=*/false, isPrivateExtern, /*isThumb=*/false,
+                 referencedDynamically, /*noDeadStrip=*/false,
+                 /*isWeakDefCanBeHidden=*/false);
   s->includeInSymtab = includeInSymtab;
   return s;
 }

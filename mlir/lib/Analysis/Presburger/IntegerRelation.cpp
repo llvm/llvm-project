@@ -39,7 +39,7 @@ std::unique_ptr<IntegerPolyhedron> IntegerPolyhedron::clone() const {
 }
 
 void IntegerRelation::append(const IntegerRelation &other) {
-  assert(isSpaceEqual(other) && "Spaces must be equal.");
+  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
 
   inequalities.reserveRows(inequalities.getNumRows() +
                            other.getNumInequalities());
@@ -61,12 +61,12 @@ IntegerRelation IntegerRelation::intersect(IntegerRelation other) const {
 }
 
 bool IntegerRelation::isEqual(const IntegerRelation &other) const {
-  assert(isSpaceEqual(other) && "Spaces must be equal.");
+  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
 bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
-  assert(isSpaceEqual(other) && "Spaces must be equal.");
+  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
   return PresburgerRelation(*this).isSubsetOf(PresburgerRelation(other));
 }
 
@@ -129,7 +129,13 @@ void removeConstraintsInvolvingIdRange(IntegerRelation &poly, unsigned begin,
 }
 
 IntegerRelation::CountsSnapshot IntegerRelation::getCounts() const {
-  return {PresburgerSpace(*this), getNumInequalities(), getNumEqualities()};
+  return {getSpace(), getNumInequalities(), getNumEqualities()};
+}
+
+void IntegerRelation::truncateIdKind(IdKind kind, unsigned num) {
+  unsigned curNum = getNumIdKind(kind);
+  assert(num <= curNum && "Can't truncate to more ids!");
+  removeIdRange(kind, num, curNum);
 }
 
 void IntegerRelation::truncateIdKind(IdKind kind,
@@ -164,7 +170,7 @@ SymbolicLexMin IntegerPolyhedron::findSymbolicIntegerLexMin() const {
 unsigned IntegerRelation::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 
-  unsigned insertPos = PresburgerSpace::insertId(kind, pos, num);
+  unsigned insertPos = space.insertId(kind, pos, num);
   inequalities.insertColumns(insertPos, num);
   equalities.insertColumns(insertPos, num);
   return insertPos;
@@ -208,7 +214,7 @@ void IntegerRelation::removeIdRange(IdKind kind, unsigned idStart,
   inequalities.removeColumns(offset + idStart, idLimit - idStart);
 
   // Remove eliminated identifiers from the space.
-  PresburgerSpace::removeIdRange(kind, idStart, idLimit);
+  space.removeIdRange(kind, idStart, idLimit);
 }
 
 void IntegerRelation::removeIdRange(unsigned idStart, unsigned idLimit) {
@@ -882,7 +888,7 @@ void IntegerRelation::gcdTightenInequalities() {
   unsigned numCols = getNumCols();
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
     // Normalize the constraint and tighten the constant term by the GCD.
-    uint64_t gcd = inequalities.normalizeRow(i, getNumCols() - 1);
+    int64_t gcd = inequalities.normalizeRow(i, getNumCols() - 1);
     if (gcd > 1)
       atIneq(i, numCols - 1) = mlir::floorDiv(atIneq(i, numCols - 1), gcd);
   }
@@ -949,7 +955,7 @@ void IntegerRelation::removeRedundantInequalities() {
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     // Change the inequality to its complement.
     tmpCst.inequalities.negateRow(r);
-    tmpCst.atIneq(r, tmpCst.getNumCols() - 1)--;
+    --tmpCst.atIneq(r, tmpCst.getNumCols() - 1);
     if (tmpCst.isEmpty()) {
       redun[r] = true;
       // Zero fill the redundant inequality.
@@ -957,7 +963,7 @@ void IntegerRelation::removeRedundantInequalities() {
       tmpCst.inequalities.fillRow(r, /*value=*/0);
     } else {
       // Reverse the change (to avoid recreating tmpCst each time).
-      tmpCst.atIneq(r, tmpCst.getNumCols() - 1)++;
+      ++tmpCst.atIneq(r, tmpCst.getNumCols() - 1);
       tmpCst.inequalities.negateRow(r);
     }
   }
@@ -1083,7 +1089,8 @@ void IntegerRelation::eliminateRedundantLocalId(unsigned posA, unsigned posB) {
 /// division representation for some local id cannot be obtained, and thus these
 /// local ids are not considered for detecting duplicates.
 void IntegerRelation::mergeLocalIds(IntegerRelation &other) {
-  assert(isSpaceCompatible(other) && "Spaces should be compatible.");
+  assert(space.isCompatible(other.getSpace()) &&
+         "Spaces should be compatible.");
 
   IntegerRelation &relA = *this;
   IntegerRelation &relB = other;
@@ -1913,7 +1920,7 @@ static void getCommonConstraints(const IntegerRelation &a,
 // lower bounds and the max of the upper bounds along each of the dimensions.
 LogicalResult
 IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
-  assert(isSpaceEqual(otherCst) && "Spaces should match.");
+  assert(space.isEqual(otherCst.getSpace()) && "Spaces should match.");
   assert(getNumLocalIds() == 0 && "local ids not supported yet here");
 
   // Get the constraints common to both systems; these will be added as is to
@@ -2077,7 +2084,7 @@ void IntegerRelation::removeIndependentConstraints(unsigned pos, unsigned num) {
 }
 
 void IntegerRelation::printSpace(raw_ostream &os) const {
-  PresburgerSpace::print(os);
+  space.print(os);
   os << getNumConstraints() << " constraints\n";
 }
 

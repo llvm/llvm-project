@@ -5554,6 +5554,10 @@ def warn_missing_sentinel : Warning <
   InGroup<Sentinel>;
 def note_sentinel_here : Note<
   "%select{function|method|block}0 has been explicitly marked sentinel here">;
+def warn_strict_uses_without_prototype : Warning<
+  "passing arguments to %select{a function|%1}0 without a prototype is "
+  "deprecated in all versions of C and is not supported in C2x">,
+  InGroup<DeprecatedNonPrototype>;
 def warn_missing_prototype : Warning<
   "no previous prototype for function %0">,
   InGroup<DiagGroup<"missing-prototypes">>, DefaultIgnore;
@@ -6582,6 +6586,15 @@ def warn_self_move : Warning<
   "explicitly moving variable of type %0 to itself">,
   InGroup<SelfMove>, DefaultIgnore;
 
+def err_builtin_move_forward_unsupported : Error<
+  "unsupported signature for %q0">;
+def err_use_of_unaddressable_function : Error<
+  "taking address of non-addressable standard library function">;
+// FIXME: This should also be in -Wc++23-compat once we have it.
+def warn_cxx20_compat_use_of_unaddressable_function : Warning<
+  "taking address of non-addressable standard library function "
+  "is incompatible with C++20">, InGroup<CXX20Compat>;
+
 def warn_redundant_move_on_return : Warning<
   "redundant move in return statement">,
   InGroup<RedundantMove>, DefaultIgnore;
@@ -6638,6 +6651,8 @@ def err_subscript_function_type : Error<
   "subscript of pointer to function type %0">;
 def err_subscript_incomplete_or_sizeless_type : Error<
   "subscript of pointer to %select{incomplete|sizeless}0 type %1">;
+def err_subscript_svbool_t : Error<
+  "subscript of svbool_t is not allowed">;
 def err_dereference_incomplete_type : Error<
   "dereference of pointer to incomplete type %0">;
 def ext_gnu_subscript_void_type : Extension<
@@ -7704,6 +7719,8 @@ let CategoryName = "Lambda Issue" in {
   def err_lambda_impcap : Error<
     "variable %0 cannot be implicitly captured in a lambda with no "
     "capture-default specified">;
+  def err_lambda_used_before_capture: Error<
+    "captured variable %0 cannot appear here">;
   def note_lambda_variable_capture_fixit : Note<
     "capture %0 by %select{value|reference}1">;
   def note_lambda_default_capture_fixit : Note<
@@ -11588,7 +11605,15 @@ def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numt
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
 
-// Layout randomization warning.
+def err_hlsl_pointers_unsupported : Error<
+  "%select{pointers|references}0 are unsupported in HLSL">;
+
+def err_hlsl_operator_unsupported : Error<
+  "the '%select{&|*|->}0' operator is unsupported in HLSL">;
+
+// Layout randomization diagnostics.
+def err_non_designated_init_used : Error<
+  "a randomized struct can only be initialized with a designated initializer">;
 def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 } // end of sema component.

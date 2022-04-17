@@ -121,7 +121,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "nearest") {
     if (const auto *sExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
-      return std::visit(
+      return common::visit(
           [&](const auto &sVal) {
             using TS = ResultType<decltype(sVal)>;
             return FoldElementalIntrinsic<T, T, TS>(context, std::move(funcRef),
@@ -158,7 +158,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "scale") {
     if (const auto *byExpr{UnwrapExpr<Expr<SomeInteger>>(args[1])}) {
-      return std::visit(
+      return common::visit(
           [&](const auto &byVal) {
             using TBY = ResultType<decltype(byVal)>;
             return FoldElementalIntrinsic<T, T, TBY>(context,
@@ -194,7 +194,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return Expr<T>{Scalar<T>::TINY()};
   } else if (name == "__builtin_ieee_next_after") {
     if (const auto *yExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
-      return std::visit(
+      return common::visit(
           [&](const auto &yVal) {
             using TY = ResultType<decltype(yVal)>;
             return FoldElementalIntrinsic<T, T, TY>(context, std::move(funcRef),

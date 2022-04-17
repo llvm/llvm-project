@@ -7,15 +7,15 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: narrow_scalar_saddo_s128
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
-    ; CHECK: %17:_(s64), %carry_out:_(s1) = G_SADDE [[COPY1]], [[COPY3]], [[UADDO1]]
-    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
-    ; CHECK: $x0 = COPY [[UADDO]](s64)
-    ; CHECK: $x1 = COPY %17(s64)
-    ; CHECK: $x2 = COPY %carry_out_ext(s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: %17:_(s64), %carry_out:_(s1) = G_SADDE [[COPY1]], [[COPY3]], [[UADDO1]]
+    ; CHECK-NEXT: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
+    ; CHECK-NEXT: $x1 = COPY %17(s64)
+    ; CHECK-NEXT: $x2 = COPY %carry_out_ext(s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -36,17 +36,17 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: narrow_scalar_saddo_big_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY1]]
-    ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY2]], [[UADDO1]]
-    ; CHECK: %22:_(s64), %carry_out:_(s1) = G_SADDE [[COPY2]], [[COPY3]], [[UADDE1]]
-    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
-    ; CHECK: $x0 = COPY [[UADDO]](s64)
-    ; CHECK: $x1 = COPY [[UADDE]](s64)
-    ; CHECK: $x2 = COPY %22(s64)
-    ; CHECK: $x3 = COPY %carry_out_ext(s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY2]], [[UADDO1]]
+    ; CHECK-NEXT: %22:_(s64), %carry_out:_(s1) = G_SADDE [[COPY2]], [[COPY3]], [[UADDE1]]
+    ; CHECK-NEXT: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[UADDE]](s64)
+    ; CHECK-NEXT: $x2 = COPY %22(s64)
+    ; CHECK-NEXT: $x3 = COPY %carry_out_ext(s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -68,18 +68,18 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_saddo_small
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC]], 8
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC1]], 8
-    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT_INREG]], [[SEXT_INREG1]]
-    ; CHECK: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ADD]], 8
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[ADD]](s32), [[SEXT_INREG2]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s32)
-    ; CHECK: $x0 = COPY [[ANYEXT]](s64)
-    ; CHECK: $x1 = COPY [[ANYEXT1]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC]], 8
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC1]], 8
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT_INREG]], [[SEXT_INREG1]]
+    ; CHECK-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ADD]], 8
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[ADD]](s32), [[SEXT_INREG2]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[ANYEXT1]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s8) = G_TRUNC %0(s64)
@@ -97,11 +97,11 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_saddo_32
     ; CHECK: %lhs:_(s32) = COPY $w0
-    ; CHECK: %rhs:_(s32) = COPY $w1
-    ; CHECK: %add:_(s32), %carry_out:_(s1) = G_SADDO %lhs, %rhs
-    ; CHECK: %carry_out_ext:_(s32) = G_ANYEXT %carry_out(s1)
-    ; CHECK: $w0 = COPY %add(s32)
-    ; CHECK: $w1 = COPY %carry_out_ext(s32)
+    ; CHECK-NEXT: %rhs:_(s32) = COPY $w1
+    ; CHECK-NEXT: %add:_(s32), %carry_out:_(s1) = G_SADDO %lhs, %rhs
+    ; CHECK-NEXT: %carry_out_ext:_(s32) = G_ANYEXT %carry_out(s1)
+    ; CHECK-NEXT: $w0 = COPY %add(s32)
+    ; CHECK-NEXT: $w1 = COPY %carry_out_ext(s32)
     %lhs:_(s32) = COPY $w0
     %rhs:_(s32) = COPY $w1
     %add:_(s32), %carry_out:_(s1) = G_SADDO %lhs, %rhs

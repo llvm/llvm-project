@@ -567,6 +567,26 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = KnownBits::ashr(KnownBits::shl(Known, ShiftKnown), ShiftKnown);
     break;
   }
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_UADDE:
+  case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_SADDE:
+  case TargetOpcode::G_USUBO:
+  case TargetOpcode::G_USUBE:
+  case TargetOpcode::G_SSUBO:
+  case TargetOpcode::G_SSUBE:
+  case TargetOpcode::G_UMULO:
+  case TargetOpcode::G_SMULO: {
+    if (MI.getOperand(1).getReg() == R) {
+      // If we know the result of a compare has the top bits zero, use this
+      // info.
+      if (TL.getBooleanContents(DstTy.isVector(), false) ==
+              TargetLowering::ZeroOrOneBooleanContent &&
+          BitWidth > 1)
+        Known.Zero.setBitsFrom(1);
+    }
+    break;
+  }
   }
 
   assert(!Known.hasConflict() && "Bits known to be one AND zero?");
@@ -672,6 +692,27 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     return computeNumSignBitsMin(MI.getOperand(2).getReg(),
                                  MI.getOperand(3).getReg(), DemandedElts,
                                  Depth + 1);
+  }
+  case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_SADDE:
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_UADDE:
+  case TargetOpcode::G_SSUBO:
+  case TargetOpcode::G_SSUBE:
+  case TargetOpcode::G_USUBO:
+  case TargetOpcode::G_USUBE:
+  case TargetOpcode::G_SMULO:
+  case TargetOpcode::G_UMULO: {
+    // If compares returns 0/-1, all bits are sign bits.
+    // We know that we have an integer-based boolean since these operations
+    // are only available for integer.
+    if (MI.getOperand(1).getReg() == R) {
+      if (TL.getBooleanContents(DstTy.isVector(), false) ==
+          TargetLowering::ZeroOrNegativeOneBooleanContent)
+        return TyBits;
+    }
+
+    break;
   }
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:

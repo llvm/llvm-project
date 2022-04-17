@@ -410,11 +410,6 @@ bool ExternalFileUnit::SetVariableFormattedRecordLength() {
   return false;
 }
 
-void ExternalFileUnit::SetLeftTabLimit() {
-  leftTabLimit = furthestPositionInRecord;
-  positionInRecord = furthestPositionInRecord;
-}
-
 bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input);
   if (!beganReadingRecord_) {
@@ -532,6 +527,11 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
       } else {
         // Unformatted stream: nothing to do
       }
+    } else if (handler.GetIoStat() != IostatOk &&
+        furthestPositionInRecord == 0) {
+      // Error in formatted variable length record, and no output yet; do
+      // nothing, like most other Fortran compilers do.
+      return true;
     } else {
       // Terminate formatted variable length record
       const char *lineEnding{"\n"};
@@ -839,7 +839,7 @@ void ExternalFileUnit::DoImpliedEndfile(IoErrorHandler &handler) {
 }
 
 void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
-  if (access == Access::Sequential) {
+  if (IsRecordFile()) {
     endfileRecordNumber = currentRecordNumber;
   }
   FlushOutput(handler);

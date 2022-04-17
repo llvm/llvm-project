@@ -80,3 +80,21 @@ define void @caller_overlap(ptr %p) {
   call i32 @callee_overlap(ptr %p)
   ret void
 }
+
+; Don't promote calls with function type mismatch.
+define void @caller_type_mismatch() {
+; CHECK-LABEL: define {{[^@]+}}@caller_type_mismatch() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_type_mismatch(ptr null)
+; CHECK-NEXT:    ret void
+;
+  call i32 @callee_type_mismatch(ptr null)
+  ret void
+}
+
+define internal void @callee_type_mismatch(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@callee_type_mismatch
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}

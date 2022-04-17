@@ -80,8 +80,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `Updates to front_insert_iterator <https://llvm.org/D103273>`_
 | `Updates to move_iterator <https://llvm.org/D117656>`_","| [iterator.concepts]
 | [iterator.cust.swap]
-| [iterator.cust.move]",Various,In progress
-`[move.sentinel] <https://wg21.link/move.sentinel>`_,`move_sentinel <https://llvm.org/D117656>`_,[predef.iterators],Arthur O'Dwyer,In progress
+| [iterator.cust.move]",Various,✅
+`[move.sentinel] <https://wg21.link/move.sentinel>`_,`move_sentinel <https://llvm.org/D117656>`_,[predef.iterators],Arthur O'Dwyer,✅
 `[common.iterator] <https://wg21.link/common.iterator>`_,`common_iterator <https://llvm.org/D103335>`_,"| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]",Zoe Carver,✅
@@ -151,11 +151,11 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.iota] <https://wg21.link/range.iota>`_,`iota_view <https://llvm.org/D107396>`_,[range.all],Zoe Carver,✅
 `[range.all] <https://wg21.link/range.all>`_,`view::all <https://llvm.org/D102028>`_,"[range.subrange], [range.view.ref]",Zoe Carver,✅
 `[range.ref.view] <https://wg21.link/range.ref.view>`_,`ref_view <https://llvm.org/D102020>`_,[view.interface],Zoe Carver,✅
-`[range.filter] <https://wg21.link/range.filter>`_,`filter_view <https://llvm.org/D109086>`_,[range.all],Louis Dionne,Under review
+`[range.filter] <https://wg21.link/range.filter>`_,`filter_view <https://llvm.org/D109086>`_,[range.all],Louis Dionne,✅
 `[range.transform] <https://wg21.link/range.transform>`_,`transform_view <https://llvm.org/D103056>`_,[range.all],Zoe Carver,✅
 `[range.take] <https://wg21.link/range.take>`_,`take_view <https://llvm.org/D106507>`_,[range.all],Zoe Carver,✅
 `[range.join] <https://wg21.link/range.join>`_,`join_view <https://llvm.org/D107671>`_,[range.all],Zoe Carver,✅
-`[range.split] <https://wg21.link/range.split>`_,`split_view (renamed to lazy_split_view by P2210) <https://llvm.org/D107500>`_,[range.all],Zoe Carver,In progress
+`[range.split] <https://wg21.link/range.split>`_,`split_view (renamed to lazy_split_view by P2210) <https://llvm.org/D107500>`_,[range.all],Zoe Carver and Konstantin Varlamov,✅
 `[range.counted] <https://wg21.link/range.counted>`_,`view::counted <https://llvm.org/D106923>`_,[range.subrange],Zoe Carver,✅
 `[range.common] <https://wg21.link/range.common>`_,`common_view <https://llvm.org/D105753>`_,[range.all],Zoe Carver,✅
 `[range.reverse] <https://wg21.link/range.reverse>`_,`reverse_view <https://llvm.org/D107096>`_,[range.all],Zoe Carver,✅

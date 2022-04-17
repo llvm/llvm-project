@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace presburger;
 
 PresburgerRelation::PresburgerRelation(const IntegerRelation &disjunct)
-    : PresburgerSpace(disjunct.getSpaceWithoutLocals()) {
+    : space(disjunct.getSpaceWithoutLocals()) {
   unionInPlace(disjunct);
 }
 
@@ -37,7 +37,7 @@ const IntegerRelation &PresburgerRelation::getDisjunct(unsigned index) const {
 /// Mutate this set, turning it into the union of this set and the given
 /// IntegerRelation.
 void PresburgerRelation::unionInPlace(const IntegerRelation &disjunct) {
-  assert(isSpaceCompatible(disjunct) && "Spaces should match");
+  assert(space.isCompatible(disjunct.getSpace()) && "Spaces should match");
   disjuncts.push_back(disjunct);
 }
 
@@ -46,7 +46,7 @@ void PresburgerRelation::unionInPlace(const IntegerRelation &disjunct) {
 /// This is accomplished by simply adding all the disjuncts of the given set
 /// to this set.
 void PresburgerRelation::unionInPlace(const PresburgerRelation &set) {
-  assert(isSpaceCompatible(set) && "Spaces should match");
+  assert(space.isCompatible(set.getSpace()) && "Spaces should match");
   for (const IntegerRelation &disjunct : set.disjuncts)
     unionInPlace(disjunct);
 }
@@ -54,7 +54,7 @@ void PresburgerRelation::unionInPlace(const PresburgerRelation &set) {
 /// Return the union of this set and the given set.
 PresburgerRelation
 PresburgerRelation::unionSet(const PresburgerRelation &set) const {
-  assert(isSpaceCompatible(set) && "Spaces should match");
+  assert(space.isCompatible(set.getSpace()) && "Spaces should match");
   PresburgerRelation result = *this;
   result.unionInPlace(set);
   return result;
@@ -87,7 +87,7 @@ PresburgerRelation PresburgerRelation::getEmpty(const PresburgerSpace &space) {
 // variables of both.
 PresburgerRelation
 PresburgerRelation::intersect(const PresburgerRelation &set) const {
-  assert(isSpaceCompatible(set) && "Spaces should match");
+  assert(space.isCompatible(set.getSpace()) && "Spaces should match");
 
   PresburgerRelation result(getSpace());
   for (const IntegerRelation &csA : disjuncts) {
@@ -163,7 +163,7 @@ static SmallVector<int64_t, 8> getIneqCoeffsFromIdx(const IntegerRelation &rel,
 ///
 static PresburgerRelation getSetDifference(IntegerRelation b,
                                            const PresburgerRelation &s) {
-  assert(b.isSpaceCompatible(s) && "Spaces should match");
+  assert(b.getSpace().isCompatible(s.getSpace()) && "Spaces should match");
   if (b.isEmptyByGCDTest())
     return PresburgerRelation::getEmpty(b.getSpaceWithoutLocals());
 
@@ -196,9 +196,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
   SmallVector<Frame, 2> frames;
 
   // When we "recurse", we ensure the current frame is stored in `frames` and
-  // increment `level`. When we "tail recurse", we just increment `level`,
-  // without storing any frame. Accordingly, when we return, we return to the
-  // last level that has a frame associated with it.
+  // increment `level`. When we return, we decrement `level`.
   unsigned level = 1;
   while (level > 0) {
     if (level - 1 >= s.getNumDisjuncts()) {
@@ -266,10 +264,17 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       if (simplex.isEmpty()) {
         // b /\ s_i is empty, so b \ s_i = b. We move directly to i + 1.
         // We are ignoring level i completely, so we restore the state
-        // *before* going to the next level. We are "tail recursing", so
-        // we don't add a frame before going to the next level.
+        // *before* going to the next level.
         b.truncate(initBCounts);
         simplex.rollback(initialSnapshot);
+        // Recurse. We haven't processed any inequalities and
+        // we don't need to process anything when we return.
+        //
+        // TODO: consider supporting tail recursion directly if this becomes
+        // relevant for performance.
+        frames.push_back(Frame{initialSnapshot, initBCounts, sI,
+                               /*ineqsToProcess=*/{},
+                               /*lastIneqProcessed=*/{}});
         ++level;
         continue;
       }
@@ -359,7 +364,7 @@ PresburgerRelation PresburgerRelation::complement() const {
 /// return `this \ set`.
 PresburgerRelation
 PresburgerRelation::subtract(const PresburgerRelation &set) const {
-  assert(isSpaceCompatible(set) && "Spaces should match");
+  assert(space.isCompatible(set.getSpace()) && "Spaces should match");
   PresburgerRelation result(getSpace());
   // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
   for (const IntegerRelation &disjunct : disjuncts)
@@ -376,7 +381,7 @@ bool PresburgerRelation::isSubsetOf(const PresburgerRelation &set) const {
 
 /// Two sets are equal iff they are subsets of each other.
 bool PresburgerRelation::isEqual(const PresburgerRelation &set) const {
-  assert(isSpaceCompatible(set) && "Spaces should match");
+  assert(space.isCompatible(set.getSpace()) && "Spaces should match");
   return this->isSubsetOf(set) && set.isSubsetOf(*this);
 }
 

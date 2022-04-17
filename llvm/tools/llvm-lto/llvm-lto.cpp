@@ -257,11 +257,6 @@ static cl::opt<bool> PrintMachOCPUOnly(
     cl::cat(LTOCategory));
 
 static cl::opt<bool>
-    UseNewPM("use-new-pm",
-             cl::desc("Run LTO passes using the new pass manager"),
-             cl::init(true), cl::Hidden, cl::cat(LTOCategory));
-
-static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
                      cl::desc("Print pass management debugging information"),
                      cl::cat(LTOCategory));
@@ -605,7 +600,6 @@ public:
     ThinGenerator.setCacheMaxSizeFiles(ThinLTOCacheMaxSizeFiles);
     ThinGenerator.setCacheMaxSizeBytes(ThinLTOCacheMaxSizeBytes);
     ThinGenerator.setFreestanding(EnableFreestanding);
-    ThinGenerator.setUseNewPM(UseNewPM);
     ThinGenerator.setDebugPassManager(DebugPassManager);
 
     // Add all the exported symbols to the table of symbols to preserve.
@@ -1016,6 +1010,7 @@ int main(int argc, char **argv) {
 
   CodeGen.setCodePICModel(codegen::getExplicitRelocModel());
   CodeGen.setFreestanding(EnableFreestanding);
+  CodeGen.setDebugPassManager(DebugPassManager);
 
   CodeGen.setDebugInfo(LTO_DEBUG_MODEL_DWARF);
   CodeGen.setTargetOptions(Options);
@@ -1069,8 +1064,6 @@ int main(int argc, char **argv) {
 
   CodeGen.setOptLevel(OptLevel - '0');
   CodeGen.setAttrs(codegen::getMAttrs());
-
-  CodeGen.setUseNewPM(UseNewPM);
 
   if (auto FT = codegen::getExplicitFileType())
     CodeGen.setFileType(FT.getValue());

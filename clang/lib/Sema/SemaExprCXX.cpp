@@ -1130,7 +1130,7 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
 
     if (C.isCopyCapture()) {
       ClassType.removeLocalCVRQualifiers(Qualifiers::CVRMask);
-      if (CurLSI->CallOperator->isConst())
+      if (!CurLSI->Mutable)
         ClassType.addConst();
       return ASTCtx.getPointerType(ClassType);
     }
@@ -4236,6 +4236,14 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       return ExprError();
 
     From = FixOverloadedFunctionReference(From, Found, Fn);
+
+    // We might get back another placeholder expression if we resolved to a
+    // builtin.
+    ExprResult Checked = CheckPlaceholderExpr(From);
+    if (Checked.isInvalid())
+      return ExprError();
+
+    From = Checked.get();
     FromType = From->getType();
   }
 

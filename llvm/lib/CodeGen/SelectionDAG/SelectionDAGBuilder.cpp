@@ -4403,9 +4403,14 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
   Base = SDB->getValue(BasePtr);
   Index = SDB->getValue(IndexVal);
   IndexType = ISD::SIGNED_SCALED;
-  Scale = DAG.getTargetConstant(
-              DL.getTypeAllocSize(GEP->getResultElementType()),
-              SDB->getCurSDLoc(), TLI.getPointerTy(DL));
+
+  // MGATHER/MSCATTER only support scaling by a power-of-two.
+  uint64_t ScaleVal = DL.getTypeAllocSize(GEP->getResultElementType());
+  if (!isPowerOf2_64(ScaleVal))
+    return false;
+
+  Scale =
+      DAG.getTargetConstant(ScaleVal, SDB->getCurSDLoc(), TLI.getPointerTy(DL));
   return true;
 }
 
@@ -8509,8 +8514,9 @@ getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
   SmallVector<unsigned, 4> Regs;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
-  // No work to do for memory operations.
-  if (OpInfo.ConstraintType == TargetLowering::C_Memory)
+  // No work to do for memory/address operands.
+  if (OpInfo.ConstraintType == TargetLowering::C_Memory ||
+      OpInfo.ConstraintType == TargetLowering::C_Address)
     return None;
 
   // If this is a constraint for a single physreg, or a constraint for a
@@ -8768,8 +8774,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     // Compute the constraint code and ConstraintType to use.
     TLI.ComputeConstraintToUse(OpInfo, OpInfo.CallOperand, &DAG);
 
-    if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
-        OpInfo.Type == InlineAsm::isClobber)
+    if ((OpInfo.ConstraintType == TargetLowering::C_Memory &&
+         OpInfo.Type == InlineAsm::isClobber) ||
+        OpInfo.ConstraintType == TargetLowering::C_Address)
       continue;
 
     // If this is a memory input, and if the operand is not indirect, do what we
@@ -8844,6 +8851,10 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
       }
       return false;
     };
+    assert((OpInfo.ConstraintType != TargetLowering::C_Address ||
+            (OpInfo.Type == InlineAsm::isInput &&
+             !OpInfo.isMatchingInputConstraint())) &&
+           "Only address as input operand is allowed.");
 
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
@@ -8976,8 +8987,11 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         break;
       }
 
-      if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
-        assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
+      if (OpInfo.ConstraintType == TargetLowering::C_Memory ||
+          OpInfo.ConstraintType == TargetLowering::C_Address) {
+        assert((OpInfo.isIndirect ||
+                OpInfo.ConstraintType != TargetLowering::C_Memory) &&
+               "Operand must be indirect to be a mem!");
         assert(InOperandVal.getValueType() ==
                    TLI.getPointerTy(DAG.getDataLayout()) &&
                "Memory operands expect pointer values");
@@ -9115,6 +9129,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         break;
       case TargetLowering::C_Memory:
         break; // Already handled.
+      case TargetLowering::C_Address:
+        break; // Silence warning.
       case TargetLowering::C_Unknown:
         assert(false && "Unexpected unknown constraint");
       }
@@ -10655,6 +10671,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 /// the end.
 void
 SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Instruction *TI = LLVMBB->getTerminator();
 
   SmallPtrSet<MachineBasicBlock *, 4> SuccsHandled;
@@ -10692,10 +10709,12 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
         unsigned &RegOut = ConstantsOut[C];
         if (RegOut == 0) {
           RegOut = FuncInfo.CreateRegs(C);
-          // We need to zero extend ConstantInt phi operands to match
+          // We need to zero/sign extend ConstantInt phi operands to match
           // assumptions in FunctionLoweringInfo::ComputePHILiveOutRegInfo.
-          ISD::NodeType ExtendType =
-              isa<ConstantInt>(PHIOp) ? ISD::ZERO_EXTEND : ISD::ANY_EXTEND;
+          ISD::NodeType ExtendType = ISD::ANY_EXTEND;
+          if (auto *CI = dyn_cast<ConstantInt>(C))
+            ExtendType = TLI.signExtendConstant(CI) ? ISD::SIGN_EXTEND
+                                                    : ISD::ZERO_EXTEND;
           CopyValueToVirtualRegister(C, RegOut, ExtendType);
         }
         Reg = RegOut;
@@ -10716,7 +10735,6 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       // Remember that this register needs to added to the machine PHI node as
       // the input for this MBB.
       SmallVector<EVT, 4> ValueVTs;
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       ComputeValueVTs(TLI, DAG.getDataLayout(), PN.getType(), ValueVTs);
       for (unsigned vti = 0, vte = ValueVTs.size(); vti != vte; ++vti) {
         EVT VT = ValueVTs[vti];

@@ -25,8 +25,12 @@ namespace jitlink {
 /// edges.
 class EHFrameEdgeFixer {
 public:
+  /// Create an eh-frame edge fixer.
+  /// If a given edge-kind is not supported on the target architecture then
+  /// Edge::Invalid should be used.
   EHFrameEdgeFixer(StringRef EHFrameSectionName, unsigned PointerSize,
-                   Edge::Kind Delta64, Edge::Kind Delta32,
+                   Edge::Kind Pointer32, Edge::Kind Pointer64,
+                   Edge::Kind Delta32, Edge::Kind Delta64,
                    Edge::Kind NegDelta32);
   Error operator()(LinkGraph &G);
 
@@ -42,9 +46,10 @@ private:
     CIEInformation() = default;
     CIEInformation(Symbol &CIESymbol) : CIESymbol(&CIESymbol) {}
     Symbol *CIESymbol = nullptr;
-    bool FDEsHaveLSDAField = false;
-    uint8_t FDEPointerEncoding = 0;
-    uint8_t LSDAPointerEncoding = 0;
+    bool AugmentationDataPresent = false;
+    bool LSDAPresent = false;
+    uint8_t LSDAEncoding = 0;
+    uint8_t AddressEncoding = 0;
   };
 
   struct EdgeTarget {
@@ -77,28 +82,33 @@ private:
 
   Error processBlock(ParseContext &PC, Block &B);
   Error processCIE(ParseContext &PC, Block &B, size_t RecordOffset,
-                   size_t RecordLength, size_t CIEDeltaFieldOffset);
+                   size_t RecordLength, size_t CIEDeltaFieldOffset,
+                   const BlockEdgeMap &BlockEdges);
   Error processFDE(ParseContext &PC, Block &B, size_t RecordOffset,
                    size_t RecordLength, size_t CIEDeltaFieldOffset,
-                   uint32_t CIEDelta, BlockEdgeMap &BlockEdges);
+                   uint32_t CIEDelta, const BlockEdgeMap &BlockEdges);
 
   Expected<AugmentationInfo>
   parseAugmentationString(BinaryStreamReader &RecordReader);
 
-  static bool isSupportedPointerEncoding(uint8_t PointerEncoding);
-  unsigned getPointerEncodingDataSize(uint8_t PointerEncoding);
-  Expected<std::pair<orc::ExecutorAddr, Edge::Kind>>
-  readEncodedPointer(uint8_t PointerEncoding,
-                     orc::ExecutorAddr PointerFieldAddress,
-                     BinaryStreamReader &RecordReader);
+  Expected<uint8_t> readPointerEncoding(BinaryStreamReader &RecordReader,
+                                        Block &InBlock, const char *FieldName);
+  Error skipEncodedPointer(uint8_t PointerEncoding,
+                           BinaryStreamReader &RecordReader);
+  Expected<Symbol *> getOrCreateEncodedPointerEdge(
+      ParseContext &PC, const BlockEdgeMap &BlockEdges, uint8_t PointerEncoding,
+      BinaryStreamReader &RecordReader, Block &BlockToFix,
+      size_t PointerFieldOffset, const char *FieldName);
 
   Expected<Symbol &> getOrCreateSymbol(ParseContext &PC,
                                        orc::ExecutorAddr Addr);
 
   StringRef EHFrameSectionName;
   unsigned PointerSize;
-  Edge::Kind Delta64;
+  Edge::Kind Pointer32;
+  Edge::Kind Pointer64;
   Edge::Kind Delta32;
+  Edge::Kind Delta64;
   Edge::Kind NegDelta32;
 };
 

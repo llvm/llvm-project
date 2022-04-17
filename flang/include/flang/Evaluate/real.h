@@ -196,6 +196,10 @@ public:
                 .IBSET(significandBits - 2)};
   }
 
+  static constexpr Real PositiveZero() { return Real{}; }
+
+  static constexpr Real NegativeZero() { return {Word{}.MASKL(1)}; }
+
   static constexpr Real Infinity(bool negative) {
     Word infinity{maxExponent};
     infinity = infinity.SHIFTL(significandBits);

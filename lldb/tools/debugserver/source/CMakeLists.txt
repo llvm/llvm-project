@@ -106,8 +106,6 @@ if (BUILDING_FOR_ARM64_OSX AND LLDB_ENABLE_ARM64E_DEBUGSERVER)
   set(CMAKE_OSX_ARCHITECTURES "arm64;arm64e")
 endif ()
 
-check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSION)
-
 find_library(SECURITY_LIBRARY Security)
 
 add_subdirectory(MacOSX)
@@ -125,6 +123,7 @@ set_property(GLOBAL PROPERTY
   LLDB_DEBUGSERVER_CODESIGN_IDENTITY ${debugserver_codesign_identity})
 
 if(APPLE)
+  set(LIBCOMPRESSION compression)
   if(APPLE_EMBEDDED)
     find_library(BACKBOARD_LIBRARY BackBoardServices
       PATHS ${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks)
@@ -144,10 +143,6 @@ if(APPLE)
       set(SKIP_TEST_DEBUGSERVER ON CACHE BOOL "" FORCE)
     endif()
   endif()
-endif()
-
-if(HAVE_LIBCOMPRESSION)
-  set(LIBCOMPRESSION compression)
 endif()
 
 if(LLDB_USE_ENTITLEMENTS)
@@ -258,10 +253,6 @@ target_link_libraries(lldbDebugserverCommon
                       ${SECURITY_LIBRARY}
                       ${LIBCOMPRESSION}
                       ${ENERGY_LIBRARY})
-if(HAVE_LIBCOMPRESSION)
-  set_property(TARGET lldbDebugserverCommon APPEND PROPERTY
-                COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
-endif()
 add_lldb_tool(debugserver ADD_TO_FRAMEWORK
   debugserver.cpp
   LINK_LIBS lldbDebugserverCommon
@@ -325,10 +316,6 @@ if(APPLE_EMBEDDED)
                       lldbDebugserverArchSupport
                       ${SECURITY_LIBRARY}
                       ${LIBCOMPRESSION})
-  if(HAVE_LIBCOMPRESSION)
-    set_property(TARGET lldbDebugserverCommon_NonUI APPEND PROPERTY
-                  COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
-  endif()
 
   add_lldb_tool(debugserver-nonui
     debugserver.cpp

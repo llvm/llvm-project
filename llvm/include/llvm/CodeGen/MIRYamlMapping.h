@@ -694,6 +694,13 @@ struct MachineFunction {
   // Register information
   bool TracksRegLiveness = false;
   bool HasWinCFI = false;
+
+  bool CallsEHReturn = false;
+  bool CallsUnwindInit = false;
+  bool HasEHCatchret = false;
+  bool HasEHScopes = false;
+  bool HasEHFunclets = false;
+
   bool FailsVerification = false;
   bool TracksDebugUserValues = false;
   std::vector<VirtualRegisterDefinition> VirtualRegisters;
@@ -724,6 +731,13 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("failedISel", MF.FailedISel, false);
     YamlIO.mapOptional("tracksRegLiveness", MF.TracksRegLiveness, false);
     YamlIO.mapOptional("hasWinCFI", MF.HasWinCFI, false);
+
+    YamlIO.mapOptional("callsEHReturn", MF.CallsEHReturn, false);
+    YamlIO.mapOptional("callsUnwindInit", MF.CallsUnwindInit, false);
+    YamlIO.mapOptional("hasEHCatchret", MF.HasEHCatchret, false);
+    YamlIO.mapOptional("hasEHScopes", MF.HasEHScopes, false);
+    YamlIO.mapOptional("hasEHFunclets", MF.HasEHFunclets, false);
+
     YamlIO.mapOptional("failsVerification", MF.FailsVerification, false);
     YamlIO.mapOptional("tracksDebugUserValues", MF.TracksDebugUserValues,
                        false);

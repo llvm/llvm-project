@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | mlir-opt | FileCheck %s
 
 func @omp_barrier() -> () {
   // CHECK: omp.barrier
@@ -896,3 +896,119 @@ func @omp_single_allocate_nowait(%data_var: memref<i32>) {
   }
   return
 }
+
+// CHECK-LABEL: @omp_task
+// CHECK-SAME: (%[[bool_var:.*]]: i1, %[[i64_var:.*]]: i64, %[[i32_var:.*]]: i32, %[[data_var:.*]]: memref<i32>)
+func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memref<i32>) {
+
+  // Checking simple task
+  // CHECK: omp.task {
+  omp.task {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Checking `if` clause
+  // CHECK: omp.task if(%[[bool_var]]) {
+  omp.task if(%bool_var) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Checking `final` clause
+  // CHECK: omp.task final(%[[bool_var]]) {
+  omp.task final(%bool_var) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Checking `untied` clause
+  // CHECK: omp.task untied {
+  omp.task untied {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Checking `in_reduction` clause
+  %c1 = arith.constant 1 : i32
+  // CHECK: %[[redn_var1:.*]] = llvm.alloca %{{.*}} x f32 : (i32) -> !llvm.ptr<f32>
+  %0 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr<f32>
+  // CHECK: %[[redn_var2:.*]] = llvm.alloca %{{.*}} x f32 : (i32) -> !llvm.ptr<f32>
+  %1 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr<f32>
+  // CHECK: omp.task in_reduction(@add_f32 -> %[[redn_var1]] : !llvm.ptr<f32>, @add_f32 -> %[[redn_var2]] : !llvm.ptr<f32>) {
+  omp.task in_reduction(@add_f32 -> %0 : !llvm.ptr<f32>, @add_f32 -> %1 : !llvm.ptr<f32>) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Checking priority clause
+  // CHECK: omp.task priority(%[[i32_var]]) {
+  omp.task priority(%i32_var) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Checking allocate clause
+  // CHECK: omp.task allocate(%[[data_var]] : memref<i32> -> %[[data_var]] : memref<i32>) {
+  omp.task allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Checking multiple clauses
+  // CHECK: omp.task if(%[[bool_var]]) final(%[[bool_var]]) untied
+  omp.task if(%bool_var) final(%bool_var) untied
+      // CHECK-SAME: in_reduction(@add_f32 -> %[[redn_var1]] : !llvm.ptr<f32>, @add_f32 -> %[[redn_var2]] : !llvm.ptr<f32>)
+      in_reduction(@add_f32 -> %0 : !llvm.ptr<f32>, @add_f32 -> %1 : !llvm.ptr<f32>)
+      // CHECK-SAME: priority(%[[i32_var]])
+      priority(%i32_var)
+      // CHECK-SAME: allocate(%[[data_var]] : memref<i32> -> %[[data_var]] : memref<i32>)
+      allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  return
+}
+
+// -----
+
+func @omp_threadprivate() {
+  %0 = arith.constant 1 : i32
+  %1 = arith.constant 2 : i32
+  %2 = arith.constant 3 : i32
+
+  // CHECK: [[ARG0:%.*]] = llvm.mlir.addressof @_QFsubEx : !llvm.ptr<i32>
+  // CHECK: {{.*}} = omp.threadprivate [[ARG0]] : !llvm.ptr<i32> -> !llvm.ptr<i32>
+  %3 = llvm.mlir.addressof @_QFsubEx : !llvm.ptr<i32>
+  %4 = omp.threadprivate %3 : !llvm.ptr<i32> -> !llvm.ptr<i32>
+  llvm.store %0, %4 : !llvm.ptr<i32>
+
+  // CHECK:  omp.parallel
+  // CHECK:    {{.*}} = omp.threadprivate [[ARG0]] : !llvm.ptr<i32> -> !llvm.ptr<i32>
+  omp.parallel  {
+    %5 = omp.threadprivate %3 : !llvm.ptr<i32> -> !llvm.ptr<i32>
+    llvm.store %1, %5 : !llvm.ptr<i32>
+    omp.terminator
+  }
+  llvm.store %2, %4 : !llvm.ptr<i32>
+  return
+}
+
+llvm.mlir.global internal @_QFsubEx() : i32

@@ -2,7 +2,6 @@
 /// Perform several driver tests for OpenMP offloading
 ///
 
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: powerpc-registered-target
 // REQUIRES: nvptx-registered-target
@@ -345,4 +344,4 @@
 // RUN:          -fopenmp-new-driver -no-canonical-prefixes -nogpulib %s -o openmp-offload-gpu 2>&1 \
 // RUN:   | FileCheck -check-prefix=NEW_DRIVER_EMBEDDING %s
 
-// NEW_DRIVER_EMBEDDING: -fembed-offload-object=[[CUBIN:.*\.cubin]],openmp.nvptx64-nvidia-cuda.sm_70
+// NEW_DRIVER_EMBEDDING: -fembed-offload-object=[[CUBIN:.*\.cubin]],openmp,nvptx64-nvidia-cuda,sm_70

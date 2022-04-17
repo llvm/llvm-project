@@ -914,8 +914,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
   if (CanonicalIVStartValue) {
-    VPValue *VPV = new VPValue(CanonicalIVStartValue);
-    addExternalDef(VPV);
+    VPValue *VPV = getOrAddExternalDef(CanonicalIVStartValue);
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
@@ -1474,9 +1473,8 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   const DataLayout &DL = State.CFG.PrevBB->getModule()->getDataLayout();
   SCEVExpander Exp(SE, DL, "induction");
 
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Value *Res =
-      Exp.expandCodeFor(Expr, Expr->getType(), VectorPH->getTerminator());
+  Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
+                                 &*State.Builder.GetInsertPoint());
 
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(this, Res, Part);
@@ -1728,8 +1726,8 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
 
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
 
-  for (const VPValue *V : Plan.VPExternalDefs)
-    assignSlot(V);
+  for (const auto &P : Plan.VPExternalDefs)
+    assignSlot(P.second);
 
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)

@@ -4,26 +4,26 @@
 # Test that prologepilog works for each of the LDNF1 instructions for stack-based objects.
 #
 --- |
-  define void @testcase_positive_offset() {
+  define void @testcase_positive_offset() uwtable {
     %dummy = alloca <vscale x 2 x i64>, align 8
     %object = alloca <vscale x 2 x i64>, align 8
     ; Reads from %object at offset 63 * readsize
     ret void
   }
-  define void @testcase_negative_offset() {
+  define void @testcase_negative_offset() uwtable {
     %dummy = alloca <vscale x 2 x i64>, align 8
     %object = alloca <vscale x 2 x i64>, align 8
     ; Reads from %object at offset 63 * readsize
     ret void
   }
 
-  define void @testcase_positive_offset_out_of_range() {
+  define void @testcase_positive_offset_out_of_range() uwtable {
     %dummy = alloca <vscale x 2 x i64>, align 8
     %object = alloca <vscale x 2 x i64>, align 8
     ; Reads from %object at offset 64 * readsize
     ret void
   }
-  define void @testcase_negative_offset_out_of_range() {
+  define void @testcase_negative_offset_out_of_range() uwtable {
     %dummy = alloca <vscale x 2 x i64>, align 8
     %object = alloca <vscale x 2 x i64>, align 8
     ; Reads from %object at offset -1 * readsize
@@ -65,7 +65,10 @@ body:             |
     ; CHECK-NEXT: renamable $z0 = LDNF1SW_D_IMM renamable $p0, $sp, 7 :: (load (s32) from %ir.object, align 8)
     ; CHECK-NEXT: renamable $z0 = LDNF1D_IMM renamable $p0, $sp, 7 :: (load (s64) from %ir.object)
     ; CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 4
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
     ; CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.2)
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
     ; CHECK-NEXT: RET_ReallyLR implicit $z0
     renamable $z0 = LDNF1B_IMM renamable $p0, %stack.1.object, 7 :: (load 1 from %ir.object, align 2)
     renamable $z0 = LDNF1B_H_IMM renamable $p0, %stack.1.object, 7 :: (load 1 from %ir.object, align 2)
@@ -121,7 +124,10 @@ body:             |
     ; CHECK-NEXT: renamable $z0 = LDNF1SW_D_IMM renamable $p0, $sp, -8 :: (load (s32) from %ir.object, align 8)
     ; CHECK-NEXT: renamable $z0 = LDNF1D_IMM renamable $p0, $sp, -8 :: (load (s64) from %ir.object)
     ; CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 4
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
     ; CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.2)
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
     ; CHECK-NEXT: RET_ReallyLR implicit $z0
     renamable $z0 = LDNF1B_IMM renamable $p0, %stack.1.object, -8 :: (load 1 from %ir.object, align 2)
     renamable $z0 = LDNF1B_H_IMM renamable $p0, %stack.1.object, -8 :: (load 1 from %ir.object, align 2)
@@ -191,7 +197,10 @@ body:             |
     ; CHECK-NEXT: $x8 = ADDPL_XXI $sp, 4
     ; CHECK-NEXT: renamable $z0 = LDNF1SW_D_IMM renamable $p0, killed $x8, 7 :: (load (s32) from %ir.object, align 8)
     ; CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 4
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
     ; CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.2)
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
     ; CHECK-NEXT: RET_ReallyLR implicit $z0
     renamable $z0 = LDNF1B_IMM renamable $p0, %stack.1.object, 8 :: (load 1 from %ir.object, align 2)
     renamable $z0 = LDNF1B_H_IMM renamable $p0, %stack.1.object, 8 :: (load 1 from %ir.object, align 2)
@@ -260,7 +269,10 @@ body:             |
     ; CHECK-NEXT: $x8 = ADDPL_XXI $sp, -4
     ; CHECK-NEXT: renamable $z0 = LDNF1SW_D_IMM renamable $p0, killed $x8, -8 :: (load (s32) from %ir.object, align 8)
     ; CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 4
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
     ; CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.2)
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
     ; CHECK-NEXT: RET_ReallyLR implicit $z0
     renamable $z0 = LDNF1B_IMM renamable $p0, %stack.1.object, -9 :: (load 1 from %ir.object, align 2)
     renamable $z0 = LDNF1B_H_IMM renamable $p0, %stack.1.object, -9 :: (load 1 from %ir.object, align 2)

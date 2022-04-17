@@ -6398,7 +6398,6 @@ llvm/lib/Target/AVR/AVRMCInstLower.cpp
 llvm/lib/Target/AVR/AVRMCInstLower.h
 llvm/lib/Target/AVR/AVRRegisterInfo.cpp
 llvm/lib/Target/AVR/AVRRegisterInfo.h
-llvm/lib/Target/AVR/AVRRelaxMemOperations.cpp
 llvm/lib/Target/AVR/AVRSelectionDAGInfo.h
 llvm/lib/Target/AVR/AVRShiftExpand.cpp
 llvm/lib/Target/AVR/AVRSubtarget.cpp

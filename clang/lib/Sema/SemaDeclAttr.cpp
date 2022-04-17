@@ -6925,6 +6925,21 @@ HLSLNumThreadsAttr *Sema::mergeHLSLNumThreadsAttr(Decl *D,
   return ::new (Context) HLSLNumThreadsAttr(Context, AL, X, Y, Z);
 }
 
+static void handleHLSLSVGroupIndexAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  using llvm::Triple;
+  Triple Target = S.Context.getTargetInfo().getTriple();
+  if (Target.getEnvironment() != Triple::Compute) {
+    uint32_t Pipeline =
+        (uint32_t)S.Context.getTargetInfo().getTriple().getEnvironment() -
+        (uint32_t)llvm::Triple::Pixel;
+    S.Diag(AL.getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
+        << AL << Pipeline << "Compute";
+    return;
+  }
+
+  D->addAttr(::new (S.Context) HLSLSV_GroupIndexAttr(S.Context, AL));
+}
+
 static void handleMSInheritanceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.LangOpts.CPlusPlus) {
     S.Diag(AL.getLoc(), diag::err_attribute_not_supported_in_lang)
@@ -8796,6 +8811,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   // HLSL attributes:
   case ParsedAttr::AT_HLSLNumThreads:
     handleHLSLNumThreadsAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_HLSLSV_GroupIndex:
+    handleHLSLSVGroupIndexAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AbiTag:

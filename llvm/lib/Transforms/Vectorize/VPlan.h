@@ -1799,15 +1799,14 @@ public:
            "Op must be an operand of the recipe");
 
     // Widened, consecutive memory operations only demand the first lane of
-    // their address.
-    return Op == getAddr() && isConsecutive();
+    // their address, unless the same operand is also stored. That latter can
+    // happen with opaque pointers.
+    return Op == getAddr() && isConsecutive() &&
+           (!isStore() || Op != getStoredValue());
   }
 };
 
 /// Recipe to expand a SCEV expression.
-/// TODO: Currently the recipe always expands the expression in the loop
-/// pre-header, but the recipe is currently placed in the header; place it in
-/// the pre-header once the latter is modeled in VPlan as a VPBasicBlock.
 class VPExpandSCEVRecipe : public VPRecipeBase, public VPValue {
   const SCEV *Expr;
   ScalarEvolution &SE;
@@ -2468,12 +2467,9 @@ class VPlan {
   /// Holds the name of the VPlan, for printing.
   std::string Name;
 
-  /// Holds all the external definitions created for this VPlan.
-  // TODO: Introduce a specific representation for external definitions in
-  // VPlan. External definitions must be immutable and hold a pointer to its
-  // underlying IR that will be used to implement its structural comparison
-  // (operators '==' and '<').
-  SetVector<VPValue *> VPExternalDefs;
+  /// Holds all the external definitions created for this VPlan. External
+  /// definitions must be immutable and hold a pointer to their underlying IR.
+  DenseMap<Value *, VPValue *> VPExternalDefs;
 
   /// Represents the trip count of the original loop, for folding
   /// the tail.
@@ -2521,8 +2517,8 @@ public:
       delete TripCount;
     if (BackedgeTakenCount)
       delete BackedgeTakenCount;
-    for (VPValue *Def : VPExternalDefs)
-      delete Def;
+    for (auto &P : VPExternalDefs)
+      delete P.second;
   }
 
   /// Prepare the plan for execution, setting up the required live-in values.
@@ -2570,9 +2566,13 @@ public:
 
   void setName(const Twine &newName) { Name = newName.str(); }
 
-  /// Add \p VPVal to the pool of external definitions if it's not already
-  /// in the pool.
-  void addExternalDef(VPValue *VPVal) { VPExternalDefs.insert(VPVal); }
+  /// Get the existing or add a new external definition for \p V.
+  VPValue *getOrAddExternalDef(Value *V) {
+    auto I = VPExternalDefs.insert({V, nullptr});
+    if (I.second)
+      I.first->second = new VPValue(V);
+    return I.first->second;
+  }
 
   void addVPValue(Value *V) {
     assert(Value2VPValueEnabled &&

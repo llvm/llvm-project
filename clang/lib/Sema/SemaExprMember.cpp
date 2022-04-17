@@ -940,7 +940,7 @@ static bool IsInFnTryBlockHandler(const Scope *S) {
   // function scope. If a FnTryCatchScope is found, check whether the TryScope
   // flag is set. If it is not, it's a function-try-block handler.
   for (; S != S->getFnParent(); S = S->getParent()) {
-    if (S->getFlags() & Scope::FnTryCatchScope)
+    if (S->isFnTryCatchScope())
       return (S->getFlags() & Scope::TryScope) != Scope::TryScope;
   }
   return false;
@@ -1735,6 +1735,9 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
 
   DeclarationName Name = NameInfo.getName();
   bool IsArrow = (OpKind == tok::arrow);
+
+  if (getLangOpts().HLSL && IsArrow)
+    return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 2);
 
   NamedDecl *FirstQualifierInScope
     = (!SS.isSet() ? nullptr : FindFirstQualifierInScope(S, SS.getScopeRep()));

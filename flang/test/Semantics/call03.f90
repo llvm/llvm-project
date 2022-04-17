@@ -151,8 +151,7 @@ module m01
     type(pdtWithDefault(3)) :: defaultVar3
     type(pdtWithDefault(4)) :: defaultVar4
     character :: ch1
-    ! The actual argument is converted to a padded expression.
-    !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
+    !ERROR: Actual length '1' is less than expected length '2'
     call ch2(ch1)
     call pdtdefault(vardefault)
     call pdtdefault(var3)
@@ -228,6 +227,7 @@ module m01
     real :: a(*)
     !ERROR: Scalar actual argument may not be associated with assumed-shape dummy argument 'x='
     call assumedshape(scalar)
+    call assumedshape(reshape(matrix,shape=[size(matrix)])) ! ok
     !ERROR: Rank of dummy argument is 1, but actual argument has rank 2
     call assumedshape(matrix)
     !ERROR: Assumed-size array may not be associated with assumed-shape dummy argument 'x='

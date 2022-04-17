@@ -831,3 +831,15 @@ struct Bar2 {
 };
 
 } // namespace no_crash
+
+int TestAssignSideEffect(int i) {
+  int k = i;
+
+  if ((k = k + 1) != 1 || (k = k + 1) != 2)
+    return 0;
+
+  if ((k = foo(0)) != 1 || (k = foo(0)) != 2)
+    return 1;
+
+  return 2;
+}

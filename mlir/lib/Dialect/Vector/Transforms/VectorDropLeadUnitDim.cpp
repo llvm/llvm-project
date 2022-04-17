@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
@@ -37,7 +38,7 @@ static SmallVector<int64_t> splatZero(int64_t rank) {
 namespace {
 
 // Casts away leading one dimensions in vector.extract_strided_slice's vector
-// input by inserting vector.shape_cast.
+// input by inserting vector.broadcast.
 struct CastAwayExtractStridedSliceLeadingOneDim
     : public OpRewritePattern<vector::ExtractStridedSliceOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -84,8 +85,8 @@ struct CastAwayExtractStridedSliceLeadingOneDim
   }
 };
 
-// Casts away leading one dimensions in vector.extract_strided_slice's vector
-// inputs by inserting vector.shape_cast.
+// Casts away leading one dimensions in vector.insert_strided_slice's vector
+// inputs by inserting vector.broadcast.
 struct CastAwayInsertStridedSliceLeadingOneDim
     : public OpRewritePattern<vector::InsertStridedSliceOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -117,6 +118,61 @@ struct CastAwayInsertStridedSliceLeadingOneDim
 
     auto newInsertOp = rewriter.create<vector::InsertStridedSliceOp>(
         loc, newDstType, newSrcVector, newDstVector, newOffsets, newStrides);
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
+                                                     newInsertOp);
+
+    return success();
+  }
+};
+
+// Casts away leading one dimensions in vector.insert's vector inputs by
+// inserting vector.broadcast.
+struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::InsertOp insertOp,
+                                PatternRewriter &rewriter) const override {
+    Type oldSrcType = insertOp.getSourceType();
+    Type newSrcType = oldSrcType;
+    int64_t oldSrcRank = 0, newSrcRank = 0;
+    if (auto type = oldSrcType.dyn_cast<VectorType>()) {
+      newSrcType = trimLeadingOneDims(type);
+      oldSrcRank = type.getRank();
+      newSrcRank = newSrcType.cast<VectorType>().getRank();
+    }
+
+    VectorType oldDstType = insertOp.getDestVectorType();
+    VectorType newDstType = trimLeadingOneDims(oldDstType);
+
+    int64_t srcDropCount = oldSrcRank - newSrcRank;
+    int64_t dstDropCount = oldDstType.getRank() - newDstType.getRank();
+    if (srcDropCount == 0 && dstDropCount == 0)
+      return failure();
+
+    // Trim leading one dimensions from both operands.
+    Location loc = insertOp.getLoc();
+
+    Value newSrcVector = insertOp.getSource();
+    if (oldSrcRank != 0) {
+      newSrcVector = rewriter.create<vector::ExtractOp>(
+          loc, insertOp.getSource(), splatZero(srcDropCount));
+    }
+    Value newDstVector = rewriter.create<vector::ExtractOp>(
+        loc, insertOp.getDest(), splatZero(dstDropCount));
+
+    unsigned oldPosRank = insertOp.getPosition().getValue().size();
+    unsigned newPosRank = newDstType.getRank() - newSrcRank;
+    SmallVector<Attribute> newPositions = llvm::to_vector(
+        insertOp.getPosition().getValue().take_back(newPosRank));
+    if (newPosRank > oldPosRank) {
+      auto zeroAttr = rewriter.getZeroAttr(rewriter.getI64Type());
+      newPositions.resize(newPosRank, zeroAttr);
+    }
+
+    auto newInsertOp = rewriter.create<vector::InsertOp>(
+        loc, newDstType, newSrcVector, newDstVector,
+        rewriter.getArrayAttr(newPositions));
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
                                                      newInsertOp);
@@ -383,7 +439,7 @@ void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
     RewritePatternSet &patterns) {
   patterns
       .add<CastAwayExtractStridedSliceLeadingOneDim,
-           CastAwayInsertStridedSliceLeadingOneDim,
+           CastAwayInsertStridedSliceLeadingOneDim, CastAwayInsertLeadingOneDim,
            CastAwayTransferReadLeadingOneDim,
            CastAwayTransferWriteLeadingOneDim, CastAwayElementwiseLeadingOneDim,
            CastAwayContractionLeadingOneDim>(patterns.getContext());

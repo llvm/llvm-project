@@ -1,0 +1,16 @@
+***************
+*** 337,343 ****
+  
+      std::string DBGBuildSourcePath;
+      std::string DBGSourcePath;
+-     std::string DBGError;
+  
+      // If DBGVersion 1 or DBGVersion missing, ignore DBGSourcePathRemapping.
+      // If DBGVersion 2, strip last two components of path remappings from
+--- 346,351 ----
+  
+      std::string DBGBuildSourcePath;
+      std::string DBGSourcePath;
+  
+      // If DBGVersion 1 or DBGVersion missing, ignore DBGSourcePathRemapping.
+      // If DBGVersion 2, strip last two components of path remappings from

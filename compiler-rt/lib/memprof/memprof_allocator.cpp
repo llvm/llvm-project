@@ -430,7 +430,7 @@ struct Allocator {
       CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
       reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
     }
-    MEMPROF_MALLOC_HOOK(res, size);
+    RunMallocHooks(res, size);
     return res;
   }
 
@@ -440,7 +440,7 @@ struct Allocator {
     if (p == 0)
       return;
 
-    MEMPROF_FREE_HOOK(ptr);
+    RunFreeHooks(ptr);
 
     uptr chunk_beg = p - kChunkHeaderSize;
     MemprofChunk *m = reinterpret_cast<MemprofChunk *>(chunk_beg);
@@ -693,19 +693,6 @@ uptr memprof_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
 
 // ---------------------- Interface ---------------- {{{1
 using namespace __memprof;
-
-#if !SANITIZER_SUPPORTS_WEAK_HOOKS
-// Provide default (no-op) implementation of malloc hooks.
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_malloc_hook, void *ptr,
-                             uptr size) {
-  (void)ptr;
-  (void)size;
-}
-
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
-  (void)ptr;
-}
-#endif
 
 uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 

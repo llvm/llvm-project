@@ -334,9 +334,9 @@ void TextOutputSection::finalize() {
             /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
       } else {
         r.referent = thunkInfo.sym = make<Defined>(
-            thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0,
-            thunkSize, /*isWeakDef=*/false, /*isExternal=*/false,
-            /*isPrivateExtern=*/true, /*isThumb=*/false,
+            thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
+            /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/true,
+            /*includeInSymtab=*/true, /*isThumb=*/false,
             /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
             /*isWeakDefCanBeHidden=*/false);
       }

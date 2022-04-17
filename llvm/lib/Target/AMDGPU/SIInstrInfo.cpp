@@ -614,7 +614,8 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
   // Registers in the sequence are allocated contiguously so we can just
   // use register number to pick one of three round-robin temps.
   unsigned RegNo = DestReg % 3;
-  Register Tmp = AMDGPU::VGPR32;
+  Register Tmp =
+      MBB.getParent()->getInfo<SIMachineFunctionInfo>()->getVGPRForAGPRCopy();
   assert(MBB.getParent()->getRegInfo().isReserved(Tmp) &&
          "VGPR used for an intermediate copy should have been reserved.");
 
@@ -8070,7 +8071,7 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
     auto &UseInst = *Use.getParent();
     // Don't bother searching between blocks, although it is possible this block
     // doesn't modify exec.
-    if (UseInst.getParent() != DefBB)
+    if (UseInst.getParent() != DefBB || UseInst.isPHI())
       return true;
 
     if (++NumUse > MaxUseScan)

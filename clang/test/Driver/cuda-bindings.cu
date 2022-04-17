@@ -9,7 +9,6 @@
 // way. Instead we check whether we've generated a permanent name on
 // device side, which appends '-device-cuda-<triple>' suffix.
 
-// REQUIRES: clang-driver
 // REQUIRES: powerpc-registered-target
 // REQUIRES: nvptx-registered-target
 

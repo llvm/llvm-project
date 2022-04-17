@@ -16,6 +16,7 @@
 #include "format.h"
 #include "internal-unit.h"
 #include "io-error.h"
+#include "flang/Common/visit.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
 #include <functional>
@@ -113,7 +114,7 @@ public:
 
   // N.B.: this also works with base classes
   template <typename A> A *get_if() const {
-    return std::visit(
+    return common::visit(
         [](auto &x) -> A * {
           if constexpr (std::is_convertible_v<decltype(x.get()), A &>) {
             return &x.get();
@@ -132,8 +133,8 @@ public:
   // For fixed-width fields, initialize the number of remaining characters.
   // Skip over leading blanks, then return the first non-blank character (if
   // any).
-  std::optional<char32_t> PrepareInput(
-      const DataEdit &edit, std::optional<int> &remaining) {
+  std::optional<char32_t> PrepareInput(const DataEdit &edit,
+      std::optional<int> &remaining, bool skipSpaces = true) {
     remaining.reset();
     if (edit.descriptor == DataEdit::ListDirected) {
       std::size_t byteCount{0};
@@ -142,7 +143,9 @@ public:
       if (edit.width.value_or(0) > 0) {
         remaining = *edit.width;
       }
-      SkipSpaces(remaining);
+      if (skipSpaces) {
+        SkipSpaces(remaining);
+      }
     }
     return NextInField(remaining, edit);
   }
@@ -406,7 +409,6 @@ public:
   ExternalFileUnit &unit() { return unit_; }
   MutableModes &mutableModes();
   ConnectionState &GetConnectionState();
-  void CompleteOperation();
   int EndIoStatement();
   ExternalFileUnit *GetExternalFileUnit() const { return &unit_; }
 

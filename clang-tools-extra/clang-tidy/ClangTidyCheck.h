@@ -417,6 +417,11 @@ protected:
   StringRef getCurrentMainFile() const { return Context->getCurrentFile(); }
   /// Returns the language options from the context.
   const LangOptions &getLangOpts() const { return Context->getLangOpts(); }
+  /// Returns true when the check is run in a use case when only 1 fix will be
+  /// applied at a time.
+  bool areDiagsSelfContained() const {
+    return Context->areDiagsSelfContained();
+  }
 };
 
 /// Read a named option from the ``Context`` and parse it as a bool.

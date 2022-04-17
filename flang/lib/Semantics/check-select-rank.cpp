@@ -60,7 +60,7 @@ void SelectRankConstructChecker::Leave(
         std::get<parser::Statement<parser::SelectRankCaseStmt>>(rankCase.t)};
     const auto &rank{
         std::get<parser::SelectRankCaseStmt::Rank>(rankCaseStmt.statement.t)};
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Default &) { // C1153
               if (!defaultRankFound) {
@@ -71,7 +71,7 @@ void SelectRankConstructChecker::Leave(
                     .Say(rankCaseStmt.source,
                         "Not more than one of the selectors of SELECT RANK "
                         "statement may be DEFAULT"_err_en_US)
-                    .Attach(prevLocDefault, "Previous use"_err_en_US);
+                    .Attach(prevLocDefault, "Previous use"_en_US);
               }
             },
             [&](const parser::Star &) { // C1153
@@ -83,7 +83,7 @@ void SelectRankConstructChecker::Leave(
                     .Say(rankCaseStmt.source,
                         "Not more than one of the selectors of SELECT RANK "
                         "statement may be '*'"_err_en_US)
-                    .Attach(prevLocStar, "Previous use"_err_en_US);
+                    .Attach(prevLocStar, "Previous use"_en_US);
               }
               if (saveSelSymbol &&
                   IsAllocatableOrPointer(*saveSelSymbol)) { // C1155
@@ -111,7 +111,7 @@ void SelectRankConstructChecker::Leave(
                         .Say(rankCaseStmt.source,
                             "Same rank value (%d) not allowed more than once"_err_en_US,
                             *val)
-                        .Attach(prevloc, "Previous use"_err_en_US);
+                        .Attach(prevloc, "Previous use"_en_US);
                   }
                 }
               }
@@ -123,7 +123,7 @@ void SelectRankConstructChecker::Leave(
 
 const SomeExpr *SelectRankConstructChecker::GetExprFromSelector(
     const parser::Selector &selector) {
-  return std::visit([](const auto &x) { return GetExpr(x); }, selector.u);
+  return common::visit([](const auto &x) { return GetExpr(x); }, selector.u);
 }
 
 } // namespace Fortran::semantics

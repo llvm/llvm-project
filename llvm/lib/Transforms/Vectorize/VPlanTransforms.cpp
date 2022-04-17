@@ -422,11 +422,9 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     const SCEV *StepSCEV = ID.getStep();
     VPValue *Step = nullptr;
     if (auto *E = dyn_cast<SCEVConstant>(StepSCEV)) {
-      Step = new VPValue(E->getValue());
-      Plan.addExternalDef(Step);
+      Step = Plan.getOrAddExternalDef(E->getValue());
     } else if (auto *E = dyn_cast<SCEVUnknown>(StepSCEV)) {
-      Step = new VPValue(E->getValue());
-      Plan.addExternalDef(Step);
+      Step = Plan.getOrAddExternalDef(E->getValue());
     } else {
       Step = new VPExpandSCEVRecipe(StepSCEV, SE);
     }
@@ -437,12 +435,9 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         IV->getStartValue(), Step, TruncI ? TruncI->getType() : nullptr);
 
     HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
-    if (Step->getDef()) {
-      // TODO: Place the step in the preheader, once it is explicitly modeled in
-      // VPlan.
-      HeaderVPBB->insert(cast<VPRecipeBase>(Step->getDef()),
-                         HeaderVPBB->getFirstNonPhi());
-    }
+    if (Step->getDef())
+      Plan.getEntry()->getEntryBasicBlock()->appendRecipe(
+          cast<VPRecipeBase>(Step->getDef()));
 
     // If there are no vector users of IV, simply update all users to use Step
     // instead.
