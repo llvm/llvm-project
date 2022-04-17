@@ -273,10 +273,10 @@ Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
 StaticLibraryDefinitionGenerator::Load(
     ObjectLayer &L, const char *FileName,
     GetObjectFileInterface GetObjFileInterface) {
-  auto ArchiveBuffer = errorOrToExpected(MemoryBuffer::getFile(FileName));
+  auto ArchiveBuffer = MemoryBuffer::getFile(FileName);
 
   if (!ArchiveBuffer)
-    return ArchiveBuffer.takeError();
+    return createFileError(FileName, ArchiveBuffer.getError());
 
   return Create(L, std::move(*ArchiveBuffer), std::move(GetObjFileInterface));
 }
@@ -288,7 +288,7 @@ StaticLibraryDefinitionGenerator::Load(
 
   auto B = object::createBinary(FileName);
   if (!B)
-    return B.takeError();
+    return createFileError(FileName, B.takeError());
 
   // If this is a regular archive then create an instance from it.
   if (isa<object::Archive>(B->getBinary()))
