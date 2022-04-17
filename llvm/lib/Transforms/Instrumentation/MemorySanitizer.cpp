@@ -1691,9 +1691,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
     if (Argument *A = dyn_cast<Argument>(V)) {
       // For arguments we compute the shadow on demand and store it in the map.
-      Value **ShadowPtr = &ShadowMap[V];
-      if (*ShadowPtr)
-        return *ShadowPtr;
+      Value *&ShadowPtr = ShadowMap[V];
+      if (ShadowPtr)
+        return ShadowPtr;
       Function *F = A->getParent();
       IRBuilder<> EntryIRB(FnPrologueEnd);
       unsigned ArgOffset = 0;
@@ -1750,12 +1750,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
           if (!PropagateShadow || Overflow || FArg.hasByValAttr() ||
               (MS.EagerChecks && FArg.hasAttribute(Attribute::NoUndef))) {
-            *ShadowPtr = getCleanShadow(V);
+            ShadowPtr = getCleanShadow(V);
             setOrigin(A, getCleanOrigin());
           } else {
             // Shadow over TLS
             Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
-            *ShadowPtr = EntryIRB.CreateAlignedLoad(getShadowTy(&FArg), Base,
+            ShadowPtr = EntryIRB.CreateAlignedLoad(getShadowTy(&FArg), Base,
                                                     kShadowTLSAlignment);
             if (MS.TrackOrigins) {
               Value *OriginPtr =
@@ -1764,14 +1764,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             }
           }
           LLVM_DEBUG(dbgs()
-                     << "  ARG:    " << FArg << " ==> " << **ShadowPtr << "\n");
+                     << "  ARG:    " << FArg << " ==> " << *ShadowPtr << "\n");
           break;
         }
 
         ArgOffset += alignTo(Size, kShadowTLSAlignment);
       }
-      assert(*ShadowPtr && "Could not find shadow for an argument");
-      return *ShadowPtr;
+      assert(ShadowPtr && "Could not find shadow for an argument");
+      return ShadowPtr;
     }
     // For everything else the shadow is zero.
     return getCleanShadow(V);

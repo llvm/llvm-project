@@ -1722,7 +1722,7 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   FormatStyle::LanguageKind Language = Style->Language;
   assert(Language != FormatStyle::LK_None);
   if (Config.getBuffer().trim().empty())
-    return make_error_code(ParseError::Error);
+    return make_error_code(ParseError::Success);
   Style->StyleSet.Clear();
   std::vector<FormatStyle> Styles;
   llvm::yaml::Input Input(Config, /*Ctxt=*/nullptr, DiagHandler,

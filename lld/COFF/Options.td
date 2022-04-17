@@ -56,6 +56,8 @@ def guard   : P<"guard", "Control flow guard">;
 def heap    : P<"heap", "Size of the heap">;
 def ignore : P<"ignore", "Specify warning codes to ignore">;
 def implib  : P<"implib", "Import library name">;
+def noimplib : F<"noimplib">,
+    HelpText<"Don't output an import lib">;
 def lib : F<"lib">,
     HelpText<"Act like lib.exe; must be first argument if present">;
 def libpath : P<"libpath", "Additional library search path">;

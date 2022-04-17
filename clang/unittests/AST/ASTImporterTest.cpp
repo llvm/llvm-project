@@ -5821,6 +5821,53 @@ TEST_P(ErrorHandlingTest, ODRViolationWithinParmVarDecls) {
   EXPECT_FALSE(ImportedF);
 }
 
+TEST_P(ErrorHandlingTest, DoNotInheritErrorFromNonDependentChild) {
+  // Declarations should not inherit an import error from a child object
+  // if the declaration has no direct dependence to such a child.
+  // For example a namespace should not get import error if one of the
+  // declarations inside it fails to import.
+  // There was a special case in error handling (when "import path circles" are
+  // encountered) when this property was not held. This case is provoked by the
+  // following code.
+  constexpr auto ToTUCode = R"(
+      namespace ns {
+        struct Err {
+          char A;
+        };
+      }
+      )";
+  constexpr auto FromTUCode = R"(
+      namespace ns {
+        struct A {
+          using U = struct Err;
+        };
+      }
+      namespace ns {
+        struct Err {}; // ODR violation
+        void f(A) {}
+      }
+      )";
+
+  Decl *ToTU = getToTuDecl(ToTUCode, Lang_CXX11);
+  static_cast<void>(ToTU);
+  Decl *FromTU = getTuDecl(FromTUCode, Lang_CXX11);
+  auto *FromA = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("A"), hasDefinition()));
+  ASSERT_TRUE(FromA);
+  auto *ImportedA = Import(FromA, Lang_CXX11);
+  // 'A' can not be imported: ODR error at 'Err'
+  EXPECT_FALSE(ImportedA);
+  // When import of 'A' failed there was a "saved import path circle" that
+  // contained namespace 'ns' (A - U - Err - ns - f - A). This should not mean
+  // that every object in this path fails to import.
+
+  Decl *FromNS = FirstDeclMatcher<NamespaceDecl>().match(
+      FromTU, namespaceDecl(hasName("ns")));
+  EXPECT_TRUE(FromNS);
+  auto *ImportedNS = Import(FromNS, Lang_CXX11);
+  EXPECT_TRUE(ImportedNS);
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionBody) {
   Decl *FromTU = getTuDecl(
       R"(

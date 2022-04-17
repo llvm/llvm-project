@@ -7,8 +7,8 @@ define i32 @foo(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a4
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR:%.*]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[A1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[A2:%.*]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[A2:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[A1:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[A3:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[A4:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[A5:%.*]], i32 4
@@ -53,9 +53,9 @@ define i32 @foo1(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 1, i32 1, i32 0, i32 2, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[A1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[A2:%.*]], i32 1
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 2, i32 1, i32 3, i32 1, i32 1, i32 0, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[A2:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[A1:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[A3:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[A4:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[A5:%.*]], i32 4
@@ -104,9 +104,9 @@ define i32 @foo2(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 3, i32 2, i32 3, i32 0, i32 1, i32 0, i32 2, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[A1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[A2:%.*]], i32 1
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 2, i32 3, i32 3, i32 0, i32 1, i32 0, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[A2:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[A1:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[A3:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[A4:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[A5:%.*]], i32 4

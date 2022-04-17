@@ -314,14 +314,7 @@ void InstallAtExitHandler();
 
 const char *GetStackOriginDescr(u32 id, uptr *pc);
 
-void EnterSymbolizer();
-void ExitSymbolizer();
-bool IsInSymbolizer();
-
-struct SymbolizerScope {
-  SymbolizerScope() { EnterSymbolizer(); }
-  ~SymbolizerScope() { ExitSymbolizer(); }
-};
+bool IsInSymbolizerOrUnwider();
 
 void PrintWarning(uptr pc, uptr bp);
 void PrintWarningWithOrigin(uptr pc, uptr bp, u32 origin);
@@ -381,22 +374,5 @@ void MsanTSDSet(void *tsd);
 void MsanTSDDtor(void *tsd);
 
 }  // namespace __msan
-
-#define MSAN_MALLOC_HOOK(ptr, size)       \
-  do {                                    \
-    if (&__sanitizer_malloc_hook) {       \
-      UnpoisonParam(2);                   \
-      __sanitizer_malloc_hook(ptr, size); \
-    }                                     \
-    RunMallocHooks(ptr, size);            \
-  } while (false)
-#define MSAN_FREE_HOOK(ptr)       \
-  do {                            \
-    if (&__sanitizer_free_hook) { \
-      UnpoisonParam(1);           \
-      __sanitizer_free_hook(ptr); \
-    }                             \
-    RunFreeHooks(ptr);            \
-  } while (false)
 
 #endif  // MSAN_H

@@ -155,7 +155,7 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.transform] <https://wg21.link/range.transform>`_,`transform_view <https://llvm.org/D103056>`_,[range.all],Zoe Carver,✅
 `[range.take] <https://wg21.link/range.take>`_,`take_view <https://llvm.org/D106507>`_,[range.all],Zoe Carver,✅
 `[range.join] <https://wg21.link/range.join>`_,`join_view <https://llvm.org/D107671>`_,[range.all],Zoe Carver,✅
-`[range.split] <https://wg21.link/range.split>`_,`split_view (renamed to lazy_split_view by P2210) <https://llvm.org/D107500>`_,[range.all],Zoe Carver,In progress
+`[range.split] <https://wg21.link/range.split>`_,`split_view (renamed to lazy_split_view by P2210) <https://llvm.org/D107500>`_,[range.all],Zoe Carver and Konstantin Varlamov,✅
 `[range.counted] <https://wg21.link/range.counted>`_,`view::counted <https://llvm.org/D106923>`_,[range.subrange],Zoe Carver,✅
 `[range.common] <https://wg21.link/range.common>`_,`common_view <https://llvm.org/D105753>`_,[range.all],Zoe Carver,✅
 `[range.reverse] <https://wg21.link/range.reverse>`_,`reverse_view <https://llvm.org/D107096>`_,[range.all],Zoe Carver,✅

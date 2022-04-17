@@ -729,7 +729,10 @@ void CodeGenModule::Release() {
   // attributes, but we use module metadata to emit build attributes. This is
   // needed for LTO, where the function attributes are inside bitcode
   // serialised into a global variable by the time build attributes are
-  // emitted, so we can't access them.
+  // emitted, so we can't access them. LTO objects could be compiled with
+  // different flags therefore module flags are set to "Min" behavior to achieve
+  // the same end result of the normal build where e.g BTI is off if any object
+  // doesn't support it.
   if (Context.getTargetInfo().hasFeature("ptrauth") &&
       LangOpts.getSignReturnAddressScope() !=
           LangOptions::SignReturnAddressScopeKind::None)
@@ -743,16 +746,16 @@ void CodeGenModule::Release() {
       Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
       Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
       Arch == llvm::Triple::aarch64_be) {
-    getModule().addModuleFlag(llvm::Module::Error, "branch-target-enforcement",
+    getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
                               LangOpts.BranchTargetEnforcement);
 
-    getModule().addModuleFlag(llvm::Module::Error, "sign-return-address",
+    getModule().addModuleFlag(llvm::Module::Min, "sign-return-address",
                               LangOpts.hasSignReturnAddress());
 
-    getModule().addModuleFlag(llvm::Module::Error, "sign-return-address-all",
+    getModule().addModuleFlag(llvm::Module::Min, "sign-return-address-all",
                               LangOpts.isSignReturnAddressScopeAll());
 
-    getModule().addModuleFlag(llvm::Module::Error,
+    getModule().addModuleFlag(llvm::Module::Min,
                               "sign-return-address-with-bkey",
                               !LangOpts.isSignReturnAddressWithAKey());
   }

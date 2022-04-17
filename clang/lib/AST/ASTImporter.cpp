@@ -138,6 +138,46 @@ namespace clang {
       To->setIsUsed();
   }
 
+  /// How to handle import errors that occur when import of a child declaration
+  /// of a DeclContext fails.
+  class ChildErrorHandlingStrategy {
+    /// This context is imported (in the 'from' domain).
+    /// It is nullptr if a non-DeclContext is imported.
+    const DeclContext *const FromDC;
+    /// Ignore import errors of the children.
+    /// If true, the context can be imported successfully if a child
+    /// of it failed to import. Otherwise the import errors of the child nodes
+    /// are accumulated (joined) into the import error object of the parent.
+    /// (Import of a parent can fail in other ways.)
+    bool const IgnoreChildErrors;
+
+  public:
+    ChildErrorHandlingStrategy(const DeclContext *FromDC)
+        : FromDC(FromDC), IgnoreChildErrors(!isa<TagDecl>(FromDC)) {}
+    ChildErrorHandlingStrategy(const Decl *FromD)
+        : FromDC(dyn_cast<DeclContext>(FromD)),
+          IgnoreChildErrors(!isa<TagDecl>(FromD)) {}
+
+    /// Process the import result of a child (of the current declaration).
+    /// \param ResultErr The import error that can be used as result of
+    /// importing the parent. This may be changed by the function.
+    /// \param ChildErr Result of importing a child. Can be success or error.
+    void handleChildImportResult(Error &ResultErr, Error &&ChildErr) {
+      if (ChildErr && !IgnoreChildErrors)
+        ResultErr = joinErrors(std::move(ResultErr), std::move(ChildErr));
+      else
+        consumeError(std::move(ChildErr));
+    }
+
+    /// Determine if import failure of a child does not cause import failure of
+    /// its parent.
+    bool ignoreChildErrorOnParent(Decl *FromChildD) const {
+      if (!IgnoreChildErrors || !FromDC)
+        return false;
+      return FromDC->containsDecl(FromChildD);
+    }
+  };
+
   class ASTNodeImporter : public TypeVisitor<ASTNodeImporter, ExpectedType>,
                           public DeclVisitor<ASTNodeImporter, ExpectedDecl>,
                           public StmtVisitor<ASTNodeImporter, ExpectedStmt> {
@@ -1809,7 +1849,7 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
   // because there is an ODR error with two typedefs.  As another example,
   // the client may allow EnumConstantDecls with same names but with
   // different values in two distinct translation units.
-  bool AccumulateChildErrors = isa<TagDecl>(FromDC);
+  ChildErrorHandlingStrategy HandleChildErrors(FromDC);
 
   Error ChildErrors = Error::success();
   for (auto *From : FromDC->decls()) {
@@ -1849,20 +1889,14 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
           if (FromRecordDecl->isCompleteDefinition() &&
               !ToRecordDecl->isCompleteDefinition()) {
             Error Err = ImportDefinition(FromRecordDecl, ToRecordDecl);
-
-            if (Err && AccumulateChildErrors)
-              ChildErrors =  joinErrors(std::move(ChildErrors), std::move(Err));
-            else
-              consumeError(std::move(Err));
+            HandleChildErrors.handleChildImportResult(ChildErrors,
+                                                      std::move(Err));
           }
         }
       }
     } else {
-      if (AccumulateChildErrors)
-        ChildErrors =
-            joinErrors(std::move(ChildErrors), ImportedOrErr.takeError());
-      else
-        consumeError(ImportedOrErr.takeError());
+      HandleChildErrors.handleChildImportResult(ChildErrors,
+                                                ImportedOrErr.takeError());
     }
   }
 
@@ -8799,8 +8833,20 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
 
     // Set the error for all nodes which have been created before we
     // recognized the error.
-    for (const auto &Path : SavedImportPaths[FromD])
+    for (const auto &Path : SavedImportPaths[FromD]) {
+      // The import path contains import-dependency nodes first.
+      // Save the node that was imported as dependency of the current node.
+      Decl *PrevFromDi = FromD;
       for (Decl *FromDi : Path) {
+        // Begin and end of the path equals 'FromD', skip it.
+        if (FromDi == FromD)
+          continue;
+        // We should not set import error on a node and all following nodes in
+        // the path if child import errors are ignored.
+        if (ChildErrorHandlingStrategy(FromDi).ignoreChildErrorOnParent(
+                PrevFromDi))
+          break;
+        PrevFromDi = FromDi;
         setImportDeclError(FromDi, ErrOut);
         //FIXME Should we remove these Decls from ImportedDecls?
         // Set the error for the mapped to Decl, which is in the "to" context.
@@ -8810,6 +8856,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
           // FIXME Should we remove these Decls from the LookupTable,
           // and from ImportedFromDecls?
       }
+    }
     SavedImportPaths.erase(FromD);
 
     // Do not return ToDOrErr, error was taken out of it.
