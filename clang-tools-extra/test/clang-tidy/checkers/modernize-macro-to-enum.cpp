@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-macro-to-enum %t -- -- -I%S/Inputs/modernize-macro-to-enum
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-macro-to-enum %t -- -- -I%S/Inputs/modernize-macro-to-enum -fno-delayed-template-parsing
 // C++14 or later required for binary literals.
 
 #if 1
@@ -303,3 +303,89 @@ void f()
   FN_GREEN(0);
   FN_BLUE(0);
 }
+
+// Ignore macros defined inside a top-level function definition.
+void g(int x)
+{
+  if (x != 0) {
+#define INSIDE1 1
+#define INSIDE2 2
+    if (INSIDE1 > 1) {
+      f();
+    }
+  } else {
+    if (INSIDE2 == 1) {
+      f();
+    }
+  }
+}
+
+// Ignore macros defined inside a top-level function declaration.
+extern void g2(
+#define INSIDE3 3
+#define INSIDE4 4
+);
+
+// Ignore macros defined inside a record (structure) declaration.
+struct S {
+#define INSIDE5 5
+#define INSIDE6 6
+  char storage[INSIDE5];
+};
+class C {
+#define INSIDE7 7
+#define INSIDE8 8
+};
+
+// Ignore macros defined inside a template function definition.
+template <int N>
+#define INSIDE9 9
+bool fn()
+{
+  #define INSIDE10 10
+  return INSIDE9 > 1 || INSIDE10 < N;
+}
+
+// Ignore macros defined inside a variable declaration.
+extern int
+#define INSIDE11 11
+v;
+
+// Ignore macros defined inside a template class definition.
+template <int N>
+class C2 {
+public:
+#define INSIDE12 12
+    char storage[N];
+  bool f() {
+    return N > INSIDE12;
+  }
+  bool g();
+};
+
+// Ignore macros defined inside a template member function definition.
+template <int N>
+#define INSIDE13 13
+bool C2<N>::g() {
+#define INSIDE14 14
+  return N < INSIDE12 || N > INSIDE13 || INSIDE14 > N;
+};
+
+// Ignore macros defined inside a template type alias.
+template <typename T>
+class C3 {
+  T data;
+};
+template <typename T>
+#define INSIDE15 15
+using Data = C3<T[INSIDE15]>;
+
+// Ignore macros defined inside a type alias.
+using Data2 =
+#define INSIDE16 16
+    char[INSIDE16];
+
+// Ignore macros defined inside a (constexpr) variable definition.
+constexpr int
+#define INSIDE17 17
+value = INSIDE17;
