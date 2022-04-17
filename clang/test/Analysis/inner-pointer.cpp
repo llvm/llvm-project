@@ -379,7 +379,7 @@ void func_addressof() {
   const char *c;
   std::string s;
   c = s.c_str();
-  addressof(s);
+  (void)addressof(s);
   consume(c); // no-warning
 }
 
