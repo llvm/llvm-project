@@ -108,10 +108,12 @@
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__functional/operations.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <experimental/__config>
-#include <functional>
+#include <functional> // TODO: Remove this include
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

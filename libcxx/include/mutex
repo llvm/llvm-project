@@ -192,7 +192,7 @@ template<class Callable, class ...Args>
 #include <__threading_support>
 #include <__utility/forward.h>
 #include <cstdint>
-#include <functional>
+#include <functional> // TODO: Remove this include
 #include <memory>
 #ifndef _LIBCPP_CXX03_LANG
 # include <tuple>
