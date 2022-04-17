@@ -153,6 +153,178 @@ static gcp_map_type &getGCMap(void *&P) {
   return *(gcp_map_type*)P;
 }
 
+namespace {
+class AddrLabelMapCallbackPtr final : CallbackVH {
+  AddrLabelMap *Map = nullptr;
+
+public:
+  AddrLabelMapCallbackPtr() = default;
+  AddrLabelMapCallbackPtr(Value *V) : CallbackVH(V) {}
+
+  void setPtr(BasicBlock *BB) {
+    ValueHandleBase::operator=(BB);
+  }
+
+  void setMap(AddrLabelMap *map) { Map = map; }
+
+  void deleted() override;
+  void allUsesReplacedWith(Value *V2) override;
+};
+} // namespace
+
+class llvm::AddrLabelMap {
+  MCContext &Context;
+  struct AddrLabelSymEntry {
+    /// The symbols for the label.
+    TinyPtrVector<MCSymbol *> Symbols;
+
+    Function *Fn;   // The containing function of the BasicBlock.
+    unsigned Index; // The index in BBCallbacks for the BasicBlock.
+  };
+
+  DenseMap<AssertingVH<BasicBlock>, AddrLabelSymEntry> AddrLabelSymbols;
+
+  /// Callbacks for the BasicBlock's that we have entries for.  We use this so
+  /// we get notified if a block is deleted or RAUWd.
+  std::vector<AddrLabelMapCallbackPtr> BBCallbacks;
+
+  /// This is a per-function list of symbols whose corresponding BasicBlock got
+  /// deleted.  These symbols need to be emitted at some point in the file, so
+  /// AsmPrinter emits them after the function body.
+  DenseMap<AssertingVH<Function>, std::vector<MCSymbol *>>
+      DeletedAddrLabelsNeedingEmission;
+
+public:
+  AddrLabelMap(MCContext &context) : Context(context) {}
+
+  ~AddrLabelMap() {
+    assert(DeletedAddrLabelsNeedingEmission.empty() &&
+           "Some labels for deleted blocks never got emitted");
+  }
+
+  ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(BasicBlock *BB);
+
+  void takeDeletedSymbolsForFunction(Function *F,
+                                     std::vector<MCSymbol *> &Result);
+
+  void UpdateForDeletedBlock(BasicBlock *BB);
+  void UpdateForRAUWBlock(BasicBlock *Old, BasicBlock *New);
+};
+
+ArrayRef<MCSymbol *> AddrLabelMap::getAddrLabelSymbolToEmit(BasicBlock *BB) {
+  assert(BB->hasAddressTaken() &&
+         "Shouldn't get label for block without address taken");
+  AddrLabelSymEntry &Entry = AddrLabelSymbols[BB];
+
+  // If we already had an entry for this block, just return it.
+  if (!Entry.Symbols.empty()) {
+    assert(BB->getParent() == Entry.Fn && "Parent changed");
+    return Entry.Symbols;
+  }
+
+  // Otherwise, this is a new entry, create a new symbol for it and add an
+  // entry to BBCallbacks so we can be notified if the BB is deleted or RAUWd.
+  BBCallbacks.emplace_back(BB);
+  BBCallbacks.back().setMap(this);
+  Entry.Index = BBCallbacks.size() - 1;
+  Entry.Fn = BB->getParent();
+  MCSymbol *Sym = BB->hasAddressTaken() ? Context.createNamedTempSymbol()
+                                        : Context.createTempSymbol();
+  Entry.Symbols.push_back(Sym);
+  return Entry.Symbols;
+}
+
+/// If we have any deleted symbols for F, return them.
+void AddrLabelMap::takeDeletedSymbolsForFunction(
+    Function *F, std::vector<MCSymbol *> &Result) {
+  DenseMap<AssertingVH<Function>, std::vector<MCSymbol *>>::iterator I =
+      DeletedAddrLabelsNeedingEmission.find(F);
+
+  // If there are no entries for the function, just return.
+  if (I == DeletedAddrLabelsNeedingEmission.end())
+    return;
+
+  // Otherwise, take the list.
+  std::swap(Result, I->second);
+  DeletedAddrLabelsNeedingEmission.erase(I);
+}
+
+//===- Address of Block Management ----------------------------------------===//
+
+ArrayRef<MCSymbol *>
+AsmPrinter::getAddrLabelSymbolToEmit(const BasicBlock *BB) {
+  // Lazily create AddrLabelSymbols.
+  if (!AddrLabelSymbols)
+    AddrLabelSymbols = std::make_unique<AddrLabelMap>(OutContext);
+  return AddrLabelSymbols->getAddrLabelSymbolToEmit(
+      const_cast<BasicBlock *>(BB));
+}
+
+void AsmPrinter::takeDeletedSymbolsForFunction(
+    const Function *F, std::vector<MCSymbol *> &Result) {
+  // If no blocks have had their addresses taken, we're done.
+  if (!AddrLabelSymbols)
+    return;
+  return AddrLabelSymbols->takeDeletedSymbolsForFunction(
+      const_cast<Function *>(F), Result);
+}
+
+void AddrLabelMap::UpdateForDeletedBlock(BasicBlock *BB) {
+  // If the block got deleted, there is no need for the symbol.  If the symbol
+  // was already emitted, we can just forget about it, otherwise we need to
+  // queue it up for later emission when the function is output.
+  AddrLabelSymEntry Entry = std::move(AddrLabelSymbols[BB]);
+  AddrLabelSymbols.erase(BB);
+  assert(!Entry.Symbols.empty() && "Didn't have a symbol, why a callback?");
+  BBCallbacks[Entry.Index] = nullptr; // Clear the callback.
+
+#if !LLVM_MEMORY_SANITIZER_BUILD
+  // BasicBlock is destroyed already, so this access is UB detectable by msan.
+  assert((BB->getParent() == nullptr || BB->getParent() == Entry.Fn) &&
+         "Block/parent mismatch");
+#endif
+
+  for (MCSymbol *Sym : Entry.Symbols) {
+    if (Sym->isDefined())
+      return;
+
+    // If the block is not yet defined, we need to emit it at the end of the
+    // function.  Add the symbol to the DeletedAddrLabelsNeedingEmission list
+    // for the containing Function.  Since the block is being deleted, its
+    // parent may already be removed, we have to get the function from 'Entry'.
+    DeletedAddrLabelsNeedingEmission[Entry.Fn].push_back(Sym);
+  }
+}
+
+void AddrLabelMap::UpdateForRAUWBlock(BasicBlock *Old, BasicBlock *New) {
+  // Get the entry for the RAUW'd block and remove it from our map.
+  AddrLabelSymEntry OldEntry = std::move(AddrLabelSymbols[Old]);
+  AddrLabelSymbols.erase(Old);
+  assert(!OldEntry.Symbols.empty() && "Didn't have a symbol, why a callback?");
+
+  AddrLabelSymEntry &NewEntry = AddrLabelSymbols[New];
+
+  // If New is not address taken, just move our symbol over to it.
+  if (NewEntry.Symbols.empty()) {
+    BBCallbacks[OldEntry.Index].setPtr(New); // Update the callback.
+    NewEntry = std::move(OldEntry);          // Set New's entry.
+    return;
+  }
+
+  BBCallbacks[OldEntry.Index] = nullptr; // Update the callback.
+
+  // Otherwise, we need to add the old symbols to the new block's set.
+  llvm::append_range(NewEntry.Symbols, OldEntry.Symbols);
+}
+
+void AddrLabelMapCallbackPtr::deleted() {
+  Map->UpdateForDeletedBlock(cast<BasicBlock>(getValPtr()));
+}
+
+void AddrLabelMapCallbackPtr::allUsesReplacedWith(Value *V2) {
+  Map->UpdateForRAUWBlock(cast<BasicBlock>(getValPtr()), cast<BasicBlock>(V2));
+}
+
 /// getGVAlignment - Return the alignment to use for the specified global
 /// value.  This rounds up to the preferred alignment if possible and legal.
 Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
@@ -259,6 +431,8 @@ bool AsmPrinter::doInitialization(Module &M) {
   MMI = MMIWP ? &MMIWP->getMMI() : nullptr;
   HasSplitStack = false;
   HasNoSplitStack = false;
+
+  AddrLabelSymbols = nullptr;
 
   // Initialize TargetLoweringObjectFile.
   const_cast<TargetLoweringObjectFile&>(getObjFileLowering())
@@ -802,7 +976,7 @@ void AsmPrinter::emitFunctionHeader() {
   // references to the dangling symbols.  Emit them at the start of the function
   // so that we don't get references to undefined symbols.
   std::vector<MCSymbol*> DeadBlockSyms;
-  MMI->takeDeletedSymbolsForFunction(&F, DeadBlockSyms);
+  takeDeletedSymbolsForFunction(&F, DeadBlockSyms);
   for (MCSymbol *DeadBlockSym : DeadBlockSyms) {
     OutStreamer->AddComment("Address taken block that was later removed");
     OutStreamer->emitLabel(DeadBlockSym);
@@ -1956,6 +2130,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   emitEndOfAsmFile(M);
 
   MMI = nullptr;
+  AddrLabelSymbols = nullptr;
 
   OutStreamer->Finish();
   OutStreamer->reset();
@@ -3140,11 +3315,12 @@ MCSymbol *AsmPrinter::createTempSymbol(const Twine &Name) const {
 }
 
 MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BlockAddress *BA) const {
-  return MMI->getAddrLabelSymbol(BA->getBasicBlock());
+  return const_cast<AsmPrinter *>(this)->getAddrLabelSymbol(
+      BA->getBasicBlock());
 }
 
 MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BasicBlock *BB) const {
-  return MMI->getAddrLabelSymbol(BB);
+  return const_cast<AsmPrinter *>(this)->getAddrLabelSymbol(BB);
 }
 
 /// GetCPISymbol - Return the symbol for the specified constant pool entry.
@@ -3303,7 +3479,7 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     // MBBs can have their address taken as part of CodeGen without having
     // their corresponding BB's address taken in IR
     if (BB && BB->hasAddressTaken())
-      for (MCSymbol *Sym : MMI->getAddrLabelSymbolToEmit(BB))
+      for (MCSymbol *Sym : getAddrLabelSymbolToEmit(BB))
         OutStreamer->emitLabel(Sym);
   }
 
