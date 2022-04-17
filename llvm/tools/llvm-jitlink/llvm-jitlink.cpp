@@ -267,6 +267,13 @@ private:
   bool C;
 };
 
+Expected<std::unique_ptr<MemoryBuffer>> getFile(const Twine &FileName) {
+  if (auto F = MemoryBuffer::getFile(FileName))
+    return std::move(*F);
+  else
+    return createFileError(FileName, F.getError());
+}
+
 void reportLLVMJITLinkError(Error Err) {
   handleAllErrors(
       std::move(Err),
@@ -1094,8 +1101,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   for (auto &HarnessFile : TestHarnesses) {
     HarnessFiles.insert(HarnessFile);
 
-    auto ObjBuffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(HarnessFile)));
+    auto ObjBuffer = ExitOnErr(getFile(HarnessFile));
 
     auto ObjInterface =
         ExitOnErr(getObjectFileInterface(ES, ObjBuffer->getMemBufferRef()));
@@ -1246,8 +1252,7 @@ static Triple getFirstFileTriple() {
   static Triple FirstTT = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
     for (auto InputFile : InputFiles) {
-      auto ObjBuffer =
-          ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFile)));
+      auto ObjBuffer = ExitOnErr(getFile(InputFile));
       switch (identify_magic(ObjBuffer->getBuffer())) {
       case file_magic::elf_relocatable:
       case file_magic::macho_object:
@@ -1456,7 +1461,7 @@ static Error addTestHarnesses(Session &S) {
   LLVM_DEBUG(dbgs() << "Adding test harness objects...\n");
   for (auto HarnessFile : TestHarnesses) {
     LLVM_DEBUG(dbgs() << "  " << HarnessFile << "\n");
-    auto ObjBuffer = errorOrToExpected(MemoryBuffer::getFile(HarnessFile));
+    auto ObjBuffer = getFile(HarnessFile);
     if (!ObjBuffer)
       return ObjBuffer.takeError();
     if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(*ObjBuffer)))
@@ -1480,7 +1485,7 @@ static Error addObjects(Session &S,
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
                       << "\" to " << JD.getName() << "\n";);
-    auto ObjBuffer = errorOrToExpected(MemoryBuffer::getFile(InputFile));
+    auto ObjBuffer = getFile(InputFile);
     if (!ObjBuffer)
       return ObjBuffer.takeError();
 
@@ -1892,8 +1897,7 @@ static Error runChecks(Session &S) {
 
   std::string CheckLineStart = "# " + CheckName + ":";
   for (auto &CheckFile : CheckFiles) {
-    auto CheckerFileBuf =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(CheckFile)));
+    auto CheckerFileBuf = ExitOnErr(getFile(CheckFile));
     if (!Checker.checkAllRulesInBuffer(CheckLineStart, &*CheckerFileBuf))
       ExitOnErr(make_error<StringError>(
           "Some checks in " + CheckFile + " failed", inconvertibleErrorCode()));
