@@ -247,3 +247,13 @@ define void @hwasan_check_memaccess(i8* %arg0,i8* %arg1, i32 %arg2) {
   call void @llvm.hwasan.check.memaccess(i8* %arg0,i8* %arg1, i32 %arg2)
   ret void
 }
+
+declare void @llvm.eh.sjlj.callsite(i32)
+
+define void @eh_sjlj_callsite(i32 %arg0) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK: i32 %arg0
+  ; CHECK: call void @llvm.eh.sjlj.callsite(i32 %arg0)
+  call void @llvm.eh.sjlj.callsite(i32 %arg0)
+  ret void
+}
