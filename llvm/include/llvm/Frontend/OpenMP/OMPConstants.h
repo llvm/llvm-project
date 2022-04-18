@@ -74,34 +74,114 @@ enum class IdentFlag {
 
 /// \note This needs to be kept in sync with kmp.h enum sched_type.
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h
-///       To complete this, more enum values will need to be moved here.
 enum class OMPScheduleType {
-  StaticChunked = 33,
-  Static = 34, // static unspecialized
-  DynamicChunked = 35,
-  GuidedChunked = 36, // guided unspecialized
-  Runtime = 37,
-  Auto = 38, // auto
+  // For typed comparisons, not a valid schedule
+  None = 0,
 
-  StaticBalancedChunked = 45, // static with chunk adjustment (e.g., simd)
-  GuidedSimd = 46,            // guided with chunk adjustment
-  RuntimeSimd = 47,           // runtime with chunk adjustment
+  // Schedule algorithms
+  BaseStaticChunked = 1,
+  BaseStatic = 2,
+  BaseDynamicChunked = 3,
+  BaseGuidedChunked = 4,
+  BaseRuntime = 5,
+  BaseAuto = 6,
+  BaseTrapezoidal = 7,
+  BaseGreedy = 8,
+  BaseBalanced = 9,
+  BaseGuidedIterativeChunked = 10,
+  BaseGuidedAnalyticalChunked = 11,
+  BaseSteal = 12,
 
-  OrderedStaticChunked = 65,
-  OrderedStatic = 66, // ordered static unspecialized
-  OrderedDynamicChunked = 67,
-  OrderedGuidedChunked = 68,
-  OrderedRuntime = 69,
-  OrderedAuto = 70, // ordered auto
+  // with chunk adjustment (e.g., simd)
+  BaseStaticBalancedChunked = 13,
+  BaseGuidedSimd = 14,
+  BaseRuntimeSimd = 15,
 
-  DistributeChunked = 91, // distribute static chunked
-  Distribute = 92,        // distribute static unspecialized
+  // static schedules algorithims for distribute
+  BaseDistributeChunked = 27,
+  BaseDistribute = 28,
 
-  ModifierMonotonic =
-      (1 << 29), // Set if the monotonic schedule modifier was present
-  ModifierNonmonotonic =
-      (1 << 30), // Set if the nonmonotonic schedule modifier was present
-  ModifierMask = ModifierMonotonic | ModifierNonmonotonic,
+  // Modifier flags to be combined with schedule algorithms
+  ModifierUnordered = (1 << 5),
+  ModifierOrdered = (1 << 6),
+  ModifierNomerge = (1 << 7),
+  ModifierMonotonic = (1 << 29),
+  ModifierNonmonotonic = (1 << 30),
+
+  // Masks combining multiple flags
+  OrderingMask = ModifierUnordered | ModifierOrdered | ModifierNomerge,
+  MonotonicityMask = ModifierMonotonic | ModifierNonmonotonic,
+  ModifierMask = OrderingMask | MonotonicityMask,
+
+  // valid schedule type values, without monotonicity flags
+  UnorderedStaticChunked = BaseStaticChunked | ModifierUnordered,   // 33
+  UnorderedStatic = BaseStatic | ModifierUnordered,                 // 34
+  UnorderedDynamicChunked = BaseDynamicChunked | ModifierUnordered, // 35
+  UnorderedGuidedChunked = BaseGuidedChunked | ModifierUnordered,   // 36
+  UnorderedRuntime = BaseRuntime | ModifierUnordered,               // 37
+  UnorderedAuto = BaseAuto | ModifierUnordered,                     // 38
+  UnorderedTrapezoidal = BaseTrapezoidal | ModifierUnordered,       // 39
+  UnorderedGreedy = BaseGreedy | ModifierUnordered,                 // 40
+  UnorderedBalanced = BaseBalanced | ModifierUnordered,             // 41
+  UnorderedGuidedIterativeChunked =
+      BaseGuidedIterativeChunked | ModifierUnordered, // 42
+  UnorderedGuidedAnalyticalChunked =
+      BaseGuidedAnalyticalChunked | ModifierUnordered, // 43
+  UnorderedSteal = BaseSteal | ModifierUnordered,      // 44
+
+  UnorderedStaticBalancedChunked =
+      BaseStaticBalancedChunked | ModifierUnordered,          // 45
+  UnorderedGuidedSimd = BaseGuidedSimd | ModifierUnordered,   // 46
+  UnorderedRuntimeSimd = BaseRuntimeSimd | ModifierUnordered, // 47
+
+  OrderedStaticChunked = BaseStaticChunked | ModifierOrdered,   // 65
+  OrderedStatic = BaseStatic | ModifierOrdered,                 // 66
+  OrderedDynamicChunked = BaseDynamicChunked | ModifierOrdered, // 67
+  OrderedGuidedChunked = BaseGuidedChunked | ModifierOrdered,   // 68
+  OrderedRuntime = BaseRuntime | ModifierOrdered,               // 69
+  OrderedAuto = BaseAuto | ModifierOrdered,                     // 70
+  OrderdTrapezoidal = BaseTrapezoidal | ModifierOrdered,        // 71
+
+  OrderedDistributeChunked = BaseDistributeChunked | ModifierOrdered, // 91
+  OrderedDistribute = BaseDistribute | ModifierOrdered,               // 92
+
+  NomergeUnorderedStaticChunked =
+      BaseStaticChunked | ModifierUnordered | ModifierNomerge, // 161
+  NomergeUnorderedStatic =
+      BaseStatic | ModifierUnordered | ModifierNomerge, // 162
+  NomergeUnorderedDynamicChunked =
+      BaseDynamicChunked | ModifierUnordered | ModifierNomerge, // 163
+  NomergeUnorderedGuidedChunked =
+      BaseGuidedChunked | ModifierUnordered | ModifierNomerge, // 164
+  NomergeUnorderedRuntime =
+      BaseRuntime | ModifierUnordered | ModifierNomerge,                 // 165
+  NomergeUnorderedAuto = BaseAuto | ModifierUnordered | ModifierNomerge, // 166
+  NomergeUnorderedTrapezoidal =
+      BaseTrapezoidal | ModifierUnordered | ModifierNomerge, // 167
+  NomergeUnorderedGreedy =
+      BaseGreedy | ModifierUnordered | ModifierNomerge, // 168
+  NomergeUnorderedBalanced =
+      BaseBalanced | ModifierUnordered | ModifierNomerge, // 169
+  NomergeUnorderedGuidedIterativeChunked =
+      BaseGuidedIterativeChunked | ModifierUnordered | ModifierNomerge, // 170
+  NomergeUnorderedGuidedAnalyticalChunked =
+      BaseGuidedAnalyticalChunked | ModifierUnordered | ModifierNomerge, // 171
+  NomergeUnorderedSteal =
+      BaseSteal | ModifierUnordered | ModifierNomerge, // 172
+
+  NomergeOrderedStaticChunked =
+      BaseStaticChunked | ModifierOrdered | ModifierNomerge,             // 193
+  NomergeOrderedStatic = BaseStatic | ModifierOrdered | ModifierNomerge, // 194
+  NomergeOrderedDynamicChunked =
+      BaseDynamicChunked | ModifierOrdered | ModifierNomerge, // 195
+  NomergeOrderedGuidedChunked =
+      BaseGuidedChunked | ModifierOrdered | ModifierNomerge, // 196
+  NomergeOrderedRuntime =
+      BaseRuntime | ModifierOrdered | ModifierNomerge,               // 197
+  NomergeOrderedAuto = BaseAuto | ModifierOrdered | ModifierNomerge, // 198
+  NomergeOrderedTrapezoidal =
+      BaseTrapezoidal | ModifierOrdered | ModifierNomerge, // 199
+
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ ModifierMask)
 };
 
