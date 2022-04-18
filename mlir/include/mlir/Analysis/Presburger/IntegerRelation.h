@@ -467,15 +467,27 @@ public:
 
   /// Adds additional local ids to the sets such that they both have the union
   /// of the local ids in each set, without changing the set of points that
-  /// lie in `this` and `other`. The ordering of the local ids in the
-  /// sets may also be changed. After merging, if the `i^th` local variable in
-  /// one set has a known division representation, then the `i^th` local
-  /// variable in the other set either has the same division representation or
-  /// no known division representation.
+  /// lie in `this` and `other`.
   ///
-  /// The number of dimensions and symbol ids in `this` and `other` should
-  /// match.
-  void mergeLocalIds(IntegerRelation &other);
+  /// While taking union, if a local id in `other` has a division representation
+  /// which is a duplicate of division representation, of another local id, it
+  /// is not added to the final union of local ids and is instead merged. The
+  /// new ordering of local ids is:
+  ///
+  /// [Local ids of `this`] [Non-merged local ids of `other`]
+  ///
+  /// The relative ordering of local ids is same as before.
+  ///
+  /// After merging, if the `i^th` local variable in one set has a known
+  /// division representation, then the `i^th` local variable in the other set
+  /// either has the same division representation or no known division
+  /// representation.
+  ///
+  /// The spaces of both relations should be compatible.
+  ///
+  /// Returns the number of non-merged local ids of `other`, i.e. the number of
+  /// locals that have been added to `this`.
+  unsigned mergeLocalIds(IntegerRelation &other);
 
   /// Changes the partition between dimensions and symbols. Depending on the new
   /// symbol count, either a chunk of dimensional identifiers immediately before
