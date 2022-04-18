@@ -1,4 +1,4 @@
-; RUN: opt -pgo-icall-prom -icp-samplepgo -S < %s | FileCheck %s
+; RUN: opt -passes=pgo-icall-prom -icp-samplepgo -S < %s | FileCheck %s
 
 define i32* @_Z3fooPi(i32* readnone returned) {
   ret i32* %0

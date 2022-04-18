@@ -13,6 +13,7 @@
 #ifndef VECTOR_OPS
 #define VECTOR_OPS
 
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
@@ -2537,6 +2538,141 @@ def Vector_ScanOp :
     "$kind `,` $source `,` $initial_value attr-dict `:` "
     "type($source) `,` type($initial_value) ";
   let hasVerifier = 1;
+}
+
+def Vector_YieldOp : Vector_Op<"yield", [
+    NoSideEffect, ReturnLike, Terminator]> {
+  let summary = "Terminates and yields values from vector regions.";
+  let description = [{
+    "vector.yield" yields an SSA value from the Vector dialect op region and
+    terminates the regions. The semantics of how the values are yielded is
+    defined by the parent operation.
+    If "vector.yield" has any operands, the operands must correspond to the
+    parent operation's results.
+    If the parent operation defines no value the vector.yield may be omitted
+    when printing the region.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [
+    OpBuilder<(ins), [{ /* nothing to do */ }]>,
+  ];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+}
+
+def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["areTypesCompatible"]>,
+       SingleBlockImplicitTerminator<"vector::YieldOp">,
+       RecursiveSideEffects]> {
+  let summary = "Executes operations in the associated region on lane #0 of a"
+                "GPU SIMT warp";
+  let description = [{
+    `warp_execute_on_lane_0` is an operation used to bridge the gap between
+    vector programming and GPU SIMT programming model. It allows to trivially
+    convert a region of vector code meant to run on a GPU warp into a valid SIMT
+    region and then allows incremental transformation to distribute vector
+    operations on the SIMT lane.
+
+    Any code present in the region would only be executed on first lane
+    based on the `laneid` operand. The `laneid` operand is an integer ID between
+    [0, `warp_size`). The `warp_size` attribute indicates the number of lanes in
+    a warp.
+
+    Operands are vector values distributed on all lanes that may be used by
+    the single lane execution. The matching region argument is a vector of all
+    the values of those lanes available to the single active lane. The
+    distributed dimension is implicit based on the shape of the operand and
+    argument. In the future this may be described by an affine map.
+
+    Return values are distributed on all lanes using laneId as index. The
+    vector is distributed based on the shape ratio between the vector type of
+    the yield and the result type.
+    If the shapes are the same this means the value is broadcasted to all lanes.
+    In the future the distribution can be made more explicit using affine_maps
+    and will support having multiple Ids.
+
+    Therefore the `warp_execute_on_lane_0` operations allow to implicitly copy
+    between lane0 and the lanes of the warp. When distributing a vector
+    from lane0 to all the lanes, the data are distributed in a block cyclic way.
+
+    During lowering values passed as operands and return value need to be
+    visible to different lanes within the warp. This would usually be done by
+    going through memory.
+
+    The region is *not* isolated from above. For values coming from the parent
+    region not going through operands only the lane 0 value will be accesible so
+    it generally only make sense for uniform values.
+
+    Example:
+    ```
+    vector.warp_execute_on_lane_0 (%laneid)[32] {
+      ...
+    }
+    ```
+
+    This may be lowered to an scf.if region as below:
+    ```
+      %cnd = arith.cmpi eq, %laneid, %c0 : index
+      scf.if %cnd {
+         ...
+      }
+    ```
+
+    When the region has operands and/or return values:
+    ```
+    %0 = vector.warp_execute_on_lane_0(%laneid)[32]
+    args(%v0 : vector<4xi32>) -> (vector<1xf32>) {
+    ^bb0(%arg0 : vector<128xi32>) :
+      ...
+      vector.yield %1 : vector<32xf32>
+    }
+    ```
+
+    values at the region boundary would go through memory:
+    ```
+    %tmp0 = memreg.alloc() : memref<32xf32, 3>
+    %tmp1 = memreg.alloc() : memref<32xf32, 3>
+    %cnd = arith.cmpi eq, %laneid, %c0 : index
+    vector.store %v0, %tmp0[%laneid] : memref<32xf32>, vector<1xf32>
+    warp_sync
+    scf.if %cnd {
+      %arg0 = vector.load %tmp0[%c0] : memref<32xf32>, vector<32xf32>
+      ...
+      vector.store %1, %tmp1[%c0] : memref<32xf32>, vector<32xf32>
+    }
+    warp_sync
+    %0 = vector.load %tmp1[%laneid] : memref<32xf32>, vector<32xf32>
+    ```
+
+  }];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+  let arguments = (ins Index:$laneid, I64Attr:$warp_size,
+                       Variadic<AnyType>:$args);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$warpRegion);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$laneid, "int64_t":$warpSize)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
+                   "int64_t":$warpSize)>,
+    // `blockArgTypes` are different than `args` types as they are they
+    // represent all the `args` instances visibile to lane 0. Therefore we need
+    // to explicit pass the type.
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
+                   "int64_t":$warpSize, "ValueRange":$args,
+                   "TypeRange":$blockArgTypes)>
+  ];
+
+  let extraClassDeclaration = [{
+    bool isDefinedOutsideOfRegion(Value value) {
+      return !getRegion().isAncestor(value.getParentRegion());
+    }
+  }];
 }
 
 #endif // VECTOR_OPS

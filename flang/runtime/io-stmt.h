@@ -132,8 +132,8 @@ public:
   // For fixed-width fields, initialize the number of remaining characters.
   // Skip over leading blanks, then return the first non-blank character (if
   // any).
-  std::optional<char32_t> PrepareInput(
-      const DataEdit &edit, std::optional<int> &remaining) {
+  std::optional<char32_t> PrepareInput(const DataEdit &edit,
+      std::optional<int> &remaining, bool skipSpaces = true) {
     remaining.reset();
     if (edit.descriptor == DataEdit::ListDirected) {
       std::size_t byteCount{0};
@@ -142,7 +142,9 @@ public:
       if (edit.width.value_or(0) > 0) {
         remaining = *edit.width;
       }
-      SkipSpaces(remaining);
+      if (skipSpaces) {
+        SkipSpaces(remaining);
+      }
     }
     return NextInField(remaining, edit);
   }
