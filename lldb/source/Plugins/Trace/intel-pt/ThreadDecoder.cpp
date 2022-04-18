@@ -43,7 +43,7 @@ DecodedThreadSP ThreadDecoder::DoDecode() {
             });
 
         if (err)
-          decoded_thread_sp->AppendError(std::move(err));
+          decoded_thread_sp->SetAsFailed(std::move(err));
         return decoded_thread_sp;
       });
 }

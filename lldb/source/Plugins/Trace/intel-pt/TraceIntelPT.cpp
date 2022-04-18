@@ -142,11 +142,25 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
         s.Format("    {0}: {1:2}s\n", name, duration.count() / 1000.0);
       });
 
+  const DecodedThread::EventsStats &events_stats =
+      decoded_trace_sp->GetEventsStats();
+  s << "\n  Events:\n";
+  s.Format("    Number of instructions with events: {0}\n",
+           events_stats.total_instructions_with_events);
+  s.Format("    Number of individual events: {0}\n", events_stats.total_count);
+  for (const auto &event_to_count : events_stats.events_counts) {
+    s.Format("      {0}: {1}\n",
+             trace_event_utils::EventToDisplayString(event_to_count.first),
+             event_to_count.second);
+  }
+
   s << "\n  Errors:\n";
-  const DecodedThread::LibiptErrors &tsc_errors =
-      decoded_trace_sp->GetTscErrors();
-  s.Format("    Number of TSC decoding errors: {0}\n", tsc_errors.total_count);
-  for (const auto &error_message_to_count : tsc_errors.libipt_errors) {
+  const DecodedThread::LibiptErrorsStats &tsc_errors_stats =
+      decoded_trace_sp->GetTscErrorsStats();
+  s.Format("    Number of TSC decoding errors: {0}\n",
+           tsc_errors_stats.total_count);
+  for (const auto &error_message_to_count :
+       tsc_errors_stats.libipt_errors_counts) {
     s.Format("      {0}: {1}\n", error_message_to_count.first,
              error_message_to_count.second);
   }

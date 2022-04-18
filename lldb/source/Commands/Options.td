@@ -1121,12 +1121,15 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">, Group<1>,
     Desc<"For each instruction, print the corresponding timestamp counter if "
     "available.">;
+  def thread_trace_dump_instructions_hide_events : Option<"events", "e">,
+    Group<1>,
+    Desc<"Dump the events that happened during the execution of the target.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,
     Group<1>,
-    Desc<"Continue dumping instructions right where the previous invocation of this "
-    "command was left, or from the beginning if this is the first invocation. The --skip "
-    "argument is discarded and the other arguments are preserved from the previous "
-    "invocation when possible.">;
+    Desc<"Continue dumping instructions right where the previous invocation of "
+    "this command was left, or from the beginning if this is the first "
+    "invocation. The --skip argument is discarded and the other arguments are "
+    "preserved from the previous invocation when possible.">;
 }
 
 let Command = "thread trace dump info" in {

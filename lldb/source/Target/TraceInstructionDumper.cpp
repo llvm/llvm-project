@@ -172,6 +172,16 @@ void TraceInstructionDumper::SetNoMoreData() { m_no_more_data = true; }
 
 bool TraceInstructionDumper::HasMoreData() { return !m_no_more_data; }
 
+void TraceInstructionDumper::PrintEvents() {
+  if (!m_options.show_events)
+    return;
+
+  trace_event_utils::ForEachEvent(
+      m_cursor_up->GetEvents(), [&](TraceEvents event) {
+        m_s.Format("  [{0}]\n", trace_event_utils::EventToDisplayString(event));
+      });
+}
+
 Optional<lldb::tid_t> TraceInstructionDumper::DumpInstructions(size_t count) {
   ThreadSP thread_sp = m_cursor_up->GetExecutionContextRef().GetThreadSP();
   if (!thread_sp) {
@@ -259,6 +269,11 @@ Optional<lldb::tid_t> TraceInstructionDumper::DumpInstructions(size_t count) {
       break;
     }
     last_id = m_cursor_up->GetId();
+    if (m_options.forwards) {
+      // When moving forwards, we first print the event before printing
+      // the actual instruction.
+      PrintEvents();
+    }
 
     if (const char *err = m_cursor_up->GetError()) {
       if (!m_cursor_up->IsForwards() && !was_prev_instruction_an_error)
@@ -297,6 +312,13 @@ Optional<lldb::tid_t> TraceInstructionDumper::DumpInstructions(size_t count) {
     }
 
     m_s.Printf("\n");
+
+    if (!m_options.forwards) {
+      // If we move backwards, we print the events after printing
+      // the actual instruction so that reading chronologically
+      // makes sense.
+      PrintEvents();
+    }
     TryMoveOneStep();
   }
   return last_id;
