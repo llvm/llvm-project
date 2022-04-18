@@ -36,13 +36,13 @@ namespace Fortran::semantics {
 // repetition.
 template <typename DSV = parser::DataStmtValue> class ValueListIterator {
 public:
-  explicit ValueListIterator(const std::list<DSV> &list)
-      : end_{list.end()}, at_{list.begin()} {
+  ValueListIterator(SemanticsContext &context, const std::list<DSV> &list)
+      : context_{context}, end_{list.end()}, at_{list.begin()} {
     SetRepetitionCount();
   }
   bool hasFatalError() const { return hasFatalError_; }
   bool IsAtEnd() const { return at_ == end_; }
-  const SomeExpr *operator*() const { return GetExpr(GetConstant()); }
+  const SomeExpr *operator*() const { return GetExpr(context_, GetConstant()); }
   parser::CharBlock LocateSource() const { return GetConstant().source; }
   ValueListIterator &operator++() {
     if (repetitionsRemaining_ > 0) {
@@ -64,6 +64,7 @@ private:
     return std::get<parser::DataStmtConstant>(GetValue().t);
   }
 
+  SemanticsContext &context_;
   listIterator end_, at_;
   ConstantSubscript repetitionsRemaining_{0};
   bool hasFatalError_{false};
@@ -93,7 +94,7 @@ class DataInitializationCompiler {
 public:
   DataInitializationCompiler(DataInitializations &inits,
       evaluate::ExpressionAnalyzer &a, const std::list<DSV> &list)
-      : inits_{inits}, exprAnalyzer_{a}, values_{list} {}
+      : inits_{inits}, exprAnalyzer_{a}, values_{a.context(), list} {}
   const DataInitializations &inits() const { return inits_; }
   bool HasSurplusValues() const { return !values_.IsAtEnd(); }
   bool Scan(const parser::DataStmtObject &);
@@ -134,7 +135,7 @@ bool DataInitializationCompiler<DSV>::Scan(
 
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const parser::Variable &var) {
-  if (const auto *expr{GetExpr(var)}) {
+  if (const auto *expr{GetExpr(exprAnalyzer_.context(), var)}) {
     exprAnalyzer_.GetFoldingContext().messages().SetLocation(var.GetSource());
     if (InitDesignator(*expr)) {
       return true;
@@ -160,10 +161,13 @@ template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
   const auto &bounds{std::get<parser::DataImpliedDo::Bounds>(ido.t)};
   auto name{bounds.name.thing.thing};
-  const auto *lowerExpr{GetExpr(bounds.lower.thing.thing)};
-  const auto *upperExpr{GetExpr(bounds.upper.thing.thing)};
-  const auto *stepExpr{
-      bounds.step ? GetExpr(bounds.step->thing.thing) : nullptr};
+  const auto *lowerExpr{
+      GetExpr(exprAnalyzer_.context(), bounds.lower.thing.thing)};
+  const auto *upperExpr{
+      GetExpr(exprAnalyzer_.context(), bounds.upper.thing.thing)};
+  const auto *stepExpr{bounds.step
+          ? GetExpr(exprAnalyzer_.context(), bounds.step->thing.thing)
+          : nullptr};
   if (lowerExpr && upperExpr) {
     // Fold the bounds expressions (again) in case any of them depend
     // on outer implied DO loops.

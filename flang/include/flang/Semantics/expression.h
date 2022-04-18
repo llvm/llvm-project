@@ -480,6 +480,12 @@ public:
     exprAnalyzer_.set_inWhereBody(InWhereBody());
   }
 
+  bool Pre(const parser::ComponentDefStmt &) {
+    // Already analyzed in name resolution and PDT instantiation;
+    // do not attempt to re-analyze now without type parameters.
+    return false;
+  }
+
   template <typename A> bool Pre(const parser::Scalar<A> &x) {
     exprAnalyzer_.Analyze(x);
     return false;

@@ -240,7 +240,7 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
   const auto &selectCase{selectCaseStmt.statement};
   const auto &selectExpr{
       std::get<parser::Scalar<parser::Expr>>(selectCase.t).thing};
-  const auto *x{GetExpr(selectExpr)};
+  const auto *x{GetExpr(context_, selectExpr)};
   if (!x) {
     return; // expression semantics failed
   }

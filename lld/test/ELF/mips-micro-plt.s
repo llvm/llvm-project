@@ -42,7 +42,7 @@
 # ASM-NEXT:            addi    $8, $8, 801
 #
 # ASM:      <foo>:
-# ASM-NEXT:    20210:  jal     131872
+# ASM-NEXT:    20210:  jal     0x20320
 
   .text
   .set micromips

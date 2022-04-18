@@ -4906,6 +4906,7 @@ cc_library(
     deps = [
         ":ControlFlowInterfaces",
         ":IR",
+        ":LoopLikeInterface",
         ":Rewrite",
         ":SideEffectInterfaces",
         ":Support",

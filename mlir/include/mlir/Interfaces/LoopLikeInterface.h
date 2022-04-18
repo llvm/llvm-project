@@ -15,20 +15,7 @@
 
 #include "mlir/IR/OpDefinition.h"
 
-//===----------------------------------------------------------------------===//
-// LoopLike Interfaces
-//===----------------------------------------------------------------------===//
-
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/LoopLikeInterface.h.inc"
-
-//===----------------------------------------------------------------------===//
-// LoopLike Utilities
-//===----------------------------------------------------------------------===//
-
-namespace mlir {
-/// Move loop invariant code out of a `looplike` operation.
-void moveLoopInvariantCode(LoopLikeOpInterface looplike);
-} // namespace mlir
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE_H_
