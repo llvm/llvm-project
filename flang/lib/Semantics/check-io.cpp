@@ -209,7 +209,7 @@ void IoChecker::Enter(const parser::Format &spec) {
           [&](const parser::Label &) { flags_.set(Flag::LabelFmt); },
           [&](const parser::Star &) { flags_.set(Flag::StarFmt); },
           [&](const parser::Expr &format) {
-            const SomeExpr *expr{GetExpr(format)};
+            const SomeExpr *expr{GetExpr(context_, format)};
             if (!expr) {
               return;
             }
@@ -299,7 +299,7 @@ void IoChecker::Enter(const parser::IdExpr &) { SetSpecifier(IoSpecKind::Id); }
 
 void IoChecker::Enter(const parser::IdVariable &spec) {
   SetSpecifier(IoSpecKind::Id);
-  const auto *expr{GetExpr(spec)};
+  const auto *expr{GetExpr(context_, spec)};
   if (!expr || !expr->GetType()) {
     return;
   }
@@ -546,7 +546,7 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
     if (stmt_ == IoStmtKind::Write) {
       CheckForDefinableVariable(*var, "Internal file");
     }
-    if (const auto *expr{GetExpr(*var)}) {
+    if (const auto *expr{GetExpr(context_, *var)}) {
       if (HasVectorSubscript(*expr)) {
         context_.Say(parser::FindSourceLocation(*var), // C1201
             "Internal file must not have a vector subscript"_err_en_US);
@@ -577,7 +577,7 @@ void IoChecker::Enter(const parser::MsgVariable &var) {
 void IoChecker::Enter(const parser::OutputItem &item) {
   flags_.set(Flag::DataList);
   if (const auto *x{std::get_if<parser::Expr>(&item.u)}) {
-    if (const auto *expr{GetExpr(*x)}) {
+    if (const auto *expr{GetExpr(context_, *x)}) {
       if (evaluate::IsBOZLiteral(*expr)) {
         context_.Say(parser::FindSourceLocation(*x), // C7109
             "Output item must not be a BOZ literal constant"_err_en_US);
