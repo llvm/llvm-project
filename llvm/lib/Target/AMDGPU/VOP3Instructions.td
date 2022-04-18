@@ -825,8 +825,8 @@ defm V_DIV_SCALE_F64       : VOP3be_Real_gfx11<0x2fd, "V_DIV_SCALE_F64", "v_div_
 defm V_MAD_U64_U32_gfx11   : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32_gfx11", "v_mad_u64_u32">;
 defm V_MAD_I64_I32_gfx11   : VOP3be_Real_gfx11<0x2ff, "V_MAD_I64_I32_gfx11", "v_mad_i64_i32">;
 // V_ADD_CO_U32, V_SUB_CO_U32, V_SUBREV_CO_U32 in VOP2Instructions.td
-defm V_ADD_NC_U16          : VOP3Only_Realtriple_with_name_gfx11<0x303, "V_ADD_U16", "v_add_nc_u16">;
-defm V_SUB_NC_U16          : VOP3Only_Realtriple_with_name_gfx11<0x304, "V_SUB_U16", "v_sub_nc_u16">;
+defm V_ADD_NC_U16          : VOP3Only_Realtriple_gfx11<0x303>;
+defm V_SUB_NC_U16          : VOP3Only_Realtriple_gfx11<0x304>;
 defm V_MUL_LO_U16          : VOP3Only_Realtriple_gfx11<0x305>;
 defm V_CVT_PK_I16_F32      : VOP3_Realtriple_gfx11<0x306>;
 defm V_CVT_PK_U16_F32      : VOP3_Realtriple_gfx11<0x307>;
