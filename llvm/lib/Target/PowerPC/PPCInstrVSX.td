@@ -51,35 +51,6 @@
 // **   printing (for example: xxswapd for xxpermdi with 0x2 as the imm).    **
 // ****************************************************************************
 
-def PPCRegVSRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSRC"; let PredicateMethod = "isVSRegNumber";
-}
-def vsrc : RegisterOperand<VSRC> {
-  let ParserMatchClass = PPCRegVSRCAsmOperand;
-}
-
-def PPCRegVSFRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSFRC"; let PredicateMethod = "isVSRegNumber";
-}
-def vsfrc : RegisterOperand<VSFRC> {
-  let ParserMatchClass = PPCRegVSFRCAsmOperand;
-}
-
-def PPCRegVSSRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSSRC"; let PredicateMethod = "isVSRegNumber";
-}
-def vssrc : RegisterOperand<VSSRC> {
-  let ParserMatchClass = PPCRegVSSRCAsmOperand;
-}
-
-def PPCRegSPILLTOVSRRCAsmOperand : AsmOperandClass {
-  let Name = "RegSPILLTOVSRRC"; let PredicateMethod = "isVSRegNumber";
-}
-
-def spilltovsrrc : RegisterOperand<SPILLTOVSRRC> {
-  let ParserMatchClass = PPCRegSPILLTOVSRRCAsmOperand;
-}
-
 def SDT_PPCldvsxlh : SDTypeProfile<1, 1, [
   SDTCisVT<0, v4f32>, SDTCisPtrTy<1>
 ]>;
