@@ -1673,8 +1673,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_implib))
     config->implib = arg->getValue();
 
-  if (auto *arg = args.getLastArg(OPT_noimplib))
-    config->noimplib = true;
+  config->noimplib = args.hasArg(OPT_noimplib);
 
   // Handle /opt.
   bool doGC = debug == DebugKind::None || args.hasArg(OPT_profile);

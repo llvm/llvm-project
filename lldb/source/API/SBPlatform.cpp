@@ -292,9 +292,7 @@ SBPlatform::SBPlatform() { LLDB_INSTRUMENT_VA(this); }
 SBPlatform::SBPlatform(const char *platform_name) {
   LLDB_INSTRUMENT_VA(this, platform_name);
 
-  Status error;
-  if (platform_name && platform_name[0])
-    m_opaque_sp = Platform::Create(ConstString(platform_name), error);
+  m_opaque_sp = Platform::Create(platform_name);
 }
 
 SBPlatform::SBPlatform(const SBPlatform &rhs) {

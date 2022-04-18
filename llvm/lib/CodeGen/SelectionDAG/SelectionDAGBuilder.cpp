@@ -4400,9 +4400,14 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
   Base = SDB->getValue(BasePtr);
   Index = SDB->getValue(IndexVal);
   IndexType = ISD::SIGNED_SCALED;
-  Scale = DAG.getTargetConstant(
-              DL.getTypeAllocSize(GEP->getResultElementType()),
-              SDB->getCurSDLoc(), TLI.getPointerTy(DL));
+
+  // MGATHER/MSCATTER only support scaling by a power-of-two.
+  uint64_t ScaleVal = DL.getTypeAllocSize(GEP->getResultElementType());
+  if (!isPowerOf2_64(ScaleVal))
+    return false;
+
+  Scale =
+      DAG.getTargetConstant(ScaleVal, SDB->getCurSDLoc(), TLI.getPointerTy(DL));
   return true;
 }
 

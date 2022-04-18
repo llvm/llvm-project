@@ -18992,6 +18992,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   default: llvm_unreachable("unexpected builtin ID");
   case RISCV::BI__builtin_riscv_orc_b_32:
   case RISCV::BI__builtin_riscv_orc_b_64:
+  case RISCV::BI__builtin_riscv_clz_32:
+  case RISCV::BI__builtin_riscv_clz_64:
   case RISCV::BI__builtin_riscv_clmul:
   case RISCV::BI__builtin_riscv_clmulh:
   case RISCV::BI__builtin_riscv_clmulr:
@@ -19037,6 +19039,11 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_orc_b_64:
       ID = Intrinsic::riscv_orc_b;
       break;
+    case RISCV::BI__builtin_riscv_clz_32:
+    case RISCV::BI__builtin_riscv_clz_64: {
+      Function *F = CGM.getIntrinsic(Intrinsic::ctlz, Ops[0]->getType());
+      return Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
+    }
 
     // Zbc
     case RISCV::BI__builtin_riscv_clmul:

@@ -35,13 +35,23 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
     for (auto &SrcMI : SrcMBB) {
       for (unsigned I = 0, E = SrcMI.getNumOperands(); I < E; ++I) {
         auto &DMO = SrcMI.getOperand(I);
-        if (!DMO.isReg() || !DMO.isDef())
+        if (!DMO.isReg())
           continue;
         Register SrcReg = DMO.getReg();
         if (Register::isPhysicalRegister(SrcReg))
           continue;
-        auto SrcRC = SrcMRI->getRegClass(SrcReg);
-        auto DstReg = DstMRI->createVirtualRegister(SrcRC);
+
+        if (Src2DstReg.find(SrcReg) != Src2DstReg.end())
+          continue;
+
+        Register DstReg = DstMRI->createIncompleteVirtualRegister(
+            SrcMRI->getVRegName(SrcReg));
+        DstMRI->setRegClassOrRegBank(DstReg,
+                                     SrcMRI->getRegClassOrRegBank(SrcReg));
+
+        LLT RegTy = SrcMRI->getType(SrcReg);
+        if (RegTy.isValid())
+          DstMRI->setType(DstReg, RegTy);
         Src2DstReg[SrcReg] = DstReg;
       }
     }

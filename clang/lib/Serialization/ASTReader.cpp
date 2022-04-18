@@ -6043,10 +6043,9 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
   case PPD_INCLUSION_DIRECTIVE: {
     const char *FullFileNameStart = Blob.data() + Record[0];
     StringRef FullFileName(FullFileNameStart, Blob.size() - Record[0]);
-    const FileEntry *File = nullptr;
+    Optional<FileEntryRef> File;
     if (!FullFileName.empty())
-      if (auto FE = PP.getFileManager().getFile(FullFileName))
-        File = *FE;
+      File = PP.getFileManager().getOptionalFileRef(FullFileName);
 
     // FIXME: Stable encoding
     InclusionDirective::InclusionKind Kind

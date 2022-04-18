@@ -292,6 +292,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                    &clause.u)) {
       // Privatisation clauses are handled elsewhere.
       continue;
+    } else if (std::get_if<Fortran::parser::OmpClause::Threads>(&clause.u)) {
+      // Nothing needs to be done for threads clause.
+      continue;
     } else {
       TODO(currentLocation, "OpenMP Block construct clauses");
     }
@@ -319,6 +322,10 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     auto singleOp = firOpBuilder.create<mlir::omp::SingleOp>(
         currentLocation, allocateOperands, allocatorOperands, nowaitAttr);
     createBodyOfOp<omp::SingleOp>(singleOp, converter, currentLocation);
+  } else if (blockDirective.v == llvm::omp::OMPD_ordered) {
+    auto orderedOp = firOpBuilder.create<mlir::omp::OrderedRegionOp>(
+        currentLocation, /*simd=*/nullptr);
+    createBodyOfOp<omp::OrderedRegionOp>(orderedOp, converter, currentLocation);
   } else {
     TODO(converter.getCurrentLocation(), "Unhandled block directive");
   }

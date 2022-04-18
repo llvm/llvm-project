@@ -762,6 +762,7 @@ public:
     case TemplateName::QualifiedTemplate:
     case TemplateName::SubstTemplateTemplateParm:
     case TemplateName::SubstTemplateTemplateParmPack:
+    case TemplateName::UsingTemplate:
       // Names that could be resolved to a TemplateDecl are handled elsewhere.
       break;
     }

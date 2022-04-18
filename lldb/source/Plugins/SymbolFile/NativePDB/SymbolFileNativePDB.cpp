@@ -1303,8 +1303,8 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
       GetFileIndex(*cii, inlinee_line.Header->FileID);
   if (!file_index_or_err)
     return;
-  uint32_t decl_file_idx = file_index_or_err.get();
-  decl_file = files.GetFileSpecAtIndex(decl_file_idx);
+  uint32_t file_offset = file_index_or_err.get();
+  decl_file = files.GetFileSpecAtIndex(file_offset);
   uint32_t decl_line = inlinee_line.Header->SourceLineNum;
   std::unique_ptr<Declaration> decl_up =
       std::make_unique<Declaration>(decl_file, decl_line);
@@ -1312,54 +1312,36 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   // Parse range and line info.
   uint32_t code_offset = 0;
   int32_t line_offset = 0;
-  bool has_base = false;
-  bool is_new_line_offset = false;
+  llvm::Optional<uint32_t> code_offset_base;
+  llvm::Optional<uint32_t> code_offset_end;
+  llvm::Optional<uint32_t> cur_line_offset;
+  llvm::Optional<uint32_t> next_line_offset;
+  llvm::Optional<uint32_t> next_file_offset;
 
-  bool is_start_of_statement = false;
+  bool is_terminal_entry = false;
+  bool is_start_of_statement = true;
   // The first instruction is the prologue end.
   bool is_prologue_end = true;
 
-  auto change_code_offset = [&](uint32_t code_delta) {
-    if (has_base) {
-      inline_site_sp->ranges.Append(RangeSourceLineVector::Entry(
-          code_offset, code_delta, decl_line + line_offset));
-      is_prologue_end = false;
-      is_start_of_statement = false;
-    } else {
-      is_start_of_statement = true;
-    }
-    has_base = true;
-    code_offset += code_delta;
-
-    if (is_new_line_offset) {
-      LineTable::Entry line_entry(func_base + code_offset,
-                                  decl_line + line_offset, 0, decl_file_idx,
-                                  true, false, is_prologue_end, false, false);
-      inline_site_sp->line_entries.push_back(line_entry);
-      is_new_line_offset = false;
-    }
+  auto update_code_offset = [&](uint32_t code_delta) {
+    if (!code_offset_base)
+      code_offset_base = code_offset;
+    else if (!code_offset_end)
+      code_offset_end = *code_offset_base + code_delta;
   };
-  auto change_code_length = [&](uint32_t length) {
-    inline_site_sp->ranges.Append(RangeSourceLineVector::Entry(
-        code_offset, length, decl_line + line_offset));
-    has_base = false;
-
-    LineTable::Entry end_line_entry(func_base + code_offset + length,
-                                    decl_line + line_offset, 0, decl_file_idx,
-                                    false, false, false, false, true);
-    inline_site_sp->line_entries.push_back(end_line_entry);
-  };
-  auto change_line_offset = [&](int32_t line_delta) {
+  auto update_line_offset = [&](int32_t line_delta) {
     line_offset += line_delta;
-    if (has_base) {
-      LineTable::Entry line_entry(
-          func_base + code_offset, decl_line + line_offset, 0, decl_file_idx,
-          is_start_of_statement, false, is_prologue_end, false, false);
-      inline_site_sp->line_entries.push_back(line_entry);
-    } else {
-      // Add line entry in next call to change_code_offset.
-      is_new_line_offset = true;
-    }
+    if (!code_offset_base || !cur_line_offset)
+      cur_line_offset = line_offset;
+    else
+      next_line_offset = line_offset;
+    ;
+  };
+  auto update_file_offset = [&](uint32_t offset) {
+    if (!code_offset_base)
+      file_offset = offset;
+    else
+      next_file_offset = offset;
   };
 
   for (auto &annot : inline_site.annotations()) {
@@ -1367,26 +1349,67 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
     case BinaryAnnotationsOpCode::CodeOffset:
     case BinaryAnnotationsOpCode::ChangeCodeOffset:
     case BinaryAnnotationsOpCode::ChangeCodeOffsetBase:
-      change_code_offset(annot.U1);
+      code_offset += annot.U1;
+      update_code_offset(annot.U1);
       break;
     case BinaryAnnotationsOpCode::ChangeLineOffset:
-      change_line_offset(annot.S1);
+      update_line_offset(annot.S1);
       break;
     case BinaryAnnotationsOpCode::ChangeCodeLength:
-      change_code_length(annot.U1);
+      update_code_offset(annot.U1);
       code_offset += annot.U1;
+      is_terminal_entry = true;
       break;
     case BinaryAnnotationsOpCode::ChangeCodeOffsetAndLineOffset:
-      change_code_offset(annot.U1);
-      change_line_offset(annot.S1);
+      code_offset += annot.U1;
+      update_code_offset(annot.U1);
+      update_line_offset(annot.S1);
       break;
     case BinaryAnnotationsOpCode::ChangeCodeLengthAndCodeOffset:
-      change_code_offset(annot.U2);
-      change_code_length(annot.U1);
+      code_offset += annot.U2;
+      update_code_offset(annot.U2);
+      update_code_offset(annot.U1);
+      code_offset += annot.U1;
+      is_terminal_entry = true;
+      break;
+    case BinaryAnnotationsOpCode::ChangeFile:
+      update_file_offset(annot.U1);
       break;
     default:
       break;
     }
+
+    // Add range if current range is finished.
+    if (code_offset_base && code_offset_end && cur_line_offset) {
+      inline_site_sp->ranges.Append(RangeSourceLineVector::Entry(
+          *code_offset_base, *code_offset_end - *code_offset_base,
+          decl_line + *cur_line_offset));
+      // Set base, end, file offset and line offset for next range.
+      if (next_file_offset)
+        file_offset = *next_file_offset;
+      cur_line_offset = next_line_offset ? next_line_offset : llvm::None;
+      code_offset_base = is_terminal_entry ? llvm::None : code_offset_end;
+      code_offset_end = next_line_offset = next_file_offset = llvm::None;
+    }
+    if (code_offset_base && cur_line_offset) {
+      if (is_terminal_entry) {
+        LineTable::Entry line_entry(
+            func_base + *code_offset_base, decl_line + *cur_line_offset, 0,
+            file_offset, false, false, false, false, true);
+        inline_site_sp->line_entries.push_back(line_entry);
+      } else {
+        LineTable::Entry line_entry(func_base + *code_offset_base,
+                                    decl_line + *cur_line_offset, 0,
+                                    file_offset, is_start_of_statement, false,
+                                    is_prologue_end, false, false);
+        inline_site_sp->line_entries.push_back(line_entry);
+        is_prologue_end = false;
+        is_start_of_statement = false;
+      }
+    }
+    if (is_terminal_entry)
+      is_start_of_statement = true;
+    is_terminal_entry = false;
   }
 
   inline_site_sp->ranges.Sort();

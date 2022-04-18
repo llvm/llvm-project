@@ -3,6 +3,7 @@ add_subdirectory(Transforms)
 add_mlir_dialect_library(MLIRLLVMIR
   IR/FunctionCallUtils.cpp
   IR/LLVMDialect.cpp
+  IR/LLVMIntrinsicOps.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp
 
@@ -11,6 +12,7 @@ add_mlir_dialect_library(MLIRLLVMIR
 
   DEPENDS
   MLIRLLVMOpsIncGen
+  MLIRLLVMIntrinsicOpsIncGen
   MLIRLLVMOpsInterfacesIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen

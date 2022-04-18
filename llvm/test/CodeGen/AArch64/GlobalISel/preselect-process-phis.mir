@@ -31,7 +31,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[CSELWr]], %bb.1, %8, %bb.2
-  ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = FCVTHSr [[COPY]]
+  ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[COPY]]
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[FCVTHSr]], %subreg.hsub
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   STRHHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
@@ -92,7 +92,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr16 = PHI %7, %bb.2, [[COPY2]], %bb.1
-  ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = FCVTHSr [[COPY]]
+  ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[COPY]]
   ; CHECK-NEXT:   STRHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
   ; CHECK-NEXT:   B %bb.2
   bb.0:

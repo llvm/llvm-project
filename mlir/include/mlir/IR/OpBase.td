@@ -1230,13 +1230,6 @@ class EnumAttrCaseInfo<string sym, int intVal, string strVal> {
   string str = strVal;
 }
 
-// An enum attribute case stored with StringAttr.
-class StrEnumAttrCase<string sym, int val = -1, string str = sym> :
-    EnumAttrCaseInfo<sym, val, str>,
-    StringBasedAttr<
-      CPred<"$_self.cast<::mlir::StringAttr>().getValue() == \"" # str # "\"">,
-      "case " # str>;
-
 // An enum attribute case stored with IntegerAttr, which has an integer value,
 // its representation as a string and a C++ symbol name which may be different.
 class IntEnumAttrCaseBase<I intType, string sym, string strVal, int intVal> :
@@ -1391,22 +1384,6 @@ class EnumAttrInfo<
     cppNamespace # "::" # specializedAttrClassName # "::get($_builder.getContext(), $0)",
     baseAttrClass.constBuilderCall);
   let valueType = baseAttrClass.valueType;
-}
-
-// An enum attribute backed by StringAttr.
-//
-// Op attributes of this kind are stored as StringAttr. Extra verification will
-// be generated on the string though: only the symbols of the allowed cases are
-// permitted as the string value.
-class StrEnumAttr<string name, string summary, list<StrEnumAttrCase> cases> :
-  EnumAttrInfo<name, cases,
-    StringBasedAttr<
-      And<[StrAttr.predicate, Or<!foreach(case, cases, case.predicate)>]>,
-      !if(!empty(summary), "allowed string cases: " #
-          !interleave(!foreach(case, cases, "'" # case.symbol # "'"), ", "),
-          summary)>> {
-  // Disable specialized Attribute class for `StringAttr` backend by default.
-  let genSpecializedAttr = 0;
 }
 
 // An enum attribute backed by IntegerAttr.

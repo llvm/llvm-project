@@ -21,7 +21,6 @@
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -461,9 +460,6 @@ bool RAGreedy::canEvictInterferenceInRange(const LiveInterval &VirtReg,
       if (!Intf->overlaps(Start, End))
         continue;
 
-      // Cannot evict non virtual reg interference.
-      if (!Register::isVirtualRegister(Intf->reg()))
-        return false;
       // Never evict spill products. They cannot split or spill.
       if (ExtraInfo->getStage(*Intf) == RS_Done)
         return false;

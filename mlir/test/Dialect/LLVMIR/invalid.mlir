@@ -104,6 +104,20 @@ func @alloca_non_integer_alignment() {
 
 // -----
 
+func @alloca_opaque_ptr_no_type(%sz : i64) {
+  // expected-error@below {{expected 'elem_type' attribute if opaque pointer type is used}}
+  "llvm.alloca"(%sz) : (i64) -> !llvm.ptr
+}
+
+// -----
+
+func @alloca_ptr_type_attr_non_opaque_ptr(%sz : i64) {
+  // expected-error@below {{unexpected 'elem_type' attribute when non-opaque pointer type is used}}
+  "llvm.alloca"(%sz) { elem_type = i32 } : (i64) -> !llvm.ptr<i32>
+}
+
+// -----
+
 func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr<f32>) {
   // expected-error@+1 {{2 operands present, but expected 0}}
   llvm.getelementptr %base[%pos] : () -> ()
@@ -156,6 +170,13 @@ func @store_non_llvm_type(%foo : memref<f32>, %bar : f32) {
 func @store_non_ptr_type(%foo : f32, %bar : f32) {
   // expected-error@+1 {{expected LLVM pointer type}}
   llvm.store %bar, %foo : f32
+}
+
+// -----
+
+func @store_malformed_elem_type(%foo: !llvm.ptr, %bar: f32) {
+  // expected-error@+1 {{expected non-function type}}
+  llvm.store %bar, %foo : !llvm.ptr, "f32"
 }
 
 // -----

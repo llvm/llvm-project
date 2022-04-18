@@ -1602,6 +1602,23 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     }
   }
 
+  // Canonicalize a signbit condition to use zero constant by swapping:
+  // (CmpLHS > -1) ? TV : FV --> (CmpLHS < 0) ? FV : TV
+  // To avoid conflicts (infinite loops) with other canonicalizations, this is
+  // not applied with any constant select arm.
+  if (Pred == ICmpInst::ICMP_SGT && match(CmpRHS, m_AllOnes()) &&
+      !match(TrueVal, m_Constant()) && !match(FalseVal, m_Constant()) &&
+      ICI->hasOneUse()) {
+    InstCombiner::BuilderTy::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(&SI);
+    Value *IsNeg = Builder.CreateICmpSLT(
+        CmpLHS, ConstantInt::getNullValue(CmpLHS->getType()), ICI->getName());
+    replaceOperand(SI, 0, IsNeg);
+    SI.swapValues();
+    SI.swapProfMetadata();
+    return &SI;
+  }
+
   // FIXME: This code is nearly duplicated in InstSimplify. Using/refactoring
   // decomposeBitTestICmp() might help.
   {

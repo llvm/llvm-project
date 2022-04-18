@@ -1185,6 +1185,78 @@ LogicalResult MemsetOp::fold(ArrayRef<Attribute> operands,
 }
 
 //===----------------------------------------------------------------------===//
+// GPU_WaitOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Remove gpu.wait op use of gpu.wait op def without async dependencies.
+/// %t = gpu.wait async []       // No async dependencies.
+/// ...  gpu.wait ... [%t, ...]  // %t can be removed.
+struct EraseRedundantGpuWaitOpPairs : public OpRewritePattern<WaitOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WaitOp op,
+                                PatternRewriter &rewriter) const final {
+    auto predicate = [](Value value) {
+      auto wait_op = value.getDefiningOp<WaitOp>();
+      return wait_op && wait_op->getNumOperands() == 0;
+    };
+    if (llvm::none_of(op.asyncDependencies(), predicate))
+      return failure();
+    SmallVector<Value> validOperands;
+    for (Value operand : op->getOperands()) {
+      if (predicate(operand))
+        continue;
+      validOperands.push_back(operand);
+    }
+    op->setOperands(validOperands);
+    return success();
+  }
+};
+
+/// Simplify trivial gpu.wait ops for the following patterns.
+/// 1. %t = gpu.wait async ... ops, where %t has no uses (regardless of async
+/// dependencies).
+/// 2. %t1 = gpu.wait async [%t0], in this case, we can replace uses of %t1 with
+/// %t0.
+/// 3. gpu.wait [] ops, i.e gpu.wait ops that neither have any async
+/// dependencies nor return any token.
+struct SimplifyGpuWaitOp : public OpRewritePattern<WaitOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WaitOp op,
+                                PatternRewriter &rewriter) const final {
+    // Erase gpu.wait ops that neither have any async dependencies nor return
+    // any async token.
+    if (op.asyncDependencies().empty() && !op.asyncToken()) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+    // Replace uses of %t1 = gpu.wait async [%t0] ops with %t0 and erase the op.
+    if (llvm::hasSingleElement(op.asyncDependencies()) && op.asyncToken()) {
+      rewriter.replaceOp(op, op.asyncDependencies());
+      return success();
+    }
+    // Erase %t = gpu.wait async ... ops, where %t has no uses.
+    if (op.asyncToken() && op.asyncToken().use_empty()) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+    return failure();
+  }
+};
+
+} // end anonymous namespace
+
+void WaitOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<EraseRedundantGpuWaitOpPairs, SimplifyGpuWaitOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // GPU_AllocOp
 //===----------------------------------------------------------------------===//
 

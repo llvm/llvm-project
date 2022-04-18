@@ -115,6 +115,7 @@ private:
   void CheckDioDummyIsScalar(const Symbol &, const Symbol &);
   void CheckDioDummyAttrs(const Symbol &, const Symbol &, Attr);
   void CheckDioDtvArg(const Symbol &, const Symbol *, GenericKind::DefinedIo);
+  void CheckGenericVsIntrinsic(const Symbol &, const GenericDetails &);
   void CheckDefaultIntegerArg(const Symbol &, const Symbol *, Attr);
   void CheckDioAssumedLenCharacterArg(
       const Symbol &, const Symbol *, std::size_t, Attr);
@@ -1148,6 +1149,11 @@ void CheckHelper::CheckGeneric(
                  [&](const GenericKind::DefinedIo &io) {
                    CheckDefinedIoProc(symbol, details, io);
                  },
+                 [&](const GenericKind::OtherKind &other) {
+                   if (other == GenericKind::OtherKind::Name) {
+                     CheckGenericVsIntrinsic(symbol, details);
+                   }
+                 },
                  [](const auto &) {},
              },
       details.kind().u);
@@ -1938,6 +1944,40 @@ void CheckHelper::CheckDioDtvArg(
                 ioKind == GenericKind::DefinedIo::ReadUnformatted
             ? Attr::INTENT_INOUT
             : Attr::INTENT_IN);
+  }
+}
+
+// If an explicit INTRINSIC name is a function, so must all the specifics be,
+// and similarly for subroutines
+void CheckHelper::CheckGenericVsIntrinsic(
+    const Symbol &symbol, const GenericDetails &generic) {
+  if (symbol.attrs().test(Attr::INTRINSIC)) {
+    const evaluate::IntrinsicProcTable &table{
+        context_.foldingContext().intrinsics()};
+    bool isSubroutine{table.IsIntrinsicSubroutine(symbol.name().ToString())};
+    if (isSubroutine || table.IsIntrinsicFunction(symbol.name().ToString())) {
+      for (const SymbolRef &ref : generic.specificProcs()) {
+        const Symbol &ultimate{ref->GetUltimate()};
+        bool specificFunc{ultimate.test(Symbol::Flag::Function)};
+        bool specificSubr{ultimate.test(Symbol::Flag::Subroutine)};
+        if (!specificFunc && !specificSubr) {
+          if (const auto *proc{ultimate.detailsIf<SubprogramDetails>()}) {
+            if (proc->isFunction()) {
+              specificFunc = true;
+            } else {
+              specificSubr = true;
+            }
+          }
+        }
+        if ((specificFunc || specificSubr) &&
+            isSubroutine != specificSubr) { // C848
+          messages_.Say(symbol.name(),
+              "Generic interface '%s' with explicit intrinsic %s of the same name may not have specific procedure '%s' that is a %s"_err_en_US,
+              symbol.name(), isSubroutine ? "subroutine" : "function",
+              ref->name(), isSubroutine ? "function" : "subroutine");
+        }
+      }
+    }
   }
 }
 

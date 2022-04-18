@@ -11,6 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "RestrictSystemIncludesCheck.h"
 #include "SIMDIntrinsicsCheck.h"
+#include "StdAllocatorConstCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -23,6 +24,8 @@ public:
         "portability-restrict-system-includes");
     CheckFactories.registerCheck<SIMDIntrinsicsCheck>(
         "portability-simd-intrinsics");
+    CheckFactories.registerCheck<StdAllocatorConstCheck>(
+        "portability-std-allocator-const");
   }
 };
 

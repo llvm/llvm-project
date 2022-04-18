@@ -43,7 +43,8 @@ protected:
 
   static void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
                             const FormatStyle &Style = getLLVMStyle(),
-                            llvm::StringRef ExpectedCode = "") {
+                            llvm::StringRef ExpectedCode = "",
+                            bool Inverse = true) {
     ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
     bool HasOriginalCode = true;
     if (ExpectedCode == "") {
@@ -51,16 +52,18 @@ protected:
       HasOriginalCode = false;
     }
 
-    FormatStyle InverseStyle = Style;
-    if (Style.SeparateDefinitionBlocks == FormatStyle::SDS_Always)
-      InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
-    else
-      InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
     EXPECT_EQ(ExpectedCode, separateDefinitionBlocks(ExpectedCode, Style))
         << "Expected code is not stable";
-    EXPECT_NE(ExpectedCode,
-              separateDefinitionBlocks(ExpectedCode, InverseStyle))
-        << "Inverse formatting makes no difference";
+    if (Inverse) {
+      FormatStyle InverseStyle = Style;
+      if (Style.SeparateDefinitionBlocks == FormatStyle::SDS_Always)
+        InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
+      else
+        InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+      EXPECT_NE(ExpectedCode,
+                separateDefinitionBlocks(ExpectedCode, InverseStyle))
+          << "Inverse formatting makes no difference";
+    }
     std::string CodeToFormat =
         HasOriginalCode ? Code.str() : removeEmptyLines(Code);
     std::string Result = separateDefinitionBlocks(CodeToFormat, Style);
@@ -446,6 +449,32 @@ TEST_F(DefinitionBlockSeparatorTest, OpeningBracketOwnsLine) {
                "}\n"
                "} // namespace NS",
                Style);
+}
+
+TEST_F(DefinitionBlockSeparatorTest, TryBlocks) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  verifyFormat("void FunctionWithInternalTry()\n"
+               "{\n"
+               "  try\n"
+               "  {\n"
+               "    return;\n"
+               "  }\n"
+               "  catch (const std::exception &)\n"
+               "  {\n"
+               "  }\n"
+               "}",
+               Style, "", /*Inverse=*/false);
+  verifyFormat("void FunctionWithTryBlock()\n"
+               "try\n"
+               "{\n"
+               "  return;\n"
+               "}\n"
+               "catch (const std::exception &)\n"
+               "{\n"
+               "}",
+               Style, "", /*Inverse=*/false);
 }
 
 TEST_F(DefinitionBlockSeparatorTest, Leave) {

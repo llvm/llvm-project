@@ -517,6 +517,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
    case TemplateName::Template:
    case TemplateName::QualifiedTemplate:
    case TemplateName::SubstTemplateTemplateParm:
+   case TemplateName::UsingTemplate:
      // It is sufficient to check value of getAsTemplateDecl.
      break;
 

@@ -2,7 +2,7 @@
 
 REQUIRES: system-linux
 
-RUN: %clangxx %cxxflags %p/Inputs/exceptions_split.cpp -Wl,-q -g -o %t_exc_split
+RUN: %clangxx %cxxflags -no-pie %p/Inputs/exceptions_split.cpp -Wl,-q -g -o %t_exc_split
 RUN: llvm-bolt %t_exc_split -o %t.exc -instrument -instrumentation-file=%t.fdata
 
 RUN: %t.exc arg1 arg2 arg3

@@ -943,8 +943,11 @@ MDNode *BPFAbstractMemberAccess::computeAccessKey(CallInst *Call,
     // ENUM_VALUE_EXISTENCE and ENUM_VALUE
     IsInt32Ret = false;
 
-    const auto *CE = cast<ConstantExpr>(Call->getArgOperand(1));
-    const GlobalVariable *GV = cast<GlobalVariable>(CE->getOperand(0));
+    // The argument could be a global variable or a getelementptr with base to
+    // a global variable depending on whether the clang option `opaque-options`
+    // is set or not.
+    const GlobalVariable *GV =
+        cast<GlobalVariable>(Call->getArgOperand(1)->stripPointerCasts());
     assert(GV->hasInitializer());
     const ConstantDataArray *DA = cast<ConstantDataArray>(GV->getInitializer());
     assert(DA->isString());

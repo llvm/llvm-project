@@ -1572,7 +1572,6 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
 
       // 12 byte accessing via ds_read/write_b96 require 16-byte alignment on
       // gfx8 and older.
-      RequiredAlignment = Align(16);
 
       if (Subtarget->hasUnalignedDSAccessEnabled()) {
         // Naturally aligned access is fastest. However, also report it is Fast
@@ -12388,13 +12387,17 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   MachineBasicBlock *Exit = ML->getExitBlock();
 
   if (Pre && Exit) {
-    BuildMI(*Pre, Pre->getFirstTerminator(), DebugLoc(),
-            TII->get(AMDGPU::S_INST_PREFETCH))
-      .addImm(1); // prefetch 2 lines behind PC
+    auto PreTerm = Pre->getFirstTerminator();
+    if (PreTerm == Pre->begin() ||
+        std::prev(PreTerm)->getOpcode() != AMDGPU::S_INST_PREFETCH)
+      BuildMI(*Pre, PreTerm, DebugLoc(), TII->get(AMDGPU::S_INST_PREFETCH))
+          .addImm(1); // prefetch 2 lines behind PC
 
-    BuildMI(*Exit, Exit->getFirstNonDebugInstr(), DebugLoc(),
-            TII->get(AMDGPU::S_INST_PREFETCH))
-      .addImm(2); // prefetch 1 line behind PC
+    auto ExitHead = Exit->getFirstNonDebugInstr();
+    if (ExitHead == Exit->end() ||
+        ExitHead->getOpcode() != AMDGPU::S_INST_PREFETCH)
+      BuildMI(*Exit, ExitHead, DebugLoc(), TII->get(AMDGPU::S_INST_PREFETCH))
+          .addImm(2); // prefetch 1 line behind PC
   }
 
   return CacheLineAlign;

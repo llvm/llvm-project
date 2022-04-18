@@ -17,10 +17,10 @@ Search,equal_range,Christopher Di Bella,n/a,Not started
 Search,binary_search,Christopher Di Bella,n/a,Not started
 Search,min,Nikolas Klauser,`D119589 <https://llvm.org/D119589>`_,✅
 Search,max,Nikolas Klauser,`D122002 <https://llvm.org/D122002>`_,✅
-Search,minmax,Not assigned,n/a,Not started
+Search,minmax,Nikolas Klauser,`D120637 <https://llvm.org/D120637>`_,✅
 Search,min_element,Nikolas Klauser,`D117025 <https://llvm.org/D117025>`_,✅
 Search,max_element,Nikolas Klauser,`D117523 <https://llvm.org/D117523>`_,✅
-Search,minmax_element,Not assigned,n/a,Not started
+Search,minmax_element,Nikolas Klauser,`D120637 <https://llvm.org/D120637>`_,✅
 Search,count,Nikolas Klauser, `D121523 <https://llvm.org/D121523>`_,✅
 Search,count_if,Nikolas Klauser, `D121523 <https://llvm.org/D121523>`_,✅
 Search,search,Not assigned,n/a,Not started

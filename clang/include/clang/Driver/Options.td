@@ -3264,6 +3264,8 @@ def mlinker_version_EQ : Joined<["-"], "mlinker-version=">,
 def mllvm : Separate<["-"], "mllvm">,Flags<[CC1Option,CC1AsOption,CoreOption,FC1Option,FlangOption]>,
   HelpText<"Additional arguments to forward to LLVM's option processing">,
   MarshallingInfoStringVector<FrontendOpts<"LLVMArgs">>;
+def mmlir : Separate<["-"], "mmlir">, Flags<[CoreOption,FC1Option,FlangOption]>,
+  HelpText<"Additional arguments to forward to MLIR's option processing">;
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   Group<m_Group>, Flags<[CC1Option]>, HelpText<"Set Fuchsia API level">,
   MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
@@ -5533,7 +5535,7 @@ defm enable_noundef_analysis : BoolOption<"",
 defm opaque_pointers : BoolOption<"",
   "opaque-pointers",
   CodeGenOpts<"OpaquePointers">,
-  Default<"CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL">,
+  DefaultTrue,
   PosFlag<SetTrue, [], "Enable">,
   NegFlag<SetFalse, [], "Disable">,
   BothFlags<[], " opaque pointers">>;

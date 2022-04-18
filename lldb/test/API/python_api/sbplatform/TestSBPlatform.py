@@ -25,6 +25,29 @@ class SBPlatformAPICase(TestBase):
         plat = lldb.SBPlatform("remote-linux") # arbitrary choice
         self.assertTrue(plat)
         plat.SetSDKRoot(self.getBuildDir())
-        self.dbg.SetCurrentPlatform("remote-linux")
+        self.dbg.SetSelectedPlatform(plat)
         self.expect("platform status",
                 substrs=["Sysroot:", self.getBuildDir()])
+
+    def test_SetCurrentPlatform_floating(self):
+        # floating platforms cannot be referenced by name until they are
+        # associated with a debugger
+        floating_platform = lldb.SBPlatform("remote-netbsd")
+        floating_platform.SetWorkingDirectory(self.getBuildDir())
+        self.assertSuccess(self.dbg.SetCurrentPlatform("remote-netbsd"))
+        dbg_platform = self.dbg.GetSelectedPlatform()
+        self.assertEqual(dbg_platform.GetName(), "remote-netbsd")
+        self.assertIsNone(dbg_platform.GetWorkingDirectory())
+
+    def test_SetCurrentPlatform_associated(self):
+        # associated platforms are found by name-based lookup
+        floating_platform = lldb.SBPlatform("remote-netbsd")
+        floating_platform.SetWorkingDirectory(self.getBuildDir())
+        orig_platform = self.dbg.GetSelectedPlatform()
+
+        self.dbg.SetSelectedPlatform(floating_platform)
+        self.dbg.SetSelectedPlatform(orig_platform)
+        self.assertSuccess(self.dbg.SetCurrentPlatform("remote-netbsd"))
+        dbg_platform = self.dbg.GetSelectedPlatform()
+        self.assertEqual(dbg_platform.GetName(), "remote-netbsd")
+        self.assertEqual(dbg_platform.GetWorkingDirectory(), self.getBuildDir())

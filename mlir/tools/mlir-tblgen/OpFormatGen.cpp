@@ -1797,28 +1797,9 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // Get a string containing all of the cases that can't be represented with a
   // keyword.
   BitVector nonKeywordCases(cases.size());
-  bool hasStrCase = false;
   for (auto &it : llvm::enumerate(cases)) {
-    hasStrCase = it.value().isStrCase();
     if (!canFormatStringAsKeyword(it.value().getStr()))
       nonKeywordCases.set(it.index());
-  }
-
-  // If this is a string enum, use the case string to determine which cases
-  // need to use the string form.
-  if (hasStrCase) {
-    if (nonKeywordCases.any()) {
-      body << "    if (llvm::is_contained(llvm::ArrayRef<llvm::StringRef>(";
-      llvm::interleaveComma(nonKeywordCases.set_bits(), body, [&](unsigned it) {
-        body << '"' << cases[it].getStr() << '"';
-      });
-      body << ")))\n"
-              "      _odsPrinter << '\"' << caseValueStr << '\"';\n"
-              "    else\n  ";
-    }
-    body << "    _odsPrinter << caseValueStr;\n"
-            "  }\n";
-    return;
   }
 
   // Otherwise if this is a bit enum attribute, don't allow cases that may

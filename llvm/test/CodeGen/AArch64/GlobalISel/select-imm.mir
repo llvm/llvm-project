@@ -72,7 +72,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
     ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
-    ; CHECK: [[FADDDrr:%[0-9]+]]:fpr64 = FADDDrr [[COPY]], [[LDRDui]]
+    ; CHECK: [[FADDDrr:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[COPY]], [[LDRDui]]
     ; CHECK: $d0 = COPY [[FADDDrr]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(s64) = COPY $d0
@@ -97,7 +97,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
     ; CHECK: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
-    ; CHECK: [[FADDSrr:%[0-9]+]]:fpr32 = FADDSrr [[COPY]], [[LDRSui]]
+    ; CHECK: [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSui]]
     ; CHECK: $s0 = COPY [[FADDSrr]]
     ; CHECK: RET_ReallyLR implicit $s0
     %0:fpr(s32) = COPY $s0
@@ -122,7 +122,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
     ; CHECK: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
-    ; CHECK: [[FADDSrr:%[0-9]+]]:fpr32 = FADDSrr [[COPY]], [[LDRSui]]
+    ; CHECK: [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY]], [[LDRSui]]
     ; CHECK: $s0 = COPY [[FADDSrr]]
     ; CHECK: RET_ReallyLR implicit $s0
     %0:fpr(s32) = COPY $s0

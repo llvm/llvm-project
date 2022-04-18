@@ -1,0 +1,4 @@
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+# RUN: %lldb -b -o 'target stop-hook add --name test --shlib test -o "p 95000 + 126"' -o 'file %t' -o 'b main' -o 'r' 2>&1 | FileCheck %s
+# CHECK: Stop hook #1 added
+# CHECK-NOT: 95126
