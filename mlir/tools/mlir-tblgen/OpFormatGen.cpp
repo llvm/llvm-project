@@ -1892,8 +1892,8 @@ void collect(FormatElement *element,
       })
       .Case([&](OIListElement *oilist) {
         for (ArrayRef<FormatElement *> arg : oilist->getParsingElements())
-          for (FormatElement *arg_ : arg)
-            collect(arg_, variables);
+          for (FormatElement *arg : arg)
+            collect(arg, variables);
       });
 }
 
