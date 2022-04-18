@@ -1690,6 +1690,22 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   }
 }
 
+Optional<uint64_t>
+BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
+                                        uint64_t FileOffset) const {
+  // Find a segment with a matching file offset.
+  for (auto &KV : SegmentMapInfo) {
+    const SegmentInfo &SegInfo = KV.second;
+    if (alignDown(SegInfo.FileOffset, SegInfo.Alignment) == FileOffset) {
+      // Use segment's aligned memory offset to calculate the base address.
+      const uint64_t MemOffset = alignDown(SegInfo.Address, SegInfo.Alignment);
+      return MMapAddress - MemOffset;
+    }
+  }
+
+  return NoneType();
+}
+
 ErrorOr<BinarySection &> BinaryContext::getSectionForAddress(uint64_t Address) {
   auto SI = AddressToSection.upper_bound(Address);
   if (SI != AddressToSection.begin()) {

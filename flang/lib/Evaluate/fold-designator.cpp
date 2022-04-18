@@ -298,7 +298,9 @@ static std::optional<DataRef> OffsetToDataRef(FoldingContext &context,
 // Reconstructs a Designator from a symbol, an offset, and a size.
 std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
     const Symbol &baseSymbol, ConstantSubscript offset, std::size_t size) {
-  CHECK(offset >= 0);
+  if (offset < 0) {
+    return std::nullopt;
+  }
   if (std::optional<DataRef> dataRef{
           OffsetToDataRef(context, NamedEntity{baseSymbol}, offset, size)}) {
     const Symbol &symbol{dataRef->GetLastSymbol()};

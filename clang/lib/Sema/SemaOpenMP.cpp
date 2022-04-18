@@ -12505,9 +12505,9 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
 
   setFunctionHasBranchProtectedScope();
 
-  return OMPAtomicDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
-                                    X, V, E, UE, D, CE, IsXLHSInRHSPart,
-                                    IsPostfixUpdate);
+  return OMPAtomicDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, AStmt,
+      {X, V, E, UE, D, CE, IsXLHSInRHSPart, IsPostfixUpdate});
 }
 
 StmtResult Sema::ActOnOpenMPTargetDirective(ArrayRef<OMPClause *> Clauses,

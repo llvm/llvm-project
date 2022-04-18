@@ -1,7 +1,4 @@
-; RUN: opt < %s -pgo-icall-prom -S -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
 ; RUN: opt < %s -passes=pgo-icall-prom -S -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
-; RUN: opt < %s -pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=20 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS2-REMARK
 

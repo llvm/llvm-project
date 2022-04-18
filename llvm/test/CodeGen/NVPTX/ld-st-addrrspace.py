@@ -44,7 +44,8 @@ addrspace_id = {
 
 def gen_load_tests():
   load_template = """
-define ${type} @ld${_volatile}${_space}.${ptx_type}(${type} addrspace(${asid})* %ptr) {
+define ${type} @${testname}(${type} addrspace(${asid})* %ptr) {
+; CHECK: ${testname}
 ; CHECK_P32: ld${_volatile}${_volatile_as}.${ptx_type} %${ptx_reg}{{[0-9]+}}, [%r{{[0-9]+}}]
 ; CHECK_P64: ld${_volatile}${_volatile_as}.${ptx_type} %${ptx_reg}{{[0-9]+}}, [%rd{{[0-9]+}}]
 ; CHECK: ret
@@ -79,6 +80,10 @@ define ${type} @ld${_volatile}${_space}.${ptx_type}(${type} addrspace(${asid})* 
         "ptx_type": llvm_type_to_ptx_type[op_type],
         "asid": addrspace_id[space],
     }
+
+    testname = \
+      Template("ld_${_volatile}${_space}.${ptx_type}").substitute(params)
+    params["testname"] = testname.replace(".", "_")
 
     # LLVM does not accept "addrspacecast Type* addrspace(0) to Type*", so we
     # need to avoid it for generic pointer tests.

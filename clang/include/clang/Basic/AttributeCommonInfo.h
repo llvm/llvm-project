@@ -48,6 +48,9 @@ public:
     // without adding related code to TableGen/ClangAttrEmitter.cpp.
     /// Context-sensitive version of a keyword attribute.
     AS_ContextSensitiveKeyword,
+
+    /// <vardecl> : <semantic>
+    AS_HLSLSemantic,
   };
   enum Kind {
 #define PARSED_ATTR(NAME) AT_##NAME,

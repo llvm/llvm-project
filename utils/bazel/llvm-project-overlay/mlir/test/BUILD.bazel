@@ -192,6 +192,51 @@ gentbl_cc_library(
     ],
 )
 
+td_library(
+    name = "TransformDialectTdFiles",
+    srcs = glob(["lib/Dialect/Transform/*.td"]),
+    deps = [
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TestTransformDialectExtensionIncGen",
+    strip_include_prefix = "lib/Dialect/Transform",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "lib/Dialect/Transform/TestTransformDialectExtension.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "lib/Dialect/Transform/TestTransformDialectExtension.cpp.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Dialect/Transform/TestTransformDialectExtension.td",
+    test = True,
+    deps = [
+        ":TransformDialectTdFiles",
+        "//mlir:PDLDialectTdFiles",
+        "//mlir:TransformDialectTdFiles",
+    ],
+)
+
+cc_library(
+    name = "TestTransformDialect",
+    srcs = glob(["lib/Dialect/Transform/*.cpp"]),
+    hdrs = glob(["lib/Dialect/Transform/*.h"]),
+    includes = ["lib/Dialect/Transform"],
+    deps = [
+        ":TestTransformDialectExtensionIncGen",
+        "//mlir:IR",
+        "//mlir:PDLDialect",
+        "//mlir:Pass",
+        "//mlir:TransformDialect",
+    ],
+)
+
 cc_library(
     name = "TestDialect",
     srcs = glob(["lib/Dialect/Test/*.cpp"]),

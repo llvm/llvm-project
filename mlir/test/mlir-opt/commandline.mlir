@@ -19,6 +19,8 @@
 // CHECK-NEXT: llvm
 // CHECK-NEXT: math
 // CHECK-NEXT: memref
+// CHECK-NEXT: ml_program
+// CHECK-NEXT: nvgpu
 // CHECK-NEXT: nvvm
 // CHECK-NEXT: omp
 // CHECK-NEXT: pdl
@@ -32,5 +34,6 @@
 // CHECK-NEXT: tensor
 // CHECK-NEXT: test
 // CHECK-NEXT: tosa
+// CHECK-NEXT: transform
 // CHECK-NEXT: vector
 // CHECK-NEXT: x86vector

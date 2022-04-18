@@ -127,18 +127,14 @@ count_t GetSystemClockCountMax(int kind, fallback_implementation) {
                                  : static_cast<count_t>(maxCount);
 }
 
-// POSIX implementation using clock_gettime. This is only enabled where
-// clock_gettime is available.  Use a millisecond CLOCK_RATE for kinds
-// of COUNT/COUNT_MAX less than 64 bits, and nanoseconds otherwise.
-constexpr unsigned_count_t MILLIS_PER_SEC{1'000u};
-constexpr unsigned_count_t NSECS_PER_SEC{1'000'000'000u};
-constexpr unsigned_count_t maxSecs{
-    std::numeric_limits<unsigned_count_t>::max() / NSECS_PER_SEC};
-
-// Use a millisecond clock rate for smaller COUNT= kinds.
-static inline unsigned_count_t ScaleResult(unsigned_count_t nsecs, int kind) {
-  return kind >= 8 ? nsecs : nsecs / (NSECS_PER_SEC / MILLIS_PER_SEC);
-}
+// POSIX implementation using clock_gettime where available.  The clock_gettime
+// result is in nanoseconds, which is converted as necessary to
+//  - deciseconds for kind 1
+//  - milliseconds for kinds 2, 4
+//  - nanoseconds for kinds 8, 16
+constexpr unsigned_count_t DS_PER_SEC{10u};
+constexpr unsigned_count_t MS_PER_SEC{1'000u};
+constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
 
 template <typename T = int, typename U = struct timespec>
 count_t GetSystemClockCount(int kind, preferred_implementation,
@@ -146,19 +142,19 @@ count_t GetSystemClockCount(int kind, preferred_implementation,
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
   struct timespec tspec;
+  const unsigned_count_t huge{GetHUGE(kind)};
   if (clock_gettime(CLOCKID, &tspec) != 0) {
-    // Return -HUGE() to represent failure.
-    return -GetHUGE(kind);
+    return -huge; // failure
   }
-  // Wrap around to avoid overflows.
-  unsigned_count_t wrappedSecs{
-      static_cast<unsigned_count_t>(tspec.tv_sec) % maxSecs};
-  unsigned_count_t unsignedNsecs{static_cast<unsigned_count_t>(tspec.tv_nsec) +
-      wrappedSecs * NSECS_PER_SEC};
-  unsigned_count_t unsignedCount{ScaleResult(unsignedNsecs, kind)};
-  // Return the modulus of the unsigned integral count with HUGE(COUNT)+1.
-  // The result is a signed integer but never negative.
-  return static_cast<count_t>(unsignedCount % (GetHUGE(kind) + 1));
+  unsigned_count_t sec{static_cast<unsigned_count_t>(tspec.tv_sec)};
+  unsigned_count_t nsec{static_cast<unsigned_count_t>(tspec.tv_nsec)};
+  if (kind >= 8) {
+    return (sec * NS_PER_SEC + nsec) % (huge + 1);
+  } else if (kind >= 2) {
+    return (sec * MS_PER_SEC + (nsec / (NS_PER_SEC / MS_PER_SEC))) % (huge + 1);
+  } else { // kind == 1
+    return (sec * DS_PER_SEC + (nsec / (NS_PER_SEC / DS_PER_SEC))) % (huge + 1);
+  }
 }
 
 template <typename T = int, typename U = struct timespec>
@@ -166,7 +162,7 @@ count_t GetSystemClockCountRate(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
-  return kind >= 8 ? static_cast<count_t>(NSECS_PER_SEC) : MILLIS_PER_SEC;
+  return kind >= 8 ? NS_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
 }
 
 template <typename T = int, typename U = struct timespec>
@@ -174,10 +170,7 @@ count_t GetSystemClockCountMax(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
-  unsigned_count_t maxClockNsec{maxSecs * NSECS_PER_SEC + NSECS_PER_SEC - 1};
-  unsigned_count_t maxClock{ScaleResult(maxClockNsec, kind)};
-  unsigned_count_t maxCount{GetHUGE(kind)};
-  return static_cast<count_t>(maxClock <= maxCount ? maxClock : maxCount);
+  return GetHUGE(kind);
 }
 
 // DATE_AND_TIME (Fortran 2018 16.9.59)

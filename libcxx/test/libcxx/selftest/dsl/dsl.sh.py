@@ -60,6 +60,7 @@ class SetupConfigs(unittest.TestCase):
             noExecute=False,
             debug=False,
             isWindows=platform.system() == 'Windows',
+            order='smart',
             params={})
 
         self.config = lit.TestingConfig.TestingConfig.fromdefaults(self.litConfig)

@@ -346,29 +346,6 @@ func @string_attr_custom_type() {
 // -----
 
 //===----------------------------------------------------------------------===//
-// Test StrEnumAttr
-//===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: func @allowed_cases_pass
-func @allowed_cases_pass() {
-  // CHECK: test.str_enum_attr
-  %0 = "test.str_enum_attr"() {attr = "A"} : () -> i32
-  // CHECK: test.str_enum_attr
-  %1 = "test.str_enum_attr"() {attr = "B"} : () -> i32
-  return
-}
-
-// -----
-
-func @disallowed_case_fail() {
-  // expected-error @+1 {{allowed string cases: 'A', 'B'}}
-  %0 = "test.str_enum_attr"() {attr = 7: i32} : () -> i32
-  return
-}
-
-// -----
-
-//===----------------------------------------------------------------------===//
 // Test I32EnumAttr
 //===----------------------------------------------------------------------===//
 

@@ -24,6 +24,11 @@
 #ifdef __APPLE__
   #include <mach-o/dyld.h>
 #endif
+#ifdef _AIX
+#include <dlfcn.h>
+#include <sys/debug.h>
+#include <sys/pseg.h>
+#endif
 
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
 // Provide a definition for the DISPATCHER_CONTEXT struct for old (Win7 and
@@ -449,6 +454,12 @@ public:
   }
 #ifdef __arm__
   virtual void saveVFPAsX() { _LIBUNWIND_ABORT("saveVFPAsX not implemented"); }
+#endif
+
+#ifdef _AIX
+  virtual uintptr_t getDataRelBase() {
+    _LIBUNWIND_ABORT("getDataRelBase not implemented");
+  }
 #endif
 
 #if defined(_LIBUNWIND_USE_CET)
@@ -910,9 +921,14 @@ public:
   virtual void        saveVFPAsX();
 #endif
 
+#ifdef _AIX
+  virtual uintptr_t getDataRelBase();
+#endif
+
 #if defined(_LIBUNWIND_USE_CET)
   virtual void *get_registers() { return &_registers; }
 #endif
+
   // libunwind does not and should not depend on C++ library which means that we
   // need our own defition of inline placement new.
   static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
@@ -1220,6 +1236,16 @@ private:
   int stepWithSEHData() { /* FIXME: Implement */ return 0; }
 #endif // defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
 
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+  bool getInfoFromTBTable(pint_t pc, R &registers);
+  int stepWithTBTable(pint_t pc, tbtable *TBTable, R &registers,
+                      bool &isSignalFrame);
+  int stepWithTBTableData() {
+    return stepWithTBTable(reinterpret_cast<pint_t>(this->getReg(UNW_REG_IP)),
+                           reinterpret_cast<tbtable *>(_info.unwind_info),
+                           _registers, _isSignalFrame);
+  }
+#endif // defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
 
   A               &_addressSpace;
   R                _registers;
@@ -1289,6 +1315,13 @@ template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
 #ifdef __arm__
 template <typename A, typename R> void UnwindCursor<A, R>::saveVFPAsX() {
   _registers.saveVFPAsX();
+}
+#endif
+
+#ifdef _AIX
+template <typename A, typename R>
+uintptr_t UnwindCursor<A, R>::getDataRelBase() {
+  return reinterpret_cast<uintptr_t>(_info.extra);
 }
 #endif
 
@@ -1922,6 +1955,507 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
 }
 #endif
 
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+// Masks for traceback table field xtbtable.
+enum xTBTableMask : uint8_t {
+  reservedBit = 0x02, // The traceback table was incorrectly generated if set
+                      // (see comments in function getInfoFromTBTable().
+  ehInfoBit = 0x08    // Exception handling info is present if set
+};
+
+enum frameType : unw_word_t {
+  frameWithXLEHStateTable = 0,
+  frameWithEHInfo = 1
+};
+
+extern "C" {
+typedef _Unwind_Reason_Code __xlcxx_personality_v0_t(int, _Unwind_Action,
+                                                     uint64_t,
+                                                     _Unwind_Exception *,
+                                                     struct _Unwind_Context *);
+__attribute__((__weak__)) __xlcxx_personality_v0_t __xlcxx_personality_v0;
+}
+
+static __xlcxx_personality_v0_t *xlcPersonalityV0;
+static RWMutex xlcPersonalityV0InitLock;
+
+template <typename A, typename R>
+bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
+  uint32_t *p = reinterpret_cast<uint32_t *>(pc);
+
+  // Keep looking forward until a word of 0 is found. The traceback
+  // table starts at the following word.
+  while (*p)
+    ++p;
+  tbtable *TBTable = reinterpret_cast<tbtable *>(p + 1);
+
+  if (_LIBUNWIND_TRACING_UNWINDING) {
+    char functionBuf[512];
+    const char *functionName = functionBuf;
+    unw_word_t offset;
+    if (!getFunctionName(functionBuf, sizeof(functionBuf), &offset)) {
+      functionName = ".anonymous.";
+    }
+    _LIBUNWIND_TRACE_UNWINDING("%s: Look up traceback table of func=%s at %p",
+                               __func__, functionName,
+                               reinterpret_cast<void *>(TBTable));
+  }
+
+  // If the traceback table does not contain necessary info, bypass this frame.
+  if (!TBTable->tb.has_tboff)
+    return false;
+
+  // Structure tbtable_ext contains important data we are looking for.
+  p = reinterpret_cast<uint32_t *>(&TBTable->tb_ext);
+
+  // Skip field parminfo if it exists.
+  if (TBTable->tb.fixedparms || TBTable->tb.floatparms)
+    ++p;
+
+  // p now points to tb_offset, the offset from start of function to TB table.
+  unw_word_t start_ip =
+      reinterpret_cast<unw_word_t>(TBTable) - *p - sizeof(uint32_t);
+  unw_word_t end_ip = reinterpret_cast<unw_word_t>(TBTable);
+  ++p;
+
+  _LIBUNWIND_TRACE_UNWINDING("start_ip=%p, end_ip=%p\n",
+                             reinterpret_cast<void *>(start_ip),
+                             reinterpret_cast<void *>(end_ip));
+
+  // Skip field hand_mask if it exists.
+  if (TBTable->tb.int_hndl)
+    ++p;
+
+  unw_word_t lsda = 0;
+  unw_word_t handler = 0;
+  unw_word_t flags = frameType::frameWithXLEHStateTable;
+
+  if (TBTable->tb.lang == TB_CPLUSPLUS && TBTable->tb.has_ctl) {
+    // State table info is available. The ctl_info field indicates the
+    // number of CTL anchors. There should be only one entry for the C++
+    // state table.
+    assert(*p == 1 && "libunwind: there must be only one ctl_info entry");
+    ++p;
+    // p points to the offset of the state table into the stack.
+    pint_t stateTableOffset = *p++;
+
+    int framePointerReg;
+
+    // Skip fields name_len and name if exist.
+    if (TBTable->tb.name_present) {
+      const uint16_t name_len = *(reinterpret_cast<uint16_t *>(p));
+      p = reinterpret_cast<uint32_t *>(reinterpret_cast<char *>(p) + name_len +
+                                       sizeof(uint16_t));
+    }
+
+    if (TBTable->tb.uses_alloca)
+      framePointerReg = *(reinterpret_cast<char *>(p));
+    else
+      framePointerReg = 1; // default frame pointer == SP
+
+    _LIBUNWIND_TRACE_UNWINDING(
+        "framePointerReg=%d, framePointer=%p, "
+        "stateTableOffset=%#lx\n",
+        framePointerReg,
+        reinterpret_cast<void *>(_registers.getRegister(framePointerReg)),
+        stateTableOffset);
+    lsda = _registers.getRegister(framePointerReg) + stateTableOffset;
+
+    // Since the traceback table generated by the legacy XLC++ does not
+    // provide the location of the personality for the state table,
+    // function __xlcxx_personality_v0(), which is the personality for the state
+    // table and is exported from libc++abi, is directly assigned as the
+    // handler here. When a legacy XLC++ frame is encountered, the symbol
+    // is resolved dynamically using dlopen() to avoid hard dependency from
+    // libunwind on libc++abi.
+
+    // Resolve the function pointer to the state table personality if it has
+    // not already.
+    if (xlcPersonalityV0 == NULL) {
+      xlcPersonalityV0InitLock.lock();
+      if (xlcPersonalityV0 == NULL) {
+        // If libc++abi is statically linked in, symbol __xlcxx_personality_v0
+        // has been resolved at the link time.
+        xlcPersonalityV0 = &__xlcxx_personality_v0;
+        if (xlcPersonalityV0 == NULL) {
+          // libc++abi is dynamically linked. Resolve __xlcxx_personality_v0
+          // using dlopen().
+          const char libcxxabi[] = "libc++abi.a(libc++abi.so.1)";
+          void *libHandle;
+          libHandle = dlopen(libcxxabi, RTLD_MEMBER | RTLD_NOW);
+          if (libHandle == NULL) {
+            _LIBUNWIND_TRACE_UNWINDING("dlopen() failed with errno=%d\n",
+                                       errno);
+            assert(0 && "dlopen() failed");
+          }
+          xlcPersonalityV0 = reinterpret_cast<__xlcxx_personality_v0_t *>(
+              dlsym(libHandle, "__xlcxx_personality_v0"));
+          if (xlcPersonalityV0 == NULL) {
+            _LIBUNWIND_TRACE_UNWINDING("dlsym() failed with errno=%d\n", errno);
+            assert(0 && "dlsym() failed");
+          }
+          dlclose(libHandle);
+        }
+      }
+      xlcPersonalityV0InitLock.unlock();
+    }
+    handler = reinterpret_cast<unw_word_t>(xlcPersonalityV0);
+    _LIBUNWIND_TRACE_UNWINDING("State table: LSDA=%p, Personality=%p\n",
+                               reinterpret_cast<void *>(lsda),
+                               reinterpret_cast<void *>(handler));
+  } else if (TBTable->tb.longtbtable) {
+    // This frame has the traceback table extension. Possible cases are
+    // 1) a C++ frame that has the 'eh_info' structure; 2) a C++ frame that
+    // is not EH aware; or, 3) a frame of other languages. We need to figure out
+    // if the traceback table extension contains the 'eh_info' structure.
+    //
+    // We also need to deal with the complexity arising from some XL compiler
+    // versions use the wrong ordering of 'longtbtable' and 'has_vec' bits
+    // where the 'longtbtable' bit is meant to be the 'has_vec' bit and vice
+    // versa. For frames of code generated by those compilers, the 'longtbtable'
+    // bit may be set but there isn't really a traceback table extension.
+    //
+    // In </usr/include/sys/debug.h>, there is the following definition of
+    // 'struct tbtable_ext'. It is not really a structure but a dummy to
+    // collect the description of optional parts of the traceback table.
+    //
+    // struct tbtable_ext {
+    //   ...
+    //   char alloca_reg;        /* Register for alloca automatic storage */
+    //   struct vec_ext vec_ext; /* Vector extension (if has_vec is set) */
+    //   unsigned char xtbtable; /* More tbtable fields, if longtbtable is set*/
+    // };
+    //
+    // Depending on how the 'has_vec'/'longtbtable' bit is interpreted, the data
+    // following 'alloca_reg' can be treated either as 'struct vec_ext' or
+    // 'unsigned char xtbtable'. 'xtbtable' bits are defined in
+    // </usr/include/sys/debug.h> as flags. The 7th bit '0x02' is currently
+    // unused and should not be set. 'struct vec_ext' is defined in
+    // </usr/include/sys/debug.h> as follows:
+    //
+    // struct vec_ext {
+    //   unsigned vr_saved:6;      /* Number of non-volatile vector regs saved
+    //   */
+    //                             /* first register saved is assumed to be */
+    //                             /* 32 - vr_saved                         */
+    //   unsigned saves_vrsave:1;  /* Set if vrsave is saved on the stack */
+    //   unsigned has_varargs:1;
+    //   ...
+    // };
+    //
+    // Here, the 7th bit is used as 'saves_vrsave'. To determine whether it
+    // is 'struct vec_ext' or 'xtbtable' that follows 'alloca_reg',
+    // we checks if the 7th bit is set or not because 'xtbtable' should
+    // never have the 7th bit set. The 7th bit of 'xtbtable' will be reserved
+    // in the future to make sure the mitigation works. This mitigation
+    // is not 100% bullet proof because 'struct vec_ext' may not always have
+    // 'saves_vrsave' bit set.
+    //
+    // 'reservedBit' is defined in enum 'xTBTableMask' above as the mask for
+    // checking the 7th bit.
+
+    // p points to field name len.
+    uint8_t *charPtr = reinterpret_cast<uint8_t *>(p);
+
+    // Skip fields name_len and name if they exist.
+    if (TBTable->tb.name_present) {
+      const uint16_t name_len = *(reinterpret_cast<uint16_t *>(charPtr));
+      charPtr = charPtr + name_len + sizeof(uint16_t);
+    }
+
+    // Skip field alloc_reg if it exists.
+    if (TBTable->tb.uses_alloca)
+      ++charPtr;
+
+    // Check traceback table bit has_vec. Skip struct vec_ext if it exists.
+    if (TBTable->tb.has_vec)
+      // Note struct vec_ext does exist at this point because whether the
+      // ordering of longtbtable and has_vec bits is correct or not, both
+      // are set.
+      charPtr += sizeof(struct vec_ext);
+
+    // charPtr points to field 'xtbtable'. Check if the EH info is available.
+    // Also check if the reserved bit of the extended traceback table field
+    // 'xtbtable' is set. If it is, the traceback table was incorrectly
+    // generated by an XL compiler that uses the wrong ordering of 'longtbtable'
+    // and 'has_vec' bits and this is in fact 'struct vec_ext'. So skip the
+    // frame.
+    if ((*charPtr & xTBTableMask::ehInfoBit) &&
+        !(*charPtr & xTBTableMask::reservedBit)) {
+      // Mark this frame has the new EH info.
+      flags = frameType::frameWithEHInfo;
+
+      // eh_info is available.
+      charPtr++;
+      // The pointer is 4-byte aligned.
+      if (reinterpret_cast<uintptr_t>(charPtr) % 4)
+        charPtr += 4 - reinterpret_cast<uintptr_t>(charPtr) % 4;
+      uintptr_t *ehInfo =
+          reinterpret_cast<uintptr_t *>(*(reinterpret_cast<uintptr_t *>(
+              registers.getRegister(2) +
+              *(reinterpret_cast<uintptr_t *>(charPtr)))));
+
+      // ehInfo points to structure en_info. The first member is version.
+      // Only version 0 is currently supported.
+      assert(*(reinterpret_cast<uint32_t *>(ehInfo)) == 0 &&
+             "libunwind: ehInfo version other than 0 is not supported");
+
+      // Increment ehInfo to point to member lsda.
+      ++ehInfo;
+      lsda = *ehInfo++;
+
+      // enInfo now points to member personality.
+      handler = *ehInfo;
+
+      _LIBUNWIND_TRACE_UNWINDING("Range table: LSDA=%#lx, Personality=%#lx\n",
+                                 lsda, handler);
+    }
+  }
+
+  _info.start_ip = start_ip;
+  _info.end_ip = end_ip;
+  _info.lsda = lsda;
+  _info.handler = handler;
+  _info.gp = 0;
+  _info.flags = flags;
+  _info.format = 0;
+  _info.unwind_info = reinterpret_cast<unw_word_t>(TBTable);
+  _info.unwind_info_size = 0;
+  _info.extra = registers.getRegister(2);
+
+  return true;
+}
+
+// Step back up the stack following the frame back link.
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
+                                        R &registers, bool &isSignalFrame) {
+  if (_LIBUNWIND_TRACING_UNWINDING) {
+    char functionBuf[512];
+    const char *functionName = functionBuf;
+    unw_word_t offset;
+    if (!getFunctionName(functionBuf, sizeof(functionBuf), &offset)) {
+      functionName = ".anonymous.";
+    }
+    _LIBUNWIND_TRACE_UNWINDING("%s: Look up traceback table of func=%s at %p",
+                               __func__, functionName,
+                               reinterpret_cast<void *>(TBTable));
+  }
+
+#if defined(__powerpc64__)
+  // Instruction to reload TOC register "l r2,40(r1)"
+  const uint32_t loadTOCRegInst = 0xe8410028;
+  const int32_t unwPPCF0Index = UNW_PPC64_F0;
+  const int32_t unwPPCV0Index = UNW_PPC64_V0;
+#else
+  // Instruction to reload TOC register "l r2,20(r1)"
+  const uint32_t loadTOCRegInst = 0x80410014;
+  const int32_t unwPPCF0Index = UNW_PPC_F0;
+  const int32_t unwPPCV0Index = UNW_PPC_V0;
+#endif
+
+  R newRegisters = registers;
+
+  // lastStack points to the stack frame of the next routine up.
+  pint_t lastStack = *(reinterpret_cast<pint_t *>(registers.getSP()));
+
+  // Return address is the address after call site instruction.
+  pint_t returnAddress;
+
+  if (isSignalFrame) {
+    _LIBUNWIND_TRACE_UNWINDING("Possible signal handler frame: lastStack=%p",
+                               reinterpret_cast<void *>(lastStack));
+
+    sigcontext *sigContext = reinterpret_cast<sigcontext *>(
+        reinterpret_cast<char *>(lastStack) + STKMIN);
+    returnAddress = sigContext->sc_jmpbuf.jmp_context.iar;
+
+    _LIBUNWIND_TRACE_UNWINDING("From sigContext=%p, returnAddress=%p\n",
+                               reinterpret_cast<void *>(sigContext),
+                               reinterpret_cast<void *>(returnAddress));
+
+    if (returnAddress < 0x10000000) {
+      // Try again using STKMINALIGN
+      sigContext = reinterpret_cast<sigcontext *>(
+          reinterpret_cast<char *>(lastStack) + STKMINALIGN);
+      returnAddress = sigContext->sc_jmpbuf.jmp_context.iar;
+      if (returnAddress < 0x10000000) {
+        _LIBUNWIND_TRACE_UNWINDING("Bad returnAddress=%p\n",
+                                   reinterpret_cast<void *>(returnAddress));
+        return UNW_EBADFRAME;
+      } else {
+        _LIBUNWIND_TRACE_UNWINDING("Tried again using STKMINALIGN: "
+                                   "sigContext=%p, returnAddress=%p. "
+                                   "Seems to be a valid address\n",
+                                   reinterpret_cast<void *>(sigContext),
+                                   reinterpret_cast<void *>(returnAddress));
+      }
+    }
+    // Restore the condition register from sigcontext.
+    newRegisters.setCR(sigContext->sc_jmpbuf.jmp_context.cr);
+
+    // Restore GPRs from sigcontext.
+    for (int i = 0; i < 32; ++i)
+      newRegisters.setRegister(i, sigContext->sc_jmpbuf.jmp_context.gpr[i]);
+
+    // Restore FPRs from sigcontext.
+    for (int i = 0; i < 32; ++i)
+      newRegisters.setFloatRegister(i + unwPPCF0Index,
+                                    sigContext->sc_jmpbuf.jmp_context.fpr[i]);
+
+    // Restore vector registers if there is an associated extended context
+    // structure.
+    if (sigContext->sc_jmpbuf.jmp_context.msr & __EXTCTX) {
+      ucontext_t *uContext = reinterpret_cast<ucontext_t *>(sigContext);
+      if (uContext->__extctx->__extctx_magic == __EXTCTX_MAGIC) {
+        for (int i = 0; i < 32; ++i)
+          newRegisters.setVectorRegister(
+              i + unwPPCV0Index, *(reinterpret_cast<v128 *>(
+                                     &(uContext->__extctx->__vmx.__vr[i]))));
+      }
+    }
+  } else {
+    // Step up a normal frame.
+    returnAddress = reinterpret_cast<pint_t *>(lastStack)[2];
+
+    _LIBUNWIND_TRACE_UNWINDING("Extract info from lastStack=%p, "
+                               "returnAddress=%p\n",
+                               reinterpret_cast<void *>(lastStack),
+                               reinterpret_cast<void *>(returnAddress));
+    _LIBUNWIND_TRACE_UNWINDING("fpr_regs=%d, gpr_regs=%d, saves_cr=%d\n",
+                               TBTable->tb.fpr_saved, TBTable->tb.gpr_saved,
+                               TBTable->tb.saves_cr);
+
+    // Restore FP registers.
+    char *ptrToRegs = reinterpret_cast<char *>(lastStack);
+    double *FPRegs = reinterpret_cast<double *>(
+        ptrToRegs - (TBTable->tb.fpr_saved * sizeof(double)));
+    for (int i = 0; i < TBTable->tb.fpr_saved; ++i)
+      newRegisters.setFloatRegister(
+          32 - TBTable->tb.fpr_saved + i + unwPPCF0Index, FPRegs[i]);
+
+    // Restore GP registers.
+    ptrToRegs = reinterpret_cast<char *>(FPRegs);
+    uintptr_t *GPRegs = reinterpret_cast<uintptr_t *>(
+        ptrToRegs - (TBTable->tb.gpr_saved * sizeof(uintptr_t)));
+    for (int i = 0; i < TBTable->tb.gpr_saved; ++i)
+      newRegisters.setRegister(32 - TBTable->tb.gpr_saved + i, GPRegs[i]);
+
+    // Restore Vector registers.
+    ptrToRegs = reinterpret_cast<char *>(GPRegs);
+
+    // Restore vector registers only if this is a Clang frame. Also
+    // check if traceback table bit has_vec is set. If it is, structure
+    // vec_ext is available.
+    if (_info.flags == frameType::frameWithEHInfo && TBTable->tb.has_vec) {
+
+      // Get to the vec_ext structure to check if vector registers are saved.
+      uint32_t *p = reinterpret_cast<uint32_t *>(&TBTable->tb_ext);
+
+      // Skip field parminfo if exists.
+      if (TBTable->tb.fixedparms || TBTable->tb.floatparms)
+        ++p;
+
+      // Skip field tb_offset if exists.
+      if (TBTable->tb.has_tboff)
+        ++p;
+
+      // Skip field hand_mask if exists.
+      if (TBTable->tb.int_hndl)
+        ++p;
+
+      // Skip fields ctl_info and ctl_info_disp if exist.
+      if (TBTable->tb.has_ctl) {
+        // Skip field ctl_info.
+        ++p;
+        // Skip field ctl_info_disp.
+        ++p;
+      }
+
+      // Skip fields name_len and name if exist.
+      // p is supposed to point to field name_len now.
+      uint8_t *charPtr = reinterpret_cast<uint8_t *>(p);
+      if (TBTable->tb.name_present) {
+        const uint16_t name_len = *(reinterpret_cast<uint16_t *>(charPtr));
+        charPtr = charPtr + name_len + sizeof(uint16_t);
+      }
+
+      // Skip field alloc_reg if it exists.
+      if (TBTable->tb.uses_alloca)
+        ++charPtr;
+
+      struct vec_ext *vec_ext = reinterpret_cast<struct vec_ext *>(charPtr);
+
+      _LIBUNWIND_TRACE_UNWINDING("vr_saved=%d\n", vec_ext->vr_saved);
+
+      // Restore vector register(s) if saved on the stack.
+      if (vec_ext->vr_saved) {
+        // Saved vector registers are 16-byte aligned.
+        if (reinterpret_cast<uintptr_t>(ptrToRegs) % 16)
+          ptrToRegs -= reinterpret_cast<uintptr_t>(ptrToRegs) % 16;
+        v128 *VecRegs = reinterpret_cast<v128 *>(ptrToRegs - vec_ext->vr_saved *
+                                                                 sizeof(v128));
+        for (int i = 0; i < vec_ext->vr_saved; ++i) {
+          newRegisters.setVectorRegister(
+              32 - vec_ext->vr_saved + i + unwPPCV0Index, VecRegs[i]);
+        }
+      }
+    }
+    if (TBTable->tb.saves_cr) {
+      // Get the saved condition register. The condition register is only
+      // a single word.
+      newRegisters.setCR(
+          *(reinterpret_cast<uint32_t *>(lastStack + sizeof(uintptr_t))));
+    }
+
+    // Restore the SP.
+    newRegisters.setSP(lastStack);
+
+    // The first instruction after return.
+    uint32_t firstInstruction = *(reinterpret_cast<uint32_t *>(returnAddress));
+
+    // Do we need to set the TOC register?
+    _LIBUNWIND_TRACE_UNWINDING(
+        "Current gpr2=%p\n",
+        reinterpret_cast<void *>(newRegisters.getRegister(2)));
+    if (firstInstruction == loadTOCRegInst) {
+      _LIBUNWIND_TRACE_UNWINDING(
+          "Set gpr2=%p from frame\n",
+          reinterpret_cast<void *>(reinterpret_cast<pint_t *>(lastStack)[5]));
+      newRegisters.setRegister(2, reinterpret_cast<pint_t *>(lastStack)[5]);
+    }
+  }
+  _LIBUNWIND_TRACE_UNWINDING("lastStack=%p, returnAddress=%p, pc=%p\n",
+                             reinterpret_cast<void *>(lastStack),
+                             reinterpret_cast<void *>(returnAddress),
+                             reinterpret_cast<void *>(pc));
+
+  // The return address is the address after call site instruction, so
+  // setting IP to that simualates a return.
+  newRegisters.setIP(reinterpret_cast<uintptr_t>(returnAddress));
+
+  // Simulate the step by replacing the register set with the new ones.
+  registers = newRegisters;
+
+  // Check if the next frame is a signal frame.
+  pint_t nextStack = *(reinterpret_cast<pint_t *>(registers.getSP()));
+
+  // Return address is the address after call site instruction.
+  pint_t nextReturnAddress = reinterpret_cast<pint_t *>(nextStack)[2];
+
+  if (nextReturnAddress > 0x01 && nextReturnAddress < 0x10000) {
+    _LIBUNWIND_TRACE_UNWINDING("The next is a signal handler frame: "
+                               "nextStack=%p, next return address=%p\n",
+                               reinterpret_cast<void *>(nextStack),
+                               reinterpret_cast<void *>(nextReturnAddress));
+    isSignalFrame = true;
+  } else {
+    isSignalFrame = false;
+  }
+
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
 
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
@@ -1948,7 +2482,14 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   // To disambiguate this, back up the pc when we know it is a return
   // address.
   if (isReturnAddress)
+#if defined(_AIX)
+    // PC needs to be a 4-byte aligned address to be able to look for a
+    // word of 0 that indicates the start of the traceback table at the end
+    // of a function on AIX.
+    pc -= 4;
+#else
     --pc;
+#endif
 
   // Ask address space object to find unwind sections for this pc.
   UnwindInfoSections sects;
@@ -1979,6 +2520,12 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
     // If there is SEH unwind info, look there next.
     if (this->getInfoFromSEH(pc))
+      return;
+#endif
+
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+    // If there is unwind info in the traceback table, look there next.
+    if (this->getInfoFromTBTable(pc, _registers))
       return;
 #endif
 
@@ -2116,6 +2663,8 @@ int UnwindCursor<A, R>::step() {
     result = this->stepWithCompactEncoding();
 #elif defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
     result = this->stepWithSEHData();
+#elif defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+    result = this->stepWithTBTableData();
 #elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
     result = this->stepWithDwarfFDE();
 #elif defined(_LIBUNWIND_ARM_EHABI)

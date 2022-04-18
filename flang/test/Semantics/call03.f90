@@ -228,6 +228,7 @@ module m01
     real :: a(*)
     !ERROR: Scalar actual argument may not be associated with assumed-shape dummy argument 'x='
     call assumedshape(scalar)
+    call assumedshape(reshape(matrix,shape=[size(matrix)])) ! ok
     !ERROR: Rank of dummy argument is 1, but actual argument has rank 2
     call assumedshape(matrix)
     !ERROR: Assumed-size array may not be associated with assumed-shape dummy argument 'x='

@@ -1128,3 +1128,149 @@ entry:
   store atomic float %in, float* %ptr seq_cst, align 4
   ret void
 }
+
+; GCN-LABEL: {{^}}atomic_load_i8_offset:
+; CIVI: flat_load_ubyte [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GFX9: flat_load_ubyte [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] offset:16 glc{{$}}
+; GCN: flat_store_byte v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @atomic_load_i8_offset(i8* %in, i8* %out) {
+entry:
+  %gep = getelementptr i8, i8* %in, i64 16
+  %val = load atomic i8, i8* %gep  seq_cst, align 1
+  store i8 %val, i8* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_load_i8:
+; GCN: flat_load_ubyte [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc
+; GCN: flat_store_byte v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @atomic_load_i8(i8* %in, i8* %out) {
+entry:
+  %val = load atomic i8, i8* %in seq_cst, align 1
+  store i8 %val, i8* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_load_i8_addr64_offset:
+; CIVI: flat_load_ubyte [[RET:v[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc{{$}}
+; GFX9: flat_load_ubyte [[RET:v[0-9]+]], v[{{[0-9]+:[0-9]+}}] offset:16 glc{{$}}
+; GCN: flat_store_byte v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @atomic_load_i8_addr64_offset(i8* %in, i8* %out, i64 %index) {
+entry:
+  %ptr = getelementptr i8, i8* %in, i64 %index
+  %gep = getelementptr i8, i8* %ptr, i64 16
+  %val = load atomic i8, i8* %gep seq_cst, align 1
+  store i8 %val, i8* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_i8_offset:
+; CIVI: flat_store_byte v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+; GFX9: flat_store_byte v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}} offset:16{{$}}
+define amdgpu_kernel void @atomic_store_i8_offset(i8 %in, i8* %out) {
+entry:
+  %gep = getelementptr i8, i8* %out, i64 16
+  store atomic i8 %in, i8* %gep  seq_cst, align 1
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_i8:
+; GCN: flat_store_byte v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @atomic_store_i8(i8 %in, i8* %out) {
+entry:
+  store atomic i8 %in, i8* %out seq_cst, align 1
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_i8_addr64_offset:
+; CIVI: flat_store_byte v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+; GFX9: flat_store_byte v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}} offset:16{{$}}
+define amdgpu_kernel void @atomic_store_i8_addr64_offset(i8 %in, i8* %out, i64 %index) {
+entry:
+  %ptr = getelementptr i8, i8* %out, i64 %index
+  %gep = getelementptr i8, i8* %ptr, i64 16
+  store atomic i8 %in, i8* %gep seq_cst, align 1
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_load_i16_offset:
+; CIVI: flat_load_ushort [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GFX9: flat_load_ushort [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] offset:16 glc{{$}}
+; GCN: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @atomic_load_i16_offset(i16* %in, i16* %out) {
+entry:
+  %gep = getelementptr i16, i16* %in, i64 8
+  %val = load atomic i16, i16* %gep  seq_cst, align 2
+  store i16 %val, i16* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_load_i16:
+; GCN: flat_load_ushort [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc
+; GCN: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @atomic_load_i16(i16* %in, i16* %out) {
+entry:
+  %val = load atomic i16, i16* %in seq_cst, align 2
+  store i16 %val, i16* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_load_i16_addr64_offset:
+; CIVI: flat_load_ushort [[RET:v[0-9]+]], v[{{[0-9]+:[0-9]+}}] glc{{$}}
+; GFX9: flat_load_ushort [[RET:v[0-9]+]], v[{{[0-9]+:[0-9]+}}] offset:16 glc{{$}}
+; GCN: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
+define amdgpu_kernel void @atomic_load_i16_addr64_offset(i16* %in, i16* %out, i64 %index) {
+entry:
+  %ptr = getelementptr i16, i16* %in, i64 %index
+  %gep = getelementptr i16, i16* %ptr, i64 8
+  %val = load atomic i16, i16* %gep seq_cst, align 2
+  store i16 %val, i16* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_i16_offset:
+; CIVI: flat_store_short v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+; GFX9: flat_store_short v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}} offset:16{{$}}
+define amdgpu_kernel void @atomic_store_i16_offset(i16 %in, i16* %out) {
+entry:
+  %gep = getelementptr i16, i16* %out, i64 8
+  store atomic i16 %in, i16* %gep  seq_cst, align 2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_i16:
+; GCN: flat_store_short v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @atomic_store_i16(i16 %in, i16* %out) {
+entry:
+  store atomic i16 %in, i16* %out seq_cst, align 2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_i16_addr64_offset:
+; CIVI: flat_store_short v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+; GFX9: flat_store_short v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}} offset:16{{$}}
+define amdgpu_kernel void @atomic_store_i16_addr64_offset(i16 %in, i16* %out, i64 %index) {
+entry:
+  %ptr = getelementptr i16, i16* %out, i64 %index
+  %gep = getelementptr i16, i16* %ptr, i64 8
+  store atomic i16 %in, i16* %gep seq_cst, align 2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_f16_offset:
+; CIVI: flat_store_short v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+; GFX9: flat_store_short v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}} offset:16{{$}}
+define amdgpu_kernel void @atomic_store_f16_offset(half %in, half* %out) {
+entry:
+  %gep = getelementptr half, half* %out, i64 8
+  store atomic half %in, half* %gep  seq_cst, align 2
+  ret void
+}
+
+; GCN-LABEL: {{^}}atomic_store_f16:
+; GCN: flat_store_short v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
+define amdgpu_kernel void @atomic_store_f16(half %in, half* %out) {
+entry:
+  store atomic half %in, half* %out seq_cst, align 2
+  ret void
+}

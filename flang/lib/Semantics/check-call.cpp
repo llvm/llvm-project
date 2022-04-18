@@ -892,7 +892,7 @@ void CheckArguments(const characteristics::Procedure &proc,
     if (treatingExternalAsImplicit && !buffer.empty()) {
       if (auto *msg{messages.Say(
               "If the procedure's interface were explicit, this reference would be in error:"_warn_en_US)}) {
-        buffer.AttachTo(*msg);
+        buffer.AttachTo(*msg, parser::Severity::Because);
       }
     }
     if (auto *msgs{messages.messages()}) {

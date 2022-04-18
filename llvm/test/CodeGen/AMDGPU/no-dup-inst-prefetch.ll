@@ -11,8 +11,6 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX10-NEXT:    s_mov_b32 s1, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr2
 ; GFX10-NEXT:    s_inst_prefetch 0x1
-; GFX10-NEXT:    s_inst_prefetch 0x1
-; GFX10-NEXT:    s_inst_prefetch 0x1
 ; GFX10-NEXT:    s_branch .LBB0_2
 ; GFX10-NEXT:    .p2align 6
 ; GFX10-NEXT:  .LBB0_1: ; %Flow
@@ -49,8 +47,6 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX10-NEXT:    s_or_b32 s2, s2, s0
 ; GFX10-NEXT:    s_branch .LBB0_1
 ; GFX10-NEXT:  .LBB0_4: ; %loop0_merge
-; GFX10-NEXT:    s_inst_prefetch 0x2
-; GFX10-NEXT:    s_inst_prefetch 0x2
 ; GFX10-NEXT:    s_inst_prefetch 0x2
 ; GFX10-NEXT:    s_endpgm
 branch1_true:

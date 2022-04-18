@@ -28,7 +28,9 @@ enum class AttrSyntax {
   // Is the identifier known as a C-style attribute?
   C,
   // Is the identifier known as a pragma attribute?
-  Pragma
+  Pragma,
+  // Is the identifier known as a HLSL semantic?
+  HLSLSemantic,
 };
 
 /// Return the version number associated with the attribute if we

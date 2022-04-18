@@ -17,7 +17,7 @@ body:             |
     ; CHECK-LABEL: name: zero
     ; CHECK: liveins: $s0, $s1
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: FCMPSri [[COPY]], implicit-def $nzcv
+    ; CHECK: nofpexcept FCMPSri [[COPY]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $s0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $s0
@@ -44,7 +44,7 @@ body:             |
     ; CHECK: liveins: $s0, $s1
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[FMOVSi:%[0-9]+]]:fpr32 = FMOVSi 112
-    ; CHECK: FCMPSrr [[COPY]], [[FMOVSi]], implicit-def $nzcv
+    ; CHECK: nofpexcept FCMPSrr [[COPY]], [[FMOVSi]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $s0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $s0
@@ -71,7 +71,7 @@ body:             |
     ; CHECK: liveins: $d0, $d1
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[FMOVDi:%[0-9]+]]:fpr64 = FMOVDi 112
-    ; CHECK: FCMPDrr [[COPY]], [[FMOVDi]], implicit-def $nzcv
+    ; CHECK: nofpexcept FCMPDrr [[COPY]], [[FMOVDi]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $s0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $s0
@@ -97,7 +97,7 @@ body:             |
     ; CHECK-LABEL: name: zero_s64
     ; CHECK: liveins: $d0, $d1, $s0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: FCMPDri [[COPY]], implicit-def $nzcv
+    ; CHECK: nofpexcept FCMPDri [[COPY]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $s0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $s0
@@ -122,7 +122,7 @@ body:             |
     ; CHECK-LABEL: name: zero_lhs
     ; CHECK: liveins: $s0, $s1
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: FCMPSri [[COPY]], implicit-def $nzcv
+    ; CHECK: nofpexcept FCMPSri [[COPY]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $s0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $s0
@@ -148,7 +148,7 @@ body:             |
     ; CHECK: liveins: $s0, $s1
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
-    ; CHECK: FCMPSrr [[FMOVS0_]], [[COPY]], implicit-def $nzcv
+    ; CHECK: nofpexcept FCMPSrr [[FMOVS0_]], [[COPY]], implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 5, implicit $nzcv
     ; CHECK: $s0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $s0

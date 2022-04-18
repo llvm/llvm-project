@@ -1943,7 +1943,7 @@ DataAggregator::parseMMapEvent() {
   }
 
   const StringRef BaseAddressStr = Line.split('[').second.split('(').first;
-  if (BaseAddressStr.getAsInteger(0, ParsedInfo.BaseAddress)) {
+  if (BaseAddressStr.getAsInteger(0, ParsedInfo.MMapAddress)) {
     reportError("expected base address");
     Diag << "Found: " << BaseAddressStr << "in '" << Line << "'\n";
     return make_error_code(llvm::errc::io_error);
@@ -2003,7 +2003,7 @@ std::error_code DataAggregator::parseMMapEvents() {
     dbgs() << "FileName -> mmap info:\n";
     for (const std::pair<const StringRef, MMapInfo> &Pair : GlobalMMapInfo)
       dbgs() << "  " << Pair.first << " : " << Pair.second.PID << " [0x"
-             << Twine::utohexstr(Pair.second.BaseAddress) << ", "
+             << Twine::utohexstr(Pair.second.MMapAddress) << ", "
              << Twine::utohexstr(Pair.second.Size) << " @ "
              << Twine::utohexstr(Pair.second.Offset) << "]\n";
   });
@@ -2017,26 +2017,42 @@ std::error_code DataAggregator::parseMMapEvents() {
 
   auto Range = GlobalMMapInfo.equal_range(NameToUse);
   for (auto I = Range.first; I != Range.second; ++I) {
-    const MMapInfo &MMapInfo = I->second;
-    if (BC->HasFixedLoadAddress && MMapInfo.BaseAddress) {
+    MMapInfo &MMapInfo = I->second;
+    if (BC->HasFixedLoadAddress && MMapInfo.MMapAddress) {
       // Check that the binary mapping matches one of the segments.
       bool MatchFound = false;
       for (auto &KV : BC->SegmentMapInfo) {
         SegmentInfo &SegInfo = KV.second;
-        // The mapping is page-aligned and hence the BaseAddress could be
+        // The mapping is page-aligned and hence the MMapAddress could be
         // different from the segment start address. We cannot know the page
         // size of the mapping, but we know it should not exceed the segment
         // alignment value. Hence we are performing an approximate check.
-        if (SegInfo.Address >= MMapInfo.BaseAddress &&
-            SegInfo.Address - MMapInfo.BaseAddress < SegInfo.Alignment) {
+        if (SegInfo.Address >= MMapInfo.MMapAddress &&
+            SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment) {
           MatchFound = true;
           break;
         }
       }
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse
-               << " at 0x" << Twine::utohexstr(MMapInfo.BaseAddress) << '\n';
+               << " at 0x" << Twine::utohexstr(MMapInfo.MMapAddress) << '\n';
         continue;
+      }
+    }
+
+    // Set base address for shared objects.
+    if (!BC->HasFixedLoadAddress) {
+      Optional<uint64_t> BaseAddress =
+          BC->getBaseAddressForMapping(MMapInfo.MMapAddress, MMapInfo.Offset);
+      if (!BaseAddress) {
+        errs() << "PERF2BOLT-WARNING: unable to find base address of the "
+                  "binary when memory mapped at 0x"
+               << Twine::utohexstr(MMapInfo.MMapAddress)
+               << " using file offset 0x" << Twine::utohexstr(MMapInfo.Offset)
+               << ". Ignoring profile data for this mapping\n";
+        continue;
+      } else {
+        MMapInfo.BaseAddress = *BaseAddress;
       }
     }
 
@@ -2110,7 +2126,7 @@ std::error_code DataAggregator::parseTaskEvents() {
   LLVM_DEBUG({
     for (std::pair<const uint64_t, MMapInfo> &MMI : BinaryMMapInfo)
       outs() << "  " << MMI.second.PID << (MMI.second.Forked ? " (forked)" : "")
-             << ": (0x" << Twine::utohexstr(MMI.second.BaseAddress) << ": 0x"
+             << ": (0x" << Twine::utohexstr(MMI.second.MMapAddress) << ": 0x"
              << Twine::utohexstr(MMI.second.Size) << ")\n";
   });
 

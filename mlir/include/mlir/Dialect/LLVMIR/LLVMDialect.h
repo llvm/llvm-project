@@ -72,6 +72,8 @@ struct LLVMDialectImpl;
 ///// Ops /////
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOps.h.inc"
+#define GET_OP_CLASSES
+#include "mlir/Dialect/LLVMIR/LLVMIntrinsicOps.h.inc"
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.h.inc"
 

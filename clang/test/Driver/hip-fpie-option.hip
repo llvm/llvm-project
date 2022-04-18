@@ -1,4 +1,4 @@
-// REQUIRES: clang-driver, amdgpu-registered-target, default-pie-on-linux
+// REQUIRES: amdgpu-registered-target, default-pie-on-linux
 
 // -fPIC and -fPIE only affects host relocation model.
 // device compilation always uses PIC. 

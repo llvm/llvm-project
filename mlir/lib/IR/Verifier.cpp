@@ -52,15 +52,14 @@ public:
   LogicalResult verifyOpAndDominance(Operation &op);
 
 private:
+  /// Any ops that have regions and are marked as "isolated from above" will be
+  /// returned in the opsWithIsolatedRegions vector.
   LogicalResult
   verifyBlock(Block &block,
               SmallVectorImpl<Operation *> &opsWithIsolatedRegions);
-  /// Verify the properties and dominance relationships of this operation,
-  /// stopping region recursion at any "isolated from above operations".  Any
-  /// such ops are returned in the opsWithIsolatedRegions vector.
-  LogicalResult
-  verifyOperation(Operation &op,
-                  SmallVectorImpl<Operation *> &opsWithIsolatedRegions);
+
+  /// Verify the properties and dominance relationships of this operation.
+  LogicalResult verifyOperation(Operation &op);
 
   /// Verify the dominance property of regions contained within the given
   /// Operation.
@@ -74,10 +73,8 @@ private:
 } // namespace
 
 LogicalResult OperationVerifier::verifyOpAndDominance(Operation &op) {
-  SmallVector<Operation *> opsWithIsolatedRegions;
-
   // Verify the operation first, collecting any IsolatedFromAbove operations.
-  if (failed(verifyOperation(op, opsWithIsolatedRegions)))
+  if (failed(verifyOperation(op)))
     return failure();
 
   // Since everything looks structurally ok to this point, we do a dominance
@@ -90,15 +87,7 @@ LogicalResult OperationVerifier::verifyOpAndDominance(Operation &op) {
       return failure();
   }
 
-  // If we aren't verifying nested operations, then we're done.
-  if (!verifyRecursively)
-    return success();
-
-  // Otherwise, check the dominance properties and invariants of any operations
-  // in the regions contained by the 'opsWithIsolatedRegions' operations.
-  return failableParallelForEach(
-      op.getContext(), opsWithIsolatedRegions,
-      [&](Operation *op) { return verifyOpAndDominance(*op); });
+  return success();
 }
 
 /// Returns true if this block may be valid without terminator. That is if:
@@ -150,7 +139,7 @@ LogicalResult OperationVerifier::verifyBlock(
       opsWithIsolatedRegions.push_back(&op);
 
       // Otherwise, check the operation inline.
-    } else if (failed(verifyOperation(op, opsWithIsolatedRegions))) {
+    } else if (failed(verifyOperation(op))) {
       return failure();
     }
   }
@@ -177,8 +166,7 @@ LogicalResult OperationVerifier::verifyBlock(
 /// Verify the properties and dominance relationships of this operation,
 /// stopping region recursion at any "isolated from above operations".  Any such
 /// ops are returned in the opsWithIsolatedRegions vector.
-LogicalResult OperationVerifier::verifyOperation(
-    Operation &op, SmallVectorImpl<Operation *> &opsWithIsolatedRegions) {
+LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   // Check that operands are non-nil and structurally ok.
   for (auto operand : op.getOperands())
     if (!operand)
@@ -197,6 +185,8 @@ LogicalResult OperationVerifier::verifyOperation(
   Optional<RegisteredOperationName> registeredInfo = opName.getRegisteredInfo();
   if (registeredInfo && failed(registeredInfo->verifyInvariants(&op)))
     return failure();
+
+  SmallVector<Operation *> opsWithIsolatedRegions;
 
   if (unsigned numRegions = op.getNumRegions()) {
     auto kindInterface = dyn_cast<RegionKindInterface>(op);
@@ -237,6 +227,12 @@ LogicalResult OperationVerifier::verifyOperation(
       }
     }
   }
+
+  // Verify the nested ops that are able to be verified in parallel.
+  if (failed(failableParallelForEach(
+          op.getContext(), opsWithIsolatedRegions,
+          [&](Operation *op) { return verifyOpAndDominance(*op); })))
+    return failure();
 
   // After the region ops are verified, run the verifiers that have additional
   // region invariants need to veirfy.

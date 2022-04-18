@@ -87,6 +87,7 @@ def _executeScriptInternal(test, commands):
     noExecute=False,
     debug=False,
     isWindows=platform.system() == 'Windows',
+    order='smart',
     params={})
   _, tmpBase = libcxx.test.format._getTempPaths(test)
   execDir = os.path.dirname(test.getExecPath())

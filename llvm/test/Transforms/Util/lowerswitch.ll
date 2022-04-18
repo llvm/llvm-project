@@ -5,15 +5,15 @@ define void @test0(i32 %mode) {
 ; CHECK-LABEL: @test0
 ;
 ; CHECK: icmp eq i32 %mode, 4
-; CHECK-NEXT: label %BB3, label %NewDefault
+; CHECK-NEXT: label %BB3, label %BB2
 ;
 ; CHECK: icmp eq i32 %mode, 2
-; CHECK-NEXT: label %BB3, label %NewDefault
+; CHECK-NEXT: label %BB3, label %BB2
 ;
 ; CHECK: icmp eq i32 %mode, 0
-; CHECK-NEXT: label %BB3, label %NewDefault
+; CHECK-NEXT: label %BB3, label %BB2
 ;
-; CHECK: %merge = phi i64 [ 1, %BB3 ], [ 0, %NewDefault ]
+; CHECK: %merge = phi i64 [ 1, %BB3 ], [ 0, %LeafBlock ], [ 0, %LeafBlock1 ], [ 0, %LeafBlock3 ]
 BB1:
   switch i32 %mode, label %BB2 [
     i32 3, label %BB2
@@ -213,7 +213,7 @@ lbl2:                                             ; preds = %cleanup, %lbl1
 
 for.cond:                                         ; preds = %cleanup, %cleanup, %lbl2
 ; CHECK: for.cond:
-; CHECK: phi i16 [ undef, %lbl2 ], [ %b.3, %NewDefault ]{{$}}
+; CHECK: phi i16 [ undef, %lbl2 ], [ %b.3, %LeafBlock ], [ %b.3, %LeafBlock1 ]{{$}}
 ; CHECK: for.cond1:
   %b.2 = phi i16 [ undef, %lbl2 ], [ %b.3, %cleanup ], [ %b.3, %cleanup ]
   br label %for.cond1

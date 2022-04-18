@@ -67,10 +67,9 @@ end
 * If both the `COUNT=` and the `COUNT_MAX=` optional arguments are
   present on the same call to the intrinsic subroutine `SYSTEM_CLOCK`,
   we require that their types have the same integer kind, since the
-  kind of these arguments is used to select the clock rate.
-  In common with some other compilers, the clock is in milliseconds
-  for kinds <= 4 and nanoseconds otherwise where the target system
-  supports these rates.
+  kind of these arguments is used to select the clock rate.  In common
+  with some other compilers, the clock rate varies from tenths of a
+  second to nanoseconds depending on argument kind and platform support.
 * If a dimension of a descriptor has zero extent in a call to
   `CFI_section`, `CFI_setpointer` or `CFI_allocate`, the lower
   bound on that dimension will be set to 1 for consistency with
@@ -83,13 +82,14 @@ end
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
 * Kind specification with `*`, e.g. `REAL*4`
-* `DOUBLE COMPLEX`
+* `DOUBLE COMPLEX` as a synonym for `COMPLEX(KIND(0.D0))` --
+  but not when spelled `TYPE(DOUBLECOMPLEX)`.
 * Signed complex literal constants
 * DEC `STRUCTURE`, `RECORD`, with '%FILL'; but `UNION`, and `MAP`
   are not yet supported throughout compilation, and elicit a
   "not yet implemented" message.
 * Structure field access with `.field`
-* `BYTE` as synonym for `INTEGER(KIND=1)`
+* `BYTE` as synonym for `INTEGER(KIND=1)`; but not when spelled `TYPE(BYTE)`.
 * Quad precision REAL literals with `Q`
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
