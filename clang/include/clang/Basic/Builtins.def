@@ -81,7 +81,9 @@
 //       builtin even if type doesn't match signature, and don't warn if we
 //       can't be sure the type is right
 //  F -> this is a libc/libm function with a '__builtin_' prefix added.
-//  f -> this is a libc/libm function without the '__builtin_' prefix.
+//  f -> this is a libc/libm function without a '__builtin_' prefix, or with
+//       'z', a C++ standard library function in namespace std::. This builtin
+//       is disableable by '-fno-builtin-foo' / '-fno-builtin-std-foo'.
 //  h -> this function requires a specific header or an explicit declaration.
 //  i -> this is a runtime library implemented function without the
 //       '__builtin_' prefix. It will be implemented in compiler-rt or libgcc.
@@ -101,6 +103,8 @@
 //  V:N: -> requires vectors of at least N bits to be legal
 //  C<N,M_0,...,M_k> -> callback behavior: argument N is called with argument
 //                      M_0, ..., M_k as payload
+//  z -> this is a C++ standard library function in (possibly-versioned)
+//       namespace std; implied by STDBUILTIN
 //  FIXME: gcc has nonnull
 
 #if defined(BUILTIN) && !defined(LIBBUILTIN)
@@ -109,6 +113,10 @@
 
 #if defined(BUILTIN) && !defined(LANGBUILTIN)
 #  define LANGBUILTIN(ID, TYPE, ATTRS, BUILTIN_LANG) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
+#if defined(BUILTIN) && !defined(STDBUILTIN)
+#  define STDBUILTIN(ID, TYPE, ATTRS, HEADER) LIBBUILTIN(ID, TYPE, "zf" ATTRS, HEADER, CXX_LANG)
 #endif
 
 // Standard libc/libm functions:
@@ -919,7 +927,7 @@ LANGBUILTIN(__exception_info, "v*",  "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_exception_info,  "v*",  "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__abnormal_termination, "i", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_abnormal_termination,  "i", "n", ALL_MS_LANGUAGES)
-LANGBUILTIN(__GetExceptionInfo, "v*.", "ntu", ALL_MS_LANGUAGES)
+LANGBUILTIN(__GetExceptionInfo, "v*.", "zntu", ALL_MS_LANGUAGES)
 LANGBUILTIN(_InterlockedAnd8,   "ccD*c",        "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_InterlockedAnd16,  "ssD*s",        "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_InterlockedAnd,    "NiNiD*Ni",     "n", ALL_MS_LANGUAGES)
@@ -1542,6 +1550,11 @@ LIBBUILTIN(__exp10f, "ff", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(_Block_object_assign, "vv*vC*iC", "f", "Blocks.h", ALL_LANGUAGES)
 LIBBUILTIN(_Block_object_dispose, "vvC*iC", "f", "Blocks.h", ALL_LANGUAGES)
 // FIXME: Also declare NSConcreteGlobalBlock and NSConcreteStackBlock.
+
+// C++11
+STDBUILTIN(move, "v&v&", "ncTh", "utility")
+STDBUILTIN(move_if_noexcept, "v&v&", "ncTh", "utility")
+STDBUILTIN(forward, "v&v&", "ncTh", "utility")
 
 // Annotation function
 BUILTIN(__builtin_annotation, "v.", "tn")
