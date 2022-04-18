@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReducerWorkItem.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -17,9 +18,17 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+
+extern cl::OptionCategory LLVMReduceOptions;
+static cl::opt<std::string> TargetTriple("mtriple",
+                                         cl::desc("Set the target triple"),
+                                         cl::cat(LLVMReduceOptions));
 
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
@@ -280,21 +289,54 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
   return DstMF;
 }
 
-std::unique_ptr<ReducerWorkItem> parseReducerWorkItem(StringRef Filename,
-                                                      LLVMContext &Ctxt,
-                                                      MachineModuleInfo *MMI) {
+std::unique_ptr<ReducerWorkItem>
+parseReducerWorkItem(const char *ToolName, StringRef Filename,
+                     LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
+                     std::unique_ptr<MachineModuleInfo> &MMI, bool IsMIR) {
+  Triple TheTriple;
+
   auto MMM = std::make_unique<ReducerWorkItem>();
-  if (MMI) {
+
+  if (IsMIR) {
     auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
     std::unique_ptr<MIRParser> MParser =
         createMIRParser(std::move(FileOrErr.get()), Ctxt);
 
     auto SetDataLayout =
         [&](StringRef DataLayoutTargetTriple) -> Optional<std::string> {
-      return MMI->getTarget().createDataLayout().getStringRepresentation();
+      // If we are supposed to override the target triple, do so now.
+      std::string IRTargetTriple = DataLayoutTargetTriple.str();
+      if (!TargetTriple.empty())
+        IRTargetTriple = Triple::normalize(TargetTriple);
+      TheTriple = Triple(IRTargetTriple);
+      if (TheTriple.getTriple().empty())
+        TheTriple.setTriple(sys::getDefaultTargetTriple());
+
+      std::string Error;
+      const Target *TheTarget =
+          TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+      if (!TheTarget) {
+        WithColor::error(errs(), ToolName) << Error;
+        exit(1);
+      }
+
+      // Hopefully the MIR parsing doesn't depend on any options.
+      TargetOptions Options;
+      Optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
+      std::string CPUStr = codegen::getCPUStr();
+      std::string FeaturesStr = codegen::getFeaturesStr();
+      TM = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
+          TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
+          codegen::getExplicitCodeModel(), CodeGenOpt::Default));
+      assert(TM && "Could not allocate target machine!");
+
+      return TM->createDataLayout().getStringRepresentation();
     };
 
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
+    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
+
+    MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
     MParser->parseMachineFunctions(*M, *MMI);
     MachineFunction *MF = nullptr;
     for (auto &F : *M) {
@@ -315,13 +357,14 @@ std::unique_ptr<ReducerWorkItem> parseReducerWorkItem(StringRef Filename,
     SMDiagnostic Err;
     std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
     if (!Result) {
-      Err.print("llvm-reduce", errs());
+      Err.print(ToolName, errs());
       return std::unique_ptr<ReducerWorkItem>();
     }
     MMM->M = std::move(Result);
   }
   if (verifyReducerWorkItem(*MMM, &errs())) {
-    errs() << "Error: " << Filename << " - input module is broken!\n";
+    WithColor::error(errs(), ToolName)
+        << Filename << " - input module is broken!\n";
     return std::unique_ptr<ReducerWorkItem>();
   }
   return MMM;
