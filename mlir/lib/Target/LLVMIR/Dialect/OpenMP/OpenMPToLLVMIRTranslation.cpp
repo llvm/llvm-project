@@ -26,25 +26,6 @@
 using namespace mlir;
 
 namespace {
-static llvm::omp::ScheduleKind
-convertToScheduleKind(Optional<omp::ClauseScheduleKind> schedKind) {
-  if (!schedKind.hasValue())
-    return llvm::omp::OMP_SCHEDULE_Default;
-  switch (schedKind.getValue()) {
-  case omp::ClauseScheduleKind::Static:
-    return llvm::omp::OMP_SCHEDULE_Static;
-  case omp::ClauseScheduleKind::Dynamic:
-    return llvm::omp::OMP_SCHEDULE_Dynamic;
-  case omp::ClauseScheduleKind::Guided:
-    return llvm::omp::OMP_SCHEDULE_Guided;
-  case omp::ClauseScheduleKind::Auto:
-    return llvm::omp::OMP_SCHEDULE_Auto;
-  case omp::ClauseScheduleKind::Runtime:
-    return llvm::omp::OMP_SCHEDULE_Runtime;
-  }
-  llvm_unreachable("unhandled schedule clause argument");
-}
-
 /// ModuleTranslation stack frame for OpenMP operations. This keeps track of the
 /// insertion points for allocas.
 class OpenMPAllocaStackFrame
@@ -827,16 +808,92 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
 
-  // TODO: Handle doacross loops when the ordered clause has a parameter.
-  bool isOrdered = loop.ordered_val().hasValue();
-  Optional<omp::ScheduleModifier> scheduleModifier = loop.schedule_modifier();
   bool isSimd = loop.simd_modifier();
 
-  ompBuilder->applyWorkshareLoop(
-      ompLoc.DL, loopInfo, allocaIP, !loop.nowait(),
-      convertToScheduleKind(schedule), chunk, isSimd,
-      scheduleModifier == omp::ScheduleModifier::monotonic,
-      scheduleModifier == omp::ScheduleModifier::nonmonotonic, isOrdered);
+  // The orderedVal refers to the value obtained from the ordered[(n)] clause.
+  //   orderedVal == -1: No ordered[(n)] clause specified.
+  //   orderedVal == 0: The ordered clause specified without a parameter.
+  //   orderedVal > 0: The ordered clause specified with a parameter (n).
+  // TODO: Handle doacross loop init when orderedVal is greater than 0.
+  int64_t orderedVal =
+      loop.ordered_val().hasValue() ? loop.ordered_val().getValue() : -1;
+  if (schedule == omp::ClauseScheduleKind::Static && orderedVal != 0) {
+    ompBuilder->applyWorkshareLoop(ompLoc.DL, loopInfo, allocaIP,
+                                   !loop.nowait(),
+                                   llvm::omp::OMP_SCHEDULE_Static, chunk);
+  } else {
+    llvm::omp::OMPScheduleType schedType;
+    switch (schedule) {
+    case omp::ClauseScheduleKind::Static:
+      if (loop.schedule_chunk_var())
+        schedType = llvm::omp::OMPScheduleType::OrderedStaticChunked;
+      else
+        schedType = llvm::omp::OMPScheduleType::OrderedStatic;
+      break;
+    case omp::ClauseScheduleKind::Dynamic:
+      if (orderedVal == 0)
+        schedType = llvm::omp::OMPScheduleType::OrderedDynamicChunked;
+      else
+        schedType = llvm::omp::OMPScheduleType::DynamicChunked;
+      break;
+    case omp::ClauseScheduleKind::Guided:
+      if (orderedVal == 0) {
+        schedType = llvm::omp::OMPScheduleType::OrderedGuidedChunked;
+      } else {
+        if (isSimd)
+          schedType = llvm::omp::OMPScheduleType::GuidedSimd;
+        else
+          schedType = llvm::omp::OMPScheduleType::GuidedChunked;
+      }
+      break;
+    case omp::ClauseScheduleKind::Auto:
+      if (orderedVal == 0)
+        schedType = llvm::omp::OMPScheduleType::OrderedAuto;
+      else
+        schedType = llvm::omp::OMPScheduleType::Auto;
+      break;
+    case omp::ClauseScheduleKind::Runtime:
+      if (orderedVal == 0) {
+        schedType = llvm::omp::OMPScheduleType::OrderedRuntime;
+      } else {
+        if (isSimd)
+          schedType = llvm::omp::OMPScheduleType::RuntimeSimd;
+        else
+          schedType = llvm::omp::OMPScheduleType::Runtime;
+      }
+      break;
+    }
+
+    if (Optional<omp::ScheduleModifier> modifier = loop.schedule_modifier()) {
+      switch (*modifier) {
+      case omp::ScheduleModifier::monotonic:
+        schedType |= llvm::omp::OMPScheduleType::ModifierMonotonic;
+        break;
+      case omp::ScheduleModifier::nonmonotonic:
+        schedType |= llvm::omp::OMPScheduleType::ModifierNonmonotonic;
+        break;
+      default:
+        // Nothing to do here.
+        break;
+      }
+    } else {
+      // OpenMP 5.1, 2.11.4 Worksharing-Loop Construct, Description.
+      // If the static schedule kind is specified or if the ordered clause is
+      // specified, and if the nonmonotonic modifier is not specified, the
+      // effect is as if the monotonic modifier is specified. Otherwise, unless
+      // the monotonic modifier is specified, the effect is as if the
+      // nonmonotonic modifier is specified.
+      // The monotonic is used by default in openmp runtime library, so no need
+      // to set it.
+      if (!(schedType == llvm::omp::OMPScheduleType::OrderedStatic ||
+            schedType == llvm::omp::OMPScheduleType::OrderedStaticChunked))
+        schedType |= llvm::omp::OMPScheduleType::ModifierNonmonotonic;
+    }
+
+    ompBuilder->applyDynamicWorkshareLoop(ompLoc.DL, loopInfo, allocaIP,
+                                          schedType, !loop.nowait(), chunk,
+                                          /*ordered*/ orderedVal == 0);
+  }
 
   // Continue building IR after the loop. Note that the LoopInfo returned by
   // `collapseLoops` points inside the outermost loop and is intended for
