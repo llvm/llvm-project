@@ -4,6 +4,7 @@ add_mlir_library(MLIRTransformUtils
   FoldUtils.cpp
   GreedyPatternRewriteDriver.cpp
   InliningUtils.cpp
+  LoopInvariantCodeMotionUtils.cpp
   RegionUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
