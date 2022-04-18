@@ -4479,14 +4479,6 @@ public:
                                 SelectionDAG &DAG,
                                 SmallVectorImpl<SDNode *> &Created) const;
 
-  /// Targets may override this function to provide custom SREM lowering for
-  /// power-of-2 denominators.  If the target returns an empty SDValue, LLVM
-  /// assumes SREM is expensive and replaces it with a series of other integer
-  /// operations.
-  virtual SDValue BuildSREMPow2(SDNode *N, const APInt &Divisor,
-                                SelectionDAG &DAG,
-                                SmallVectorImpl<SDNode *> &Created) const;
-
   /// Indicate whether this target prefers to combine FDIVs with the same
   /// divisor. If the transform should never be done, return zero. If the
   /// transform should be done, return the minimum number of divisor uses

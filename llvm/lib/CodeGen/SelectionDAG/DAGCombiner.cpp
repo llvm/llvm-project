@@ -569,8 +569,6 @@ namespace {
     SDValue BuildSDIV(SDNode *N);
     SDValue BuildSDIVPow2(SDNode *N);
     SDValue BuildUDIV(SDNode *N);
-    SDValue BuildSREMPow2(SDNode *N);
-    SDValue buildOptimizedSREM(SDValue N0, SDValue N1, SDNode *N);
     SDValue BuildLogBase2(SDValue V, const SDLoc &DL);
     SDValue BuildDivEstimate(SDValue N, SDValue Op, SDNodeFlags Flags);
     SDValue buildRsqrtEstimate(SDValue Op, SDNodeFlags Flags);
@@ -4322,7 +4320,12 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   return SDValue();
 }
 
-static bool isDivisorPowerOfTwo(SDValue Divisor) {
+SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT CCVT = getSetCCResultType(VT);
+  unsigned BitWidth = VT.getScalarSizeInBits();
+
   // Helper for determining whether a value is a power-2 constant scalar or a
   // vector of such elements.
   auto IsPowerOfTwo = [](ConstantSDNode *C) {
@@ -4335,20 +4338,11 @@ static bool isDivisorPowerOfTwo(SDValue Divisor) {
     return false;
   };
 
-  return ISD::matchUnaryPredicate(Divisor, IsPowerOfTwo);
-}
-
-SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  EVT CCVT = getSetCCResultType(VT);
-  unsigned BitWidth = VT.getScalarSizeInBits();
-
   // fold (sdiv X, pow2) -> simple ops after legalize
   // FIXME: We check for the exact bit here because the generic lowering gives
   // better results in that case. The target-specific lowering should learn how
   // to handle exact sdivs efficiently.
-  if (!N->getFlags().hasExact() && isDivisorPowerOfTwo(N1)) {
+  if (!N->getFlags().hasExact() && ISD::matchUnaryPredicate(N1, IsPowerOfTwo)) {
     // Target-specific implementation of sdiv x, pow2.
     if (SDValue Res = BuildSDIVPow2(N))
       return Res;
@@ -4504,16 +4498,6 @@ SDValue DAGCombiner::visitUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   return SDValue();
 }
 
-SDValue DAGCombiner::buildOptimizedSREM(SDValue N0, SDValue N1, SDNode *N) {
-  if (!N->getFlags().hasExact() && isDivisorPowerOfTwo(N1) &&
-      !DAG.doesNodeExist(ISD::SDIV, N->getVTList(), {N0, N1})) {
-    // Target-specific implementation of srem x, pow2.
-    if (SDValue Res = BuildSREMPow2(N))
-      return Res;
-  }
-  return SDValue();
-}
-
 // handles ISD::SREM and ISD::UREM
 SDValue DAGCombiner::visitREM(SDNode *N) {
   unsigned Opcode = N->getOpcode();
@@ -4574,12 +4558,6 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   // combine will not return a DIVREM.  Regardless, checking cheapness here
   // makes sense since the simplification results in fatter code.
   if (DAG.isKnownNeverZero(N1) && !TLI.isIntDivCheap(VT, Attr)) {
-    if (isSigned) {
-      // check if we can build faster implementation for srem
-      SDValue OptimizedRem = buildOptimizedSREM(N0, N1, N);
-      if (OptimizedRem.getNode())
-        return OptimizedRem;
-    }
     SDValue OptimizedDiv =
         isSigned ? visitSDIVLike(N0, N1, N) : visitUDIVLike(N0, N1, N);
     if (OptimizedDiv.getNode() && OptimizedDiv.getNode() != N) {
@@ -23890,27 +23868,6 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
 
   SmallVector<SDNode *, 8> Built;
   if (SDValue S = TLI.BuildUDIV(N, DAG, LegalOperations, Built)) {
-    for (SDNode *N : Built)
-      AddToWorklist(N);
-    return S;
-  }
-
-  return SDValue();
-}
-
-/// Given an ISD::SREM node expressing a remainder by constant power of 2,
-/// return a DAG expression that will generate the same value.
-SDValue DAGCombiner::BuildSREMPow2(SDNode *N) {
-  ConstantSDNode *C = isConstOrConstSplat(N->getOperand(1));
-  if (!C)
-    return SDValue();
-
-  // Avoid division by zero.
-  if (C->isZero())
-    return SDValue();
-
-  SmallVector<SDNode *, 8> Built;
-  if (SDValue S = TLI.BuildSREMPow2(N, C->getAPIntValue(), DAG, Built)) {
     for (SDNode *N : Built)
       AddToWorklist(N);
     return S;
