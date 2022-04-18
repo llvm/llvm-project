@@ -834,7 +834,7 @@ void ExternalFileUnit::DoImpliedEndfile(IoErrorHandler &handler) {
 }
 
 void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
-  if (access == Access::Sequential) {
+  if (IsRecordFile()) {
     endfileRecordNumber = currentRecordNumber;
   }
   FlushOutput(handler);
