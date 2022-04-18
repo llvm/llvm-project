@@ -71,7 +71,35 @@ def CastOp : CIR_Op<"cast", [Pure]> {
   let assemblyFormat = "`(` $kind `,` $src `:` type($src) `)` `,` type($res) attr-dict";
 
   // The input and output types should match the cast kind.
-  //let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// PtrStrideOp
+//===----------------------------------------------------------------------===//
+
+def PtrStrideOp : CIR_Op<"ptr_stride", [Pure]> {
+  let summary = "pointer access with stride";
+  let description = [{
+    Given a base pointer as operand, provides a new pointer after applying
+    a stride. Used for array subscripts, vectors, etc.
+
+    ```mlir
+    %3 = cir.cst(0 : i32) : i32
+    %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins AnyType:$base, AnyInteger:$stride);
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = [{
+    `(` $base `:` type($base) `,` $stride `:` type($stride) `)`
+    `,` type($result) attr-dict
+  }];
+
+  // The input and output types should match the cast kind.
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
