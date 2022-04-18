@@ -30,6 +30,24 @@ S *addressof(bool b, S &s, S &t) {
   return __builtin_addressof(b ? s : t);
 }
 
+namespace std { template<typename T> T *addressof(T &); }
+
+// CHECK: define {{.*}} @_Z13std_addressofbR1SS0_(
+S *std_addressof(bool b, S &s, S &t) {
+  // CHECK: %[[LVALUE:.*]] = phi
+  // CHECK: ret {{.*}}* %[[LVALUE]]
+  return std::addressof(b ? s : t);
+}
+
+namespace std { template<typename T> T *__addressof(T &); }
+
+// CHECK: define {{.*}} @_Z15std___addressofbR1SS0_(
+S *std___addressof(bool b, S &s, S &t) {
+  // CHECK: %[[LVALUE:.*]] = phi
+  // CHECK: ret {{.*}}* %[[LVALUE]]
+  return std::__addressof(b ? s : t);
+}
+
 extern "C" int __builtin_abs(int); // #1
 long __builtin_abs(long);          // #2
 extern "C" int __builtin_abs(int); // #3
