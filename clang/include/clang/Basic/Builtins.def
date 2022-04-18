@@ -103,8 +103,7 @@
 //  V:N: -> requires vectors of at least N bits to be legal
 //  C<N,M_0,...,M_k> -> callback behavior: argument N is called with argument
 //                      M_0, ..., M_k as payload
-//  z -> this is a C++ standard library function in (possibly-versioned)
-//       namespace std; implied by STDBUILTIN
+//  z -> this is a function in (possibly-versioned) namespace std
 //  FIXME: gcc has nonnull
 
 #if defined(BUILTIN) && !defined(LIBBUILTIN)
@@ -113,10 +112,6 @@
 
 #if defined(BUILTIN) && !defined(LANGBUILTIN)
 #  define LANGBUILTIN(ID, TYPE, ATTRS, BUILTIN_LANG) BUILTIN(ID, TYPE, ATTRS)
-#endif
-
-#if defined(BUILTIN) && !defined(STDBUILTIN)
-#  define STDBUILTIN(ID, TYPE, ATTRS, HEADER) LIBBUILTIN(ID, TYPE, "zf" ATTRS, HEADER, CXX_LANG)
 #endif
 
 // Standard libc/libm functions:
@@ -1551,10 +1546,14 @@ LIBBUILTIN(_Block_object_assign, "vv*vC*iC", "f", "Blocks.h", ALL_LANGUAGES)
 LIBBUILTIN(_Block_object_dispose, "vvC*iC", "f", "Blocks.h", ALL_LANGUAGES)
 // FIXME: Also declare NSConcreteGlobalBlock and NSConcreteStackBlock.
 
-// C++11
-STDBUILTIN(move, "v&v&", "ncTh", "utility")
-STDBUILTIN(move_if_noexcept, "v&v&", "ncTh", "utility")
-STDBUILTIN(forward, "v&v&", "ncTh", "utility")
+// C++ standard library builtins in namespace 'std'.
+LIBBUILTIN(addressof, "v*v&", "zfncTh", "memory", CXX_LANG)
+// Synonym for addressof used internally by libstdc++.
+LANGBUILTIN(__addressof, "v*v&", "zfncT", CXX_LANG)
+LIBBUILTIN(as_const, "v&v&", "zfncTh", "utility", CXX_LANG)
+LIBBUILTIN(forward, "v&v&", "zfncTh", "utility", CXX_LANG)
+LIBBUILTIN(move, "v&v&", "zfncTh", "utility", CXX_LANG)
+LIBBUILTIN(move_if_noexcept, "v&v&", "zfncTh", "utility", CXX_LANG)
 
 // Annotation function
 BUILTIN(__builtin_annotation, "v.", "tn")
