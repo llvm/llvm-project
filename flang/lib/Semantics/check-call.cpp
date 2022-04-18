@@ -79,7 +79,7 @@ static void CheckImplicitInterfaceArg(
 
 // When scalar CHARACTER actual arguments are known to be short,
 // we extend them on the right with spaces and a warning.
-static void PadShortCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
+static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
     const characteristics::TypeAndShape &dummyType,
     characteristics::TypeAndShape &actualType,
     evaluate::FoldingContext &context, parser::ContextualMessages &messages) {
@@ -93,12 +93,14 @@ static void PadShortCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
           ToInt64(Fold(context, common::Clone(*actualType.LEN())))};
       if (dummyLength && actualLength && *actualLength < *dummyLength) {
         messages.Say(
-            "Actual length '%jd' is less than expected length '%jd'"_warn_en_US,
+            "Actual length '%jd' is less than expected length '%jd'"_err_en_US,
             *actualLength, *dummyLength);
+#if 0 // We used to just emit a warning, and padded the actual argument
         auto converted{ConvertToType(dummyType.type(), std::move(actual))};
         CHECK(converted);
         actual = std::move(*converted);
         actualType.set_LEN(SubscriptIntExpr{*dummyLength});
+#endif
       }
     }
   }
@@ -152,7 +154,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{context.messages()};
-  PadShortCharacterActual(actual, dummy.type, actualType, context, messages);
+  CheckCharacterActual(actual, dummy.type, actualType, context, messages);
   if (allowIntegerConversions) {
     ConvertIntegerActual(actual, dummy.type, actualType, messages);
   }

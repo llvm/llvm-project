@@ -375,9 +375,11 @@ TEST(DxcModeTest, TargetProfileValidation) {
       if (DiagLevel == DiagnosticsEngine::Level::Error) {
         Errors.emplace_back();
         Info.FormatDiagnostic(Errors.back());
+        Errors.back() += '\0';
       } else {
         Msgs.emplace_back();
         Info.FormatDiagnostic(Msgs.back());
+        Msgs.back() += '\0';
       }
     }
     void clear() override {
