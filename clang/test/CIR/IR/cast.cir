@@ -1,0 +1,16 @@
+// RUN: cir-tool %s | cir-tool | FileCheck %s
+
+module  {
+  func.func @yolo(%arg0 : i32) {
+    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr<!cir.array<i32 x 10>>, ["x", paraminit]
+    %a = cir.cast (int_to_bool, %arg0 : i32), !cir.bool
+
+    %3 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+    %4 = cir.cst(0 : i32) : i32
+    cir.return
+  }
+}
+
+// CHECK: func @yolo(%arg0: i32)
+// CHECK: %1 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
+// CHECK: %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
