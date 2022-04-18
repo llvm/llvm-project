@@ -3368,7 +3368,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
         break;
       }
 
-      if ((S->getFlags() & Scope::FnScope))
+      if (S->isFunctionScope())
         // If we're in a function or function template then this is a local
         // class rather than a nested class.
         break;
