@@ -65,7 +65,7 @@ static cl::OptionCategory
 static cl::opt<bool> StripSections(
     "strip-sections", cl::ZeroOrMore,
     cl::desc("Strip offloading sections from the host object file."),
-    cl::init(true), cl::cat(ClangLinkerWrapperCategory));
+    cl::init(false), cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<std::string> LinkerUserPath("linker-path", cl::Required,
                                            cl::desc("Path of linker binary"),
