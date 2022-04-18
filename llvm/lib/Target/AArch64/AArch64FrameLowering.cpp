@@ -3235,7 +3235,7 @@ public:
   // instructions. May skip if the replacement is not profitable. May invalidate
   // the input iterator and replace it with a valid one.
   void emitCode(MachineBasicBlock::iterator &InsertI,
-                const AArch64FrameLowering *TFI, bool IsLast);
+                const AArch64FrameLowering *TFI, bool TryMergeSPUpdate);
 };
 
 void TagStoreEdit::emitUnrolled(MachineBasicBlock::iterator InsertI) {
@@ -3374,7 +3374,8 @@ void mergeMemRefs(const SmallVectorImpl<TagStoreInstr> &TSE,
 }
 
 void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
-                            const AArch64FrameLowering *TFI, bool IsLast) {
+                            const AArch64FrameLowering *TFI,
+                            bool TryMergeSPUpdate) {
   if (TagStores.empty())
     return;
   TagStoreInstr &FirstTagStore = TagStores[0];
@@ -3404,8 +3405,8 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
     emitUnrolled(InsertI);
   } else {
     MachineInstr *UpdateInstr = nullptr;
-    int64_t TotalOffset;
-    if (IsLast) {
+    int64_t TotalOffset = 0;
+    if (TryMergeSPUpdate) {
       // See if we can merge base register update into the STGloop.
       // This is done in AArch64LoadStoreOptimizer for "normal" stores,
       // but STGloop is way too unusual for that, and also it only
@@ -3550,7 +3551,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   for (auto &Instr : Instrs) {
     if (EndOffset && *EndOffset != Instr.Offset) {
       // Found a gap.
-      TSE.emitCode(InsertI, TFI, /*IsLast = */ false);
+      TSE.emitCode(InsertI, TFI, /*TryMergeSPUpdate = */ false);
       TSE.clear();
     }
 
@@ -3558,7 +3559,11 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
     EndOffset = Instr.Offset + Instr.Size;
   }
 
-  TSE.emitCode(InsertI, TFI, /*IsLast = */ true);
+  // Multiple FP/SP updates in a loop cannot be described by CFI instructions.
+  TSE.emitCode(InsertI, TFI, /*TryMergeSPUpdate = */
+               !MBB->getParent()
+                    ->getInfo<AArch64FunctionInfo>()
+                    ->needsAsyncDwarfUnwindInfo());
 
   return InsertI;
 }

@@ -831,6 +831,28 @@ public:
   /// The lambda's compiler-generated \c operator().
   CXXMethodDecl *CallOperator = nullptr;
 
+  struct DelayedCapture {
+    VarDecl *Var;
+    SourceLocation Loc;
+    LambdaCaptureKind Kind;
+  };
+
+  /// Holds the captures until we parsed the qualifiers, as the cv qualified
+  /// type of captures can only be computed at that point, and the captures
+  /// should not be visible before.
+  /// The index represents the position in the original capture list.
+  /// We use a map as not all index represents captures (defaults), or are
+  /// captured (some captures are invalid).
+  llvm::DenseMap<unsigned, DelayedCapture> DelayedCaptures;
+
+  /// Whether the current scope when parsing the lambda
+  /// is after the call operator qualifiers,
+  /// which is the point at which the captures are usable
+  /// per [expr.prim.id.unqual]/p3.2 and [expr.prim.lambda.capture]/6.
+  /// This is set to false by default as the lambda can be reconstructed during
+  /// instantiation
+  bool BeforeLambdaQualifiersScope = false;
+
   /// Source range covering the lambda introducer [...].
   SourceRange IntroducerRange;
 

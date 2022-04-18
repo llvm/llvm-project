@@ -5554,6 +5554,10 @@ def warn_missing_sentinel : Warning <
   InGroup<Sentinel>;
 def note_sentinel_here : Note<
   "%select{function|method|block}0 has been explicitly marked sentinel here">;
+def warn_strict_uses_without_prototype : Warning<
+  "passing arguments to %select{a function|%1}0 without a prototype is "
+  "deprecated in all versions of C and is not supported in C2x">,
+  InGroup<DeprecatedNonPrototype>;
 def warn_missing_prototype : Warning<
   "no previous prototype for function %0">,
   InGroup<DiagGroup<"missing-prototypes">>, DefaultIgnore;
@@ -7706,6 +7710,8 @@ let CategoryName = "Lambda Issue" in {
   def err_lambda_impcap : Error<
     "variable %0 cannot be implicitly captured in a lambda with no "
     "capture-default specified">;
+  def err_lambda_used_before_capture: Error<
+    "captured variable %0 cannot appear here">;
   def note_lambda_variable_capture_fixit : Note<
     "capture %0 by %select{value|reference}1">;
   def note_lambda_default_capture_fixit : Note<

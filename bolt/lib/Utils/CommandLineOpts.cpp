@@ -17,7 +17,12 @@ using namespace llvm;
 
 namespace llvm {
 namespace bolt {
-const char *BoltRevision = LLVM_REVISION;
+const char *BoltRevision =
+#ifdef LLVM_REVISION
+    LLVM_REVISION;
+#else
+    "<unknown>";
+#endif
 }
 }
 

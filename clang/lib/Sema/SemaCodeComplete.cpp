@@ -9972,7 +9972,7 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
   using llvm::make_range;
   if (!Angled) {
     // The current directory is on the include path for "quoted" includes.
-    auto *CurFile = PP.getCurrentFileLexer()->getFileEntry();
+    const FileEntry *CurFile = PP.getCurrentFileLexer()->getFileEntry();
     if (CurFile && CurFile->getDir())
       AddFilesFromIncludeDir(CurFile->getDir()->getName(), false,
                              DirectoryLookup::LT_NormalDir);

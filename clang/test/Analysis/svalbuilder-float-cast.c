@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker debug.ExprInspection -Wno-deprecated-non-prototype -verify %s
 void clang_analyzer_denote(int, const char *);
 void clang_analyzer_express(int);
 
