@@ -793,7 +793,8 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
   for (Use &U : F->uses()) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     // Must be a direct call.
-    if (CB == nullptr || !CB->isCallee(&U))
+    if (CB == nullptr || !CB->isCallee(&U) ||
+        CB->getFunctionType() != F->getFunctionType())
       return nullptr;
 
     // Can't change signature of musttail callee

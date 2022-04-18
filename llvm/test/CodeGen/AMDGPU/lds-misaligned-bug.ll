@@ -25,12 +25,10 @@ bb:
 }
 
 ; GCN-LABEL: test_local_misaligned_v4:
-; ALIGNED-DAG: ds_{{read2|load_2addr}}_b32
-; ALIGNED-DAG: ds_{{read2|load_2addr}}_b32
-; ALIGNED-DAG: ds_{{write2|store_2addr}}_b32
-; ALIGNED-DAG: ds_{{write2|store_2addr}}_b32
-; UNALIGNED-DAG: ds_{{read2|load_2addr}}_b64
-; UNALIGNED-DAG: ds_{{write2|store_2addr}}_b64
+; GCN-DAG: ds_{{read2|load_2addr}}_b32
+; GCN-DAG: ds_{{read2|load_2addr}}_b32
+; GCN-DAG: ds_{{write2|store_2addr}}_b32
+; GCN-DAG: ds_{{write2|store_2addr}}_b32
 define amdgpu_kernel void @test_local_misaligned_v4(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()

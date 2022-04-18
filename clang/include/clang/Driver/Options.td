@@ -1935,15 +1935,10 @@ def fglobal_isel : Flag<["-"], "fglobal-isel">, Group<f_clang_Group>,
   HelpText<"Enables the global instruction selector">;
 def fexperimental_isel : Flag<["-"], "fexperimental-isel">, Group<f_clang_Group>,
   Alias<fglobal_isel>;
-defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
-  CodeGenOpts<"LegacyPassManager">, DefaultFalse,
-  PosFlag<SetTrue>,
-  NegFlag<SetFalse>,
-  BothFlags<[CC1Option]>>, Group<f_clang_Group>;
+def fno_legacy_pass_manager : Flag<["-"], "fno-legacy-pass-manager">,
+  Group<f_clang_Group>, Flags<[CC1Option, NoArgumentUnused]>;
 def fexperimental_new_pass_manager : Flag<["-"], "fexperimental-new-pass-manager">,
   Group<f_clang_Group>, Flags<[CC1Option]>, Alias<fno_legacy_pass_manager>;
-def fno_experimental_new_pass_manager : Flag<["-"], "fno-experimental-new-pass-manager">,
-  Group<f_clang_Group>, Flags<[CC1Option,NoDriverOption]>, Alias<flegacy_pass_manager>;
 def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floating-point">,
   Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Enables experimental strict floating point in LLVM.">,
@@ -3269,6 +3264,8 @@ def mlinker_version_EQ : Joined<["-"], "mlinker-version=">,
 def mllvm : Separate<["-"], "mllvm">,Flags<[CC1Option,CC1AsOption,CoreOption,FC1Option,FlangOption]>,
   HelpText<"Additional arguments to forward to LLVM's option processing">,
   MarshallingInfoStringVector<FrontendOpts<"LLVMArgs">>;
+def mmlir : Separate<["-"], "mmlir">, Flags<[CoreOption,FC1Option,FlangOption]>,
+  HelpText<"Additional arguments to forward to MLIR's option processing">;
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   Group<m_Group>, Flags<[CC1Option]>, HelpText<"Set Fuchsia API level">,
   MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
@@ -5538,7 +5535,7 @@ defm enable_noundef_analysis : BoolOption<"",
 defm opaque_pointers : BoolOption<"",
   "opaque-pointers",
   CodeGenOpts<"OpaquePointers">,
-  Default<"CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL">,
+  DefaultTrue,
   PosFlag<SetTrue, [], "Enable">,
   NegFlag<SetFalse, [], "Disable">,
   BothFlags<[], " opaque pointers">>;
@@ -5683,8 +5680,6 @@ def emit_header_unit : Flag<["-"], "emit-header-unit">,
   HelpText<"Generate C++20 header units from header files">;
 def emit_pch : Flag<["-"], "emit-pch">,
   HelpText<"Generate pre-compiled header file">;
-def emit_llvm_bc : Flag<["-"], "emit-llvm-bc">,
-  HelpText<"Build ASTs then convert to LLVM, emit .bc file">;
 def emit_llvm_only : Flag<["-"], "emit-llvm-only">,
   HelpText<"Build ASTs and convert to LLVM, discarding output">;
 def emit_codegen_only : Flag<["-"], "emit-codegen-only">,
@@ -6148,6 +6143,8 @@ def emit_obj : Flag<["-"], "emit-obj">,
   HelpText<"Emit native object files">;
 def init_only : Flag<["-"], "init-only">,
   HelpText<"Only execute frontend initialization">;
+def emit_llvm_bc : Flag<["-"], "emit-llvm-bc">,
+  HelpText<"Build ASTs then convert to LLVM, emit .bc file">;
 
 } // let Group = Action_Group
 

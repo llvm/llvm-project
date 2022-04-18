@@ -1700,6 +1700,7 @@ SelectInlineAsmMemoryOperand(const SDValue &Op,
   case InlineAsm::Constraint_T:
   case InlineAsm::Constraint_m:
   case InlineAsm::Constraint_o:
+  case InlineAsm::Constraint_p:
     // Accept an address with a long displacement and an index.
     // m works the same as T, as this is the most general case.
     // We don't really have any special handling of "offsettable"

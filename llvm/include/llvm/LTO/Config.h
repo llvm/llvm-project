@@ -57,9 +57,6 @@ struct Config {
   unsigned OptLevel = 2;
   bool DisableVerify = false;
 
-  /// Use the new pass manager
-  bool UseNewPM = true;
-
   /// Use the standard optimization pipeline.
   bool UseDefaultPipeline = false;
 

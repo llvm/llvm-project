@@ -55,7 +55,7 @@ MultiAffineFunction::valueAt(ArrayRef<int64_t> point) const {
   // of the matrix contains the constant term. Let v be the input point with
   // a 1 appended at the end. We can see that output * v gives the desired
   // output vector.
-  pointHomogenous.push_back(1);
+  pointHomogenous.emplace_back(1);
   SmallVector<int64_t, 8> result =
       output.postMultiplyWithColumn(pointHomogenous);
   assert(result.size() == getNumOutputs());

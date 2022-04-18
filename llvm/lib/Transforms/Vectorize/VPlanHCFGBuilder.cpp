@@ -182,8 +182,7 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 
   // A and B: Create VPValue and add it to the pool of external definitions and
   // to the Value->VPValue map.
-  VPValue *NewVPVal = new VPValue(IRVal);
-  Plan.addExternalDef(NewVPVal);
+  VPValue *NewVPVal = Plan.getOrAddExternalDef(IRVal);
   IRDef2VPValue[IRVal] = NewVPVal;
   return NewVPVal;
 }
@@ -258,9 +257,7 @@ VPRegionBlock *PlainCFGBuilder::buildPlainCFG() {
   for (auto &I : *PreheaderBB) {
     if (I.getType()->isVoidTy())
       continue;
-    VPValue *VPV = new VPValue(&I);
-    Plan.addExternalDef(VPV);
-    IRDef2VPValue[&I] = VPV;
+    IRDef2VPValue[&I] = Plan.getOrAddExternalDef(&I);
   }
   // Create empty VPBB for Loop H so that we can link PH->H.
   VPBlockBase *HeaderVPBB = getOrCreateVPBB(TheLoop->getHeader());

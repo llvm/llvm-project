@@ -1839,6 +1839,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
           Node->getOpcode() == ISD::MUL || Node->getOpcode() == ISD::SHL ||
           Node->getOpcode() == ISD::SRL ||
           Node->getOpcode() == ISD::SIGN_EXTEND_INREG ||
+          Node->getOpcode() == RISCVISD::GREV ||
+          Node->getOpcode() == RISCVISD::GORC ||
           isa<ConstantSDNode>(Node)) &&
          "Unexpected opcode");
 
@@ -2201,6 +2203,8 @@ bool RISCVDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
   case RISCV::SUBW:
   case RISCV::MULW:
   case RISCV::SLLIW:
+  case RISCV::GREVIW:
+  case RISCV::GORCIW:
     // Result is already sign extended just remove the sext.w.
     // NOTE: We only handle the nodes that are selected with hasAllWUsers.
     ReplaceUses(N, N0.getNode());

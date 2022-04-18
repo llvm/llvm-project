@@ -14,12 +14,10 @@ define void @loop_1(i32 %Value, i1 %PredEntry, i1 %PredD) {
 ; CHECK-NEXT:    br i1 [[PIVOT]], label [[LEAFBLOCK:%.*]], label [[LEAFBLOCK1:%.*]]
 ; CHECK:       LeafBlock1:
 ; CHECK-NEXT:    [[SWITCHLEAF2:%.*]] = icmp eq i32 [[VALUE]], 1
-; CHECK-NEXT:    br i1 [[SWITCHLEAF2]], label [[IRR_GUARD]], label [[NEWDEFAULT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF2]], label [[IRR_GUARD]], label [[EXIT:%.*]]
 ; CHECK:       LeafBlock:
 ; CHECK-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[VALUE]], 0
-; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[IRR_GUARD]], label [[NEWDEFAULT]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[SWITCHLEAF]], label [[IRR_GUARD]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:

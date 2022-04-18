@@ -95,7 +95,9 @@ protected:
     };
 
     while (*EnvP != nullptr) {
-      EnvTable.emplace_back(prepareEnvVar(*EnvP));
+      auto S = prepareEnvVar(*EnvP);
+      if (!StringRef(S).startswith("GTEST_"))
+        EnvTable.emplace_back(S);
       ++EnvP;
     }
   }

@@ -23,7 +23,7 @@ body:             |
     ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load (<2 x s32>), align 4)
     ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[LDRDui]], %subreg.dsub
-    ; CHECK: [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY]], [[INSERT_SUBREG]], 0
+    ; CHECK: [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = nofpexcept FMULv2i32_indexed [[COPY]], [[INSERT_SUBREG]], 0
     ; CHECK: $d0 = COPY [[FMULv2i32_indexed]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s32>) = COPY $d0

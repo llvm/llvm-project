@@ -79,6 +79,8 @@ const char *IostatErrorString(int iostat) {
     return "UTF-8 decoding error";
   case IostatUnitOverflow:
     return "UNIT number is out of range";
+  case IostatBadRealInput:
+    return "Bad REAL input value";
   default:
     return nullptr;
   }

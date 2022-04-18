@@ -148,6 +148,9 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::driver::options::OPT_emit_llvm:
       opts.programAction = EmitLLVM;
       break;
+    case clang::driver::options::OPT_emit_llvm_bc:
+      opts.programAction = EmitLLVMBitcode;
+      break;
     case clang::driver::options::OPT_emit_obj:
       opts.programAction = EmitObj;
       break;
@@ -593,6 +596,9 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   success &= parseDiagArgs(res, args, diags);
   res.frontendOpts_.llvmArgs =
       args.getAllArgValues(clang::driver::options::OPT_mllvm);
+
+  res.frontendOpts_.mlirArgs =
+      args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
   return success;
 }

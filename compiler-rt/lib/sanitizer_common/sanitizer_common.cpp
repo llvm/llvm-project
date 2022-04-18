@@ -310,18 +310,22 @@ struct MallocFreeHook {
 
 static MallocFreeHook MFHooks[kMaxMallocFreeHooks];
 
-void RunMallocHooks(const void *ptr, uptr size) {
+void RunMallocHooks(void *ptr, uptr size) {
+  __sanitizer_malloc_hook(ptr, size);
   for (int i = 0; i < kMaxMallocFreeHooks; i++) {
     auto hook = MFHooks[i].malloc_hook;
-    if (!hook) return;
+    if (!hook)
+      break;
     hook(ptr, size);
   }
 }
 
-void RunFreeHooks(const void *ptr) {
+void RunFreeHooks(void *ptr) {
+  __sanitizer_free_hook(ptr);
   for (int i = 0; i < kMaxMallocFreeHooks; i++) {
     auto hook = MFHooks[i].free_hook;
-    if (!hook) return;
+    if (!hook)
+      break;
     hook(ptr);
   }
 }
@@ -369,4 +373,16 @@ int __sanitizer_install_malloc_and_free_hooks(void (*malloc_hook)(const void *,
                                               void (*free_hook)(const void *)) {
   return InstallMallocFreeHooks(malloc_hook, free_hook);
 }
+
+// Provide default (no-op) implementation of malloc hooks.
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_malloc_hook, void *ptr,
+                             uptr size) {
+  (void)ptr;
+  (void)size;
+}
+
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
+  (void)ptr;
+}
+
 } // extern "C"

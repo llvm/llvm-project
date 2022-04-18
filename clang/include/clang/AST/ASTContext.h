@@ -1160,6 +1160,10 @@ public:
   /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
   llvm::DenseSet<const VarDecl *> CUDADeviceVarODRUsedByHost;
 
+  /// Keep track of CUDA/HIP external kernels or device variables ODR-used by
+  /// host code.
+  llvm::DenseSet<const ValueDecl *> CUDAExternalDeviceDeclODRUsedByHost;
+
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins,
              TranslationUnitKind TUKind);

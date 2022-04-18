@@ -20,7 +20,7 @@
 ;; user made compatible server.
 
 ;;; Code:
-(require 'lsp-mod)
+(require 'lsp-mode)
 
 (defgroup lsp-mlir nil
   "LSP support for MLIR."

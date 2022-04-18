@@ -5,7 +5,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 # RUN:   %s -o %t.o
-# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
+# RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
 # RUN: llvm-bolt %t.exe -print-cfg \
 # RUN:    -print-only=main -o %t.out | FileCheck %s

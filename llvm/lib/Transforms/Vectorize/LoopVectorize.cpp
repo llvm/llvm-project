@@ -5198,12 +5198,9 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     return ElementCount::getFixed(ClampedConstTripCount);
   }
 
-  TargetTransformInfo::RegisterKind RegKind =
-      ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
-                           : TargetTransformInfo::RGK_FixedWidthVector;
   ElementCount MaxVF = MaxVectorElementCount;
   if (MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
-                            TTI.shouldMaximizeVectorBandwidth(RegKind))) {
+                            TTI.shouldMaximizeVectorBandwidth())) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         PowerOf2Floor(WidestRegister.getKnownMinSize() / SmallestType),
         ComputeScalableMaxVF);
@@ -10612,8 +10609,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
             if (auto *Resume = MainILV.getReductionResumeValue(
                     ReductionPhi->getRecurrenceDescriptor())) {
-              VPValue *StartVal = new VPValue(Resume);
-              BestEpiPlan.addExternalDef(StartVal);
+              VPValue *StartVal = BestEpiPlan.getOrAddExternalDef(Resume);
               ReductionPhi->setOperand(0, StartVal);
             }
           }

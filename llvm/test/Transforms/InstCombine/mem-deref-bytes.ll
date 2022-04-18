@@ -102,7 +102,7 @@ define i32 @memcmp_nonconst_size(i8* nocapture readonly %d, i8* nocapture readon
 
 define i8* @memcpy_const_size_set_deref(i8* nocapture readonly %d, i8* nocapture readonly %s) {
 ; CHECK-LABEL: @memcpy_const_size_set_deref(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(64) [[D:%.*]], i8* noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(64) [[D:%.*]], i8* noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i64 64, i1 false)
 ; CHECK-NEXT:    ret i8* [[D]]
 ;
   %call = tail call i8* @memcpy(i8* %d, i8* %s, i64 64)
@@ -111,7 +111,7 @@ define i8* @memcpy_const_size_set_deref(i8* nocapture readonly %d, i8* nocapture
 
 define i8* @memmove_const_size_set_deref(i8* nocapture readonly %d, i8* nocapture readonly %s) {
 ; CHECK-LABEL: @memmove_const_size_set_deref(
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(64) [[D:%.*]], i8* noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(64) [[D:%.*]], i8* noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i64 64, i1 false)
 ; CHECK-NEXT:    ret i8* [[D]]
 ;
   %call = tail call i8* @memmove(i8* %d, i8* %s, i64 64)
@@ -120,7 +120,7 @@ define i8* @memmove_const_size_set_deref(i8* nocapture readonly %d, i8* nocaptur
 
 define i8* @memset_const_size_set_deref(i8* nocapture readonly %s, i8 %c) {
 ; CHECK-LABEL: @memset_const_size_set_deref(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i8 [[C:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(64) [[S:%.*]], i8 [[C:%.*]], i64 64, i1 false)
 ; CHECK-NEXT:    ret i8* [[S]]
 ;
   %call = tail call i8* @memset(i8* %s, i8 %c, i64 64)
@@ -129,7 +129,7 @@ define i8* @memset_const_size_set_deref(i8* nocapture readonly %s, i8 %c) {
 
 define i8* @memchr_const_size_set_deref(i8* nocapture readonly %s, i32 %c) {
 ; CHECK-LABEL: @memchr_const_size_set_deref(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @memchr(i8* noundef nonnull dereferenceable(64) [[S:%.*]], i32 [[C:%.*]], i64 64)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @memchr(i8* noundef nonnull dereferenceable(1) [[S:%.*]], i32 [[C:%.*]], i64 64)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @memchr(i8* %s, i32 %c, i64 64)

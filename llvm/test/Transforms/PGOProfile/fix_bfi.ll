@@ -1,6 +1,6 @@
 ; Note: Scaling the func entry count (using the sum of count value) so that BFI counter value is close to raw profile counter values.
 ; RUN: llvm-profdata merge %S/Inputs/fix_bfi.proftext -o %t.profdata
-; RUN: opt -pgo-instr-use -pgo-test-profile-file=%t.profdata -S -pgo-fix-entry-count=true < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S -pgo-fix-entry-count=true < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

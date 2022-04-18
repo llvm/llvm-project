@@ -1428,7 +1428,40 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
       Value *WrappedFnCst =
           ConstantExpr::getBitCast(NewF, PointerType::getUnqual(FT));
-      F.replaceAllUsesWith(WrappedFnCst);
+
+      // Extern weak functions can sometimes be null at execution time.
+      // Code will sometimes check if an extern weak function is null.
+      // This could look something like:
+      //   declare extern_weak i8 @my_func(i8)
+      //   br i1 icmp ne (i8 (i8)* @my_func, i8 (i8)* null), label %use_my_func,
+      //   label %avoid_my_func
+      // The @"dfsw$my_func" wrapper is never null, so if we replace this use
+      // in the comparision, the icmp will simplify to false and we have
+      // accidentially optimized away a null check that is necessary.
+      // This can lead to a crash when the null extern_weak my_func is called.
+      //
+      // To prevent (the most common pattern of) this problem,
+      // do not replace uses in comparisons with the wrapper.
+      // We definitely want to replace uses in call instructions.
+      // Other uses (e.g. store the function address somewhere) might be
+      // called or compared or both - this case may not be handled correctly.
+      // We will default to replacing with wrapper in cases we are unsure.
+      auto IsNotCmpUse = [](Use &U) -> bool {
+        User *Usr = U.getUser();
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
+          // This is the most common case for icmp ne null
+          if (CE->getOpcode() == Instruction::ICmp) {
+            return false;
+          }
+        }
+        if (Instruction *I = dyn_cast<Instruction>(Usr)) {
+          if (I->getOpcode() == Instruction::ICmp) {
+            return false;
+          }
+        }
+        return true;
+      };
+      F.replaceUsesWithIf(WrappedFnCst, IsNotCmpUse);
 
       UnwrappedFnMap[WrappedFnCst] = &F;
       *FI = NewF;

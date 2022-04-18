@@ -1,7 +1,7 @@
 # Defining Dialect Attributes and Types
 
 This document describes how to define dialect
-[attributes](../LangRef.md/#attributes) and [types](../LangRef.md/#type-system).
+[attributes](LangRef.md/#attributes) and [types](LangRef.md/#type-system).
 
 [TOC]
 
@@ -280,7 +280,7 @@ MLIR includes several specialized classes for common situations:
 Similarly to operations, Attribute and Type classes may attach `Traits` that
 provide additional mixin methods and other data. `Trait`s may be attached via
 the trailing template argument, i.e. the `traits` list parameter in the example
-above. See the main [`Trait`](../Traits.md) documentation for more information
+above. See the main [`Trait`](Traits.md) documentation for more information
 on defining and using traits.
 
 ### Interfaces
@@ -288,7 +288,7 @@ on defining and using traits.
 Attribute and Type classes may attach `Interfaces` to provide an virtual
 interface into the Attribute or Type. `Interfaces` are added in the same way as
 [Traits](#Traits), by using the `traits` list template parameter of the
-`AttrDef` or `TypeDef`. See the main [`Interface`](../Interfaces.md)
+`AttrDef` or `TypeDef`. See the main [`Interface`](Interfaces.md)
 documentation for more information on defining and using interfaces.
 
 ### Builders

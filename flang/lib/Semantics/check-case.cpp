@@ -79,15 +79,31 @@ private:
       if (type && type->category() == caseExprType_.category() &&
           (type->category() != TypeCategory::Character ||
               type->kind() == caseExprType_.kind())) {
-        x->v = evaluate::Fold(context_.foldingContext(),
-            evaluate::ConvertToType(T::GetType(), std::move(*x->v)));
-        if (x->v) {
-          if (auto value{evaluate::GetScalarConstantValue<T>(*x->v)}) {
-            return *value;
+        parser::Messages buffer; // discarded folding messages
+        parser::ContextualMessages foldingMessages{expr.source, &buffer};
+        evaluate::FoldingContext foldingContext{
+            context_.foldingContext(), foldingMessages};
+        auto folded{evaluate::Fold(foldingContext, SomeExpr{*x->v})};
+        if (auto converted{evaluate::Fold(foldingContext,
+                evaluate::ConvertToType(T::GetType(), SomeExpr{folded}))}) {
+          if (auto value{evaluate::GetScalarConstantValue<T>(*converted)}) {
+            auto back{evaluate::Fold(foldingContext,
+                evaluate::ConvertToType(*type, SomeExpr{*converted}))};
+            if (back == folded) {
+              x->v = converted;
+              return value;
+            } else {
+              context_.Say(expr.source,
+                  "CASE value (%s) overflows type (%s) of SELECT CASE expression"_err_en_US,
+                  folded.AsFortran(), caseExprType_.AsFortran());
+              hasErrors_ = true;
+              return std::nullopt;
+            }
           }
         }
-        context_.Say(
-            expr.source, "CASE value must be a constant scalar"_err_en_US);
+        context_.Say(expr.source,
+            "CASE value (%s) must be a constant scalar"_err_en_US,
+            x->v->AsFortran());
       } else {
         std::string typeStr{type ? type->AsFortran() : "typeless"s};
         context_.Say(expr.source,

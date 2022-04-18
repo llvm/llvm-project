@@ -94,79 +94,11 @@ public:
   /// attaching to processes unless another platform is specified.
   static lldb::PlatformSP GetHostPlatform();
 
-  /// Get the platform for the given architecture. See Platform::Create for how
-  /// a platform is chosen for a given architecture.
-  ///
-  /// \param[in] arch
-  ///     The architecture for which we are getting a platform.
-  ///
-  /// \param[in] process_host_arch
-  ///     The process host architecture if it's known. An invalid ArchSpec
-  ///     represents that the process host architecture is unknown.
-  ///
-  /// \param[out] platform_arch_ptr
-  ///     The architecture which was used to pick the returned platform. This
-  ///     can be different from the input architecture if we're looking for a
-  ///     compatible match instead of an exact match.
-  ///
-  /// \return
-  ///     Return the platform that matches the input architecture or the
-  ///     default (invalid) platform if none could be found.
-  static lldb::PlatformSP
-  GetPlatformForArchitecture(const ArchSpec &arch,
-                             const ArchSpec &process_host_arch = {},
-                             ArchSpec *platform_arch_ptr = nullptr);
-
-  /// Get the platform for the given list of architectures.
-  ///
-  /// The algorithm works a follows:
-  ///
-  /// 1. Returns the selected platform if it matches any of the architectures.
-  /// 2. Returns the host platform if it matches any of the architectures.
-  /// 3. Returns the platform that matches all the architectures.
-  ///
-  /// If none of the above apply, this function returns a default platform. The
-  /// candidates output argument differentiates between either no platforms
-  /// supporting the given architecture or multiple platforms supporting the
-  /// given architecture.
-  ///
-  /// \param[in] arch
-  ///     The architecture for which we are getting a platform.
-  ///
-  /// \param[in] process_host_arch
-  ///     The process host architecture if it's known. An invalid ArchSpec
-  ///     represents that the process host architecture is unknown.
-  ///
-  /// \param[in] selected_platform_sp
-  ///     The currently selected platform.
-  ///
-  /// \param[out] candidates
-  ///     A list of candidate platforms in case multiple platforms could
-  ///     support the given list of architectures. If no platforms match the
-  ///     given architecture the list will be empty.
-  ///
-  /// \return
-  ///     Return the platform that matches the input architectures or the
-  ///     default (invalid) platform if no platforms support the given
-  ///     architectures or multiple platforms support the given architecture.
-  static lldb::PlatformSP
-  GetPlatformForArchitectures(std::vector<ArchSpec> archs,
-                              const ArchSpec &process_host_arch,
-                              lldb::PlatformSP selected_platform_sp,
-                              std::vector<lldb::PlatformSP> &candidates);
-
   static const char *GetHostPlatformName();
 
   static void SetHostPlatform(const lldb::PlatformSP &platform_sp);
 
-  // Find an existing platform plug-in by name
-  static lldb::PlatformSP Find(ConstString name);
-
-  static lldb::PlatformSP Create(ConstString name, Status &error);
-
-  static lldb::PlatformSP Create(const ArchSpec &arch,
-                                 const ArchSpec &process_host_arch,
-                                 ArchSpec *platform_arch_ptr, Status &error);
+  static lldb::PlatformSP Create(llvm::StringRef name);
 
   /// Augments the triple either with information from platform or the host
   /// system (if platform is null).
@@ -917,9 +849,6 @@ public:
   virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
 
 protected:
-  /// For unit testing purposes only.
-  static void Clear();
-
   /// Create a list of ArchSpecs with the given OS and a architectures. The
   /// vendor field is left as an "unspecified unknown".
   static std::vector<ArchSpec>
@@ -1068,6 +997,32 @@ public:
       m_selected_platform_sp = m_platforms.back();
     }
   }
+
+  lldb::PlatformSP GetOrCreate(llvm::StringRef name);
+  lldb::PlatformSP GetOrCreate(const ArchSpec &arch,
+                               const ArchSpec &process_host_arch,
+                               ArchSpec *platform_arch_ptr, Status &error);
+  lldb::PlatformSP GetOrCreate(const ArchSpec &arch,
+                               const ArchSpec &process_host_arch,
+                               ArchSpec *platform_arch_ptr);
+
+  /// Get the platform for the given list of architectures.
+  ///
+  /// The algorithm works a follows:
+  ///
+  /// 1. Returns the selected platform if it matches any of the architectures.
+  /// 2. Returns the host platform if it matches any of the architectures.
+  /// 3. Returns the platform that matches all the architectures.
+  ///
+  /// If none of the above apply, this function returns a default platform. The
+  /// candidates output argument differentiates between either no platforms
+  /// supporting the given architecture or multiple platforms supporting the
+  /// given architecture.
+  lldb::PlatformSP GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
+                               const ArchSpec &process_host_arch,
+                               std::vector<lldb::PlatformSP> &candidates);
+
+  lldb::PlatformSP Create(llvm::StringRef name);
 
 protected:
   typedef std::vector<lldb::PlatformSP> collection;

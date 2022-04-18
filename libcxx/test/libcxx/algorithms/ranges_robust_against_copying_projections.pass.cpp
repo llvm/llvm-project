@@ -141,11 +141,11 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::min(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::min_element(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::min_element(a, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::minmax(T(), T(), Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::minmax({ T(), T() }, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::minmax(a, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::minmax_element(first, last, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::minmax_element(a, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::minmax(T(), T(), Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::minmax({ T(), T() }, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::minmax(a, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::minmax_element(first, last, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::minmax_element(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::mismatch(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::mismatch(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::next_permutation(first, last, Less(), Proj(&copies)); assert(copies == 0);

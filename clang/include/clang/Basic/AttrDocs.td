@@ -6411,3 +6411,14 @@ instructs the compiler that this structure should not have its field layout
 randomized.
   }];
 }
+
+def HLSLSV_GroupIndexDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupIndex`` semantic, when applied to an input parameter, specifies a
+data binding to map the group index to the specified parameter. This attribute
+is only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupindex
+  }];
+}

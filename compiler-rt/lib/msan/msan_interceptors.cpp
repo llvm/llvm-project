@@ -90,7 +90,8 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
 #define CHECK_UNPOISONED_0(x, n)                                  \
   do {                                                            \
     sptr __offset = __msan_test_shadow(x, n);                     \
-    if (__msan::IsInSymbolizer()) break;                          \
+    if (__msan::IsInSymbolizerOrUnwider())                        \
+      break;                                                      \
     if (__offset >= 0 && __msan::flags()->report_umrs) {          \
       GET_CALLER_PC_BP_SP;                                        \
       (void)sp;                                                   \
@@ -1599,7 +1600,7 @@ void __msan_clear_and_unpoison(void *a, uptr size) {
 
 void *__msan_memcpy(void *dest, const void *src, SIZE_T n) {
   if (!msan_inited) return internal_memcpy(dest, src, n);
-  if (msan_init_is_running || __msan::IsInSymbolizer())
+  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
     return REAL(memcpy)(dest, src, n);
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;

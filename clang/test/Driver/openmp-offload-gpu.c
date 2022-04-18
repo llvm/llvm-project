@@ -2,7 +2,6 @@
 /// Perform several driver tests for OpenMP offloading
 ///
 
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: powerpc-registered-target
 // REQUIRES: nvptx-registered-target

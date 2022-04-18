@@ -609,6 +609,8 @@ public:
   void      setSP(uint32_t value) { _registers.__r1 = value; }
   uint64_t  getIP() const         { return _registers.__srr0; }
   void      setIP(uint32_t value) { _registers.__srr0 = value; }
+  uint64_t  getCR() const         { return _registers.__cr; }
+  void      setCR(uint32_t value) { _registers.__cr = value; }
 
 private:
   struct ppc_thread_state_t {
@@ -1175,6 +1177,8 @@ public:
   void      setSP(uint64_t value) { _registers.__r1 = value; }
   uint64_t  getIP() const         { return _registers.__srr0; }
   void      setIP(uint64_t value) { _registers.__srr0 = value; }
+  uint64_t  getCR() const         { return _registers.__cr; }
+  void      setCR(uint64_t value) { _registers.__cr = value; }
 
 private:
   struct ppc64_thread_state_t {

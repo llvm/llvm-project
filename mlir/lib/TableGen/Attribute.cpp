@@ -157,8 +157,6 @@ EnumAttrCase::EnumAttrCase(const llvm::Record *record) : Attribute(record) {
 EnumAttrCase::EnumAttrCase(const llvm::DefInit *init)
     : EnumAttrCase(init->getDef()) {}
 
-bool EnumAttrCase::isStrCase() const { return isSubClassOf("StrEnumAttrCase"); }
-
 StringRef EnumAttrCase::getSymbol() const {
   return def->getValueAsString("symbol");
 }

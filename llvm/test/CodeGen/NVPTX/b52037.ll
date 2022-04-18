@@ -23,14 +23,14 @@ target triple = "nvptx64-nvidia-cuda"
 %struct.foo = type <{ i16*, %float4, %int3, i32, %float3, [4 x i8], i64, i32, i8, [3 x i8], i32 }>
 
 @global = external local_unnamed_addr addrspace(4) externally_initialized global [27 x %char3], align 1
-@global.1 = linkonce_odr unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* inttoptr (i64 16 to i8*), i8* null, i8* null] }, align 8
+@global_1 = linkonce_odr unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* inttoptr (i64 16 to i8*), i8* null, i8* null] }, align 8
 
 ; Function Attrs: argmemonly mustprogress nofree nounwind willreturn
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #0
 
 declare %float4 @snork(float) local_unnamed_addr
 
-declare %float3 @bar.2(float, float) local_unnamed_addr
+declare %float3 @bar_2(float, float) local_unnamed_addr
 
 declare %float3 @zot() local_unnamed_addr
 
@@ -49,7 +49,7 @@ bb:
   %0 = bitcast %float4* %tmp9 to i16**
   store i16* %tmp5, i16** %0, align 8
   %tmp10 = getelementptr inbounds %struct.zot, %struct.zot* %tmp, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @global.1, i64 0, inrange i32 0, i64 3) to i32 (...)**), i32 (...)*** %tmp10, align 16
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @global_1, i64 0, inrange i32 0, i64 3) to i32 (...)**), i32 (...)*** %tmp10, align 16
   %tmp34 = getelementptr %struct.spam.2, %struct.spam.2* %arg, i64 0, i32 0, i32 0
   %tmp.i1 = tail call i64 @foo()
   %tmp44.i16 = getelementptr inbounds i16, i16* %tmp5, i64 undef
@@ -100,7 +100,7 @@ bb49.i.lr.ph:                                     ; preds = %bb
   %tmp22.i.i.peel = fsub contract float %tmp19.i.i, %tmp15.i.i.peel
   %tmp17.i.i.peel = extractvalue %float3 %tmp13.i.i.peel, 2
   %tmp27.i.i.peel = fsub contract float %tmp24.i.i, %tmp17.i.i.peel
-  %tmp28.i.i.peel = tail call %float3 @bar.2(float %tmp22.i.i.peel, float %tmp27.i.i.peel) #1
+  %tmp28.i.i.peel = tail call %float3 @bar_2(float %tmp22.i.i.peel, float %tmp27.i.i.peel) #1
   %tmp28.i.elt.i.peel = extractvalue %float3 %tmp28.i.i.peel, 0
   store float %tmp28.i.elt.i.peel, float* %tmp59.i, align 16
   %tmp28.i.elt2.i.peel = extractvalue %float3 %tmp28.i.i.peel, 1
@@ -171,7 +171,7 @@ bb49.i:                                           ; preds = %bb49.i, %bb49.i.lr.
   %tmp22.i.i = fsub contract float %tmp19.i.i, %tmp15.i.i
   %tmp17.i.i = extractvalue %float3 %tmp13.i.i, 2
   %tmp27.i.i = fsub contract float %tmp24.i.i, %tmp17.i.i
-  %tmp28.i.i = tail call %float3 @bar.2(float %tmp22.i.i, float %tmp27.i.i) #1
+  %tmp28.i.i = tail call %float3 @bar_2(float %tmp22.i.i, float %tmp27.i.i) #1
   %tmp28.i.elt.i = extractvalue %float3 %tmp28.i.i, 0
   store float %tmp28.i.elt.i, float* %tmp59.i, align 16
   %tmp28.i.elt2.i = extractvalue %float3 %tmp28.i.i, 1

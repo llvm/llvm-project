@@ -2722,6 +2722,21 @@ VarDecl::needsDestruction(const ASTContext &Ctx) const {
   return getType().isDestructedType();
 }
 
+CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
+  assert(hasInit() && "Expect initializer to check for flexible array init");
+  auto *Ty = getType()->getAs<RecordType>();
+  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+    return CharUnits::Zero();
+  auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
+  if (!List)
+    return CharUnits::Zero();
+  auto FlexibleInit = List->getInit(List->getNumInits() - 1);
+  auto InitTy = Ctx.getAsConstantArrayType(FlexibleInit->getType());
+  if (!InitTy)
+    return CharUnits::Zero();
+  return Ctx.getTypeSizeInChars(InitTy);
+}
+
 MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {
   if (isStaticDataMember())
     // FIXME: Remove ?

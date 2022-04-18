@@ -1240,6 +1240,8 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
           return OFFLOAD_FAIL;
         }
 
+        DP("Implicit argument count: %d\n",
+           KernelInfoEntry.implicit_argument_count);
         if (KernelInfoEntry.implicit_argument_count >= 4) {
           // Initialise pointer for implicit_argument_count != 0 ABI
           // Guess that the right implicit argument is at offset 24 after
@@ -1247,8 +1249,10 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
           // the offset from msgpack. Clang is not annotating it at present.
           uint64_t Offset =
               sizeof(void *) * (KernelInfoEntry.explicit_argument_count + 3);
-          if ((Offset + 8) > (ArgPool->kernarg_segment_size)) {
-            DP("Bad offset of hostcall, exceeds kernarg segment size\n");
+          if ((Offset + 8) > ArgPool->kernarg_size_including_implicit()) {
+            DP("Bad offset of hostcall: %lu, exceeds kernarg size w/ implicit "
+               "args: %d\n",
+               Offset + 8, ArgPool->kernarg_size_including_implicit());
           } else {
             memcpy(static_cast<char *>(kernarg) + Offset, &buffer, 8);
           }

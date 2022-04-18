@@ -47,4 +47,4 @@ attributes #0 = { returns_twice }
 
 !llvm.module.flags = !{!0}
 
-!0 = !{i32 1, !"branch-target-enforcement", i32 1}
+!0 = !{i32 8, !"branch-target-enforcement", i32 1}

@@ -1,7 +1,6 @@
 ; Test to ensure the pgo memop optimization pass doesn't try to scale
 ; up a value profile with a 0 count, which would lead to divide by 0.
 ; RUN: opt < %s -passes=pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=1 -S | FileCheck %s --check-prefix=MEMOP_OPT
-; RUN: opt < %s -pgo-memop-opt -verify-dom-info -pgo-memop-count-threshold=1 -S | FileCheck %s --check-prefix=MEMOP_OPT
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
