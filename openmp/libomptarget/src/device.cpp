@@ -297,7 +297,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
                     HstPtrName))
                 .first->HDTT;
     INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
-         "Creating new map entry with HstPtrBase= " DPxMOD
+         "Creating new map entry with HstPtrBase=" DPxMOD
          ", HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", Size=%ld, "
          "DynRefCount=%s, HoldRefCount=%s, Name=%s\n",
          DPxPTR(HstPtrBase), DPxPTR(HstPtrBegin), DPxPTR(Ptr), Size,
