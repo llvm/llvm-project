@@ -63,11 +63,14 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
 
   // Generate a random number
   def int_ppc_darn : GCCBuiltin<"__builtin_darn">,
-                     Intrinsic<[llvm_i64_ty], [], [IntrNoMem]>;
+                     Intrinsic<[llvm_i64_ty], [],
+                               [IntrNoMerge, IntrHasSideEffects]>;
   def int_ppc_darnraw : GCCBuiltin<"__builtin_darn_raw">,
-                     Intrinsic<[llvm_i64_ty], [], [IntrNoMem]>;
+                     Intrinsic<[llvm_i64_ty], [],
+                               [IntrNoMerge, IntrHasSideEffects]>;
   def int_ppc_darn32 : GCCBuiltin<"__builtin_darn_32">,
-                     Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+                     Intrinsic<[llvm_i32_ty], [],
+                               [IntrNoMerge, IntrHasSideEffects]>;
 
   // Bit permute doubleword
   def int_ppc_bpermd : GCCBuiltin<"__builtin_bpermd">,
