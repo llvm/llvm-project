@@ -95,9 +95,6 @@ Features not supported or with limited support for Cuda devices
 
 - Nested parallelism: inner parallel regions are executed sequentially.
 
-- Static linking of libraries containing device code is not supported without
-  explicitly using ``-fopenmp-new-driver``.
-
 - Automatic translation of math functions in target regions to device-specific
   math functions is not implemented yet.
 
