@@ -146,14 +146,12 @@ entry:
   ret void
 }
 
-define void @stg_alloca17() uwtable {
+define void @stg_alloca17() nounwind {
 ; CHECK-LABEL: stg_alloca17:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #288
-; CHECK-NEXT:    .cfi_def_cfa_offset 288
-; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, #256
+; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Folded Spill
 ; CHECK-NEXT:  .LBB11_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st2g sp, [sp], #32
@@ -161,6 +159,31 @@ define void @stg_alloca17() uwtable {
 ; CHECK-NEXT:    cbnz x8, .LBB11_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    stg sp, [sp], #16
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %a = alloca i8, i32 272, align 16
+  call void @llvm.aarch64.settag(i8* %a, i64 272)
+  ret void
+}
+
+define void @stg_alloca18() uwtable {
+; CHECK-LABEL: stg_alloca18:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #288
+; CHECK-NEXT:    .cfi_def_cfa_offset 288
+; CHECK-NEXT:    str x29, [sp, #272] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    mov x8, #256
+; CHECK-NEXT:    stg x9, [x9], #16
+; CHECK-NEXT:  .LBB12_1: // %entry
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    sub x8, x8, #32
+; CHECK-NEXT:    st2g x9, [x9], #32
+; CHECK-NEXT:    cbnz x8, .LBB12_1
+; CHECK-NEXT:  // %bb.2: // %entry
+; CHECK-NEXT:    add sp, sp, #272
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0

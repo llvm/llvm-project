@@ -37,6 +37,7 @@ public:
   /// @{
 
   unsigned getInliningThresholdMultiplier() { return 3; }
+  unsigned adjustInliningThreshold(const CallBase *CB) const;
 
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
                                 TTI::TargetCostKind CostKind);

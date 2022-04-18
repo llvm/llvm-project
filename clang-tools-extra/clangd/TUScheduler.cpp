@@ -110,6 +110,11 @@ constexpr trace::Metric
 constexpr trace::Metric PreambleBuildFilesystemLatencyRatio(
     "preamble_fs_latency_ratio", trace::Metric::Distribution, "build_type");
 
+constexpr trace::Metric PreambleBuildSize("preamble_build_size",
+                                          trace::Metric::Distribution);
+constexpr trace::Metric PreambleSerializedSize("preamble_serialized_size",
+                                               trace::Metric::Distribution);
+
 void reportPreambleBuild(const PreambleBuildStats &Stats,
                          bool IsFirstPreamble) {
   auto RecordWithLabel = [&Stats](llvm::StringRef Label) {
@@ -122,6 +127,9 @@ void reportPreambleBuild(const PreambleBuildStats &Stats,
   static llvm::once_flag OnceFlag;
   llvm::call_once(OnceFlag, [&] { RecordWithLabel("first_build"); });
   RecordWithLabel(IsFirstPreamble ? "first_build_for_file" : "rebuild");
+
+  PreambleBuildSize.record(Stats.BuildSize);
+  PreambleSerializedSize.record(Stats.SerializedSize);
 }
 
 class ASTWorker;

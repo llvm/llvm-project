@@ -103,6 +103,10 @@ END-SCRIPT
 #include <__algorithm/pop_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pop_heap.h'}}
 #include <__algorithm/prev_permutation.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/prev_permutation.h'}}
 #include <__algorithm/push_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/push_heap.h'}}
+#include <__algorithm/ranges_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy.h'}}
+#include <__algorithm/ranges_copy_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_backward.h'}}
+#include <__algorithm/ranges_copy_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_if.h'}}
+#include <__algorithm/ranges_copy_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_n.h'}}
 #include <__algorithm/ranges_count.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_count.h'}}
 #include <__algorithm/ranges_count_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_count_if.h'}}
 #include <__algorithm/ranges_find.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find.h'}}
@@ -112,6 +116,8 @@ END-SCRIPT
 #include <__algorithm/ranges_max_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max_element.h'}}
 #include <__algorithm/ranges_min.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_min.h'}}
 #include <__algorithm/ranges_min_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_min_element.h'}}
+#include <__algorithm/ranges_minmax.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_minmax.h'}}
+#include <__algorithm/ranges_minmax_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_minmax_element.h'}}
 #include <__algorithm/ranges_mismatch.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_mismatch.h'}}
 #include <__algorithm/ranges_swap_ranges.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_swap_ranges.h'}}
 #include <__algorithm/ranges_transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_transform.h'}}
@@ -301,6 +307,7 @@ END-SCRIPT
 #include <__iterator/iterator_traits.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iterator_traits.h'}}
 #include <__iterator/mergeable.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/mergeable.h'}}
 #include <__iterator/move_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_iterator.h'}}
+#include <__iterator/move_sentinel.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_sentinel.h'}}
 #include <__iterator/next.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/next.h'}}
 #include <__iterator/ostream_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/ostream_iterator.h'}}
 #include <__iterator/ostreambuf_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/ostreambuf_iterator.h'}}
@@ -402,8 +409,10 @@ END-SCRIPT
 #include <__ranges/empty_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/empty_view.h'}}
 #include <__ranges/enable_borrowed_range.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_borrowed_range.h'}}
 #include <__ranges/enable_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_view.h'}}
+#include <__ranges/filter_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/filter_view.h'}}
 #include <__ranges/iota_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/iota_view.h'}}
 #include <__ranges/join_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/join_view.h'}}
+#include <__ranges/lazy_split_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/lazy_split_view.h'}}
 #include <__ranges/non_propagating_cache.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/non_propagating_cache.h'}}
 #include <__ranges/owning_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/owning_view.h'}}
 #include <__ranges/range_adaptor.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/range_adaptor.h'}}

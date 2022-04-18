@@ -45,7 +45,7 @@ entry:
 ; CHECK-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
 ; CHECK:       entry_to_outline:
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast [59 x i64]* [[TMP0:%.*]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP]], i8 0, i64 236, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 4 [[TMP]], i8 0, i64 236, i1 false)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i64 [[TMP1:%.*]], 0
 ; CHECK-NEXT:    [[A:%.*]] = add i64 [[TMP2:%.*]], [[TMP3:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = add i64 [[TMP2]], [[TMP3]]

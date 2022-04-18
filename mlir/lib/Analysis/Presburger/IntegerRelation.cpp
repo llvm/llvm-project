@@ -955,7 +955,7 @@ void IntegerRelation::removeRedundantInequalities() {
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     // Change the inequality to its complement.
     tmpCst.inequalities.negateRow(r);
-    tmpCst.atIneq(r, tmpCst.getNumCols() - 1)--;
+    --tmpCst.atIneq(r, tmpCst.getNumCols() - 1);
     if (tmpCst.isEmpty()) {
       redun[r] = true;
       // Zero fill the redundant inequality.
@@ -963,7 +963,7 @@ void IntegerRelation::removeRedundantInequalities() {
       tmpCst.inequalities.fillRow(r, /*value=*/0);
     } else {
       // Reverse the change (to avoid recreating tmpCst each time).
-      tmpCst.atIneq(r, tmpCst.getNumCols() - 1)++;
+      ++tmpCst.atIneq(r, tmpCst.getNumCols() - 1);
       tmpCst.inequalities.negateRow(r);
     }
   }

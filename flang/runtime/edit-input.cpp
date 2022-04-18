@@ -12,6 +12,7 @@
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
 #include <algorithm>
+#include <cfenv>
 
 namespace Fortran::runtime::io {
 
@@ -57,12 +58,15 @@ static inline char32_t GetDecimalPoint(const DataEdit &edit) {
 // Returns true if there's a '-' sign.
 static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
     std::optional<char32_t> &next, std::optional<int> &remaining) {
-  next = io.PrepareInput(edit, remaining);
+  bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
+  next = io.PrepareInput(edit, remaining, !bzMode);
   bool negative{false};
   if (next) {
     negative = *next == '-';
     if (negative || *next == '+') {
-      io.SkipSpaces(remaining);
+      if (!bzMode) {
+        io.SkipSpaces(remaining);
+      }
       next = io.NextInField(remaining, edit);
     }
   }
@@ -152,7 +156,8 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
   if (ScanNumericPrefix(io, edit, next, remaining)) {
     Put('-');
   }
-  if (next.value_or(' ') == ' ') { // empty/blank field means zero
+  bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
+  if (!next || (!bzMode && *next == ' ')) { // empty/blank field means zero
     remaining.reset();
     if (!io.GetConnectionState().IsAtEOF()) {
       Put('0');
@@ -180,10 +185,11 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     }
     exponent = 0;
   } else if (first == decimal || (first >= '0' && first <= '9') ||
-      first == 'E' || first == 'D' || first == 'Q') {
+      (bzMode && (first == ' ' || first == '\t')) || first == 'E' ||
+      first == 'D' || first == 'Q') {
     Put('.'); // input field is normalized to a fraction
     auto start{got};
-    bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
+    bool anyDigit{false};
     for (; next; next = io.NextInField(remaining, edit)) {
       char32_t ch{*next};
       if (ch == ' ' || ch == '\t') {
@@ -194,8 +200,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
         }
       }
       if (ch == '0' && got == start && !decimalPoint) {
+        anyDigit = true;
         // omit leading zeroes before the decimal
       } else if (ch >= '0' && ch <= '9') {
+        anyDigit = true;
         Put(ch);
       } else if (ch == decimal && !decimalPoint) {
         // the decimal point is *not* copied to the buffer
@@ -205,7 +213,11 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
     }
     if (got == start) {
-      Put('0'); // emit at least one digit
+      if (anyDigit) {
+        Put('0'); // emit at least one digit
+      } else {
+        return 0; // no digits, invalid input
+      }
     }
     if (next &&
         (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
@@ -276,6 +288,25 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
   return got;
 }
 
+static void RaiseFPExceptions(decimal::ConversionResultFlags flags) {
+#undef RAISE
+#ifdef feraisexcept // a macro in some environments; omit std::
+#define RAISE feraiseexcept
+#else
+#define RAISE std::feraiseexcept
+#endif
+  if (flags & decimal::ConversionResultFlags::Overflow) {
+    RAISE(FE_OVERFLOW);
+  }
+  if (flags & decimal::ConversionResultFlags::Inexact) {
+    RAISE(FE_INEXACT);
+  }
+  if (flags & decimal::ConversionResultFlags::Invalid) {
+    RAISE(FE_INVALID);
+  }
+#undef RAISE
+}
+
 // If no special modes are in effect and the form of the input value
 // that's present in the input stream is acceptable to the decimal->binary
 // converter without modification, this fast path for real input
@@ -324,10 +355,13 @@ static bool TryFastPathRealInput(
     return false; // unconverted characters remain in fixed width field
   }
   // Success on the fast path!
-  // TODO: raise converted.flags as exceptions?
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<PRECISION> *>(n) =
       converted.binary;
   io.HandleRelativePosition(p - str);
+  // Set FP exception flags
+  if (converted.flags != decimal::ConversionResultFlags::Exact) {
+    RaiseFPExceptions(converted.flags);
+  }
   return true;
 }
 
@@ -349,7 +383,7 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
     return false;
   }
   if (got == 0) {
-    io.GetIoErrorHandler().SignalError("Bad REAL input value");
+    io.GetIoErrorHandler().SignalError(IostatBadRealInput);
     return false;
   }
   bool hadExtra{got > maxDigits};
@@ -395,9 +429,12 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
     converted.flags = static_cast<enum decimal::ConversionResultFlags>(
         converted.flags | decimal::Inexact);
   }
-  // TODO: raise converted.flags as exceptions?
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<binaryPrecision> *>(n) =
       converted.binary;
+  // Set FP exception flags
+  if (converted.flags != decimal::ConversionResultFlags::Exact) {
+    RaiseFPExceptions(converted.flags);
+  }
   return true;
 }
 

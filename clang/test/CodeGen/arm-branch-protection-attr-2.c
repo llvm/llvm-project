@@ -15,19 +15,19 @@
 
 // Check module attributes
 
-// NONE:  !{i32 1, !"branch-target-enforcement", i32 0}
-// PART:  !{i32 1, !"branch-target-enforcement", i32 0}
-// ALL:   !{i32 1, !"branch-target-enforcement", i32 0}
-// BTE:   !{i32 1, !"branch-target-enforcement", i32 1}
+// NONE:  !{i32 8, !"branch-target-enforcement", i32 0}
+// PART:  !{i32 8, !"branch-target-enforcement", i32 0}
+// ALL:   !{i32 8, !"branch-target-enforcement", i32 0}
+// BTE:   !{i32 8, !"branch-target-enforcement", i32 1}
 
-// NONE:  !{i32 1, !"sign-return-address", i32 0}
-// PART:  !{i32 1, !"sign-return-address", i32 1}
-// ALL:   !{i32 1, !"sign-return-address", i32 1}
-// BTE:   !{i32 1, !"sign-return-address", i32 0}
+// NONE:  !{i32 8, !"sign-return-address", i32 0}
+// PART:  !{i32 8, !"sign-return-address", i32 1}
+// ALL:   !{i32 8, !"sign-return-address", i32 1}
+// BTE:   !{i32 8, !"sign-return-address", i32 0}
 
-// NONE:  !{i32 1, !"sign-return-address-all", i32 0}
-// PART:  !{i32 1, !"sign-return-address-all", i32 0}
-// ALL:   !{i32 1, !"sign-return-address-all", i32 1}
-// BTE:   !{i32 1, !"sign-return-address-all", i32 0}
+// NONE:  !{i32 8, !"sign-return-address-all", i32 0}
+// PART:  !{i32 8, !"sign-return-address-all", i32 0}
+// ALL:   !{i32 8, !"sign-return-address-all", i32 1}
+// BTE:   !{i32 8, !"sign-return-address-all", i32 0}
 
 void foo() {}

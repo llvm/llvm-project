@@ -537,6 +537,26 @@ multiclass VPatWidenFPNegMulSacSDNode_VV_VF<string instruction_name> {
   }
 }
 
+multiclass VPatMultiplyAddSDNode_VV_VX<SDNode op, string instruction_name> {
+  foreach vti = AllIntegerVectors in {
+    defvar suffix = vti.LMul.MX;
+    // NOTE: We choose VMADD because it has the most commuting freedom. So it
+    // works best with how TwoAddressInstructionPass tries commuting.
+    def : Pat<(vti.Vector (op vti.RegClass:$rs2,
+                              (mul_oneuse vti.RegClass:$rs1, vti.RegClass:$rd))),
+              (!cast<Instruction>(instruction_name#"_VV_"# suffix)
+                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    // The choice of VMADD here is arbitrary, vmadd.vx and vmacc.vx are equally
+    // commutable.
+    def : Pat<(vti.Vector (op vti.RegClass:$rs2,
+                              (mul_oneuse (SplatPat XLenVT:$rs1), vti.RegClass:$rd))),
+              (!cast<Instruction>(instruction_name#"_VX_" # suffix)
+                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -682,36 +702,8 @@ defm : VPatWidenBinarySDNode_VV_VX<mul, sext_oneuse, anyext_oneuse,
                                    "PseudoVWMULSU">;
 
 // 12.13 Vector Single-Width Integer Multiply-Add Instructions.
-foreach vti = AllIntegerVectors in {
-  // NOTE: We choose VMADD because it has the most commuting freedom. So it
-  // works best with how TwoAddressInstructionPass tries commuting.
-  defvar suffix = vti.LMul.MX;
-  def : Pat<(vti.Vector (add vti.RegClass:$rs2,
-                              (mul_oneuse vti.RegClass:$rs1, vti.RegClass:$rd))),
-            (!cast<Instruction>("PseudoVMADD_VV_"# suffix)
-                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
-  def : Pat<(vti.Vector (sub vti.RegClass:$rs2,
-                              (mul_oneuse vti.RegClass:$rs1, vti.RegClass:$rd))),
-            (!cast<Instruction>("PseudoVNMSUB_VV_"# suffix)
-                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
-
-  // The choice of VMADD here is arbitrary, vmadd.vx and vmacc.vx are equally
-  // commutable.
-  def : Pat<(vti.Vector (add vti.RegClass:$rs2,
-                              (mul_oneuse (SplatPat XLenVT:$rs1),
-                                          vti.RegClass:$rd))),
-            (!cast<Instruction>("PseudoVMADD_VX_" # suffix)
-                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
-  def : Pat<(vti.Vector (sub vti.RegClass:$rs2,
-                              (mul_oneuse (SplatPat XLenVT:$rs1),
-                                          vti.RegClass:$rd))),
-            (!cast<Instruction>("PseudoVNMSUB_VX_" # suffix)
-                 vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
-}
+defm : VPatMultiplyAddSDNode_VV_VX<add, "PseudoVMADD">;
+defm : VPatMultiplyAddSDNode_VV_VX<sub, "PseudoVNMSUB">;
 
 // 12.14 Vector Widening Integer Multiply-Add Instructions
 defm : VPatWidenMulAddSDNode_VV<sext_oneuse, sext_oneuse, "PseudoVWMACC">;

@@ -73,5 +73,5 @@ void numericConversion8(double D, enum UnscopedFixed UF) { numericConversion8(UF
 // CHECK-MESSAGES: :[[@LINE-3]]:54: note: the last parameter in the range is 'UF'
 // CHECK-MESSAGES: :[[@LINE-4]]:35: note: 'double' and 'enum UnscopedFixed' may be implicitly converted{{$}}
 
-void pointeeConverison(int *IP, double *DP) { pointeeConversion(DP, IP); }
+void pointeeConversion(int *IP, double *DP) { pointeeConversion(DP, IP); }
 // NO-WARN: Even though this is possible in C, a swap is diagnosed by the compiler.

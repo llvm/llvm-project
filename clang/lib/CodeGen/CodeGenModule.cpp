@@ -579,6 +579,30 @@ void CodeGenModule::Release() {
     }
   }
 
+  // Emit a global array containing all external kernels or device variables
+  // used by host functions and mark it as used for CUDA/HIP. This is necessary
+  // to get kernels or device variables in archives linked in even if these
+  // kernels or device variables are only used in host functions.
+  if (!Context.CUDAExternalDeviceDeclODRUsedByHost.empty()) {
+    SmallVector<llvm::Constant *, 8> UsedArray;
+    for (auto D : Context.CUDAExternalDeviceDeclODRUsedByHost) {
+      GlobalDecl GD;
+      if (auto *FD = dyn_cast<FunctionDecl>(D))
+        GD = GlobalDecl(FD, KernelReferenceKind::Kernel);
+      else
+        GD = GlobalDecl(D);
+      UsedArray.push_back(llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          GetAddrOfGlobal(GD), Int8PtrTy));
+    }
+
+    llvm::ArrayType *ATy = llvm::ArrayType::get(Int8PtrTy, UsedArray.size());
+
+    auto *GV = new llvm::GlobalVariable(
+        getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
+        llvm::ConstantArray::get(ATy, UsedArray), "gpu.used.external");
+    addCompilerUsedGlobal(GV);
+  }
+
   emitLLVMUsed();
   if (SanStats)
     SanStats->finish();
@@ -729,7 +753,10 @@ void CodeGenModule::Release() {
   // attributes, but we use module metadata to emit build attributes. This is
   // needed for LTO, where the function attributes are inside bitcode
   // serialised into a global variable by the time build attributes are
-  // emitted, so we can't access them.
+  // emitted, so we can't access them. LTO objects could be compiled with
+  // different flags therefore module flags are set to "Min" behavior to achieve
+  // the same end result of the normal build where e.g BTI is off if any object
+  // doesn't support it.
   if (Context.getTargetInfo().hasFeature("ptrauth") &&
       LangOpts.getSignReturnAddressScope() !=
           LangOptions::SignReturnAddressScopeKind::None)
@@ -743,16 +770,16 @@ void CodeGenModule::Release() {
       Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
       Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
       Arch == llvm::Triple::aarch64_be) {
-    getModule().addModuleFlag(llvm::Module::Error, "branch-target-enforcement",
+    getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
                               LangOpts.BranchTargetEnforcement);
 
-    getModule().addModuleFlag(llvm::Module::Error, "sign-return-address",
+    getModule().addModuleFlag(llvm::Module::Min, "sign-return-address",
                               LangOpts.hasSignReturnAddress());
 
-    getModule().addModuleFlag(llvm::Module::Error, "sign-return-address-all",
+    getModule().addModuleFlag(llvm::Module::Min, "sign-return-address-all",
                               LangOpts.isSignReturnAddressScopeAll());
 
-    getModule().addModuleFlag(llvm::Module::Error,
+    getModule().addModuleFlag(llvm::Module::Min,
                               "sign-return-address-with-bkey",
                               !LangOpts.isSignReturnAddressWithAKey());
   }
@@ -4588,6 +4615,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         T = D->getType();
 
       if (getLangOpts().CPlusPlus) {
+        if (!InitDecl->getFlexibleArrayInitChars(getContext()).isZero())
+          ErrorUnsupported(D, "flexible array initializer");
         Init = EmitNullConstant(T);
         NeedsGlobalCtor = true;
       } else {
@@ -4601,6 +4630,19 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       // also don't need to register a destructor.
       if (getLangOpts().CPlusPlus && !NeedsGlobalDtor)
         DelayedCXXInitPosition.erase(D);
+
+#if 0
+      // FIXME: The following check doesn't handle flexible array members
+      // inside tail padding (which don't actually increase the size of
+      // the struct).
+#ifndef NDEBUG
+      CharUnits VarSize = getContext().getTypeSizeInChars(ASTTy) +
+                          InitDecl->getFlexibleArrayInitChars(getContext());
+      CharUnits CstSize = CharUnits::fromQuantity(
+          getDataLayout().getTypeAllocSize(Init->getType()));
+      assert(VarSize == CstSize && "Emitted constant has unexpected size");
+#endif
+#endif
     }
   }
 

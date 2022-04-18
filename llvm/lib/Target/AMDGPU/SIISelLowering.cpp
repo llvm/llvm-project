@@ -1572,7 +1572,6 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
 
       // 12 byte accessing via ds_read/write_b96 require 16-byte alignment on
       // gfx8 and older.
-      RequiredAlignment = Align(16);
 
       if (Subtarget->hasUnalignedDSAccessEnabled()) {
         // Naturally aligned access is fastest. However, also report it is Fast
@@ -1594,6 +1593,18 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       // gfx8 and older, but  we can do a 8 byte aligned, 16 byte access in a
       // single operation using ds_read2/write2_b64.
       RequiredAlignment = Align(8);
+
+      if (Subtarget->hasUnalignedDSAccessEnabled()) {
+        // Naturally aligned access is fastest. However, also report it is Fast
+        // if memory is aligned less than DWORD. A narrow load or store will be
+        // be equally slow as a single ds_read_b128/ds_write_b128, but there
+        // will be more of them, so overall we will pay less penalty issuing a
+        // single instruction.
+        if (IsFast)
+          *IsFast = Alignment >= RequiredAlignment || Alignment < Align(4);
+        return true;
+      }
+
       break;
     default:
       if (Size > 32)
@@ -1604,9 +1615,11 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
 
     if (IsFast) {
       // FIXME: Lie it is fast if +unaligned-access-mode is passed so that
-      // DS accesses get vectorized.
+      // DS accesses get vectorized. Do this only for sizes below 96 as
+      // b96 and b128 cases already properly handled.
+      // Remove Subtarget check once all sizes properly handled.
       *IsFast = Alignment >= RequiredAlignment ||
-                Subtarget->hasUnalignedDSAccessEnabled();
+                (Subtarget->hasUnalignedDSAccessEnabled() && Size < 96);
     }
 
     return Alignment >= RequiredAlignment ||
@@ -1677,8 +1690,22 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
     return false;
   }
 
-  return allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
-                                            Alignment, Flags, IsFast);
+  bool Allow = allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
+                                                  Alignment, Flags, IsFast);
+
+  if (Allow && IsFast && Subtarget->hasUnalignedDSAccessEnabled() &&
+      (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
+       AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
+    // Lie it is fast if +unaligned-access-mode is passed so that DS accesses
+    // get vectorized. We could use ds_read2_b*/ds_write2_b* instructions on a
+    // misaligned data which is faster than a pair of ds_read_b*/ds_write_b*
+    // which would be equally misaligned.
+    // This is only used by the common passes, selection always calls the
+    // allowsMisalignedMemoryAccessesImpl version.
+    *IsFast = true;
+  }
+
+  return Allow;
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
@@ -9123,9 +9150,10 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       return SplitVectorStore(Op, DAG);
 
     return expandUnalignedStore(Store, DAG);
-  } else {
-    llvm_unreachable("unhandled address space");
   }
+
+  // Probably an invalid store. If so we'll end up emitting a selection error.
+  return SDValue();
 }
 
 SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
@@ -12359,13 +12387,17 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   MachineBasicBlock *Exit = ML->getExitBlock();
 
   if (Pre && Exit) {
-    BuildMI(*Pre, Pre->getFirstTerminator(), DebugLoc(),
-            TII->get(AMDGPU::S_INST_PREFETCH))
-      .addImm(1); // prefetch 2 lines behind PC
+    auto PreTerm = Pre->getFirstTerminator();
+    if (PreTerm == Pre->begin() ||
+        std::prev(PreTerm)->getOpcode() != AMDGPU::S_INST_PREFETCH)
+      BuildMI(*Pre, PreTerm, DebugLoc(), TII->get(AMDGPU::S_INST_PREFETCH))
+          .addImm(1); // prefetch 2 lines behind PC
 
-    BuildMI(*Exit, Exit->getFirstNonDebugInstr(), DebugLoc(),
-            TII->get(AMDGPU::S_INST_PREFETCH))
-      .addImm(2); // prefetch 1 line behind PC
+    auto ExitHead = Exit->getFirstNonDebugInstr();
+    if (ExitHead == Exit->end() ||
+        ExitHead->getOpcode() != AMDGPU::S_INST_PREFETCH)
+      BuildMI(*Exit, ExitHead, DebugLoc(), TII->get(AMDGPU::S_INST_PREFETCH))
+          .addImm(2); // prefetch 1 line behind PC
   }
 
   return CacheLineAlign;

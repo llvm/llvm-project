@@ -1,4 +1,4 @@
-// REQUIRES: clang-driver, x86-registered-target, amdgpu-registered-target
+// REQUIRES: x86-registered-target, amdgpu-registered-target
 
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --offload-arch=gfx1030 \

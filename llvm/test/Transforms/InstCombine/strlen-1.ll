@@ -14,7 +14,6 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @null_hello_mid = constant [13 x i8] c"hello wor\00ld\00"
 
 declare i32 @strlen(i8*)
-declare noalias i8* @strdup(i8*)
 
 ; Check strlen(string constant) -> integer constant.
 
@@ -280,18 +279,5 @@ define i1 @strlen0_after_write_to_second_byte(i8 *%ptr) {
   %cmp = icmp eq i32 %len, 0
   ret i1 %cmp
 }
-
-; Check strlen(strdup(string constant)) -> integer constant.
-
-define i32 @test_simplify_strduped_constant() {
-; CHECK-LABEL: @test_simplify_strduped_constant(
-; CHECK-NEXT:    ret i32 5
-;
-  %hello_p = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %hello_s = call i8* @strdup(i8* %hello_p)
-  %hello_l = call i32 @strlen(i8* %hello_s)
-  ret i32 %hello_l
-}
-
 
 attributes #0 = { null_pointer_is_valid }

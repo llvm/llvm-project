@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: llc < %s -march=nvptx -mcpu=sm_32 | FileCheck %s
 
 
 ; CHECK-LABEL: atom0

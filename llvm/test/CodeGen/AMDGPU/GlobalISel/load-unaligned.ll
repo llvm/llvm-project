@@ -12,7 +12,7 @@ define <4 x i32> @load_lds_v4i32_align1(<4 x i32> addrspace(3)* %ptr) {
 ; GFX9-LABEL: load_lds_v4i32_align1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
+; GFX9-NEXT:    ds_read_b128 v[0:3], v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -86,7 +86,7 @@ define <4 x i32> @load_lds_v4i32_align1(<4 x i32> addrspace(3)* %ptr) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    ds_load_2addr_b64 v[0:3], v0 offset1:1
+; GFX11-NEXT:    ds_load_b128 v[0:3], v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load <4 x i32>, <4 x i32> addrspace(3)* %ptr, align 1
@@ -170,7 +170,7 @@ define void @store_lds_v4i32_align1(<4 x i32> addrspace(3)* %out, <4 x i32> %x) 
 ; GFX9-LABEL: store_lds_v4i32_align1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ds_write2_b64 v0, v[1:2], v[3:4] offset1:1
+; GFX9-NEXT:    ds_write_b128 v0, v[1:4]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -222,7 +222,7 @@ define void @store_lds_v4i32_align1(<4 x i32> addrspace(3)* %out, <4 x i32> %x) 
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    ds_store_2addr_b64 v0, v[1:2], v[3:4] offset1:1
+; GFX11-NEXT:    ds_store_b128 v0, v[1:4]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <4 x i32> %x, <4 x i32> addrspace(3)* %out, align 1

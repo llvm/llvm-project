@@ -8,6 +8,7 @@
 
 #include "clang/Basic/LangStandard.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace clang;
 
@@ -42,4 +43,47 @@ const LangStandard *LangStandard::getLangStandardForName(StringRef Name) {
   return &getLangStandardForKind(K);
 }
 
-
+LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
+                                                     const llvm::Triple &T) {
+  switch (Lang) {
+  case Language::Unknown:
+  case Language::LLVM_IR:
+    llvm_unreachable("Invalid input kind!");
+  case Language::OpenCL:
+    return LangStandard::lang_opencl12;
+  case Language::OpenCLCXX:
+    return LangStandard::lang_openclcpp10;
+  case Language::CUDA:
+    return LangStandard::lang_cuda;
+  case Language::Asm:
+  case Language::C:
+#if defined(CLANG_DEFAULT_STD_C)
+    return CLANG_DEFAULT_STD_C;
+#else
+    // The PS4 uses C99 as the default C standard.
+    if (T.isPS4())
+      return LangStandard::lang_gnu99;
+    return LangStandard::lang_gnu17;
+#endif
+  case Language::ObjC:
+#if defined(CLANG_DEFAULT_STD_C)
+    return CLANG_DEFAULT_STD_C;
+#else
+    return LangStandard::lang_gnu11;
+#endif
+  case Language::CXX:
+  case Language::ObjCXX:
+#if defined(CLANG_DEFAULT_STD_CXX)
+    return CLANG_DEFAULT_STD_CXX;
+#else
+    return LangStandard::lang_gnucxx14;
+#endif
+  case Language::RenderScript:
+    return LangStandard::lang_c99;
+  case Language::HIP:
+    return LangStandard::lang_hip;
+  case Language::HLSL:
+    return LangStandard::lang_hlsl2021;
+  }
+  llvm_unreachable("unhandled Language kind!");
+}

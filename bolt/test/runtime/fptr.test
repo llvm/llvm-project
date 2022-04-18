@@ -1,6 +1,6 @@
 # Make sure BOLT correctly updates values based on function pointer.
 
-RUN: %clang %cflags %p/Inputs/fptr.c -Wl,-q -o %t.exe
+RUN: %clang %cflags -no-pie %p/Inputs/fptr.c -Wl,-q -o %t.exe
 RUN: llvm-bolt %t.exe -o %t -lite=0
 RUN: %t | FileCheck %s
 

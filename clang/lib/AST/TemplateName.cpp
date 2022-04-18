@@ -13,6 +13,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -76,12 +77,18 @@ TemplateName::TemplateName(SubstTemplateTemplateParmPackStorage *Storage)
     : Storage(Storage) {}
 TemplateName::TemplateName(QualifiedTemplateName *Qual) : Storage(Qual) {}
 TemplateName::TemplateName(DependentTemplateName *Dep) : Storage(Dep) {}
+TemplateName::TemplateName(UsingShadowDecl *Using) : Storage(Using) {}
 
 bool TemplateName::isNull() const { return Storage.isNull(); }
 
 TemplateName::NameKind TemplateName::getKind() const {
-  if (Storage.is<TemplateDecl *>())
+  if (auto *ND = Storage.dyn_cast<Decl *>()) {
+    if (isa<UsingShadowDecl>(ND))
+      return UsingTemplate;
+    assert(isa<TemplateDecl>(ND));
     return Template;
+  }
+
   if (Storage.is<DependentTemplateName *>())
     return DependentTemplate;
   if (Storage.is<QualifiedTemplateName *>())
@@ -99,14 +106,22 @@ TemplateName::NameKind TemplateName::getKind() const {
 }
 
 TemplateDecl *TemplateName::getAsTemplateDecl() const {
-  if (TemplateDecl *Template = Storage.dyn_cast<TemplateDecl *>())
-    return Template;
+  if (Decl *TemplateOrUsing = Storage.dyn_cast<Decl *>()) {
+    if (UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(TemplateOrUsing))
+      return cast<TemplateDecl>(USD->getTargetDecl());
+
+    assert(isa<TemplateDecl>(TemplateOrUsing));
+    return cast<TemplateDecl>(TemplateOrUsing);
+  }
 
   if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName())
     return QTN->getTemplateDecl();
 
   if (SubstTemplateTemplateParmStorage *sub = getAsSubstTemplateTemplateParm())
     return sub->getReplacement().getAsTemplateDecl();
+
+  if (UsingShadowDecl *USD = getAsUsingShadowDecl())
+    return cast<TemplateDecl>(USD->getTargetDecl());
 
   return nullptr;
 }
@@ -151,6 +166,13 @@ QualifiedTemplateName *TemplateName::getAsQualifiedTemplateName() const {
 
 DependentTemplateName *TemplateName::getAsDependentTemplateName() const {
   return Storage.dyn_cast<DependentTemplateName *>();
+}
+
+UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
+  if (Decl *D = Storage.dyn_cast<Decl *>())
+    if (UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(D))
+      return USD;
+  return nullptr;
 }
 
 TemplateName TemplateName::getNameToSubstitute() const {
@@ -222,7 +244,22 @@ bool TemplateName::containsUnexpandedParameterPack() const {
 
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
-  if (TemplateDecl *Template = Storage.dyn_cast<TemplateDecl *>())
+  auto Kind = getKind();
+  TemplateDecl *Template = nullptr;
+  if (Kind == TemplateName::Template || Kind == TemplateName::UsingTemplate) {
+    // After `namespace ns { using std::vector }`, what is the fully-qualified
+    // name of the UsingTemplateName `vector` within ns?
+    //
+    // - ns::vector (the qualified name of the using-shadow decl)
+    // - std::vector (the qualified name of the underlying template decl)
+    //
+    // Similar to the UsingType behavior, using declarations are used to import
+    // names more often than to export them, thus using the original name is
+    // most useful in this case.
+    Template = getAsTemplateDecl();
+  }
+
+  if (Template)
     if (Policy.CleanUglifiedParameters &&
         isa<TemplateTemplateParmDecl>(Template) && Template->getIdentifier())
       OS << Template->getIdentifier()->deuglifiedName();
@@ -262,6 +299,7 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
   else if (AssumedTemplateStorage *Assumed = getAsAssumedTemplateName()) {
     Assumed->getDeclName().print(OS, Policy);
   } else {
+    assert(getKind() == TemplateName::OverloadedTemplate);
     OverloadedTemplateStorage *OTS = getAsOverloadedTemplate();
     (*OTS->begin())->printName(OS);
   }

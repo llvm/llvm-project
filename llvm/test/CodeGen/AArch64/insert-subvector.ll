@@ -621,9 +621,13 @@ define <16 x i8> @load2multi1_v4i8(float %tmp, <4 x i8> *%a, <4 x i8> *%b) {
 define <16 x i8> @load2multi2_v4i8(float %tmp, <4 x i8> *%a, <4 x i8> *%b) {
 ; CHECK-LABEL: load2multi2_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1r { v0.2s }, [x0]
-; CHECK-NEXT:    ld1r { v1.2s }, [x1]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ldr s0, [x1]
+; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %la = load <4 x i8>, <4 x i8> *%a
   %lb = load <4 x i8>, <4 x i8> *%b
@@ -631,4 +635,45 @@ define <16 x i8> @load2multi2_v4i8(float %tmp, <4 x i8> *%a, <4 x i8> *%b) {
   %s2 = shufflevector <4 x i8> %lb, <4 x i8> %lb, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s3 = shufflevector <8 x i8> %s1, <8 x i8> %s2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i8> %s3
+}
+
+define void @loads_before_stores(i8* %i44) {
+; CHECK-LABEL: loads_before_stores:
+; CHECK:       // %bb.0: // %bb
+; CHECK-NEXT:    add x8, x0, #20
+; CHECK-NEXT:    ldr s0, [x0, #28]
+; CHECK-NEXT:    ldrh w9, [x0, #26]
+; CHECK-NEXT:    ldrh w10, [x0, #24]
+; CHECK-NEXT:    ld1 { v0.s }[1], [x8]
+; CHECK-NEXT:    strh w9, [x0, #20]
+; CHECK-NEXT:    strh w10, [x0, #30]
+; CHECK-NEXT:    stur d0, [x0, #22]
+; CHECK-NEXT:    ret
+bb:
+  %i45 = getelementptr inbounds i8, i8* %i44, i64 20
+  %i46 = getelementptr inbounds i8, i8* %i44, i64 26
+  %i48 = load i8, i8* %i46, align 1
+  %i49 = getelementptr inbounds i8, i8* %i44, i64 21
+  %i50 = getelementptr inbounds i8, i8* %i44, i64 27
+  %i52 = load i8, i8* %i50, align 1
+  %i53 = getelementptr inbounds i8, i8* %i44, i64 22
+  %i54 = getelementptr inbounds i8, i8* %i44, i64 28
+  %i61 = getelementptr inbounds i8, i8* %i44, i64 24
+  %i62 = getelementptr inbounds i8, i8* %i44, i64 30
+  %i63 = load i8, i8* %i61, align 1
+  %i65 = getelementptr inbounds i8, i8* %i44, i64 25
+  %i66 = getelementptr inbounds i8, i8* %i44, i64 31
+  %i67 = load i8, i8* %i65, align 1
+  %0 = bitcast i8* %i45 to <4 x i8>*
+  %1 = load <4 x i8>, <4 x i8>* %0, align 1
+  store i8 %i48, i8* %i45, align 1
+  store i8 %i52, i8* %i49, align 1
+  %2 = bitcast i8* %i54 to <4 x i8>*
+  %3 = load <4 x i8>, <4 x i8>* %2, align 1
+  store i8 %i63, i8* %i62, align 1
+  %4 = shufflevector <4 x i8> %3, <4 x i8> %1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %5 = bitcast i8* %i53 to <8 x i8>*
+  store <8 x i8> %4, <8 x i8>* %5, align 1
+  store i8 %i67, i8* %i66, align 1
+  ret void
 }

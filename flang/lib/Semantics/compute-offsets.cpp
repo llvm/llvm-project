@@ -50,7 +50,8 @@ private:
   void DoEquivalenceSet(const EquivalenceSet &);
   SymbolAndOffset Resolve(const SymbolAndOffset &);
   std::size_t ComputeOffset(const EquivalenceObject &);
-  void DoSymbol(Symbol &);
+  // Returns amount of padding that was needed for alignment
+  std::size_t DoSymbol(Symbol &);
   SizeAndAlignment GetSizeAndAlignment(const Symbol &, bool entire);
   std::size_t Align(std::size_t, std::size_t);
 
@@ -150,7 +151,13 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   std::size_t minAlignment{0};
   for (auto &object : details.objects()) {
     Symbol &symbol{*object};
-    DoSymbol(symbol);
+    auto errorSite{
+        commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
+    if (std::size_t padding{DoSymbol(symbol)}) {
+      context_.Say(errorSite,
+          "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
+          commonBlock.name(), padding, symbol.name());
+    }
     auto eqIter{equivalenceBlock_.end()};
     auto iter{dependents_.find(symbol)};
     if (iter == dependents_.end()) {
@@ -161,8 +168,6 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
     } else {
       SymbolAndOffset &dep{iter->second};
       Symbol &base{*dep.symbol};
-      auto errorSite{
-          commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
       if (const auto *baseBlock{FindCommonBlockContaining(base)}) {
         if (baseBlock == &commonBlock) {
           context_.Say(errorSite,
@@ -287,19 +292,22 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
   return result;
 }
 
-void ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
+std::size_t ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
   if (!symbol.has<ObjectEntityDetails>() && !symbol.has<ProcEntityDetails>()) {
-    return;
+    return 0;
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol, true)};
   if (s.size == 0) {
-    return;
+    return 0;
   }
+  std::size_t previousOffset{offset_};
   offset_ = Align(offset_, s.alignment);
+  std::size_t padding{offset_ - previousOffset};
   symbol.set_size(s.size);
   symbol.set_offset(offset_);
   offset_ += s.size;
   alignment_ = std::max(alignment_, s.alignment);
+  return padding;
 }
 
 auto ComputeOffsetsHelper::GetSizeAndAlignment(

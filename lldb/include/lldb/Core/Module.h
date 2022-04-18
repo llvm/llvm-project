@@ -817,6 +817,12 @@ public:
   void ReportErrorIfModifyDetected(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
+  void ReportWarningOptimization(llvm::Optional<lldb::user_id_t> debugger_id);
+
+  void
+  ReportWarningUnsupportedLanguage(lldb::LanguageType language,
+                                   llvm::Optional<lldb::user_id_t> debugger_id);
+
   // Return true if the file backing this module has changed since the module
   // was originally created  since we saved the initial file modification time
   // when the module first gets created.
@@ -1052,6 +1058,9 @@ protected:
   /// an object file and a symbol file which both have symbol tables. The parse
   /// time for the symbol tables can be aggregated here.
   StatsDuration m_symtab_index_time;
+
+  std::once_flag m_optimization_warning;
+  std::once_flag m_language_warning;
 
   /// Resolve a file or load virtual address.
   ///

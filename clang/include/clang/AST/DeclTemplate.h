@@ -1148,23 +1148,40 @@ public:
 /// parameters and is not part of the Decl hierarchy. Just a facility.
 class TemplateParmPosition {
 protected:
-  // FIXME: These probably don't need to be ints. int:5 for depth, int:8 for
-  // position? Maybe?
-  unsigned Depth;
-  unsigned Position;
+  enum { DepthWidth = 20, PositionWidth = 12 };
+  unsigned Depth : DepthWidth;
+  unsigned Position : PositionWidth;
 
-  TemplateParmPosition(unsigned D, unsigned P) : Depth(D), Position(P) {}
+  static constexpr unsigned MaxDepth = (1U << DepthWidth) - 1;
+  static constexpr unsigned MaxPosition = (1U << PositionWidth) - 1;
+
+  TemplateParmPosition(unsigned D, unsigned P) : Depth(D), Position(P) {
+    // The input may fill maximum values to show that it is invalid.
+    // Add one here to convert it to zero.
+    assert((D + 1) <= MaxDepth &&
+           "The depth of template parmeter position is more than 2^20!");
+    assert((P + 1) <= MaxPosition &&
+           "The position of template parmeter position is more than 2^12!");
+  }
 
 public:
   TemplateParmPosition() = delete;
 
   /// Get the nesting depth of the template parameter.
   unsigned getDepth() const { return Depth; }
-  void setDepth(unsigned D) { Depth = D; }
+  void setDepth(unsigned D) {
+    assert((D + 1) <= MaxDepth &&
+           "The depth of template parmeter position is more than 2^20!");
+    Depth = D;
+  }
 
   /// Get the position of the template parameter within its parameter list.
   unsigned getPosition() const { return Position; }
-  void setPosition(unsigned P) { Position = P; }
+  void setPosition(unsigned P) {
+    assert((P + 1) <= MaxPosition &&
+           "The position of template parmeter position is more than 2^12!");
+    Position = P;
+  }
 
   /// Get the index of the template parameter within its parameter list.
   unsigned getIndex() const { return Position; }
