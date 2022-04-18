@@ -6431,6 +6431,18 @@ const parser::Name *DeclarationVisitor::FindComponent(
   if (!base || !base->symbol) {
     return nullptr;
   }
+  if (auto *misc{base->symbol->detailsIf<MiscDetails>()}) {
+    if (component.source == "kind") {
+      if (misc->kind() == MiscDetails::Kind::ComplexPartRe ||
+          misc->kind() == MiscDetails::Kind::ComplexPartIm ||
+          misc->kind() == MiscDetails::Kind::KindParamInquiry ||
+          misc->kind() == MiscDetails::Kind::LenParamInquiry) {
+        // x%{re,im,kind,len}%kind
+        MakePlaceholder(component, MiscDetails::Kind::KindParamInquiry);
+        return &component;
+      }
+    }
+  }
   auto &symbol{base->symbol->GetUltimate()};
   if (!symbol.has<AssocEntityDetails>() && !ConvertToObjectEntity(symbol)) {
     SayWithDecl(*base, symbol,
@@ -6442,25 +6454,24 @@ const parser::Name *DeclarationVisitor::FindComponent(
     return nullptr; // should have already reported error
   }
   if (const IntrinsicTypeSpec * intrinsic{type->AsIntrinsic()}) {
-    auto name{component.ToString()};
     auto category{intrinsic->category()};
     MiscDetails::Kind miscKind{MiscDetails::Kind::None};
-    if (name == "kind") {
+    if (component.source == "kind") {
       miscKind = MiscDetails::Kind::KindParamInquiry;
     } else if (category == TypeCategory::Character) {
-      if (name == "len") {
+      if (component.source == "len") {
         miscKind = MiscDetails::Kind::LenParamInquiry;
       }
     } else if (category == TypeCategory::Complex) {
-      if (name == "re") {
+      if (component.source == "re") {
         miscKind = MiscDetails::Kind::ComplexPartRe;
-      } else if (name == "im") {
+      } else if (component.source == "im") {
         miscKind = MiscDetails::Kind::ComplexPartIm;
       }
     }
     if (miscKind != MiscDetails::Kind::None) {
       MakePlaceholder(component, miscKind);
-      return nullptr;
+      return &component;
     }
   } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
     if (const Scope * scope{derived->scope()}) {
