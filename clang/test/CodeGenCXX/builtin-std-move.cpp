@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -o - -std=c++17 %s | FileCheck %s --implicit-check-not=@_ZSt4move
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-linux-gnu -emit-llvm -o - -std=c++17 %s | FileCheck %s --implicit-check-not=@_ZSt4move
 
 namespace std {
   template<typename T> constexpr T &&move(T &val) { return static_cast<T&&>(val); }
