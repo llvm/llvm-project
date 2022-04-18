@@ -52443,15 +52443,13 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
   if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
     Y = Y.getOperand(0);
 
-  if (!Y.hasOneUse())
-    return SDValue();
-
   X86::CondCode CC;
   SDValue EFLAGS;
-  if (Y.getOpcode() == X86ISD::SETCC) {
+  if (Y.getOpcode() == X86ISD::SETCC && Y.hasOneUse()) {
     CC = (X86::CondCode)Y.getConstantOperandVal(0);
     EFLAGS = Y.getOperand(1);
-  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1))) {
+  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1)) &&
+             Y.hasOneUse()) {
     EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
   }
 
