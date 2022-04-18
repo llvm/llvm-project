@@ -674,8 +674,9 @@ public:
 
   mlir::Type getSomeKindInteger() { return builder.getIndexType(); }
 
-  mlir::FuncOp getFunction(llvm::StringRef name, mlir::FunctionType funTy) {
-    if (mlir::FuncOp func = builder.getNamedFunction(name))
+  mlir::func::FuncOp getFunction(llvm::StringRef name,
+                                 mlir::FunctionType funTy) {
+    if (mlir::func::FuncOp func = builder.getNamedFunction(name))
       return func;
     return builder.createFunction(getLoc(), name, funTy);
   }
@@ -800,7 +801,7 @@ public:
             fir::factory::extractCharacterProcedureTuple(builder, loc, funcPtr);
     } else {
       std::string name = converter.mangleName(*symbol);
-      mlir::FuncOp func =
+      mlir::func::FuncOp func =
           Fortran::lower::getOrDeclareFunction(name, proc, converter);
       funcPtr = builder.create<fir::AddrOfOp>(loc, func.getFunctionType(),
                                               builder.getSymbolRefAttr(name));
@@ -2258,7 +2259,8 @@ public:
 
   // Find the argument that corresponds to the host associations.
   // Verify some assumptions about how the signature was built here.
-  [[maybe_unused]] static unsigned findHostAssocTuplePos(mlir::FuncOp fn) {
+  [[maybe_unused]] static unsigned
+  findHostAssocTuplePos(mlir::func::FuncOp fn) {
     // Scan the argument list from last to first as the host associations are
     // appended for now.
     for (unsigned i = fn.getNumArguments(); i > 0; --i)
@@ -2447,7 +2449,7 @@ public:
     // different view of what the function signature is in different locations.
     // Casts are inserted as needed below to accommodate this.
 
-    // The mlir::FuncOp type prevails, unless it has a different number of
+    // The mlir::func::FuncOp type prevails, unless it has a different number of
     // arguments which can happen in legal program if it was passed as a dummy
     // procedure argument earlier with no further type information.
     mlir::SymbolRefAttr funcSymbolAttr;
@@ -3160,7 +3162,7 @@ static mlir::Type adjustedArrayElementType(mlir::Type t) {
 /// Helper to generate calls to scalar user defined assignment procedures.
 static void genScalarUserDefinedAssignmentCall(fir::FirOpBuilder &builder,
                                                mlir::Location loc,
-                                               mlir::FuncOp func,
+                                               mlir::func::FuncOp func,
                                                const fir::ExtendedValue &lhs,
                                                const fir::ExtendedValue &rhs) {
   auto prepareUserDefinedArg =
@@ -3640,12 +3642,12 @@ public:
     const auto *rhs = procRef.arguments()[1].value().UnwrapExpr();
     assert(lhs && rhs &&
            "user defined assignment arguments must be expressions");
-    mlir::FuncOp func =
+    mlir::func::FuncOp func =
         Fortran::lower::CallerInterface(procRef, converter).getFuncOp();
     ael.lowerElementalUserAssignment(func, *lhs, *rhs);
   }
 
-  void lowerElementalUserAssignment(mlir::FuncOp userAssignment,
+  void lowerElementalUserAssignment(mlir::func::FuncOp userAssignment,
                                     const Fortran::lower::SomeExpr &lhs,
                                     const Fortran::lower::SomeExpr &rhs) {
     mlir::Location loc = getLoc();
@@ -3737,7 +3739,8 @@ public:
       Fortran::lower::AbstractConverter &converter,
       Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
       Fortran::lower::ExplicitIterSpace &explicitIterSpace,
-      mlir::FuncOp userAssignmentFunction, const Fortran::lower::SomeExpr &lhs,
+      mlir::func::FuncOp userAssignmentFunction,
+      const Fortran::lower::SomeExpr &lhs,
       const Fortran::lower::SomeExpr &rhs) {
     Fortran::lower::ImplicitIterSpace implicit;
     ArrayExprLowering ael(converter, stmtCtx, symMap,
@@ -3746,7 +3749,7 @@ public:
     return ael.lowerScalarUserAssignment(userAssignmentFunction, lhs, rhs);
   }
 
-  ExtValue lowerScalarUserAssignment(mlir::FuncOp userAssignment,
+  ExtValue lowerScalarUserAssignment(mlir::func::FuncOp userAssignment,
                                      const Fortran::lower::SomeExpr &lhs,
                                      const Fortran::lower::SomeExpr &rhs) {
     mlir::Location loc = getLoc();
@@ -5904,7 +5907,7 @@ private:
   /// Create a call to the LLVM memcpy intrinsic.
   void createCallMemcpy(llvm::ArrayRef<mlir::Value> args) {
     mlir::Location loc = getLoc();
-    mlir::FuncOp memcpyFunc = fir::factory::getLlvmMemcpy(builder);
+    mlir::func::FuncOp memcpyFunc = fir::factory::getLlvmMemcpy(builder);
     mlir::SymbolRefAttr funcSymAttr =
         builder.getSymbolRefAttr(memcpyFunc.getName());
     mlir::FunctionType funcTy = memcpyFunc.getFunctionType();
@@ -5917,7 +5920,7 @@ private:
                          mlir::Value bufferSize, mlir::Value buffSize,
                          mlir::Value eleSz) {
     mlir::Location loc = getLoc();
-    mlir::FuncOp reallocFunc = fir::factory::getRealloc(builder);
+    mlir::func::FuncOp reallocFunc = fir::factory::getRealloc(builder);
     auto cond = builder.create<mlir::arith::CmpIOp>(
         loc, mlir::arith::CmpIPredicate::sle, bufferSize, needed);
     auto ifOp = builder.create<fir::IfOp>(loc, mem.getType(), cond,
@@ -7051,7 +7054,7 @@ mlir::Value Fortran::lower::createSubroutineCall(
           call);
     } else if (explicitIterSpace.isActive() && lhs->Rank() == 0) {
       // Scalar defined assignment (elemental or not) in a FORALL context.
-      mlir::FuncOp func =
+      mlir::func::FuncOp func =
           Fortran::lower::CallerInterface(call, converter).getFuncOp();
       ArrayExprLowering::lowerScalarUserAssignment(
           converter, symMap, stmtCtx, explicitIterSpace, func, *lhs, *rhs);

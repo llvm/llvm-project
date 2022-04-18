@@ -1861,7 +1861,7 @@ struct MemRefToLLVMPass : public ConvertMemRefToLLVMBase<MemRefToLLVMPass> {
     RewritePatternSet patterns(&getContext());
     populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
     LLVMConversionTarget target(getContext());
-    target.addLegalOp<FuncOp>();
+    target.addLegalOp<func::FuncOp>();
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
   }

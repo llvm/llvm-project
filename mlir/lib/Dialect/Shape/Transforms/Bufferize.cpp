@@ -37,6 +37,6 @@ struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
 };
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::createShapeBufferizePass() {
+std::unique_ptr<OperationPass<func::FuncOp>> mlir::createShapeBufferizePass() {
   return std::make_unique<ShapeBufferizePass>();
 }

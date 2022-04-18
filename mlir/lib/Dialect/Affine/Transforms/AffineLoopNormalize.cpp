@@ -37,6 +37,7 @@ struct AffineLoopNormalizePass
 
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::createAffineLoopNormalizePass() {
+std::unique_ptr<OperationPass<func::FuncOp>>
+mlir::createAffineLoopNormalizePass() {
   return std::make_unique<AffineLoopNormalizePass>();
 }

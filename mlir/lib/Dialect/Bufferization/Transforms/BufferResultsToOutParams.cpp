@@ -18,7 +18,7 @@ using namespace mlir;
 // Updates the func op and entry block.
 //
 // Any args appended to the entry block are added to `appendedEntryArgs`.
-static void updateFuncOp(FuncOp func,
+static void updateFuncOp(func::FuncOp func,
                          SmallVectorImpl<BlockArgument> &appendedEntryArgs) {
   auto functionType = func.getFunctionType();
 
@@ -57,10 +57,10 @@ static void updateFuncOp(FuncOp func,
     appendedEntryArgs.push_back(func.front().addArgument(type, loc));
 }
 
-// Updates all ReturnOps in the scope of the given FuncOp by either keeping them
-// as return values or copying the associated buffer contents into the given
-// out-params.
-static void updateReturnOps(FuncOp func,
+// Updates all ReturnOps in the scope of the given func::FuncOp by either
+// keeping them as return values or copying the associated buffer contents into
+// the given out-params.
+static void updateReturnOps(func::FuncOp func,
                             ArrayRef<BlockArgument> appendedEntryArgs) {
   func.walk([&](func::ReturnOp op) {
     SmallVector<Value, 6> copyIntoOutParams;
@@ -128,7 +128,7 @@ struct BufferResultsToOutParamsPass
   void runOnOperation() override {
     ModuleOp module = getOperation();
 
-    for (auto func : module.getOps<FuncOp>()) {
+    for (auto func : module.getOps<func::FuncOp>()) {
       SmallVector<BlockArgument, 6> appendedEntryArgs;
       updateFuncOp(func, appendedEntryArgs);
       if (func.isExternal())

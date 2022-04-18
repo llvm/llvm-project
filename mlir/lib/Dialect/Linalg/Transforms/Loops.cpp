@@ -298,7 +298,7 @@ struct FoldAffineOp : public RewritePattern {
 };
 
 template <typename LoopType>
-static void lowerLinalgToLoopsImpl(FuncOp funcOp) {
+static void lowerLinalgToLoopsImpl(func::FuncOp funcOp) {
   MLIRContext *context = funcOp.getContext();
   RewritePatternSet patterns(context);
   patterns.add<LinalgRewritePattern<LoopType>>(context);
@@ -338,16 +338,17 @@ struct LowerToParallelLoops
 
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::createConvertLinalgToLoopsPass() {
+std::unique_ptr<OperationPass<func::FuncOp>>
+mlir::createConvertLinalgToLoopsPass() {
   return std::make_unique<LowerToLoops>();
 }
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createConvertLinalgToParallelLoopsPass() {
   return std::make_unique<LowerToParallelLoops>();
 }
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createConvertLinalgToAffineLoopsPass() {
   return std::make_unique<LowerToAffineLoops>();
 }

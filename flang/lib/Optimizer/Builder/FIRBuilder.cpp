@@ -31,21 +31,22 @@ static llvm::cl::opt<std::size_t>
                                       "name"),
                        llvm::cl::init(32));
 
-mlir::FuncOp fir::FirOpBuilder::createFunction(mlir::Location loc,
-                                               mlir::ModuleOp module,
-                                               llvm::StringRef name,
-                                               mlir::FunctionType ty) {
+mlir::func::FuncOp fir::FirOpBuilder::createFunction(mlir::Location loc,
+                                                     mlir::ModuleOp module,
+                                                     llvm::StringRef name,
+                                                     mlir::FunctionType ty) {
   return fir::createFuncOp(loc, module, name, ty);
 }
 
-mlir::FuncOp fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
-                                                 llvm::StringRef name) {
-  return modOp.lookupSymbol<mlir::FuncOp>(name);
+mlir::func::FuncOp fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
+                                                       llvm::StringRef name) {
+  return modOp.lookupSymbol<mlir::func::FuncOp>(name);
 }
 
-mlir::FuncOp fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
-                                                 mlir::SymbolRefAttr symbol) {
-  return modOp.lookupSymbol<mlir::FuncOp>(symbol);
+mlir::func::FuncOp
+fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
+                                    mlir::SymbolRefAttr symbol) {
+  return modOp.lookupSymbol<mlir::func::FuncOp>(symbol);
 }
 
 fir::GlobalOp fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,

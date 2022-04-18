@@ -34,7 +34,7 @@ struct AffineScalarReplacement
 
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createAffineScalarReplacementPass() {
   return std::make_unique<AffineScalarReplacement>();
 }

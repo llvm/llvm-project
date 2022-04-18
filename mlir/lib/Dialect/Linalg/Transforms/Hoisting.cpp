@@ -339,7 +339,7 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
 // 4. Hoist the tensor_read/tensor_write and update the tensor SSA links.
 // After this transformation the scf.forOp may have unused arguments that can be
 // remove by the canonicalization pass.
-void mlir::linalg::hoistRedundantVectorTransfersOnTensor(FuncOp func) {
+void mlir::linalg::hoistRedundantVectorTransfersOnTensor(func::FuncOp func) {
   bool changed = true;
   while (changed) {
     changed = false;
@@ -391,7 +391,7 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(FuncOp func) {
   }
 }
 
-void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
+void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
   bool changed = true;
   while (changed) {
     changed = false;

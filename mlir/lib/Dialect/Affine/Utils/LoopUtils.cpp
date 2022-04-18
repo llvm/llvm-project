@@ -141,7 +141,7 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
   auto *parentBlock = forOp->getBlock();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
-      OpBuilder topBuilder(forOp->getParentOfType<FuncOp>().getBody());
+      OpBuilder topBuilder(forOp->getParentOfType<func::FuncOp>().getBody());
       auto constOp = topBuilder.create<arith::ConstantIndexOp>(
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
@@ -960,7 +960,7 @@ void mlir::getPerfectlyNestedLoops(SmallVectorImpl<AffineForOp> &nestedLoops,
 /// Identify valid and profitable bands of loops to tile. This is currently just
 /// a temporary placeholder to test the mechanics of tiled code generation.
 /// Returns all maximal outermost perfect loop nests to tile.
-void mlir::getTileableBands(FuncOp f,
+void mlir::getTileableBands(func::FuncOp f,
                             std::vector<SmallVector<AffineForOp, 6>> *bands) {
   // Get maximal perfect nest of 'affine.for' insts starting from root
   // (inclusive).
@@ -2049,7 +2049,7 @@ static LogicalResult generateCopy(
   *nBegin = begin;
   *nEnd = end;
 
-  FuncOp f = begin->getParentOfType<FuncOp>();
+  func::FuncOp f = begin->getParentOfType<func::FuncOp>();
   OpBuilder topBuilder(f.getBody());
   Value zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
 
@@ -2067,7 +2067,7 @@ static LogicalResult generateCopy(
   OpBuilder &b = region.isWrite() ? epilogue : prologue;
 
   // Builder to create constants at the top level.
-  auto func = copyPlacementBlock->getParent()->getParentOfType<FuncOp>();
+  auto func = copyPlacementBlock->getParent()->getParentOfType<func::FuncOp>();
   OpBuilder top(func.getBody());
 
   auto loc = region.loc;
@@ -2614,7 +2614,7 @@ gatherLoopsInBlock(Block *block, unsigned currLoopDepth,
 }
 
 /// Gathers all AffineForOps in 'func.func' grouped by loop depth.
-void mlir::gatherLoops(FuncOp func,
+void mlir::gatherLoops(func::FuncOp func,
                        std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
   for (auto &block : func)
     gatherLoopsInBlock(&block, /*currLoopDepth=*/0, depthToLoops);

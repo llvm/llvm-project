@@ -15,7 +15,7 @@ using namespace test;
 
 namespace {
 struct TestRecursiveTypesPass
-    : public PassWrapper<TestRecursiveTypesPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestRecursiveTypesPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestRecursiveTypesPass)
 
   LogicalResult createIRWithTypes();
@@ -25,7 +25,7 @@ struct TestRecursiveTypesPass
     return "Test support for recursive types";
   }
   void runOnOperation() override {
-    FuncOp func = getOperation();
+    func::FuncOp func = getOperation();
 
     // Just make sure recursive types are printed and parsed.
     if (func.getName() == "roundtrip")
@@ -47,7 +47,7 @@ struct TestRecursiveTypesPass
 
 LogicalResult TestRecursiveTypesPass::createIRWithTypes() {
   MLIRContext *ctx = &getContext();
-  FuncOp func = getOperation();
+  func::FuncOp func = getOperation();
   auto type = TestRecursiveType::get(ctx, "some_long_and_unique_name");
   if (failed(type.setBody(type)))
     return func.emitError("expected to be able to set the type body");

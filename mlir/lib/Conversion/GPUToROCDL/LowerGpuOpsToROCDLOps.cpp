@@ -94,7 +94,7 @@ struct LowerGpuOpsToROCDLOpsPass
 } // namespace
 
 void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
-  target.addIllegalOp<FuncOp>();
+  target.addIllegalOp<func::FuncOp>();
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<ROCDL::ROCDLDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();

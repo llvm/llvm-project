@@ -101,8 +101,8 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
     rewriter.setInsertionPointToStart(&module->getRegion(0).front());
     auto opFunctionTy = FunctionType::get(
         rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
-    opFunc =
-        rewriter.create<FuncOp>(rewriter.getUnknownLoc(), name, opFunctionTy);
+    opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name,
+                                           opFunctionTy);
     opFunc.setPrivate();
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));

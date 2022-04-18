@@ -281,7 +281,7 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
 /// Returns true if tensor has an in-place annotation.
 static bool isInPlace(Value val) {
   if (auto arg = val.dyn_cast<BlockArgument>())
-    if (auto funcOp = dyn_cast<FuncOp>(arg.getOwner()->getParentOp()))
+    if (auto funcOp = dyn_cast<func::FuncOp>(arg.getOwner()->getParentOp()))
       if (auto attr = funcOp.getArgAttrOfType<BoolAttr>(
               arg.getArgNumber(),
               bufferization::BufferizableOpInterface::kInplaceableAttrName))

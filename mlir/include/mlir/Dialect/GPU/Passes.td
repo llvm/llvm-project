@@ -23,7 +23,7 @@ def GpuKernelOutlining : Pass<"gpu-kernel-outlining", "ModuleOp"> {
   let dependentDialects = ["mlir::DLTIDialect"];
 }
 
-def GpuAsyncRegionPass : Pass<"gpu-async-region", "FuncOp"> {
+def GpuAsyncRegionPass : Pass<"gpu-async-region", "func::FuncOp"> {
   let summary = "Make GPU ops async";
   let constructor = "mlir::createGpuAsyncRegionPass()";
   let dependentDialects = ["async::AsyncDialect"];

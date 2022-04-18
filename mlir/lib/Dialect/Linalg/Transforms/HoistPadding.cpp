@@ -128,7 +128,7 @@ static bool isOnlyUsedAsInputOfLinalgOp(tensor::PadOp padOp) {
 static void
 getAtMostNEnclosingLoops(tensor::PadOp padOp, int nLevels,
                          SmallVector<scf::ForOp> &reverseEnclosingLoops) {
-  AsmState state(padOp->getParentOfType<mlir::FuncOp>());
+  AsmState state(padOp->getParentOfType<func::FuncOp>());
   (void)state;
   scf::ForOp outermostEnclosingForOp = nullptr;
   Operation *nextEnclosingOp = padOp->getParentOp();

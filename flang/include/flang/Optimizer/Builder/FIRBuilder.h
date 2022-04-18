@@ -52,8 +52,8 @@ public:
   }
 
   /// Get the current Function
-  mlir::FuncOp getFunction() {
-    return getRegion().getParentOfType<mlir::FuncOp>();
+  mlir::func::FuncOp getFunction() {
+    return getRegion().getParentOfType<mlir::func::FuncOp>();
   }
 
   /// Get a reference to the kind map.
@@ -222,19 +222,19 @@ public:
 
   /// Get a function by name. If the function exists in the current module, it
   /// is returned. Otherwise, a null FuncOp is returned.
-  mlir::FuncOp getNamedFunction(llvm::StringRef name) {
+  mlir::func::FuncOp getNamedFunction(llvm::StringRef name) {
     return getNamedFunction(getModule(), name);
   }
-  static mlir::FuncOp getNamedFunction(mlir::ModuleOp module,
-                                       llvm::StringRef name);
+  static mlir::func::FuncOp getNamedFunction(mlir::ModuleOp module,
+                                             llvm::StringRef name);
 
   /// Get a function by symbol name. The result will be null if there is no
   /// function with the given symbol in the module.
-  mlir::FuncOp getNamedFunction(mlir::SymbolRefAttr symbol) {
+  mlir::func::FuncOp getNamedFunction(mlir::SymbolRefAttr symbol) {
     return getNamedFunction(getModule(), symbol);
   }
-  static mlir::FuncOp getNamedFunction(mlir::ModuleOp module,
-                                       mlir::SymbolRefAttr symbol);
+  static mlir::func::FuncOp getNamedFunction(mlir::ModuleOp module,
+                                             mlir::SymbolRefAttr symbol);
 
   fir::GlobalOp getNamedGlobal(llvm::StringRef name) {
     return getNamedGlobal(getModule(), name);
@@ -254,28 +254,29 @@ public:
 
   /// Create a new FuncOp. If the function may have already been created, use
   /// `addNamedFunction` instead.
-  mlir::FuncOp createFunction(mlir::Location loc, llvm::StringRef name,
-                              mlir::FunctionType ty) {
+  mlir::func::FuncOp createFunction(mlir::Location loc, llvm::StringRef name,
+                                    mlir::FunctionType ty) {
     return createFunction(loc, getModule(), name, ty);
   }
 
-  static mlir::FuncOp createFunction(mlir::Location loc, mlir::ModuleOp module,
-                                     llvm::StringRef name,
-                                     mlir::FunctionType ty);
+  static mlir::func::FuncOp createFunction(mlir::Location loc,
+                                           mlir::ModuleOp module,
+                                           llvm::StringRef name,
+                                           mlir::FunctionType ty);
 
   /// Determine if the named function is already in the module. Return the
   /// instance if found, otherwise add a new named function to the module.
-  mlir::FuncOp addNamedFunction(mlir::Location loc, llvm::StringRef name,
-                                mlir::FunctionType ty) {
+  mlir::func::FuncOp addNamedFunction(mlir::Location loc, llvm::StringRef name,
+                                      mlir::FunctionType ty) {
     if (auto func = getNamedFunction(name))
       return func;
     return createFunction(loc, name, ty);
   }
 
-  static mlir::FuncOp addNamedFunction(mlir::Location loc,
-                                       mlir::ModuleOp module,
-                                       llvm::StringRef name,
-                                       mlir::FunctionType ty) {
+  static mlir::func::FuncOp addNamedFunction(mlir::Location loc,
+                                             mlir::ModuleOp module,
+                                             llvm::StringRef name,
+                                             mlir::FunctionType ty) {
     if (auto func = getNamedFunction(module, name))
       return func;
     return createFunction(loc, module, name, ty);

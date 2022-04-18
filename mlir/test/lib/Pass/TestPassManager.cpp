@@ -26,7 +26,7 @@ struct TestModulePass
   }
 };
 struct TestFunctionPass
-    : public PassWrapper<TestFunctionPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestFunctionPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFunctionPass)
 
   void runOnOperation() final {}
@@ -50,7 +50,7 @@ struct TestInterfacePass
   }
 };
 struct TestOptionsPass
-    : public PassWrapper<TestOptionsPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestOptionsPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsPass)
 
   struct Options : public PassPipelineOptions<Options> {
@@ -155,11 +155,11 @@ static void testNestedPipeline(OpPassManager &pm) {
   auto &modulePM = pm.nest<ModuleOp>();
   modulePM.addPass(std::make_unique<TestModulePass>());
   /// A nested function pass.
-  auto &nestedFunctionPM = modulePM.nest<FuncOp>();
+  auto &nestedFunctionPM = modulePM.nest<func::FuncOp>();
   nestedFunctionPM.addPass(std::make_unique<TestFunctionPass>());
 
   // Nest a function pipeline that contains a single pass.
-  auto &functionPM = pm.nest<FuncOp>();
+  auto &functionPM = pm.nest<func::FuncOp>();
   functionPM.addPass(std::make_unique<TestFunctionPass>());
 }
 

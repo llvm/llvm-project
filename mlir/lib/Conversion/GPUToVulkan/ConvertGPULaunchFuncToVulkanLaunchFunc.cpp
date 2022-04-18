@@ -123,7 +123,7 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::declareVulkanLaunchFunc(
 
   // Declare vulkan launch function.
   auto funcType = builder.getFunctionType(vulkanLaunchTypes, {});
-  builder.create<FuncOp>(loc, kVulkanLaunch, funcType).setPrivate();
+  builder.create<func::FuncOp>(loc, kVulkanLaunch, funcType).setPrivate();
 
   return success();
 }

@@ -1022,7 +1022,7 @@ def Shape_FunctionLibraryOp : Shape_Op<"function_library",
 
   let extraClassDeclaration = [{
     /// Returns an associated shape function for an operation if defined.
-    FuncOp getShapeFunction(Operation *op);
+    func::FuncOp getShapeFunction(Operation *op);
   }];
 
   let builders = [OpBuilder<(ins "StringRef":$name)>];

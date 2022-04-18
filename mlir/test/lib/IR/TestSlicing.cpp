@@ -25,12 +25,12 @@ using namespace mlir;
 /// with name being the function name and a `suffix`.
 static LogicalResult createBackwardSliceFunction(Operation *op,
                                                  StringRef suffix) {
-  FuncOp parentFuncOp = op->getParentOfType<FuncOp>();
+  func::FuncOp parentFuncOp = op->getParentOfType<func::FuncOp>();
   OpBuilder builder(parentFuncOp);
   Location loc = op->getLoc();
   std::string clonedFuncOpName = parentFuncOp.getName().str() + suffix.str();
-  FuncOp clonedFuncOp = builder.create<FuncOp>(loc, clonedFuncOpName,
-                                               parentFuncOp.getFunctionType());
+  func::FuncOp clonedFuncOp = builder.create<func::FuncOp>(
+      loc, clonedFuncOpName, parentFuncOp.getFunctionType());
   BlockAndValueMapping mapper;
   builder.setInsertionPointToEnd(clonedFuncOp.addEntryBlock());
   for (const auto &arg : enumerate(parentFuncOp.getArguments()))
@@ -61,7 +61,7 @@ struct SliceAnalysisTestPass
 
 void SliceAnalysisTestPass::runOnOperation() {
   ModuleOp module = getOperation();
-  auto funcOps = module.getOps<FuncOp>();
+  auto funcOps = module.getOps<func::FuncOp>();
   unsigned opNum = 0;
   for (auto funcOp : funcOps) {
     // TODO: For now this is just looking for Linalg ops. It can be generalized

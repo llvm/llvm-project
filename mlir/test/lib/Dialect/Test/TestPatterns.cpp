@@ -148,7 +148,7 @@ public:
 };
 
 struct TestPatternDriver
-    : public PassWrapper<TestPatternDriver, OperationPass<FuncOp>> {
+    : public PassWrapper<TestPatternDriver, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
 
   StringRef getArgument() const final { return "test-patterns"; }
@@ -176,7 +176,7 @@ namespace {
 template <typename OpTy>
 static void invokeCreateWithInferredReturnType(Operation *op) {
   auto *context = op->getContext();
-  auto fop = op->getParentOfType<FuncOp>();
+  auto fop = op->getParentOfType<func::FuncOp>();
   auto location = UnknownLoc::get(context);
   OpBuilder b(op);
   b.setInsertionPointAfter(op);
@@ -215,7 +215,7 @@ static void reifyReturnShape(Operation *op) {
 }
 
 struct TestReturnTypeDriver
-    : public PassWrapper<TestReturnTypeDriver, OperationPass<FuncOp>> {
+    : public PassWrapper<TestReturnTypeDriver, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestReturnTypeDriver)
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -257,7 +257,8 @@ struct TestReturnTypeDriver
 
 namespace {
 struct TestDerivedAttributeDriver
-    : public PassWrapper<TestDerivedAttributeDriver, OperationPass<FuncOp>> {
+    : public PassWrapper<TestDerivedAttributeDriver,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDerivedAttributeDriver)
 
   StringRef getArgument() const final { return "test-derived-attr"; }
@@ -690,8 +691,8 @@ struct TestLegalizePatternDriver
              TestNestedOpCreationUndoRewrite, TestReplaceEraseOp,
              TestCreateUnregisteredOp>(&getContext());
     patterns.add<TestDropOpSignatureConversion>(&getContext(), converter);
-    mlir::populateFunctionOpInterfaceTypeConversionPattern<FuncOp>(patterns,
-                                                                   converter);
+    mlir::populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
+        patterns, converter);
     mlir::populateCallOpTypeConversionPattern(patterns, converter);
 
     // Define the conversion target used for the test.
@@ -706,7 +707,7 @@ struct TestLegalizePatternDriver
       return llvm::none_of(op.getOperandTypes(),
                            [](Type type) { return type.isF32(); });
     });
-    target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return converter.isSignatureLegal(op.getFunctionType()) &&
              converter.isLegal(&op.getBody());
     });
@@ -726,7 +727,7 @@ struct TestLegalizePatternDriver
     });
 
     // Check support for marking certain operations as recursively legal.
-    target.markOpRecursivelyLegal<FuncOp, ModuleOp>([](Operation *op) {
+    target.markOpRecursivelyLegal<func::FuncOp, ModuleOp>([](Operation *op) {
       return static_cast<bool>(
           op->getAttrOfType<UnitAttr>("test.recursively_legal"));
     });
@@ -871,7 +872,7 @@ struct TestRemapValueInRegion
 };
 
 struct TestRemappedValue
-    : public mlir::PassWrapper<TestRemappedValue, OperationPass<FuncOp>> {
+    : public mlir::PassWrapper<TestRemappedValue, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestRemappedValue)
 
   StringRef getArgument() const final { return "test-remapped-value"; }
@@ -888,7 +889,7 @@ struct TestRemappedValue
     patterns.add<TestRemapValueInRegion>(typeConverter, &getContext());
 
     mlir::ConversionTarget target(getContext());
-    target.addLegalOp<ModuleOp, FuncOp, TestReturnOp>();
+    target.addLegalOp<ModuleOp, func::FuncOp, TestReturnOp>();
 
     // Expect the type_producer/type_consumer operations to only operate on f64.
     target.addDynamicallyLegalOp<TestTypeProducerOp>(
@@ -931,7 +932,8 @@ struct RemoveTestDialectOps : public RewritePattern {
 };
 
 struct TestUnknownRootOpDriver
-    : public mlir::PassWrapper<TestUnknownRootOpDriver, OperationPass<FuncOp>> {
+    : public mlir::PassWrapper<TestUnknownRootOpDriver,
+                               OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestUnknownRootOpDriver)
 
   StringRef getArgument() const final {
@@ -1142,7 +1144,7 @@ struct TestTypeConversionDriver
              (recursiveType &&
               recursiveType.getName() == "outer_converted_type");
     });
-    target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return converter.isSignatureLegal(op.getFunctionType()) &&
              converter.isLegal(&op.getBody());
     });
@@ -1162,8 +1164,8 @@ struct TestTypeConversionDriver
                  TestTestSignatureConversionNoConverter>(converter,
                                                          &getContext());
     patterns.add<TestTypeConversionAnotherProducer>(&getContext());
-    mlir::populateFunctionOpInterfaceTypeConversionPattern<FuncOp>(patterns,
-                                                                   converter);
+    mlir::populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
+        patterns, converter);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -1312,7 +1314,7 @@ struct TestMergeBlocksPatternDriver
     patterns.add<TestMergeBlock, TestUndoBlocksMerge, TestMergeSingleBlockOps>(
         context);
     ConversionTarget target(*context);
-    target.addLegalOp<FuncOp, ModuleOp, TerminatorOp, TestBranchOp,
+    target.addLegalOp<func::FuncOp, ModuleOp, TerminatorOp, TestBranchOp,
                       TestTypeConsumerOp, TestTypeProducerOp, TestReturnOp>();
     target.addIllegalOp<ILLegalOpF>();
 

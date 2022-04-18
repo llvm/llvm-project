@@ -224,7 +224,7 @@ std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass(
   return std::make_unique<OneShotBufferizePass>(options);
 }
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::bufferization::createFinalizingBufferizePass() {
   return std::make_unique<FinalizingBufferizePass>();
 }

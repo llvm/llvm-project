@@ -183,7 +183,7 @@ public:
             rewriter.replaceOpWithNewOp<ConvertOp>(
                 addr, typeConverter.convertType(addr.getType()), addr.getVal());
           }
-        } else if (auto func = mlir::dyn_cast<mlir::FuncOp>(op)) {
+        } else if (auto func = mlir::dyn_cast<mlir::func::FuncOp>(op)) {
           mlir::FunctionType ty = func.getFunctionType();
           if (typeConverter.needsConversion(ty)) {
             rewriter.startRootUpdate(func);

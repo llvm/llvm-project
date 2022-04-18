@@ -1190,13 +1190,13 @@ void FunctionLibraryOp::build(OpBuilder &builder, OperationState &result,
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 }
 
-FuncOp FunctionLibraryOp::getShapeFunction(Operation *op) {
+func::FuncOp FunctionLibraryOp::getShapeFunction(Operation *op) {
   auto attr = getMapping()
                   .get(op->getName().getIdentifier())
                   .dyn_cast_or_null<FlatSymbolRefAttr>();
   if (!attr)
     return nullptr;
-  return lookupSymbol<FuncOp>(attr);
+  return lookupSymbol<func::FuncOp>(attr);
 }
 
 ParseResult FunctionLibraryOp::parse(OpAsmParser &parser,

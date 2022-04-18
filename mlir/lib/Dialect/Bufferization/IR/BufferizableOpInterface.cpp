@@ -626,7 +626,7 @@ bool bufferization::isFunctionArgument(Value value) {
   auto bbArg = value.dyn_cast<BlockArgument>();
   if (!bbArg)
     return false;
-  return isa<FuncOp>(bbArg.getOwner()->getParentOp());
+  return isa<func::FuncOp>(bbArg.getOwner()->getParentOp());
 }
 
 MemRefType bufferization::getContiguousMemRefType(ShapedType shapedType,

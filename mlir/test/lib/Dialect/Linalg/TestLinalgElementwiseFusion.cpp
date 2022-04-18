@@ -47,7 +47,8 @@ static bool setFusedOpOperandLimit(const OpResult &producer,
 
 namespace {
 struct TestLinalgElementwiseFusion
-    : public PassWrapper<TestLinalgElementwiseFusion, OperationPass<FuncOp>> {
+    : public PassWrapper<TestLinalgElementwiseFusion,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgElementwiseFusion)
 
   TestLinalgElementwiseFusion() = default;
@@ -96,7 +97,7 @@ struct TestLinalgElementwiseFusion
 
   void runOnOperation() override {
     MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getOperation();
+    func::FuncOp funcOp = this->getOperation();
 
     if (fuseGenericOps) {
       RewritePatternSet fusionPatterns(context);

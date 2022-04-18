@@ -260,7 +260,7 @@ static Operation *getOutermostInvariantForOp(AffineIfOp ifOp) {
   // Walk up the parents past all for op that this conditional is invariant on.
   auto ifOperands = ifOp.getOperands();
   auto *res = ifOp.getOperation();
-  while (!isa<FuncOp>(res->getParentOp())) {
+  while (!isa<func::FuncOp>(res->getParentOp())) {
     auto *parentOp = res->getParentOp();
     if (auto forOp = dyn_cast<AffineForOp>(parentOp)) {
       if (llvm::is_contained(ifOperands, forOp.getInductionVar()))
@@ -1020,7 +1020,7 @@ static void loadCSE(AffineReadOpInterface loadA,
 // currently only eliminates the stores only if no other loads/uses (other
 // than dealloc) remain.
 //
-void mlir::affineScalarReplace(FuncOp f, DominanceInfo &domInfo,
+void mlir::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
                                PostDominanceInfo &postDomInfo) {
   // Load op's whose results were replaced by those forwarded from stores.
   SmallVector<Operation *, 8> opsToErase;
@@ -1277,12 +1277,12 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
   std::unique_ptr<DominanceInfo> domInfo;
   std::unique_ptr<PostDominanceInfo> postDomInfo;
   if (domOpFilter)
-    domInfo =
-        std::make_unique<DominanceInfo>(domOpFilter->getParentOfType<FuncOp>());
+    domInfo = std::make_unique<DominanceInfo>(
+        domOpFilter->getParentOfType<func::FuncOp>());
 
   if (postDomOpFilter)
     postDomInfo = std::make_unique<PostDominanceInfo>(
-        postDomOpFilter->getParentOfType<FuncOp>());
+        postDomOpFilter->getParentOfType<func::FuncOp>());
 
   // Walk all uses of old memref; collect ops to perform replacement. We use a
   // DenseSet since an operation could potentially have multiple uses of a

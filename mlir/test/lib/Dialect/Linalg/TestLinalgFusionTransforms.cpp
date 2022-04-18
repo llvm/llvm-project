@@ -113,7 +113,7 @@ namespace {
 template <LinalgTilingLoopType LoopType>
 struct TestLinalgFusionTransforms
     : public PassWrapper<TestLinalgFusionTransforms<LoopType>,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgFusionTransforms)
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -125,7 +125,7 @@ struct TestLinalgFusionTransforms
 
   void runOnOperation() override {
     MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getOperation();
+    func::FuncOp funcOp = this->getOperation();
     RewritePatternSet fusionPatterns(context);
     Aliases alias;
     LinalgDependenceGraph dependenceGraph =
@@ -177,7 +177,7 @@ struct TestLinalgFusionTransformsTiledLoops
 };
 } // namespace
 
-static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
+static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
   OpBuilder b(f);
   DenseSet<Operation *> eraseSet;
 
@@ -237,7 +237,7 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
 
 namespace {
 struct TestLinalgGreedyFusion
-    : public PassWrapper<TestLinalgGreedyFusion, OperationPass<FuncOp>> {
+    : public PassWrapper<TestLinalgGreedyFusion, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgGreedyFusion)
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -255,7 +255,7 @@ struct TestLinalgGreedyFusion
     patterns.add<ExtractSliceOfPadTensorSwapPattern>(context);
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-    OpPassManager pm(FuncOp::getOperationName());
+    OpPassManager pm(func::FuncOp::getOperationName());
     pm.addPass(createLoopInvariantCodeMotionPass());
     pm.addPass(createCanonicalizerPass());
     pm.addPass(createCSEPass());
@@ -271,7 +271,7 @@ struct TestLinalgGreedyFusion
 /// testing.
 struct TestLinalgTileAndFuseSequencePass
     : public PassWrapper<TestLinalgTileAndFuseSequencePass,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestLinalgTileAndFuseSequencePass)
 
@@ -294,7 +294,7 @@ struct TestLinalgTileAndFuseSequencePass
   }
 
   void runOnOperation() override {
-    FuncOp funcOp = getOperation();
+    func::FuncOp funcOp = getOperation();
     auto &blocks = funcOp.getBody().getBlocks();
     if (!llvm::hasSingleElement(blocks)) {
       return;

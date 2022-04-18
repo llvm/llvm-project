@@ -221,8 +221,8 @@ struct FuncOpLowering : public OpConversionPattern<toy::FuncOp> {
     }
 
     // Create a new non-toy function, with the same region.
-    auto func = rewriter.create<mlir::FuncOp>(op.getLoc(), op.getName(),
-                                              op.getFunctionType());
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(),
+                                                    op.getFunctionType());
     rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
     rewriter.eraseOp(op);
     return success();

@@ -209,7 +209,7 @@ struct ForcedSpacing16 {
 mlir::Value fir::runtime::genExponent(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Type resultType,
                                       mlir::Value x) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
 
   if (fltTy.isF32()) {
@@ -245,7 +245,7 @@ mlir::Value fir::runtime::genExponent(fir::FirOpBuilder &builder,
 /// Generate call to Fraction instrinsic runtime routine.
 mlir::Value fir::runtime::genFraction(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Value x) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
 
   if (fltTy.isF32())
@@ -270,7 +270,7 @@ mlir::Value fir::runtime::genFraction(fir::FirOpBuilder &builder,
 mlir::Value fir::runtime::genNearest(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Value x,
                                      mlir::Value s) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
 
   if (fltTy.isF32())
@@ -305,7 +305,7 @@ mlir::Value fir::runtime::genNearest(fir::FirOpBuilder &builder,
 /// Generate call to RRSpacing intrinsic runtime routine.
 mlir::Value fir::runtime::genRRSpacing(fir::FirOpBuilder &builder,
                                        mlir::Location loc, mlir::Value x) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
 
   if (fltTy.isF32())
@@ -330,7 +330,7 @@ mlir::Value fir::runtime::genRRSpacing(fir::FirOpBuilder &builder,
 mlir::Value fir::runtime::genScale(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Value x,
                                    mlir::Value i) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
 
   if (fltTy.isF32())
@@ -354,7 +354,7 @@ mlir::Value fir::runtime::genScale(fir::FirOpBuilder &builder,
 mlir::Value fir::runtime::genSetExponent(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Value x,
                                          mlir::Value i) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
 
   if (fltTy.isF32())
@@ -377,7 +377,7 @@ mlir::Value fir::runtime::genSetExponent(fir::FirOpBuilder &builder,
 /// Generate call to Spacing intrinsic runtime routine.
 mlir::Value fir::runtime::genSpacing(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Value x) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
 
   if (fltTy.isF32())
