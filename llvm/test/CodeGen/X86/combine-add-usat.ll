@@ -152,3 +152,24 @@ define <8 x i16> @combine_no_overflow_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
   %3 = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %1, <8 x i16> %2)
   ret <8 x i16> %3
 }
+
+; fold (uadd_sat (shuffle x, u, m), (shuffle y, u, m)) -> (shuffle (uadd_sat x, y), u, m)
+define <8 x i16> @combine_shuffle_shuffle_v8i16(<8 x i16> %x0, <8 x i16> %y0) {
+; SSE-LABEL: combine_shuffle_shuffle_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm0[3,2,1,0,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[3,2,1,0,4,5,6,7]
+; SSE-NEXT:    paddusw %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_shuffle_shuffle_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; AVX-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
+; AVX-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x1= shufflevector <8 x i16> %x0, <8 x i16> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>
+  %y1 = shufflevector <8 x i16> %y0, <8 x i16> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>
+  %res = tail call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %x1, <8 x i16> %y1)
+  ret <8 x i16> %res
+}
