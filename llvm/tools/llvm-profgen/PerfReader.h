@@ -13,7 +13,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Regex.h"
-#include <bits/stdint-uintn.h>
 #include <cstdint>
 #include <fstream>
 #include <list>
