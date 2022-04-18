@@ -187,7 +187,7 @@ ASAN_MEMORY_ACCESS_CALLBACK(store, true, 16)
 extern "C"
 NOINLINE INTERFACE_ATTRIBUTE
 void __asan_loadN(uptr addr, uptr size) {
-  if ((addr = __asan_region_is_poisoned(addr, size))) {
+  if (__asan_region_is_poisoned(addr, size)) {
     GET_CALLER_PC_BP_SP;
     ReportGenericError(pc, bp, sp, addr, false, size, 0, true);
   }
@@ -196,7 +196,7 @@ void __asan_loadN(uptr addr, uptr size) {
 extern "C"
 NOINLINE INTERFACE_ATTRIBUTE
 void __asan_exp_loadN(uptr addr, uptr size, u32 exp) {
-  if ((addr = __asan_region_is_poisoned(addr, size))) {
+  if (__asan_region_is_poisoned(addr, size)) {
     GET_CALLER_PC_BP_SP;
     ReportGenericError(pc, bp, sp, addr, false, size, exp, true);
   }
@@ -205,7 +205,7 @@ void __asan_exp_loadN(uptr addr, uptr size, u32 exp) {
 extern "C"
 NOINLINE INTERFACE_ATTRIBUTE
 void __asan_loadN_noabort(uptr addr, uptr size) {
-  if ((addr = __asan_region_is_poisoned(addr, size))) {
+  if (__asan_region_is_poisoned(addr, size)) {
     GET_CALLER_PC_BP_SP;
     ReportGenericError(pc, bp, sp, addr, false, size, 0, false);
   }
@@ -214,7 +214,7 @@ void __asan_loadN_noabort(uptr addr, uptr size) {
 extern "C"
 NOINLINE INTERFACE_ATTRIBUTE
 void __asan_storeN(uptr addr, uptr size) {
-  if ((addr = __asan_region_is_poisoned(addr, size))) {
+  if (__asan_region_is_poisoned(addr, size)) {
     GET_CALLER_PC_BP_SP;
     ReportGenericError(pc, bp, sp, addr, true, size, 0, true);
   }
@@ -223,7 +223,7 @@ void __asan_storeN(uptr addr, uptr size) {
 extern "C"
 NOINLINE INTERFACE_ATTRIBUTE
 void __asan_exp_storeN(uptr addr, uptr size, u32 exp) {
-  if ((addr = __asan_region_is_poisoned(addr, size))) {
+  if (__asan_region_is_poisoned(addr, size)) {
     GET_CALLER_PC_BP_SP;
     ReportGenericError(pc, bp, sp, addr, true, size, exp, true);
   }
@@ -232,7 +232,7 @@ void __asan_exp_storeN(uptr addr, uptr size, u32 exp) {
 extern "C"
 NOINLINE INTERFACE_ATTRIBUTE
 void __asan_storeN_noabort(uptr addr, uptr size) {
-  if ((addr = __asan_region_is_poisoned(addr, size))) {
+  if (__asan_region_is_poisoned(addr, size)) {
     GET_CALLER_PC_BP_SP;
     ReportGenericError(pc, bp, sp, addr, true, size, 0, false);
   }
