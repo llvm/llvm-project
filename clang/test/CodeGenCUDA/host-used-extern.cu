@@ -11,19 +11,19 @@
 
 #include "Inputs/cuda.h"
 
-// CHECK-LABEL: @gpu.used.external = appending {{.*}}global
+// CHECK-LABEL: @__clang_gpu_used_external = appending {{.*}}global
 // CHECK-DAG: @_Z7kernel1v
 // CHECK-DAG: @_Z7kernel4v
 // CHECK-DAG: @var1
-// CHECK-LABEL: @llvm.compiler.used = {{.*}} @gpu.used.external
+// CHECK-LABEL: @llvm.compiler.used = {{.*}} @__clang_gpu_used_external
 
-// NEG-NOT: @gpu.used.external = {{.*}} @_Z7kernel2v
-// NEG-NOT: @gpu.used.external = {{.*}} @_Z7kernel3v
-// NEG-NOT: @gpu.used.external = {{.*}} @var2
-// NEG-NOT: @gpu.used.external = {{.*}} @var3
-// NORDC-NOT: @gpu.used.external = {{.*}} @_Z7kernel1v
-// NORDC-NOT: @gpu.used.external = {{.*}} @_Z7kernel4v
-// NORDC-NOT: @gpu.used.external = {{.*}} @var1
+// NEG-NOT: @__clang_gpu_used_external = {{.*}} @_Z7kernel2v
+// NEG-NOT: @__clang_gpu_used_external = {{.*}} @_Z7kernel3v
+// NEG-NOT: @__clang_gpu_used_external = {{.*}} @var2
+// NEG-NOT: @__clang_gpu_used_external = {{.*}} @var3
+// NORDC-NOT: @__clang_gpu_used_external = {{.*}} @_Z7kernel1v
+// NORDC-NOT: @__clang_gpu_used_external = {{.*}} @_Z7kernel4v
+// NORDC-NOT: @__clang_gpu_used_external = {{.*}} @var1
 
 __global__ void kernel1();
 

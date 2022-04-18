@@ -599,7 +599,7 @@ void CodeGenModule::Release() {
 
     auto *GV = new llvm::GlobalVariable(
         getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
-        llvm::ConstantArray::get(ATy, UsedArray), "gpu.used.external");
+        llvm::ConstantArray::get(ATy, UsedArray), "__clang_gpu_used_external");
     addCompilerUsedGlobal(GV);
   }
 
