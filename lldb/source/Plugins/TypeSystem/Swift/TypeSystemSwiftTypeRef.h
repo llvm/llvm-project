@@ -306,6 +306,10 @@ public:
   CompilerType RemangleAsType(swift::Demangle::Demangler &dem,
                               swift::Demangle::NodePointer node);
 
+  /// Search the debug info for a Clang type with the specified name and cache
+  /// the result.
+  lldb::TypeSP LookupClangType(llvm::StringRef name);
+
 protected:
   /// Helper that creates an AST type from \p type.
   void *ReconstructType(lldb::opaque_compiler_type_t type);
@@ -349,8 +353,6 @@ protected:
   /// APINotes are used to get at the SDK swiftification annotations.
   clang::api_notes::APINotesManager *
   GetAPINotesManager(ClangExternalASTSourceCallbacks *source, unsigned id);
-
-  lldb::TypeSP LookupClangType(llvm::StringRef name);
 
   CompilerType LookupClangForwardType(llvm::StringRef name);
 

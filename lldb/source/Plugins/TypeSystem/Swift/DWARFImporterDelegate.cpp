@@ -218,25 +218,9 @@ public:
       return;
 
     // Find the type in the debug info.
-    TypeMap clang_types;
-    ConstString module_cs(inModule);
-
-    llvm::SmallVector<CompilerContext, 3> decl_context;
-    // Perform a lookup in a specific module, if requested.
-    if (!inModule.empty())
-      decl_context.push_back({CompilerContextKind::Module, module_cs});
-    // Swift doesn't keep track of submodules.
-    decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
-    decl_context.push_back({GetCompilerContextKind(kind), name_cs});
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    auto search = [&](Module &module) {
-      module.FindTypes(decl_context,
-                       TypeSystemClang::GetSupportedLanguagesForTypes(),
-                       searched_symbol_files, clang_types);
-    };
-    if (Module *module =
-            m_swift_typesystem.GetModule())
-      search(*module);
+    TypeSP clang_type_sp;
+    if (m_swift_typesystem.GetModule())
+      clang_type_sp = m_swift_typesystem.LookupClangType(name);
     else if (TargetSP target_sp = m_swift_typesystem.GetTargetWP().lock()) {
       // In a scratch context, check the module's DWARFImporterDelegates
       // first.
@@ -244,43 +228,46 @@ public:
       // It's a common pattern that a type is revisited immediately
       // after looking it up in a per-module context in the scratch
       // context for dynamic type resolution.
+
       auto images = target_sp->GetImages();
       for (size_t i = 0; i != images.GetSize(); ++i) {
         auto module_sp = images.GetModuleAtIndex(i);
         if (!module_sp)
           continue;
-        search(*module_sp);
-        if (!clang_types.Empty())
+        auto ts = module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+        if (!ts) {
+          llvm::consumeError(ts.takeError());
+          continue;
+        }
+        auto *swift_ts = static_cast<TypeSystemSwift *>(&*ts);
+        clang_type_sp = swift_ts->GetTypeSystemSwiftTypeRef().LookupClangType(name);
+        if (clang_type_sp)
           break;
       }
     }
 
-    clang_types.ForEach([&](lldb::TypeSP &clang_type_sp) {
-      if (!clang_type_sp)
-        return true;
+    if (!clang_type_sp)
+      return;
 
-      // Filter out types with a mismatching type kind.
-      if (kind && HasTypeKind(clang_type_sp, *kind))
-        return true;
+    // Filter out types with a mismatching type kind.
+    if (kind && HasTypeKind(clang_type_sp, *kind))
+      return;
 
-      // Realize the full type.
-      CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
+    // Realize the full type.
+    CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
 
-      // Filter our non-Clang types.
-      auto *type_system = llvm::dyn_cast_or_null<TypeSystemClang>(
-          compiler_type.GetTypeSystem());
-      if (!type_system)
-        return true;
+    // Filter our non-Clang types.
+    auto *type_system =
+        llvm::dyn_cast_or_null<TypeSystemClang>(compiler_type.GetTypeSystem());
+    if (!type_system)
+      return;
 
-      // Import the type into the DWARFImporter's context.
-      clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
-      clang::ASTContext &from_ctx = type_system->getASTContext();
+    // Import the type into the DWARFImporter's context.
+    clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
+    clang::ASTContext &from_ctx = type_system->getASTContext();
 
-      clang::QualType qual_type = ClangUtil::GetQualType(compiler_type);
-      importType(qual_type, from_ctx, to_ctx, kind, results);
-
-      return true;
-    });
+    clang::QualType qual_type = ClangUtil::GetQualType(compiler_type);
+    importType(qual_type, from_ctx, to_ctx, kind, results);
 
     LLDB_LOG(GetLog(LLDBLog::Types),
              "{0}::lookupValue() -- imported {1} types from debug info.",
