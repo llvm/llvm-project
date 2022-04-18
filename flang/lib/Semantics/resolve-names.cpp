@@ -6599,14 +6599,13 @@ void DeclarationVisitor::NonPointerInitialization(
         CHECK(!details->init());
         Walk(expr);
         if (ultimate.owner().IsParameterizedDerivedType()) {
-          // Can't convert to type of component, which might not yet
-          // be known; that's done later during PDT instantiation.
-          if (MaybeExpr value{EvaluateExpr(expr)}) {
-            details->set_init(std::move(*value));
+          // Save the expression for per-instantiation analysis.
+          details->set_unanalyzedPDTComponentInit(&expr.thing.value());
+        } else {
+          if (MaybeExpr folded{EvaluateNonPointerInitializer(
+                  ultimate, expr, expr.thing.value().source)}) {
+            details->set_init(std::move(*folded));
           }
-        } else if (MaybeExpr folded{EvaluateNonPointerInitializer(
-                       ultimate, expr, expr.thing.value().source)}) {
-          details->set_init(std::move(*folded));
         }
       }
     }
