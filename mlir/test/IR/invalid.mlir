@@ -1643,3 +1643,14 @@ func @invalid_region_dominance_with_dominance_free_regions() {
 // -----
 
 func @foo() {} // expected-error {{expected non-empty function body}}
+
+// -----
+
+// expected-error@+1 {{expected valid attribute name}}
+"t"(){""}
+
+// -----
+
+// expected-error@+2 {{expected ']'}}
+"f"() { b = [@m:
+

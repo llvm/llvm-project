@@ -169,8 +169,10 @@ Attribute Parser::parseAttribute(Type type) {
       const char *curPointer = getToken().getLoc().getPointer();
       consumeToken(Token::colon);
       if (!consumeIf(Token::colon)) {
-        state.lex.resetPointer(curPointer);
-        consumeToken();
+        if (getToken().isNot(Token::eof, Token::error)) {
+          state.lex.resetPointer(curPointer);
+          consumeToken();
+        }
         break;
       }
       // Parse the reference itself.
@@ -271,6 +273,10 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
       nameId = builder.getStringAttr(getTokenSpelling());
     else
       return emitError("expected attribute name");
+
+    if (nameId->size() == 0)
+      return emitError("expected valid attribute name");
+
     if (!seenKeys.insert(*nameId).second)
       return emitError("duplicate key '")
              << nameId->getValue() << "' in dictionary attribute";
