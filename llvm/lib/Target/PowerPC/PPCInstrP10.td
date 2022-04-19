@@ -752,36 +752,6 @@ let Predicates = [PrefixInstrs] in {
   }
 }
 
-def PPCRegACCRCAsmOperand : AsmOperandClass {
-  let Name = "RegACCRC"; let PredicateMethod = "isACCRegNumber";
-}
-
-def acc : RegisterOperand<ACCRC> {
-  let ParserMatchClass = PPCRegACCRCAsmOperand;
-}
-
-def uacc : RegisterOperand<UACCRC> {
-  let ParserMatchClass = PPCRegACCRCAsmOperand;
-}
-
-def PPCRegVSRpRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSRpRC"; let PredicateMethod = "isVSRpEvenRegNumber";
-}
-
-def vsrprc : RegisterOperand<VSRpRC> {
-  let ParserMatchClass = PPCRegVSRpRCAsmOperand;
-}
-
-def PPCRegVSRpEvenRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSRpEvenRC"; let PredicateMethod = "isVSRpEvenRegNumber";
-}
-
-def vsrpevenrc : RegisterOperand<VSRpRC> {
-  let ParserMatchClass = PPCRegVSRpEvenRCAsmOperand;
-  let EncoderMethod = "getVSRpEvenEncoding";
-  let DecoderMethod = "decodeVSRpEvenOperands";
-}
-
 class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
                            string asmstr, InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin> {
