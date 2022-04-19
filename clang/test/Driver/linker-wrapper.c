@@ -1,4 +1,6 @@
 // REQUIRES: x86-registered-target
+// REQUIRES: nvptx-registered-target
+// REQUIRES: amdgpu-registered-target
 
 // RUN: %clang -cc1 %s -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,nvptx64-nvida-cuda,sm_70 \
@@ -9,8 +11,8 @@
 // NVPTX_LINK: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_70 {{.*}}.o {{.*}}.o
 
 // RUN: %clang -cc1 %s -emit-obj -o %t.o \
-// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,amdgcn-amd-amdhsam,gfx908 \
-// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,amdgcn-amd-amdhsam,gfx908
+// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,amdgcn-amd-amdhsa,gfx908 \
+// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,amdgcn-amd-amdhsa,gfx908
 // RUN: clang-linker-wrapper --dry-run -linker-path /usr/bin/ld -- %t.o -o a.out \
 // RUN:   2>&1 | FileCheck %s --check-prefix=AMDGPU_LINK
 

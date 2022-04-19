@@ -1,4 +1,6 @@
 // REQUIRES: x86-registered-target
+// REQUIRES: nvptx-registered-target
+// REQUIRES: amdgpu-registered-target
 
 // RUN: %clang -cc1 %s -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,nvptx64-nvida-cuda,sm_70
