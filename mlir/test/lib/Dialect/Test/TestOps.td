@@ -10,7 +10,9 @@
 #define TEST_OPS
 
 include "TestDialect.td"
+include "TestInterfaces.td"
 include "mlir/Dialect/DLTI/DLTIBase.td"
+include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
@@ -22,9 +24,8 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
-include "TestInterfaces.td"
 
 
 // Include the attribute definitions.
@@ -2759,14 +2760,14 @@ def : Pat<(TestDefaultStrAttrNoValueOp $value),
 def TestResource : Resource<"TestResource">;
 
 def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
-    let arguments = (ins
-        Arg<Variadic<AnyMemRef>, "", [MemRead]>,
-        Arg<FlatSymbolRefAttr, "", [MemRead]>:$first,
-        Arg<SymbolRefAttr, "", [MemWrite]>:$second,
-        Arg<OptionalAttr<SymbolRefAttr>, "", [MemRead]>:$optional_symbol
-        );
+  let arguments = (ins
+    Arg<Variadic<AnyMemRef>, "", [MemRead]>,
+    Arg<FlatSymbolRefAttr, "", [MemRead]>:$first,
+    Arg<SymbolRefAttr, "", [MemWrite]>:$second,
+    Arg<OptionalAttr<SymbolRefAttr>, "", [MemRead]>:$optional_symbol
+  );
 
-    let results = (outs Res<AnyMemRef, "", [MemAlloc<TestResource>]>);
+  let results = (outs Res<AnyMemRef, "", [MemAlloc<TestResource>]>);
 }
 
 def TestEffectsOpB : TEST_Op<"op_with_effects_b",
@@ -2790,6 +2791,28 @@ def TestVerifiersOp : TEST_Op<"verifiers",
   let regions = (region SizedRegion<1>:$region);
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Test Loop Op with a graph region
+//===----------------------------------------------------------------------===//
+
+// Test loop op with a graph region.
+def TestGraphLoopOp : TEST_Op<"graph_loop",
+                         [LoopLikeOpInterface, NoSideEffect,
+                          RecursiveSideEffects, SingleBlock,
+                          RegionKindInterface, HasOnlyGraphRegion]> {
+  let arguments = (ins Variadic<AnyType>:$args);
+  let results = (outs Variadic<AnyType>:$rets);
+  let regions = (region SizedRegion<1>:$body);
+
+  let assemblyFormat = [{
+    $args $body attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::Region &getLoopBody() { return getBody(); }
+  }];
 }
 
 #endif // TEST_OPS
