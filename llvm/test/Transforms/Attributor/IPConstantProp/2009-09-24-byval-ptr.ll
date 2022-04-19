@@ -237,7 +237,8 @@ define i32 @unions_v2() nounwind {
 ; IS__CGSCC_NPM-SAME: () #[[ATTR0]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    call void @vfu1(i8 noundef 0, i32 noundef 0) #[[ATTR0]]
-; IS__CGSCC_NPM-NEXT:    ret i32 99
+; IS__CGSCC_NPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 noundef 0, i32 noundef 0) #[[ATTR0]]
+; IS__CGSCC_NPM-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
   call void @vfu1(%struct.MYstr* byval(%struct.MYstr) align 4 @mystr) nounwind

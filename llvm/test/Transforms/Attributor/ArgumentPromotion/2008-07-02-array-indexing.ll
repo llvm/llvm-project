@@ -44,10 +44,10 @@ define i32 @foo(i32* %A) {
 ; IS__TUNIT____-NEXT:    [[X:%.*]] = call i32 @callee(i32* nocapture nofree readonly align 4 [[A]]) #[[ATTR1:[0-9]+]]
 ; IS__TUNIT____-NEXT:    ret i32 [[X]]
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @callee(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @callee(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]]) #[[ATTR2:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret i32 [[X]]
 ;
   %X = call i32 @callee(i1 false, i32* %A)             ; <i32> [#uses=1]
@@ -59,5 +59,6 @@ define i32 @foo(i32* %A) {
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readonly willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { readonly willreturn }
 ;.
