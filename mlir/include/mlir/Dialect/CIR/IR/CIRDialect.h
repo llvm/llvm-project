@@ -36,9 +36,33 @@ using FuncOp = func::FuncOp;
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
 
 namespace mlir {
+namespace OpTrait {
+
+namespace impl {
+// These functions are out-of-line implementations of the methods in the
+// corresponding trait classes.  This avoids them being template
+// instantiated/duplicated.
+LogicalResult verifySameFirstOperandAndResultType(Operation *op);
+} // namespace impl
+
+/// This class provides verification for ops that are known to have the same
+/// first operand and result type.
+///
+template <typename ConcreteType>
+class SameFirstOperandAndResultType
+    : public TraitBase<ConcreteType, SameFirstOperandAndResultType> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifySameFirstOperandAndResultType(op);
+  }
+};
+
+} // namespace OpTrait
+
 namespace cir {
 void buildTerminatedBody(OpBuilder &builder, Location loc);
 } // namespace cir
+
 } // namespace mlir
 
 #define GET_OP_CLASSES

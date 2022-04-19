@@ -117,12 +117,6 @@ OpFoldResult ConstantOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
 LogicalResult CastOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
-// PtrStrideOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult PtrStrideOp::verify() { return success(); }
-
-//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
@@ -855,6 +849,25 @@ void LoopOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 }
 
 llvm::SmallVector<Region *> LoopOp::getLoopRegions() { return {&getBody()}; }
+
+//===----------------------------------------------------------------------===//
+// CIR defined traits
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
+  if (failed(verifyAtLeastNOperands(op, 1)) || failed(verifyOneResult(op)))
+    return failure();
+
+  auto type = op->getResult(0).getType();
+  auto opType = op->getOperand(0).getType();
+
+  if (type != opType)
+    return op->emitOpError()
+           << "requires the same type for first operand and result";
+
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
