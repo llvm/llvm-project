@@ -2,7 +2,7 @@
 
 // Error on the gpu that crashes the host
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newDriver
+// UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
 
 #include <iostream>
 
