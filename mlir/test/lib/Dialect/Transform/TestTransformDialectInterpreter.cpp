@@ -37,7 +37,7 @@ public:
 
   void runOnOperation() override {
     ModuleOp module = getOperation();
-    transform::TransformState state(module);
+    transform::TransformState state(module.getBodyRegion(), module);
     for (auto op :
          module.getBody()->getOps<transform::TransformOpInterface>()) {
       if (failed(state.applyTransform(op)))

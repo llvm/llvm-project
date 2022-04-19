@@ -7699,6 +7699,7 @@ td_library(
     srcs = glob(["include/mlir/Dialect/Transform/IR/*.td"]),
     deps = [
         ":OpBaseTdFiles",
+        ":PDLDialectTdFiles",
     ],
 )
 
@@ -7746,15 +7747,35 @@ gentbl_cc_library(
     deps = [":TransformDialectTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "TransformOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Transform/IR/TransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Transform/IR/TransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/IR/TransformOps.td",
+    deps = [":TransformDialectTdFiles"],
+)
+
 cc_library(
     name = "TransformDialect",
     srcs = glob(["lib/Dialect/Transform/IR/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/IR/*.h"]),
     deps = [
         ":IR",
+        ":PDLDialect",
         ":Support",
         ":TransformDialectIncGen",
         ":TransformDialectInterfacesIncGen",
+        ":TransformOpsIncGen",
         "//llvm:Support",
     ],
 )

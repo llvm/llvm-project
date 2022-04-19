@@ -38,31 +38,47 @@ public:
 
   LogicalResult apply(transform::TransformResults &results,
                       transform::TransformState &state) {
-    emitRemark() << "applying transformation";
+    InFlightDiagnostic remark = emitRemark() << "applying transformation";
+    if (Attribute message = getMessage())
+      remark << " " << message;
+
     return success();
   }
+
+  Attribute getMessage() { return getOperation()->getAttr("message"); }
 
   static ParseResult parse(OpAsmParser &parser, OperationState &state) {
-    return success();
+    StringAttr message;
+    OptionalParseResult result = parser.parseOptionalAttribute(message);
+    if (!result.hasValue())
+      return success();
+
+    if (result.getValue().succeeded())
+      state.addAttribute("message", message);
+    return result.getValue();
   }
 
-  void print(OpAsmPrinter &printer) {}
+  void print(OpAsmPrinter &printer) {
+    if (getMessage())
+      printer << " " << getMessage();
+  }
 };
 } // namespace
 
 LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   if (getOperation()->getNumOperands() != 0) {
-    results.set(getResult().cast<OpResult>(), getOperand(0).getDefiningOp());
+    results.set(getResult().cast<OpResult>(),
+                getOperation()->getOperand(0).getDefiningOp());
   } else {
     results.set(getResult().cast<OpResult>(),
-                reinterpret_cast<Operation *>(*parameter()));
+                reinterpret_cast<Operation *>(*getParameter()));
   }
   return success();
 }
 
 LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::verify() {
-  if (parameter().hasValue() ^ (getNumOperands() != 1))
+  if (getParameter().hasValue() ^ (getNumOperands() != 1))
     return emitOpError() << "expects either a parameter or an operand";
   return success();
 }
@@ -72,9 +88,9 @@ LogicalResult mlir::test::TestConsumeOperandIfMatchesParamOrFail::apply(
   ArrayRef<Operation *> payload = state.getPayloadOps(getOperand());
   assert(payload.size() == 1 && "expected a single target op");
   auto value = reinterpret_cast<intptr_t>(payload[0]);
-  if (static_cast<uint64_t>(value) != parameter()) {
+  if (static_cast<uint64_t>(value) != getParameter()) {
     return emitOpError() << "expected the operand to be associated with "
-                         << parameter() << " got " << value;
+                         << getParameter() << " got " << value;
   }
 
   emitRemark() << "succeeded";

@@ -7,9 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-
-#include "mlir/Dialect/Transform/IR/TransformDialect.cpp.inc"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
 
 using namespace mlir;
 
-void transform::TransformDialect::initialize() {}
+#include "mlir/Dialect/Transform/IR/TransformDialect.cpp.inc"
+
+void transform::TransformDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
+      >();
+}

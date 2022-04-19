@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
@@ -19,16 +20,21 @@ using namespace mlir;
 
 constexpr const Value transform::TransformState::kTopLevelValue;
 
-transform::TransformState::TransformState(Operation *root) {
-  operationMapping[kTopLevelValue].push_back(root);
+transform::TransformState::TransformState(Region &region, Operation *root)
+    : topLevel(root) {
+  auto result = mappings.try_emplace(&region);
+  assert(result.second && "the region scope is already present");
+  (void)result;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  regionStack.push_back(&region);
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 }
 
-Operation *transform::TransformState::getTopLevel() const {
-  return operationMapping.lookup(kTopLevelValue).front();
-}
+Operation *transform::TransformState::getTopLevel() const { return topLevel; }
 
 ArrayRef<Operation *>
 transform::TransformState::getPayloadOps(Value value) const {
+  const TransformOpMapping &operationMapping = getMapping(value).direct;
   auto iter = operationMapping.find(value);
   assert(iter != operationMapping.end() && "unknown handle");
   return iter->getSecond();
@@ -46,8 +52,9 @@ transform::TransformState::setPayloadOps(Value value,
   // Setting new payload for the value without cleaning it first is a misuse of
   // the API, assert here.
   SmallVector<Operation *> storedTargets(targets.begin(), targets.end());
+  Mappings &mappings = getMapping(value);
   bool inserted =
-      operationMapping.insert({value, std::move(storedTargets)}).second;
+      mappings.direct.insert({value, std::move(storedTargets)}).second;
   assert(inserted && "value is already associated with another list");
   (void)inserted;
 
@@ -55,7 +62,7 @@ transform::TransformState::setPayloadOps(Value value,
   // expressed using the dialect and may be constructed by valid API calls from
   // valid IR. Emit an error here.
   for (Operation *op : targets) {
-    auto insertionResult = reverseMapping.insert({op, value});
+    auto insertionResult = mappings.reverse.insert({op, value});
     if (!insertionResult.second) {
       InFlightDiagnostic diag = op->emitError()
                                 << "operation tracked by two handles";
@@ -69,15 +76,16 @@ transform::TransformState::setPayloadOps(Value value,
 }
 
 void transform::TransformState::removePayloadOps(Value value) {
-  for (Operation *op : operationMapping[value])
-    reverseMapping.erase(op);
-  operationMapping.erase(value);
+  Mappings &mappings = getMapping(value);
+  for (Operation *op : mappings.direct[value])
+    mappings.reverse.erase(op);
+  mappings.direct.erase(value);
 }
 
 void transform::TransformState::updatePayloadOps(
     Value value, function_ref<Operation *(Operation *)> callback) {
-  auto it = operationMapping.find(value);
-  assert(it != operationMapping.end() && "unknown handle");
+  auto it = getMapping(value).direct.find(value);
+  assert(it != getMapping(value).direct.end() && "unknown handle");
   SmallVector<Operation *> &association = it->getSecond();
   SmallVector<Operation *> updated;
   updated.reserve(association.size());
@@ -98,9 +106,13 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   for (Value target : transform->getOperands())
     removePayloadOps(target);
 
-  for (auto &en : llvm::enumerate(transform->getResults()))
+  for (auto &en : llvm::enumerate(transform->getResults())) {
+    assert(en.value().getDefiningOp() == transform.getOperation() &&
+           "payload IR association for a value other than the result of the "
+           "current transform op");
     if (failed(setPayloadOps(en.value(), results.get(en.index()))))
       return failure();
+  }
 
   return success();
 }
