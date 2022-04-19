@@ -16932,10 +16932,12 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   }
 
   PartialDiagnostic FDiag = PDiag(DiagKind);
+  AssignmentAction ActionForDiag = Action;
   if (Action == AA_Passing_CFAudited)
-    FDiag << FirstType << SecondType << AA_Passing << SrcExpr->getSourceRange();
-  else
-    FDiag << FirstType << SecondType << Action << SrcExpr->getSourceRange();
+    ActionForDiag = AA_Passing;
+
+  FDiag << FirstType << SecondType << ActionForDiag
+        << SrcExpr->getSourceRange();
 
   if (DiagKind == diag::ext_typecheck_convert_incompatible_pointer_sign ||
       DiagKind == diag::err_typecheck_convert_incompatible_pointer_sign) {
