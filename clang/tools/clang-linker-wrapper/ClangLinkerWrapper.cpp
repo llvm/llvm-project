@@ -433,7 +433,7 @@ extractFromBinary(const ObjectFile &Obj,
   StripArgs.push_back(TempFile);
 
   if (Error Err = executeCommands(*StripPath, StripArgs))
-    return Err;
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
@@ -634,7 +634,7 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
     printCommands(CmdArgs);
 
   if (Error Err = executeCommands(*PtxasPath, CmdArgs))
-    return Err;
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
@@ -674,7 +674,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
     printCommands(CmdArgs);
 
   if (Error Err = executeCommands(*NvlinkPath, CmdArgs))
-    return Err;
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
@@ -711,7 +711,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
     printCommands(CmdArgs);
 
   if (Error Err = executeCommands(*LLDPath, CmdArgs))
-    return Err;
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
@@ -791,7 +791,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
     printCommands(CmdArgs);
 
   if (Error Err = executeCommands(LinkerUserPath, CmdArgs))
-    return Err;
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
