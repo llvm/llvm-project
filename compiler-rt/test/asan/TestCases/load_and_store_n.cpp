@@ -1,32 +1,18 @@
-// CHECK_REGULAR_LOAD_STORE: call void @__asan_loadN
-// CHECK_REGULAR_LOAD_STORE: call void @__asan_storeN
 // RUN: %clangxx_asan -O2 -fsanitize-address-outline-instrumentation %s -o %t
-// RUN: %clangxx_asan -O2 -fsanitize-address-outline-instrumentation %s -o - -S \
-// RUN:   -emit-llvm | FileCheck %s --check-prefix=CHECK_REGULAR_LOAD_STORE
 // RUN: not %run %t A 2>&1 | FileCheck %s --check-prefix=CHECK_0_BYTES
 // RUN: not %run %t B 2>&1 | FileCheck %s --check-prefix=CHECK_0_BYTES
 // RUN: not %run %t C 2>&1 | FileCheck %s --check-prefix=CHECK_1_BYTES
 // RUN: not %run %t D 2>&1 | FileCheck %s --check-prefix=CHECK_1_BYTES
 
-// CHECK_NOABORT_LOAD_STORE: call void @__asan_loadN_noabort
-// CHECK_NOABORT_LOAD_STORE: call void @__asan_storeN_noabort
 // RUN: %clangxx_asan -O2 -fsanitize-address-outline-instrumentation %s -o %t \
 // RUN:   -mllvm -asan-recover=1
-// RUN: %clangxx_asan -O2 -fsanitize-address-outline-instrumentation %s -o - -S \
-// RUN:   -mllvm -asan-recover=1 -emit-llvm \
-// RUN:   | FileCheck %s --check-prefix=CHECK_NOABORT_LOAD_STORE
 // RUN: not %run %t A 2>&1 | FileCheck %s --check-prefix=CHECK_0_BYTES
 // RUN: not %run %t B 2>&1 | FileCheck %s --check-prefix=CHECK_0_BYTES
 // RUN: not %run %t C 2>&1 | FileCheck %s --check-prefix=CHECK_1_BYTES
 // RUN: not %run %t D 2>&1 | FileCheck %s --check-prefix=CHECK_1_BYTES
 
-// CHECK_EXP_LOAD_STORE: call void @__asan_exp_loadN
-// CHECK_EXP_LOAD_STORE: call void @__asan_exp_storeN
 // RUN: %clangxx_asan -O2 -fsanitize-address-outline-instrumentation %s -o %t \
 // RUN:   -mllvm -asan-force-experiment=42
-// RUN: %clangxx_asan -O2 -fsanitize-address-outline-instrumentation %s -o - -S \
-// RUN:   -mllvm -asan-force-experiment=42 -emit-llvm \
-// RUN:   | FileCheck %s --check-prefix=CHECK_EXP_LOAD_STORE
 // RUN: not %run %t A 2>&1 | FileCheck %s --check-prefix=CHECK_0_BYTES
 // RUN: not %run %t B 2>&1 | FileCheck %s --check-prefix=CHECK_0_BYTES
 // RUN: not %run %t C 2>&1 | FileCheck %s --check-prefix=CHECK_1_BYTES
