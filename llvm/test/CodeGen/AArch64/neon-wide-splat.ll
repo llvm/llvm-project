@@ -109,9 +109,9 @@ define <8 x i8> @shuffle_not1(<16 x i8> %v) {
 define <4 x i32> @shuffle_not2(<4 x i32> %v) {
 ; CHECK-LABEL: shuffle_not2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #4
-; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
-; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
+; CHECK-NEXT:    trn1 v1.4s, v0.4s, v0.4s
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    zip2 v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 1, i32 2, i32 1, i32 2>

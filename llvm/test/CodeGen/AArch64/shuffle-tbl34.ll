@@ -232,9 +232,9 @@ define <8 x i16> @shuffle4_v8i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x 
 define <4 x i32> @shuffle4_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; CHECK-LABEL: shuffle4_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v2.16b, v2.16b, v3.16b, #8
-; CHECK-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v1.16b, v3.16b, v2.16b, #12
+; CHECK-NEXT:    rev64 v3.4s, v3.4s
+; CHECK-NEXT:    zip1 v4.4s, v1.4s, v1.4s
+; CHECK-NEXT:    zip2 v1.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    ext v0.16b, v4.16b, v0.16b, #4
 ; CHECK-NEXT:    mov v1.d[1], v0.d[1]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
