@@ -16,6 +16,7 @@
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
+#include "llvm/Support/Compiler.h"
 #include <cstring>
 
 using namespace llvm;
@@ -23,6 +24,24 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
+
+static_assert(sizeof(SymbolUnion) <= 64, "SymbolUnion too large");
+
+template <typename T> struct AssertSymbol {
+  static_assert(std::is_trivially_destructible<T>(),
+                "Symbol types must be trivially destructible");
+  static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
+  static_assert(alignof(T) <= alignof(SymbolUnion),
+                "SymbolUnion not aligned enough");
+};
+
+LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
+  AssertSymbol<Defined>();
+  AssertSymbol<CommonSymbol>();
+  AssertSymbol<Undefined>();
+  AssertSymbol<SharedSymbol>();
+  AssertSymbol<LazyObject>();
+}
 
 std::string lld::toString(const elf::Symbol &sym) {
   StringRef name = sym.getName();
