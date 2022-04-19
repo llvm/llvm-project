@@ -1,3 +1,4 @@
+// REQUIRES: integrated-as
 // RUN: %clang -ccc-print-bindings -c %s -fembed-bitcode 2>&1 | FileCheck %s
 // CHECK: clang
 // CHECK: clang

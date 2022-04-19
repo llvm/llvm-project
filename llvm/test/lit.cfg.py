@@ -284,6 +284,10 @@ if (not 'xcore' in config.target_triple and
     not 'nanomips' in config.target_triple):
     config.available_features.add('object-emission')
 
+# Integrated assembler
+if not 'nanomips' in config.target_triple:
+    config.available_features.add('integrated-as')
+
 # LLVM can be configured with an empty default triple
 # Some tests are "generic" and require a valid default triple
 if config.target_triple:
