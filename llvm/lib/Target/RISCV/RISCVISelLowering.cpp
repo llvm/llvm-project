@@ -1941,37 +1941,27 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
       // A zero-value value difference means that we're somewhere in the middle
       // of a fractional step, e.g. <0,0,0*,0,1,1,1,1>. Wait until we notice a
       // step change before evaluating the sequence.
-      if (ValDiff != 0) {
-        int64_t Remainder = ValDiff % IdxDiff;
-        // Normalize the step if it's greater than 1.
-        if (Remainder != ValDiff) {
-          // The difference must cleanly divide the element span.
-          if (Remainder != 0)
-            return None;
-          ValDiff /= IdxDiff;
-          IdxDiff = 1;
-        }
+      if (ValDiff == 0)
+        continue;
 
-        if (!SeqStepNum)
-          SeqStepNum = ValDiff;
-        else if (ValDiff != SeqStepNum)
+      int64_t Remainder = ValDiff % IdxDiff;
+      // Normalize the step if it's greater than 1.
+      if (Remainder != ValDiff) {
+        // The difference must cleanly divide the element span.
+        if (Remainder != 0)
           return None;
-
-        if (!SeqStepDenom)
-          SeqStepDenom = IdxDiff;
-        else if (IdxDiff != *SeqStepDenom)
-          return None;
+        ValDiff /= IdxDiff;
+        IdxDiff = 1;
       }
-    }
 
-    // Record and/or check any addend.
-    if (SeqStepNum && SeqStepDenom) {
-      uint64_t ExpectedVal =
-          (int64_t)(Idx * (uint64_t)*SeqStepNum) / *SeqStepDenom;
-      int64_t Addend = SignExtend64(Val - ExpectedVal, EltSizeInBits);
-      if (!SeqAddend)
-        SeqAddend = Addend;
-      else if (SeqAddend != Addend)
+      if (!SeqStepNum)
+        SeqStepNum = ValDiff;
+      else if (ValDiff != SeqStepNum)
+        return None;
+
+      if (!SeqStepDenom)
+        SeqStepDenom = IdxDiff;
+      else if (IdxDiff != *SeqStepDenom)
         return None;
     }
 
@@ -1979,10 +1969,28 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
     if (!PrevElt || PrevElt->first != Val)
       PrevElt = std::make_pair(Val, Idx);
   }
-  // We need to have logged both a step and an addend for this to count as
-  // a legal index sequence.
-  if (!SeqStepNum || !SeqStepDenom || !SeqAddend)
+
+  // We need to have logged a step for this to count as a legal index sequence.
+  if (!SeqStepNum || !SeqStepDenom)
     return None;
+
+  // Loop back through the sequence and validate elements we might have skipped
+  // while waiting for a valid step. While doing this, log any sequence addend.
+  for (unsigned Idx = 0; Idx < NumElts; Idx++) {
+    if (Op.getOperand(Idx).isUndef())
+      continue;
+    uint64_t Val = Op.getConstantOperandVal(Idx) &
+                   maskTrailingOnes<uint64_t>(EltSizeInBits);
+    uint64_t ExpectedVal =
+        (int64_t)(Idx * (uint64_t)*SeqStepNum) / *SeqStepDenom;
+    int64_t Addend = SignExtend64(Val - ExpectedVal, EltSizeInBits);
+    if (!SeqAddend)
+      SeqAddend = Addend;
+    else if (Addend != SeqAddend)
+      return None;
+  }
+
+  assert(SeqAddend && "Must have an addend if we have a step");
 
   return VIDSequence{*SeqStepNum, *SeqStepDenom, *SeqAddend};
 }
