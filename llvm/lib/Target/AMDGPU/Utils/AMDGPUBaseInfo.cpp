@@ -1618,7 +1618,8 @@ bool hasG16(const MCSubtargetInfo &STI) {
 }
 
 bool hasPackedD16(const MCSubtargetInfo &STI) {
-  return !STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem];
+  return !STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem] && !isCI(STI) &&
+         !isSI(STI);
 }
 
 bool isSI(const MCSubtargetInfo &STI) {
