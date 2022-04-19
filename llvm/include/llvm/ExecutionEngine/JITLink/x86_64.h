@@ -447,11 +447,10 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     break;
   }
 
-  default: {
-    // If you hit this you should check that *constructor and other non-fixup
-    // edges have been removed prior to applying fixups.
-    llvm_unreachable("Graph contains edge kind with no fixup expression");
-  }
+  default:
+    return make_error<JITLinkError>(
+        "In graph " + G.getName() + ", section " + B.getSection().getName() +
+        "unsupported edge kind" + getEdgeKindName(E.getKind()));
   }
 
   return Error::success();
