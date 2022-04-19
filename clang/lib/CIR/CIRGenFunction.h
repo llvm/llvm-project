@@ -408,13 +408,16 @@ public:
   mlir::LogicalResult
   buildCompoundStmtWithoutScope(const clang::CompoundStmt &S);
 
-  /// EmitIgnoredExpr - Emit code to compute the specified expression,
+  /// Emit code to compute the specified expression,
   /// ignoring the result.
   void buildIgnoredExpr(const clang::Expr *E);
 
+  LValue buildArraySubscriptExpr(const clang::ArraySubscriptExpr *E,
+                                 bool Accessed = false);
+
   mlir::LogicalResult buildDeclStmt(const clang::DeclStmt &S);
 
-  /// GetUndefRValue - Get an appropriate 'undef' rvalue for the given type.
+  /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
   /// void types so it just returns RValue::get(nullptr) but it'll need
   /// addressed later.
