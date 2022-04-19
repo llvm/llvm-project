@@ -92,6 +92,16 @@ static cl::opt<bool> EmbedBitcode(
     cl::desc("Embed linked bitcode instead of an executable device image"),
     cl::init(false), cl::cat(ClangLinkerWrapperCategory));
 
+static cl::opt<bool> DryRun(
+    "dry-run", cl::ZeroOrMore,
+    cl::desc("List the linker commands to be run without executing them"),
+    cl::init(false), cl::cat(ClangLinkerWrapperCategory));
+
+static cl::opt<bool>
+    PrintWrappedModule("print-wrapped-module", cl::ZeroOrMore,
+                       cl::desc("Print the wrapped module's IR for testing"),
+                       cl::init(false), cl::cat(ClangLinkerWrapperCategory));
+
 static cl::opt<std::string>
     HostTriple("host-triple", cl::ZeroOrMore,
                cl::desc("Triple to use for the host compilation"),
@@ -233,17 +243,40 @@ Error createOutputFile(const Twine &Prefix, StringRef Extension,
   return Error::success();
 }
 
+/// Execute the command \p ExecutablePath with the arguments \p Args.
+Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
+  if (Verbose || DryRun)
+    printCommands(Args);
+
+  if (!DryRun)
+    if (sys::ExecuteAndWait(ExecutablePath, Args))
+      return createStringError(inconvertibleErrorCode(),
+                               "'" + sys::path::filename(ExecutablePath) + "'" +
+                                   " failed");
+  return Error::success();
+}
+
+Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
+
+  ErrorOr<std::string> Path = sys::findProgramByName(Name, Paths);
+  if (!Path)
+    Path = sys::findProgramByName(Name);
+  if (!Path && DryRun)
+    return Name.str();
+  if (!Path)
+    return createStringError(Path.getError(),
+                             "Unable to find '" + Name + "' in path");
+  return *Path;
+}
+
 Error runLinker(std::string &LinkerPath, SmallVectorImpl<std::string> &Args) {
   std::vector<StringRef> LinkerArgs;
   LinkerArgs.push_back(LinkerPath);
   for (auto &Arg : Args)
     LinkerArgs.push_back(Arg);
 
-  if (Verbose)
-    printCommands(LinkerArgs);
-
-  if (sys::ExecuteAndWait(LinkerPath, LinkerArgs))
-    return createStringError(inconvertibleErrorCode(), "'linker' failed");
+  if (Error Err = executeCommands(LinkerPath, LinkerArgs))
+    return Err;
   return Error::success();
 }
 
@@ -379,12 +412,10 @@ extractFromBinary(const ObjectFile &Obj,
 
   // We will use llvm-strip to remove the now unneeded section containing the
   // offloading code.
-  ErrorOr<std::string> StripPath =
-      sys::findProgramByName("llvm-strip", {getMainExecutable("llvm-strip")});
+  Expected<std::string> StripPath =
+      findProgram("llvm-strip", {getMainExecutable("llvm-strip")});
   if (!StripPath)
-    StripPath = sys::findProgramByName("llvm-strip");
-  if (!StripPath)
-    return None;
+    return StripPath.takeError();
 
   SmallString<128> TempFile;
   if (Error Err = createOutputFile(Prefix + "-host", Extension, TempFile))
@@ -401,11 +432,8 @@ extractFromBinary(const ObjectFile &Obj,
   StripArgs.push_back("-o");
   StripArgs.push_back(TempFile);
 
-  if (Verbose)
-    printCommands(StripArgs);
-
-  if (sys::ExecuteAndWait(*StripPath, StripArgs))
-    return createStringError(inconvertibleErrorCode(), "'llvm-strip' failed");
+  if (Error Err = executeCommands(*StripPath, StripArgs))
+    return Err;
 
   return static_cast<std::string>(TempFile);
 }
@@ -569,13 +597,9 @@ namespace nvptx {
 Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
                                StringRef Arch) {
   // NVPTX uses the ptxas binary to create device object files.
-  ErrorOr<std::string> PtxasPath =
-      sys::findProgramByName("ptxas", {CudaBinaryPath});
+  Expected<std::string> PtxasPath = findProgram("ptxas", {CudaBinaryPath});
   if (!PtxasPath)
-    PtxasPath = sys::findProgramByName("ptxas");
-  if (!PtxasPath)
-    return createStringError(PtxasPath.getError(),
-                             "Unable to find 'ptxas' in path");
+    return PtxasPath.takeError();
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
@@ -609,8 +633,8 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
   if (Verbose)
     printCommands(CmdArgs);
 
-  if (sys::ExecuteAndWait(*PtxasPath, CmdArgs))
-    return createStringError(inconvertibleErrorCode(), "'ptxas' failed");
+  if (Error Err = executeCommands(*PtxasPath, CmdArgs))
+    return Err;
 
   return static_cast<std::string>(TempFile);
 }
@@ -618,13 +642,9 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
 Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
                            StringRef Arch) {
   // NVPTX uses the nvlink binary to link device object files.
-  ErrorOr<std::string> NvlinkPath =
-      sys::findProgramByName("nvlink", {CudaBinaryPath});
+  Expected<std::string> NvlinkPath = findProgram("nvlink", {CudaBinaryPath});
   if (!NvlinkPath)
-    NvlinkPath = sys::findProgramByName("nvlink");
-  if (!NvlinkPath)
-    return createStringError(NvlinkPath.getError(),
-                             "Unable to find 'nvlink' in path");
+    return NvlinkPath.takeError();
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
@@ -653,8 +673,8 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   if (Verbose)
     printCommands(CmdArgs);
 
-  if (sys::ExecuteAndWait(*NvlinkPath, CmdArgs))
-    return createStringError(inconvertibleErrorCode(), "'nvlink' failed");
+  if (Error Err = executeCommands(*NvlinkPath, CmdArgs))
+    return Err;
 
   return static_cast<std::string>(TempFile);
 }
@@ -663,13 +683,9 @@ namespace amdgcn {
 Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
                            StringRef Arch) {
   // AMDGPU uses lld to link device object files.
-  ErrorOr<std::string> LLDPath =
-      sys::findProgramByName("lld", {getMainExecutable("lld")});
+  Expected<std::string> LLDPath = findProgram("lld", {CudaBinaryPath});
   if (!LLDPath)
-    LLDPath = sys::findProgramByName("lld");
-  if (!LLDPath)
-    return createStringError(LLDPath.getError(),
-                             "Unable to find 'lld' in path");
+    return LLDPath.takeError();
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
@@ -694,8 +710,8 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   if (Verbose)
     printCommands(CmdArgs);
 
-  if (sys::ExecuteAndWait(*LLDPath, CmdArgs))
-    return createStringError(inconvertibleErrorCode(), "'lld' failed");
+  if (Error Err = executeCommands(*LLDPath, CmdArgs))
+    return Err;
 
   return static_cast<std::string>(TempFile);
 }
@@ -774,8 +790,8 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   if (Verbose)
     printCommands(CmdArgs);
 
-  if (sys::ExecuteAndWait(LinkerUserPath, CmdArgs))
-    return createStringError(inconvertibleErrorCode(), "'linker' failed");
+  if (Error Err = executeCommands(LinkerUserPath, CmdArgs))
+    return Err;
 
   return static_cast<std::string>(TempFile);
 }
@@ -1184,6 +1200,9 @@ Expected<std::string> wrapDeviceImages(ArrayRef<std::string> Images) {
   M.setTargetTriple(HostTriple);
   if (Error Err = wrapBinaries(M, ImagesToWrap))
     return std::move(Err);
+
+  if (PrintWrappedModule)
+    llvm::errs() << M;
 
   return compileModule(M);
 }
