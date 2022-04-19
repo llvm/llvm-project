@@ -309,6 +309,57 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
   return false;
 }
 
+bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
+  SmallVector<bool> visited(getOperation()->getNumRegions(), false);
+  visited[index] = true;
+
+  // Retrieve all successors of the region and enqueue them in the worklist.
+  SmallVector<unsigned> worklist;
+  auto enqueueAllSuccessors = [&](unsigned index) {
+    SmallVector<RegionSuccessor> successors;
+    this->getSuccessorRegions(index, successors);
+    for (RegionSuccessor successor : successors)
+      if (!successor.isParent())
+        worklist.push_back(successor.getSuccessor()->getRegionNumber());
+  };
+  enqueueAllSuccessors(index);
+
+  // Process all regions in the worklist via DFS.
+  while (!worklist.empty()) {
+    unsigned nextRegion = worklist.pop_back_val();
+    if (nextRegion == index)
+      return true;
+    if (visited[nextRegion])
+      continue;
+    visited[nextRegion] = true;
+    enqueueAllSuccessors(nextRegion);
+  }
+
+  return false;
+}
+
+Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {
+  while (Region *region = op->getParentRegion()) {
+    op = region->getParentOp();
+    if (auto branchOp = dyn_cast<RegionBranchOpInterface>(op))
+      if (branchOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+  }
+  return nullptr;
+}
+
+Region *mlir::getEnclosingRepetitiveRegion(Value value) {
+  Region *region = value.getParentRegion();
+  while (region) {
+    Operation *op = region->getParentOp();
+    if (auto branchOp = dyn_cast<RegionBranchOpInterface>(op))
+      if (branchOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+    region = op->getParentRegion();
+  }
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // RegionBranchTerminatorOpInterface
 //===----------------------------------------------------------------------===//
