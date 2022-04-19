@@ -14,9 +14,9 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEINSTRUCTIONS_MIR_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEINSTRUCTIONS_MIR_H
 
-#include "Delta.h"
-
 namespace llvm {
+class TestRunner;
+
 void reduceInstructionsMIRDeltaPass(TestRunner &Test);
 } // namespace llvm
 

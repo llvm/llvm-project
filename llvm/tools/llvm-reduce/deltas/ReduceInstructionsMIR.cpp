@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceInstructionsMIR.h"
+#include "Delta.h"
 
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
