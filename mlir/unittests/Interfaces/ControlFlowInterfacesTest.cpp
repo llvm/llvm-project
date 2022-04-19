@@ -65,6 +65,27 @@ struct LoopRegionsOp
   }
 };
 
+/// Each region branches back it itself or the parent.
+struct DoubleLoopRegionsOp
+    : public Op<DoubleLoopRegionsOp, RegionBranchOpInterface::Trait> {
+  using Op::Op;
+
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
+
+  static StringRef getOperationName() {
+    return "cftest.double_loop_regions_op";
+  }
+
+  void getSuccessorRegions(Optional<unsigned> index,
+                           ArrayRef<Attribute> operands,
+                           SmallVectorImpl<RegionSuccessor> &regions) {
+    if (index.hasValue()) {
+      regions.push_back(RegionSuccessor());
+      regions.push_back(RegionSuccessor(&getOperation()->getRegion(*index)));
+    }
+  }
+};
+
 /// Regions are executed sequentially.
 struct SequentialRegionsOp
     : public Op<SequentialRegionsOp, RegionBranchOpInterface::Trait> {
@@ -89,7 +110,7 @@ struct CFTestDialect : Dialect {
   explicit CFTestDialect(MLIRContext *ctx)
       : Dialect(getDialectNamespace(), ctx, TypeID::get<CFTestDialect>()) {
     addOperations<DummyOp, MutuallyExclusiveRegionsOp, LoopRegionsOp,
-                  SequentialRegionsOp>();
+                  DoubleLoopRegionsOp, SequentialRegionsOp>();
   }
   static StringRef getDialectNamespace() { return "cftest"; }
 };
@@ -97,6 +118,27 @@ struct CFTestDialect : Dialect {
 TEST(RegionBranchOpInterface, MutuallyExclusiveOps) {
   const char *ir = R"MLIR(
 "cftest.mutually_exclusive_regions_op"() (
+      {"cftest.dummy_op"() : () -> ()},  // op1
+      {"cftest.dummy_op"() : () -> ()}   // op2
+  ) : () -> ()
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<CFTestDialect>();
+  MLIRContext ctx(registry);
+
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
+  Operation *testOp = &module->getBody()->getOperations().front();
+  Operation *op1 = &testOp->getRegion(0).front().front();
+  Operation *op2 = &testOp->getRegion(1).front().front();
+
+  EXPECT_TRUE(insideMutuallyExclusiveRegions(op1, op2));
+  EXPECT_TRUE(insideMutuallyExclusiveRegions(op2, op1));
+}
+
+TEST(RegionBranchOpInterface, MutuallyExclusiveOps2) {
+  const char *ir = R"MLIR(
+"cftest.double_loop_regions_op"() (
       {"cftest.dummy_op"() : () -> ()},  // op1
       {"cftest.dummy_op"() : () -> ()}   // op2
   ) : () -> ()
