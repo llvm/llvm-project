@@ -71,10 +71,10 @@ namespace {
 /// in C++. Passes defined declaratively use a cleaner mechanism for providing
 /// these utilities.
 struct MyFunctionPass : public PassWrapper<MyFunctionPass,
-                                           OperationPass<FuncOp>> {
+                                           OperationPass<func::FuncOp>> {
   void runOnOperation() override {
-    // Get the current FuncOp operation being operated on.
-    FuncOp f = getOperation();
+    // Get the current func::FuncOp operation being operated on.
+    func::FuncOp f = getOperation();
 
     // Walk the operations within the function.
     f.walk([](Operation *inst) {
@@ -356,7 +356,7 @@ nestedModulePM.addPass(std::make_unique<MySPIRVModulePass>());
 
 // Nest a pass manager that operates on functions within the nested SPIRV
 // module.
-OpPassManager &nestedFunctionPM = nestedModulePM.nest<FuncOp>();
+OpPassManager &nestedFunctionPM = nestedModulePM.nest<func::FuncOp>();
 nestedFunctionPM.addPass(std::make_unique<MyFunctionPass>());
 
 // Run the pass manager on the top-level module.
@@ -372,12 +372,12 @@ OpPassManager<ModuleOp>
   MyModulePass
   OpPassManager<spirv::ModuleOp>
     MySPIRVModulePass
-    OpPassManager<FuncOp>
+    OpPassManager<func::FuncOp>
       MyFunctionPass
 ```
 
 These pipelines are then run over a single operation at a time. This means that,
-for example, given a series of consecutive passes on FuncOp, it will execute all
+for example, given a series of consecutive passes on func::FuncOp, it will execute all
 on the first function, then all on the second function, etc. until the entire
 program has been run through the passes. This provides several benefits:
 

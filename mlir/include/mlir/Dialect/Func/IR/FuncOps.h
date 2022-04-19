@@ -30,12 +30,6 @@ class PatternRewriter;
 
 #include "mlir/Dialect/Func/IR/FuncOpsDialect.h.inc"
 
-namespace mlir {
-/// FIXME: This is a temporary using directive to ease the transition of FuncOp
-/// to the Func dialect. This will be removed after all uses are updated.
-using FuncOp = func::FuncOp;
-} // namespace mlir
-
 namespace llvm {
 
 /// Allow stealing the low bits of FuncOp.

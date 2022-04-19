@@ -676,7 +676,6 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
   Operation *writeValue = rewriter.create<vector::TransferWriteOp>(
       loc, readValue, copyOp.target(), indices,
       rewriter.getMultiDimIdentityMap(srcType.getRank()));
-  copyOp->getParentOfType<FuncOp>().dump();
   rewriter.replaceOp(copyOp, writeValue->getResults());
   return success();
 }
