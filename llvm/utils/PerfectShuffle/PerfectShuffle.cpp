@@ -18,6 +18,10 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+
+#define GENERATE_NEON
+#define GENERATE_NEON_INS
+
 struct Operator;
 
 // Masks are 4-nibble hex numbers.  Values 0-7 in any nibble means that it takes
@@ -143,6 +147,11 @@ struct Operator {
   }
 };
 
+#ifdef GENERATE_NEON_INS
+// Special case "insert" op identifier used below
+static Operator InsOp(0, "ins", 15, 1);
+#endif
+
 static const char *getZeroCostOpName(unsigned short Op) {
   if (ShufTab[Op].Arg0 == 0x0123)
     return "LHS";
@@ -172,6 +181,11 @@ static void PrintOperation(unsigned ValNo, unsigned short Vals[]) {
       }
   }
 
+#ifdef GENERATE_NEON_INS
+  if (ShufTab[ThisOp].Op == &InsOp) {
+    std::cerr << ", lane " << ShufTab[ThisOp].Arg1;
+  } else
+#endif
   if (!ShufTab[Vals[ValNo]].Op->isOnlyLHSOperator()) {
     std::cerr << ", ";
     if (ShufTab[ShufTab[ThisOp].Arg1].Cost == 0) {
@@ -199,6 +213,13 @@ static unsigned getNumEntered() {
 static void EvaluateOps(unsigned short Elt, unsigned short Vals[],
                         unsigned &NumVals) {
   if (ShufTab[Elt].Cost == 0) return;
+#ifdef GENERATE_NEON_INS
+  if (ShufTab[Elt].Op == &InsOp) {
+    EvaluateOps(ShufTab[Elt].Arg0, Vals, NumVals);
+    Vals[NumVals++] = Elt;
+    return;
+  }
+#endif
 
   // If this value has already been evaluated, it is free.  FIXME: match undefs.
   for (unsigned i = 0, e = NumVals; i != e; ++i)
@@ -288,6 +309,28 @@ int main() {
           ShufTab[i] = ShufTab[MinVal];
         }
       }
+#ifdef GENERATE_NEON_INS
+      else {
+        // Similarly, if we take the mask (eg 3,6,1,0) and take the cost with
+        // undef for each lane (eg u,6,1,0 or 3,u,1,0 etc), we can use a single
+        // lane insert to fixup the result.
+        unsigned MinVal = i;
+        unsigned MinCost = ShufTab[i].Cost;
+
+        for (unsigned LaneIdx = 0; LaneIdx < 4; LaneIdx++) {
+          if (getMaskElt(i, LaneIdx) == 8)
+            continue;
+          unsigned NewElt = setMaskElt(i, LaneIdx, 8);
+          if (ShufTab[NewElt].Cost + 1 < ShufTab[i].Cost) {
+            MadeChange = true;
+            ShufTab[i].Cost = ShufTab[NewElt].Cost + 1;
+            ShufTab[i].Op = &InsOp;
+            ShufTab[i].Arg0 = NewElt;
+            ShufTab[i].Arg1 = LaneIdx;
+          }
+        }
+      }
+#endif
     }
 
     for (unsigned LHS = 0; LHS != 0x8889; ++LHS) {
@@ -301,6 +344,10 @@ int main() {
 
       for (unsigned opnum = 0, e = TheOperators.size(); opnum != e; ++opnum) {
         Operator *Op = TheOperators[opnum];
+#ifdef GENERATE_NEON_INS
+        if (Op == &InsOp)
+          continue;
+#endif
 
         // Evaluate op(LHS,LHS)
         unsigned ResultMask = Op->getTransformedMask(LHS, LHS);
@@ -419,6 +466,12 @@ int main() {
         PrintMask(ShufTab[i].Arg1, std::cout);
       }
     }
+#ifdef GENERATE_NEON_INS
+    else if (ShufTab[i].Op == &InsOp) {
+      std::cout << ", lane " << ShufTab[i].Arg1;
+    }
+#endif
+
     std::cout << "\n";
   }
   std::cout << "  0\n};\n";
@@ -496,8 +549,6 @@ vsldoi<2> the_vsldoi2("vsldoi8" , OP_VSLDOI8);
 vsldoi<3> the_vsldoi3("vsldoi12", OP_VSLDOI12);
 
 #endif
-
-#define GENERATE_NEON
 
 #ifdef GENERATE_NEON
 enum {
