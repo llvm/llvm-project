@@ -254,4 +254,26 @@ EXTERN void __kmpc_impl_threadfence_system() {
 EXTERN int __kmpc_get_hardware_thread_id_in_block() { return __builtin_amdgcn_workitem_id_x(); }
 EXTERN int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
 
+#if defined(__gfx90a__) &&                                                     \
+    __has_builtin(__builtin_amdgcn_is_shared) &&                               \
+    __has_builtin(__builtin_amdgcn_is_private) &&                              \
+    __has_builtin(__builtin_amdgcn_ds_atomic_fadd_f32) &&                      \
+    __has_builtin(__builtin_amdgcn_global_atomic_fadd_f32)
+// This function is called for gfx90a only and single precision
+// floating point type
+EXTERN float __kmpc_unsafeAtomicAdd(float* addr, float value) {
+  if (__builtin_amdgcn_is_shared(
+          (const __attribute__((address_space(0))) void*)addr))
+    return __builtin_amdgcn_ds_atomic_fadd_f32((
+      const __attribute__((address_space(3))) float*)addr, value);
+  else if (__builtin_amdgcn_is_private(
+              (const __attribute__((address_space(0))) void*)addr)) {
+      float temp = *addr;
+      *addr = temp + value;
+      return temp;
+  }
+  return __builtin_amdgcn_global_atomic_fadd_f32(
+    (const __attribute__((address_space(1))) float*)addr, value);
+}
+#endif // if defined(gfx90a) &&
 #pragma omp end declare target

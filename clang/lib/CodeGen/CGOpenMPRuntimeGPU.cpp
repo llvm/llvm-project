@@ -4205,10 +4205,21 @@ std::pair<bool, RValue> CGOpenMPRuntimeGPU::emitFastFPAtomicCall(
   FPAtomicArgs.push_back(X.getPointer(CGF));
   FPAtomicArgs.push_back(UpdateFixed.getScalarVal());
 
-  llvm::Function *AtomicF = CGM.getIntrinsic(IID, {FPAtomicArgs[1]->getType(),
-                                                   FPAtomicArgs[0]->getType(),
-                                                   FPAtomicArgs[1]->getType()});
-  auto CallInst = CGF.EmitNounwindRuntimeCall(AtomicF, FPAtomicArgs);
-
+  llvm::Value *CallInst = nullptr;
+  if (Update.getScalarVal()->getType()->isFloatTy()) {
+    // Fast FP atomics are not available for single precision address located in
+    // FLAT address space.
+    // We need to check the address space at runtime to determine
+    // which function we can call. This is done in the OpenMP runtime.
+    CallInst =
+        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                CGM.getModule(), OMPRTL___kmpc_unsafeAtomicAdd),
+                            FPAtomicArgs);
+  } else {
+    llvm::Function *AtomicF = CGM.getIntrinsic(
+        IID, {FPAtomicArgs[1]->getType(), FPAtomicArgs[0]->getType(),
+              FPAtomicArgs[1]->getType()});
+    CallInst = CGF.EmitNounwindRuntimeCall(AtomicF, FPAtomicArgs);
+  }
   return std::make_pair(true, RValue::get(CallInst));
 }

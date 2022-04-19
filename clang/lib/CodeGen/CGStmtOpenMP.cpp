@@ -5841,7 +5841,8 @@ emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X, RValue Update,
                      HintClause::OpenMPSyncHintExpr::AMD_safe_fp_atomics)
           ? false
           : Context.getTargetInfo().allowAMDGPUUnsafeFPAtomics();
-  if (Context.getTargetInfo().getTriple().isAMDGCN() && CGF.CGM.getOpenMPRuntime().supportFastFPAtomics() &&
+  if (Context.getTargetInfo().getTriple().isAMDGCN() &&
+      CGF.CGM.getOpenMPRuntime().supportFastFPAtomics() &&
       userRequestsAMDGPUFastFPAtomics &&
       (BO == BO_Add || BO == BO_LT || BO == BO_GT) &&
       CGF.CGM.getLangOpts().OpenMPIsDevice && Update.isScalar() &&
