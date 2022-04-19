@@ -22,12 +22,45 @@ namespace llvm {
   class IRBuilderBase;
 
   /// Analyze the name and prototype of the given function and set any
-  /// applicable attributes.
+  /// applicable attributes. Note that this merely helps optimizations on an
+  /// already existing function but does not consider mandatory attributes.
+  ///
   /// If the library function is unavailable, this doesn't modify it.
   ///
   /// Returns true if any attributes were set and false otherwise.
-  bool inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI);
-  bool inferLibFuncAttributes(Module *M, StringRef Name, const TargetLibraryInfo &TLI);
+  bool inferNonMandatoryLibFuncAttrs(Module *M, StringRef Name,
+                                     const TargetLibraryInfo &TLI);
+  bool inferNonMandatoryLibFuncAttrs(Function &F, const TargetLibraryInfo &TLI);
+
+  /// Calls getOrInsertFunction() and then makes sure to add mandatory
+  /// argument attributes.
+  FunctionCallee getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                                    LibFunc TheLibFunc, FunctionType *T,
+                                    AttributeList AttributeList);
+  FunctionCallee getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                                    LibFunc TheLibFunc, FunctionType *T);
+  template <typename... ArgsTy>
+  FunctionCallee getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                               LibFunc TheLibFunc, AttributeList AttributeList,
+                               Type *RetTy, ArgsTy... Args) {
+    SmallVector<Type*, sizeof...(ArgsTy)> ArgTys{Args...};
+    return getOrInsertLibFunc(M, TLI, TheLibFunc,
+                              FunctionType::get(RetTy, ArgTys, false),
+                              AttributeList);
+  }
+  /// Same as above, but without the attributes.
+  template <typename... ArgsTy>
+  FunctionCallee getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                             LibFunc TheLibFunc, Type *RetTy, ArgsTy... Args) {
+    return getOrInsertLibFunc(M, TLI, TheLibFunc, AttributeList{}, RetTy,
+                              Args...);
+  }
+  // Avoid an incorrect ordering that'd otherwise compile incorrectly.
+  template <typename... ArgsTy>
+  FunctionCallee
+  getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
+                     LibFunc TheLibFunc, AttributeList AttributeList,
+                     FunctionType *Invalid, ArgsTy... Args) = delete;
 
   /// Check whether the overloaded floating point function
   /// corresponding to \a Ty is available.
@@ -35,10 +68,10 @@ namespace llvm {
                   LibFunc DoubleFn, LibFunc FloatFn, LibFunc LongDoubleFn);
 
   /// Get the name of the overloaded floating point function
-  /// corresponding to \a Ty.
-  StringRef getFloatFnName(const TargetLibraryInfo *TLI, Type *Ty,
-                           LibFunc DoubleFn, LibFunc FloatFn,
-                           LibFunc LongDoubleFn);
+  /// corresponding to \a Ty. Return the LibFunc in \a TheLibFunc.
+  StringRef getFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
+                       LibFunc DoubleFn, LibFunc FloatFn,
+                       LibFunc LongDoubleFn, LibFunc &TheLibFunc);
 
   /// Return V if it is an i8*, otherwise cast it to i8*.
   Value *castToCStr(Value *V, IRBuilderBase &B);
@@ -148,7 +181,8 @@ namespace llvm {
   /// function is known to take a single of type matching 'Op' and returns one
   /// value with the same type. If 'Op' is a long double, 'l' is added as the
   /// suffix of name, if 'Op' is a float, we add a 'f' suffix.
-  Value *emitUnaryFloatFnCall(Value *Op, StringRef Name, IRBuilderBase &B,
+  Value *emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
+                              StringRef Name, IRBuilderBase &B,
                               const AttributeList &Attrs);
 
   /// Emit a call to the unary function DoubleFn, FloatFn or LongDoubleFn,
@@ -162,8 +196,10 @@ namespace llvm {
   /// function is known to take type matching 'Op1' and 'Op2' and return one
   /// value with the same type. If 'Op1/Op2' are long double, 'l' is added as
   /// the suffix of name, if 'Op1/Op2' are float, we add a 'f' suffix.
-  Value *emitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
-                               IRBuilderBase &B, const AttributeList &Attrs);
+  Value *emitBinaryFloatFnCall(Value *Op1, Value *Op2,
+                               const TargetLibraryInfo *TLI,
+                               StringRef Name, IRBuilderBase &B,
+                               const AttributeList &Attrs);
 
   /// Emit a call to the binary function DoubleFn, FloatFn or LongDoubleFn,
   /// depending of the type of Op1.
