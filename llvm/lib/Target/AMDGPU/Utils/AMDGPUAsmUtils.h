@@ -83,8 +83,10 @@ extern StringLiteral const DfmtSymbolic[];
 extern StringLiteral const NfmtSymbolicGFX10[];
 extern StringLiteral const NfmtSymbolicSICI[];
 extern StringLiteral const NfmtSymbolicVI[];
-extern StringLiteral const UfmtSymbolic[];
-extern unsigned const DfmtNfmt2UFmt[];
+extern StringLiteral const UfmtSymbolicGFX10[];
+extern StringLiteral const UfmtSymbolicGFX11[];
+extern unsigned const DfmtNfmt2UFmtGFX10[];
+extern unsigned const DfmtNfmt2UFmtGFX11[];
 
 } // namespace MTBUFFormat
 

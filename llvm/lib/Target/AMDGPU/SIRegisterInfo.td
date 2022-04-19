@@ -211,8 +211,15 @@ defm SRC_SCC : SIRegLoHi16<"src_scc", 253>;
 // Should never be emitted.
 def SCC : SIReg<"scc">;
 
-defm M0 : SIRegLoHi16 <"m0", 124>;
-defm SGPR_NULL : SIRegLoHi16 <"null", 125>;
+// Encoding changes between subtarget generations.
+// See also Utils/AMDGPUBaseInfo.cpp MAP_REG2REG.
+defm M0_gfxpre11 : SIRegLoHi16 <"m0", 124>;
+defm M0_gfx11plus : SIRegLoHi16 <"m0", 125>;
+defm M0 : SIRegLoHi16 <"m0", 0>;
+
+defm SGPR_NULL_gfxpre11 : SIRegLoHi16 <"null", 125>;
+defm SGPR_NULL_gfx11plus : SIRegLoHi16 <"null", 124>;
+defm SGPR_NULL : SIRegLoHi16 <"null", 0>;
 
 defm SRC_SHARED_BASE : SIRegLoHi16<"src_shared_base", 235>;
 defm SRC_SHARED_LIMIT : SIRegLoHi16<"src_shared_limit", 236>;

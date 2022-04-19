@@ -1384,27 +1384,44 @@ void decodeDfmtNfmt(unsigned Format, unsigned &Dfmt, unsigned &Nfmt) {
   Nfmt = (Format >> NFMT_SHIFT) & NFMT_MASK;
 }
 
-int64_t getUnifiedFormat(const StringRef Name) {
-  for (int Id = UFMT_FIRST; Id <= UFMT_LAST; ++Id) {
-    if (Name == UfmtSymbolic[Id])
-      return Id;
+int64_t getUnifiedFormat(const StringRef Name, const MCSubtargetInfo &STI) {
+  if (isGFX11Plus(STI)) {
+    for (int Id = UfmtGFX11::UFMT_FIRST; Id <= UfmtGFX11::UFMT_LAST; ++Id) {
+      if (Name == UfmtSymbolicGFX11[Id])
+        return Id;
+    }
+  } else {
+    for (int Id = UfmtGFX10::UFMT_FIRST; Id <= UfmtGFX10::UFMT_LAST; ++Id) {
+      if (Name == UfmtSymbolicGFX10[Id])
+        return Id;
+    }
   }
   return UFMT_UNDEF;
 }
 
-StringRef getUnifiedFormatName(unsigned Id) {
-  return isValidUnifiedFormat(Id) ? UfmtSymbolic[Id] : "";
+StringRef getUnifiedFormatName(unsigned Id, const MCSubtargetInfo &STI) {
+  if(isValidUnifiedFormat(Id, STI))
+    return isGFX10(STI) ? UfmtSymbolicGFX10[Id] : UfmtSymbolicGFX11[Id];
+  return "";
 }
 
-bool isValidUnifiedFormat(unsigned Id) {
-  return Id <= UFMT_LAST;
+bool isValidUnifiedFormat(unsigned Id, const MCSubtargetInfo &STI) {
+  return isGFX10(STI) ? Id <= UfmtGFX10::UFMT_LAST : Id <= UfmtGFX11::UFMT_LAST;
 }
 
-int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt) {
+int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt,
+                             const MCSubtargetInfo &STI) {
   int64_t Fmt = encodeDfmtNfmt(Dfmt, Nfmt);
-  for (int Id = UFMT_FIRST; Id <= UFMT_LAST; ++Id) {
-    if (Fmt == DfmtNfmt2UFmt[Id])
-      return Id;
+  if (isGFX11Plus(STI)) {
+    for (int Id = UfmtGFX11::UFMT_FIRST; Id <= UfmtGFX11::UFMT_LAST; ++Id) {
+      if (Fmt == DfmtNfmt2UFmtGFX11[Id])
+        return Id;
+    }
+  } else {
+    for (int Id = UfmtGFX10::UFMT_FIRST; Id <= UfmtGFX10::UFMT_LAST; ++Id) {
+      if (Fmt == DfmtNfmt2UFmtGFX10[Id])
+        return Id;
+    }
   }
   return UFMT_UNDEF;
 }
@@ -1642,6 +1659,10 @@ bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
   return isGFX9(STI) || isGFX10(STI);
 }
 
+bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI) {
+  return isVI(STI) || isGFX9(STI) || isGFX10(STI);
+}
+
 bool isGFX8Plus(const MCSubtargetInfo &STI) {
   return isVI(STI) || isGFX9Plus(STI);
 }
@@ -1654,7 +1675,21 @@ bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
 }
 
-bool isGFX10Plus(const MCSubtargetInfo &STI) { return isGFX10(STI); }
+bool isGFX10Plus(const MCSubtargetInfo &STI) {
+  return isGFX10(STI) || isGFX11Plus(STI);
+}
+
+bool isGFX11(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
+}
+
+bool isGFX11Plus(const MCSubtargetInfo &STI) {
+  return isGFX11(STI);
+}
+
+bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
+  return !isGFX11Plus(STI);
+}
 
 bool isNotGFX10Plus(const MCSubtargetInfo &STI) {
   return isSI(STI) || isCI(STI) || isVI(STI) || isGFX9(STI);
@@ -1749,6 +1784,8 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
   CASE_VI_GFX9PLUS(TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11) \
   CASE_VI_GFX9PLUS(TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
   CASE_VI_GFX9PLUS(TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
+  CASE_GFXPRE11_GFX11PLUS(M0) \
+  CASE_GFXPRE11_GFX11PLUS(SGPR_NULL) \
   }
 
 #define CASE_CI_VI(node) \
@@ -1758,6 +1795,9 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
 #define CASE_VI_GFX9PLUS(node) \
   case node: return isGFX9Plus(STI) ? node##_gfx9plus : node##_vi;
 
+#define CASE_GFXPRE11_GFX11PLUS(node) \
+  case node: return isGFX11Plus(STI) ? node##_gfx11plus : node##_gfxpre11;
+
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
   if (STI.getTargetTriple().getArch() == Triple::r600)
     return Reg;
@@ -1766,9 +1806,11 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 
 #undef CASE_CI_VI
 #undef CASE_VI_GFX9PLUS
+#undef CASE_GFXPRE11_GFX11PLUS
 
 #define CASE_CI_VI(node)   case node##_ci: case node##_vi:   return node;
 #define CASE_VI_GFX9PLUS(node) case node##_vi: case node##_gfx9plus: return node;
+#define CASE_GFXPRE11_GFX11PLUS(node) case node##_gfx11plus: case node##_gfxpre11: return node;
 
 unsigned mc2PseudoReg(unsigned Reg) {
   MAP_REG2REG
@@ -1776,6 +1818,7 @@ unsigned mc2PseudoReg(unsigned Reg) {
 
 #undef CASE_CI_VI
 #undef CASE_VI_GFX9PLUS
+#undef CASE_GFXPRE11_GFX11PLUS
 #undef MAP_REG2REG
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
@@ -2224,7 +2267,8 @@ const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
 #define GET_SourcesOfDivergence_IMPL
 #define GET_Gfx9BufferFormat_IMPL
-#define GET_Gfx10PlusBufferFormat_IMPL
+#define GET_Gfx10BufferFormat_IMPL
+#define GET_Gfx11PlusBufferFormat_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
@@ -2237,16 +2281,20 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX10Plus(STI)
-             ? getGfx10PlusBufferFormatInfo(BitsPerComp, NumComponents,
+  return isGFX11Plus(STI)
+             ? getGfx11PlusBufferFormatInfo(BitsPerComp, NumComponents,
                                             NumFormat)
-             : getGfx9BufferFormatInfo(BitsPerComp, NumComponents, NumFormat);
+             : isGFX10(STI) ? getGfx10BufferFormatInfo(BitsPerComp,
+                                                       NumComponents, NumFormat)
+                            : getGfx9BufferFormatInfo(BitsPerComp,
+                                                      NumComponents, NumFormat);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI) {
-  return isGFX10Plus(STI) ? getGfx10PlusBufferFormatInfo(Format)
-                          : getGfx9BufferFormatInfo(Format);
+  return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
+                          : isGFX10(STI) ? getGfx10BufferFormatInfo(Format)
+                                         : getGfx9BufferFormatInfo(Format);
 }
 
 } // namespace AMDGPU

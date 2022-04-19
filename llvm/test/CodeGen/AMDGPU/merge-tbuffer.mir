@@ -1,5 +1,6 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX11 %s
 
 #
 # GFX9 tests
@@ -1610,5 +1611,802 @@ body:             |
     %5:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %6:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4:sgpr_128, 0, 12, 22, 0, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4:sgpr_128, 0, 8, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+...
+---
+
+
+#
+# GFX11 tests
+#
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_x_xyz
+# GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 63, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY killed %7.sub1_sub2_sub3
+name: gfx11_tbuffer_load_x_xyz
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %5:sgpr_128, 0, 8, 60, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_xyz_x
+# GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 63, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %7.sub0_sub1_sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub3
+name: gfx11_tbuffer_load_xyz_x
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %5:sgpr_128, 0, 4, 60, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_xy_xy
+# GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 63, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %7.sub0_sub1
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY killed %7.sub2_sub3
+name: gfx11_tbuffer_load_xy_xy
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable load 8, align 1, addrspace 4)
+    %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 12, 50, 0, 0, 0, implicit $exec :: (dereferenceable load 8, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_x_xy
+# GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 4, 60, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY killed %7.sub1_sub2
+name: gfx11_tbuffer_load_x_xy
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 8, 50, 0, 0, 0, implicit $exec :: (dereferenceable load 8, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_xy_x
+# GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 4, 60, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %7.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub2
+name: gfx11_tbuffer_load_xy_x
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable load 8, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 12, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_x_x
+# GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub1
+
+name: gfx11_tbuffer_load_x_x
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_x_x_format_32_32_32_32
+# GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub1
+
+name: gfx11_tbuffer_load_x_x_format_32_32_32_32
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 63, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 63, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_float_32
+# GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 63, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 60, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+
+name: gfx11_tbuffer_load_float_32
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %9:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %10:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 20, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %11:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %12:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 28, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %13:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 36, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %14:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 40, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %15:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 44, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_sint_32
+# GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 49, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 62, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 59, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+
+name: gfx11_tbuffer_load_sint_32
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %9:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 16, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %10:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 20, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %11:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 24, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %12:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 28, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %13:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 36, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %14:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 40, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %15:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 44, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_uint_32
+# GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 48, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 61, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 58, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+
+name: gfx11_tbuffer_load_uint_32
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 20, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 20, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %9:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 16, 20, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %10:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 20, 20, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %11:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 24, 20, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %12:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 28, 20, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %13:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 36, 20, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %14:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 40, 20, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %15:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 44, 20, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_not_merged_data_format_mismatch
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 13, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 20, 13, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 28, 13, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 36, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 40, 13, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 44, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+
+
+name: gfx11_tbuffer_load_not_merged_data_format_mismatch
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 13, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %9:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %10:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 20, 13, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %11:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %12:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 28, 13, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %13:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 36, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %14:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 40, 13, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %15:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 44, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_not_merged_num_format_mismatch
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 21, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 20, 21, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 28, 21, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 36, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 40, 21, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 44, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+name: gfx11_tbuffer_load_not_merged_num_format_mismatch
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %9:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %10:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 20, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %11:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %12:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 28, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %13:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 36, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %14:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 40, 21, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %15:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 44, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_x_xyz
+# GFX11: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1, %1, %subreg.sub2
+# GFX11: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE %0, %subreg.sub0, %9, %subreg.sub1_sub2_sub3
+# GFX11: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %10, %8, 0, 4, 63, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 4)
+name: gfx11_tbuffer_store_x_xyz
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %14:vreg_96 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1, %6:vgpr_32, %subreg.sub2
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact %14:vreg_96, %13:sgpr_128, 0, 8, 60, 0, 0, 0, implicit $exec :: (dereferenceable store 12, align 1, addrspace 4)
+...
+---
+
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_xyz_x
+# GFX11: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1, %1, %subreg.sub2
+# GFX11: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE %9, %subreg.sub0_sub1_sub2, %0, %subreg.sub3
+# GFX11: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %10, %8, 0, 4, 63, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 4)
+name: gfx11_tbuffer_store_xyz_x
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %14:vreg_96 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1, %6:vgpr_32, %subreg.sub2
+    TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact %14:vreg_96, %13:sgpr_128, 0, 4, 60, 0, 0, 0, implicit $exec :: (dereferenceable store 12, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_xy_xy
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %0, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE %9, %subreg.sub0_sub1, %10, %subreg.sub2_sub3
+# GFX11: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %11, %8, 0, 4, 63, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 4)
+name: gfx11_tbuffer_store_xy_xy
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
+    %15:vreg_64 = REG_SEQUENCE %6:vgpr_32, %subreg.sub0, %7:vgpr_32, %subreg.sub1
+    TBUFFER_STORE_FORMAT_XY_OFFSET_exact %14:vreg_64, %13:sgpr_128, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_XY_OFFSET_exact %15:vreg_64, %13:sgpr_128, 0, 12, 50, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_x_xy
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_64, %subreg.sub1_sub2
+# GFX11: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %11, %8, 0, 4, 60, 0, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
+name: gfx11_tbuffer_store_x_xy
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_XY_OFFSET_exact %15:vreg_64, %13:sgpr_128, 0, 8, 50, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_xy_x
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE %9, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX11: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %10, %8, 0, 4, 60, 0, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
+name: gfx11_tbuffer_store_xy_x
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
+    TBUFFER_STORE_FORMAT_XY_OFFSET_exact %14:vreg_64, %13:sgpr_128, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 12, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+...
+---
+
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_x_x
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %0, %subreg.sub1
+# GFX11: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %9, %8, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
+name: gfx11_tbuffer_store_x_x
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 8, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_x_x_format_32_32_32_32
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %0, %subreg.sub1
+# GFX11: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %9, %8, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
+name: gfx11_tbuffer_store_x_x_format_32_32_32_32
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 4, 63, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 8, 63, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_float32
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
+# GFX11: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %5, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, %4, %subreg.sub2
+# GFX11: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %16, %subreg.sub0_sub1_sub2, %3, %subreg.sub3
+# GFX11: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %17, %13, 0, 16, 63, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %18, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX11: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %19, %13, 0, 36, 60, 0, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
+name: gfx11_tbuffer_store_float32
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    %12:vgpr_32 = COPY $vgpr8
+    %11:vgpr_32 = COPY $vgpr7
+    %10:vgpr_32 = COPY $vgpr6
+    %9:vgpr_32 = COPY $vgpr5
+    %8:vgpr_32 = COPY $vgpr4
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 20, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %8:vgpr_32, %13:sgpr_128, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %9:vgpr_32, %13:sgpr_128, 0, 28, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %10:vgpr_32, %13:sgpr_128, 0, 36, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %11:vgpr_32, %13:sgpr_128, 0, 40, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %12:vgpr_32, %13:sgpr_128, 0, 44, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_sint32
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
+# GFX11: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 49, 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %5, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, %4, %subreg.sub2
+# GFX11: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %16, %subreg.sub0_sub1_sub2, %3, %subreg.sub3
+# GFX11: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %17, %13, 0, 16, 62, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %18, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX11: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %19, %13, 0, 36, 59, 0, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
+name: gfx11_tbuffer_store_sint32
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    %12:vgpr_32 = COPY $vgpr8
+    %11:vgpr_32 = COPY $vgpr7
+    %10:vgpr_32 = COPY $vgpr6
+    %9:vgpr_32 = COPY $vgpr5
+    %8:vgpr_32 = COPY $vgpr4
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 16, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 20, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %8:vgpr_32, %13:sgpr_128, 0, 24, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %9:vgpr_32, %13:sgpr_128, 0, 28, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %10:vgpr_32, %13:sgpr_128, 0, 36, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %11:vgpr_32, %13:sgpr_128, 0, 40, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %12:vgpr_32, %13:sgpr_128, 0, 44, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_uint32
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
+# GFX11: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 48, 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %5, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %15, %subreg.sub0_sub1, %4, %subreg.sub2
+# GFX11: %{{[0-9]+}}:vreg_128 = REG_SEQUENCE killed %16, %subreg.sub0_sub1_sub2, %3, %subreg.sub3
+# GFX11: TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed %17, %13, 0, 16, 61, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = REG_SEQUENCE killed %18, %subreg.sub0_sub1, %0, %subreg.sub2
+# GFX11: TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact killed %19, %13, 0, 36, 58, 0, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
+name: gfx11_tbuffer_store_uint32
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    %12:vgpr_32 = COPY $vgpr8
+    %11:vgpr_32 = COPY $vgpr7
+    %10:vgpr_32 = COPY $vgpr6
+    %9:vgpr_32 = COPY $vgpr5
+    %8:vgpr_32 = COPY $vgpr4
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 20, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 20, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 16, 20, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 20, 20, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %8:vgpr_32, %13:sgpr_128, 0, 24, 20, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %9:vgpr_32, %13:sgpr_128, 0, 28, 20, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %10:vgpr_32, %13:sgpr_128, 0, 36, 20, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %11:vgpr_32, %13:sgpr_128, 0, 40, 20, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %12:vgpr_32, %13:sgpr_128, 0, 44, 20, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_not_merged_data_format_mismatch
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %8, %13, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %7, %13, 0, 8, 21, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %6, %13, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %5, %13, 0, 20, 21, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %4, %13, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %3, %13, 0, 28, 21, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %2, %13, 0, 30, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %1, %13, 0, 40, 21, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %0, %13, 0, 32, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+name: gfx11_tbuffer_store_not_merged_data_format_mismatch
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    %12:vgpr_32 = COPY $vgpr8
+    %11:vgpr_32 = COPY $vgpr7
+    %10:vgpr_32 = COPY $vgpr6
+    %9:vgpr_32 = COPY $vgpr5
+    %8:vgpr_32 = COPY $vgpr4
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 20, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %8:vgpr_32, %13:sgpr_128, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %9:vgpr_32, %13:sgpr_128, 0, 28, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %10:vgpr_32, %13:sgpr_128, 0, 30, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %11:vgpr_32, %13:sgpr_128, 0, 40, 21, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %12:vgpr_32, %13:sgpr_128, 0, 32, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+...
+---
+
+# GFX11-LABEL: name: gfx11_tbuffer_store_not_merged_num_format_mismatch
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %8, %13, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %7, %13, 0, 8, 13, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %6, %13, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %5, %13, 0, 20, 13, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %4, %13, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %3, %13, 0, 28, 13, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %2, %13, 0, 30, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %1, %13, 0, 40, 13, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+# GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %0, %13, 0, 32, 22, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
+name: gfx11_tbuffer_store_not_merged_num_format_mismatch
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    %12:vgpr_32 = COPY $vgpr8
+    %11:vgpr_32 = COPY $vgpr7
+    %10:vgpr_32 = COPY $vgpr6
+    %9:vgpr_32 = COPY $vgpr5
+    %8:vgpr_32 = COPY $vgpr4
+    %7:vgpr_32 = COPY $vgpr3
+    %6:vgpr_32 = COPY $vgpr2
+    %5:vgpr_32 = COPY $vgpr1
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 13, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 16, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 20, 13, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %8:vgpr_32, %13:sgpr_128, 0, 24, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %9:vgpr_32, %13:sgpr_128, 0, 28, 13, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %10:vgpr_32, %13:sgpr_128, 0, 30, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %11:vgpr_32, %13:sgpr_128, 0, 40, 13, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_X_OFFSET_exact %12:vgpr_32, %13:sgpr_128, 0, 32, 22, 0, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
+...
+---
+
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_not_merged_swizzled_0
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 22, 0, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+name: gfx11_tbuffer_load_not_merged_swizzled_0
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, 1, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_not_merged_swizzled_1
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 22, 0, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+name: gfx11_tbuffer_load_not_merged_swizzled_1
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, 1, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
+...
+---
+
+
+# GFX11-LABEL: name: gfx11_tbuffer_load_merge_across_swizzle
+# GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 50, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+# GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 12, 22, 0, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+name: gfx11_tbuffer_load_merge_across_swizzle
+body:             |
+  bb.0.entry:
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = COPY $sgpr1
+    %2:sgpr_32 = COPY $sgpr2
+    %3:sgpr_32 = COPY $sgpr3
+    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
+    %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 12, 22, 0, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %9:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...
 ---

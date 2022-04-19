@@ -310,8 +310,8 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
   if (AMDGPU::isGFX10Plus(STI)) {
     if (Val == UFMT_DEFAULT)
       return;
-    if (isValidUnifiedFormat(Val)) {
-      O << " format:[" << getUnifiedFormatName(Val) << ']';
+    if (isValidUnifiedFormat(Val, STI)) {
+      O << " format:[" << getUnifiedFormatName(Val, STI) << ']';
     } else {
       O << " format:" << Val;
     }

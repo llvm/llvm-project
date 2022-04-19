@@ -515,6 +515,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
+    if (Res) break;
+
+    Res = tryDecodeInst(DecoderTableGFX1164, MI, QW, Address);
   } while (false);
 
   if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
@@ -1350,8 +1353,10 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   case 109: return createRegOperand(TBA_HI);
   case 110: return createRegOperand(TMA_LO);
   case 111: return createRegOperand(TMA_HI);
-  case 124: return createRegOperand(M0);
-  case 125: return createRegOperand(SGPR_NULL);
+  case 124:
+    return isGFX11Plus() ? createRegOperand(SGPR_NULL) : createRegOperand(M0);
+  case 125:
+    return isGFX11Plus() ? createRegOperand(M0) : createRegOperand(SGPR_NULL);
   case 126: return createRegOperand(EXEC_LO);
   case 127: return createRegOperand(EXEC_HI);
   case 235: return createRegOperand(SRC_SHARED_BASE);
@@ -1377,7 +1382,14 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   case 106: return createRegOperand(VCC);
   case 108: return createRegOperand(TBA);
   case 110: return createRegOperand(TMA);
-  case 125: return createRegOperand(SGPR_NULL);
+  case 124:
+    if (isGFX11Plus())
+      return createRegOperand(SGPR_NULL);
+    break;
+  case 125:
+    if (!isGFX11Plus())
+      return createRegOperand(SGPR_NULL);
+    break;
   case 126: return createRegOperand(EXEC);
   case 235: return createRegOperand(SRC_SHARED_BASE);
   case 236: return createRegOperand(SRC_SHARED_LIMIT);
@@ -1490,6 +1502,15 @@ bool AMDGPUDisassembler::isGFX10() const { return AMDGPU::isGFX10(STI); }
 bool AMDGPUDisassembler::isGFX10Plus() const {
   return AMDGPU::isGFX10Plus(STI);
 }
+
+bool AMDGPUDisassembler::isGFX11() const {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
+}
+
+bool AMDGPUDisassembler::isGFX11Plus() const {
+  return AMDGPU::isGFX11Plus(STI);
+}
+
 
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
