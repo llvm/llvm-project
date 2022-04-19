@@ -12,13 +12,13 @@
 # CHECK-INTERESTINGNESS: G_IMPLICIT_DEF
 # CHECK-INTERESTINGNESS: G_STORE
 
-# RESULT: %v0:vgpr(s32) = COPY $vgpr0, implicit-def %9(p1), implicit-def %10(s64), implicit-def %11(s64)
-# RESULT-NEXT: %arst:_(<2 x s32>) = G_IMPLICIT_DEF
-# RESULT-NEXT: %aoeu:_(s64) = G_BITCAST %arst(<2 x s32>)
+# RESULT: %v0:vgpr(s32) = COPY $vgpr0, implicit-def %9(<2 x s16>), implicit-def %10(s64), implicit-def %11(s64), implicit-def %12(<2 x s32>)
+# RESULT-NEXT: %unused_load_ptr:sgpr(p1) = G_IMPLICIT_DEF
+# RESULT-NEXT: %aoeu:_(s64) = G_BITCAST %12(<2 x s32>)
 # RESULT-NEXT: %add:_(s64) = G_ADD %aoeu, %aoeu
 # RESULT-NEXT: %ptr:_(p1) = G_IMPLICIT_DEF
 # RESULT-NEXT: G_STORE %v0(s32), %ptr(p1) :: (store (s32), addrspace 1)
-# RESULT-NEXT: S_ENDPGM 0, implicit %add(s64), implicit %v0(s32), implicit %11(s64)
+# RESULT-NEXT: S_ENDPGM 0, implicit %add(s64), implicit %9(<2 x s16>), implicit %11(s64)
 
 ---
 name:            f

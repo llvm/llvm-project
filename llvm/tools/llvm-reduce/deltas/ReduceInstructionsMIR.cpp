@@ -23,7 +23,7 @@ using namespace llvm;
 
 static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
                                     MachineBasicBlock::reverse_iterator &RI,
-                                    const RegClassOrRegBank &RC,
+                                    const RegClassOrRegBank &RC, LLT Ty,
                                     SetVector<MachineInstr *> &ExcludeMIs) {
   auto MRI = &MBB.getParent()->getRegInfo();
   for (MachineBasicBlock::reverse_instr_iterator E = MBB.instr_rend(); RI != E;
@@ -37,7 +37,7 @@ static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
       if (Register::isPhysicalRegister(Reg))
         continue;
 
-      if (MRI->getRegClassOrRegBank(Reg) == RC &&
+      if (MRI->getRegClassOrRegBank(Reg) == RC && MRI->getType(Reg) == Ty &&
           !ExcludeMIs.count(MO.getParent()))
         return Reg;
     }
@@ -81,6 +81,8 @@ static void extractInstrFromModule(Oracle &O, MachineFunction &MF) {
       auto UE = MRI->use_end();
 
       const auto &RegRC = MRI->getRegClassOrRegBank(Reg);
+      LLT RegTy = MRI->getType(Reg);
+
       Register NewReg = 0;
       // If this is not a physical register and there are some uses.
       if (UI != UE) {
@@ -88,7 +90,7 @@ static void extractInstrFromModule(Oracle &O, MachineFunction &MF) {
         MachineBasicBlock *BB = MI->getParent();
         ++RI;
         while (NewReg == 0 && BB) {
-          NewReg = getPrevDefOfRCInMBB(*BB, RI, RegRC, ToDelete);
+          NewReg = getPrevDefOfRCInMBB(*BB, RI, RegRC, RegTy, ToDelete);
           // Prepare for idom(BB).
           if (auto *IDM = MDT.getNode(BB)->getIDom()) {
             BB = IDM->getBlock();
