@@ -561,6 +561,15 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
   if (!ptrs.count(addr))
     return;
 
+  auto getArrayFromSubscript = [&](PtrStrideOp strideOp) -> mlir::Value {
+    auto castOp = dyn_cast<CastOp>(strideOp.getBase().getDefiningOp());
+    if (!castOp)
+      return {};
+    if (castOp.getKind() != cir::CastKind::array_to_ptrdecay)
+      return {};
+    return castOp.getSrc();
+  };
+
   auto data = storeOp.getValue();
   // 2.4.2 - If the declaration includes an initialization, the
   // initialization is treated as a separate operation
@@ -583,6 +592,16 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
     // p = &x;
     getPmap()[addr].clear();
     getPmap()[addr].insert(State::getLocalValue(data));
+    return;
+  }
+
+  if (auto ptrStrideOp = dyn_cast<PtrStrideOp>(data.getDefiningOp())) {
+    // p = &a[0];
+    auto array = getArrayFromSubscript(ptrStrideOp);
+    if (array) {
+      getPmap()[addr].clear();
+      getPmap()[addr].insert(State::getLocalValue(array));
+    }
     return;
   }
 
