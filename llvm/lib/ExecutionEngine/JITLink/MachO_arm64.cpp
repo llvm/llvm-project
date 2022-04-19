@@ -677,7 +677,10 @@ private:
       break;
     }
     default:
-      llvm_unreachable("Unrecognized edge kind");
+      return make_error<JITLinkError>(
+          "In graph " + G.getName() + ", section " + B.getSection().getName() +
+          "unsupported edge kind" +
+          getMachOARM64RelocationKindName(E.getKind()));
     }
 
     return Error::success();

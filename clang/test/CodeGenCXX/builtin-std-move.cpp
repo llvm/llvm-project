@@ -55,3 +55,12 @@ extern "C" void *use_address() {
 }
 
 // CHECK: define {{.*}} ptr @_ZSt4moveIiEOT_RS0_(ptr
+
+extern "C" void take_const_int_rref(const int &&);
+// CHECK-LABEL: define {{.*}} @move_const_int(
+extern "C" void move_const_int() {
+  // CHECK: store i32 5, ptr %[[N_ADDR:[^,]*]]
+  const int n = 5;
+  // CHECK: call {{.*}} @take_const_int_rref(ptr {{.*}} %[[N_ADDR]])
+  take_const_int_rref(std::move(n));
+}

@@ -30,8 +30,10 @@ class IncludeInserterCheckBase : public ClangTidyCheck {
 public:
   IncludeInserterCheckBase(StringRef CheckName, ClangTidyContext *Context,
                            utils::IncludeSorter::IncludeStyle Style =
-                               utils::IncludeSorter::IS_Google)
-      : ClangTidyCheck(CheckName, Context), Inserter(Style) {}
+                               utils::IncludeSorter::IS_Google,
+                           bool SelfContainedDiags = false)
+      : ClangTidyCheck(CheckName, Context),
+        Inserter(Style, SelfContainedDiags) {}
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override {
@@ -79,6 +81,19 @@ class MultipleHeaderInserterCheck : public IncludeInserterCheckBase {
 public:
   MultipleHeaderInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
+
+  std::vector<StringRef> headersToInclude() const override {
+    return {"path/to/header.h", "path/to/header2.h", "path/to/header.h"};
+  }
+};
+
+class MultipleHeaderSingleInserterCheck : public IncludeInserterCheckBase {
+public:
+  MultipleHeaderSingleInserterCheck(StringRef CheckName,
+                                    ClangTidyContext *Context)
+      : IncludeInserterCheckBase(CheckName, Context,
+                                 utils::IncludeSorter::IS_Google,
+                                 /*SelfContainedDiags=*/true) {}
 
   std::vector<StringRef> headersToInclude() const override {
     return {"path/to/header.h", "path/to/header2.h", "path/to/header.h"};
@@ -243,6 +258,41 @@ void foo() {
 
   EXPECT_EQ(PostCode,
             runCheckOnCode<MultipleHeaderInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_input2.cc"));
+}
+
+TEST(IncludeInserterTest, InsertMultipleIncludesNoDeduplicate) {
+  const char *PreCode = R"(
+#include "clang_tidy/tests/insert_includes_test_header.h"
+
+#include <list>
+#include <map>
+
+#include "path/to/a/header.h"
+
+void foo() {
+  int a = 0;
+})";
+  // FIXME: ClangFormat bug - https://bugs.llvm.org/show_bug.cgi?id=49298
+  // clang-format off
+  const char *PostCode = R"(
+#include "clang_tidy/tests/insert_includes_test_header.h"
+
+#include <list>
+#include <map>
+
+#include "path/to/a/header.h"
+#include "path/to/header.h"
+#include "path/to/header2.h"
+#include "path/to/header.h"
+
+void foo() {
+  int a = 0;
+})";
+  // clang-format on
+
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<MultipleHeaderSingleInserterCheck>(
                 PreCode, "clang_tidy/tests/insert_includes_test_input2.cc"));
 }
 
