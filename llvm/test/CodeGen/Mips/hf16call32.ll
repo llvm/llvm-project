@@ -820,7 +820,7 @@ declare void @v_df_df(double, double) #1
 declare float @sf_v() #1
 ; stel: .section .mips16.call.fp.sf_v,"ax",@progbits
 ; stel: .ent __call_stub_fp_sf_v
-; stel: move $18, $ra
+; stel: move $18, ${{31|ra}}
 ; stel: jal sf_v
 ; stel: mfc1 $2, $f0
 ; stel: jr $18

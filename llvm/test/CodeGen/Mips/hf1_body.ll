@@ -3,6 +3,7 @@
 ; RUN:     FileCheck %s -check-prefixes=ALL,GAS
 
 ; The integrated assembler expands assembly macros before printing.
+; REQUIRES: integrated-as
 ; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 \
 ; RUN:     -relocation-model=pic < %s | \
 ; RUN:     FileCheck %s -check-prefixes=ALL,IAS

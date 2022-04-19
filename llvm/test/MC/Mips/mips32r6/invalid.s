@@ -1,5 +1,6 @@
 # Instructions that are available for the current ISA but should be rejected by
 # the assembler (e.g. invalid set of operands or operand's restrictions not met).
+# UNSUPPORTED: nanomips
 
 # RUN: not llvm-mc %s -triple=mips-unknown-linux -mcpu=mips32r6 2>%t1
 # RUN: FileCheck %s < %t1
