@@ -363,7 +363,7 @@ RewriteInstance::createRewriteInstance(ELFObjectFileBase *File, const int Argc,
   auto RI = std::make_unique<RewriteInstance>(File, Argc, Argv, ToolPath, Err);
   if (Err)
     return std::move(Err);
-  return RI;
+  return std::move(RI);
 }
 
 RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
