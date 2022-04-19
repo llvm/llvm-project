@@ -1314,19 +1314,18 @@ void GPUNodeBuilder::createFor(__isl_take isl_ast_node *Node) {
 
 void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {
   isl_ast_expr *LocalIndex = isl_ast_expr_copy(KernelStmt->u.c.local_index);
-  LocalIndex = isl_ast_expr_address_of(LocalIndex);
-  Value *LocalAddr = ExprBuilder.create(LocalIndex);
+  auto LocalAddr = ExprBuilder.createAccessAddress(LocalIndex);
   isl_ast_expr *Index = isl_ast_expr_copy(KernelStmt->u.c.index);
-  Index = isl_ast_expr_address_of(Index);
-  Value *GlobalAddr = ExprBuilder.create(Index);
-  Type *IndexTy = GlobalAddr->getType()->getPointerElementType();
+  auto GlobalAddr = ExprBuilder.createAccessAddress(Index);
 
   if (KernelStmt->u.c.read) {
-    LoadInst *Load = Builder.CreateLoad(IndexTy, GlobalAddr, "shared.read");
-    Builder.CreateStore(Load, LocalAddr);
+    LoadInst *Load =
+        Builder.CreateLoad(GlobalAddr.second, GlobalAddr.first, "shared.read");
+    Builder.CreateStore(Load, LocalAddr.first);
   } else {
-    LoadInst *Load = Builder.CreateLoad(IndexTy, LocalAddr, "shared.write");
-    Builder.CreateStore(Load, GlobalAddr);
+    LoadInst *Load =
+        Builder.CreateLoad(LocalAddr.second, LocalAddr.first, "shared.write");
+    Builder.CreateStore(Load, GlobalAddr.first);
   }
 }
 
