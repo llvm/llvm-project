@@ -545,27 +545,27 @@ vext<2> the_vext2("vext2", OP_VEXT2);
 vext<3> the_vext3("vext3", OP_VEXT3);
 
 struct vuzpl : public Operator {
-  vuzpl() : Operator(0x0246, "vuzpl", OP_VUZPL, 2) {}
+  vuzpl() : Operator(0x0246, "vuzpl", OP_VUZPL, 1) {}
 } the_vuzpl;
 
 struct vuzpr : public Operator {
-  vuzpr() : Operator(0x1357, "vuzpr", OP_VUZPR, 2) {}
+  vuzpr() : Operator(0x1357, "vuzpr", OP_VUZPR, 1) {}
 } the_vuzpr;
 
 struct vzipl : public Operator {
-  vzipl() : Operator(0x0415, "vzipl", OP_VZIPL, 2) {}
+  vzipl() : Operator(0x0415, "vzipl", OP_VZIPL, 1) {}
 } the_vzipl;
 
 struct vzipr : public Operator {
-  vzipr() : Operator(0x2637, "vzipr", OP_VZIPR, 2) {}
+  vzipr() : Operator(0x2637, "vzipr", OP_VZIPR, 1) {}
 } the_vzipr;
 
 struct vtrnl : public Operator {
-  vtrnl() : Operator(0x0426, "vtrnl", OP_VTRNL, 2) {}
+  vtrnl() : Operator(0x0426, "vtrnl", OP_VTRNL, 1) {}
 } the_vtrnl;
 
 struct vtrnr : public Operator {
-  vtrnr() : Operator(0x1537, "vtrnr", OP_VTRNR, 2) {}
+  vtrnr() : Operator(0x1537, "vtrnr", OP_VTRNR, 1) {}
 } the_vtrnr;
 
 #endif

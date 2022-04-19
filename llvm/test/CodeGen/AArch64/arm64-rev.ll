@@ -561,8 +561,8 @@ define void @float_vrev64(float* nocapture %source, <4 x float>* nocapture %dest
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    dup.4s v0, v0[0]
-; CHECK-NEXT:    ext.16b v0, v1, v0, #12
-; CHECK-NEXT:    rev64.4s v0, v0
+; CHECK-NEXT:    trn2.4s v1, v1, v0
+; CHECK-NEXT:    ext.16b v0, v1, v0, #4
 ; CHECK-NEXT:    str q0, [x1, #176]
 ; CHECK-NEXT:    ret
 ;

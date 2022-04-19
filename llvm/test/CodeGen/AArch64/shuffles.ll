@@ -4,11 +4,11 @@
 define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: test_shuf1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v3.16b, v6.16b, v7.16b, #8
+; CHECK-NEXT:    zip2 v3.4s, v7.4s, v6.4s
 ; CHECK-NEXT:    ext v5.16b, v6.16b, v4.16b, #12
 ; CHECK-NEXT:    uzp1 v6.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    uzp2 v4.4s, v2.4s, v4.4s
-; CHECK-NEXT:    ext v3.16b, v3.16b, v3.16b, #12
+; CHECK-NEXT:    trn2 v3.4s, v7.4s, v3.4s
 ; CHECK-NEXT:    ext v5.16b, v7.16b, v5.16b, #8
 ; CHECK-NEXT:    trn2 v6.4s, v6.4s, v1.4s
 ; CHECK-NEXT:    trn1 v2.4s, v4.4s, v2.4s
@@ -28,9 +28,9 @@ define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 define <4 x i32> @test_shuf2(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: test_shuf2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v0.16b, v6.16b, v7.16b, #8
+; CHECK-NEXT:    zip2 v0.4s, v7.4s, v6.4s
 ; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #12
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #12
+; CHECK-NEXT:    trn2 v0.4s, v7.4s, v0.4s
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v0.16b, #8
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v2.16b, #8
 ; CHECK-NEXT:    ret
@@ -78,8 +78,8 @@ define <4 x i32> @test1503(<4 x i32> %a, <4 x i32> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v1.16b, #12
 ; CHECK-NEXT:    zip1 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    trn1 v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ext v0.16b, v1.16b, v0.16b, #8
+; CHECK-NEXT:    trn1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    ret
 {
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 1, i32 5, i32 0, i32 3>
@@ -89,9 +89,8 @@ define <4 x i32> @test1503(<4 x i32> %a, <4 x i32> %b)
 define <4 x i32> @test4366(<4 x i32> %a, <4 x i32> %b)
 ; CHECK-LABEL: test4366:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 v2.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    uzp1 v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ext v0.16b, v0.16b, v2.16b, #4
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    zip2 v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
 {

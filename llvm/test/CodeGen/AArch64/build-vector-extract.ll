@@ -31,8 +31,8 @@ define <2 x i64> @extract1_i32_zext_insert0_i64_undef(<4 x i32> %x) {
 ; CHECK-LABEL: extract1_i32_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    zip1 v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #12
+; CHECK-NEXT:    zip1 v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x i32> %x, i32 1
   %z = zext i32 %e to i64
@@ -58,8 +58,8 @@ define <2 x i64> @extract2_i32_zext_insert0_i64_undef(<4 x i32> %x) {
 ; CHECK-LABEL: extract2_i32_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #12
+; CHECK-NEXT:    uzp1 v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    zip2 v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x i32> %x, i32 2
   %z = zext i32 %e to i64
@@ -138,7 +138,7 @@ define <2 x i64> @extract1_i32_zext_insert1_i64_undef(<4 x i32> %x) {
 ; CHECK-LABEL: extract1_i32_zext_insert1_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #4
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x i32> %x, i32 1
