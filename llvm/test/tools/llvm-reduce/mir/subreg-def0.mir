@@ -4,7 +4,8 @@
 
 # CHECK-INTERESTINGNESS: V_ADD_U32
 
-# RESULT: S_WAITCNT 0, implicit-def undef %2.sub1, implicit-def %3.sub0
+# RESULT: undef %2.sub1:vreg_64 = IMPLICIT_DEF
+# RESULT-NEXT: %3.sub0:vreg_64 = IMPLICIT_DEF
 # RESULT-NEXT: %1:vgpr_32 = V_ADD_U32_e32 %2.sub0, %2.sub1, implicit $exec
 # RESULT-NEXT: S_ENDPGM 0, implicit %1
 

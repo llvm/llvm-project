@@ -69,17 +69,15 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
-  MachineInstr *TopMI = nullptr;
+  MachineBasicBlock *EntryMBB = &*MF.begin();
+  MachineBasicBlock::iterator EntryInsPt =
+      EntryMBB->SkipPHIsLabelsAndDebug(EntryMBB->begin());
 
   // Mark MIs for deletion according to some criteria.
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (shouldNotRemoveInstruction(*TII, MI))
         continue;
-      if (MBB.isEntryBlock() && !TopMI) {
-        TopMI = &MI;
-        continue;
-      }
       if (!O.shouldKeep())
         ToDelete.insert(&MI);
     }
@@ -118,19 +116,15 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
         }
       }
 
-      // If no dominating definition was found then add an implicit one to the
-      // first instruction in the entry block.
-
-      // FIXME: This should really insert IMPLICIT_DEF or G_IMPLICIT_DEF. We
-      // need to refine the reduction quality metric from number of serialized
-      // bytes to continue progressing if we're going to introduce new
-      // instructions.
-      if (!NewReg && TopMI) {
+      // If no dominating definition was found then add an implicit def to the
+      // top of the entry block.
+      if (!NewReg) {
         NewReg = MRI->cloneVirtualRegister(Reg);
-        TopMI->addOperand(MachineOperand::CreateReg(
-            NewReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/,
-            MO.isDead(), MO.isUndef(), MO.isEarlyClobber(), MO.getSubReg(),
-            /*IsDebug*/ false, MO.isInternalRead()));
+        bool IsGeneric = MRI->getRegClassOrNull(Reg) == nullptr;
+        unsigned ImpDef = IsGeneric ? TargetOpcode::G_IMPLICIT_DEF
+                                    : TargetOpcode::IMPLICIT_DEF;
+        BuildMI(*EntryMBB, EntryInsPt, DebugLoc(), TII->get(ImpDef))
+          .addReg(NewReg, getRegState(MO), MO.getSubReg());
       }
 
       // Update all uses.
