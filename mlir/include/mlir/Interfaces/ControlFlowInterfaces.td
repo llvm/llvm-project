@@ -211,6 +211,11 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
        SmallVector<Attribute, 2> nullAttrs(getOperation()->getNumOperands());
        getSuccessorRegions(index, nullAttrs, regions);
     }
+
+    /// Return `true` if control flow originating from the given region may
+    /// eventually branch back to the same region. (Maybe after passing through
+    /// other regions.)
+    bool isRepetitiveRegion(unsigned index);
   }];
 }
 
