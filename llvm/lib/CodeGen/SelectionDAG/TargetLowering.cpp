@@ -5560,17 +5560,6 @@ SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   return SDValue();
 }
 
-SDValue
-TargetLowering::BuildSREMPow2(SDNode *N, const APInt &Divisor,
-                              SelectionDAG &DAG,
-                              SmallVectorImpl<SDNode *> &Created) const {
-  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.isIntDivCheap(N->getValueType(0), Attr))
-    return SDValue(N, 0); // Lower SREM as SREM
-  return SDValue();
-}
-
 /// Given an ISD::SDIV node expressing a divide by constant,
 /// return a DAG expression to select that will generate the same value by
 /// multiplying by a magic number.
