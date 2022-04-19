@@ -87,6 +87,11 @@ void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     }
   } else {
     assert(Fixup.getKind() == FK_PCRel_2);
+
+    int64_t ByteOff = (int64_t)Value - 8;
+    if (ByteOff > INT16_MAX * 8 || ByteOff < INT16_MIN * 8)
+      report_fatal_error("Branch target out of insn range");
+
     Value = (uint16_t)((Value - 8) / 8);
     support::endian::write<uint16_t>(&Data[Fixup.getOffset() + 2], Value,
                                      Endian);
