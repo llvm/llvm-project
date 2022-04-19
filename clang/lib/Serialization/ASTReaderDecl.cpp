@@ -2382,13 +2382,17 @@ ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
   if (writtenAsCanonicalDecl) {
     auto *CanonPattern = readDeclAs<VarTemplateDecl>();
     if (D->isCanonicalDecl()) { // It's kept in the folding set.
-      // FIXME: If it's already present, merge it.
+      VarTemplateSpecializationDecl *CanonSpec;
       if (auto *Partial = dyn_cast<VarTemplatePartialSpecializationDecl>(D)) {
-        CanonPattern->getCommonPtr()->PartialSpecializations
-            .GetOrInsertNode(Partial);
+        CanonSpec = CanonPattern->getCommonPtr()
+                        ->PartialSpecializations.GetOrInsertNode(Partial);
       } else {
-        CanonPattern->getCommonPtr()->Specializations.GetOrInsertNode(D);
+        CanonSpec =
+            CanonPattern->getCommonPtr()->Specializations.GetOrInsertNode(D);
       }
+      // If we already have a matching specialization, merge it.
+      if (CanonSpec != D)
+        mergeRedeclarable<VarDecl>(D, CanonSpec, Redecl);
     }
   }
 
