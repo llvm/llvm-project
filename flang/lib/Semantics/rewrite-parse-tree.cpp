@@ -120,7 +120,7 @@ void RewriteMutator::Post(parser::IoUnit &x) {
       // the I/O unit in situ to a FileUnitNumber so that automatic expression
       // constraint checking will be applied.
       auto source{var->GetSource()};
-      auto expr{std::visit(
+      auto expr{common::visit(
           [](auto &&indirection) {
             return parser::Expr{std::move(indirection)};
           },
@@ -159,7 +159,7 @@ void RewriteMutator::Post(parser::ReadStmt &x) {
       const parser::Name &last{parser::GetLastName(*var)};
       DeclTypeSpec *type{last.symbol ? last.symbol->GetType() : nullptr};
       if (type && type->category() == DeclTypeSpec::Character) {
-        x.format = std::visit(
+        x.format = common::visit(
             [](auto &&indirection) {
               return parser::Expr{std::move(indirection)};
             },

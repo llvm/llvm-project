@@ -262,7 +262,7 @@ void OmpStructureChecker::CheckPredefinedAllocatorRestriction(
     const parser::CharBlock &source,
     const parser::OmpObjectList &ompObjectList) {
   for (const auto &ompObject : ompObjectList.v) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
               if (const auto *dataRef{
@@ -420,54 +420,55 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   // current context yet.
   // TODO: Check for declare simd regions.
   bool eligibleSIMD{false};
-  std::visit(Fortran::common::visitors{
-                 // Allow `!$OMP ORDERED SIMD`
-                 [&](const parser::OpenMPBlockConstruct &c) {
-                   const auto &beginBlockDir{
-                       std::get<parser::OmpBeginBlockDirective>(c.t)};
-                   const auto &beginDir{
-                       std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-                   if (beginDir.v == llvm::omp::Directive::OMPD_ordered) {
-                     const auto &clauses{
-                         std::get<parser::OmpClauseList>(beginBlockDir.t)};
-                     for (const auto &clause : clauses.v) {
-                       if (std::get_if<parser::OmpClause::Simd>(&clause.u)) {
-                         eligibleSIMD = true;
-                         break;
-                       }
-                     }
-                   }
-                 },
-                 [&](const parser::OpenMPSimpleStandaloneConstruct &c) {
-                   const auto &dir{
-                       std::get<parser::OmpSimpleStandaloneDirective>(c.t)};
-                   if (dir.v == llvm::omp::Directive::OMPD_ordered) {
-                     const auto &clauses{std::get<parser::OmpClauseList>(c.t)};
-                     for (const auto &clause : clauses.v) {
-                       if (std::get_if<parser::OmpClause::Simd>(&clause.u)) {
-                         eligibleSIMD = true;
-                         break;
-                       }
-                     }
-                   }
-                 },
-                 // Allowing SIMD construct
-                 [&](const parser::OpenMPLoopConstruct &c) {
-                   const auto &beginLoopDir{
-                       std::get<parser::OmpBeginLoopDirective>(c.t)};
-                   const auto &beginDir{
-                       std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
-                   if ((beginDir.v == llvm::omp::Directive::OMPD_simd) ||
-                       (beginDir.v == llvm::omp::Directive::OMPD_do_simd)) {
-                     eligibleSIMD = true;
-                   }
-                 },
-                 [&](const parser::OpenMPAtomicConstruct &c) {
-                   // Allow `!$OMP ATOMIC`
-                   eligibleSIMD = true;
-                 },
-                 [&](const auto &c) {},
-             },
+  common::visit(Fortran::common::visitors{
+                    // Allow `!$OMP ORDERED SIMD`
+                    [&](const parser::OpenMPBlockConstruct &c) {
+                      const auto &beginBlockDir{
+                          std::get<parser::OmpBeginBlockDirective>(c.t)};
+                      const auto &beginDir{
+                          std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
+                      if (beginDir.v == llvm::omp::Directive::OMPD_ordered) {
+                        const auto &clauses{
+                            std::get<parser::OmpClauseList>(beginBlockDir.t)};
+                        for (const auto &clause : clauses.v) {
+                          if (std::get_if<parser::OmpClause::Simd>(&clause.u)) {
+                            eligibleSIMD = true;
+                            break;
+                          }
+                        }
+                      }
+                    },
+                    [&](const parser::OpenMPSimpleStandaloneConstruct &c) {
+                      const auto &dir{
+                          std::get<parser::OmpSimpleStandaloneDirective>(c.t)};
+                      if (dir.v == llvm::omp::Directive::OMPD_ordered) {
+                        const auto &clauses{
+                            std::get<parser::OmpClauseList>(c.t)};
+                        for (const auto &clause : clauses.v) {
+                          if (std::get_if<parser::OmpClause::Simd>(&clause.u)) {
+                            eligibleSIMD = true;
+                            break;
+                          }
+                        }
+                      }
+                    },
+                    // Allowing SIMD construct
+                    [&](const parser::OpenMPLoopConstruct &c) {
+                      const auto &beginLoopDir{
+                          std::get<parser::OmpBeginLoopDirective>(c.t)};
+                      const auto &beginDir{
+                          std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
+                      if ((beginDir.v == llvm::omp::Directive::OMPD_simd) ||
+                          (beginDir.v == llvm::omp::Directive::OMPD_do_simd)) {
+                        eligibleSIMD = true;
+                      }
+                    },
+                    [&](const parser::OpenMPAtomicConstruct &c) {
+                      // Allow `!$OMP ATOMIC`
+                      eligibleSIMD = true;
+                    },
+                    [&](const auto &c) {},
+                },
       c.u);
   if (!eligibleSIMD) {
     context_.Say(parser::FindSourceLocation(c),
@@ -482,7 +483,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
   // 2.12.5 Target Construct Restriction
   bool eligibleTarget{true};
   llvm::omp::Directive ineligibleTargetDir;
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const parser::OpenMPBlockConstruct &c) {
             const auto &beginBlockDir{
@@ -495,7 +496,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
             }
           },
           [&](const parser::OpenMPStandaloneConstruct &c) {
-            std::visit(
+            common::visit(
                 common::visitors{
                     [&](const parser::OpenMPSimpleStandaloneConstruct &c) {
                       const auto &dir{
@@ -881,7 +882,7 @@ void OmpStructureChecker::Leave(const parser::OmpEndSectionsDirective &x) {
 void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     const parser::OmpObjectList &objList) {
   for (const auto &ompObject : objList.v) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Designator &) {
               if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
@@ -1442,7 +1443,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
     const parser::AssignmentStmt &assignment) {
   const auto &expr{std::get<parser::Expr>(assignment.t)};
   const auto &var{std::get<parser::Variable>(assignment.t)};
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const common::Indirection<parser::FunctionReference> &x) {
             const auto &procedureDesignator{
@@ -1542,7 +1543,7 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const parser::OmpAtomic &atomicConstruct) {
             const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
@@ -1704,7 +1705,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
     if (!threadprivateAllowedSet.test(type)) {
       if (const auto *objList{GetOmpObjectList(*clause)}) {
         for (const auto &ompObject : objList->v) {
-          std::visit(
+          common::visit(
               common::visitors{
                   [&](const parser::Designator &) {
                     if (const auto *name{
@@ -1831,7 +1832,7 @@ bool OmpStructureChecker::CheckReductionOperators(
 
   const auto &definedOp{std::get<0>(x.v.t)};
   bool ok = false;
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const parser::DefinedOperator &dOpr) {
             const auto &intrinsicOp{
@@ -2023,7 +2024,7 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
       llvm::omp::Directive::OMPD_threadprivate,
       llvm::omp::Directive::OMPD_declare_target};
   for (const auto &ompObject : objList.v) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
               if (const auto *dataRef{
@@ -2360,7 +2361,7 @@ llvm::StringRef OmpStructureChecker::getDirectiveName(
 }
 
 void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const common::Indirection<parser::ArrayElement> &elem) {
             // Check if the base element is valid on Depend Clause
@@ -2631,7 +2632,7 @@ const parser::OmpObjectList *OmpStructureChecker::GetOmpObjectList(
 
   // TODO:: Generate the tuples using TableGen.
   // Handle other constructs with OmpObjectList such as OpenMPThreadprivate.
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const auto &x) -> const parser::OmpObjectList * {
             using Ty = std::decay_t<decltype(x)>;

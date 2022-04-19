@@ -23,6 +23,7 @@
 #error g++ >= 7.2 is required
 #endif
 
+#include "visit.h"
 #include "llvm/Support/Compiler.h"
 #include <functional>
 #include <list>
@@ -49,8 +50,8 @@ using namespace std::literals::string_literals;
 namespace Fortran::common {
 
 // Helper templates for combining a list of lambdas into an anonymous
-// struct for use with std::visit() on a std::variant<> sum type.
-// E.g.: std::visit(visitors{
+// struct for use with common::visit() on a std::variant<> sum type.
+// E.g.: common::visit(visitors{
 //         [&](const firstType &x) { ... },
 //         [&](const secondType &x) { ... },
 //         ...
