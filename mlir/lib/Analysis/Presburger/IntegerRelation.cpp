@@ -1092,35 +1092,10 @@ void IntegerRelation::eliminateRedundantLocalId(unsigned posA, unsigned posB) {
 /// obtained, and thus these local ids are not considered for detecting
 /// duplicates.
 unsigned IntegerRelation::mergeLocalIds(IntegerRelation &other) {
-  assert(space.isCompatible(other.getSpace()) &&
-         "Spaces should be compatible.");
-
   IntegerRelation &relA = *this;
   IntegerRelation &relB = other;
 
   unsigned oldALocals = relA.getNumLocalIds();
-
-  // Merge local ids of relA and relB without using division information,
-  // i.e. append local ids of `relB` to `relA` and insert local ids of `relA`
-  // to `relB` at start of its local ids.
-  unsigned initLocals = relA.getNumLocalIds();
-  insertId(IdKind::Local, relA.getNumLocalIds(), relB.getNumLocalIds());
-  relB.insertId(IdKind::Local, 0, initLocals);
-
-  // Get division representations from each rel.
-  std::vector<SmallVector<int64_t, 8>> divsA, divsB;
-  SmallVector<unsigned, 4> denomsA, denomsB;
-  relA.getLocalReprs(divsA, denomsA);
-  relB.getLocalReprs(divsB, denomsB);
-
-  // Copy division information for relB into `divsA` and `denomsA`, so that
-  // these have the combined division information of both rels. Since newly
-  // added local variables in relA and relB have no constraints, they will not
-  // have any division representation.
-  std::copy(divsB.begin() + initLocals, divsB.end(),
-            divsA.begin() + initLocals);
-  std::copy(denomsB.begin() + initLocals, denomsB.end(),
-            denomsA.begin() + initLocals);
 
   // Merge function that merges the local variables in both sets by treating
   // them as the same identifier.
@@ -1140,9 +1115,7 @@ unsigned IntegerRelation::mergeLocalIds(IntegerRelation &other) {
     return true;
   };
 
-  // Merge all divisions by removing duplicate divisions.
-  unsigned localOffset = getIdKindOffset(IdKind::Local);
-  presburger::removeDuplicateDivs(divsA, denomsA, localOffset, merge);
+  presburger::mergeLocalIds(*this, other, merge);
 
   // Since we do not remove duplicate divisions in relA, this is guranteed to be
   // non-negative.

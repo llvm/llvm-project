@@ -49,7 +49,6 @@ public:
   enum class Kind {
     FlatAffineConstraints,
     FlatAffineValueConstraints,
-    MultiAffineFunction,
     IntegerRelation,
     IntegerPolyhedron,
   };
