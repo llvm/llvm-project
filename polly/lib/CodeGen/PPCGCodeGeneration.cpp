@@ -486,12 +486,13 @@ private:
   /// Store a specific kernel launch parameter in the array of kernel launch
   /// parameters.
   ///
+  /// @param ArrayTy    Array type of \p Parameters.
   /// @param Parameters The list of parameters in which to store.
   /// @param Param      The kernel launch parameter to store.
   /// @param Index      The index in the parameter list, at which to store the
   ///                   parameter.
-  void insertStoreParameter(Instruction *Parameters, Instruction *Param,
-                            int Index);
+  void insertStoreParameter(Type *ArrayTy, Instruction *Parameters,
+                            Instruction *Param, int Index);
 
   /// Create kernel launch parameters.
   ///
@@ -1625,11 +1626,11 @@ GPUNodeBuilder::getBlockSizes(ppcg_kernel *Kernel) {
   return std::make_tuple(Sizes[0], Sizes[1], Sizes[2]);
 }
 
-void GPUNodeBuilder::insertStoreParameter(Instruction *Parameters,
+void GPUNodeBuilder::insertStoreParameter(Type *ArrayTy,
+                                          Instruction *Parameters,
                                           Instruction *Param, int Index) {
   Value *Slot = Builder.CreateGEP(
-      Parameters->getType()->getPointerElementType(), Parameters,
-      {Builder.getInt64(0), Builder.getInt64(Index)});
+      ArrayTy, Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
   Value *ParamTyped = Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
   Builder.CreateStore(ParamTyped, Slot);
 }
@@ -1730,7 +1731,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
+    insertStoreParameter(ArrayTy, Parameters, Param, Index);
     Index++;
   }
 
@@ -1751,7 +1752,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
+    insertStoreParameter(ArrayTy, Parameters, Param, Index);
     Index++;
   }
 
@@ -1764,7 +1765,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
+    insertStoreParameter(ArrayTy, Parameters, Param, Index);
     Index++;
   }
 
@@ -1776,7 +1777,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                          Launch + "_param_size_" + std::to_string(i),
                          EntryBlock->getTerminator());
       Builder.CreateStore(Val, Param);
-      insertStoreParameter(Parameters, Param, Index);
+      insertStoreParameter(ArrayTy, Parameters, Param, Index);
       Index++;
     }
   }
