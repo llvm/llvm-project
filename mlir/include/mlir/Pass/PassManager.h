@@ -253,11 +253,15 @@ public:
     ///   pass, we only print in the case of a failure.
     ///     - This option should *not* be used with the other `printAfter` flags
     ///       above.
+    /// * 'printCustomFormOnFailure' signals that when printing the IR after a
+    ///   pass failure, the custom form should be used (unsafe) instead of the
+    ///   generic form.
     /// * 'opPrintingFlags' sets up the printing flags to use when printing the
     ///   IR.
     explicit IRPrinterConfig(
         bool printModuleScope = false, bool printAfterOnlyOnChange = false,
         bool printAfterOnlyOnFailure = false,
+        bool printCustomFormOnFailure = false,
         OpPrintingFlags opPrintingFlags = OpPrintingFlags());
     virtual ~IRPrinterConfig();
 
@@ -288,6 +292,13 @@ public:
       return printAfterOnlyOnFailure;
     }
 
+    /// Returns true if the IR should be printed in custom form even on failure.
+    /// This is unsafe and there is no guaranee that the custom form printer
+    /// will not crash or print valid IR.
+    bool shouldPrintCustomFormOnFailure() const {
+      return printCustomFormOnFailure;
+    }
+
     /// Returns the printing flags to be used to print the IR.
     OpPrintingFlags getOpPrintingFlags() const { return opPrintingFlags; }
 
@@ -302,6 +313,10 @@ public:
     /// A flag that indicates that the IR after a pass should only be printed if
     /// the pass failed.
     bool printAfterOnlyOnFailure;
+
+    /// A flag that indicates that the IR should be printed (or attempted to be
+    /// printed) in custom form even after a pass failure.
+    bool printCustomFormOnFailure;
 
     /// Flags to control printing behavior.
     OpPrintingFlags opPrintingFlags;
@@ -325,6 +340,9 @@ public:
   ///   pass, we only print in the case of a failure.
   ///     - This option should *not* be used with the other `printAfter` flags
   ///       above.
+  /// * 'printCustomFormOnFailure' signals that when printing the IR after a
+  ///   pass failure, the custom form should be used (unsafe) instead of the
+  ///   generic form.
   /// * 'out' corresponds to the stream to output the printed IR to.
   /// * 'opPrintingFlags' sets up the printing flags to use when printing the
   ///   IR.
@@ -334,7 +352,8 @@ public:
       std::function<bool(Pass *, Operation *)> shouldPrintAfterPass =
           [](Pass *, Operation *) { return true; },
       bool printModuleScope = true, bool printAfterOnlyOnChange = true,
-      bool printAfterOnlyOnFailure = false, raw_ostream &out = llvm::errs(),
+      bool printAfterOnlyOnFailure = false,
+      bool printCustomFormOnFailure = false, raw_ostream &out = llvm::errs(),
       OpPrintingFlags opPrintingFlags = OpPrintingFlags());
 
   //===--------------------------------------------------------------------===//

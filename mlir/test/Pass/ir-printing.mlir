@@ -5,6 +5,7 @@
 // RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-before=cse -mlir-print-ir-module-scope -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_MODULE %s
 // RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,cse)' -mlir-print-ir-after-all -mlir-print-ir-after-change -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL_CHANGE %s
 // RUN: not mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,test-pass-failure)' -mlir-print-ir-after-failure -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_FAILURE %s
+// RUN: not mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,test-pass-failure)' -mlir-print-ir-after-failure -mlir-print-custom-assembly-after-failure -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_FAILURE_CUSTOM %s
 
 func @foo() {
   %0 = arith.constant 0 : i32
@@ -64,3 +65,5 @@ func @bar() {
 
 // AFTER_FAILURE-NOT: // -----// IR Dump After{{.*}}CSE
 // AFTER_FAILURE: // -----// IR Dump After{{.*}}TestFailurePass Failed //----- //
+// AFTER_FAILURE_CUSTOM: // -----// IR Dump After{{.*}}TestFailurePass Failed //----- //
+// AFTER_FAILURE_CUSTOM: func @foo()
