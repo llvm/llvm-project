@@ -2269,7 +2269,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       // about the plaform (e.g., ios-macabi runs on the macOS, but
       // uses iOS version numbers).
       if (platform_sp &&
-          target_triple.getEnvironment() != llvm::Triple::UnknownEnvironment) {
+          target_triple.getEnvironment() == llvm::Triple::UnknownEnvironment) {
         llvm::VersionTuple version =
             platform_sp->GetOSVersion(target.GetProcessSP().get());
         llvm::SmallString<32> buffer;
@@ -2279,9 +2279,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
           os << target_triple.getVendorName() << '-';
           os << llvm::Triple::getOSTypeName(target_triple.getOS());
           os << version.getAsString();
-          StringRef env = target_triple.getEnvironmentName();
-          if (!env.empty())
-            os << '-' << env;
         }
         computed_triple = llvm::Triple(buffer);
       } else {
