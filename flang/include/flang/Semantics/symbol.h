@@ -639,6 +639,10 @@ public:
             [](const UseDetails &x) { return x.symbol().Rank(); },
             [](const HostAssocDetails &x) { return x.symbol().Rank(); },
             [](const ObjectEntityDetails &oed) { return oed.shape().Rank(); },
+            [](const ProcEntityDetails &ped) {
+              const Symbol *iface{ped.interface().symbol()};
+              return iface ? iface->Rank() : 0;
+            },
             [](const AssocEntityDetails &aed) {
               if (const auto &expr{aed.expr()}) {
                 if (auto assocRank{aed.rank()}) {
