@@ -27,6 +27,15 @@ public:
 
   void print(raw_ostream &ROS, void *p = nullptr) const;
   operator Module &() const { return *M; }
+
+  /// Return a number to indicate whether there was any reduction progress.
+  uint64_t getComplexityScore() const {
+    return isMIR() ? computeMIRComplexityScore() : getIRSize();
+  }
+
+private:
+  uint64_t computeMIRComplexityScore() const;
+  uint64_t getIRSize() const;
 };
 
 std::unique_ptr<ReducerWorkItem>

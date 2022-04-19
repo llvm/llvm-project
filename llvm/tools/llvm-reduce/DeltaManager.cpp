@@ -110,18 +110,8 @@ void llvm::printDeltaPasses(raw_ostream &OS) {
 #undef DELTA_PASS
 }
 
-// FIXME: We might want to use a different metric than "number of
-// bytes in serialized IR" to detect non-progress of the main delta
-// loop
-static int getIRSize(TestRunner &Tester) {
-  std::string Str;
-  raw_string_ostream SS(Str);
-  Tester.getProgram().print(SS, /*AnnotationWriter=*/nullptr);
-  return Str.length();
-}
-
 void llvm::runDeltaPasses(TestRunner &Tester, int MaxPassIterations) {
-  int OldSize = getIRSize(Tester);
+  uint64_t OldComplexity = Tester.getProgram().getComplexityScore();
   for (int Iter = 0; Iter < MaxPassIterations; ++Iter) {
     if (DeltaPasses.empty()) {
       runAllDeltaPasses(Tester);
@@ -133,9 +123,9 @@ void llvm::runDeltaPasses(TestRunner &Tester, int MaxPassIterations) {
         Passes = Split.second;
       }
     }
-    int NewSize = getIRSize(Tester);
-    if (NewSize >= OldSize)
+    uint64_t NewComplexity = Tester.getProgram().getComplexityScore();
+    if (NewComplexity >= OldComplexity)
       break;
-    OldSize = NewSize;
+    OldComplexity = NewComplexity;
   }
 }

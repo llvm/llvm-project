@@ -473,3 +473,80 @@ void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
              /*ShouldPreserveUseListOrder=*/true);
   }
 }
+
+// FIXME: We might want to use a different metric than "number of
+// bytes in serialized IR" to detect non-progress of the main delta
+// loop
+uint64_t ReducerWorkItem::getIRSize() const {
+  std::string Str;
+  raw_string_ostream SS(Str);
+  print(SS, /*AnnotationWriter=*/nullptr);
+  return Str.length();
+}
+
+/// Try to produce some number that indicates a function is getting smaller /
+/// simpler.
+static uint64_t computeMIRComplexityScoreImpl(const MachineFunction &MF) {
+  uint64_t Score = 0;
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Add for stack objects
+  Score += MFI.getNumObjects();
+
+  // Add in the block count.
+  Score += 2 * MF.size();
+
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      const unsigned Opc = MI.getOpcode();
+
+      // Reductions may want or need to introduce implicit_defs, so don't count
+      // them.
+      // TODO: These probably should count in some way.
+      if (Opc == TargetOpcode::IMPLICIT_DEF ||
+          Opc == TargetOpcode::G_IMPLICIT_DEF)
+        continue;
+
+      // Each instruction adds to the score
+      Score += 4;
+
+      if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI ||
+          Opc == TargetOpcode::INLINEASM || Opc == TargetOpcode::INLINEASM_BR)
+        ++Score;
+
+      if (MI.getFlags() != 0)
+        ++Score;
+
+      // Increase weight for more operands.
+      for (const MachineOperand &MO : MI.operands()) {
+        ++Score;
+
+        // Treat registers as more complex.
+        if (MO.isReg()) {
+          ++Score;
+
+          // And subregisters as even more complex.
+          if (MO.getSubReg()) {
+            ++Score;
+            if (MO.isDef())
+              ++Score;
+          }
+        } else if (MO.isRegMask())
+          ++Score;
+      }
+    }
+  }
+
+  return Score;
+}
+
+uint64_t ReducerWorkItem::computeMIRComplexityScore() const {
+  uint64_t Score = 0;
+
+  for (const Function &F : getModule()) {
+    if (auto *MF = MMI->getMachineFunction(F))
+      Score += computeMIRComplexityScoreImpl(*MF);
+  }
+
+  return Score;
+}
