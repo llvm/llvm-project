@@ -40,11 +40,14 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   struct Options {
     enum : unsigned {
       None = 0,
+      // Emit pset remarks only detecting invalid derefs
       RemarkPsetInvalid = 1,
-      RemarkAll = 1 << 1,
-      HistoryNull = 1 << 2,
-      HistoryInvalid = 1 << 3,
-      HistoryAll = 1 << 4,
+      // Emit pset remarks for all derefs
+      RemarkPsetAlways = 1 << 1,
+      RemarkAll = 1 << 2,
+      HistoryNull = 1 << 3,
+      HistoryInvalid = 1 << 4,
+      HistoryAll = 1 << 5,
     };
     unsigned val = None;
 
@@ -52,6 +55,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
       for (auto &remark : pass.remarksList) {
         val |= StringSwitch<unsigned>(remark)
                    .Case("pset-invalid", RemarkPsetInvalid)
+                   .Case("pset-always", RemarkPsetAlways)
                    .Case("all", RemarkAll)
                    .Default(None);
       }
@@ -67,6 +71,9 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     bool emitRemarkAll() { return val & RemarkAll; }
     bool emitRemarkPsetInvalid() {
       return emitRemarkAll() || val & RemarkPsetInvalid;
+    }
+    bool emitRemarkPsetAlways() {
+      return emitRemarkAll() || val & RemarkPsetAlways;
     }
 
     bool emitHistoryAll() { return val & HistoryAll; }
@@ -624,6 +631,19 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
   bool hasInvalid = getPmap()[addr].count(State::getInvalid());
   bool hasNullptr = getPmap()[addr].count(State::getNullPtr());
 
+  auto emitPsetRemark = [&] {
+    llvm::SmallString<128> psetStr;
+    llvm::raw_svector_ostream Out(psetStr);
+    printPset(getPmap()[addr], Out);
+    emitRemark(loadOp.getLoc()) << "pset => " << Out.str();
+  };
+
+  bool psetRemarkEmitted = false;
+  if (opts.emitRemarkPsetAlways()) {
+    emitPsetRemark();
+    psetRemarkEmitted = true;
+  }
+
   // 2.4.2 - On every dereference of a Pointer p, enforce that p is valid.
   if (!hasInvalid && !hasNullptr)
     return;
@@ -655,12 +675,8 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
     D.attachNote(*note) << "invalidated here";
   }
 
-  if (opts.emitRemarkPsetInvalid()) {
-    llvm::SmallString<128> psetStr;
-    llvm::raw_svector_ostream Out(psetStr);
-    printPset(getPmap()[addr], Out);
-    emitRemark(loadOp.getLoc()) << "pset => " << Out.str();
-  }
+  if (!psetRemarkEmitted && opts.emitRemarkPsetInvalid())
+    emitPsetRemark();
 }
 
 void LifetimeCheckPass::checkOperation(Operation *op) {
