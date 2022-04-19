@@ -127,6 +127,62 @@ static void cloneFrameInfo(
   }
 }
 
+static void cloneMemOperands(MachineInstr &DstMI, MachineInstr &SrcMI,
+                             MachineFunction &SrcMF, MachineFunction &DstMF) {
+  // The new MachineMemOperands should be owned by the new function's
+  // Allocator.
+  PseudoSourceValueManager &PSVMgr = DstMF.getPSVManager();
+
+  // We also need to remap the PseudoSourceValues from the new function's
+  // PseudoSourceValueManager.
+  SmallVector<MachineMemOperand *, 2> NewMMOs;
+  for (MachineMemOperand *OldMMO : SrcMI.memoperands()) {
+    MachinePointerInfo NewPtrInfo(OldMMO->getPointerInfo());
+    if (const PseudoSourceValue *PSV =
+            NewPtrInfo.V.dyn_cast<const PseudoSourceValue *>()) {
+      switch (PSV->kind()) {
+      case PseudoSourceValue::Stack:
+        NewPtrInfo.V = PSVMgr.getStack();
+        break;
+      case PseudoSourceValue::GOT:
+        NewPtrInfo.V = PSVMgr.getGOT();
+        break;
+      case PseudoSourceValue::JumpTable:
+        NewPtrInfo.V = PSVMgr.getJumpTable();
+        break;
+      case PseudoSourceValue::ConstantPool:
+        NewPtrInfo.V = PSVMgr.getConstantPool();
+        break;
+      case PseudoSourceValue::FixedStack:
+        NewPtrInfo.V = PSVMgr.getFixedStack(
+            cast<FixedStackPseudoSourceValue>(PSV)->getFrameIndex());
+        break;
+      case PseudoSourceValue::GlobalValueCallEntry:
+        NewPtrInfo.V = PSVMgr.getGlobalValueCallEntry(
+            cast<GlobalValuePseudoSourceValue>(PSV)->getValue());
+        break;
+      case PseudoSourceValue::ExternalSymbolCallEntry:
+        NewPtrInfo.V = PSVMgr.getExternalSymbolCallEntry(
+            cast<ExternalSymbolPseudoSourceValue>(PSV)->getSymbol());
+        break;
+      case PseudoSourceValue::TargetCustom:
+      default:
+        // FIXME: We have no generic interface for allocating custom PSVs.
+        report_fatal_error("Cloning TargetCustom PSV not handled");
+      }
+    }
+
+    MachineMemOperand *NewMMO = DstMF.getMachineMemOperand(
+        NewPtrInfo, OldMMO->getFlags(), OldMMO->getMemoryType(),
+        OldMMO->getBaseAlign(), OldMMO->getAAInfo(), OldMMO->getRanges(),
+        OldMMO->getSyncScopeID(), OldMMO->getSuccessOrdering(),
+        OldMMO->getFailureOrdering());
+    NewMMOs.push_back(NewMMO);
+  }
+
+  DstMI.setMemRefs(DstMF, NewMMOs);
+}
+
 static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
                                                 MachineModuleInfo &DestMMI) {
   auto DstMF = std::make_unique<MachineFunction>(
@@ -252,7 +308,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
         DstMI->addOperand(DstMO);
       }
-      DstMI->setMemRefs(*DstMF, SrcMI.memoperands());
+
+      cloneMemOperands(*DstMI, SrcMI, *SrcMF, *DstMF);
     }
   }
 
