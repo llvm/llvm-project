@@ -9745,8 +9745,12 @@ static SDValue tryFormConcatFromShuffle(SDValue Op, SelectionDAG &DAG) {
 }
 
 /// GeneratePerfectShuffle - Given an entry in the perfect-shuffle table, emit
-/// the specified operations to build the shuffle.
-static SDValue GeneratePerfectShuffle(unsigned PFEntry, SDValue LHS,
+/// the specified operations to build the shuffle. ID is the perfect-shuffle
+//ID, V1 and V2 are the original shuffle inputs. PFEntry is the Perfect shuffle
+//table entry and LHS/RHS are the immediate inputs for this stage of the
+//shuffle.
+static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1,
+                                      SDValue V2, unsigned PFEntry, SDValue LHS,
                                       SDValue RHS, SelectionDAG &DAG,
                                       const SDLoc &dl) {
   unsigned OpNum = (PFEntry >> 26) & 0x0F;
@@ -9763,12 +9767,13 @@ static SDValue GeneratePerfectShuffle(unsigned PFEntry, SDValue LHS,
     OP_VEXT1,
     OP_VEXT2,
     OP_VEXT3,
-    OP_VUZPL, // VUZP, left result
-    OP_VUZPR, // VUZP, right result
-    OP_VZIPL, // VZIP, left result
-    OP_VZIPR, // VZIP, right result
-    OP_VTRNL, // VTRN, left result
-    OP_VTRNR  // VTRN, right result
+    OP_VUZPL,  // VUZP, left result
+    OP_VUZPR,  // VUZP, right result
+    OP_VZIPL,  // VZIP, left result
+    OP_VZIPR,  // VZIP, right result
+    OP_VTRNL,  // VTRN, left result
+    OP_VTRNR,  // VTRN, right result
+    OP_MOVLANE // Move lane. RHSID is the lane to move into
   };
 
   if (OpNum == OP_COPY) {
@@ -9778,9 +9783,48 @@ static SDValue GeneratePerfectShuffle(unsigned PFEntry, SDValue LHS,
     return RHS;
   }
 
+  if (OpNum == OP_MOVLANE) {
+    // Decompose a PerfectShuffle ID to get the Mask for lane Elt
+    auto getPFIDLane = [](unsigned ID, int Elt) -> int {
+      assert(Elt < 4 && "Expected Perfect Lanes to be less than 4");
+      Elt = 3 - Elt;
+      while (Elt > 0) {
+        ID /= 9;
+        Elt--;
+      }
+      return (ID % 9 == 8) ? -1 : ID % 9;
+    };
+
+    // For OP_MOVLANE shuffles, the RHSID represents the lane to move into. We
+    // get the lane to move from from the PFID, which is always from the
+    // original vectors (V1 or V2).
+    SDValue OpLHS = GeneratePerfectShuffle(
+        LHSID, V1, V2, PerfectShuffleTable[LHSID], LHS, RHS, DAG, dl);
+    EVT VT = OpLHS.getValueType();
+    assert(RHSID < 8 && "Expected a lane index for RHSID!");
+    int MaskElt = getPFIDLane(ID, RHSID);
+    assert(MaskElt >= 0 && "Didn't expect an undef movlane index!");
+    unsigned ExtLane = MaskElt < 4 ? MaskElt : (MaskElt - 4);
+    SDValue Input = MaskElt < 4 ? V1 : V2;
+    // Be careful about creating illegal types. Use f16 instead of i16.
+    if (VT == MVT::v4i16) {
+      Input = DAG.getBitcast(MVT::v4f16, Input);
+      OpLHS = DAG.getBitcast(MVT::v4f16, OpLHS);
+    }
+    SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
+                              Input.getValueType().getVectorElementType(),
+                              Input, DAG.getVectorIdxConstant(ExtLane, dl));
+    SDValue Ins =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, Input.getValueType(), OpLHS,
+                    Ext, DAG.getVectorIdxConstant(RHSID & 0x3, dl));
+    return DAG.getBitcast(VT, Ins);
+  }
+
   SDValue OpLHS, OpRHS;
-  OpLHS = GeneratePerfectShuffle(PerfectShuffleTable[LHSID], LHS, RHS, DAG, dl);
-  OpRHS = GeneratePerfectShuffle(PerfectShuffleTable[RHSID], LHS, RHS, DAG, dl);
+  OpLHS = GeneratePerfectShuffle(LHSID, V1, V2, PerfectShuffleTable[LHSID], LHS,
+                                 RHS, DAG, dl);
+  OpRHS = GeneratePerfectShuffle(RHSID, V1, V2, PerfectShuffleTable[RHSID], LHS,
+                                 RHS, DAG, dl);
   EVT VT = OpLHS.getValueType();
 
   switch (OpNum) {
@@ -10239,7 +10283,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     unsigned PFTableIndex = PFIndexes[0] * 9 * 9 * 9 + PFIndexes[1] * 9 * 9 +
                             PFIndexes[2] * 9 + PFIndexes[3];
     unsigned PFEntry = PerfectShuffleTable[PFTableIndex];
-    return GeneratePerfectShuffle(PFEntry, V1, V2, DAG, dl);
+    return GeneratePerfectShuffle(PFTableIndex, V1, V2, PFEntry, V1, V2, DAG,
+                                  dl);
   }
 
   return GenerateTBL(Op, ShuffleMask, DAG);

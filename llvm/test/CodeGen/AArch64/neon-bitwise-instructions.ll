@@ -939,9 +939,11 @@ define <8 x i16> @vselect_equivalent_shuffle_v8i16_zero(<8 x i16> %a) {
 define <4 x i16> @vselect_equivalent_shuffle_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: vselect_equivalent_shuffle_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #2
-; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
-; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v0.h[2], v1.h[1]
+; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %c = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 4, i32 5, i32 3>
   ret <4 x i16> %c
@@ -950,9 +952,8 @@ define <4 x i16> @vselect_equivalent_shuffle_v4i16(<4 x i16> %a, <4 x i16> %b) {
 define <4 x i32> @vselect_equivalent_shuffle_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vselect_equivalent_shuffle_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
-; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    mov v0.s[2], v1.s[1]
 ; CHECK-NEXT:    ret
   %c = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 4, i32 5, i32 3>
   ret <4 x i32> %c

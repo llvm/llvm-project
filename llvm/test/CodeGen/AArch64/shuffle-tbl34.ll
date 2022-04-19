@@ -517,9 +517,8 @@ define <8 x i16> @shuffle3_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
 define <4 x i32> @shuffle3_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: shuffle3_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp1 v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ext v0.16b, v1.16b, v0.16b, #8
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    dup v1.4s, v2.s[0]
 ; CHECK-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-NEXT:    ret
