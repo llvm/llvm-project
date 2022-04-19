@@ -4,22 +4,21 @@
 define <16 x i32> @test_shuf1(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: test_shuf1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 v3.4s, v7.4s, v6.4s
-; CHECK-NEXT:    ext v5.16b, v6.16b, v4.16b, #12
-; CHECK-NEXT:    uzp1 v6.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uzp2 v4.4s, v2.4s, v4.4s
-; CHECK-NEXT:    trn2 v3.4s, v7.4s, v3.4s
-; CHECK-NEXT:    ext v5.16b, v7.16b, v5.16b, #8
-; CHECK-NEXT:    trn2 v6.4s, v6.4s, v1.4s
-; CHECK-NEXT:    trn1 v2.4s, v4.4s, v2.4s
-; CHECK-NEXT:    ext v4.16b, v1.16b, v1.16b, #12
-; CHECK-NEXT:    ext v3.16b, v1.16b, v3.16b, #8
-; CHECK-NEXT:    rev64 v16.4s, v5.4s
-; CHECK-NEXT:    dup v7.4s, v7.s[0]
-; CHECK-NEXT:    ext v1.16b, v0.16b, v6.16b, #12
-; CHECK-NEXT:    mov v2.s[3], v7.s[3]
-; CHECK-NEXT:    ext v0.16b, v3.16b, v4.16b, #8
-; CHECK-NEXT:    ext v3.16b, v5.16b, v16.16b, #8
+; CHECK-NEXT:    uzp1 v16.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ext v3.16b, v6.16b, v4.16b, #12
+; CHECK-NEXT:    zip2 v6.4s, v7.4s, v6.4s
+; CHECK-NEXT:    uzp2 v17.4s, v2.4s, v4.4s
+; CHECK-NEXT:    trn2 v16.4s, v16.4s, v1.4s
+; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #4
+; CHECK-NEXT:    trn2 v4.4s, v7.4s, v6.4s
+; CHECK-NEXT:    rev64 v5.4s, v7.4s
+; CHECK-NEXT:    trn1 v2.4s, v17.4s, v2.4s
+; CHECK-NEXT:    dup v6.4s, v7.s[0]
+; CHECK-NEXT:    mov v4.d[1], v1.d[1]
+; CHECK-NEXT:    mov v3.d[1], v5.d[1]
+; CHECK-NEXT:    ext v1.16b, v0.16b, v16.16b, #12
+; CHECK-NEXT:    mov v2.s[3], v6.s[3]
+; CHECK-NEXT:    mov v0.16b, v4.16b
 ; CHECK-NEXT:    ret
   %s3 = shufflevector <16 x i32> %x, <16 x i32> %y, <16 x i32> <i32 29, i32 26, i32 7, i32 4, i32 3, i32 6, i32 5, i32 2, i32 9, i32 8, i32 17, i32 28, i32 27, i32 16, i32 31, i32 30>
   ret <16 x i32> %s3
@@ -29,10 +28,9 @@ define <4 x i32> @test_shuf2(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: test_shuf2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip2 v0.4s, v7.4s, v6.4s
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #12
+; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #4
 ; CHECK-NEXT:    trn2 v0.4s, v7.4s, v0.4s
-; CHECK-NEXT:    ext v0.16b, v1.16b, v0.16b, #8
-; CHECK-NEXT:    ext v0.16b, v0.16b, v2.16b, #8
+; CHECK-NEXT:    mov v0.d[1], v1.d[1]
 ; CHECK-NEXT:    ret
   %s3 = shufflevector <16 x i32> %x, <16 x i32> %y, <4 x i32> <i32 29, i32 26, i32 7, i32 4>
   ret <4 x i32> %s3
@@ -64,10 +62,9 @@ define <4 x i32> @test_shuf4(<16 x i32> %x, <16 x i32> %y) {
 define <4 x i32> @test_shuf5(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: test_shuf5:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64 v1.4s, v7.4s
 ; CHECK-NEXT:    ext v0.16b, v6.16b, v4.16b, #12
-; CHECK-NEXT:    ext v0.16b, v7.16b, v0.16b, #8
-; CHECK-NEXT:    rev64 v1.4s, v0.4s
-; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
+; CHECK-NEXT:    mov v0.d[1], v1.d[1]
 ; CHECK-NEXT:    ret
   %s3 = shufflevector <16 x i32> %x, <16 x i32> %y, <4 x i32> <i32 27, i32 16, i32 31, i32 30>
   ret <4 x i32> %s3

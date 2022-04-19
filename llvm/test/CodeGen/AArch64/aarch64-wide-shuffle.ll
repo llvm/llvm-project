@@ -7,10 +7,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i16> @f(<4 x i32> %vqdmlal_v3.i, <8 x i16> %x5) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-NEXT:    ext v1.8b, v0.8b, v1.8b, #4
-; CHECK-NEXT:    uzp1 v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    dup v0.4h, v0.h[4]
+; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   ; Check that we don't just dup the input vector. The code emitted is ext, dup, ext, ext
