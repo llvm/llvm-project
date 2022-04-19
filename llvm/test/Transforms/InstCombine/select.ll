@@ -2588,7 +2588,7 @@ define <2 x i32> @true_undef_vec(i1 %cond, <2 x i32> %x) {
 
 define i8 @cond_freeze(i8 %x, i8 %y) {
 ; CHECK-LABEL: @cond_freeze(
-; CHECK-NEXT:    ret i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[Y:%.*]]
 ;
   %cond.fr = freeze i1 undef
   %s = select i1 %cond.fr, i8 %x, i8 %y
@@ -2615,7 +2615,7 @@ define i8 @cond_freeze_constant_true_val(i8 %x) {
 
 define i8 @cond_freeze_both_arms_constant() {
 ; CHECK-LABEL: @cond_freeze_both_arms_constant(
-; CHECK-NEXT:    ret i8 3
+; CHECK-NEXT:    ret i8 42
 ;
   %cond.fr = freeze i1 undef
   %s = select i1 %cond.fr, i8 42, i8 3
@@ -2646,7 +2646,7 @@ declare void @foo2(i8, i8)
 
 define void @cond_freeze_multipleuses(i8 %x, i8 %y) {
 ; CHECK-LABEL: @cond_freeze_multipleuses(
-; CHECK-NEXT:    call void @foo2(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    call void @foo2(i8 [[Y:%.*]], i8 [[X:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %cond.fr = freeze i1 undef
