@@ -128,6 +128,17 @@ void __dfsan_unimplemented(char *fname) {
            fname);
 }
 
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_wrapper_extern_weak_null(
+    const void *addr, char *fname) {
+  if (!addr)
+    Report(
+        "ERROR: DataFlowSanitizer: dfsan generated wrapper calling null "
+        "extern_weak function %s\nIf this only happens with dfsan, the "
+        "dfsan instrumentation pass may be accidentally optimizing out a "
+        "null check\n",
+        fname);
+}
+
 // Use '-mllvm -dfsan-debug-nonzero-labels' and break on this function
 // to try to figure out where labels are being introduced in a nominally
 // label-free program.
