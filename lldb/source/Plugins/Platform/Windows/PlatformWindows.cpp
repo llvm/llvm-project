@@ -651,7 +651,7 @@ _Static_assert(sizeof(struct __lldb_LoadLibraryResult) <= 3 * sizeof(void *),
 
 void * __lldb_LoadLibraryHelper(const wchar_t *name, const wchar_t *paths,
                                 __lldb_LoadLibraryResult *result) {
-  for (const wchar_t *path = paths; path; ) {
+  for (const wchar_t *path = paths; path && *path; ) {
     (void)AddDllDirectory(path);
     path += wcslen(path) + 1;
   }
