@@ -22,7 +22,6 @@ class InductionDescriptor;
 class Instruction;
 class PHINode;
 class ScalarEvolution;
-class SCEV;
 class Loop;
 
 struct VPlanTransforms {
