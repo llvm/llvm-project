@@ -120,3 +120,49 @@ define <4 x i32> @lshr_C1_add_A_C2_v4i32_splat(i16 %I) {
   %E = lshr <4 x i32> <i32 6, i32 2, i32 1, i32 -7>, %D
   ret <4 x i32> %E
 }
+
+define i32 @shl_add_nuw(i32 %x) {
+; CHECK-LABEL: @shl_add_nuw(
+; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = shl i32 6, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 5
+  %r = shl i32 6, %a
+  ret i32 %r
+}
+
+define <2 x i12> @lshr_add_nuw(<2 x i12> %x) {
+; CHECK-LABEL: @lshr_add_nuw(
+; CHECK-NEXT:    [[A:%.*]] = add nuw <2 x i12> [[X:%.*]], <i12 5, i12 1>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i12> <i12 6, i12 42>, [[A]]
+; CHECK-NEXT:    ret <2 x i12> [[R]]
+;
+  %a = add nuw <2 x i12> %x, <i12 5, i12 1>
+  %r = lshr <2 x i12> <i12 6, i12 42>, %a
+  ret <2 x i12> %r
+}
+
+define i32 @ashr_add_nuw(i32 %x, i32* %p) {
+; CHECK-LABEL: @ashr_add_nuw(
+; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 5
+; CHECK-NEXT:    store i32 [[A]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 -6, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 5
+  store i32 %a, i32* %p
+  %r = ashr i32 -6, %a
+  ret i32 %r
+}
+
+define i32 @shl_add_nsw(i32 %x) {
+; CHECK-LABEL: @shl_add_nsw(
+; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = shl i32 6, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nsw i32 %x, 5
+  %r = shl i32 6, %a
+  ret i32 %r
+}
