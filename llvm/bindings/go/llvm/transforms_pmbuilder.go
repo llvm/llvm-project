@@ -43,10 +43,6 @@ func (pmb PassManagerBuilder) PopulateFunc(pm PassManager) {
 	C.LLVMPassManagerBuilderPopulateFunctionPassManager(pmb.C, pm.C)
 }
 
-func (pmb PassManagerBuilder) PopulateLTOPassManager(pm PassManager, internalize bool, runInliner bool) {
-	C.LLVMPassManagerBuilderPopulateLTOPassManager(pmb.C, pm.C, boolToLLVMBool(internalize), boolToLLVMBool(runInliner))
-}
-
 func (pmb PassManagerBuilder) Dispose() {
 	C.LLVMPassManagerBuilderDispose(pmb.C)
 }
