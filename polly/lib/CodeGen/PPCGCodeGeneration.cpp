@@ -3443,13 +3443,11 @@ public:
         continue;
 
       for (Value *Op : Inst.operands())
-        // Look for (<func-type>*) among operands of Inst
-        if (auto PtrTy = dyn_cast<PointerType>(Op->getType())) {
-          if (isa<FunctionType>(PtrTy->getPointerElementType())) {
-            LLVM_DEBUG(dbgs()
-                       << Inst << " has illegal use of function in kernel.\n");
-            return true;
-          }
+        // Look for functions among operands of Inst.
+        if (isa<Function>(Op->stripPointerCasts())) {
+          LLVM_DEBUG(dbgs()
+                     << Inst << " has illegal use of function in kernel.\n");
+          return true;
         }
     }
     return false;
