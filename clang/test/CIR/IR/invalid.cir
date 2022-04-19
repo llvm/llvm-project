@@ -93,8 +93,37 @@ func.func @s1() {
 
 // -----
 
-func.func @s1(%x: !cir.ptr<i32>) {
+func.func @badstride(%x: !cir.ptr<i32>) {
   %idx = cir.cst(2 : i32) : i32
   %4 = cir.ptr_stride(%x : !cir.ptr<i32>, %idx : i32), !cir.ptr<f32> // expected-error {{requires the same type for first operand and result}}
+  cir.return
+}
+
+// -----
+
+func.func @cast0(%arg0: i32) {
+  %1 = cir.cast(int_to_bool, %arg0 : i32), i32 // expected-error {{requires !cir.bool type for result}}
+  cir.return
+}
+
+// -----
+
+func.func @cast1(%arg1: f32) {
+  %1 = cir.cast(int_to_bool, %arg1 : f32), !cir.bool // expected-error {{requires integral type for result}}
+  cir.return
+}
+
+// -----
+
+func.func @cast2(%p: !cir.ptr<i32>) {
+  %2 = cir.cast(array_to_ptrdecay, %p : !cir.ptr<i32>), !cir.ptr<i32> // expected-error {{requires !cir.array pointee}}
+  cir.return
+}
+
+// -----
+
+func.func @cast3(%p: !cir.ptr<i32>) {
+  %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", paraminit]
+  %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<f32> // expected-error {{requires same type for array element and pointee result}}
   cir.return
 }

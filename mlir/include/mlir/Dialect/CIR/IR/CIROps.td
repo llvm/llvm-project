@@ -61,14 +61,16 @@ def CastOp : CIR_Op<"cast", [Pure]> {
     %4 = cir.cast (int_to_bool, %3 : i32), !cir.bool
     ...
     %x = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
-
     ```
   }];
 
   let arguments = (ins CastKind:$kind, AnyType:$src);
-  let results = (outs AnyType:$res);
+  let results = (outs AnyType:$result);
 
-  let assemblyFormat = "`(` $kind `,` $src `:` type($src) `)` `,` type($res) attr-dict";
+  let assemblyFormat = [{
+    `(` $kind `,` $src `:` type($src) `)`
+    `,` type($result) attr-dict
+  }];
 
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
