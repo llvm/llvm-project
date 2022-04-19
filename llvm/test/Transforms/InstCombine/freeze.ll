@@ -87,6 +87,15 @@ define void @or_select_multipleuses_logical(i32 %x, i1 %y) {
   ret void
 }
 
+define <3 x i4> @partial_undef_vec() {
+; CHECK-LABEL: @partial_undef_vec(
+; CHECK-NEXT:    [[F:%.*]] = freeze <3 x i4> <i4 poison, i4 1, i4 undef>
+; CHECK-NEXT:    ret <3 x i4> [[F]]
+;
+  %f = freeze <3 x i4> <i4 poison, i4 1, i4 undef>
+  ret <3 x i4> %f
+}
+
 ; Move the freeze forward to prevent poison from spreading.
 
 define i32 @early_freeze_test1(i32 %x, i32 %y) {
@@ -267,8 +276,8 @@ define i32 @propagate_drop_flags_mul(i32 %arg) {
 define i32 @propagate_drop_flags_udiv(i32 %arg) {
 ; CHECK-LABEL: @propagate_drop_flags_udiv(
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = lshr i32 [[ARG_FR]], 1
-; CHECK-NEXT:    ret i32 [[V1]]
+; CHECK-NEXT:    [[V11:%.*]] = lshr i32 [[ARG_FR]], 1
+; CHECK-NEXT:    ret i32 [[V11]]
 ;
   %v1 = udiv exact i32 %arg, 2
   %v1.fr = freeze i32 %v1
