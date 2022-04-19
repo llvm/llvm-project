@@ -163,6 +163,9 @@ public:
   /// Machine Function map.
   void deleteMachineFunctionFor(Function &F);
 
+  /// Add an externally created MachineFunction \p MF for \p F.
+  void insertFunction(const Function &F, std::unique_ptr<MachineFunction> &&MF);
+
   /// Keep track of various per-module pieces of information for backends
   /// that would like to do so.
   template<typename Ty>

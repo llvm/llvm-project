@@ -127,10 +127,11 @@ static void cloneFrameInfo(
   }
 }
 
-static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
+static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
+                                                MachineModuleInfo &DestMMI) {
   auto DstMF = std::make_unique<MachineFunction>(
       SrcMF->getFunction(), SrcMF->getTarget(), SrcMF->getSubtarget(),
-      SrcMF->getFunctionNumber(), SrcMF->getMMI());
+      SrcMF->getFunctionNumber(), DestMMI);
   DenseMap<MachineBasicBlock *, MachineBasicBlock *> Src2DstMBB;
 
   auto *SrcMRI = &SrcMF->getRegInfo();
@@ -292,7 +293,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
 std::unique_ptr<ReducerWorkItem>
 parseReducerWorkItem(const char *ToolName, StringRef Filename,
                      LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
-                     std::unique_ptr<MachineModuleInfo> &MMI, bool IsMIR) {
+                     bool IsMIR) {
   Triple TheTriple;
 
   auto MMM = std::make_unique<ReducerWorkItem>();
@@ -336,23 +337,9 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
     LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
 
-    MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
-    MParser->parseMachineFunctions(*M, *MMI);
-    MachineFunction *MF = nullptr;
-    for (auto &F : *M) {
-      if (auto *MF4F = MMI->getMachineFunction(F)) {
-        // XXX: Maybe it would not be a lot of effort to handle multiple MFs by
-        // simply storing them in a ReducerWorkItem::SmallVector or similar. The
-        // single MF use-case seems a lot more common though so that will do for
-        // now.
-        assert(!MF && "Only single MF supported!");
-        MF = MF4F;
-      }
-    }
-    assert(MF && "No MF found!");
-
+    MMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    MParser->parseMachineFunctions(*M, *MMM->MMI);
     MMM->M = std::move(M);
-    MMM->MF = cloneMF(MF);
   } else {
     SMDiagnostic Err;
     std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
@@ -371,16 +358,24 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
 }
 
 std::unique_ptr<ReducerWorkItem>
-cloneReducerWorkItem(const ReducerWorkItem &MMM) {
+cloneReducerWorkItem(const ReducerWorkItem &MMM, const TargetMachine *TM) {
   auto CloneMMM = std::make_unique<ReducerWorkItem>();
-  if (MMM.MF) {
-    // Note that we cannot clone the Module as then we would need a way to
-    // updated the cloned MachineFunction's IR references.
-    // XXX: Actually have a look at
-    // std::unique_ptr<Module> CloneModule(const Module &M, ValueToValueMapTy
-    // &VMap);
+  if (TM) {
+    // We're assuming the Module IR contents are always unchanged by MIR
+    // reductions, and can share it as a constant.
     CloneMMM->M = MMM.M;
-    CloneMMM->MF = cloneMF(MMM.MF.get());
+
+    // MachineModuleInfo contains a lot of other state used during codegen which
+    // we won't be using here, but we should be able to ignore it (although this
+    // is pretty ugly).
+    const LLVMTargetMachine *LLVMTM =
+        static_cast<const LLVMTargetMachine *>(TM);
+    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+
+    for (const Function &F : MMM.getModule()) {
+      if (auto *MF = MMM.MMI->getMachineFunction(F))
+        CloneMMM->MMI->insertFunction(F, cloneMF(MF, *CloneMMM->MMI));
+    }
   } else {
     CloneMMM->M = CloneModule(*MMM.M);
   }
@@ -390,15 +385,27 @@ cloneReducerWorkItem(const ReducerWorkItem &MMM) {
 bool verifyReducerWorkItem(const ReducerWorkItem &MMM, raw_fd_ostream *OS) {
   if (verifyModule(*MMM.M, OS))
     return true;
-  if (MMM.MF && !MMM.MF->verify(nullptr, "", /*AbortOnError=*/false))
-    return true;
+
+  if (!MMM.MMI)
+    return false;
+
+  for (const Function &F : MMM.getModule()) {
+    if (const MachineFunction *MF = MMM.MMI->getMachineFunction(F)) {
+      if (!MF->verify(nullptr, "", /*AbortOnError=*/false))
+        return true;
+    }
+  }
+
   return false;
 }
 
 void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
-  if (MF) {
+  if (MMI) {
     printMIR(ROS, *M);
-    printMIR(ROS, *MF);
+    for (Function &F : *M) {
+      if (auto *MF = MMI->getMachineFunction(F))
+        printMIR(ROS, *MF);
+    }
   } else {
     M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,
              /*ShouldPreserveUseListOrder=*/true);

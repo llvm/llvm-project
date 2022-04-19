@@ -132,13 +132,14 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
   }
   return SplitOne;
 }
+
 // Check if \p ChunkToCheckForUninterestingness is interesting. Returns the
 // modified module if the chunk resulted in a reduction.
-template <typename T>
+template <typename FuncType>
 static std::unique_ptr<ReducerWorkItem>
 CheckChunk(Chunk &ChunkToCheckForUninterestingness,
            std::unique_ptr<ReducerWorkItem> Clone, TestRunner &Test,
-           function_ref<void(Oracle &, T &)> ExtractChunksFromModule,
+           FuncType ExtractChunksFromModule,
            std::set<Chunk> &UninterestingChunks,
            std::vector<Chunk> &ChunksStillConsideredInteresting) {
   // Take all of ChunksStillConsideredInteresting chunks, except those we've
@@ -183,11 +184,10 @@ CheckChunk(Chunk &ChunkToCheckForUninterestingness,
   return Clone;
 }
 
-template <typename T>
+template <typename FuncType>
 SmallString<0> ProcessChunkFromSerializedBitcode(
     Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
-    function_ref<void(Oracle &, T &)> ExtractChunksFromModule,
-    std::set<Chunk> &UninterestingChunks,
+    FuncType ExtractChunksFromModule, std::set<Chunk> &UninterestingChunks,
     std::vector<Chunk> &ChunksStillConsideredInteresting,
     SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced) {
   LLVMContext Ctx;
@@ -217,10 +217,8 @@ SmallString<0> ProcessChunkFromSerializedBitcode(
 /// reduces the amount of chunks that are considered interesting by the
 /// given test. The number of chunks is determined by a preliminary run of the
 /// reduction pass where no change must be made to the module.
-template <typename T>
-void runDeltaPassInt(
-    TestRunner &Test,
-    function_ref<void(Oracle &, T &)> ExtractChunksFromModule) {
+void llvm::runDeltaPass(TestRunner &Test,
+                        ReductionFunc ExtractChunksFromModule) {
   assert(!verifyReducerWorkItem(Test.getProgram(), &errs()) &&
          "input module is broken before making changes");
 
@@ -250,7 +248,7 @@ void runDeltaPassInt(
     std::vector<Chunk> NoChunks;
     Oracle NoChunksCounter(NoChunks);
     std::unique_ptr<ReducerWorkItem> Clone =
-        cloneReducerWorkItem(Test.getProgram());
+        cloneReducerWorkItem(Test.getProgram(), Test.getTargetMachine());
     ExtractChunksFromModule(NoChunksCounter, *Clone);
     assert(Targets == NoChunksCounter.count() &&
            "number of chunks changes when reducing");
@@ -365,9 +363,11 @@ void runDeltaPassInt(
         // Forward I to the last chunk processed in parallel.
         I += NumChunksProcessed - 1;
       } else {
-        Result = CheckChunk(*I, cloneReducerWorkItem(Test.getProgram()), Test,
-                            ExtractChunksFromModule, UninterestingChunks,
-                            ChunksStillConsideredInteresting);
+        Result = CheckChunk(
+            *I,
+            cloneReducerWorkItem(Test.getProgram(), Test.getTargetMachine()),
+            Test, ExtractChunksFromModule, UninterestingChunks,
+            ChunksStillConsideredInteresting);
       }
 
       if (!Result)
@@ -393,16 +393,4 @@ void runDeltaPassInt(
   if (ReducedProgram)
     Test.setProgram(std::move(ReducedProgram));
   errs() << "Couldn't increase anymore.\n";
-}
-
-void llvm::runDeltaPass(
-    TestRunner &Test,
-    function_ref<void(Oracle &, Module &)> ExtractChunksFromModule) {
-  runDeltaPassInt<Module>(Test, ExtractChunksFromModule);
-}
-
-void llvm::runDeltaPass(
-    TestRunner &Test,
-    function_ref<void(Oracle &, MachineFunction &)> ExtractChunksFromModule) {
-  runDeltaPassInt<MachineFunction>(Test, ExtractChunksFromModule);
 }

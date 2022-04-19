@@ -19,20 +19,23 @@ using namespace llvm;
 class ReducerWorkItem {
 public:
   std::shared_ptr<Module> M;
-  std::unique_ptr<MachineFunction> MF;
+  std::unique_ptr<MachineModuleInfo> MMI;
+
+  bool isMIR() const { return MMI != nullptr; }
+
+  const Module &getModule() const { return *M; }
+
   void print(raw_ostream &ROS, void *p = nullptr) const;
-  bool isMIR() { return MF != nullptr; }
   operator Module &() const { return *M; }
-  operator MachineFunction &() const { return *MF; }
 };
 
 std::unique_ptr<ReducerWorkItem>
 parseReducerWorkItem(const char *ToolName, StringRef Filename,
                      LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
-                     std::unique_ptr<MachineModuleInfo> &MMI, bool IsMIR);
+                     bool IsMIR);
 
 std::unique_ptr<ReducerWorkItem>
-cloneReducerWorkItem(const ReducerWorkItem &MMM);
+cloneReducerWorkItem(const ReducerWorkItem &MMM, const TargetMachine *TM);
 
 bool verifyReducerWorkItem(const ReducerWorkItem &MMM, raw_fd_ostream *OS);
 

@@ -141,6 +141,13 @@ void MachineModuleInfo::deleteMachineFunctionFor(Function &F) {
   LastResult = nullptr;
 }
 
+void MachineModuleInfo::insertFunction(const Function &F,
+                                       std::unique_ptr<MachineFunction> &&MF) {
+  auto I = MachineFunctions.insert(std::make_pair(&F, std::move(MF)));
+  assert(I.second && "machine function already mapped");
+  (void)I;
+}
+
 namespace {
 
 /// This pass frees the MachineFunction object associated with a Function.
