@@ -377,76 +377,6 @@ buildTypeForLambdaCallOperator(Sema &S, clang::CXXRecordDecl *Class,
   return MethodType;
 }
 
-/// Start the definition of a lambda expression.
-/// In this overload, we do not know the type yet
-CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
-                                           SourceRange IntroducerRange,
-                                           TypeSourceInfo *MethodTypeInfo,
-                                           SourceLocation EndLoc,
-                                           ArrayRef<ParmVarDecl *> Params,
-                                           ConstexprSpecKind ConstexprKind,
-                                           Expr *TrailingRequiresClause) {
-
-  LambdaScopeInfo *LSI = getCurLambda();
-
-  TemplateParameterList *TemplateParams =
-      getGenericLambdaTemplateParameterList(LSI, *this);
-
-  // At this point, we may not know the type of the lambda, if we have not
-  // parsed a trailing return type yet
-  QualType MethodType = MethodTypeInfo
-                            ? buildTypeForLambdaCallOperator(
-                                  *this, Class, TemplateParams, MethodTypeInfo)
-                            : QualType();
-
-  // C++11 [expr.prim.lambda]p5:
-  //   The closure type for a lambda-expression has a public inline function
-  //   call operator (13.5.4) whose parameters and return type are described
-  //   by the lambda-expression's parameter-declaration-clause and
-  //   trailing-return-type respectively.
-  DeclarationName MethodName =
-      Context.DeclarationNames.getCXXOperatorName(OO_Call);
-  DeclarationNameLoc MethodNameLoc =
-      DeclarationNameLoc::makeCXXOperatorNameLoc(IntroducerRange);
-  CXXMethodDecl *Method = CXXMethodDecl::Create(
-      Context, Class, EndLoc,
-      DeclarationNameInfo(MethodName, IntroducerRange.getBegin(),
-                          MethodNameLoc),
-      MethodType, MethodTypeInfo, SC_None, getCurFPFeatures().isFPConstrained(),
-      /*isInline=*/true, ConstexprKind, EndLoc, TrailingRequiresClause);
-  Method->setAccess(AS_public);
-  if (!TemplateParams)
-    Class->addDecl(Method);
-
-  // Temporarily set the lexical declaration context to the current
-  // context, so that the Scope stack matches the lexical nesting.
-  Method->setLexicalDeclContext(CurContext);
-  // Create a function template if we have a template parameter list
-  FunctionTemplateDecl *const TemplateMethod =
-      TemplateParams
-          ? FunctionTemplateDecl::Create(Context, Class, Method->getLocation(),
-                                         MethodName, TemplateParams, Method)
-          : nullptr;
-  if (TemplateMethod) {
-    TemplateMethod->setAccess(AS_public);
-    Method->setDescribedFunctionTemplate(TemplateMethod);
-    Class->addDecl(TemplateMethod);
-    TemplateMethod->setLexicalDeclContext(CurContext);
-  }
-
-  // Add parameters.
-  if (!Params.empty()) {
-    Method->setParams(Params);
-    CheckParmsForFunctionDef(Params,
-                             /*CheckParameterNames=*/false);
-
-    for (auto P : Method->parameters())
-      P->setOwningFunction(Method);
-  }
-
-  return Method;
-}
-
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
     Optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling) {
@@ -517,12 +447,11 @@ static void buildLambdaScopeReturnType(Sema &S, LambdaScopeInfo *LSI,
   }
 }
 
-static void buildLambdaScopeCaptures(LambdaScopeInfo *LSI,
-                                     CXXMethodDecl *CallOperator,
-                                     SourceRange IntroducerRange,
-                                     LambdaCaptureDefault CaptureDefault,
-                                     SourceLocation CaptureDefaultLoc,
-                                     bool ExplicitParams, bool Mutable) {
+void Sema::buildLambdaScope(LambdaScopeInfo *LSI, CXXMethodDecl *CallOperator,
+                            SourceRange IntroducerRange,
+                            LambdaCaptureDefault CaptureDefault,
+                            SourceLocation CaptureDefaultLoc,
+                            bool ExplicitParams, bool Mutable) {
   LSI->CallOperator = CallOperator;
   CXXRecordDecl *LambdaClass = CallOperator->getParent();
   LSI->Lambda = LambdaClass;
@@ -534,17 +463,6 @@ static void buildLambdaScopeCaptures(LambdaScopeInfo *LSI,
   LSI->IntroducerRange = IntroducerRange;
   LSI->ExplicitParams = ExplicitParams;
   LSI->Mutable = Mutable;
-}
-
-void Sema::buildLambdaScope(LambdaScopeInfo *LSI, CXXMethodDecl *CallOperator,
-                            SourceRange IntroducerRange,
-                            LambdaCaptureDefault CaptureDefault,
-                            SourceLocation CaptureDefaultLoc,
-                            bool ExplicitParams, bool ExplicitResultType,
-                            bool Mutable) {
-  buildLambdaScopeCaptures(LSI, CallOperator, IntroducerRange, CaptureDefault,
-                           CaptureDefaultLoc, ExplicitParams, Mutable);
-  buildLambdaScopeReturnType(*this, LSI, CallOperator, ExplicitResultType);
 }
 
 void Sema::finishLambdaExplicitCaptures(LambdaScopeInfo *LSI) {
@@ -953,26 +871,74 @@ static TypeSourceInfo *getLambdaType(Sema &S, LambdaIntroducer &Intro,
   return MethodTyInfo;
 }
 
-static CXXMethodDecl *CreateMethod(Sema &S, SourceRange IntroducerRange,
-                                   CXXRecordDecl *Class) {
+CXXMethodDecl *Sema::CreateLambdaCallOperator(SourceRange IntroducerRange,
+                                              CXXRecordDecl *Class) {
+
   // C++11 [expr.prim.lambda]p5:
   //   The closure type for a lambda-expression has a public inline function
   //   call operator (13.5.4) whose parameters and return type are described
   //   by the lambda-expression's parameter-declaration-clause and
   //   trailing-return-type respectively.
   DeclarationName MethodName =
-      S.Context.DeclarationNames.getCXXOperatorName(OO_Call);
+      Context.DeclarationNames.getCXXOperatorName(OO_Call);
   DeclarationNameLoc MethodNameLoc =
       DeclarationNameLoc::makeCXXOperatorNameLoc(IntroducerRange.getBegin());
   CXXMethodDecl *Method = CXXMethodDecl::Create(
-      S.Context, Class, SourceLocation(),
+      Context, Class, SourceLocation(),
       DeclarationNameInfo(MethodName, IntroducerRange.getBegin(),
                           MethodNameLoc),
-      QualType(), nullptr, SC_None, S.getCurFPFeatures().isFPConstrained(),
+      QualType(), nullptr, SC_None, getCurFPFeatures().isFPConstrained(),
       /*isInline=*/true, ConstexprSpecKind::Unspecified, SourceLocation(),
       nullptr);
   Method->setAccess(AS_public);
   return Method;
+}
+
+void Sema::CompleteLambdaCallOperator(
+    CXXMethodDecl *Method, SourceLocation LambdaLoc,
+    SourceLocation CallOperatorLoc, Expr *TrailingRequiresClause,
+    TypeSourceInfo *MethodTyInfo, ConstexprSpecKind ConstexprKind,
+    ArrayRef<ParmVarDecl *> Params, bool HasExplicitResultType) {
+
+  LambdaScopeInfo *const LSI = getCurrentLambdaScopeUnsafe(*this);
+
+  if (TrailingRequiresClause)
+    Method->setTrailingRequiresClause(TrailingRequiresClause);
+
+  TemplateParameterList *TemplateParams =
+      getGenericLambdaTemplateParameterList(LSI, *this);
+
+  auto DC = Method->getLexicalDeclContext();
+  Method->setLexicalDeclContext(LSI->Lambda);
+  if (TemplateParams) {
+    FunctionTemplateDecl *const TemplateMethod = FunctionTemplateDecl::Create(
+        Context, LSI->Lambda, Method->getLocation(), Method->getDeclName(),
+        TemplateParams, Method);
+    TemplateMethod->setAccess(AS_public);
+    Method->setDescribedFunctionTemplate(TemplateMethod);
+    LSI->Lambda->addDecl(TemplateMethod);
+    TemplateMethod->setLexicalDeclContext(DC);
+  } else {
+    LSI->Lambda->addDecl(Method);
+  }
+  LSI->Lambda->setLambdaIsGeneric(TemplateParams);
+  LSI->Lambda->setLambdaTypeInfo(MethodTyInfo);
+
+  Method->setLexicalDeclContext(DC);
+  Method->setLocation(LambdaLoc);
+  Method->setInnerLocStart(CallOperatorLoc);
+  Method->setTypeSourceInfo(MethodTyInfo);
+  Method->setType(buildTypeForLambdaCallOperator(*this, LSI->Lambda,
+                                                 TemplateParams, MethodTyInfo));
+  Method->setConstexprKind(ConstexprKind);
+  if (!Params.empty()) {
+    CheckParmsForFunctionDef(Params, /*CheckParameterNames=*/false);
+    Method->setParams(Params);
+    for (auto P : Method->parameters())
+      P->setOwningFunction(Method);
+  }
+
+  buildLambdaScopeReturnType(*this, LSI, Method, HasExplicitResultType);
 }
 
 void Sema::ActOnLambdaIntroducer(LambdaIntroducer &Intro, Scope *CurrentScope) {
@@ -1016,7 +982,7 @@ void Sema::ActOnLambdaIntroducer(LambdaIntroducer &Intro, Scope *CurrentScope) {
   //   by the lambda-expression's parameter-declaration-clause and
   //   trailing-return-type respectively.
 
-  CXXMethodDecl *Method = CreateMethod(*this, Intro.Range, Class);
+  CXXMethodDecl *Method = CreateLambdaCallOperator(Intro.Range, Class);
   LSI->CallOperator = Method;
   Method->setLexicalDeclContext(CurContext);
 
@@ -1297,54 +1263,23 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   SmallVector<ParmVarDecl *, 8> Params;
   bool ExplicitResultType;
 
-  SourceLocation TypeLoc, LambdaLoc;
+  SourceLocation TypeLoc, CallOperatorLoc;
   if (ParamInfo.getNumTypeObjects() == 0) {
-    LambdaLoc = TypeLoc = Intro.Range.getEnd();
+    CallOperatorLoc = TypeLoc = Intro.Range.getEnd();
   } else {
     unsigned index;
     ParamInfo.isFunctionDeclarator(index);
     const auto &Object = ParamInfo.getTypeObject(index);
     TypeLoc =
         Object.Loc.isValid() ? Object.Loc : ParamInfo.getSourceRange().getEnd();
-    LambdaLoc = ParamInfo.getSourceRange().getEnd();
+    CallOperatorLoc = ParamInfo.getSourceRange().getEnd();
   }
 
   CXXRecordDecl *Class = LSI->Lambda;
   CXXMethodDecl *Method = LSI->CallOperator;
 
-  if (auto *C = ParamInfo.getTrailingRequiresClause())
-    Method->setTrailingRequiresClause(C);
-
-  TemplateParameterList *TemplateParams =
-      getGenericLambdaTemplateParameterList(LSI, *this);
-
-  auto DC = Method->getLexicalDeclContext();
-  Method->setLexicalDeclContext(Class);
-  if (TemplateParams) {
-    FunctionTemplateDecl *const TemplateMethod = FunctionTemplateDecl::Create(
-        Context, Class, Method->getLocation(), Method->getDeclName(),
-        TemplateParams, Method);
-    TemplateMethod->setAccess(AS_public);
-    Method->setDescribedFunctionTemplate(TemplateMethod);
-    Class->addDecl(TemplateMethod);
-    TemplateMethod->setLexicalDeclContext(DC);
-  } else {
-    Class->addDecl(Method);
-  }
-  Method->setLexicalDeclContext(DC);
-  Class->setLambdaIsGeneric(TemplateParams);
-
   TypeSourceInfo *MethodTyInfo = getLambdaType(
       *this, Intro, ParamInfo, getCurScope(), TypeLoc, ExplicitResultType);
-
-  Class->setLambdaTypeInfo(MethodTyInfo);
-  Method->setInnerLocStart(LambdaLoc);
-  Method->setLocation(Intro.Range.getBegin());
-  Method->setTypeSourceInfo(MethodTyInfo);
-  Method->setType(buildTypeForLambdaCallOperator(*this, Class, TemplateParams,
-                                                 MethodTyInfo));
-  Method->setConstexprKind(ParamInfo.getDeclSpec().getConstexprSpecifier());
-  buildLambdaScopeReturnType(*this, LSI, Method, ExplicitResultType);
 
   LSI->ExplicitParams = ParamInfo.getNumTypeObjects() != 0;
 
@@ -1359,14 +1294,15 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     }
   }
 
+  CompleteLambdaCallOperator(Method, Intro.Range.getBegin(), CallOperatorLoc,
+                             ParamInfo.getTrailingRequiresClause(),
+                             MethodTyInfo,
+                             ParamInfo.getDeclSpec().getConstexprSpecifier(),
+                             Params, ExplicitResultType);
+
   ContextRAII ManglingContext(*this, Class->getDeclContext());
 
-  CheckParmsForFunctionDef(Params, /*CheckParameterNames=*/false);
-
-  if (LSI->ExplicitParams) {
-    Method->setParams(Params);
-    CheckCXXDefaultArguments(Method);
-  }
+  CheckCXXDefaultArguments(Method);
 
   // This represents the function body for the lambda function, check if we
   // have to apply optnone due to a pragma.

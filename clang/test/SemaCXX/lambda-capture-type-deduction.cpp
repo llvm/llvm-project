@@ -163,6 +163,35 @@ void dependent(U&& u) {
   [&]() requires is_same<decltype(u), T> {}();
 }
 
+template <typename T>
+void dependent_init_capture(T x = 0) {
+  [ y = x + 1, x ]() mutable -> decltype(y + x) requires(is_same<decltype((y)), int &> && is_same<decltype((x)), int &>) {
+    return y;
+  }
+  ();
+  [ y = x + 1, x ]() -> decltype(y + x) requires(is_same<decltype((y)), const int &> && is_same<decltype((x)), const int &>) {
+    return y;
+  }
+  ();
+}
+
+template <typename T, typename...>
+struct extract_type {
+  using type = T;
+};
+
+template <typename... T>
+void dependent_variadic_capture(T... x) {
+  [... y = x, x... ](auto...) mutable -> typename extract_type<decltype(y)...>::type requires((is_same<decltype((y)), int &> && ...) && (is_same<decltype((x)), int &> && ...)) {
+    return 0;
+  }
+  (x...);
+  [... y = x, x... ](auto...) -> typename extract_type<decltype(y)...>::type requires((is_same<decltype((y)), const int &> && ...) && (is_same<decltype((x)), const int &> && ...)) {
+    return 0;
+  }
+  (x...);
+}
+
 void test_dependent() {
   int v   = 0;
   int & r = v;
@@ -170,6 +199,8 @@ void test_dependent() {
   dependent<int&>(v);
   dependent<int&>(r);
   dependent<const int&>(cr);
+  dependent_init_capture(0);
+  dependent_variadic_capture(1, 2, 3, 4);
 }
 
 void test_CWG2569_tpl(auto a) {

@@ -12966,44 +12966,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   LambdaScopeInfo *LSI = getSema().PushLambdaScope();
   Sema::FunctionScopeRAII FuncScopeCleanup(getSema());
 
-  // Transform the template parameters, and add them to the current
-  // instantiation scope. The null case is handled correctly.
-  auto TPL = getDerived().TransformTemplateParameterList(
-      E->getTemplateParameterList());
-  LSI->GLTemplateParameterList = TPL;
-
-  // Transform the type of the original lambda's call operator.
-  // The transformation MUST be done in the CurrentInstantiationScope since
-  // it introduces a mapping of the original to the newly created
-  // transformed parameters.
-  TypeSourceInfo *NewCallOpTSI = nullptr;
-  {
-    TypeSourceInfo *OldCallOpTSI = E->getCallOperator()->getTypeSourceInfo();
-    FunctionProtoTypeLoc OldCallOpFPTL =
-        OldCallOpTSI->getTypeLoc().getAs<FunctionProtoTypeLoc>();
-
-    TypeLocBuilder NewCallOpTLBuilder;
-    SmallVector<QualType, 4> ExceptionStorage;
-    TreeTransform *This = this; // Work around gcc.gnu.org/PR56135.
-    QualType NewCallOpType = TransformFunctionProtoType(
-        NewCallOpTLBuilder, OldCallOpFPTL, nullptr, Qualifiers(),
-        [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-          return This->TransformExceptionSpec(OldCallOpFPTL.getBeginLoc(), ESI,
-                                              ExceptionStorage, Changed);
-        });
-    if (NewCallOpType.isNull())
-      return ExprError();
-    NewCallOpTSI = NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context,
-                                                        NewCallOpType);
-  }
-
-  // Transform the trailing requires clause
-  ExprResult NewTrailingRequiresClause;
-  if (Expr *TRC = E->getCallOperator()->getTrailingRequiresClause())
-    // FIXME: Concepts: Substitution into requires clause should only happen
-    //                  when checking satisfaction.
-    NewTrailingRequiresClause = getDerived().TransformExpr(TRC);
-
   // Create the local class that will describe the lambda.
 
   // FIXME: DependencyKind below is wrong when substituting inside a templated
@@ -13019,10 +12981,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     DependencyKind = CXXRecordDecl::LDK_NeverDependent;
 
   CXXRecordDecl *OldClass = E->getLambdaClass();
-  CXXRecordDecl *Class =
-      getSema().createLambdaClosureType(E->getIntroducerRange(), NewCallOpTSI,
-                                        DependencyKind, E->getCaptureDefault());
-
+  CXXRecordDecl *Class = getSema().createLambdaClosureType(
+      E->getIntroducerRange(), nullptr, DependencyKind, E->getCaptureDefault());
   getDerived().transformedLocalDecl(OldClass, {Class});
 
   Optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling;
@@ -13032,34 +12992,18 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                                OldClass->getDeviceLambdaManglingNumber(),
                                OldClass->getLambdaContextDecl());
 
-  // Build the call operator.
-  CXXMethodDecl *NewCallOperator = getSema().startLambdaDefinition(
-      Class, E->getIntroducerRange(), NewCallOpTSI,
-      E->getCallOperator()->getEndLoc(),
-      NewCallOpTSI->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams(),
-      E->getCallOperator()->getConstexprKind(),
-      NewTrailingRequiresClause.get());
+  CXXMethodDecl *NewCallOperator =
+      getSema().CreateLambdaCallOperator(E->getIntroducerRange(), Class);
+  NewCallOperator->setLexicalDeclContext(getSema().CurContext);
 
-  LSI->CallOperator = NewCallOperator;
-
-  getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
-  getDerived().transformedLocalDecl(E->getCallOperator(), {NewCallOperator});
-
-  // Number the lambda for linkage purposes if necessary.
-  getSema().handleLambdaNumbering(Class, NewCallOperator, Mangling);
+  // Enter the scope of the lambda.
+  getSema().buildLambdaScope(LSI, NewCallOperator, E->getIntroducerRange(),
+                             E->getCaptureDefault(), E->getCaptureDefaultLoc(),
+                             E->hasExplicitParameters(), E->isMutable());
 
   // Introduce the context of the call operator.
   Sema::ContextRAII SavedContext(getSema(), NewCallOperator,
                                  /*NewThisContext*/false);
-
-  // Enter the scope of the lambda.
-  getSema().buildLambdaScope(LSI, NewCallOperator,
-                             E->getIntroducerRange(),
-                             E->getCaptureDefault(),
-                             E->getCaptureDefaultLoc(),
-                             E->hasExplicitParameters(),
-                             E->hasExplicitResultType(),
-                             E->isMutable());
 
   bool Invalid = false;
 
@@ -13181,6 +13125,60 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                                  EllipsisLoc);
   }
   getSema().finishLambdaExplicitCaptures(LSI);
+
+  // Transform the template parameters, and add them to the current
+  // instantiation scope. The null case is handled correctly.
+  auto TPL = getDerived().TransformTemplateParameterList(
+      E->getTemplateParameterList());
+  LSI->GLTemplateParameterList = TPL;
+
+  // Transform the type of the original lambda's call operator.
+  // The transformation MUST be done in the CurrentInstantiationScope since
+  // it introduces a mapping of the original to the newly created
+  // transformed parameters.
+  TypeSourceInfo *NewCallOpTSI = nullptr;
+  {
+    TypeSourceInfo *OldCallOpTSI = E->getCallOperator()->getTypeSourceInfo();
+    FunctionProtoTypeLoc OldCallOpFPTL =
+        OldCallOpTSI->getTypeLoc().getAs<FunctionProtoTypeLoc>();
+
+    TypeLocBuilder NewCallOpTLBuilder;
+    SmallVector<QualType, 4> ExceptionStorage;
+    TreeTransform *This = this; // Work around gcc.gnu.org/PR56135.
+    QualType NewCallOpType = TransformFunctionProtoType(
+        NewCallOpTLBuilder, OldCallOpFPTL, nullptr, Qualifiers(),
+        [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
+          return This->TransformExceptionSpec(OldCallOpFPTL.getBeginLoc(), ESI,
+                                              ExceptionStorage, Changed);
+        });
+    if (NewCallOpType.isNull())
+      return ExprError();
+    NewCallOpTSI =
+        NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
+  }
+
+  // Transform the trailing requires clause
+  ExprResult NewTrailingRequiresClause;
+  if (Expr *TRC = E->getCallOperator()->getTrailingRequiresClause())
+    // FIXME: Concepts: Substitution into requires clause should only happen
+    //                  when checking satisfaction.
+    NewTrailingRequiresClause = getDerived().TransformExpr(TRC);
+
+  getSema().CompleteLambdaCallOperator(
+      NewCallOperator, E->getCallOperator()->getLocation(),
+      E->getCallOperator()->getInnerLocStart(), NewTrailingRequiresClause.get(),
+      NewCallOpTSI, E->getCallOperator()->getConstexprKind(),
+      NewCallOpTSI->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams(),
+      E->hasExplicitResultType());
+
+  getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
+  getDerived().transformedLocalDecl(E->getCallOperator(), {NewCallOperator});
+
+  {
+    // Number the lambda for linkage purposes if necessary.
+    Sema::ContextRAII ManglingContext(getSema(), Class->getDeclContext());
+    getSema().handleLambdaNumbering(Class, NewCallOperator, Mangling);
+  }
 
   // FIXME: Sema's lambda-building mechanism expects us to push an expression
   // evaluation context even if we're not transforming the function body.

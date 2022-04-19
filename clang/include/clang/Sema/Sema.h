@@ -6828,15 +6828,6 @@ public:
                                          unsigned LambdaDependencyKind,
                                          LambdaCaptureDefault CaptureDefault);
 
-  /// Start the definition of a lambda expression.
-  CXXMethodDecl *startLambdaDefinition(CXXRecordDecl *Class,
-                                       SourceRange IntroducerRange,
-                                       TypeSourceInfo *MethodType,
-                                       SourceLocation EndLoc,
-                                       ArrayRef<ParmVarDecl *> Params,
-                                       ConstexprSpecKind ConstexprKind,
-                                       Expr *TrailingRequiresClause);
-
   /// Number lambda for linkage purposes if necessary.
   void handleLambdaNumbering(
       CXXRecordDecl *Class, CXXMethodDecl *Method,
@@ -6849,8 +6840,15 @@ public:
                         LambdaCaptureDefault CaptureDefault,
                         SourceLocation CaptureDefaultLoc,
                         bool ExplicitParams,
-                        bool ExplicitResultType,
                         bool Mutable);
+
+  CXXMethodDecl *CreateLambdaCallOperator(SourceRange IntroducerRange,
+                                          CXXRecordDecl *Class);
+  void CompleteLambdaCallOperator(
+      CXXMethodDecl *Method, SourceLocation LambdaLoc,
+      SourceLocation CallOperatorLoc, Expr *TrailingRequiresClause,
+      TypeSourceInfo *MethodTyInfo, ConstexprSpecKind ConstexprKind,
+      ArrayRef<ParmVarDecl *> Params, bool HasExplicitResultType);
 
   /// Perform initialization analysis of the init-capture and perform
   /// any implicit conversions such as an lvalue-to-rvalue conversion if
