@@ -38,3 +38,21 @@ void loop_basic_dowhile() {
   *p = 42;          // expected-warning {{use of invalid pointer 'p'}}
                     // expected-remark@-1 {{pset => { nullptr, invalid }}}
 }
+
+// p1179r1: 2.4.9.3
+void loop0(bool b, int j) {
+  int a[4], c[4];
+  int *p = &a[0];
+  while (j) {
+    // This access is invalidated after the first iteration
+    *p = 42;     // expected-warning {{use of invalid pointer 'p'}}
+                 // expected-remark@-1 {{pset => { c, nullptr }}}
+    p = nullptr; // expected-note {{invalidated here}}
+    if (b) {
+      p = &c[j];
+    }
+    j = j - 1;
+  }
+  *p = 0; // expected-warning {{use of invalid pointer 'p'}}
+          // expected-remark@-1 {{pset => { a, c, nullptr }}}
+}
