@@ -690,9 +690,9 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
                 // to symbols that belong to the subroutine scope and are
                 // meaningless on the caller side without the related call
                 // expression.
-                for (auto extent : *resultShape) {
-                  if (extent && !IsConstantExpr(*extent)) {
-                    return std::nullopt;
+                for (auto &extent : *resultShape) {
+                  if (extent && !IsActuallyConstant(*extent)) {
+                    extent.reset();
                   }
                 }
               }

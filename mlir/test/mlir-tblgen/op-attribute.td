@@ -3,6 +3,7 @@
 // RUN: mlir-tblgen -print-records -I %S/../../include %s | FileCheck %s --check-prefix=RECORD
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
