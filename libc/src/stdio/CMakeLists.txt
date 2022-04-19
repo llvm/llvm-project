@@ -25,11 +25,59 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  flockfile
+  SRCS
+    flockfile.cpp
+  HDRS
+    flockfile.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  funlockfile
+  SRCS
+    funlockfile.cpp
+  HDRS
+    funlockfile.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fread_unlocked
+  SRCS
+    fread_unlocked.cpp
+  HDRS
+    fread_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fread
   SRCS
     fread.cpp
   HDRS
     fread.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fwrite_unlocked
+  SRCS
+    fwrite_unlocked.cpp
+  HDRS
+    fwrite_unlocked.h
   DEPENDS
     libc.include.stdio
     libc.src.__support.File.file

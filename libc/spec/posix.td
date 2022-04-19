@@ -502,12 +502,32 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec StdIO = HeaderSpec<
+      "stdio.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "flockfile",
+              RetValSpec<VoidType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "funlockfile",
+              RetValSpec<VoidType>,
+              [ArgSpec<FILEPtr>]
+          >,
+      ]
+  >;
+
   let Headers = [
     CType,
     Errno,
     FCntl,
     PThread,
     Signal,
+    StdIO,
     StdLib,
     SysMMan,
     SysStat,

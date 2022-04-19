@@ -145,11 +145,27 @@ public:
     f->eof = f->err = false;
   }
 
-  // Buffered write of |len| bytes from |data|.
-  size_t write(const void *data, size_t len);
+  // Buffered write of |len| bytes from |data| without the file lock.
+  size_t write_unlocked(const void *data, size_t len);
 
-  // Buffered read of |len| bytes into |data|.
-  size_t read(void *data, size_t len);
+  // Buffered write of |len| bytes from |data| under the file lock.
+  size_t write(const void *data, size_t len) {
+    lock();
+    size_t ret = write_unlocked(data, len);
+    unlock();
+    return ret;
+  }
+
+  // Buffered read of |len| bytes into |data| without the file lock.
+  size_t read_unlocked(void *data, size_t len);
+
+  // Buffered read of |len| bytes into |data| under the file lock.
+  size_t read(void *data, size_t len) {
+    lock();
+    size_t ret = read_unlocked(data, len);
+    unlock();
+    return ret;
+  }
 
   int seek(long offset, int whence);
 
