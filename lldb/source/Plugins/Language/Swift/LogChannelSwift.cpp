@@ -20,8 +20,6 @@ static Log::Channel g_channel(g_categories, SwiftLog::Health);
 
 static std::string g_swift_log_buffer;
 
-Log::Channel LogChannelSwift::g_channel(g_categories, SwiftLog::Health);
-
 template <> Log::Channel &lldb_private::LogChannelFor<SwiftLog>() {
   return g_channel;
 }
