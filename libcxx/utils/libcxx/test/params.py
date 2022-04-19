@@ -146,9 +146,9 @@ DEFAULT_PARAMETERS = [
               AddFlag('-fsanitize=address') if sanitizer == 'Address' else None,
               AddFeature('asan')            if sanitizer == 'Address' else None,
 
-              AddFlag('-fsanitize=memory')               if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,
-              AddFeature('msan')                         if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,
-              AddFlag('-fsanitize-memory-track-origins') if sanitizer == 'MemoryWithOrigins' else None,
+              AddFlag('-fsanitize=memory -fsanitize-memory-param-retval') if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,
+              AddFeature('msan')                                          if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,
+              AddFlag('-fsanitize-memory-track-origins')                  if sanitizer == 'MemoryWithOrigins' else None,
 
               AddFlag('-fsanitize=thread') if sanitizer == 'Thread' else None,
               AddFeature('tsan')           if sanitizer == 'Thread' else None,
