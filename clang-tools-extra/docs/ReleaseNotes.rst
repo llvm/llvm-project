@@ -53,6 +53,7 @@ Inlay hints
 
 Diagnostics
 ^^^^^^^^^^^
+- Improved Fix-its of some clang-tidy checks when applied with clangd.
 
 Semantic Highlighting
 ^^^^^^^^^^^^^^^^^^^^^
