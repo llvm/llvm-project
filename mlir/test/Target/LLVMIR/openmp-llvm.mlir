@@ -657,7 +657,7 @@ llvm.func @body(i64)
 llvm.func @test_omp_wsloop_runtime_simd(%lb : i64, %ub : i64, %step : i64) -> () {
   omp.wsloop schedule(runtime, simd)
   for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-    // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 1073741871
+    // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 47
     // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
     // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
     // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
@@ -674,7 +674,7 @@ llvm.func @body(i64)
 llvm.func @test_omp_wsloop_guided_simd(%lb : i64, %ub : i64, %step : i64) -> () {
   omp.wsloop schedule(guided, simd)
   for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-    // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 1073741870
+    // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 46
     // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
     // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
     // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
@@ -788,7 +788,7 @@ llvm.func @body(i64)
 llvm.func @test_omp_wsloop_dynamic_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
  omp.wsloop schedule(dynamic) ordered(0)
  for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 67, i64 1, i64 %{{.*}}, i64 1, i64 1)
+  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 1073741891, i64 1, i64 %{{.*}}, i64 1, i64 1)
   // CHECK: call void @__kmpc_dispatch_fini_8u
   // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
   // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
@@ -806,7 +806,7 @@ llvm.func @body(i64)
 llvm.func @test_omp_wsloop_auto_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
  omp.wsloop schedule(auto) ordered(0)
  for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 70, i64 1, i64 %{{.*}}, i64 1, i64 1)
+  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 1073741894, i64 1, i64 %{{.*}}, i64 1, i64 1)
   // CHECK: call void @__kmpc_dispatch_fini_8u
   // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
   // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
@@ -824,7 +824,7 @@ llvm.func @body(i64)
 llvm.func @test_omp_wsloop_runtime_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
  omp.wsloop schedule(runtime) ordered(0)
  for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 69, i64 1, i64 %{{.*}}, i64 1, i64 1)
+  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 1073741893, i64 1, i64 %{{.*}}, i64 1, i64 1)
   // CHECK: call void @__kmpc_dispatch_fini_8u
   // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
   // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
@@ -842,7 +842,7 @@ llvm.func @body(i64)
 llvm.func @test_omp_wsloop_guided_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
  omp.wsloop schedule(guided) ordered(0)
  for (%iv) : i64 = (%lb) to (%ub) step (%step) {
-  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 68, i64 1, i64 %{{.*}}, i64 1, i64 1)
+  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 1073741892, i64 1, i64 %{{.*}}, i64 1, i64 1)
   // CHECK: call void @__kmpc_dispatch_fini_8u
   // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
   // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0

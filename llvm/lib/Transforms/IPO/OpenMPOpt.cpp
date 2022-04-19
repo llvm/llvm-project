@@ -4276,10 +4276,10 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       unsigned ScheduleTypeVal =
           ScheduleTypeCI ? ScheduleTypeCI->getZExtValue() : 0;
       switch (OMPScheduleType(ScheduleTypeVal)) {
-      case OMPScheduleType::UnorderedStatic:
-      case OMPScheduleType::UnorderedStaticChunked:
-      case OMPScheduleType::OrderedDistribute:
-      case OMPScheduleType::OrderedDistributeChunked:
+      case OMPScheduleType::Static:
+      case OMPScheduleType::StaticChunked:
+      case OMPScheduleType::Distribute:
+      case OMPScheduleType::DistributeChunked:
         break;
       default:
         SPMDCompatibilityTracker.indicatePessimisticFixpoint();

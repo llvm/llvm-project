@@ -38,7 +38,7 @@
 // CHECK-NEXT:    store i32 %[[DOTCOUNT]], i32* %[[P_UPPERBOUND]], align 4
 // CHECK-NEXT:    store i32 1, i32* %[[P_STRIDE]], align 4
 // CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
-// CHECK-NEXT:    call void @__kmpc_dispatch_init_4u(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 1073741859, i32 1, i32 %[[DOTCOUNT]], i32 1, i32 5)
+// CHECK-NEXT:    call void @__kmpc_dispatch_init_4u(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 35, i32 1, i32 %[[DOTCOUNT]], i32 1, i32 5)
 // CHECK-NEXT:    br label %[[OMP_LOOP_PREHEADER_OUTER_COND:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_LOOP_HEADER:.*]]:

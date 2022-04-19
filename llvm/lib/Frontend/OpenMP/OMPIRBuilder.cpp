@@ -69,167 +69,7 @@ static bool isConflictIP(IRBuilder<>::InsertPoint IP1,
     return false;
   return IP1.getBlock() == IP2.getBlock() && IP1.getPoint() == IP2.getPoint();
 }
-
-static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
-  // Valid ordered/unordered and base algorithm combinations.
-  switch (SchedType & ~OMPScheduleType::MonotonicityMask) {
-  case OMPScheduleType::UnorderedStaticChunked:
-  case OMPScheduleType::UnorderedStatic:
-  case OMPScheduleType::UnorderedDynamicChunked:
-  case OMPScheduleType::UnorderedGuidedChunked:
-  case OMPScheduleType::UnorderedRuntime:
-  case OMPScheduleType::UnorderedAuto:
-  case OMPScheduleType::UnorderedTrapezoidal:
-  case OMPScheduleType::UnorderedGreedy:
-  case OMPScheduleType::UnorderedBalanced:
-  case OMPScheduleType::UnorderedGuidedIterativeChunked:
-  case OMPScheduleType::UnorderedGuidedAnalyticalChunked:
-  case OMPScheduleType::UnorderedSteal:
-  case OMPScheduleType::UnorderedStaticBalancedChunked:
-  case OMPScheduleType::UnorderedGuidedSimd:
-  case OMPScheduleType::UnorderedRuntimeSimd:
-  case OMPScheduleType::OrderedStaticChunked:
-  case OMPScheduleType::OrderedStatic:
-  case OMPScheduleType::OrderedDynamicChunked:
-  case OMPScheduleType::OrderedGuidedChunked:
-  case OMPScheduleType::OrderedRuntime:
-  case OMPScheduleType::OrderedAuto:
-  case OMPScheduleType::OrderdTrapezoidal:
-  case OMPScheduleType::NomergeUnorderedStaticChunked:
-  case OMPScheduleType::NomergeUnorderedStatic:
-  case OMPScheduleType::NomergeUnorderedDynamicChunked:
-  case OMPScheduleType::NomergeUnorderedGuidedChunked:
-  case OMPScheduleType::NomergeUnorderedRuntime:
-  case OMPScheduleType::NomergeUnorderedAuto:
-  case OMPScheduleType::NomergeUnorderedTrapezoidal:
-  case OMPScheduleType::NomergeUnorderedGreedy:
-  case OMPScheduleType::NomergeUnorderedBalanced:
-  case OMPScheduleType::NomergeUnorderedGuidedIterativeChunked:
-  case OMPScheduleType::NomergeUnorderedGuidedAnalyticalChunked:
-  case OMPScheduleType::NomergeUnorderedSteal:
-  case OMPScheduleType::NomergeOrderedStaticChunked:
-  case OMPScheduleType::NomergeOrderedStatic:
-  case OMPScheduleType::NomergeOrderedDynamicChunked:
-  case OMPScheduleType::NomergeOrderedGuidedChunked:
-  case OMPScheduleType::NomergeOrderedRuntime:
-  case OMPScheduleType::NomergeOrderedAuto:
-  case OMPScheduleType::NomergeOrderedTrapezoidal:
-    break;
-  default:
-    return false;
-  }
-
-  // Must not set both monotonicity modifiers at the same time.
-  OMPScheduleType MonotonicityFlags =
-      SchedType & OMPScheduleType::MonotonicityMask;
-  if (MonotonicityFlags == OMPScheduleType::MonotonicityMask)
-    return false;
-
-  return true;
-}
 #endif
-
-/// Determine which scheduling algorithm to use, determined from schedule clause
-/// arguments.
-static OMPScheduleType
-getOpenMPBaseScheduleType(llvm::omp::ScheduleKind ClauseKind, bool HasChunks,
-                          bool HasSimdModifier) {
-  // Currently, the default schedule it static.
-  switch (ClauseKind) {
-  case OMP_SCHEDULE_Default:
-  case OMP_SCHEDULE_Static:
-    return HasChunks ? OMPScheduleType::BaseStaticChunked
-                     : OMPScheduleType::BaseStatic;
-  case OMP_SCHEDULE_Dynamic:
-    return OMPScheduleType::BaseDynamicChunked;
-  case OMP_SCHEDULE_Guided:
-    return HasSimdModifier ? OMPScheduleType::BaseGuidedSimd
-                           : OMPScheduleType::BaseGuidedChunked;
-  case OMP_SCHEDULE_Auto:
-    return llvm::omp::OMPScheduleType::BaseAuto;
-  case OMP_SCHEDULE_Runtime:
-    return HasSimdModifier ? OMPScheduleType::BaseRuntimeSimd
-                           : OMPScheduleType::BaseRuntime;
-  }
-  llvm_unreachable("unhandled schedule clause argument");
-}
-
-/// Adds ordering modifier flags to schedule type.
-static OMPScheduleType
-getOpenMPOrderingScheduleType(OMPScheduleType BaseScheduleType,
-                              bool HasOrderedClause) {
-  assert((BaseScheduleType & OMPScheduleType::ModifierMask) ==
-             OMPScheduleType::None &&
-         "Must not have ordering nor monotonicity flags already set");
-
-  OMPScheduleType OrderingModifier = HasOrderedClause
-                                         ? OMPScheduleType::ModifierOrdered
-                                         : OMPScheduleType::ModifierUnordered;
-  OMPScheduleType OrderingScheduleType = BaseScheduleType | OrderingModifier;
-
-  // Unsupported combinations
-  if (OrderingScheduleType ==
-      (OMPScheduleType::BaseGuidedSimd | OMPScheduleType::ModifierOrdered))
-    return OMPScheduleType::OrderedGuidedChunked;
-  else if (OrderingScheduleType == (OMPScheduleType::BaseRuntimeSimd |
-                                    OMPScheduleType::ModifierOrdered))
-    return OMPScheduleType::OrderedRuntime;
-
-  return OrderingScheduleType;
-}
-
-/// Adds monotonicity modifier flags to schedule type.
-static OMPScheduleType
-getOpenMPMonotonicityScheduleType(OMPScheduleType ScheduleType,
-                                  bool HasSimdModifier, bool HasMonotonic,
-                                  bool HasNonmonotonic, bool HasOrderedClause) {
-  assert((ScheduleType & OMPScheduleType::MonotonicityMask) ==
-             OMPScheduleType::None &&
-         "Must not have monotonicity flags already set");
-  assert((!HasMonotonic || !HasNonmonotonic) &&
-         "Monotonic and Nonmonotonic are contradicting each other");
-
-  if (HasMonotonic) {
-    return ScheduleType | OMPScheduleType::ModifierMonotonic;
-  } else if (HasNonmonotonic) {
-    return ScheduleType | OMPScheduleType::ModifierNonmonotonic;
-  } else {
-    // OpenMP 5.1, 2.11.4 Worksharing-Loop Construct, Description.
-    // If the static schedule kind is specified or if the ordered clause is
-    // specified, and if the nonmonotonic modifier is not specified, the
-    // effect is as if the monotonic modifier is specified. Otherwise, unless
-    // the monotonic modifier is specified, the effect is as if the
-    // nonmonotonic modifier is specified.
-    OMPScheduleType BaseScheduleType =
-        ScheduleType & ~OMPScheduleType::ModifierMask;
-    if ((BaseScheduleType == OMPScheduleType::BaseStatic) ||
-        (BaseScheduleType == OMPScheduleType::BaseStaticChunked) ||
-        HasOrderedClause) {
-      // The monotonic is used by default in openmp runtime library, so no need
-      // to set it.
-      return ScheduleType;
-    } else {
-      return ScheduleType | OMPScheduleType::ModifierNonmonotonic;
-    }
-  }
-}
-
-/// Determine the schedule type using schedule and ordering clause arguments.
-static OMPScheduleType
-computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
-                          bool HasSimdModifier, bool HasMonotonicModifier,
-                          bool HasNonmonotonicModifier, bool HasOrderedClause) {
-  OMPScheduleType BaseSchedule =
-      getOpenMPBaseScheduleType(ClauseKind, HasChunks, HasSimdModifier);
-  OMPScheduleType OrderedSchedule =
-      getOpenMPOrderingScheduleType(BaseSchedule, HasOrderedClause);
-  OMPScheduleType Result = getOpenMPMonotonicityScheduleType(
-      OrderedSchedule, HasSimdModifier, HasMonotonicModifier,
-      HasNonmonotonicModifier, HasOrderedClause);
-
-  assert(isValidWorkshareLoopScheduleType(Result));
-  return Result;
-}
 
 /// Make \p Source branch to \p Target.
 ///
@@ -1811,8 +1651,8 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
 
   Value *ThreadNum = getOrCreateThreadID(SrcLoc);
 
-  Constant *SchedulingType = ConstantInt::get(
-      I32Type, static_cast<int>(OMPScheduleType::UnorderedStatic));
+  Constant *SchedulingType =
+      ConstantInt::get(I32Type, static_cast<int>(OMPScheduleType::Static));
 
   // Call the "init" function and update the trip count of the loop with the
   // value it produced.
@@ -1898,7 +1738,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
       Builder.CreateZExt(OrigTripCount, InternalIVTy, "tripcount");
 
   Constant *SchedulingType = ConstantInt::get(
-      I32Type, static_cast<int>(OMPScheduleType::UnorderedStaticChunked));
+      I32Type, static_cast<int>(OMPScheduleType::StaticChunked));
   Builder.CreateStore(Zero, PLowerBound);
   Value *OrigUpperBound = Builder.CreateSub(CastedTripCount, One);
   Builder.CreateStore(OrigUpperBound, PUpperBound);
@@ -1996,55 +1836,41 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
   return {DispatchAfter, DispatchAfter->getFirstInsertionPt()};
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoop(
-    DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    bool NeedsBarrier, llvm::omp::ScheduleKind SchedKind,
-    llvm::Value *ChunkSize, bool HasSimdModifier, bool HasMonotonicModifier,
-    bool HasNonmonotonicModifier, bool HasOrderedClause) {
-  OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
-      SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
-      HasNonmonotonicModifier, HasOrderedClause);
-
-  bool IsOrdered = (EffectiveScheduleType & OMPScheduleType::ModifierOrdered) ==
-                   OMPScheduleType::ModifierOrdered;
-  switch (EffectiveScheduleType & ~OMPScheduleType::ModifierMask) {
-  case OMPScheduleType::BaseStatic:
-    assert(!ChunkSize && "No chunk size with static-chunked schedule");
-    if (IsOrdered)
-      return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
-                                       NeedsBarrier, ChunkSize);
-    // FIXME: Monotonicity ignored?
-    return applyStaticWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier);
-
-  case OMPScheduleType::BaseStaticChunked:
-    if (IsOrdered)
-      return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
-                                       NeedsBarrier, ChunkSize);
-    // FIXME: Monotonicity ignored?
-    return applyStaticChunkedWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier,
-                                           ChunkSize);
-
-  case OMPScheduleType::BaseRuntime:
-  case OMPScheduleType::BaseAuto:
-  case OMPScheduleType::BaseGreedy:
-  case OMPScheduleType::BaseBalanced:
-  case OMPScheduleType::BaseSteal:
-  case OMPScheduleType::BaseGuidedSimd:
-  case OMPScheduleType::BaseRuntimeSimd:
-    assert(!ChunkSize &&
-           "schedule type does not support user-defined chunk sizes");
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::applyWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
+                                    InsertPointTy AllocaIP, bool NeedsBarrier,
+                                    llvm::omp::ScheduleKind SchedKind,
+                                    llvm::Value *ChunkSize) {
+  switch (SchedKind) {
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Default:
+    assert(!ChunkSize && "No chunk size with default schedule (which for clang "
+                         "is static non-chunked)");
     LLVM_FALLTHROUGH;
-  case OMPScheduleType::BaseDynamicChunked:
-  case OMPScheduleType::BaseGuidedChunked:
-  case OMPScheduleType::BaseGuidedIterativeChunked:
-  case OMPScheduleType::BaseGuidedAnalyticalChunked:
-  case OMPScheduleType::BaseStaticBalancedChunked:
-    return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Static:
+    if (ChunkSize)
+      return applyStaticChunkedWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier,
+                                             ChunkSize);
+    return applyStaticWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier);
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Auto:
+    assert(!ChunkSize && "Chunk size with auto scheduling not user-defined");
+    return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, OMPScheduleType::Auto,
+                                     NeedsBarrier, nullptr);
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Dynamic:
+    return applyDynamicWorkshareLoop(DL, CLI, AllocaIP,
+                                     OMPScheduleType::DynamicChunked,
                                      NeedsBarrier, ChunkSize);
-
-  default:
-    llvm_unreachable("Unknown/unimplemented schedule kind");
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Guided:
+    return applyDynamicWorkshareLoop(DL, CLI, AllocaIP,
+                                     OMPScheduleType::GuidedChunked,
+                                     NeedsBarrier, ChunkSize);
+  case llvm::omp::ScheduleKind::OMP_SCHEDULE_Runtime:
+    assert(!ChunkSize &&
+           "Chunk size with runtime scheduling implied to be one");
+    return applyDynamicWorkshareLoop(
+        DL, CLI, AllocaIP, OMPScheduleType::Runtime, NeedsBarrier, nullptr);
   }
+
+  llvm_unreachable("Unknown/unimplemented schedule kind");
 }
 
 /// Returns an LLVM function to call for initializing loop bounds using OpenMP
@@ -2096,15 +1922,10 @@ getKmpcForDynamicFiniForType(Type *Ty, Module &M, OpenMPIRBuilder &OMPBuilder) {
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyDynamicWorkshareLoop(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    OMPScheduleType SchedType, bool NeedsBarrier, Value *Chunk) {
+    OMPScheduleType SchedType, bool NeedsBarrier, Value *Chunk, bool Ordered) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
   assert(!isConflictIP(AllocaIP, CLI->getPreheaderIP()) &&
          "Require dedicated allocate IP");
-  assert(isValidWorkshareLoopScheduleType(SchedType) &&
-         "Require valid schedule type");
-
-  bool Ordered = (SchedType & OMPScheduleType::ModifierOrdered) ==
-                 OMPScheduleType::ModifierOrdered;
 
   // Set up the source location value for OpenMP runtime.
   Builder.SetCurrentDebugLocation(DL);
