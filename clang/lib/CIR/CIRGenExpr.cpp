@@ -98,6 +98,7 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
   }
 
   // Update the alloca with more info on initialization.
+  assert(Addr.getPointer() && "expected pointer to exist");
   auto SrcAlloca =
       dyn_cast_or_null<mlir::cir::AllocaOp>(Addr.getPointer().getDefiningOp());
   if (InitDecl) {
@@ -408,14 +409,131 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
   return Call;
 }
 
-/// EmitIgnoredExpr - Emit code to compute the specified expression,
-/// ignoring the result.
+/// Emit code to compute the specified expression, ignoring the result.
 void CIRGenFunction::buildIgnoredExpr(const Expr *E) {
   if (E->isPRValue())
     return (void)buildAnyExpr(E);
 
   // Just emit it as an l-value and drop the result.
   buildLValue(E);
+}
+
+/// If the specified expr is a simple decay from an array to pointer,
+/// return the array subexpression.
+/// FIXME: this could be abstracted into a commeon AST helper.
+static const Expr *isSimpleArrayDecayOperand(const Expr *E) {
+  // If this isn't just an array->pointer decay, bail out.
+  const auto *CE = dyn_cast<CastExpr>(E);
+  if (!CE || CE->getCastKind() != CK_ArrayToPointerDecay)
+    return nullptr;
+
+  // If this is a decay from variable width array, bail out.
+  const Expr *SubExpr = CE->getSubExpr();
+  if (SubExpr->getType()->isVariableArrayType())
+    return nullptr;
+
+  return SubExpr;
+}
+
+LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
+                                               bool Accessed) {
+  // The index must always be an integer, which is not an aggregate.  Emit it
+  // in lexical order (this complexity is, sadly, required by C++17).
+  // llvm::Value *IdxPre =
+  //     (E->getLHS() == E->getIdx()) ? EmitScalarExpr(E->getIdx()) : nullptr;
+  assert(E->getLHS() != E->getIdx() && "not implemented");
+  bool SignedIndices = false;
+  auto EmitIdxAfterBase = [&](bool Promote) -> mlir::Value {
+    mlir::Value Idx;
+    if (E->getLHS() != E->getIdx()) {
+      assert(E->getRHS() == E->getIdx() && "index was neither LHS nor RHS");
+      Idx = buildScalarExpr(E->getIdx());
+    }
+
+    QualType IdxTy = E->getIdx()->getType();
+    bool IdxSigned = IdxTy->isSignedIntegerOrEnumerationType();
+    SignedIndices |= IdxSigned;
+
+    assert(!SanOpts.has(SanitizerKind::ArrayBounds) && "not implemented");
+
+    // TODO: Extend or truncate the index type to 32 or 64-bits.
+    // if (Promote && !Idx.getType().isa<::mlir::cir::PointerType>()) {
+    //   Idx = Builder.CreateIntCast(Idx, IntPtrTy, IdxSigned, "idxprom");
+    // }
+
+    return Idx;
+  };
+
+  // If the base is a vector type, then we are forming a vector element
+  // with this subscript.
+  if (E->getBase()->getType()->isVectorType() &&
+      !isa<ExtVectorElementExpr>(E->getBase())) {
+    assert(0 && "not implemented");
+  }
+
+  // All the other cases basically behave like simple offsetting.
+
+  // Handle the extvector case we ignored above.
+  if (isa<ExtVectorElementExpr>(E->getBase())) {
+    assert(0 && "not implemented");
+  }
+
+  // TODO: TBAAAccessInfo
+  LValueBaseInfo EltBaseInfo;
+  Address Addr = Address::invalid();
+  if (const VariableArrayType *vla =
+          getContext().getAsVariableArrayType(E->getType())) {
+    assert(0 && "not implemented");
+  } else if (const ObjCObjectType *OIT =
+                 E->getType()->getAs<ObjCObjectType>()) {
+    assert(0 && "not implemented");
+  } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
+    // If this is A[i] where A is an array, the frontend will have decayed
+    // the base to be a ArrayToPointerDecay implicit cast.  While correct, it is
+    // inefficient at -O0 to emit a "gep A, 0, 0" when codegen'ing it, then
+    // a "gep x, i" here.  Emit one "gep A, 0, i".
+    assert(Array->getType()->isArrayType() &&
+           "Array to pointer decay must have array source type!");
+    LValue ArrayLV;
+    // For simple multidimensional array indexing, set the 'accessed' flag
+    // for better bounds-checking of the base expression.
+    // if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
+    //   ArrayLV = buildArraySubscriptExpr(ASE, /*Accessed*/ true);
+    assert(!llvm::isa<ArraySubscriptExpr>(Array) &&
+           "multidimensional array indexing not implemented");
+
+    ArrayLV = buildLValue(Array);
+    auto arrayPtrTy =
+        ArrayLV.getPointer().getType().dyn_cast<::mlir::cir::PointerType>();
+    assert(arrayPtrTy && "expected pointer type");
+    auto arrayTy = arrayPtrTy.getPointee().dyn_cast<::mlir::cir::ArrayType>();
+    assert(arrayTy && "expected array type");
+
+    auto flatPtrTy =
+        mlir::cir::PointerType::get(builder.getContext(), arrayTy.getEltType());
+    auto loc = getLoc(Array->getBeginLoc());
+    auto basePtr = builder.create<mlir::cir::CastOp>(
+        loc, flatPtrTy, mlir::cir::CastKind::array_to_ptrdecay,
+        ArrayLV.getPointer());
+
+    loc = getLoc(Array->getEndLoc());
+    auto stride = builder.create<mlir::cir::PtrStrideOp>(
+        loc, flatPtrTy, basePtr, EmitIdxAfterBase(/*Promote=*/true));
+    // Propagate the alignment from the array itself to the result.
+    Addr = Address(stride.getResult(), ArrayLV.getAlignment());
+    EltBaseInfo = ArrayLV.getBaseInfo();
+    // TODO: EltTBAAInfo
+  } else {
+    // The base must be a pointer; emit it with an estimate of its alignment.
+    assert(0 && "not implemented");
+  }
+
+  LValue LV = LValue::makeAddr(Addr, E->getType(), EltBaseInfo);
+
+  if (getLangOpts().ObjC && getLangOpts().getGC() != LangOptions::NonGC) {
+    assert(0 && "not implemented");
+  }
+  return LV;
 }
 
 /// Emit code to compute a designator that specifies the location
@@ -429,6 +547,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
         << E->getStmtClassName() << "'";
     assert(0 && "not implemented");
   }
+  case Expr::ArraySubscriptExprClass:
+    return buildArraySubscriptExpr(cast<ArraySubscriptExpr>(E));
   case Expr::BinaryOperatorClass:
     return buildBinaryOperatorLValue(cast<BinaryOperator>(E));
   case Expr::DeclRefExprClass:

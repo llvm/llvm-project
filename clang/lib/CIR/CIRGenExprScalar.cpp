@@ -41,6 +41,18 @@ public:
     return buildLoadOfLValue(E);
   }
 
+  mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
+    // Do we need anything like TestAndClearIgnoreResultAssign()?
+    assert(!E->getBase()->getType()->isVectorType() &&
+           "vector types not implemented");
+
+    // Emit subscript expressions in rvalue context's.  For most cases, this
+    // just loads the lvalue formed by the subscript expr.  However, we have to
+    // be careful, because the base of a vector subscript is occasionally an
+    // rvalue, so we can't get it as an lvalue.
+    return buildLoadOfLValue(E);
+  }
+
   // Emit code for an explicit or implicit cast.  Implicit
   // casts have to handle a more broad range of conversions than explicit
   // casts, as they handle things like function to ptr-to-function decay
