@@ -30,6 +30,28 @@ add_libc_unittest(
     libc.src.stdio.fwrite_unlocked
 )
 
+add_libc_unittest(
+  fopencookie_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fopencookie_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.stdio
+    libc.include.stdlib
+    libc.src.stdio.fclose
+    libc.src.stdio.fflush
+    libc.src.stdio.fopencookie
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
+)
+
+target_link_libraries(
+  libc.test.src.stdio.fopencookie_test PRIVATE LibcMemoryHelpers
+)
+
 add_subdirectory(printf_core)
 
 add_subdirectory(testdata)
