@@ -16118,21 +16118,21 @@ size_t __ovld __cnfn get_image_array_size(read_write image2d_array_msaa_depth_t)
 * Return the number of samples associated with image
 */
 #if defined(cl_khr_gl_msaa_sharing)
-int __ovld get_image_num_samples(read_only image2d_msaa_t);
-int __ovld get_image_num_samples(read_only image2d_msaa_depth_t);
-int __ovld get_image_num_samples(read_only image2d_array_msaa_t);
-int __ovld get_image_num_samples(read_only image2d_array_msaa_depth_t);
+int __ovld __cnfn get_image_num_samples(read_only image2d_msaa_t);
+int __ovld __cnfn get_image_num_samples(read_only image2d_msaa_depth_t);
+int __ovld __cnfn get_image_num_samples(read_only image2d_array_msaa_t);
+int __ovld __cnfn get_image_num_samples(read_only image2d_array_msaa_depth_t);
 
-int __ovld get_image_num_samples(write_only image2d_msaa_t);
-int __ovld get_image_num_samples(write_only image2d_msaa_depth_t);
-int __ovld get_image_num_samples(write_only image2d_array_msaa_t);
-int __ovld get_image_num_samples(write_only image2d_array_msaa_depth_t);
+int __ovld __cnfn get_image_num_samples(write_only image2d_msaa_t);
+int __ovld __cnfn get_image_num_samples(write_only image2d_msaa_depth_t);
+int __ovld __cnfn get_image_num_samples(write_only image2d_array_msaa_t);
+int __ovld __cnfn get_image_num_samples(write_only image2d_array_msaa_depth_t);
 
 #if defined(__opencl_c_read_write_images)
-int __ovld get_image_num_samples(read_write image2d_msaa_t);
-int __ovld get_image_num_samples(read_write image2d_msaa_depth_t);
-int __ovld get_image_num_samples(read_write image2d_array_msaa_t);
-int __ovld get_image_num_samples(read_write image2d_array_msaa_depth_t);
+int __ovld __cnfn get_image_num_samples(read_write image2d_msaa_t);
+int __ovld __cnfn get_image_num_samples(read_write image2d_msaa_depth_t);
+int __ovld __cnfn get_image_num_samples(read_write image2d_array_msaa_t);
+int __ovld __cnfn get_image_num_samples(read_write image2d_array_msaa_depth_t);
 #endif //defined(__opencl_c_read_write_images)
 #endif
 
