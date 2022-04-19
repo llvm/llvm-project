@@ -314,9 +314,6 @@ int main() {
         // Similarly, if we take the mask (eg 3,6,1,0) and take the cost with
         // undef for each lane (eg u,6,1,0 or 3,u,1,0 etc), we can use a single
         // lane insert to fixup the result.
-        unsigned MinVal = i;
-        unsigned MinCost = ShufTab[i].Cost;
-
         for (unsigned LaneIdx = 0; LaneIdx < 4; LaneIdx++) {
           if (getMaskElt(i, LaneIdx) == 8)
             continue;
