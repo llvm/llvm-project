@@ -38,7 +38,6 @@ let test_pmbuilder () =
 
   let module_passmgr = PassManager.create () in
   let func_passmgr   = PassManager.create_function m in
-  let lto_passmgr    = PassManager.create () in
 
   ignore (Llvm_passmgr_builder.create ()
            ++ set_opt_level 3
@@ -47,14 +46,11 @@ let test_pmbuilder () =
            ++ set_disable_unroll_loops false
            ++ use_inliner_with_threshold 10
            ++ populate_function_pass_manager func_passmgr
-           ++ populate_module_pass_manager module_passmgr
-           ++ populate_lto_pass_manager lto_passmgr
-                  ~internalize:false ~run_inliner:false);
+           ++ populate_module_pass_manager module_passmgr);
   Gc.compact ();
 
   PassManager.dispose module_passmgr;
-  PassManager.dispose func_passmgr;
-  PassManager.dispose lto_passmgr
+  PassManager.dispose func_passmgr
 
 
 (*===-- Driver ------------------------------------------------------------===*)
