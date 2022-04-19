@@ -46,9 +46,11 @@ entry:
 define <8 x i16> @v8i16_2(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: v8i16_2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev64 v2.4h, v0.4h
-; CHECK-NEXT:    rev64 v0.4h, v1.4h
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    adrp x8, .LCPI4_0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %V128 = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>

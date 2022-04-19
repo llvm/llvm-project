@@ -11489,7 +11489,9 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
     unsigned PFEntry = PerfectShuffleTable[PFTableIndex];
     unsigned Cost = (PFEntry >> 30);
 
-    if (Cost <= 4)
+    // The cost tables encode cost 0 or cost 1 shuffles using the value 0 in
+    // the top 2 bits.
+    if (Cost == 0)
       return true;
   }
 
