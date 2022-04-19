@@ -24,6 +24,7 @@
 #include "deltas/ReduceGlobalValues.h"
 #include "deltas/ReduceGlobalVarInitializers.h"
 #include "deltas/ReduceGlobalVars.h"
+#include "deltas/ReduceIRReferences.h"
 #include "deltas/ReduceInstructions.h"
 #include "deltas/ReduceInstructionsMIR.h"
 #include "deltas/ReduceMetadata.h"
@@ -67,7 +68,11 @@ static cl::opt<std::string>
   DELTA_PASS("module-data", reduceModuleDataDeltaPass)
 
 #define DELTA_PASSES_MIR                                                       \
-  DELTA_PASS("instructions", reduceInstructionsMIRDeltaPass)
+  DELTA_PASS("instructions", reduceInstructionsMIRDeltaPass)                   \
+  DELTA_PASS("ir-instruction-references",                                      \
+             reduceIRInstructionReferencesDeltaPass)                           \
+  DELTA_PASS("ir-block-references", reduceIRBlockReferencesDeltaPass)          \
+  DELTA_PASS("ir-function-references", reduceIRFunctionReferencesDeltaPass)
 
 static void runAllDeltaPasses(TestRunner &Tester) {
 #define DELTA_PASS(NAME, FUNC) FUNC(Tester);
