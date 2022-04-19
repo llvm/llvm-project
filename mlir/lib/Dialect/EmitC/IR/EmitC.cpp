@@ -220,6 +220,11 @@ Type emitc::OpaqueType::parse(AsmParser &parser) {
     parser.emitError(loc) << "expected non empty string in !emitc.opaque type";
     return Type();
   }
+  if (value.back() == '*') {
+    parser.emitError(loc) << "pointer not allowed as outer type with "
+                             "!emitc.opaque, use !emitc.ptr instead";
+    return Type();
+  }
   if (parser.parseGreater())
     return Type();
   return get(parser.getContext(), value);
