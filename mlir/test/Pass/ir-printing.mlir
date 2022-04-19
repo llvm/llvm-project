@@ -64,3 +64,4 @@ func @bar() {
 
 // AFTER_FAILURE-NOT: // -----// IR Dump After{{.*}}CSE
 // AFTER_FAILURE: // -----// IR Dump After{{.*}}TestFailurePass Failed //----- //
+// AFTER_FAILURE: func @foo()

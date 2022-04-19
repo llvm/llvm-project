@@ -108,6 +108,37 @@ struct TestFailurePass : public PassWrapper<TestFailurePass, OperationPass<>> {
   }
 };
 
+/// A test pass that creates an invalid operation in a function body.
+struct TestInvalidIRPass
+    : public PassWrapper<TestInvalidIRPass,
+                         InterfacePass<FunctionOpInterface>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestInvalidIRPass)
+
+  TestInvalidIRPass() = default;
+  TestInvalidIRPass(const TestInvalidIRPass &other) {}
+
+  StringRef getArgument() const final { return "test-pass-create-invalid-ir"; }
+  StringRef getDescription() const final {
+    return "Test pass that adds an invalid operation in a function body";
+  }
+  void getDependentDialects(DialectRegistry &registry) const final {
+    registry.insert<test::TestDialect>();
+  }
+  void runOnOperation() final {
+    if (signalFailure)
+      signalPassFailure();
+    if (!emitInvalidIR)
+      return;
+    OpBuilder b(getOperation().getBody());
+    OperationState state(b.getUnknownLoc(), "test.any_attr_of_i32_str");
+    b.create(state);
+  }
+  Option<bool> signalFailure{*this, "signal-pass-failure",
+                             llvm::cl::desc("Trigger a pass failure")};
+  Option<bool> emitInvalidIR{*this, "emit-invalid-ir", llvm::cl::init(true),
+                             llvm::cl::desc("Emit invalid IR")};
+};
+
 /// A test pass that always fails to enable testing the failure recovery
 /// mechanisms of the pass manager.
 struct TestInvalidParentPass
@@ -179,6 +210,7 @@ void registerPassManagerTestPass() {
 
   PassRegistration<TestCrashRecoveryPass>();
   PassRegistration<TestFailurePass>();
+  PassRegistration<TestInvalidIRPass>();
   PassRegistration<TestInvalidParentPass>();
 
   PassRegistration<TestStatisticPass>();
