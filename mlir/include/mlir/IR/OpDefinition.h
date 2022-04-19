@@ -29,21 +29,6 @@ namespace mlir {
 class Builder;
 class OpBuilder;
 
-/// This class represents success/failure for operation parsing. It is
-/// essentially a simple wrapper class around LogicalResult that allows for
-/// explicit conversion to bool. This allows for the parser to chain together
-/// parse rules without the clutter of "failed/succeeded".
-class ParseResult : public LogicalResult {
-public:
-  ParseResult(LogicalResult result = success()) : LogicalResult(result) {}
-
-  // Allow diagnostics emitted during parsing to be converted to failure.
-  ParseResult(const InFlightDiagnostic &) : LogicalResult(failure()) {}
-  ParseResult(const Diagnostic &) : LogicalResult(failure()) {}
-
-  /// Failure is true in a boolean context.
-  explicit operator bool() const { return failed(); }
-};
 /// This class implements `Optional` functionality for ParseResult. We don't
 /// directly use Optional here, because it provides an implicit conversion
 /// to 'bool' which we want to avoid. This class is used to implement tri-state
