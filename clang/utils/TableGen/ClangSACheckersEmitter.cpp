@@ -76,14 +76,17 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B, const Record &R) 
 
 static std::string getCheckerDocs(const Record &R) {
   StringRef LandingPage;
-  if (BitsInit *BI = R.getValueAsBitsInit("Documentation")) {
-    uint64_t V = getValueFromBitsInit(BI, R);
-    if (V == 1)
-      LandingPage = "available_checks.html";
-    else if (V == 2)
-      LandingPage = "alpha_checks.html";
-  }
-  
+  const BitsInit *BI = R.getValueAsBitsInit("Documentation");
+  if (!BI)
+    PrintFatalError(R.getLoc(), "missing Documentation<...> member for " +
+                                    getCheckerFullName(&R));
+
+  uint64_t V = getValueFromBitsInit(BI, R);
+  if (V == 1)
+    LandingPage = "available_checks.html";
+  else if (V == 2)
+    LandingPage = "alpha_checks.html";
+
   if (LandingPage.empty())
     return "";
 
