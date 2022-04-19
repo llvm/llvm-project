@@ -75,23 +75,18 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B, const Record &R) 
 }
 
 static std::string getCheckerDocs(const Record &R) {
-  StringRef LandingPage;
   const BitsInit *BI = R.getValueAsBitsInit("Documentation");
   if (!BI)
     PrintFatalError(R.getLoc(), "missing Documentation<...> member for " +
                                     getCheckerFullName(&R));
 
-  uint64_t V = getValueFromBitsInit(BI, R);
-  if (V == 1)
-    LandingPage = "available_checks.html";
-  else if (V == 2)
-    LandingPage = "alpha_checks.html";
-
-  if (LandingPage.empty())
+  // Ignore 'Documentation<NotDocumented>' checkers.
+  if (getValueFromBitsInit(BI, R) == 0)
     return "";
 
-  return (llvm::Twine("https://clang-analyzer.llvm.org/") + LandingPage + "#" +
-          getCheckerFullName(&R))
+  std::string CheckerFullName = StringRef(getCheckerFullName(&R, "-")).lower();
+  return (llvm::Twine("https://clang.llvm.org/docs/analyzer/checkers.html#") +
+          CheckerFullName)
       .str();
 }
 
