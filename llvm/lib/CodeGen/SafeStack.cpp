@@ -48,6 +48,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -632,6 +633,13 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   // expected.
   // FIXME: no need to update BasePointer in leaf functions.
   unsigned FrameSize = alignTo(SSL.getFrameSize(), StackAlignment);
+
+  MDBuilder MDB(F.getContext());
+  SmallVector<Metadata *, 2> Data;
+  Data.push_back(MDB.createString("unsafe-stack-size"));
+  Data.push_back(MDB.createConstant(ConstantInt::get(Int32Ty, FrameSize)));
+  MDNode *MD = MDTuple::get(F.getContext(), Data);
+  F.setMetadata(LLVMContext::MD_annotation, MD);
 
   // Update shadow stack pointer in the function epilogue.
   IRB.SetInsertPoint(BasePointer->getNextNode());

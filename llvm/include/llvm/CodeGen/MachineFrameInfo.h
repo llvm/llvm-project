@@ -334,6 +334,9 @@ private:
   /// Not null, if shrink-wrapping found a better place for the epilogue.
   MachineBasicBlock *Restore = nullptr;
 
+  /// Size of the UnsafeStack Frame
+  uint64_t UnsafeStackSize = 0;
+
 public:
   explicit MachineFrameInfo(unsigned StackAlignment, bool StackRealignable,
                             bool ForcedRealign)
@@ -786,6 +789,9 @@ public:
   void setSavePoint(MachineBasicBlock *NewSave) { Save = NewSave; }
   MachineBasicBlock *getRestorePoint() const { return Restore; }
   void setRestorePoint(MachineBasicBlock *NewRestore) { Restore = NewRestore; }
+
+  uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
+  void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }
 
   /// Return a set of physical registers that are pristine.
   ///
