@@ -104,6 +104,16 @@ def testModuleOperation():
   assert ctx._get_live_operation_count() == 1
   assert op1 is op2
 
+  # Test live operation clearing.
+  op1 = module.operation
+  assert ctx._get_live_operation_count() == 1
+  num_invalidated = ctx._clear_live_operations()
+  assert num_invalidated == 1
+  assert ctx._get_live_operation_count() == 0
+  op1 = None
+  gc.collect()
+  op1 = module.operation
+
   # Ensure that if module is de-referenced, the operations are still valid.
   module = None
   gc.collect()
