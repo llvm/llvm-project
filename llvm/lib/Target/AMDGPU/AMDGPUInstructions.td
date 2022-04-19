@@ -541,21 +541,25 @@ defm atomic_store_#as : binary_atomic_op<atomic_store>;
 // GlobalISelEmitter allows pattern matches where src and dst def count
 // mismatch.
 multiclass ret_noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }] in {
+  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return false; }] in {
     defm "_noret" : binary_atomic_op<atomic_op, IsInt>;
   }
 
-  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }] in {
+  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return true; }] in {
     defm "_ret" : binary_atomic_op<atomic_op, IsInt>;
   }
 }
 
 multiclass ret_noret_ternary_atomic_op<SDNode atomic_op> {
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }] in {
+  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return false; }] in {
     defm "_noret" : ternary_atomic_op<atomic_op>;
   }
 
-  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }] in {
+  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return true; }] in {
     defm "_ret" : ternary_atomic_op<atomic_op>;
   }
 }
