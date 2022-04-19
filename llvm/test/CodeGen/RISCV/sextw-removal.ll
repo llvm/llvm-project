@@ -81,17 +81,17 @@ define signext i32 @test2(i32* %p, i32 signext %b) nounwind {
 ; RV64ZBB-LABEL: test2:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    lw a0, 0(a0)
-; RV64ZBB-NEXT:    li a2, 1
-; RV64ZBB-NEXT:    sllw a1, a2, a1
-; RV64ZBB-NEXT:    andn a0, a0, a1
+; RV64ZBB-NEXT:    li a2, -2
+; RV64ZBB-NEXT:    rolw a1, a2, a1
+; RV64ZBB-NEXT:    and a0, a1, a0
 ; RV64ZBB-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test2:
 ; NOREMOVAL:       # %bb.0:
 ; NOREMOVAL-NEXT:    lw a0, 0(a0)
-; NOREMOVAL-NEXT:    li a2, 1
-; NOREMOVAL-NEXT:    sllw a1, a2, a1
-; NOREMOVAL-NEXT:    andn a0, a0, a1
+; NOREMOVAL-NEXT:    li a2, -2
+; NOREMOVAL-NEXT:    rolw a1, a2, a1
+; NOREMOVAL-NEXT:    and a0, a1, a0
 ; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, i32* %p
@@ -114,17 +114,17 @@ define signext i32 @test3(i32* %p, i32 signext %b) nounwind {
 ; RV64ZBB-LABEL: test3:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    lw a0, 0(a0)
-; RV64ZBB-NEXT:    li a2, 1
-; RV64ZBB-NEXT:    sllw a1, a2, a1
-; RV64ZBB-NEXT:    orn a0, a0, a1
+; RV64ZBB-NEXT:    li a2, -2
+; RV64ZBB-NEXT:    rolw a1, a2, a1
+; RV64ZBB-NEXT:    or a0, a1, a0
 ; RV64ZBB-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test3:
 ; NOREMOVAL:       # %bb.0:
 ; NOREMOVAL-NEXT:    lw a0, 0(a0)
-; NOREMOVAL-NEXT:    li a2, 1
-; NOREMOVAL-NEXT:    sllw a1, a2, a1
-; NOREMOVAL-NEXT:    orn a0, a0, a1
+; NOREMOVAL-NEXT:    li a2, -2
+; NOREMOVAL-NEXT:    rolw a1, a2, a1
+; NOREMOVAL-NEXT:    or a0, a1, a0
 ; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, i32* %p
