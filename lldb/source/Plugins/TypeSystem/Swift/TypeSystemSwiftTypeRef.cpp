@@ -1324,10 +1324,10 @@ void TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(
   lldb::ProcessSP process_sp;
   if (auto target_sp = sc.target_sp)
     process_sp = target_sp->GetProcessSP();
-  if (m_swift_ast_context_initialized)
-    GetSwiftASTContext()->PerformCompileUnitImports(sc, process_sp, error);
-  else
+  if (!m_swift_ast_context_initialized)
     m_initial_symbol_context = std::make_unique<SymbolContext>(sc);
+  else if (auto *swift_ast_ctx = GetSwiftASTContext())
+    swift_ast_ctx->PerformCompileUnitImports(sc, process_sp, error);
 }
 
 UserExpression *TypeSystemSwiftTypeRefForExpressions::GetUserExpression(
