@@ -8,7 +8,7 @@ define void @mainTest(i32* %ptr) #0  {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[PTR:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP:%.*]], label [[BAIL_OUT:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[OP_RDX3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[OP_EXTRA3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[PTR]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
@@ -17,10 +17,10 @@ define void @mainTest(i32* %ptr) #0  {
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP7]], [[TMP4]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], [[TMP3]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[OP_RDX1]], [[TMP2]]
-; CHECK-NEXT:    [[OP_RDX3]] = add i32 [[OP_RDX2]], 1
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = add i32 [[TMP7]], 1
+; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = add i32 [[OP_EXTRA]], [[TMP4]]
+; CHECK-NEXT:    [[OP_EXTRA2:%.*]] = add i32 [[OP_EXTRA1]], [[TMP3]]
+; CHECK-NEXT:    [[OP_EXTRA3]] = add i32 [[OP_EXTRA2]], [[TMP2]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       bail_out:
 ; CHECK-NEXT:    ret void
