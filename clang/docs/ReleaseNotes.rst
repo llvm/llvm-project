@@ -157,6 +157,9 @@ Improvements to Clang's diagnostics
   function with a prototype. e.g., ``void f(int); void f() {}`` is now properly
   diagnosed.
 
+- ``-Wmisexpect`` warns when the branch weights collected during profiling
+  conflict with those added by ``llvm.expect``.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 - Improve __builtin_dump_struct:
