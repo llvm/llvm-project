@@ -674,7 +674,7 @@ bool IoStatementState::CheckForEndOfRecord() {
         IoErrorHandler &handler{GetIoErrorHandler()};
         if (mutableModes().nonAdvancing) {
           handler.SignalEor();
-        } else if (connection.openRecl && !connection.modes.pad) {
+        } else if (!connection.modes.pad) {
           handler.SignalError(IostatRecordReadOverrun);
         }
         return connection.modes.pad; // PAD='YES'
