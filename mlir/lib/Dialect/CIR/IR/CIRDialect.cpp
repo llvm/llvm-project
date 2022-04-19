@@ -114,7 +114,37 @@ OpFoldResult ConstantOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
 // CastOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult CastOp::verify() { return success(); }
+LogicalResult CastOp::verify() {
+  auto resType = getResult().getType();
+  auto srcType = getSrc().getType();
+
+  switch (getKind()) {
+  case cir::CastKind::int_to_bool: {
+    if (!resType.isa<mlir::cir::BoolType>())
+      return emitOpError() << "requires !cir.bool type for result";
+    if (!(srcType.isInteger(32) || srcType.isInteger(64)))
+      return emitOpError() << "requires integral type for result";
+    return success();
+  }
+  case cir::CastKind::array_to_ptrdecay: {
+    auto arrayPtrTy = srcType.dyn_cast<mlir::cir::PointerType>();
+    auto flatPtrTy = resType.dyn_cast<mlir::cir::PointerType>();
+    if (!arrayPtrTy || !flatPtrTy)
+      return emitOpError() << "requires !cir.ptr type for source and result";
+
+    auto arrayTy = arrayPtrTy.getPointee().dyn_cast<mlir::cir::ArrayType>();
+    if (!arrayTy)
+      return emitOpError() << "requires !cir.array pointee";
+
+    if (arrayTy.getEltType() != flatPtrTy.getPointee())
+      return emitOpError()
+             << "requires same type for array element and pointee result";
+    return success();
+  }
+  }
+
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // ReturnOp
@@ -452,8 +482,7 @@ mlir::LogicalResult YieldOp::verify() {
 
   if (isFallthrough()) {
     if (!llvm::isa<SwitchOp>(getOperation()->getParentOp()))
-      return emitOpError()
-             << "fallthrough only expected within 'cir.switch'";
+      return emitOpError() << "fallthrough only expected within 'cir.switch'";
     return mlir::success();
   }
 
@@ -629,15 +658,14 @@ parseSwitchOp(OpAsmParser &parser,
         return mlir::failure();
       if (parser.parseLSquare().failed())
         return mlir::failure();
-      auto result = parser.parseCommaSeparatedList([&]() {
-        int64_t val = 0;
-        if (parser.parseInteger(val).failed())
-          return ::mlir::failure();
-        caseEltValueListAttr.push_back(
-            mlir::IntegerAttr::get(intCondType, val));
-        return ::mlir::success();
-      });
-      if (result.failed())
+      if (parser.parseCommaSeparatedList([&]() {
+            int64_t val = 0;
+            if (parser.parseInteger(val).failed())
+              return ::mlir::failure();
+            caseEltValueListAttr.push_back(
+                mlir::IntegerAttr::get(intCondType, val));
+            return ::mlir::success();
+          }))
         return mlir::failure();
       if (parser.parseRSquare().failed())
         return mlir::failure();
