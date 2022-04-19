@@ -30,9 +30,16 @@ namespace std {
   template<typename T> struct remove_reference<T&> { using type = T; };
   template<typename T> struct remove_reference<T&&> { using type = T; };
 
+  template<typename T> struct is_lvalue_reference { static constexpr bool value = false; };
+  template<typename T> struct is_lvalue_reference<T&> { static constexpr bool value = true; };
+
   template<typename T> CONSTEXPR T &&forward(typename remove_reference<T>::type &x) {
     static_assert(T::moveable, "instantiated forward"); // expected-error {{no member named 'moveable' in 'B'}}
                                                         // expected-error@-1 {{no member named 'moveable' in 'C'}}
+    return static_cast<T&&>(x);
+  }
+  template<typename T> CONSTEXPR T &&forward(typename remove_reference<T>::type &&x) {
+    static_assert(!is_lvalue_reference<T>::value, "should not forward rval as lval"); // expected-error {{static_assert failed}}
     return static_cast<T&&>(x);
   }
 
@@ -75,6 +82,11 @@ static_assert(f({}), "should be constexpr");
 // expected-error@#f {{never produces a constant expression}}
 // expected-note@#call {{}}
 #endif
+
+A &forward_rval_as_lval() {
+  std::forward<A&&>(A()); // expected-warning {{const attribute}}
+  return std::forward<A&>(A()); // expected-note {{instantiation of}}
+}
 
 struct B {};
 B &&(*pMove)(B&) = std::move; // #1 expected-note {{instantiation of}}
