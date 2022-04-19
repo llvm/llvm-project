@@ -39,3 +39,12 @@ void p4() {
   int *p;  // expected-note {{uninitialized here}}
   *p = 42; // expected-warning {{use of invalid pointer 'p'}}
 }
+
+void p5() {
+  int *p = nullptr;
+  {
+    int a[10];
+    p = &a[0];
+  }        // expected-note {{pointee 'a' invalidated at end of scope}}
+  *p = 42; // expected-warning {{use of invalid pointer 'p'}}
+}
