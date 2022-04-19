@@ -53,13 +53,6 @@ struct PassManagerOptions {
       llvm::cl::desc(
           "When printing the IR after a pass, only print if the pass failed"),
       llvm::cl::init(false)};
-  llvm::cl::opt<bool> printCustomAssemblyAfterFailure{
-      "mlir-print-custom-assembly-after-failure",
-      llvm::cl::desc(
-          "When printing the IR after a pass failure, print in custom form "
-          "instead of generic (WARNING: this is unsafe and there is no "
-          "guarantee of a crash-free or valid print"),
-      llvm::cl::init(false)};
   llvm::cl::opt<bool> printModuleScope{
       "mlir-print-ir-module-scope",
       llvm::cl::desc("When printing IR for print-ir-[before|after]{-all} "
@@ -129,7 +122,7 @@ void PassManagerOptions::addPrinterInstrumentation(PassManager &pm) {
   // Otherwise, add the IR printing instrumentation.
   pm.enableIRPrinting(shouldPrintBeforePass, shouldPrintAfterPass,
                       printModuleScope, printAfterChange, printAfterFailure,
-                      printCustomAssemblyAfterFailure, llvm::errs());
+                      llvm::errs());
 }
 
 void mlir::registerPassManagerCLOptions() {
