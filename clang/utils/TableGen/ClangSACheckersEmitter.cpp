@@ -24,28 +24,29 @@ using namespace llvm;
 // Static Analyzer Checkers Tables generation
 //===----------------------------------------------------------------------===//
 
-static std::string getPackageFullName(const Record *R);
+static std::string getPackageFullName(const Record *R, StringRef Sep = ".");
 
-static std::string getParentPackageFullName(const Record *R) {
+static std::string getParentPackageFullName(const Record *R,
+                                            StringRef Sep = ".") {
   std::string name;
   if (DefInit *DI = dyn_cast<DefInit>(R->getValueInit("ParentPackage")))
-    name = getPackageFullName(DI->getDef());
+    name = getPackageFullName(DI->getDef(), Sep);
   return name;
 }
 
-static std::string getPackageFullName(const Record *R) {
-  std::string name = getParentPackageFullName(R);
+static std::string getPackageFullName(const Record *R, StringRef Sep) {
+  std::string name = getParentPackageFullName(R, Sep);
   if (!name.empty())
-    name += ".";
+    name += Sep;
   assert(!R->getValueAsString("PackageName").empty());
   name += R->getValueAsString("PackageName");
   return name;
 }
 
-static std::string getCheckerFullName(const Record *R) {
-  std::string name = getParentPackageFullName(R);
+static std::string getCheckerFullName(const Record *R, StringRef Sep = ".") {
+  std::string name = getParentPackageFullName(R, Sep);
   if (!name.empty())
-    name += ".";
+    name += Sep;
   assert(!R->getValueAsString("CheckerName").empty());
   name += R->getValueAsString("CheckerName");
   return name;
