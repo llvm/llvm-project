@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -117,6 +118,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   return success();
 }
 
+transform::TransformState::Extension::~Extension() = default;
+
 //===----------------------------------------------------------------------===//
 // TransformResults
 //===----------------------------------------------------------------------===//
@@ -143,6 +146,61 @@ transform::TransformResults::get(unsigned resultNumber) const {
          "querying results for a non-existent handle");
   assert(segments[resultNumber].data() != nullptr && "querying unset results");
   return segments[resultNumber];
+}
+
+//===----------------------------------------------------------------------===//
+// Utilities for PossibleTopLevelTransformOpTrait.
+//===----------------------------------------------------------------------===//
+
+LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
+    TransformState &state, Operation *op) {
+  SmallVector<Operation *> targets;
+  if (op->getNumOperands() != 0)
+    llvm::append_range(targets, state.getPayloadOps(op->getOperand(0)));
+  else
+    targets.push_back(state.getTopLevel());
+
+  return state.mapBlockArguments(op->getRegion(0).front().getArgument(0),
+                                 targets);
+}
+
+LogicalResult
+transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
+  // Attaching this trait without the interface is a misuse of the API, but it
+  // cannot be caught via a static_assert because interface registration is
+  // dynamic.
+  assert(isa<TransformOpInterface>(op) &&
+         "should implement TransformOpInterface to have "
+         "PossibleTopLevelTransformOpTrait");
+
+  if (op->getNumRegions() != 1)
+    return op->emitOpError() << "expects one region";
+
+  Region *bodyRegion = &op->getRegion(0);
+  if (!llvm::hasNItems(*bodyRegion, 1))
+    return op->emitOpError() << "expects a single-block region";
+
+  Block *body = &bodyRegion->front();
+  if (body->getNumArguments() != 1 ||
+      !body->getArgumentTypes()[0].isa<pdl::OperationType>()) {
+    return op->emitOpError()
+           << "expects the entry block to have one argument of type "
+           << pdl::OperationType::get(op->getContext());
+  }
+
+  if (auto *parent =
+          op->getParentWithTrait<PossibleTopLevelTransformOpTrait>()) {
+    if (op->getNumOperands() == 0) {
+      InFlightDiagnostic diag =
+          op->emitOpError()
+          << "expects the root operation to be provided for a nested op";
+      diag.attachNote(parent->getLoc())
+          << "nested in another possible top-level op";
+      return diag;
+    }
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

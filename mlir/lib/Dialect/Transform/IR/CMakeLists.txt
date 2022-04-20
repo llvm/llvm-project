@@ -11,4 +11,5 @@ add_mlir_dialect_library(MLIRTransformDialect
   MLIRIR
   MLIRPDL
   MLIRPDLInterp
+  MLIRRewrite
   )

@@ -84,6 +84,13 @@ def Transform_Dialect : Dialect {
     `LoopTransformDialectExtension` in the cases above. Unprefixed operation
     names are reserved for ops defined directly in the Transform dialect.
 
+    Overall, Transform IR ops are expected to be contained in a single top-level
+    op. Such top-level ops specifie how to apply the transformations described
+    by operations they contain, e.g., `transform.sequence` executes
+    transformations one by one and fails if any of them fails. Such ops are
+    expected to have the `PossibleTopLevelTransformOpTrait` and may be used
+    without arguments.
+
     ## Intended Use and Integrations
 
     The transformation control infrastructure provided by this dialect is
@@ -163,13 +170,32 @@ def Transform_Dialect : Dialect {
   let cppNamespace = "::mlir::transform";
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 
+  let dependentDialects = [
+    "::mlir::pdl::PDLDialect",
+    "::mlir::pdl_interp::PDLInterpDialect",
+  ];
+
   let extraClassDeclaration = [{
-    // Make addOperations available to the TransformDialectExtension class.
+      /// Returns the named PDL constraint functions available in the dialect
+      /// as a map from their name to the function.
+      const ::llvm::StringMap<::mlir::PDLConstraintFunction> &
+      getPDLConstraintHooks() const;
+
     private:
+      // Make addOperations available to the TransformDialectExtension class.
       using ::mlir::Dialect::addOperations;
 
       template <typename, typename...>
       friend class TransformDialectExtension;
+
+      /// Takes ownership of the named PDL constraint function from the given
+      /// map and makes them available for use by the operations in the dialect.
+      void mergeInPDLMatchHooks(
+          ::llvm::StringMap<::mlir::PDLConstraintFunction> &&constraintFns);
+
+      /// A container for PDL constraint function that can be used by
+      /// operations in this dialect.
+      PDLPatternModule pdlMatchHooks;
   }];
 }
 
@@ -177,5 +203,13 @@ def Transform_Dialect : Dialect {
 // extensions of this dialect may also use this.
 class TransformDialectOp<string mnemonic, list<Trait> traits = []>
     : Op<Transform_Dialect, mnemonic, traits>;
+
+// Trait for operations that may be top-level operations in Transform IR.
+// Operations must have one single-block region and must be usable without
+// operands. See the C++ definition of the trait for more information.
+def PossibleTopLevelTransformOpTrait
+    : NativeOpTrait<"PossibleTopLevelTransformOpTrait"> {
+  let cppNamespace = "::mlir::transform";
+}
 
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT
