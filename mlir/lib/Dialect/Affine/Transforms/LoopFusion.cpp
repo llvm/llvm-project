@@ -61,7 +61,7 @@ struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
 
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createLoopFusionPass(unsigned fastMemorySpace,
                            uint64_t localBufSizeThreshold, bool maximalFusion,
                            enum FusionMode affineFusionMode) {
@@ -202,7 +202,7 @@ public:
 
   // Initializes the dependence graph based on operations in 'f'.
   // Returns true on success, false otherwise.
-  bool init(FuncOp f);
+  bool init(func::FuncOp f);
 
   // Returns the graph node for 'id'.
   Node *getNode(unsigned id) {
@@ -731,7 +731,7 @@ void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
 // Assigns each node in the graph a node id based on program order in 'f'.
 // TODO: Add support for taking a Block arg to construct the
 // dependence graph at a different depth.
-bool MemRefDependenceGraph::init(FuncOp f) {
+bool MemRefDependenceGraph::init(func::FuncOp f) {
   LLVM_DEBUG(llvm::dbgs() << "--- Initializing MDG ---\n");
   DenseMap<Value, SetVector<unsigned>> memrefAccesses;
 
@@ -895,7 +895,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   // Create builder to insert alloc op just before 'forOp'.
   OpBuilder b(forInst);
   // Builder to create constants at the top level.
-  OpBuilder top(forInst->getParentOfType<FuncOp>().getBody());
+  OpBuilder top(forInst->getParentOfType<func::FuncOp>().getBody());
   // Create new memref type based on slice bounds.
   auto oldMemRef = cast<AffineWriteOpInterface>(srcStoreOpInst).getMemRef();
   auto oldMemRefType = oldMemRef.getType().cast<MemRefType>();
@@ -1853,7 +1853,7 @@ public:
     };
 
     // Search for siblings which load the same memref function argument.
-    auto fn = dstNode->op->getParentOfType<FuncOp>();
+    auto fn = dstNode->op->getParentOfType<func::FuncOp>();
     for (unsigned i = 0, e = fn.getNumArguments(); i != e; ++i) {
       for (auto *user : fn.getArgument(i).getUsers()) {
         if (auto loadOp = dyn_cast<AffineReadOpInterface>(user)) {

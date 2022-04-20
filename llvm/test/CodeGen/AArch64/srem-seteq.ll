@@ -234,11 +234,11 @@ define i32 @test_srem_one(i32 %X) nounwind {
 define i32 @test_srem_pow2(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_pow2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #15
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel w8, w8, w0, lt
-; CHECK-NEXT:    and w8, w8, #0xfffffff0
-; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    negs w8, w0
+; CHECK-NEXT:    and w9, w0, #0xf
+; CHECK-NEXT:    and w8, w8, #0xf
+; CHECK-NEXT:    csneg w8, w9, w8, mi
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 16
@@ -251,12 +251,11 @@ define i32 @test_srem_pow2(i32 %X) nounwind {
 define i32 @test_srem_int_min(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_int_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    add w8, w0, w8
-; CHECK-NEXT:    csel w8, w8, w0, lt
-; CHECK-NEXT:    and w8, w8, #0x80000000
-; CHECK-NEXT:    cmn w0, w8
+; CHECK-NEXT:    negs w8, w0
+; CHECK-NEXT:    and w9, w0, #0x7fffffff
+; CHECK-NEXT:    and w8, w8, #0x7fffffff
+; CHECK-NEXT:    csneg w8, w9, w8, mi
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %srem = srem i32 %X, 2147483648

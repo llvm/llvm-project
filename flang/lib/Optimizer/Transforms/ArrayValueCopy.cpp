@@ -684,7 +684,7 @@ conservativeCallConflict(llvm::ArrayRef<mlir::Operation *> reaches) {
               call.getCallableForCallee().dyn_cast<mlir::SymbolRefAttr>()) {
         auto module = op->getParentOfType<mlir::ModuleOp>();
         return hasHostAssociationArgument(
-            module.lookupSymbol<mlir::FuncOp>(callee));
+            module.lookupSymbol<mlir::func::FuncOp>(callee));
       }
     return false;
   });

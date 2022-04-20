@@ -125,7 +125,8 @@ prependResAttrsToArgAttrs(OpBuilder &builder,
 /// the extra arguments.
 static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
                                    LLVMTypeConverter &typeConverter,
-                                   FuncOp funcOp, LLVM::LLVMFuncOp newFuncOp) {
+                                   func::FuncOp funcOp,
+                                   LLVM::LLVMFuncOp newFuncOp) {
   auto type = funcOp.getFunctionType();
   SmallVector<NamedAttribute, 4> attributes;
   filterFuncAttributes(funcOp->getAttrs(), /*filterArgAndResAttrs=*/false,
@@ -183,7 +184,8 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
 /// corresponding to a memref descriptor.
 static void wrapExternalFunction(OpBuilder &builder, Location loc,
                                  LLVMTypeConverter &typeConverter,
-                                 FuncOp funcOp, LLVM::LLVMFuncOp newFuncOp) {
+                                 func::FuncOp funcOp,
+                                 LLVM::LLVMFuncOp newFuncOp) {
   OpBuilder::InsertionGuard guard(builder);
 
   Type wrapperType;
@@ -273,14 +275,14 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
 
 namespace {
 
-struct FuncOpConversionBase : public ConvertOpToLLVMPattern<FuncOp> {
+struct FuncOpConversionBase : public ConvertOpToLLVMPattern<func::FuncOp> {
 protected:
-  using ConvertOpToLLVMPattern<FuncOp>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern<func::FuncOp>::ConvertOpToLLVMPattern;
 
   // Convert input FuncOp to LLVMFuncOp by using the LLVMTypeConverter provided
   // to this legalization pattern.
   LLVM::LLVMFuncOp
-  convertFuncOpToLLVMFuncOp(FuncOp funcOp,
+  convertFuncOpToLLVMFuncOp(func::FuncOp funcOp,
                             ConversionPatternRewriter &rewriter) const {
     // Convert the original function arguments. They are converted using the
     // LLVMTypeConverter provided to this legalization pattern.
@@ -363,7 +365,7 @@ struct FuncOpConversion : public FuncOpConversionBase {
       : FuncOpConversionBase(converter) {}
 
   LogicalResult
-  matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
+  matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
     if (!newFuncOp)
@@ -390,7 +392,7 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
   using FuncOpConversionBase::FuncOpConversionBase;
 
   LogicalResult
-  matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
+  matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
     // TODO: bare ptr conversion could be handled by argument materialization

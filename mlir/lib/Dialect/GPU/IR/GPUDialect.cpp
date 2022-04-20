@@ -1200,8 +1200,8 @@ public:
   LogicalResult matchAndRewrite(WaitOp op,
                                 PatternRewriter &rewriter) const final {
     auto predicate = [](Value value) {
-      auto wait_op = value.getDefiningOp<WaitOp>();
-      return wait_op && wait_op->getNumOperands() == 0;
+      auto waitOp = value.getDefiningOp<WaitOp>();
+      return waitOp && waitOp->getNumOperands() == 0;
     };
     if (llvm::none_of(op.asyncDependencies(), predicate))
       return failure();

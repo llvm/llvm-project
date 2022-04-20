@@ -3,11 +3,11 @@
 namespace std {
 
 template <class T>
-void swap(T x, T y) {
+void swap(T &x, T &y) {
 }
 
 template <class T>
-T &&move(T x) {
+T &&move(T &x) {
 }
 
 template <class T>
@@ -403,7 +403,7 @@ private:
 class CopyAndMove2 {
 public:
   CopyAndMove2 &operator=(const CopyAndMove2 &object) {
-    *this = std::move(CopyAndMove2(object));
+    *this = CopyAndMove2(object);
     return *this;
   }
 

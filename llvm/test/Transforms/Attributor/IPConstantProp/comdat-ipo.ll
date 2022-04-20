@@ -19,8 +19,12 @@ define i32 @baz() {
 ; constprop @foo's return value into bar.
 
 define linkonce_odr i32 @foo() {
-; CHECK-LABEL: define {{[^@]+}}@foo() {
-; CHECK-NEXT:    ret i32 10
+; IS__TUNIT____-LABEL: define {{[^@]+}}@foo() {
+; IS__TUNIT____-NEXT:    ret i32 10
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@foo() {
+; IS__CGSCC____-NEXT:    [[VAL:%.*]] = call i32 @baz()
+; IS__CGSCC____-NEXT:    ret i32 [[VAL]]
 ;
 
   %val = call i32 @baz()
@@ -28,17 +32,23 @@ define linkonce_odr i32 @foo() {
 }
 
 define i32 @bar() {
-; CHECK: Function Attrs: norecurse
-; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @foo()
-; CHECK-NEXT:    ret i32 [[VAL]]
+; IS__TUNIT____: Function Attrs: norecurse
+; IS__TUNIT____-LABEL: define {{[^@]+}}@bar
+; IS__TUNIT____-SAME: () #[[ATTR1:[0-9]+]] {
+; IS__TUNIT____-NEXT:    [[VAL:%.*]] = call i32 @foo()
+; IS__TUNIT____-NEXT:    ret i32 [[VAL]]
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@bar() {
+; IS__CGSCC____-NEXT:    [[VAL:%.*]] = call i32 @foo()
+; IS__CGSCC____-NEXT:    ret i32 [[VAL]]
 ;
 
   %val = call i32 @foo()
   ret i32 %val
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CHECK: attributes #[[ATTR1]] = { norecurse }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR1]] = { norecurse }
+;.
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

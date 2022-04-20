@@ -16,19 +16,19 @@
 # REL: R_MIPS_JALR   {{.*}} far
 
 # SO: jalr  $25
-# SO: bal   -24 <foo>
+# SO: bal   {{.*}} <foo>
 # SO: jalr  $25
 
 # SO: jr    $25
-# SO: b     -64 <foo>
+# SO: b     {{.*}} <foo>
 # SO: jr    $25
 
-# EXE: bal   -4 <foo>
-# EXE: bal   -24 <foo>
+# EXE: bal   {{.*}} <foo>
+# EXE: bal   {{.*}} <foo>
 # EXE: jalr  $25
 
-# EXE: b     -56 <foo>
-# EXE: b     -64 <foo>
+# EXE: b     {{.*}} <foo>
+# EXE: b     {{.*}} <foo>
 # EXE: jr    $25
 
   .text

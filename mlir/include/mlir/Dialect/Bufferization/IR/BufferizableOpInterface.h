@@ -266,7 +266,7 @@ enum class BufferRelation {
   Equivalent
 };
 
-/// Return `true` if the given value is a BlockArgument of a FuncOp.
+/// Return `true` if the given value is a BlockArgument of a func::FuncOp.
 bool isFunctionArgument(Value value);
 
 /// Dialect-specific analysis state. Analysis/bufferization information

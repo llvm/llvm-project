@@ -657,4 +657,7 @@ def warn_drv_fjmc_for_elf_only : Warning<
 def err_drv_target_variant_invalid : Error<
   "unsupported '%0' value '%1'; use 'ios-macabi' instead">;
 
+def err_drv_invalid_directx_shader_module : Error<
+  "invalid profile : %0">;
+
 }

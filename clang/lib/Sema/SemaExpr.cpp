@@ -2698,6 +2698,18 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   return BuildDeclarationNameExpr(SS, R, ADL);
 }
 
+ExprResult Sema::ActOnMutableAgnosticIdExpression(Scope *S, CXXScopeSpec &SS,
+                                                  UnqualifiedId &Id) {
+  MutableAgnosticContextRAII Ctx(*this);
+  return ActOnIdExpression(S, SS, /*TemplateKwLoc*/
+                           SourceLocation(), Id,
+                           /*HasTrailingLParen*/ false,
+                           /*IsAddressOfOperand*/ false,
+                           /*CorrectionCandidateCallback*/ nullptr,
+                           /*IsInlineAsmIdentifier*/ false,
+                           /*KeywordReplacement*/ nullptr);
+}
+
 /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified
 /// declaration name, generally during template instantiation.
 /// There's a large number of things which don't need to be done along
@@ -3395,7 +3407,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
 
   case Decl::Function: {
     if (unsigned BID = cast<FunctionDecl>(VD)->getBuiltinID()) {
-      if (!Context.BuiltinInfo.isPredefinedLibFunction(BID)) {
+      if (!Context.BuiltinInfo.isDirectlyAddressable(BID)) {
         type = Context.BuiltinFnTy;
         valueKind = VK_PRValue;
         break;
@@ -18545,6 +18557,11 @@ static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
 static bool CheckCaptureUseBeforeLambdaQualifiers(Sema &S, VarDecl *Var,
                                                   SourceLocation ExprLoc,
                                                   LambdaScopeInfo *LSI) {
+
+  // Allow `[a = 1](decltype(a)) {}` as per CWG2569.
+  if (S.InMutableAgnosticContext)
+    return true;
+
   if (Var->isInvalidDecl())
     return false;
 
@@ -18627,7 +18644,7 @@ bool Sema::tryCaptureVariable(
       LSI = dyn_cast_or_null<LambdaScopeInfo>(
           FunctionScopes[FunctionScopesIndex]);
     if (LSI && LSI->BeforeLambdaQualifiersScope) {
-      if (isa<ParmVarDecl>(Var))
+      if (isa<ParmVarDecl>(Var) && !Var->getDeclContext()->isFunctionOrMethod())
         return true;
       IsInLambdaBeforeQualifiers = true;
       if (!CheckCaptureUseBeforeLambdaQualifiers(*this, Var, ExprLoc, LSI)) {
@@ -20528,13 +20545,44 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts());
     if (DRE) {
       auto *FD = cast<FunctionDecl>(DRE->getDecl());
-      if (FD->getBuiltinID() == Builtin::BI__noop) {
+      unsigned BuiltinID = FD->getBuiltinID();
+      if (BuiltinID == Builtin::BI__noop) {
         E = ImpCastExprToType(E, Context.getPointerType(FD->getType()),
                               CK_BuiltinFnToFnPtr)
                 .get();
         return CallExpr::Create(Context, E, /*Args=*/{}, Context.IntTy,
                                 VK_PRValue, SourceLocation(),
                                 FPOptionsOverride());
+      }
+
+      if (Context.BuiltinInfo.isInStdNamespace(BuiltinID)) {
+        // Any use of these other than a direct call is ill-formed as of C++20,
+        // because they are not addressable functions. In earlier language
+        // modes, warn and force an instantiation of the real body.
+        Diag(E->getBeginLoc(),
+             getLangOpts().CPlusPlus20
+                 ? diag::err_use_of_unaddressable_function
+                 : diag::warn_cxx20_compat_use_of_unaddressable_function);
+        if (FD->isImplicitlyInstantiable()) {
+          // Require a definition here because a normal attempt at
+          // instantiation for a builtin will be ignored, and we won't try
+          // again later. We assume that the definition of the template
+          // precedes this use.
+          InstantiateFunctionDefinition(E->getBeginLoc(), FD,
+                                        /*Recursive=*/false,
+                                        /*DefinitionRequired=*/true,
+                                        /*AtEndOfTU=*/false);
+        }
+        // Produce a properly-typed reference to the function.
+        CXXScopeSpec SS;
+        SS.Adopt(DRE->getQualifierLoc());
+        TemplateArgumentListInfo TemplateArgs;
+        DRE->copyTemplateArgumentsInto(TemplateArgs);
+        return BuildDeclRefExpr(
+            FD, FD->getType(), VK_LValue, DRE->getNameInfo(),
+            DRE->hasQualifier() ? &SS : nullptr, DRE->getFoundDecl(),
+            DRE->getTemplateKeywordLoc(),
+            DRE->hasExplicitTemplateArgs() ? &TemplateArgs : nullptr);
       }
     }
 

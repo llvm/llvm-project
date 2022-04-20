@@ -36,10 +36,49 @@ merge2:
   ret i8 addrspace(1)* %b6
 }
 
+define i8 addrspace(1)* @test2(i1 %c, i32 %n, i8 addrspace(1)* %b1, i8 addrspace(1)* %b2) gc "statepoint-example" {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LEFT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP:%.*]], label [[MERGE2:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[B5:%.*]] = phi i8 addrspace(1)* [ [[B2:%.*]], [[LEFT]] ], [ [[B5]], [[LOOP]] ], [ [[B5]], [[LOOP]] ]
+; CHECK-NEXT:    switch i32 [[N:%.*]], label [[MERGE2]] [
+; CHECK-NEXT:    i32 0, label [[LOOP]]
+; CHECK-NEXT:    i32 1, label [[LOOP]]
+; CHECK-NEXT:    i32 2, label [[LEFT]]
+; CHECK-NEXT:    ]
+; CHECK:       merge2:
+; CHECK-NEXT:    [[B6_BASE:%.*]] = phi i8 addrspace(1)* [ [[B1:%.*]], [[LEFT]] ], [ [[B2]], [[LOOP]] ], !is_base_value !0
+; CHECK-NEXT:    [[B6:%.*]] = phi i8 addrspace(1)* [ [[B1]], [[LEFT]] ], [ [[B5]], [[LOOP]] ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* [[B6]], i8 addrspace(1)* [[B6_BASE]]) ]
+; CHECK-NEXT:    [[B6_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[B6_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    ret i8 addrspace(1)* [[B6_RELOCATED]]
+;
+entry:
+  br label %left
+
+left:
+  br i1 %c, label %loop, label %merge2
+
+loop:
+  %b5 = phi i8 addrspace(1)* [ %b2, %left ], [ %b5, %loop ], [ %b5, %loop ]
+  switch i32 %n, label %merge2 [ i32 0, label %loop
+  i32 1, label %loop
+  i32 2, label %left ]
+
+merge2:
+  %b6 = phi i8 addrspace(1)* [ %b1, %left ], [ %b5, %loop ]
+  call void @foo() [ "deopt"() ]
+  ret i8 addrspace(1)* %b6
+}
+
 ; FIXME: In this test case %b5.base and %b6.base (inserted by RS4GC) are
 ; identical to %b5 and %b6 ; correspondingly.
-define i8 addrspace(1)* @test2(i1 %c, i8 addrspace(1)* %b1, i8 addrspace(1)* %b2) gc "statepoint-example" {
-; CHECK-LABEL: @test2(
+define i8 addrspace(1)* @test3(i1 %c, i8 addrspace(1)* %b1, i8 addrspace(1)* %b2) gc "statepoint-example" {
+; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  left:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP:%.*]], label [[MERGE2:%.*]]
 ; CHECK:       loop:
@@ -69,5 +108,80 @@ merge2:
   br i1 %c, label %loop, label %exit
 
 exit:
+  ret i8 addrspace(1)* %b6
+}
+
+define i8 addrspace(1)* @test4(i1 %c, i8 addrspace(1)* %b1, i8 addrspace(1)* %b2) gc "statepoint-example" {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:  left:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP:%.*]], label [[MERGE2:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[B3:%.*]] = phi i8 addrspace(1)* [ [[B2:%.*]], [[LEFT:%.*]] ], [ [[B5:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B4:%.*]] = bitcast i8 addrspace(1)* [[B3]] to i32 addrspace(1)*
+; CHECK-NEXT:    [[B5]] = bitcast i32 addrspace(1)* [[B4]] to i8 addrspace(1)*
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[MERGE2]]
+; CHECK:       merge2:
+; CHECK-NEXT:    [[B6_BASE:%.*]] = phi i8 addrspace(1)* [ [[B1:%.*]], [[LEFT]] ], [ [[B2]], [[LOOP]] ], !is_base_value !0
+; CHECK-NEXT:    [[B6:%.*]] = phi i8 addrspace(1)* [ [[B1]], [[LEFT]] ], [ [[B5]], [[LOOP]] ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* [[B6]], i8 addrspace(1)* [[B6_BASE]]) ]
+; CHECK-NEXT:    [[B6_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[B6_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    ret i8 addrspace(1)* [[B6_RELOCATED]]
+;
+left:
+  br i1 %c, label %loop, label %merge2
+
+loop:
+  %b3 = phi i8 addrspace(1)* [ %b2, %left ], [ %b5, %loop ]
+  %b4 = bitcast i8 addrspace(1)* %b3 to i32 addrspace(1)*
+  %b5 = bitcast i32 addrspace(1)* %b4 to i8 addrspace(1)*
+  br i1 %c, label %loop, label %merge2
+
+merge2:
+  %b6 = phi i8 addrspace(1)* [ %b1, %left ], [ %b5, %loop ]
+  call void @foo() [ "deopt"() ]
+  ret i8 addrspace(1)* %b6
+}
+
+define i8 addrspace(1)* @test5(i1 %c, i32 %n, i8 addrspace(1)* %b1, i8 addrspace(1)* %b2) gc "statepoint-example" {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LEFT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP:%.*]], label [[MERGE2:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[B3:%.*]] = phi i8 addrspace(1)* [ [[B2:%.*]], [[LEFT]] ], [ [[B5:%.*]], [[LOOP]] ], [ [[B5]], [[LOOP]] ]
+; CHECK-NEXT:    [[B4:%.*]] = bitcast i8 addrspace(1)* [[B3]] to i32 addrspace(1)*
+; CHECK-NEXT:    [[B5]] = bitcast i32 addrspace(1)* [[B4]] to i8 addrspace(1)*
+; CHECK-NEXT:    switch i32 [[N:%.*]], label [[MERGE2]] [
+; CHECK-NEXT:    i32 0, label [[LOOP]]
+; CHECK-NEXT:    i32 1, label [[LOOP]]
+; CHECK-NEXT:    i32 2, label [[LEFT]]
+; CHECK-NEXT:    ]
+; CHECK:       merge2:
+; CHECK-NEXT:    [[B6_BASE:%.*]] = phi i8 addrspace(1)* [ [[B1:%.*]], [[LEFT]] ], [ [[B2]], [[LOOP]] ], !is_base_value !0
+; CHECK-NEXT:    [[B6:%.*]] = phi i8 addrspace(1)* [ [[B1]], [[LEFT]] ], [ [[B5]], [[LOOP]] ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* [[B6]], i8 addrspace(1)* [[B6_BASE]]) ]
+; CHECK-NEXT:    [[B6_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[B6_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    ret i8 addrspace(1)* [[B6_RELOCATED]]
+;
+entry:
+  br label %left
+
+left:
+  br i1 %c, label %loop, label %merge2
+
+loop:
+  %b3 = phi i8 addrspace(1)* [ %b2, %left ], [ %b5, %loop ], [ %b5, %loop ]
+  %b4 = bitcast i8 addrspace(1)* %b3 to i32 addrspace(1)*
+  %b5 = bitcast i32 addrspace(1)* %b4 to i8 addrspace(1)*
+  switch i32 %n, label %merge2 [ i32 0, label %loop
+  i32 1, label %loop
+  i32 2, label %left ]
+
+merge2:
+  %b6 = phi i8 addrspace(1)* [ %b1, %left ], [ %b5, %loop ]
+  call void @foo() [ "deopt"() ]
   ret i8 addrspace(1)* %b6
 }

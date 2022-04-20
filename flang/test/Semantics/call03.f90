@@ -151,8 +151,7 @@ module m01
     type(pdtWithDefault(3)) :: defaultVar3
     type(pdtWithDefault(4)) :: defaultVar4
     character :: ch1
-    ! The actual argument is converted to a padded expression.
-    !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
+    !ERROR: Actual length '1' is less than expected length '2'
     call ch2(ch1)
     call pdtdefault(vardefault)
     call pdtdefault(var3)

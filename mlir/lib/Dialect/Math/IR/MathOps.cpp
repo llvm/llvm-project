@@ -27,7 +27,7 @@ using namespace mlir::math;
 
 OpFoldResult math::AbsOp::fold(ArrayRef<Attribute> operands) {
   return constFoldUnaryOp<FloatAttr>(operands, [](const APFloat &a) {
-    APFloat result(a);
+    const APFloat &result(a);
     return abs(result);
   });
 }

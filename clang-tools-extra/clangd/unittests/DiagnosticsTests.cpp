@@ -678,6 +678,67 @@ TEST(DiagnosticTest, ElseAfterReturnRange) {
                   Diag(Main.range(), "do not use 'else' after 'return'"))));
 }
 
+TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
+  Annotations Main(R"cpp($MathHeader[[]]
+    struct Foo{
+      int A, B;
+      Foo()$Fix[[]] {
+        $A[[A = 1;]]
+        $B[[B = 1;]]
+      }
+    };
+    void InitVariables() {
+      float $C[[C]]$CFix[[]];
+      double $D[[D]]$DFix[[]];
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyProvider =
+      addTidyChecks("cppcoreguidelines-prefer-member-initializer,"
+                    "cppcoreguidelines-init-variables");
+  clangd::Fix ExpectedAFix;
+  ExpectedAFix.Message =
+      "'A' should be initialized in a member initializer of the constructor";
+  ExpectedAFix.Edits.push_back(TextEdit{Main.range("Fix"), " : A(1)"});
+  ExpectedAFix.Edits.push_back(TextEdit{Main.range("A"), ""});
+
+  // When invoking clang-tidy normally, this code would produce `, B(1)` as the
+  // fix the `B` member, as it would think its already included the ` : ` from
+  // the previous `A` fix.
+  clangd::Fix ExpectedBFix;
+  ExpectedBFix.Message =
+      "'B' should be initialized in a member initializer of the constructor";
+  ExpectedBFix.Edits.push_back(TextEdit{Main.range("Fix"), " : B(1)"});
+  ExpectedBFix.Edits.push_back(TextEdit{Main.range("B"), ""});
+
+  clangd::Fix ExpectedCFix;
+  ExpectedCFix.Message = "variable 'C' is not initialized";
+  ExpectedCFix.Edits.push_back(TextEdit{Main.range("CFix"), " = NAN"});
+  ExpectedCFix.Edits.push_back(
+      TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
+
+  // Again in clang-tidy only the include directive would be emitted for the
+  // first warning. However we need the include attaching for both warnings.
+  clangd::Fix ExpectedDFix;
+  ExpectedDFix.Message = "variable 'D' is not initialized";
+  ExpectedDFix.Edits.push_back(TextEdit{Main.range("DFix"), " = NAN"});
+  ExpectedDFix.Edits.push_back(
+      TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      UnorderedElementsAre(
+          AllOf(Diag(Main.range("A"), "'A' should be initialized in a member "
+                                      "initializer of the constructor"),
+                withFix(equalToFix(ExpectedAFix))),
+          AllOf(Diag(Main.range("B"), "'B' should be initialized in a member "
+                                      "initializer of the constructor"),
+                withFix(equalToFix(ExpectedBFix))),
+          AllOf(Diag(Main.range("C"), "variable 'C' is not initialized"),
+                withFix(equalToFix(ExpectedCFix))),
+          AllOf(Diag(Main.range("D"), "variable 'D' is not initialized"),
+                withFix(equalToFix(ExpectedDFix)))));
+}
+
 TEST(DiagnosticsTest, Preprocessor) {
   // This looks like a preamble, but there's an #else in the middle!
   // Check that:

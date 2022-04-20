@@ -539,7 +539,7 @@ void fir::runtime::genMaxlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value fir::runtime::genMaxval(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value arrayBox,
                                     mlir::Value maskBox) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
@@ -658,7 +658,7 @@ void fir::runtime::genMinvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value arrayBox,
                                     mlir::Value maskBox) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
@@ -715,7 +715,7 @@ mlir::Value fir::runtime::genProduct(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Value arrayBox,
                                      mlir::Value maskBox,
                                      mlir::Value resultBox) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
@@ -783,7 +783,7 @@ mlir::Value fir::runtime::genDotProduct(fir::FirOpBuilder &builder,
                                         mlir::Value vectorABox,
                                         mlir::Value vectorBBox,
                                         mlir::Value resultBox) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   auto ty = vectorABox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
@@ -867,7 +867,7 @@ void fir::runtime::genSumDim(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value arrayBox, mlir::Value maskBox,
                                  mlir::Value resultBox) {
-  mlir::FuncOp func;
+  mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();

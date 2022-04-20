@@ -18,7 +18,5 @@ struct __attribute((packed, aligned(4))) { char a; int x; char z[]; } d = { 1, 2
 struct __attribute((packed, aligned(4))) { char a; int x; char z[]; } e = { 1, 2, { 13, 15, 17, 19 } };
 // CHECK: @e ={{.*}} <{ i8, i32, [4 x i8] }> <{ i8 1, i32 2, [4 x i8] c"\0D\0F\11\13" }>
 
-// FIXME: This global should be 6 bytes, not 8.  Not likely to matter in most
-// cases, but still a bug.
 struct { int x; char y[]; } f = { 1, { 13, 15 } };
-// CHECK: @f ={{.*}} global { i32, [2 x i8] } { i32 1, [2 x i8] c"\0D\0F" }
+// CHECK: @f ={{.*}} global <{ i32, [2 x i8] }> <{ i32 1, [2 x i8] c"\0D\0F" }>

@@ -98,9 +98,10 @@ scf::ForOp mlir::cloneWithNewYields(OpBuilder &b, scf::ForOp loop,
 /// `outlinedFuncBody` to alloc simple canonicalizations.
 // TODO: support more than single-block regions.
 // TODO: more flexible constant handling.
-FailureOr<FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
-                                                 Location loc, Region &region,
-                                                 StringRef funcName) {
+FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
+                                                       Location loc,
+                                                       Region &region,
+                                                       StringRef funcName) {
   assert(!funcName.empty() && "funcName cannot be empty");
   if (!region.hasOneBlock())
     return failure();
@@ -110,7 +111,7 @@ FailureOr<FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
 
   // Outline before current function.
   OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(region.getParentOfType<FuncOp>());
+  rewriter.setInsertionPoint(region.getParentOfType<func::FuncOp>());
 
   SetVector<Value> captures;
   getUsedValuesDefinedAbove(region, captures);
@@ -132,7 +133,8 @@ FailureOr<FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
   FunctionType outlinedFuncType =
       FunctionType::get(rewriter.getContext(), outlinedFuncArgTypes,
                         originalTerminator->getOperandTypes());
-  auto outlinedFunc = rewriter.create<FuncOp>(loc, funcName, outlinedFuncType);
+  auto outlinedFunc =
+      rewriter.create<func::FuncOp>(loc, funcName, outlinedFuncType);
   Block *outlinedFuncBody = outlinedFunc.addEntryBlock();
 
   // Merge blocks while replacing the original block operands.
@@ -198,12 +200,12 @@ FailureOr<FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
   return outlinedFunc;
 }
 
-LogicalResult mlir::outlineIfOp(RewriterBase &b, scf::IfOp ifOp, FuncOp *thenFn,
-                                StringRef thenFnName, FuncOp *elseFn,
-                                StringRef elseFnName) {
+LogicalResult mlir::outlineIfOp(RewriterBase &b, scf::IfOp ifOp,
+                                func::FuncOp *thenFn, StringRef thenFnName,
+                                func::FuncOp *elseFn, StringRef elseFnName) {
   IRRewriter rewriter(b);
   Location loc = ifOp.getLoc();
-  FailureOr<FuncOp> outlinedFuncOpOrFailure;
+  FailureOr<func::FuncOp> outlinedFuncOpOrFailure;
   if (thenFn && !ifOp.getThenRegion().empty()) {
     outlinedFuncOpOrFailure = outlineSingleBlockRegion(
         rewriter, loc, ifOp.getThenRegion(), thenFnName);

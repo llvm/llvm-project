@@ -19,12 +19,19 @@ entry:
 }
 
 define i32 @main() nounwind  {
-; CHECK: Function Attrs: norecurse nounwind
-; CHECK-LABEL: define {{[^@]+}}@main
-; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call i32 @foo() #[[ATTR0]]
-; CHECK-NEXT:    ret i32 [[R]]
+; IS__TUNIT____: Function Attrs: norecurse nounwind
+; IS__TUNIT____-LABEL: define {{[^@]+}}@main
+; IS__TUNIT____-SAME: () #[[ATTR1:[0-9]+]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[R:%.*]] = call i32 @foo() #[[ATTR0]]
+; IS__TUNIT____-NEXT:    ret i32 [[R]]
+;
+; IS__CGSCC____: Function Attrs: nounwind
+; IS__CGSCC____-LABEL: define {{[^@]+}}@main
+; IS__CGSCC____-SAME: () #[[ATTR0]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[R:%.*]] = call i32 @foo() #[[ATTR0]]
+; IS__CGSCC____-NEXT:    ret i32 [[R]]
 ;
 entry:
   %r = call i32 @foo( ) nounwind
@@ -32,6 +39,8 @@ entry:
 }
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { nounwind }
-; CHECK: attributes #[[ATTR1]] = { norecurse nounwind }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nounwind }
+; IS__TUNIT____: attributes #[[ATTR1]] = { norecurse nounwind }
+;.
+; IS__CGSCC____: attributes #[[ATTR0]] = { nounwind }
 ;.
