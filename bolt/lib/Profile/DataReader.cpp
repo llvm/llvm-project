@@ -47,6 +47,8 @@ Optional<StringRef> getLTOCommonName(const StringRef Name) {
     return Name.substr(0, LTOSuffixPos + 10);
   if ((LTOSuffixPos = Name.find(".constprop.")) != StringRef::npos)
     return Name.substr(0, LTOSuffixPos + 11);
+  if ((LTOSuffixPos = Name.find(".llvm.")) != StringRef::npos)
+    return Name.substr(0, LTOSuffixPos + 6);
   return NoneType();
 }
 
