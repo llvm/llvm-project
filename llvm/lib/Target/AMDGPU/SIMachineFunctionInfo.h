@@ -437,7 +437,6 @@ private:
   unsigned GITPtrHigh;
 
   unsigned HighBitsOf32BitAddress;
-  unsigned GDSSize;
 
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
@@ -746,10 +745,6 @@ public:
 
   uint32_t get32BitAddressHighBits() const {
     return HighBitsOf32BitAddress;
-  }
-
-  unsigned getGDSSize() const {
-    return GDSSize;
   }
 
   unsigned getNumUserSGPRs() const {

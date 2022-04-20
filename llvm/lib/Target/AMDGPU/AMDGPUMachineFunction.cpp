@@ -32,6 +32,15 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
   Attribute WaveLimitAttr = F.getFnAttribute("amdgpu-wave-limiter");
   WaveLimiter = WaveLimitAttr.getValueAsBool();
 
+  // FIXME: How is this attribute supposed to interact with statically known
+  // global sizes?
+  StringRef S = F.getFnAttribute("amdgpu-gds-size").getValueAsString();
+  if (!S.empty())
+    S.consumeInteger(0, GDSSize);
+
+  // Assume the attribute allocates before any known GDS globals.
+  StaticGDSSize = GDSSize;
+
   CallingConv::ID CC = F.getCallingConv();
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL)
     ExplicitKernArgSize = ST.getExplicitKernArgSize(F, MaxKernArgAlign);
@@ -46,18 +55,27 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   Align Alignment =
       DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
 
-  /// TODO: We should sort these to minimize wasted space due to alignment
-  /// padding. Currently the padding is decided by the first encountered use
-  /// during lowering.
-  unsigned Offset = StaticLDSSize = alignTo(StaticLDSSize, Alignment);
+  unsigned Offset;
+  if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    /// TODO: We should sort these to minimize wasted space due to alignment
+    /// padding. Currently the padding is decided by the first encountered use
+    /// during lowering.
+    Offset = StaticLDSSize = alignTo(StaticLDSSize, Alignment);
+
+    StaticLDSSize += DL.getTypeAllocSize(GV.getValueType());
+
+    // Update the LDS size considering the padding to align the dynamic shared
+    // memory.
+    LDSSize = alignTo(StaticLDSSize, DynLDSAlign);
+  } else {
+    Offset = StaticGDSSize = alignTo(StaticGDSSize, Alignment);
+    StaticGDSSize += DL.getTypeAllocSize(GV.getValueType());
+
+    // FIXME: Apply alignment of dynamic GDS
+    GDSSize = StaticGDSSize;
+  }
 
   Entry.first->second = Offset;
-  StaticLDSSize += DL.getTypeAllocSize(GV.getValueType());
-
-  // Update the LDS size considering the padding to align the dynamic shared
-  // memory.
-  LDSSize = alignTo(StaticLDSSize, DynLDSAlign);
-
   return Offset;
 }
 
