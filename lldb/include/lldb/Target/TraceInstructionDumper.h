@@ -8,10 +8,23 @@
 
 #include "lldb/Target/TraceCursor.h"
 
+#include "lldb/Symbol/SymbolContext.h"
+
 #ifndef LLDB_TARGET_TRACE_INSTRUCTION_DUMPER_H
 #define LLDB_TARGET_TRACE_INSTRUCTION_DUMPER_H
 
 namespace lldb_private {
+
+/// Helper struct that holds symbol, disassembly and address information of an
+/// instruction.
+struct InstructionSymbolInfo {
+  SymbolContext sc;
+  Address address;
+  lldb::addr_t load_address;
+  lldb::DisassemblerSP disassembler;
+  lldb::InstructionSP instruction;
+  lldb_private::ExecutionContext exe_ctx;
+};
 
 /// Class that holds the configuration used by \a TraceInstructionDumper for
 /// traversing and dumping instructions.
@@ -82,6 +95,28 @@ private:
   bool TryMoveOneStep();
 
   void PrintEvents();
+
+  void PrintMissingInstructionsMessage();
+
+  void PrintInstructionHeader();
+
+  void DumpInstructionDisassembly(const InstructionSymbolInfo &insn);
+
+  /// Dump the symbol context of the given instruction address if it's different
+  /// from the symbol context of the previous instruction in the trace.
+  ///
+  /// \param[in] prev_sc
+  ///     The symbol context of the previous instruction in the trace.
+  ///
+  /// \param[in] address
+  ///     The address whose symbol information will be dumped.
+  ///
+  /// \return
+  ///     The symbol context of the current address, which might differ from the
+  ///     previous one.
+  void DumpInstructionSymbolContext(
+      const llvm::Optional<InstructionSymbolInfo> &prev_insn,
+      const InstructionSymbolInfo &insn);
 
   lldb::TraceCursorUP m_cursor_up;
   TraceInstructionDumperOptions m_options;
