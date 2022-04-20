@@ -90,6 +90,11 @@ namespace {
       AU.addPreserved<MachineBlockFrequencyInfo>();
     }
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties()
+        .set(MachineFunctionProperties::Property::IsSSA);
+    }
+
     void releaseMemory() override {
       ScopeMap.clear();
       PREMap.clear();

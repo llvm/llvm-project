@@ -9,7 +9,7 @@
 ; RUN: opt -thinlto-bc -o %t3.o %s
 ; RUN: opt -thinlto-bc -o %t4.o %p/Inputs/devirt_promote.ll
 
-; RUN: llvm-lto2 run %t3.o %t4.o -save-temps -use-new-pm -pass-remarks=. \
+; RUN: llvm-lto2 run %t3.o %t4.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -wholeprogramdevirt-print-index-based \
 ; RUN:   -o %t5 \

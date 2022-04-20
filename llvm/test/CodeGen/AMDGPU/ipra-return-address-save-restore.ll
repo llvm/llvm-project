@@ -47,11 +47,20 @@ cond.true:                                        ; preds = %entry
   br i1 %phi.cmp, label %common.ret, label %cond.true20
 
 cond.true20:                                      ; preds = %cond.true
-  %trunc1 = trunc i32 %0 to i8
-  switch i8 %trunc, label %common.ret [
-    i8 44, label %sw.bb
-    i8 0, label %if.end.i.i2285
-  ]
+  %v = zext i8 %trunc to i32
+  br label %NodeBlock
+
+NodeBlock:                                        ; preds = %cond.true20
+  %Pivot = icmp slt i32 %v, 44
+  br i1 %Pivot, label %LeafBlock, label %LeafBlock1
+
+LeafBlock1:                                       ; preds = %NodeBlock
+  %SwitchLeaf2 = icmp eq i32 %v, 44
+  br i1 %SwitchLeaf2, label %sw.bb, label %NewDefault
+
+LeafBlock:                                        ; preds = %NodeBlock
+  %SwitchLeaf = icmp eq i32 %v, 0
+  br i1 %SwitchLeaf, label %if.end.i.i2285, label %NewDefault
 
 sw.bb:                                            ; preds = %cond.true20
   %10 = load float, float* null, align 4
@@ -76,7 +85,12 @@ common.ret.critedge:                              ; preds = %entry
   store i32 0, i32* null, align 4
   br label %common.ret
 
-common.ret:                                       ; preds = %if.end.i.i2285, %if.end627.sink.split, %cond.end579, %bsdf_alloc.exit2188, %if.end511, %common.ret.critedge, %if.then443, %sw.bb, %cond.true20, %cond.true
+NewDefault:                                       ; preds = %LeafBlock1, %LeafBlock
+  %phi.store = phi i32 [0, %LeafBlock], [1, %LeafBlock1]
+  store i32 %phi.store, i32* null, align 4
+  br label %common.ret
+
+common.ret:                                       ; preds = %if.end.i.i2285, %if.end627.sink.split, %cond.end579, %bsdf_alloc.exit2188, %if.end511, %common.ret.critedge, %if.then443, %sw.bb, %NewDefault, %cond.true
   ret void
 
 if.end511:                                        ; preds = %if.then443

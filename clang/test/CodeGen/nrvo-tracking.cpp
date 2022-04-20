@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -fblocks -Wno-return-stack-address -triple x86_64-unknown-unknown-gnu -emit-llvm -O1 -fexperimental-new-pass-manager -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -fblocks -Wno-return-stack-address -triple x86_64-unknown-unknown-gnu -emit-llvm -O1 -o - %s | FileCheck %s
 
 struct alignas(4) X {
   X();

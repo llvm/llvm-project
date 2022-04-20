@@ -1,6 +1,5 @@
 // Tests CUDA kernel arguments get global address space when targetting SPIR-V.
 
-// REQUIRES: clang-driver
 
 // RUN: %clang -Xclang -no-opaque-pointers -emit-llvm --cuda-device-only --offload=spirv32 \
 // RUN:   -nocudalib -nocudainc %s -o %t.bc -c 2>&1

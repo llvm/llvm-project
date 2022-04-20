@@ -31,21 +31,22 @@ static llvm::cl::opt<std::size_t>
                                       "name"),
                        llvm::cl::init(32));
 
-mlir::FuncOp fir::FirOpBuilder::createFunction(mlir::Location loc,
-                                               mlir::ModuleOp module,
-                                               llvm::StringRef name,
-                                               mlir::FunctionType ty) {
+mlir::func::FuncOp fir::FirOpBuilder::createFunction(mlir::Location loc,
+                                                     mlir::ModuleOp module,
+                                                     llvm::StringRef name,
+                                                     mlir::FunctionType ty) {
   return fir::createFuncOp(loc, module, name, ty);
 }
 
-mlir::FuncOp fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
-                                                 llvm::StringRef name) {
-  return modOp.lookupSymbol<mlir::FuncOp>(name);
+mlir::func::FuncOp fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
+                                                       llvm::StringRef name) {
+  return modOp.lookupSymbol<mlir::func::FuncOp>(name);
 }
 
-mlir::FuncOp fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
-                                                 mlir::SymbolRefAttr symbol) {
-  return modOp.lookupSymbol<mlir::FuncOp>(symbol);
+mlir::func::FuncOp
+fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
+                                    mlir::SymbolRefAttr symbol) {
+  return modOp.lookupSymbol<mlir::func::FuncOp>(symbol);
 }
 
 fir::GlobalOp fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
@@ -196,10 +197,9 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 
 /// Get the block for adding Allocas.
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
-  // auto iface =
-  //     getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-  // return iface ? iface.getAllocaBlock() : getEntryBlock();
-  return getEntryBlock();
+  auto iface =
+      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  return iface ? iface.getAllocaBlock() : getEntryBlock();
 }
 
 /// Create a temporary variable on the stack. Anonymous temporaries have no
@@ -332,6 +332,14 @@ mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
     return create<fir::ConvertOp>(loc, toTy, val);
   }
   return val;
+}
+
+void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
+                                               mlir::Value val,
+                                               mlir::Value addr) {
+  mlir::Value cast =
+      createConvert(loc, fir::unwrapRefType(addr.getType()), val);
+  create<fir::StoreOp>(loc, cast, addr);
 }
 
 fir::StringLitOp fir::FirOpBuilder::createStringLitOp(mlir::Location loc,

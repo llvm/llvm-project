@@ -298,6 +298,7 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
+static bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
@@ -578,6 +579,100 @@ void AArch64FrameLowering::emitCalleeSavedFrameMoves(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   emitCalleeSavedGPRLocations(MBB, MBBI);
   emitCalleeSavedSVELocations(MBB, MBBI);
+}
+
+static void insertCFISameValue(const MCInstrDesc &Desc, MachineFunction &MF,
+                               MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator InsertPt,
+                               unsigned DwarfReg) {
+  unsigned CFIIndex =
+      MF.addFrameInst(MCCFIInstruction::createSameValue(nullptr, DwarfReg));
+  BuildMI(MBB, InsertPt, DebugLoc(), Desc).addCFIIndex(CFIIndex);
+}
+
+void AArch64FrameLowering::resetCFIToInitialState(
+    MachineBasicBlock &MBB) const {
+
+  MachineFunction &MF = *MBB.getParent();
+  const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  const auto &TRI =
+      static_cast<const AArch64RegisterInfo &>(*Subtarget.getRegisterInfo());
+  const auto &MFI = *MF.getInfo<AArch64FunctionInfo>();
+
+  const MCInstrDesc &CFIDesc = TII.get(TargetOpcode::CFI_INSTRUCTION);
+  DebugLoc DL;
+
+  // Reset the CFA to `SP + 0`.
+  MachineBasicBlock::iterator InsertPt = MBB.begin();
+  unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
+      nullptr, TRI.getDwarfRegNum(AArch64::SP, true), 0));
+  BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
+
+  // Flip the RA sign state.
+  if (MFI.shouldSignReturnAddress()) {
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+    BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
+  }
+
+  // Shadow call stack uses X18, reset it.
+  if (needsShadowCallStackPrologueEpilogue(MF))
+    insertCFISameValue(CFIDesc, MF, MBB, InsertPt,
+                       TRI.getDwarfRegNum(AArch64::X18, true));
+
+  // Emit .cfi_same_value for callee-saved registers.
+  const std::vector<CalleeSavedInfo> &CSI =
+      MF.getFrameInfo().getCalleeSavedInfo();
+  for (const auto &Info : CSI) {
+    unsigned Reg = Info.getReg();
+    if (!TRI.regNeedsCFI(Reg, Reg))
+      continue;
+    insertCFISameValue(CFIDesc, MF, MBB, InsertPt,
+                       TRI.getDwarfRegNum(Reg, true));
+  }
+}
+
+static void emitCalleeSavedRestores(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI,
+                                    bool SVE) {
+  MachineFunction &MF = *MBB.getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+  if (CSI.empty())
+    return;
+
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL = MBB.findDebugLoc(MBBI);
+
+  for (const auto &Info : CSI) {
+    if (SVE !=
+        (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector))
+      continue;
+
+    unsigned Reg = Info.getReg();
+    if (SVE &&
+        !static_cast<const AArch64RegisterInfo &>(TRI).regNeedsCFI(Reg, Reg))
+      continue;
+
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(
+        nullptr, TRI.getDwarfRegNum(Info.getReg(), true)));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
+  }
+}
+
+void AArch64FrameLowering::emitCalleeSavedGPRRestores(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
+  emitCalleeSavedRestores(MBB, MBBI, false);
+}
+
+void AArch64FrameLowering::emitCalleeSavedSVERestores(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
+  emitCalleeSavedRestores(MBB, MBBI, true);
 }
 
 // Find a scratch register that we can use at the start of the prologue to
@@ -887,7 +982,9 @@ static void fixupSEHOpcode(MachineBasicBlock::iterator MBBI,
 static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, const TargetInstrInfo *TII, int CSStackSizeInc,
-    bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI, bool InProlog = true) {
+    bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
+    MachineInstr::MIFlag FrameFlag = MachineInstr::FrameSetup,
+    int CFAOffset = 0) {
   unsigned NewOpc;
   switch (MBBI->getOpcode()) {
   default:
@@ -950,10 +1047,9 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
       CSStackSizeInc < MinOffset || CSStackSizeInc > MaxOffset) {
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed(CSStackSizeInc), TII,
-                    InProlog ? MachineInstr::FrameSetup
-                             : MachineInstr::FrameDestroy,
-                    false, false, nullptr, EmitCFI && InProlog);
+                    StackOffset::getFixed(CSStackSizeInc), TII, FrameFlag,
+                    false, false, nullptr, EmitCFI,
+                    StackOffset::getFixed(CFAOffset));
 
     return std::prev(MBBI);
   }
@@ -981,16 +1077,15 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // Generate a new SEH code that corresponds to the new instruction.
   if (NeedsWinCFI) {
     *HasWinCFI = true;
-    InsertSEH(*MIB, *TII,
-              InProlog ? MachineInstr::FrameSetup : MachineInstr::FrameDestroy);
+    InsertSEH(*MIB, *TII, FrameFlag);
   }
 
-  if (EmitCFI && InProlog) {
+  if (EmitCFI) {
     unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::cfiDefCfaOffset(nullptr, -CSStackSizeInc));
+        MCCFIInstruction::cfiDefCfaOffset(nullptr, CFAOffset - CSStackSizeInc));
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
-        .setMIFlags(MachineInstr::FrameSetup);
+        .setMIFlags(FrameFlag);
   }
 
   return std::prev(MBB.erase(MBBI));
@@ -1129,6 +1224,14 @@ static void emitShadowCallStackEpilogue(const TargetInstrInfo &TII,
       .addReg(AArch64::X18)
       .addImm(-8)
       .setMIFlag(MachineInstr::FrameDestroy);
+
+  if (MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo()) {
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, 18));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
+  }
 }
 
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
@@ -1164,7 +1267,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                 MFnI.needsDwarfUnwindInfo());
 
   if (MFnI.shouldSignReturnAddress()) {
-
     unsigned PACI;
     if (MFnI.shouldSignWithBKey()) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITBKEY))
@@ -1650,6 +1752,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL;
   bool NeedsWinCFI = needsWinCFI(MF);
+  bool EmitCFI = MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo();
   bool HasWinCFI = false;
   bool IsFunclet = false;
   auto WinCFI = make_scope_exit([&]() { assert(HasWinCFI == MF.hasWinCFI()); });
@@ -1659,9 +1762,12 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     IsFunclet = isFuncletReturnInstr(*MBBI);
   }
 
-  auto ShadowStackEpilogue = make_scope_exit([&]() {
+  auto FinishingTouches = make_scope_exit([&]() {
+    InsertReturnAddressAuth(MF, MBB);
     if (needsShadowCallStackPrologueEpilogue(MF))
       emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
+    if (EmitCFI)
+      emitCalleeSavedGPRRestores(MBB, MBB.getFirstTerminator());
   });
 
   int64_t NumBytes = IsFunclet ? getWinEHFuncletFrameSize(MF)
@@ -1676,36 +1782,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // How much of the stack used by incoming arguments this function is expected
   // to restore in this particular epilogue.
   int64_t ArgumentStackToRestore = getArgumentStackToRestore(MF, MBB);
-
-  // The stack frame should be like below,
-  //
-  //      ----------------------                     ---
-  //      |                    |                      |
-  //      | BytesInStackArgArea|              CalleeArgStackSize
-  //      | (NumReusableBytes) |                (of tail call)
-  //      |                    |                     ---
-  //      |                    |                      |
-  //      ---------------------|        ---           |
-  //      |                    |         |            |
-  //      |   CalleeSavedReg   |         |            |
-  //      | (CalleeSavedStackSize)|      |            |
-  //      |                    |         |            |
-  //      ---------------------|         |         NumBytes
-  //      |                    |     StackSize  (StackAdjustUp)
-  //      |   LocalStackSize   |         |            |
-  //      | (covering callee   |         |            |
-  //      |       args)        |         |            |
-  //      |                    |         |            |
-  //      ----------------------        ---          ---
-  //
-  // So NumBytes = StackSize + BytesInStackArgArea - CalleeArgStackSize
-  //             = StackSize + ArgumentPopSize
-  //
-  // AArch64TargetLowering::LowerCall figures out ArgumentPopSize and keeps
-  // it as the 2nd argument of AArch64ISD::TC_RETURN.
-
-  auto Cleanup = make_scope_exit([&] { InsertReturnAddressAuth(MF, MBB); });
-
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
   unsigned FixedObject = getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
@@ -1740,9 +1816,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   bool CombineSPBump = shouldCombineCSRLocalStackBumpInEpilogue(MBB, NumBytes);
   // Assume we can't combine the last pop with the sp restore.
 
+  bool CombineAfterCSRBump = false;
   if (!CombineSPBump && PrologueSaveSize != 0) {
     MachineBasicBlock::iterator Pop = std::prev(MBB.getFirstTerminator());
-    while (AArch64InstrInfo::isSEHInstruction(*Pop))
+    while (Pop->getOpcode() == TargetOpcode::CFI_INSTRUCTION ||
+           AArch64InstrInfo::isSEHInstruction(*Pop))
       Pop = std::prev(Pop);
     // Converting the last ldp to a post-index ldp is valid only if the last
     // ldp's offset is 0.
@@ -1750,16 +1828,17 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     // If the offset is 0 and the AfterCSR pop is not actually trying to
     // allocate more stack for arguments (in space that an untimely interrupt
     // may clobber), convert it to a post-index ldp.
-    if (OffsetOp.getImm() == 0 && AfterCSRPopSize >= 0)
-      convertCalleeSaveRestoreToSPPrePostIncDec(MBB, Pop, DL, TII,
-                                                PrologueSaveSize, NeedsWinCFI,
-                                                &HasWinCFI, false, false);
-    else {
+    if (OffsetOp.getImm() == 0 && AfterCSRPopSize >= 0) {
+      convertCalleeSaveRestoreToSPPrePostIncDec(
+          MBB, Pop, DL, TII, PrologueSaveSize, NeedsWinCFI, &HasWinCFI, EmitCFI,
+          MachineInstr::FrameDestroy, PrologueSaveSize);
+    } else {
       // If not, make sure to emit an add after the last ldp.
       // We're doing this by transfering the size to be restored from the
       // adjustment *before* the CSR pops to the adjustment *after* the CSR
       // pops.
       AfterCSRPopSize += PrologueSaveSize;
+      CombineAfterCSRBump = true;
     }
   }
 
@@ -1820,10 +1899,22 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // If there is a single SP update, insert it before the ret and we're done.
   if (CombineSPBump) {
     assert(!SVEStackSize && "Cannot combine SP bump with SVE");
+
+    // When we are about to restore the CSRs, the CFA register is SP again.
+    if (EmitCFI && hasFP(MF)) {
+      const AArch64RegisterInfo &RegInfo = *Subtarget.getRegisterInfo();
+      unsigned Reg = RegInfo.getDwarfRegNum(AArch64::SP, true);
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::cfiDefCfa(nullptr, Reg, NumBytes));
+      BuildMI(MBB, LastPopI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlags(MachineInstr::FrameDestroy);
+    }
+
     emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(NumBytes + (int64_t)AfterCSRPopSize),
                     TII, MachineInstr::FrameDestroy, false, NeedsWinCFI,
-                    &HasWinCFI);
+                    &HasWinCFI, EmitCFI, StackOffset::getFixed(NumBytes));
     if (HasWinCFI)
       BuildMI(MBB, MBB.getFirstTerminator(), DL,
               TII->get(AArch64::SEH_EpilogEnd))
@@ -1856,29 +1947,40 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // Deallocate the SVE area.
   if (SVEStackSize) {
     if (AFI->isStackRealigned()) {
-      if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize())
+      if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
         // Set SP to start of SVE callee-save area from which they can
         // be reloaded. The code below will deallocate the stack space
         // space by moving FP -> SP.
         emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, AArch64::FP,
                         StackOffset::getScalable(-CalleeSavedSize), TII,
                         MachineInstr::FrameDestroy);
+      }
     } else {
       if (AFI->getSVECalleeSavedStackSize()) {
         // Deallocate the non-SVE locals first before we can deallocate (and
         // restore callee saves) from the SVE area.
-        emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,
-                        StackOffset::getFixed(NumBytes), TII,
-                        MachineInstr::FrameDestroy);
+        emitFrameOffset(
+            MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,
+            StackOffset::getFixed(NumBytes), TII, MachineInstr::FrameDestroy,
+            false, false, nullptr, EmitCFI && !hasFP(MF),
+            SVEStackSize + StackOffset::getFixed(NumBytes + PrologueSaveSize));
         NumBytes = 0;
       }
 
       emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,
-                      DeallocateBefore, TII, MachineInstr::FrameDestroy);
+                      DeallocateBefore, TII, MachineInstr::FrameDestroy, false,
+                      false, nullptr, EmitCFI && !hasFP(MF),
+                      SVEStackSize +
+                          StackOffset::getFixed(NumBytes + PrologueSaveSize));
 
       emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
-                      DeallocateAfter, TII, MachineInstr::FrameDestroy);
+                      DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
+                      false, nullptr, EmitCFI && !hasFP(MF),
+                      DeallocateAfter +
+                          StackOffset::getFixed(NumBytes + PrologueSaveSize));
     }
+    if (EmitCFI)
+      emitCalleeSavedSVERestores(MBB, RestoreEnd);
   }
 
   if (!hasFP(MF)) {
@@ -1888,14 +1990,21 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     if (RedZone && AfterCSRPopSize == 0)
       return;
 
+    // Pop the local variables off the stack. If there are no callee-saved
+    // registers, it means we are actually positioned at the terminator and can
+    // combine stack increment for the locals and the stack increment for
+    // callee-popped arguments into (possibly) a single instruction and be done.
     bool NoCalleeSaveRestore = PrologueSaveSize == 0;
     int64_t StackRestoreBytes = RedZone ? 0 : NumBytes;
     if (NoCalleeSaveRestore)
       StackRestoreBytes += AfterCSRPopSize;
 
-    emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed(StackRestoreBytes), TII,
-                    MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
+    emitFrameOffset(
+        MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
+        StackOffset::getFixed(StackRestoreBytes), TII,
+        MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI, EmitCFI,
+        StackOffset::getFixed((RedZone ? 0 : NumBytes) + PrologueSaveSize));
+
     // If we were able to combine the local stack pop with the argument pop,
     // then we're done.
     if (NoCalleeSaveRestore || AfterCSRPopSize == 0) {
@@ -1924,6 +2033,17 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                     StackOffset::getFixed(NumBytes), TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI);
 
+  // When we are about to restore the CSRs, the CFA register is SP again.
+  if (EmitCFI && hasFP(MF)) {
+    const AArch64RegisterInfo &RegInfo = *Subtarget.getRegisterInfo();
+    unsigned Reg = RegInfo.getDwarfRegNum(AArch64::SP, true);
+    unsigned CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::cfiDefCfa(nullptr, Reg, PrologueSaveSize));
+    BuildMI(MBB, LastPopI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
+  }
+
   // This must be placed after the callee-save restore code because that code
   // assumes the SP is at the same location as it was after the callee-save save
   // code in the prologue.
@@ -1931,9 +2051,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     assert(AfterCSRPopSize > 0 && "attempting to reallocate arg stack that an "
                                   "interrupt may have clobbered");
 
-    emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed(AfterCSRPopSize), TII,
-                    MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
+    emitFrameOffset(
+        MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
+        StackOffset::getFixed(AfterCSRPopSize), TII, MachineInstr::FrameDestroy,
+        false, NeedsWinCFI, &HasWinCFI, EmitCFI,
+        StackOffset::getFixed(CombineAfterCSRBump ? PrologueSaveSize : 0));
   }
   if (HasWinCFI)
     BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::SEH_EpilogEnd))
@@ -2630,6 +2752,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
         MachineMemOperand::MOLoad, Size, Alignment));
     if (NeedsWinCFI)
       InsertSEH(MIB, TII, MachineInstr::FrameDestroy);
+
     return MIB->getIterator();
   };
 
@@ -3112,7 +3235,7 @@ public:
   // instructions. May skip if the replacement is not profitable. May invalidate
   // the input iterator and replace it with a valid one.
   void emitCode(MachineBasicBlock::iterator &InsertI,
-                const AArch64FrameLowering *TFI, bool IsLast);
+                const AArch64FrameLowering *TFI, bool TryMergeSPUpdate);
 };
 
 void TagStoreEdit::emitUnrolled(MachineBasicBlock::iterator InsertI) {
@@ -3251,7 +3374,8 @@ void mergeMemRefs(const SmallVectorImpl<TagStoreInstr> &TSE,
 }
 
 void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
-                            const AArch64FrameLowering *TFI, bool IsLast) {
+                            const AArch64FrameLowering *TFI,
+                            bool TryMergeSPUpdate) {
   if (TagStores.empty())
     return;
   TagStoreInstr &FirstTagStore = TagStores[0];
@@ -3281,8 +3405,8 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
     emitUnrolled(InsertI);
   } else {
     MachineInstr *UpdateInstr = nullptr;
-    int64_t TotalOffset;
-    if (IsLast) {
+    int64_t TotalOffset = 0;
+    if (TryMergeSPUpdate) {
       // See if we can merge base register update into the STGloop.
       // This is done in AArch64LoadStoreOptimizer for "normal" stores,
       // but STGloop is way too unusual for that, and also it only
@@ -3427,7 +3551,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   for (auto &Instr : Instrs) {
     if (EndOffset && *EndOffset != Instr.Offset) {
       // Found a gap.
-      TSE.emitCode(InsertI, TFI, /*IsLast = */ false);
+      TSE.emitCode(InsertI, TFI, /*TryMergeSPUpdate = */ false);
       TSE.clear();
     }
 
@@ -3435,7 +3559,11 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
     EndOffset = Instr.Offset + Instr.Size;
   }
 
-  TSE.emitCode(InsertI, TFI, /*IsLast = */ true);
+  // Multiple FP/SP updates in a loop cannot be described by CFI instructions.
+  TSE.emitCode(InsertI, TFI, /*TryMergeSPUpdate = */
+               !MBB->getParent()
+                    ->getInfo<AArch64FunctionInfo>()
+                    ->needsAsyncDwarfUnwindInfo());
 
   return InsertI;
 }

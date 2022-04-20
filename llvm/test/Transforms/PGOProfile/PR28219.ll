@@ -1,6 +1,6 @@
 ; Test that we annotate entire program's summary and not just this module's
 ; RUN: llvm-profdata merge %S/Inputs/PR28219.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s
 
 define i32 @bar() {
 entry:

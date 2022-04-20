@@ -168,7 +168,7 @@ static char *GetItaniumDemangledStr(const char *M) {
 }
 
 static char *GetRustV0DemangledStr(const char *M) {
-  char *demangled_cstr = llvm::rustDemangle(M, nullptr, nullptr, nullptr);
+  char *demangled_cstr = llvm::rustDemangle(M);
 
   if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr && demangled_cstr[0])

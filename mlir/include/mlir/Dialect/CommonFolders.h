@@ -108,6 +108,56 @@ Attribute constFoldUnaryOp(ArrayRef<Attribute> operands,
   return {};
 }
 
+template <
+    class AttrElementT, class TargetAttrElementT,
+    class ElementValueT = typename AttrElementT::ValueType,
+    class TargetElementValueT = typename TargetAttrElementT::ValueType,
+    class CalculationT = function_ref<TargetElementValueT(ElementValueT, bool)>>
+Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
+                          const CalculationT &calculate) {
+  assert(operands.size() == 1 && "Cast op takes one operand");
+  if (!operands[0])
+    return {};
+
+  if (operands[0].isa<AttrElementT>()) {
+    auto op = operands[0].cast<AttrElementT>();
+    bool castStatus = true;
+    auto res = calculate(op.getValue(), castStatus);
+    if (!castStatus)
+      return {};
+    return TargetAttrElementT::get(resType, res);
+  }
+  if (operands[0].isa<SplatElementsAttr>()) {
+    // The operand is a splat so we can avoid expanding the values out and
+    // just fold based on the splat value.
+    auto op = operands[0].cast<SplatElementsAttr>();
+    bool castStatus = true;
+    auto elementResult =
+        calculate(op.getSplatValue<ElementValueT>(), castStatus);
+    if (!castStatus)
+      return {};
+    return DenseElementsAttr::get(resType, elementResult);
+  }
+  if (operands[0].isa<ElementsAttr>()) {
+    // Operand is ElementsAttr-derived; perform an element-wise fold by
+    // expanding the value.
+    auto op = operands[0].cast<ElementsAttr>();
+    bool castStatus = true;
+    auto opIt = op.value_begin<ElementValueT>();
+    SmallVector<TargetElementValueT> elementResults;
+    elementResults.reserve(op.getNumElements());
+    for (size_t i = 0, e = op.getNumElements(); i < e; ++i, ++opIt) {
+      auto elt = calculate(*opIt, castStatus);
+      if (!castStatus)
+        return {};
+      elementResults.push_back(elt);
+    }
+
+    return DenseElementsAttr::get(resType, elementResults);
+  }
+  return {};
+}
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_COMMONFOLDERS_H

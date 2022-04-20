@@ -1870,9 +1870,6 @@ LegalizerHelper::widenScalarInsert(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
                                            LLT WideTy) {
-  if (TypeIdx == 1)
-    return UnableToLegalize; // TODO
-
   unsigned Opcode;
   unsigned ExtOpcode;
   Optional<Register> CarryIn = None;
@@ -1915,6 +1912,18 @@ LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
     ExtOpcode = TargetOpcode::G_ZEXT;
     CarryIn = MI.getOperand(4).getReg();
     break;
+  }
+
+  if (TypeIdx == 1) {
+    unsigned BoolExtOp = MIRBuilder.getBoolExtOp(WideTy.isVector(), false);
+
+    Observer.changingInstr(MI);
+    widenScalarDst(MI, WideTy, 1);
+    if (CarryIn)
+      widenScalarSrc(MI, WideTy, 4, BoolExtOp);
+
+    Observer.changedInstr(MI);
+    return Legalized;
   }
 
   auto LHSExt = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MI.getOperand(2)});
@@ -1988,8 +1997,12 @@ LegalizerHelper::widenScalarAddSubShlSat(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
                                  LLT WideTy) {
-  if (TypeIdx == 1)
-    return UnableToLegalize;
+  if (TypeIdx == 1) {
+    Observer.changingInstr(MI);
+    widenScalarDst(MI, WideTy, 1);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
 
   bool IsSigned = MI.getOpcode() == TargetOpcode::G_SMULO;
   Register Result = MI.getOperand(0).getReg();
@@ -2995,7 +3008,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     if (isa<GSExtLoad>(LoadMI)) {
       auto NewLoad = MIRBuilder.buildLoad(LoadTy, PtrReg, *NewMMO);
       MIRBuilder.buildSExtInReg(LoadReg, NewLoad, MemSizeInBits);
-    } else if (isa<GZExtLoad>(LoadMI) || WideMemTy == DstTy) {
+    } else if (isa<GZExtLoad>(LoadMI) || WideMemTy == LoadTy) {
       auto NewLoad = MIRBuilder.buildLoad(LoadTy, PtrReg, *NewMMO);
       // The extra bits are guaranteed to be zero, since we stored them that
       // way.  A zext load from Wide thus automatically gives zext from MemVT.
@@ -4897,10 +4910,26 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
-  case TargetOpcode::G_SELECT:
-    if (TypeIdx != 0)
-      return UnableToLegalize;
-    if (MRI.getType(MI.getOperand(1).getReg()).isVector())
+  case TargetOpcode::G_SELECT: {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register CondReg = MI.getOperand(1).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    LLT CondTy = MRI.getType(CondReg);
+    if (TypeIdx == 1) {
+      if (!CondTy.isScalar() ||
+          DstTy.getElementCount() != MoreTy.getElementCount())
+        return UnableToLegalize;
+
+      // This is turning a scalar select of vectors into a vector
+      // select. Broadcast the select condition.
+      auto ShufSplat = MIRBuilder.buildShuffleSplat(MoreTy, CondReg);
+      Observer.changingInstr(MI);
+      MI.getOperand(1).setReg(ShufSplat.getReg(0));
+      Observer.changedInstr(MI);
+      return Legalized;
+    }
+
+    if (CondTy.isVector())
       return UnableToLegalize;
 
     Observer.changingInstr(MI);
@@ -4909,6 +4938,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
+  }
   case TargetOpcode::G_UNMERGE_VALUES:
     return UnableToLegalize;
   case TargetOpcode::G_PHI:
@@ -7244,25 +7274,32 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   Register Op2Reg = MI.getOperand(3).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT MaskTy = MRI.getType(MaskReg);
-  LLT Op1Ty = MRI.getType(Op1Reg);
   if (!DstTy.isVector())
     return UnableToLegalize;
 
-  // Vector selects can have a scalar predicate. If so, splat into a vector and
-  // finish for later legalization attempts to try again.
   if (MaskTy.isScalar()) {
+    // Turn the scalar condition into a vector condition mask.
+
     Register MaskElt = MaskReg;
-    if (MaskTy.getSizeInBits() < DstTy.getScalarSizeInBits())
-      MaskElt = MIRBuilder.buildSExt(DstTy.getElementType(), MaskElt).getReg(0);
-    // Generate a vector splat idiom to be pattern matched later.
+
+    // The condition was potentially zero extended before, but we want a sign
+    // extended boolean.
+    if (MaskTy.getSizeInBits() <= DstTy.getScalarSizeInBits() &&
+        MaskTy != LLT::scalar(1)) {
+      MaskElt = MIRBuilder.buildSExtInReg(MaskTy, MaskElt, 1).getReg(0);
+    }
+
+    // Continue the sign extension (or truncate) to match the data type.
+    MaskElt = MIRBuilder.buildSExtOrTrunc(DstTy.getElementType(),
+                                          MaskElt).getReg(0);
+
+    // Generate a vector splat idiom.
     auto ShufSplat = MIRBuilder.buildShuffleSplat(DstTy, MaskElt);
-    Observer.changingInstr(MI);
-    MI.getOperand(1).setReg(ShufSplat.getReg(0));
-    Observer.changedInstr(MI);
-    return Legalized;
+    MaskReg = ShufSplat.getReg(0);
+    MaskTy = DstTy;
   }
 
-  if (MaskTy.getSizeInBits() != Op1Ty.getSizeInBits()) {
+  if (MaskTy.getSizeInBits() != DstTy.getSizeInBits()) {
     return UnableToLegalize;
   }
 

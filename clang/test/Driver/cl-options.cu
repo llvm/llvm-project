@@ -3,7 +3,6 @@
 // Note: %s must be preceded by --, otherwise it may be interpreted as a
 // command-line option, e.g. on Mac where %s is commonly under /Users.
 
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 

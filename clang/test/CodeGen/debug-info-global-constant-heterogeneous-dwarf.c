@@ -16,7 +16,7 @@
 // INT-ADDROF-NOVAL: @g = internal constant i32 1, align 4, !dbg.def ![[#FRAGMENT:]]
 // INT-ADDROF-NOVAL-DAG: !llvm.dbg.retainedNodes = !{![[#LIFETIME:]]}
 // INT-ADDROF-NOVAL-DAG: ![[#FRAGMENT]] = distinct !DIFragment()
-// INT-ADDROF-NOVAL-DAG: ![[#LIFETIME]] = distinct !DILifetime(object: ![[#GV:]], location: !DIExpr(DIOpArg(0, i32*), DIOpDeref(i32)), argObjects: {![[#FRAGMENT]]})
+// INT-ADDROF-NOVAL-DAG: ![[#LIFETIME]] = distinct !DILifetime(object: ![[#GV:]], location: !DIExpr(DIOpArg(0, ptr), DIOpDeref(i32)), argObjects: {![[#FRAGMENT]]})
 // INT-ADDROF-NOVAL-DAG: ![[#GV]] = distinct !DIGlobalVariable(name: "g",
 //
 // INT-NOADDROF-VAL-NOT: @g =
@@ -35,7 +35,7 @@
 // FLOAT-ADDROF-NOVAL: @g = internal constant float 1.000000e+00, align 4, !dbg.def ![[#FRAGMENT:]]
 // FLOAT-ADDROF-NOVAL-DAG: !llvm.dbg.retainedNodes = !{![[#LIFETIME:]]}
 // FLOAT-ADDROF-NOVAL-DAG: ![[#FRAGMENT]] = distinct !DIFragment()
-// FLOAT-ADDROF-NOVAL-DAG: ![[#LIFETIME]] = distinct !DILifetime(object: ![[#GV:]], location: !DIExpr(DIOpArg(0, float*), DIOpDeref(float)), argObjects: {![[#FRAGMENT]]})
+// FLOAT-ADDROF-NOVAL-DAG: ![[#LIFETIME]] = distinct !DILifetime(object: ![[#GV:]], location: !DIExpr(DIOpArg(0, ptr), DIOpDeref(float)), argObjects: {![[#FRAGMENT]]})
 // FLOAT-ADDROF-NOVAL-DAG: ![[#GV]] = distinct !DIGlobalVariable(name: "g",
 //
 // FLOAT-NOADDROF-VAL-NOT: @g =

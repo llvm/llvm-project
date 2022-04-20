@@ -141,10 +141,7 @@ static const unsigned MaxIVUsers = 200;
 /// the salvaging is not too expensive for the compiler.
 static const unsigned MaxSCEVSalvageExpressionSize = 64;
 
-// Temporary flag to cleanup congruent phis after LSR phi expansion.
-// It's currently disabled until we can determine whether it's truly useful or
-// not. The flag should be removed after the v3.0 release.
-// This is now needed for ivchains.
+// Cleanup congruent phis after LSR phi expansion.
 static cl::opt<bool> EnablePhiElim(
   "enable-lsr-phielim", cl::Hidden, cl::init(true),
   cl::desc("Enable LSR phi elimination"));

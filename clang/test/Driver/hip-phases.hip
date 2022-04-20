@@ -4,7 +4,6 @@
 // - Host/device-only compilation;
 // - User-requested final phase - binary or assembly.
 
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 //

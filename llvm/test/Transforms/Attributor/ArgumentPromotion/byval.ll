@@ -113,7 +113,7 @@ define i32 @main() nounwind  {
 ; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[A]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@main
 ; IS__CGSCC_OPM-SAME: () #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
@@ -121,19 +121,23 @@ define i32 @main() nounwind  {
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[TMP1]], align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
+; IS__CGSCC_OPM-NEXT:    store i64 2, i64* [[TMP4]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[C0:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull readonly byval([[STRUCT_SS]]) align 32 dereferenceable(12) [[S]]) #[[ATTR2:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    [[C1:%.*]] = call i32 @g(%struct.ss* noalias nocapture nofree noundef nonnull readonly byval([[STRUCT_SS]]) align 32 dereferenceable(12) [[S]]) #[[ATTR2]]
 ; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[A]]
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@main
 ; IS__CGSCC_NPM-SAME: () #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    ret i32 3
+; IS__CGSCC_NPM-NEXT:    [[C0:%.*]] = call i32 @f(i32 noundef 1, i64 noundef 2) #[[ATTR2:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @g(i32 noundef 1, i64 noundef 2) #[[ATTR2]]
+; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
+; IS__CGSCC_NPM-NEXT:    ret i32 [[A]]
 ;
 entry:
   %S = alloca %struct.ss
@@ -153,10 +157,7 @@ entry:
 ; IS__TUNIT____: attributes #[[ATTR1:[0-9]+]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind willreturn }
 ;.
-; IS__CGSCC_OPM: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nounwind willreturn }
-;.
-; IS__CGSCC_NPM: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree norecurse nosync nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { nounwind willreturn }
 ;.

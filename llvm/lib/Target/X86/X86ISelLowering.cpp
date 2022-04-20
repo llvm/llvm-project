@@ -7976,7 +7976,6 @@ static void resolveZeroablesFromTargetShuffle(const SmallVectorImpl<int> &Mask,
 }
 
 // Forward declaration (for getFauxShuffleMask recursive check).
-// TODO: Use DemandedElts variant.
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    const SelectionDAG &DAG, unsigned Depth,
@@ -21239,7 +21238,10 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (SrcVT == MVT::i64 && DstVT == MVT::f64 && Subtarget.hasSSE2() &&
       !IsStrict)
     return LowerUINT_TO_FP_i64(Op, DAG, Subtarget);
-  if (SrcVT == MVT::i32 && Subtarget.hasSSE2() && DstVT != MVT::f80)
+  // The transform for i32->f64/f32 isn't correct for 0 when rounding to
+  // negative infinity. So disable under strictfp. Using FILD instead.
+  if (SrcVT == MVT::i32 && Subtarget.hasSSE2() && DstVT != MVT::f80 &&
+      !IsStrict)
     return LowerUINT_TO_FP_i32(Op, DAG, Subtarget);
   if (Subtarget.is64Bit() && SrcVT == MVT::i64 &&
       (DstVT == MVT::f32 || DstVT == MVT::f64))
@@ -43960,13 +43962,6 @@ static SDValue combineLogicBlendIntoConditionalNegate(
   return DAG.getBitcast(VT, Res);
 }
 
-// Is this a PSHUFB or a OR(PSHUFB,PSHUFB) chain?
-static bool isPSHUFBOrChain(SDValue N) {
-  return N.getOpcode() == X86ISD::PSHUFB ||
-         (N.getOpcode() == ISD::OR && isPSHUFBOrChain(N.getOperand(0)) &&
-          isPSHUFBOrChain(N.getOperand(1)));
-}
-
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
@@ -44010,26 +44005,15 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // by forcing the unselected elements to zero.
   // TODO: Can we handle more shuffles with this?
   if (N->getOpcode() == ISD::VSELECT && CondVT.isVector() &&
-      isPSHUFBOrChain(LHS) && isPSHUFBOrChain(RHS) &&
+      LHS.getOpcode() == X86ISD::PSHUFB && RHS.getOpcode() == X86ISD::PSHUFB &&
       LHS.hasOneUse() && RHS.hasOneUse()) {
-    SmallVector<int, 64> CondMask;
-    if (createShuffleMaskFromVSELECT(CondMask, Cond)) {
-      MVT SimpleVT = VT.getSimpleVT();
+    MVT SimpleVT = VT.getSimpleVT();
+    SmallVector<SDValue, 1> LHSOps, RHSOps;
+    SmallVector<int, 64> LHSMask, RHSMask, CondMask;
+    if (createShuffleMaskFromVSELECT(CondMask, Cond) &&
+        getTargetShuffleMask(LHS.getNode(), SimpleVT, true, LHSOps, LHSMask) &&
+        getTargetShuffleMask(RHS.getNode(), SimpleVT, true, RHSOps, RHSMask)) {
       int NumElts = VT.getVectorNumElements();
-      SmallVector<SDValue, 1> LHSOps, RHSOps;
-      SmallVector<int, 64> LHSMask, RHSMask;
-      if (LHS.getOpcode() != X86ISD::PSHUFB ||
-          !getTargetShuffleMask(LHS.getNode(), SimpleVT, true, LHSOps, LHSMask)) {
-        LHSOps.assign({LHS});
-        LHSMask.resize(NumElts);
-        std::iota(LHSMask.begin(), LHSMask.end(), 0);
-      }
-      if (RHS.getOpcode() != X86ISD::PSHUFB ||
-          !getTargetShuffleMask(RHS.getNode(), SimpleVT, true, RHSOps, RHSMask)) {
-        RHSOps.assign({RHS});
-        RHSMask.resize(NumElts);
-        std::iota(RHSMask.begin(), RHSMask.end(), 0);
-      }
       for (int i = 0; i != NumElts; ++i) {
         // getConstVector sets negative shuffle mask values as undef, so ensure
         // we hardcode SM_SentinelZero values to zero (0x80).
@@ -48899,9 +48883,10 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   }
 
   // Try to fold a VTRUNCUS or VTRUNCS into a truncating store.
-  if (!St->isTruncatingStore() && StoredVal.hasOneUse() &&
+  if (!St->isTruncatingStore() &&
       (StoredVal.getOpcode() == X86ISD::VTRUNCUS ||
        StoredVal.getOpcode() == X86ISD::VTRUNCS) &&
+      StoredVal.hasOneUse() &&
       TLI.isTruncStoreLegal(StoredVal.getOperand(0).getValueType(), VT)) {
     bool IsSigned = StoredVal.getOpcode() == X86ISD::VTRUNCS;
     return EmitTruncSStore(IsSigned, St->getChain(),
@@ -48910,15 +48895,15 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   }
 
   // Try to fold a extract_element(VTRUNC) pattern into a truncating store.
-  if (!St->isTruncatingStore() && StoredVal.hasOneUse()) {
+  if (!St->isTruncatingStore()) {
     auto IsExtractedElement = [](SDValue V) {
-      if (V.getOpcode() == ISD::TRUNCATE && V.getOperand(0).hasOneUse())
+      if (V.getOpcode() == ISD::TRUNCATE && V.hasOneUse())
         V = V.getOperand(0);
       unsigned Opc = V.getOpcode();
-      if (Opc == ISD::EXTRACT_VECTOR_ELT || Opc == X86ISD::PEXTRW) {
-        if (V.getOperand(0).hasOneUse() && isNullConstant(V.getOperand(1)))
-          return V.getOperand(0);
-      }
+      if ((Opc == ISD::EXTRACT_VECTOR_ELT || Opc == X86ISD::PEXTRW) &&
+          isNullConstant(V.getOperand(1)) && V.hasOneUse() &&
+          V.getOperand(0).hasOneUse())
+        return V.getOperand(0);
       return SDValue();
     };
     if (SDValue Extract = IsExtractedElement(StoredVal)) {
@@ -52459,15 +52444,13 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
   if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
     Y = Y.getOperand(0);
 
-  if (!Y.hasOneUse())
-    return SDValue();
-
   X86::CondCode CC;
   SDValue EFLAGS;
-  if (Y.getOpcode() == X86ISD::SETCC) {
+  if (Y.getOpcode() == X86ISD::SETCC && Y.hasOneUse()) {
     CC = (X86::CondCode)Y.getConstantOperandVal(0);
     EFLAGS = Y.getOperand(1);
-  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1))) {
+  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1)) &&
+             Y.hasOneUse()) {
     EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
   }
 

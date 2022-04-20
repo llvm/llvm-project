@@ -287,11 +287,48 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     // name to users (in diagnostics) and to tools that don't have access to
     // the VFS (in debug info and dependency '.d' files).
     //
-    // FIXME: This is pretty complicated. It's also inconsistent with how
-    // "real" filesystems behave and confuses parts of clang expect to see the
-    // name-as-accessed on the \a FileEntryRef. Maybe the returned \a
-    // FileEntryRef::getName() could return the accessed name unmodified, but
-    // make the external name available via a separate API.
+    // FIXME: This is pretty complex and has some very complicated interactions
+    // with the rest of clang. It's also inconsistent with how "real"
+    // filesystems behave and confuses parts of clang expect to see the
+    // name-as-accessed on the \a FileEntryRef.
+    //
+    // Further, it isn't *just* external names, but will also give back absolute
+    // paths when a relative path was requested - the check is comparing the
+    // name from the status, which is passed an absolute path resolved from the
+    // current working directory. `clang-apply-replacements` appears to depend
+    // on this behaviour, though it's adjusting the working directory, which is
+    // definitely not supported. Once that's fixed this hack should be able to
+    // be narrowed to only when there's an externally mapped name given back.
+    //
+    // A potential plan to remove this is as follows -
+    //   - Add API to determine if the name has been rewritten by the VFS.
+    //   - Fix `clang-apply-replacements` to pass down the absolute path rather
+    //     than changing the CWD. Narrow this hack down to just externally
+    //     mapped paths.
+    //   - Expose the requested filename. One possibility would be to allow
+    //     redirection-FileEntryRefs to be returned, rather than returning
+    //     the pointed-at-FileEntryRef, and customizing `getName()` to look
+    //     through the indirection.
+    //   - Update callers such as `HeaderSearch::findUsableModuleForHeader()`
+    //     to explicitly use the requested filename rather than just using
+    //     `getName()`.
+    //   - Add a `FileManager::getExternalPath` API for explicitly getting the
+    //     remapped external filename when there is one available. Adopt it in
+    //     callers like diagnostics/deps reporting instead of calling
+    //     `getName()` directly.
+    //   - Switch the meaning of `FileEntryRef::getName()` to get the requested
+    //     name, not the external name. Once that sticks, revert callers that
+    //     want the requested name back to calling `getName()`.
+    //   - Update the VFS to always return the requested name. This could also
+    //     return the external name, or just have an API to request it
+    //     lazily. The latter has the benefit of making accesses of the
+    //     external path easily tracked, but may also require extra work than
+    //     just returning up front.
+    //   - (Optionally) Add an API to VFS to get the external filename lazily
+    //     and update `FileManager::getExternalPath()` to use it instead. This
+    //     has the benefit of making such accesses easily tracked, though isn't
+    //     necessarily required (and could cause extra work than just adding to
+    //     eg. `vfs::Status` up front).
     auto &Redirection =
         *SeenFileEntries
              .insert({Status.getName(), FileEntryRef::MapValue(*UFE, DirInfo)})
@@ -312,12 +349,14 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   FileEntryRef ReturnedRef(*NamedFileEnt);
   if (ReusingEntry) { // Already have an entry with this inode, return it.
 
-    // FIXME: this hack ensures that if we look up a file by a virtual path in
-    // the VFS that the getDir() will have the virtual path, even if we found
-    // the file by a 'real' path first. This is required in order to find a
-    // module's structure when its headers/module map are mapped in the VFS.
-    // We should remove this as soon as we can properly support a file having
-    // multiple names.
+    // FIXME: This hack ensures that `getDir()` will use the path that was
+    // used to lookup this file, even if we found a file by different path
+    // first. This is required in order to find a module's structure when its
+    // headers/module map are mapped in the VFS.
+    //
+    // See above for how this will eventually be removed. `IsVFSMapped`
+    // *cannot* be narrowed to `ExposesExternalVFSPath` as crash reproducers
+    // also depend on this logic and they have `use-external-paths: false`.
     if (&DirInfo.getDirEntry() != UFE->Dir && Status.IsVFSMapped)
       UFE->Dir = &DirInfo.getDirEntry();
 

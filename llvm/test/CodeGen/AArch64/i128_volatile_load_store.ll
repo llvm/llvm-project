@@ -8,8 +8,8 @@ define void @test1() {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, x
-; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x8, x8, :lo12:x
+; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]
@@ -23,8 +23,8 @@ define void @test2() {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, x
-; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x8, x8, :lo12:x
+; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    ldp x8, x9, [x8, #504]
 ; CHECK-NEXT:    stp x8, x9, [x10, #504]
@@ -38,10 +38,10 @@ define void @test3() {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, x
-; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x8, x8, :lo12:x
-; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    add x8, x8, #512
+; CHECK-NEXT:    adrp x10, y
+; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    add x10, x10, #512
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]
@@ -55,8 +55,8 @@ define void @test4() {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, x
-; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x8, x8, :lo12:x
+; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    ldp x8, x9, [x8, #-512]
 ; CHECK-NEXT:    stp x8, x9, [x10, #-512]
@@ -70,10 +70,10 @@ define void @test5() {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, x
-; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x8, x8, :lo12:x
-; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    sub x8, x8, #520
+; CHECK-NEXT:    adrp x10, y
+; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    sub x10, x10, #520
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]
@@ -87,10 +87,10 @@ define void @test6() {
 ; CHECK-LABEL: test6:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, x
-; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x8, x8, :lo12:x
-; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    sub x8, x8, #520
+; CHECK-NEXT:    adrp x10, y
+; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    sub x10, x10, #520
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]
@@ -104,10 +104,10 @@ define void @test7() {
 ; CHECK-LABEL: test7:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, x
-; CHECK-NEXT:    adrp x10, y
 ; CHECK-NEXT:    add x8, x8, :lo12:x
-; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    add x8, x8, #503
+; CHECK-NEXT:    adrp x10, y
+; CHECK-NEXT:    add x10, x10, :lo12:y
 ; CHECK-NEXT:    add x10, x10, #503
 ; CHECK-NEXT:    ldp x8, x9, [x8]
 ; CHECK-NEXT:    stp x8, x9, [x10]

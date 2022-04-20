@@ -67,6 +67,8 @@ tools = [
     'clang-tblgen', 'clang-scan-deps', 'opt', 'llvm-ifs', 'yaml2obj',
     ToolSubst('%clang_extdef_map', command=FindTool(
         'clang-extdef-mapping'), unresolved='ignore'),
+    ToolSubst('%clang_dxc', command=config.clang,
+        extra_args=['--driver-mode=dxc']),
 ]
 
 if config.clang_examples:
@@ -131,6 +133,9 @@ if config.has_plugins and config.llvm_plugin_ext:
 if config.clang_default_pie_on_linux:
     config.available_features.add('default-pie-on-linux')
 
+if config.clang_enable_opaque_pointers:
+    config.available_features.add('enable-opaque-pointers')
+
 # Set available features we allow tests to conditionalize on.
 #
 if config.clang_default_cxx_stdlib != '':
@@ -184,10 +189,6 @@ if re.match(r'.*-(windows-msvc)$', config.target_triple):
 # [PR8833] LLP64-incompatible tests
 if not re.match(r'^x86_64.*-(windows-msvc|windows-gnu)$', config.target_triple):
     config.available_features.add('LP64')
-
-# [PR12920] "clang-driver" -- set if gcc driver is not used.
-if not re.match(r'.*-(cygwin)$', config.target_triple):
-    config.available_features.add('clang-driver')
 
 # Tests that are specific to the Apple Silicon macOS.
 if re.match(r'^arm64(e)?-apple-(macos|darwin)', config.target_triple):

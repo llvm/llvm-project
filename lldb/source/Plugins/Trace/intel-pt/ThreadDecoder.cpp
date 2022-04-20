@@ -30,15 +30,20 @@ DecodedThreadSP ThreadDecoder::Decode() {
 }
 
 DecodedThreadSP ThreadDecoder::DoDecode() {
-  DecodedThreadSP decoded_thread_sp =
-      std::make_shared<DecodedThread>(m_thread_sp);
+  return m_trace.GetTimer()
+      .ForThread(m_thread_sp->GetID())
+      .TimeTask<DecodedThreadSP>("Decoding instructions", [&]() {
+        DecodedThreadSP decoded_thread_sp =
+            std::make_shared<DecodedThread>(m_thread_sp);
 
-  Error err = m_trace.OnThreadBufferRead(
-      m_thread_sp->GetID(), [&](llvm::ArrayRef<uint8_t> data) {
-        DecodeTrace(*decoded_thread_sp, m_trace, data);
-        return Error::success();
+        Error err = m_trace.OnThreadBufferRead(
+            m_thread_sp->GetID(), [&](llvm::ArrayRef<uint8_t> data) {
+              DecodeTrace(*decoded_thread_sp, m_trace, data);
+              return Error::success();
+            });
+
+        if (err)
+          decoded_thread_sp->AppendError(std::move(err));
+        return decoded_thread_sp;
       });
-  if (err)
-    decoded_thread_sp->AppendError(std::move(err));
-  return decoded_thread_sp;
 }

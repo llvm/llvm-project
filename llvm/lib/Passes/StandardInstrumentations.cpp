@@ -465,7 +465,7 @@ bool isInteresting(Any IR, StringRef PassID) {
 
 } // namespace
 
-template <typename T> ChangeReporter<T>::~ChangeReporter<T>() {
+template <typename T> ChangeReporter<T>::~ChangeReporter() {
   assert(BeforeStack.empty() && "Problem with Change Printer stack.");
 }
 

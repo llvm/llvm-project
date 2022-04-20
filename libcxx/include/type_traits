@@ -416,7 +416,6 @@ namespace std
 }
 
 */
-
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -3567,6 +3566,15 @@ struct __invoke_of
         typename __invokable_r<void, _Fp, _Args...>::_Result>
 {
 };
+
+#else
+
+// Assume that it's a functor in C++03
+template <class _Func, class... _Args>
+_LIBCPP_HIDE_FROM_ABI
+decltype(std::declval<_Func>()(std::declval<_Args>()...)) __invoke(_Func&& __func, _Args&&... __args) {
+    return static_cast<_Func&&>(__func)(static_cast<_Args&&>(__args)...);
+}
 
 #endif // _LIBCPP_CXX03_LANG
 

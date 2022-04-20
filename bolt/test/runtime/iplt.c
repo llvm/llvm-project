@@ -1,6 +1,6 @@
 // This test checks that the ifuncs works after bolt.
 
-// RUN: %clang %cflags %s -fuse-ld=lld \
+// RUN: %clang %cflags -no-pie %s -fuse-ld=lld \
 // RUN:    -o %t.exe -Wl,-q
 // RUN: llvm-bolt %t.exe -o %t.bolt.exe -use-old-text=0 -lite=0
 // RUN: %t.bolt.exe  | FileCheck %s

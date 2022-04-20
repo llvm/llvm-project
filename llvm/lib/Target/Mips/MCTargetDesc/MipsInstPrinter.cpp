@@ -88,29 +88,30 @@ void MipsInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     break;
   case Mips::Save16:
     O << "\tsave\t";
-    printSaveRestore(MI, O);
+    printSaveRestore(MI, STI, O);
     O << " # 16 bit inst\n";
     return;
   case Mips::SaveX16:
     O << "\tsave\t";
-    printSaveRestore(MI, O);
+    printSaveRestore(MI, STI, O);
     O << "\n";
     return;
   case Mips::Restore16:
     O << "\trestore\t";
-    printSaveRestore(MI, O);
+    printSaveRestore(MI, STI, O);
     O << " # 16 bit inst\n";
     return;
   case Mips::RestoreX16:
     O << "\trestore\t";
-    printSaveRestore(MI, O);
+    printSaveRestore(MI, STI, O);
     O << "\n";
     return;
   }
 
   // Try to print any aliases first.
-  if (!printAliasInstr(MI, Address, O) && !printAlias(*MI, O))
-    printInstruction(MI, Address, O);
+  if (!printAliasInstr(MI, Address, STI, O) &&
+      !printAlias(*MI, Address, STI, O))
+    printInstruction(MI, Address, STI, O);
   printAnnotation(O, Annot);
 
   switch (MI->getOpcode()) {
@@ -123,7 +124,7 @@ void MipsInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                   raw_ostream &O) {
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     printRegName(O, Op.getReg());
@@ -139,8 +140,42 @@ void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   Op.getExpr()->print(O, &MAI, true);
 }
 
+void MipsInstPrinter::printJumpOperand(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (!Op.isImm())
+    return printOperand(MI, OpNo, STI, O);
+
+  if (PrintBranchImmAsAddress)
+    O << formatHex(Op.getImm());
+  else
+    O << formatImm(Op.getImm());
+}
+
+void MipsInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
+                                         unsigned OpNo,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (!Op.isImm())
+    return printOperand(MI, OpNo, STI, O);
+
+  if (PrintBranchImmAsAddress) {
+    uint64_t Target = Address + Op.getImm();
+    if (STI.hasFeature(Mips::FeatureMips32))
+      Target &= 0xffffffff;
+    else if (STI.hasFeature(Mips::FeatureMips16))
+      Target &= 0xffff;
+    O << formatHex(Target);
+  } else {
+    O << formatImm(Op.getImm());
+  }
+}
+
 template <unsigned Bits, unsigned Offset>
-void MipsInstPrinter::printUImm(const MCInst *MI, int opNum, raw_ostream &O) {
+void MipsInstPrinter::printUImm(const MCInst *MI, int opNum,
+                                const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(opNum);
   if (MO.isImm()) {
     uint64_t Imm = MO.getImm();
@@ -151,11 +186,12 @@ void MipsInstPrinter::printUImm(const MCInst *MI, int opNum, raw_ostream &O) {
     return;
   }
 
-  printOperand(MI, opNum, O);
+  printOperand(MI, opNum, STI, O);
 }
 
-void MipsInstPrinter::
-printMemOperand(const MCInst *MI, int opNum, raw_ostream &O) {
+void MipsInstPrinter::printMemOperand(const MCInst *MI, int opNum,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   // Load/Store memory operands -- imm($reg)
   // If PIC target the target is loaded as the
   // pattern lw $25,%call16($28)
@@ -175,24 +211,26 @@ printMemOperand(const MCInst *MI, int opNum, raw_ostream &O) {
     break;
   }
 
-  printOperand(MI, opNum+1, O);
+  printOperand(MI, opNum + 1, STI, O);
   O << "(";
-  printOperand(MI, opNum, O);
+  printOperand(MI, opNum, STI, O);
   O << ")";
 }
 
-void MipsInstPrinter::
-printMemOperandEA(const MCInst *MI, int opNum, raw_ostream &O) {
+void MipsInstPrinter::printMemOperandEA(const MCInst *MI, int opNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
   // when using stack locations for not load/store instructions
   // print the same way as all normal 3 operand instructions.
-  printOperand(MI, opNum, O);
+  printOperand(MI, opNum, STI, O);
   O << ", ";
-  printOperand(MI, opNum+1, O);
+  printOperand(MI, opNum + 1, STI, O);
 }
 
-void MipsInstPrinter::
-printFCCOperand(const MCInst *MI, int opNum, raw_ostream &O) {
-  const MCOperand& MO = MI->getOperand(opNum);
+void MipsInstPrinter::printFCCOperand(const MCInst *MI, int opNum,
+                                      const MCSubtargetInfo & /* STI */,
+                                      raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(opNum);
   O << MipsFCCToString((Mips::CondCode)MO.getImm());
 }
 
@@ -202,82 +240,116 @@ printSHFMask(const MCInst *MI, int opNum, raw_ostream &O) {
 }
 
 bool MipsInstPrinter::printAlias(const char *Str, const MCInst &MI,
-                                 unsigned OpNo, raw_ostream &OS) {
+                                 uint64_t Address, unsigned OpNo,
+                                 const MCSubtargetInfo &STI, raw_ostream &OS,
+                                 bool IsBranch) {
   OS << "\t" << Str << "\t";
-  printOperand(&MI, OpNo, OS);
+  if (IsBranch)
+    printBranchOperand(&MI, Address, OpNo, STI, OS);
+  else
+    printOperand(&MI, OpNo, STI, OS);
   return true;
 }
 
 bool MipsInstPrinter::printAlias(const char *Str, const MCInst &MI,
-                                 unsigned OpNo0, unsigned OpNo1,
-                                 raw_ostream &OS) {
-  printAlias(Str, MI, OpNo0, OS);
+                                 uint64_t Address, unsigned OpNo0,
+                                 unsigned OpNo1, const MCSubtargetInfo &STI,
+                                 raw_ostream &OS, bool IsBranch) {
+  printAlias(Str, MI, Address, OpNo0, STI, OS, IsBranch);
   OS << ", ";
-  printOperand(&MI, OpNo1, OS);
+  if (IsBranch)
+    printBranchOperand(&MI, Address, OpNo1, STI, OS);
+  else
+    printOperand(&MI, OpNo1, STI, OS);
   return true;
 }
 
-bool MipsInstPrinter::printAlias(const MCInst &MI, raw_ostream &OS) {
+bool MipsInstPrinter::printAlias(const MCInst &MI, uint64_t Address,
+                                 const MCSubtargetInfo &STI, raw_ostream &OS) {
   switch (MI.getOpcode()) {
   case Mips::BEQ:
   case Mips::BEQ_MM:
     // beq $zero, $zero, $L2 => b $L2
     // beq $r0, $zero, $L2 => beqz $r0, $L2
     return (isReg<Mips::ZERO>(MI, 0) && isReg<Mips::ZERO>(MI, 1) &&
-            printAlias("b", MI, 2, OS)) ||
-           (isReg<Mips::ZERO>(MI, 1) && printAlias("beqz", MI, 0, 2, OS));
+            printAlias("b", MI, Address, 2, STI, OS, true)) ||
+           (isReg<Mips::ZERO>(MI, 1) &&
+            printAlias("beqz", MI, Address, 0, 2, STI, OS, true));
   case Mips::BEQ64:
     // beq $r0, $zero, $L2 => beqz $r0, $L2
-    return isReg<Mips::ZERO_64>(MI, 1) && printAlias("beqz", MI, 0, 2, OS);
+    return isReg<Mips::ZERO_64>(MI, 1) &&
+           printAlias("beqz", MI, Address, 0, 2, STI, OS, true);
   case Mips::BNE:
   case Mips::BNE_MM:
     // bne $r0, $zero, $L2 => bnez $r0, $L2
-    return isReg<Mips::ZERO>(MI, 1) && printAlias("bnez", MI, 0, 2, OS);
+    return isReg<Mips::ZERO>(MI, 1) &&
+           printAlias("bnez", MI, Address, 0, 2, STI, OS, true);
   case Mips::BNE64:
     // bne $r0, $zero, $L2 => bnez $r0, $L2
-    return isReg<Mips::ZERO_64>(MI, 1) && printAlias("bnez", MI, 0, 2, OS);
+    return isReg<Mips::ZERO_64>(MI, 1) &&
+           printAlias("bnez", MI, Address, 0, 2, STI, OS, true);
   case Mips::BGEZAL:
     // bgezal $zero, $L1 => bal $L1
-    return isReg<Mips::ZERO>(MI, 0) && printAlias("bal", MI, 1, OS);
+    return isReg<Mips::ZERO>(MI, 0) &&
+           printAlias("bal", MI, Address, 1, STI, OS, true);
   case Mips::BC1T:
     // bc1t $fcc0, $L1 => bc1t $L1
-    return isReg<Mips::FCC0>(MI, 0) && printAlias("bc1t", MI, 1, OS);
+    return isReg<Mips::FCC0>(MI, 0) &&
+           printAlias("bc1t", MI, Address, 1, STI, OS, true);
   case Mips::BC1F:
     // bc1f $fcc0, $L1 => bc1f $L1
-    return isReg<Mips::FCC0>(MI, 0) && printAlias("bc1f", MI, 1, OS);
+    return isReg<Mips::FCC0>(MI, 0) &&
+           printAlias("bc1f", MI, Address, 1, STI, OS, true);
   case Mips::JALR:
+    // jalr $zero, $r1 => jr $r1
     // jalr $ra, $r1 => jalr $r1
-    return isReg<Mips::RA>(MI, 0) && printAlias("jalr", MI, 1, OS);
+    return (isReg<Mips::ZERO>(MI, 0) &&
+            printAlias("jr", MI, Address, 1, STI, OS)) ||
+           (isReg<Mips::RA>(MI, 0) &&
+            printAlias("jalr", MI, Address, 1, STI, OS));
   case Mips::JALR64:
+    // jalr $zero, $r1 => jr $r1
     // jalr $ra, $r1 => jalr $r1
-    return isReg<Mips::RA_64>(MI, 0) && printAlias("jalr", MI, 1, OS);
+    return (isReg<Mips::ZERO_64>(MI, 0) &&
+            printAlias("jr", MI, Address, 1, STI, OS)) ||
+           (isReg<Mips::RA_64>(MI, 0) &&
+            printAlias("jalr", MI, Address, 1, STI, OS));
   case Mips::NOR:
   case Mips::NOR_MM:
   case Mips::NOR_MMR6:
     // nor $r0, $r1, $zero => not $r0, $r1
-    return isReg<Mips::ZERO>(MI, 2) && printAlias("not", MI, 0, 1, OS);
+    return isReg<Mips::ZERO>(MI, 2) &&
+           printAlias("not", MI, Address, 0, 1, STI, OS);
   case Mips::NOR64:
     // nor $r0, $r1, $zero => not $r0, $r1
-    return isReg<Mips::ZERO_64>(MI, 2) && printAlias("not", MI, 0, 1, OS);
+    return isReg<Mips::ZERO_64>(MI, 2) &&
+           printAlias("not", MI, Address, 0, 1, STI, OS);
   case Mips::OR:
+  case Mips::ADDu:
     // or $r0, $r1, $zero => move $r0, $r1
-    return isReg<Mips::ZERO>(MI, 2) && printAlias("move", MI, 0, 1, OS);
-  default: return false;
+    // addu $r0, $r1, $zero => move $r0, $r1
+    return isReg<Mips::ZERO>(MI, 2) &&
+           printAlias("move", MI, Address, 0, 1, STI, OS);
+  default:
+    return false;
   }
 }
 
-void MipsInstPrinter::printSaveRestore(const MCInst *MI, raw_ostream &O) {
+void MipsInstPrinter::printSaveRestore(const MCInst *MI,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     if (i != 0) O << ", ";
     if (MI->getOperand(i).isReg())
       printRegName(O, MI->getOperand(i).getReg());
     else
-      printUImm<16>(MI, i, O);
+      printUImm<16>(MI, i, STI, O);
   }
 }
 
-void MipsInstPrinter::
-printRegisterList(const MCInst *MI, int opNum, raw_ostream &O) {
+void MipsInstPrinter::printRegisterList(const MCInst *MI, int opNum,
+                                        const MCSubtargetInfo & /* STI */,
+                                        raw_ostream &O) {
   // - 2 because register List is always first operand of instruction and it is
   // always followed by memory operand (base + offset).
   for (int i = opNum, e = MI->getNumOperands() - 2; i != e; ++i) {

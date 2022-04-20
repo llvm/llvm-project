@@ -1516,25 +1516,23 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
 
   if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
+    // Check if alignment requirements for ds_read/write instructions are
+    // disabled.
+    if (!Subtarget->hasUnalignedDSAccessEnabled() && Alignment < Align(4))
+      return false;
+
     Align RequiredAlignment(PowerOf2Ceil(Size/8)); // Natural alignment.
     if (Subtarget->hasLDSMisalignedBug() && Size > 32 &&
         Alignment < RequiredAlignment)
       return false;
-
-    // Check if alignment requirements for ds_read/write instructions are
-    // disabled.
-    if (Subtarget->hasUnalignedDSAccessEnabled()) {
-      if (IsFast)
-        *IsFast = Alignment != Align(2);
-      return true;
-    }
 
     // Either, the alignment requirements are "enabled", or there is an
     // unaligned LDS access related hardware bug though alignment requirements
     // are "disabled". In either case, we need to check for proper alignment
     // requirements.
     //
-    if (Size == 64) {
+    switch (Size) {
+    case 64:
       // SI has a hardware bug in the LDS / GDS bounds checking: if the base
       // address is negative, then the instruction is incorrectly treated as
       // out-of-bounds even if base + offsets is in bounds. Split vectorized
@@ -1546,31 +1544,66 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       // 8 byte accessing via ds_read/write_b64 require 8-byte alignment, but we
       // can do a 4 byte aligned, 8 byte access in a single operation using
       // ds_read2/write2_b32 with adjacent offsets.
-      bool AlignedBy4 = Alignment >= Align(4);
-      if (IsFast)
-        *IsFast = AlignedBy4;
+      RequiredAlignment = Align(4);
+      break;
+    case 96:
+      if (!Subtarget->hasDS96AndDS128())
+        return false;
 
-      return AlignedBy4;
-    }
-    if (Size == 96) {
       // 12 byte accessing via ds_read/write_b96 require 16-byte alignment on
       // gfx8 and older.
-      bool AlignedBy16 = Alignment >= Align(16);
-      if (IsFast)
-        *IsFast = AlignedBy16;
 
-      return AlignedBy16;
-    }
-    if (Size == 128) {
+      if (Subtarget->hasUnalignedDSAccessEnabled()) {
+        // Naturally aligned access is fastest. However, also report it is Fast
+        // if memory is aligned less than DWORD. A narrow load or store will be
+        // be equally slow as a single ds_read_b96/ds_write_b96, but there will
+        // be more of them, so overall we will pay less penalty issuing a single
+        // instruction.
+        if (IsFast)
+          *IsFast = Alignment >= RequiredAlignment || Alignment < Align(4);
+        return true;
+      }
+
+      break;
+    case 128:
+      if (!Subtarget->hasDS96AndDS128() || !Subtarget->useDS128())
+        return false;
+
       // 16 byte accessing via ds_read/write_b128 require 16-byte alignment on
       // gfx8 and older, but  we can do a 8 byte aligned, 16 byte access in a
       // single operation using ds_read2/write2_b64.
-      bool AlignedBy8 = Alignment >= Align(8);
-      if (IsFast)
-        *IsFast = AlignedBy8;
+      RequiredAlignment = Align(8);
 
-      return AlignedBy8;
+      if (Subtarget->hasUnalignedDSAccessEnabled()) {
+        // Naturally aligned access is fastest. However, also report it is Fast
+        // if memory is aligned less than DWORD. A narrow load or store will be
+        // be equally slow as a single ds_read_b128/ds_write_b128, but there
+        // will be more of them, so overall we will pay less penalty issuing a
+        // single instruction.
+        if (IsFast)
+          *IsFast = Alignment >= RequiredAlignment || Alignment < Align(4);
+        return true;
+      }
+
+      break;
+    default:
+      if (Size > 32)
+        return false;
+
+      break;
     }
+
+    if (IsFast) {
+      // FIXME: Lie it is fast if +unaligned-access-mode is passed so that
+      // DS accesses get vectorized. Do this only for sizes below 96 as
+      // b96 and b128 cases already properly handled.
+      // Remove Subtarget check once all sizes properly handled.
+      *IsFast = Alignment >= RequiredAlignment ||
+                (Subtarget->hasUnalignedDSAccessEnabled() && Size < 96);
+    }
+
+    return Alignment >= RequiredAlignment ||
+           Subtarget->hasUnalignedDSAccessEnabled();
   }
 
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
@@ -1595,9 +1628,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     return AlignedBy4;
   }
 
-  if (Subtarget->hasUnalignedBufferAccessEnabled() &&
-      !(AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-        AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
+  if (Subtarget->hasUnalignedBufferAccessEnabled()) {
     // If we have a uniform constant load, it still requires using a slow
     // buffer instruction if unaligned.
     if (IsFast) {
@@ -1639,8 +1670,22 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
     return false;
   }
 
-  return allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
-                                            Alignment, Flags, IsFast);
+  bool Allow = allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
+                                                  Alignment, Flags, IsFast);
+
+  if (Allow && IsFast && Subtarget->hasUnalignedDSAccessEnabled() &&
+      (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
+       AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
+    // Lie it is fast if +unaligned-access-mode is passed so that DS accesses
+    // get vectorized. We could use ds_read2_b*/ds_write2_b* instructions on a
+    // misaligned data which is faster than a pair of ds_read_b*/ds_write_b*
+    // which would be equally misaligned.
+    // This is only used by the common passes, selection always calls the
+    // allowsMisalignedMemoryAccessesImpl version.
+    *IsFast = true;
+  }
+
+  return Allow;
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
@@ -8519,27 +8564,15 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    // Use ds_read_b128 or ds_read_b96 when possible.
-    if (Subtarget->hasDS96AndDS128() &&
-        ((Subtarget->useDS128() && MemVT.getStoreSize() == 16) ||
-         MemVT.getStoreSize() == 12) &&
-        allowsMisalignedMemoryAccessesImpl(MemVT.getSizeInBits(), AS,
-                                           Load->getAlign()))
+    bool Fast = false;
+    auto Flags = Load->getMemOperand()->getFlags();
+    if (allowsMisalignedMemoryAccessesImpl(MemVT.getSizeInBits(), AS,
+                                           Load->getAlign(), Flags, &Fast) &&
+        Fast)
       return SDValue();
 
-    if (NumElements > 2)
+    if (MemVT.isVector())
       return SplitVectorLoad(Op, DAG);
-
-    // SI has a hardware bug in the LDS / GDS bounds checking: if the base
-    // address is negative, then the instruction is incorrectly treated as
-    // out-of-bounds even if base + offsets is in bounds. Split vectorized
-    // loads here to avoid emitting ds_read2_b32. We may re-combine the
-    // load later in the SILoadStoreOptimizer.
-    if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS &&
-        NumElements == 2 && MemVT.getStoreSize() == 8 &&
-        Load->getAlignment() < 8) {
-      return SplitVectorLoad(Op, DAG);
-    }
   }
 
   if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
@@ -9030,39 +9063,21 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    // Use ds_write_b128 or ds_write_b96 when possible.
-    if (Subtarget->hasDS96AndDS128() &&
-        ((Subtarget->useDS128() && VT.getStoreSize() == 16) ||
-         (VT.getStoreSize() == 12)) &&
-        allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AS,
-                                           Store->getAlign()))
+    bool Fast = false;
+    auto Flags = Store->getMemOperand()->getFlags();
+    if (allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AS,
+                                           Store->getAlign(), Flags, &Fast) &&
+        Fast)
       return SDValue();
 
-    if (NumElements > 2)
+    if (VT.isVector())
       return SplitVectorStore(Op, DAG);
 
-    // SI has a hardware bug in the LDS / GDS bounds checking: if the base
-    // address is negative, then the instruction is incorrectly treated as
-    // out-of-bounds even if base + offsets is in bounds. Split vectorized
-    // stores here to avoid emitting ds_write2_b32. We may re-combine the
-    // store later in the SILoadStoreOptimizer.
-    if (!Subtarget->hasUsableDSOffset() &&
-        NumElements == 2 && VT.getStoreSize() == 8 &&
-        Store->getAlignment() < 8) {
-      return SplitVectorStore(Op, DAG);
-    }
-
-    if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
-                                        VT, *Store->getMemOperand())) {
-      if (VT.isVector())
-        return SplitVectorStore(Op, DAG);
-      return expandUnalignedStore(Store, DAG);
-    }
-
-    return SDValue();
-  } else {
-    llvm_unreachable("unhandled address space");
+    return expandUnalignedStore(Store, DAG);
   }
+
+  // Probably an invalid store. If so we'll end up emitting a selection error.
+  return SDValue();
 }
 
 SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
@@ -12296,13 +12311,17 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   MachineBasicBlock *Exit = ML->getExitBlock();
 
   if (Pre && Exit) {
-    BuildMI(*Pre, Pre->getFirstTerminator(), DebugLoc(),
-            TII->get(AMDGPU::S_INST_PREFETCH))
-      .addImm(1); // prefetch 2 lines behind PC
+    auto PreTerm = Pre->getFirstTerminator();
+    if (PreTerm == Pre->begin() ||
+        std::prev(PreTerm)->getOpcode() != AMDGPU::S_INST_PREFETCH)
+      BuildMI(*Pre, PreTerm, DebugLoc(), TII->get(AMDGPU::S_INST_PREFETCH))
+          .addImm(1); // prefetch 2 lines behind PC
 
-    BuildMI(*Exit, Exit->getFirstNonDebugInstr(), DebugLoc(),
-            TII->get(AMDGPU::S_INST_PREFETCH))
-      .addImm(2); // prefetch 1 line behind PC
+    auto ExitHead = Exit->getFirstNonDebugInstr();
+    if (ExitHead == Exit->end() ||
+        ExitHead->getOpcode() != AMDGPU::S_INST_PREFETCH)
+      BuildMI(*Exit, ExitHead, DebugLoc(), TII->get(AMDGPU::S_INST_PREFETCH))
+          .addImm(2); // prefetch 1 line behind PC
   }
 
   return CacheLineAlign;

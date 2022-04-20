@@ -578,8 +578,8 @@ define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI55_0
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI55_0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %1 = insertelement <vscale x 2 x double> undef, double 3.33, i32 0

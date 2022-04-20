@@ -3,7 +3,6 @@
 ; RUN: llvm-profdata merge -instr -suppl-min-size-threshold=0 \
 ; RUN:   -supplement-instr-with-sample=%p/Inputs/sample-profile.proftext \
 ; RUN:   %S/Inputs/suppl-profile.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

@@ -17,12 +17,12 @@ __device__ __constant__ int FileVarDeviceConstant;
 
 // CHECK: @_ZZ7kernel1iE13FuncVarShared = internal addrspace(3) global i32 undef, align 4, !dbg.def ![[FUNC_VAR_SHARED_FRAGMENT:[0-9]+]]
 
-// CHECK: call void @llvm.dbg.def(metadata ![[ARG_LIFETIME:[0-9]+]], metadata i32 addrspace(5)* %Arg.addr)
+// CHECK: call void @llvm.dbg.def(metadata ![[ARG_LIFETIME:[0-9]+]], metadata ptr addrspace(5) %Arg.addr)
 __device__ void kernel1(int Arg) {
 
   __shared__ int FuncVarShared;
 
-  // CHECK: call void @llvm.dbg.def(metadata ![[FUNC_VAR_LIFETIME:[0-9]+]], metadata i32 addrspace(5)* %FuncVar)
+  // CHECK: call void @llvm.dbg.def(metadata ![[FUNC_VAR_LIFETIME:[0-9]+]], metadata ptr addrspace(5) %FuncVar)
   int FuncVar;
 }
 
@@ -34,20 +34,20 @@ __device__ void kernel1(int Arg) {
 // CHECK-DAG: ![[FILE_VAR_DEVICE_CONSTANT_FRAGMENT]] = distinct !DIFragment()
 // CHECK-DAG: ![[FUNC_VAR_SHARED_FRAGMENT]] = distinct !DIFragment()
 
-// CHECK-DAG: ![[FILE_VAR_DEVICE_LIFETIME]] = distinct !DILifetime(object: ![[FILE_VAR_DEVICE:[0-9]+]], location: !DIExpr(DIOpArg(0, i32 addrspace(1)*), DIOpDeref(i32)), argObjects: {![[FILE_VAR_DEVICE_FRAGMENT]]})
+// CHECK-DAG: ![[FILE_VAR_DEVICE_LIFETIME]] = distinct !DILifetime(object: ![[FILE_VAR_DEVICE:[0-9]+]], location: !DIExpr(DIOpArg(0, ptr addrspace(1)), DIOpDeref(i32)), argObjects: {![[FILE_VAR_DEVICE_FRAGMENT]]})
 // CHECK-DAG: ![[FILE_VAR_DEVICE]] = distinct !DIGlobalVariable(name: "FileVarDevice",
 
-// CHECK-DAG: ![[FILE_VAR_DEVICE_SHARED_LIFETIME]] = distinct !DILifetime(object: ![[FILE_VAR_DEVICE_SHARED:[0-9]+]], location: !DIExpr(DIOpArg(0, i32 addrspace(3)*), DIOpDeref(i32)), argObjects: {![[FILE_VAR_DEVICE_SHARED_FRAGMENT]]})
+// CHECK-DAG: ![[FILE_VAR_DEVICE_SHARED_LIFETIME]] = distinct !DILifetime(object: ![[FILE_VAR_DEVICE_SHARED:[0-9]+]], location: !DIExpr(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)), argObjects: {![[FILE_VAR_DEVICE_SHARED_FRAGMENT]]})
 // CHECK-DAG: ![[FILE_VAR_DEVICE_SHARED]] = distinct !DIGlobalVariable(name: "FileVarDeviceShared",
 
-// CHECK-DAG: ![[FILE_VAR_DEVICE_CONSTANT_LIFETIME]] = distinct !DILifetime(object: ![[FILE_VAR_DEVICE_CONSTANT:[0-9]+]], location: !DIExpr(DIOpArg(0, i32 addrspace(4)*), DIOpDeref(i32)), argObjects: {![[FILE_VAR_DEVICE_CONSTANT_FRAGMENT]]})
+// CHECK-DAG: ![[FILE_VAR_DEVICE_CONSTANT_LIFETIME]] = distinct !DILifetime(object: ![[FILE_VAR_DEVICE_CONSTANT:[0-9]+]], location: !DIExpr(DIOpArg(0, ptr addrspace(4)), DIOpDeref(i32)), argObjects: {![[FILE_VAR_DEVICE_CONSTANT_FRAGMENT]]})
 // CHECK-DAG: ![[FILE_VAR_DEVICE_CONSTANT]] = distinct !DIGlobalVariable(name: "FileVarDeviceConstant",
 
-// CHECK-DAG: ![[FUNC_VAR_SHARED_LIFETIME]] = distinct !DILifetime(object: ![[FUNC_VAR_SHARED:[0-9]+]], location: !DIExpr(DIOpArg(0, i32 addrspace(3)*), DIOpDeref(i32)), argObjects: {![[FUNC_VAR_SHARED_FRAGMENT]]})
+// CHECK-DAG: ![[FUNC_VAR_SHARED_LIFETIME]] = distinct !DILifetime(object: ![[FUNC_VAR_SHARED:[0-9]+]], location: !DIExpr(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)), argObjects: {![[FUNC_VAR_SHARED_FRAGMENT]]})
 // CHECK-DAG: ![[FUNC_VAR_SHARED]] = distinct !DIGlobalVariable(name: "FuncVarShared",
 
-// CHECK-DAG: ![[ARG_LIFETIME]] = distinct !DILifetime(object: ![[ARG:[0-9]+]], location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref(i32)))
+// CHECK-DAG: ![[ARG_LIFETIME]] = distinct !DILifetime(object: ![[ARG:[0-9]+]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(i32)))
 // CHECK-DAG: ![[ARG]] = !DILocalVariable(name: "Arg", arg: 1,
 
-// CHECK-DAG: ![[FUNC_VAR_LIFETIME]] = distinct !DILifetime(object: ![[FUNC_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref(i32)))
+// CHECK-DAG: ![[FUNC_VAR_LIFETIME]] = distinct !DILifetime(object: ![[FUNC_VAR:[0-9]+]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(i32)))
 // CHECK-DAG: ![[FUNC_VAR]] = !DILocalVariable(name: "FuncVar",

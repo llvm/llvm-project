@@ -364,6 +364,8 @@ def note_constexpr_memory_leak : Note<
   "%plural{0:|: (along with %0 other memory leak%s0)}0">;
 def note_constexpr_unsupported_layout : Note<
   "type %0 has unexpected layout">;
+def note_constexpr_unsupported_flexible_array : Note<
+  "flexible array initialization is not yet supported">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 

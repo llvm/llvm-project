@@ -13,6 +13,7 @@
 // canonically for use in semantic checking.
 
 #include "flang/Common/Fortran.h"
+#include "flang/Common/visit.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
@@ -175,8 +176,7 @@ bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
 // Is the symbol modifiable in this scope
-std::optional<parser::MessageFixedText> WhyNotModifiable(
-    const Symbol &, const Scope &);
+std::optional<parser::Message> WhyNotModifiable(const Symbol &, const Scope &);
 std::optional<parser::Message> WhyNotModifiable(SourceName, const SomeExpr &,
     const Scope &, bool vectorSubscriptIsOk = false);
 const Symbol *IsExternalInPureContext(const Symbol &, const Scope &);
@@ -240,7 +240,7 @@ const Symbol *FindExternallyVisibleObject(
 template <typename T>
 const Symbol *FindExternallyVisibleObject(
     const evaluate::Expr<T> &expr, const Scope &scope) {
-  return std::visit(
+  return common::visit(
       [&](const auto &x) { return FindExternallyVisibleObject(x, scope); },
       expr.u);
 }
@@ -256,22 +256,25 @@ bool ExprHasTypeCategory(
 bool ExprTypeKindIsDefault(
     const SomeExpr &expr, const SemanticsContext &context);
 
-struct GetExprHelper {
-  // Specializations for parse tree nodes that have a typedExpr member.
-  static const SomeExpr *Get(const parser::Expr &);
-  static const SomeExpr *Get(const parser::Variable &);
-  static const SomeExpr *Get(const parser::DataStmtConstant &);
-  static const SomeExpr *Get(const parser::AllocateObject &);
-  static const SomeExpr *Get(const parser::PointerObject &);
+class GetExprHelper {
+public:
+  explicit GetExprHelper(SemanticsContext *context) : context_{context} {}
+  GetExprHelper() : crashIfNoExpr_{true} {}
 
-  template <typename T>
-  static const SomeExpr *Get(const common::Indirection<T> &x) {
+  // Specializations for parse tree nodes that have a typedExpr member.
+  const SomeExpr *Get(const parser::Expr &);
+  const SomeExpr *Get(const parser::Variable &);
+  const SomeExpr *Get(const parser::DataStmtConstant &);
+  const SomeExpr *Get(const parser::AllocateObject &);
+  const SomeExpr *Get(const parser::PointerObject &);
+
+  template <typename T> const SomeExpr *Get(const common::Indirection<T> &x) {
     return Get(x.value());
   }
-  template <typename T> static const SomeExpr *Get(const std::optional<T> &x) {
+  template <typename T> const SomeExpr *Get(const std::optional<T> &x) {
     return x ? Get(*x) : nullptr;
   }
-  template <typename T> static const SomeExpr *Get(const T &x) {
+  template <typename T> const SomeExpr *Get(const T &x) {
     static_assert(
         !parser::HasTypedExpr<T>::value, "explicit Get overload must be added");
     if constexpr (ConstraintTrait<T>) {
@@ -282,8 +285,25 @@ struct GetExprHelper {
       return nullptr;
     }
   }
+
+private:
+  SemanticsContext *context_{nullptr};
+  const bool crashIfNoExpr_{false};
 };
 
+// If a SemanticsContext is passed, even if null, it is possible for a null
+// pointer to be returned in the event of an expression that had fatal errors.
+// Use these first two forms in semantics checks for best error recovery.
+// If a SemanticsContext is not passed, a missing expression will
+// cause a crash.
+template <typename T>
+const SomeExpr *GetExpr(SemanticsContext *context, const T &x) {
+  return GetExprHelper{context}.Get(x);
+}
+template <typename T>
+const SomeExpr *GetExpr(SemanticsContext &context, const T &x) {
+  return GetExprHelper{&context}.Get(x);
+}
 template <typename T> const SomeExpr *GetExpr(const T &x) {
   return GetExprHelper{}.Get(x);
 }
@@ -293,7 +313,7 @@ const evaluate::Assignment *GetAssignment(
     const parser::PointerAssignmentStmt &);
 
 template <typename T> std::optional<std::int64_t> GetIntValue(const T &x) {
-  if (const auto *expr{GetExpr(x)}) {
+  if (const auto *expr{GetExpr(nullptr, x)}) {
     return evaluate::ToInt64(*expr);
   } else {
     return std::nullopt;

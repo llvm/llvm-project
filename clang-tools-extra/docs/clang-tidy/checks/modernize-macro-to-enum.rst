@@ -14,10 +14,12 @@ within the constraints outlined below.
 
 Potential macros for replacement must meet the following constraints:
 
-- Macros must expand only to integral literal tokens.  The unary operators
-  plus, minus and tilde are recognized to allow for positive, negative
-  and bitwise negated integers.  More complicated integral constant
-  expressions are not currently recognized by this check.
+- Macros must expand only to integral literal tokens or simple expressions
+  of literal tokens.  The unary operators plus, minus and tilde are
+  recognized to allow for positive, negative and bitwise negated integers.
+  The above expressions may also be surrounded by matching pairs of
+  parentheses.  More complicated integral constant expressions are not
+  recognized by this check.
 - Macros must be defined on sequential source file lines, or with
   only comment lines in between macro definitions.
 - Macros must all be defined in the same source file.
@@ -43,6 +45,7 @@ Examples:
   #define GREEN 0x00FF00
   #define BLUE  0x0000FF
 
+  #define TM_NONE (-1) // No method selected.
   #define TM_ONE 1    // Use tailored method one.
   #define TM_TWO 2    // Use tailored method two.  Method two
                       // is preferable to method one.
@@ -59,6 +62,7 @@ becomes
   };
 
   enum {
+  TM_NONE = (-1), // No method selected.
   TM_ONE = 1,    // Use tailored method one.
   TM_TWO = 2,    // Use tailored method two.  Method two
                       // is preferable to method one.

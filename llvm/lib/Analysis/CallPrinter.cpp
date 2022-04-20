@@ -218,6 +218,71 @@ struct DOTGraphTraits<CallGraphDOTInfo *> : public DefaultDOTGraphTraits {
 } // end llvm namespace
 
 namespace {
+void doCallGraphDOTPrinting(
+    Module &M, function_ref<BlockFrequencyInfo *(Function &)> LookupBFI) {
+  std::string Filename;
+  if (!CallGraphDotFilenamePrefix.empty())
+    Filename = (CallGraphDotFilenamePrefix + ".callgraph.dot");
+  else
+    Filename = (std::string(M.getModuleIdentifier()) + ".callgraph.dot");
+  errs() << "Writing '" << Filename << "'...";
+
+  std::error_code EC;
+  raw_fd_ostream File(Filename, EC, sys::fs::OF_Text);
+
+  CallGraph CG(M);
+  CallGraphDOTInfo CFGInfo(&M, &CG, LookupBFI);
+
+  if (!EC)
+    WriteGraph(File, &CFGInfo);
+  else
+    errs() << "  error opening file for writing!";
+  errs() << "\n";
+}
+
+void viewCallGraph(Module &M,
+                   function_ref<BlockFrequencyInfo *(Function &)> LookupBFI) {
+  CallGraph CG(M);
+  CallGraphDOTInfo CFGInfo(&M, &CG, LookupBFI);
+
+  std::string Title =
+      DOTGraphTraits<CallGraphDOTInfo *>::getGraphName(&CFGInfo);
+  ViewGraph(&CFGInfo, "callgraph", true, Title);
+}
+} // namespace
+
+namespace llvm {
+PreservedAnalyses CallGraphDOTPrinterPass::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  auto LookupBFI = [&FAM](Function &F) {
+    return &FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
+
+  doCallGraphDOTPrinting(M, LookupBFI);
+
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses CallGraphViewerPass::run(Module &M,
+                                           ModuleAnalysisManager &AM) {
+
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  auto LookupBFI = [&FAM](Function &F) {
+    return &FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
+
+  viewCallGraph(M, LookupBFI);
+
+  return PreservedAnalyses::all();
+}
+} // namespace llvm
+
+namespace {
 // Viewer
 class CallGraphViewer : public ModulePass {
 public:
@@ -239,12 +304,7 @@ bool CallGraphViewer::runOnModule(Module &M) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
 
-  CallGraph CG(M);
-  CallGraphDOTInfo CFGInfo(&M, &CG, LookupBFI);
-
-  std::string Title =
-      DOTGraphTraits<CallGraphDOTInfo *>::getGraphName(&CFGInfo);
-  ViewGraph(&CFGInfo, "callgraph", true, Title);
+  viewCallGraph(M, LookupBFI);
 
   return false;
 }
@@ -271,24 +331,7 @@ bool CallGraphDOTPrinter::runOnModule(Module &M) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
 
-  std::string Filename;
-  if (!CallGraphDotFilenamePrefix.empty())
-    Filename = (CallGraphDotFilenamePrefix + ".callgraph.dot");
-  else
-    Filename = (std::string(M.getModuleIdentifier()) + ".callgraph.dot");
-  errs() << "Writing '" << Filename << "'...";
-
-  std::error_code EC;
-  raw_fd_ostream File(Filename, EC, sys::fs::OF_Text);
-
-  CallGraph CG(M);
-  CallGraphDOTInfo CFGInfo(&M, &CG, LookupBFI);
-
-  if (!EC)
-    WriteGraph(File, &CFGInfo);
-  else
-    errs() << "  error opening file for writing!";
-  errs() << "\n";
+  doCallGraphDOTPrinting(M, LookupBFI);
 
   return false;
 }

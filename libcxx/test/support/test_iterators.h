@@ -506,6 +506,7 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+static_assert(std::input_iterator<cpp20_input_iterator<int*>>);
 
 template<std::input_or_output_iterator>
 struct iter_value_or_void { using type = void; };

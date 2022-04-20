@@ -962,6 +962,12 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     // These are not truly commutable so hide them from the default case.
     break;
 
+  case X86::MASKMOVDQU:
+  case X86::VMASKMOVDQU:
+    if (AsmPrinter.getSubtarget().is64Bit())
+      OutMI.setFlags(X86::IP_HAS_AD_SIZE);
+    break;
+
   default: {
     // If the instruction is a commutable arithmetic instruction we might be
     // able to commute the operands to get a 2 byte VEX prefix.

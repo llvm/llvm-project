@@ -1,10 +1,7 @@
-; RUN: opt < %s -pgo-instr-gen -pgo-instrument-entry -S | FileCheck %s --check-prefix=GEN
 ; RUN: opt < %s -passes=pgo-instr-gen -pgo-instrument-entry -S | FileCheck %s --check-prefix=GEN
-; RUN: opt < %s -pgo-instr-gen -pgo-instrument-entry -instrprof -atomic-first-counter -S | FileCheck %s --check-prefix=GENA
 ; RUN: opt < %s -passes=pgo-instr-gen,instrprof -pgo-instrument-entry -atomic-first-counter -S | FileCheck %s --check-prefix=GENA
 
 ; RUN: llvm-profdata merge %S/Inputs/branch2.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -pgo-instrument-entry -S | FileCheck %s --check-prefix=USE
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -pgo-instrument-entry -S | FileCheck %s --check-prefix=USE
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

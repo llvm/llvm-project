@@ -7,12 +7,12 @@
 
 // CHECK-LABEL: @_Z7kernel1i
 // CHECK-SAME: !dbg ![[#FUNC_SUBPROGRAM:]]
-// CHECK: call void @llvm.dbg.def(metadata ![[#ARG_LIFETIME:]], metadata i32 addrspace(5)* %Arg.addr)
+// CHECK: call void @llvm.dbg.def(metadata ![[#ARG_LIFETIME:]], metadata ptr addrspace(5) %Arg.addr)
 __device__ void kernel1(int Arg) {
 
   __shared__ int FuncVarShared;
 
-  // CHECK: call void @llvm.dbg.def(metadata ![[#FUNC_VAR_LIFETIME:]], metadata i32 addrspace(5)* %FuncVar)
+  // CHECK: call void @llvm.dbg.def(metadata ![[#FUNC_VAR_LIFETIME:]], metadata ptr addrspace(5) %FuncVar)
   int FuncVar;
 }
 
@@ -22,12 +22,12 @@ __device__ void kernel1(int Arg) {
 // CHECK-DAG: ![[#FUNC_SUBPROGRAM]] = distinct !DISubprogram(name: "kernel1"{{.*}}retainedNodes: ![[#FUNC_RETAINED_NODES:]]{{.*}})
 // CHECK-DAG: ![[#FUNC_RETAINED_NODES]] = !{![[#ARG:]], ![[#FUNC_VAR:]]}
 
-// CHECK-DAG: ![[#FUNC_VAR_SHARED_LIFETIME]] = distinct !DILifetime(object: ![[#FUNC_VAR_SHARED:]], location: !DIExpr(DIOpArg(0, i32 addrspace(3)*), DIOpDeref(i32)), argObjects: {![[#FUNC_VAR_SHARED_FRAGMENT:]]})
+// CHECK-DAG: ![[#FUNC_VAR_SHARED_LIFETIME]] = distinct !DILifetime(object: ![[#FUNC_VAR_SHARED:]], location: !DIExpr(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)), argObjects: {![[#FUNC_VAR_SHARED_FRAGMENT:]]})
 // CHECK-DAG: ![[#FUNC_VAR_SHARED]] = distinct !DIGlobalVariable(name: "FuncVarShared",
 // CHECK-DAG: ![[#FUNC_VAR_SHARED_FRAGMENT]] = distinct !DIFragment()
 
-// CHECK-DAG: ![[#ARG_LIFETIME]] = distinct !DILifetime(object: ![[#ARG]], location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref(i32)))
+// CHECK-DAG: ![[#ARG_LIFETIME]] = distinct !DILifetime(object: ![[#ARG]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(i32)))
 // CHECK-DAG: ![[#ARG]] = !DILocalVariable(name: "Arg", arg: 1,
 
-// CHECK-DAG: ![[#FUNC_VAR_LIFETIME]] = distinct !DILifetime(object: ![[#FUNC_VAR]], location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref(i32)))
+// CHECK-DAG: ![[#FUNC_VAR_LIFETIME]] = distinct !DILifetime(object: ![[#FUNC_VAR]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(i32)))
 // CHECK-DAG: ![[#FUNC_VAR]] = !DILocalVariable(name: "FuncVar",

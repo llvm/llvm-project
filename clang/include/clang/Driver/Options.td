@@ -49,6 +49,10 @@ def CC1Option : OptionFlag;
 // CC1AsOption - This option should be accepted by clang -cc1as.
 def CC1AsOption : OptionFlag;
 
+// DXCOption - This is a dxc.exe compatibility option. Options with this flag
+// are made available when the driver is running in DXC compatibility mode.
+def DXCOption : OptionFlag;
+
 // NoDriverOption - This option should not be accepted by the driver.
 def NoDriverOption : OptionFlag;
 
@@ -1946,15 +1950,10 @@ def fglobal_isel : Flag<["-"], "fglobal-isel">, Group<f_clang_Group>,
   HelpText<"Enables the global instruction selector">;
 def fexperimental_isel : Flag<["-"], "fexperimental-isel">, Group<f_clang_Group>,
   Alias<fglobal_isel>;
-defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
-  CodeGenOpts<"LegacyPassManager">, DefaultFalse,
-  PosFlag<SetTrue, [], "Use the legacy pass manager in LLVM (deprecated, to be removed in a future release)">,
-  NegFlag<SetFalse, [], "Use the new pass manager in LLVM">,
-  BothFlags<[CC1Option]>>, Group<f_clang_Group>;
+def fno_legacy_pass_manager : Flag<["-"], "fno-legacy-pass-manager">,
+  Group<f_clang_Group>, Flags<[CC1Option, NoArgumentUnused]>;
 def fexperimental_new_pass_manager : Flag<["-"], "fexperimental-new-pass-manager">,
   Group<f_clang_Group>, Flags<[CC1Option]>, Alias<fno_legacy_pass_manager>;
-def fno_experimental_new_pass_manager : Flag<["-"], "fno-experimental-new-pass-manager">,
-  Group<f_clang_Group>, Flags<[CC1Option,NoDriverOption]>, Alias<flegacy_pass_manager>;
 def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floating-point">,
   Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Enables experimental strict floating point in LLVM.">,
@@ -2539,7 +2538,9 @@ def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
 def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Use the new driver for OpenMP offloading.">;
-def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>;
+def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Disable tail call optimization, keeping the call stack accurate">,
+  MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
 def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">, Group<f_Group>;
 defm escaping_block_tail_calls : BoolFOption<"escaping-block-tail-calls",
   CodeGenOpts<"NoEscapingBlockTailCalls">, DefaultFalse,
@@ -3290,6 +3291,8 @@ def mlinker_version_EQ : Joined<["-"], "mlinker-version=">,
 def mllvm : Separate<["-"], "mllvm">,Flags<[CC1Option,CC1AsOption,CoreOption,FC1Option,FlangOption]>,
   HelpText<"Additional arguments to forward to LLVM's option processing">,
   MarshallingInfoStringVector<FrontendOpts<"LLVMArgs">>;
+def mmlir : Separate<["-"], "mmlir">, Flags<[CoreOption,FC1Option,FlangOption]>,
+  HelpText<"Additional arguments to forward to MLIR's option processing">;
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   Group<m_Group>, Flags<[CC1Option]>, HelpText<"Set Fuchsia API level">,
   MarshallingInfoInt<LangOpts<"FuchsiaAPILevel">>;
@@ -5368,9 +5371,6 @@ def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
   HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,none">,
   NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
-def mdisable_tail_calls : Flag<["-"], "mdisable-tail-calls">,
-  HelpText<"Disable tail call optimization, keeping the call stack accurate">,
-  MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
 def menable_no_infinities : Flag<["-"], "menable-no-infs">,
   HelpText<"Allow optimization to assume there are no infinities.">,
   MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;
@@ -5706,7 +5706,7 @@ defm enable_noundef_analysis : BoolOption<"",
 defm opaque_pointers : BoolOption<"",
   "opaque-pointers",
   CodeGenOpts<"OpaquePointers">,
-  Default<"CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL">,
+  DefaultTrue,
   PosFlag<SetTrue, [], "Enable">,
   NegFlag<SetFalse, [], "Disable">,
   BothFlags<[], " opaque pointers">>;
@@ -5851,8 +5851,6 @@ def emit_header_unit : Flag<["-"], "emit-header-unit">,
   HelpText<"Generate C++20 header units from header files">;
 def emit_pch : Flag<["-"], "emit-pch">,
   HelpText<"Generate pre-compiled header file">;
-def emit_llvm_bc : Flag<["-"], "emit-llvm-bc">,
-  HelpText<"Build ASTs then convert to LLVM, emit .bc file">;
 def emit_llvm_only : Flag<["-"], "emit-llvm-only">,
   HelpText<"Build ASTs and convert to LLVM, discarding output">;
 def emit_codegen_only : Flag<["-"], "emit-codegen-only">,
@@ -6316,6 +6314,8 @@ def emit_obj : Flag<["-"], "emit-obj">,
   HelpText<"Emit native object files">;
 def init_only : Flag<["-"], "init-only">,
   HelpText<"Only execute frontend initialization">;
+def emit_llvm_bc : Flag<["-"], "emit-llvm-bc">,
+  HelpText<"Build ASTs then convert to LLVM, emit .bc file">;
 
 } // let Group = Action_Group
 
@@ -6963,3 +6963,33 @@ def itodcallsbyclone : Flag<["-"], "itodcallsbyclone">,
 def no_itodcallsbyclone : Flag<["-"], "disable-itodcallsbyclone">,
   HelpText<"Disable indirect to direct call promotion by function cloning">;
 // AOCC END
+
+//===----------------------------------------------------------------------===//
+// clang-dxc Options
+//===----------------------------------------------------------------------===//
+
+def dxc_Group : OptionGroup<"<clang-dxc options>">, Flags<[DXCOption]>,
+  HelpText<"dxc compatibility options">;
+
+class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
+  KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>, Flags<[DXCOption, NoXarchOption]>;
+
+def dxc_help : Option<["/", "-", "--"], "help", KIND_JOINED>,
+  Group<dxc_Group>, Flags<[DXCOption, NoXarchOption]>, Alias<help>,
+  HelpText<"Display available options">;
+
+
+def Fo : DXCJoinedOrSeparate<"Fo">, Alias<o>,
+  HelpText<"Output object file.">;
+
+def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
+  HelpText<"Set target profile.">,
+  Values<"ps_6_0, ps_6_1, ps_6_2, ps_6_3, ps_6_4, ps_6_5, ps_6_6, ps_6_7,"
+         "vs_6_0, vs_6_1, vs_6_2, vs_6_3, vs_6_4, vs_6_5, vs_6_6, vs_6_7,"
+         "gs_6_0, gs_6_1, gs_6_2, gs_6_3, gs_6_4, gs_6_5, gs_6_6, gs_6_7,"
+         "hs_6_0, hs_6_1, hs_6_2, hs_6_3, hs_6_4, hs_6_5, hs_6_6, hs_6_7,"
+         "ds_6_0, ds_6_1, ds_6_2, ds_6_3, ds_6_4, ds_6_5, ds_6_6, ds_6_7,"
+         "cs_6_0, cs_6_1, cs_6_2, cs_6_3, cs_6_4, cs_6_5, cs_6_6, cs_6_7,"
+         "lib_6_3, lib_6_4, lib_6_5, lib_6_6, lib_6_7, lib_6_x,"
+         "ms_6_5, ms_6_6, ms_6_7,"
+         "as_6_5, as_6_6, as_6_7">;

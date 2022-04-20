@@ -4,9 +4,9 @@
 #define __device__ __attribute__((device))
 
 __device__ void kernel1() {
-  // CHECK: call void @llvm.dbg.def(metadata ![[#VAR_X_LT:]], metadata %union.anon addrspace(5)* %[[#ALLOCA:]])
-  // CHECK: call void @llvm.dbg.def(metadata ![[#VAR_F_LT:]], metadata %union.anon addrspace(5)* %[[#ALLOCA:]])
-  // CHECK: call void @llvm.dbg.def(metadata ![[#VAR_ANON_LT:]], metadata %union.anon addrspace(5)* %[[#ALLOCA:]])
+  // CHECK: call void @llvm.dbg.def(metadata ![[#VAR_X_LT:]], metadata ptr addrspace(5) %[[#ALLOCA:]])
+  // CHECK: call void @llvm.dbg.def(metadata ![[#VAR_F_LT:]], metadata ptr addrspace(5) %[[#ALLOCA:]])
+  // CHECK: call void @llvm.dbg.def(metadata ![[#VAR_ANON_LT:]], metadata ptr addrspace(5) %[[#ALLOCA:]])
   union { int x; float f; };
 }
 
@@ -14,6 +14,6 @@ __device__ void kernel1() {
 // CHECK: ![[#VAR_X:]] = !DILocalVariable(name: "x", scope: ![[#SUB]],{{.*}} flags: DIFlagArtificial)
 // CHECK: ![[#VAR_F:]] = !DILocalVariable(name: "f", scope: ![[#SUB]],{{.*}} flags: DIFlagArtificial)
 // CHECK: ![[#VAR_ANON:]] = !DILocalVariable(scope: ![[#SUB]],{{.*}} flags: DIFlagArtificial)
-// CHECK: ![[#VAR_X_LT]] = distinct !DILifetime(object: ![[#VAR_X]], location: !DIExpr(DIOpReferrer(%union.anon addrspace(5)*), DIOpDeref(%union.anon)))
-// CHECK: ![[#VAR_F_LT]] = distinct !DILifetime(object: ![[#VAR_F]], location: !DIExpr(DIOpReferrer(%union.anon addrspace(5)*), DIOpDeref(%union.anon)))
-// CHECK: ![[#VAR_ANON_LT]] = distinct !DILifetime(object: ![[#VAR_ANON]], location: !DIExpr(DIOpReferrer(%union.anon addrspace(5)*), DIOpDeref(%union.anon)))
+// CHECK: ![[#VAR_X_LT]] = distinct !DILifetime(object: ![[#VAR_X]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(%union.anon)))
+// CHECK: ![[#VAR_F_LT]] = distinct !DILifetime(object: ![[#VAR_F]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(%union.anon)))
+// CHECK: ![[#VAR_ANON_LT]] = distinct !DILifetime(object: ![[#VAR_ANON]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(%union.anon)))

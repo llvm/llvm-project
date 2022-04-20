@@ -35,9 +35,9 @@ class InclusionDirectiveCallbacks : public PPCallbacks {
 public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     this->HashLoc = HashLoc;
     this->IncludeTok = IncludeTok;
@@ -56,7 +56,7 @@ public:
   SmallString<16> FileName;
   bool IsAngled;
   CharSourceRange FilenameRange;
-  const FileEntry* File;
+  Optional<FileEntryRef> File;
   SmallString<16> SearchPath;
   SmallString<16> RelativePath;
   const Module* Imported;

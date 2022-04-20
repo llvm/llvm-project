@@ -11,13 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Utils/CommandLineOpts.h"
-#include "bolt/Utils/BoltRevision.inc"
+#include "llvm/Support/VCSRevision.h"
 
 using namespace llvm;
 
 namespace llvm {
 namespace bolt {
-const char *BoltRevision = BOLT_VERSION_STRING;
+const char *BoltRevision =
+#ifdef LLVM_REVISION
+    LLVM_REVISION;
+#else
+    "<unknown>";
+#endif
 }
 }
 

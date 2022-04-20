@@ -13,7 +13,7 @@ __host__ __device__ void caller() { callee(empty{}); }
 // to the alloca directly.
 
 // CHECK: %[[ALLOCA:[^ ]+]] = alloca %struct.empty, align 1, addrspace(5)
-// CHECK: %[[ASPACE_CAST:[^ ]+]] = addrspacecast %struct.empty addrspace(5)* %[[ALLOCA]] to %struct.empty*
-// CHECK: call void @llvm.dbg.def(metadata ![[#PARAM_FRAGMENT:]], metadata %struct.empty* %[[ASPACE_CAST]]), !dbg
-// CHECK-DAG: ![[#PARAM_FRAGMENT]] = distinct !DILifetime(object: ![[#PARAM_DILOCALVAR:]], location: !DIExpr(DIOpReferrer(%struct.empty*), DIOpDeref(%struct.empty)))
+// CHECK: %[[ASPACE_CAST:[^ ]+]] = addrspacecast ptr addrspace(5) %[[ALLOCA]] to ptr
+// CHECK: call void @llvm.dbg.def(metadata ![[#PARAM_FRAGMENT:]], metadata ptr %[[ASPACE_CAST]]), !dbg
+// CHECK-DAG: ![[#PARAM_FRAGMENT]] = distinct !DILifetime(object: ![[#PARAM_DILOCALVAR:]], location: !DIExpr(DIOpReferrer(ptr), DIOpDeref(%struct.empty)))
 // CHECK-DAG: ![[#PARAM_DILOCALVAR]] = !DILocalVariable(arg: 1,

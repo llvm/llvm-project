@@ -4817,11 +4817,18 @@ static Value *SimplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
   if (!CommonValue)
     return UndefValue::get(PN->getType());
 
-  // If we have a PHI node like phi(X, undef, X), where X is defined by some
-  // instruction, we cannot return X as the result of the PHI node unless it
-  // dominates the PHI block.
-  if (HasUndefInput)
+  if (HasUndefInput) {
+    // We cannot start executing a trapping constant expression on more control
+    // flow paths.
+    auto *CE = dyn_cast<ConstantExpr>(CommonValue);
+    if (CE && CE->canTrap())
+      return nullptr;
+
+    // If we have a PHI node like phi(X, undef, X), where X is defined by some
+    // instruction, we cannot return X as the result of the PHI node unless it
+    // dominates the PHI block.
     return valueDominatesPHI(CommonValue, PN, Q.DT) ? CommonValue : nullptr;
+  }
 
   return CommonValue;
 }
@@ -5200,15 +5207,16 @@ SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
         (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
       return Op0;
 
-  if (!isDefaultFPEnvironment(ExBehavior, Rounding))
-    return nullptr;
-
   // fsub -0.0, (fsub -0.0, X) ==> X
   // fsub -0.0, (fneg X) ==> X
   Value *X;
-  if (match(Op0, m_NegZeroFP()) &&
-      match(Op1, m_FNeg(m_Value(X))))
-    return X;
+  if (canIgnoreSNaN(ExBehavior, FMF))
+    if (match(Op0, m_NegZeroFP()) &&
+        match(Op1, m_FNeg(m_Value(X))))
+      return X;
+
+  if (!isDefaultFPEnvironment(ExBehavior, Rounding))
+    return nullptr;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
   // fsub 0.0, (fneg X) ==> X if signed zeros are ignored.

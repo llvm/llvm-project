@@ -168,6 +168,10 @@ static cl::opt<bool> EnableMergeCompatibleInvokes(
     "simplifycfg-merge-compatible-invokes", cl::Hidden, cl::init(true),
     cl::desc("Allow SimplifyCFG to merge invokes together when appropriate"));
 
+static cl::opt<unsigned> MaxSwitchCasesPerResult(
+    "max-switch-cases-per-result", cl::Hidden, cl::init(16),
+    cl::desc("Limit cases to analyze when converting a switch to select"));
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -5531,7 +5535,7 @@ ConstantFold(Instruction *I, const DataLayout &DL,
 /// destionations CaseDest corresponding to value CaseVal (0 for the default
 /// case), of a switch instruction SI.
 static bool
-GetCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
+getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
                BasicBlock **CommonDest,
                SmallVectorImpl<std::pair<PHINode *, Constant *>> &Res,
                const DataLayout &DL, const TargetTransformInfo &TTI) {
@@ -5602,9 +5606,9 @@ GetCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
 
 // Helper function used to add CaseVal to the list of cases that generate
 // Result. Returns the updated number of cases that generate this result.
-static uintptr_t MapCaseToResult(ConstantInt *CaseVal,
-                                 SwitchCaseResultVectorTy &UniqueResults,
-                                 Constant *Result) {
+static size_t mapCaseToResult(ConstantInt *CaseVal,
+                              SwitchCaseResultVectorTy &UniqueResults,
+                              Constant *Result) {
   for (auto &I : UniqueResults) {
     if (I.first == Result) {
       I.second.push_back(CaseVal);
@@ -5620,18 +5624,19 @@ static uintptr_t MapCaseToResult(ConstantInt *CaseVal,
 // results for the PHI node of the common destination block for a switch
 // instruction. Returns false if multiple PHI nodes have been found or if
 // there is not a common destination block for the switch.
-static bool
-InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI, BasicBlock *&CommonDest,
-                      SwitchCaseResultVectorTy &UniqueResults,
-                      Constant *&DefaultResult, const DataLayout &DL,
-                      const TargetTransformInfo &TTI,
-                      uintptr_t MaxUniqueResults, uintptr_t MaxCasesPerResult) {
+static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
+                                  BasicBlock *&CommonDest,
+                                  SwitchCaseResultVectorTy &UniqueResults,
+                                  Constant *&DefaultResult,
+                                  const DataLayout &DL,
+                                  const TargetTransformInfo &TTI,
+                                  uintptr_t MaxUniqueResults) {
   for (auto &I : SI->cases()) {
     ConstantInt *CaseVal = I.getCaseValue();
 
     // Resulting value at phi nodes for this case value.
     SwitchCaseResultsTy Results;
-    if (!GetCaseResults(SI, CaseVal, I.getCaseSuccessor(), &CommonDest, Results,
+    if (!getCaseResults(SI, CaseVal, I.getCaseSuccessor(), &CommonDest, Results,
                         DL, TTI))
       return false;
 
@@ -5640,11 +5645,11 @@ InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI, BasicBlock *&CommonDest,
       return false;
 
     // Add the case->result mapping to UniqueResults.
-    const uintptr_t NumCasesForResult =
-        MapCaseToResult(CaseVal, UniqueResults, Results.begin()->second);
+    const size_t NumCasesForResult =
+        mapCaseToResult(CaseVal, UniqueResults, Results.begin()->second);
 
     // Early out if there are too many cases for this result.
-    if (NumCasesForResult > MaxCasesPerResult)
+    if (NumCasesForResult > MaxSwitchCasesPerResult)
       return false;
 
     // Early out if there are too many unique results.
@@ -5660,7 +5665,7 @@ InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI, BasicBlock *&CommonDest,
   // Find the default result value.
   SmallVector<std::pair<PHINode *, Constant *>, 1> DefaultResults;
   BasicBlock *DefaultDest = SI->getDefaultDest();
-  GetCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest, DefaultResults,
+  getCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest, DefaultResults,
                  DL, TTI);
   // If the default value is not found abort unless the default destination
   // is unreachable.
@@ -5675,48 +5680,76 @@ InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI, BasicBlock *&CommonDest,
 
 // Helper function that checks if it is possible to transform a switch with only
 // two cases (or two cases + default) that produces a result into a select.
-// Example:
-// switch (a) {
-//   case 10:                %0 = icmp eq i32 %a, 10
-//     return 10;            %1 = select i1 %0, i32 10, i32 4
-//   case 20:        ---->   %2 = icmp eq i32 %a, 20
-//     return 2;             %3 = select i1 %2, i32 2, i32 %1
-//   default:
-//     return 4;
-// }
-static Value *ConvertTwoCaseSwitch(const SwitchCaseResultVectorTy &ResultVector,
-                                   Constant *DefaultResult, Value *Condition,
-                                   IRBuilder<> &Builder) {
+// TODO: Handle switches with more than 2 cases that map to the same result.
+static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
+                                 Constant *DefaultResult, Value *Condition,
+                                 IRBuilder<> &Builder) {
   // If we are selecting between only two cases transform into a simple
   // select or a two-way select if default is possible.
+  // Example:
+  // switch (a) {                  %0 = icmp eq i32 %a, 10
+  //   case 10: return 42;         %1 = select i1 %0, i32 42, i32 4
+  //   case 20: return 2;   ---->  %2 = icmp eq i32 %a, 20
+  //   default: return 4;          %3 = select i1 %2, i32 2, i32 %1
+  // }
   if (ResultVector.size() == 2 && ResultVector[0].second.size() == 1 &&
       ResultVector[1].second.size() == 1) {
-    ConstantInt *const FirstCase = ResultVector[0].second[0];
-    ConstantInt *const SecondCase = ResultVector[1].second[0];
-
-    bool DefaultCanTrigger = DefaultResult;
+    ConstantInt *FirstCase = ResultVector[0].second[0];
+    ConstantInt *SecondCase = ResultVector[1].second[0];
     Value *SelectValue = ResultVector[1].first;
-    if (DefaultCanTrigger) {
-      Value *const ValueCompare =
+    if (DefaultResult) {
+      Value *ValueCompare =
           Builder.CreateICmpEQ(Condition, SecondCase, "switch.selectcmp");
       SelectValue = Builder.CreateSelect(ValueCompare, ResultVector[1].first,
                                          DefaultResult, "switch.select");
     }
-    Value *const ValueCompare =
+    Value *ValueCompare =
         Builder.CreateICmpEQ(Condition, FirstCase, "switch.selectcmp");
     return Builder.CreateSelect(ValueCompare, ResultVector[0].first,
                                 SelectValue, "switch.select");
   }
 
-  // Handle the degenerate case where two cases have the same value.
-  if (ResultVector.size() == 1 && ResultVector[0].second.size() == 2 &&
-      DefaultResult) {
-    Value *Cmp1 = Builder.CreateICmpEQ(
-        Condition, ResultVector[0].second[0], "switch.selectcmp.case1");
-    Value *Cmp2 = Builder.CreateICmpEQ(
-        Condition, ResultVector[0].second[1], "switch.selectcmp.case2");
-    Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
-    return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+  // Handle the degenerate case where two cases have the same result value.
+  if (ResultVector.size() == 1 && DefaultResult) {
+    ArrayRef<ConstantInt *> CaseValues = ResultVector[0].second;
+    unsigned CaseCount = CaseValues.size();
+    // n bits group cases map to the same result:
+    // case 0,4      -> Cond & 0b1..1011 == 0 ? result : default
+    // case 0,2,4,6  -> Cond & 0b1..1001 == 0 ? result : default
+    // case 0,2,8,10 -> Cond & 0b1..0101 == 0 ? result : default
+    if (isPowerOf2_32(CaseCount)) {
+      ConstantInt *MinCaseVal = CaseValues[0];
+      // Find mininal value.
+      for (auto Case : CaseValues)
+        if (Case->getValue().slt(MinCaseVal->getValue()))
+          MinCaseVal = Case;
+
+      // Mark the bits case number touched.
+      APInt BitMask = APInt::getZero(MinCaseVal->getBitWidth());
+      for (auto Case : CaseValues)
+        BitMask |= (Case->getValue() - MinCaseVal->getValue());
+
+      // Check if cases with the same result can cover all number
+      // in touched bits.
+      if (BitMask.countPopulation() == Log2_32(CaseCount)) {
+        if (!MinCaseVal->isNullValue())
+          Condition = Builder.CreateSub(Condition, MinCaseVal);
+        Value *And = Builder.CreateAnd(Condition, ~BitMask, "switch.and");
+        Value *Cmp = Builder.CreateICmpEQ(
+            And, Constant::getNullValue(And->getType()), "switch.selectcmp");
+        return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+      }
+    }
+
+    // Handle the degenerate case where two cases have the same value.
+    if (CaseValues.size() == 2) {
+      Value *Cmp1 = Builder.CreateICmpEQ(Condition, CaseValues[0],
+                                         "switch.selectcmp.case1");
+      Value *Cmp2 = Builder.CreateICmpEQ(Condition, CaseValues[1],
+                                         "switch.selectcmp.case2");
+      Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
+      return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+    }
   }
 
   return nullptr;
@@ -5724,10 +5757,10 @@ static Value *ConvertTwoCaseSwitch(const SwitchCaseResultVectorTy &ResultVector,
 
 // Helper function to cleanup a switch instruction that has been converted into
 // a select, fixing up PHI nodes and basic blocks.
-static void RemoveSwitchAfterSelectConversion(SwitchInst *SI, PHINode *PHI,
-                                              Value *SelectValue,
-                                              IRBuilder<> &Builder,
-                                              DomTreeUpdater *DTU) {
+static void removeSwitchAfterSelectFold(SwitchInst *SI, PHINode *PHI,
+                                        Value *SelectValue,
+                                        IRBuilder<> &Builder,
+                                        DomTreeUpdater *DTU) {
   std::vector<DominatorTree::UpdateType> Updates;
 
   BasicBlock *SelectBB = SI->getParent();
@@ -5758,33 +5791,31 @@ static void RemoveSwitchAfterSelectConversion(SwitchInst *SI, PHINode *PHI,
     DTU->applyUpdates(Updates);
 }
 
-/// If the switch is only used to initialize one or more
-/// phi nodes in a common successor block with only two different
-/// constant values, replace the switch with select.
-static bool switchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
-                           DomTreeUpdater *DTU, const DataLayout &DL,
-                           const TargetTransformInfo &TTI) {
+/// If a switch is only used to initialize one or more phi nodes in a common
+/// successor block with only two different constant values, try to replace the
+/// switch with a select. Returns true if the fold was made.
+static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
+                              DomTreeUpdater *DTU, const DataLayout &DL,
+                              const TargetTransformInfo &TTI) {
   Value *const Cond = SI->getCondition();
   PHINode *PHI = nullptr;
   BasicBlock *CommonDest = nullptr;
   Constant *DefaultResult;
   SwitchCaseResultVectorTy UniqueResults;
   // Collect all the cases that will deliver the same value from the switch.
-  if (!InitializeUniqueCases(SI, PHI, CommonDest, UniqueResults, DefaultResult,
-                             DL, TTI, /*MaxUniqueResults*/2,
-                             /*MaxCasesPerResult*/2))
+  if (!initializeUniqueCases(SI, PHI, CommonDest, UniqueResults, DefaultResult,
+                             DL, TTI, /*MaxUniqueResults*/ 2))
     return false;
-  assert(PHI != nullptr && "PHI for value select not found");
 
+  assert(PHI != nullptr && "PHI for value select not found");
   Builder.SetInsertPoint(SI);
   Value *SelectValue =
-      ConvertTwoCaseSwitch(UniqueResults, DefaultResult, Cond, Builder);
-  if (SelectValue) {
-    RemoveSwitchAfterSelectConversion(SI, PHI, SelectValue, Builder, DTU);
-    return true;
-  }
-  // The switch couldn't be converted into a select.
-  return false;
+      foldSwitchToSelect(UniqueResults, DefaultResult, Cond, Builder);
+  if (!SelectValue)
+    return false;
+
+  removeSwitchAfterSelectFold(SI, PHI, SelectValue, Builder, DTU);
+  return true;
 }
 
 namespace {
@@ -6237,7 +6268,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // Resulting value at phi nodes for this case value.
     using ResultsTy = SmallVector<std::pair<PHINode *, Constant *>, 4>;
     ResultsTy Results;
-    if (!GetCaseResults(SI, CaseVal, CI->getCaseSuccessor(), &CommonDest,
+    if (!getCaseResults(SI, CaseVal, CI->getCaseSuccessor(), &CommonDest,
                         Results, DL, TTI))
       return false;
 
@@ -6265,7 +6296,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // or a bitmask that fits in a register.
   SmallVector<std::pair<PHINode *, Constant *>, 4> DefaultResultsList;
   bool HasDefaultResults =
-      GetCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest,
+      getCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest,
                      DefaultResultsList, DL, TTI);
 
   bool NeedMask = (TableHasHoles && !HasDefaultResults);
@@ -6569,7 +6600,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (eliminateDeadSwitchCases(SI, DTU, Options.AC, DL))
     return requestResimplify();
 
-  if (switchToSelect(SI, Builder, DTU, DL, TTI))
+  if (trySwitchToSelect(SI, Builder, DTU, DL, TTI))
     return requestResimplify();
 
   if (Options.ForwardSwitchCondToPhi && ForwardSwitchConditionToPHI(SI))

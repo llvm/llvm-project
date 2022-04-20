@@ -978,27 +978,33 @@ DISubprogram *DISubprogram::getImpl(
     unsigned ScopeLine, Metadata *ContainingType, unsigned VirtualIndex,
     int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
     Metadata *TemplateParams, Metadata *Declaration, Metadata *RetainedNodes,
-    Metadata *ThrownTypes, Metadata *Annotations, StorageType Storage,
-    bool ShouldCreate) {
+    Metadata *ThrownTypes, Metadata *Annotations, MDString *TargetFuncName,
+    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
+  assert(isCanonical(TargetFuncName) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DISubprogram,
                         (Scope, Name, LinkageName, File, Line, Type, ScopeLine,
                          ContainingType, VirtualIndex, ThisAdjustment, Flags,
                          SPFlags, Unit, TemplateParams, Declaration,
-                         RetainedNodes, ThrownTypes, Annotations));
-  SmallVector<Metadata *, 12> Ops = {
+                         RetainedNodes, ThrownTypes, Annotations,
+                         TargetFuncName));
+  SmallVector<Metadata *, 13> Ops = {
       File,           Scope,          Name,        LinkageName,
       Type,           Unit,           Declaration, RetainedNodes,
-      ContainingType, TemplateParams, ThrownTypes, Annotations};
-  if (!Annotations) {
+      ContainingType, TemplateParams, ThrownTypes, Annotations,
+      TargetFuncName};
+  if (!TargetFuncName) {
     Ops.pop_back();
-    if (!ThrownTypes) {
+    if (!Annotations) {
       Ops.pop_back();
-      if (!TemplateParams) {
+      if (!ThrownTypes) {
         Ops.pop_back();
-        if (!ContainingType)
+        if (!TemplateParams) {
           Ops.pop_back();
+          if (!ContainingType)
+            Ops.pop_back();
+        }
       }
     }
   }

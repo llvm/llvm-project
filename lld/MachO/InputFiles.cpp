@@ -636,9 +636,10 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
   }
   assert(!isWeakDefCanBeHidden &&
          "weak_def_can_be_hidden on already-hidden symbol?");
+  bool includeInSymtab = !name.startswith("l") && !name.startswith("L");
   return make<Defined>(
       name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
-      /*isExternal=*/false, /*isPrivateExtern=*/false,
+      /*isExternal=*/false, /*isPrivateExtern=*/false, includeInSymtab,
       sym.n_desc & N_ARM_THUMB_DEF, sym.n_desc & REFERENCED_DYNAMICALLY,
       sym.n_desc & N_NO_DEAD_STRIP);
 }
@@ -658,7 +659,7 @@ static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
   return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
                        /*isWeakDef=*/false,
                        /*isExternal=*/false, /*isPrivateExtern=*/false,
-                       sym.n_desc & N_ARM_THUMB_DEF,
+                       /*includeInSymtab=*/true, sym.n_desc & N_ARM_THUMB_DEF,
                        /*isReferencedDynamically=*/false,
                        sym.n_desc & N_NO_DEAD_STRIP);
 }

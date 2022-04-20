@@ -58,6 +58,17 @@ public:
   // FIXME: remove when files support multiple names
   bool IsVFSMapped = false;
 
+  /// Whether this entity has an external path different from the virtual path,
+  /// and the external path is exposed by leaking it through the abstraction.
+  /// For example, a RedirectingFileSystem will set this for paths where
+  /// UseExternalName is true.
+  ///
+  /// FIXME: Currently the external path is exposed by replacing the virtual
+  /// path in this Status object. Instead, we should leave the path in the
+  /// Status intact (matching the requested virtual path) - see
+  /// FileManager::getFileRef for how how we plan to fix this.
+  bool ExposesExternalVFSPath = false;
+
   Status() = default;
   Status(const llvm::sys::fs::file_status &Status);
   Status(const Twine &Name, llvm::sys::fs::UniqueID UID,

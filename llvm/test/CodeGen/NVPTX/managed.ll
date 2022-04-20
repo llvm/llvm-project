@@ -1,5 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: llc < %s -march=nvptx -mcpu=sm_30 -mattr=+ptx40 | FileCheck %s
 
+; RUN: not --crash llc < %s -march=nvptx -mcpu=sm_20 2>&1 | FileCheck %s --check-prefix ERROR
+; ERROR: LLVM ERROR: .attribute(.managed) requires PTX version >= 4.0 and sm_30
 
 ; CHECK: .visible .global .align 4 .u32 device_g;
 @device_g = addrspace(1) global i32 zeroinitializer

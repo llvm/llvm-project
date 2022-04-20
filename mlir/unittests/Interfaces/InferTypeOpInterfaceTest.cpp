@@ -36,7 +36,7 @@ protected:
     registry.insert<func::FuncDialect, arith::ArithmeticDialect>();
     ctx.appendDialectRegistry(registry);
     module = parseSourceString<ModuleOp>(ir, &ctx);
-    mapFn = cast<FuncOp>(module->front());
+    mapFn = cast<func::FuncOp>(module->front());
   }
 
   // Create ValueShapeRange on the arith.addi operation.
@@ -48,7 +48,7 @@ protected:
   DialectRegistry registry;
   MLIRContext ctx;
   OwningOpRef<ModuleOp> module;
-  FuncOp mapFn;
+  func::FuncOp mapFn;
 };
 
 TEST_F(ValueShapeRangeTest, ShapesFromValues) {

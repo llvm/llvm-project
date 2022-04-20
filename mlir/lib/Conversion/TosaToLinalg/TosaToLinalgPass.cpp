@@ -70,12 +70,12 @@ void mlir::tosa::addTosaToLinalgPasses(OpPassManager &pm,
                                        bool disableTosaDecompositions) {
   // Optional decompositions are designed to benefit linalg.
   if (!disableTosaDecompositions)
-    pm.addNestedPass<FuncOp>(mlir::tosa::createTosaOptionalDecompositions());
-  pm.addNestedPass<FuncOp>(mlir::createCanonicalizerPass());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaOptionalDecompositions());
+  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
 
-  pm.addNestedPass<FuncOp>(tosa::createTosaMakeBroadcastablePass());
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgNamed());
-  pm.addNestedPass<FuncOp>(mlir::createCanonicalizerPass());
-  pm.addNestedPass<FuncOp>(tosa::createTosaMakeBroadcastablePass());
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalgNamed());
+  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
 }

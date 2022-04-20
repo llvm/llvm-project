@@ -88,3 +88,10 @@ CtorClosureOutOfLine::CtorClosureOutOfLine(const HasImplicitDtor2 &v) {}
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"??1HasImplicitDtor1@@QAE@XZ"
 // CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FCtorClosureOutOfLine@@QAEXXZ"
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"??1HasImplicitDtor2@@QAE@XZ"
+
+struct SomeStruct {};
+constexpr SomeStruct kConstexprStruct;
+struct __declspec(dllexport) ConstexprDefaultArg {
+  ConstexprDefaultArg(SomeStruct = kConstexprStruct) {}
+};
+// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FConstexprDefaultArg@@QAEXXZ"

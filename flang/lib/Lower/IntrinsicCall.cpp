@@ -573,8 +573,9 @@ struct IntrinsicLibrary {
                            llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <typename GeneratorType>
-  mlir::FuncOp getWrapper(GeneratorType, llvm::StringRef name,
-                          mlir::FunctionType, bool loadRefArguments = false);
+  mlir::func::FuncOp getWrapper(GeneratorType, llvm::StringRef name,
+                                mlir::FunctionType,
+                                bool loadRefArguments = false);
 
   /// Generate calls to ElementalGenerator, handling the elemental aspects
   template <typename GeneratorType>
@@ -737,19 +738,19 @@ static constexpr IntrinsicHandler handlers[]{
     {"get_command_argument",
      &I::genGetCommandArgument,
      {{{"number", asValue},
-       {"value", asAddr},
+       {"value", asBox, handleDynamicOptional},
        {"length", asAddr},
        {"status", asAddr},
-       {"errmsg", asAddr}}},
+       {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"get_environment_variable",
      &I::genGetEnvironmentVariable,
-     {{{"name", asValue},
-       {"value", asAddr},
+     {{{"name", asBox},
+       {"value", asBox, handleDynamicOptional},
        {"length", asAddr},
        {"status", asAddr},
-       {"trim_name", asValue},
-       {"errmsg", asAddr}}},
+       {"trim_name", asAddr},
+       {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"iachar", &I::genIchar},
     {"iand", &I::genIand},
@@ -1226,11 +1227,12 @@ private:
   bool infinite = false; // When forbidden conversion or wrong argument number
 };
 
-/// Build mlir::FuncOp from runtime symbol description and add
+/// Build mlir::func::FuncOp from runtime symbol description and add
 /// fir.runtime attribute.
-static mlir::FuncOp getFuncOp(mlir::Location loc, fir::FirOpBuilder &builder,
-                              const RuntimeFunction &runtime) {
-  mlir::FuncOp function = builder.addNamedFunction(
+static mlir::func::FuncOp getFuncOp(mlir::Location loc,
+                                    fir::FirOpBuilder &builder,
+                                    const RuntimeFunction &runtime) {
+  mlir::func::FuncOp function = builder.addNamedFunction(
       loc, runtime.symbol, runtime.typeGenerator(builder.getContext()));
   function->setAttr("fir.runtime", builder.getUnitAttr());
   return function;
@@ -1239,8 +1241,8 @@ static mlir::FuncOp getFuncOp(mlir::Location loc, fir::FirOpBuilder &builder,
 /// Select runtime function that has the smallest distance to the intrinsic
 /// function type and that will not imply narrowing arguments or extending the
 /// result.
-/// If nothing is found, the mlir::FuncOp will contain a nullptr.
-mlir::FuncOp searchFunctionInLibrary(
+/// If nothing is found, the mlir::func::FuncOp will contain a nullptr.
+mlir::func::FuncOp searchFunctionInLibrary(
     mlir::Location loc, fir::FirOpBuilder &builder,
     const Fortran::common::StaticMultimapView<RuntimeFunction> &lib,
     llvm::StringRef name, mlir::FunctionType funcType,
@@ -1266,14 +1268,14 @@ mlir::FuncOp searchFunctionInLibrary(
 /// Search runtime for the best runtime function given an intrinsic name
 /// and interface. The interface may not be a perfect match in which case
 /// the caller is responsible to insert argument and return value conversions.
-/// If nothing is found, the mlir::FuncOp will contain a nullptr.
-static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
-                                       fir::FirOpBuilder &builder,
-                                       llvm::StringRef name,
-                                       mlir::FunctionType funcType) {
+/// If nothing is found, the mlir::func::FuncOp will contain a nullptr.
+static mlir::func::FuncOp getRuntimeFunction(mlir::Location loc,
+                                             fir::FirOpBuilder &builder,
+                                             llvm::StringRef name,
+                                             mlir::FunctionType funcType) {
   const RuntimeFunction *bestNearMatch = nullptr;
   FunctionDistance bestMatchDistance{};
-  mlir::FuncOp match;
+  mlir::func::FuncOp match;
   using RtMap = Fortran::common::StaticMultimapView<RuntimeFunction>;
   static constexpr RtMap pgmathF(pgmathFast);
   static_assert(pgmathF.Verify() && "map must be sorted");
@@ -1300,7 +1302,7 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
   // mathRuntimeVersion == llvmOnly
   static constexpr RtMap llvmIntr(llvmIntrinsics);
   static_assert(llvmIntr.Verify() && "map must be sorted");
-  if (mlir::FuncOp exactMatch =
+  if (mlir::func::FuncOp exactMatch =
           searchFunctionInLibrary(loc, builder, llvmIntr, name, funcType,
                                   &bestNearMatch, bestMatchDistance))
     return exactMatch;
@@ -1577,12 +1579,12 @@ IntrinsicLibrary::invokeGenerator(SubroutineGenerator generator,
 }
 
 template <typename GeneratorType>
-mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
-                                          llvm::StringRef name,
-                                          mlir::FunctionType funcType,
-                                          bool loadRefArguments) {
+mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
+                                                llvm::StringRef name,
+                                                mlir::FunctionType funcType,
+                                                bool loadRefArguments) {
   std::string wrapperName = fir::mangleIntrinsicProcedure(name, funcType);
-  mlir::FuncOp function = builder.getNamedFunction(wrapperName);
+  mlir::func::FuncOp function = builder.getNamedFunction(wrapperName);
   if (!function) {
     // First time this wrapper is needed, build it.
     function = builder.createFunction(loc, wrapperName, funcType);
@@ -1663,7 +1665,7 @@ IntrinsicLibrary::outlineInWrapper(GeneratorType generator,
   }
 
   mlir::FunctionType funcType = getFunctionType(resultType, args, builder);
-  mlir::FuncOp wrapper = getWrapper(generator, name, funcType);
+  mlir::func::FuncOp wrapper = getWrapper(generator, name, funcType);
   return builder.create<fir::CallOp>(loc, wrapper, args).getResult(0);
 }
 
@@ -1679,7 +1681,7 @@ fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
   for (const auto &extendedVal : args)
     mlirArgs.emplace_back(toValue(extendedVal, builder, loc));
   mlir::FunctionType funcType = getFunctionType(resultType, mlirArgs, builder);
-  mlir::FuncOp wrapper = getWrapper(generator, name, funcType);
+  mlir::func::FuncOp wrapper = getWrapper(generator, name, funcType);
   auto call = builder.create<fir::CallOp>(loc, wrapper, mlirArgs);
   if (resultType)
     return toExtendedValue(call.getResult(0), builder, loc);
@@ -1690,7 +1692,8 @@ fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
 IntrinsicLibrary::RuntimeCallGenerator
 IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
                                           mlir::FunctionType soughtFuncType) {
-  mlir::FuncOp funcOp = getRuntimeFunction(loc, builder, name, soughtFuncType);
+  mlir::func::FuncOp funcOp =
+      getRuntimeFunction(loc, builder, name, soughtFuncType);
   if (!funcOp) {
     std::string buffer("not yet implemented: missing intrinsic lowering: ");
     llvm::raw_string_ostream sstream(buffer);
@@ -1722,7 +1725,7 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
   // So instead of duplicating the runtime, just have the wrappers loading
   // this before calling the code generators.
   bool loadRefArguments = true;
-  mlir::FuncOp funcOp;
+  mlir::func::FuncOp funcOp;
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
     funcOp = std::visit(
         [&](auto generator) {
@@ -2399,100 +2402,119 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
 void IntrinsicLibrary::genGetCommandArgument(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 5);
-
-  auto processCharBox = [&](llvm::Optional<fir::CharBoxValue> arg,
-                            mlir::Value &value) -> void {
-    if (arg.hasValue()) {
-      value = builder.createBox(loc, *arg);
-    } else {
-      value = builder
-                  .create<fir::AbsentOp>(
-                      loc, fir::BoxType::get(builder.getNoneType()))
-                  .getResult();
-    }
-  };
-
-  // Handle NUMBER argument
   mlir::Value number = fir::getBase(args[0]);
+  const fir::ExtendedValue &value = args[1];
+  const fir::ExtendedValue &length = args[2];
+  const fir::ExtendedValue &status = args[3];
+  const fir::ExtendedValue &errmsg = args[4];
+
   if (!number)
     fir::emitFatalError(loc, "expected NUMBER parameter");
 
-  // Handle optional VALUE argument
-  mlir::Value value;
-  llvm::Optional<fir::CharBoxValue> valBox;
-  if (const fir::CharBoxValue *charBox = args[1].getCharBox())
-    valBox = *charBox;
-  processCharBox(valBox, value);
-
-  // Handle optional LENGTH argument
-  mlir::Value length = fir::getBase(args[2]);
-
-  // Handle optional STATUS argument
-  mlir::Value status = fir::getBase(args[3]);
-
-  // Handle optional ERRMSG argument
-  mlir::Value errmsg;
-  llvm::Optional<fir::CharBoxValue> errmsgBox;
-  if (const fir::CharBoxValue *charBox = args[4].getCharBox())
-    errmsgBox = *charBox;
-  processCharBox(errmsgBox, errmsg);
-
-  fir::runtime::genGetCommandArgument(builder, loc, number, value, length,
-                                      status, errmsg);
+  if (isStaticallyPresent(value) || isStaticallyPresent(status) ||
+      isStaticallyPresent(errmsg)) {
+    mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+    mlir::Value valBox =
+        isStaticallyPresent(value)
+            ? fir::getBase(value)
+            : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+    mlir::Value errBox =
+        isStaticallyPresent(errmsg)
+            ? fir::getBase(errmsg)
+            : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+    mlir::Value stat =
+        fir::runtime::genArgumentValue(builder, loc, number, valBox, errBox);
+    if (isStaticallyPresent(status)) {
+      mlir::Value statAddr = fir::getBase(status);
+      mlir::Value statIsPresentAtRuntime = builder.genIsNotNull(loc, statAddr);
+      builder.genIfThen(loc, statIsPresentAtRuntime)
+          .genThen(
+              [&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
+          .end();
+    }
+  }
+  if (isStaticallyPresent(length)) {
+    mlir::Value lenAddr = fir::getBase(length);
+    mlir::Value lenIsPresentAtRuntime = builder.genIsNotNull(loc, lenAddr);
+    builder.genIfThen(loc, lenIsPresentAtRuntime)
+        .genThen([&]() {
+          mlir::Value len =
+              fir::runtime::genArgumentLength(builder, loc, number);
+          builder.createStoreWithConvert(loc, len, lenAddr);
+        })
+        .end();
+  }
 }
 
 // GET_ENVIRONMENT_VARIABLE
 void IntrinsicLibrary::genGetEnvironmentVariable(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 6);
-
-  auto processCharBox = [&](llvm::Optional<fir::CharBoxValue> arg,
-                            mlir::Value &value) -> void {
-    if (arg.hasValue()) {
-      value = builder.createBox(loc, *arg);
-    } else {
-      value = builder
-                  .create<fir::AbsentOp>(
-                      loc, fir::BoxType::get(builder.getNoneType()))
-                  .getResult();
-    }
-  };
-
-  // Handle NAME argument
-  mlir::Value name;
-  if (const fir::CharBoxValue *charBox = args[0].getCharBox()) {
-    llvm::Optional<fir::CharBoxValue> nameBox = *charBox;
-    assert(nameBox.hasValue());
-    name = builder.createBox(loc, *nameBox);
-  }
-
-  // Handle optional VALUE argument
-  mlir::Value value;
-  llvm::Optional<fir::CharBoxValue> valBox;
-  if (const fir::CharBoxValue *charBox = args[1].getCharBox())
-    valBox = *charBox;
-  processCharBox(valBox, value);
-
-  // Handle optional LENGTH argument
-  mlir::Value length = fir::getBase(args[2]);
-
-  // Handle optional STATUS argument
-  mlir::Value status = fir::getBase(args[3]);
+  mlir::Value name = fir::getBase(args[0]);
+  const fir::ExtendedValue &value = args[1];
+  const fir::ExtendedValue &length = args[2];
+  const fir::ExtendedValue &status = args[3];
+  const fir::ExtendedValue &trimName = args[4];
+  const fir::ExtendedValue &errmsg = args[5];
 
   // Handle optional TRIM_NAME argument
-  mlir::Value trim_name = isStaticallyAbsent(args[4])
-                              ? builder.createBool(loc, true)
-                              : fir::getBase(args[4]);
+  mlir::Value trim;
+  if (isStaticallyAbsent(trimName)) {
+    trim = builder.createBool(loc, true);
+  } else {
+    mlir::Type i1Ty = builder.getI1Type();
+    mlir::Value trimNameAddr = fir::getBase(trimName);
+    mlir::Value trimNameIsPresentAtRuntime =
+        builder.genIsNotNull(loc, trimNameAddr);
+    trim = builder
+               .genIfOp(loc, {i1Ty}, trimNameIsPresentAtRuntime,
+                        /*withElseRegion=*/true)
+               .genThen([&]() {
+                 auto trimLoad = builder.create<fir::LoadOp>(loc, trimNameAddr);
+                 mlir::Value cast = builder.createConvert(loc, i1Ty, trimLoad);
+                 builder.create<fir::ResultOp>(loc, cast);
+               })
+               .genElse([&]() {
+                 mlir::Value trueVal = builder.createBool(loc, true);
+                 builder.create<fir::ResultOp>(loc, trueVal);
+               })
+               .getResults()[0];
+  }
 
-  // Handle optional ERRMSG argument
-  mlir::Value errmsg;
-  llvm::Optional<fir::CharBoxValue> errmsgBox;
-  if (const fir::CharBoxValue *charBox = args[5].getCharBox())
-    errmsgBox = *charBox;
-  processCharBox(errmsgBox, errmsg);
+  if (isStaticallyPresent(value) || isStaticallyPresent(status) ||
+      isStaticallyPresent(errmsg)) {
+    mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+    mlir::Value valBox =
+        isStaticallyPresent(value)
+            ? fir::getBase(value)
+            : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+    mlir::Value errBox =
+        isStaticallyPresent(errmsg)
+            ? fir::getBase(errmsg)
+            : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+    mlir::Value stat = fir::runtime::genEnvVariableValue(builder, loc, name,
+                                                         valBox, trim, errBox);
+    if (isStaticallyPresent(status)) {
+      mlir::Value statAddr = fir::getBase(status);
+      mlir::Value statIsPresentAtRuntime = builder.genIsNotNull(loc, statAddr);
+      builder.genIfThen(loc, statIsPresentAtRuntime)
+          .genThen(
+              [&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
+          .end();
+    }
+  }
 
-  fir::runtime::genGetEnvironmentVariable(builder, loc, name, value, length,
-                                          status, trim_name, errmsg);
+  if (isStaticallyPresent(length)) {
+    mlir::Value lenAddr = fir::getBase(length);
+    mlir::Value lenIsPresentAtRuntime = builder.genIsNotNull(loc, lenAddr);
+    builder.genIfThen(loc, lenIsPresentAtRuntime)
+        .genThen([&]() {
+          mlir::Value len =
+              fir::runtime::genEnvVariableLength(builder, loc, name, trim);
+          builder.createStoreWithConvert(loc, len, lenAddr);
+        })
+        .end();
+  }
 }
 
 // IAND

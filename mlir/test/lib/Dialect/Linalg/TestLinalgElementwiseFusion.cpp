@@ -47,7 +47,8 @@ static bool setFusedOpOperandLimit(const OpResult &producer,
 
 namespace {
 struct TestLinalgElementwiseFusion
-    : public PassWrapper<TestLinalgElementwiseFusion, OperationPass<FuncOp>> {
+    : public PassWrapper<TestLinalgElementwiseFusion,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgElementwiseFusion)
 
   TestLinalgElementwiseFusion() = default;
@@ -96,14 +97,12 @@ struct TestLinalgElementwiseFusion
 
   void runOnOperation() override {
     MLIRContext *context = &this->getContext();
-    FuncOp funcOp = this->getOperation();
+    func::FuncOp funcOp = this->getOperation();
 
     if (fuseGenericOps) {
       RewritePatternSet fusionPatterns(context);
-      linalg::populateElementwiseOpsFusionPatterns(
-          fusionPatterns,
-          linalg::LinalgElementwiseFusionOptions()
-              .setControlElementwiseOpsFusionFn(setFusedOpOperandLimit<4>));
+      linalg::populateElementwiseOpsFusionPatterns(fusionPatterns,
+                                                   setFusedOpOperandLimit<4>);
 
       (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
                                          std::move(fusionPatterns));
@@ -113,7 +112,7 @@ struct TestLinalgElementwiseFusion
     if (controlFuseByExpansion) {
       RewritePatternSet fusionPatterns(context);
 
-      linalg::ControlElementwiseOpsFusionFn controlReshapeFusionFn =
+      linalg::ControlFusionFn controlReshapeFusionFn =
           [](const OpResult &producer, OpOperand &consumer) {
             if (auto collapseOp =
                     producer.getDefiningOp<tensor::CollapseShapeOp>()) {
@@ -148,14 +147,16 @@ struct TestLinalgElementwiseFusion
 
     if (fuseWithReshapeByCollapsing) {
       RewritePatternSet patterns(context);
-      linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns);
+      linalg::populateFoldReshapeOpsByCollapsingPatterns(
+          patterns, [](const OpResult & /*producer*/,
+                       OpOperand & /*consumer*/) { return true; });
       (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
     }
 
     if (fuseWithReshapeByCollapsingWithControlFn) {
       RewritePatternSet patterns(context);
-      linalg::ControlElementwiseOpsFusionFn controlFn =
-          [](const OpResult &producer, OpOperand &consumer) -> bool {
+      linalg::ControlFusionFn controlFn = [](const OpResult &producer,
+                                             OpOperand &consumer) -> bool {
         if (isa<tensor::ExpandShapeOp>(producer.getDefiningOp())) {
           // Skip fusing the first operand.
           return consumer.getOperandNumber();

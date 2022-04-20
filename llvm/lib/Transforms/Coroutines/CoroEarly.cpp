@@ -238,9 +238,15 @@ static bool declaresCoroEarlyIntrinsics(const Module &M) {
           "llvm.coro.suspend"});
 }
 
-PreservedAnalyses CoroEarlyPass::run(Function &F, FunctionAnalysisManager &) {
-  Module &M = *F.getParent();
-  if (!declaresCoroEarlyIntrinsics(M) || !Lowerer(M).lowerEarlyIntrinsics(F))
+PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
+  if (!declaresCoroEarlyIntrinsics(M))
+    return PreservedAnalyses::all();
+
+  Lowerer L(M);
+  bool Changed = false;
+  for (auto &F : M)
+    Changed |= L.lowerEarlyIntrinsics(F);
+  if (Changed)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

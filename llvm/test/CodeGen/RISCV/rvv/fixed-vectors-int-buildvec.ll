@@ -723,3 +723,24 @@ define <8 x i16> @splat_idx_v8i16(<8 x i16> %v, i64 %idx) {
   %splat = shufflevector <8 x i16> %ins, <8 x i16> poison, <8 x i32> zeroinitializer
   ret <8 x i16> %splat
 }
+
+; FIXME: This is not a vid sequence!
+define <4 x i8> @buildvec_not_vid_v4i8_1() {
+; CHECK-LABEL: buildvec_not_vid_v4i8_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 0, i8 0, i8 2, i8 3>
+}
+
+; FIXME: This is not a vid sequence!
+define <4 x i8> @buildvec_not_vid_v4i8_2() {
+; CHECK-LABEL: buildvec_not_vid_v4i8_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vrsub.vi v8, v8, 3
+; CHECK-NEXT:    ret
+  ret <4 x i8> <i8 3, i8 3, i8 1, i8 0>
+}

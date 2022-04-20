@@ -496,7 +496,7 @@ define <vscale x 16 x i1> @test_predicate_insert_16xi1(<vscale x 16 x i1> %val, 
   ret <vscale x 16 x i1> %res
 }
 
-define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, i1 %elt, i32 %idx) {
+define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, i1 %elt, i32 %idx) uwtable {
 ; CHECK-LABEL: test_predicate_insert_32xi1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -524,7 +524,10 @@ define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, 
 ; CHECK-NEXT:    cmpne p0.b, p1/z, z0.b, #0
 ; CHECK-NEXT:    cmpne p1.b, p1/z, z1.b, #0
 ; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
   %res = insertelement <vscale x 32 x i1> %val, i1 %elt, i32 %idx
   ret <vscale x 32 x i1> %res

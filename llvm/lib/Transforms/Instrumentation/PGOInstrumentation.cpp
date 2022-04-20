@@ -431,124 +431,7 @@ struct SelectInstVisitor : public InstVisitor<SelectInstVisitor> {
   unsigned getNumOfSelectInsts() const { return NSIs; }
 };
 
-
-class PGOInstrumentationGenLegacyPass : public ModulePass {
-public:
-  static char ID;
-
-  PGOInstrumentationGenLegacyPass(bool IsCS = false)
-      : ModulePass(ID), IsCS(IsCS) {
-    initializePGOInstrumentationGenLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override { return "PGOInstrumentationGenPass"; }
-
-private:
-  // Is this is context-sensitive instrumentation.
-  bool IsCS;
-  bool runOnModule(Module &M) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
-
-class PGOInstrumentationUseLegacyPass : public ModulePass {
-public:
-  static char ID;
-
-  // Provide the profile filename as the parameter.
-  PGOInstrumentationUseLegacyPass(std::string Filename = "", bool IsCS = false)
-      : ModulePass(ID), ProfileFileName(std::move(Filename)), IsCS(IsCS) {
-    if (!PGOTestProfileFile.empty())
-      ProfileFileName = PGOTestProfileFile;
-    initializePGOInstrumentationUseLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override { return "PGOInstrumentationUsePass"; }
-
-private:
-  std::string ProfileFileName;
-  // Is this is context-sensitive instrumentation use.
-  bool IsCS;
-
-  bool runOnModule(Module &M) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
-
-class PGOInstrumentationGenCreateVarLegacyPass : public ModulePass {
-public:
-  static char ID;
-  StringRef getPassName() const override {
-    return "PGOInstrumentationGenCreateVarPass";
-  }
-  PGOInstrumentationGenCreateVarLegacyPass(std::string CSInstrName = "")
-      : ModulePass(ID), InstrProfileOutput(CSInstrName) {
-    initializePGOInstrumentationGenCreateVarLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-private:
-  bool runOnModule(Module &M) override {
-    createProfileFileNameVar(M, InstrProfileOutput);
-    // The variable in a comdat may be discarded by LTO. Ensure the
-    // declaration will be retained.
-    appendToCompilerUsed(M, createIRLevelProfileFlagVar(M, /*IsCS=*/true));
-    return false;
-  }
-  std::string InstrProfileOutput;
-};
-
 } // end anonymous namespace
-
-char PGOInstrumentationGenLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(PGOInstrumentationGenLegacyPass, "pgo-instr-gen",
-                      "PGO instrumentation.", false, false)
-INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(PGOInstrumentationGenLegacyPass, "pgo-instr-gen",
-                    "PGO instrumentation.", false, false)
-
-ModulePass *llvm::createPGOInstrumentationGenLegacyPass(bool IsCS) {
-  return new PGOInstrumentationGenLegacyPass(IsCS);
-}
-
-char PGOInstrumentationUseLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(PGOInstrumentationUseLegacyPass, "pgo-instr-use",
-                      "Read PGO instrumentation profile.", false, false)
-INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_PASS_END(PGOInstrumentationUseLegacyPass, "pgo-instr-use",
-                    "Read PGO instrumentation profile.", false, false)
-
-ModulePass *llvm::createPGOInstrumentationUseLegacyPass(StringRef Filename,
-                                                        bool IsCS) {
-  return new PGOInstrumentationUseLegacyPass(Filename.str(), IsCS);
-}
-
-char PGOInstrumentationGenCreateVarLegacyPass::ID = 0;
-
-INITIALIZE_PASS(PGOInstrumentationGenCreateVarLegacyPass,
-                "pgo-instr-gen-create-var",
-                "Create PGO instrumentation version variable for CSPGO.", false,
-                false)
-
-ModulePass *
-llvm::createPGOInstrumentationGenCreateVarLegacyPass(StringRef CSInstrName) {
-  return new PGOInstrumentationGenCreateVarLegacyPass(std::string(CSInstrName));
-}
 
 namespace {
 
@@ -1698,22 +1581,6 @@ PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
-bool PGOInstrumentationGenLegacyPass::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
-  auto LookupTLI = [this](Function &F) -> TargetLibraryInfo & {
-    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  };
-  auto LookupBPI = [this](Function &F) {
-    return &this->getAnalysis<BranchProbabilityInfoWrapperPass>(F).getBPI();
-  };
-  auto LookupBFI = [this](Function &F) {
-    return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
-  };
-  return InstrumentAllFunctions(M, LookupTLI, LookupBPI, LookupBFI, IsCS);
-}
-
 PreservedAnalyses PGOInstrumentationGen::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -2072,25 +1939,6 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
-}
-
-bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
-  auto LookupTLI = [this](Function &F) -> TargetLibraryInfo & {
-    return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  };
-  auto LookupBPI = [this](Function &F) {
-    return &this->getAnalysis<BranchProbabilityInfoWrapperPass>(F).getBPI();
-  };
-  auto LookupBFI = [this](Function &F) {
-    return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
-  };
-
-  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  return annotateAllFunctions(M, ProfileFileName, "", LookupTLI, LookupBPI,
-                              LookupBFI, PSI, IsCS);
 }
 
 static std::string getSimpleNodeName(const BasicBlock *Node) {

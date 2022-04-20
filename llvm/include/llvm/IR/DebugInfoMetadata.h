@@ -1874,25 +1874,25 @@ private:
           DISPFlags SPFlags, DICompileUnit *Unit,
           DITemplateParameterArray TemplateParams, DISubprogram *Declaration,
           DINodeArray RetainedNodes, DITypeArray ThrownTypes,
-          DINodeArray Annotations, StorageType Storage,
-          bool ShouldCreate = true) {
+          DINodeArray Annotations, StringRef TargetFuncName,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
                    ScopeLine, ContainingType, VirtualIndex, ThisAdjustment,
                    Flags, SPFlags, Unit, TemplateParams.get(), Declaration,
                    RetainedNodes.get(), ThrownTypes.get(), Annotations.get(),
+                   getCanonicalMDString(Context, TargetFuncName),
                    Storage, ShouldCreate);
   }
-  static DISubprogram *getImpl(LLVMContext &Context, Metadata *Scope,
-                               MDString *Name, MDString *LinkageName,
-                               Metadata *File, unsigned Line, Metadata *Type,
-                               unsigned ScopeLine, Metadata *ContainingType,
-                               unsigned VirtualIndex, int ThisAdjustment,
-                               DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
-                               Metadata *TemplateParams, Metadata *Declaration,
-                               Metadata *RetainedNodes, Metadata *ThrownTypes,
-                               Metadata *Annotations, StorageType Storage,
-                               bool ShouldCreate = true);
+  static DISubprogram *
+  getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
+          MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
+          unsigned ScopeLine, Metadata *ContainingType, unsigned VirtualIndex,
+          int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
+          Metadata *TemplateParams, Metadata *Declaration,
+          Metadata *RetainedNodes, Metadata *ThrownTypes, Metadata *Annotations,
+          MDString *TargetFuncName, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDISubprogram cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
@@ -1900,7 +1900,8 @@ private:
                         getContainingType(), getVirtualIndex(),
                         getThisAdjustment(), getFlags(), getSPFlags(),
                         getUnit(), getTemplateParams(), getDeclaration(),
-                        getRetainedNodes(), getThrownTypes(), getAnnotations());
+                        getRetainedNodes(), getThrownTypes(), getAnnotations(),
+                        getTargetFuncName());
   }
 
 public:
@@ -1912,10 +1913,11 @@ public:
        DIFlags Flags, DISPFlags SPFlags, DICompileUnit *Unit,
        DITemplateParameterArray TemplateParams = nullptr,
        DISubprogram *Declaration = nullptr, DINodeArray RetainedNodes = nullptr,
-       DITypeArray ThrownTypes = nullptr, DINodeArray Annotations = nullptr),
+       DITypeArray ThrownTypes = nullptr, DINodeArray Annotations = nullptr,
+       StringRef TargetFuncName = ""),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
-       Declaration, RetainedNodes, ThrownTypes, Annotations))
+       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName))
 
   DEFINE_ALL_MDNODE_GET_METHODS(
       DISubprogram,
@@ -1925,10 +1927,10 @@ public:
        DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
        Metadata *TemplateParams = nullptr, Metadata *Declaration = nullptr,
        Metadata *RetainedNodes = nullptr, Metadata *ThrownTypes = nullptr,
-       Metadata *Annotations = nullptr),
+       Metadata *Annotations = nullptr, MDString *TargetFuncName = nullptr),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
-       Declaration, RetainedNodes, ThrownTypes, Annotations))
+       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName))
 
   TempDISubprogram clone() const { return cloneImpl(); }
 
@@ -2034,6 +2036,9 @@ public:
   DINodeArray getAnnotations() const {
     return cast_or_null<MDTuple>(getRawAnnotations());
   }
+  StringRef getTargetFuncName() const {
+    return (getRawTargetFuncName()) ? getStringOperand(12) : StringRef();
+  }
 
   Metadata *getRawScope() const { return getOperand(1); }
   MDString *getRawName() const { return getOperandAs<MDString>(2); }
@@ -2053,6 +2058,9 @@ public:
   }
   Metadata *getRawAnnotations() const {
     return getNumOperands() > 11 ? getOperandAs<Metadata>(11) : nullptr;
+  }
+  MDString *getRawTargetFuncName() const {
+    return getNumOperands() > 12 ? getOperandAs<MDString>(12) : nullptr;
   }
 
   void replaceRawLinkageName(MDString *LinkageName) {

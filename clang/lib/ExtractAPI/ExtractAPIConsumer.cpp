@@ -198,8 +198,8 @@ public:
         DeclarationFragmentsBuilder::getFunctionSignature(Decl);
 
     // Add the function record to the API set.
-    API.addFunction(Name, USR, Loc, Availability, Linkage, Comment, Declaration,
-                    SubHeading, Signature);
+    API.addGlobalFunction(Name, USR, Loc, Availability, Linkage, Comment,
+                          Declaration, SubHeading, Signature);
     return true;
   }
 
@@ -215,9 +215,11 @@ public:
       return true;
 
     // Collect symbol information.
-    StringRef Name = Decl->getName();
+    std::string NameString = Decl->getQualifiedNameAsString();
+    StringRef Name(NameString);
     if (Name.empty())
       Name = getTypedefName(Decl);
+
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
@@ -233,8 +235,9 @@ public:
     DeclarationFragments SubHeading =
         DeclarationFragmentsBuilder::getSubHeading(Decl);
 
-    EnumRecord *EnumRecord = API.addEnum(Name, USR, Loc, Availability, Comment,
-                                         Declaration, SubHeading);
+    EnumRecord *EnumRecord =
+        API.addEnum(API.copyString(Name), USR, Loc, Availability, Comment,
+                    Declaration, SubHeading);
 
     // Now collect information about the enumerators in this enum.
     recordEnumConstants(EnumRecord, Decl->enumerators());

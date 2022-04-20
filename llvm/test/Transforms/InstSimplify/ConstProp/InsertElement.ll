@@ -50,3 +50,19 @@ define i64 @extract_undef_index_from_nonzero_vec() {
   %E = extractelement <2 x i64> <i64 -1, i64 -1>, i64 undef
   ret i64 %E
 }
+
+define <vscale x 2 x i32> @insertelement_scalable_null() {
+; CHECK-LABEL: @insertelement_scalable_null(
+; CHECK-NEXT:    ret <vscale x 2 x i32> zeroinitializer
+;
+  %vec = insertelement <vscale x 2 x i32> zeroinitializer, i32 0, i32 0
+  ret <vscale x 2 x i32> %vec
+}
+
+define <vscale x 2 x float> @insertelement_scalable_null_fp() {
+; CHECK-LABEL: @insertelement_scalable_null_fp(
+; CHECK-NEXT:    ret <vscale x 2 x float> zeroinitializer
+;
+  %vec = insertelement <vscale x 2 x float> zeroinitializer, float 0.0, i32 1
+  ret <vscale x 2 x float> %vec
+}

@@ -265,3 +265,104 @@ module m12d
   interface g
   end interface
 end module
+
+module m13a
+ contains
+  subroutine subr
+  end subroutine
+end module
+module m13b
+  use m13a
+  interface subr
+    module procedure subr
+  end interface
+end module
+module m13c
+  use m13a
+  use m13b
+ contains
+  subroutine test
+    call subr
+  end subroutine
+end module
+module m13d
+  use m13b
+  use m13a
+ contains
+  subroutine test
+    call subr
+  end subroutine
+end module
+
+module m14a
+  type :: foo
+    integer :: n
+  end type
+end module
+module m14b
+  interface foo
+    module procedure bar
+  end interface
+ contains
+  real function bar(x)
+    real, intent(in) :: x
+    bar = x
+  end function
+end module
+module m14c
+  use m14a
+  use m14b
+  type(foo) :: x
+end module
+module m14d
+  use m14a
+  use m14b
+  type(foo) :: x
+ contains
+  subroutine test
+    real :: y
+    y = foo(1.0)
+    x = foo(2)
+  end subroutine
+end module
+module m14e
+  use m14b
+  use m14a
+  type(foo) :: x
+ contains
+  subroutine test
+    real :: y
+    y = foo(1.0)
+    x = foo(2)
+  end subroutine
+end module
+
+module m15a
+  interface foo
+    module procedure bar
+  end interface
+ contains
+  subroutine bar
+  end subroutine
+end module
+module m15b
+  !ERROR: Cannot use-associate 'foo'; it is already declared in this scope
+  use m15a
+ contains
+  subroutine foo
+  end subroutine
+end module
+module m15c
+ contains
+  subroutine foo
+  end subroutine
+end module
+module m15d
+  use m15a
+  use m15c
+ contains
+  subroutine test
+    !ERROR: Reference to 'foo' is ambiguous
+    call foo
+  end subroutine
+end module

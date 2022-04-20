@@ -97,9 +97,9 @@ attributes #1 = { "cmse_nonsecure_entry" "target-features"="+8msecext,+armv8-m.m
 
 !llvm.module.flags = !{!0, !1, !2}
 
-!0 = !{i32 1, !"branch-target-enforcement", i32 0}
-!1 = !{i32 1, !"sign-return-address", i32 1}
-!2 = !{i32 1, !"sign-return-address-all", i32 0}
+!0 = !{i32 8, !"branch-target-enforcement", i32 0}
+!1 = !{i32 8, !"sign-return-address", i32 1}
+!2 = !{i32 8, !"sign-return-address-all", i32 0}
 
 ; UNWIND-LABEL: FunctionAddress: 0x0
 ; UNWIND:       0x00      ; vsp = vsp + 4

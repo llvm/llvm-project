@@ -42,7 +42,7 @@ void OptReductionPass::runOnOperation() {
   ModuleOp module = this->getOperation();
   ModuleOp moduleVariant = module.clone();
 
-  PassManager passManager(module.getContext());
+  OpPassManager passManager("builtin.module");
   if (failed(parsePassPipeline(optPass, passManager))) {
     module.emitError() << "\nfailed to parse pass pipeline";
     return signalPassFailure();
@@ -54,7 +54,13 @@ void OptReductionPass::runOnOperation() {
     return signalPassFailure();
   }
 
-  if (failed(passManager.run(moduleVariant))) {
+  // Temporarily push the variant under the main module and execute the pipeline
+  // on it.
+  module.getBody()->push_back(moduleVariant);
+  LogicalResult pipelineResult = runPipeline(passManager, moduleVariant);
+  moduleVariant->remove();
+
+  if (failed(pipelineResult)) {
     module.emitError() << "\nfailed to run pass pipeline";
     return signalPassFailure();
   }

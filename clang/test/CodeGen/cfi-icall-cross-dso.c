@@ -1,25 +1,25 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -O1 -fno-experimental-new-pass-manager \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -O1 -fno-inline \
 // RUN:   -fsanitize=cfi-icall -fsanitize-cfi-cross-dso \
 // RUN:   -fsanitize-cfi-canonical-jump-tables -emit-llvm -o - %s | FileCheck \
 // RUN:       --check-prefix=CHECK --check-prefix=CHECK-DIAG \
 // RUN:       --check-prefix=ITANIUM --check-prefix=ITANIUM-DIAG \
 // RUN:       %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -O1 -fno-experimental-new-pass-manager \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -O1 -fno-inline \
 // RUN:   -fsanitize=cfi-icall -fsanitize-cfi-cross-dso -fsanitize-trap=cfi-icall \
 // RUN:   -fsanitize-cfi-canonical-jump-tables -emit-llvm -o - %s | FileCheck \
 // RUN:       --check-prefix=CHECK \
 // RUN:       --check-prefix=ITANIUM --check-prefix=ITANIUM-TRAP \
 // RUN:       %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -O1 -fno-experimental-new-pass-manager \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -O1 -fno-inline \
 // RUN:   -fsanitize=cfi-icall -fsanitize-cfi-cross-dso \
 // RUN:   -fsanitize-cfi-canonical-jump-tables -emit-llvm -o - %s | FileCheck \
 // RUN:       --check-prefix=CHECK --check-prefix=CHECK-DIAG \
 // RUN:       --check-prefix=MS --check-prefix=MS-DIAG \
 // RUN:       %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -O1 -fno-experimental-new-pass-manager \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -O1 -fno-inline \
 // RUN:   -fsanitize=cfi-icall -fsanitize-cfi-cross-dso -fsanitize-trap=cfi-icall \
 // RUN:   -fsanitize-cfi-canonical-jump-tables -emit-llvm -o - %s | FileCheck \
 // RUN:       --check-prefix=CHECK \
@@ -66,7 +66,7 @@ Fn h1() {
 }
 
 // CHECK: define {{(dso_local )?}}void @bar({{.*}} !type [[TNOPROTO:![0-9]+]] !type [[TNOPROTO_GENERALIZED:![0-9]+]] !type [[TNOPROTO_ID:![0-9]+]]
-// ITANIUM: define available_externally void @foo({{[^!]*$}}
+// ITANIUM: declare void @foo({{[^!]*$}}
 // MS: define linkonce_odr dso_local void @foo({{.*}} !type [[TNOPROTO]] !type [[TNOPROTO_GENERALIZED:![0-9]+]] !type [[TNOPROTO_ID]]
 inline void foo() {}
 void bar() { foo(); }

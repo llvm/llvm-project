@@ -78,18 +78,6 @@ public:
                            numLocals);
   }
 
-  /// Returns the space. This function is primarily intended to be used from
-  /// derived classes.
-  PresburgerSpace getSpace() const { return *this; }
-
-  /// Returns the space without locals. This function is primarily intended to
-  /// be used from derived classes.
-  PresburgerSpace getSpaceWithoutLocals() const {
-    return PresburgerSpace(numDomain, numRange, numSymbols);
-  }
-
-  virtual ~PresburgerSpace() = default;
-
   unsigned getNumDomainIds() const { return numDomain; }
   unsigned getNumRangeIds() const { return numRange; }
   unsigned getNumSetDimIds() const { return numRange; }
@@ -125,24 +113,20 @@ public:
   /// Positions are relative to the kind of identifier. Return the absolute
   /// column position (i.e., not relative to the kind of identifier) of the
   /// first added identifier.
-  virtual unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1);
+  unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1);
 
   /// Removes identifiers of the specified kind in the column range [idStart,
   /// idLimit). The range is relative to the kind of identifier.
-  virtual void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
-
-  /// Truncate the ids of the specified kind to the specified number by dropping
-  /// some ids at the end. `num` must be less than the current number.
-  void truncateIdKind(IdKind kind, unsigned num);
+  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
 
   /// Returns true if both the spaces are compatible i.e. if both spaces have
   /// the same number of identifiers of each kind (excluding locals).
-  bool isSpaceCompatible(const PresburgerSpace &other) const;
+  bool isCompatible(const PresburgerSpace &other) const;
 
   /// Returns true if both the spaces are equal including local identifiers i.e.
   /// if both spaces have the same number of identifiers of each kind (including
   /// locals).
-  bool isSpaceEqual(const PresburgerSpace &other) const;
+  bool isEqual(const PresburgerSpace &other) const;
 
   /// Changes the partition between dimensions and symbols. Depending on the new
   /// symbol count, either a chunk of dimensional identifiers immediately before
