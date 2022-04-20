@@ -8822,6 +8822,9 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         (D.getDeclSpec().isTypeRep() &&
          D.getDeclSpec().getRepAsType().get()->isFunctionProtoType()) ||
         (!R->getAsAdjusted<FunctionType>() && R->isFunctionProtoType());
+    assert(
+        (HasPrototype || !SemaRef.getLangOpts().requiresStrictPrototypes()) &&
+        "Strict prototypes are required");
 
     NewFD = FunctionDecl::Create(
         SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,

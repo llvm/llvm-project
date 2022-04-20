@@ -176,6 +176,11 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+- Added the ``-fno-knr-functions`` flag to allow users to opt into the C2x
+  behavior where a function with an empty parameter list is treated as though
+  the parameter list were ``void``. There is no ``-fknr-functions`` or
+  ``-fno-no-knr-functions`` flag; this feature cannot be disabled in language
+  modes where it is required, such as C++ or C2x.
 
 Deprecated Compiler Flags
 -------------------------
@@ -239,6 +244,8 @@ C2x Feature Support
 - Removed support for implicit function declarations. This was a C89 feature
   that was removed in C99, but cannot be supported in C2x because it requires
   support for functions without prototypes, which no longer exist in C2x.
+- Implemented `WG14 N2841 No function declarators without prototypes <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2841.htm>`_
+  and `WG14 N2432 Remove support for function definitions with identifier lists <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2432.pdf>`_.
 
 C++ Language Changes in Clang
 -----------------------------

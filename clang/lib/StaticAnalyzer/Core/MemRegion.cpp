@@ -1033,8 +1033,10 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
             T = TSI->getType();
           if (T.isNull())
             T = getContext().VoidTy;
-          if (!T->getAs<FunctionType>())
-            T = getContext().getFunctionNoProtoType(T);
+          if (!T->getAs<FunctionType>()) {
+            FunctionProtoType::ExtProtoInfo Ext;
+            T = getContext().getFunctionType(T, None, Ext);
+          }
           T = getContext().getBlockPointerType(T);
 
           const BlockCodeRegion *BTR =
