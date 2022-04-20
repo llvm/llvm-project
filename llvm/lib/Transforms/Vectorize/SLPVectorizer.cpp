@@ -1188,7 +1188,8 @@ public:
             return AllUsersVectorized(V1) && AllUsersVectorized(V2);
           };
           // A broadcast of a load can be cheaper on some targets.
-          if (R.TTI->isLegalBroadcastLoad(V1->getType(), NumLanes) &&
+          if (R.TTI->isLegalBroadcastLoad(V1->getType(),
+                                          ElementCount::getFixed(NumLanes)) &&
               ((int)V1->getNumUses() == NumLanes ||
                AllUsersAreInternal(V1, V2)))
             return VLOperands::ScoreSplatLoads;

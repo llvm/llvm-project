@@ -256,7 +256,7 @@ public:
     return Alignment >= DataSize && isPowerOf2_32(DataSize);
   }
 
-  bool isLegalBroadcastLoad(Type *ElementTy, unsigned NumElements) const {
+  bool isLegalBroadcastLoad(Type *ElementTy, ElementCount NumElements) const {
     return false;
   }
 
