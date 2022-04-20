@@ -26,8 +26,3 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTargetInfo() {
   RegisterTarget<Triple::spirv64> Y(getTheSPIRV64Target(), "spirv64",
                                     "SPIR-V 64-bit", "SPIRV");
 }
-
-// FIXME: Temporary stub - this function must be defined for linking
-// to succeed and will be called unconditionally by llc, so must be a no-op.
-// Remove once this function is properly implemented.
-extern "C" void LLVMInitializeSPIRVTargetMC() {}

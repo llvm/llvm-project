@@ -18,6 +18,8 @@ add_llvm_target(SPIRVCodeGen
   LINK_COMPONENTS
   CodeGen
   Core
+  MC
+  SPIRVDesc
   SPIRVInfo
   Support
   Target
@@ -26,4 +28,5 @@ add_llvm_target(SPIRVCodeGen
   SPIRV
   )
 
+add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)

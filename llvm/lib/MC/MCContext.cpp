@@ -29,6 +29,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionSPIRV.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -110,6 +111,9 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
   case Triple::DXContainer:
     Env = IsDXContainer;
     break;
+  case Triple::SPIRV:
+    Env = IsSPIRV;
+    break;
   case Triple::UnknownObjectFormat:
     report_fatal_error("Cannot initialize MC for unknown object file format.");
     break;
@@ -147,6 +151,7 @@ void MCContext::reset() {
   WasmAllocator.DestroyAll();
   XCOFFAllocator.DestroyAll();
   MCInstAllocator.DestroyAll();
+  SPIRVAllocator.DestroyAll();
 
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
@@ -253,6 +258,9 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
     return createXCOFFSymbolImpl(Name, IsTemporary);
   case MCContext::IsDXContainer:
     break;
+  case MCContext::IsSPIRV:
+    return new (Name, *this)
+        MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
   }
   return new (Name, *this) MCSymbol(MCSymbol::SymbolKindUnset, Name,
                                     IsTemporary);
@@ -801,6 +809,21 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
                        MultiSymbolsAllowed);
 
   Entry.second = Result;
+
+  auto *F = new MCDataFragment();
+  Result->getFragmentList().insert(Result->begin(), F);
+  F->setParent(Result);
+
+  if (Begin)
+    Begin->setFragment(F);
+
+  return Result;
+}
+
+MCSectionSPIRV *MCContext::getSPIRVSection() {
+  MCSymbol *Begin = nullptr;
+  MCSectionSPIRV *Result = new (SPIRVAllocator.Allocate())
+      MCSectionSPIRV(SectionKind::getText(), Begin);
 
   auto *F = new MCDataFragment();
   Result->getFragmentList().insert(Result->begin(), F);
