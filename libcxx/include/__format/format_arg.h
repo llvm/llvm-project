@@ -160,17 +160,17 @@ private:
   };
   __format::__arg_t __type_;
 
-  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(bool __v) noexcept
+  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(const bool& __v) noexcept
       : __boolean(__v), __type_(__format::__arg_t::__boolean) {}
 
   template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(_Tp __v) noexcept
+  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(const _Tp& __v) noexcept
       requires(same_as<_Tp, char_type> ||
                (same_as<_Tp, char> && same_as<char_type, wchar_t>))
       : __char_type(__v), __type_(__format::__arg_t::__char_type) {}
 
   template <__libcpp_signed_integer _Tp>
-  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(_Tp __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(const _Tp& __v) noexcept {
     if constexpr (sizeof(_Tp) <= sizeof(int)) {
       __int = static_cast<int>(__v);
       __type_ = __format::__arg_t::__int;
@@ -189,7 +189,7 @@ private:
   }
 
   template <__libcpp_unsigned_integer _Tp>
-  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(_Tp __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(const _Tp& __v) noexcept {
     if constexpr (sizeof(_Tp) <= sizeof(unsigned)) {
       __unsigned = static_cast<unsigned>(__v);
       __type_ = __format::__arg_t::__unsigned;
