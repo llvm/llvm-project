@@ -762,10 +762,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     StringRef PCHInclude = PPOpts.ImplicitPCHInclude;
     CI.getLangOpts().NeededByPCHOrCompilationUsesPCH = true;
     std::string SpecificModuleCachePath = CI.getSpecificModuleCachePath();
-    if (auto PCHDir = FileMgr.getDirectory(PCHInclude)) {
+    if (auto PCHDir = FileMgr.getOptionalDirectoryRef(PCHInclude)) {
       std::error_code EC;
       SmallString<128> DirNative;
-      llvm::sys::path::native((*PCHDir)->getName(), DirNative);
+      llvm::sys::path::native(PCHDir->getName(), DirNative);
       bool Found = false;
       llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
       for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
