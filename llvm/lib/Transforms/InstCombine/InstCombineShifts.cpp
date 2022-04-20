@@ -1163,15 +1163,32 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
-    // Look for a "splat" mul pattern - it replicates bits across each half of
-    // a value, so a right shift is just a mask of the low bits:
-    // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
-    // TODO: Generalize to allow more than just half-width shifts?
     const APInt *MulC;
-    if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC))) &&
-        BitWidth > 2 && ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
-        MulC->logBase2() == ShAmtC)
-      return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
+    if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC)))) {
+      // Look for a "splat" mul pattern - it replicates bits across each half of
+      // a value, so a right shift is just a mask of the low bits:
+      // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
+      // TODO: Generalize to allow more than just half-width shifts?
+      if (BitWidth > 2 && ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
+          MulC->logBase2() == ShAmtC)
+        return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
+
+      // The one-use check is not strictly necessary, but codegen may not be
+      // able to invert the transform and perf may suffer with an extra mul
+      // instruction.
+      if (Op0->hasOneUse()) {
+        APInt NewMulC = MulC->lshr(ShAmtC);
+        // if c is divisible by (1 << ShAmtC):
+        // lshr (mul nuw x, MulC), ShAmtC -> mul nuw x, (MulC >> ShAmtC)
+        if (MulC->eq(NewMulC.shl(ShAmtC))) {
+          auto *NewMul =
+              BinaryOperator::CreateNUWMul(X, ConstantInt::get(Ty, NewMulC));
+          BinaryOperator *OrigMul = cast<BinaryOperator>(Op0);
+          NewMul->setHasNoSignedWrap(OrigMul->hasNoSignedWrap());
+          return NewMul;
+        }
+      }
+    }
 
     // Try to narrow a bswap:
     // (bswap (zext X)) >> C --> zext (bswap X >> C')
