@@ -25,13 +25,16 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -962,6 +965,101 @@ inline static bool isTruncatedShiftCountForLEA(unsigned ShAmt) {
   // The SIB.scale field is two bits wide which means that we can encode any
   // shift amount less than 4.
   return ShAmt < 4 && ShAmt > 0;
+}
+
+static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
+                                   MachineInstr &CmpValDefInstr,
+                                   const MachineRegisterInfo *MRI,
+                                   MachineInstr **AndInstr,
+                                   const TargetRegisterInfo *TRI,
+                                   bool &NoSignFlag, bool &ClearsOverflowFlag) {
+  if (CmpValDefInstr.getOpcode() != X86::SUBREG_TO_REG)
+    return false;
+
+  if (CmpInstr.getOpcode() != X86::TEST64rr)
+    return false;
+
+  // CmpInstr is a TEST64rr instruction, and `X86InstrInfo::analyzeCompare`
+  // guarantees that it's analyzable only if two registers are identical.
+  assert(
+      (CmpInstr.getOperand(0).getReg() == CmpInstr.getOperand(1).getReg()) &&
+      "CmpInstr is an analyzable TEST64rr, and `X86InstrInfo::analyzeCompare` "
+      "requires two reg operands are the same.");
+
+  // Caller (`X86InstrInfo::optimizeCompareInstr`) guarantees that
+  // `CmpValDefInstr` defines the value that's used by `CmpInstr`; in this case
+  // if `CmpValDefInstr` sets the EFLAGS, it is likely that `CmpInstr` is
+  // redundant.
+  assert(
+      (MRI->getVRegDef(CmpInstr.getOperand(0).getReg()) == &CmpValDefInstr) &&
+      "Caller guarantees that TEST64rr is a user of SUBREG_TO_REG.");
+
+  // As seen in X86 td files, CmpValDefInstr.getOperand(1).getImm() is typically
+  // 0.
+  if (CmpValDefInstr.getOperand(1).getImm() != 0)
+    return false;
+
+  // As seen in X86 td files, CmpValDefInstr.getOperand(3) is typically
+  // sub_32bit or sub_xmm.
+  if (CmpValDefInstr.getOperand(3).getImm() != X86::sub_32bit)
+    return false;
+
+  MachineInstr *VregDefInstr =
+      MRI->getVRegDef(CmpValDefInstr.getOperand(2).getReg());
+
+  assert(VregDefInstr && "Must have a definition (SSA)");
+
+  // Requires `CmpValDefInstr` and `VregDefInstr` are from the same MBB
+  // to simplify the subsequent analysis.
+  //
+  // FIXME: If `VregDefInstr->getParent()` is the only predecessor of
+  // `CmpValDefInstr.getParent()`, this could be handled.
+  if (VregDefInstr->getParent() != CmpValDefInstr.getParent())
+    return false;
+
+  if (X86::isAND(VregDefInstr->getOpcode())) {
+    // Get a sequence of instructions like
+    //   %reg = and* ...                    // Set EFLAGS
+    //   ...                                // EFLAGS not changed
+    //   %extended_reg = subreg_to_reg 0, %reg, %subreg.sub_32bit
+    //   test64rr %extended_reg, %extended_reg, implicit-def $eflags
+    //
+    // If subsequent readers use a subset of bits that don't change
+    // after `and*` instructions, it's likely that the test64rr could
+    // be optimized away.
+    for (const MachineInstr &Instr :
+         make_range(std::next(MachineBasicBlock::iterator(VregDefInstr)),
+                    MachineBasicBlock::iterator(CmpValDefInstr))) {
+      // There are instructions between 'VregDefInstr' and
+      // 'CmpValDefInstr' that modifies EFLAGS.
+      if (Instr.modifiesRegister(X86::EFLAGS, TRI))
+        return false;
+    }
+
+    *AndInstr = VregDefInstr;
+
+    // AND instruction will essentially update SF and clear OF, so
+    // NoSignFlag should be false in the sense that SF is modified by `AND`.
+    //
+    // However, the implementation artifically sets `NoSignFlag` to true
+    // to poison the SF bit; that is to say, if SF is looked at later, the
+    // optimization (to erase TEST64rr) will be disabled.
+    //
+    // The reason to poison SF bit is that SF bit value could be different
+    // in the `AND` and `TEST` operation; signed bit is not known for `AND`,
+    // and is known to be 0 as a result of `TEST64rr`.
+    //
+    // FIXME: As opposed to poisoning the SF bit direclty, consider peeking into
+    // the AND instruction and using the static information to guide peephole optimization if possible.
+    // For example, it's possible to fold a conditional move into a copy
+    // if the relevant EFLAG bits could be deduced from an immediate operand of and operation.
+    // 
+    NoSignFlag = true;
+    // ClearsOverflowFlag is true for AND operation (no surprise).
+    ClearsOverflowFlag = true;
+    return true;
+  }
+  return false;
 }
 
 bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
@@ -4224,6 +4322,23 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         if (IsCmpZero &&
             isDefConvertible(Inst, NoSignFlag, ClearsOverflowFlag)) {
           MI = &Inst;
+          break;
+        }
+
+        // Look back for the following pattern, in which case the test64rr
+        // instruction could be erased.
+        //
+        // Example:
+        //  %reg = and32ri %in_reg, 5
+        //  ...                         // EFLAGS not changed.
+        //  %src_reg = subreg_to_reg 0, %reg, %subreg.sub_index
+        //  test64rr %src_reg, %src_reg, implicit-def $eflags
+        MachineInstr *AndInstr = nullptr;
+        if (IsCmpZero &&
+            findRedundantFlagInstr(CmpInstr, Inst, MRI, &AndInstr, TRI,
+                                   NoSignFlag, ClearsOverflowFlag)) {
+          assert(AndInstr != nullptr && X86::isAND(AndInstr->getOpcode()));
+          MI = AndInstr;
           break;
         }
         // Cannot find other candidates before definition of SrcReg.
