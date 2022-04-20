@@ -537,11 +537,12 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
             static_cast<int32_t>(inputs.size()),
             static_cast<int32_t>(outputs.size())}));
         $_state.addAttributes(attributes);
-        createAndFillStructuredOpRegion<{0}>(
+        createAndFillStructuredOpRegion(
           $_builder,
           $_state,
           TypeRange(inputs),
-          TypeRange(outputs));
+          TypeRange(outputs),
+          {0}::getRegionBuilder());
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
@@ -557,11 +558,12 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
           $_builder.getI32VectorAttr({{
             static_cast<int32_t>(inputs.size()),
             static_cast<int32_t>(outputs.size())}));
-        createAndFillStructuredOpRegion<{0}>(
+        createAndFillStructuredOpRegion(
           $_builder,
           $_state,
           TypeRange(inputs),
-          TypeRange(outputs));
+          TypeRange(outputs),
+          {0}::getRegionBuilder());
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
@@ -618,11 +620,12 @@ static const char structuredOpBuilderFormat[] = R"FMT(
       $_builder.getI32VectorAttr({{
         static_cast<int32_t>(inputs.size()),
         static_cast<int32_t>(outputs.size())}));
-    createAndFillStructuredOpRegion<{0}>(
+    createAndFillStructuredOpRegion(
       $_builder,
       $_state,
       TypeRange(inputs),
-      TypeRange(outputs));
+      TypeRange(outputs),
+      {0}::getRegionBuilder());
   }]>
 )FMT";
 
@@ -705,10 +708,11 @@ void {0}::getEffects(SmallVectorImpl<
 // {0}: Class name
 static const char structuredOpParserFormat[] = R"FMT(
 ParseResult {0}::parse(OpAsmParser &parser, OperationState &result) {{
-  return ::parseNamedStructuredOp<{0}>(parser, result);
+  return ::parseNamedStructuredOp(parser, result,
+    {0}::getNumRegionArgs(), {0}::getRegionBuilder());
 }
 void {0}::print(OpAsmPrinter &p) {{
-  ::printNamedStructuredOp(p, *this);
+  ::printNamedStructuredOp(p, getOperation(), inputs(), outputs());
 }
 )FMT";
 

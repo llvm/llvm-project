@@ -91,11 +91,13 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:      $_builder.getI32VectorAttr({
 #  ODS-NEXT:        static_cast<int32_t>(inputs.size()),
 #  ODS-NEXT:        static_cast<int32_t>(outputs.size())}));
-#  ODS-NEXT:    createAndFillStructuredOpRegion<Test1Op>(
+#  ODS-NEXT:    createAndFillStructuredOpRegion(
 #  ODS-NEXT:      $_builder,
 #  ODS-NEXT:      $_state,
 #  ODS-NEXT:      TypeRange(inputs),
-#  ODS-NEXT:      TypeRange(outputs)
+#  ODS-NEXT:      TypeRange(outputs),
+#  ODS-NEXT:      Test1Op::getRegionBuilder()
+
 
 # IMPL-LABEL:  void Test1Op::regionBuilder(ImplicitLocOpBuilder &b,
 #  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
