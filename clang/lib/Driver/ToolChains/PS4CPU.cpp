@@ -54,11 +54,11 @@ void tools::PScpu::addProfileRTArgs(const ToolChain &TC, const ArgList &Args,
         Args, "--dependent-lib=", PSTC.getProfileRTLibName(), ""));
 }
 
-void tools::PScpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
-                                          const InputInfo &Output,
-                                          const InputInfoList &Inputs,
-                                          const ArgList &Args,
-                                          const char *LinkingOutput) const {
+void tools::PScpu::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
+                                           const InputInfo &Output,
+                                           const InputInfoList &Inputs,
+                                           const ArgList &Args,
+                                           const char *LinkingOutput) const {
   auto &TC = static_cast<const toolchains::PS4PS5Base &>(getToolChain());
   claimNoWarnArgs(Args);
   ArgStringList CmdArgs;
@@ -117,11 +117,11 @@ void toolchains::PS5CPU::addSanitizerArgs(const ArgList &Args,
     CmdArgs.push_back(arg("SceThreadSanitizer_nosubmission_stub_weak"));
 }
 
-void tools::PScpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
-                                      const InputInfo &Output,
-                                      const InputInfoList &Inputs,
-                                      const ArgList &Args,
-                                      const char *LinkingOutput) const {
+void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+                                        const InputInfo &Output,
+                                        const InputInfoList &Inputs,
+                                        const ArgList &Args,
+                                        const char *LinkingOutput) const {
   auto &TC = static_cast<const toolchains::PS4PS5Base &>(getToolChain());
   const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
@@ -245,7 +245,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
 }
 
 Tool *toolchains::PS4CPU::buildAssembler() const {
-  return new tools::PScpu::Assemble(*this);
+  return new tools::PScpu::Assembler(*this);
 }
 
 Tool *toolchains::PS5CPU::buildAssembler() const {
@@ -255,7 +255,7 @@ Tool *toolchains::PS5CPU::buildAssembler() const {
 }
 
 Tool *toolchains::PS4PS5Base::buildLinker() const {
-  return new tools::PScpu::Link(*this);
+  return new tools::PScpu::Linker(*this);
 }
 
 SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
