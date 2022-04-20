@@ -13,9 +13,9 @@
 // RUN:   | FileCheck %s
 
 // verify the tools invocations
-// CHECK: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"{{.*}}"-x" "c"
+// CHECK: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
 // CHECK: clang{{.*}}"-cc1" "-triple" "nvptx64-nvidia-cuda" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "sm_52"
-// CHECK: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu" "-emit-obj"
+// CHECK: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
 // CHECK: clang-linker-wrapper{{.*}}"--"{{.*}} "-o" "a.out"
 
 // RUN:   %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 %s 2>&1 \
