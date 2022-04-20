@@ -117,12 +117,32 @@ static std::string getCondVarNames(const Stmt *Cond) {
   return Result;
 }
 
-static bool isKnownFalse(const Expr &Cond, const ASTContext &Ctx) {
-  if (Cond.isValueDependent())
+static bool isKnownToHaveValue(const Expr &Cond, const ASTContext &Ctx,
+                               bool ExpectedValue) {
+  if (Cond.isValueDependent()) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(&Cond)) {
+      // Conjunctions (disjunctions) can still be handled if at least one
+      // conjunct (disjunct) is known to be false (true).
+      if (!ExpectedValue && BinOp->getOpcode() == BO_LAnd)
+        return isKnownToHaveValue(*BinOp->getLHS(), Ctx, false) ||
+               isKnownToHaveValue(*BinOp->getRHS(), Ctx, false);
+      if (ExpectedValue && BinOp->getOpcode() == BO_LOr)
+        return isKnownToHaveValue(*BinOp->getLHS(), Ctx, true) ||
+               isKnownToHaveValue(*BinOp->getRHS(), Ctx, true);
+      if (BinOp->getOpcode() == BO_Comma)
+        return isKnownToHaveValue(*BinOp->getRHS(), Ctx, ExpectedValue);
+    } else if (const auto *UnOp = dyn_cast<UnaryOperator>(&Cond)) {
+      if (UnOp->getOpcode() == UO_LNot)
+        return isKnownToHaveValue(*UnOp->getSubExpr(), Ctx, !ExpectedValue);
+    } else if (const auto *Paren = dyn_cast<ParenExpr>(&Cond))
+      return isKnownToHaveValue(*Paren->getSubExpr(), Ctx, ExpectedValue);
+    else if (const auto *ImplCast = dyn_cast<ImplicitCastExpr>(&Cond))
+      return isKnownToHaveValue(*ImplCast->getSubExpr(), Ctx, ExpectedValue);
     return false;
+  }
   bool Result = false;
   if (Cond.EvaluateAsBooleanCondition(Result, Ctx))
-    return !Result;
+    return Result == ExpectedValue;
   return false;
 }
 
@@ -144,7 +164,7 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LoopStmt = Result.Nodes.getNodeAs<Stmt>("loop-stmt");
   const auto *Func = Result.Nodes.getNodeAs<Decl>("func");
 
-  if (isKnownFalse(*Cond, *Result.Context))
+  if (isKnownToHaveValue(*Cond, *Result.Context, false))
     return;
 
   bool ShouldHaveConditionVariables = true;
