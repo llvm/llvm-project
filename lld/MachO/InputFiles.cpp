@@ -116,6 +116,7 @@ static std::vector<PlatformInfo> getPlatformInfos(const InputFile *input) {
 
   const char *hdr = input->mb.getBufferStart();
 
+  // "Zippered" object files can have multiple LC_BUILD_VERSION load commands.
   std::vector<PlatformInfo> platformInfos;
   for (auto *cmd : findCommands<build_version_command>(hdr, LC_BUILD_VERSION)) {
     PlatformInfo info;
