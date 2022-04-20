@@ -532,6 +532,8 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <__utility/auto_cast.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
+#include <__utility/unreachable.h>
+#include <climits>
 #include <compare>
 #include <cstdio>  // EOF
 #include <cstdlib>
@@ -539,6 +541,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <initializer_list>
 #include <iosfwd>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string_view>
@@ -674,16 +677,9 @@ private:
     {
         pointer   __data_;
         size_type __size_;
-        size_type __cap_;
+        size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
+        size_type __is_long_ : 1;
     };
-
-#ifdef _LIBCPP_BIG_ENDIAN
-    static const size_type __short_mask = 0x01;
-    static const size_type __long_mask  = 0x1ul;
-#else  // _LIBCPP_BIG_ENDIAN
-    static const size_type __short_mask = 0x80;
-    static const size_type __long_mask  = ~(size_type(~0) >> 1);
-#endif // _LIBCPP_BIG_ENDIAN
 
     enum {__min_cap = (sizeof(__long) - 1)/sizeof(value_type) > 2 ?
                       (sizeof(__long) - 1)/sizeof(value_type) : 2};
@@ -692,25 +688,45 @@ private:
     {
         value_type __data_[__min_cap];
         unsigned char __padding[sizeof(value_type) - 1];
-        unsigned char __size_;
+        unsigned char __size_ : 7;
+        unsigned char __is_long_ : 1;
     };
 
+// The __endian_factor is required because the field we use to store the size
+// (either size_type or unsigned char depending on long/short) has one fewer
+// bit than it would if it were not a bitfield.
+//
+// If the LSB is used to store the short-flag in the short string representation,
+// we have to multiply the size by two when it is stored and divide it by two when
+// it is loaded to make sure that we always store an even number. In the long string
+// representation, we can ignore this because we can assume that we always allocate
+// an even amount of value_types.
+//
+// If the MSB is used for the short-flag, the max_size() is numeric_limits<size_type>::max() / 2.
+// This does not impact the short string representation, since we never need the MSB
+// for representing the size of a short string anyway.
+
+#ifdef _LIBCPP_BIG_ENDIAN
+    static const size_type __endian_factor = 2;
 #else
+    static const size_type __endian_factor = 1;
+#endif
+
+#else // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+
+#ifdef _LIBCPP_BIG_ENDIAN
+    static const size_type __endian_factor = 1;
+#else
+    static const size_type __endian_factor = 2;
+#endif
 
     struct __long
     {
-        size_type __cap_;
+        size_type __is_long_ : 1;
+        size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
         size_type __size_;
         pointer   __data_;
     };
-
-#ifdef _LIBCPP_BIG_ENDIAN
-    static const size_type __short_mask = 0x80;
-    static const size_type __long_mask  = ~(size_type(~0) >> 1);
-#else  // _LIBCPP_BIG_ENDIAN
-    static const size_type __short_mask = 0x01;
-    static const size_type __long_mask  = 0x1ul;
-#endif // _LIBCPP_BIG_ENDIAN
 
     enum {__min_cap = (sizeof(__long) - 1)/sizeof(value_type) > 2 ?
                       (sizeof(__long) - 1)/sizeof(value_type) : 2};
@@ -719,7 +735,10 @@ private:
     {
         union
         {
-            unsigned char __size_;
+            struct {
+                unsigned char __is_long_ : 1;
+                unsigned char __size_ : 7;
+            };
             value_type __lx;
         };
         value_type __data_[__min_cap];
@@ -1426,8 +1445,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY void __shrink_or_extend(size_type __target_capacity);
 
     _LIBCPP_INLINE_VISIBILITY
-    bool __is_long() const _NOEXCEPT
-        {return bool(__r_.first().__s.__size_ & __short_mask);}
+    bool __is_long() const _NOEXCEPT {
+        return __r_.first().__s.__is_long_;
+    }
 
 #if _LIBCPP_DEBUG_LEVEL == 2
 
@@ -1474,43 +1494,18 @@ private:
     _LIBCPP_HIDE_FROM_ABI allocator_type& __alloc() _NOEXCEPT { return __r_.second(); }
     _LIBCPP_HIDE_FROM_ABI const allocator_type& __alloc() const _NOEXCEPT { return __r_.second(); }
 
-#ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+    _LIBCPP_INLINE_VISIBILITY
+    void __set_short_size(size_type __s) _NOEXCEPT {
+        _LIBCPP_ASSERT(__s < __min_cap, "__s should never be greater than or equal to the short string capacity");
+        __r_.first().__s.__size_ = __s;
+        __r_.first().__s.__is_long_ = false;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
-    void __set_short_size(size_type __s) _NOEXCEPT
-#   ifdef _LIBCPP_BIG_ENDIAN
-        {__r_.first().__s.__size_ = (unsigned char)(__s << 1);}
-#   else
-        {__r_.first().__s.__size_ = (unsigned char)(__s);}
-#   endif
-
-    _LIBCPP_INLINE_VISIBILITY
-    size_type __get_short_size() const _NOEXCEPT
-#   ifdef _LIBCPP_BIG_ENDIAN
-        {return __r_.first().__s.__size_ >> 1;}
-#   else
-        {return __r_.first().__s.__size_;}
-#   endif
-
-#else  // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __set_short_size(size_type __s) _NOEXCEPT
-#   ifdef _LIBCPP_BIG_ENDIAN
-        {__r_.first().__s.__size_ = (unsigned char)(__s);}
-#   else
-        {__r_.first().__s.__size_ = (unsigned char)(__s << 1);}
-#   endif
-
-    _LIBCPP_INLINE_VISIBILITY
-    size_type __get_short_size() const _NOEXCEPT
-#   ifdef _LIBCPP_BIG_ENDIAN
-        {return __r_.first().__s.__size_;}
-#   else
-        {return __r_.first().__s.__size_ >> 1;}
-#   endif
-
-#endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+    size_type __get_short_size() const _NOEXCEPT {
+        _LIBCPP_ASSERT(!__r_.first().__s.__is_long_, "String has to be short when trying to get the short size");
+        return __r_.first().__s.__size_;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     void __set_long_size(size_type __s) _NOEXCEPT
@@ -1523,11 +1518,15 @@ private:
         {if (__is_long()) __set_long_size(__s); else __set_short_size(__s);}
 
     _LIBCPP_INLINE_VISIBILITY
-    void __set_long_cap(size_type __s) _NOEXCEPT
-        {__r_.first().__l.__cap_  = __long_mask | __s;}
+    void __set_long_cap(size_type __s) _NOEXCEPT {
+        __r_.first().__l.__cap_ = __s / __endian_factor;
+        __r_.first().__l.__is_long_ = true;
+    }
+
     _LIBCPP_INLINE_VISIBILITY
-    size_type __get_long_cap() const _NOEXCEPT
-        {return __r_.first().__l.__cap_ & size_type(~__long_mask);}
+    size_type __get_long_cap() const _NOEXCEPT {
+        return __r_.first().__l.__cap_ * __endian_factor;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     void __set_long_pointer(pointer __p) _NOEXCEPT
@@ -3225,11 +3224,12 @@ typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::max_size() const _NOEXCEPT
 {
     size_type __m = __alloc_traits::max_size(__alloc());
-#ifdef _LIBCPP_BIG_ENDIAN
-    return (__m <= ~__long_mask ? __m : __m/2) - __alignment;
-#else
-    return __m - __alignment;
-#endif
+    if (__m <= std::numeric_limits<size_type>::max() / 2) {
+        return __m - __alignment;
+    } else {
+        bool __uses_lsb = __endian_factor == 2;
+        return __uses_lsb ? __m - __alignment : (__m / 2) - __alignment;
+    }
 }
 
 template <class _CharT, class _Traits, class _Allocator>
