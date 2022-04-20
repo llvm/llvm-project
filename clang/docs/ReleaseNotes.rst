@@ -119,6 +119,10 @@ Bug Fixes
   This fixes Issue `Issue 52802 <https://github.com/llvm/llvm-project/issues/52802>`_.
 - Unknown type attributes with a ``[[]]`` spelling are no longer diagnosed twice.
   This fixes Issue `Issue 54817 <https://github.com/llvm/llvm-project/issues/54817>`_.
+- Clang should no longer incorrectly diagnose a variable declaration inside of
+  a lambda expression that shares the name of a variable in a containing
+  if/while/for/switch init statement as a redeclaration.
+  This fixes `Issue 54913 <https://github.com/llvm/llvm-project/issues/54913>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
