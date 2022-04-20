@@ -12,7 +12,7 @@
 #   int x;
 #   char y;
 # };
-# 
+#
 # __attribute__((noinline)) S CreateS(int p1, char p2) {
 #   S s;
 #   s.x = p1 + 1;
@@ -21,15 +21,15 @@
 #   ++s.y;
 #   return s;
 # }
-# 
+#
 # int main(int argc, char** argv) {
 #   int local = argc * 2;
 #   S s = CreateS(local, 'a');
 #   return s.x + s.y;
 # }
 
-# FIXME: The following variable location have wrong register numbers due to 
-# https://github.com/llvm/llvm-project/issues/53575. Fix them after resolving 
+# FIXME: The following variable location have wrong register numbers due to
+# https://github.com/llvm/llvm-project/issues/53575. Fix them after resolving
 # the issue.
 
 # CHECK:      (lldb) image lookup -a 0x140001000 -v
@@ -244,8 +244,9 @@ main:                                   # @main
 	.asciz	"s"
 	.p2align	2
 .Ltmp24:
-	.cv_def_range	 .Ltmp0 .Lfunc_end0, subfield_reg, 18, 0
-	.cv_def_range	 .Ltmp1 .Lfunc_end0, subfield_reg, 3, 4
+	# The following .cv_def_range order is inverted on purpose for testing.
+	.cv_def_range	 .Ltmp0 .Lfunc_end0, subfield_reg, 3, 4
+	.cv_def_range	 .Ltmp1 .Lfunc_end0, subfield_reg,18, 0
 	.short	2                               # Record length
 	.short	4431                            # Record kind: S_PROC_ID_END
 .Ltmp14:

@@ -52,15 +52,18 @@ MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
 namespace {
 struct FindMembersSize : public TypeVisitorCallbacks {
   FindMembersSize(
-      llvm::SmallVectorImpl<std::pair<RegisterId, uint32_t>> &members_info,
+      std::map<uint64_t, std::pair<RegisterId, uint32_t>> &members_info,
       TpiStream &tpi)
       : members_info(members_info), tpi(tpi) {}
-  llvm::SmallVectorImpl<std::pair<RegisterId, uint32_t>> &members_info;
+  std::map<uint64_t, std::pair<RegisterId, uint32_t>> &members_info;
   TpiStream &tpi;
   llvm::Error visitKnownMember(CVMemberRecord &cvr,
                                DataMemberRecord &member) override {
-    members_info.emplace_back(llvm::codeview::RegisterId::NONE,
-                              GetSizeOfType(member.Type, tpi));
+    auto it = members_info.insert(
+        {member.getFieldOffset(),
+         {llvm::codeview::RegisterId::NONE, GetSizeOfType(member.Type, tpi)}});
+    if (!it.second)
+      return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record);
     return llvm::Error::success();
   }
 };
@@ -708,10 +711,11 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
       break;
     }
     case S_DEFRANGE_SUBFIELD_REGISTER: {
-      // A vector of register id and member size pairs. If the variable is a
-      // simple type, then we don't know the number of subfields. Otherwise, the
-      // vector size will be the number of subfields in the udt type.
-      llvm::SmallVector<std::pair<RegisterId, uint32_t>> members_info;
+      // A map from offset in parent to pair of register id and size. If the
+      // variable is a simple type, then we don't know the number of subfields.
+      // Otherwise, the size of the map should be greater than or equal to the
+      // number of sub field record.
+      std::map<uint64_t, std::pair<RegisterId, uint32_t>> members_info;
       bool is_simple_type = result.type.isSimple();
       if (!is_simple_type) {
         CVType class_cvt = index.tpi().getType(result.type);
@@ -725,8 +729,6 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
         }
       }
 
-      uint32_t prev_offset = 0;
-      uint32_t cur_offset = 0;
       size_t member_idx = 0;
       // Assuming S_DEFRANGE_SUBFIELD_REGISTER is followed only by
       // S_DEFRANGE_SUBFIELD_REGISTER, need to verify.
@@ -748,26 +750,21 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
         }
 
         if (is_simple_type) {
-          // Fix last member's size.
-          if (!members_info.empty())
-            members_info.back().second =
-                loc.Hdr.OffsetInParent - prev_offset;
-          members_info.emplace_back((RegisterId)(uint16_t)loc.Hdr.Register, 0);
-          prev_offset = loc.Hdr.OffsetInParent;
+          if (members_info.count(loc.Hdr.OffsetInParent)) {
+            // Malformed record.
+            result.ranges->Clear();
+            return result;
+          }
+          members_info[loc.Hdr.OffsetInParent] = {
+              (RegisterId)(uint16_t)loc.Hdr.Register, 0};
         } else {
-          // Some fields maybe optimized away and have no
-          // S_DEFRANGE_SUBFIELD_REGISTER to describe them. Skip them.
-          while (loc.Hdr.OffsetInParent != cur_offset &&
-                 member_idx < members_info.size()) {
-            cur_offset += members_info[member_idx].second;
-            ++member_idx;
+          if (!members_info.count(loc.Hdr.OffsetInParent)) {
+            // Malformed record.
+            result.ranges->Clear();
+            return result;
           }
-          if (member_idx < members_info.size()) {
-            members_info[member_idx].first =
-                (RegisterId)(uint16_t)loc.Hdr.Register;
-            cur_offset += members_info[member_idx].second;
-            ++member_idx;
-          }
+          members_info[loc.Hdr.OffsetInParent].first =
+              (RegisterId)(uint16_t)loc.Hdr.Register;
         }
         // Go to next S_DEFRANGE_SUBFIELD_REGISTER.
         loc_specifier_id = PdbCompilandSymId(
@@ -775,12 +772,23 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
             loc_specifier_id.offset + loc_specifier_cvs.RecordData.size());
         loc_specifier_cvs = index.ReadSymbolRecord(loc_specifier_id);
       }
-      if (is_simple_type && !members_info.empty())
-        members_info.back().second =
-            GetTypeSizeForSimpleKind(result.type.getSimpleKind()) - prev_offset;
-      auto member_info_ref = llvm::makeArrayRef(members_info);
+      // Fix size for simple type.
+      if (is_simple_type) {
+        auto cur = members_info.begin();
+        auto end = members_info.end();
+        auto next = cur;
+        ++next;
+        uint32_t size = 0;
+        while (next != end) {
+          cur->second.second = next->first - cur->first;
+          size += cur->second.second;
+          cur = next++;
+        }
+        cur->second.second =
+            GetTypeSizeForSimpleKind(result.type.getSimpleKind()) - size;
+      }
       result.location =
-          MakeEnregisteredLocationExpressionForClass(member_info_ref, module);
+          MakeEnregisteredLocationExpressionForClass(members_info, module);
       break;
     }
     default:
