@@ -22,12 +22,8 @@ func @result_shape(%arg0 : tensor<2x3x?xf32>, %arg1 : tensor<?x5xf32>)
 //   CHECK-DAG:   %[[C3:.+]] = arith.constant 3 : index
 //   CHECK-DAG:   %[[C5:.+]] = arith.constant 5 : index
 //   CHECK-DAG:   %[[D0:.+]] = tensor.dim %[[ARG_1]], %[[C0]]
-//   CHECK-DAG:   %[[S0:.+]] = tensor.from_elements %[[D0]], %[[C5]]
-//   CHECK-DAG:   %[[D0_OUT:.+]] = tensor.extract %[[S0]][%[[C0]]]
 //   CHECK-DAG:   %[[D1:.+]] = tensor.dim %[[ARG_0]], %[[C2]]
-//   CHECK-DAG:   %[[S1:.+]] = tensor.from_elements %[[C2]], %[[C3]], %[[D1]]
-//   CHECK-DAG:   %[[D1_OUT:.+]] = tensor.extract %[[S1]][%[[C2]]]
-//       CHECK:   return %[[D0_OUT]], %[[C5]], %[[C2]], %[[C3]], %[[D1_OUT]]
+//       CHECK:   return %[[D0]], %[[C5]], %[[C2]], %[[C3]], %[[D1]]
 
 // -----
 
