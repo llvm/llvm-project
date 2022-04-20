@@ -465,15 +465,14 @@ Value Importer::processConstant(llvm::Constant *c) {
     if (!type)
       return nullptr;
     if (auto symbolRef = attr.dyn_cast<FlatSymbolRefAttr>())
-      return instMap[c] = bEntry.create<AddressOfOp>(unknownLoc, type,
-                                                     symbolRef.getValue());
-    return instMap[c] = bEntry.create<ConstantOp>(unknownLoc, type, attr);
+      return bEntry.create<AddressOfOp>(unknownLoc, type, symbolRef.getValue());
+    return bEntry.create<ConstantOp>(unknownLoc, type, attr);
   }
   if (auto *cn = dyn_cast<llvm::ConstantPointerNull>(c)) {
     Type type = processType(cn->getType());
     if (!type)
       return nullptr;
-    return instMap[c] = bEntry.create<NullOp>(unknownLoc, type);
+    return bEntry.create<NullOp>(unknownLoc, type);
   }
   if (auto *gv = dyn_cast<llvm::GlobalVariable>(c))
     return bEntry.create<AddressOfOp>(UnknownLoc::get(context),
@@ -498,13 +497,13 @@ Value Importer::processConstant(llvm::Constant *c) {
     // Remove this zombie LLVM instruction now, leaving us only with the MLIR
     // op.
     i->deleteValue();
-    return instMap[c] = value;
+    return value;
   }
   if (auto *ue = dyn_cast<llvm::UndefValue>(c)) {
     Type type = processType(ue->getType());
     if (!type)
       return nullptr;
-    return instMap[c] = bEntry.create<UndefOp>(UnknownLoc::get(context), type);
+    return bEntry.create<UndefOp>(UnknownLoc::get(context), type);
   }
 
   if (isa<llvm::ConstantAggregate>(c) || isa<llvm::ConstantAggregateZero>(c)) {
