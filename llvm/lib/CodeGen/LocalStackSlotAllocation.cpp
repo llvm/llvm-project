@@ -344,7 +344,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
 
   MachineBasicBlock *Entry = &Fn.front();
 
-  unsigned BaseReg = 0;
+  Register BaseReg;
   int64_t BaseOffset = 0;
 
   // Loop through the frame references and allocate for them as necessary.
@@ -414,10 +414,6 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
         continue;
       }
 
-      const MachineFunction *MF = MI.getMF();
-      const TargetRegisterClass *RC = TRI->getPointerRegClass(*MF);
-      BaseReg = Fn.getRegInfo().createVirtualRegister(RC);
-
       LLVM_DEBUG(dbgs() << "  Materializing base register"
                         << " at frame local offset "
                         << LocalOffset + InstrOffset);
@@ -437,7 +433,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
       ++NumBaseRegisters;
       UsedBaseReg = true;
     }
-    assert(BaseReg != 0 && "Unable to allocate virtual base register!");
+    assert(BaseReg && "Unable to allocate virtual base register!");
 
     // Modify the instruction to use the new base register rather
     // than the frame index operand.
