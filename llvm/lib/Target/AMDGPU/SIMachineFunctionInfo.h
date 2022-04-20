@@ -467,9 +467,23 @@ public:
     bool IsDead = false;
   };
 
-  // Map WWM VGPR to a stack slot that is used to save/restore it in the
-  // prolog/epilog.
-  MapVector<Register, Optional<int>> WWMReservedRegs;
+  // Track VGPRs reserved for WWM.
+  SmallSetVector<Register, 8> WWMReservedRegs;
+
+  /// Track stack slots used for save/restore of reserved WWM VGPRs in the
+  /// prolog/epilog.
+
+  /// FIXME: This is temporary state only needed in PrologEpilogInserter, and
+  /// doesn't really belong here. It does not require serialization
+  SmallVector<int, 8> WWMReservedFrameIndexes;
+
+  void allocateWWMReservedSpillSlots(MachineFrameInfo &MFI,
+                                     const SIRegisterInfo &TRI);
+
+  auto wwmAllocation() const {
+    assert(WWMReservedRegs.size() == WWMReservedFrameIndexes.size());
+    return zip(WWMReservedRegs, WWMReservedFrameIndexes);
+  }
 
 private:
   // Track VGPR + wave index for each subregister of the SGPR spilled to
@@ -521,8 +535,8 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error, SMRange &SourceRange);
 
-  void reserveWWMRegister(Register Reg, Optional<int> FI) {
-    WWMReservedRegs.insert(std::make_pair(Reg, FI));
+  void reserveWWMRegister(Register Reg) {
+    WWMReservedRegs.insert(Reg);
   }
 
   ArrayRef<SpilledReg> getSGPRToVGPRSpills(int FrameIndex) const {

@@ -749,7 +749,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     return;
   }
 
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -789,19 +789,13 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
                      *Reg.FI);
   }
 
-  // VGPRs used for Whole Wave Mode
-  for (const auto &Reg : FuncInfo->WWMReservedRegs) {
-    auto VGPR = Reg.first;
-    auto FI = Reg.second;
-    if (!FI)
-      continue;
-
+  for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
     if (!ScratchExecCopy)
       ScratchExecCopy =
           buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ true);
 
-    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR,
-                     *FI);
+    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
+                     std::get<0>(ReservedWWM), std::get<1>(ReservedWWM));
   }
 
   if (ScratchExecCopy) {
@@ -1063,18 +1057,13 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                        Reg.VGPR, *Reg.FI);
   }
 
-  for (const auto &Reg : FuncInfo->WWMReservedRegs) {
-    auto VGPR = Reg.first;
-    auto FI = Reg.second;
-    if (!FI)
-      continue;
-
+  for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
     if (!ScratchExecCopy)
       ScratchExecCopy =
           buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, /*IsProlog*/ false);
 
-    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR,
-                       *FI);
+    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
+                       std::get<0>(ReservedWWM), std::get<1>(ReservedWWM));
   }
 
   if (ScratchExecCopy) {
@@ -1123,6 +1112,11 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
+  if (!FuncInfo->isEntryFunction()) {
+    // Spill VGPRs used for Whole Wave Mode
+    FuncInfo->allocateWWMReservedSpillSlots(MFI, *TRI);
+  }
 
   const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
                                && EnableSpillVGPRToAGPR;
