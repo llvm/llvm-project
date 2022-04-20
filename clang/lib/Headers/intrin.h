@@ -560,8 +560,6 @@ unsigned __int64 __cdecl _byteswap_uint64(unsigned __int64 val);
 
 __int64 __mulh(__int64 __a, __int64 __b);
 unsigned __int64 __umulh(unsigned __int64 __a, unsigned __int64 __b);
-
-void __break(int);
 #endif
 
 /*----------------------------------------------------------------------------*\

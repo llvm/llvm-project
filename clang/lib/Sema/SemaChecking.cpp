@@ -2948,9 +2948,6 @@ bool Sema::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   if (BuiltinID == AArch64::BI__getReg)
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31);
 
-  if (BuiltinID == AArch64::BI__break)
-    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 0xffff);
-
   if (CheckNeonBuiltinFunctionCall(TI, BuiltinID, TheCall))
     return true;
 

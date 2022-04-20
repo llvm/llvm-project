@@ -4529,9 +4529,8 @@ multiclass MemTagStore<bits<2> opc1, string insn> {
 //---
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
-class ExceptionGeneration<bits<3> op1, bits<2> ll, string asm,
-                          list<dag> pattern = []>
-    : I<(outs), (ins timm32_0_65535:$imm), asm, "\t$imm", "", pattern>,
+class ExceptionGeneration<bits<3> op1, bits<2> ll, string asm>
+    : I<(outs), (ins timm32_0_65535:$imm), asm, "\t$imm", "", []>,
       Sched<[WriteSys]> {
   bits<16> imm;
   let Inst{31-24} = 0b11010100;
