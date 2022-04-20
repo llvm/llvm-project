@@ -850,39 +850,6 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
   return GenericOpc;
 }
 
-#ifndef NDEBUG
-/// Helper function that verifies that we have a valid copy at the end of
-/// selectCopy. Verifies that the source and dest have the expected sizes and
-/// then returns true.
-static bool isValidCopy(const MachineInstr &I, const RegisterBank &DstBank,
-                        const MachineRegisterInfo &MRI,
-                        const TargetRegisterInfo &TRI,
-                        const RegisterBankInfo &RBI) {
-  const Register DstReg = I.getOperand(0).getReg();
-  const Register SrcReg = I.getOperand(1).getReg();
-  const unsigned DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
-  const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
-
-  // Make sure the size of the source and dest line up.
-  assert(
-      (DstSize == SrcSize ||
-       // Copies are a mean to setup initial types, the number of
-       // bits may not exactly match.
-       (Register::isPhysicalRegister(SrcReg) && DstSize <= SrcSize) ||
-       // Copies are a mean to copy bits around, as long as we are
-       // on the same register class, that's fine. Otherwise, that
-       // means we need some SUBREG_TO_REG or AND & co.
-       (((DstSize + 31) / 32 == (SrcSize + 31) / 32) && DstSize > SrcSize)) &&
-      "Copy with different width?!");
-
-  // Check the size of the destination.
-  assert((DstSize <= 64 || DstBank.getID() == AArch64::FPRRegBankID) &&
-         "GPRs cannot get more than 64-bit width values");
-
-  return true;
-}
-#endif
-
 /// Helper function for selectCopy. Inserts a subregister copy from \p SrcReg
 /// to \p *To.
 ///
@@ -957,31 +924,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     return false;
   }
 
-  // A couple helpers below, for making sure that the copy we produce is valid.
-
-  // Set to true if we insert a SUBREG_TO_REG. If we do this, then we don't want
-  // to verify that the src and dst are the same size, since that's handled by
-  // the SUBREG_TO_REG.
-  bool KnownValid = false;
-
-  // Returns true, or asserts if something we don't expect happens. Instead of
-  // returning true, we return isValidCopy() to ensure that we verify the
-  // result.
-  auto CheckCopy = [&]() {
-    // If we have a bitcast or something, we can't have physical registers.
-    assert((I.isCopy() ||
-            (!Register::isPhysicalRegister(I.getOperand(0).getReg()) &&
-             !Register::isPhysicalRegister(I.getOperand(1).getReg()))) &&
-           "No phys reg on generic operator!");
-    bool ValidCopy = true;
-#ifndef NDEBUG
-    ValidCopy = KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI);
-    assert(ValidCopy && "Invalid copy.");
-#endif
-    (void)KnownValid;
-    return ValidCopy;
-  };
-
   // Is this a copy? If so, then we may need to insert a subregister copy.
   if (I.isCopy()) {
     // Yes. Check if there's anything to fix up.
@@ -1026,15 +968,12 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
           .addImm(SubReg);
       MachineOperand &RegOp = I.getOperand(1);
       RegOp.setReg(PromoteReg);
-
-      // Promise that the copy is implicitly validated by the SUBREG_TO_REG.
-      KnownValid = true;
     }
 
     // If the destination is a physical register, then there's nothing to
     // change, so we're done.
     if (Register::isPhysicalRegister(DstReg))
-      return CheckCopy();
+      return true;
   }
 
   // No need to constrain SrcReg. It will get constrained when we hit another
@@ -1054,7 +993,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   }
 
   I.setDesc(TII.get(AArch64::COPY));
-  return CheckCopy();
+  return true;
 }
 
 static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
