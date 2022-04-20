@@ -176,6 +176,9 @@ Changes in existing checks
 - Fixed incorrect suggestions for :doc:`readability-container-size-empty
   <clang-tidy/checks/readability-container-size-empty>` when smart pointers are involved.
 
+- Fixed some false positives in :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone-infinite-loop>` involving dependent expressions.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
