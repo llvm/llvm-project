@@ -24,6 +24,11 @@ bool LLDBMemoryReader::queryDataLayout(DataLayoutQueryType type, void *inBuffer,
       return false;
     // The mask returned by the process masks out the non-addressable bits.
     uint64_t mask_pattern = ~ptrauth_mask;
+    // LLDBMemoryReader sets LLDB_FILE_ADDRESS_BIT to distinguish process
+    // addresses and file addresses that point into a reflection section on
+    // disk. Setting the bit in the mask ensures it isn't accidentally cleared
+    // by ptrauth stripping.
+    mask_pattern |= LLDB_FILE_ADDRESS_BIT;
     memcpy(outBuffer, &mask_pattern, sizeof(uint64_t));
     return true;
   }
