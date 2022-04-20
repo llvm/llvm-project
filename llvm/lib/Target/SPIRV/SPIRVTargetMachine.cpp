@@ -12,6 +12,9 @@
 
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
+#include "SPIRVCallLowering.h"
+#include "SPIRVGlobalRegistry.h"
+#include "SPIRVLegalizerInfo.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
@@ -34,6 +37,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   // Register the target.
   RegisterTargetMachine<SPIRVTargetMachine> X(getTheSPIRV32Target());
   RegisterTargetMachine<SPIRVTargetMachine> Y(getTheSPIRV64Target());
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -155,7 +161,19 @@ bool SPIRVPassConfig::addRegBankSelect() {
   return false;
 }
 
+namespace {
+// A custom subclass of InstructionSelect, which is mostly the same except from
+// not requiring RegBankSelect to occur previously.
+class SPIRVInstructionSelect : public InstructionSelect {
+  // We don't use register banks, so unset the requirement for them
+  MachineFunctionProperties getRequiredProperties() const override {
+    return InstructionSelect::getRequiredProperties().reset(
+        MachineFunctionProperties::Property::RegBankSelected);
+  }
+};
+} // namespace
+
 bool SPIRVPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new SPIRVInstructionSelect());
   return false;
 }

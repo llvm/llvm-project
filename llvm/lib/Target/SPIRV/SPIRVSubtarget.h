@@ -30,13 +30,15 @@
 
 namespace llvm {
 class StringRef;
-
+class SPIRVGlobalRegistry;
 class SPIRVTargetMachine;
 
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
 private:
   const unsigned PointerSize;
   uint32_t SPIRVVersion;
+
+  std::unique_ptr<SPIRVGlobalRegistry> GR;
 
   SPIRVInstrInfo InstrInfo;
   SPIRVFrameLowering FrameLowering;
@@ -45,6 +47,8 @@ private:
   // GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<InstructionSelector> InstSelector;
 
 public:
   // This constructor initializes the data members to match that
@@ -59,12 +63,19 @@ public:
   unsigned getPointerSize() const { return PointerSize; }
   bool canDirectlyComparePointers() const;
   uint32_t getSPIRVVersion() const { return SPIRVVersion; };
+  SPIRVGlobalRegistry *getSPIRVGlobalRegistry() const { return GR.get(); }
 
   const CallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
   const RegisterBankInfo *getRegBankInfo() const override {
     return RegBankInfo.get();
+  }
+  const LegalizerInfo *getLegalizerInfo() const override {
+    return Legalizer.get();
+  }
+  InstructionSelector *getInstructionSelector() const override {
+    return InstSelector.get();
   }
   const SPIRVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const SPIRVFrameLowering *getFrameLowering() const override {

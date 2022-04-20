@@ -17,12 +17,19 @@
 
 namespace llvm {
 
+class SPIRVGlobalRegistry;
+class SPIRVSubtarget;
 class SPIRVTargetLowering;
 
 class SPIRVCallLowering : public CallLowering {
 private:
+  const SPIRVSubtarget &ST;
+  // Used to create and assign function, argument, and return type information.
+  SPIRVGlobalRegistry *GR;
+
 public:
-  SPIRVCallLowering(const SPIRVTargetLowering &TLI);
+  SPIRVCallLowering(const SPIRVTargetLowering &TLI, const SPIRVSubtarget &ST,
+                    SPIRVGlobalRegistry *GR);
 
   // Built OpReturn or OpReturnValue.
   bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
