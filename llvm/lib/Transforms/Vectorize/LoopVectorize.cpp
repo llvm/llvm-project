@@ -480,7 +480,7 @@ public:
                             VPTransformState &State);
 
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
-  void fixVectorizedLoop(VPTransformState &State);
+  void fixVectorizedLoop(VPTransformState &State, VPlan &Plan);
 
   // Return true if any runtime check is added.
   bool areSafetyChecksAdded() { return AddedSafetyChecks; }
@@ -3646,7 +3646,8 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths(VPTransformState &State) {
   }
 }
 
-void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
+void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
+                                            VPlan &Plan) {
   // Insert truncates and extends for any truncated instructions as hints to
   // InstCombine.
   if (VF.isVector())
@@ -3668,7 +3669,8 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Forget the original basic block.
   PSE.getSE()->forgetLoop(OrigLoop);
 
-  Loop *VectorLoop = LI->getLoopFor(State.CFG.PrevBB);
+  VPBasicBlock *LatchVPBB = Plan.getVectorLoopRegion()->getExitBasicBlock();
+  Loop *VectorLoop = LI->getLoopFor(State.CFG.VPBB2IRBB[LatchVPBB]);
   // If we inserted an edge from the middle block to the unique exit block,
   // update uses outside the loop (phis) to account for the newly inserted
   // edge.
@@ -3864,8 +3866,10 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   setDebugLocFromInst(LoopExitInst);
 
   Type *PhiTy = OrigPhi->getType();
-  BasicBlock *VectorLoopLatch =
-      LI->getLoopFor(State.CFG.PrevBB)->getLoopLatch();
+
+  VPBasicBlock *LatchVPBB =
+      PhiR->getParent()->getEnclosingLoopRegion()->getExitBasicBlock();
+  BasicBlock *VectorLoopLatch = State.CFG.VPBB2IRBB[LatchVPBB];
   // If tail is folded by masking, the vector value to leave the loop should be
   // a Select choosing between the vectorized LoopExitInst and vectorized Phi,
   // instead of the former. For an inloop reduction the reduction will already
@@ -7628,7 +7632,9 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupVectorized});
 
-  Loop *L = LI->getLoopFor(State.CFG.PrevBB);
+  VPBasicBlock *HeaderVPBB =
+      BestVPlan.getVectorLoopRegion()->getEntryBasicBlock();
+  Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
   if (VectorizedLoopID.hasValue())
     L->setLoopID(VectorizedLoopID.getValue());
   else {
@@ -7646,7 +7652,7 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.
-  ILV.fixVectorizedLoop(State);
+  ILV.fixVectorizedLoop(State, BestVPlan);
 
   ILV.printDebugTracesAtEnd();
 }
@@ -8750,8 +8756,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
 
   // Create initial VPlan skeleton, starting with a block for the pre-header,
-  // followed by a region for the vector loop. The skeleton vector loop region
-  // contains a header and latch block.
+  // followed by a region for the vector loop, followed by the middle block. The
+  // skeleton vector loop region contains a header and latch block.
   VPBasicBlock *Preheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Preheader);
 
@@ -8760,6 +8766,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   VPBlockUtils::insertBlockAfter(LatchVPBB, HeaderVPBB);
   auto *TopRegion = new VPRegionBlock(HeaderVPBB, LatchVPBB, "vector loop");
   VPBlockUtils::insertBlockAfter(TopRegion, Preheader);
+  VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
+  VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
   Instruction *DLInst =
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction());

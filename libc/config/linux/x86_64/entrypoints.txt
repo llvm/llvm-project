@@ -253,6 +253,7 @@ if(LLVM_LIBC_FULL_BUILD)
     # stdio.h entrypoints
     libc.src.stdio.fclose
     libc.src.stdio.flockfile
+    libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fread
     libc.src.stdio.fread_unlocked

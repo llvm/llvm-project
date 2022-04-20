@@ -473,8 +473,7 @@ static Module *getTopLevelOrNull(Module *M) {
 void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
                                         bool RequestingModuleIsModuleInterface,
                                         SourceLocation FilenameLoc,
-                                        StringRef Filename,
-                                        const FileEntry *File) {
+                                        StringRef Filename, FileEntryRef File) {
   // No errors for indirect modules. This may be a bit of a problem for modules
   // with no source files.
   if (getTopLevelOrNull(RequestingModule) != getTopLevelOrNull(SourceModule))
@@ -542,7 +541,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
         diag::warn_non_modular_include_in_framework_module :
         diag::warn_non_modular_include_in_module;
     Diags.Report(FilenameLoc, DiagID) << RequestingModule->getFullModuleName()
-        << File->getName();
+        << File.getName();
   }
 }
 
