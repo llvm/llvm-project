@@ -19,6 +19,8 @@
 # FULL-NEXT: scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
 # FULL-NEXT: frameOffsetReg:  '$sgpr12'
 # FULL-NEXT: stackPtrOffsetReg:  '$sgpr13'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
@@ -114,6 +116,8 @@ body:             |
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
@@ -178,6 +182,8 @@ body:             |
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
@@ -243,6 +249,8 @@ body:             |
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
@@ -445,5 +453,41 @@ machineFunctionInfo:
 body:             |
   bb.0:
     S_ENDPGM 0
+
+...
+
+---
+# ALL-LABEL: name: bytes_in_stack_arg_area
+# ALL: bytesInStackArgArea: 444
+name: bytes_in_stack_arg_area
+machineFunctionInfo:
+  bytesInStackArgArea: 444
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: returns_void_true
+# FULL: returnsVoid: true
+# SIMPLE-NOT: returnsVoid
+name: returns_void_true
+machineFunctionInfo:
+  returnsVoid: true
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+---
+# ALL-LABEL: name: returns_void_false
+# ALL: returnsVoid: false
+name: returns_void_false
+machineFunctionInfo:
+  returnsVoid: false
+body:             |
+  bb.0:
+    SI_RETURN
 
 ...

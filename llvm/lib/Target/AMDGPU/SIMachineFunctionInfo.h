@@ -290,6 +290,9 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue FrameOffsetReg = "$fp_reg";
   StringValue StackPtrOffsetReg = "$sp_reg";
 
+  unsigned BytesInStackArgArea = 0;
+  bool ReturnsVoid = true;
+
   Optional<SIArgumentInfo> ArgInfo;
   SIMode Mode;
   Optional<FrameIndex> ScavengeFI;
@@ -323,6 +326,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue("$fp_reg"));
     YamlIO.mapOptional("stackPtrOffsetReg", MFI.StackPtrOffsetReg,
                        StringValue("$sp_reg"));
+    YamlIO.mapOptional("bytesInStackArgArea", MFI.BytesInStackArgArea, 0u);
+    YamlIO.mapOptional("returnsVoid", MFI.ReturnsVoid, true);
     YamlIO.mapOptional("argumentInfo", MFI.ArgInfo);
     YamlIO.mapOptional("mode", MFI.Mode, SIMode());
     YamlIO.mapOptional("highBitsOf32BitAddress",
