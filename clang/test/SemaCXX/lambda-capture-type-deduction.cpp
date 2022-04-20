@@ -87,23 +87,23 @@ void err() {
   int y, z;                // expected-note 2{{declared here}}
   auto implicit_tpl = [=]( // expected-note {{variable 'y' is captured here}}
                           decltype(
-                              [&]<decltype((y))> { return 0; }) y) { // expected-error{{captured variable 'y' cannot appear here}}
+                              [&]<decltype(y)> { return 0; }) y) { //expected-error{{captured variable 'y' cannot appear here}}
     return y;
   };
 
-  auto init_tpl = [x = 1](                                            // expected-note{{explicitly captured here}}
-                      decltype([&]<decltype((x))> { return 0; }) y) { // expected-error {{captured variable 'x' cannot appear here}}
+  auto init_tpl = [x = 1](                                          // expected-note{{explicitly captured here}}
+                      decltype([&]<decltype(x)> { return 0; }) y) { // expected-error {{captured variable 'x' cannot appear here}}
     return x;
   };
 
   auto implicit = [=]( // expected-note {{variable 'z' is captured here}}
                       decltype(
-                          [&](decltype((z))) { return 0; }) z) { // expected-error{{captured variable 'z' cannot appear here}}
+                          [&](decltype(z)) { return 0; }) z) { //expected-error{{captured variable 'z' cannot appear here}}
     return z;
   };
 
-  auto init = [x = 1](                                            // expected-note{{explicitly captured here}}
-                  decltype([&](decltype((x))) { return 0; }) y) { // expected-error {{captured variable 'x' cannot appear here}}
+  auto init = [x = 1](                                          // expected-note{{explicitly captured here}}
+                  decltype([&](decltype(x)) { return 0; }) y) { // expected-error {{captured variable 'x' cannot appear here}}
     return x;
   };
 
@@ -141,20 +141,20 @@ void nested() {
       decltype([&](
                    decltype([=]( // expected-note {{variable 'x' is captured here}}
                                 decltype([&](
-                                             decltype([&](decltype((x))) {}) // expected-error{{captured variable 'x' cannot appear here}}
+                                             decltype([&](decltype(x)) {}) // expected-error{{captured variable 'x' cannot appear here}}
                                          ) {})) {})) {})){};
 
   (void)[&](
       decltype([&](
                    decltype([&](
                                 decltype([&](
-                                             decltype([&](decltype((y))) {})) {})) {})) {})){};
+                                             decltype([&](decltype(y)) {})) {})) {})) {})){};
 
   (void)[=](
       decltype([=](
                    decltype([=](
-                                decltype([=](                                // expected-note {{variable 'z' is captured here}}
-                                             decltype([&]<decltype((z))> {}) // expected-error{{captured variable 'z' cannot appear here}}
+                                decltype([=](                              // expected-note {{variable 'z' is captured here}}
+                                             decltype([&]<decltype(z)> {}) // expected-error{{captured variable 'z' cannot appear here}}
                                          ) {})) {})) {})){};
 }
 
@@ -201,16 +201,4 @@ void test_dependent() {
   dependent<const int&>(cr);
   dependent_init_capture(0);
   dependent_variadic_capture(1, 2, 3, 4);
-}
-
-void test_CWG2569_tpl(auto a) {
-  (void)[=]<typename T = decltype(a)>(decltype(a) b = decltype(a)()){};
-}
-
-void test_CWG2569() {
-  int a = 0;
-  (void)[=]<typename T = decltype(a)>(decltype(a) b = decltype(a)()){};
-  test_CWG2569_tpl(0);
-
-  (void)[=]<typename T = decltype(not_a_thing)>(decltype(not_a_thing)){}; // expected-error 2{{use of undeclared identifier 'not_a_thing'}}
 }
