@@ -399,16 +399,15 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
           reassociateShiftAmtsOfTwoSameDirectionShifts(&I, SQ)))
     return NewShift;
 
-  // C0 shift (A add C) -> (C0 shift C) shift A
-  // iff A and C2 are both positive or the add has 'nuw'.
+  // Pre-shift a constant shifted by a variable amount with constant offset:
+  // C shift (A add nuw C1) --> (C shift C1) shift A
   Value *A;
-  Constant *C;
-  if (match(Op0, m_Constant()) && match(Op1, m_Add(m_Value(A), m_Constant(C))))
-    if (cast<BinaryOperator>(Op1)->hasNoUnsignedWrap() ||
-        (isKnownNonNegative(A, DL, 0, &AC, &I, &DT) &&
-         isKnownNonNegative(C, DL, 0, &AC, &I, &DT)))
-      return BinaryOperator::Create(
-          I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), Op0, C), A);
+  Constant *C, *C1;
+  if (match(Op0, m_Constant(C)) &&
+      match(Op1, m_NUWAdd(m_Value(A), m_Constant(C1)))) {
+    Constant *NewC = ConstantExpr::get(I.getOpcode(), C, C1);
+    return BinaryOperator::Create(I.getOpcode(), NewC, A);
+  }
 
   // X shift (A srem C) -> X shift (A and (C - 1)) iff C is a power of 2.
   // Because shifts by negative values (which could occur if A were negative)
