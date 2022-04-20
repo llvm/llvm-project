@@ -34,22 +34,25 @@ class DiagnosticEngine;
 class Token {
 public:
   enum Kind {
-    // Markers.
+    /// Markers.
     eof,
     error,
+    /// Token signifying a code completion location.
     code_complete,
+    /// Token signifying a code completion location within a string.
+    code_complete_string,
 
-    // Keywords.
+    /// Keywords.
     KW_BEGIN,
-    // Dependent keywords, i.e. those that are treated as keywords depending on
-    // the current parser context.
+    /// Dependent keywords, i.e. those that are treated as keywords depending on
+    /// the current parser context.
     KW_DEPENDENT_BEGIN,
     kw_attr,
     kw_op,
     kw_type,
     KW_DEPENDENT_END,
 
-    // General keywords.
+    /// General keywords.
     kw_Attr,
     kw_erase,
     kw_let,
@@ -68,7 +71,7 @@ public:
     kw_with,
     KW_END,
 
-    // Punctuation.
+    /// Punctuation.
     arrow,
     colon,
     comma,
@@ -76,7 +79,7 @@ public:
     equal,
     equal_arrow,
     semicolon,
-    // Paired punctuation.
+    /// Paired punctuation.
     less,
     greater,
     l_brace,
@@ -87,7 +90,7 @@ public:
     r_square,
     underscore,
 
-    // Tokens.
+    /// Tokens.
     directive,
     identifier,
     integer,

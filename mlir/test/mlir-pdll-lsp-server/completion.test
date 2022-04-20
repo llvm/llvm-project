@@ -1,16 +1,16 @@
-// RUN: mlir-pdll-lsp-server -lit-test < %s | FileCheck -strict-whitespace %s
+// RUN: mlir-pdll-lsp-server -pdll-extra-dir %S -pdll-extra-dir %S/../../include  -lit-test < %s | FileCheck -strict-whitespace %s
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"pdll","capabilities":{},"trace":"off"}}
 // -----
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
   "uri":"test:///foo.pdll",
   "languageId":"pdll",
   "version":1,
-  "text":"Constraint ValueCst(value: Value);\nConstraint Cst();\nPattern FooPattern with benefit(1) {\nlet tuple = (value1 = _: Op, _: Op<test.op>);\nerase tuple.value1;\n}"
+  "text":"#include \"include/included.pdll\"\nConstraint ValueCst(value: Value);\nConstraint Cst();\nPattern FooPattern with benefit(1) {\nlet tuple = (value1 = _: Op, _: Op<test.op>);\nerase tuple.value1;\n}"
 }}}
 // -----
 {"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{
   "textDocument":{"uri":"test:///foo.pdll"},
-  "position":{"line":4,"character":12}
+  "position":{"line":5,"character":12}
 }}
 //      CHECK:  "id": 1
 // CHECK-NEXT:  "jsonrpc": "2.0",
@@ -49,7 +49,7 @@
 // -----
 {"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{
   "textDocument":{"uri":"test:///foo.pdll"},
-  "position":{"line":2,"character":23}
+  "position":{"line":3,"character":23}
 }}
 //      CHECK:  "id": 1
 // CHECK-NEXT:  "jsonrpc": "2.0",
@@ -82,7 +82,7 @@
 // -----
 {"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{
   "textDocument":{"uri":"test:///foo.pdll"},
-  "position":{"line":3,"character":24}
+  "position":{"line":4,"character":24}
 }}
 //      CHECK:  "id": 1
 // CHECK-NEXT:  "jsonrpc": "2.0",
@@ -196,6 +196,26 @@
 // CHECK-NEXT:        "kind": 8,
 // CHECK-NEXT:        "label": "ValueCst",
 // CHECK-NEXT:        "sortText": "2_ValueCst"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":0,"character":18}
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "isIncomplete": false,
+// CHECK-NEXT:    "items": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "kind": 17,
+// CHECK-NEXT:        "label": "included.td"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "kind": 17,
+// CHECK-NEXT:        "label": "included.pdll"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:  }

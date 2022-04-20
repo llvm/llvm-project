@@ -424,6 +424,7 @@ private:
   LogicalResult codeCompleteDialectName();
   LogicalResult codeCompleteOperationName(StringRef dialectName);
   LogicalResult codeCompletePatternMetadata();
+  LogicalResult codeCompleteIncludeFilename(StringRef curPath);
 
   void codeCompleteCallSignature(ast::Node *parent, unsigned currentNumArgs);
   void codeCompleteOperationOperandsSignature(Optional<StringRef> opName,
@@ -679,6 +680,10 @@ LogicalResult Parser::parseDirective(SmallVectorImpl<ast::Decl *> &decls) {
 LogicalResult Parser::parseInclude(SmallVectorImpl<ast::Decl *> &decls) {
   SMRange loc = curToken.getLoc();
   consumeToken(Token::directive);
+
+  // Handle code completion of the include file path.
+  if (curToken.is(Token::code_complete_string))
+    return codeCompleteIncludeFilename(curToken.getStringValue());
 
   // Parse the file being included.
   if (!curToken.isString())
@@ -2919,6 +2924,11 @@ LogicalResult Parser::codeCompleteOperationName(StringRef dialectName) {
 
 LogicalResult Parser::codeCompletePatternMetadata() {
   codeCompleteContext->codeCompletePatternMetadata();
+  return failure();
+}
+
+LogicalResult Parser::codeCompleteIncludeFilename(StringRef curPath) {
+  codeCompleteContext->codeCompleteIncludeFilename(curPath);
   return failure();
 }
 
