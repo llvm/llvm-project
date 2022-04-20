@@ -45,7 +45,6 @@ namespace llvm {
 class BasicBlock;
 class Function;
 class LLVMTargetMachine;
-class MMIAddrLabelMap;
 class MachineFunction;
 class Module;
 class MCSymbol;
@@ -105,10 +104,6 @@ class MachineModuleInfo {
   unsigned CurCallSite;
 
   /// \}
-
-  /// This map keeps track of which symbol is being used for the specified
-  /// basic block's address of label.
-  MMIAddrLabelMap *AddrLabelSymbols;
 
   // TODO: Ideally, what we'd like is to have a switch that allows emitting
   // synchronous (precise at call-sites only) CFA into .eh_frame. However,
@@ -188,25 +183,6 @@ public:
   bool usesMSVCFloatingPoint() const { return UsesMSVCFloatingPoint; }
 
   void setUsesMSVCFloatingPoint(bool b) { UsesMSVCFloatingPoint = b; }
-
-  /// Return the symbol to be used for the specified basic block when its
-  /// address is taken.  This cannot be its normal LBB label because the block
-  /// may be accessed outside its containing function.
-  MCSymbol *getAddrLabelSymbol(const BasicBlock *BB) {
-    return getAddrLabelSymbolToEmit(BB).front();
-  }
-
-  /// Return the symbol to be used for the specified basic block when its
-  /// address is taken.  If other blocks were RAUW'd to this one, we may have
-  /// to emit them as well, return the whole set.
-  ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
-
-  /// If the specified function has had any references to address-taken blocks
-  /// generated, but the block got deleted, return the symbol now so we can
-  /// emit it.  This prevents emitting a reference to a symbol that has no
-  /// definition.
-  void takeDeletedSymbolsForFunction(const Function *F,
-                                     std::vector<MCSymbol*> &Result);
 
   /// \name Exception Handling
   /// \{

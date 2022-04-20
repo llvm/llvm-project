@@ -24,7 +24,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -45,173 +44,16 @@ static cl::opt<bool>
 // Out of line virtual method.
 MachineModuleInfoImpl::~MachineModuleInfoImpl() = default;
 
-namespace llvm {
-
-class MMIAddrLabelMapCallbackPtr final : CallbackVH {
-  MMIAddrLabelMap *Map = nullptr;
-
-public:
-  MMIAddrLabelMapCallbackPtr() = default;
-  MMIAddrLabelMapCallbackPtr(Value *V) : CallbackVH(V) {}
-
-  void setPtr(BasicBlock *BB) {
-    ValueHandleBase::operator=(BB);
-  }
-
-  void setMap(MMIAddrLabelMap *map) { Map = map; }
-
-  void deleted() override;
-  void allUsesReplacedWith(Value *V2) override;
-};
-
-class MMIAddrLabelMap {
-  MCContext &Context;
-  struct AddrLabelSymEntry {
-    /// The symbols for the label.
-    TinyPtrVector<MCSymbol *> Symbols;
-
-    Function *Fn;   // The containing function of the BasicBlock.
-    unsigned Index; // The index in BBCallbacks for the BasicBlock.
-  };
-
-  DenseMap<AssertingVH<BasicBlock>, AddrLabelSymEntry> AddrLabelSymbols;
-
-  /// Callbacks for the BasicBlock's that we have entries for.  We use this so
-  /// we get notified if a block is deleted or RAUWd.
-  std::vector<MMIAddrLabelMapCallbackPtr> BBCallbacks;
-
-  /// This is a per-function list of symbols whose corresponding BasicBlock got
-  /// deleted.  These symbols need to be emitted at some point in the file, so
-  /// AsmPrinter emits them after the function body.
-  DenseMap<AssertingVH<Function>, std::vector<MCSymbol*>>
-    DeletedAddrLabelsNeedingEmission;
-
-public:
-  MMIAddrLabelMap(MCContext &context) : Context(context) {}
-
-  ~MMIAddrLabelMap() {
-    assert(DeletedAddrLabelsNeedingEmission.empty() &&
-           "Some labels for deleted blocks never got emitted");
-  }
-
-  ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(BasicBlock *BB);
-
-  void takeDeletedSymbolsForFunction(Function *F,
-                                     std::vector<MCSymbol*> &Result);
-
-  void UpdateForDeletedBlock(BasicBlock *BB);
-  void UpdateForRAUWBlock(BasicBlock *Old, BasicBlock *New);
-};
-
-} // end namespace llvm
-
-ArrayRef<MCSymbol *> MMIAddrLabelMap::getAddrLabelSymbolToEmit(BasicBlock *BB) {
-  assert(BB->hasAddressTaken() &&
-         "Shouldn't get label for block without address taken");
-  AddrLabelSymEntry &Entry = AddrLabelSymbols[BB];
-
-  // If we already had an entry for this block, just return it.
-  if (!Entry.Symbols.empty()) {
-    assert(BB->getParent() == Entry.Fn && "Parent changed");
-    return Entry.Symbols;
-  }
-
-  // Otherwise, this is a new entry, create a new symbol for it and add an
-  // entry to BBCallbacks so we can be notified if the BB is deleted or RAUWd.
-  BBCallbacks.emplace_back(BB);
-  BBCallbacks.back().setMap(this);
-  Entry.Index = BBCallbacks.size() - 1;
-  Entry.Fn = BB->getParent();
-  MCSymbol *Sym = BB->hasAddressTaken() ? Context.createNamedTempSymbol()
-                                        : Context.createTempSymbol();
-  Entry.Symbols.push_back(Sym);
-  return Entry.Symbols;
-}
-
-/// If we have any deleted symbols for F, return them.
-void MMIAddrLabelMap::
-takeDeletedSymbolsForFunction(Function *F, std::vector<MCSymbol*> &Result) {
-  DenseMap<AssertingVH<Function>, std::vector<MCSymbol*>>::iterator I =
-    DeletedAddrLabelsNeedingEmission.find(F);
-
-  // If there are no entries for the function, just return.
-  if (I == DeletedAddrLabelsNeedingEmission.end()) return;
-
-  // Otherwise, take the list.
-  std::swap(Result, I->second);
-  DeletedAddrLabelsNeedingEmission.erase(I);
-}
-
-void MMIAddrLabelMap::UpdateForDeletedBlock(BasicBlock *BB) {
-  // If the block got deleted, there is no need for the symbol.  If the symbol
-  // was already emitted, we can just forget about it, otherwise we need to
-  // queue it up for later emission when the function is output.
-  AddrLabelSymEntry Entry = std::move(AddrLabelSymbols[BB]);
-  AddrLabelSymbols.erase(BB);
-  assert(!Entry.Symbols.empty() && "Didn't have a symbol, why a callback?");
-  BBCallbacks[Entry.Index] = nullptr;  // Clear the callback.
-
-#if !LLVM_MEMORY_SANITIZER_BUILD
-  // BasicBlock is destroyed already, so this access is UB detectable by msan.
-  assert((BB->getParent() == nullptr || BB->getParent() == Entry.Fn) &&
-         "Block/parent mismatch");
-#endif
-
-  for (MCSymbol *Sym : Entry.Symbols) {
-    if (Sym->isDefined())
-      return;
-
-    // If the block is not yet defined, we need to emit it at the end of the
-    // function.  Add the symbol to the DeletedAddrLabelsNeedingEmission list
-    // for the containing Function.  Since the block is being deleted, its
-    // parent may already be removed, we have to get the function from 'Entry'.
-    DeletedAddrLabelsNeedingEmission[Entry.Fn].push_back(Sym);
-  }
-}
-
-void MMIAddrLabelMap::UpdateForRAUWBlock(BasicBlock *Old, BasicBlock *New) {
-  // Get the entry for the RAUW'd block and remove it from our map.
-  AddrLabelSymEntry OldEntry = std::move(AddrLabelSymbols[Old]);
-  AddrLabelSymbols.erase(Old);
-  assert(!OldEntry.Symbols.empty() && "Didn't have a symbol, why a callback?");
-
-  AddrLabelSymEntry &NewEntry = AddrLabelSymbols[New];
-
-  // If New is not address taken, just move our symbol over to it.
-  if (NewEntry.Symbols.empty()) {
-    BBCallbacks[OldEntry.Index].setPtr(New);    // Update the callback.
-    NewEntry = std::move(OldEntry);             // Set New's entry.
-    return;
-  }
-
-  BBCallbacks[OldEntry.Index] = nullptr;    // Update the callback.
-
-  // Otherwise, we need to add the old symbols to the new block's set.
-  llvm::append_range(NewEntry.Symbols, OldEntry.Symbols);
-}
-
-void MMIAddrLabelMapCallbackPtr::deleted() {
-  Map->UpdateForDeletedBlock(cast<BasicBlock>(getValPtr()));
-}
-
-void MMIAddrLabelMapCallbackPtr::allUsesReplacedWith(Value *V2) {
-  Map->UpdateForRAUWBlock(cast<BasicBlock>(getValPtr()), cast<BasicBlock>(V2));
-}
-
 void MachineModuleInfo::initialize() {
   ObjFileMMI = nullptr;
   CurCallSite = 0;
   NextFnNum = 0;
   UsesMSVCFloatingPoint = false;
-  AddrLabelSymbols = nullptr;
   DbgInfoAvailable = false;
 }
 
 void MachineModuleInfo::finalize() {
   Personalities.clear();
-
-  delete AddrLabelSymbols;
-  AddrLabelSymbols = nullptr;
 
   Context.reset();
   // We don't clear the ExternalContext.
@@ -229,8 +71,6 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
   Context.setObjectFileInfo(MMI.TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
   CurCallSite = MMI.CurCallSite;
-  UsesMSVCFloatingPoint = MMI.UsesMSVCFloatingPoint;
-  AddrLabelSymbols = MMI.AddrLabelSymbols;
   ExternalContext = MMI.ExternalContext;
   TheModule = MMI.TheModule;
 }
@@ -254,25 +94,6 @@ MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
 }
 
 MachineModuleInfo::~MachineModuleInfo() { finalize(); }
-
-//===- Address of Block Management ----------------------------------------===//
-
-ArrayRef<MCSymbol *>
-MachineModuleInfo::getAddrLabelSymbolToEmit(const BasicBlock *BB) {
-  // Lazily create AddrLabelSymbols.
-  if (!AddrLabelSymbols)
-    AddrLabelSymbols = new MMIAddrLabelMap(getContext());
- return AddrLabelSymbols->getAddrLabelSymbolToEmit(const_cast<BasicBlock*>(BB));
-}
-
-void MachineModuleInfo::
-takeDeletedSymbolsForFunction(const Function *F,
-                              std::vector<MCSymbol*> &Result) {
-  // If no blocks have had their addresses taken, we're done.
-  if (!AddrLabelSymbols) return;
-  return AddrLabelSymbols->
-     takeDeletedSymbolsForFunction(const_cast<Function*>(F), Result);
-}
 
 /// \name Exception Handling
 /// \{
