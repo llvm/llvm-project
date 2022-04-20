@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -async-to-async-runtime -convert-async-to-llvm | FileCheck %s
 
 // CHECK-LABEL: reference_counting
-func @reference_counting(%arg0: !async.token) {
+func.func @reference_counting(%arg0: !async.token) {
   // CHECK: %[[C2:.*]] = arith.constant 2 : i64
   // CHECK: call @mlirAsyncRuntimeAddRef(%arg0, %[[C2]])
   async.runtime.add_ref %arg0 {count = 2 : i64} : !async.token
@@ -16,7 +16,7 @@ func @reference_counting(%arg0: !async.token) {
 // -----
 
 // CHECK-LABEL: execute_no_async_args
-func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
+func.func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn(%arg0, %arg1)
   %token = async.execute {
     %c0 = arith.constant 0 : index
@@ -71,7 +71,7 @@ func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 // -----
 
 // CHECK-LABEL: nested_async_execute
-func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
+func.func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn_0(%arg0, %arg2, %arg1)
   %token0 = async.execute {
     %c0 = arith.constant 0 : index
@@ -129,7 +129,7 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // -----
 
 // CHECK-LABEL: async_execute_token_dependency
-func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
+func.func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
   // CHECK: %0 = call @async_execute_fn(%arg0, %arg1)
   %token = async.execute {
     %c0 = arith.constant 0 : index
@@ -177,7 +177,7 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 // -----
 
 // CHECK-LABEL: async_group_await_all
-func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
+func.func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
   %c = arith.constant 1 : index
   // CHECK: %[[GROUP:.*]] = call @mlirAsyncRuntimeCreateGroup
   %0 = async.create_group %c : !async.group
@@ -219,7 +219,7 @@ func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
 // -----
 
 // CHECK-LABEL: execute_and_return_f32
-func @execute_and_return_f32() -> f32 {
+func.func @execute_and_return_f32() -> f32 {
  // CHECK: %[[RET:.*]]:2 = call @async_execute_fn
   %token, %result = async.execute -> !async.value<f32> {
     %c0 = arith.constant 123.0 : f32
@@ -257,7 +257,7 @@ func @execute_and_return_f32() -> f32 {
 // -----
 
 // CHECK-LABEL: @async_value_operands
-func @async_value_operands() {
+func.func @async_value_operands() {
   // CHECK: %[[RET:.*]]:2 = call @async_execute_fn
   %token, %result = async.execute -> !async.value<f32> {
     %c0 = arith.constant 123.0 : f32

@@ -1,7 +1,7 @@
 // RUN: mlir-opt -convert-scf-to-openmp %s | FileCheck %s
 
 // CHECK-LABEL: @parallel
-func @parallel(%arg0: index, %arg1: index, %arg2: index,
+func.func @parallel(%arg0: index, %arg1: index, %arg2: index,
           %arg3: index, %arg4: index, %arg5: index) {
   // CHECK: omp.parallel {
   // CHECK: omp.wsloop for (%[[LVAR1:.*]], %[[LVAR2:.*]]) : index = (%arg0, %arg1) to (%arg2, %arg3) step (%arg4, %arg5) {
@@ -18,7 +18,7 @@ func @parallel(%arg0: index, %arg1: index, %arg2: index,
 }
 
 // CHECK-LABEL: @nested_loops
-func @nested_loops(%arg0: index, %arg1: index, %arg2: index,
+func.func @nested_loops(%arg0: index, %arg1: index, %arg2: index,
                    %arg3: index, %arg4: index, %arg5: index) {
   // CHECK: omp.parallel {
   // CHECK: omp.wsloop for (%[[LVAR_OUT1:.*]]) : index = (%arg0) to (%arg2) step (%arg4) {
@@ -41,7 +41,7 @@ func @nested_loops(%arg0: index, %arg1: index, %arg2: index,
 }
 
 // CHECK-LABEL: @adjacent_loops
-func @adjacent_loops(%arg0: index, %arg1: index, %arg2: index,
+func.func @adjacent_loops(%arg0: index, %arg1: index, %arg2: index,
                      %arg3: index, %arg4: index, %arg5: index) {
   // CHECK: omp.parallel {
   // CHECK: omp.wsloop for (%[[LVAR_AL1:.*]]) : index = (%arg0) to (%arg2) step (%arg4) {

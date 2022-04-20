@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: func @complex_abs
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
-func @complex_abs(%arg: complex<f32>) -> f32 {
+func.func @complex_abs(%arg: complex<f32>) -> f32 {
   %abs = complex.abs %arg: complex<f32>
   return %abs : f32
 }
@@ -16,7 +16,7 @@ func @complex_abs(%arg: complex<f32>) -> f32 {
 
 // CHECK-LABEL: func @complex_add
 // CHECK-SAME: (%[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>)
-func @complex_add(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+func.func @complex_add(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %add = complex.add %lhs, %rhs: complex<f32>
   return %add : complex<f32>
 }
@@ -31,7 +31,7 @@ func @complex_add(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: func @complex_div
 // CHECK-SAME: (%[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>)
-func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+func.func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %div = complex.div %lhs, %rhs : complex<f32>
   return %div : complex<f32>
 }
@@ -140,7 +140,7 @@ func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: func @complex_eq
 // CHECK-SAME: %[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>
-func @complex_eq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
+func.func @complex_eq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
   %eq = complex.eq %lhs, %rhs: complex<f32>
   return %eq : i1
 }
@@ -155,7 +155,7 @@ func @complex_eq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
 
 // CHECK-LABEL: func @complex_exp
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
-func @complex_exp(%arg: complex<f32>) -> complex<f32> {
+func.func @complex_exp(%arg: complex<f32>) -> complex<f32> {
   %exp = complex.exp %arg: complex<f32>
   return %exp : complex<f32>
 }
@@ -171,7 +171,7 @@ func @complex_exp(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: func @complex_log
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
-func @complex_log(%arg: complex<f32>) -> complex<f32> {
+func.func @complex_log(%arg: complex<f32>) -> complex<f32> {
   %log = complex.log %arg: complex<f32>
   return %log : complex<f32>
 }
@@ -190,7 +190,7 @@ func @complex_log(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: func @complex_log1p
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
-func @complex_log1p(%arg: complex<f32>) -> complex<f32> {
+func.func @complex_log1p(%arg: complex<f32>) -> complex<f32> {
   %log1p = complex.log1p %arg: complex<f32>
   return %log1p : complex<f32>
 }
@@ -214,7 +214,7 @@ func @complex_log1p(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: func @complex_mul
 // CHECK-SAME: (%[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>)
-func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+func.func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %mul = complex.mul %lhs, %rhs : complex<f32>
   return %mul : complex<f32>
 }
@@ -332,7 +332,7 @@ func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: func @complex_neg
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
-func @complex_neg(%arg: complex<f32>) -> complex<f32> {
+func.func @complex_neg(%arg: complex<f32>) -> complex<f32> {
   %neg = complex.neg %arg: complex<f32>
   return %neg : complex<f32>
 }
@@ -345,7 +345,7 @@ func @complex_neg(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: func @complex_neq
 // CHECK-SAME: %[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>
-func @complex_neq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
+func.func @complex_neq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
   %neq = complex.neq %lhs, %rhs: complex<f32>
   return %neq : i1
 }
@@ -360,7 +360,7 @@ func @complex_neq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
 
 // CHECK-LABEL: func @complex_sign
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
-func @complex_sign(%arg: complex<f32>) -> complex<f32> {
+func.func @complex_sign(%arg: complex<f32>) -> complex<f32> {
   %sign = complex.sign %arg: complex<f32>
   return %sign : complex<f32>
 }
@@ -384,7 +384,7 @@ func @complex_sign(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: func @complex_sub
 // CHECK-SAME: (%[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>)
-func @complex_sub(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+func.func @complex_sub(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %sub = complex.sub %lhs, %rhs: complex<f32>
   return %sub : complex<f32>
 }

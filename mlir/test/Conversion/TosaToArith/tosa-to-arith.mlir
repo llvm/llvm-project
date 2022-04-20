@@ -2,7 +2,7 @@
 // RUN: mlir-opt --split-input-file --tosa-to-arith="include-apply-rescale=false" %s -verify-diagnostics -o -| FileCheck --check-prefix="SCALE" %s
 
 // CHECK-LABEL: func @const_test
-func @const_test() -> (tensor<i32>) {
+func.func @const_test() -> (tensor<i32>) {
   // CHECK: [[C3:%.+]] = arith.constant dense<3> : tensor<i32>
   %0 = "tosa.const"() {value = dense<3> : tensor<i32>} : () -> tensor<i32>
 
@@ -13,7 +13,7 @@ func @const_test() -> (tensor<i32>) {
 // -----
 
 // CHECK-LABEL: @apply_scale_test_i32
-func @apply_scale_test_i32(%arg0 : i32, %arg1 : i32, %arg2 : i8) -> (i32) {
+func.func @apply_scale_test_i32(%arg0 : i32, %arg1 : i32, %arg2 : i8) -> (i32) {
   // CHECK-DAG: [[C1_8:%.+]] = arith.constant 1 : i8
   // CHECK-DAG: [[C1_32:%.+]] = arith.constant 1 : i32
   // CHECK-DAG: [[C1_64:%.+]] = arith.constant 1 : i64
@@ -51,7 +51,7 @@ func @apply_scale_test_i32(%arg0 : i32, %arg1 : i32, %arg2 : i8) -> (i32) {
 // -----
 
 // CHECK-LABEL: @apply_scale_test_vector
-func @apply_scale_test_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>, %arg2 : vector<4xi8>) -> (vector<4xi32>) {
+func.func @apply_scale_test_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>, %arg2 : vector<4xi8>) -> (vector<4xi32>) {
   // CHECK-DAG: [[C1_8:%.+]] = arith.constant dense<1> : vector<4xi8>
   // CHECK-DAG: [[C1_32:%.+]] = arith.constant dense<1> : vector<4xi32>
   // CHECK-DAG: [[C1_64:%.+]] = arith.constant dense<1> : vector<4xi64>
@@ -88,7 +88,7 @@ func @apply_scale_test_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>, %arg
 // -----
 
 // CHECK-LABEL: @apply_scale_test_i48
-func @apply_scale_test_i48(%arg0 : i48, %arg1 : i32, %arg2 : i8) -> (i32) {
+func.func @apply_scale_test_i48(%arg0 : i48, %arg1 : i32, %arg2 : i8) -> (i32) {
   // CHECK-DAG: [[C1_8:%.+]] = arith.constant 1 : i8
   // CHECK-DAG: [[C1_32:%.+]] = arith.constant 1 : i32
   // CHECK-DAG: [[C1_64:%.+]] = arith.constant 1 : i64

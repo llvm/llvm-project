@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: llvm.func @complex_div
 // CHECK-SAME:    %[[LHS:.*]]: ![[C_TY:.*>]], %[[RHS:.*]]: ![[C_TY]]) -> ![[C_TY]]
-func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+func.func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %div = complex.div %lhs, %rhs : complex<f32>
   return %div : complex<f32>
 }
@@ -33,7 +33,7 @@ func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: llvm.func @complex_mul
 // CHECK-SAME:    %[[LHS:.*]]: ![[C_TY:.*>]], %[[RHS:.*]]: ![[C_TY]]) -> ![[C_TY]]
-func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
+func.func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
   %mul = complex.mul %lhs, %rhs : complex<f32>
   return %mul : complex<f32>
 }
@@ -57,7 +57,7 @@ func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: llvm.func @complex_abs
 // CHECK-SAME: %[[ARG:.*]]: ![[C_TY:.*]])
-func @complex_abs(%arg: complex<f32>) -> f32 {
+func.func @complex_abs(%arg: complex<f32>) -> f32 {
   %abs = complex.abs %arg: complex<f32>
   return %abs : f32
 }

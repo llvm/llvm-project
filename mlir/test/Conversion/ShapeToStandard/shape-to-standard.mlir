@@ -3,7 +3,7 @@
 // Lower binary ops.
 // CHECK-LABEL: @binary_ops
 // CHECK-SAME: (%[[LHS:.*]]: index, %[[RHS:.*]]: index)
-func @binary_ops(%lhs : index, %rhs : index) {
+func.func @binary_ops(%lhs : index, %rhs : index) {
   // CHECK: arith.addi %[[LHS]], %[[RHS]] : index
   %sum = shape.add %lhs, %rhs : index, index -> index
   // CHECK: arith.muli %[[LHS]], %[[RHS]] : index
@@ -16,7 +16,7 @@ func @binary_ops(%lhs : index, %rhs : index) {
 // Don't lower binary ops when they operate on `shape.size`.
 // CHECK-LABEL: @binary_ops_on_size
 // CHECK-SAME: (%[[LHS:.*]]: !shape.size, %[[RHS:.*]]: !shape.size)
-func @binary_ops_on_size(%lhs : !shape.size, %rhs : !shape.size) {
+func.func @binary_ops_on_size(%lhs : !shape.size, %rhs : !shape.size) {
   // CHECK: shape.add %[[LHS]], %[[RHS]] : !shape.size, !shape.size -> !shape.size
   // CHECK: shape.mul %[[LHS]], %[[RHS]] : !shape.size, !shape.size -> !shape.size
   %sum = shape.add %lhs, %rhs : !shape.size, !shape.size -> !shape.size
@@ -29,7 +29,7 @@ func @binary_ops_on_size(%lhs : !shape.size, %rhs : !shape.size) {
 // Convert `rank` to `dim` of the first dimension.
 // CHECK-LABEL: @rank
 // CHECK-SAME: (%[[SHAPE:.*]]: tensor<?xindex>) -> index
-func @rank(%shape : tensor<?xindex>) -> index {
+func.func @rank(%shape : tensor<?xindex>) -> index {
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[RESULT:.*]] = tensor.dim %[[SHAPE]], %[[C0]]
   // CHECK: return %[[RESULT]] : index
@@ -41,7 +41,7 @@ func @rank(%shape : tensor<?xindex>) -> index {
 
 // Don't lower `get_extent` if it is of type `shape.size`.
 // CHECK-LABEL: @get_extent
-func @get_extent(%shape : tensor<?xindex>, %idx : !shape.size) -> !shape.size {
+func.func @get_extent(%shape : tensor<?xindex>, %idx : !shape.size) -> !shape.size {
   // CHECK: shape.get_extent
   %result = shape.get_extent %shape, %idx
       : tensor<?xindex>, !shape.size -> !shape.size
@@ -52,7 +52,7 @@ func @get_extent(%shape : tensor<?xindex>, %idx : !shape.size) -> !shape.size {
 
 // Don't lower `rank` if type is not error-free.
 // CHECK-LABEL: @rank
-func @rank(%shape : !shape.shape) {
+func.func @rank(%shape : !shape.shape) {
   // CHECK: shape.rank
   %rank = shape.rank %shape : !shape.shape -> !shape.size
   return
@@ -64,7 +64,7 @@ func @rank(%shape : !shape.shape) {
 // `shape_of` operation.
 // CHECK-LABEL: @get_extent_shape_of
 // CHECK-SAME:  (%[[ARG:.*]]: tensor<2x3xf32>, %[[IDX:.*]]: index) -> index
-func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : index) -> index {
+func.func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : index) -> index {
   // CHECK: %[[RESULT:.*]] = tensor.dim %[[ARG]], %[[IDX]] : tensor<2x3xf32>
   // CHECK: return %[[RESULT]] : index
   %shape = shape.shape_of %arg : tensor<2x3xf32> -> tensor<?xindex>
@@ -77,7 +77,7 @@ func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : index) -> index {
 // Express `get_extent` as `tensor.extract`.
 // CHECK-LABEL: @get_extent_from_extent_tensor
 // CHECK-SAME: (%[[EXTENTS:.*]]: tensor<?xindex>, %[[IDX:.*]]: index) -> index
-func @get_extent_from_extent_tensor(%extents : tensor<?xindex>, %idx : index)
+func.func @get_extent_from_extent_tensor(%extents : tensor<?xindex>, %idx : index)
     -> index {
   // CHECK: %[[RESULT:.*]] = tensor.extract %[[EXTENTS]][%[[IDX]]] : tensor<?xindex>
   // CHECK: return %[[RESULT]] : index
@@ -90,7 +90,7 @@ func @get_extent_from_extent_tensor(%extents : tensor<?xindex>, %idx : index)
 // Lower `const_shape` to `tensor.from_elements`.
 // CHECK-LABEL: @const_shape
 // CHECK-SAME: () -> tensor<3xindex>
-func @const_shape() -> tensor<3xindex> {
+func.func @const_shape() -> tensor<3xindex> {
   // CHECK: %[[C1:.*]] = arith.constant 1 : index
   // CHECK: %[[C2:.*]] = arith.constant 2 : index
   // CHECK: %[[C3:.*]] = arith.constant 3 : index
@@ -106,7 +106,7 @@ func @const_shape() -> tensor<3xindex> {
 // Lower `const_shape` in the case of rank 0.
 // CHECK-LABEL: func @const_shape_zero_elements
 // CHECK-SAME: () -> tensor<0xindex>
-func @const_shape_zero_elements() -> tensor<0xindex> {
+func.func @const_shape_zero_elements() -> tensor<0xindex> {
   // CHECK: %[[TENSOR:.*]] = tensor.from_elements : tensor<0xindex>
   // CHECK: %[[RESULT:.*]] = tensor.cast %[[TENSOR]] : tensor<0xindex> to tensor<0xindex>
   // CHECK: return %[[RESULT]] : tensor<0xindex>
@@ -119,7 +119,7 @@ func @const_shape_zero_elements() -> tensor<0xindex> {
 // Lower `any` to its first operand.
 // CHECK-LABEL: @any_of_three
 // CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<?xindex>) -> tensor<?xindex>
-func @any_of_three(%a : tensor<?xindex>,
+func.func @any_of_three(%a : tensor<?xindex>,
                    %b : tensor<?xindex>,
                    %c : tensor<?xindex>) -> tensor<?xindex> {
   // CHECK: return %[[A]] : tensor<?xindex>
@@ -132,7 +132,7 @@ func @any_of_three(%a : tensor<?xindex>,
 // Lower `any` to its first operand.
 // CHECK-LABEL: @any_of_one
 // CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>) -> tensor<?xindex>
-func @any_of_one(%a : tensor<?xindex>) -> tensor<?xindex> {
+func.func @any_of_one(%a : tensor<?xindex>) -> tensor<?xindex> {
   // CHECK: return %[[A]] : tensor<?xindex>
   %result = "shape.any"(%a) : (tensor<?xindex>) -> tensor<?xindex>
   return %result : tensor<?xindex>
@@ -142,7 +142,7 @@ func @any_of_one(%a : tensor<?xindex>) -> tensor<?xindex> {
 
 // Lower 'const_size` to `arith.constant`
 // CHECK-LABEL: @const_size
-func @const_size() -> index {
+func.func @const_size() -> index {
   // CHECK: %[[RES:.*]] = arith.constant 42 : index
   %size = shape.const_size 42
   %result = shape.size_to_index %size : !shape.size
@@ -156,7 +156,7 @@ func @const_size() -> index {
 // Fold to_extent_tensor when already on tensor.
 // CHECK-LABEL: @to_extent_tensor
 // CHECK-SAME: (%[[ARG:.*]]: tensor<?xindex>
-func @to_extent_tensor(%arg: tensor<?xindex>) -> tensor<3xindex> {
+func.func @to_extent_tensor(%arg: tensor<?xindex>) -> tensor<3xindex> {
   // CHECK-NOT: to_extent_tensor
   // CHECK: %[[RES:.*]] = tensor.cast %[[ARG]] : tensor<?xindex> to tensor<3xindex
   %casted = shape.to_extent_tensor %arg : tensor<?xindex> -> tensor<3xindex>
@@ -166,7 +166,7 @@ func @to_extent_tensor(%arg: tensor<?xindex>) -> tensor<3xindex> {
 
 // CHECK-LABEL: @shape_reduce
 // CHECK-SAME:  (%[[SHAPE:.*]]: tensor<?xindex>) -> index
-func @shape_reduce(%shape : tensor<?xindex>) -> index {
+func.func @shape_reduce(%shape : tensor<?xindex>) -> index {
   %init = arith.constant 1 : index
   %num_elements = shape.reduce(%shape, %init) : tensor<?xindex> -> index {
     ^bb0(%index : index, %extent : index, %acc: index):
@@ -191,7 +191,7 @@ func @shape_reduce(%shape : tensor<?xindex>) -> index {
 // Don't lower `shape_of` for result type of `shape.shape`.
 // CHECK-LABEL: @shape_of
 // CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>)
-func @shape_of(%arg : tensor<*xf32>) {
+func.func @shape_of(%arg : tensor<*xf32>) {
   // CHECK: shape.shape
   %shape = shape.shape_of %arg : tensor<*xf32> -> !shape.shape
   return
@@ -202,7 +202,7 @@ func @shape_of(%arg : tensor<*xf32>) {
 // Lower `shape_of` for unranked tensors.
 // CHECK-LABEL: @shape_of_unranked
 // CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>)
-func @shape_of_unranked(%arg : tensor<*xf32>) {
+func.func @shape_of_unranked(%arg : tensor<*xf32>) {
   // CHECK: %[[RANK:.*]] = tensor.rank %[[ARG]] : tensor<*xf32>
   // CHECK: %[[SHAPE:.*]] = tensor.generate %[[RANK]] {
   // CHECK: ^bb0(%[[I:.*]]: index):
@@ -218,7 +218,7 @@ func @shape_of_unranked(%arg : tensor<*xf32>) {
 // Don't lower `shape_of` with `shape.shape` type.
 // CHECK-LABEL: @shape_of
 // CHECK-SAME: (%[[ARG:.*]]: tensor<1x2x3xf32>)
-func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
+func.func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
   // CHECK: shape.shape_of %[[ARG]] : tensor<1x2x3xf32> -> !shape.shape
   %shape = shape.shape_of %arg : tensor<1x2x3xf32> -> !shape.shape
   return
@@ -229,7 +229,7 @@ func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
 // Lower `shape_of` for statically shaped tensor.
 // CHECK-LABEL: @shape_of_stat
 // CHECK-SAME: (%[[ARG:.*]]: tensor<1x2x3xf32>)
-func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
+func.func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
   // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
   // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
   // CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
@@ -243,7 +243,7 @@ func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
 // Lower `shape_of` for 0-D tensor.
 // CHECK-LABEL: @shape_of_zero_d
 // CHECK-SAME: (%[[ARG:.*]]: tensor<f32>)
-func @shape_of_zero_d(%arg : tensor<f32>) {
+func.func @shape_of_zero_d(%arg : tensor<f32>) {
   // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor.from_elements : tensor<0xindex>
   %shape = shape.shape_of %arg : tensor<f32> -> tensor<?xindex>
   return
@@ -254,7 +254,7 @@ func @shape_of_zero_d(%arg : tensor<f32>) {
 // Lower `shape_of` for dynamically shaped tensor.
 // CHECK-LABEL: @shape_of_dyn
 // CHECK-SAME: (%[[ARG:.*]]: tensor<1x5x?xf32>)
-func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
+func.func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
   // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
   // CHECK-DAG: %[[C5:.*]] = arith.constant 5 : index
   // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
@@ -268,7 +268,7 @@ func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
 
 // CHECK-LABEL:  @shape_eq
 // CHECK-SAME:   (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>) -> i1
-func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>) -> i1 {
+func.func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>) -> i1 {
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[RANK_A:.*]] = tensor.dim %[[A]], %[[C0]] : tensor<?xindex>
   // CHECK: %[[RANK_B:.*]] = tensor.dim %[[B]], %[[C0]] : tensor<?xindex>
@@ -297,7 +297,7 @@ func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>) -> i1 {
 
 // CHECK-LABEL:  @shape_eq
 // CHECK-SAME:   (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<?xindex>) -> i1
-func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>, %c : tensor<?xindex>) -> i1 {
+func.func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>, %c : tensor<?xindex>) -> i1 {
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[RANK_A:.*]] = tensor.dim %[[A]], %[[C0]] : tensor<?xindex>
   // CHECK: %[[RANK_B:.*]] = tensor.dim %[[B]], %[[C0]] : tensor<?xindex>
@@ -344,7 +344,7 @@ func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>, %c : tensor<?xindex>)
 
 // Don't lower `shape.broadcast` if a `shape.shape` type is involved.
 // CHECK-LABEL: @broadcast
-func @broadcast(%a : tensor<?xindex>, %b : !shape.shape) -> !shape.shape {
+func.func @broadcast(%a : tensor<?xindex>, %b : !shape.shape) -> !shape.shape {
   // CHECK: shape.broadcast
   %c = shape.broadcast %a, %b : tensor<?xindex>, !shape.shape -> !shape.shape
   return %c : !shape.shape
@@ -352,7 +352,7 @@ func @broadcast(%a : tensor<?xindex>, %b : !shape.shape) -> !shape.shape {
 
 // -----
 
-func @try_is_broadcastable (%a : tensor<2xindex>, %b : tensor<3xindex>, %c : tensor<2xindex>) -> i1 {
+func.func @try_is_broadcastable (%a : tensor<2xindex>, %b : tensor<3xindex>, %c : tensor<2xindex>) -> i1 {
   %0 = shape.is_broadcastable %a, %b, %c : tensor<2xindex>, tensor<3xindex>, tensor<2xindex>
   return %0 : i1
 }
@@ -442,7 +442,7 @@ func @try_is_broadcastable (%a : tensor<2xindex>, %b : tensor<3xindex>, %c : ten
 
 // -----
 
-func @broadcast(%a : tensor<2xindex>, %b : tensor<3xindex>, %c : tensor<2xindex>) -> !shape.witness {
+func.func @broadcast(%a : tensor<2xindex>, %b : tensor<3xindex>, %c : tensor<2xindex>) -> !shape.witness {
   %0 = shape.cstr_broadcastable %a, %b, %c : tensor<2xindex>, tensor<3xindex>, tensor<2xindex>
   return %0 : !shape.witness
 }
@@ -536,7 +536,7 @@ func @broadcast(%a : tensor<2xindex>, %b : tensor<3xindex>, %c : tensor<2xindex>
 
 // -----
 
-func @broadcast_3_shapes_different_extents(%a : tensor<2xindex>,
+func.func @broadcast_3_shapes_different_extents(%a : tensor<2xindex>,
                                            %b : tensor<3xindex>,
                                            %c : tensor<2xindex>) {
 // CHECK-LABEL:   func @broadcast_3_shapes_different_extents(
@@ -596,7 +596,7 @@ func @broadcast_3_shapes_different_extents(%a : tensor<2xindex>,
 // -----
 
 // CHECK-LABEL: @broadcast_to_known_rank
-func @broadcast_to_known_rank(%a : tensor<1xindex>, %b : tensor<3xindex>)
+func.func @broadcast_to_known_rank(%a : tensor<1xindex>, %b : tensor<3xindex>)
     -> tensor<3xindex> {
   // CHECK: %[[RES:.*]] = tensor.cast %{{.*}} : tensor<?xindex> to tensor<3xindex>
   // CHECK: return %[[RES]] : tensor<3xindex>
@@ -609,7 +609,7 @@ func @broadcast_to_known_rank(%a : tensor<1xindex>, %b : tensor<3xindex>)
 // Lower `split_at`
 // CHECK-LABEL: @split_at
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<?xindex>, %[[INDEX:.*]]: index
-func @split_at(%shape: tensor<?xindex>, %index: index) -> (tensor<?xindex>, tensor<?xindex>) {
+func.func @split_at(%shape: tensor<?xindex>, %index: index) -> (tensor<?xindex>, tensor<?xindex>) {
   // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
   // CHECK-NEXT: %[[RANK:.*]] = tensor.dim %[[SHAPE]], %[[C0]] : tensor<?xindex>
   // CHECK-NEXT: %[[POSINDEX:.*]] = arith.addi %[[INDEX]], %[[RANK]] : index

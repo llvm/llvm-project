@@ -1,11 +1,11 @@
 // RUN: mlir-opt -lower-affine %s | FileCheck %s
 
 // CHECK-LABEL: func @empty() {
-func @empty() {
+func.func @empty() {
   return     // CHECK:  return
 }            // CHECK: }
 
-func private @body(index) -> ()
+func.func private @body(index) -> ()
 
 // Simple loops are properly converted.
 // CHECK-LABEL: func @simple_loop
@@ -17,7 +17,7 @@ func private @body(index) -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @simple_loop() {
+func.func @simple_loop() {
   affine.for %i = 1 to 42 {
     call @body(%i) : (index) -> ()
   }
@@ -26,7 +26,7 @@ func @simple_loop() {
 
 /////////////////////////////////////////////////////////////////////
 
-func @for_with_yield(%buffer: memref<1024xf32>) -> (f32) {
+func.func @for_with_yield(%buffer: memref<1024xf32>) -> (f32) {
   %sum_0 = arith.constant 0.0 : f32
   %sum = affine.for %i = 0 to 10 step 2 iter_args(%sum_iter = %sum_0) -> (f32) {
     %t = affine.load %buffer[%i] : memref<1024xf32>
@@ -50,9 +50,9 @@ func @for_with_yield(%buffer: memref<1024xf32>) -> (f32) {
 
 /////////////////////////////////////////////////////////////////////
 
-func private @pre(index) -> ()
-func private @body2(index, index) -> ()
-func private @post(index) -> ()
+func.func private @pre(index) -> ()
+func.func private @body2(index, index) -> ()
+func.func private @post(index) -> ()
 
 // CHECK-LABEL: func @imperfectly_nested_loops
 // CHECK-NEXT:   %[[c0:.*]] = arith.constant 0 : index
@@ -70,7 +70,7 @@ func private @post(index) -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @imperfectly_nested_loops() {
+func.func @imperfectly_nested_loops() {
   affine.for %i = 0 to 42 {
     call @pre(%i) : (index) -> ()
     affine.for %j = 7 to 56 step 2 {
@@ -83,8 +83,8 @@ func @imperfectly_nested_loops() {
 
 /////////////////////////////////////////////////////////////////////
 
-func private @mid(index) -> ()
-func private @body3(index, index) -> ()
+func.func private @mid(index) -> ()
+func.func private @body3(index, index) -> ()
 
 // CHECK-LABEL: func @more_imperfectly_nested_loops
 // CHECK-NEXT:   %[[c0:.*]] = arith.constant 0 : index
@@ -109,7 +109,7 @@ func private @body3(index, index) -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @more_imperfectly_nested_loops() {
+func.func @more_imperfectly_nested_loops() {
   affine.for %i = 0 to 42 {
     call @pre(%i) : (index) -> ()
     affine.for %j = 7 to 56 step 2 {
@@ -136,7 +136,7 @@ func @more_imperfectly_nested_loops() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @affine_apply_loops_shorthand(%N : index) {
+func.func @affine_apply_loops_shorthand(%N : index) {
   affine.for %i = 0 to %N {
     affine.for %j = affine_map<(d0)[]->(d0)>(%i)[] to 42 {
       call @body2(%i, %j) : (index, index) -> ()
@@ -147,7 +147,7 @@ func @affine_apply_loops_shorthand(%N : index) {
 
 /////////////////////////////////////////////////////////////////////
 
-func private @get_idx() -> (index)
+func.func private @get_idx() -> (index)
 
 #set1 = affine_set<(d0) : (20 - d0 >= 0)>
 #set2 = affine_set<(d0) : (d0 - 10 >= 0)>
@@ -165,7 +165,7 @@ func private @get_idx() -> (index)
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @if_only() {
+func.func @if_only() {
   %i = call @get_idx() : () -> (index)
   affine.if #set1(%i) {
     call @body(%i) : (index) -> ()
@@ -188,7 +188,7 @@ func @if_only() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @if_else() {
+func.func @if_else() {
   %i = call @get_idx() : () -> (index)
   affine.if #set1(%i) {
     call @body(%i) : (index) -> ()
@@ -225,7 +225,7 @@ func @if_else() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @nested_ifs() {
+func.func @nested_ifs() {
   %i = call @get_idx() : () -> (index)
   affine.if #set1(%i) {
     affine.if #set2(%i) {
@@ -254,7 +254,7 @@ func @nested_ifs() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return %[[v3]] : i64
 // CHECK-NEXT: }
-func @if_with_yield() -> (i64) {
+func.func @if_with_yield() -> (i64) {
   %cst0 = arith.constant 0 : i64
   %cst1 = arith.constant 1 : i64
   %i = call @get_idx() : () -> (index)
@@ -300,7 +300,7 @@ func @if_with_yield() -> (i64) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @multi_cond(%N : index, %M : index, %K : index, %L : index) {
+func.func @multi_cond(%N : index, %M : index, %K : index, %L : index) {
   %i = call @get_idx() : () -> (index)
   affine.if #setN(%i)[%N,%M,%K,%L] {
     call @body(%i) : (index) -> ()
@@ -311,7 +311,7 @@ func @multi_cond(%N : index, %M : index, %K : index, %L : index) {
 }
 
 // CHECK-LABEL: func @if_for
-func @if_for() {
+func.func @if_for() {
 // CHECK-NEXT:   %[[v0:.*]] = call @get_idx() : () -> index
   %i = call @get_idx() : () -> (index)
 // CHECK-NEXT:   %[[c0:.*]] = arith.constant 0 : index
@@ -386,7 +386,7 @@ func @if_for() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @loop_min_max(%N : index) {
+func.func @loop_min_max(%N : index) {
   affine.for %i = 0 to 42 {
     affine.for %j = max #lbMultiMap(%i)[%N] to min #ubMultiMap(%i)[%N] {
       call @body2(%i, %j) : (index, index) -> ()
@@ -420,7 +420,7 @@ func @loop_min_max(%N : index) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @min_reduction_tree(%v1 : index, %v2 : index, %v3 : index, %v4 : index, %v5 : index, %v6 : index, %v7 : index) {
+func.func @min_reduction_tree(%v1 : index, %v2 : index, %v3 : index, %v4 : index, %v5 : index, %v6 : index, %v7 : index) {
   affine.for %i = 0 to min #map_7_values(%v1, %v2, %v3, %v4, %v5, %v6, %v7)[] {
     call @body(%i) : (index) -> ()
   }
@@ -438,7 +438,7 @@ func @min_reduction_tree(%v1 : index, %v2 : index, %v3 : index, %v4 : index, %v5
 #map6 = affine_map<(d0,d1,d2) -> (d0 + d1 + d2)>
 
 // CHECK-LABEL: func @affine_applies(
-func @affine_applies(%arg0 : index) {
+func.func @affine_applies(%arg0 : index) {
 // CHECK: %[[c0:.*]] = arith.constant 0 : index
   %zero = affine.apply #map0()
 
@@ -478,7 +478,7 @@ func @affine_applies(%arg0 : index) {
 }
 
 // CHECK-LABEL: func @args_ret_affine_apply(
-func @args_ret_affine_apply(index, index) -> (index, index) {
+func.func @args_ret_affine_apply(index, index) -> (index, index) {
 ^bb0(%0 : index, %1 : index):
 // CHECK-NEXT: return %{{.*}}, %{{.*}} : index, index
   %00 = affine.apply #map2 (%0)
@@ -501,7 +501,7 @@ func @args_ret_affine_apply(index, index) -> (index, index) {
 // affine.apply lowering.
 // --------------------------------------------------------------------------//
 // CHECK-LABEL: func @affine_apply_mod
-func @affine_apply_mod(%arg0 : index) -> (index) {
+func.func @affine_apply_mod(%arg0 : index) -> (index) {
 // CHECK-NEXT: %[[c42:.*]] = arith.constant 42 : index
 // CHECK-NEXT: %[[v0:.*]] = arith.remsi %{{.*}}, %[[c42]] : index
 // CHECK-NEXT: %[[c0:.*]] = arith.constant 0 : index
@@ -520,7 +520,7 @@ func @affine_apply_mod(%arg0 : index) -> (index) {
 // affine.apply lowering.
 // --------------------------------------------------------------------------//
 // CHECK-LABEL: func @affine_apply_floordiv
-func @affine_apply_floordiv(%arg0 : index) -> (index) {
+func.func @affine_apply_floordiv(%arg0 : index) -> (index) {
 // CHECK-NEXT: %[[c42:.*]] = arith.constant 42 : index
 // CHECK-NEXT: %[[c0:.*]] = arith.constant 0 : index
 // CHECK-NEXT: %[[cm1:.*]] = arith.constant -1 : index
@@ -542,7 +542,7 @@ func @affine_apply_floordiv(%arg0 : index) -> (index) {
 // affine.apply lowering.
 // --------------------------------------------------------------------------//
 // CHECK-LABEL: func @affine_apply_ceildiv
-func @affine_apply_ceildiv(%arg0 : index) -> (index) {
+func.func @affine_apply_ceildiv(%arg0 : index) -> (index) {
 // CHECK-NEXT:  %[[c42:.*]] = arith.constant 42 : index
 // CHECK-NEXT:  %[[c0:.*]] = arith.constant 0 : index
 // CHECK-NEXT:  %[[c1:.*]] = arith.constant 1 : index
@@ -559,7 +559,7 @@ func @affine_apply_ceildiv(%arg0 : index) -> (index) {
 }
 
 // CHECK-LABEL: func @affine_load
-func @affine_load(%arg0 : index) {
+func.func @affine_load(%arg0 : index) {
   %0 = memref.alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     %1 = affine.load %0[%i0 + symbol(%arg0) + 7] : memref<10xf32>
@@ -572,7 +572,7 @@ func @affine_load(%arg0 : index) {
 }
 
 // CHECK-LABEL: func @affine_store
-func @affine_store(%arg0 : index) {
+func.func @affine_store(%arg0 : index) {
   %0 = memref.alloc() : memref<10xf32>
   %1 = arith.constant 11.0 : f32
   affine.for %i0 = 0 to 10 {
@@ -588,7 +588,7 @@ func @affine_store(%arg0 : index) {
 }
 
 // CHECK-LABEL: func @affine_load_store_zero_dim
-func @affine_load_store_zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
+func.func @affine_load_store_zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
   %0 = affine.load %arg0[] : memref<i32>
   affine.store %0, %arg1[] : memref<i32>
 // CHECK: %[[x:.*]] = memref.load %arg0[] : memref<i32>
@@ -597,7 +597,7 @@ func @affine_load_store_zero_dim(%arg0 : memref<i32>, %arg1 : memref<i32>) {
 }
 
 // CHECK-LABEL: func @affine_prefetch
-func @affine_prefetch(%arg0 : index) {
+func.func @affine_prefetch(%arg0 : index) {
   %0 = memref.alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.prefetch %0[%i0 + symbol(%arg0) + 7], read, locality<3>, data : memref<10xf32>
@@ -610,7 +610,7 @@ func @affine_prefetch(%arg0 : index) {
 }
 
 // CHECK-LABEL: func @affine_dma_start
-func @affine_dma_start(%arg0 : index) {
+func.func @affine_dma_start(%arg0 : index) {
   %0 = memref.alloc() : memref<100xf32>
   %1 = memref.alloc() : memref<100xf32, 2>
   %2 = memref.alloc() : memref<1xi32>
@@ -629,7 +629,7 @@ func @affine_dma_start(%arg0 : index) {
 }
 
 // CHECK-LABEL: func @affine_dma_wait
-func @affine_dma_wait(%arg0 : index) {
+func.func @affine_dma_wait(%arg0 : index) {
   %2 = memref.alloc() : memref<1xi32>
   %c64 = arith.constant 64 : index
   affine.for %i0 = 0 to 10 {
@@ -644,7 +644,7 @@ func @affine_dma_wait(%arg0 : index) {
 
 // CHECK-LABEL: func @affine_min
 // CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
-func @affine_min(%arg0: index, %arg1: index) -> index{
+func.func @affine_min(%arg0: index, %arg1: index) -> index{
   // CHECK: %[[Cm1:.*]] = arith.constant -1
   // CHECK: %[[neg1:.*]] = arith.muli %[[ARG1]], %[[Cm1:.*]]
   // CHECK: %[[first:.*]] = arith.addi %[[ARG0]], %[[neg1]]
@@ -659,7 +659,7 @@ func @affine_min(%arg0: index, %arg1: index) -> index{
 
 // CHECK-LABEL: func @affine_max
 // CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
-func @affine_max(%arg0: index, %arg1: index) -> index{
+func.func @affine_max(%arg0: index, %arg1: index) -> index{
   // CHECK: %[[Cm1:.*]] = arith.constant -1
   // CHECK: %[[neg1:.*]] = arith.muli %[[ARG1]], %[[Cm1:.*]]
   // CHECK: %[[first:.*]] = arith.addi %[[ARG0]], %[[neg1]]
@@ -674,7 +674,7 @@ func @affine_max(%arg0: index, %arg1: index) -> index{
 
 // CHECK-LABEL: func @affine_parallel(
 // CHECK-SAME: %[[ARG0:.*]]: memref<100x100xf32>, %[[ARG1:.*]]: memref<100x100xf32>) {
-func @affine_parallel(%o: memref<100x100xf32>, %a: memref<100x100xf32>) {
+func.func @affine_parallel(%o: memref<100x100xf32>, %a: memref<100x100xf32>) {
   affine.parallel (%i, %j) = (0, 0) to (100, 100) {
   }
   return
@@ -690,7 +690,7 @@ func @affine_parallel(%o: memref<100x100xf32>, %a: memref<100x100xf32>) {
 
 // CHECK-LABEL: func @affine_parallel_tiled(
 // CHECK-SAME: %[[ARG0:.*]]: memref<100x100xf32>, %[[ARG1:.*]]: memref<100x100xf32>, %[[ARG2:.*]]: memref<100x100xf32>) {
-func @affine_parallel_tiled(%o: memref<100x100xf32>, %a: memref<100x100xf32>, %b: memref<100x100xf32>) {
+func.func @affine_parallel_tiled(%o: memref<100x100xf32>, %a: memref<100x100xf32>, %b: memref<100x100xf32>) {
   affine.parallel (%i0, %j0, %k0) = (0, 0, 0) to (100, 100, 100) step (10, 10, 10) {
     affine.parallel (%i1, %j1, %k1) = (%i0, %j0, %k0) to (%i0 + 10, %j0 + 10, %k0 + 10) {
       %0 = affine.load %a[%i1, %k1] : memref<100x100xf32>
@@ -728,7 +728,7 @@ func @affine_parallel_tiled(%o: memref<100x100xf32>, %a: memref<100x100xf32>, %b
 
 /////////////////////////////////////////////////////////////////////
 
-func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> (memref<3x3xf32>) {
+func.func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> (memref<3x3xf32>) {
   %O = memref.alloc() : memref<3x3xf32>
   affine.parallel (%kx, %ky) = (0, 0) to (2, 2) {
       %1 = affine.load %arg0[%kx, %ky] : memref<3x3xf32>
@@ -757,7 +757,7 @@ func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> 
 
 /////////////////////////////////////////////////////////////////////
 
-func @affine_parallel_simple_dynamic_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+func.func @affine_parallel_simple_dynamic_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %c_0 = arith.constant 0 : index
   %output_dim = memref.dim %arg0, %c_0 : memref<?x?xf32>
   affine.parallel (%kx, %ky) = (%c_0, %c_0) to (%output_dim, %output_dim) {
@@ -788,7 +788,7 @@ func @affine_parallel_simple_dynamic_bounds(%arg0: memref<?x?xf32>, %arg1: memre
 
 /////////////////////////////////////////////////////////////////////
 
-func @affine_parallel_with_reductions(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> (f32, f32) {
+func.func @affine_parallel_with_reductions(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> (f32, f32) {
   %0:2 = affine.parallel (%kx, %ky) = (0, 0) to (2, 2) reduce ("addf", "mulf") -> (f32, f32) {
             %1 = affine.load %arg0[%kx, %ky] : memref<3x3xf32>
             %2 = affine.load %arg1[%kx, %ky] : memref<3x3xf32>
@@ -829,7 +829,7 @@ func @affine_parallel_with_reductions(%arg0: memref<3x3xf32>, %arg1: memref<3x3x
 
 /////////////////////////////////////////////////////////////////////
 
-func @affine_parallel_with_reductions_f64(%arg0: memref<3x3xf64>, %arg1: memref<3x3xf64>) -> (f64, f64) {
+func.func @affine_parallel_with_reductions_f64(%arg0: memref<3x3xf64>, %arg1: memref<3x3xf64>) -> (f64, f64) {
   %0:2 = affine.parallel (%kx, %ky) = (0, 0) to (2, 2) reduce ("addf", "mulf") -> (f64, f64) {
             %1 = affine.load %arg0[%kx, %ky] : memref<3x3xf64>
             %2 = affine.load %arg1[%kx, %ky] : memref<3x3xf64>
@@ -868,7 +868,7 @@ func @affine_parallel_with_reductions_f64(%arg0: memref<3x3xf64>, %arg1: memref<
 
 /////////////////////////////////////////////////////////////////////
 
-func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: memref<3x3xi64>) -> (i64, i64) {
+func.func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: memref<3x3xi64>) -> (i64, i64) {
   %0:2 = affine.parallel (%kx, %ky) = (0, 0) to (2, 2) reduce ("addi", "muli") -> (i64, i64) {
             %1 = affine.load %arg0[%kx, %ky] : memref<3x3xi64>
             %2 = affine.load %arg1[%kx, %ky] : memref<3x3xi64>

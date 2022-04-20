@@ -11,7 +11,7 @@
 //  CHECK-NEXT:    cf.br ^bb1(%[[iv]] : index)
 //  CHECK-NEXT:  ^bb3:   // pred: ^bb1
 //  CHECK-NEXT:    return
-func @simple_std_for_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @simple_std_for_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
     %c1 = arith.constant 1 : index
   }
@@ -38,7 +38,7 @@ func @simple_std_for_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
 //  CHECK-NEXT:    cf.br ^bb1(%[[iv0]] : index)
 //  CHECK-NEXT:  ^bb6:   // pred: ^bb1
 //  CHECK-NEXT:    return
-func @simple_std_2_for_loops(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @simple_std_2_for_loops(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
     %c1 = arith.constant 1 : index
     scf.for %i1 = %arg0 to %arg1 step %arg2 {
@@ -55,7 +55,7 @@ func @simple_std_2_for_loops(%arg0 : index, %arg1 : index, %arg2 : index) {
 //  CHECK-NEXT:     cf.br ^bb2
 //  CHECK-NEXT:   ^bb2:   // 2 preds: ^bb0, ^bb1
 //  CHECK-NEXT:     return
-func @simple_std_if(%arg0: i1) {
+func.func @simple_std_if(%arg0: i1) {
   scf.if %arg0 {
     %c1 = arith.constant 1 : index
   }
@@ -72,7 +72,7 @@ func @simple_std_if(%arg0: i1) {
 //  CHECK-NEXT:     cf.br ^bb3
 //  CHECK-NEXT:   ^bb3:   // 2 preds: ^bb1, ^bb2
 //  CHECK-NEXT:     return
-func @simple_std_if_else(%arg0: i1) {
+func.func @simple_std_if_else(%arg0: i1) {
   scf.if %arg0 {
     %c1 = arith.constant 1 : index
   } else {
@@ -96,7 +96,7 @@ func @simple_std_if_else(%arg0: i1) {
 //  CHECK-NEXT:   cf.br ^bb5
 //  CHECK-NEXT: ^bb5:   // 2 preds: ^bb0, ^bb4
 //  CHECK-NEXT:   return
-func @simple_std_2_ifs(%arg0: i1) {
+func.func @simple_std_2_ifs(%arg0: i1) {
   scf.if %arg0 {
     %c1 = arith.constant 1 : index
     scf.if %arg0 {
@@ -133,7 +133,7 @@ func @simple_std_2_ifs(%arg0: i1) {
 //  CHECK-NEXT:   ^bb8:   // pred: ^bb1
 //  CHECK-NEXT:     return
 //  CHECK-NEXT: }
-func @simple_std_for_loop_with_2_ifs(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : i1) {
+func.func @simple_std_for_loop_with_2_ifs(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : i1) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
     %c1 = arith.constant 1 : index
     scf.if %arg3 {
@@ -149,7 +149,7 @@ func @simple_std_for_loop_with_2_ifs(%arg0 : index, %arg1 : index, %arg2 : index
 }
 
 // CHECK-LABEL: func @simple_if_yield
-func @simple_if_yield(%arg0: i1) -> (i1, i1) {
+func.func @simple_if_yield(%arg0: i1) -> (i1, i1) {
 // CHECK:   cf.cond_br %{{.*}}, ^[[then:.*]], ^[[else:.*]]
   %0:2 = scf.if %arg0 -> (i1, i1) {
 // CHECK: ^[[then]]:
@@ -176,7 +176,7 @@ func @simple_if_yield(%arg0: i1) -> (i1, i1) {
 }
 
 // CHECK-LABEL: func @nested_if_yield
-func @nested_if_yield(%arg0: i1) -> (index) {
+func.func @nested_if_yield(%arg0: i1) -> (index) {
 // CHECK:   cf.cond_br %{{.*}}, ^[[first_then:.*]], ^[[first_else:.*]]
   %0 = scf.if %arg0 -> i1 {
 // CHECK: ^[[first_then]]:
@@ -248,7 +248,7 @@ func @nested_if_yield(%arg0: i1) -> (index) {
 // CHECK:           return
 // CHECK:         }
 
-func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
                         %arg3 : index, %arg4 : index) {
   %step = arith.constant 1 : index
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
@@ -275,7 +275,7 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //
 // CHECK:      ^[[CONTINUE]]:
 // CHECK:        return %[[ITER_ARG0]], %[[ITER_ARG1]] : f32, f32
-func @for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> (f32, f32) {
+func.func @for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> (f32, f32) {
   %s0 = arith.constant 0.0 : f32
   %s1 = arith.constant 1.0 : f32
   %result:2 = scf.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %sj = %s1) -> (f32, f32) {
@@ -302,7 +302,7 @@ func @for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> (f32, f32) {
 // CHECK:         cf.br ^[[COND_OUT]](%{{.*}}, %[[ARG_IN]] : index, f32)
 // CHECK:       ^[[CONT_OUT]]:
 // CHECK:         return %[[ARG_OUT]] : f32
-func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 {
+func.func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 {
   %s0 = arith.constant 1.0 : f32
   %r = scf.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%iter = %s0) -> (f32) {
     %result = scf.for %i1 = %arg0 to %arg1 step %arg2 iter_args(%si = %iter) -> (f32) {
@@ -314,11 +314,11 @@ func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 {
   return %r : f32
 }
 
-func private @generate() -> i64
+func.func private @generate() -> i64
 
 // CHECK-LABEL: @simple_parallel_reduce_loop
 // CHECK-SAME: %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[INIT:.*]]: f32
-func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
+func.func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
                                   %arg2: index, %arg3: f32) -> f32 {
   // A parallel loop with reduction is converted through sequential loops with
   // reductions into a CFG of blocks where the partially reduced value is
@@ -358,7 +358,7 @@ func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
 
 // CHECK-LABEL: parallel_reduce_loop
 // CHECK-SAME: %[[INIT1:[0-9A-Za-z_]*]]: f32)
-func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
                            %arg3 : index, %arg4 : index, %arg5 : f32) -> (f32, i64) {
   // Multiple reduction blocks should be folded in the same body, and the
   // reduction value must be forwarded through block structures.
@@ -403,7 +403,7 @@ func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 // that the presence of unknown ops does not prevent the conversion from being
 // applied.
 // CHECK-LABEL: @unknown_op_inside_loop
-func @unknown_op_inside_loop(%arg0: index, %arg1: index, %arg2: index) {
+func.func @unknown_op_inside_loop(%arg0: index, %arg1: index, %arg2: index) {
   // CHECK-NOT: scf.for
   scf.for %i = %arg0 to %arg1 step %arg2 {
     // CHECK: unknown.op
@@ -414,7 +414,7 @@ func @unknown_op_inside_loop(%arg0: index, %arg1: index, %arg2: index) {
 }
 
 // CHECK-LABEL: @minimal_while
-func @minimal_while() {
+func.func @minimal_while() {
   // CHECK:   %[[COND:.*]] = "test.make_condition"() : () -> i1
   // CHECK:   cf.br ^[[BEFORE:.*]]
   %0 = "test.make_condition"() : () -> i1
@@ -435,7 +435,7 @@ func @minimal_while() {
 }
 
 // CHECK-LABEL: @do_while
-func @do_while(%arg0: f32) {
+func.func @do_while(%arg0: f32) {
   // CHECK:   cf.br ^[[BEFORE:.*]]({{.*}}: f32)
   scf.while (%arg1 = %arg0) : (f32) -> (f32) {
   // CHECK: ^[[BEFORE]](%[[VAL:.*]]: f32):
@@ -455,7 +455,7 @@ func @do_while(%arg0: f32) {
 
 // CHECK-LABEL: @while_values
 // CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: f32)
-func @while_values(%arg0: i32, %arg1: f32) {
+func.func @while_values(%arg0: i32, %arg1: f32) {
   // CHECK:     %[[COND:.*]] = "test.make_condition"() : () -> i1
   %0 = "test.make_condition"() : () -> i1
   %c0_i32 = arith.constant 0 : i32
@@ -483,7 +483,7 @@ func @while_values(%arg0: i32, %arg1: f32) {
 }
 
 // CHECK-LABEL: @nested_while_ops
-func @nested_while_ops(%arg0: f32) -> i64 {
+func.func @nested_while_ops(%arg0: f32) -> i64 {
   // CHECK:       cf.br ^[[OUTER_BEFORE:.*]](%{{.*}} : f32)
   %0 = scf.while(%outer = %arg0) : (f32) -> i64 {
     // CHECK:   ^[[OUTER_BEFORE]](%{{.*}}: f32):
@@ -548,7 +548,7 @@ func @nested_while_ops(%arg0: f32) -> i64 {
 
 // CHECK-LABEL: @ifs_in_parallel
 // CHECK: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: i1, %[[ARG4:.*]]: i1)
-func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, %arg5: i1) {
+func.func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, %arg5: i1) {
   // CHECK:   cf.br ^[[LOOP_LATCH:.*]](%[[ARG0]] : index)
   // CHECK: ^[[LOOP_LATCH]](%[[LOOP_IV:.*]]: index):
   // CHECK:   %[[LOOP_COND:.*]] = arith.cmpi slt, %[[LOOP_IV]], %[[ARG1]] : index
@@ -589,7 +589,7 @@ func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, %arg5
 }
 
 // CHECK-LABEL: func @func_execute_region_elim_multi_yield
-func @func_execute_region_elim_multi_yield() {
+func.func @func_execute_region_elim_multi_yield() {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
       %c = "test.cmp"() : () -> i1

@@ -1,7 +1,7 @@
 // RUN: mlir-opt -convert-memref-to-llvm %s | FileCheck %s
 
 // CHECK-LABEL: @empty
-func @empty() {
+func.func @empty() {
   // CHECK: llvm.intr.stacksave 
   // CHECK: llvm.br
   memref.alloca_scope {
@@ -13,7 +13,7 @@ func @empty() {
 }
 
 // CHECK-LABEL: @returns_nothing
-func @returns_nothing(%b: f32) {
+func.func @returns_nothing(%b: f32) {
   %a = arith.constant 10.0 : f32
   // CHECK: llvm.intr.stacksave 
   memref.alloca_scope {
@@ -25,7 +25,7 @@ func @returns_nothing(%b: f32) {
 }
 
 // CHECK-LABEL: @returns_one_value
-func @returns_one_value(%b: f32) -> f32 {
+func.func @returns_one_value(%b: f32) -> f32 {
   %a = arith.constant 10.0 : f32
   // CHECK: llvm.intr.stacksave 
   %result = memref.alloca_scope -> f32 {
@@ -37,7 +37,7 @@ func @returns_one_value(%b: f32) -> f32 {
 }
 
 // CHECK-LABEL: @returns_multiple_values
-func @returns_multiple_values(%b: f32) -> f32 {
+func.func @returns_multiple_values(%b: f32) -> f32 {
   %a = arith.constant 10.0 : f32
   // CHECK: llvm.intr.stacksave 
   %result1, %result2 = memref.alloca_scope -> (f32, f32) {

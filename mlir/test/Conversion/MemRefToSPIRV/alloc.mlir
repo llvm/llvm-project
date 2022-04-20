@@ -5,7 +5,7 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func @alloc_dealloc_workgroup_mem(%arg0 : index, %arg1 : index) {
+  func.func @alloc_dealloc_workgroup_mem(%arg0 : index, %arg1 : index) {
     %0 = memref.alloc() : memref<4x5xf32, 3>
     %1 = memref.load %0[%arg0, %arg1] : memref<4x5xf32, 3>
     memref.store %1, %0[%arg0, %arg1] : memref<4x5xf32, 3>
@@ -30,7 +30,7 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func @alloc_dealloc_workgroup_mem(%arg0 : index, %arg1 : index) {
+  func.func @alloc_dealloc_workgroup_mem(%arg0 : index, %arg1 : index) {
     %0 = memref.alloc() : memref<4x5xi16, 3>
     %1 = memref.load %0[%arg0, %arg1] : memref<4x5xi16, 3>
     memref.store %1, %0[%arg0, %arg1] : memref<4x5xi16, 3>
@@ -59,7 +59,7 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func @two_allocs() {
+  func.func @two_allocs() {
     %0 = memref.alloc() : memref<4x5xf32, 3>
     %1 = memref.alloc() : memref<2x3xi32, 3>
     return
@@ -79,7 +79,7 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func @two_allocs_vector() {
+  func.func @two_allocs_vector() {
     %0 = memref.alloc() : memref<4xvector<4xf32>, 3>
     %1 = memref.alloc() : memref<2xvector<2xi32>, 3>
     return
@@ -100,7 +100,7 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : index) {
+  func.func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : index) {
     // expected-error @+1 {{unhandled allocation type}}
     %0 = memref.alloc(%arg0) : memref<4x?xf32, 3>
     return
@@ -114,7 +114,7 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func @alloc_dealloc_mem() {
+  func.func @alloc_dealloc_mem() {
     // expected-error @+1 {{unhandled allocation type}}
     %0 = memref.alloc() : memref<4x5xf32>
     return
@@ -129,7 +129,7 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : memref<4x?xf32, 3>) {
+  func.func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : memref<4x?xf32, 3>) {
     // expected-error @+1 {{unhandled deallocation type}}
     memref.dealloc %arg0 : memref<4x?xf32, 3>
     return
@@ -143,7 +143,7 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func @alloc_dealloc_mem(%arg0 : memref<4x5xf32>) {
+  func.func @alloc_dealloc_mem(%arg0 : memref<4x5xf32>) {
     // expected-error @+1 {{unhandled deallocation type}}
     memref.dealloc %arg0 : memref<4x5xf32>
     return
