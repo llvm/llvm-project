@@ -235,7 +235,7 @@ private:
 
   /// hasFloatVersion - Checks if there is a float version of the specified
   /// function by checking for an existing function with name FuncName + f
-  bool hasFloatVersion(StringRef FuncName);
+  bool hasFloatVersion(const Module *M, StringRef FuncName);
 
   /// Shared code to optimize strlen+wcslen and strnlen+wcsnlen.
   Value *optimizeStringLength(CallInst *CI, IRBuilderBase &B, unsigned CharSize,

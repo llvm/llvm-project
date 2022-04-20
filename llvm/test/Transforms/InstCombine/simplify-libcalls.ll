@@ -242,5 +242,18 @@ define i4 @strlen(i8* %s) {
   ret i4 0
 }
 
+; Test emission of stpncpy.
+@a = dso_local global [4 x i8] c"123\00"
+@b = dso_local global [5 x i8] zeroinitializer
+declare i8* @__stpncpy_chk(i8* noundef, i8* noundef, i32 noundef, i32 noundef)
+define signext i32 @emit_stpncpy() {
+; CHECK-LABEL: @emit_stpncpy(
+; CHECK-NEXT: call i8* @stpncpy({{.*}} @b, {{.*}} @a, {{.*}} i32 2)
+  %call = call i8* @__stpncpy_chk(i8* noundef getelementptr inbounds ([5 x i8], [5 x i8]* @b, i32 0, i32 0),
+                                  i8* noundef getelementptr inbounds ([4 x i8], [4 x i8]* @a, i32 0, i32 0),
+                                  i32 noundef 2, i32 noundef 5)
+  ret i32 0
+}
+
 attributes #0 = { nobuiltin }
 attributes #1 = { builtin }

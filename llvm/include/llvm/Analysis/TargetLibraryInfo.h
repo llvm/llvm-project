@@ -280,6 +280,13 @@ public:
     return B == OverrideAsUnavailable;
   }
 
+  /// Return true if the function type FTy is valid for the library function
+  /// F, regardless of whether the function is available.
+  bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
+                              const Module &M) const {
+    return Impl->isValidProtoForLibFunc(FTy, F, M);
+  }
+
   /// Searches for a particular function name.
   ///
   /// If it is one of the known library functions, return true and set F to the
