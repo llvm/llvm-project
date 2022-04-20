@@ -103,7 +103,7 @@ class BTFTypeEnum : public BTFTypeBase {
   std::vector<struct BTF::BTFEnum> EnumValues;
 
 public:
-  BTFTypeEnum(const DICompositeType *ETy, uint32_t NumValues);
+  BTFTypeEnum(const DICompositeType *ETy, uint32_t NumValues, bool IsSigned);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + EnumValues.size() * BTF::BTFEnumSize;
   }
@@ -214,6 +214,20 @@ class BTFTypeDeclTag : public BTFTypeBase {
 public:
   BTFTypeDeclTag(uint32_t BaseTypeId, int ComponentId, StringRef Tag);
   uint32_t getSize() override { return BTFTypeBase::getSize() + 4; }
+  void completeType(BTFDebug &BDebug) override;
+  void emitType(MCStreamer &OS) override;
+};
+
+/// Handle 64-bit enumerate type.
+class BTFTypeEnum64 : public BTFTypeBase {
+  const DICompositeType *ETy;
+  std::vector<struct BTF::BTFEnum64> EnumValues;
+
+public:
+  BTFTypeEnum64(const DICompositeType *ETy, uint32_t NumValues, bool IsSigned);
+  uint32_t getSize() override {
+    return BTFTypeBase::getSize() + EnumValues.size() * BTF::BTFEnum64Size;
+  }
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
 };

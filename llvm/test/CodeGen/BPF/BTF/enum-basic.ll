@@ -22,7 +22,7 @@
 ; CHECK-NEXT:        .long   28
 ; CHECK-NEXT:        .long   5
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_ENUM(id = 1)
-; CHECK-NEXT:        .long   100663298               # 0x6000002
+; CHECK-NEXT:        .long   2248146946              # 0x86000002
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   -1

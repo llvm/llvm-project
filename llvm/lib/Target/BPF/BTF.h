@@ -60,6 +60,7 @@ enum {
   CommonTypeSize = 12,
   BTFArraySize = 12,
   BTFEnumSize = 8,
+  BTFEnum64Size = 12,
   BTFMemberSize = 12,
   BTFParamSize = 8,
   BTFDataSecVarSize = 12,
@@ -143,6 +144,15 @@ enum : uint8_t {
 struct BTFEnum {
   uint32_t NameOff; ///< Enum name offset in the string table
   int32_t Val;      ///< Enum member value
+};
+
+/// BTF_KIND_ENUM64 is followed by multiple "struct BTFEnum64".
+/// The exact number of BTFEnum64 is stored in the vlen (of the
+/// info in "struct CommonType").
+struct BTFEnum64 {
+  uint32_t NameOff; ///< Enum name offset in the string table
+  uint32_t Val_Lo32;     ///< Enum member lo32 value
+  uint32_t Val_Hi32;     ///< Enum member hi32 value
 };
 
 /// BTF_KIND_ARRAY is followed by one "struct BTFArray".
