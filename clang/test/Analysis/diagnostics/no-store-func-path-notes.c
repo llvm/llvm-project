@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -w -x c -analyzer-checker=core -analyzer-output=text\
+// RUN: %clang_analyze_cc1 -w -Wno-implicit-function-declaration -analyzer-checker=core -analyzer-output=text\
 // RUN:     -verify %s
 
 typedef __typeof(sizeof(int)) size_t;

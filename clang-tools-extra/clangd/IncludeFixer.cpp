@@ -197,7 +197,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_no_member_template:
   case diag::err_no_member_template_suggest:
   case diag::warn_implicit_function_decl:
-  case diag::ext_implicit_function_decl:
+  case diag::ext_implicit_function_decl_c99:
   case diag::err_opencl_implicit_function_decl:
     dlog("Unresolved name at {0}, last typo was {1}",
          Info.getLocation().printToString(Info.getSourceManager()),

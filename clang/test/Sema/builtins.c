@@ -2,7 +2,7 @@
 // This test needs to set the target because it uses __builtin_ia32_vec_ext_v4si
 
 int test1(float a, int b) {
-  return __builtin_isless(a, b); // expected-note {{declared here}}
+  return __builtin_isless(a, b);
 }
 int test2(int a, int b) {
   return __builtin_islessequal(a, b);  // expected-error {{floating point type}}
@@ -97,8 +97,7 @@ void test12(void) {
 }
 
 void test_unknown_builtin(int a, int b) {
-  __builtin_isles(a, b); // expected-error{{use of unknown builtin}} \
-                         // expected-note{{did you mean '__builtin_isless'?}}
+  __builtin_isles(a, b); // expected-error{{use of unknown builtin}}
 }
 
 int test13(void) {
@@ -207,9 +206,9 @@ void test18(void) {
 }
 
 void no_ms_builtins(void) {
-  __assume(1); // expected-warning {{implicit declaration}}
-  __noop(1); // expected-warning {{implicit declaration}}
-  __debugbreak(); // expected-warning {{implicit declaration}}
+  __assume(1); // expected-error {{call to undeclared function '__assume'; ISO C99 and later do not support implicit function declarations}}
+  __noop(1); // expected-error {{call to undeclared function '__noop'; ISO C99 and later do not support implicit function declarations}}
+  __debugbreak(); // expected-error {{call to undeclared function '__debugbreak'; ISO C99 and later do not support implicit function declarations}}
 }
 
 void unavailable(void) {
@@ -234,7 +233,7 @@ void Test19(void)
 
         strlcat(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcat' call appears to be size of the source; expected the size of the destination}} \
                                     // expected-note {{change size argument to be the size of the destination}}
-				    
+
         __builtin___strlcat_chk(buf, b, sizeof(b), __builtin_object_size(buf, 0)); // expected-warning {{size argument in '__builtin___strlcat_chk' call appears to be size of the source; expected the size of the destination}} \
                                                                                    // expected-note {{change size argument to be the size of the destination}} \
 				                                                   // expected-warning {{'strlcat' will always overflow; destination buffer has size 20, but size argument is 40}}

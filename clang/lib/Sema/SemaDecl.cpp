@@ -933,9 +933,12 @@ Corrected:
       //
       //   appeared.
       //
-      // We also allow this in C99 as an extension.
-      if (NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *Name, S))
-        return NameClassification::NonType(D);
+      // We also allow this in C99 as an extension. However, this is not
+      // allowed in C2x as there are no functions without prototypes there.
+      if (!getLangOpts().C2x) {
+        if (NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *Name, S))
+          return NameClassification::NonType(D);
+      }
     }
 
     if (getLangOpts().CPlusPlus20 && SS.isEmpty() && NextToken.is(tok::less)) {
@@ -2302,7 +2305,8 @@ NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
   if (!ForRedeclaration &&
       (Context.BuiltinInfo.isPredefinedLibFunction(ID) ||
        Context.BuiltinInfo.isHeaderDependentFunction(ID))) {
-    Diag(Loc, diag::ext_implicit_lib_function_decl)
+    Diag(Loc, LangOpts.C99 ? diag::ext_implicit_lib_function_decl_c99
+                           : diag::ext_implicit_lib_function_decl)
         << Context.BuiltinInfo.getName(ID) << R;
     if (const char *Header = Context.BuiltinInfo.getHeaderName(ID))
       Diag(Loc, diag::note_include_header_or_declare)
@@ -15267,6 +15271,9 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
 /// call, forming a call to an implicitly defined function (per C99 6.5.1p2).
 NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
                                           IdentifierInfo &II, Scope *S) {
+  // It is not valid to implicitly define a function in C2x.
+  assert(!LangOpts.C2x && "Cannot implicitly define a function in C2x");
+
   // Find the scope in which the identifier is injected and the corresponding
   // DeclContext.
   // FIXME: C89 does not say what happens if there is no enclosing block scope.
@@ -15305,7 +15312,7 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
     }
   }
 
-  // Extension in C99.  Legal in C90, but warn about it.
+  // Extension in C99 (defaults to error). Legal in C89, but warn about it.
   unsigned diag_id;
   if (II.getName().startswith("__builtin_"))
     diag_id = diag::warn_builtin_unknown;
@@ -15313,7 +15320,7 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
   else if (getLangOpts().OpenCL)
     diag_id = diag::err_opencl_implicit_function_decl;
   else if (getLangOpts().C99)
-    diag_id = diag::ext_implicit_function_decl;
+    diag_id = diag::ext_implicit_function_decl_c99;
   else
     diag_id = diag::warn_implicit_function_decl;
 
@@ -15331,9 +15338,16 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
   }
 
   Diag(Loc, diag_id) << &II;
-  if (Corrected)
-    diagnoseTypo(Corrected, PDiag(diag::note_function_suggestion),
-                 /*ErrorRecovery*/ false);
+  if (Corrected) {
+    // If the correction is going to suggest an implicitly defined function,
+    // skip the correction as not being a particularly good idea.
+    bool Diagnose = true;
+    if (const auto *D = Corrected.getCorrectionDecl())
+      Diagnose = !D->isImplicit();
+    if (Diagnose)
+      diagnoseTypo(Corrected, PDiag(diag::note_function_suggestion),
+                   /*ErrorRecovery*/ false);
+  }
 
   // If we found a prior declaration of this function, don't bother building
   // another one. We've already pushed that one into scope, so there's nothing

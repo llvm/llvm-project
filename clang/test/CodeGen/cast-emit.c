@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
 
+extern int f();
 typedef union {
   int    i;
   float  f;

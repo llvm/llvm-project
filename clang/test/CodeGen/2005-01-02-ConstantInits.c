@@ -5,6 +5,7 @@
 // array subscripts.  This corresponds to PR487.
 
 struct X { int a[2]; };
+extern int bar();
 
 //.
 // CHECK: @test.i23 = internal global i32 4, align 4

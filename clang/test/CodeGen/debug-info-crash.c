@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -fblocks -debug-info-kind=limited -S %s -o -
+// RUN: %clang_cc1 -std=c89 -triple i386-apple-darwin10 -fblocks -debug-info-kind=limited -S %s -o -
 
 // rdar://7590323
 typedef struct dispatch_queue_s *dispatch_queue_t;

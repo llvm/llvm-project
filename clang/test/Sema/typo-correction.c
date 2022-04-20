@@ -37,7 +37,7 @@ int c11Generic(int arg) {
 
 typedef long long __m128i __attribute__((__vector_size__(16)));
 int PR23101(__m128i __x) {
-  return foo((__v2di)__x);  // expected-warning {{implicit declaration of function 'foo'}} \
+  return foo((__v2di)__x);  // expected-error {{call to undeclared function 'foo'; ISO C99 and later do not support implicit function declarations}} \
                             // expected-error {{use of undeclared identifier '__v2di'}}
 }
 

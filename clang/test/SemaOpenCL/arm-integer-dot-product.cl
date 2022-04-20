@@ -9,11 +9,11 @@ void test_negative() {
     int sr;
     ur = arm_dot(ua8, ub8); // expected-error{{implicit declaration of function 'arm_dot' is invalid in OpenCL}}
     sr = arm_dot(sa8, sb8);
-    ur = arm_dot_acc(ua8, ub8, ur); // expected-error{{implicit declaration of function 'arm_dot_acc' is invalid in OpenCL}} //expected-note{{'arm_dot_acc' declared here}}
+    ur = arm_dot_acc(ua8, ub8, ur); // expected-error{{implicit declaration of function 'arm_dot_acc' is invalid in OpenCL}}
     sr = arm_dot_acc(sa8, sb8, sr);
     ur = arm_dot_acc(ua16, ub16, ur);
     sr = arm_dot_acc(sa16, sb16, sr);
-    ur = arm_dot_acc_sat(ua8, ub8, ur); // expected-error{{implicit declaration of function 'arm_dot_acc_sat' is invalid in OpenCL}} //expected-note{{did you mean 'arm_dot_acc'?}}
+    ur = arm_dot_acc_sat(ua8, ub8, ur); // expected-error{{implicit declaration of function 'arm_dot_acc_sat' is invalid in OpenCL}}
     sr = arm_dot_acc_sat(sa8, sb8, sr);
 }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -std=c89 -o - | FileCheck %s
 
 struct X { int *XX; int Y;};
 

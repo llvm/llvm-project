@@ -417,9 +417,9 @@ def warn_return_value_udt_incomplete: Warning<
 def warn_implicit_function_decl : Warning<
   "implicit declaration of function %0">,
   InGroup<ImplicitFunctionDeclare>, DefaultIgnore;
-def ext_implicit_function_decl : ExtWarn<
-  "implicit declaration of function %0 is invalid in C99">,
-  InGroup<ImplicitFunctionDeclare>;
+def ext_implicit_function_decl_c99 : ExtWarn<
+  "call to undeclared function %0; ISO C99 and later do not support implicit "
+  "function declarations">, InGroup<ImplicitFunctionDeclare>, DefaultError;
 def note_function_suggestion : Note<"did you mean %0?">;
 
 def err_ellipsis_first_param : Error<
@@ -698,6 +698,10 @@ def note_unreachable_silence : Note<
 def ext_implicit_lib_function_decl : ExtWarn<
   "implicitly declaring library function '%0' with type %1">,
   InGroup<ImplicitFunctionDeclare>;
+def ext_implicit_lib_function_decl_c99 : ExtWarn<
+  "call to undeclared library function '%0' with type %1; ISO C99 and later "
+  "do not support implicit function declarations">,
+  InGroup<ImplicitFunctionDeclare>, DefaultError;
 def note_include_header_or_declare : Note<
   "include the header <%0> or explicitly provide a declaration for '%1'">;
 def note_previous_builtin_declaration : Note<"%0 is a builtin with type %1">;

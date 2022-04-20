@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2-bitperm -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2-bitperm -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2-bitperm -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify=overload -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 #include <arm_sve.h>
 
@@ -29,8 +29,8 @@
 //
 svuint8_t test_svbext_u8(svuint8_t op1, svuint8_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svbext'}}
-  // expected-warning@+1 {{implicit declaration of function 'svbext_u8'}}
+  // overload-warning@+2 {{call to undeclared function 'svbext'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svbext_u8'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svbext,_u8,,)(op1, op2);
 }
 
@@ -46,8 +46,8 @@ svuint8_t test_svbext_u8(svuint8_t op1, svuint8_t op2)
 //
 svuint16_t test_svbext_u16(svuint16_t op1, svuint16_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svbext'}}
-  // expected-warning@+1 {{implicit declaration of function 'svbext_u16'}}
+  // overload-warning@+2 {{call to undeclared function 'svbext'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svbext_u16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svbext,_u16,,)(op1, op2);
 }
 
@@ -63,8 +63,8 @@ svuint16_t test_svbext_u16(svuint16_t op1, svuint16_t op2)
 //
 svuint32_t test_svbext_u32(svuint32_t op1, svuint32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svbext'}}
-  // expected-warning@+1 {{implicit declaration of function 'svbext_u32'}}
+  // overload-warning@+2 {{call to undeclared function 'svbext'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svbext_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svbext,_u32,,)(op1, op2);
 }
 
@@ -80,8 +80,8 @@ svuint32_t test_svbext_u32(svuint32_t op1, svuint32_t op2)
 //
 svuint64_t test_svbext_u64(svuint64_t op1, svuint64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svbext'}}
-  // expected-warning@+1 {{implicit declaration of function 'svbext_u64'}}
+  // overload-warning@+2 {{call to undeclared function 'svbext'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svbext_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svbext,_u64,,)(op1, op2);
 }
 
@@ -101,8 +101,8 @@ svuint64_t test_svbext_u64(svuint64_t op1, svuint64_t op2)
 //
 svuint8_t test_svbext_n_u8(svuint8_t op1, uint8_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svbext'}}
-  // expected-warning@+1 {{implicit declaration of function 'svbext_n_u8'}}
+  // overload-warning@+2 {{call to undeclared function 'svbext'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svbext_n_u8'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svbext,_n_u8,,)(op1, op2);
 }
 
@@ -122,8 +122,8 @@ svuint8_t test_svbext_n_u8(svuint8_t op1, uint8_t op2)
 //
 svuint16_t test_svbext_n_u16(svuint16_t op1, uint16_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svbext'}}
-  // expected-warning@+1 {{implicit declaration of function 'svbext_n_u16'}}
+  // overload-warning@+2 {{call to undeclared function 'svbext'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svbext_n_u16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svbext,_n_u16,,)(op1, op2);
 }
 
@@ -143,8 +143,8 @@ svuint16_t test_svbext_n_u16(svuint16_t op1, uint16_t op2)
 //
 svuint32_t test_svbext_n_u32(svuint32_t op1, uint32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svbext'}}
-  // expected-warning@+1 {{implicit declaration of function 'svbext_n_u32'}}
+  // overload-warning@+2 {{call to undeclared function 'svbext'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svbext_n_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svbext,_n_u32,,)(op1, op2);
 }
 
@@ -164,7 +164,7 @@ svuint32_t test_svbext_n_u32(svuint32_t op1, uint32_t op2)
 //
 svuint64_t test_svbext_n_u64(svuint64_t op1, uint64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svbext'}}
-  // expected-warning@+1 {{implicit declaration of function 'svbext_n_u64'}}
+  // overload-warning@+2 {{call to undeclared function 'svbext'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svbext_n_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svbext,_n_u64,,)(op1, op2);
 }

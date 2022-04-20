@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify=overload -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -31,8 +31,8 @@
 //
 svfloat32_t test_svcvtlt_f32_f16_m(svfloat32_t inactive, svbool_t pg, svfloat16_t op)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svcvtlt_f32_m'}}
-  // expected-warning@+1 {{implicit declaration of function 'svcvtlt_f32_f16_m'}}
+  // overload-warning@+2 {{call to undeclared function 'svcvtlt_f32_m'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svcvtlt_f32_f16_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svcvtlt_f32,_f16,_m,)(inactive, pg, op);
 }
 
@@ -50,8 +50,8 @@ svfloat32_t test_svcvtlt_f32_f16_m(svfloat32_t inactive, svbool_t pg, svfloat16_
 //
 svfloat64_t test_svcvtlt_f64_f32_m(svfloat64_t inactive, svbool_t pg, svfloat32_t op)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svcvtlt_f64_m'}}
-  // expected-warning@+1 {{implicit declaration of function 'svcvtlt_f64_f32_m'}}
+  // overload-warning@+2 {{call to undeclared function 'svcvtlt_f64_m'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svcvtlt_f64_f32_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svcvtlt_f64,_f32,_m,)(inactive, pg, op);
 }
 
@@ -69,8 +69,8 @@ svfloat64_t test_svcvtlt_f64_f32_m(svfloat64_t inactive, svbool_t pg, svfloat32_
 //
 svfloat32_t test_svcvtlt_f32_f16_x(svbool_t pg, svfloat16_t op)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svcvtlt_f32_x'}}
-  // expected-warning@+1 {{implicit declaration of function 'svcvtlt_f32_f16_x'}}
+  // overload-warning@+2 {{call to undeclared function 'svcvtlt_f32_x'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svcvtlt_f32_f16_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svcvtlt_f32,_f16,_x,)(pg, op);
 }
 
@@ -88,7 +88,7 @@ svfloat32_t test_svcvtlt_f32_f16_x(svbool_t pg, svfloat16_t op)
 //
 svfloat64_t test_svcvtlt_f64_f32_x(svbool_t pg, svfloat32_t op)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svcvtlt_f64_x'}}
-  // expected-warning@+1 {{implicit declaration of function 'svcvtlt_f64_f32_x'}}
+  // overload-warning@+2 {{call to undeclared function 'svcvtlt_f64_x'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svcvtlt_f64_f32_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svcvtlt_f64,_f32,_x,)(pg, op);
 }

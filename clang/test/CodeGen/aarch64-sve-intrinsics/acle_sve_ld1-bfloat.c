@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -no-opaque-pointers -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -no-opaque-pointers -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify -verify-ignore-unexpected=error -verify-ignore-unexpected=note %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error -verify-ignore-unexpected=note %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -32,7 +32,7 @@
 //
 svbfloat16_t test_svld1_bf16(svbool_t pg, const bfloat16_t *base)
 {
-  // expected-warning@+1 {{implicit declaration of function 'svld1_bf16'}}
+  // expected-warning@+1 {{call to undeclared function 'svld1_bf16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svld1,_bf16,,)(pg, base);
 }
 
@@ -56,6 +56,6 @@ svbfloat16_t test_svld1_bf16(svbool_t pg, const bfloat16_t *base)
 //
 svbfloat16_t test_svld1_vnum_bf16(svbool_t pg, const bfloat16_t *base, int64_t vnum)
 {
-  // expected-warning@+1 {{implicit declaration of function 'svld1_vnum_bf16'}}
+  // expected-warning@+1 {{call to undeclared function 'svld1_vnum_bf16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svld1_vnum,_bf16,,)(pg, base, vnum);
 }

@@ -1,4 +1,4 @@
-// RUN:     %clang_cc1 -triple thumbv8m.base-eabi -fsyntax-only        %s 2>&1 | FileCheck --check-prefix=CHECK-c %s
+// RUN: not %clang_cc1 -triple thumbv8m.base-eabi -fsyntax-only %s 2>&1 | FileCheck --check-prefix=CHECK-c %s
 // RUN: not %clang_cc1 -triple thumbv8m.base-eabi -fsyntax-only -x c++ %s 2>&1 | FileCheck --check-prefix=CHECK-cpp %s
 
 #include <arm_cmse.h>
@@ -16,10 +16,10 @@ void func(callback_t fptr, void *p)
   cmse_TTAT(p);
   cmse_TTA_fptr(fptr);
   cmse_TTAT_fptr(fptr);
-// CHECK-c: warning: implicit declaration of function 'cmse_TTA'
-// CHECK-c: warning: implicit declaration of function 'cmse_TTAT'
-// CHECK-c: warning: implicit declaration of function 'cmse_TTA_fptr'
-// CHECK-c: warning: implicit declaration of function 'cmse_TTAT_fptr'
+// CHECK-c: error: call to undeclared function 'cmse_TTA'
+// CHECK-c: error: call to undeclared function 'cmse_TTAT'
+// CHECK-c: error: call to undeclared function 'cmse_TTA_fptr'
+// CHECK-c: error: call to undeclared function 'cmse_TTAT_fptr'
 // CHECK-cpp: error: use of undeclared identifier 'cmse_TTA'
 // CHECK-cpp: error: use of undeclared identifier 'cmse_TTAT'
 // CHECK-cpp: error: use of undeclared identifier 'cmse_TTA_fptr'

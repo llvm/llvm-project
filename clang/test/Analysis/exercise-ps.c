@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 %s -verify \
+// RUN: %clang_analyze_cc1 %s -verify -Wno-error=implicit-function-declaration \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-config core.CallAndMessage:ArgPointeeInitializedness=true
 //
@@ -19,7 +19,7 @@ void_typedef f2_helper(void);
 static void f2(void *buf) {
   F12_typedef* x;
   x = f2_helper();
-  memcpy((&x[1]), (buf), 1); // expected-warning{{implicitly declaring library function 'memcpy' with type 'void *(void *, const void *}} \
+  memcpy((&x[1]), (buf), 1); // expected-warning{{call to undeclared library function 'memcpy' with type 'void *(void *, const void *}} \
   // expected-note{{include the header <string.h> or explicitly provide a declaration for 'memcpy'}}
 }
 

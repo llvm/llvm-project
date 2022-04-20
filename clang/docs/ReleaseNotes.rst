@@ -156,6 +156,12 @@ Improvements to Clang's diagnostics
   without a prototype and with no arguments is an invalid redeclaration of a
   function with a prototype. e.g., ``void f(int); void f() {}`` is now properly
   diagnosed.
+- The ``-Wimplicit-function-declaration`` warning diagnostic now defaults to
+  an error in C99 and later. Prior to C2x, it may be downgraded to a warning
+  with ``-Wno-error=implicit-function-declaration``, or disabled entirely with
+  ``-Wno-implicit-function-declaration``. As of C2x, support for implicit
+  function declarations has been removed, and the warning options will have no
+  effect.
 
 - ``-Wmisexpect`` warns when the branch weights collected during profiling
   conflict with those added by ``llvm.expect``.
@@ -230,6 +236,9 @@ C2x Feature Support
 - Implemented the `*_WIDTH` macros to complete support for
   `WG14 N2412 Two's complement sign representation for C2x <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2412.pdf>`_.
 - Implemented `WG14 N2418 Adding the u8 character prefix <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2418.pdf>`_.
+- Removed support for implicit function declarations. This was a C89 feature
+  that was removed in C99, but cannot be supported in C2x because it requires
+  support for functions without prototypes, which no longer exist in C2x.
 
 C++ Language Changes in Clang
 -----------------------------

@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify=overload -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -29,8 +29,8 @@
 //
 svbool_t test_svwhilegt_b8_s32(int32_t op1, int32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b8'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b8_s32'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b8'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b8_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b8,_s32,,)(op1, op2);
 }
 
@@ -48,8 +48,8 @@ svbool_t test_svwhilegt_b8_s32(int32_t op1, int32_t op2)
 //
 svbool_t test_svwhilegt_b16_s32(int32_t op1, int32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b16'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b16_s32'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b16'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b16_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b16,_s32,,)(op1, op2);
 }
 
@@ -67,8 +67,8 @@ svbool_t test_svwhilegt_b16_s32(int32_t op1, int32_t op2)
 //
 svbool_t test_svwhilegt_b32_s32(int32_t op1, int32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b32'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b32_s32'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b32'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b32_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b32,_s32,,)(op1, op2);
 }
 
@@ -86,8 +86,8 @@ svbool_t test_svwhilegt_b32_s32(int32_t op1, int32_t op2)
 //
 svbool_t test_svwhilegt_b64_s32(int32_t op1, int32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b64'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b64_s32'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b64'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b64_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b64,_s32,,)(op1, op2);
 }
 
@@ -103,8 +103,8 @@ svbool_t test_svwhilegt_b64_s32(int32_t op1, int32_t op2)
 //
 svbool_t test_svwhilegt_b8_u32(uint32_t op1, uint32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b8'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b8_u32'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b8'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b8_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b8,_u32,,)(op1, op2);
 }
 
@@ -122,8 +122,8 @@ svbool_t test_svwhilegt_b8_u32(uint32_t op1, uint32_t op2)
 //
 svbool_t test_svwhilegt_b16_u32(uint32_t op1, uint32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b16'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b16_u32'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b16'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b16_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b16,_u32,,)(op1, op2);
 }
 
@@ -141,8 +141,8 @@ svbool_t test_svwhilegt_b16_u32(uint32_t op1, uint32_t op2)
 //
 svbool_t test_svwhilegt_b32_u32(uint32_t op1, uint32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b32'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b32_u32'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b32'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b32_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b32,_u32,,)(op1, op2);
 }
 
@@ -160,8 +160,8 @@ svbool_t test_svwhilegt_b32_u32(uint32_t op1, uint32_t op2)
 //
 svbool_t test_svwhilegt_b64_u32(uint32_t op1, uint32_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b64'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b64_u32'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b64'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b64_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b64,_u32,,)(op1, op2);
 }
 
@@ -177,8 +177,8 @@ svbool_t test_svwhilegt_b64_u32(uint32_t op1, uint32_t op2)
 //
 svbool_t test_svwhilegt_b8_s64(int64_t op1, int64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b8'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b8_s64'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b8'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b8_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b8,_s64,,)(op1, op2);
 }
 
@@ -196,8 +196,8 @@ svbool_t test_svwhilegt_b8_s64(int64_t op1, int64_t op2)
 //
 svbool_t test_svwhilegt_b16_s64(int64_t op1, int64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b16'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b16_s64'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b16'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b16_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b16,_s64,,)(op1, op2);
 }
 
@@ -215,8 +215,8 @@ svbool_t test_svwhilegt_b16_s64(int64_t op1, int64_t op2)
 //
 svbool_t test_svwhilegt_b32_s64(int64_t op1, int64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b32'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b32_s64'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b32'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b32_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b32,_s64,,)(op1, op2);
 }
 
@@ -234,8 +234,8 @@ svbool_t test_svwhilegt_b32_s64(int64_t op1, int64_t op2)
 //
 svbool_t test_svwhilegt_b64_s64(int64_t op1, int64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b64'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b64_s64'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b64'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b64_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b64,_s64,,)(op1, op2);
 }
 
@@ -251,8 +251,8 @@ svbool_t test_svwhilegt_b64_s64(int64_t op1, int64_t op2)
 //
 svbool_t test_svwhilegt_b8_u64(uint64_t op1, uint64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b8'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b8_u64'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b8'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b8_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b8,_u64,,)(op1, op2);
 }
 
@@ -270,8 +270,8 @@ svbool_t test_svwhilegt_b8_u64(uint64_t op1, uint64_t op2)
 //
 svbool_t test_svwhilegt_b16_u64(uint64_t op1, uint64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b16'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b16_u64'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b16'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b16_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b16,_u64,,)(op1, op2);
 }
 
@@ -289,8 +289,8 @@ svbool_t test_svwhilegt_b16_u64(uint64_t op1, uint64_t op2)
 //
 svbool_t test_svwhilegt_b32_u64(uint64_t op1, uint64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b32'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b32_u64'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b32'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b32_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b32,_u64,,)(op1, op2);
 }
 
@@ -308,7 +308,7 @@ svbool_t test_svwhilegt_b32_u64(uint64_t op1, uint64_t op2)
 //
 svbool_t test_svwhilegt_b64_u64(uint64_t op1, uint64_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svwhilegt_b64'}}
-  // expected-warning@+1 {{implicit declaration of function 'svwhilegt_b64_u64'}}
+  // overload-warning@+2 {{call to undeclared function 'svwhilegt_b64'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svwhilegt_b64_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svwhilegt_b64,_u64,,)(op1, op2);
 }

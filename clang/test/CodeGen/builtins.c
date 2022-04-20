@@ -15,6 +15,7 @@ void r(char *str, void *ptr) {
 }
 
 int random(void);
+int finite(double);
 
 int main(void) {
   int N = random();
@@ -25,11 +26,11 @@ int main(void) {
   P(types_compatible_p, (int, float));
   P(choose_expr, (0, 10, 20));
   P(constant_p, (sizeof(10)));
-  P(expect, (N == 12, 0)); 
+  P(expect, (N == 12, 0));
   V(prefetch, (&N));
   V(prefetch, (&N, 1));
   V(prefetch, (&N, 1, 0));
-  
+
   // Numeric Constants
 
   Q(huge_val, ());
@@ -100,7 +101,7 @@ int main(void) {
   V(strncpy, (s0, s1, n));
   V(sprintf, (s0, "%s", s1));
   V(snprintf, (s0, n, "%s", s1));
-  
+
   // Object size checking
   V(__memset_chk, (s0, 0, sizeof s0, n));
   V(__memcpy_chk, (s0, s1, sizeof s0, n));

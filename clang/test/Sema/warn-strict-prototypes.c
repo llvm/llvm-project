@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -Wno-implicit-function-declaration -verify %s
-// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -Wno-implicit-function-declaration -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 // function definition with 0 params, no prototype, no preceding declaration.
 void foo0() {} // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
