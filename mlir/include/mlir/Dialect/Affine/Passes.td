@@ -63,7 +63,7 @@ def AffineLoopFusion : Pass<"affine-loop-fusion", "func::FuncOp"> {
     Example 1: Producer-consumer fusion.
     Input:
     ```mlir
-    func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
+    func.func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
       %0 = memref.alloc() : memref<10xf32>
       %1 = memref.alloc() : memref<10xf32>
       %cst = arith.constant 0.000000e+00 : f32
@@ -86,7 +86,7 @@ def AffineLoopFusion : Pass<"affine-loop-fusion", "func::FuncOp"> {
     ```
     Output:
     ```mlir
-    func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
+    func.func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
       %0 = memref.alloc() : memref<1xf32>
       %1 = memref.alloc() : memref<1xf32>
       %cst = arith.constant 0.000000e+00 : f32
@@ -107,7 +107,7 @@ def AffineLoopFusion : Pass<"affine-loop-fusion", "func::FuncOp"> {
     Example 2: Sibling fusion.
     Input:
     ```mlir
-    func @sibling_fusion(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>,
+    func.func @sibling_fusion(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>,
                          %arg2: memref<10x10xf32>, %arg3: memref<10x10xf32>,
                          %arg4: memref<10x10xf32>) {
       affine.for %arg5 = 0 to 3 {
@@ -131,7 +131,7 @@ def AffineLoopFusion : Pass<"affine-loop-fusion", "func::FuncOp"> {
     ```
     Output:
     ```mlir
-    func @sibling_fusion(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>,
+    func.func @sibling_fusion(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>,
                          %arg2: memref<10x10xf32>, %arg3: memref<10x10xf32>,
                          %arg4: memref<10x10xf32>) {
       affine.for %arg5 = 0 to 3 {
@@ -238,7 +238,7 @@ def AffinePipelineDataTransfer
     Input
 
     ```mlir
-    func @pipelinedatatransfer() {
+    func.func @pipelinedatatransfer() {
       %0 = memref.alloc() : memref<256xf32>
       %1 = memref.alloc() : memref<32xf32, 1>
       %2 = memref.alloc() : memref<1xf32>
@@ -259,7 +259,7 @@ def AffinePipelineDataTransfer
 
     ```mlir
     module {
-      func @pipelinedatatransfer() {
+      func.func @pipelinedatatransfer() {
         %c8 = arith.constant 8 : index
         %c0 = arith.constant 0 : index
         %0 = memref.alloc() : memref<256xf32>
@@ -306,7 +306,7 @@ def AffineScalarReplacement : Pass<"affine-scalrep", "func::FuncOp"> {
     Input
 
     ```mlir
-    func @store_load_affine_apply() -> memref<10x10xf32> {
+    func.func @store_load_affine_apply() -> memref<10x10xf32> {
       %cf7 = arith.constant 7.0 : f32
       %m = memref.alloc() : memref<10x10xf32>
       affine.for %i0 = 0 to 10 {
@@ -324,7 +324,7 @@ def AffineScalarReplacement : Pass<"affine-scalrep", "func::FuncOp"> {
 
     ```mlir
     module {
-      func @store_load_affine_apply() -> memref<10x10xf32> {
+      func.func @store_load_affine_apply() -> memref<10x10xf32> {
         %cst = arith.constant 7.000000e+00 : f32
         %0 = memref.alloc() : memref<10x10xf32>
         affine.for %arg0 = 0 to 10 {

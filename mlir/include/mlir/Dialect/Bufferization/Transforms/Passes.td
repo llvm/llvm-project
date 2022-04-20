@@ -25,7 +25,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
     ```mlir
     #map0 = affine_map<(d0) -> (d0)>
     module {
-      func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
         cf.cond_br %arg0, ^bb1, ^bb2
       ^bb1:
         cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -54,7 +54,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
     ```mlir
     #map0 = affine_map<(d0) -> (d0)>
     module {
-      func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
         cf.cond_br %arg0, ^bb1, ^bb2
       ^bb1:  // pred: ^bb0
         %0 = memref.alloc() : memref<2xf32>
