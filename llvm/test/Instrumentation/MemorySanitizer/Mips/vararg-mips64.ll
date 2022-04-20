@@ -1,5 +1,4 @@
 ; RUN: opt < %s -S -passes=msan 2>&1 | FileCheck %s
-; RUN: opt < %s -msan -S | FileCheck %s
 
 target datalayout = "E-m:m-i8:8:32-i16:16:32-i64:64-n32:64-S128"
 target triple = "mips64--linux"

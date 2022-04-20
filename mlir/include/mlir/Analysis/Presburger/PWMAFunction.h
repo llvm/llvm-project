@@ -42,54 +42,35 @@ namespace presburger {
 ///
 /// Checking equality of two such functions is supported, as well as finding the
 /// value of the function at a specified point.
-class MultiAffineFunction : protected IntegerPolyhedron {
+class MultiAffineFunction {
 public:
-  /// We use protected inheritance to avoid inheriting the whole public
-  /// interface of IntegerPolyhedron. These using declarations explicitly make
-  /// only the relevant functions part of the public interface.
-  using IntegerPolyhedron::getNumDimAndSymbolIds;
-  using IntegerPolyhedron::getNumDimIds;
-  using IntegerPolyhedron::getNumIds;
-  using IntegerPolyhedron::getNumLocalIds;
-  using IntegerPolyhedron::getNumSymbolIds;
-  using IntegerPolyhedron::getSpace;
-
   MultiAffineFunction(const IntegerPolyhedron &domain, const Matrix &output)
-      : IntegerPolyhedron(domain), output(output) {}
+      : domainSet(domain), output(output) {}
   MultiAffineFunction(const Matrix &output, const PresburgerSpace &space)
-      : IntegerPolyhedron(space), output(output) {}
+      : domainSet(space), output(output) {}
 
-  ~MultiAffineFunction() override = default;
-  Kind getKind() const override { return Kind::MultiAffineFunction; }
-  bool classof(const IntegerRelation *rel) const {
-    return rel->getKind() == Kind::MultiAffineFunction;
-  }
-
-  unsigned getNumInputs() const { return getNumDimAndSymbolIds(); }
+  unsigned getNumInputs() const { return domainSet.getNumDimAndSymbolIds(); }
   unsigned getNumOutputs() const { return output.getNumRows(); }
   bool isConsistent() const {
-    return output.getNumColumns() == getNumIds() + 1;
+    return output.getNumColumns() == domainSet.getNumIds() + 1;
   }
-  const IntegerPolyhedron &getDomain() const { return *this; }
+  const IntegerPolyhedron &getDomain() const { return domainSet; }
+  const PresburgerSpace &getDomainSpace() const { return domainSet.getSpace(); }
 
   /// Insert `num` identifiers of the specified kind at position `pos`.
   /// Positions are relative to the kind of identifier. The coefficient columns
   /// corresponding to the added identifiers are initialized to zero. Return the
   /// absolute column position (i.e., not relative to the kind of identifier)
   /// of the first added identifier.
-  unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
-
-  /// Swap the posA^th identifier with the posB^th identifier.
-  void swapId(unsigned posA, unsigned posB) override;
+  unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1);
 
   /// Remove the specified range of ids.
-  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit) override;
-  using IntegerRelation::removeIdRange;
+  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
 
-  /// Eliminate the `posB^th` local identifier, replacing every instance of it
-  /// with the `posA^th` local identifier. This should be used when the two
-  /// local variables are known to always take the same values.
-  void eliminateRedundantLocalId(unsigned posA, unsigned posB) override;
+  /// Given a MAF `other`, merges local identifiers such that both funcitons
+  /// have union of local ids, without changing the set of points in domain or
+  /// the output.
+  void mergeLocalIds(MultiAffineFunction &other);
 
   /// Return whether the outputs of `this` and `other` agree wherever both
   /// functions are defined, i.e., the outputs should be equal for all points in
@@ -114,6 +95,10 @@ public:
   void dump() const;
 
 private:
+  /// The IntegerPolyhedron representing the domain over which the function is
+  /// defined.
+  IntegerPolyhedron domainSet;
+
   /// The function's output is a tuple of integers, with the ith element of the
   /// tuple defined by the affine expression given by the ith row of this output
   /// matrix.

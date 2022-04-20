@@ -100,7 +100,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
 
 struct ForToWhileLoop : public SCFForToWhileLoopBase<ForToWhileLoop> {
   void runOnOperation() override {
-    FuncOp funcOp = getOperation();
+    func::FuncOp funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopLoweringPattern>(ctx);

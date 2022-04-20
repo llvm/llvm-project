@@ -265,6 +265,9 @@ public:
   /// Allow a diagnostic to be converted to 'failure'.
   operator LogicalResult() const;
 
+  /// Allow a diagnostic to be converted to 'failure'.
+  operator ParseResult() const { return ParseResult(LogicalResult(*this)); }
+
   /// Allow a diagnostic to be converted to FailureOr<T>. Always results in
   /// 'failure' because this cast cannot possibly return an object of 'T'.
   template <typename T>
@@ -353,6 +356,10 @@ public:
   /// Allow an inflight diagnostic to be converted to 'failure', otherwise
   /// 'success' if this is an empty diagnostic.
   operator LogicalResult() const;
+
+  /// Allow an inflight diagnostic to be converted to 'failure', otherwise
+  /// 'success' if this is an empty diagnostic.
+  operator ParseResult() const { return ParseResult(LogicalResult(*this)); }
 
   /// Allow an inflight diagnostic to be converted to FailureOr<T>. Always
   /// results in 'failure' because this cast cannot possibly return an object of

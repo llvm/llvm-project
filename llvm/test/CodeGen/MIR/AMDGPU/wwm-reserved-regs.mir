@@ -1,0 +1,44 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: empty_wwm_regs{{$}}
+# CHECK: machineFunctionInfo:
+# CHECK-NOT: wwmReservedRegs
+---
+name: empty_wwm_regs
+machineFunctionInfo:
+  wwmReservedRegs: []
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+# CHECK-LABEL: name: one_reg{{$}}
+# CHECK: machineFunctionInfo:
+# CHECK: wwmReservedRegs:
+# CHECK-NEXT: - '$vgpr0'
+---
+name: one_reg
+machineFunctionInfo:
+  wwmReservedRegs: ['$vgpr0']
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+# CHECK-LABEL: name: two_reg{{$}}
+# CHECK: machineFunctionInfo:
+# CHECK: wwmReservedRegs:
+# CHECK-NEXT: - '$vgpr0'
+# CHECK-NEXT: - '$vgpr1'
+---
+name: two_reg
+machineFunctionInfo:
+  wwmReservedRegs: ['$vgpr0', '$vgpr1']
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...

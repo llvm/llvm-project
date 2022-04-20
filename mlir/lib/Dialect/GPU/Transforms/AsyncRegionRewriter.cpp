@@ -338,6 +338,6 @@ void GpuAsyncRegionPass::runOnOperation() {
   getOperation().getRegion().walk(SingleTokenUseCallback());
 }
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::createGpuAsyncRegionPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> mlir::createGpuAsyncRegionPass() {
   return std::make_unique<GpuAsyncRegionPass>();
 }

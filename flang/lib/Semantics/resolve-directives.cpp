@@ -279,6 +279,18 @@ public:
     return true;
   }
 
+  bool Pre(const parser::StmtFunctionStmt &x) {
+    const auto &parsedExpr{std::get<parser::Scalar<parser::Expr>>(x.t)};
+    if (const auto *expr{GetExpr(context_, parsedExpr)}) {
+      for (const Symbol &symbol : evaluate::CollectSymbols(*expr)) {
+        if (!IsStmtFunctionDummy(symbol)) {
+          stmtFunctionExprSymbols_.insert(symbol.GetUltimate());
+        }
+      }
+    }
+    return true;
+  }
+
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
 
@@ -352,18 +364,18 @@ public:
     return false;
   }
   bool Pre(const parser::OmpLinearClause &x) {
-    std::visit(common::visitors{
-                   [&](const parser::OmpLinearClause::WithoutModifier
-                           &linearWithoutModifier) {
-                     ResolveOmpNameList(
-                         linearWithoutModifier.names, Symbol::Flag::OmpLinear);
-                   },
-                   [&](const parser::OmpLinearClause::WithModifier
-                           &linearWithModifier) {
-                     ResolveOmpNameList(
-                         linearWithModifier.names, Symbol::Flag::OmpLinear);
-                   },
-               },
+    common::visit(common::visitors{
+                      [&](const parser::OmpLinearClause::WithoutModifier
+                              &linearWithoutModifier) {
+                        ResolveOmpNameList(linearWithoutModifier.names,
+                            Symbol::Flag::OmpLinear);
+                      },
+                      [&](const parser::OmpLinearClause::WithModifier
+                              &linearWithModifier) {
+                        ResolveOmpNameList(
+                            linearWithModifier.names, Symbol::Flag::OmpLinear);
+                      },
+                  },
         x.u);
     return false;
   }
@@ -744,7 +756,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
 static bool IsLastNameArray(const parser::Designator &designator) {
   const auto &name{GetLastName(designator)};
   const evaluate::DataRef dataRef{*(name.symbol)};
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const evaluate::SymbolRef &ref) { return ref->Rank() > 0; },
           [](const evaluate::ArrayRef &aref) {
@@ -759,7 +771,7 @@ static bool IsLastNameArray(const parser::Designator &designator) {
 void AccAttributeVisitor::AllowOnlyArrayAndSubArray(
     const parser::AccObjectList &objectList) {
   for (const auto &accObject : objectList.v) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
               if (!IsLastNameArray(designator)) {
@@ -786,7 +798,7 @@ void AccAttributeVisitor::AllowOnlyArrayAndSubArray(
 void AccAttributeVisitor::DoNotAllowAssumedSizedArray(
     const parser::AccObjectList &objectList) {
   for (const auto &accObject : objectList.v) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
               const auto &name{GetLastName(designator)};
@@ -871,7 +883,7 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
 void AccAttributeVisitor::EnsureAllocatableOrPointer(
     const llvm::acc::Clause clause, const parser::AccObjectList &objectList) {
   for (const auto &accObject : objectList.v) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
               const auto &lastName{GetLastName(designator)};
@@ -965,7 +977,7 @@ void AccAttributeVisitor::ResolveAccObjectList(
 
 void AccAttributeVisitor::ResolveAccObject(
     const parser::AccObject &accObject, Symbol::Flag accFlag) {
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
             if (const auto *name{GetDesignatorNameIfDataRef(designator)}) {
@@ -1560,7 +1572,7 @@ void OmpAttributeVisitor::ResolveOmpObjectList(
 
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
             if (const auto *name{GetDesignatorNameIfDataRef(designator)}) {

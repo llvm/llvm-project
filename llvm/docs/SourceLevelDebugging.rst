@@ -1086,8 +1086,8 @@ a Fortran front-end would generate the following descriptors:
 
   !DILocalVariable(name: "string", arg: 1, scope: !10, file: !3, line: 4, type: !15)
   !DIStringType(name: "character(*)!2", stringLength: !16, stringLengthExpression: !DIExpression(), size: 32)
-  
-A fortran deferred-length character can also contain the information of raw storage of the characters in addition to the length of the string. This information is encoded in the  stringLocationExpression field. Based on this information, DW_AT_data_location attribute is emitted in a DW_TAG_string_type debug info. 
+
+A fortran deferred-length character can also contain the information of raw storage of the characters in addition to the length of the string. This information is encoded in the  stringLocationExpression field. Based on this information, DW_AT_data_location attribute is emitted in a DW_TAG_string_type debug info.
 
   !DIStringType(name: "character(*)!2", stringLengthExpression: !DIExpression(), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32)
 
@@ -1104,6 +1104,25 @@ and this will materialize in DWARF tags as:
                   DW_AT_data_location (DW_OP_push_object_address, DW_OP_deref)
                   ...
                   DW_AT_artificial    (true)
+
+A Fortran front-end may need to generate a *trampoline* function to call a
+function defined in a different compilation unit. In this case, the front-end
+can emit the following descriptor for the trampoline function:
+
+.. code-block:: text
+
+  !DISubprogram(name: "sub1_.t0p", linkageName: "sub1_.t0p", scope: !4, file: !4, type: !5, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !7, retainedNodes: !24, targetFuncName: "sub1_")
+
+The targetFuncName field is the name of the function that the trampoline
+calls. This descriptor results in the following DWARF tag:
+
+.. code-block:: text
+
+  DW_TAG_subprogram
+    ...
+    DW_AT_linkage_name	("sub1_.t0p")
+    DW_AT_name	("sub1_.t0p")
+    DW_AT_trampoline	("sub1_")
 
 Debugging information format
 ============================

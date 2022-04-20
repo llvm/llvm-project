@@ -59,7 +59,8 @@ static MCAsmInfo *createLoongArchMCAsmInfo(const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   MCAsmInfo *MAI = new LoongArchMCAsmInfo(TT);
 
-  MCRegister SP = MRI.getDwarfRegNum(LoongArch::R2, true);
+  // Initial state of the frame pointer is sp(r3).
+  MCRegister SP = MRI.getDwarfRegNum(LoongArch::R3, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
   MAI->addInitialFrameState(Inst);
 

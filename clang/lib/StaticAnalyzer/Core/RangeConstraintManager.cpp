@@ -353,6 +353,21 @@ const llvm::APSInt &RangeSet::getMaxValue() const {
   return std::prev(end())->To();
 }
 
+bool clang::ento::RangeSet::isUnsigned() const {
+  assert(!isEmpty());
+  return begin()->From().isUnsigned();
+}
+
+uint32_t clang::ento::RangeSet::getBitWidth() const {
+  assert(!isEmpty());
+  return begin()->From().getBitWidth();
+}
+
+APSIntType clang::ento::RangeSet::getAPSIntType() const {
+  assert(!isEmpty());
+  return APSIntType(begin()->From());
+}
+
 bool RangeSet::containsImpl(llvm::APSInt &Point) const {
   if (isEmpty() || !pin(Point))
     return false;
@@ -653,6 +668,181 @@ RangeSet RangeSet::Factory::negate(RangeSet What) {
 
   llvm::sort(Result);
   return makePersistent(std::move(Result));
+}
+
+// Convert range set to the given integral type using truncation and promotion.
+// This works similar to APSIntType::apply function but for the range set.
+RangeSet RangeSet::Factory::castTo(RangeSet What, APSIntType Ty) {
+  // Set is empty or NOOP (aka cast to the same type).
+  if (What.isEmpty() || What.getAPSIntType() == Ty)
+    return What;
+
+  const bool IsConversion = What.isUnsigned() != Ty.isUnsigned();
+  const bool IsTruncation = What.getBitWidth() > Ty.getBitWidth();
+  const bool IsPromotion = What.getBitWidth() < Ty.getBitWidth();
+
+  if (IsTruncation)
+    return makePersistent(truncateTo(What, Ty));
+
+  // Here we handle 2 cases:
+  // - IsConversion && !IsPromotion.
+  //   In this case we handle changing a sign with same bitwidth: char -> uchar,
+  //   uint -> int. Here we convert negatives to positives and positives which
+  //   is out of range to negatives. We use convertTo function for that.
+  // - IsConversion && IsPromotion && !What.isUnsigned().
+  //   In this case we handle changing a sign from signeds to unsigneds with
+  //   higher bitwidth: char -> uint, int-> uint64. The point is that we also
+  //   need convert negatives to positives and use convertTo function as well.
+  //   For example, we don't need such a convertion when converting unsigned to
+  //   signed with higher bitwidth, because all the values of unsigned is valid
+  //   for the such signed.
+  if (IsConversion && (!IsPromotion || !What.isUnsigned()))
+    return makePersistent(convertTo(What, Ty));
+
+  assert(IsPromotion && "Only promotion operation from unsigneds left.");
+  return makePersistent(promoteTo(What, Ty));
+}
+
+RangeSet RangeSet::Factory::castTo(RangeSet What, QualType T) {
+  assert(T->isIntegralOrEnumerationType() && "T shall be an integral type.");
+  return castTo(What, ValueFactory.getAPSIntType(T));
+}
+
+RangeSet::ContainerType RangeSet::Factory::truncateTo(RangeSet What,
+                                                      APSIntType Ty) {
+  using llvm::APInt;
+  using llvm::APSInt;
+  ContainerType Result;
+  ContainerType Dummy;
+  // CastRangeSize is an amount of all possible values of cast type.
+  // Example: `char` has 256 values; `short` has 65536 values.
+  // But in fact we use `amount of values` - 1, because
+  // we can't keep `amount of values of UINT64` inside uint64_t.
+  // E.g. 256 is an amount of all possible values of `char` and we can't keep
+  // it inside `char`.
+  // And it's OK, it's enough to do correct calculations.
+  uint64_t CastRangeSize = APInt::getMaxValue(Ty.getBitWidth()).getZExtValue();
+  for (const Range &R : What) {
+    // Get bounds of the given range.
+    APSInt FromInt = R.From();
+    APSInt ToInt = R.To();
+    // CurrentRangeSize is an amount of all possible values of the current
+    // range minus one.
+    uint64_t CurrentRangeSize = (ToInt - FromInt).getZExtValue();
+    // This is an optimization for a specific case when this Range covers
+    // the whole range of the target type.
+    Dummy.clear();
+    if (CurrentRangeSize >= CastRangeSize) {
+      Dummy.emplace_back(ValueFactory.getMinValue(Ty),
+                         ValueFactory.getMaxValue(Ty));
+      Result = std::move(Dummy);
+      break;
+    }
+    // Cast the bounds.
+    Ty.apply(FromInt);
+    Ty.apply(ToInt);
+    const APSInt &PersistentFrom = ValueFactory.getValue(FromInt);
+    const APSInt &PersistentTo = ValueFactory.getValue(ToInt);
+    if (FromInt > ToInt) {
+      Dummy.emplace_back(ValueFactory.getMinValue(Ty), PersistentTo);
+      Dummy.emplace_back(PersistentFrom, ValueFactory.getMaxValue(Ty));
+    } else
+      Dummy.emplace_back(PersistentFrom, PersistentTo);
+    // Every range retrieved after truncation potentialy has garbage values.
+    // So, we have to unite every next range with the previouses.
+    Result = unite(Result, Dummy);
+  }
+
+  return Result;
+}
+
+// Divide the convertion into two phases (presented as loops here).
+// First phase(loop) works when casted values go in ascending order.
+// E.g. char{1,3,5,127} -> uint{1,3,5,127}
+// Interrupt the first phase and go to second one when casted values start
+// go in descending order. That means that we crossed over the middle of
+// the type value set (aka 0 for signeds and MAX/2+1 for unsigneds).
+// For instance:
+// 1: uchar{1,3,5,128,255} -> char{1,3,5,-128,-1}
+//    Here we put {1,3,5} to one array and {-128, -1} to another
+// 2: char{-128,-127,-1,0,1,2} -> uchar{128,129,255,0,1,3}
+//    Here we put {128,129,255} to one array and {0,1,3} to another.
+// After that we unite both arrays.
+// NOTE: We don't just concatenate the arrays, because they may have
+// adjacent ranges, e.g.:
+// 1: char(-128, 127) -> uchar -> arr1(128, 255), arr2(0, 127) ->
+//    unite -> uchar(0, 255)
+// 2: uchar(0, 1)U(254, 255) -> char -> arr1(0, 1), arr2(-2, -1) ->
+//    unite -> uchar(-2, 1)
+RangeSet::ContainerType RangeSet::Factory::convertTo(RangeSet What,
+                                                     APSIntType Ty) {
+  using llvm::APInt;
+  using llvm::APSInt;
+  using Bounds = std::pair<const APSInt &, const APSInt &>;
+  ContainerType AscendArray;
+  ContainerType DescendArray;
+  auto CastRange = [Ty, &VF = ValueFactory](const Range &R) -> Bounds {
+    // Get bounds of the given range.
+    APSInt FromInt = R.From();
+    APSInt ToInt = R.To();
+    // Cast the bounds.
+    Ty.apply(FromInt);
+    Ty.apply(ToInt);
+    return {VF.getValue(FromInt), VF.getValue(ToInt)};
+  };
+  // Phase 1. Fill the first array.
+  APSInt LastConvertedInt = Ty.getMinValue();
+  const auto *It = What.begin();
+  const auto *E = What.end();
+  while (It != E) {
+    Bounds NewBounds = CastRange(*(It++));
+    // If values stop going acsending order, go to the second phase(loop).
+    if (NewBounds.first < LastConvertedInt) {
+      DescendArray.emplace_back(NewBounds.first, NewBounds.second);
+      break;
+    }
+    // If the range contains a midpoint, then split the range.
+    // E.g. char(-5, 5) -> uchar(251, 5)
+    // Here we shall add a range (251, 255) to the first array and (0, 5) to the
+    // second one.
+    if (NewBounds.first > NewBounds.second) {
+      DescendArray.emplace_back(ValueFactory.getMinValue(Ty), NewBounds.second);
+      AscendArray.emplace_back(NewBounds.first, ValueFactory.getMaxValue(Ty));
+    } else
+      // Values are going acsending order.
+      AscendArray.emplace_back(NewBounds.first, NewBounds.second);
+    LastConvertedInt = NewBounds.first;
+  }
+  // Phase 2. Fill the second array.
+  while (It != E) {
+    Bounds NewBounds = CastRange(*(It++));
+    DescendArray.emplace_back(NewBounds.first, NewBounds.second);
+  }
+  // Unite both arrays.
+  return unite(AscendArray, DescendArray);
+}
+
+/// Promotion from unsigneds to signeds/unsigneds left.
+RangeSet::ContainerType RangeSet::Factory::promoteTo(RangeSet What,
+                                                     APSIntType Ty) {
+  ContainerType Result;
+  // We definitely know the size of the result set.
+  Result.reserve(What.size());
+
+  // Each unsigned value fits every larger type without any changes,
+  // whether the larger type is signed or unsigned. So just promote and push
+  // back each range one by one.
+  for (const Range &R : What) {
+    // Get bounds of the given range.
+    llvm::APSInt FromInt = R.From();
+    llvm::APSInt ToInt = R.To();
+    // Cast the bounds.
+    Ty.apply(FromInt);
+    Ty.apply(ToInt);
+    Result.emplace_back(ValueFactory.getValue(FromInt),
+                        ValueFactory.getValue(ToInt));
+  }
+  return Result;
 }
 
 RangeSet RangeSet::Factory::deletePoint(RangeSet From,

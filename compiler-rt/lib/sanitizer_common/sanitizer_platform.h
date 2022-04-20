@@ -340,7 +340,7 @@
 #  define MSC_PREREQ(version) 0
 #endif
 
-#if SANITIZER_MAC && defined (__x86_64__)
+#if SANITIZER_MAC && defined(__x86_64__)
 #  define SANITIZER_NON_UNIQUE_TYPEINFO 0
 #else
 #  define SANITIZER_NON_UNIQUE_TYPEINFO 1

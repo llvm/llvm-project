@@ -178,7 +178,7 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
 namespace {
 
 struct TosaTestQuantUtilAPI
-    : public PassWrapper<TosaTestQuantUtilAPI, OperationPass<FuncOp>> {
+    : public PassWrapper<TosaTestQuantUtilAPI, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TosaTestQuantUtilAPI)
 
   StringRef getArgument() const final { return PASS_NAME; }

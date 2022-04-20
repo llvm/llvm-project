@@ -195,8 +195,8 @@ public:
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
-      // Calling CalleeInterface ctor will build a declaration mlir::FuncOp with
-      // no other side effects.
+      // Calling CalleeInterface ctor will build a declaration
+      // mlir::func::FuncOp with no other side effects.
       // TODO: when doing some compiler profiling on real apps, it may be worth
       // to check it's better to save the CalleeInterface instead of recomputing
       // it later when lowering the body. CalleeInterface ctor should be linear
@@ -742,8 +742,8 @@ private:
     return cond;
   }
 
-  mlir::FuncOp getFunc(llvm::StringRef name, mlir::FunctionType ty) {
-    if (mlir::FuncOp func = builder->getNamedFunction(name)) {
+  mlir::func::FuncOp getFunc(llvm::StringRef name, mlir::FunctionType ty) {
+    if (mlir::func::FuncOp func = builder->getNamedFunction(name)) {
       assert(func.getFunctionType() == ty);
       return func;
     }
@@ -2191,7 +2191,7 @@ private:
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
     Fortran::lower::CalleeInterface callee(funit, *this);
-    mlir::FuncOp func = callee.addEntryBlockAndMapArguments();
+    mlir::func::FuncOp func = callee.addEntryBlockAndMapArguments();
     builder = new fir::FirOpBuilder(func, bridge.getKindMap());
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setInsertionPointToStart(&func.front());
@@ -2387,7 +2387,7 @@ private:
     // FIXME: get rid of the bogus function context and instantiate the
     // globals directly into the module.
     mlir::MLIRContext *context = &getMLIRContext();
-    mlir::FuncOp func = fir::FirOpBuilder::createFunction(
+    mlir::func::FuncOp func = fir::FirOpBuilder::createFunction(
         mlir::UnknownLoc::get(context), getModuleOp(),
         fir::NameUniquer::doGenerated("Sham"),
         mlir::FunctionType::get(context, llvm::None, llvm::None));

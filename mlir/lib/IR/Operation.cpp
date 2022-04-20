@@ -525,7 +525,8 @@ InFlightDiagnostic Operation::emitOpError(const Twine &message) {
 
 /// Create a deep copy of this operation but keep the operation regions empty.
 /// Operands are remapped using `mapper` (if present), and `mapper` is updated
-/// to contain the results.
+/// to contain the results. The `mapResults` flag specifies whether the results
+/// of the cloned operation should be added to the map.
 Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper,
                                           bool mapResults) {
   SmallVector<Value, 8> operands;

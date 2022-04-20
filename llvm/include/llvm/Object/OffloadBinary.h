@@ -73,6 +73,7 @@ public:
 
   ImageKind getImageKind() const { return TheEntry->TheImageKind; }
   OffloadKind getOffloadKind() const { return TheEntry->TheOffloadKind; }
+  uint32_t getVersion() const { return TheHeader->Version; }
   uint32_t getFlags() const { return TheEntry->Flags; }
   uint64_t getSize() const { return TheHeader->Size; }
 

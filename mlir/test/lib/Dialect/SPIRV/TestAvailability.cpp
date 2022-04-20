@@ -22,7 +22,7 @@ using namespace mlir;
 namespace {
 /// A pass for testing SPIR-V op availability.
 struct PrintOpAvailability
-    : public PassWrapper<PrintOpAvailability, OperationPass<FuncOp>> {
+    : public PassWrapper<PrintOpAvailability, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PrintOpAvailability)
 
   void runOnOperation() override;
@@ -106,7 +106,7 @@ void registerPrintSpirvAvailabilityPass() {
 namespace {
 /// A pass for testing SPIR-V op availability.
 struct ConvertToTargetEnv
-    : public PassWrapper<ConvertToTargetEnv, OperationPass<FuncOp>> {
+    : public PassWrapper<ConvertToTargetEnv, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConvertToTargetEnv)
 
   StringRef getArgument() const override { return "test-spirv-target-env"; }
@@ -149,7 +149,7 @@ struct ConvertToSubgroupBallot : public RewritePattern {
 
 void ConvertToTargetEnv::runOnOperation() {
   MLIRContext *context = &getContext();
-  FuncOp fn = getOperation();
+  func::FuncOp fn = getOperation();
 
   auto targetEnv = fn.getOperation()
                        ->getAttr(spirv::getTargetEnvAttrName())

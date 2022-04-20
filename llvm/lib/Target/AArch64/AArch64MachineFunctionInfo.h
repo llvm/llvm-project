@@ -116,7 +116,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SRetReturnReg - sret lowering includes returning the value of the
   /// returned struct in a register. This field holds the virtual register into
   /// which the sret argument is passed.
-  unsigned SRetReturnReg = 0;
+  Register SRetReturnReg;
+
   /// SVE stack size (for predicates and data vectors) are maintained here
   /// rather than in FrameInfo, as the placement and Stack IDs are target
   /// specific.

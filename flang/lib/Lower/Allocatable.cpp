@@ -118,7 +118,7 @@ static void genRuntimeSetBounds(fir::FirOpBuilder &builder, mlir::Location loc,
                                 const fir::MutableBoxValue &box,
                                 mlir::Value dimIndex, mlir::Value lowerBound,
                                 mlir::Value upperBound) {
-  mlir::FuncOp callee =
+  mlir::func::FuncOp callee =
       box.isPointer()
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerSetBounds)>(loc,
                                                                     builder)
@@ -138,7 +138,7 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
                                     mlir::Location loc,
                                     const fir::MutableBoxValue &box,
                                     mlir::Value len) {
-  mlir::FuncOp callee =
+  mlir::func::FuncOp callee =
       box.isPointer()
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyCharacter)>(
                 loc, builder)
@@ -166,7 +166,7 @@ static mlir::Value genRuntimeAllocate(fir::FirOpBuilder &builder,
                                       mlir::Location loc,
                                       const fir::MutableBoxValue &box,
                                       ErrorManager &errorManager) {
-  mlir::FuncOp callee =
+  mlir::func::FuncOp callee =
       box.isPointer()
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerAllocate)>(loc, builder)
           : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(loc,
@@ -187,7 +187,7 @@ static mlir::Value genRuntimeDeallocate(fir::FirOpBuilder &builder,
                                         ErrorManager &errorManager) {
   // Ensure fir.box is up-to-date before passing it to deallocate runtime.
   mlir::Value boxAddress = fir::factory::getMutableIRBox(builder, loc, box);
-  mlir::FuncOp callee =
+  mlir::func::FuncOp callee =
       box.isPointer()
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerDeallocate)>(loc,
                                                                      builder)

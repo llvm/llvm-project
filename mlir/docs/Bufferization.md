@@ -507,14 +507,14 @@ The code, slightly simplified and annotated, is reproduced here:
 ```c++
   // Partial bufferization passes.
   pm.addPass(createTensorConstantBufferizePass());
-  pm.addNestedPass<FuncOp>(createTCPBufferizePass()); // Bufferizes the downstream `tcp` dialect.
-  pm.addNestedPass<FuncOp>(createSCFBufferizePass());
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());
+  pm.addNestedPass<func::FuncOp>(createTCPBufferizePass()); // Bufferizes the downstream `tcp` dialect.
+  pm.addNestedPass<func::FuncOp>(createSCFBufferizePass());
+  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());
+  pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());
   pm.addPass(createFuncBufferizePass());
 
   // Finalizing bufferization pass.
-  pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());
+  pm.addNestedPass<func::FuncOp>(createFinalizingBufferizePass());
 ```
 
 Looking first at the partial bufferization passes, we see that there are a

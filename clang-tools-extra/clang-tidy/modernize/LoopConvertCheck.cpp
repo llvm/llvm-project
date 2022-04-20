@@ -463,7 +463,8 @@ LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
       MinConfidence(Options.get("MinConfidence", Confidence::CL_Reasonable)),
       NamingStyle(Options.get("NamingStyle", VariableNamer::NS_CamelCase)),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM)),
+                                        utils::IncludeSorter::IS_LLVM),
+               areDiagsSelfContained()),
       UseCxx20IfAvailable(Options.get("UseCxx20ReverseRanges", true)),
       ReverseFunction(Options.get("MakeReverseRangeFunction", "")),
       ReverseHeader(Options.get("MakeReverseRangeHeader", "")) {
@@ -800,9 +801,12 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
                                      const ast_matchers::BoundNodes &Nodes,
                                      const ForStmt *Loop,
                                      LoopFixerKind FixerKind) {
-  // If we already modified the range of this for loop, don't do any further
-  // updates on this iteration.
-  if (TUInfo->getReplacedVars().count(Loop))
+  // In self contained diagnosics mode we don't want dependancies on other
+  // loops, otherwise, If we already modified the range of this for loop, don't
+  // do any further updates on this iteration.
+  if (areDiagsSelfContained())
+    TUInfo = std::make_unique<TUTrackingInfo>();
+  else if (TUInfo->getReplacedVars().count(Loop))
     return false;
 
   // Check that we have exactly one index variable and at most one end variable.

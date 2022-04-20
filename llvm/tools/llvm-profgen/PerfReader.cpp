@@ -341,7 +341,8 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
 }
 
 std::unique_ptr<PerfReaderBase>
-PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput) {
+PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
+                       Optional<uint32_t> PIDFilter) {
   std::unique_ptr<PerfReaderBase> PerfReader;
 
   if (PerfInput.Format == PerfFormat::UnsymbolizedProfile) {
@@ -352,7 +353,8 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput) {
 
   // For perf data input, we need to convert them into perf script first.
   if (PerfInput.Format == PerfFormat::PerfData)
-    PerfInput = PerfScriptReader::convertPerfDataToTrace(Binary, PerfInput);
+    PerfInput =
+        PerfScriptReader::convertPerfDataToTrace(Binary, PerfInput, PIDFilter);
 
   assert((PerfInput.Format == PerfFormat::PerfScript) &&
          "Should be a perfscript!");
@@ -360,9 +362,10 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput) {
   PerfInput.Content =
       PerfScriptReader::checkPerfScriptType(PerfInput.InputFile);
   if (PerfInput.Content == PerfContent::LBRStack) {
-    PerfReader.reset(new HybridPerfReader(Binary, PerfInput.InputFile));
+    PerfReader.reset(
+        new HybridPerfReader(Binary, PerfInput.InputFile, PIDFilter));
   } else if (PerfInput.Content == PerfContent::LBR) {
-    PerfReader.reset(new LBRPerfReader(Binary, PerfInput.InputFile));
+    PerfReader.reset(new LBRPerfReader(Binary, PerfInput.InputFile, PIDFilter));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -370,8 +373,8 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput) {
   return PerfReader;
 }
 
-PerfInputFile PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
-                                                       PerfInputFile &File) {
+PerfInputFile PerfScriptReader::convertPerfDataToTrace(
+    ProfiledBinary *Binary, PerfInputFile &File, Optional<uint32_t> PIDFilter) {
   StringRef PerfData = File.InputFile;
   // Run perf script to retrieve PIDs matching binary we're interested in.
   auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
@@ -397,7 +400,7 @@ PerfInputFile PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
     if (isMMap2Event(TraceIt.getCurrentLine()) &&
         extractMMap2EventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
       auto It = PIDSet.emplace(MMap.PID);
-      if (It.second) {
+      if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
         if (!PIDs.empty()) {
           PIDs.append(",");
         }
@@ -424,6 +427,10 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   // Drop the event which doesn't belong to user-provided binary
   StringRef BinaryName = llvm::sys::path::filename(Event.BinaryPath);
   if (Binary->getName() != BinaryName)
+    return;
+
+  // Drop the event if process does not match pid filter
+  if (PIDFilter && Event.PID != *PIDFilter)
     return;
 
   // Drop the event if its image is loaded at the same address

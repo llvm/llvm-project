@@ -61,7 +61,7 @@ define i32* @checkAndAdvance(i32* align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAValueConstantRange] for CtxI '  %2 = load i32, i32* %0, align 4' at position {flt: [@-1]} with state range(32)<full-set / full-set>
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, i32* %0, align 4' at position {flt: [@-1]} with state set-state(< {full-set} >)
+; GRAPH-NEXT: [AAPotentialConstantValues] for CtxI '  %2 = load i32, i32* %0, align 4' at position {flt: [@-1]} with state set-state(< {full-set} >)
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAValueSimplify] for CtxI <<null inst>> at position {flt: [@-1]} with state not-simple
 ; GRAPH-EMPTY:
@@ -69,7 +69,7 @@ define i32* @checkAndAdvance(i32* align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAValueConstantRange] for CtxI <<null inst>> at position {flt: [@-1]} with state range(32)<[0,1) / [0,1)>
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %3 = icmp eq i32 %2, 0' at position {flt: [@-1]} with state set-state(< {full-set} >)
+; GRAPH-NEXT: [AAPotentialConstantValues] for CtxI '  %3 = icmp eq i32 %2, 0' at position {flt: [@-1]} with state set-state(< {full-set} >)
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoReturn] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state may-return
 ; GRAPH-EMPTY:
