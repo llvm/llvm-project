@@ -75,11 +75,12 @@ contains
   ! Test that optional intent(out) are default initialized only when
   ! present.
   ! CHECK-LABEL: func @_QMtest_dinitPintent_out_optional(
-  ! CHECK-SAME: %[[x:.*]]: !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>> {fir.bindc_name = "x", fir.optional})
+  ! CHECK-SAME: %[[x:.*]]: !fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>> {fir.bindc_name = "x", fir.optional})
   subroutine intent_out_optional(x)
-    ! CHECK: %[[isPresent:.*]] = fir.is_present %[[x]] : (!fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>) -> i1
+    ! CHECK: %[[isPresent:.*]] = fir.is_present %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> i1
     ! CHECK: fir.if %[[isPresent]] {
-      ! CHECK: %[[xboxNone:.*]] = fir.convert %[[x]]
+      ! CHECK: %[[xbox:.*]] = fir.embox %[[x]] : (!fir.ref<!fir.type<_QMtest_dinitTt{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTt{i:i32}>>
+      ! CHECK: %[[xboxNone:.*]] = fir.convert %[[xbox]]
       ! CHECK: fir.call @_FortranAInitialize(%[[xboxNone]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
     ! CHECK: }
     type(t), intent(out), optional :: x
