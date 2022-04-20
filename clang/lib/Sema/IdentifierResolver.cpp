@@ -123,7 +123,7 @@ bool IdentifierResolver::isDeclInScope(Decl *D, DeclContext *Ctx, Scope *S,
       assert(S->getParent() && "No TUScope?");
       // If the current decl is in a lambda, we shouldn't consider this is a
       // redefinition as lambda has its own scope.
-      if (S->getParent()->isControlScope()) {
+      if (S->getParent()->isControlScope() && !S->isFunctionScope()) {
         S = S->getParent();
         if (S->isDeclScope(D))
           return true;
