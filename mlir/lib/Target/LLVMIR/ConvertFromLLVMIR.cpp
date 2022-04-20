@@ -735,8 +735,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   // FIXME: Support uses of SubtargetData. Currently inbounds GEPs, fast-math
   // flags and call / operand attributes are not supported.
   Location loc = processDebugLoc(inst->getDebugLoc(), inst);
-  Value &v = instMap[inst];
-  assert(!v && "processInstruction must be called only once per instruction!");
+  assert(!instMap.count(inst) &&
+         "processInstruction must be called only once per instruction!");
   switch (inst->getOpcode()) {
   default:
     return emitError(loc) << "unknown instruction: " << diag(*inst);
@@ -794,7 +794,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     }
     Operation *op = b.create(state);
     if (!inst->getType()->isVoidTy())
-      v = op->getResult(0);
+      instMap[inst] = op->getResult(0);
     return success();
   }
   case llvm::Instruction::Alloca: {
@@ -803,7 +803,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       return failure();
 
     auto *allocaInst = cast<llvm::AllocaInst>(inst);
-    v = b.create<AllocaOp>(loc, processType(inst->getType()),
+    instMap[inst] =
+        b.create<AllocaOp>(loc, processType(inst->getType()),
                            processType(allocaInst->getAllocatedType()), size,
                            allocaInst->getAlign().value());
     return success();
@@ -813,7 +814,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Value rhs = processValue(inst->getOperand(1));
     if (!lhs || !rhs)
       return failure();
-    v = b.create<ICmpOp>(
+    instMap[inst] = b.create<ICmpOp>(
         loc, getICmpPredicate(cast<llvm::ICmpInst>(inst)->getPredicate()), lhs,
         rhs);
     return success();
@@ -896,7 +897,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Type type = processType(inst->getType());
     if (!type)
       return failure();
-    v = b.getInsertionBlock()->addArgument(
+    instMap[inst] = b.getInsertionBlock()->addArgument(
         type, processDebugLoc(inst->getDebugLoc(), inst));
     return success();
   }
@@ -930,7 +931,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       op = b.create<CallOp>(loc, tys, ops);
     }
     if (!ci->getType()->isVoidTy())
-      v = op->getResult(0);
+      instMap[inst] = op->getResult(0);
     return success();
   }
   case llvm::Instruction::LandingPad: {
@@ -944,7 +945,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     if (!ty)
       return failure();
 
-    v = b.create<LandingpadOp>(loc, ty, lpi->isCleanup(), ops);
+    instMap[inst] = b.create<LandingpadOp>(loc, ty, lpi->isCleanup(), ops);
     return success();
   }
   case llvm::Instruction::Invoke: {
@@ -977,7 +978,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     }
 
     if (!ii->getType()->isVoidTy())
-      v = op->getResult(0);
+      instMap[inst] = op->getResult(0);
     return success();
   }
   case llvm::Instruction::Fence: {
@@ -1026,8 +1027,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Type type = processType(inst->getType());
     if (!type)
       return failure();
-    v = b.create<GEPOp>(loc, type, sourceElementType, basePtr, dynamicIndices,
-                        staticIndices);
+    instMap[inst] = b.create<GEPOp>(loc, type, sourceElementType, basePtr,
+                                    dynamicIndices, staticIndices);
     return success();
   }
   }
