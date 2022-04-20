@@ -431,6 +431,20 @@ define <2 x float> @test6(float %A){
   ret <2 x float> %tmp35
 }
 
+; FIXME: This test should not be optimized by OptimizeIntegerToVectorInsertions.
+; The bitcast from vector is confusing it.
+define <2 x i64> @int2vec_insertion_bitcast_from_vec(i64 %x) {
+; CHECK-LABEL: @int2vec_insertion_bitcast_from_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[X:%.*]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+;
+  %a = bitcast i64 %x to <8 x i8>
+  %b = zext <8 x i8> %a to <8 x i16>
+  %c = bitcast <8 x i16> %b to i128
+  %d = bitcast i128 %c to <2 x i64>
+  ret <2 x i64> %d
+}
+
 define i64 @ISPC0(i64 %in) {
 ; CHECK-LABEL: @ISPC0(
 ; CHECK-NEXT:    ret i64 0
