@@ -390,17 +390,87 @@ define i8 @test27(i8 %A) {
   ret i8 %E
 }
 
-;; This is just a zero-extending shr.
-define i32 @test28(i32 %X) {
-; CHECK-LABEL: @test28(
+;; No demand for extra sign bits.
+
+define i32 @ashr_lowmask(i32 %x) {
+; CHECK-LABEL: @ashr_lowmask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 24
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
-  ;; Sign extend
-  %Y = ashr i32 %X, 24
-  ;; Mask out sign bits
-  %Z = and i32 %Y, 255
-  ret i32 %Z
+  %a = ashr i32 %x, 24
+  %r = and i32 %a, 255
+  ret i32 %r
+}
+
+define i32 @ashr_lowmask_use(i32 %x) {
+; CHECK-LABEL: @ashr_lowmask_use(
+; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 1
+; CHECK-NEXT:    call void @use32(i32 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[X]], 1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = ashr i32 %x, 1
+  call void @use32(i32 %a)
+  %r = and i32 %a, 2147483647
+  ret i32 %r
+}
+
+define <2 x i8> @ashr_lowmask_use_splat(<2 x i8> %x, <2 x i8>* %p) {
+; CHECK-LABEL: @ashr_lowmask_use_splat(
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[X]], <i8 7, i8 7>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = ashr <2 x i8> %x, <i8 7, i8 7>
+  store <2 x i8> %a, <2 x i8>* %p
+  %r = and <2 x i8> %a, <i8 1, i8 1>
+  ret <2 x i8> %r
+}
+
+; negative test - must keep all low bits
+
+define i32 @ashr_not_lowmask1_use(i32 %x) {
+; CHECK-LABEL: @ashr_not_lowmask1_use(
+; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 24
+; CHECK-NEXT:    call void @use32(i32 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], 254
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = ashr i32 %x, 24
+  call void @use32(i32 %a)
+  %r = and i32 %a, 254
+  ret i32 %r
+}
+
+; negative test - must keep all low bits
+
+define i32 @ashr_not_lowmask2_use(i32 %x) {
+; CHECK-LABEL: @ashr_not_lowmask2_use(
+; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 24
+; CHECK-NEXT:    call void @use32(i32 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], 127
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = ashr i32 %x, 24
+  call void @use32(i32 %a)
+  %r = and i32 %a, 127
+  ret i32 %r
+}
+
+; negative test - must keep only low bits
+
+define i32 @ashr_not_lowmask3_use(i32 %x) {
+; CHECK-LABEL: @ashr_not_lowmask3_use(
+; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 24
+; CHECK-NEXT:    call void @use32(i32 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], 511
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = ashr i32 %x, 24
+  call void @use32(i32 %a)
+  %r = and i32 %a, 511
+  ret i32 %r
 }
 
 define i32 @test29(i8 %X) {
@@ -1167,14 +1237,14 @@ define i32 @lowmask_sext_in_reg(i32 %x) {
   ret i32 %and
 }
 
-; Negative test - mismatched shift amounts
+; Mismatched shift amounts, but the mask op can be replaced by a shift.
 
 define i32 @lowmask_not_sext_in_reg(i32 %x) {
 ; CHECK-LABEL: @lowmask_not_sext_in_reg(
 ; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 19
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[L]], 20
 ; CHECK-NEXT:    call void @use32(i32 [[R]])
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[R]], 4095
+; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[L]], 20
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %l = shl i32 %x, 19

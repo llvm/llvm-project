@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple thumbv7--windows-itanium -fobjc-runtime=ios -O1 -fexceptions -fobjc-exceptions -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7--windows-itanium -fobjc-runtime=ios -O1 -fexceptions -fobjc-exceptions -emit-llvm %s -o - | FileCheck %s
 // REQUIRES: arm-registered-target
 
 void (*f)(id);

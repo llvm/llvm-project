@@ -1,5 +1,126 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG %s 2>&1 -fopenmp -fopenmp-version=45 | FileCheck %s
 
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG %s 2>&1 -fopenmp -fopenmp-version=51 | FileCheck %s --check-prefix=OMP51
+
+#if _OPENMP == 202011
+
+// OMP51-LABEL:  void target_has_device_addr(int argc)
+void target_has_device_addr(int argc) {
+// OMP51:   [B1]
+// OMP51-NEXT:   [[#TTD:]]: 5
+// OMP51-NEXT:   [[#TTD+1]]: int x = 5;
+// OMP51-NEXT:   [[#TTD+2]]: x
+// OMP51-NEXT:   [[#TTD+3]]: [B1.[[#TTD+2]]] (ImplicitCastExpr, LValueToRValue, int)
+// OMP51-NEXT:   [[#TTD+4]]: [B1.[[#TTD+6]]]
+// OMP51-NEXT:   [[#TTD+5]]: [B1.[[#TTD+6]]] = [B1.[[#TTD+3]]]
+// OMP51-NEXT:   [[#TTD+6]]: argc
+// OMP51-NEXT:   [[#TTD+7]]: #pragma omp target has_device_addr(x)
+// OMP51-NEXT:   [B1.[[#TTD+5]]]
+  int x = 5;
+#pragma omp target has_device_addr(x)
+   argc = x;
+}
+// OMP51-LABEL: void target_s_has_device_addr(int argc)
+void target_s_has_device_addr(int argc) {
+  int x, cond, fp, rd, lin, step, map;
+// OMP51-DAG:  [B3]
+// OMP51-DAG: [[#TSB:]]: x
+// OMP51-DAG: [[#TSB+1]]: [B3.[[#TSB]]] (ImplicitCastExpr, LValueToRValue, int)
+// OMP51-DAG: [[#TSB+2]]: argc
+// OMP51-DAG: [[#TSB+3]]: [B3.[[#TSB+2]]] = [B3.[[#TSB+1]]]
+// OMP51-DAG:  [B1]
+// OMP51-DAG: [[#TS:]]: cond
+// OMP51-DAG: [[#TS+1]]: [B1.[[#TS]]] (ImplicitCastExpr, LValueToRValue, int)
+// OMP51-DAG: [[#TS+2]]: [B1.[[#TS+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// OMP51-DAG: [[#TS+3]]: fp
+// OMP51-DAG: [[#TS+4]]: rd
+// OMP51-DAG: [[#TS+5]]: lin
+// OMP51-DAG: [[#TS+6]]: step
+// OMP51-DAG: [[#TS+7]]: [B1.[[#TS+6]]] (ImplicitCastExpr, LValueToRValue, int)
+// OMP51-DAG: [[#TS+8]]: [B3.[[#TSB+2]]]
+// OMP51-DAG: [[#TS+9]]: [B3.[[#TSB]]]
+// OMP51-DAG: [[#TS+10]]: #pragma omp target simd if(cond) firstprivate(fp) reduction(+: rd) linear(lin: step) has_device_addr(map)
+// OMP51-DAG:    for (int i = 0;
+// OMP51-DAG: [B3.[[#TSB+3]]];
+#pragma omp target simd if(cond) firstprivate(fp) reduction(+:rd) linear(lin: step) has_device_addr(map)
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}
+// OMP51-LABEL: void target_t_l_has_device_addr(int argc)
+void target_t_l_has_device_addr(int argc) {
+int x, cond, fp, rd, map;
+// OMP51-DAG: [B3]
+// OMP51-DAG: [[#TTDB:]]: x
+// OMP51-DAG: [[#TTDB+1]]: [B3.[[#TTDB]]] (ImplicitCastExpr, LValueToRValue, int)
+// OMP51-DAG: [[#TTDB+2]]: argc
+// OMP51-DAG: [[#TTDB+3]]: [B3.[[#TTDB+2]]] = [B3.[[#TTDB+1]]]
+// OMP51-DAG: [B1]
+// OMP51-DAG: [[#TTD:]]: cond
+// OMP51-DAG: [[#TTD+1]]: [B1.[[#TTD]]] (ImplicitCastExpr, LValueToRValue, int)
+// OMP51-DAG: [[#TTD+2]]: [B1.[[#TTD+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// OMP51-DAG: [[#TTD+3]]: fp
+// OMP51-DAG: [[#TTD+4]]: rd
+// OMP51-DAG: [[#TTD+5]]: [B3.[[#TTDB+2]]]
+// OMP51-DAG: [[#TTD+6]]: [B3.[[#TTDB]]]
+// OMP51-DAG: [[#TTD+7]]:  #pragma omp target teams loop if(cond) firstprivate(fp) reduction(+: rd) has_device_addr(map)
+// OMP51-DAG: for (int i = 0;
+// OMP51-DAG:   [B3.[[#TTDB+3]]];
+#pragma omp target teams loop if(cond) firstprivate(fp) reduction(+:rd) has_device_addr(map)
+   for (int i = 0; i <10; ++i)
+     argc = x;
+}
+// OMP51-LABEL:  void target_p_l_has_device_addr(int argc)
+void target_p_l_has_device_addr(int argc) {
+int x, cond, fp, rd, map;
+#pragma omp target parallel loop if(cond) firstprivate(fp) reduction(+:rd) has_device_addr(map)
+// OMP51-DAG: [B3]
+// OMP51-DAG: [[#TTDB:]]: x
+// OMP51-DAG: [[#TTDB+1]]: [B3.[[#TTDB]]] (ImplicitCastExpr, LValueToRValue, int)
+// OMP51-DAG: [[#TTDB+2]]: argc
+// OMP51-DAG: [[#TTDB+3]]: [B3.[[#TTDB+2]]] = [B3.[[#TTDB+1]]]
+// OMP51-DAG: [B1]
+// OMP51-DAG: [[#TTD:]]: cond
+// OMP51-DAG: [[#TTD+1]]: [B1.[[#TTD]]] (ImplicitCastExpr, LValueToRValue, int)
+// OMP51-DAG: [[#TTD+2]]: [B1.[[#TTD+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// OMP51-DAG: [[#TTD+3]]: fp
+// OMP51-DAG: [[#TTD+4]]: rd
+// OMP51-DAG: [[#TTD+5]]: [B3.[[#TTDB+2]]]
+// OMP51-DAG: [[#TTD+6]]: [B3.[[#TTDB]]]
+// OMP51-DAG: [[#TTD+7]]: #pragma omp target parallel loop if(cond) firstprivate(fp) reduction(+: rd) has_device_addr(map)
+// OMP51-DAG: for (int i = 0;
+// OMP51-DAG:   [B3.[[#TTDB+3]]];
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}
+struct SomeKernel {
+  int targetDev;
+  float devPtr;
+  SomeKernel();
+  ~SomeKernel();
+// OMP51-LABEL: template<> void apply<32U>()
+  template<unsigned int nRHS>
+  void apply() {
+// OMP51-DAG: [B1]
+// OMP51-DAG: [[#TTD:]]: 10
+// OMP51-DAG: [[#TTD+1]]: [B1.[[#TTD:]]] (ImplicitCastExpr, IntegralToFloating, float)
+// OMP51-DAG: [[#TTD+2]]: this
+// OMP51-DAG: [[#TTD+3]]: [B1.[[#TTD+2]]]->devPtr
+// OMP51-DAG: [[#TTD+4]]: [B1.[[#TTD+3]]] = [B1.[[#TTD+1]]]
+// OMP51-DAG: [[#TTD+5]]: #pragma omp target has_device_addr(this->devPtr) device(this->targetDev)
+// OMP51-DAG:    {
+// OMP51-DAG:    [B1.[[#TTD+4]]];
+    #pragma omp target has_device_addr(devPtr) device(targetDev)
+    {
+      devPtr = 10;
+    }
+  }
+};
+void use_template() {
+  SomeKernel aKern;
+  aKern.apply<32>();
+}
+#else // _OPENMP
+
 // CHECK-LABEL:  void xxx(int argc)
 void xxx(int argc) {
 // CHECK:        [B1]
@@ -771,3 +892,5 @@ void targetparallelloop(int argc) {
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
+
+#endif  // _OPENMP

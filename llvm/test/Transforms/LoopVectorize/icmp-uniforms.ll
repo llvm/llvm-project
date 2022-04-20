@@ -41,10 +41,13 @@ for.end:
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[COND:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ir<%iv>, ir<13>

@@ -1,8 +1,8 @@
 // Cross comdat example
 // Parent VTable is in a comdat section.
 
-// RUN: %clang_cc1 %s -triple=aarch64 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
-// RUN: %clang_cc1 %s -triple=x86_64 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=aarch64 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
 
 // A::foo() has a comdat since it is an inline function
 // CHECK: $_ZN1A3fooEv = comdat any

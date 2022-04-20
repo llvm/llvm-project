@@ -60,7 +60,7 @@ void mlir::populateRemoveShapeConstraintsPatterns(RewritePatternSet &patterns) {
       patterns.getContext());
 }
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createRemoveShapeConstraintsPass() {
   return std::make_unique<RemoveShapeConstraintsPass>();
 }

@@ -4077,6 +4077,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Value *Args[4] = {CI->getArgOperand(0), CI->getArgOperand(1),
                       CI->getArgOperand(2), CI->getArgOperand(4)};
     NewCall = Builder.CreateCall(NewFn, Args);
+    AttributeList OldAttrs = CI->getAttributes();
+    AttributeList NewAttrs = AttributeList::get(
+        C, OldAttrs.getFnAttrs(), OldAttrs.getRetAttrs(),
+        {OldAttrs.getParamAttrs(0), OldAttrs.getParamAttrs(1),
+         OldAttrs.getParamAttrs(2), OldAttrs.getParamAttrs(4)});
+    NewCall->setAttributes(NewAttrs);
     auto *MemCI = cast<MemIntrinsic>(NewCall);
     // All mem intrinsics support dest alignment.
     const ConstantInt *Align = cast<ConstantInt>(CI->getArgOperand(3));
@@ -4388,6 +4394,24 @@ bool llvm::UpgradeModuleFlags(Module &M) {
         }
       }
     }
+
+    // Upgrade branch protection and return address signing module flags. The
+    // module flag behavior for these fields were Error and now they are Min.
+    if (ID->getString() == "branch-target-enforcement" ||
+        ID->getString().startswith("sign-return-address")) {
+      if (auto *Behavior =
+              mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
+        if (Behavior->getLimitedValue() == Module::Error) {
+          Type *Int32Ty = Type::getInt32Ty(M.getContext());
+          Metadata *Ops[3] = {
+              ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Module::Min)),
+              Op->getOperand(1), Op->getOperand(2)};
+          ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+          Changed = true;
+        }
+      }
+    }
+
     // Upgrade Objective-C Image Info Section. Removed the whitespce in the
     // section name so that llvm-lto will not complain about mismatching
     // module flags that is functionally the same.

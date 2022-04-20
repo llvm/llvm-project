@@ -776,11 +776,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         }
 
         // (srli (slli x, c3-c2), c3).
-        // Skip it in order to select sraiw.
+        // Skip if we could use (zext.w (sraiw X, C2)).
         bool Skip = Subtarget->hasStdExtZba() && C3 == 32 &&
                     X.getOpcode() == ISD::SIGN_EXTEND_INREG &&
                     cast<VTSDNode>(X.getOperand(1))->getVT() == MVT::i32;
-        if (OneUseOrZExtW && !IsCANDI && !Skip) {
+        // Also Skip if we can use bexti.
+        Skip |= Subtarget->hasStdExtZbs() && C3 == XLen - 1;
+        if (OneUseOrZExtW && !Skip) {
           SDNode *SLLI = CurDAG->getMachineNode(
               RISCV::SLLI, DL, XLenVT, X,
               CurDAG->getTargetConstant(C3 - C2, DL, XLenVT));
@@ -1837,6 +1839,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
           Node->getOpcode() == ISD::MUL || Node->getOpcode() == ISD::SHL ||
           Node->getOpcode() == ISD::SRL ||
           Node->getOpcode() == ISD::SIGN_EXTEND_INREG ||
+          Node->getOpcode() == RISCVISD::GREV ||
+          Node->getOpcode() == RISCVISD::GORC ||
           isa<ConstantSDNode>(Node)) &&
          "Unexpected opcode");
 
@@ -2199,6 +2203,8 @@ bool RISCVDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
   case RISCV::SUBW:
   case RISCV::MULW:
   case RISCV::SLLIW:
+  case RISCV::GREVIW:
+  case RISCV::GORCIW:
     // Result is already sign extended just remove the sext.w.
     // NOTE: We only handle the nodes that are selected with hasAllWUsers.
     ReplaceUses(N, N0.getNode());

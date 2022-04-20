@@ -9,8 +9,6 @@
 #ifndef MLIR_PASS_PASS_H
 #define MLIR_PASS_PASS_H
 
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/LogicalResult.h"

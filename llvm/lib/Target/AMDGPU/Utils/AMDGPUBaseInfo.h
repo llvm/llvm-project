@@ -54,6 +54,9 @@ bool isHsaAbiVersion5(const MCSubtargetInfo *STI);
 /// false otherwise.
 bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI);
 
+/// \returns The offset of the multigrid_sync_arg argument from implicitarg_ptr
+unsigned getMultigridSyncArgImplicitArgPosition();
+
 /// \returns The offset of the hostcall pointer argument from implicitarg_ptr
 unsigned getHostcallImplicitArgPosition();
 
@@ -638,6 +641,18 @@ StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);
 void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
 
 } // namespace Hwreg
+
+namespace DepCtr {
+
+int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI);
+int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
+                 const MCSubtargetInfo &STI);
+bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
+                              const MCSubtargetInfo &STI);
+bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
+                  bool &IsDefault, const MCSubtargetInfo &STI);
+
+} // namespace DepCtr
 
 namespace Exp {
 

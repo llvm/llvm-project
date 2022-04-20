@@ -681,14 +681,62 @@ private:
   const vector::UnrollVectorOptions options;
 };
 
+struct UnrollTranposePattern : public OpRewritePattern<vector::TransposeOp> {
+  UnrollTranposePattern(MLIRContext *context,
+                        const vector::UnrollVectorOptions &options)
+      : OpRewritePattern<vector::TransposeOp>(context, /*benefit=*/1),
+        options(options) {}
+  LogicalResult matchAndRewrite(vector::TransposeOp tranposeOp,
+                                PatternRewriter &rewriter) const override {
+    if (tranposeOp.getResultType().getRank() == 0)
+      return failure();
+    auto targetShape = getTargetShape(options, tranposeOp);
+    if (!targetShape)
+      return failure();
+    auto originalVectorType = tranposeOp.getResultType();
+    SmallVector<int64_t, 4> strides(targetShape->size(), 1);
+    Location loc = tranposeOp.getLoc();
+    ArrayRef<int64_t> originalSize = originalVectorType.getShape();
+    SmallVector<int64_t, 4> ratio = *shapeRatio(originalSize, *targetShape);
+    int64_t sliceCount = computeMaxLinearIndex(ratio);
+    // Prepare the result vector;
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, originalVectorType, rewriter.getZeroAttr(originalVectorType));
+    SmallVector<int64_t> permutation;
+    tranposeOp.getTransp(permutation);
+    for (int64_t i = 0; i < sliceCount; i++) {
+      SmallVector<int64_t, 4> elementOffsets =
+          getVectorOffset(originalSize, *targetShape, i);
+      SmallVector<int64_t, 4> permutedOffsets(elementOffsets.size());
+      SmallVector<int64_t, 4> permutedShape(elementOffsets.size());
+      // Compute the source offsets and shape.
+      for (auto &indices : llvm::enumerate(permutation)) {
+        permutedOffsets[indices.value()] = elementOffsets[indices.index()];
+        permutedShape[indices.value()] = (*targetShape)[indices.index()];
+      }
+      Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, tranposeOp.getVector(), permutedOffsets, permutedShape, strides);
+      Value tranposedSlice =
+          rewriter.create<vector::TransposeOp>(loc, slicedOperand, permutation);
+      result = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, tranposedSlice, result, elementOffsets, strides);
+    }
+    rewriter.replaceOp(tranposeOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
     RewritePatternSet &patterns, const UnrollVectorOptions &options) {
   patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
                UnrollContractionPattern, UnrollElementwisePattern,
-               UnrollReductionPattern, UnrollMultiReductionPattern>(
-      patterns.getContext(), options);
+               UnrollReductionPattern, UnrollMultiReductionPattern,
+               UnrollTranposePattern>(patterns.getContext(), options);
 }
 
 void mlir::vector::populatePropagateVectorDistributionPatterns(

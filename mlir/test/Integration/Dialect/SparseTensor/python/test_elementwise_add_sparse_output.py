@@ -7,7 +7,6 @@ import sys
 
 from mlir import ir
 from mlir import runtime as rt
-from mlir import execution_engine
 from mlir.dialects import sparse_tensor as st
 from mlir.dialects import builtin
 from mlir.dialects.linalg.opdsl import lang as dsl
@@ -61,10 +60,10 @@ func @main(%ad: tensor<3x4xf64>, %bd: tensor<3x4xf64>) -> tensor<3x4xf64, #DCSR>
 
 def _run_test(support_lib, kernel):
   """Compiles, runs and checks results."""
+  compiler = sparse_compiler.SparseCompiler(
+      options='', opt_level=2, shared_libs=[support_lib])
   module = ir.Module.parse(kernel)
-  sparse_compiler.SparseCompiler(options='')(module)
-  engine = execution_engine.ExecutionEngine(
-      module, opt_level=0, shared_libs=[support_lib])
+  engine = compiler.compile_and_jit(module)
 
   # Set up numpy inputs and buffer for output.
   a = np.array(

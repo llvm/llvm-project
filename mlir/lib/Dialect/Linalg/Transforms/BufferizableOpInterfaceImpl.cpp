@@ -48,8 +48,9 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
       continue;
     }
     // Input operands are never written to.
-    newInputBuffers.push_back(
-        *state.getBuffer(rewriter, *opOperand, /*forceInPlace=*/true));
+    newInputBuffers.push_back(*state.getBuffer(
+        rewriter, *opOperand,
+        BufferizationState::ForceInPlacability::FORCE_INPLACE));
   }
 
   // New output operands for the cloned op.

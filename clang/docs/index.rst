@@ -42,9 +42,11 @@ Using Clang as a Compiler
    SourceBasedCodeCoverage
    Modules
    MSVCCompatibility
+   MisExpect
    OpenCLSupport
    OpenMPSupport
    SYCLSupport
+   HLSLSupport
    ThinLTO
    APINotes
    CommandGuide/index

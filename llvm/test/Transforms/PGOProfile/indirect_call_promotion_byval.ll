@@ -1,4 +1,3 @@
-; RUN: opt < %s -pgo-icall-prom -S -icp-total-percent-threshold=10 | FileCheck %s
 ; RUN: opt < %s -passes=pgo-icall-prom -S -icp-total-percent-threshold=10 | FileCheck %s
 
 ; PR42413: Previously the call promotion code did not correctly update the byval

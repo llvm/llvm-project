@@ -14,6 +14,7 @@
 #ifndef LLVMIR_OP_BASE
 #define LLVMIR_OP_BASE
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -97,10 +98,11 @@ def LLVM_AnyPointer : Type<CPred<"$_self.isa<::mlir::LLVM::LLVMPointerType>()">,
 // on the element type.
 class LLVM_PointerTo<Type pointee> : Type<
   And<[LLVM_AnyPointer.predicate,
-       SubstLeaves<
-         "$_self",
-         "$_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType()",
-         pointee.predicate>]>,
+       Or<[CPred<"$_self.cast<::mlir::LLVM::LLVMPointerType>().isOpaque()">,
+           SubstLeaves<
+             "$_self",
+             "$_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType()",
+             pointee.predicate>]>]>,
   "LLVM pointer to " # pointee.summary>;
 
 // Type constraints accepting LLVM pointer type to integer of a specific width.
@@ -365,14 +367,47 @@ class LLVM_VectorReductionAcc<string mnem>
   }];
 }
 
-// LLVM vector predication intrinsics.
-class LLVM_VPBinaryBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
-      Arguments<(ins LLVM_VectorOf<element>:$lhs, LLVM_VectorOf<element>:$rhs,
-                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+def LLVM_OneResultOpBuilder :
+  OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  [{
+    if (resultType) $_state.addTypes(resultType);
+    $_state.addOperands(operands);
+    for (auto namedAttr : attributes)
+      $_state.addAttribute(namedAttr.getName(), namedAttr.getValue());
+  }]>;
 
-class LLVM_VPBinaryI<string mnem> : LLVM_VPBinaryBase<mnem, AnyInteger>;
+def LLVM_ZeroResultOpBuilder :
+  OpBuilder<(ins "ValueRange":$operands,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  [{
+    $_state.addOperands(operands);
+    for (auto namedAttr : attributes)
+      $_state.addAttribute(namedAttr.getName(), namedAttr.getValue());
+  }]>;
 
-class LLVM_VPBinaryF<string mnem> : LLVM_VPBinaryBase<mnem, AnyFloat>;
+// Compatibility builder that takes an instance of wrapped llvm::VoidType
+// to indicate no result.
+def LLVM_VoidResultTypeOpBuilder :
+  OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  [{
+    assert(isCompatibleType(resultType) && "result must be an LLVM type");
+    assert(resultType.isa<LLVMVoidType>() &&
+           "for zero-result operands, only 'void' is accepted as result type");
+    build($_builder, $_state, operands, attributes);
+  }]>;
+
+
+// Opaque builder used for terminator operations that contain successors.
+def LLVM_TerminatorPassthroughOpBuilder :
+  OpBuilder<(ins "ValueRange":$operands, "SuccessorRange":$destinations,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+  [{
+    $_state.addOperands(operands);
+    $_state.addSuccessors(destinations);
+    $_state.addAttributes(attributes);
+  }]>;
+
 
 #endif  // LLVMIR_OP_BASE

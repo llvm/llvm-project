@@ -898,6 +898,10 @@ defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads <
   "buffer_load_dwordx4", v4i32
 >;
 
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, atomic_load_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, atomic_load_16_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i16, atomic_load_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i16, atomic_load_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, extloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, zextloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, sextloadi8_global>;
@@ -1383,13 +1387,13 @@ multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst> {
   defvar Op = !cast<SDPatternOperator>(OpPrefix # "_" # RtnMode # "_" # vt.Size);
   defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
 
-  def : Pat<
+  def : GCNPat<
     (vt (Op (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset), vt:$vdata_in)),
     (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix) getVregSrcForVT<vt>.ret:$vdata_in,
       SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset)
   >;
 
-  def : Pat<
+  def : GCNPat<
     (vt (Op (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset),
       vt:$vdata_in)),
     (!cast<MUBUF_Pseudo>(Inst # "_ADDR64" # InstSuffix) getVregSrcForVT<vt>.ret:$vdata_in,
@@ -1409,7 +1413,7 @@ multiclass BufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst> 
   defvar OffsetResDag = (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix)
     getVregSrcForVT<data_vt>.ret:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
     offset:$offset);
-  def : Pat<
+  def : GCNPat<
     (vt (Op (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset), data_vt:$vdata_in)),
     !if(!eq(RtnMode, "ret"),
       (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS OffsetResDag, getVregSrcForVT<data_vt>.ret)),
@@ -1420,7 +1424,7 @@ multiclass BufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst> 
   defvar Addr64ResDag = (!cast<MUBUF_Pseudo>(Inst # "_ADDR64" # InstSuffix)
     getVregSrcForVT<data_vt>.ret:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
     SCSrc_b32:$soffset, offset:$offset);
-  def : Pat<
+  def : GCNPat<
     (vt (Op (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset),
       data_vt:$vdata_in)),
     !if(!eq(RtnMode, "ret"),
@@ -1794,6 +1798,10 @@ multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo In
   >;
 }
 let SubtargetPredicate = isGFX6GFX7 in {
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_BYTE_ADDR64, BUFFER_STORE_BYTE_OFFSET, i32, atomic_store_global_8>;
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_BYTE_ADDR64, BUFFER_STORE_BYTE_OFFSET, i16, atomic_store_global_8>;
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_SHORT_ADDR64, BUFFER_STORE_SHORT_OFFSET, i32, atomic_store_global_16>;
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_SHORT_ADDR64, BUFFER_STORE_SHORT_OFFSET, i16, atomic_store_global_16>;
 defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_DWORD_ADDR64, BUFFER_STORE_DWORD_OFFSET, i32, atomic_store_global_32>;
 defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_DWORDX2_ADDR64, BUFFER_STORE_DWORDX2_OFFSET, i64, atomic_store_global_64>;
 } // End Predicates = isGFX6GFX7
@@ -1843,7 +1851,7 @@ defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX3_OFFEN, BUFFER_STORE_DWORDX3_OF
 defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX4_OFFEN, BUFFER_STORE_DWORDX4_OFFSET, v4i32, store_private, VReg_128>;
 
 
-let OtherPredicates = [D16PreservesUnusedBits, DisableFlatScratch] in {
+let OtherPredicates = [HasD16LoadStore, DisableFlatScratch] in {
  // Hiding the extract high pattern in the PatFrag seems to not
  // automatically increase the complexity.
 let AddedComplexity = 1 in {

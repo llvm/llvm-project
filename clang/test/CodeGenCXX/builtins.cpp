@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // Builtins inside a namespace inside an extern "C" must be considered builtins.
 extern "C" {
@@ -28,6 +28,24 @@ S *addressof(bool b, S &s, S &t) {
   // CHECK: %[[LVALUE:.*]] = phi
   // CHECK: ret {{.*}}* %[[LVALUE]]
   return __builtin_addressof(b ? s : t);
+}
+
+namespace std { template<typename T> T *addressof(T &); }
+
+// CHECK: define {{.*}} @_Z13std_addressofbR1SS0_(
+S *std_addressof(bool b, S &s, S &t) {
+  // CHECK: %[[LVALUE:.*]] = phi
+  // CHECK: ret {{.*}}* %[[LVALUE]]
+  return std::addressof(b ? s : t);
+}
+
+namespace std { template<typename T> T *__addressof(T &); }
+
+// CHECK: define {{.*}} @_Z15std___addressofbR1SS0_(
+S *std___addressof(bool b, S &s, S &t) {
+  // CHECK: %[[LVALUE:.*]] = phi
+  // CHECK: ret {{.*}}* %[[LVALUE]]
+  return std::__addressof(b ? s : t);
 }
 
 extern "C" int __builtin_abs(int); // #1

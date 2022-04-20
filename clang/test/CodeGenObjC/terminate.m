@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.8 -emit-llvm -fexceptions -fobjc-exceptions -o - %s | FileCheck %s -check-prefix=CHECK-WITH
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.7 -emit-llvm -fexceptions -fobjc-exceptions -o - %s | FileCheck %s -check-prefix=CHECK-WITHOUT
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.8 -emit-llvm -fexceptions -fobjc-exceptions -o - %s | FileCheck %s -check-prefix=CHECK-WITH
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.7 -emit-llvm -fexceptions -fobjc-exceptions -o - %s | FileCheck %s -check-prefix=CHECK-WITHOUT
 
 void destroy(void**);
 

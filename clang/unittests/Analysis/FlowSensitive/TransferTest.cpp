@@ -187,6 +187,54 @@ TEST_F(TransferTest, StructVarDecl) {
       });
 }
 
+TEST_F(TransferTest, StructVarDeclWithInit) {
+  std::string Code = R"(
+    struct A {
+      int Bar;
+    };
+
+    A Gen();
+
+    void target() {
+      A Foo = Gen();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        ASSERT_TRUE(FooDecl->getType()->isStructureType());
+        auto FooFields = FooDecl->getType()->getAsRecordDecl()->fields();
+
+        FieldDecl *BarDecl = nullptr;
+        for (FieldDecl *Field : FooFields) {
+          if (Field->getNameAsString() == "Bar") {
+            BarDecl = Field;
+          } else {
+            FAIL() << "Unexpected field: " << Field->getNameAsString();
+          }
+        }
+        ASSERT_THAT(BarDecl, NotNull());
+
+        const auto *FooLoc = cast<AggregateStorageLocation>(
+            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *BarLoc =
+            cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
+
+        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
+        const auto *BarVal = cast<IntegerValue>(FooVal->getChild(*BarDecl));
+        EXPECT_EQ(Env.getValue(*BarLoc), BarVal);
+      });
+}
+
 TEST_F(TransferTest, ClassVarDecl) {
   std::string Code = R"(
     class A {
@@ -2941,6 +2989,73 @@ TEST_F(TransferTest, CorrelatedBranches) {
           auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl, SkipPast::None));
           EXPECT_TRUE(Env.flowConditionImplies(CVal));
         }
+      });
+}
+
+TEST_F(TransferTest, LoopWithAssignmentConverges) {
+  std::string Code = R"(
+
+    bool &foo();
+
+    void target() {
+       do {
+        bool Bar = foo();
+        if (Bar) break;
+        (void)Bar;
+        /*[[p]]*/
+      } while (true);
+    }
+  )";
+  // The key property that we are verifying is implicit in `runDataflow` --
+  // namely, that the analysis succeeds, rather than hitting the maximum number
+  // of iterations.
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
+      });
+}
+
+TEST_F(TransferTest, LoopWithReferenceAssignmentConverges) {
+  std::string Code = R"(
+
+    bool &foo();
+
+    void target() {
+       do {
+        bool& Bar = foo();
+        if (Bar) break;
+        (void)Bar;
+        /*[[p]]*/
+      } while (true);
+    }
+  )";
+  // The key property that we are verifying is implicit in `runDataflow` --
+  // namely, that the analysis succeeds, rather than hitting the maximum number
+  // of iterations.
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        auto &BarVal =
+            *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::Reference));
+        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
       });
 }
 

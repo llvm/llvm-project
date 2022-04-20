@@ -22,11 +22,11 @@ void f2(unsigned int m)
   extern int e1[2][m]; // expected-error {{variable length array declaration cannot have 'extern' linkage}}
 
   e1[0][0] = 0;
-  
+
 }
 
 // PR2361
-int i; 
+int i;
 int c[][i]; // expected-error {{variably modified type declaration not allowed at file scope}}
 int d[i]; // expected-error {{variable length array declaration not allowed at file scope}}
 
@@ -72,7 +72,7 @@ int TransformBug(int a) {
 // PR36157
 struct {
   int a[ // expected-error {{variable length array in struct}}
-    implicitly_declared() // expected-warning {{implicit declaration}}
+    implicitly_declared() // expected-error {{call to undeclared function 'implicitly_declared'; ISO C99 and later do not support implicit function declarations}}
   ];
 };
 int (*use_implicitly_declared)(void) = implicitly_declared; // ok, was implicitly declared at file scope

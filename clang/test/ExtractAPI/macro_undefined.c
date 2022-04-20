@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
-// RUN: %t/reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/reference.output.json.in >> %t/reference.output.json
 // RUN: %clang -extract-api --product-name=Macros -target arm64-apple-macosx \
 // RUN: -x objective-c-header %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
@@ -95,6 +95,12 @@ FUNC_GEN(bar, const int *, unsigned);
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "foo"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -142,7 +148,7 @@ FUNC_GEN(bar, const int *, unsigned);
         },
         {
           "kind": "text",
-          "spelling": " *"
+          "spelling": " * "
         },
         {
           "kind": "internalParam",
@@ -189,7 +195,7 @@ FUNC_GEN(bar, const int *, unsigned);
               },
               {
                 "kind": "text",
-                "spelling": " *"
+                "spelling": " * "
               },
               {
                 "kind": "internalParam",
@@ -241,6 +247,12 @@ FUNC_GEN(bar, const int *, unsigned);
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "bar"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -285,6 +297,12 @@ FUNC_GEN(bar, const int *, unsigned);
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "HELLO"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

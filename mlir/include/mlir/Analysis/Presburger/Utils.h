@@ -130,6 +130,32 @@ void removeDuplicateDivs(
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 
+/// Given two relations, A and B, add additional local ids to the sets such
+/// that both have the union of the local ids in each set, without changing
+/// the set of points that lie in A and B.
+///
+/// While taking union, if a local id in any set has a division representation
+/// which is a duplicate of division representation, of another local id in any
+/// set, it is not added to the final union of local ids and is instead merged.
+///
+/// On every possible merge, `merge(i, j)` is called. `i`, `j` are position
+/// of local identifiers in both sets which are being merged. If `merge(i, j)`
+/// returns true, the divisions are merged, otherwise the divisions are not
+/// merged.
+void mergeLocalIds(IntegerRelation &relA, IntegerRelation &relB,
+                   llvm::function_ref<bool(unsigned i, unsigned j)> merge);
+
+/// Compute the gcd of the range.
+int64_t gcdRange(ArrayRef<int64_t> range);
+
+/// Divide the range by its gcd and return the gcd.
+int64_t normalizeRange(MutableArrayRef<int64_t> range);
+
+/// Normalize the given (numerator, denominator) pair by dividing out the
+/// common factors between them. The numerator here is an affine expression
+/// with integer coefficients.
+void normalizeDiv(MutableArrayRef<int64_t> num, int64_t &denom);
+
 /// Return `coeffs` with all the elements negated.
 SmallVector<int64_t, 8> getNegatedCoeffs(ArrayRef<int64_t> coeffs);
 

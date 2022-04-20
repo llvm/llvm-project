@@ -8,7 +8,11 @@
 
 #include "assembly.h"
 
+#if defined(_AIX)
+    .toc
+#else
     .text
+#endif
 
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 
@@ -334,8 +338,11 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 // On entry:
 //  thread_state pointer is in r3
 //
+#if defined(_AIX)
+DEFINE_LIBUNWIND_FUNCTION_AND_WEAK_ALIAS(__unw_getcontext, unw_getcontext)
+#else
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
-
+#endif
 // store register (GPR)
 #define PPC64_STR(n) \
   std   n, (8 * (n + 2))(3)
@@ -567,7 +574,11 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 // On entry:
 //  thread_state pointer is in r3
 //
+#if defined(_AIX)
+DEFINE_LIBUNWIND_FUNCTION_AND_WEAK_ALIAS(__unw_getcontext, unw_getcontext)
+#else
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+#endif
   stw     0,   8(3)
   mflr    0
   stw     0,   0(3) // store lr as ssr0

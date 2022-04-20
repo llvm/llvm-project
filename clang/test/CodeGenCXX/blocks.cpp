@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fblocks -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -fblocks -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
 
 // CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
 // CHECK: @[[BLOCK_DESCRIPTOR22:.*]] = internal constant { i64, i64, i8*, i8*, i8*, i8* } { i64 0, i64 36, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* null }, align 8

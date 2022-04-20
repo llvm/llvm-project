@@ -78,10 +78,12 @@ TraceIntelPT::TraceIntelPT(
     const pt_cpu &cpu_info,
     const std::vector<ThreadPostMortemTraceSP> &traced_threads)
     : m_cpu_info(cpu_info) {
-  for (const ThreadPostMortemTraceSP &thread : traced_threads)
-    m_thread_decoders.emplace(
-        thread->GetID(),
-        std::make_unique<PostMortemThreadDecoder>(thread, *this));
+  for (const ThreadPostMortemTraceSP &thread : traced_threads) {
+    m_thread_decoders.emplace(thread->GetID(),
+                              std::make_unique<ThreadDecoder>(thread, *this));
+    SetPostMortemThreadDataFile(thread->GetID(), "threadTraceBuffer",
+                                thread->GetTraceFile());
+  }
 }
 
 DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
@@ -104,39 +106,62 @@ lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
 }
 
 void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
-  Optional<size_t> raw_size = GetRawTraceSize(thread);
+  lldb::tid_t tid = thread.GetID();
   s.Format("\nthread #{0}: tid = {1}", thread.GetIndexID(), thread.GetID());
-  if (!raw_size) {
+  if (!IsTraced(tid)) {
     s << ", not traced\n";
     return;
   }
   s << "\n";
+
+  Expected<size_t> raw_size = GetRawTraceSize(thread);
+  if (!raw_size) {
+    s.Format("  {0}\n", toString(raw_size.takeError()));
+    return;
+  }
+
   DecodedThreadSP decoded_trace_sp = Decode(thread);
   size_t insn_len = decoded_trace_sp->GetInstructionsCount();
   size_t mem_used = decoded_trace_sp->CalculateApproximateMemoryUsage();
 
-  s.Format("  Raw trace size: {0} KiB\n", *raw_size / 1024);
   s.Format("  Total number of instructions: {0}\n", insn_len);
-  s.Format("  Total approximate memory usage: {0:2} KiB\n",
-           (double)mem_used / 1024);
+
+  s << "\n  Memory usage:\n";
+  s.Format("    Raw trace size: {0} KiB\n", *raw_size / 1024);
+  s.Format(
+      "    Total approximate memory usage (excluding raw trace): {0:2} KiB\n",
+      (double)mem_used / 1024);
   if (insn_len != 0)
-    s.Format("  Average memory usage per instruction: {0:2} bytes\n",
+    s.Format("    Average memory usage per instruction (excluding raw trace): "
+             "{0:2} bytes\n",
              (double)mem_used / insn_len);
 
+  s << "\n  Timing:\n";
+  GetTimer().ForThread(tid).ForEachTimedTask(
+      [&](const std::string &name, std::chrono::milliseconds duration) {
+        s.Format("    {0}: {1:2}s\n", name, duration.count() / 1000.0);
+      });
+
+  s << "\n  Errors:\n";
   const DecodedThread::LibiptErrors &tsc_errors =
       decoded_trace_sp->GetTscErrors();
-  s.Format("\n  Number of TSC decoding errors: {0}\n", tsc_errors.total_count);
+  s.Format("    Number of TSC decoding errors: {0}\n", tsc_errors.total_count);
   for (const auto &error_message_to_count : tsc_errors.libipt_errors) {
-    s.Format("    {0}: {1}\n", error_message_to_count.first,
+    s.Format("      {0}: {1}\n", error_message_to_count.first,
              error_message_to_count.second);
   }
 }
 
-Optional<size_t> TraceIntelPT::GetRawTraceSize(Thread &thread) {
-  if (IsTraced(thread.GetID()))
-    return Decode(thread)->GetRawTraceSize();
-  else
-    return None;
+llvm::Expected<size_t> TraceIntelPT::GetRawTraceSize(Thread &thread) {
+  size_t size;
+  auto callback = [&](llvm::ArrayRef<uint8_t> data) {
+    size = data.size();
+    return Error::success();
+  };
+  if (Error err = OnThreadBufferRead(thread.GetID(), callback))
+    return std::move(err);
+
+  return size;
 }
 
 Expected<pt_cpu> TraceIntelPT::GetCPUInfoForLiveProcess() {
@@ -213,10 +238,10 @@ void TraceIntelPT::DoRefreshLiveProcessState(
   }
 
   for (const TraceThreadState &thread_state : state->tracedThreads) {
-    Thread &thread =
-        *m_live_process->GetThreadList().FindThreadByID(thread_state.tid);
+    ThreadSP thread_sp =
+        m_live_process->GetThreadList().FindThreadByID(thread_state.tid);
     m_thread_decoders.emplace(
-        thread_state.tid, std::make_unique<LiveThreadDecoder>(thread, *this));
+        thread_state.tid, std::make_unique<ThreadDecoder>(thread_sp, *this));
   }
 }
 
@@ -352,7 +377,9 @@ Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
   return Start(tids, thread_buffer_size, enable_tsc, psb_period);
 }
 
-Expected<std::vector<uint8_t>>
-TraceIntelPT::GetLiveThreadBuffer(lldb::tid_t tid) {
-  return Trace::GetLiveThreadBinaryData(tid, "threadTraceBuffer");
+Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,
+                                       OnBinaryDataReadCallback callback) {
+  return OnThreadBinaryDataRead(tid, "threadTraceBuffer", callback);
 }
+
+TaskTimer &TraceIntelPT::GetTimer() { return m_task_timer; }

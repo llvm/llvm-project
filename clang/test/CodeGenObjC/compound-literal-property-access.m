@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
 // rdar://20407999
 
 typedef __attribute__((__ext_vector_type__(2))) float vector_float2;

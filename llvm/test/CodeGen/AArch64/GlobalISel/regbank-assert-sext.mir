@@ -18,10 +18,11 @@ body:             |
 
     ; CHECK-LABEL: name: gpr
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %copy:gpr(s32) = COPY $w0
-    ; CHECK: %copy_assert_sext:gpr(s32) = G_ASSERT_SEXT %copy, 16
-    ; CHECK: $w1 = COPY %copy_assert_sext(s32)
-    ; CHECK: RET_ReallyLR implicit $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr(s32) = COPY $w0
+    ; CHECK-NEXT: %copy_assert_sext:gpr(s32) = G_ASSERT_SEXT %copy, 16
+    ; CHECK-NEXT: $w1 = COPY %copy_assert_sext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:_(s32) = COPY $w0
     %copy_assert_sext:_(s32) = G_ASSERT_SEXT %copy(s32), 16
     $w1 = COPY %copy_assert_sext(s32)
@@ -41,10 +42,11 @@ body:             |
 
     ; CHECK-LABEL: name: gpr_vector
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: %copy:gpr(<2 x s32>) = COPY $x0
-    ; CHECK: %copy_assert_sext:gpr(<2 x s32>) = G_ASSERT_SEXT %copy, 16
-    ; CHECK: $x1 = COPY %copy_assert_sext(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr(<2 x s32>) = COPY $x0
+    ; CHECK-NEXT: %copy_assert_sext:gpr(<2 x s32>) = G_ASSERT_SEXT %copy, 16
+    ; CHECK-NEXT: $x1 = COPY %copy_assert_sext(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %copy:_(<2 x s32>) = COPY $x0
     %copy_assert_sext:_(<2 x s32>) = G_ASSERT_SEXT %copy(<2 x s32>), 16
     $x1 = COPY %copy_assert_sext(<2 x s32>)
@@ -64,10 +66,11 @@ body:             |
 
     ; CHECK-LABEL: name: fpr
     ; CHECK: liveins: $s0, $s1
-    ; CHECK: %copy:fpr(s32) = COPY $s0
-    ; CHECK: %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
-    ; CHECK: $s1 = COPY %copy_assert_sext(s32)
-    ; CHECK: RET_ReallyLR implicit $s1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr(s32) = COPY $s0
+    ; CHECK-NEXT: %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
+    ; CHECK-NEXT: $s1 = COPY %copy_assert_sext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s1
     %copy:_(s32) = COPY $s0
     %copy_assert_sext:_(s32) = G_ASSERT_SEXT %copy(s32), 16
     $s1 = COPY %copy_assert_sext(s32)
@@ -87,10 +90,11 @@ body:             |
 
     ; CHECK-LABEL: name: fpr_vector
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: %copy:fpr(<2 x s32>) = COPY $d0
-    ; CHECK: %copy_assert_sext:fpr(<2 x s32>) = G_ASSERT_SEXT %copy, 16
-    ; CHECK: $d1 = COPY %copy_assert_sext(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: %copy_assert_sext:fpr(<2 x s32>) = G_ASSERT_SEXT %copy, 16
+    ; CHECK-NEXT: $d1 = COPY %copy_assert_sext(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d1
     %copy:_(<2 x s32>) = COPY $d0
     %copy_assert_sext:_(<2 x s32>) = G_ASSERT_SEXT %copy(<2 x s32>), 16
     $d1 = COPY %copy_assert_sext(<2 x s32>)
@@ -108,10 +112,11 @@ body:             |
 
     ; CHECK-LABEL: name: in_between_cross_bank_copy
     ; CHECK: liveins: $s0, $w1
-    ; CHECK: %copy:fpr(s32) = COPY $s0
-    ; CHECK: %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
-    ; CHECK: $w1 = COPY %copy_assert_sext(s32)
-    ; CHECK: RET_ReallyLR implicit $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:fpr(s32) = COPY $s0
+    ; CHECK-NEXT: %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
+    ; CHECK-NEXT: $w1 = COPY %copy_assert_sext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:_(s32) = COPY $s0
     %copy_assert_sext:_(s32) = G_ASSERT_SEXT %copy(s32), 16
     $w1 = COPY %copy_assert_sext(s32)
@@ -132,11 +137,12 @@ body:             |
 
     ; CHECK-LABEL: name: fpr_feeding_store
     ; CHECK: liveins: $x0, $s0, $s1
-    ; CHECK: %ptr:gpr(p0) = COPY $x0
-    ; CHECK: %copy:fpr(s32) = COPY $s0
-    ; CHECK: %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
-    ; CHECK: G_STORE %copy_assert_sext(s32), %ptr(p0) :: (store (s32))
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr(p0) = COPY $x0
+    ; CHECK-NEXT: %copy:fpr(s32) = COPY $s0
+    ; CHECK-NEXT: %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
+    ; CHECK-NEXT: G_STORE %copy_assert_sext(s32), %ptr(p0) :: (store (s32))
+    ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %copy:_(s32) = COPY $s0
     %copy_assert_sext:_(s32) = G_ASSERT_SEXT %copy(s32), 16
@@ -158,15 +164,16 @@ body:             |
 
     ; CHECK-LABEL: name: fpr_feeding_select
     ; CHECK: liveins: $d0, $x1, $w0
-    ; CHECK: %w0:gpr(s32) = COPY $w0
-    ; CHECK: %cond:gpr(s1) = G_TRUNC %w0(s32)
-    ; CHECK: %fpr:fpr(s64) = COPY $d0
-    ; CHECK: %fpr_assert_sext:fpr(s64) = G_ASSERT_SEXT %fpr, 32
-    ; CHECK: %gpr:gpr(s64) = COPY $x1
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(s64) = COPY %gpr(s64)
-    ; CHECK: %select:fpr(s64) = G_SELECT %cond(s1), %fpr_assert_sext, [[COPY]]
-    ; CHECK: $d0 = COPY %select(s64)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %w0:gpr(s32) = COPY $w0
+    ; CHECK-NEXT: %cond:gpr(s1) = G_TRUNC %w0(s32)
+    ; CHECK-NEXT: %fpr:fpr(s64) = COPY $d0
+    ; CHECK-NEXT: %fpr_assert_sext:fpr(s64) = G_ASSERT_SEXT %fpr, 32
+    ; CHECK-NEXT: %gpr:gpr(s64) = COPY $x1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s64) = COPY %gpr(s64)
+    ; CHECK-NEXT: %select:fpr(s64) = G_SELECT %cond(s1), %fpr_assert_sext, [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY %select(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %w0:_(s32) = COPY $w0
     %cond:_(s1) = G_TRUNC %w0(s32)
     %fpr:_(s64) = COPY $d0
@@ -185,24 +192,29 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fpr_feeding_phi
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $s0, $w1
-  ; CHECK:   %copy1:fpr(s32) = COPY $s0
-  ; CHECK:   %copy2:gpr(s32) = COPY $w1
-  ; CHECK:   %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy1, 16
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr(s32) = COPY %copy1(s32)
-  ; CHECK:   %cmp:gpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), %copy2
-  ; CHECK:   %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-  ; CHECK:   G_BRCOND %cmp_trunc(s1), %bb.1
-  ; CHECK:   G_BR %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %bb1_val:gpr(s32) = COPY %copy2(s32)
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.0(0x80000000)
-  ; CHECK:   %phi:fpr(s32) = G_PHI %copy_assert_sext(s32), %bb.0, %bb1_val(s32), %bb.1
-  ; CHECK:   G_BR %bb.0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $s0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy1:fpr(s32) = COPY $s0
+  ; CHECK-NEXT:   %copy2:gpr(s32) = COPY $w1
+  ; CHECK-NEXT:   %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy1, 16
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY %copy1(s32)
+  ; CHECK-NEXT:   %cmp:gpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), %copy2
+  ; CHECK-NEXT:   %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
+  ; CHECK-NEXT:   G_BRCOND %cmp_trunc(s1), %bb.1
+  ; CHECK-NEXT:   G_BR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %bb1_val:gpr(s32) = COPY %copy2(s32)
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.0(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %phi:fpr(s32) = G_PHI %copy_assert_sext(s32), %bb.0, %bb1_val(s32), %bb.1
+  ; CHECK-NEXT:   G_BR %bb.0
   bb.0:
     successors: %bb.1, %bb.2
     liveins: $s0, $w1
@@ -235,25 +247,30 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fed_by_fpr_phi
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $s0, $s1
-  ; CHECK:   %copy1:fpr(s32) = COPY $s0
-  ; CHECK:   %copy2:fpr(s32) = COPY $s1
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr(s32) = COPY %copy1(s32)
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr(s32) = COPY %copy2(s32)
-  ; CHECK:   %cmp:gpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
-  ; CHECK:   %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
-  ; CHECK:   G_BRCOND %cmp_trunc(s1), %bb.1
-  ; CHECK:   G_BR %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %bb1_val:gpr(s32) = COPY %copy2(s32)
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.0(0x80000000)
-  ; CHECK:   %phi:fpr(s32) = G_PHI %copy1(s32), %bb.0, %bb1_val(s32), %bb.1
-  ; CHECK:   %assert_sext:fpr(s32) = G_ASSERT_SEXT %phi, 16
-  ; CHECK:   G_BR %bb.0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy1:fpr(s32) = COPY $s0
+  ; CHECK-NEXT:   %copy2:fpr(s32) = COPY $s1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY %copy1(s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr(s32) = COPY %copy2(s32)
+  ; CHECK-NEXT:   %cmp:gpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+  ; CHECK-NEXT:   %cmp_trunc:gpr(s1) = G_TRUNC %cmp(s32)
+  ; CHECK-NEXT:   G_BRCOND %cmp_trunc(s1), %bb.1
+  ; CHECK-NEXT:   G_BR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %bb1_val:gpr(s32) = COPY %copy2(s32)
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.0(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %phi:fpr(s32) = G_PHI %copy1(s32), %bb.0, %bb1_val(s32), %bb.1
+  ; CHECK-NEXT:   %assert_sext:fpr(s32) = G_ASSERT_SEXT %phi, 16
+  ; CHECK-NEXT:   G_BR %bb.0
   bb.0:
     successors: %bb.1, %bb.2
     liveins: $s0, $s1
@@ -283,14 +300,16 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: different_blocks_gpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $w0, $w1
-  ; CHECK:   %copy:gpr(s32) = COPY $w0
-  ; CHECK:   G_BR %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   %copy_assert_sext:gpr(s32) = G_ASSERT_SEXT %copy, 16
-  ; CHECK:   $w1 = COPY %copy_assert_sext(s32)
-  ; CHECK:   RET_ReallyLR implicit $w1
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:gpr(s32) = COPY $w0
+  ; CHECK-NEXT:   G_BR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   %copy_assert_sext:gpr(s32) = G_ASSERT_SEXT %copy, 16
+  ; CHECK-NEXT:   $w1 = COPY %copy_assert_sext(s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w1
   bb.0:
     successors: %bb.1
     liveins: $w0, $w1
@@ -311,14 +330,16 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: different_blocks_fpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $s0, $s1
-  ; CHECK:   %copy:fpr(s32) = COPY $s0
-  ; CHECK:   G_BR %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
-  ; CHECK:   $s1 = COPY %copy_assert_sext(s32)
-  ; CHECK:   RET_ReallyLR implicit $s1
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:fpr(s32) = COPY $s0
+  ; CHECK-NEXT:   G_BR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   %copy_assert_sext:fpr(s32) = G_ASSERT_SEXT %copy, 16
+  ; CHECK-NEXT:   $s1 = COPY %copy_assert_sext(s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s1
   bb.0:
     successors: %bb.1
     liveins: $s0, $s1
@@ -340,19 +361,24 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: different_blocks_fpr_backedge
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $s0, $s1
-  ; CHECK:   %copy:fpr(s32) = COPY $s0
-  ; CHECK:   G_BR %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %copy_assert_sext1:fpr(s32) = G_ASSERT_SEXT %copy, 16
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.0(0x80000000)
-  ; CHECK:   %copy_assert_sext2:fpr(s32) = G_ASSERT_SEXT %copy_assert_sext1, 16
-  ; CHECK:   %copy_assert_sext3:fpr(s32) = G_ASSERT_SEXT %copy_assert_sext2, 16
-  ; CHECK:   G_BR %bb.0
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy:fpr(s32) = COPY $s0
+  ; CHECK-NEXT:   G_BR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy_assert_sext1:fpr(s32) = G_ASSERT_SEXT %copy, 16
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.0(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy_assert_sext2:fpr(s32) = G_ASSERT_SEXT %copy_assert_sext1, 16
+  ; CHECK-NEXT:   %copy_assert_sext3:fpr(s32) = G_ASSERT_SEXT %copy_assert_sext2, 16
+  ; CHECK-NEXT:   G_BR %bb.0
   bb.0:
     successors: %bb.1
     liveins: $s0, $s1

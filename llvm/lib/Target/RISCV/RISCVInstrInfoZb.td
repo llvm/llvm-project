@@ -922,11 +922,13 @@ def : PatGprGpr<riscv_gorcw, GORCW>;
 
 // Select GREVIW/GORCIW when the immediate doesn't have bit 5 set and the result
 // is sign extended.
-// FIXME: Use binop_allwusers and doPeepholeSExtW instead?
-def : Pat<(i64 (sext_inreg (binop_oneuse<riscv_grev> GPR:$rs1, uimm5:$imm), i32)),
-          (GREVIW GPR:$rs1, uimm5:$imm)>;
-def : Pat<(i64 (sext_inreg (binop_oneuse<riscv_gorc> GPR:$rs1, uimm5:$imm), i32)),
-          (GORCIW GPR:$rs1, uimm5:$imm)>;
+// FIXME: Two special patterns keeped when Imm is 7.
+def : Pat<(i64 (sext_inreg (binop_oneuse<riscv_grev> GPR:$rs1, 7), i32)),
+          (GREVIW GPR:$rs1, 7)>;
+def : Pat<(i64 (sext_inreg (binop_oneuse<riscv_gorc> GPR:$rs1, 7), i32)),
+          (GORCIW GPR:$rs1, 7)>;
+def : PatGprImm<binop_allwusers<riscv_grev>, GREVIW, uimm5>;
+def : PatGprImm<binop_allwusers<riscv_gorc>, GORCIW, uimm5>;
 
 def : PatGprGpr<riscv_shflw, SHFLW>;
 def : PatGprGpr<riscv_unshflw, UNSHFLW>;
@@ -972,10 +974,11 @@ def : Pat<(select (XLenVT (setge GPR:$x, GPR:$y)), GPR:$rs3, GPR:$rs1),
 def : Pat<(select (XLenVT (setle GPR:$y, GPR:$x)), GPR:$rs3, GPR:$rs1),
           (CMOV GPR:$rs1, (SLT GPR:$x, GPR:$y), GPR:$rs3)>;
 
-// setge X, 0 is canonicalized to setgt X, -1.
-// FIXME: This can be generalized to more immediates by using SLTI.
-def : Pat<(select (XLenVT (setgt GPR:$x, -1)), GPR:$rs3, GPR:$rs1),
-          (CMOV GPR:$rs1, (SLT GPR:$x, X0), GPR:$rs3)>;
+// setge X, Imm is canonicalized to setgt X, (Imm - 1).
+def : Pat<(select (XLenVT (setgt GPR:$x, simm12_minus1_nonzero:$imm)), GPR:$rs3, GPR:$rs1),
+          (CMOV GPR:$rs1, (SLTI GPR:$x, (ImmPlus1 simm12_minus1_nonzero:$imm)), GPR:$rs3)>;
+def : Pat<(select (XLenVT (setugt GPR:$x, simm12_minus1_nonzero:$imm)), GPR:$rs3, GPR:$rs1),
+          (CMOV GPR:$rs1, (SLTIU GPR:$x, (ImmPlus1 simm12_minus1_nonzero:$imm)), GPR:$rs3)>;
 
 def : Pat<(select GPR:$rs2, GPR:$rs1, GPR:$rs3),
           (CMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;

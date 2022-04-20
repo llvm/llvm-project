@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=arm-unknown-linux-gnueabi -target-abi aapcs -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=arm-unknown-linux-gnueabi -target-abi aapcs -emit-llvm -o - | FileCheck %s
 
 class SMLoc {
  const char *Ptr;

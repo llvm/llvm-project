@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64e-apple-ios13.0 -debug-info-kind=standalone -fobjc-arc -fsanitize=nullability-return \
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64e-apple-ios13.0 -debug-info-kind=standalone -fobjc-arc -fsanitize=nullability-return \
 // RUN:   %s -emit-llvm -o - | FileCheck %s
 
 @interface NSObject

@@ -78,6 +78,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool IsISA2_07 = false;
   bool IsISA3_0 = false;
   bool IsISA3_1 = false;
+  bool HasQuadwordAtomics = false;
 
 protected:
   std::string ABI;
@@ -439,8 +440,18 @@ public:
       DataLayout += "-S128-v256:256:256-v512:512:512";
     resetDataLayout(DataLayout);
 
-    // PPC64 supports atomics up to 8 bytes.
-    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    // Newer PPC64 instruction sets support atomics up to 16 bytes.
+    MaxAtomicPromoteWidth = 128;
+    // Baseline PPC64 supports inlining atomics up to 8 bytes.
+    MaxAtomicInlineWidth = 64;
+  }
+
+  void setMaxAtomicWidth() override {
+    // For power8 and up, backend is able to inline 16-byte atomic lock free
+    // code.
+    // TODO: We should allow AIX to inline quadword atomics in the future.
+    if (!getTriple().isOSAIX() && hasFeature("quadword-atomics"))
+      MaxAtomicInlineWidth = 128;
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

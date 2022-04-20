@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DebuggerEvents.h"
+#include "llvm/Support/WithColor.h"
 
 using namespace lldb_private;
 
@@ -56,7 +57,12 @@ llvm::StringRef DiagnosticEventData::GetPrefix() const {
 }
 
 void DiagnosticEventData::Dump(Stream *s) const {
-  *s << GetPrefix() << ": " << GetMessage() << '\n';
+  llvm::HighlightColor color = m_type == Type::Warning
+                                   ? llvm::HighlightColor::Warning
+                                   : llvm::HighlightColor::Error;
+  llvm::WithColor(s->AsRawOstream(), color, llvm::ColorMode::Enable)
+      << GetPrefix();
+  *s << ": " << GetMessage() << '\n';
   s->Flush();
 }
 

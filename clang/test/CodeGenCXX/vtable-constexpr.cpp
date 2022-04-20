@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple %itanium_abi_triple | FileCheck %s --implicit-check-not=DoNotEmit
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 %s -emit-llvm -o - -triple %itanium_abi_triple | FileCheck %s --implicit-check-not=DoNotEmit
 
 // constexpr virtual functions can be called at runtime and go in the vtable as
 // normal. But they are implicitly inline so are never the key function.

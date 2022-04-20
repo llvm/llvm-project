@@ -698,12 +698,11 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
   // VGPR available at all times.
   if (ST.hasMAIInsts() && !ST.hasGFX90AInsts()) {
-    reserveRegisterTuples(Reserved, AMDGPU::VGPR32);
+    reserveRegisterTuples(Reserved, MFI->getVGPRForAGPRCopy());
   }
 
-  for (auto Reg : MFI->WWMReservedRegs) {
-    reserveRegisterTuples(Reserved, Reg.first);
-  }
+  for (Register Reg : MFI->WWMReservedRegs)
+    reserveRegisterTuples(Reserved, Reg);
 
   // FIXME: Stop using reserved registers for this.
   for (MCPhysReg Reg : MFI->getAGPRSpillVGPRs())
@@ -1553,8 +1552,8 @@ void SIRegisterInfo::buildSpillLoadStore(
       assert(EltSize == 4);
 
       if (!TmpIntermediateVGPR) {
-        assert(MF->getRegInfo().isReserved(AMDGPU::VGPR32));
-        TmpIntermediateVGPR = AMDGPU::VGPR32;
+        TmpIntermediateVGPR = FuncInfo->getVGPRForAGPRCopy();
+        assert(MF->getRegInfo().isReserved(TmpIntermediateVGPR));
       }
       if (IsStore) {
         auto AccRead = BuildMI(MBB, MI, DL,
@@ -2902,8 +2901,7 @@ MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const 
 
 const TargetRegisterClass *
 SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
-                                         const RegisterBank &RB,
-                                         const MachineRegisterInfo &MRI) const {
+                                         const RegisterBank &RB) const {
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
     return getVGPRClassForBitWidth(std::max(32u, Size));
@@ -2925,7 +2923,7 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
                                          const MachineRegisterInfo &MRI) const {
   const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
   if (const RegisterBank *RB = RCOrRB.dyn_cast<const RegisterBank*>())
-    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB, MRI);
+    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB);
 
   if (const auto *RC = RCOrRB.dyn_cast<const TargetRegisterClass *>())
     return getAllocatableClass(RC);

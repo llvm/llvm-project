@@ -1052,16 +1052,70 @@ static ParseResult parseAsyncDependencies(
                                  OpAsmParser::Delimiter::OptionalSquare);
 }
 
+/// Prints optional async dependencies with its leading keyword.
+///   (`async`)? (`[` ssa-id-list `]`)?
+// Used by the tablegen assembly format for several async ops.
 static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
                                    Type asyncTokenType,
                                    OperandRange asyncDependencies) {
   if (asyncTokenType)
-    printer << "async ";
+    printer << "async";
   if (asyncDependencies.empty())
     return;
-  printer << "[";
+  if (asyncTokenType)
+    printer << ' ';
+  printer << '[';
   llvm::interleaveComma(asyncDependencies, printer);
-  printer << "]";
+  printer << ']';
+}
+
+namespace {
+
+/// Erases a common case of copy ops where a destination value is used only by
+/// the copy op, alloc and dealloc ops.
+struct EraseTrivialCopyOp : public OpRewritePattern<MemcpyOp> {
+  using OpRewritePattern<MemcpyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(MemcpyOp op,
+                                PatternRewriter &rewriter) const override {
+    Value dest = op.dst();
+    // If `dest` is a block argument, we cannot remove `op`.
+    if (dest.isa<BlockArgument>())
+      return failure();
+    auto isDeallocLikeOpActingOnVal = [](Operation *op, Value val) {
+      auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+      if (!memOp)
+        return false;
+      llvm::SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4>
+          memOpEffects;
+      memOp.getEffects(memOpEffects);
+      return llvm::none_of(memOpEffects, [val](auto &effect) {
+        return effect.getValue() == val &&
+               !isa<MemoryEffects::Free>(effect.getEffect());
+      });
+    };
+    // We can erase `op` iff `dest` has no other use apart from its
+    // use by `op` and dealloc ops.
+    if (llvm::any_of(dest.getUsers(), [isDeallocLikeOpActingOnVal, op,
+                                       dest](Operation *user) {
+          return user != op && !isDeallocLikeOpActingOnVal(user, dest);
+        }))
+      return failure();
+
+    if (op.asyncDependencies().size() > 1 ||
+        ((op.asyncDependencies().empty() && op.asyncToken()) ||
+         (!op.asyncDependencies().empty() && !op.asyncToken())))
+      return failure();
+    rewriter.replaceOp(op, op.asyncDependencies());
+    return success();
+  }
+};
+
+} // end anonymous namespace
+
+void MemcpyOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<EraseTrivialCopyOp>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1182,6 +1236,78 @@ LogicalResult MemcpyOp::fold(ArrayRef<Attribute> operands,
 LogicalResult MemsetOp::fold(ArrayRef<Attribute> operands,
                              SmallVectorImpl<::mlir::OpFoldResult> &results) {
   return foldMemRefCast(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// GPU_WaitOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Remove gpu.wait op use of gpu.wait op def without async dependencies.
+/// %t = gpu.wait async []       // No async dependencies.
+/// ...  gpu.wait ... [%t, ...]  // %t can be removed.
+struct EraseRedundantGpuWaitOpPairs : public OpRewritePattern<WaitOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WaitOp op,
+                                PatternRewriter &rewriter) const final {
+    auto predicate = [](Value value) {
+      auto waitOp = value.getDefiningOp<WaitOp>();
+      return waitOp && waitOp->getNumOperands() == 0;
+    };
+    if (llvm::none_of(op.asyncDependencies(), predicate))
+      return failure();
+    SmallVector<Value> validOperands;
+    for (Value operand : op->getOperands()) {
+      if (predicate(operand))
+        continue;
+      validOperands.push_back(operand);
+    }
+    op->setOperands(validOperands);
+    return success();
+  }
+};
+
+/// Simplify trivial gpu.wait ops for the following patterns.
+/// 1. %t = gpu.wait async ... ops, where %t has no uses (regardless of async
+/// dependencies).
+/// 2. %t1 = gpu.wait async [%t0], in this case, we can replace uses of %t1 with
+/// %t0.
+/// 3. gpu.wait [] ops, i.e gpu.wait ops that neither have any async
+/// dependencies nor return any token.
+struct SimplifyGpuWaitOp : public OpRewritePattern<WaitOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WaitOp op,
+                                PatternRewriter &rewriter) const final {
+    // Erase gpu.wait ops that neither have any async dependencies nor return
+    // any async token.
+    if (op.asyncDependencies().empty() && !op.asyncToken()) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+    // Replace uses of %t1 = gpu.wait async [%t0] ops with %t0 and erase the op.
+    if (llvm::hasSingleElement(op.asyncDependencies()) && op.asyncToken()) {
+      rewriter.replaceOp(op, op.asyncDependencies());
+      return success();
+    }
+    // Erase %t = gpu.wait async ... ops, where %t has no uses.
+    if (op.asyncToken() && op.asyncToken().use_empty()) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+    return failure();
+  }
+};
+
+} // end anonymous namespace
+
+void WaitOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<EraseRedundantGpuWaitOpPairs, SimplifyGpuWaitOp>(context);
 }
 
 //===----------------------------------------------------------------------===//

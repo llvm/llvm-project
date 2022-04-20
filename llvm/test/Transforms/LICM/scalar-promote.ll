@@ -599,6 +599,76 @@ Out:
 
 }
 
+@glb = external global i8, align 1
+
+; Test case for PR51248.
+define void @test_sink_store_only() writeonly {
+; CHECK-LABEL: @test_sink_store_only(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GLB_PROMOTED:%.*]] = load i8, i8* @glb, align 1
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ [[GLB_PROMOTED]], [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[I]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[DIV]] = sdiv i8 [[I]], 3
+; CHECK-NEXT:    [[ADD]] = add i8 [[I]], 4
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[DIV1_LCSSA:%.*]] = phi i8 [ [[DIV1]], [[LOOP_HEADER]] ]
+; CHECK-NEXT:    store i8 [[DIV1_LCSSA]], i8* @glb, align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %i = phi i8 [ 0, %entry ], [ %add, %loop.latch ]
+  %cmp = icmp ult i8 %i, 4
+  br i1 %cmp, label %loop.latch, label %exit
+
+loop.latch:
+  %div = sdiv i8 %i, 3
+  store i8 %div, i8* @glb, align 1
+  %add = add i8 %i, 4
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+define void @test_sink_store_only_no_phi_needed() writeonly {
+; CHECK-LABEL: @test_sink_store_only_no_phi_needed(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[I]], 4
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[I]], 3
+; CHECK-NEXT:    [[ADD]] = add i8 [[I]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[DIV_LCSSA:%.*]] = phi i8 [ [[DIV]], [[LOOP]] ]
+; CHECK-NEXT:    store i8 [[DIV_LCSSA]], i8* @glb, align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ 0, %entry ], [ %add, %loop ]
+  %cmp = icmp ult i8 %i, 4
+  %div = sdiv i8 %i, 3
+  store i8 %div, i8* @glb, align 1
+  %add = add i8 %i, 4
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

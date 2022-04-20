@@ -967,7 +967,6 @@ extern omp_memspace_handle_t const omp_large_cap_mem_space;
 extern omp_memspace_handle_t const omp_const_mem_space;
 extern omp_memspace_handle_t const omp_high_bw_mem_space;
 extern omp_memspace_handle_t const omp_low_lat_mem_space;
-// Preview of target memory support
 extern omp_memspace_handle_t const llvm_omp_target_host_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_shared_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_device_mem_space;
@@ -987,7 +986,6 @@ extern omp_allocator_handle_t const omp_low_lat_mem_alloc;
 extern omp_allocator_handle_t const omp_cgroup_mem_alloc;
 extern omp_allocator_handle_t const omp_pteam_mem_alloc;
 extern omp_allocator_handle_t const omp_thread_mem_alloc;
-// Preview of target memory support
 extern omp_allocator_handle_t const llvm_omp_target_host_mem_alloc;
 extern omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc;
 extern omp_allocator_handle_t const llvm_omp_target_device_mem_alloc;

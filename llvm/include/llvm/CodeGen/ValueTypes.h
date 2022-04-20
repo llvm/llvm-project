@@ -364,6 +364,12 @@ namespace llvm {
       return {(BaseSize.getKnownMinSize() + 7) / 8, BaseSize.isScalable()};
     }
 
+    // Return the number of bytes overwritten by a store of this value type or
+    // this value type's element type in the case of a vector.
+    uint64_t getScalarStoreSize() const {
+      return getScalarType().getStoreSize().getFixedSize();
+    }
+
     /// Return the number of bits overwritten by a store of the specified value
     /// type.
     ///

@@ -4,14 +4,6 @@
 ; RUN: echo '!9 = !{!"%/t/version.ll", !0}' > %t/version.txt
 ; RUN: cat %t/little.txt %s %t/version.txt > %t/2
 
-; RUN: opt -insert-gcov-profiling -disable-output < %t/2
-; RUN: head -c8 %t/version.gcno | grep '^oncg.804'
-; RUN: rm %t/version.gcno
-; RUN: not --crash opt -insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t/2
-; RUN: opt -insert-gcov-profiling -default-gcov-version='402*' -disable-output < %t/2
-; RUN: head -c8 %t/version.gcno | grep '^oncg.204'
-; RUN: rm %t/version.gcno
-
 ; RUN: opt -passes=insert-gcov-profiling -disable-output < %t/2
 ; RUN: head -c8 %t/version.gcno | grep '^oncg.804'
 ; RUN: rm %t/version.gcno
@@ -21,7 +13,7 @@
 ; RUN: rm %t/version.gcno
 
 ; RUN: cat %t/big.txt %s %t/version.txt > %t/big.ll
-; RUN: opt -insert-gcov-profiling -disable-output < %t/big.ll
+; RUN: opt -passes=insert-gcov-profiling -disable-output < %t/big.ll
 ; RUN: head -c8 %t/version.gcno | grep '^gcno408.'
 
 define void @test() !dbg !5 {

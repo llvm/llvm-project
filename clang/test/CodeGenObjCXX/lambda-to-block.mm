@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x objective-c++ -fblocks -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -std=c++1z -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x objective-c++ -fblocks -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -std=c++1z -emit-llvm -o - %s | FileCheck %s
 
 // rdar://31385153
 // Shouldn't crash!

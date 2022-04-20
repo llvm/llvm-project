@@ -253,7 +253,7 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load"> {
+def fir_LoadOp : fir_OneResultOp<"load", [MemoryEffects<[MemRead]>]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -320,7 +320,7 @@ def fir_CharConvertOp : fir_Op<"char_convert", []> {
   let hasVerifier = 1;
 }
 
-def fir_StoreOp : fir_Op<"store", []> {
+def fir_StoreOp : fir_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -489,16 +489,12 @@ class fir_SwitchTerminatorOp<string mnemonic, list<Trait> traits = []> :
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);
     llvm::Optional<mlir::ValueRange> getSuccessorOperands(
         mlir::ValueRange operands, unsigned cond);
-    using BranchOpInterfaceTrait::getSuccessorOperands;
 
     // Helper function to deal with Optional operand forms
     void printSuccessorAtIndex(mlir::OpAsmPrinter &p, unsigned i) {
       auto *succ = getSuccessor(i);
       auto ops = getSuccessorOperands(i);
-      if (ops.hasValue())
-        p.printSuccessorAndUseList(succ, ops.getValue());
-      else
-        p.printSuccessor(succ);
+      p.printSuccessorAndUseList(succ, ops.getForwardedOperands());
     }
 
     mlir::ArrayAttr getCases() {
@@ -2286,7 +2282,7 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
   let hasCustomAssemblyFormat = 1;
 
   let builders = [
-    OpBuilder<(ins "mlir::FuncOp":$callee,
+    OpBuilder<(ins "mlir::func::FuncOp":$callee,
         CArg<"mlir::ValueRange", "{}">:$operands)>,
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
         "llvm::ArrayRef<mlir::Type>":$results,

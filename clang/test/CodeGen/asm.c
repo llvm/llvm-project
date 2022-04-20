@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 // PR10415
 __asm__ ("foo1");
@@ -273,4 +273,14 @@ loop:
   return 0;
 label_true:
   return 1;
+}
+
+void *t33(void *ptr)
+{
+  void *ret;
+  asm ("lea %1, %0" : "=r" (ret) : "p" (ptr));
+  return ret;
+
+  // CHECK: @t33
+  // CHECK: %1 = call i8* asm "lea $1, $0", "=r,p,~{dirflag},~{fpsr},~{flags}"(i8* %0)
 }

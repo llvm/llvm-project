@@ -2,6 +2,41 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
+; CHECK-LABEL: function 'forked_ptrs_simple':
+; CHECK-NEXT:  loop:
+; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:    SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Expressions re-written:
+
+define void @forked_ptrs_simple(float* nocapture readonly %Base1, float* nocapture readonly %Base2, float* %Dest) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.Dest = getelementptr inbounds float, float* %Dest, i64 %iv
+  %l.Dest = load float, float* %gep.Dest
+  %cmp = fcmp une float %l.Dest, 0.0
+  %gep.1 = getelementptr inbounds float, float* %Base1, i64 %iv
+  %gep.2 = getelementptr inbounds float, float* %Base2, i64 %iv
+  %select = select i1 %cmp, float* %gep.1, float* %gep.2
+  %sink = load float, float* %select, align 4
+  store float %sink, float* %gep.Dest, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 100
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
 ; CHECK-LABEL: function 'forked_ptrs_different_base_same_offset':
 ; CHECK-NEXT:  for.body:
 ; CHECK-NEXT:    Report: cannot identify array bounds

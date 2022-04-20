@@ -1,4 +1,3 @@
-// REQUIRES: clang-driver
 
 // Check that we raise an error if we're trying to compile OpenCL for amdhsa code but can't
 // find a ROCm install, unless -nogpulib was passed.

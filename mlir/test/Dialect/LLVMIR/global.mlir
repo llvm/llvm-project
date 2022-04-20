@@ -57,6 +57,10 @@ llvm.mlir.global extern_weak @extern_weak() : i64
 llvm.mlir.global linkonce_odr @linkonce_odr() : i64
 // CHECK: llvm.mlir.global weak_odr
 llvm.mlir.global weak_odr @weak_odr() : i64
+// CHECK: llvm.mlir.global external @has_thr_local(42 : i64) {thr_local} : i64
+llvm.mlir.global external @has_thr_local(42 : i64) {thr_local} : i64
+// CHECK: llvm.mlir.global external @has_dso_local(42 : i64) {dso_local} : i64
+llvm.mlir.global external @has_dso_local(42 : i64) {dso_local} : i64
 
 // CHECK-LABEL: references
 func @references() {
@@ -81,7 +85,7 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 // -----
 
 // expected-error @+1 {{op requires attribute 'sym_name'}}
-"llvm.mlir.global"() ({}) {type = i64, constant, global_type = i64, value = 42 : i64} : () -> ()
+"llvm.mlir.global"() ({}) {linkage = "private", type = i64, constant, global_type = i64, value = 42 : i64} : () -> ()
 
 // -----
 

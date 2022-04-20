@@ -7,10 +7,8 @@ RUN: sed s/{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}/{6C633EB7-46FE-4609-BA83-EB820
 RUN: sed s/{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}/{6C633EB7-46FE-4609-BA83-EB820E6F5683}/ %S/Inputs/pdb-type-server-guid-collision-b.yaml | yaml2obj > b.obj
 RUN: sed s/{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}/{6C633EB7-46FE-4609-BA83-EB820E6F5683}/ %S/Inputs/pdb-type-server-guid-collision-a-pdb.yaml | llvm-pdbutil yaml2pdb - -pdb a.pdb
 RUN: sed s/{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}/{6C633EB7-46FE-4609-BA83-EB820E6F5683}/ %S/Inputs/pdb-type-server-guid-collision-b-pdb.yaml | llvm-pdbutil yaml2pdb - -pdb b.pdb
-RUN: lld-link a.obj b.obj -out:collision.dll -debug -pdb:collision.pdb -nodefaultlib /noentry /dll -verbose 2>&1 | FileCheck %s -check-prefix LOG
+RUN: lld-link a.obj b.obj -out:collision.dll -debug -pdb:collision.pdb -nodefaultlib /noentry /dll
 RUN: llvm-pdbutil dump -globals collision.pdb | FileCheck %s -check-prefix DUMP
-
-LOG: lld-link: GUID collision between b.pdb and a.pdb
 
 DUMP-LABEL:                       Global Symbols
 DUMP:       ============================================================

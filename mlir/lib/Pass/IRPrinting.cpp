@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/PassManager.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -169,8 +170,7 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
     out << formatv("// -----// IR Dump After {0} Failed", pass->getName());
-    printIR(op, config->shouldPrintAtModuleScope(), out,
-            OpPrintingFlags().printGenericOpForm());
+    printIR(op, config->shouldPrintAtModuleScope(), out, OpPrintingFlags());
     out << "\n\n";
   });
 }

@@ -46,10 +46,10 @@ define void @f4() !dbg !19 {
 !7 = !{i32 7, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}
-!10 = !{i32 1, !"branch-target-enforcement", i32 0}
-!11 = !{i32 1, !"sign-return-address", i32 0}
-!12 = !{i32 1, !"sign-return-address-all", i32 0}
-!13 = !{i32 1, !"sign-return-address-with-bkey", i32 0}
+!10 = !{i32 8, !"branch-target-enforcement", i32 0}
+!11 = !{i32 8, !"sign-return-address", i32 0}
+!12 = !{i32 8, !"sign-return-address-all", i32 0}
+!13 = !{i32 8, !"sign-return-address-with-bkey", i32 0}
 !14 = !{i32 7, !"PIC Level", i32 2}
 !15 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 1, type: !16, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !16 = !DISubroutineType(types: !17)

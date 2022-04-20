@@ -90,13 +90,3 @@ value llvm_pmbuilder_populate_module_pass_manager(LLVMPassManagerRef PM,
   LLVMPassManagerBuilderPopulateModulePassManager(PMBuilder_val(PMB), PM);
   return Val_unit;
 }
-
-/* [ `Module ] Llvm.PassManager.t ->
-   internalize:bool -> run_inliner:bool -> t -> unit */
-value llvm_pmbuilder_populate_lto_pass_manager(LLVMPassManagerRef PM,
-                                               value Internalize,
-                                               value RunInliner, value PMB) {
-  LLVMPassManagerBuilderPopulateLTOPassManager(
-      PMBuilder_val(PMB), PM, Bool_val(Internalize), Bool_val(RunInliner));
-  return Val_unit;
-}

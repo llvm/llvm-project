@@ -11,11 +11,16 @@
 
 #include "src/__support/architectures.h"
 
+#if defined(LIBC_TARGET_HAS_FMA)
+
 #if defined(LLVM_LIBC_ARCH_X86_64)
 #include "x86_64/FMA.h"
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
 #include "aarch64/FMA.h"
+#endif
+
 #else
+// FMA instructions are not available
 #include "generic/FMA.h"
 #include "src/__support/CPP/TypeTraits.h"
 

@@ -153,7 +153,7 @@ struct ParallelComputeFunctionBounds {
 
 struct ParallelComputeFunction {
   unsigned numLoops;
-  FuncOp func;
+  func::FuncOp func;
   llvm::SmallVector<Value> captures;
 };
 
@@ -258,11 +258,11 @@ static ParallelComputeFunction createParallelComputeFunction(
       getParallelComputeFunctionType(op, rewriter);
 
   FunctionType type = computeFuncType.type;
-  FuncOp func = FuncOp::create(op.getLoc(),
-                               numBlockAlignedInnerLoops > 0
-                                   ? "parallel_compute_fn_with_aligned_loops"
-                                   : "parallel_compute_fn",
-                               type);
+  func::FuncOp func = func::FuncOp::create(
+      op.getLoc(),
+      numBlockAlignedInnerLoops > 0 ? "parallel_compute_fn_with_aligned_loops"
+                                    : "parallel_compute_fn",
+      type);
   func.setPrivate();
 
   // Insert function into the module symbol table and assign it unique name.
@@ -455,8 +455,9 @@ static ParallelComputeFunction createParallelComputeFunction(
 //     call @parallel_compute_fn(%block_start, %block_size, ...);
 //   }
 //
-static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
-                                          PatternRewriter &rewriter) {
+static func::FuncOp
+createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
+                            PatternRewriter &rewriter) {
   OpBuilder::InsertionGuard guard(rewriter);
   Location loc = computeFunc.func.getLoc();
   ImplicitLocOpBuilder b(loc, rewriter);
@@ -476,7 +477,7 @@ static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   inputTypes.append(computeFuncInputTypes.begin(), computeFuncInputTypes.end());
 
   FunctionType type = rewriter.getFunctionType(inputTypes, TypeRange());
-  FuncOp func = FuncOp::create(loc, "async_dispatch_fn", type);
+  func::FuncOp func = func::FuncOp::create(loc, "async_dispatch_fn", type);
   func.setPrivate();
 
   // Insert function into the module symbol table and assign it unique name.
@@ -580,7 +581,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
 
   // Add one more level of indirection to dispatch parallel compute functions
   // using async operations and recursive work splitting.
-  FuncOp asyncDispatchFunction =
+  func::FuncOp asyncDispatchFunction =
       createAsyncDispatchFunction(parallelComputeFunction, rewriter);
 
   Value c0 = b.create<arith::ConstantIndexOp>(0);
@@ -651,7 +652,7 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
                      const SmallVector<Value> &tripCounts) {
   MLIRContext *ctx = op->getContext();
 
-  FuncOp compute = parallelComputeFunction.func;
+  func::FuncOp compute = parallelComputeFunction.func;
 
   Value c0 = b.create<arith::ConstantIndexOp>(0);
   Value c1 = b.create<arith::ConstantIndexOp>(1);

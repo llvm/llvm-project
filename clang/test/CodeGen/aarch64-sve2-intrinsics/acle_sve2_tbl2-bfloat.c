@@ -4,9 +4,9 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +bf16 -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify=overload -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify -verify-ignore-unexpected=error -verify-ignore-unexpected=note %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +bf16 -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error -verify-ignore-unexpected=note %s
 
 #include <arm_sve.h>
 
@@ -32,7 +32,7 @@
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
 svbfloat16_t test_svtbl2_bf16(svbfloat16x2_t data, svuint16_t indices) {
-  // overload-warning@+2 {{implicit declaration of function 'svtbl2'}}
-  // expected-warning@+1 {{implicit declaration of function 'svtbl2_bf16'}}
+  // overload-warning@+2 {{call to undeclared function 'svtbl2'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svtbl2_bf16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbl2, _bf16, , )(data, indices);
 }

@@ -3432,7 +3432,7 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
           << SourceRange(D.getName().TemplateId->LAngleLoc,
                          D.getName().TemplateId->RAngleLoc)
           << D.getName().TemplateId->LAngleLoc;
-      D.SetIdentifier(Name.getAsIdentifierInfo(), Loc);
+      D.SetIdentifier(II, Loc);
     }
 
     if (SS.isSet() && !SS.isInvalid()) {
@@ -11023,6 +11023,8 @@ void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
       TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
       bool TemplateMatches =
           Context.hasSameTemplateName(SpecifiedName, GuidedTemplate);
+      // FIXME: We should consider other template kinds (using, qualified),
+      // otherwise we will emit bogus diagnostics.
       if (SpecifiedName.getKind() == TemplateName::Template && TemplateMatches)
         AcceptableReturnType = true;
       else {
@@ -13351,7 +13353,8 @@ void Sema::CheckImplicitSpecialMemberDeclaration(Scope *S, FunctionDecl *FD) {
   R.resolveKind();
   R.suppressDiagnostics();
 
-  CheckFunctionDeclaration(S, FD, R, /*IsMemberSpecialization*/false);
+  CheckFunctionDeclaration(S, FD, R, /*IsMemberSpecialization*/ false,
+                           FD->isThisDeclarationADefinition());
 }
 
 void Sema::setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
@@ -17376,6 +17379,21 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
   for (unsigned I = 0, E = TryBlock->getNumHandlers(); I != E; ++I) {
     CXXCatchStmt *Handler = TryBlock->getHandler(I);
     SearchForReturnInStmt(*this, Handler);
+  }
+}
+
+void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc,
+                               FnBodyKind BodyKind) {
+  switch (BodyKind) {
+  case FnBodyKind::Delete:
+    SetDeclDeleted(D, Loc);
+    break;
+  case FnBodyKind::Default:
+    SetDeclDefaulted(D, Loc);
+    break;
+  case FnBodyKind::Other:
+    llvm_unreachable(
+        "Parsed function body should be '= delete;' or '= default;'");
   }
 }
 

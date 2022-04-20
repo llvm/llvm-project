@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=thumbv7m-none--eabi -target-cpu cortex-m3 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=thumbv7m-none--eabi -target-cpu cortex-m3 | FileCheck %s
 
 int i;
 long long l;

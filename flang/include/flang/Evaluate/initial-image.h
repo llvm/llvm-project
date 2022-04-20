@@ -88,7 +88,7 @@ public:
   template <typename T>
   Result Add(ConstantSubscript offset, std::size_t bytes, const Expr<T> &x,
       FoldingContext &c) {
-    return std::visit(
+    return common::visit(
         [&](const auto &y) { return Add(offset, bytes, y, c); }, x.u);
   }
 

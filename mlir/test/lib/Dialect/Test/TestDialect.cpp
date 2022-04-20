@@ -18,6 +18,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -335,22 +336,31 @@ TestDialect::getOperationPrinter(Operation *op) const {
 // TestBranchOp
 //===----------------------------------------------------------------------===//
 
-Optional<MutableOperandRange>
-TestBranchOp::getMutableSuccessorOperands(unsigned index) {
+SuccessorOperands TestBranchOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  return getTargetOperandsMutable();
+  return SuccessorOperands(getTargetOperandsMutable());
 }
 
 //===----------------------------------------------------------------------===//
 // TestProducingBranchOp
 //===----------------------------------------------------------------------===//
 
-Optional<MutableOperandRange>
-TestProducingBranchOp::getMutableSuccessorOperands(unsigned index) {
+SuccessorOperands TestProducingBranchOp::getSuccessorOperands(unsigned index) {
   assert(index <= 1 && "invalid successor index");
   if (index == 1)
-    return getFirstOperandsMutable();
-  return getSecondOperandsMutable();
+    return SuccessorOperands(getFirstOperandsMutable());
+  return SuccessorOperands(getSecondOperandsMutable());
+}
+
+//===----------------------------------------------------------------------===//
+// TestProducingBranchOp
+//===----------------------------------------------------------------------===//
+
+SuccessorOperands TestInternalBranchOp::getSuccessorOperands(unsigned index) {
+  assert(index <= 1 && "invalid successor index");
+  if (index == 0)
+    return SuccessorOperands(0, getSuccessOperandsMutable());
+  return SuccessorOperands(1, getErrorOperandsMutable());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1294,6 +1304,37 @@ void SingleNoTerminatorCustomAsmOp::print(OpAsmPrinter &printer) {
       // This op has a single block without terminators. But explicitly mark
       // as not printing block terminators for testing.
       /*printBlockTerminators=*/false);
+}
+
+//===----------------------------------------------------------------------===//
+// TestVerifiersOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestVerifiersOp::verify() {
+  if (!getRegion().hasOneBlock())
+    return emitOpError("`hasOneBlock` trait hasn't been verified");
+
+  Operation *definingOp = getInput().getDefiningOp();
+  if (definingOp && failed(mlir::verify(definingOp)))
+    return emitOpError("operand hasn't been verified");
+
+  emitRemark("success run of verifier");
+
+  return success();
+}
+
+LogicalResult TestVerifiersOp::verifyRegions() {
+  if (!getRegion().hasOneBlock())
+    return emitOpError("`hasOneBlock` trait hasn't been verified");
+
+  for (Block &block : getRegion())
+    for (Operation &op : block)
+      if (failed(mlir::verify(&op)))
+        return emitOpError("nested op hasn't been verified");
+
+  emitRemark("success run of region verifier");
+
+  return success();
 }
 
 #include "TestOpEnums.cpp.inc"

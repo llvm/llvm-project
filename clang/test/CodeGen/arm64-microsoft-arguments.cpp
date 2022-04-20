@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-windows -ffreestanding -emit-llvm -O0 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-windows -ffreestanding -emit-llvm -O0 \
 // RUN: -x c++ -o - %s | FileCheck %s
 
 // Pass and return for type size <= 8 bytes.

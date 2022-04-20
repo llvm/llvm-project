@@ -39,7 +39,7 @@ std::unique_ptr<IntegerPolyhedron> IntegerPolyhedron::clone() const {
 }
 
 void IntegerRelation::append(const IntegerRelation &other) {
-  assert(isSpaceEqual(other) && "Spaces must be equal.");
+  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
 
   inequalities.reserveRows(inequalities.getNumRows() +
                            other.getNumInequalities());
@@ -61,12 +61,12 @@ IntegerRelation IntegerRelation::intersect(IntegerRelation other) const {
 }
 
 bool IntegerRelation::isEqual(const IntegerRelation &other) const {
-  assert(isSpaceEqual(other) && "Spaces must be equal.");
+  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
 bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
-  assert(isSpaceEqual(other) && "Spaces must be equal.");
+  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
   return PresburgerRelation(*this).isSubsetOf(PresburgerRelation(other));
 }
 
@@ -129,7 +129,13 @@ void removeConstraintsInvolvingIdRange(IntegerRelation &poly, unsigned begin,
 }
 
 IntegerRelation::CountsSnapshot IntegerRelation::getCounts() const {
-  return {PresburgerSpace(*this), getNumInequalities(), getNumEqualities()};
+  return {getSpace(), getNumInequalities(), getNumEqualities()};
+}
+
+void IntegerRelation::truncateIdKind(IdKind kind, unsigned num) {
+  unsigned curNum = getNumIdKind(kind);
+  assert(num <= curNum && "Can't truncate to more ids!");
+  removeIdRange(kind, num, curNum);
 }
 
 void IntegerRelation::truncateIdKind(IdKind kind,
@@ -164,7 +170,7 @@ SymbolicLexMin IntegerPolyhedron::findSymbolicIntegerLexMin() const {
 unsigned IntegerRelation::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 
-  unsigned insertPos = PresburgerSpace::insertId(kind, pos, num);
+  unsigned insertPos = space.insertId(kind, pos, num);
   inequalities.insertColumns(insertPos, num);
   equalities.insertColumns(insertPos, num);
   return insertPos;
@@ -208,7 +214,7 @@ void IntegerRelation::removeIdRange(IdKind kind, unsigned idStart,
   inequalities.removeColumns(offset + idStart, idLimit - idStart);
 
   // Remove eliminated identifiers from the space.
-  PresburgerSpace::removeIdRange(kind, idStart, idLimit);
+  space.removeIdRange(kind, idStart, idLimit);
 }
 
 void IntegerRelation::removeIdRange(unsigned idStart, unsigned idLimit) {
@@ -882,7 +888,7 @@ void IntegerRelation::gcdTightenInequalities() {
   unsigned numCols = getNumCols();
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
     // Normalize the constraint and tighten the constant term by the GCD.
-    uint64_t gcd = inequalities.normalizeRow(i, getNumCols() - 1);
+    int64_t gcd = inequalities.normalizeRow(i, getNumCols() - 1);
     if (gcd > 1)
       atIneq(i, numCols - 1) = mlir::floorDiv(atIneq(i, numCols - 1), gcd);
   }
@@ -949,7 +955,7 @@ void IntegerRelation::removeRedundantInequalities() {
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     // Change the inequality to its complement.
     tmpCst.inequalities.negateRow(r);
-    tmpCst.atIneq(r, tmpCst.getNumCols() - 1)--;
+    --tmpCst.atIneq(r, tmpCst.getNumCols() - 1);
     if (tmpCst.isEmpty()) {
       redun[r] = true;
       // Zero fill the redundant inequality.
@@ -957,7 +963,7 @@ void IntegerRelation::removeRedundantInequalities() {
       tmpCst.inequalities.fillRow(r, /*value=*/0);
     } else {
       // Reverse the change (to avoid recreating tmpCst each time).
-      tmpCst.atIneq(r, tmpCst.getNumCols() - 1)++;
+      ++tmpCst.atIneq(r, tmpCst.getNumCols() - 1);
       tmpCst.inequalities.negateRow(r);
     }
   }
@@ -1076,51 +1082,44 @@ void IntegerRelation::eliminateRedundantLocalId(unsigned posA, unsigned posB) {
 /// of the local ids in each set, without changing the set of points that
 /// lie in `this` and `other`.
 ///
-/// To detect local ids that always take the same in both sets, each local id is
+/// To detect local ids that always take the same value, each local id is
 /// represented as a floordiv with constant denominator in terms of other ids.
-/// After extracting these divisions, local ids with the same division
-/// representation are considered duplicate and are merged. It is possible that
-/// division representation for some local id cannot be obtained, and thus these
-/// local ids are not considered for detecting duplicates.
-void IntegerRelation::mergeLocalIds(IntegerRelation &other) {
-  assert(isSpaceCompatible(other) && "Spaces should be compatible.");
-
+/// After extracting these divisions, local ids in `other` with the same
+/// division representation as some other local id in any set are considered
+/// duplicate and are merged.
+///
+/// It is possible that division representation for some local id cannot be
+/// obtained, and thus these local ids are not considered for detecting
+/// duplicates.
+unsigned IntegerRelation::mergeLocalIds(IntegerRelation &other) {
   IntegerRelation &relA = *this;
   IntegerRelation &relB = other;
 
-  // Merge local ids of relA and relB without using division information,
-  // i.e. append local ids of `relB` to `relA` and insert local ids of `relA`
-  // to `relB` at start of its local ids.
-  unsigned initLocals = relA.getNumLocalIds();
-  insertId(IdKind::Local, relA.getNumLocalIds(), relB.getNumLocalIds());
-  relB.insertId(IdKind::Local, 0, initLocals);
-
-  // Get division representations from each rel.
-  std::vector<SmallVector<int64_t, 8>> divsA, divsB;
-  SmallVector<unsigned, 4> denomsA, denomsB;
-  relA.getLocalReprs(divsA, denomsA);
-  relB.getLocalReprs(divsB, denomsB);
-
-  // Copy division information for relB into `divsA` and `denomsA`, so that
-  // these have the combined division information of both rels. Since newly
-  // added local variables in relA and relB have no constraints, they will not
-  // have any division representation.
-  std::copy(divsB.begin() + initLocals, divsB.end(),
-            divsA.begin() + initLocals);
-  std::copy(denomsB.begin() + initLocals, denomsB.end(),
-            denomsA.begin() + initLocals);
+  unsigned oldALocals = relA.getNumLocalIds();
 
   // Merge function that merges the local variables in both sets by treating
   // them as the same identifier.
-  auto merge = [&relA, &relB](unsigned i, unsigned j) -> bool {
+  auto merge = [&relA, &relB, oldALocals](unsigned i, unsigned j) -> bool {
+    // We only merge from local at pos j to local at pos i, where j > i.
+    if (i >= j)
+      return false;
+
+    // If i < oldALocals, we are trying to merge duplicate divs. Since we do not
+    // want to merge duplicates in A, we ignore this call.
+    if (j < oldALocals)
+      return false;
+
+    // Merge local at pos j into local at position i.
     relA.eliminateRedundantLocalId(i, j);
     relB.eliminateRedundantLocalId(i, j);
     return true;
   };
 
-  // Merge all divisions by removing duplicate divisions.
-  unsigned localOffset = getIdKindOffset(IdKind::Local);
-  presburger::removeDuplicateDivs(divsA, denomsA, localOffset, merge);
+  presburger::mergeLocalIds(*this, other, merge);
+
+  // Since we do not remove duplicate divisions in relA, this is guranteed to be
+  // non-negative.
+  return relA.getNumLocalIds() - oldALocals;
 }
 
 void IntegerRelation::removeDuplicateDivs() {
@@ -1913,7 +1912,7 @@ static void getCommonConstraints(const IntegerRelation &a,
 // lower bounds and the max of the upper bounds along each of the dimensions.
 LogicalResult
 IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
-  assert(isSpaceEqual(otherCst) && "Spaces should match.");
+  assert(space.isEqual(otherCst.getSpace()) && "Spaces should match.");
   assert(getNumLocalIds() == 0 && "local ids not supported yet here");
 
   // Get the constraints common to both systems; these will be added as is to
@@ -2077,7 +2076,7 @@ void IntegerRelation::removeIndependentConstraints(unsigned pos, unsigned num) {
 }
 
 void IntegerRelation::printSpace(raw_ostream &os) const {
-  PresburgerSpace::print(os);
+  space.print(os);
   os << getNumConstraints() << " constraints\n";
 }
 

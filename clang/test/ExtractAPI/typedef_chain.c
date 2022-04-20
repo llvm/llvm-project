@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
-// RUN: %t/reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/reference.output.json.in >> %t/reference.output.json
 // RUN: %clang -extract-api --product-name=TypedefChain -target arm64-apple-macosx \
 // RUN: -x objective-c-header %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
@@ -86,6 +86,12 @@ typedef MyIntInt MyIntIntInt;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyInt"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -140,6 +146,12 @@ typedef MyIntInt MyIntIntInt;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyIntInt"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -194,6 +206,12 @@ typedef MyIntInt MyIntIntInt;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyIntIntInt"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

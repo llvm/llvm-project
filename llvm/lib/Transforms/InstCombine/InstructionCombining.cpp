@@ -1037,10 +1037,10 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
   return NewBO;
 }
 
-Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op,
-                                                SelectInst *SI) {
-  // Don't modify shared select instructions.
-  if (!SI->hasOneUse())
+Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
+                                                bool FoldWithMultiUse) {
+  // Don't modify shared select instructions unless set FoldWithMultiUse
+  if (!SI->hasOneUse() && !FoldWithMultiUse)
     return nullptr;
 
   Value *TV = SI->getTrueValue();
@@ -2810,7 +2810,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
           Value *Result =
-              lowerObjectSizeCall(II, DL, &TLI, /*MustSucceed=*/true);
+              lowerObjectSizeCall(II, DL, &TLI, AA, /*MustSucceed=*/true);
           replaceInstUsesWith(*I, Result);
           eraseInstFromFunction(*I);
           Users[i] = nullptr; // Skip examining in the next loop.
@@ -3779,23 +3779,20 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     return replaceInstUsesWith(I, NI);
 
   if (match(Op0, m_Undef())) {
-    // If I is freeze(undef), see its uses and fold it to the best constant.
+    // If I is freeze(undef), check its uses and fold it to a fixed constant.
     // - or: pick -1
-    // - select's condition: pick the value that leads to choosing a constant
-    // - other ops: pick 0
+    // - select's condition: if the true value is constant, choose it by making
+    //                       the condition true.
+    // - default: pick 0
     Constant *BestValue = nullptr;
     Constant *NullValue = Constant::getNullValue(I.getType());
     for (const auto *U : I.users()) {
       Constant *C = NullValue;
 
       if (match(U, m_Or(m_Value(), m_Value())))
-        C = Constant::getAllOnesValue(I.getType());
-      else if (const auto *SI = dyn_cast<SelectInst>(U)) {
-        if (SI->getCondition() == &I) {
-          APInt CondVal(1, isa<Constant>(SI->getFalseValue()) ? 0 : 1);
-          C = Constant::getIntegerValue(I.getType(), CondVal);
-        }
-      }
+        C = ConstantInt::getAllOnesValue(I.getType());
+      else if (match(U, m_Select(m_Specific(&I), m_Constant(), m_Value())))
+        C = ConstantInt::getTrue(I.getType());
 
       if (!BestValue)
         BestValue = C;

@@ -16,7 +16,7 @@ def get_libcxx_paths():
   macro_test_path = os.path.join(src_root, 'test', 'std', 'language.support',
                             'support.limits', 'support.limits.general')
   assert os.path.exists(macro_test_path)
-  assert os.path.exists(os.path.join(macro_test_path, 'version.version.pass.cpp'))
+  assert os.path.exists(os.path.join(macro_test_path, 'version.version.compile.pass.cpp'))
   return script_name, src_root, include_path, docs_path, macro_test_path
 
 script_name, source_root, include_path, docs_path, macro_test_path = get_libcxx_paths()
@@ -74,7 +74,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_allocate_at_least",
     "values": { "c++2b": 202106 },
     "headers": ["memory"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_allocator_traits_is_always_equal",
     "values": { "c++17": 201411 },
@@ -104,7 +103,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_assume_aligned",
     "values": { "c++20": 201811 },
     "headers": ["memory"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_atomic_flag_test",
     "values": { "c++20": 201907 },
@@ -1107,13 +1105,12 @@ def produce_tests():
 
 {cxx_tests}
 
-int main(int, char**) {{ return 0; }}
 """.format(script_name=script_name,
            header=h,
            markup=('\n{}\n'.format(markup) if markup else ''),
            synopsis=generate_synopsis(test_list),
            cxx_tests=generate_std_tests(test_list))
-    test_name = "{header}.version.pass.cpp".format(header=h)
+    test_name = "{header}.version.compile.pass.cpp".format(header=h)
     out_path = os.path.join(macro_test_path, test_name)
     with open(out_path, 'w', newline='\n') as f:
       f.write(test_body)

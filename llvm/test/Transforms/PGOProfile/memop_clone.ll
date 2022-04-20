@@ -1,4 +1,4 @@
-; RUN: opt < %s -pgo-memop-opt -verify-dom-info -S | FileCheck %s
+; RUN: opt < %s -passes=pgo-memop-opt -verify-dom-info -S | FileCheck %s
 
 define i32 @test(i8* %a, i8* %b) !prof !1 {
 ; CHECK_LABEL: test

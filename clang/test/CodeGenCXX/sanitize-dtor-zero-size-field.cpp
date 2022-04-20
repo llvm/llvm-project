@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -O0 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++20 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call void @__sanitizer_dtor_callback"
-// RUN: %clang_cc1 -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++20 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call void @__sanitizer_dtor_callback"
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++20 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call void @__sanitizer_dtor_callback"
+// RUN: %clang_cc1 -no-opaque-pointers -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++20 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call void @__sanitizer_dtor_callback"
 
 struct Empty {};
 

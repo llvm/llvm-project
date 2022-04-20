@@ -930,9 +930,11 @@ bool Sema::LookupBuiltin(LookupResult &R) {
 
       // If this is a builtin on this (or all) targets, create the decl.
       if (unsigned BuiltinID = II->getBuiltinID()) {
-        // In C++ and OpenCL (spec v1.2 s6.9.f), we don't have any predefined
-        // library functions like 'malloc'. Instead, we'll just error.
-        if ((getLangOpts().CPlusPlus || getLangOpts().OpenCL) &&
+        // In C++, C2x, and OpenCL (spec v1.2 s6.9.f), we don't have any
+        // predefined library functions like 'malloc'. Instead, we'll just
+        // error.
+        if ((getLangOpts().CPlusPlus || getLangOpts().OpenCL ||
+             getLangOpts().C2x) &&
             Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
           return false;
 
@@ -1931,13 +1933,14 @@ NamedDecl *LookupResult::getAcceptableDeclSlow(NamedDecl *D) const {
 /// used to diagnose ambiguities.
 ///
 /// @returns \c true if lookup succeeded and false otherwise.
-bool Sema::LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation) {
+bool Sema::LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation,
+                      bool ForceNoCPlusPlus) {
   DeclarationName Name = R.getLookupName();
   if (!Name) return false;
 
   LookupNameKind NameKind = R.getLookupKind();
 
-  if (!getLangOpts().CPlusPlus) {
+  if (!getLangOpts().CPlusPlus || ForceNoCPlusPlus) {
     // Unqualified name lookup in C/Objective-C is purely lexical, so
     // search in the declarations attached to the name.
     if (NameKind == Sema::LookupRedeclarationWithLinkage) {

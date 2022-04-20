@@ -1098,13 +1098,11 @@ define i32 @sdiv_constant_dividend_select_of_constants_divisor(i1 %b) {
   ret i32 %r
 }
 
-; TODO: sdiv should still be replaced by select.
-
 define i32 @sdiv_constant_dividend_select_of_constants_divisor_use(i1 %b) {
 ; CHECK-LABEL: @sdiv_constant_dividend_select_of_constants_divisor_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i32 3, i32 -14
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
@@ -1204,13 +1202,11 @@ define i32 @udiv_constant_dividend_select_of_constants_divisor(i1 %b) {
   ret i32 %r
 }
 
-; TODO: udiv should still be replaced by select.
-
 define i32 @udiv_constant_dividend_select_of_constants_divisor_use(i1 %b) {
 ; CHECK-LABEL: @udiv_constant_dividend_select_of_constants_divisor_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i32 3, i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3

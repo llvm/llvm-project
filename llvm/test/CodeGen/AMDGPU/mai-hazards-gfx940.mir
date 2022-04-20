@@ -1155,7 +1155,7 @@ body:             |
 ...
 # GCN-LABEL: name: flat_store_data_agpr_overwritten
 # GCN:      FLAT_STORE_DWORDX4
-# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name: flat_store_data_agpr_overwritten
 body: |

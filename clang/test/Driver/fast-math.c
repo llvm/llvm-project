@@ -5,7 +5,6 @@
 // support.
 //
 // Both of them use gcc driver for as.
-// REQUIRES: clang-driver
 //
 // RUN: %clang -### -fno-honor-infinities -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-INFS %s

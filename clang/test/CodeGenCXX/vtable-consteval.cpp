@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple x86_64-linux | FileCheck %s --check-prefix=ITANIUM --implicit-check-not=DoNotEmit
-// RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple x86_64-windows | FileCheck %s --check-prefix=MSABI --implicit-check-not=DoNotEmit
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 %s -emit-llvm -o - -triple x86_64-linux | FileCheck %s --check-prefix=ITANIUM --implicit-check-not=DoNotEmit
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 %s -emit-llvm -o - -triple x86_64-windows | FileCheck %s --check-prefix=MSABI --implicit-check-not=DoNotEmit
 
 // FIXME: The MSVC ABI rule in use here was discussed with MS folks prior to
 // them implementing virtual consteval functions, but we do not know for sure

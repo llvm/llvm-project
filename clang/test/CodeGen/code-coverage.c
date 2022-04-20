@@ -11,8 +11,8 @@
 
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -fprofile-arcs -coverage-notes-file=aaa.gcno -coverage-data-file=bbb.gcda -debug-info-kind=limited -dwarf-version=4 %s -o - | FileCheck %s --check-prefix GCOV_FILE_INFO
 
-// RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fexperimental-new-pass-manager -fdebug-pass-manager -fprofile-arcs %s 2>&1 | FileCheck --check-prefix=NEWPM %s
-// RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fexperimental-new-pass-manager -fdebug-pass-manager -fprofile-arcs -O3 %s 2>&1 | FileCheck --check-prefix=NEWPM-O3 %s
+// RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fdebug-pass-manager -fprofile-arcs %s 2>&1 | FileCheck --check-prefix=NEWPM %s
+// RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fdebug-pass-manager -fprofile-arcs -O3 %s 2>&1 | FileCheck --check-prefix=NEWPM-O3 %s
 
 // NEWPM-NOT: Running pass
 // NEWPM: Running pass: GCOVProfilerPass

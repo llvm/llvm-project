@@ -82,6 +82,10 @@ static const Expr *peelOffPointerArithmetic(const BinaryOperator *B) {
   return nullptr;
 }
 
+/// \return A subexpression of @c Ex which represents the
+/// expression-of-interest.
+static const Expr *peelOffOuterExpr(const Expr *Ex, const ExplodedNode *N);
+
 /// Given that expression S represents a pointer that would be dereferenced,
 /// try to find a sub-expression from which the pointer came from.
 /// This is used for tracking down origins of a null or undefined value:
@@ -1919,11 +1923,33 @@ TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
       return nullptr;
 
     if (const Expr *Condition = NB->getLastCondition()) {
+
+      // If we can't retrieve a sensible condition, just bail out.
+      const Expr *InnerExpr = peelOffOuterExpr(Condition, N);
+      if (!InnerExpr)
+        return nullptr;
+
+      // If the condition was a function call, we likely won't gain much from
+      // tracking it either. Evidence suggests that it will mostly trigger in
+      // scenarios like this:
+      //
+      //   void f(int *x) {
+      //     x = nullptr;
+      //     if (alwaysTrue()) // We don't need a whole lot of explanation
+      //                       // here, the function name is good enough.
+      //       *x = 5;
+      //   }
+      //
+      // Its easy to create a counterexample where this heuristic would make us
+      // lose valuable information, but we've never really seen one in practice.
+      if (isa<CallExpr>(InnerExpr))
+        return nullptr;
+
       // Keeping track of the already tracked conditions on a visitor level
       // isn't sufficient, because a new visitor is created for each tracked
       // expression, hence the BugReport level set.
       if (BR.addTrackedCondition(N)) {
-        getParentTracker().track(Condition, N,
+        getParentTracker().track(InnerExpr, N,
                                  {bugreporter::TrackingKind::Condition,
                                   /*EnableNullFPSuppression=*/false});
         return constructDebugPieceForTrackedCondition(Condition, N, BRC);
@@ -1938,10 +1964,8 @@ TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
 // Implementation of trackExpressionValue.
 //===----------------------------------------------------------------------===//
 
-/// \return A subexpression of @c Ex which represents the
-/// expression-of-interest.
-static const Expr *peelOffOuterExpr(const Expr *Ex,
-                                    const ExplodedNode *N) {
+static const Expr *peelOffOuterExpr(const Expr *Ex, const ExplodedNode *N) {
+
   Ex = Ex->IgnoreParenCasts();
   if (const auto *FE = dyn_cast<FullExpr>(Ex))
     return peelOffOuterExpr(FE->getSubExpr(), N);

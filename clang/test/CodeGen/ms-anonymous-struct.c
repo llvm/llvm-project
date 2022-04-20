@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-extensions -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fms-extensions -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: %struct.test = type { i32, %struct.nested2, i32 }
 // CHECK: %struct.nested2 = type { i32, %struct.nested1, i32 }

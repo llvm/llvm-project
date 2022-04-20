@@ -999,7 +999,7 @@ def int_eh_unwind_init: Intrinsic<[]>,
 def int_eh_dwarf_cfa  : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty]>;
 
 def int_eh_sjlj_lsda             : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
-def int_eh_sjlj_callsite         : Intrinsic<[], [llvm_i32_ty], [IntrNoMem]>;
+def int_eh_sjlj_callsite         : Intrinsic<[], [llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 
 def int_eh_sjlj_functioncontext : Intrinsic<[], [llvm_ptr_ty]>;
 def int_eh_sjlj_setjmp          : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty]>;

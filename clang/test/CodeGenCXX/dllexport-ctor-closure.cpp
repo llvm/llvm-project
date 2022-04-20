@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-windows-msvc -emit-llvm -std=c++14 \
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-msvc -emit-llvm -std=c++14 \
 // RUN:    -fno-threadsafe-statics -fms-extensions -O1 -mconstructor-aliases \
 // RUN:    -disable-llvm-passes -o - %s -w -fms-compatibility-version=19.00 | \
 // RUN:    FileCheck %s
@@ -88,3 +88,10 @@ CtorClosureOutOfLine::CtorClosureOutOfLine(const HasImplicitDtor2 &v) {}
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"??1HasImplicitDtor1@@QAE@XZ"
 // CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FCtorClosureOutOfLine@@QAEXXZ"
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"??1HasImplicitDtor2@@QAE@XZ"
+
+struct SomeStruct {};
+constexpr SomeStruct kConstexprStruct;
+struct __declspec(dllexport) ConstexprDefaultArg {
+  ConstexprDefaultArg(SomeStruct = kConstexprStruct) {}
+};
+// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FConstexprDefaultArg@@QAEXXZ"

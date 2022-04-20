@@ -10,6 +10,7 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace mlir;
 using namespace presburger;
@@ -17,6 +18,18 @@ using namespace presburger;
 using Direction = Simplex::Direction;
 
 const int nullIndex = std::numeric_limits<int>::max();
+
+// Return a + scale*b;
+LLVM_ATTRIBUTE_UNUSED
+static SmallVector<int64_t, 8>
+scaleAndAddForAssert(ArrayRef<int64_t> a, int64_t scale, ArrayRef<int64_t> b) {
+  assert(a.size() == b.size());
+  SmallVector<int64_t, 8> res;
+  res.reserve(a.size());
+  for (unsigned i = 0, e = a.size(); i < e; ++i)
+    res.push_back(a[i] + scale * b[i]);
+  return res;
+}
 
 SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM, unsigned symbolOffset,
                          unsigned nSymbol)
@@ -143,27 +156,9 @@ unsigned SimplexBase::addRow(ArrayRef<int64_t> coeffs, bool makeRestricted) {
           nRowCoeff * tableau(nRow - 1, col) + idxRowCoeff * tableau(pos, col);
   }
 
-  normalizeRow(nRow - 1);
+  tableau.normalizeRow(nRow - 1);
   // Push to undo log along with the index of the new constraint.
   return con.size() - 1;
-}
-
-/// Normalize the row by removing factors that are common between the
-/// denominator and all the numerator coefficients.
-void SimplexBase::normalizeRow(unsigned row) {
-  int64_t gcd = 0;
-  for (unsigned col = 0; col < nCol; ++col) {
-    gcd = llvm::greatestCommonDivisor(gcd, std::abs(tableau(row, col)));
-    // If the gcd becomes 1 then the row is already normalized.
-    if (gcd == 1)
-      return;
-  }
-
-  // Note that the gcd can never become zero since the first element of the row,
-  // the denominator, is non-zero.
-  assert(gcd != 0);
-  for (unsigned col = 0; col < nCol; ++col)
-    tableau(row, col) /= gcd;
 }
 
 namespace {
@@ -217,8 +212,10 @@ Direction flippedDirection(Direction direction) {
 /// add these to the set of ignored columns and continue to the next row. If we
 /// run out of rows, then A*y is zero and we are done.
 MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::findRationalLexMin() {
-  if (restoreRationalConsistency().failed())
+  if (restoreRationalConsistency().failed()) {
+    markEmpty();
     return OptimumKind::Empty;
+  }
   return getRationalSample();
 }
 
@@ -336,6 +333,14 @@ SymbolicLexSimplex::getSymbolicSampleNumerator(unsigned row) const {
   return sample;
 }
 
+SmallVector<int64_t, 8>
+SymbolicLexSimplex::getSymbolicSampleIneq(unsigned row) const {
+  SmallVector<int64_t, 8> sample = getSymbolicSampleNumerator(row);
+  // The inequality is equivalent to the GCD-normalized one.
+  normalizeRange(sample);
+  return sample;
+}
+
 void LexSimplexBase::appendSymbol() {
   appendVariable();
   swapColumns(3 + nSymbol, nCol - 1);
@@ -354,8 +359,8 @@ bool SymbolicLexSimplex::isSymbolicSampleIntegral(unsigned row) const {
          isRangeDivisibleBy(tableau.getRow(row).slice(3, nSymbol), denom);
 }
 
-/// This proceeds similarly to LexSimplex::addCut(). We are given a row that has
-/// a symbolic sample value with fractional coefficients.
+/// This proceeds similarly to LexSimplexBase::addCut(). We are given a row that
+/// has a symbolic sample value with fractional coefficients.
 ///
 /// Let the row be
 /// (c + coeffM*M + sum_i a_i*s_i + sum_j b_j*y_j)/d,
@@ -371,10 +376,11 @@ bool SymbolicLexSimplex::isSymbolicSampleIntegral(unsigned row) const {
 /// sum_i (b_i%d)y_i = ((-c%d) + sum_i (-a_i%d)s_i)%d + k*d for some integer k
 ///
 /// where we take a modulo of the whole symbolic expression on the right to
-/// bring it into the range [0, d - 1]. Therefore, as in LexSimplex::addCut,
+/// bring it into the range [0, d - 1]. Therefore, as in addCut(),
 /// k is the quotient on dividing the LHS by d, and since LHS >= 0, we have
-/// k >= 0 as well. We realize the modulo of the symbolic expression by adding a
-/// division variable
+/// k >= 0 as well. If all the a_i are divisible by d, then we can add the
+/// constraint directly.  Otherwise, we realize the modulo of the symbolic
+/// expression by adding a division variable
 ///
 /// q = ((-c%d) + sum_i (-a_i%d)s_i)/d
 ///
@@ -388,17 +394,24 @@ bool SymbolicLexSimplex::isSymbolicSampleIntegral(unsigned row) const {
 /// column.
 LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
   int64_t d = tableau(row, 0);
+  if (isRangeDivisibleBy(tableau.getRow(row).slice(3, nSymbol), d)) {
+    // The coefficients of symbols in the symbol numerator are divisible
+    // by the denominator, so we can add the constraint directly,
+    // i.e., ignore the symbols and add a regular cut as in addCut().
+    return addCut(row);
+  }
 
-  // Add the division variable `q` described above to the symbol domain.
-  // q = ((-c%d) + sum_i (-a_i%d)s_i)/d.
-  SmallVector<int64_t, 8> domainDivCoeffs;
-  domainDivCoeffs.reserve(nSymbol + 1);
+  // Construct the division variable `q = ((-c%d) + sum_i (-a_i%d)s_i)/d`.
+  SmallVector<int64_t, 8> divCoeffs;
+  divCoeffs.reserve(nSymbol + 1);
+  int64_t divDenom = d;
   for (unsigned col = 3; col < 3 + nSymbol; ++col)
-    domainDivCoeffs.push_back(mod(-tableau(row, col), d)); // (-a_i%d)s_i
-  domainDivCoeffs.push_back(mod(-tableau(row, 1), d));     // -c%d.
+    divCoeffs.push_back(mod(-tableau(row, col), divDenom)); // (-a_i%d)s_i
+  divCoeffs.push_back(mod(-tableau(row, 1), divDenom));     // -c%d.
+  normalizeDiv(divCoeffs, divDenom);
 
-  domainSimplex.addDivisionVariable(domainDivCoeffs, d);
-  domainPoly.addLocalFloorDiv(domainDivCoeffs, d);
+  domainSimplex.addDivisionVariable(divCoeffs, divDenom);
+  domainPoly.addLocalFloorDiv(divCoeffs, divDenom);
 
   // Update `this` to account for the additional symbol we just added.
   appendSymbol();
@@ -463,7 +476,7 @@ Optional<unsigned> SymbolicLexSimplex::maybeGetAlwaysViolatedRow() {
   for (unsigned row = 0; row < nRow; ++row) {
     if (tableau(row, 2) > 0)
       continue;
-    if (domainSimplex.isSeparateInequality(getSymbolicSampleNumerator(row))) {
+    if (domainSimplex.isSeparateInequality(getSymbolicSampleIneq(row))) {
       // Sample numerator always takes negative values in the symbol domain.
       return row;
     }
@@ -539,7 +552,7 @@ SymbolicLexMin SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
         assert(tableau(splitRow, 2) == 0 &&
                "Non-branching pivots should have been handled already!");
 
-        symbolicSample = getSymbolicSampleNumerator(splitRow);
+        symbolicSample = getSymbolicSampleIneq(splitRow);
         if (domainSimplex.isRedundantInequality(symbolicSample))
           continue;
 
@@ -617,7 +630,8 @@ SymbolicLexMin SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
       assert(u.orientation == Orientation::Row &&
              "The split row should have been returned to row orientation!");
       SmallVector<int64_t, 8> splitIneq =
-          getComplementIneq(getSymbolicSampleNumerator(u.pos));
+          getComplementIneq(getSymbolicSampleIneq(u.pos));
+      normalizeRange(splitIneq);
       if (moveRowUnknownToColumn(u.pos).failed()) {
         // The unknown can't be made non-negative; return.
         --level;
@@ -666,16 +680,16 @@ LogicalResult LexSimplex::restoreRationalConsistency() {
 }
 
 // Move the row unknown to column orientation while preserving lexicopositivity
-// of the basis transform. The sample value of the row must be negative.
+// of the basis transform. The sample value of the row must be non-positive.
 //
 // We only consider pivots where the pivot element is positive. Suppose no such
 // pivot exists, i.e., some violated row has no positive coefficient for any
 // basis unknown. The row can be represented as (s + c_1*u_1 + ... + c_n*u_n)/d,
 // where d is the denominator, s is the sample value and the c_i are the basis
-// coefficients. Since any feasible assignment of the basis satisfies u_i >= 0
-// for all i, and we have s < 0 as well as c_i < 0 for all i, any feasible
-// assignment would violate this row and therefore the constraints have no
-// solution.
+// coefficients. If s != 0, then since any feasible assignment of the basis
+// satisfies u_i >= 0 for all i, and we have s < 0 as well as c_i < 0 for all i,
+// any feasible assignment would violate this row and therefore the constraints
+// have no solution.
 //
 // We can preserve lexicopositivity by picking the pivot column with positive
 // pivot element that makes the lexicographically smallest change to the sample
@@ -713,10 +727,10 @@ LogicalResult LexSimplex::restoreRationalConsistency() {
 // B'.col(k) = B.col(k) - B(i,k) * B.col(j) / B(i,j) for k != j
 // and similarly, s' = s - s_i * B.col(j) / B(i,j).
 //
-// Since the row is violated, we have s_i < 0, so the change in sample value
-// when pivoting with column a is lexicographically smaller than that when
-// pivoting with column b iff B.col(a) / B(i, a) is lexicographically smaller
-// than B.col(b) / B(i, b).
+// If s_i == 0, then the sample value remains unchanged. Otherwise, if s_i < 0,
+// the change in sample value when pivoting with column a is lexicographically
+// smaller than that when pivoting with column b iff B.col(a) / B(i, a) is
+// lexicographically smaller than B.col(b) / B(i, b).
 //
 // Since B(i, j) > 0, column j remains lexicopositive.
 //
@@ -736,10 +750,8 @@ LogicalResult LexSimplexBase::moveRowUnknownToColumn(unsigned row) {
         !maybeColumn ? col : getLexMinPivotColumn(row, *maybeColumn, col);
   }
 
-  if (!maybeColumn) {
-    markEmpty();
+  if (!maybeColumn)
     return failure();
-  }
 
   pivot(row, *maybeColumn);
   return success();
@@ -922,7 +934,7 @@ void SimplexBase::pivot(unsigned pivotRow, unsigned pivotCol) {
       tableau(pivotRow, col) = -tableau(pivotRow, col);
     }
   }
-  normalizeRow(pivotRow);
+  tableau.normalizeRow(pivotRow);
 
   for (unsigned row = 0; row < nRow; ++row) {
     if (row == pivotRow)
@@ -938,7 +950,7 @@ void SimplexBase::pivot(unsigned pivotRow, unsigned pivotCol) {
                         tableau(row, pivotCol) * tableau(pivotRow, j);
     }
     tableau(row, pivotCol) *= tableau(pivotRow, pivotCol);
-    normalizeRow(row);
+    tableau.normalizeRow(row);
   }
 }
 
@@ -1678,7 +1690,7 @@ public:
       else if (simplex.con[i + 1].orientation == Orientation::Column)
         dual.push_back(simplex.tableau(row, simplex.con[i + 1].pos));
       else
-        dual.push_back(0);
+        dual.emplace_back(0);
     }
     return *maybeWidth;
   }
@@ -1705,7 +1717,7 @@ private:
     coeffs.reserve(2 * dir.size());
     for (int64_t coeff : dir)
       coeffs.push_back(-coeff);
-    coeffs.push_back(0); // constant term
+    coeffs.emplace_back(0); // constant term
     return coeffs;
   }
 
@@ -1716,17 +1728,6 @@ private:
   /// A stack of snapshots, used for rolling back.
   SmallVector<unsigned, 8> snapshotStack;
 };
-
-// Return a + scale*b;
-static SmallVector<int64_t, 8> scaleAndAdd(ArrayRef<int64_t> a, int64_t scale,
-                                           ArrayRef<int64_t> b) {
-  assert(a.size() == b.size());
-  SmallVector<int64_t, 8> res;
-  res.reserve(a.size());
-  for (unsigned i = 0, e = a.size(); i < e; ++i)
-    res.push_back(a[i] + scale * b[i]);
-  return res;
-}
 
 /// Reduce the basis to try and find a direction in which the polytope is
 /// "thin". This only works for bounded polytopes.
@@ -1845,11 +1846,11 @@ void Simplex::reduceBasis(Matrix &basis, unsigned level) {
       // computed value of u is really the minimizer.
 
       // Check the value at u - 1.
-      assert(gbrSimplex.computeWidth(scaleAndAdd(
+      assert(gbrSimplex.computeWidth(scaleAndAddForAssert(
                  basis.getRow(i + 1), -1, basis.getRow(i))) >= widthI[j] &&
              "Computed u value does not minimize the width!");
       // Check the value at u + 1.
-      assert(gbrSimplex.computeWidth(scaleAndAdd(
+      assert(gbrSimplex.computeWidth(scaleAndAddForAssert(
                  basis.getRow(i + 1), +1, basis.getRow(i))) >= widthI[j] &&
              "Computed u value does not minimize the width!");
 
@@ -1985,7 +1986,7 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
       // generalized basis reduction.
       SmallVector<int64_t, 8> basisCoeffs =
           llvm::to_vector<8>(basis.getRow(level));
-      basisCoeffs.push_back(0);
+      basisCoeffs.emplace_back(0);
 
       MaybeOptimum<int64_t> minRoundedUp, maxRoundedDown;
       std::tie(minRoundedUp, maxRoundedDown) =
@@ -2015,7 +2016,7 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
       if (*minRoundedUp < *maxRoundedDown) {
         reduceBasis(basis, level);
         basisCoeffs = llvm::to_vector<8>(basis.getRow(level));
-        basisCoeffs.push_back(0);
+        basisCoeffs.emplace_back(0);
         std::tie(minRoundedUp, maxRoundedDown) =
             computeIntegerBounds(basisCoeffs);
       }
@@ -2038,7 +2039,7 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
     // case this has no effect)
     rollback(snapshotStack.back());
     int64_t nextValue = nextValueStack.back();
-    nextValueStack.back()++;
+    ++nextValueStack.back();
     if (nextValue > upperBoundStack.back()) {
       // We have exhausted the range and found no solution. Pop the stack and
       // return up a level.

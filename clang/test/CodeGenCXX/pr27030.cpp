@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s
 struct A {};
 struct B : A {};
 extern "C" {

@@ -68,7 +68,6 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   bool IsGraphics;
   bool HasFP32Denormals;
   bool HasFP64FP16Denormals;
-  unsigned MaxVGPRs;
 
   static const FeatureBitset InlineFeatureIgnoreList;
 
@@ -113,8 +112,6 @@ public:
     return TTI::PSK_FastHardware;
   }
 
-  unsigned getHardwareNumberOfRegisters(bool Vector) const;
-  unsigned getNumberOfRegisters(bool Vector) const;
   unsigned getNumberOfRegisters(unsigned RCID) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
@@ -135,15 +132,14 @@ public:
                                     unsigned AddrSpace) const;
   Type *getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
                                   unsigned SrcAddrSpace, unsigned DestAddrSpace,
-                                  unsigned SrcAlign, unsigned DestAlign) const;
+                                  unsigned SrcAlign, unsigned DestAlign,
+                                  Optional<uint32_t> AtomicElementSize) const;
 
-  void getMemcpyLoopResidualLoweringType(SmallVectorImpl<Type *> &OpsOut,
-                                         LLVMContext &Context,
-                                         unsigned RemainingBytes,
-                                         unsigned SrcAddrSpace,
-                                         unsigned DestAddrSpace,
-                                         unsigned SrcAlign,
-                                         unsigned DestAlign) const;
+  void getMemcpyLoopResidualLoweringType(
+      SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
+      unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
+      unsigned SrcAlign, unsigned DestAlign,
+      Optional<uint32_t> AtomicCpySize) const;
   unsigned getMaxInterleaveFactor(unsigned VF);
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;

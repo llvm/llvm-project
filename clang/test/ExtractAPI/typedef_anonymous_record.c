@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
-// RUN: %t/reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/reference.output.json.in >> %t/reference.output.json
 // RUN: %clang -extract-api --product-name=TypedefChain -target arm64-apple-macosx \
 // RUN: -x objective-c-header %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
@@ -85,6 +85,12 @@ typedef MyStructStruct MyStructStructStruct;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyStruct"
+          }
+        ],
         "title": "MyStruct"
       },
       "pathComponents": [
@@ -132,6 +138,12 @@ typedef MyStructStruct MyStructStructStruct;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyStructStruct"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -186,6 +198,12 @@ typedef MyStructStruct MyStructStructStruct;
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyStructStructStruct"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

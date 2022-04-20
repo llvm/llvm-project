@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
-// RUN: %t/reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/reference.output.json.in >> %t/reference.output.json
 // RUN: %clang -extract-api --product-name=Macros -target arm64-apple-macosx \
 // RUN: -x objective-c-header %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
@@ -80,6 +80,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "HELLO"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -124,6 +130,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "WORLD"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -180,6 +192,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MACRO_FUN"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -252,6 +270,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "FUN"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -308,6 +332,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "FUNC99"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -364,6 +394,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "FUNGNU"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

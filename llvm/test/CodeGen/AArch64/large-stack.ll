@@ -21,7 +21,7 @@ entry:
 
 declare dso_local i32 @printf(i8*, ...)
 
-attributes #0 = { noinline optnone "frame-pointer"="all" }
+attributes #0 = { noinline optnone "frame-pointer"="all" uwtable }
 
 ; CHECK:                  stp	x[[SPILL_REG1:[0-9]+]], x[[SPILL_REG2:[0-9]+]], [sp, #-[[SPILL_OFFSET1:[0-9]+]]]
 ; CHECK-NEXT:             .cfi_def_cfa_offset [[SPILL_OFFSET1]]
@@ -48,5 +48,10 @@ attributes #0 = { noinline optnone "frame-pointer"="all" }
 ; CHECK-COUNT-128:        add	sp, sp, #[[STACK1]], lsl #12
 ; CHECK-NEXT:             add	sp, sp, #[[STACK2]], lsl #12
 ; CHECK-NEXT:             add	sp, sp, #[[STACK3]]
+; CHECK-NEXT:	            .cfi_def_cfa wsp, [[SPILL_OFFSET1]]
 ; CHECK-NEXT:             ldr	x[[SPILL_REG3]], [sp, #[[SPILL_OFFSET2]]]
 ; CHECK-NEXT:             ldp	x[[SPILL_REG1]], x[[SPILL_REG2]], [sp], #[[SPILL_OFFSET1]]
+; CHECK-NEXT:           	.cfi_def_cfa_offset 0
+; CHECK-NEXT:           	.cfi_restore w[[SPILL_REG3]]
+; CHECK-NEXT:           	.cfi_restore w[[SPILL_REG2]]
+; CHECK-NEXT:           	.cfi_restore w[[SPILL_REG1]]

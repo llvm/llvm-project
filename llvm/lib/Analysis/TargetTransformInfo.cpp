@@ -626,9 +626,8 @@ Optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
   return TTIImpl->getVScaleForTuning();
 }
 
-bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  return TTIImpl->shouldMaximizeVectorBandwidth(K);
+bool TargetTransformInfo::shouldMaximizeVectorBandwidth() const {
+  return TTIImpl->shouldMaximizeVectorBandwidth();
 }
 
 ElementCount TargetTransformInfo::getMinimumVF(unsigned ElemWidth,
@@ -976,18 +975,21 @@ Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
 
 Type *TargetTransformInfo::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
-    unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign) const {
+    unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+    Optional<uint32_t> AtomicElementSize) const {
   return TTIImpl->getMemcpyLoopLoweringType(Context, Length, SrcAddrSpace,
-                                            DestAddrSpace, SrcAlign, DestAlign);
+                                            DestAddrSpace, SrcAlign, DestAlign,
+                                            AtomicElementSize);
 }
 
 void TargetTransformInfo::getMemcpyLoopResidualLoweringType(
     SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
     unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-    unsigned SrcAlign, unsigned DestAlign) const {
-  TTIImpl->getMemcpyLoopResidualLoweringType(OpsOut, Context, RemainingBytes,
-                                             SrcAddrSpace, DestAddrSpace,
-                                             SrcAlign, DestAlign);
+    unsigned SrcAlign, unsigned DestAlign,
+    Optional<uint32_t> AtomicCpySize) const {
+  TTIImpl->getMemcpyLoopResidualLoweringType(
+      OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
+      DestAlign, AtomicCpySize);
 }
 
 bool TargetTransformInfo::areInlineCompatible(const Function *Caller,

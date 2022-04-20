@@ -23,7 +23,7 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
   parser::ContextualMessages messages{
       *context_.location(), &context_.messages()};
   for (const parser::PointerObject &pointerObject : nullifyStmt.v) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Name &name) {
               const Symbol *symbol{name.symbol};
@@ -40,7 +40,7 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
               }
             },
             [&](const parser::StructureComponent &structureComponent) {
-              if (const auto *checkedExpr{GetExpr(pointerObject)}) {
+              if (const auto *checkedExpr{GetExpr(context_, pointerObject)}) {
                 if (!IsPointer(*structureComponent.component.symbol)) { // C951
                   messages.Say(structureComponent.component.source,
                       "component in NULLIFY statement must have the POINTER attribute"_err_en_US);

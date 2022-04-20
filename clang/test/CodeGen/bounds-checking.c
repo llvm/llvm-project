@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -fsanitize=local-bounds -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fsanitize=local-bounds -fexperimental-new-pass-manager -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s --check-prefixes=CHECK,NONLOCAL
-// RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -fexperimental-new-pass-manager -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s --check-prefixes=CHECK,NONLOCAL
 //
 // REQUIRES: x86-registered-target
 
@@ -20,6 +18,7 @@ void f2(void) {
   a[1] = 42;
 
 #ifndef NO_DYNAMIC
+  extern void *malloc(__typeof__(sizeof(0)));
   short *b = malloc(64);
   b[5] = *a + a[1] + 2;
 #endif

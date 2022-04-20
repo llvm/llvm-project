@@ -1,44 +1,44 @@
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
 
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
-// RUN: %clang_cc1 -triple thumbv7-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
 
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
 
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
-// RUN: %clang_cc1 -triple i686-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
 
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
 
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
-// RUN: %clang_cc1 -triple x86_64-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DECL -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DECL
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_IN_BLOCKS_DEFN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-IN-BLOCKS-DEFN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLOCKS_NOT_IN_BLOCKS_EXTERN -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_EXTERN_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-EXTERN-DLLIMPORT
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fblocks -fdeclspec -DBLCOKS_NOT_IN_BLOCKS_DLLIMPORT -Os -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-BLOCKS-NOT-IN-BLOCKS-DLLIMPORT
 
 void *_Block_copy(void *);
 

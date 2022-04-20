@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
-// RUN: %t/reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/reference.output.json.in >> %t/reference.output.json
 // RUN: %clang -extract-api --product-name=GlobalRecord -target arm64-apple-macosx \
 // RUN: %t/input1.h %t/input2.h %t/input3.h -o %t/output.json | FileCheck -allow-empty %s
 
@@ -88,6 +88,12 @@ char unavailable __attribute__((unavailable));
         "uri": "file://INPUT_DIR/input1.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "num"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -177,7 +183,7 @@ char unavailable __attribute__((unavailable));
         },
         {
           "kind": "text",
-          "spelling": " *"
+          "spelling": " * "
         },
         {
           "kind": "internalParam",
@@ -333,7 +339,7 @@ char unavailable __attribute__((unavailable));
               },
               {
                 "kind": "text",
-                "spelling": " *"
+                "spelling": " * "
               },
               {
                 "kind": "internalParam",
@@ -367,6 +373,12 @@ char unavailable __attribute__((unavailable));
         "uri": "file://INPUT_DIR/input2.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "add"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

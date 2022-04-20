@@ -23,7 +23,7 @@
 #define BUG_REPORT_URL "https://github.com/llvm/llvm-project/issues/"
 
 /* Default to -fPIE and -pie on Linux. */
-#define CLANG_DEFAULT_PIE_ON_LINUX 0
+#define CLANG_DEFAULT_PIE_ON_LINUX 1
 
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER ""
@@ -105,6 +105,9 @@
 
 /* Spawn a new process clang.exe for the CC1 tool invocation, when necessary */
 #define CLANG_SPAWN_CC1 0
+
+/* Whether to enable opaque pointers by default */
+#define CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL 1
 
 /* Directly provide definitions here behind platform preprocessor definitions.
  * The preprocessor conditions are sufficient to handle all of the configuration

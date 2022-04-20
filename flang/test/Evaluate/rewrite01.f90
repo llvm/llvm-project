@@ -57,6 +57,13 @@ subroutine size_test(x, n, m)
 end subroutine
 
 subroutine shape_test(x, n, m)
+  abstract interface
+    function foo(n)
+      integer, intent(in) :: n
+      real, pointer :: foo(:,:)
+    end function
+  end interface
+  procedure(foo), pointer :: pf
   integer :: x(n, m)
   !CHECK: PRINT *, [INTEGER(4)::int(size(x,dim=1,kind=8),kind=4),int(size(x,dim=2,kind=8),kind=4)]
   print *, shape(x)
@@ -66,6 +73,8 @@ subroutine shape_test(x, n, m)
   print *, shape(returns_array_2(m))
   !CHECK: PRINT *, [INTEGER(8)::42_8]
   print *, shape(returns_array_3(), kind=8)
+  !CHECK: PRINT *, 2_4
+  print *, rank(pf(1))
 end subroutine
 
 subroutine lbound_test(x, n, m)

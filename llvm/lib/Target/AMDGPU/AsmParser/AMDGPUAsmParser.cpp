@@ -818,6 +818,7 @@ public:
   }
 
   bool isSWaitCnt() const;
+  bool isDepCtr() const;
   bool isHwreg() const;
   bool isSendMsg() const;
   bool isSwizzle() const;
@@ -1543,6 +1544,11 @@ public:
 
   bool parseCnt(int64_t &IntVal);
   OperandMatchResultTy parseSWaitCntOps(OperandVector &Operands);
+
+  bool parseDepCtr(int64_t &IntVal, unsigned &Mask);
+  void depCtrError(SMLoc Loc, int ErrorId, StringRef DepCtrName);
+  OperandMatchResultTy parseDepCtrOps(OperandVector &Operands);
+
   OperandMatchResultTy parseHwreg(OperandVector &Operands);
 
 private:
@@ -1588,7 +1594,7 @@ private:
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
   bool validateMovrels(const MCInst &Inst, const OperandVector &Operands);
-  bool validateMIMGDataSize(const MCInst &Inst);
+  Optional<StringRef> validateMIMGDataSize(const MCInst &Inst);
   bool validateMIMGAddrSize(const MCInst &Inst);
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst);
@@ -3484,13 +3490,13 @@ bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {
   return true;
 }
 
-bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
+Optional<StringRef> AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
 
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
   if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
-    return true;
+    return None;
 
   int VDataIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
   int DMaskIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dmask);
@@ -3499,7 +3505,7 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   assert(VDataIdx != -1);
 
   if (DMaskIdx == -1 || TFEIdx == -1) // intersect_ray
-    return true;
+    return None;
 
   unsigned VDataSize = AMDGPU::getRegOperandSize(getMRI(), Desc, VDataIdx);
   unsigned TFESize = (TFEIdx != -1 && Inst.getOperand(TFEIdx).getImm()) ? 1 : 0;
@@ -3507,15 +3513,22 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   if (DMask == 0)
     DMask = 1;
 
+  bool isPackedD16 = false;
   unsigned DataSize =
     (Desc.TSFlags & SIInstrFlags::Gather4) ? 4 : countPopulation(DMask);
   if (hasPackedD16()) {
     int D16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::d16);
-    if (D16Idx >= 0 && Inst.getOperand(D16Idx).getImm())
+    isPackedD16 = D16Idx >= 0;
+    if (isPackedD16 && Inst.getOperand(D16Idx).getImm())
       DataSize = (DataSize + 1) / 2;
   }
 
-  return (VDataSize / 4) == DataSize + TFESize;
+  if ((VDataSize / 4) == DataSize + TFESize)
+    return None;
+
+  return StringRef(isPackedD16
+                       ? "image data size does not match dmask, d16 and tfe"
+                       : "image data size does not match dmask and tfe");
 }
 
 bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
@@ -4440,9 +4453,8 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
           "invalid dim; must be MSAA type");
     return false;
   }
-  if (!validateMIMGDataSize(Inst)) {
-    Error(IDLoc,
-      "image data size does not match dmask and tfe");
+  if (auto ErrMsg = validateMIMGDataSize(Inst)) {
+    Error(IDLoc, *ErrMsg);
     return false;
   }
   if (!validateMIMGAddrSize(Inst)) {
@@ -6332,6 +6344,91 @@ bool
 AMDGPUOperand::isSWaitCnt() const {
   return isImm();
 }
+
+//===----------------------------------------------------------------------===//
+// DepCtr
+//===----------------------------------------------------------------------===//
+
+void AMDGPUAsmParser::depCtrError(SMLoc Loc, int ErrorId,
+                                  StringRef DepCtrName) {
+  switch (ErrorId) {
+  case OPR_ID_UNKNOWN:
+    Error(Loc, Twine("invalid counter name ", DepCtrName));
+    return;
+  case OPR_ID_UNSUPPORTED:
+    Error(Loc, Twine(DepCtrName, " is not supported on this GPU"));
+    return;
+  case OPR_ID_DUPLICATE:
+    Error(Loc, Twine("duplicate counter name ", DepCtrName));
+    return;
+  case OPR_VAL_INVALID:
+    Error(Loc, Twine("invalid value for ", DepCtrName));
+    return;
+  default:
+    assert(false);
+  }
+}
+
+bool AMDGPUAsmParser::parseDepCtr(int64_t &DepCtr, unsigned &UsedOprMask) {
+
+  using namespace llvm::AMDGPU::DepCtr;
+
+  SMLoc DepCtrLoc = getLoc();
+  StringRef DepCtrName = getTokenStr();
+
+  if (!skipToken(AsmToken::Identifier, "expected a counter name") ||
+      !skipToken(AsmToken::LParen, "expected a left parenthesis"))
+    return false;
+
+  int64_t ExprVal;
+  if (!parseExpr(ExprVal))
+    return false;
+
+  unsigned PrevOprMask = UsedOprMask;
+  int CntVal = encodeDepCtr(DepCtrName, ExprVal, UsedOprMask, getSTI());
+
+  if (CntVal < 0) {
+    depCtrError(DepCtrLoc, CntVal, DepCtrName);
+    return false;
+  }
+
+  if (!skipToken(AsmToken::RParen, "expected a closing parenthesis"))
+    return false;
+
+  if (trySkipToken(AsmToken::Amp) || trySkipToken(AsmToken::Comma)) {
+    if (isToken(AsmToken::EndOfStatement)) {
+      Error(getLoc(), "expected a counter name");
+      return false;
+    }
+  }
+
+  unsigned CntValMask = PrevOprMask ^ UsedOprMask;
+  DepCtr = (DepCtr & ~CntValMask) | CntVal;
+  return true;
+}
+
+OperandMatchResultTy AMDGPUAsmParser::parseDepCtrOps(OperandVector &Operands) {
+  using namespace llvm::AMDGPU::DepCtr;
+
+  int64_t DepCtr = getDefaultDepCtrEncoding(getSTI());
+  SMLoc Loc = getLoc();
+
+  if (isToken(AsmToken::Identifier) && peekToken().is(AsmToken::LParen)) {
+    unsigned UsedOprMask = 0;
+    while (!isToken(AsmToken::EndOfStatement)) {
+      if (!parseDepCtr(DepCtr, UsedOprMask))
+        return MatchOperand_ParseFail;
+    }
+  } else {
+    if (!parseExpr(DepCtr))
+      return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, DepCtr, Loc));
+  return MatchOperand_Success;
+}
+
+bool AMDGPUOperand::isDepCtr() const { return isS16Imm(); }
 
 //===----------------------------------------------------------------------===//
 // hwreg

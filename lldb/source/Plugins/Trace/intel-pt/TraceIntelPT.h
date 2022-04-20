@@ -9,7 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPT_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPT_H
 
-#include "IntelPTDecoder.h"
+#include "TaskTimer.h"
+#include "ThreadDecoder.h"
 #include "TraceIntelPTSessionFileParser.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
@@ -72,7 +73,7 @@ public:
 
   void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) override;
 
-  llvm::Optional<size_t> GetRawTraceSize(Thread &thread);
+  llvm::Expected<size_t> GetRawTraceSize(Thread &thread);
 
   void DoRefreshLiveProcessState(
       llvm::Expected<TraceGetStateResponse> state) override;
@@ -137,8 +138,9 @@ public:
                     StructuredData::ObjectSP configuration =
                         StructuredData::ObjectSP()) override;
 
-  /// Get the thread buffer content for a live thread
-  llvm::Expected<std::vector<uint8_t>> GetLiveThreadBuffer(lldb::tid_t tid);
+  /// See \a Trace::OnThreadBinaryDataRead().
+  llvm::Error OnThreadBufferRead(lldb::tid_t tid,
+                                 OnBinaryDataReadCallback callback);
 
   llvm::Expected<pt_cpu> GetCPUInfo();
 
@@ -148,6 +150,10 @@ public:
   ///     The current traced live process. If it's not a live process,
   ///     return \a nullptr.
   Process *GetLiveProcess();
+
+  /// \return
+  ///     The timer object for this trace.
+  TaskTimer &GetTimer();
 
 private:
   friend class TraceIntelPTSessionFileParser;
@@ -183,6 +189,7 @@ private:
   std::map<lldb::tid_t, std::unique_ptr<ThreadDecoder>> m_thread_decoders;
   /// Error gotten after a failed live process update, if any.
   llvm::Optional<std::string> m_live_refresh_error;
+  TaskTimer m_task_timer;
 };
 
 } // namespace trace_intel_pt

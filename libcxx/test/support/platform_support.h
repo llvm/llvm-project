@@ -28,6 +28,7 @@
 #    define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO8859-1"
 #    define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO8859-2"
 #endif
+#define LOCALE_ja_JP_UTF_8     "ja_JP.UTF-8"
 #define LOCALE_ru_RU_UTF_8     "ru_RU.UTF-8"
 #define LOCALE_zh_CN_UTF_8     "zh_CN.UTF-8"
 
@@ -38,6 +39,8 @@
 #include <string>
 #if defined(_WIN32)
 #   include <io.h> // _mktemp_s
+#   include <fcntl.h> // _O_EXCL, ...
+#   include <sys/stat.h> // _S_IREAD, ...
 #else
 #   include <unistd.h> // close
 #endif
@@ -53,9 +56,18 @@ inline
 std::string get_temp_file_name()
 {
 #if defined(_WIN32)
-    char Name[] = "libcxx.XXXXXX";
-    if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
-    return Name;
+    while (true) {
+        char Name[] = "libcxx.XXXXXX";
+        if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
+        int fd = _open(Name, _O_RDWR | _O_CREAT | _O_EXCL, _S_IREAD | _S_IWRITE);
+        if (fd != -1) {
+            _close(fd);
+            return Name;
+        }
+        if (errno == EEXIST)
+            continue;
+        abort();
+    }
 #else
     std::string Name;
     int FD = -1;

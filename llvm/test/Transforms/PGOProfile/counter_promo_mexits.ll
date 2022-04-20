@@ -1,4 +1,3 @@
-; RUN: opt < %s -pgo-instr-gen -instrprof -do-counter-promotion=true -speculative-counter-promotion-max-exiting=3 -S | FileCheck --check-prefix=PROMO %s
 ; RUN: opt < %s --passes=pgo-instr-gen,instrprof -do-counter-promotion=true -speculative-counter-promotion-max-exiting=3 -S | FileCheck --check-prefix=PROMO %s
 
 @g = common local_unnamed_addr global i32 0, align 4

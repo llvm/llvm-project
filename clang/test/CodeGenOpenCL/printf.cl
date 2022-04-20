@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -cl-std=CL1.2 -cl-ext=-+cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=FP64,ALL %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -cl-std=CL1.2 -cl-ext=-cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=NOFP64,ALL %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -cl-std=CL3.0 -cl-ext=+__opencl_c_fp64,+cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=FP64,ALL %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -cl-std=CL3.0 -cl-ext=-__opencl_c_fp64,-cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=NOFP64,ALL %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -cl-std=clc++2021 -cl-ext=+__opencl_c_fp64,+cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=FP64,ALL %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -cl-std=clc++2021 -cl-ext=-__opencl_c_fp64,-cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=NOFP64,ALL %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -cl-std=CL1.2 -cl-ext=-+cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=FP64,ALL %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -cl-std=CL1.2 -cl-ext=-cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=NOFP64,ALL %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -cl-std=CL3.0 -cl-ext=+__opencl_c_fp64,+cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=FP64,ALL %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -cl-std=CL3.0 -cl-ext=-__opencl_c_fp64,-cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=NOFP64,ALL %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -cl-std=clc++2021 -cl-ext=+__opencl_c_fp64,+cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=FP64,ALL %s
+// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -cl-std=clc++2021 -cl-ext=-__opencl_c_fp64,-cl_khr_fp64 -triple spir-unknown-unknown -disable-llvm-passes -emit-llvm -o - %s | FileCheck -check-prefixes=NOFP64,ALL %s
 
 typedef __attribute__((ext_vector_type(2))) float float2;
 typedef __attribute__((ext_vector_type(2))) half half2;

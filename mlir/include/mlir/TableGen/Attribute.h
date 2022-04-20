@@ -144,9 +144,6 @@ public:
   explicit EnumAttrCase(const llvm::Record *record);
   explicit EnumAttrCase(const llvm::DefInit *init);
 
-  // Returns true if this EnumAttrCase is backed by a StringAttr.
-  bool isStrCase() const;
-
   // Returns the symbol of this enum attribute case.
   StringRef getSymbol() const;
 

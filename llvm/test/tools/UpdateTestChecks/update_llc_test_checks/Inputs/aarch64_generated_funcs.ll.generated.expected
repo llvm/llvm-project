@@ -90,9 +90,13 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
 ; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    .cfi_def_cfa wsp, 48
+; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-LABEL: main:
@@ -117,9 +121,13 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    stp w10, w8, [x29, #-12]
-; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    stp w9, w11, [sp, #12]
+; CHECK-NEXT:    .cfi_def_cfa wsp, 48
+; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-LABEL: OUTLINED_FUNCTION_0:

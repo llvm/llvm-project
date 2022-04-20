@@ -19,9 +19,9 @@
 # CHECK:     Processing CFI record at
 # CHECK:       Record is FDE
 # CHECK:         Adding edge at {{.*}} to CIE at: {{.*}}
-# CHECK:         Already has edge at {{.*}} to PC at {{.*}}
+# CHECK:         Existing edge at {{.*}} to PC begin at {{.*}}
 # CHECK:         Adding keep-alive edge from target at {{.*}} to FDE at {{.*}}
-# CHECK:         Already has edge at {{.*}} to LSDA at {{.*}}
+# CHECK:         Existing edge at {{.*}} to LSDA at {{.*}}
 
 	.section	__TEXT,__text,regular,pure_instructions
  	.globl	_main

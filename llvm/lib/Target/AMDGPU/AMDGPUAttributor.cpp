@@ -436,6 +436,12 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         removeAssumedBits(QUEUE_PTR);
     }
 
+    if (funcRetrievesMultigridSyncArg(A)) {
+      assert(!isAssumed(IMPLICIT_ARG_PTR) &&
+             "multigrid_sync_arg needs implicitarg_ptr");
+      removeAssumedBits(MULTIGRID_SYNC_ARG);
+    }
+
     if (funcRetrievesHostcallPtr(A)) {
       assert(!isAssumed(IMPLICIT_ARG_PTR) && "hostcall needs implicitarg_ptr");
       removeAssumedBits(HOSTCALL_PTR);
@@ -531,6 +537,12 @@ private:
     }
 
     return false;
+  }
+
+  bool funcRetrievesMultigridSyncArg(Attributor &A) {
+    auto Pos = llvm::AMDGPU::getMultigridSyncArgImplicitArgPosition();
+    AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesHostcallPtr(Attributor &A) {
@@ -733,7 +745,12 @@ public:
         {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
          &AAAMDFlatWorkGroupSize::ID, &AACallEdges::ID, &AAPointerInfo::ID});
 
-    Attributor A(Functions, InfoCache, CGUpdater, &Allowed);
+    AttributorConfig AC(CGUpdater);
+    AC.Allowed = &Allowed;
+    AC.IsModulePass = true;
+    AC.DefaultInitializeLiveInternals = false;
+
+    Attributor A(Functions, InfoCache, AC);
 
     for (Function &F : M) {
       if (!F.isIntrinsic()) {

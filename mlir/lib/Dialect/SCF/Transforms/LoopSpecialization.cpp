@@ -251,7 +251,7 @@ struct ForLoopSpecialization
 
 struct ForLoopPeeling : public SCFForLoopPeelingBase<ForLoopPeeling> {
   void runOnOperation() override {
-    FuncOp funcOp = getOperation();
+    func::FuncOp funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopPeelingPattern>(ctx, skipPartial);

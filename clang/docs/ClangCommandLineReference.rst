@@ -801,7 +801,7 @@ Generate Interface Stub Files, emit merged text not binary.
 
 Extract API information
 
-.. option:: -fopenmp-new-driver
+.. option:: -fopenmp-new-driver, fno-openmp-new-driver
 
 Use the new driver for OpenMP offloading.
 
@@ -2092,10 +2092,6 @@ Emit OpenMP code only for SIMD-based constructs.
 .. option:: -fopenmp-target-debug, -fno-openmp-target-debug
 
 Enable debugging in the OpenMP offloading device RTL
-
-.. option:: -fopenmp-target-new-runtime, -fno-openmp-target-new-runtime
-
-Use the new bitcode library for OpenMP offloading
 
 .. option:: -fopenmp-offload-mandatory
 

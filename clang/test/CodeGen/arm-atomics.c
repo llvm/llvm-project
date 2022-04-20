@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=thumbv7-none--eabi | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=armv6-none--eabi | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=armv7-unknown-openbsd | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=thumbv7-none--eabi | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=armv6-none--eabi | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=armv7-unknown-openbsd | FileCheck %s
 
 int i;
 long long l;

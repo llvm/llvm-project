@@ -145,9 +145,9 @@ public:
                    FileID PrevFID) override;
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void Ident(SourceLocation Loc, StringRef str) override;
   void PragmaMessage(SourceLocation Loc, StringRef Namespace,
@@ -394,7 +394,7 @@ void PrintPPOutputPPCallbacks::InclusionDirective(
     StringRef FileName,
     bool IsAngled,
     CharSourceRange FilenameRange,
-    const FileEntry *File,
+    Optional<FileEntryRef> File,
     StringRef SearchPath,
     StringRef RelativePath,
     const Module *Imported,

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-feature +avx512f -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-feature +avx512f -o - | FileCheck %s
 
 typedef long long __m128i __attribute__ ((vector_size (16)));
 typedef long long __m256i __attribute__ ((vector_size (32)));

@@ -16,7 +16,8 @@ from mlir import execution_engine
 from mlir import ir
 from mlir import runtime
 from mlir.dialects import sparse_tensor
-from mlir.passmanager import PassManager
+
+from . import mlir_sparse_compiler
 
 # Type aliases for type annotation.
 _SupportFunc = Callable[..., None]
@@ -38,6 +39,13 @@ _ENTRY_NAME = "main"
 def _get_support_lib_name() -> str:
   """Gets the string name for the supporting C shared library."""
   return os.getenv(_SUPPORTLIB_ENV_VAR, _DEFAULT_SUPPORTLIB)
+
+
+@functools.lru_cache()
+def _get_sparse_compiler() -> mlir_sparse_compiler.SparseCompiler:
+  """Gets the MLIR sparse compiler with default setting."""
+  return mlir_sparse_compiler.SparseCompiler(
+      options="", opt_level=_OPT_LEVEL, shared_libs=[_get_support_lib_name()])
 
 
 def _record_support_funcs(
@@ -184,10 +192,7 @@ def compile_and_build_engine(
     A JIT execution engine for the MLIR module.
 
   """
-  pipeline = f"sparse-compiler"
-  PassManager.parse(pipeline).run(module)
-  return execution_engine.ExecutionEngine(
-      module, opt_level=_OPT_LEVEL, shared_libs=[_get_support_lib_name()])
+  return _get_sparse_compiler().compile_and_jit(module)
 
 
 class _SparseTensorDescriptor(ctypes.Structure):

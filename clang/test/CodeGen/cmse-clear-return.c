@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -triple thumbv8m.main   -O0 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.main   -O0 -mcmse -S -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-LE,CHECK-LE-NOPT,CHECK-SOFT
-// RUN: %clang_cc1 -triple thumbebv8m.main -O0 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbebv8m.main -O0 -mcmse -S -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-BE,CHECK-SOFT
-// RUN: %clang_cc1 -triple thumbv8m.main   -O2 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.main   -O2 -mcmse -S -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-LE,CHECK-LE-OPT,CHECK-SOFT
-// RUN: %clang_cc1 -triple thumbebv8m.main -O2 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbebv8m.main -O2 -mcmse -S -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-BE,CHECK-BE-OPT,CHECK-SOFT
-// RUN: %clang_cc1 -triple thumbv8m.main   -O0 -mcmse -S -emit-llvm %s -o - \
+// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.main   -O0 -mcmse -S -emit-llvm %s -o - \
 // RUN:            -mfloat-abi hard | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-LE,CHECK-LE-NOPT,CHECK-HARD
 

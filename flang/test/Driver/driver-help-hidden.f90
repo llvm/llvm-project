@@ -48,6 +48,7 @@
 ! CHECK-NEXT: -help     Display available options
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -mllvm <value>         Additional arguments to forward to LLVM's option processing
+! CHECK-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! CHECK-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! CHECK-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! CHECK-NEXT: -o <file> Write output to <file>

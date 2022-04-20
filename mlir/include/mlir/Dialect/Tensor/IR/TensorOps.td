@@ -516,7 +516,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     Example:
 
     ```
-    // Rank-reducing extract_slice.
+    // Rank-altering insert_slice.
     %1 = tensor.insert_slice %t into %0[0, 0, 0][1, 16, 4][1, 1, 1] :
       tensor<16x4xf32> into tensor<8x16x4xf32>
     %3 = tensor.insert_slice %tt into %2[%o0, 4, %o2][1, %sz1, 1][1, %st1, 1] :
@@ -678,7 +678,7 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     Tensor_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
     Arguments<(ins AnyTensor:$src, IndexListArrayAttr:$reassociation)>,
     Results<(outs AnyTensor:$result)> {
- 
+
   code commonExtraClassDeclaration = [{
     static StringRef getReassociationAttrName() { return "reassociation"; }
     SmallVector<AffineMap, 4> getReassociationMaps();
@@ -982,6 +982,8 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
         return getConstantIntValue(ofr) == static_cast<int64_t>(0);
       });
     }
+    /// Return the dimensions with a non-zero low or high padding.
+    llvm::SmallBitVector getPaddedDims();
   }];
 
   let builders = [

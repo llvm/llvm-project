@@ -11,6 +11,12 @@ if(APPLE)
     )
 endif()
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  list(APPEND LIBUNWIND_CXX_SOURCES
+    Unwind_AIXExtras.cpp
+    )
+endif()
+
 set(LIBUNWIND_C_SOURCES
     UnwindLevel1.c
     UnwindLevel1-gcc-ext.c
@@ -26,7 +32,11 @@ set(LIBUNWIND_ASM_SOURCES
     )
 
 # See add_asm_sources() in compiler-rt for explanation of this workaround.
-if((APPLE AND CMAKE_VERSION VERSION_LESS 3.19) OR (MINGW AND CMAKE_VERSION VERSION_LESS 3.17))
+# CMake doesn't work correctly with assembly on AIX. Workaround by compiling
+# as C files as well.
+if((APPLE AND CMAKE_VERSION VERSION_LESS 3.19) OR
+   (MINGW AND CMAKE_VERSION VERSION_LESS 3.17) OR
+   (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
   set_source_files_properties(${LIBUNWIND_ASM_SOURCES} PROPERTIES LANGUAGE C)
 endif()
 

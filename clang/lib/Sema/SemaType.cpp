@@ -2143,6 +2143,11 @@ QualType Sema::BuildPointerType(QualType T,
     return QualType();
   }
 
+  if (getLangOpts().HLSL) {
+    Diag(Loc, diag::err_hlsl_pointers_unsupported) << 0;
+    return QualType();
+  }
+
   if (checkQualifiedFunction(*this, T, Loc, QFK_Pointer))
     return QualType();
 
@@ -2205,6 +2210,11 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
   //   is ill-formed.
   if (T->isVoidType()) {
     Diag(Loc, diag::err_reference_to_void);
+    return QualType();
+  }
+
+  if (getLangOpts().HLSL) {
+    Diag(Loc, diag::err_hlsl_pointers_unsupported) << 1;
     return QualType();
   }
 
@@ -2964,6 +2974,11 @@ QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
       !getOpenCLOptions().isAvailableOption("__cl_clang_function_pointers",
                                             getLangOpts())) {
     Diag(Loc, diag::err_opencl_function_pointer) << /*pointer*/ 0;
+    return QualType();
+  }
+
+  if (getLangOpts().HLSL) {
+    Diag(Loc, diag::err_hlsl_pointers_unsupported) << 0;
     return QualType();
   }
 
@@ -5548,15 +5563,16 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
            diag::warn_noderef_on_non_pointer_or_array);
 
   // GNU warning -Wstrict-prototypes
-  //   Warn if a function declaration is without a prototype.
+  //   Warn if a function declaration or definition is without a prototype.
   //   This warning is issued for all kinds of unprototyped function
   //   declarations (i.e. function type typedef, function pointer etc.)
   //   C99 6.7.5.3p14:
   //   The empty list in a function declarator that is not part of a definition
   //   of that function specifies that no information about the number or types
   //   of the parameters is supplied.
-  if (!LangOpts.CPlusPlus &&
-      D.getFunctionDefinitionKind() == FunctionDefinitionKind::Declaration) {
+  // See ActOnFinishFunctionBody() and MergeFunctionDecl() for handling of
+  // function declarations whose behavior changes in C2x.
+  if (!LangOpts.CPlusPlus) {
     bool IsBlock = false;
     for (const DeclaratorChunk &DeclType : D.type_objects()) {
       switch (DeclType.Kind) {

@@ -1089,6 +1089,10 @@ class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueT
 
 let OtherPredicates = [HasFlatAddressSpace] in {
 
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
@@ -1126,6 +1130,11 @@ def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, vt>;
 
 def : FlatStoreAtomicPat <FLAT_STORE_DWORD, atomic_store_flat_32, i32>;
 def : FlatStoreAtomicPat <FLAT_STORE_DWORDX2, atomic_store_flat_64, i64>;
+def : FlatStoreAtomicPat <FLAT_STORE_BYTE, atomic_store_flat_8, i32>;
+def : FlatStoreAtomicPat <FLAT_STORE_BYTE, atomic_store_flat_8, i16>;
+def : FlatStoreAtomicPat <FLAT_STORE_SHORT, atomic_store_flat_16, i32>;
+def : FlatStoreAtomicPat <FLAT_STORE_SHORT, atomic_store_flat_16, i16>;
+
 
 foreach as = [ "flat", "global" ] in {
 defm : FlatAtomicPat <"FLAT_ATOMIC_ADD", "atomic_load_add_"#as, i32>;
@@ -1160,10 +1169,12 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_XOR_X2", "atomic_load_xor_"#as, i64>;
 def : FlatStorePat <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
 def : FlatStorePat <FLAT_STORE_SHORT, store_flat, i16>;
 
-let OtherPredicates = [D16PreservesUnusedBits] in {
+let OtherPredicates = [HasD16LoadStore] in {
 def : FlatStorePat <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
 def : FlatStorePat <FLAT_STORE_BYTE_D16_HI, truncstorei8_hi16_flat, i32>;
+}
 
+let OtherPredicates = [D16PreservesUnusedBits] in {
 def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2i16>;
 def : FlatLoadPat_D16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_flat, v2f16>;
 def : FlatLoadPat_D16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_flat, v2i16>;
@@ -1310,6 +1321,10 @@ multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, Val
 
 let OtherPredicates = [HasFlatGlobalInsts] in {
 
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, extloadi8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, zextloadi8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_SBYTE, sextloadi8_global, i32>;
@@ -1350,10 +1365,12 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, truncstorei16_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, store_global, i16>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX3, store_global, v3i32>;
 
-let OtherPredicates = [D16PreservesUnusedBits] in {
+let OtherPredicates = [HasD16LoadStore] in {
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT_D16_HI, truncstorei16_hi16_global, i32>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE_D16_HI, truncstorei8_hi16_global, i32>;
+}
 
+let OtherPredicates = [D16PreservesUnusedBits] in {
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_global, v2i16>;
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_global, v2f16>;
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_global, v2i16>;
@@ -1369,6 +1386,10 @@ defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_SHORT_D16, load_d16_lo_global, v2i16>
 defm : GlobalFLATLoadPats_D16 <GLOBAL_LOAD_SHORT_D16, load_d16_lo_global, v2f16>;
 }
 
+defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_BYTE, atomic_store_global_8, i32>;
+defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_BYTE, atomic_store_global_8, i16>;
+defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_SHORT, atomic_store_global_16, i32>;
+defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_SHORT, atomic_store_global_16, i16>;
 defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_DWORD, atomic_store_global_32, i32>;
 defm : GlobalFLATAtomicStorePats <GLOBAL_STORE_DWORDX2, atomic_store_global_64, i64>;
 
@@ -1472,10 +1493,12 @@ defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, truncstorei16_private, i32>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, store_private, i16>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX3, store_private, v3i32>;
 
-let OtherPredicates = [D16PreservesUnusedBits, HasFlatScratchInsts, EnableFlatScratch] in {
+let OtherPredicates = [HasD16LoadStore, HasFlatScratchInsts, EnableFlatScratch] in {
 defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT_D16_HI, truncstorei16_hi16_private, i32>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE_D16_HI, truncstorei8_hi16_private, i32>;
+}
 
+let OtherPredicates = [D16PreservesUnusedBits, HasFlatScratchInsts, EnableFlatScratch] in {
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_private, v2i16>;
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_private, v2f16>;
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_private, v2i16>;

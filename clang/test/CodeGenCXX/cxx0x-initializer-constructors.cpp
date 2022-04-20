@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -S -triple x86_64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -S -triple x86_64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 struct S {
   S(int x) { }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fxray-instrument -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fxray-instrument -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: @_Z16alwaysInstrumentv
 [[clang::xray_always_instrument]] void alwaysInstrument() {

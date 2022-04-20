@@ -110,6 +110,11 @@ constexpr trace::Metric
 constexpr trace::Metric PreambleBuildFilesystemLatencyRatio(
     "preamble_fs_latency_ratio", trace::Metric::Distribution, "build_type");
 
+constexpr trace::Metric PreambleBuildSize("preamble_build_size",
+                                          trace::Metric::Distribution);
+constexpr trace::Metric PreambleSerializedSize("preamble_serialized_size",
+                                               trace::Metric::Distribution);
+
 void reportPreambleBuild(const PreambleBuildStats &Stats,
                          bool IsFirstPreamble) {
   auto RecordWithLabel = [&Stats](llvm::StringRef Label) {
@@ -122,6 +127,9 @@ void reportPreambleBuild(const PreambleBuildStats &Stats,
   static llvm::once_flag OnceFlag;
   llvm::call_once(OnceFlag, [&] { RecordWithLabel("first_build"); });
   RecordWithLabel(IsFirstPreamble ? "first_build_for_file" : "rebuild");
+
+  PreambleBuildSize.record(Stats.BuildSize);
+  PreambleSerializedSize.record(Stats.SerializedSize);
 }
 
 class ASTWorker;
@@ -790,7 +798,7 @@ ASTWorker::~ASTWorker() {
 
 void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
                        bool ContentChanged) {
-  std::string TaskName = llvm::formatv("Update ({0})", Inputs.Version);
+  llvm::StringLiteral TaskName = "Update";
   auto Task = [=]() mutable {
     // Get the actual command as `Inputs` does not have a command.
     // FIXME: some build systems like Bazel will take time to preparing

@@ -910,6 +910,8 @@ namespace llvm {
     Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
                                    AtomicOrdering Ord) const override;
 
+    bool shouldInlineQuadwordAtomics() const;
+
     TargetLowering::AtomicExpansionKind
     shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
 

@@ -18,7 +18,7 @@ func @c() {
 }
 
 func @a(%arg0: i32, %arg1: i32) {
-  %1 = "emitc.apply"(%arg0) {applicableOperator = "&"} : (i32) -> !emitc.opaque<"int32_t*">
-  %2 = emitc.apply "&"(%arg1) : (i32) -> !emitc.opaque<"int32_t*">
+  %1 = "emitc.apply"(%arg0) {applicableOperator = "&"} : (i32) -> !emitc.ptr<i32>
+  %2 = emitc.apply "&"(%arg1) : (i32) -> !emitc.ptr<i32>
   return
 }

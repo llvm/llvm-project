@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu \
 // RUN:   -x hip -emit-llvm-bc %s -o %t.hip.bc
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu \
 // RUN:   -mlink-bitcode-file %t.hip.bc -DHIP_PLATFORM -emit-llvm \
 // RUN:   %s -o - | FileCheck %s
 

@@ -14,23 +14,17 @@
 
 namespace {
 
-enum class ValueType { Uint32, Uint64, Pair, Tuple, String };
-struct AllValueTypes : EnumValuesAsTuple<AllValueTypes, ValueType, 5> {
-  static constexpr const char* Names[] = {
-      "uint32", "uint64", "pair<uint32, uint32>",
-      "tuple<uint32, uint64, uint32>", "string"};
+enum class ValueType { Uint32, Uint64, Pair, Tuple, String, Float };
+struct AllValueTypes : EnumValuesAsTuple<AllValueTypes, ValueType, 6> {
+  static constexpr const char* Names[] = {"uint32", "uint64", "pair<uint32, uint32>", "tuple<uint32, uint64, uint32>",
+                                          "string", "float"};
 };
 
+using Types = std::tuple< uint32_t, uint64_t, std::pair<uint32_t, uint32_t>, std::tuple<uint32_t, uint64_t, uint32_t>,
+                          std::string, float >;
+
 template <class V>
-using Value = std::conditional_t<
-    V() == ValueType::Uint32, uint32_t,
-    std::conditional_t<
-        V() == ValueType::Uint64, uint64_t,
-        std::conditional_t<
-            V() == ValueType::Pair, std::pair<uint32_t, uint32_t>,
-            std::conditional_t<V() == ValueType::Tuple,
-                               std::tuple<uint32_t, uint64_t, uint32_t>,
-                               std::string> > > >;
+using Value = std::tuple_element_t<(int)V::value, Types>;
 
 enum class Order {
   Random,
@@ -358,6 +352,21 @@ struct PopHeap {
   };
 };
 
+template <class ValueType, class Order>
+struct MinMaxElement {
+  size_t Quantity;
+
+  void run(benchmark::State& state) const {
+    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
+      benchmark::DoNotOptimize(std::minmax_element(Copy.begin(), Copy.end()));
+    });
+  }
+
+  std::string name() const {
+    return "BM_MinMaxElement" + ValueType::name() + Order::name() + "_" + std::to_string(Quantity);
+  }
+};
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -382,5 +391,6 @@ int main(int argc, char** argv) {
       Quantities);
   makeCartesianProductBenchmark<PushHeap, AllValueTypes, AllOrders>(Quantities);
   makeCartesianProductBenchmark<PopHeap, AllValueTypes>(Quantities);
+  makeCartesianProductBenchmark<MinMaxElement, AllValueTypes, AllOrders>(Quantities);
   benchmark::RunSpecifiedBenchmarks();
 }

@@ -313,11 +313,6 @@
 #define LLVM_EXTENSION
 #endif
 
-// LLVM_ATTRIBUTE_DEPRECATED(decl, "message")
-// This macro will be removed.
-// Use C++14's attribute instead: [[deprecated("message")]]
-#define LLVM_ATTRIBUTE_DEPRECATED(decl, message) [[deprecated(message)]] decl
-
 /// LLVM_BUILTIN_UNREACHABLE - On compilers which support it, expands
 /// to an expression which states that it is undefined behavior for the
 /// compiler to reach this point.  Otherwise is not defined.
@@ -399,22 +394,6 @@
 # define LLVM_PACKED(d) d __attribute__((packed))
 # define LLVM_PACKED_START _Pragma("pack(push, 1)")
 # define LLVM_PACKED_END   _Pragma("pack(pop)")
-#endif
-
-/// \macro LLVM_PTR_SIZE
-/// A constant integer equivalent to the value of sizeof(void*).
-/// Generally used in combination with alignas or when doing computation in the
-/// preprocessor.
-#ifdef __SIZEOF_POINTER__
-# define LLVM_PTR_SIZE __SIZEOF_POINTER__
-#elif defined(_WIN64)
-# define LLVM_PTR_SIZE 8
-#elif defined(_WIN32)
-# define LLVM_PTR_SIZE 4
-#elif defined(_MSC_VER)
-# error "could not determine LLVM_PTR_SIZE as a constant int for MSVC"
-#else
-# define LLVM_PTR_SIZE sizeof(void *)
 #endif
 
 /// \macro LLVM_MEMORY_SANITIZER_BUILD

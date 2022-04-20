@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -18,6 +20,15 @@ using namespace mlir;
 
 #include "mlir/Interfaces/ControlFlowInterfaces.cpp.inc"
 
+SuccessorOperands::SuccessorOperands(MutableOperandRange forwardedOperands)
+    : producedOperandCount(0), forwardedOperands(std::move(forwardedOperands)) {
+}
+
+SuccessorOperands::SuccessorOperands(unsigned int producedOperandCount,
+                                     MutableOperandRange forwardedOperands)
+    : producedOperandCount(producedOperandCount),
+      forwardedOperands(std::move(forwardedOperands)) {}
+
 //===----------------------------------------------------------------------===//
 // BranchOpInterface
 //===----------------------------------------------------------------------===//
@@ -26,32 +37,31 @@ using namespace mlir;
 /// successor if 'operandIndex' is within the range of 'operands', or None if
 /// `operandIndex` isn't a successor operand index.
 Optional<BlockArgument>
-detail::getBranchSuccessorArgument(Optional<OperandRange> operands,
+detail::getBranchSuccessorArgument(const SuccessorOperands &operands,
                                    unsigned operandIndex, Block *successor) {
+  OperandRange forwardedOperands = operands.getForwardedOperands();
   // Check that the operands are valid.
-  if (!operands || operands->empty())
+  if (forwardedOperands.empty())
     return llvm::None;
 
   // Check to ensure that this operand is within the range.
-  unsigned operandsStart = operands->getBeginOperandIndex();
+  unsigned operandsStart = forwardedOperands.getBeginOperandIndex();
   if (operandIndex < operandsStart ||
-      operandIndex >= (operandsStart + operands->size()))
+      operandIndex >= (operandsStart + forwardedOperands.size()))
     return llvm::None;
 
   // Index the successor.
-  unsigned argIndex = operandIndex - operandsStart;
+  unsigned argIndex =
+      operands.getProducedOperandCount() + operandIndex - operandsStart;
   return successor->getArgument(argIndex);
 }
 
 /// Verify that the given operands match those of the given successor block.
 LogicalResult
 detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
-                                      Optional<OperandRange> operands) {
-  if (!operands)
-    return success();
-
+                                      const SuccessorOperands &operands) {
   // Check the count.
-  unsigned operandCount = operands->size();
+  unsigned operandCount = operands.size();
   Block *destBB = op->getSuccessor(succNo);
   if (operandCount != destBB->getNumArguments())
     return op->emitError() << "branch has " << operandCount
@@ -60,10 +70,10 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                            << destBB->getNumArguments();
 
   // Check the types.
-  auto operandIt = operands->begin();
-  for (unsigned i = 0; i != operandCount; ++i, ++operandIt) {
+  for (unsigned i = operands.getProducedOperandCount(); i != operandCount;
+       ++i) {
     if (!cast<BranchOpInterface>(op).areTypesCompatible(
-            (*operandIt).getType(), destBB->getArgument(i).getType()))
+            operands[i].getType(), destBB->getArgument(i).getType()))
       return op->emitError() << "type mismatch for bb argument #" << i
                              << " of successor #" << succNo;
   }
@@ -230,6 +240,40 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   return success();
 }
 
+/// Return `true` if region `r` is reachable from region `begin` according to
+/// the RegionBranchOpInterface (by taking a branch).
+static bool isRegionReachable(Region *begin, Region *r) {
+  assert(begin->getParentOp() == r->getParentOp() &&
+         "expected that both regions belong to the same op");
+  auto op = cast<RegionBranchOpInterface>(begin->getParentOp());
+  SmallVector<bool> visited(op->getNumRegions(), false);
+  visited[begin->getRegionNumber()] = true;
+
+  // Retrieve all successors of the region and enqueue them in the worklist.
+  SmallVector<unsigned> worklist;
+  auto enqueueAllSuccessors = [&](unsigned index) {
+    SmallVector<RegionSuccessor> successors;
+    op.getSuccessorRegions(index, successors);
+    for (RegionSuccessor successor : successors)
+      if (!successor.isParent())
+        worklist.push_back(successor.getSuccessor()->getRegionNumber());
+  };
+  enqueueAllSuccessors(begin->getRegionNumber());
+
+  // Process all regions in the worklist via DFS.
+  while (!worklist.empty()) {
+    unsigned nextRegion = worklist.pop_back_val();
+    if (nextRegion == r->getRegionNumber())
+      return true;
+    if (visited[nextRegion])
+      continue;
+    visited[nextRegion] = true;
+    enqueueAllSuccessors(nextRegion);
+  }
+
+  return false;
+}
+
 /// Return `true` if `a` and `b` are in mutually exclusive regions.
 ///
 /// 1. Find the first common of `a` and `b` (ancestor) that implements
@@ -267,39 +311,42 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
     }
     assert(regionA && regionB && "could not find region of op");
 
-    // Helper function that checks if region `r` is reachable from region
-    // `begin`.
-    std::function<bool(Region *, Region *)> isRegionReachable =
-        [&](Region *begin, Region *r) {
-          if (begin == r)
-            return true;
-          if (begin == nullptr)
-            return false;
-          // Compute index of region.
-          int64_t beginIndex = -1;
-          for (const auto &it : llvm::enumerate(branchOp->getRegions()))
-            if (&it.value() == begin)
-              beginIndex = it.index();
-          assert(beginIndex != -1 && "could not find region in op");
-          // Retrieve all successors of the region.
-          SmallVector<RegionSuccessor> successors;
-          branchOp.getSuccessorRegions(beginIndex, successors);
-          // Call function recursively on all successors.
-          for (RegionSuccessor successor : successors)
-            if (isRegionReachable(successor.getSuccessor(), r))
-              return true;
-          return false;
-        };
-
-    // `a` and `b` are in mutually exclusive regions if neither region is
-    // reachable from the other region.
-    return !isRegionReachable(regionA, regionB) &&
+    // `a` and `b` are in mutually exclusive regions if both regions are
+    // distinct and neither region is reachable from the other region.
+    return regionA != regionB && !isRegionReachable(regionA, regionB) &&
            !isRegionReachable(regionB, regionA);
   }
 
   // Could not find a common RegionBranchOpInterface among a's and b's
   // ancestors.
   return false;
+}
+
+bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
+  Region *region = &getOperation()->getRegion(index);
+  return isRegionReachable(region, region);
+}
+
+Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {
+  while (Region *region = op->getParentRegion()) {
+    op = region->getParentOp();
+    if (auto branchOp = dyn_cast<RegionBranchOpInterface>(op))
+      if (branchOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+  }
+  return nullptr;
+}
+
+Region *mlir::getEnclosingRepetitiveRegion(Value value) {
+  Region *region = value.getParentRegion();
+  while (region) {
+    Operation *op = region->getParentOp();
+    if (auto branchOp = dyn_cast<RegionBranchOpInterface>(op))
+      if (branchOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+    region = op->getParentRegion();
+  }
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

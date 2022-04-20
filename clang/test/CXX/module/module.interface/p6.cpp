@@ -9,7 +9,7 @@ struct S { // expected-note {{previous declaration is here}}
 };
 typedef S S;
 export typedef S S; // OK, does not redeclare an entity
-export struct S;    // expected-error {{cannot export redeclaration 'S' here since the previous declaration is not exported}}
+export struct S;    // expected-error {{cannot export redeclaration 'S' here since the previous declaration has module linkage}}
 
 namespace A {
 struct X; // expected-note {{previous declaration is here}}
@@ -17,10 +17,10 @@ export struct Y;
 } // namespace A
 
 namespace A {
-export struct X; // expected-error {{cannot export redeclaration 'X' here since the previous declaration is not exported}}
+export struct X; // expected-error {{cannot export redeclaration 'X' here since the previous declaration has module linkage}}
 export struct Y; // OK
 struct Z;        // expected-note {{previous declaration is here}}
-export struct Z; // expected-error {{cannot export redeclaration 'Z' here since the previous declaration is not exported}}
+export struct Z; // expected-error {{cannot export redeclaration 'Z' here since the previous declaration has module linkage}}
 } // namespace A
 
 namespace A {
@@ -29,29 +29,29 @@ struct C {}; // expected-note {{previous declaration is here}}
 } // namespace A
 
 namespace A {
-export struct B {}; // expected-error {{cannot export redeclaration 'B' here since the previous declaration is not exported}}
-export struct C;    // expected-error {{cannot export redeclaration 'C' here since the previous declaration is not exported}}
+export struct B {}; // expected-error {{cannot export redeclaration 'B' here since the previous declaration has module linkage}}
+export struct C;    // expected-error {{cannot export redeclaration 'C' here since the previous declaration has module linkage}}
 } // namespace A
 
 template <typename T>
 struct TemplS; // expected-note {{previous declaration is here}}
 
 export template <typename T>
-struct TemplS {}; // expected-error {{cannot export redeclaration 'TemplS' here since the previous declaration is not exported}}
+struct TemplS {}; // expected-error {{cannot export redeclaration 'TemplS' here since the previous declaration has module linkage}}
 
 template <typename T>
 struct TemplS2; // expected-note {{previous declaration is here}}
 
 export template <typename U>
-struct TemplS2 {}; // expected-error {{cannot export redeclaration 'TemplS2' here since the previous declaration is not exported}}
+struct TemplS2 {}; // expected-error {{cannot export redeclaration 'TemplS2' here since the previous declaration has module linkage}}
 
 void baz();        // expected-note {{previous declaration is here}}
-export void baz(); // expected-error {{cannot export redeclaration 'baz' here since the previous declaration is not exported}}
+export void baz(); // expected-error {{cannot export redeclaration 'baz' here since the previous declaration has module linkage}}
 
 namespace A {
 export void foo();
 void bar();        // expected-note {{previous declaration is here}}
-export void bar(); // expected-error {{cannot export redeclaration 'bar' here since the previous declaration is not exported}}
+export void bar(); // expected-error {{cannot export redeclaration 'bar' here since the previous declaration has module linkage}}
 void f1();         // expected-note {{previous declaration is here}}
 } // namespace A
 
@@ -63,34 +63,34 @@ void A::foo();
 
 // The compiler couldn't export A::f1() here since A::f1() is declared above without exported.
 // See [module.interface]/p6 for details.
-export void A::f1(); // expected-error {{cannot export redeclaration 'f1' here since the previous declaration is not exported}}
+export void A::f1(); // expected-error {{cannot export redeclaration 'f1' here since the previous declaration has module linkage}}
 
 template <typename T>
 void TemplFunc(); // expected-note {{previous declaration is here}}
 
 export template <typename T>
-void TemplFunc() { // expected-error {{cannot export redeclaration 'TemplFunc' here since the previous declaration is not exported}}
+void TemplFunc() { // expected-error {{cannot export redeclaration 'TemplFunc' here since the previous declaration has module linkage}}
 }
 
 namespace A {
 template <typename T>
 void TemplFunc2(); // expected-note {{previous declaration is here}}
 export template <typename T>
-void TemplFunc2() {} // expected-error {{cannot export redeclaration 'TemplFunc2' here since the previous declaration is not exported}}
+void TemplFunc2() {} // expected-error {{cannot export redeclaration 'TemplFunc2' here since the previous declaration has module linkage}}
 template <typename T>
 void TemplFunc3(); // expected-note {{previous declaration is here}}
 } // namespace A
 
 export template <typename T>
-void A::TemplFunc3() {} // expected-error {{cannot export redeclaration 'TemplFunc3' here since the previous declaration is not exported}}
+void A::TemplFunc3() {} // expected-error {{cannot export redeclaration 'TemplFunc3' here since the previous declaration has module linkage}}
 
 int var;        // expected-note {{previous declaration is here}}
-export int var; // expected-error {{cannot export redeclaration 'var' here since the previous declaration is not exported}}
+export int var; // expected-error {{cannot export redeclaration 'var' here since the previous declaration has module linkage}}
 
 template <typename T>
 T TemplVar; // expected-note {{previous declaration is here}}
 export template <typename T>
-T TemplVar; // expected-error {{cannot export redeclaration 'TemplVar' here since the previous declaration is not exported}}
+T TemplVar; // expected-error {{cannot export redeclaration 'TemplVar' here since the previous declaration has module linkage}}
 
 // Test the compiler wouldn't complain about the redeclaration of friend in exported class.
 namespace Friend {

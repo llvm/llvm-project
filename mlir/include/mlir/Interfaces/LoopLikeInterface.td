@@ -61,7 +61,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Return the single lower bound value or attribute if it exist, otherwise
+        Return the single lower bound value or attribute if it exists, otherwise
         return llvm::None.
       }],
       /*retTy=*/"::mlir::Optional<::mlir::OpFoldResult>",
@@ -73,11 +73,23 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Return the single step value or attribute if it exist, otherwise
+        Return the single step value or attribute if it exists, otherwise
         return llvm::None.
       }],
       /*retTy=*/"::mlir::Optional<::mlir::OpFoldResult>",
       /*methodName=*/"getSingleStep",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return llvm::None;
+      }]
+    >,
+    InterfaceMethod<[{
+        Return the single upper bound value or attribute if it exists, otherwise
+        return llvm::None.
+      }],
+      /*retTy=*/"::mlir::Optional<::mlir::OpFoldResult>",
+      /*methodName=*/"getSingleUpperBound",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{

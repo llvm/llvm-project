@@ -82,6 +82,30 @@ public:
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 
+  std::string convertConstraint(const char *&Constraint) const override {
+    switch (Constraint[0]) {
+    case 'p': // Keep 'p' constraint.
+      return std::string("p");
+    case 'Z':
+      switch (Constraint[1]) {
+      case 'Q': // Address with base and unsigned 12-bit displacement
+      case 'R': // Likewise, plus an index
+      case 'S': // Address with base and signed 20-bit displacement
+      case 'T': // Likewise, plus an index
+        // "^" hints llvm that this is a 2 letter constraint.
+        // "Constraint++" is used to promote the string iterator
+        // to the next constraint.
+        return std::string("^") + std::string(Constraint++, 2);
+      default:
+        break;
+      }
+      break;
+    default:
+      break;
+    }
+    return TargetInfo::convertConstraint(Constraint);
+  }
+
   const char *getClobbers() const override {
     // FIXME: Is this really right?
     return "";

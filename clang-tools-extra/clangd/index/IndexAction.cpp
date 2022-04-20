@@ -28,10 +28,10 @@ namespace clang {
 namespace clangd {
 namespace {
 
-llvm::Optional<std::string> toURI(const FileEntry *File) {
+llvm::Optional<std::string> toURI(Optional<FileEntryRef> File) {
   if (!File)
     return llvm::None;
-  auto AbsolutePath = File->tryGetRealPathName();
+  auto AbsolutePath = File->getFileEntry().tryGetRealPathName();
   if (AbsolutePath.empty())
     return llvm::None;
   return URI::create(AbsolutePath).toString();
@@ -58,7 +58,7 @@ public:
       return;
 
     const auto FileID = SM.getFileID(Loc);
-    const auto *File = SM.getFileEntryForID(FileID);
+    auto File = SM.getFileEntryRefForID(FileID);
     auto URI = toURI(File);
     if (!URI)
       return;
@@ -84,7 +84,8 @@ public:
   // Add edges from including files to includes.
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File,
                           llvm::StringRef SearchPath,
                           llvm::StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
@@ -92,7 +93,7 @@ public:
     if (!IncludeURI)
       return;
 
-    auto IncludingURI = toURI(SM.getFileEntryForID(SM.getFileID(HashLoc)));
+    auto IncludingURI = toURI(SM.getFileEntryRefForID(SM.getFileID(HashLoc)));
     if (!IncludingURI)
       return;
 
@@ -106,7 +107,7 @@ public:
   void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override {
 #ifndef NDEBUG
-    auto URI = toURI(&SkippedFile.getFileEntry());
+    auto URI = toURI(SkippedFile);
     if (!URI)
       return;
     auto I = IG.try_emplace(*URI);

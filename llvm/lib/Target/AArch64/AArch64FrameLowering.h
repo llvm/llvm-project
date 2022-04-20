@@ -29,6 +29,8 @@ public:
   void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI) const;
 
+  void resetCFIToInitialState(MachineBasicBlock &MBB) const override;
+
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
@@ -147,6 +149,10 @@ private:
                                    MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVELocations(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI) const;
+  void emitCalleeSavedGPRRestores(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI) const;
+  void emitCalleeSavedSVERestores(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI) const;
 };
 
 } // End llvm namespace

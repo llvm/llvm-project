@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple s390x-linux-gnu -emit-llvm -x c++ -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple s390x-linux-gnu -emit-llvm -x c++ -o - %s -mfloat-abi soft \
+// RUN: %clang_cc1 -no-opaque-pointers -triple s390x-linux-gnu -emit-llvm -x c++ -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple s390x-linux-gnu -emit-llvm -x c++ -o - %s -mfloat-abi soft \
 // RUN:   | FileCheck %s --check-prefix=SOFT-FLOAT
 
 // Verify that class types are also recognized as float-like aggregate types

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s
 
 // Test1::B should just have a single entry in its VTT, which points to the vtable.
 namespace Test1 {

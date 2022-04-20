@@ -30,25 +30,25 @@ using namespace mlir::sparse_tensor;
 void mlir::sparse_tensor::buildSparseCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
   // TODO(wrengr): ensure the original `pm` is for ModuleOp
-  pm.addNestedPass<FuncOp>(createLinalgGeneralizationPass());
+  pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
   pm.addPass(createLinalgElementwiseOpFusionPass());
   pm.addPass(createSparsificationPass(options.sparsificationOptions()));
   pm.addPass(createSparseTensorConversionPass(
       options.sparseTensorConversionOptions()));
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
-  pm.addNestedPass<FuncOp>(vector::createVectorBufferizePass());
-  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());
-  pm.addNestedPass<FuncOp>(createConvertVectorToSCFPass());
-  pm.addNestedPass<FuncOp>(createConvertSCFToCFPass());
+  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());
+  pm.addNestedPass<func::FuncOp>(vector::createVectorBufferizePass());
+  pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
+  pm.addNestedPass<func::FuncOp>(createConvertVectorToSCFPass());
+  pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());
   pm.addPass(func::createFuncBufferizePass());
   pm.addPass(arith::createConstantBufferizePass());
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());
-  pm.addNestedPass<FuncOp>(
+  pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());
+  pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());
   pm.addPass(createLowerAffinePass());
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createMemRefToLLVMPass());
-  pm.addNestedPass<FuncOp>(createConvertMathToLLVMPass());
+  pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
 }

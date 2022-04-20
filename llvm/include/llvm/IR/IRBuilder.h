@@ -25,7 +25,6 @@
 #include "llvm/IR/ConstantFolder.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-//#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FPEnv.h"
@@ -2322,15 +2321,6 @@ public:
                              const Twine &Name = "") {
     SmallVector<int, 16> IntMask;
     ShuffleVectorInst::getShuffleMask(cast<Constant>(Mask), IntMask);
-    return CreateShuffleVector(V1, V2, IntMask, Name);
-  }
-
-  LLVM_ATTRIBUTE_DEPRECATED(Value *CreateShuffleVector(Value *V1, Value *V2,
-                                                       ArrayRef<uint32_t> Mask,
-                                                       const Twine &Name = ""),
-                            "Pass indices as 'int' instead") {
-    SmallVector<int, 16> IntMask;
-    IntMask.assign(Mask.begin(), Mask.end());
     return CreateShuffleVector(V1, V2, IntMask, Name);
   }
 

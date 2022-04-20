@@ -103,6 +103,12 @@ END-SCRIPT
 #include <__algorithm/pop_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pop_heap.h'}}
 #include <__algorithm/prev_permutation.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/prev_permutation.h'}}
 #include <__algorithm/push_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/push_heap.h'}}
+#include <__algorithm/ranges_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy.h'}}
+#include <__algorithm/ranges_copy_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_backward.h'}}
+#include <__algorithm/ranges_copy_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_if.h'}}
+#include <__algorithm/ranges_copy_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_n.h'}}
+#include <__algorithm/ranges_count.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_count.h'}}
+#include <__algorithm/ranges_count_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_count_if.h'}}
 #include <__algorithm/ranges_find.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find.h'}}
 #include <__algorithm/ranges_find_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find_if.h'}}
 #include <__algorithm/ranges_find_if_not.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find_if_not.h'}}
@@ -110,6 +116,8 @@ END-SCRIPT
 #include <__algorithm/ranges_max_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max_element.h'}}
 #include <__algorithm/ranges_min.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_min.h'}}
 #include <__algorithm/ranges_min_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_min_element.h'}}
+#include <__algorithm/ranges_minmax.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_minmax.h'}}
+#include <__algorithm/ranges_minmax_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_minmax_element.h'}}
 #include <__algorithm/ranges_mismatch.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_mismatch.h'}}
 #include <__algorithm/ranges_swap_ranges.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_swap_ranges.h'}}
 #include <__algorithm/ranges_transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_transform.h'}}
@@ -230,6 +238,7 @@ END-SCRIPT
 #include <__filesystem/space_info.h> // expected-error@*:* {{use of private header from outside its module: '__filesystem/space_info.h'}}
 #include <__filesystem/u8path.h> // expected-error@*:* {{use of private header from outside its module: '__filesystem/u8path.h'}}
 #include <__format/buffer.h> // expected-error@*:* {{use of private header from outside its module: '__format/buffer.h'}}
+#include <__format/enable_insertable.h> // expected-error@*:* {{use of private header from outside its module: '__format/enable_insertable.h'}}
 #include <__format/format_arg.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_arg.h'}}
 #include <__format/format_args.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_args.h'}}
 #include <__format/format_context.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_context.h'}}
@@ -298,6 +307,7 @@ END-SCRIPT
 #include <__iterator/iterator_traits.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iterator_traits.h'}}
 #include <__iterator/mergeable.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/mergeable.h'}}
 #include <__iterator/move_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_iterator.h'}}
+#include <__iterator/move_sentinel.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_sentinel.h'}}
 #include <__iterator/next.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/next.h'}}
 #include <__iterator/ostream_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/ostream_iterator.h'}}
 #include <__iterator/ostreambuf_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/ostreambuf_iterator.h'}}
@@ -314,10 +324,12 @@ END-SCRIPT
 #include <__locale> // expected-error@*:* {{use of private header from outside its module: '__locale'}}
 #include <__mbstate_t.h> // expected-error@*:* {{use of private header from outside its module: '__mbstate_t.h'}}
 #include <__memory/addressof.h> // expected-error@*:* {{use of private header from outside its module: '__memory/addressof.h'}}
+#include <__memory/allocate_at_least.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocate_at_least.h'}}
 #include <__memory/allocation_guard.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocation_guard.h'}}
 #include <__memory/allocator.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocator.h'}}
 #include <__memory/allocator_arg_t.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocator_arg_t.h'}}
 #include <__memory/allocator_traits.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocator_traits.h'}}
+#include <__memory/assume_aligned.h> // expected-error@*:* {{use of private header from outside its module: '__memory/assume_aligned.h'}}
 #include <__memory/auto_ptr.h> // expected-error@*:* {{use of private header from outside its module: '__memory/auto_ptr.h'}}
 #include <__memory/compressed_pair.h> // expected-error@*:* {{use of private header from outside its module: '__memory/compressed_pair.h'}}
 #include <__memory/concepts.h> // expected-error@*:* {{use of private header from outside its module: '__memory/concepts.h'}}
@@ -397,8 +409,10 @@ END-SCRIPT
 #include <__ranges/empty_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/empty_view.h'}}
 #include <__ranges/enable_borrowed_range.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_borrowed_range.h'}}
 #include <__ranges/enable_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_view.h'}}
+#include <__ranges/filter_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/filter_view.h'}}
 #include <__ranges/iota_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/iota_view.h'}}
 #include <__ranges/join_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/join_view.h'}}
+#include <__ranges/lazy_split_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/lazy_split_view.h'}}
 #include <__ranges/non_propagating_cache.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/non_propagating_cache.h'}}
 #include <__ranges/owning_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/owning_view.h'}}
 #include <__ranges/range_adaptor.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/range_adaptor.h'}}
@@ -419,6 +433,8 @@ END-SCRIPT
 #include <__thread/poll_with_backoff.h> // expected-error@*:* {{use of private header from outside its module: '__thread/poll_with_backoff.h'}}
 #include <__thread/timed_backoff_policy.h> // expected-error@*:* {{use of private header from outside its module: '__thread/timed_backoff_policy.h'}}
 #include <__tuple> // expected-error@*:* {{use of private header from outside its module: '__tuple'}}
+#include <__type_traits/integral_constant.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/integral_constant.h'}}
+#include <__type_traits/is_callable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_callable.h'}}
 #include <__utility/as_const.h> // expected-error@*:* {{use of private header from outside its module: '__utility/as_const.h'}}
 #include <__utility/auto_cast.h> // expected-error@*:* {{use of private header from outside its module: '__utility/auto_cast.h'}}
 #include <__utility/cmp.h> // expected-error@*:* {{use of private header from outside its module: '__utility/cmp.h'}}

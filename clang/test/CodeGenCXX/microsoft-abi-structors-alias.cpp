@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-win32 -fno-rtti -mconstructor-aliases -O1 -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=i386-pc-win32 -fno-rtti -mconstructor-aliases -O1 -disable-llvm-passes | FileCheck %s
 
 namespace test1 {
 template <typename T> class A {

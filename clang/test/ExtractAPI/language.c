@@ -1,9 +1,9 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/c.reference.output.json.in >> \
-// RUN: %t/c.reference.output.json
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/objc.reference.output.json.in >> \
-// RUN: %t/objc.reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/c.reference.output.json.in >> %t/c.reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/objc.reference.output.json.in >> %t/objc.reference.output.json
 
 // RUN: %clang -extract-api -x c-header -target arm64-apple-macosx \
 // RUN: %t/c.h -o %t/c.output.json | FileCheck -allow-empty %s
@@ -88,6 +88,12 @@ char objc;
         "uri": "file://INPUT_DIR/c.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "c"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -162,6 +168,12 @@ char objc;
         "uri": "file://INPUT_DIR/objc.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "objc"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

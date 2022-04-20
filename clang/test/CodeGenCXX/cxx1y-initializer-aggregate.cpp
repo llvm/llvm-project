@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1y %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1y %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
 
 struct A {
   int n = 0;

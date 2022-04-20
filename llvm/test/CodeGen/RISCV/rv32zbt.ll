@@ -336,8 +336,7 @@ define i32 @cmov_sgt_i32_constant_2046(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_sgt_i32_constant_2046:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    slti a1, a1, 2047
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sgt i32 %b, 2046
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -358,8 +357,7 @@ define i32 @cmov_sgt_i32_constant_neg_2049(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_sgt_i32_constant_neg_2049:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    slti a1, a1, -2048
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sgt i32 %b, -2049
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -398,8 +396,7 @@ define i32 @cmov_sge_i32_constant_2047(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_sge_i32_constant_2047:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    slti a1, a1, 2047
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sge i32 %b, 2047
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -420,8 +417,7 @@ define i32 @cmov_sge_i32_constant_neg_2048(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_sge_i32_constant_neg_2048:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    slti a1, a1, -2048
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sge i32 %b, -2048
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -519,8 +515,7 @@ define i32 @cmov_ugt_i32_constant_2046(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_ugt_i32_constant_2046:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    sltiu a1, a1, 2047
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp ugt i32 %b, 2046
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -541,8 +536,7 @@ define i32 @cmov_ugt_i32_constant_neg_2049(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_ugt_i32_constant_neg_2049:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    sltiu a1, a1, -2048
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp ugt i32 %b, 4294965247
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -581,8 +575,7 @@ define i32 @cmov_uge_i32_constant_2047(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_uge_i32_constant_2047:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    sltiu a1, a1, 2047
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp uge i32 %b, 2047
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -603,8 +596,7 @@ define i32 @cmov_uge_i32_constant_neg_2048(i32 %a, i32 %b, i32 %c) nounwind {
 ; RV32ZBT-LABEL: cmov_uge_i32_constant_neg_2048:
 ; RV32ZBT:       # %bb.0:
 ; RV32ZBT-NEXT:    sltiu a1, a1, -2048
-; RV32ZBT-NEXT:    xori a1, a1, 1
-; RV32ZBT-NEXT:    cmov a0, a1, a0, a2
+; RV32ZBT-NEXT:    cmov a0, a1, a2, a0
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp uge i32 %b, 4294965248
   %cond = select i1 %tobool, i32 %a, i32 %c
@@ -807,8 +799,8 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 define i64 @fshl_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ; RV32I-LABEL: fshl_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    srli a5, a4, 5
-; RV32I-NEXT:    andi a6, a5, 1
+; RV32I-NEXT:    slli a5, a4, 26
+; RV32I-NEXT:    srli a6, a5, 31
 ; RV32I-NEXT:    mv a5, a3
 ; RV32I-NEXT:    bnez a6, .LBB36_2
 ; RV32I-NEXT:  # %bb.1:
@@ -836,8 +828,8 @@ define i64 @fshl_i64(i64 %a, i64 %b, i64 %c) nounwind {
 ;
 ; RV32ZBT-LABEL: fshl_i64:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    srli a5, a4, 5
-; RV32ZBT-NEXT:    andi a5, a5, 1
+; RV32ZBT-NEXT:    slli a5, a4, 26
+; RV32ZBT-NEXT:    srli a5, a5, 31
 ; RV32ZBT-NEXT:    cmov a2, a5, a2, a3
 ; RV32ZBT-NEXT:    cmov a3, a5, a3, a0
 ; RV32ZBT-NEXT:    andi a4, a4, 31

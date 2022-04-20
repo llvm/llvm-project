@@ -1299,6 +1299,41 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
                                  Scope::CompoundStmtScope);
 
+  // Parse function body eagerly if it is either '= delete;' or '= default;' as
+  // ActOnStartOfFunctionDef needs to know whether the function is deleted.
+  Sema::FnBodyKind BodyKind = Sema::FnBodyKind::Other;
+  SourceLocation KWLoc;
+  if (TryConsumeToken(tok::equal)) {
+    assert(getLangOpts().CPlusPlus && "Only C++ function definitions have '='");
+
+    if (TryConsumeToken(tok::kw_delete, KWLoc)) {
+      Diag(KWLoc, getLangOpts().CPlusPlus11
+                      ? diag::warn_cxx98_compat_defaulted_deleted_function
+                      : diag::ext_defaulted_deleted_function)
+          << 1 /* deleted */;
+      BodyKind = Sema::FnBodyKind::Delete;
+    } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
+      Diag(KWLoc, getLangOpts().CPlusPlus11
+                      ? diag::warn_cxx98_compat_defaulted_deleted_function
+                      : diag::ext_defaulted_deleted_function)
+          << 0 /* defaulted */;
+      BodyKind = Sema::FnBodyKind::Default;
+    } else {
+      llvm_unreachable("function definition after = not 'delete' or 'default'");
+    }
+
+    if (Tok.is(tok::comma)) {
+      Diag(KWLoc, diag::err_default_delete_in_multiple_declaration)
+          << (BodyKind == Sema::FnBodyKind::Delete);
+      SkipUntil(tok::semi);
+    } else if (ExpectAndConsume(tok::semi, diag::err_expected_after,
+                                BodyKind == Sema::FnBodyKind::Delete
+                                    ? "delete"
+                                    : "default")) {
+      SkipUntil(tok::semi);
+    }
+  }
+
   // Tell the actions module that we have entered a function definition with the
   // specified Declarator for the function.
   Sema::SkipBodyInfo SkipBody;
@@ -1306,10 +1341,13 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                               TemplateInfo.TemplateParams
                                                   ? *TemplateInfo.TemplateParams
                                                   : MultiTemplateParamsArg(),
-                                              &SkipBody);
+                                              &SkipBody, BodyKind);
 
   if (SkipBody.ShouldSkip) {
-    SkipFunctionBody();
+    // Do NOT enter SkipFunctionBody if we already consumed the tokens.
+    if (BodyKind == Sema::FnBodyKind::Other)
+      SkipFunctionBody();
+
     return Res;
   }
 
@@ -1320,6 +1358,13 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // safe because we're always the sole owner.
   D.getMutableDeclSpec().abort();
 
+  if (BodyKind != Sema::FnBodyKind::Other) {
+    Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind);
+    Stmt *GeneratedBody = Res ? Res->getBody() : nullptr;
+    Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
+    return Res;
+  }
+
   // With abbreviated function templates - we need to explicitly add depth to
   // account for the implicit template parameter list induced by the template.
   if (auto *Template = dyn_cast_or_null<FunctionTemplateDecl>(Res))
@@ -1328,42 +1373,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
       // First template parameter is implicit - meaning no explicit template
       // parameter list was specified.
       CurTemplateDepthTracker.addDepth(1);
-
-  if (TryConsumeToken(tok::equal)) {
-    assert(getLangOpts().CPlusPlus && "Only C++ function definitions have '='");
-
-    bool Delete = false;
-    SourceLocation KWLoc;
-    if (TryConsumeToken(tok::kw_delete, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
-        << 1 /* deleted */;
-      Actions.SetDeclDeleted(Res, KWLoc);
-      Delete = true;
-    } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
-        << 0 /* defaulted */;
-      Actions.SetDeclDefaulted(Res, KWLoc);
-    } else {
-      llvm_unreachable("function definition after = not 'delete' or 'default'");
-    }
-
-    if (Tok.is(tok::comma)) {
-      Diag(KWLoc, diag::err_default_delete_in_multiple_declaration)
-        << Delete;
-      SkipUntil(tok::semi);
-    } else if (ExpectAndConsume(tok::semi, diag::err_expected_after,
-                                Delete ? "delete" : "default")) {
-      SkipUntil(tok::semi);
-    }
-
-    Stmt *GeneratedBody = Res ? Res->getBody() : nullptr;
-    Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
-    return Res;
-  }
 
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
@@ -2145,14 +2154,14 @@ SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
   PrevTokLocation = Tok.getLocation();
 
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
-    if (S->getFlags() & Scope::FnScope) {
+    if (S->isFunctionScope()) {
       cutOffParsing();
       Actions.CodeCompleteOrdinaryName(getCurScope(),
                                        Sema::PCC_RecoveryInFunction);
       return PrevTokLocation;
     }
 
-    if (S->getFlags() & Scope::ClassScope) {
+    if (S->isClassScope()) {
       cutOffParsing();
       Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Class);
       return PrevTokLocation;
@@ -2377,7 +2386,9 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
-  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr);
+  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr,
+                          /*DiagnoseEmptyAttrs=*/false,
+                          /*WarnOnUnknownAttrs=*/true);
 
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
@@ -2444,7 +2455,9 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
   // We don't support any module import attributes yet.
-  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_import_attr);
+  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_import_attr,
+                          /*DiagnoseEmptyAttrs=*/false,
+                          /*WarnOnUnknownAttrs=*/true);
 
   if (PP.hadModuleLoaderFatalFailure()) {
     // With a fatal failure in the module loader, we abort parsing.
@@ -2505,8 +2518,8 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   // the header is parseable. Emit a warning to make the user aware.
   if (IsObjCAtImport && AtLoc.isValid()) {
     auto &SrcMgr = PP.getSourceManager();
-    auto *FE = SrcMgr.getFileEntryForID(SrcMgr.getFileID(AtLoc));
-    if (FE && llvm::sys::path::parent_path(FE->getDir()->getName())
+    auto FE = SrcMgr.getFileEntryRefForID(SrcMgr.getFileID(AtLoc));
+    if (FE && llvm::sys::path::parent_path(FE->getDir().getName())
                   .endswith(".framework"))
       Diags.Report(AtLoc, diag::warn_atimport_in_framework_header);
   }

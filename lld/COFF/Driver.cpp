@@ -1673,13 +1673,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_implib))
     config->implib = arg->getValue();
 
+  config->noimplib = args.hasArg(OPT_noimplib);
+
   // Handle /opt.
   bool doGC = debug == DebugKind::None || args.hasArg(OPT_profile);
   Optional<ICFLevel> icfLevel = None;
   if (args.hasArg(OPT_profile))
     icfLevel = ICFLevel::None;
   unsigned tailMerge = 1;
-  bool ltoNewPM = true;
   bool ltoDebugPM = false;
   for (auto *arg : args.filtered(OPT_opt)) {
     std::string str = StringRef(arg->getValue()).lower();
@@ -1701,9 +1702,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       } else if (s == "nolldtailmerge") {
         tailMerge = 0;
       } else if (s == "ltonewpassmanager") {
-        ltoNewPM = true;
-      } else if (s == "noltonewpassmanager") {
-        ltoNewPM = false;
+        /* We always use the new PM. */
       } else if (s == "ltodebugpassmanager") {
         ltoDebugPM = true;
       } else if (s == "noltodebugpassmanager") {
@@ -1733,7 +1732,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->doICF = icfLevel.getValue();
   config->tailMerge =
       (tailMerge == 1 && config->doICF != ICFLevel::None) || tailMerge == 2;
-  config->ltoNewPassManager = ltoNewPM;
   config->ltoDebugPassManager = ltoDebugPM;
 
   // Handle /lldsavetemps
@@ -2026,7 +2024,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle generation of import library from a def file.
   if (!args.hasArg(OPT_INPUT, OPT_wholearchive_file)) {
     fixupExports();
-    createImportLibrary(/*asLib=*/true);
+    if (!config->noimplib)
+      createImportLibrary(/*asLib=*/true);
     return;
   }
 
@@ -2285,7 +2284,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // -implib option is given explicitly, for compatibility with GNU ld.
   if (!config->exports.empty() || config->dll) {
     fixupExports();
-    if (!config->mingw || !config->implib.empty())
+    if (!config->noimplib && (!config->mingw || !config->implib.empty()))
       createImportLibrary(/*asLib=*/false);
     assignExportOrdinals();
   }

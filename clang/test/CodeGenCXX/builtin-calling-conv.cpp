@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-linux-pc -DREDECL -emit-llvm %s -o - | FileCheck %s -check-prefix LINUX
-// RUN: %clang_cc1 -triple spir-unknown-unknown -DREDECL -DSPIR -emit-llvm %s -o - | FileCheck %s -check-prefix SPIR
-// RUN: %clang_cc1 -triple x86_64-linux-pc -emit-llvm %s -o - | FileCheck %s -check-prefix LINUX
-// RUN: %clang_cc1 -triple spir-unknown-unknown -DSPIR -emit-llvm %s -o - | FileCheck %s -check-prefix SPIR
-// RUN: %clang_cc1 -triple i386-windows-pc -fdefault-calling-conv=stdcall -emit-llvm %s -o - | FileCheck %s -check-prefix WIN32
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-pc -DREDECL -emit-llvm %s -o - | FileCheck %s -check-prefix LINUX
+// RUN: %clang_cc1 -no-opaque-pointers -triple spir-unknown-unknown -DREDECL -DSPIR -emit-llvm %s -o - | FileCheck %s -check-prefix SPIR
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-pc -emit-llvm %s -o - | FileCheck %s -check-prefix LINUX
+// RUN: %clang_cc1 -no-opaque-pointers -triple spir-unknown-unknown -DSPIR -emit-llvm %s -o - | FileCheck %s -check-prefix SPIR
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-windows-pc -fdefault-calling-conv=stdcall -emit-llvm %s -o - | FileCheck %s -check-prefix WIN32
 
 #ifdef REDECL
 namespace std {

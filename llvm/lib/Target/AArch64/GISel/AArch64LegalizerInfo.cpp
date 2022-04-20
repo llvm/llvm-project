@@ -169,7 +169,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_SREM, G_UREM, G_SDIVREM, G_UDIVREM})
-      .lowerFor({s1, s8, s16, s32, s64, v2s64, v4s32, v2s32})
+      .lowerFor({s8, s16, s32, s64, v2s64, v4s32, v2s32})
       .widenScalarOrEltToNextPow2(0)
       .clampScalarOrElt(0, s32, s64)
       .clampNumElements(0, v2s32, v4s32)
@@ -180,7 +180,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SMULO, G_UMULO})
       .widenScalarToNextPow2(0, /*Min = */ 32)
       .clampScalar(0, s32, s64)
-      .lowerIf(typeIs(1, s1));
+      .lower();
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH})
       .legalFor({s64, v8s16, v16s8, v4s32})
@@ -308,7 +308,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       // These extends are also legal
       .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 8}})
       .widenScalarToNextPow2(0, /* MinSize = */8)
-      .lowerIfMemSizeNotPow2()
+      .lowerIfMemSizeNotByteSizePow2()
       .clampScalar(0, s8, s64)
       .narrowScalarIf([=](const LegalityQuery &Query) {
         // Clamp extending load results to 32-bits.
@@ -317,10 +317,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           Query.Types[0].getSizeInBits() > 32;
         },
         changeTo(0, s32))
-      // Lower any any-extending loads left into G_ANYEXT and G_LOAD
-      .lowerIf([=](const LegalityQuery &Query) {
-        return Query.Types[0] != Query.MMODescrs[0].MemoryTy;
-      })
       .clampMaxNumElements(0, s8, 16)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
@@ -536,7 +532,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
       .lowerIf(
-          all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(1, s1), typeIs(2, p0)));
+          all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
       .customIf([](const LegalityQuery &Query) {

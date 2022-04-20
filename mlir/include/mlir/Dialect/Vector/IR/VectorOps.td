@@ -13,6 +13,8 @@
 #ifndef VECTOR_OPS
 #define VECTOR_OPS
 
+include "mlir/IR/EnumAttr.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
@@ -31,19 +33,19 @@ class Vector_Op<string mnemonic, list<Trait> traits = []> :
     Op<Vector_Dialect, mnemonic, traits>;
 
 // The "kind" of combining function for contractions and reductions.
-def COMBINING_KIND_ADD : BitEnumAttrCaseBit<"ADD", 0, "add">;
-def COMBINING_KIND_MUL : BitEnumAttrCaseBit<"MUL", 1, "mul">;
-def COMBINING_KIND_MINUI : BitEnumAttrCaseBit<"MINUI", 2, "minui">;
-def COMBINING_KIND_MINSI : BitEnumAttrCaseBit<"MINSI", 3, "minsi">;
-def COMBINING_KIND_MINF : BitEnumAttrCaseBit<"MINF", 4, "minf">;
-def COMBINING_KIND_MAXUI : BitEnumAttrCaseBit<"MAXUI", 5, "maxui">;
-def COMBINING_KIND_MAXSI : BitEnumAttrCaseBit<"MAXSI", 6, "maxsi">;
-def COMBINING_KIND_MAXF : BitEnumAttrCaseBit<"MAXF", 7, "maxf">;
-def COMBINING_KIND_AND : BitEnumAttrCaseBit<"AND", 8, "and">;
-def COMBINING_KIND_OR  : BitEnumAttrCaseBit<"OR", 9, "or">;
-def COMBINING_KIND_XOR : BitEnumAttrCaseBit<"XOR", 10, "xor">;
+def COMBINING_KIND_ADD : I32BitEnumAttrCaseBit<"ADD", 0, "add">;
+def COMBINING_KIND_MUL : I32BitEnumAttrCaseBit<"MUL", 1, "mul">;
+def COMBINING_KIND_MINUI : I32BitEnumAttrCaseBit<"MINUI", 2, "minui">;
+def COMBINING_KIND_MINSI : I32BitEnumAttrCaseBit<"MINSI", 3, "minsi">;
+def COMBINING_KIND_MINF : I32BitEnumAttrCaseBit<"MINF", 4, "minf">;
+def COMBINING_KIND_MAXUI : I32BitEnumAttrCaseBit<"MAXUI", 5, "maxui">;
+def COMBINING_KIND_MAXSI : I32BitEnumAttrCaseBit<"MAXSI", 6, "maxsi">;
+def COMBINING_KIND_MAXF : I32BitEnumAttrCaseBit<"MAXF", 7, "maxf">;
+def COMBINING_KIND_AND : I32BitEnumAttrCaseBit<"AND", 8, "and">;
+def COMBINING_KIND_OR  : I32BitEnumAttrCaseBit<"OR", 9, "or">;
+def COMBINING_KIND_XOR : I32BitEnumAttrCaseBit<"XOR", 10, "xor">;
 
-def CombiningKind : BitEnumAttr<
+def CombiningKind : I32BitEnumAttr<
     "CombiningKind",
     "Kind of combining function for contractions and reductions",
     [COMBINING_KIND_ADD, COMBINING_KIND_MUL, COMBINING_KIND_MINUI,
@@ -1177,7 +1179,8 @@ def Vector_TransferReadOp :
     memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>).
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
-    supplied as the operands `[1 .. 1 + rank(memref/tensor))`.
+    supplied as the operands `[1 .. 1 + rank(memref/tensor))` that defines the
+    starting point of the transfer (e.g. `%A[%i0, %i1, %i2]`).
 
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
@@ -1196,18 +1199,15 @@ def Vector_TransferReadOp :
     specified to mask out elements. Such elements will be replaces with
     `padding`. Elements whose corresponding mask element is `0` are masked out.
 
-    An optional boolean array attribute is provided to specify which dimensions
-    of the transfer are guaranteed to be within bounds. The length of the array
-    must equal the rank of the vector type. Broadcast dimensions must always be
-    in-bounds. The absence of this optional `in_bounds` attribute signifies that
-    any dimension of the transfer (except for broadcasts) may be out-of-bounds.
-    A `vector.transfer_read` can be lowered to a simple load if all dimensions
-    are specified to be within bounds and no `mask` was specified.
-
-    Note that `in_bounds` is specified for result dimensions and not input
-    dimensions. The starting point of the transfer, i.e.,
-    `%A[%expr1, %expr2, %expr3, %expr4]` in the example below, is expected to
-    be in-bounds and as indices are increasing, accesses may run out-of-bounds.
+    An optional boolean array attribute `in_bounds` specifies for every vector
+    dimension if the transfer is guaranteed to be within the source bounds.
+    While the starting point of the transfer has to be in-bounds, accesses may
+    run out-of-bounds as indices increase. Broadcast dimensions must always be
+    in-bounds. If specified, the `in_bounds` array length has to be equal to the
+    vector rank. In absence of the attribute, accesses along all dimensions
+    (except for broadcasts) may run out-of-bounds. A `vector.transfer_read` can
+    be lowered to a simple load if all dimensions are specified to be within
+    bounds and no `mask` was specified.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1387,7 +1387,8 @@ def Vector_TransferWriteOp :
     new tensor of the same type.
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
-    supplied as the operands `[2 .. 2 + rank(memref/tensor))`.
+    supplied as the operands `[2 .. 2 + rank(memref/tensor))` that defines the
+    starting point of the transfer (e.g. `%A[%i0, %i1, %i2, %i3]`).
 
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
@@ -1402,25 +1403,14 @@ def Vector_TransferWriteOp :
     specified to mask out elements. Elements whose corresponding mask element
     is `0` are masked out.
 
-    An optional boolean array attribute is provided to specify which dimensions
-    of the transfer are guaranteed to be within bounds. The absence of this
-    `in_bounds` attribute signifies that any dimension of the transfer may be
-    out-of-bounds. A `vector.transfer_write` can be lowered to a simple store
-    if all dimensions are specified to be within bounds and no `mask` was
-    specified.
-
-    An optional boolean array attribute is provided to specify which dimensions
-    of the transfer are guaranteed to be within bounds. The length of the array
-    must equal the rank of the vector type. The absence of this optional
-    `in_bounds` attribute signifies that any dimension of the transfer
-    may be out-of-bounds. A `vector.transfer_write` can be lowered to a simple
-    store if all dimensions are specified to be within bounds and no `mask` was
-    specified.
-
-    Note that `in_bounds` is specified for result dimensions and not input
-    dimensions. The starting point of the transfer, i.e.,
-    `%A[%expr1, %expr2, %expr3, %expr4]` in the example below, is expected to
-    be in-bounds and as indices are increasing, accesses may run out-of-bounds.
+    An optional boolean array attribute `in_bounds` specifies for every vector
+    dimension if the transfer is guaranteed to be within the source bounds.
+    While the starting point of the transfer has to be in-bounds, accesses may
+    run out-of-bounds as indices increase. If specified, the `in_bounds` array
+    length has to be equal to the vector rank. In absence of the attribute,
+    accesses along all dimensions may run out-of-bounds. A
+    `vector.transfer_write` can be lowered to a simple store if all dimensions
+    are specified to be within bounds and no `mask` was specified.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
@@ -2229,6 +2219,7 @@ def Vector_CreateMaskOp :
 
 def Vector_TransposeOp :
   Vector_Op<"transpose", [NoSideEffect,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyVector:$vector, I64ArrayAttr:$transp)>,
@@ -2548,6 +2539,141 @@ def Vector_ScanOp :
     "$kind `,` $source `,` $initial_value attr-dict `:` "
     "type($source) `,` type($initial_value) ";
   let hasVerifier = 1;
+}
+
+def Vector_YieldOp : Vector_Op<"yield", [
+    NoSideEffect, ReturnLike, Terminator]> {
+  let summary = "Terminates and yields values from vector regions.";
+  let description = [{
+    "vector.yield" yields an SSA value from the Vector dialect op region and
+    terminates the regions. The semantics of how the values are yielded is
+    defined by the parent operation.
+    If "vector.yield" has any operands, the operands must correspond to the
+    parent operation's results.
+    If the parent operation defines no value the vector.yield may be omitted
+    when printing the region.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [
+    OpBuilder<(ins), [{ /* nothing to do */ }]>,
+  ];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+}
+
+def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["areTypesCompatible"]>,
+       SingleBlockImplicitTerminator<"vector::YieldOp">,
+       RecursiveSideEffects]> {
+  let summary = "Executes operations in the associated region on lane #0 of a"
+                "GPU SIMT warp";
+  let description = [{
+    `warp_execute_on_lane_0` is an operation used to bridge the gap between
+    vector programming and GPU SIMT programming model. It allows to trivially
+    convert a region of vector code meant to run on a GPU warp into a valid SIMT
+    region and then allows incremental transformation to distribute vector
+    operations on the SIMT lane.
+
+    Any code present in the region would only be executed on first lane
+    based on the `laneid` operand. The `laneid` operand is an integer ID between
+    [0, `warp_size`). The `warp_size` attribute indicates the number of lanes in
+    a warp.
+
+    Operands are vector values distributed on all lanes that may be used by
+    the single lane execution. The matching region argument is a vector of all
+    the values of those lanes available to the single active lane. The
+    distributed dimension is implicit based on the shape of the operand and
+    argument. In the future this may be described by an affine map.
+
+    Return values are distributed on all lanes using laneId as index. The
+    vector is distributed based on the shape ratio between the vector type of
+    the yield and the result type.
+    If the shapes are the same this means the value is broadcasted to all lanes.
+    In the future the distribution can be made more explicit using affine_maps
+    and will support having multiple Ids.
+
+    Therefore the `warp_execute_on_lane_0` operations allow to implicitly copy
+    between lane0 and the lanes of the warp. When distributing a vector
+    from lane0 to all the lanes, the data are distributed in a block cyclic way.
+
+    During lowering values passed as operands and return value need to be
+    visible to different lanes within the warp. This would usually be done by
+    going through memory.
+
+    The region is *not* isolated from above. For values coming from the parent
+    region not going through operands only the lane 0 value will be accesible so
+    it generally only make sense for uniform values.
+
+    Example:
+    ```
+    vector.warp_execute_on_lane_0 (%laneid)[32] {
+      ...
+    }
+    ```
+
+    This may be lowered to an scf.if region as below:
+    ```
+      %cnd = arith.cmpi eq, %laneid, %c0 : index
+      scf.if %cnd {
+         ...
+      }
+    ```
+
+    When the region has operands and/or return values:
+    ```
+    %0 = vector.warp_execute_on_lane_0(%laneid)[32]
+    args(%v0 : vector<4xi32>) -> (vector<1xf32>) {
+    ^bb0(%arg0 : vector<128xi32>) :
+      ...
+      vector.yield %1 : vector<32xf32>
+    }
+    ```
+
+    values at the region boundary would go through memory:
+    ```
+    %tmp0 = memreg.alloc() : memref<32xf32, 3>
+    %tmp1 = memreg.alloc() : memref<32xf32, 3>
+    %cnd = arith.cmpi eq, %laneid, %c0 : index
+    vector.store %v0, %tmp0[%laneid] : memref<32xf32>, vector<1xf32>
+    warp_sync
+    scf.if %cnd {
+      %arg0 = vector.load %tmp0[%c0] : memref<32xf32>, vector<32xf32>
+      ...
+      vector.store %1, %tmp1[%c0] : memref<32xf32>, vector<32xf32>
+    }
+    warp_sync
+    %0 = vector.load %tmp1[%laneid] : memref<32xf32>, vector<32xf32>
+    ```
+
+  }];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+  let arguments = (ins Index:$laneid, I64Attr:$warp_size,
+                       Variadic<AnyType>:$args);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$warpRegion);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$laneid, "int64_t":$warpSize)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
+                   "int64_t":$warpSize)>,
+    // `blockArgTypes` are different than `args` types as they are they
+    // represent all the `args` instances visibile to lane 0. Therefore we need
+    // to explicit pass the type.
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
+                   "int64_t":$warpSize, "ValueRange":$args,
+                   "TypeRange":$blockArgTypes)>
+  ];
+
+  let extraClassDeclaration = [{
+    bool isDefinedOutsideOfRegion(Value value) {
+      return !getRegion().isAncestor(value.getParentRegion());
+    }
+  }];
 }
 
 #endif // VECTOR_OPS

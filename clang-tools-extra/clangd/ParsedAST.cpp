@@ -211,7 +211,6 @@ private:
       SynthesizedFilenameTok.setKind(tok::header_name);
       SynthesizedFilenameTok.setLiteralData(Inc.Written.data());
 
-      const FileEntry *FE = File ? &File->getFileEntry() : nullptr;
       llvm::StringRef WrittenFilename =
           llvm::StringRef(Inc.Written).drop_front().drop_back();
       Delegate->InclusionDirective(
@@ -220,7 +219,7 @@ private:
           syntax::FileRange(SM, SynthesizedFilenameTok.getLocation(),
                             SynthesizedFilenameTok.getEndLoc())
               .toCharRange(SM),
-          FE, "SearchPath", "RelPath",
+          File, "SearchPath", "RelPath",
           /*Imported=*/nullptr, Inc.FileKind);
       if (File)
         Delegate->FileSkipped(*File, SynthesizedFilenameTok, Inc.FileKind);
@@ -413,6 +412,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
+    CTContext->setSelfContainedDiags(true);
     CTChecks = CTFactories.createChecks(CTContext.getPointer());
     llvm::erase_if(CTChecks, [&](const auto &Check) {
       return !Check->isLanguageVersionSupported(CTContext->getLangOpts());
@@ -428,7 +428,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     // this is an error. (The actual typo correction is nice too).
     // We restore the original severity in the level adjuster.
     // FIXME: It would be better to have a real API for this, but what?
-    for (auto ID : {diag::ext_implicit_function_decl,
+    for (auto ID : {diag::ext_implicit_function_decl_c99,
+                    diag::ext_implicit_lib_function_decl_c99,
                     diag::warn_implicit_function_decl}) {
       OverriddenSeverity.try_emplace(
           ID, Clang->getDiagnostics().getDiagnosticLevel(ID, SourceLocation()));

@@ -276,12 +276,13 @@ define dso_local i1 @test_setcc3() {
 }
 
 
-define dso_local i32 @test_br_cc() {
+define dso_local i32 @test_br_cc() uwtable {
 ; CHECK-LABEL: test_br_cc:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
 ; CHECK-NEXT:    adrp x8, rhs
@@ -292,10 +293,15 @@ define dso_local i32 @test_br_cc() {
 ; CHECK-NEXT:  // %bb.1: // %iftrue
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB11_2: // %iffalse
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    mov w0, #29
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 
   %lhs = load fp128, fp128* @lhs, align 16
@@ -414,8 +420,8 @@ define dso_local void @test_extend() {
 define fp128 @test_neg(fp128 %in) {
 ; CHECK-LABEL: test_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    str q0, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldrb w8, [sp, #15]
 ; CHECK-NEXT:    eor w8, w8, #0x80
 ; CHECK-NEXT:    strb w8, [sp, #15]

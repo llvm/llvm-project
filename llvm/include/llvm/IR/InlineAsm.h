@@ -240,12 +240,15 @@ public:
     Kind_RegDefEarlyClobber = 3, // Early-clobber output register, "=&r".
     Kind_Clobber = 4,            // Clobbered register, "~r".
     Kind_Imm = 5,                // Immediate.
-    Kind_Mem = 6,                // Memory operand, "m".
+    Kind_Mem = 6,                // Memory operand, "m", or an address, "p".
 
     // Memory constraint codes.
     // These could be tablegenerated but there's little need to do that since
     // there's plenty of space in the encoding to support the union of all
     // constraint codes for all targets.
+    // Addresses are included here as they need to be treated the same by the
+    // backend, the only difference is that they are not used to actaully
+    // access memory by the instruction.
     Constraint_Unknown = 0,
     Constraint_es,
     Constraint_i,
@@ -268,7 +271,15 @@ public:
     Constraint_Z,
     Constraint_ZC,
     Constraint_Zy,
-    Constraints_Max = Constraint_Zy,
+
+    // Address constraints
+    Constraint_p,
+    Constraint_ZQ,
+    Constraint_ZR,
+    Constraint_ZS,
+    Constraint_ZT,
+
+    Constraints_Max = Constraint_ZT,
     Constraints_ShiftAmount = 16,
 
     Flag_MatchingOperand = 0x80000000
@@ -453,6 +464,16 @@ public:
       return "ZC";
     case InlineAsm::Constraint_Zy:
       return "Zy";
+    case InlineAsm::Constraint_p:
+      return "p";
+    case InlineAsm::Constraint_ZQ:
+      return "ZQ";
+    case InlineAsm::Constraint_ZR:
+      return "ZR";
+    case InlineAsm::Constraint_ZS:
+      return "ZS";
+    case InlineAsm::Constraint_ZT:
+      return "ZT";
     default:
       llvm_unreachable("Unknown memory constraint");
     }

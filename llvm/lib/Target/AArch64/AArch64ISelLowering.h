@@ -673,7 +673,8 @@ public:
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
-  bool shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  TargetLoweringBase::AtomicExpansionKind
+  shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
 
@@ -1041,6 +1042,8 @@ private:
                                               SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+                        SmallVectorImpl<SDNode *> &Created) const override;
+  SDValue BuildSREMPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;
   SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                           int &ExtraSteps, bool &UseOneConst,

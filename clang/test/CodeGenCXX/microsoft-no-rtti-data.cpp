@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fno-rtti-data -triple=i386-pc-win32 -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti-data -triple=i386-pc-win32 -o - -emit-llvm | FileCheck %s
 
 // vftable shouldn't have RTTI data in it.
 // CHECK-NOT: @"??_R4S@@6B@"

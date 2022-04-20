@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,NONCOFF
-// RUN: %clang_cc1 -triple i386-unknown-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,COFF
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,NONCOFF
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,COFF
 
 __attribute((aligned(16))) float a[128];
 union {int a[4]; __attribute((aligned(16))) float b[4];} b;

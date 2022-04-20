@@ -441,10 +441,9 @@ static Value getPHISourceValue(Block *current, Block *pred,
   for (unsigned i = 0, e = terminator.getNumSuccessors(); i < e; ++i) {
     Block *successor = terminator.getSuccessor(i);
     auto branch = cast<BranchOpInterface>(terminator);
-    Optional<OperandRange> successorOperands = branch.getSuccessorOperands(i);
+    SuccessorOperands successorOperands = branch.getSuccessorOperands(i);
     assert(
-        (!seenSuccessors.contains(successor) ||
-         (successorOperands && successorOperands->empty())) &&
+        (!seenSuccessors.contains(successor) || successorOperands.empty()) &&
         "successors with arguments in LLVM branches must be different blocks");
     seenSuccessors.insert(successor);
   }
@@ -662,7 +661,10 @@ LogicalResult ModuleTranslation::convertGlobals() {
 
     auto *var = new llvm::GlobalVariable(
         *llvmModule, type, op.getConstant(), linkage, cst, op.getSymName(),
-        /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal, addrSpace);
+        /*InsertBefore=*/nullptr,
+        op.getThreadLocal_() ? llvm::GlobalValue::GeneralDynamicTLSModel
+                             : llvm::GlobalValue::NotThreadLocal,
+        addrSpace);
 
     if (op.getUnnamedAddr().hasValue())
       var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.getUnnamedAddr()));

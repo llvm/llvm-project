@@ -1689,7 +1689,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     bool iterArgsNotInOrder = false;
     for (unsigned i = 0, e = yieldOp->getNumOperands(); i < e; ++i) {
       Value val = yieldOp.getOperand(i);
-      auto iterArgIt = llvm::find(iterArgs, val);
+      auto *iterArgIt = llvm::find(iterArgs, val);
       if (iterArgIt == iterArgs.end()) {
         // `val` is defined outside of the loop.
         assert(forOp.isDefinedOutsideOfLoop(val) &&
@@ -1723,12 +1723,61 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<AffineForEmptyLoopFolder>(context);
 }
 
+/// Return operands used when entering the region at 'index'. These operands
+/// correspond to the loop iterator operands, i.e., those excluding the
+/// induction variable. AffineForOp only has one region, so zero is the only
+/// valid value for `index`.
+OperandRange AffineForOp::getSuccessorEntryOperands(unsigned index) {
+  assert(index == 0 && "invalid region index");
+
+  // The initial operands map to the loop arguments after the induction
+  // variable.
+  return getIterOperands();
+}
+
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void AffineForOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  assert((!index.hasValue() || index.getValue() == 0) &&
+         "expected loop region");
+  // The loop may typically branch back to its body or to the parent operation.
+  // If the predecessor is the parent op and the trip count is known to be at
+  // least one, branch into the body using the iterator arguments. And in cases
+  // we know the trip count is zero, it can only branch back to its parent.
+  Optional<uint64_t> tripCount = getTrivialConstantTripCount(*this);
+  if (!index.hasValue() && tripCount.hasValue()) {
+    if (tripCount.getValue() > 0) {
+      regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
+      return;
+    }
+    if (tripCount.getValue() == 0) {
+      regions.push_back(RegionSuccessor(getResults()));
+      return;
+    }
+  }
+
+  // From the loop body, if the trip count is one, we can only branch back to
+  // the parent.
+  if (index.hasValue() && tripCount.hasValue() && tripCount.getValue() == 1) {
+    regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  // In all other cases, the loop may branch back to itself or the parent
+  // operation.
+  regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
+  regions.push_back(RegionSuccessor(getResults()));
+}
+
 /// Returns true if the affine.for has zero iterations in trivial cases.
 static bool hasTrivialZeroTripCount(AffineForOp op) {
   Optional<uint64_t> tripCount = getTrivialConstantTripCount(op);
-  if (tripCount.hasValue() && tripCount.getValue() == 0)
-    return true;
-  return false;
+  return tripCount.hasValue() && tripCount.getValue() == 0;
 }
 
 LogicalResult AffineForOp::fold(ArrayRef<Attribute> operands,
@@ -1873,6 +1922,13 @@ Optional<OpFoldResult> AffineForOp::getSingleLowerBound() {
 Optional<OpFoldResult> AffineForOp::getSingleStep() {
   OpBuilder b(getContext());
   return OpFoldResult(b.getI64IntegerAttr(getStep()));
+}
+
+Optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
+  if (!hasConstantUpperBound())
+    return llvm::None;
+  OpBuilder b(getContext());
+  return OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()));
 }
 
 /// Returns true if the provided value is the induction variable of a

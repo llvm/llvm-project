@@ -9,10 +9,10 @@
 #include "DecodedThread.h"
 
 #include <intel-pt.h>
-#include <memory>
 
 #include "TraceCursorIntelPT.h"
-#include "lldb/Utility/StreamString.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -33,10 +33,6 @@ void IntelPTError::log(llvm::raw_ostream &OS) const {
     OS << "    ";
   }
   OS << "error: " << libipt_error_message;
-}
-
-Optional<size_t> DecodedThread::GetRawTraceSize() const {
-  return m_raw_trace_size;
 }
 
 size_t DecodedThread::GetInstructionsCount() const {
@@ -177,8 +173,6 @@ DecodedThread::DecodedThread(ThreadSP thread_sp, Error &&error)
     : m_thread_sp(thread_sp) {
   AppendError(std::move(error));
 }
-
-void DecodedThread::SetRawTraceSize(size_t size) { m_raw_trace_size = size; }
 
 lldb::TraceCursorUP DecodedThread::GetCursor() {
   // We insert a fake error signaling an empty trace if needed becasue the

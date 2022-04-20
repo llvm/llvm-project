@@ -104,6 +104,7 @@ def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_imag
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
 def FuncExtKhrGlMsaaSharingReadWrite     : FunctionExtension<"cl_khr_gl_msaa_sharing __opencl_c_read_write_images">;
 
+def FuncExtOpenCLCDeviceEnqueue          : FunctionExtension<"__opencl_c_device_enqueue">;
 def FuncExtOpenCLCGenericAddressSpace    : FunctionExtension<"__opencl_c_generic_address_space">;
 def FuncExtOpenCLCNamedAddressSpaceBuiltins : FunctionExtension<"__opencl_c_named_address_space_builtins">;
 def FuncExtOpenCLCPipes                  : FunctionExtension<"__opencl_c_pipes">;
@@ -923,7 +924,7 @@ def : Builtin<"write_mem_fence", [Void, MemFenceFlags]>;
 // OpenCL v3.0 s6.15.10 - Address Space Qualifier Functions.
 // to_global, to_local, to_private are declared in Builtins.def.
 
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
   // The OpenCL 3.0 specification defines these with a "gentype" argument indicating any builtin
   // type or user-defined type, which cannot be represented currently.  Hence we slightly diverge
   // by providing only the following overloads with a void pointer.
@@ -1454,7 +1455,7 @@ let Extension = FuncExtOpenCLCPipes in {
 // Defined in Builtins.def
 
 // --- Table 33 ---
-let MinVersion = CL20 in {
+let Extension = FuncExtOpenCLCDeviceEnqueue in {
   def : Builtin<"enqueue_marker",
       [Int, Queue, UInt, PointerType<ConstType<ClkEvent>, GenericAS>, PointerType<ClkEvent, GenericAS>]>;
 

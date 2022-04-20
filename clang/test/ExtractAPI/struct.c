@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
-// RUN: %t/reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/reference.output.json.in >> %t/reference.output.json
 // RUN: %clang -extract-api -target arm64-apple-macosx \
 // RUN: %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
@@ -120,6 +120,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Color"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -165,6 +171,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Red"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -211,6 +223,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Green"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -257,6 +275,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Blue"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -320,6 +344,12 @@ struct Color {
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Alpha"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -pedantic -fsyntax-only %s -verify -fblocks
 
+extern int printf(const char *, ...);
+
 typedef void (^CL)(void);
 
 CL foo(void) {
@@ -62,9 +64,9 @@ typedef struct {
 
 int foo3(void) {
     CFBasicHashCallbacks cb;
-    
+
     Boolean (*value_equal)(uintptr_t, uintptr_t) = 0;
-            
+
     cb.isEqual = ^(const CFBasicHash *table, uintptr_t stack_value_or_key1, uintptr_t stack_value_or_key2, Boolean is_key) {
       return (Boolean)(uintptr_t)INVOKE_CALLBACK2(value_equal, (uintptr_t)stack_value_or_key1, (uintptr_t)stack_value_or_key2);
     };
@@ -73,16 +75,15 @@ int foo3(void) {
 static int funk(char *s) {
   if (^{} == ((void*)0))
     return 1;
-  else 
+  else
     return 0;
 }
 void next(void);
 void foo4(void) {
   int (^xx)(const char *s) = ^(char *s) { return 1; }; // expected-error {{incompatible block pointer types initializing 'int (^)(const char *)' with an expression of type 'int (^)(char *)'}}
   int (*yy)(const char *s) = funk; // expected-warning {{incompatible function pointer types initializing 'int (*)(const char *)' with an expression of type 'int (char *)'}}
-  
-  int (^nested)(char *s) = ^(char *str) { void (^nest)(void) = ^(void) { printf("%s\n", str); }; next(); return 1; }; // expected-warning{{implicitly declaring library function 'printf' with type 'int (const char *, ...)'}} \
-  // expected-note{{include the header <stdio.h> or explicitly provide a declaration for 'printf'}}
+
+  int (^nested)(char *s) = ^(char *str) { void (^nest)(void) = ^(void) { printf("%s\n", str); }; next(); return 1; };
 }
 
 typedef void (^bptr)(void);
@@ -99,6 +100,7 @@ bptr foo5(int j) {
 int (*funcptr3[5])(long);
 int sz8 = sizeof(^int (*[5])(long) {return funcptr3;}); // expected-error {{block cannot return array type}} expected-warning {{incompatible pointer to integer conversion}}
 int sz9 = sizeof(^int(*())()[3]{ }); // expected-error {{function cannot return array type}}
+                                     // expected-warning@-1 2 {{a function declaration without a prototype is deprecated in all versions of C}}
 
 void foo6(void) {
   int (^b)(int) __attribute__((noreturn));

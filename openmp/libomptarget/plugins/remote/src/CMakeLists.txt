@@ -34,7 +34,7 @@ install(TARGETS omptarget.rtl.rpc LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}"
 target_link_libraries(omptarget.rtl.rpc
   grpc++
   protobuf
-  "-ldl"
+  absl::synchronization
   ${OPENMP_PTHREAD_LIB}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports")
 

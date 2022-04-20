@@ -92,6 +92,11 @@ static bool isIntegralConstant(const Token &Token) {
       Begin, End, [](char C) { return C == '.' || std::toupper(C) == 'E'; });
 }
 
+static StringRef getTokenName(const Token &Tok) {
+  return Tok.is(tok::raw_identifier) ? Tok.getRawIdentifier()
+                                     : Tok.getIdentifierInfo()->getName();
+}
+
 namespace {
 
 struct EnumMacro {
@@ -128,9 +133,9 @@ public:
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     clearCurrentEnum(HashLoc);
   }
@@ -217,6 +222,8 @@ private:
   void conditionStart(const SourceLocation &Loc);
   void checkCondition(SourceRange ConditionRange);
   void checkName(const Token &MacroNameTok);
+  void rememberExpressionName(const Token &MacroNameTok);
+  void invalidateExpressionNames();
   void warnMacroEnum(const EnumMacro &Macro) const;
   void fixEnumMacro(const MacroList &MacroList) const;
 
@@ -225,6 +232,7 @@ private:
   const SourceManager &SM;
   SmallVector<MacroList> Enums;
   SmallVector<FileState> Files;
+  std::vector<std::string> ExpressionNames;
   FileState *CurrentFile = nullptr;
 };
 
@@ -279,21 +287,22 @@ void MacroToEnumCallbacks::checkCondition(SourceRange Range) {
 }
 
 void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
-  std::string Id;
-  if (MacroNameTok.is(tok::raw_identifier))
-    Id = MacroNameTok.getRawIdentifier().str();
-  else if (MacroNameTok.is(tok::identifier))
-    Id = MacroNameTok.getIdentifierInfo()->getName().str();
-  else {
-    assert(false && "Expected either an identifier or raw identifier token");
-    return;
-  }
+  rememberExpressionName(MacroNameTok);
 
+  StringRef Id = getTokenName(MacroNameTok);
   llvm::erase_if(Enums, [&Id](const MacroList &MacroList) {
     return llvm::any_of(MacroList, [&Id](const EnumMacro &Macro) {
-      return Macro.Name.getIdentifierInfo()->getName().str() == Id;
+      return getTokenName(Macro.Name) == Id;
     });
   });
+}
+
+void MacroToEnumCallbacks::rememberExpressionName(const Token &MacroNameTok) {
+  std::string Id = getTokenName(MacroNameTok).str();
+  auto Pos = llvm::lower_bound(ExpressionNames, Id);
+  if (Pos == ExpressionNames.end() || *Pos != Id) {
+    ExpressionNames.insert(Pos, Id);
+  }
 }
 
 void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
@@ -327,18 +336,51 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
     return;
 
   const MacroInfo *Info = MD->getMacroInfo();
-  if (Info->isFunctionLike() || Info->isBuiltinMacro() ||
-      Info->tokens().empty() || Info->tokens().size() > 2)
+  ArrayRef<Token> MacroTokens = Info->tokens();
+  if (Info->isFunctionLike() || Info->isBuiltinMacro() || MacroTokens.empty())
     return;
 
-  // It can be +Lit, -Lit or just Lit.
-  Token Tok = Info->tokens().front();
-  if (Info->tokens().size() == 2) {
-    if (!Tok.isOneOf(tok::TokenKind::minus, tok::TokenKind::plus,
-                     tok::TokenKind::tilde))
+  // Return Lit when +Lit, -Lit or ~Lit; otherwise return Unknown.
+  Token Unknown;
+  Unknown.setKind(tok::TokenKind::unknown);
+  auto GetUnopArg = [Unknown](Token First, Token Second) {
+    return First.isOneOf(tok::TokenKind::minus, tok::TokenKind::plus,
+                         tok::TokenKind::tilde)
+               ? Second
+               : Unknown;
+  };
+
+  // It could just be a single token.
+  Token Tok = MacroTokens.front();
+
+  // It can be any arbitrary nesting of matched parentheses around
+  // +Lit, -Lit, ~Lit or Lit.
+  if (MacroTokens.size() > 2) {
+    // Strip off matching '(', ..., ')' token pairs.
+    size_t Begin = 0;
+    size_t End = MacroTokens.size() - 1;
+    assert(End >= 2U);
+    for (; Begin < MacroTokens.size() / 2; ++Begin, --End) {
+      if (!MacroTokens[Begin].is(tok::TokenKind::l_paren) ||
+          !MacroTokens[End].is(tok::TokenKind::r_paren))
+        break;
+    }
+    size_t Size = End >= Begin ? (End - Begin + 1U) : 0U;
+
+    // It was a single token inside matching parens.
+    if (Size == 1)
+      Tok = MacroTokens[Begin];
+    else if (Size == 2)
+      // It can be +Lit, -Lit or ~Lit.
+      Tok = GetUnopArg(MacroTokens[Begin], MacroTokens[End]);
+    else
+      // Zero or too many tokens after we stripped matching parens.
       return;
-    Tok = Info->tokens().back();
+  } else if (MacroTokens.size() == 2) {
+    // It can be +Lit, -Lit, or ~Lit.
+    Tok = GetUnopArg(MacroTokens.front(), MacroTokens.back());
   }
+
   if (!Tok.isLiteral() || isStringLiteral(Tok.getKind()) ||
       !isIntegralConstant(Tok))
     return;
@@ -354,9 +396,10 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
 void MacroToEnumCallbacks::MacroUndefined(const Token &MacroNameTok,
                                           const MacroDefinition &MD,
                                           const MacroDirective *Undef) {
+  rememberExpressionName(MacroNameTok);
+
   auto MatchesToken = [&MacroNameTok](const EnumMacro &Macro) {
-    return Macro.Name.getIdentifierInfo()->getName() ==
-           MacroNameTok.getIdentifierInfo()->getName();
+    return getTokenName(Macro.Name) == getTokenName(MacroNameTok);
   };
 
   auto It = llvm::find_if(Enums, [MatchesToken](const MacroList &MacroList) {
@@ -418,7 +461,19 @@ void MacroToEnumCallbacks::PragmaDirective(SourceLocation Loc,
     CurrentFile->GuardScanner = IncludeGuard::IfGuard;
 }
 
+void MacroToEnumCallbacks::invalidateExpressionNames() {
+  for (const std::string &Id : ExpressionNames) {
+    llvm::erase_if(Enums, [Id](const MacroList &MacroList) {
+      return llvm::any_of(MacroList, [&Id](const EnumMacro &Macro) {
+        return getTokenName(Macro.Name) == Id;
+      });
+    });
+  }
+}
+
 void MacroToEnumCallbacks::EndOfMainFile() {
+  invalidateExpressionNames();
+
   for (const MacroList &MacroList : Enums) {
     if (MacroList.empty())
       continue;
@@ -432,8 +487,8 @@ void MacroToEnumCallbacks::EndOfMainFile() {
 
 void MacroToEnumCallbacks::warnMacroEnum(const EnumMacro &Macro) const {
   Check->diag(Macro.Directive->getLocation(),
-              "macro %0 defines an integral constant; prefer an enum instead")
-      << Macro.Name.getIdentifierInfo();
+              "macro '%0' defines an integral constant; prefer an enum instead")
+      << getTokenName(Macro.Name);
 }
 
 void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {

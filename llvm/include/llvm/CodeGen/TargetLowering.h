@@ -256,6 +256,11 @@ public:
     MaskedIntrinsic,  // Use a target-specific intrinsic for the LL/SC loop.
     BitTestIntrinsic, // Use a target-specific intrinsic for special bit
                       // operations; used by X86.
+    Expand,           // Generic expansion in terms of other atomic operations.
+
+    // Rewrite to a non-atomic form for use in a known non-preemptible
+    // environment.
+    NotAtomic
   };
 
   /// Enum that specifies when a multiplication should be expanded.
@@ -2020,12 +2025,6 @@ public:
   // be unnecessarily held, except if clrex, inserted by this hook, is executed.
   virtual void emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const {}
 
-  /// Returns true if the given (atomic) store should be expanded by the
-  /// IR-level AtomicExpand pass into an "atomic xchg" which ignores its input.
-  virtual bool shouldExpandAtomicStoreInIR(StoreInst *SI) const {
-    return false;
-  }
-
   /// Returns true if arguments should be sign-extended in lib calls.
   virtual bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
     return IsSigned;
@@ -2039,6 +2038,13 @@ public:
   /// Returns how the given (atomic) load should be expanded by the
   /// IR-level AtomicExpand pass.
   virtual AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+    return AtomicExpansionKind::None;
+  }
+
+  /// Returns how the given (atomic) store should be expanded by the IR-level
+  /// AtomicExpand pass into. For instance AtomicExpansionKind::Expand will try
+  /// to use an atomicrmw xchg.
+  virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }
 
@@ -2243,21 +2249,33 @@ protected:
   /// Indicate that the specified operation does not work with the specified
   /// type and indicate what to do about it. Note that VT may refer to either
   /// the type of a result or that of an operand of Op.
-  void setOperationAction(unsigned Op, MVT VT, LegalizeAction Action) {
-    assert(Op < array_lengthof(OpActions[0]) && "Table isn't big enough!");
-    OpActions[(unsigned)VT.SimpleTy][Op] = Action;
+  void setOperationAction(ArrayRef<unsigned> Ops, MVT VT,
+                          LegalizeAction Action) {
+    for (auto Op : Ops) {
+      assert(Op < array_lengthof(OpActions[0]) && "Table isn't big enough!");
+      OpActions[(unsigned)VT.SimpleTy][Op] = Action;
+    }
+  }
+  void setOperationAction(ArrayRef<unsigned> Ops, ArrayRef<MVT> VTs,
+                          LegalizeAction Action) {
+    for (auto VT : VTs)
+      setOperationAction(Ops, VT, Action);
   }
 
   /// Indicate that the specified load with extension does not work with the
   /// specified type and indicate what to do about it.
-  void setLoadExtAction(unsigned ExtType, MVT ValVT, MVT MemVT,
+  void setLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT, MVT MemVT,
                         LegalizeAction Action) {
-    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
-           MemVT.isValid() && "Table isn't big enough!");
-    assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
-    unsigned Shift = 4 * ExtType;
-    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &= ~((uint16_t)0xF << Shift);
-    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action << Shift;
+    for (auto ExtType : ExtTypes) {
+      assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
+             MemVT.isValid() && "Table isn't big enough!");
+      assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+      unsigned Shift = 4 * ExtType;
+      LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &=
+          ~((uint16_t)0xF << Shift);
+      LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action
+                                                        << Shift;
+    }
   }
 
   /// Indicate that the specified truncating store does not work with the
@@ -2307,17 +2325,24 @@ protected:
 
   /// Indicate that the specified condition code is or isn't supported on the
   /// target and indicate what to do about it.
-  void setCondCodeAction(ISD::CondCode CC, MVT VT,
+  void setCondCodeAction(ArrayRef<ISD::CondCode> CCs, MVT VT,
                          LegalizeAction Action) {
-    assert(VT.isValid() && (unsigned)CC < array_lengthof(CondCodeActions) &&
-           "Table isn't big enough!");
-    assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
-    /// The lower 3 bits of the SimpleTy index into Nth 4bit set from the 32-bit
-    /// value and the upper 29 bits index into the second dimension of the array
-    /// to select what 32-bit value to use.
-    uint32_t Shift = 4 * (VT.SimpleTy & 0x7);
-    CondCodeActions[CC][VT.SimpleTy >> 3] &= ~((uint32_t)0xF << Shift);
-    CondCodeActions[CC][VT.SimpleTy >> 3] |= (uint32_t)Action << Shift;
+    for (auto CC : CCs) {
+      assert(VT.isValid() && (unsigned)CC < array_lengthof(CondCodeActions) &&
+             "Table isn't big enough!");
+      assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+      /// The lower 3 bits of the SimpleTy index into Nth 4bit set from the
+      /// 32-bit value and the upper 29 bits index into the second dimension of
+      /// the array to select what 32-bit value to use.
+      uint32_t Shift = 4 * (VT.SimpleTy & 0x7);
+      CondCodeActions[CC][VT.SimpleTy >> 3] &= ~((uint32_t)0xF << Shift);
+      CondCodeActions[CC][VT.SimpleTy >> 3] |= (uint32_t)Action << Shift;
+    }
+  }
+  void setCondCodeAction(ArrayRef<ISD::CondCode> CCs, ArrayRef<MVT> VTs,
+                         LegalizeAction Action) {
+    for (auto VT : VTs)
+      setCondCodeAction(CCs, VT, Action);
   }
 
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
@@ -2338,14 +2363,11 @@ protected:
   /// Targets should invoke this method for each target independent node that
   /// they want to provide a custom DAG combiner for by implementing the
   /// PerformDAGCombine virtual method.
-  void setTargetDAGCombine(ISD::NodeType NT) {
-    assert(unsigned(NT >> 3) < array_lengthof(TargetDAGCombineArray));
-    TargetDAGCombineArray[NT >> 3] |= 1 << (NT&7);
-  }
-
   void setTargetDAGCombine(ArrayRef<ISD::NodeType> NTs) {
-    for (auto NT : NTs)
-      setTargetDAGCombine(NT);
+    for (auto NT : NTs) {
+      assert(unsigned(NT >> 3) < array_lengthof(TargetDAGCombineArray));
+      TargetDAGCombineArray[NT >> 3] |= 1 << (NT & 7);
+    }
   }
 
   /// Set the target's minimum function alignment.
@@ -2677,6 +2699,10 @@ public:
     return false;
   }
 
+  /// Return true if this constant should be sign extended when promoting to
+  /// a larger type.
+  virtual bool signExtendConstant(const ConstantInt *C) const { return false; }
+
   /// Return true if sinking I's operands to the same basic block as I is
   /// profitable, e.g. because the operands can be folded into a target
   /// instruction during instruction selection. After calling the function
@@ -2969,8 +2995,9 @@ public:
   //
 
   /// Rename the default libcall routine name for the specified libcall.
-  void setLibcallName(RTLIB::Libcall Call, const char *Name) {
-    LibcallRoutineNames[Call] = Name;
+  void setLibcallName(ArrayRef<RTLIB::Libcall> Calls, const char *Name) {
+    for (auto Call : Calls)
+      LibcallRoutineNames[Call] = Name;
   }
 
   /// Get the libcall routine name for the specified libcall.
@@ -4309,6 +4336,7 @@ public:
     C_Register,            // Constraint represents specific register(s).
     C_RegisterClass,       // Constraint represents any of register(s) in class.
     C_Memory,              // Memory constraint.
+    C_Address,             // Address constraint.
     C_Immediate,           // Requires an immediate.
     C_Other,               // Something else.
     C_Unknown              // Unsupported constraint.
@@ -4413,6 +4441,8 @@ public:
       return InlineAsm::Constraint_o;
     if (ConstraintCode == "X")
       return InlineAsm::Constraint_X;
+    if (ConstraintCode == "p")
+      return InlineAsm::Constraint_p;
     return InlineAsm::Constraint_Unknown;
   }
 
@@ -4446,6 +4476,14 @@ public:
   /// assumes SDIV is expensive and replaces it with a series of other integer
   /// operations.
   virtual SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor,
+                                SelectionDAG &DAG,
+                                SmallVectorImpl<SDNode *> &Created) const;
+
+  /// Targets may override this function to provide custom SREM lowering for
+  /// power-of-2 denominators.  If the target returns an empty SDValue, LLVM
+  /// assumes SREM is expensive and replaces it with a series of other integer
+  /// operations.
+  virtual SDValue BuildSREMPow2(SDNode *N, const APInt &Divisor,
                                 SelectionDAG &DAG,
                                 SmallVectorImpl<SDNode *> &Created) const;
 
@@ -4739,28 +4777,32 @@ public:
   /// method accepts vectors as its arguments.
   SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
 
-  /// Legalize a SETCC with given LHS and RHS and condition code CC on the
-  /// current target.
+  /// Legalize a SETCC or VP_SETCC with given LHS and RHS and condition code CC
+  /// on the current target. A VP_SETCC will additionally be given a Mask
+  /// and/or EVL not equal to SDValue().
   ///
   /// If the SETCC has been legalized using AND / OR, then the legalized node
   /// will be stored in LHS. RHS and CC will be set to SDValue(). NeedInvert
-  /// will be set to false.
+  /// will be set to false. This will also hold if the VP_SETCC has been
+  /// legalized using VP_AND / VP_OR.
   ///
-  /// If the SETCC has been legalized by using getSetCCSwappedOperands(),
-  /// then the values of LHS and RHS will be swapped, CC will be set to the
-  /// new condition, and NeedInvert will be set to false.
+  /// If the SETCC / VP_SETCC has been legalized by using
+  /// getSetCCSwappedOperands(), then the values of LHS and RHS will be
+  /// swapped, CC will be set to the new condition, and NeedInvert will be set
+  /// to false.
   ///
-  /// If the SETCC has been legalized using the inverse condcode, then LHS and
-  /// RHS will be unchanged, CC will set to the inverted condcode, and
-  /// NeedInvert will be set to true. The caller must invert the result of the
-  /// SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to swap
-  /// the effect of a true/false result.
+  /// If the SETCC / VP_SETCC has been legalized using the inverse condcode,
+  /// then LHS and RHS will be unchanged, CC will set to the inverted condcode,
+  /// and NeedInvert will be set to true. The caller must invert the result of
+  /// the SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to
+  /// swap the effect of a true/false result.
   ///
-  /// \returns true if the SetCC has been legalized, false if it hasn't.
+  /// \returns true if the SETCC / VP_SETCC has been legalized, false if it
+  /// hasn't.
   bool LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT, SDValue &LHS,
-                             SDValue &RHS, SDValue &CC, bool &NeedInvert,
-                             const SDLoc &dl, SDValue &Chain,
-                             bool IsSignaling = false) const;
+                             SDValue &RHS, SDValue &CC, SDValue Mask,
+                             SDValue EVL, bool &NeedInvert, const SDLoc &dl,
+                             SDValue &Chain, bool IsSignaling = false) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

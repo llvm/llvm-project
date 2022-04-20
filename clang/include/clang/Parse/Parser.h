@@ -1861,6 +1861,8 @@ private:
                                      Token &Replacement);
   ExprResult ParseCXXIdExpression(bool isAddressOfOperand = false);
 
+  ExprResult ParseCXXMaybeMutableAgnosticExpression();
+
   bool areTokensAdjacent(const Token &A, const Token &B);
 
   void CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectTypePtr,
@@ -1901,6 +1903,8 @@ private:
   ParseLambdaIntroducer(LambdaIntroducer &Intro,
                         LambdaIntroducerTentativeParse *Tentative = nullptr);
   ExprResult ParseLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro);
+  void ParseLambdaLexedGNUAttributeArgs(LateParsedAttribute &LA,
+                                        ParsedAttributes &Attrs, Declarator &D);
 
   //===--------------------------------------------------------------------===//
   // C++ 5.2p1: C++ Casts
@@ -2633,8 +2637,12 @@ private:
   // Forbid C++11 and C2x attributes that appear on certain syntactic locations
   // which standard permits but we don't supported yet, for example, attributes
   // appertain to decl specifiers.
+  // For the most cases we don't want to warn on unknown type attributes, but
+  // left them to later diagnoses. However, for a few cases like module
+  // declarations and module import declarations, we should do it.
   void ProhibitCXX11Attributes(ParsedAttributes &Attrs, unsigned DiagID,
-                               bool DiagnoseEmptyAttrs = false);
+                               bool DiagnoseEmptyAttrs = false,
+                               bool WarnOnUnknownAttrs = false);
 
   /// Skip C++11 and C2x attributes and return the end location of the
   /// last one.
@@ -2781,6 +2789,15 @@ private:
       SourceLocation &Loc,
       Sema::AttributeCompletion Completion = Sema::AttributeCompletion::None,
       const IdentifierInfo *EnclosingScope = nullptr);
+
+  void MaybeParseHLSLSemantics(ParsedAttributes &Attrs,
+                               SourceLocation *EndLoc = nullptr) {
+    if (getLangOpts().HLSL && Tok.is(tok::colon))
+      ParseHLSLSemantics(Attrs, EndLoc);
+  }
+
+  void ParseHLSLSemantics(ParsedAttributes &Attrs,
+                          SourceLocation *EndLoc = nullptr);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&

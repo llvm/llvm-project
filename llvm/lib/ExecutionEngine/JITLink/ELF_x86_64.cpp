@@ -381,9 +381,9 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
 
     Config.PrePrunePasses.push_back(DWARFRecordSectionSplitter(".eh_frame"));
-    Config.PrePrunePasses.push_back(
-        EHFrameEdgeFixer(".eh_frame", x86_64::PointerSize, x86_64::Delta64,
-                         x86_64::Delta32, x86_64::NegDelta32));
+    Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
+        ".eh_frame", x86_64::PointerSize, x86_64::Pointer32, x86_64::Pointer64,
+        x86_64::Delta32, x86_64::Delta64, x86_64::NegDelta32));
     Config.PrePrunePasses.push_back(EHFrameNullTerminator(".eh_frame"));
 
     // Construct a JITLinker and run the link function.

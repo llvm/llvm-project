@@ -66,9 +66,6 @@
    don't. */
 #define HAVE_DECL_STRERROR_S 0
 
-/* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
-#define LLVM_ENABLE_DIA_SDK 0
-
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
@@ -170,9 +167,6 @@
 
 /* Define to 1 if you have the `pread' function. */
 #define HAVE_PREAD 1
-
-/* Have pthread_getspecific */
-#define HAVE_PTHREAD_GETSPECIFIC 1
 
 /* Define to 1 if you have the <pthread.h> header file. */
 /* HAVE_PTHREAD_H defined in Bazel */

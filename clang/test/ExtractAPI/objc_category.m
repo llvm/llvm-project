@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
-// RUN: %t/reference.output.json
+// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
+// RUN: %t/reference.output.json.in >> %t/reference.output.json
 // RUN: %clang -extract-api -x objective-c-header -target arm64-apple-macosx \
 // RUN: %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
@@ -105,6 +105,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Interface"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",
@@ -131,13 +137,26 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "identifier",
           "spelling": "InstanceMethod"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
+      "functionSignature": {
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          }
+        ]
+      },
       "identifier": {
         "interfaceLanguage": "objective-c",
         "precise": "c:objc(cs)Interface(im)InstanceMethod"
@@ -154,6 +173,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "InstanceMethod"
+          }
+        ],
         "subHeading": [
           {
             "kind": "text",
@@ -185,13 +210,26 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "identifier",
           "spelling": "ClassMethod"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
+      "functionSignature": {
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          }
+        ]
+      },
       "identifier": {
         "interfaceLanguage": "objective-c",
         "precise": "c:objc(cs)Interface(cm)ClassMethod"
@@ -208,6 +246,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "ClassMethod"
+          }
+        ],
         "subHeading": [
           {
             "kind": "text",
@@ -266,7 +310,7 @@
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ") "
         },
         {
           "kind": "typeIdentifier",
@@ -294,6 +338,12 @@
         "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Property"
+          }
+        ],
         "subHeading": [
           {
             "kind": "identifier",

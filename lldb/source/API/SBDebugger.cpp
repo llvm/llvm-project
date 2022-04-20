@@ -57,6 +57,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -204,6 +206,15 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
     error.SetError(Status(std::move(e)));
   }
   return error;
+}
+
+void SBDebugger::PrintStackTraceOnError() {
+  LLDB_INSTRUMENT();
+
+  llvm::EnablePrettyStackTrace();
+  static std::string executable =
+      llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+  llvm::sys::PrintStackTraceOnErrorSignal(executable);
 }
 
 void SBDebugger::Terminate() {
@@ -1449,21 +1460,11 @@ SBError SBDebugger::SetCurrentPlatform(const char *platform_name_cstr) {
   SBError sb_error;
   if (m_opaque_sp) {
     if (platform_name_cstr && platform_name_cstr[0]) {
-      ConstString platform_name(platform_name_cstr);
-      PlatformSP platform_sp(Platform::Find(platform_name));
-
-      if (platform_sp) {
-        // Already have a platform with this name, just select it
-        m_opaque_sp->GetPlatformList().SetSelectedPlatform(platform_sp);
-      } else {
-        // We don't have a platform by this name yet, create one
-        platform_sp = Platform::Create(platform_name, sb_error.ref());
-        if (platform_sp) {
-          // We created the platform, now append and select it
-          bool make_selected = true;
-          m_opaque_sp->GetPlatformList().Append(platform_sp, make_selected);
-        }
-      }
+      PlatformList &platforms = m_opaque_sp->GetPlatformList();
+      if (PlatformSP platform_sp = platforms.GetOrCreate(platform_name_cstr))
+        platforms.SetSelectedPlatform(platform_sp);
+      else
+        sb_error.ref().SetErrorString("platform not found");
     } else {
       sb_error.ref().SetErrorString("invalid platform name");
     }

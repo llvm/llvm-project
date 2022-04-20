@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
 
 struct A {
   constexpr A(int x) : x(x) {}

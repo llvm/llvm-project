@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -emit-llvm -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin11 -emit-llvm -fobjc-arc -o - %s | FileCheck %s
 
 id makeObject1() __attribute__((ns_returns_retained));
 id makeObject2() __attribute__((ns_returns_retained));

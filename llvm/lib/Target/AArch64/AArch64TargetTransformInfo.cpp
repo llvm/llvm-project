@@ -50,12 +50,6 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
-bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  assert(K != TargetTransformInfo::RGK_Scalar);
-  return K == TargetTransformInfo::RGK_FixedWidthVector;
-}
-
 /// Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
@@ -2602,6 +2596,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *SubTp,
                                                ArrayRef<Value *> Args) {
   Kind = improveShuffleKindFromMask(Kind, Mask);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
       Kind == TTI::SK_Reverse) {
@@ -2696,11 +2691,26 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       { TTI::SK_Reverse, MVT::nxv4i1,   1 },
       { TTI::SK_Reverse, MVT::nxv2i1,   1 },
     };
-    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
   }
+
   if (Kind == TTI::SK_Splice && isa<ScalableVectorType>(Tp))
     return getSpliceCost(Tp, Index);
+
+  // Inserting a subvector can often be done with either a D, S or H register
+  // move, so long as the inserted vector is "aligned".
+  if (Kind == TTI::SK_InsertSubvector && LT.second.isFixedLengthVector() &&
+      LT.second.getSizeInBits() <= 128 && SubTp) {
+    std::pair<InstructionCost, MVT> SubLT =
+        TLI->getTypeLegalizationCost(DL, SubTp);
+    if (SubLT.second.isVector()) {
+      int NumElts = LT.second.getVectorNumElements();
+      int NumSubElts = SubLT.second.getVectorNumElements();
+      if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
+        return SubLT.first;
+    }
+  }
+
   return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }

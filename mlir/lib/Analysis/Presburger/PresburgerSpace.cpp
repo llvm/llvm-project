@@ -104,20 +104,14 @@ void PresburgerSpace::removeIdRange(IdKind kind, unsigned idStart,
     numLocals -= numIdsEliminated;
 }
 
-void PresburgerSpace::truncateIdKind(IdKind kind, unsigned num) {
-  unsigned curNum = getNumIdKind(kind);
-  assert(num <= curNum && "Can't truncate to more ids!");
-  removeIdRange(kind, num, curNum);
-}
-
-bool PresburgerSpace::isSpaceCompatible(const PresburgerSpace &other) const {
+bool PresburgerSpace::isCompatible(const PresburgerSpace &other) const {
   return getNumDomainIds() == other.getNumDomainIds() &&
          getNumRangeIds() == other.getNumRangeIds() &&
          getNumSymbolIds() == other.getNumSymbolIds();
 }
 
-bool PresburgerSpace::isSpaceEqual(const PresburgerSpace &other) const {
-  return isSpaceCompatible(other) && getNumLocalIds() == other.getNumLocalIds();
+bool PresburgerSpace::isEqual(const PresburgerSpace &other) const {
+  return isCompatible(other) && getNumLocalIds() == other.getNumLocalIds();
 }
 
 void PresburgerSpace::setDimSymbolSeparation(unsigned newSymbolCount) {

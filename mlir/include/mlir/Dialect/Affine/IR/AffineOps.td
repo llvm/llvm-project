@@ -109,7 +109,10 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
 def AffineForOp : Affine_Op<"for",
     [AutomaticAllocationScope, ImplicitAffineTerminator, RecursiveSideEffects,
      DeclareOpInterfaceMethods<LoopLikeOpInterface,
-     ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep"]>]> {
+     ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
+      "getSingleUpperBound"]>,
+     DeclareOpInterfaceMethods<RegionBranchOpInterface,
+     ["getSuccessorEntryOperands"]>]> {
   let summary = "for operation";
   let description = [{
     Syntax:

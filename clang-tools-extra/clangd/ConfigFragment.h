@@ -232,17 +232,26 @@ struct Fragment {
     /// - None
     llvm::Optional<Located<std::string>> UnusedIncludes;
 
+    /// Controls IncludeCleaner diagnostics.
+    struct IncludesBlock {
+      /// Regexes that will be used to avoid diagnosing certain includes as
+      /// unused or missing. These can match any suffix of the header file in
+      /// question.
+      std::vector<Located<std::string>> IgnoreHeader;
+    };
+    IncludesBlock Includes;
+
     /// Controls how clang-tidy will run over the code base.
     ///
     /// The settings are merged with any settings found in .clang-tidy
-    /// configiration files with these ones taking precedence.
+    /// configuration files with these ones taking precedence.
     struct ClangTidyBlock {
       std::vector<Located<std::string>> Add;
       /// List of checks to disable.
       /// Takes precedence over Add. To enable all llvm checks except include
       /// order:
       ///   Add: llvm-*
-      ///   Remove: llvm-include-onder
+      ///   Remove: llvm-include-order
       std::vector<Located<std::string>> Remove;
 
       /// A Key-Value pair list of options to pass to clang-tidy checks

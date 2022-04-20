@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOSIZE
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - -Oz -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-SIZE
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOSIZE
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 %s -emit-llvm -o - -Oz -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-SIZE
 
 void t1(int *a) {
   delete a;

@@ -208,6 +208,30 @@ struct GPUAsyncWaitLowering
   }
 };
 
+struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
+  using ConvertOpToLLVMPattern<gpu::LaneIdOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::LaneIdOp op, gpu::LaneIdOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Value newOp = rewriter.create<NVVM::LaneIdOp>(loc, rewriter.getI32Type());
+    // Truncate or extend the result depending on the index bitwidth specified
+    // by the LLVMTypeConverter options.
+    const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
+    if (indexBitwidth > 32) {
+      newOp = rewriter.create<LLVM::SExtOp>(
+          loc, IntegerType::get(context, indexBitwidth), newOp);
+    } else if (indexBitwidth < 32) {
+      newOp = rewriter.create<LLVM::TruncOp>(
+          loc, IntegerType::get(context, indexBitwidth), newOp);
+    }
+    rewriter.replaceOp(op, {newOp});
+    return success();
+  }
+};
+
 /// Import the GPU Ops to NVVM Patterns.
 #include "GPUToNVVM.cpp.inc"
 
@@ -279,7 +303,7 @@ struct LowerGpuOpsToNVVMOpsPass
 } // namespace
 
 void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
-  target.addIllegalOp<FuncOp>();
+  target.addIllegalOp<func::FuncOp>();
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
@@ -303,7 +327,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                        NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
            GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
                                        NVVM::GridDimYOp, NVVM::GridDimZOp>,
-           GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
+           GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(
+          converter);
 
   // Explicitly drop memory space when lowering private memory
   // attributions since NVVM models it as `alloca`s in the default

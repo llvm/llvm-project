@@ -304,6 +304,66 @@ void presburger::removeDuplicateDivs(
   }
 }
 
+void presburger::mergeLocalIds(
+    IntegerRelation &relA, IntegerRelation &relB,
+    llvm::function_ref<bool(unsigned i, unsigned j)> merge) {
+  assert(relA.getSpace().isCompatible(relB.getSpace()) &&
+         "Spaces should be compatible.");
+
+  // Merge local ids of relA and relB without using division information,
+  // i.e. append local ids of `relB` to `relA` and insert local ids of `relA`
+  // to `relB` at start of its local ids.
+  unsigned initLocals = relA.getNumLocalIds();
+  relA.insertId(IdKind::Local, relA.getNumLocalIds(), relB.getNumLocalIds());
+  relB.insertId(IdKind::Local, 0, initLocals);
+
+  // Get division representations from each rel.
+  std::vector<SmallVector<int64_t, 8>> divsA, divsB;
+  SmallVector<unsigned, 4> denomsA, denomsB;
+  relA.getLocalReprs(divsA, denomsA);
+  relB.getLocalReprs(divsB, denomsB);
+
+  // Copy division information for relB into `divsA` and `denomsA`, so that
+  // these have the combined division information of both rels. Since newly
+  // added local variables in relA and relB have no constraints, they will not
+  // have any division representation.
+  std::copy(divsB.begin() + initLocals, divsB.end(),
+            divsA.begin() + initLocals);
+  std::copy(denomsB.begin() + initLocals, denomsB.end(),
+            denomsA.begin() + initLocals);
+
+  // Merge all divisions by removing duplicate divisions.
+  unsigned localOffset = relA.getIdKindOffset(IdKind::Local);
+  presburger::removeDuplicateDivs(divsA, denomsA, localOffset, merge);
+}
+
+int64_t presburger::gcdRange(ArrayRef<int64_t> range) {
+  int64_t gcd = 0;
+  for (int64_t elem : range) {
+    gcd = llvm::GreatestCommonDivisor64(gcd, std::abs(elem));
+    if (gcd == 1)
+      return gcd;
+  }
+  return gcd;
+}
+
+int64_t presburger::normalizeRange(MutableArrayRef<int64_t> range) {
+  int64_t gcd = gcdRange(range);
+  if (gcd == 0 || gcd == 1)
+    return gcd;
+  for (int64_t &elem : range)
+    elem /= gcd;
+  return gcd;
+}
+
+void presburger::normalizeDiv(MutableArrayRef<int64_t> num, int64_t &denom) {
+  assert(denom > 0 && "denom must be positive!");
+  int64_t gcd = llvm::greatestCommonDivisor(gcdRange(num), denom);
+  for (int64_t &coeff : num)
+    coeff /= gcd;
+  denom /= gcd;
+}
+
 SmallVector<int64_t, 8> presburger::getNegatedCoeffs(ArrayRef<int64_t> coeffs) {
   SmallVector<int64_t, 8> negatedCoeffs;
   negatedCoeffs.reserve(coeffs.size());

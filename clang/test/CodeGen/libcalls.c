@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fmath-errno -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-YES %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-NO %s
-// RUN: %clang_cc1 -menable-unsafe-fp-math -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-FAST %s
+// RUN: %clang_cc1 -Wno-implicit-function-declaration -fmath-errno -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-YES %s
+// RUN: %clang_cc1 -Wno-implicit-function-declaration -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-NO %s
+// RUN: %clang_cc1 -Wno-implicit-function-declaration -menable-unsafe-fp-math -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-FAST %s
 
 // CHECK-YES-LABEL: define{{.*}} void @test_sqrt
 // CHECK-NO-LABEL: define{{.*}} void @test_sqrt

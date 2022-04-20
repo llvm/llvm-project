@@ -3862,9 +3862,10 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
 
     // The path to the source file where this module was declared
     SourceManager &SM = CGM.getContext().getSourceManager();
-    const FileEntry *mainFile = SM.getFileEntryForID(SM.getMainFileID());
+    Optional<FileEntryRef> mainFile =
+        SM.getFileEntryRefForID(SM.getMainFileID());
     std::string path =
-      (Twine(mainFile->getDir()->getName()) + "/" + mainFile->getName()).str();
+        (mainFile->getDir().getName() + "/" + mainFile->getName()).str();
     module.add(MakeConstantString(path, ".objc_source_file_name"));
     module.add(symtab);
 

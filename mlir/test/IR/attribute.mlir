@@ -230,7 +230,8 @@ func @wrong_int_attrs_type_fail() {
   "test.int_attrs"() {
     any_i32_attr = 5.0 : f32,
     si32_attr = 7 : si32,
-    ui32_attr = 6 : ui32
+    ui32_attr = 6 : ui32,
+    index_attr = 1 : index
   } : () -> ()
   return
 }
@@ -339,29 +340,6 @@ func @non_type_in_type_array_attr_fail() {
 func @string_attr_custom_type() {
   // CHECK: "string_data" : !foo.string
   test.string_attr_with_type "string_data" : !foo.string
-  return
-}
-
-// -----
-
-//===----------------------------------------------------------------------===//
-// Test StrEnumAttr
-//===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: func @allowed_cases_pass
-func @allowed_cases_pass() {
-  // CHECK: test.str_enum_attr
-  %0 = "test.str_enum_attr"() {attr = "A"} : () -> i32
-  // CHECK: test.str_enum_attr
-  %1 = "test.str_enum_attr"() {attr = "B"} : () -> i32
-  return
-}
-
-// -----
-
-func @disallowed_case_fail() {
-  // expected-error @+1 {{allowed string cases: 'A', 'B'}}
-  %0 = "test.str_enum_attr"() {attr = 7: i32} : () -> i32
   return
 }
 
@@ -512,7 +490,7 @@ func @fn() { return }
 
 // -----
 
-// expected-error @+1 {{referencing to a 'FuncOp' symbol}}
+// expected-error @+1 {{referencing to a 'func::FuncOp' symbol}}
 "test.symbol_ref_attr"() {symbol = @foo} : () -> ()
 
 // -----

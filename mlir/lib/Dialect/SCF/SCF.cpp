@@ -356,6 +356,10 @@ Optional<OpFoldResult> ForOp::getSingleStep() {
   return OpFoldResult(getStep());
 }
 
+Optional<OpFoldResult> ForOp::getSingleUpperBound() {
+  return OpFoldResult(getUpperBound());
+}
+
 /// Prints the initialization list in the form of
 ///   <prefix>(%inner = %outer, %inner2 = %outer2, <...>)
 /// where 'inner' values are assumed to be region arguments and 'outer' values
@@ -1769,7 +1773,7 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
     // Note that the array access to elseYield will not go out of bounds
     // since it must have the same length as thenYield, since they both
     // come from the same scf.if.
-    for (auto tup : llvm::enumerate(thenYield)) {
+    for (const auto &tup : llvm::enumerate(thenYield)) {
       if (tup.value().getDefiningOp() == nestedIf) {
         auto nestedIdx = tup.value().cast<OpResult>().getResultNumber();
         if (nestedIf.elseYield().getOperand(nestedIdx) !=
@@ -1793,9 +1797,8 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
       // If the then value is defined within the scf.if, bail.
       if (tup.value().getParentRegion() == &op.getThenRegion()) {
         return failure();
-      } else {
-        elseYieldsToUpgradeToSelect.push_back(tup.index());
       }
+      elseYieldsToUpgradeToSelect.push_back(tup.index());
     }
 
     Location loc = op.getLoc();
