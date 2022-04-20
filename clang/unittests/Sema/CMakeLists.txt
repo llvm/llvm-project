@@ -19,11 +19,11 @@ clang_target_link_libraries(SemaTests
   clangParse
   clangSema
   clangSerialization
-  clangTesting
   clangTooling
   )
 
 target_link_libraries(SemaTests
   PRIVATE
+  clangTesting
   LLVMTestingSupport
 )
