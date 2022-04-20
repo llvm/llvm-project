@@ -283,6 +283,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
     assert(!Failed && "Invalid warn-stack-size fn attr value");
     (void)Failed;
   }
+  if (MF.getFunction().hasFnAttribute(Attribute::SafeStack)) {
+    StackSize += MFI.getUnsafeStackSize();
+  }
   if (StackSize > Threshold) {
     DiagnosticInfoStackSize DiagStackSize(F, StackSize, Threshold, DS_Warning);
     F.getContext().diagnose(DiagStackSize);
