@@ -5,6 +5,7 @@
 // CHECK: ExprWithCleanups
 // CHECK-NEXT: cleanup CompoundLiteralExpr
 
+extern int getObj();
 void test(int c, id a) {
   (void)getObj(c, a);
 }

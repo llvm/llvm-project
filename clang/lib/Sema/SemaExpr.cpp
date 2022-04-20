@@ -2554,8 +2554,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     return ExprError();
 
   // This could be an implicitly declared function reference (legal in C90,
-  // extension in C99, forbidden in C++).
-  if (R.empty() && HasTrailingLParen && II && !getLangOpts().CPlusPlus) {
+  // extension in C99, forbidden in C++ and C2x).
+  if (R.empty() && HasTrailingLParen && II && !getLangOpts().CPlusPlus &&
+      !getLangOpts().C2x) {
     NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *II, S);
     if (D) R.addDecl(D);
   }

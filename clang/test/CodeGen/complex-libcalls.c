@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -w -S -o - -emit-llvm              %s | FileCheck %s -check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=HAS_ERRNO
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm              %s | FileCheck %s -check-prefix=NO__ERRNO
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=HAS_ERRNO
 
-// Test attributes and builtin codegen of complex library calls. 
+// Test attributes and builtin codegen of complex library calls.
 
 void foo(float f) {
   cabs(f);       cabsf(f);      cabsl(f);
@@ -49,7 +49,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @casinf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @casinl({ x86_fp80, x86_fp80 }* noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  casinh(f);     casinhf(f);    casinhl(f); 
+  casinh(f);     casinhf(f);    casinhl(f);
 
 // NO__ERRNO: declare { double, double } @casinh(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @casinhf(<2 x float> noundef) [[READNONE]]
@@ -58,7 +58,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @casinhf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @casinhl({ x86_fp80, x86_fp80 }* noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  catan(f);      catanf(f);     catanl(f); 
+  catan(f);      catanf(f);     catanl(f);
 
 // NO__ERRNO: declare { double, double } @catan(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @catanf(<2 x float> noundef) [[READNONE]]
@@ -126,7 +126,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @clogf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @clogl({ x86_fp80, x86_fp80 }* noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  cproj(f);      cprojf(f);     cprojl(f); 
+  cproj(f);      cprojf(f);     cprojl(f);
 
 // NO__ERRNO: declare { double, double } @cproj(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @cprojf(<2 x float> noundef) [[READNONE]]
@@ -169,7 +169,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @csinhf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @csinhl({ x86_fp80, x86_fp80 }* noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  csqrt(f);      csqrtf(f);     csqrtl(f);  
+  csqrt(f);      csqrtf(f);     csqrtl(f);
 
 // NO__ERRNO: declare { double, double } @csqrt(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @csqrtf(<2 x float> noundef) [[READNONE]]
@@ -187,7 +187,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @ctanf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @ctanl({ x86_fp80, x86_fp80 }* noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  ctanh(f);      ctanhf(f);     ctanhl(f); 
+  ctanh(f);      ctanhf(f);     ctanhl(f);
 
 // NO__ERRNO: declare { double, double } @ctanh(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @ctanhf(<2 x float> noundef) [[READNONE]]
