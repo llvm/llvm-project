@@ -103,6 +103,10 @@ def QSortCompareT : NamedType<"__qsortcompare_t">;
 
 def AtexitHandlerT : NamedType<"__atexithandler_t">;
 
+def FILE : NamedType<"FILE">;
+def FILEPtr : PtrType<FILE>;
+def FILERestrictedPtr : RestrictedPtrType<FILE>;
+
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;
 
