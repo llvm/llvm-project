@@ -1175,8 +1175,6 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
     switch (Call->getBuiltinCallee()) {
     default:
       break;
-    case Builtin::BIaddressof:
-    case Builtin::BI__addressof:
     case Builtin::BI__builtin_addressof: {
       LValue LV = EmitLValue(Call->getArg(0));
       if (BaseInfo) *BaseInfo = LV.getBaseInfo();
