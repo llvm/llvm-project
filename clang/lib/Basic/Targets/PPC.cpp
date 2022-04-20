@@ -208,6 +208,7 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__dcbf", "__builtin_dcbf");
   Builder.defineMacro("__fmadd", "__builtin_fma");
   Builder.defineMacro("__fmadds", "__builtin_fmaf");
+  Builder.defineMacro("__abs", "__builtin_abs");
   Builder.defineMacro("__labs", "__builtin_labs");
   Builder.defineMacro("__llabs", "__builtin_llabs");
   Builder.defineMacro("__popcnt4", "__builtin_popcount");
