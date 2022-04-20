@@ -259,9 +259,8 @@ define i32 @PR44028(i32 %x) {
 
 define i64 @lshr_mul(i64 %0) {
 ; CHECK-LABEL: @lshr_mul(
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0:%.*]], 52
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact i64 [[TMP2]], 2
-; CHECK-NEXT:    ret i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0:%.*]], 13
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %2 = mul nuw i64 %0, 52
   %3 = lshr i64 %2, 2
@@ -270,9 +269,8 @@ define i64 @lshr_mul(i64 %0) {
 
 define i64 @lshr_mul_nuw_nsw(i64 %0) {
 ; CHECK-LABEL: @lshr_mul_nuw_nsw(
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i64 [[TMP0:%.*]], 52
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact i64 [[TMP2]], 2
-; CHECK-NEXT:    ret i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i64 [[TMP0:%.*]], 13
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %2 = mul nuw nsw i64 %0, 52
   %3 = lshr i64 %2, 2
@@ -281,9 +279,8 @@ define i64 @lshr_mul_nuw_nsw(i64 %0) {
 
 define <4 x i32> @lshr_mul_vector(<4 x i32> %0) {
 ; CHECK-LABEL: @lshr_mul_vector(
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw <4 x i32> [[TMP0:%.*]], <i32 52, i32 52, i32 52, i32 52>
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <4 x i32> [[TMP2]], <i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw <4 x i32> [[TMP0:%.*]], <i32 13, i32 13, i32 13, i32 13>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %2 = mul nuw <4 x i32> %0, <i32 52, i32 52, i32 52, i32 52>
   %3 = lshr <4 x i32> %2, <i32 2, i32 2, i32 2, i32 2>
@@ -321,6 +318,17 @@ define i64 @lshr_mul_negative_nonuw(i64 %0) {
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %2 = mul i64 %0, 52
+  %3 = lshr i64 %2, 2
+  ret i64 %3
+}
+
+define i64 @lshr_mul_negative_nsw(i64 %0) {
+; CHECK-LABEL: @lshr_mul_negative_nsw(
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw i64 [[TMP0:%.*]], 52
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact i64 [[TMP2]], 2
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %2 = mul nsw i64 %0, 52
   %3 = lshr i64 %2, 2
   ret i64 %3
 }
