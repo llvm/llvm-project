@@ -3445,7 +3445,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
               allocation_state::getContainerObjRegion(statePrev, Sym);
           const auto *TypedRegion = cast<TypedValueRegion>(ObjRegion);
           QualType ObjTy = TypedRegion->getValueType();
-          OS << "Inner buffer of '" << ObjTy.getAsString() << "' ";
+          OS << "Inner buffer of '" << ObjTy << "' ";
 
           if (N->getLocation().getKind() == ProgramPoint::PostImplicitCallKind) {
             OS << "deallocated by call to destructor";

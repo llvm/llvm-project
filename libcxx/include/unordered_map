@@ -525,7 +525,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__node_handle>
 #include <__utility/forward.h>
 #include <compare>
-#include <functional>
+#include <functional> // TODO: Remove this include
 #include <iterator> // __libcpp_erase_if_container
 #include <stdexcept>
 #include <tuple>

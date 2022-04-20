@@ -9,8 +9,15 @@
 #ifndef _LIBCPP___RANGES_JOIN_VIEW_H
 #define _LIBCPP___RANGES_JOIN_VIEW_H
 
+#include <__concepts/constructible.h>
+#include <__concepts/convertible_to.h>
+#include <__concepts/copyable.h>
+#include <__concepts/derived_from.h>
+#include <__concepts/equality_comparable.h>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__iterator/iter_move.h>
+#include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
