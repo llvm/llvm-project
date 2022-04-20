@@ -39,7 +39,7 @@ namespace lldb_private {
 namespace npdb {
 class PdbAstBuilder;
 
-class SymbolFileNativePDB : public SymbolFile {
+class SymbolFileNativePDB : public SymbolFileCommon {
   friend class UdtRecordCompleter;
 
   /// LLVM RTTI support.
@@ -49,7 +49,7 @@ public:
   /// LLVM RTTI support.
   /// \{
   bool isA(const void *ClassID) const override {
-    return ClassID == &ID || SymbolFile::isA(ClassID);
+    return ClassID == &ID || SymbolFileCommon::isA(ClassID);
   }
   static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
   /// \}
