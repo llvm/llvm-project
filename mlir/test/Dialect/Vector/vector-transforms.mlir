@@ -13,7 +13,7 @@
 // CHECK-NEXT: %[[VEC1:.*]] = vector.insert_strided_slice %[[A2]], %[[VEC0]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
 // CHECK-NEXT: return %[[VEC1:.*]] : vector<4x2xf32>
 
-func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
+func.func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
   %1 = arith.addf %0, %0: vector<4x2xf32>
   return %1: vector<4x2xf32>
 }
@@ -56,7 +56,7 @@ func @add4x2(%0: vector<4x2xf32>) -> vector<4x2xf32> {
 
 // CHECK-NEXT: return %[[R4]] : vector<4x4xf32>
 
-func @add4x4(%0: vector<4x4xf32>, %1: vector<4x4xf32>) -> vector<4x4xf32> {
+func.func @add4x4(%0: vector<4x4xf32>, %1: vector<4x4xf32>) -> vector<4x4xf32> {
   %2 = arith.addf %0, %1: vector<4x4xf32>
   %3 = arith.addf %1, %2: vector<4x4xf32>
   return %3: vector<4x4xf32>
@@ -166,7 +166,7 @@ func @add4x4(%0: vector<4x4xf32>, %1: vector<4x4xf32>) -> vector<4x4xf32> {
 
 // CHECK-NEXT:  return %[[VEC4]] : vector<4x4xf32>
 
-func @contraction4x4_ijk(%arg0 : vector<4x6xf32>, %arg1 : vector<6x4xf32>,
+func.func @contraction4x4_ijk(%arg0 : vector<4x6xf32>, %arg1 : vector<6x4xf32>,
                          %arg2 : vector<4x4xf32>, %arg3 : index)
                          -> (vector<4x4xf32>) {
   %lhsm = vector.constant_mask [4, 6] : vector<4x6xi1>
@@ -231,7 +231,7 @@ func @contraction4x4_ijk(%arg0 : vector<4x6xf32>, %arg1 : vector<6x4xf32>,
 // CHECK-NEXT: %[[VEC3:.*]] = vector.insert_strided_slice %[[R1S22]], %[[VEC2]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 // CHECK-NEXT:  return %[[VEC3]] : vector<4x4xf32>
 
-func @contraction4x4_ikj(%arg0 : vector<4x2xf32>, %arg1 : vector<2x4xf32>,
+func.func @contraction4x4_ikj(%arg0 : vector<4x2xf32>, %arg1 : vector<2x4xf32>,
                          %arg2 : vector<4x4xf32>, %arg3 : index)
                          -> (vector<4x4xf32>) {
   %lhsm = vector.constant_mask [4, 2] : vector<4x2xi1>
@@ -271,7 +271,7 @@ func @contraction4x4_ikj(%arg0 : vector<4x2xf32>, %arg1 : vector<2x4xf32>,
 // CHECK-NEXT: vector.transfer_write %[[R3]], %{{.*}}[%[[C2]], %[[C2]]] {in_bounds = [true, true]} : vector<2x2xf32>, memref<4x4xf32>
 // CHECK-NEXT: return
 
-func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
+func.func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
                                    %arg1 : memref<2x4xf32>,
                                    %arg2 : memref<4x4xf32>) {
   %c0 = arith.constant 0 : index
@@ -304,7 +304,7 @@ func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
 // CHECK-COUNT-4: arith.addf
 // CHECK-COUNT-4: vector.transfer_write
 
-func @vector_transfers(%arg0: index, %arg1: index) {
+func.func @vector_transfers(%arg0: index, %arg1: index) {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
@@ -325,7 +325,7 @@ func @vector_transfers(%arg0: index, %arg1: index) {
 // CHECK-LABEL: func @cancelling_shape_cast_ops
 //  CHECK-SAME: %[[A0:.*0]]: vector<2x4xf32>
 //       CHECK: return %[[A0]] : vector<2x4xf32>
-func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
+func.func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
   %0 = vector.shape_cast %arg0 : vector<2x4xf32> to vector<8xf32>
   %1 = vector.shape_cast %0 : vector<8xf32> to vector<2x4xf32>
   return %1 : vector<2x4xf32>
@@ -363,7 +363,7 @@ func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
 //       CHECK:   vector.transfer_write %[[SEL1]], %[[ARG0]][%[[C0]], %[[C2]]] {{.*}} : vector<2x2xf32>, memref<4x4xf32>
 //       CHECK:   vector.transfer_write %[[SEL2]], %[[ARG0]][%[[C2]], %[[C0]]] {{.*}} : vector<2x2xf32>, memref<4x4xf32>
 //       CHECK:   vector.transfer_write %[[SEL3]], %[[ARG0]][%[[C2]], %[[C2]]] {{.*}} : vector<2x2xf32>, memref<4x4xf32>
-func @elementwise_unroll(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>) {
+func.func @elementwise_unroll(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %arg0[%c0, %c0], %cf0 : memref<4x4xf32>, vector<4x4xf32>
@@ -400,7 +400,7 @@ func @elementwise_unroll(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>) {
 // CHECK-NEXT: %[[VTW3:.*]] = vector.transfer_write %[[R3]], %[[VTW2]][%[[C2]], %[[C2]]] {in_bounds = [true, true]} : vector<2x2xf32>, tensor<4x4xf32>
 // CHECK-NEXT: return %[[VTW3]] : tensor<4x4xf32>
 
-func @contraction4x4_ikj_xfer_read_tensor(%arg0 : tensor<4x2xf32>,
+func.func @contraction4x4_ikj_xfer_read_tensor(%arg0 : tensor<4x2xf32>,
                                           %arg1 : tensor<2x4xf32>,
                                           %arg2 : tensor<4x4xf32>) ->
   tensor<4x4xf32> {
@@ -421,7 +421,7 @@ func @contraction4x4_ikj_xfer_read_tensor(%arg0 : tensor<4x2xf32>,
 
 // CHECK-LABEL: func @bubble_down_bitcast_in_extract
 //  CHECK-SAME: %[[SRC:.+]]: vector<4xf32>
-func @bubble_down_bitcast_in_extract(%src: vector<4xf32>) -> (f16, f16) {
+func.func @bubble_down_bitcast_in_extract(%src: vector<4xf32>) -> (f16, f16) {
   %0 = vector.bitcast %src : vector<4xf32> to vector<8xf16>
   // CHECK: %[[EXTRACT1:.+]] = vector.extract %[[SRC]][1] : vector<4xf32>
   // CHECK:    %[[CAST1:.+]] = vector.bitcast %[[EXTRACT1]] : vector<1xf32> to vector<2xf16>
@@ -437,7 +437,7 @@ func @bubble_down_bitcast_in_extract(%src: vector<4xf32>) -> (f16, f16) {
 
 // CHECK-LABEL: func @bubble_down_bitcast_in_strided_slice_extract
 //  CHECK-SAME: %[[SRC:.+]]: vector<4xf32>
-func @bubble_down_bitcast_in_strided_slice_extract(%arg0: vector<4xf32>) -> vector<4xf16> {
+func.func @bubble_down_bitcast_in_strided_slice_extract(%arg0: vector<4xf32>) -> vector<4xf16> {
   // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] {offsets = [2], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
   // CHECK: %[[CAST:.+]] = vector.bitcast %[[EXTRACT]] : vector<2xf32> to vector<4xf16>
   %cast = vector.bitcast %arg0: vector<4xf32> to vector<8xf16>
@@ -448,7 +448,7 @@ func @bubble_down_bitcast_in_strided_slice_extract(%arg0: vector<4xf32>) -> vect
 
 // CHECK-LABEL: func @bubble_down_bitcast_in_strided_slice_extract_full_last_dim
 //  CHECK-SAME: %[[SRC:.+]]: vector<4x2xf32>
-func @bubble_down_bitcast_in_strided_slice_extract_full_last_dim(%arg0: vector<4x2xf32>) -> vector<2x4xf16> {
+func.func @bubble_down_bitcast_in_strided_slice_extract_full_last_dim(%arg0: vector<4x2xf32>) -> vector<2x4xf16> {
   // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] {offsets = [1], sizes = [2], strides = [1]} : vector<4x2xf32> to vector<2x2xf32>
   // CHECK: %[[CAST:.+]] = vector.bitcast %[[EXTRACT]] : vector<2x2xf32> to vector<2x4xf16>
   %cast = vector.bitcast %arg0: vector<4x2xf32> to vector<4x4xf16>
@@ -458,7 +458,7 @@ func @bubble_down_bitcast_in_strided_slice_extract_full_last_dim(%arg0: vector<4
 }
 
 // CHECK-LABEL: func @bubble_down_bitcast_in_strided_slice_extract_odd_offset
-func @bubble_down_bitcast_in_strided_slice_extract_odd_offset(%arg0: vector<4xf32>) -> vector<4xf16> {
+func.func @bubble_down_bitcast_in_strided_slice_extract_odd_offset(%arg0: vector<4xf32>) -> vector<4xf16> {
   // CHECK: vector.bitcast
   // CHECK-NEXT: vector.extract_strided_slice
   %cast = vector.bitcast %arg0: vector<4xf32> to vector<8xf16>
@@ -467,7 +467,7 @@ func @bubble_down_bitcast_in_strided_slice_extract_odd_offset(%arg0: vector<4xf3
 }
 
 // CHECK-LABEL: func @bubble_down_bitcast_in_strided_slice_extract_odd_size
-func @bubble_down_bitcast_in_strided_slice_extract_odd_size(%arg0: vector<4xf32>) -> vector<3xf16> {
+func.func @bubble_down_bitcast_in_strided_slice_extract_odd_size(%arg0: vector<4xf32>) -> vector<3xf16> {
   // CHECK: vector.bitcast
   // CHECK-NEXT: vector.extract_strided_slice
   %cast = vector.bitcast %arg0: vector<4xf32> to vector<8xf16>
@@ -477,7 +477,7 @@ func @bubble_down_bitcast_in_strided_slice_extract_odd_size(%arg0: vector<4xf32>
 
 // CHECK-LABEL: func @bubble_up_bitcast_in_strided_slice_insert
 //  CHECK-SAME: (%[[DST:.+]]: vector<8xf16>, %[[SRC1:.+]]: vector<4xf16>, %[[SRC2:.+]]: vector<4xf16>)
-func @bubble_up_bitcast_in_strided_slice_insert(%dst: vector<8xf16>, %src1: vector<4xf16>, %src2: vector<4xf16>) -> vector<4xf32> {
+func.func @bubble_up_bitcast_in_strided_slice_insert(%dst: vector<8xf16>, %src1: vector<4xf16>, %src2: vector<4xf16>) -> vector<4xf32> {
   // CHECK-DAG: %[[CAST_SRC1:.+]] = vector.bitcast %[[SRC1]] : vector<4xf16> to vector<2xf32>
   // CHECK-DAG: %[[CAST_SRC2:.+]] = vector.bitcast %[[SRC2]] : vector<4xf16> to vector<2xf32>
   // CHECK-DAG: %[[CAST_DST:.+]] = vector.bitcast %[[DST]] : vector<8xf16> to vector<4xf32>
@@ -491,7 +491,7 @@ func @bubble_up_bitcast_in_strided_slice_insert(%dst: vector<8xf16>, %src1: vect
 }
 
 // CHECK-LABEL: func @bubble_up_bitcast_in_strided_slice_insert_odd_offset
-func @bubble_up_bitcast_in_strided_slice_insert_odd_offset(%dst: vector<8xf16>, %src: vector<4xf16>) -> vector<4xf32> {
+func.func @bubble_up_bitcast_in_strided_slice_insert_odd_offset(%dst: vector<8xf16>, %src: vector<4xf16>) -> vector<4xf32> {
   // CHECK: vector.insert_strided_slice
   // CHECK-NEXT: vector.bitcast
   %0 = vector.insert_strided_slice %src, %dst {offsets = [3], strides = [1]} : vector<4xf16> into vector<8xf16>
@@ -500,7 +500,7 @@ func @bubble_up_bitcast_in_strided_slice_insert_odd_offset(%dst: vector<8xf16>, 
 }
 
 // CHECK-LABEL: func @bubble_up_bitcast_in_strided_slice_insert_different_rank
-func @bubble_up_bitcast_in_strided_slice_insert_different_rank(%dst: vector<16x4x8xf16>, %src: vector<2x4xf16>) -> vector<16x4x4xf32> {
+func.func @bubble_up_bitcast_in_strided_slice_insert_different_rank(%dst: vector<16x4x8xf16>, %src: vector<2x4xf16>) -> vector<16x4x4xf32> {
   // CHECK: vector.insert_strided_slice
   // CHECK-NEXT: vector.bitcast
   %0 = vector.insert_strided_slice %src, %dst {offsets = [0, 0, 2], strides = [1, 1]} : vector<2x4xf16> into vector<16x4x8xf16>

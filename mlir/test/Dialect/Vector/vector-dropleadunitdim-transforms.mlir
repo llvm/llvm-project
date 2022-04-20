@@ -24,7 +24,7 @@
   iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 }
 
-func @cast_away_contraction_leading_one_dims(%arg0: vector<1x16x8xf32>, %arg1: vector<1x8x16xf32>, %arg2: vector<1x16x16xf32>) -> vector<1x16x16xf32> {
+func.func @cast_away_contraction_leading_one_dims(%arg0: vector<1x16x8xf32>, %arg1: vector<1x8x16xf32>, %arg2: vector<1x16x16xf32>) -> vector<1x16x16xf32> {
   %0 = vector.contract #contraction_trait0 %arg0, %arg1, %arg2  : vector<1x16x8xf32>, vector<1x8x16xf32> into vector<1x16x16xf32>
   return %0: vector<1x16x16xf32>
 }
@@ -56,7 +56,7 @@ func @cast_away_contraction_leading_one_dims(%arg0: vector<1x16x8xf32>, %arg1: v
   kind = #vector.kind<mul>
 }
 
-func @cast_away_contraction_leading_one_dims_transposeneeded(%arg0: vector<1x1x8xf32>, %arg1: vector<1x8x16xf32>, %arg2: vector<1x1x16xf32>) -> vector<1x1x16xf32> {
+func.func @cast_away_contraction_leading_one_dims_transposeneeded(%arg0: vector<1x1x8xf32>, %arg1: vector<1x8x16xf32>, %arg2: vector<1x1x16xf32>) -> vector<1x1x16xf32> {
   %0 = vector.contract #contraction_trait1 %arg0, %arg1, %arg2  : vector<1x1x8xf32>, vector<1x8x16xf32> into vector<1x1x16xf32>
   return %0: vector<1x1x16xf32>
 }
@@ -89,7 +89,7 @@ func @cast_away_contraction_leading_one_dims_transposeneeded(%arg0: vector<1x1x8
 }
 
 
-func @cast_away_contraction_leading_one_dims_transposeneeded2(%arg0: vector<8x1x16xf32>, %arg1: vector<2x8x1xf32>, %arg2: vector<1x2x16xf32>) -> vector<1x2x16xf32> {
+func.func @cast_away_contraction_leading_one_dims_transposeneeded2(%arg0: vector<8x1x16xf32>, %arg1: vector<2x8x1xf32>, %arg2: vector<1x2x16xf32>) -> vector<1x2x16xf32> {
   %0 = vector.contract #contraction_trait2 %arg0, %arg1, %arg2  : vector<8x1x16xf32>, vector<2x8x1xf32> into vector<1x2x16xf32>
   return %0: vector<1x2x16xf32>
 }
@@ -126,7 +126,7 @@ func @cast_away_contraction_leading_one_dims_transposeneeded2(%arg0: vector<8x1x
 }
 
 
-func @cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4(%arg0: vector<1x8x1x16xf32>, %arg1: vector<1x2x8x1xf32>, %arg2: vector<1x1x2x16xf32>) -> vector<1x1x2x16xf32> {
+func.func @cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4(%arg0: vector<1x8x1x16xf32>, %arg1: vector<1x2x8x1xf32>, %arg2: vector<1x1x2x16xf32>) -> vector<1x1x2x16xf32> {
   %0 = vector.contract #contraction_trait2 %arg0, %arg1, %arg2  : vector<1x8x1x16xf32>, vector<1x2x8x1xf32> into vector<1x1x2x16xf32>
   return %0: vector<1x1x2x16xf32>
 }
@@ -159,14 +159,14 @@ func @cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4(%arg0: vect
   iterator_types = ["parallel","parallel", "parallel", "parallel", "reduction"]
 }
 
-func @cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4_acctranspose(%arg0: vector<1x8x1x16xf32>, %arg1: vector<1x2x8x1xf32>, %arg2: vector<1x1x2x16xf32>) -> vector<1x1x2x16xf32> {
+func.func @cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4_acctranspose(%arg0: vector<1x8x1x16xf32>, %arg1: vector<1x2x8x1xf32>, %arg2: vector<1x1x2x16xf32>) -> vector<1x1x2x16xf32> {
   %0 = vector.contract #contraction_trait3 %arg0, %arg1, %arg2  : vector<1x8x1x16xf32>, vector<1x2x8x1xf32> into vector<1x1x2x16xf32>
   return %0: vector<1x1x2x16xf32>
 }
 
 // -----
 // CHECK-LABEL: func @cast_away_extract_strided_slice_leading_one_dims
-func @cast_away_extract_strided_slice_leading_one_dims(%arg0: vector<1x8x8xf16>) -> vector<1x1x8xf16> {
+func.func @cast_away_extract_strided_slice_leading_one_dims(%arg0: vector<1x8x8xf16>) -> vector<1x1x8xf16> {
   // CHECK:     %[[SRC:.+]] = vector.extract %{{.*}}[0] : vector<1x8x8xf16>
   // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[SRC]] {offsets = [4], sizes = [1], strides = [1]} : vector<8x8xf16> to vector<1x8xf16>
   %0 = vector.extract_strided_slice %arg0 {offsets = [0, 4], sizes = [1, 1], strides = [1, 1]} : vector<1x8x8xf16> to vector<1x1x8xf16>
@@ -176,7 +176,7 @@ func @cast_away_extract_strided_slice_leading_one_dims(%arg0: vector<1x8x8xf16>)
 }
 
 // CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims
-func @cast_away_insert_strided_slice_leading_one_dims(%arg0: vector<1x8xf16>, %arg1: vector<1x8x8xf16>) -> vector<1x8x8xf16> {
+func.func @cast_away_insert_strided_slice_leading_one_dims(%arg0: vector<1x8xf16>, %arg1: vector<1x8x8xf16>) -> vector<1x8x8xf16> {
   // CHECK:    %[[SRC:.+]] = vector.extract %{{.*}}[0] : vector<1x8xf16>
   // CHECK:    %[[DST:.+]] = vector.extract %{{.*}}[0] : vector<1x8x8xf16>
   // CHECK: %[[INSERT:.+]] = vector.insert_strided_slice %[[SRC]], %[[DST]] {offsets = [0, 0], strides = [1]} : vector<8xf16> into vector<8x8xf16>
@@ -188,7 +188,7 @@ func @cast_away_insert_strided_slice_leading_one_dims(%arg0: vector<1x8xf16>, %a
 
 // CHECK-LABEL: func @cast_away_insert_strided_slice_leading_one_dims_one_element
 //  CHECK-SAME: %[[ARG0:.+]]: vector<1x1xf16>, %{{.+}}: vector<1x1x1xf16>
-func @cast_away_insert_strided_slice_leading_one_dims_one_element(%arg0: vector<1x1xf16>, %arg1: vector<1x1x1xf16>) -> vector<1x1x1xf16> {
+func.func @cast_away_insert_strided_slice_leading_one_dims_one_element(%arg0: vector<1x1xf16>, %arg1: vector<1x1x1xf16>) -> vector<1x1x1xf16> {
   // CHECK: %[[EXT:.+]] = vector.extract %{{.*}}[0] : vector<1x1xf16>
   // CHECK: %[[B:.+]] = vector.broadcast %[[EXT]] : vector<1xf16> to vector<1x1x1xf16>
   %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0, 0], strides = [1, 1]} : vector<1x1xf16> into vector<1x1x1xf16>
@@ -197,7 +197,7 @@ func @cast_away_insert_strided_slice_leading_one_dims_one_element(%arg0: vector<
 }
 
 // CHECK-LABEL: func @cast_away_transfer_read_leading_one_dims
-func @cast_away_transfer_read_leading_one_dims(%arg0: memref<1x4x8x16xf16>) -> vector<1x4xf16> {
+func.func @cast_away_transfer_read_leading_one_dims(%arg0: memref<1x4x8x16xf16>) -> vector<1x4xf16> {
   // CHECK: %[[C0:.+]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
   // CHECK: %[[F0:.+]] = arith.constant 0.000000e+00 : f16
@@ -210,7 +210,7 @@ func @cast_away_transfer_read_leading_one_dims(%arg0: memref<1x4x8x16xf16>) -> v
 }
 
 // CHECK-LABEL: func @cast_away_transfer_read_leading_one_dims_one_element
-func @cast_away_transfer_read_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>) -> vector<1x1xf16> {
+func.func @cast_away_transfer_read_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>) -> vector<1x1xf16> {
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0. : f16
   // CHECK: vector.broadcast %{{.+}} : vector<1xf16> to vector<1x1xf16>
@@ -219,7 +219,7 @@ func @cast_away_transfer_read_leading_one_dims_one_element(%arg0: memref<1x1x1x1
 }
 
 // CHECK-LABEL: func @cast_away_transfer_write_leading_one_dims
-func @cast_away_transfer_write_leading_one_dims(%arg0: memref<1x4x8x16xf16>, %arg1: vector<1x4xf16>) {
+func.func @cast_away_transfer_write_leading_one_dims(%arg0: memref<1x4x8x16xf16>, %arg1: vector<1x4xf16>) {
   // CHECK: %[[C0:.+]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
   // CHECK: %[[CAST:.+]] = vector.extract %{{.*}}[0] : vector<1x4xf16>
@@ -230,7 +230,7 @@ func @cast_away_transfer_write_leading_one_dims(%arg0: memref<1x4x8x16xf16>, %ar
 }
 
 // CHECK-LABEL: func @cast_away_transfer_write_leading_one_dims_one_element
-func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>, %arg1: vector<1x1xf16>) {
+func.func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>, %arg1: vector<1x1xf16>) {
   %c0 = arith.constant 0 : index
   // CHECK: vector.extract %{{.+}}[0] : vector<1x1xf16>
   vector.transfer_write %arg1, %arg0[%c0, %c0, %c0, %c0] {in_bounds = [true, true]} : vector<1x1xf16>, memref<1x1x1x1xf16>
@@ -238,7 +238,7 @@ func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x
 }
 
 // CHECK-LABEL: func @cast_away_elementwise_leading_one_dims
-func @cast_away_elementwise_leading_one_dims(
+func.func @cast_away_elementwise_leading_one_dims(
   %arg0: vector<1x1x8xf32>, %arg1: f32, %arg2: vector<1x4xf32>,
   %arg3: vector<1x4xf32>, %arg4: i1) ->
   (vector<1x1x8xf32>, vector<1x4xi1>, vector<1x4xf32>, vector<1x4xf32>) {
@@ -271,7 +271,7 @@ func @cast_away_elementwise_leading_one_dims(
 //       CHECK:   %[[INSERT:.+]] = vector.insert %[[S]], %[[EXTRACT]] [0] : f32 into vector<4xf32>
 //       CHECK:   %[[BCAST:.+]] = vector.broadcast %[[INSERT]] : vector<4xf32> to vector<1x1x4xf32>
 //       CHECK:   return %[[BCAST]]
-func @cast_away_insert_leading_one_dims_scalar(%s: f32, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
+func.func @cast_away_insert_leading_one_dims_scalar(%s: f32, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
   %0 = vector.insert %s, %v [0, 0, 0] : f32 into vector<1x1x4xf32>
   return %0: vector<1x1x4xf32>
 }
@@ -280,7 +280,7 @@ func @cast_away_insert_leading_one_dims_scalar(%s: f32, %v: vector<1x1x4xf32>) -
 //  CHECK-SAME: (%[[S:.+]]: vector<4xf32>, %[[V:.+]]: vector<1x1x4xf32>)
 //       CHECK:   %[[BCAST:.+]] = vector.broadcast %[[S]] : vector<4xf32> to vector<1x1x4xf32>
 //       CHECK:   return %[[BCAST]]
-func @cast_away_insert_leading_one_dims_rank1(%s: vector<4xf32>, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
+func.func @cast_away_insert_leading_one_dims_rank1(%s: vector<4xf32>, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
   %0 = vector.insert %s, %v [0, 0] : vector<4xf32> into vector<1x1x4xf32>
   return %0: vector<1x1x4xf32>
 }
@@ -290,7 +290,7 @@ func @cast_away_insert_leading_one_dims_rank1(%s: vector<4xf32>, %v: vector<1x1x
 //       CHECK:   %[[EXTRACT:.+]] = vector.extract %[[S]][0] : vector<1x4xf32>
 //       CHECK:   %[[BCAST:.+]] = vector.broadcast %[[EXTRACT]] : vector<4xf32> to vector<1x1x4xf32>
 //       CHECK:   return %[[BCAST]]
-func @cast_away_insert_leading_one_dims_rank2(%s: vector<1x4xf32>, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
+func.func @cast_away_insert_leading_one_dims_rank2(%s: vector<1x4xf32>, %v: vector<1x1x4xf32>) -> vector<1x1x4xf32> {
   %0 = vector.insert %s, %v [0] : vector<1x4xf32> into vector<1x1x4xf32>
   return %0: vector<1x1x4xf32>
 }
@@ -300,7 +300,7 @@ func @cast_away_insert_leading_one_dims_rank2(%s: vector<1x4xf32>, %v: vector<1x
 //       CHECK:   %[[EXTRACT:.+]] = vector.extract %[[S]][0] : vector<1x4xf32>
 //       CHECK:   %[[INSERT:.+]] = vector.insert %[[EXTRACT]], %[[V]] [5, 0] : vector<4xf32> into vector<8x1x4xf32>
 //       CHECK:   return %[[INSERT]]
-func @cast_away_insert_leading_one_dims_non_one_dest(%s: vector<1x4xf32>, %v: vector<8x1x4xf32>) -> vector<8x1x4xf32> {
+func.func @cast_away_insert_leading_one_dims_non_one_dest(%s: vector<1x4xf32>, %v: vector<8x1x4xf32>) -> vector<8x1x4xf32> {
   %0 = vector.insert %s, %v [5] : vector<1x4xf32> into vector<8x1x4xf32>
   return %0: vector<8x1x4xf32>
 }

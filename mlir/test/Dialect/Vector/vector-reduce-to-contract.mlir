@@ -9,7 +9,7 @@
 //  CHECK-SAME:   iterator_types = ["parallel", "reduction", "parallel"], kind = #vector.kind<add>}
 //  CHECK-SAME:   %{{.*}}, %{{.*}}, %[[C0]] : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x16xf32>
 //  CHECK-NEXT:   return %[[R]] : vector<8x16xf32>
-func @multidimreduction_contract(
+func.func @multidimreduction_contract(
   %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>) -> vector<8x16xf32> {
   %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
   %1 = vector.multi_reduction <add>, %0 [1] : vector<8x32x16xf32> to vector<8x16xf32>
@@ -27,7 +27,7 @@ func @multidimreduction_contract(
 //  CHECK-SAME:   iterator_types = ["parallel", "reduction", "parallel"], kind = #vector.kind<add>}
 //  CHECK-SAME:   %{{.*}}, %{{.*}}, %[[C0]] : vector<8x32x16xi32>, vector<8x32x16xi32> into vector<8x16xi32>
 //  CHECK-NEXT:   return %[[R]] : vector<8x16xi32>
-func @multidimreduction_contract_int(
+func.func @multidimreduction_contract_int(
   %arg0: vector<8x32x16xi32>,%arg1: vector<8x32x16xi32>) -> vector<8x16xi32> {
   %0 = arith.muli %arg0, %arg1 : vector<8x32x16xi32>
   %1 = vector.multi_reduction <add>, %0 [1] : vector<8x32x16xi32> to vector<8x16xi32>
@@ -50,7 +50,7 @@ func @multidimreduction_contract_int(
 //  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
 //  CHECK-SAME:   %[[ARG0]], %{{.*}}, %[[C0]] : vector<32x16x8xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 //  CHECK-NEXT:   return %[[R]] : vector<8x32xf32>
-func @contract_transpose(
+func.func @contract_transpose(
   %arg0: vector<32x16x8xf32>, %arg1: vector<8x32x16xf32>) -> vector<8x32xf32> {
   %cst = arith.constant dense<0.000000e+00> : vector<8x32xf32>
   %0 = vector.transpose %arg0, [2, 0, 1] : vector<32x16x8xf32> to vector<8x32x16xf32>
@@ -76,7 +76,7 @@ func @contract_transpose(
 //  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
 //  CHECK-SAME:   %[[ARG0]], %{{.*}}, %[[C0]] : vector<32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 //  CHECK-NEXT:   return %[[R]] : vector<8x32xf32>
-func @contract_broadcast(
+func.func @contract_broadcast(
   %arg0: vector<32x16xf32>, %arg1: vector<8x32x16xf32>) -> vector<8x32xf32> {
   %cst = arith.constant dense<0.000000e+00> : vector<8x32xf32>
   %0 = vector.broadcast %arg0 : vector<32x16xf32> to vector<8x32x16xf32>
@@ -93,7 +93,7 @@ func @contract_broadcast(
 
 // -----
 
-func @broadcast_vector_extsi(%a : vector<4xi8>) -> vector<2x4xi32> {
+func.func @broadcast_vector_extsi(%a : vector<4xi8>) -> vector<2x4xi32> {
   // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<4xi8> to vector<4xi32>
   // CHECK: vector.broadcast %[[EXT:.+]] : vector<4xi32> to vector<2x4xi32>
   %b = vector.broadcast %a : vector<4xi8> to vector<2x4xi8>
@@ -103,7 +103,7 @@ func @broadcast_vector_extsi(%a : vector<4xi8>) -> vector<2x4xi32> {
 
 // -----
 
-func @broadcast_scalar_extsi(%a : i8) -> vector<2x4xi32> {
+func.func @broadcast_scalar_extsi(%a : i8) -> vector<2x4xi32> {
   // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : i8 to i32
   // CHECK: vector.broadcast %[[EXT]] : i32 to vector<2x4xi32>
   %b = vector.broadcast %a : i8 to vector<2x4xi8>
@@ -113,7 +113,7 @@ func @broadcast_scalar_extsi(%a : i8) -> vector<2x4xi32> {
 
 // -----
 
-func @transpose_extsi(%a : vector<4x2xi8>) -> vector<2x4xi32> {
+func.func @transpose_extsi(%a : vector<4x2xi8>) -> vector<2x4xi32> {
   // CHECK: %[[EXT:.+]] = arith.extsi %{{.+}} : vector<4x2xi8> to vector<4x2xi32>
   // CHECK: vector.transpose %[[EXT]], [1, 0] : vector<4x2xi32> to vector<2x4xi32>
   %b = vector.transpose %a, [1, 0]: vector<4x2xi8> to vector<2x4xi8>
@@ -133,7 +133,7 @@ func @transpose_extsi(%a : vector<4x2xi8>) -> vector<2x4xi32> {
 //       CHECK:   %[[T:.+]] = vector.transpose %[[ADD]], [1, 0]
 //       CHECK:   return %[[T]]
 
-func @transpose_elementwise_same_type(%a : vector<4x2xf32>, %b : vector<4x2xf32>) -> vector<2x4xf32> {
+func.func @transpose_elementwise_same_type(%a : vector<4x2xf32>, %b : vector<4x2xf32>) -> vector<2x4xf32> {
   %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
   %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
   %r = arith.addf %at, %bt : vector<2x4xf32>
@@ -147,7 +147,7 @@ func @transpose_elementwise_same_type(%a : vector<4x2xf32>, %b : vector<4x2xf32>
 //       CHECK:   %[[S:.+]] = arith.select %[[COND]], %[[A]], %[[B]] : vector<4x2xi1>, vector<4x2xf32>
 //       CHECK:   %[[T:.+]] = vector.transpose %[[S]], [1, 0] : vector<4x2xf32> to vector<2x4xf32>
 //       CHECK:   return %[[T]]
-func @transpose_elementwise_diff_operand_types(%cond: vector<4x2xi1>, %a : vector<4x2xf32>, %b : vector<4x2xf32>) -> vector<2x4xf32> {
+func.func @transpose_elementwise_diff_operand_types(%cond: vector<4x2xi1>, %a : vector<4x2xf32>, %b : vector<4x2xf32>) -> vector<2x4xf32> {
   %condt = vector.transpose %cond, [1, 0]: vector<4x2xi1> to vector<2x4xi1>
   %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
   %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
@@ -162,7 +162,7 @@ func @transpose_elementwise_diff_operand_types(%cond: vector<4x2xi1>, %a : vecto
 //       CHECK:   %[[CMP:.+]] = arith.cmpf olt, %[[A]], %[[B]] : vector<4x2xf32>
 //       CHECK:   %[[T:.+]] = vector.transpose %[[CMP]], [1, 0] : vector<4x2xi1> to vector<2x4xi1>
 //       CHECK:   return %[[T]]
-func @transpose_elementwise_diff_operand_result_type(%a : vector<4x2xf32>, %b : vector<4x2xf32>) -> vector<2x4xi1> {
+func.func @transpose_elementwise_diff_operand_result_type(%a : vector<4x2xf32>, %b : vector<4x2xf32>) -> vector<2x4xi1> {
   %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
   %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
   %r = arith.cmpf olt, %at, %bt : vector<2x4xf32>
@@ -178,7 +178,7 @@ func @transpose_elementwise_diff_operand_result_type(%a : vector<4x2xf32>, %b : 
 //       CHECK:   %[[T:.+]] = vector.transpose %[[ADD]], [1, 0, 3, 2] : vector<4x6x3x2xf32> to vector<6x4x2x3xf32>
 //       CHECK:   return %[[T:.+]] : vector<6x4x2x3xf32>
 
-func @transpose_elementwise_splat_constant(%a : vector<4x6x3x2xf32>) -> vector<6x4x2x3xf32> {
+func.func @transpose_elementwise_splat_constant(%a : vector<4x6x3x2xf32>) -> vector<6x4x2x3xf32> {
   %b = arith.constant dense<5.0> : vector<6x4x2x3xf32>
   %at = vector.transpose %a, [1, 0, 3, 2]: vector<4x6x3x2xf32> to vector<6x4x2x3xf32>
   %r = arith.addf %at, %b : vector<6x4x2x3xf32>
@@ -191,7 +191,7 @@ func @transpose_elementwise_splat_constant(%a : vector<4x6x3x2xf32>) -> vector<6
 //       CHECK:   vector.transpose
 //       CHECK:   vector.transpose
 //       CHECK:   arith.addf
-func @transpose_elementwise_diff_map(%a : vector<4x6x3x2xf32>, %b: vector<6x2x4x3xf32>) -> vector<6x4x2x3xf32> {
+func.func @transpose_elementwise_diff_map(%a : vector<4x6x3x2xf32>, %b: vector<6x2x4x3xf32>) -> vector<6x4x2x3xf32> {
   %at = vector.transpose %a, [1, 0, 3, 2]: vector<4x6x3x2xf32> to vector<6x4x2x3xf32>
   %bt = vector.transpose %b, [0, 2, 1, 3]: vector<6x2x4x3xf32> to vector<6x4x2x3xf32>
   %r = arith.addf %at, %bt : vector<6x4x2x3xf32>

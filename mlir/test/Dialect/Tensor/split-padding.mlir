@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file -test-tensor-transform-patterns=test-split-padding-patterns %s | FileCheck %s
 
 // CHECK-LABEL: func @pad_all_zero_sizes
-func @pad_all_zero_sizes(%input: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+func.func @pad_all_zero_sizes(%input: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
   %f0 = arith.constant 0.0 : f32
   %c0 = arith.constant 0 : index
   %0 = tensor.pad %input low[0, %c0, 0] high[%c0, 0, 0] {
@@ -18,7 +18,7 @@ func @pad_all_zero_sizes(%input: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
 
 // CHECK-LABEL: func @pad_non_zero_sizes
 //  CHECK-SAME: (%[[INPUT:.+]]: tensor<?x?x8xf32>, %[[LOW0:.+]]: index, %[[HIGH1:.+]]: index)
-func @pad_non_zero_sizes(%input: tensor<?x?x8xf32>, %low0: index, %high1: index) -> tensor<?x?x8xf32> {
+func.func @pad_non_zero_sizes(%input: tensor<?x?x8xf32>, %low0: index, %high1: index) -> tensor<?x?x8xf32> {
   %f0 = arith.constant 0.0 : f32
   %0 = tensor.pad %input low[%low0, 0, 0] high[0, %high1, 0] {
   ^bb0(%dim0: index, %dim1: index, %dim2: index):
