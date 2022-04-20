@@ -137,13 +137,13 @@ unknown dimension can be queried using the "dim" builtin as shown below.
 Example:
 
 ```mlir
-func foo(...) {
+func.func foo(...) {
   %A = memref.alloc <8x?xf32, #lmap> (%N)
   ...
   call bar(%A) : (memref<8x?xf32, #lmap>)
 }
 
-func bar(%A : memref<8x?xf32, #lmap>) {
+func.func bar(%A : memref<8x?xf32, #lmap>) {
   // Type of %A indicates that %A has dynamic shape with 8 rows
   // and unknown number of columns. The number of columns is queried
   // dynamically using dim instruction.
@@ -549,7 +549,7 @@ The presence of dynamic control flow leads to an inner non-affine function
 nested in an outer function that uses affine loops.
 
 ```mlir
-func @search(%A: memref<?x?xi32>, %S: <?xi32>, %key : i32) {
+func.func @search(%A: memref<?x?xi32>, %S: <?xi32>, %key : i32) {
   %ni = memref.dim %A, 0 : memref<?x?xi32>
   // This loop can be parallelized
   affine.for %i = 0 to %ni {
@@ -558,7 +558,7 @@ func @search(%A: memref<?x?xi32>, %S: <?xi32>, %key : i32) {
   return
 }
 
-func @search_body(%A: memref<?x?xi32>, %S: memref<?xi32>, %key: i32, %i : i32) {
+func.func @search_body(%A: memref<?x?xi32>, %S: memref<?xi32>, %key: i32, %i : i32) {
   %nj = memref.dim %A, 1 : memref<?x?xi32>
   cf.br ^bb1(0)
 
@@ -607,7 +607,7 @@ for (i = 0; i < N; i++)
 ```
 
 ```mlir
-func @outer_nest(%n : index) {
+func.func @outer_nest(%n : index) {
   affine.for %i = 0 to %n {
     affine.for %j = 0 to %n {
       %pow = call @pow(2, %j) : (index, index) ->  index
@@ -617,7 +617,7 @@ func @outer_nest(%n : index) {
   return
 }
 
-func @inner_nest(%m : index, %n : index) {
+func.func @inner_nest(%m : index, %n : index) {
   affine.for %k = 0 to %m {
     affine.for %l = 0 to %n {
       ...
@@ -658,7 +658,7 @@ in a dilated convolution.
 // input:   [batch, input_height, input_width, input_feature]
 // kernel: [kernel_height, kernel_width, input_feature, output_feature]
 // output: [batch, output_height, output_width, output_feature]
-func @conv2d(%input: memref<16x1024x1024x3xf32, #lm0, /*scratchpad=*/1>,
+func.func @conv2d(%input: memref<16x1024x1024x3xf32, #lm0, /*scratchpad=*/1>,
              %kernel: memref<5x5x3x32xf32, #lm0, /*scratchpad=*/1>,
              %output: memref<16x512x512x32xf32, #lm0, /*scratchpad=*/1>) {
   affine.for %b = 0 to %batch {
@@ -756,7 +756,7 @@ instruction that appears in that branch. Each leaf node is an ML Instruction.
 #intset_ij = (i, j) [M, N, K]  : i >= 0, -i + N - 1 >= 0, j >= 0, -j + N-1 >= 0
 #intset_ijk = (i, j, k) [M, N, K] : i >= 0, -i + N - 1 >= 0, j >= 0,
                                      -j +  M-1 >= 0, k >= 0, -k + N - 1 >= 0)
-func @matmul(%A, %B, %C, %M, %N, %K) : (...)  { // %M, N, K are symbols
+func.func @matmul(%A, %B, %C, %M, %N, %K) : (...)  { // %M, N, K are symbols
   // t1, t2, t3, t4, t5, t6  are abstract polyhedral loops
   mldim %t1 : {S1,S2,S3,S4,S5}  floordiv (i, 128) {
     mldim %t2 : {S1,S2,S3,S4,S5}  floordiv (j, 128) {
@@ -838,7 +838,7 @@ Example:
 // read relation: two elements ( d0 <= r0 <= d0+1 )
 ##aff_rel9 = (d0) -> (r0) : r0 - d0 >= 0, d0 - r0 + 1 >= 0
 
-func @count (%A : memref<128xf32>, %pos : i32) -> f32
+func.func @count (%A : memref<128xf32>, %pos : i32) -> f32
   reads: {%A ##aff_rel9 (%pos)}
   writes: /* empty */
   may_reads: /* empty */
@@ -913,7 +913,7 @@ Example:
 ```mlir
 ##rel9 ( ) [s0] -> (r0, r1) : 0 <= r0 <= 1023, 0 <= r1 <= s0 - 1
 
-func @cblas_reduce_ffi(%M: memref<1024 x ? x f32, #layout_map0, /*mem=*/0>)
+func.func @cblas_reduce_ffi(%M: memref<1024 x ? x f32, #layout_map0, /*mem=*/0>)
   -> f32 [
   reads: {%M, ##rel9() }
   writes: /* empty */
@@ -921,7 +921,7 @@ func @cblas_reduce_ffi(%M: memref<1024 x ? x f32, #layout_map0, /*mem=*/0>)
   may_writes: /* empty */
 ]
 
-func @dma_mem_to_scratchpad(%a : memref<1024 x f32, #layout_map0, /*mem=*/0>,
+func.func @dma_mem_to_scratchpad(%a : memref<1024 x f32, #layout_map0, /*mem=*/0>,
     %b : memref<1024 x f32, #layout_map0, 1>, %c : memref<1024 x f32,
     #layout_map0>) [
   reads: {%M, ##rel9() }
@@ -986,7 +986,7 @@ Example:
 
 ```mlir
 // Return sum of elements in 1-dimensional mref A
-func i32 @sum(%A : memref<?xi32>, %N : i32) -> (i32) {
+func.func i32 @sum(%A : memref<?xi32>, %N : i32) -> (i32) {
    %init = 0
    %result = affine.for %i = 0 to N with %tmp(%init) {
       %value = affine.load %A[%i]
@@ -1016,7 +1016,7 @@ Example:
 
 ```mlir
 // Compute sum of half of the array
-func i32 @sum_half(%A : memref<?xi32>, %N : i32) -> (i32) {
+func.func i32 @sum_half(%A : memref<?xi32>, %N : i32) -> (i32) {
    %s0 = 0
    %s1 = affine.for %i = 1 ... N step 1 with %s2 (%s0) {
        %s3 = if (%i >= %N / 2) {

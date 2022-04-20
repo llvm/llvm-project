@@ -44,7 +44,7 @@ def testValueIsInstance():
   ctx.allow_unregistered_dialects = True
   module = Module.parse(
       r"""
-    func @foo(%arg0: f32) {
+    func.func @foo(%arg0: f32) {
       %0 = "some_dialect.some_op"() : () -> f64
       return
     }""", ctx)
@@ -64,7 +64,7 @@ def testValueHash():
   ctx.allow_unregistered_dialects = True
   module = Module.parse(
       r"""
-    func @foo(%arg0: f32) -> f32 {
+    func.func @foo(%arg0: f32) -> f32 {
       %0 = "some_dialect.some_op"(%arg0) : (f32) -> f32
       return %0 : f32
     }""", ctx)

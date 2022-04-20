@@ -858,7 +858,7 @@ gpu.module @foo {
   }
 }
 
-func @main() {
+func.func @main() {
   // Fill the buffer with some data
   %buffer = memref.alloc : memref<8xi32>
   %data = ...
@@ -881,7 +881,7 @@ spv.module @__spv__foo /*VCE triple and other metadata here*/ {
   spv.EntryPoint @bar, ...
 }
 
-func @main() {
+func.func @main() {
   // Fill the buffer with some data.
   %buffer = memref.alloc : memref<8xi32>
   %data = ...

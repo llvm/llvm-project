@@ -42,7 +42,7 @@ class MlirOptKernel(Kernel):
 
     ```mlir
     // configuration: --pass
-    func @foo(%tensor: tensor<2x3xf64>) -> tensor<3x2xf64> { ... }
+    func.func @foo(%tensor: tensor<2x3xf64>) -> tensor<3x2xf64> { ... }
     ```
 
     ```mlir

@@ -33,7 +33,7 @@ _KERNEL_STR = """
   doc = "X(i,j) = A(i,j) + B(i,j)"
 }
 
-func @sparse_add_elt(
+func.func @sparse_add_elt(
     %arga: tensor<3x4xf64, #DCSR>, %argb: tensor<3x4xf64, #DCSR>) -> tensor<3x4xf64, #DCSR> {
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
@@ -48,7 +48,7 @@ func @sparse_add_elt(
   return %0 : tensor<3x4xf64, #DCSR>
 }
 
-func @main(%ad: tensor<3x4xf64>, %bd: tensor<3x4xf64>) -> tensor<3x4xf64, #DCSR>
+func.func @main(%ad: tensor<3x4xf64>, %bd: tensor<3x4xf64>) -> tensor<3x4xf64, #DCSR>
   attributes { llvm.emit_c_interface } {
   %a = sparse_tensor.convert %ad : tensor<3x4xf64> to tensor<3x4xf64, #DCSR>
   %b = sparse_tensor.convert %bd : tensor<3x4xf64> to tensor<3x4xf64, #DCSR>

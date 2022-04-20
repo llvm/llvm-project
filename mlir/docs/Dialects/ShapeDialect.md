@@ -97,7 +97,7 @@ separate shape function library, while here we would normally reify it as part
 of lowering, but for simplicity will show as a standalone shape function.
 
 ```mlir
-func @matmul_shape1(%lhs: tensor<*xf32>, %rhs: tensor<*xindex>) -> tensor<?xindex> {
+func.func @matmul_shape1(%lhs: tensor<*xf32>, %rhs: tensor<*xindex>) -> tensor<?xindex> {
   %c1 = shape.const_size 1
   %c2 = shape.const_size 2
   // We allow `shape.shape_of` to return either a `!shape.shape` or
@@ -136,7 +136,7 @@ We can now hoist computations of constraint were possible (which in the case
 below is not too many as we need to verify the rank before we can split)
 
 ```mlir
-func @matmul_shape2(%lhs: tensor<*xf32>, %lhs: tensor<*xf32>) -> tensor<?xindex> {
+func.func @matmul_shape2(%lhs: tensor<*xf32>, %lhs: tensor<*xf32>) -> tensor<?xindex> {
   %c1 = shape.const_size 1
   %c2 = shape.const_size 2
   %lhs_shape = shape.shape_of %lhs : tensor<*xf32> -> tensor<?xindex>
@@ -167,7 +167,7 @@ The above form can now be lowered to the fully imperative form (see
 for example).
 
 ```mlir
-func @matmul_shape3(%lhs: tensor<*xf32>, %lhs: tensor<*xf32>) -> tensor<?xindex> {
+func.func @matmul_shape3(%lhs: tensor<*xf32>, %lhs: tensor<*xf32>) -> tensor<?xindex> {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %lhs_shape = shape.shape_of %lhs : tensor<*xf32> -> tensor<?xindex>

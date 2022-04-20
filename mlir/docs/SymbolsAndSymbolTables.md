@@ -78,7 +78,7 @@ Below is an example of how an operation can reference a symbol operation:
 
 ```mlir
 // This `func.func` operation defines a symbol named `symbol`.
-func @symbol()
+func.func @symbol()
 
 // Our `foo.user` operation contains a SymbolRefAttr with the name of the
 // `symbol` func.
@@ -86,7 +86,7 @@ func @symbol()
 
 // Symbol references resolve to the nearest parent operation that defines a
 // symbol table, so we can have references with arbitrary nesting levels.
-func @other_symbol() {
+func.func @other_symbol() {
   affine.for %i0 = 0 to 10 {
     // Our `foo.user` operation resolves to the same `symbol` func as defined
     // above.
@@ -107,7 +107,7 @@ module {
 // a symbol.
 module @module_symbol {
   // This `func.func` operation defines a symbol named `nested_symbol`.
-  func @nested_symbol()
+  func.func @nested_symbol()
 }
 
 // Our `foo.user` operation may refer to the nested symbol, by resolving through
@@ -207,17 +207,17 @@ quote. A few examples of what this looks like in the IR are shown below:
 module @public_module {
   // This function can be accessed by 'live.user', but cannot be referenced
   // externally; all uses are known to reside within parent regions.
-  func nested @nested_function()
+  func.func nested @nested_function()
 
   // This function cannot be accessed outside of 'public_module'.
-  func private @private_function()
+  func.func private @private_function()
 }
 
 // This function can only be accessed from within the top-level module.
-func private @private_function()
+func.func private @private_function()
 
 // This function may be referenced externally.
-func @public_function()
+func.func @public_function()
 
 "live.user"() {uses = [
   @public_module::@nested_function,

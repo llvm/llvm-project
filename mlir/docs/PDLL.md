@@ -406,7 +406,7 @@ the concept, let's take a look at a quick example. Consider the `.mlir` snippet
 below:
 
 ```mlir
-func @baz(%arg: i32) {
+func.func @baz(%arg: i32) {
   %result = my_dialect.foo %arg, %arg -> i32
 }
 ```

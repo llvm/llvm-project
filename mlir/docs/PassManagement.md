@@ -1091,7 +1091,7 @@ this instrumentation:
 $ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -mlir-print-ir-before=cse
 
 *** IR Dump Before CSE ***
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   %c1_i32_0 = arith.constant 1 : i32
   return %c1_i32, %c1_i32_0 : i32, i32
@@ -1107,7 +1107,7 @@ func @simple_constant() -> (i32, i32) {
 $ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -mlir-print-ir-after=cse
 
 *** IR Dump After CSE ***
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
@@ -1128,7 +1128,7 @@ func @simple_constant() -> (i32, i32) {
 $ mlir-opt foo.mlir -pass-pipeline='func.func(cse,cse)' -mlir-print-ir-after=cse -mlir-print-ir-after-change
 
 *** IR Dump After CSE ***
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
@@ -1143,7 +1143,7 @@ func @simple_constant() -> (i32, i32) {
 $ mlir-opt foo.mlir -pass-pipeline='func.func(cse,bad-pass)' -mlir-print-ir-after-failure
 
 *** IR Dump After BadPass Failed ***
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
@@ -1159,22 +1159,22 @@ func @simple_constant() -> (i32, i32) {
 $ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func.func(cse)' -mlir-print-ir-after=cse -mlir-print-ir-module-scope
 
 *** IR Dump After CSE ***  ('func.func' operation: @bar)
-func @bar(%arg0: f32, %arg1: f32) -> f32 {
+func.func @bar(%arg0: f32, %arg1: f32) -> f32 {
   ...
 }
 
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   %c1_i32_0 = arith.constant 1 : i32
   return %c1_i32, %c1_i32_0 : i32, i32
 }
 
 *** IR Dump After CSE ***  ('func.func' operation: @simple_constant)
-func @bar(%arg0: f32, %arg1: f32) -> f32 {
+func.func @bar(%arg0: f32, %arg1: f32) -> f32 {
   ...
 }
 
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
@@ -1196,7 +1196,7 @@ reproducible may have the form:
 // configuration: -pass-pipeline='func.func(cse,canonicalize),inline' -verify-each
 
 module {
-  func @foo() {
+  func.func @foo() {
     ...
   }
 }
@@ -1231,7 +1231,7 @@ the following reproducer will be generated:
 // configuration: -pass-pipeline='func.func(canonicalize)' -verify-each -mlir-disable-threading
 
 module {
-  func @foo() {
+  func.func @foo() {
     ...
   }
 }
