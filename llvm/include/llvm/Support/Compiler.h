@@ -396,22 +396,6 @@
 # define LLVM_PACKED_END   _Pragma("pack(pop)")
 #endif
 
-/// \macro LLVM_PTR_SIZE
-/// A constant integer equivalent to the value of sizeof(void*).
-/// Generally used in combination with alignas or when doing computation in the
-/// preprocessor.
-#ifdef __SIZEOF_POINTER__
-# define LLVM_PTR_SIZE __SIZEOF_POINTER__
-#elif defined(_WIN64)
-# define LLVM_PTR_SIZE 8
-#elif defined(_WIN32)
-# define LLVM_PTR_SIZE 4
-#elif defined(_MSC_VER)
-# error "could not determine LLVM_PTR_SIZE as a constant int for MSVC"
-#else
-# define LLVM_PTR_SIZE sizeof(void *)
-#endif
-
 /// \macro LLVM_MEMORY_SANITIZER_BUILD
 /// Whether LLVM itself is built with MemorySanitizer instrumentation.
 #if __has_feature(memory_sanitizer)
