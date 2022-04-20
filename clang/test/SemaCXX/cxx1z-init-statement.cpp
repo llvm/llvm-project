@@ -90,18 +90,3 @@ void test_constexpr_init_stmt() {
   static_assert(constexpr_switch_init(-2) == 0, "");
   static_assert(constexpr_switch_init(-5) == -1, "");
 }
-
-int test_lambda_init() {
-  if (int x = []() {int x = 42; return x; }(); x) {
-  };
-
-  switch (int y = []() {int y = 42; return y; }(); y) {
-  case 42:
-    return 1;
-  }
-
-  for (int x = [] { int x = 0; return x; }();;)
-    ;
-
-  return 0;
-}
