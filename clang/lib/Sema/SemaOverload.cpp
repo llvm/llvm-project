@@ -1747,6 +1747,13 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                "Non-address-of operator for overloaded function expression");
         FromType = S.Context.getPointerType(FromType);
       }
+
+      // Check that we've computed the proper type after overload resolution.
+      // FIXME: FixOverloadedFunctionReference has side-effects; we shouldn't
+      // be calling it from within an NDEBUG block.
+      assert(S.Context.hasSameType(
+        FromType,
+        S.FixOverloadedFunctionReference(From, AccessPair, Fn)->getType()));
     } else {
       return false;
     }
@@ -15181,9 +15188,10 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
     if (SubExpr == UnOp->getSubExpr())
       return UnOp;
 
-    // FIXME: This can't currently fail, but in principle it could.
-    return CreateBuiltinUnaryOp(UnOp->getOperatorLoc(), UO_AddrOf, SubExpr)
-        .get();
+    return UnaryOperator::Create(
+        Context, SubExpr, UO_AddrOf, Context.getPointerType(SubExpr->getType()),
+        VK_PRValue, OK_Ordinary, UnOp->getOperatorLoc(), false,
+        CurFPFeatureOverrides());
   }
 
   if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {
@@ -15194,20 +15202,10 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
       TemplateArgs = &TemplateArgsBuffer;
     }
 
-    QualType Type = Fn->getType();
-    ExprValueKind ValueKind = getLangOpts().CPlusPlus ? VK_LValue : VK_PRValue;
-
-    // FIXME: Duplicated from BuildDeclarationNameExpr.
-    if (unsigned BID = Fn->getBuiltinID()) {
-      if (!Context.BuiltinInfo.isDirectlyAddressable(BID)) {
-        Type = Context.BuiltinFnTy;
-        ValueKind = VK_PRValue;
-      }
-    }
-
-    DeclRefExpr *DRE = BuildDeclRefExpr(
-        Fn, Type, ValueKind, ULE->getNameInfo(), ULE->getQualifierLoc(),
-        Found.getDecl(), ULE->getTemplateKeywordLoc(), TemplateArgs);
+    DeclRefExpr *DRE =
+        BuildDeclRefExpr(Fn, Fn->getType(), VK_LValue, ULE->getNameInfo(),
+                         ULE->getQualifierLoc(), Found.getDecl(),
+                         ULE->getTemplateKeywordLoc(), TemplateArgs);
     DRE->setHadMultipleCandidates(ULE->getNumDecls() > 1);
     return DRE;
   }
