@@ -77,6 +77,17 @@ function(add_compiler_rt_object_libraries name)
       list(REMOVE_ITEM target_flags "-msse3")
     endif()
 
+    # Build the macOS sanitizers with Mac Catalyst support.
+    if (APPLE AND
+        "${COMPILER_RT_ENABLE_MACCATALYST}" AND
+        "${libname}" MATCHES ".*\.osx.*")
+      foreach(arch ${LIB_ARCHS_${libname}})
+        list(APPEND target_flags
+          -target ${arch}-apple-macos${DARWIN_osx_MIN_VER}
+          -darwin-target-variant ${arch}-apple-ios13.1-macabi)
+      endforeach()
+    endif()
+
     set_target_compile_flags(${libname}
       ${extra_cflags_${libname}} ${target_flags})
     set_property(TARGET ${libname} APPEND PROPERTY
@@ -233,6 +244,19 @@ function(add_compiler_rt_runtime name type)
         format_object_libs(sources_${libname} ${os} ${LIB_OBJECT_LIBS})
         get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir_${libname})
         get_compiler_rt_install_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} install_dir_${libname})
+      endif()
+
+      # Build the macOS sanitizers with Mac Catalyst support.
+      if ("${COMPILER_RT_ENABLE_MACCATALYST}" AND
+          "${os}" MATCHES "^(osx)$")
+        foreach(arch ${LIB_ARCHS_${libname}})
+          list(APPEND extra_cflags_${libname}
+            -target ${arch}-apple-macos${DARWIN_osx_MIN_VER}
+            -darwin-target-variant ${arch}-apple-ios13.1-macabi)
+          list(APPEND extra_link_flags_${libname}
+            -target ${arch}-apple-macos${DARWIN_osx_MIN_VER}
+            -darwin-target-variant ${arch}-apple-ios13.1-macabi)
+        endforeach()
       endif()
     endforeach()
   else()
