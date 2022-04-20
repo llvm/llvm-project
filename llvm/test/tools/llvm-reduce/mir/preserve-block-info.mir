@@ -1,0 +1,72 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -simplify-mir -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS: V_MOV_B32
+
+
+# RESULT: bb.0.entry:
+# RESULT: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+
+# RESULT: bb.1 (address-taken, align 8):
+# RESULT: bb.2 (landing-pad, align 16):
+# RESULT: bb.3 (inlineasm-br-indirect-target):
+# RESULT: bb.4 (ehfunclet-entry):
+# RESULT: bb.5 (bbsections 1):
+# RESULT: bb.6 (bbsections 2):
+# RESULT: bb.7 (bbsections 3):
+# RESULT: bb.8:
+# RESULT-NEXT: successors: %bb.9(0x66666666), %bb.10(0x1999999a)
+# RESULT: bb.9:
+# RESULT: bb.10.exitblock:
+
+--- |
+  define void @func(i32 %size)  {
+  entry:
+    br label %exitblock
+
+  exitblock:
+    ret void
+  }
+
+...
+
+---
+name: func
+alignment:       32
+exposesReturnsTwice: true
+legalized:       true
+regBankSelected: true
+selected:        true
+failedISel:      true
+tracksRegLiveness: true
+hasWinCFI:       true
+failsVerification: true
+tracksDebugUserValues: true
+body:             |
+  bb.0.entry:
+    S_NOP 0
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+
+  bb.1 (address-taken, align 8):
+
+  bb.2 (landing-pad, align 16):
+
+  bb.3 (inlineasm-br-indirect-target):
+
+  bb.4 (ehfunclet-entry):
+
+  bb.5 (bbsections 1):
+  bb.6 (bbsections 2):
+  bb.7 (bbsections 3):
+
+  bb.8:
+    successors: %bb.9(4), %bb.10(1)
+    S_CBRANCH_SCC1 %bb.10, implicit undef $scc
+    S_BRANCH %bb.9
+
+  bb.9:
+
+  bb.10.exitblock:
+    S_ENDPGM 0, implicit %0
+...
