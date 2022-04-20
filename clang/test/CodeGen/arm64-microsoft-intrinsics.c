@@ -103,13 +103,6 @@ unsigned long long check_umulh(unsigned long long a, unsigned long long b) {
 // CHECK-MSVC: %[[RES:.*]] = trunc i128 %[[HIGH]] to i64
 // CHECK-LINUX: error: call to undeclared function '__umulh'
 
-void check__break() {
-  __break(0);
-}
-
-// CHECK-MSVC: call void @llvm.aarch64.break(i32 0)
-// CHECK-LINUX: error: implicit declaration of function '__break'
-
 unsigned __int64 check__getReg(void) {
   unsigned volatile __int64 reg;
   reg = __getReg(18);
