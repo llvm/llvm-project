@@ -20,7 +20,7 @@ mkdir build; cd build
 cmake -G Ninja \
     -DLLVM_ENABLE_PROJECTS="clang;lld" \
     -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
-    -DCMAKE_INSTALL_PREFIX="/home/daichi/llvm-riscv" \
+    -DCMAKE_INSTALL_PREFIX="${HOME}/llvm-riscv" \
     -DLLVM_DEFAULT_TARGET_TRIPLE="riscv32-unknown-elf" \
     -DLLVM_TARGET_ARCH="riscv32" \
     -DLLVM_USE_SPLIT_DWARF=True \
