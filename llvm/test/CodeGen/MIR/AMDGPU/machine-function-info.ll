@@ -11,6 +11,7 @@
 ; CHECK-NEXT: explicitKernArgSize: 128
 ; CHECK-NEXT: maxKernArgAlign: 64
 ; CHECK-NEXT: ldsSize: 2048
+; CHECK-NEXT: gdsSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: noSignedZerosFPMath: false
@@ -43,11 +44,14 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
   ret void
 }
 
+@gds = addrspace(2) global [128 x i32] undef, align 4
+
 ; CHECK-LABEL: {{^}}name: ps_shader
 ; CHECK: machineFunctionInfo:
 ; CHECK-NEXT: explicitKernArgSize: 0
 ; CHECK-NEXT: maxKernArgAlign: 4
 ; CHECK-NEXT: ldsSize: 0
+; CHECK-NEXT: gdsSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: noSignedZerosFPMath: false
@@ -75,11 +79,18 @@ define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
   ret void
 }
 
+; CHECK-LABEL: {{^}}name: gds_size_shader
+; CHECK: gdsSize: 4096
+define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
+  ret void
+}
+
 ; CHECK-LABEL: {{^}}name: function
 ; CHECK: machineFunctionInfo:
 ; CHECK-NEXT: explicitKernArgSize: 0
 ; CHECK-NEXT: maxKernArgAlign: 1
 ; CHECK-NEXT: ldsSize: 0
+; CHECK-NEXT: gdsSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: false
 ; CHECK-NEXT: noSignedZerosFPMath: false
@@ -121,6 +132,7 @@ define void @function() {
 ; CHECK-NEXT: explicitKernArgSize: 0
 ; CHECK-NEXT: maxKernArgAlign: 1
 ; CHECK-NEXT: ldsSize: 0
+; CHECK-NEXT: gdsSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: false
 ; CHECK-NEXT: noSignedZerosFPMath: true
@@ -214,11 +226,12 @@ define amdgpu_cs void @wwm_reserved_regs(i32 addrspace(1)* %ptr, <4 x i32> inreg
   ret void
 }
 
-declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #5
+declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #6
 
 attributes #0 = { "no-signed-zeros-fp-math" = "true" }
 attributes #1 = { "amdgpu-dx10-clamp" = "false" }
 attributes #2 = { "amdgpu-ieee" = "false" }
 attributes #3 = { "amdgpu-dx10-clamp" = "false" "amdgpu-ieee" = "false" }
 attributes #4 = { "amdgpu-32bit-address-high-bits"="0xffff8000" }
-attributes #5 = { convergent nounwind readnone willreturn }
+attributes #5 = { "amdgpu-gds-size"="4096" }
+attributes #6 = { convergent nounwind readnone willreturn }

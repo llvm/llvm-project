@@ -8,6 +8,7 @@
 # FULL-NEXT: explicitKernArgSize: 128
 # FULL-NEXT: maxKernArgAlign: 64
 # FULL-NEXT: ldsSize: 2048
+# FULL-NEXT: gdsSize: 256
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -47,6 +48,7 @@
 # SIMPLE-NEXT: explicitKernArgSize: 128
 # SIMPLE-NEXT: maxKernArgAlign: 64
 # SIMPLE-NEXT: ldsSize: 2048
+# SIMPLE-NEXT: gdsSize: 256
 # SIMPLE-NEXT: isEntryFunction: true
 # SIMPLE-NEXT: memoryBound: true
 # SIMPLE-NEXT: waveLimiter: true
@@ -74,6 +76,7 @@ machineFunctionInfo:
   explicitKernArgSize: 128
   maxKernArgAlign: 64
   ldsSize: 2048
+  gdsSize: 256
   isEntryFunction: true
   noSignedZerosFPMath: false
   memoryBound:     true
@@ -100,6 +103,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -163,6 +167,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -227,6 +232,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -387,6 +393,7 @@ body:             |
 # ALL-LABEL: name: dyn_lds_with_alignment
 
 # FULL: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 8
 
 # SIMPLE: dynLDSAlign: 8

@@ -578,6 +578,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     const llvm::MachineFunction &MF)
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
+      GDSSize(MFI.getGDSSize()),
       DynLDSAlign(MFI.getDynLDSAlign()), IsEntryFunction(MFI.isEntryFunction()),
       NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
@@ -607,6 +608,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   ExplicitKernArgSize = YamlMFI.ExplicitKernArgSize;
   MaxKernArgAlign = assumeAligned(YamlMFI.MaxKernArgAlign);
   LDSSize = YamlMFI.LDSSize;
+  GDSSize = YamlMFI.GDSSize;
   DynLDSAlign = YamlMFI.DynLDSAlign;
   HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   Occupancy = YamlMFI.Occupancy;
