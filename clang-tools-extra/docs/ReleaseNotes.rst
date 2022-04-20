@@ -173,6 +173,9 @@ Changes in existing checks
 - Fixed nonsensical suggestion of :doc:`altera-struct-pack-align
   <clang-tidy/checks/altera-struct-pack-align>` check for empty structs.
 
+- Fixed incorrect suggestions for :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability-container-size-empty>` when smart pointers are involved.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
