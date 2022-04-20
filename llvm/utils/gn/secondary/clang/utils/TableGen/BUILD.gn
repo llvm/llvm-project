@@ -1,5 +1,7 @@
 executable("clang-tblgen") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    "//clang/lib/Support",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
   ]
