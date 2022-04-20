@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -145,8 +146,11 @@ void MMIAddrLabelMap::UpdateForDeletedBlock(BasicBlock *BB) {
   assert(!Entry.Symbols.empty() && "Didn't have a symbol, why a callback?");
   BBCallbacks[Entry.Index] = nullptr;  // Clear the callback.
 
+#if !LLVM_MEMORY_SANITIZER_BUILD
+  // BasicBlock is destroyed already, so this access is UB detectable by msan.
   assert((BB->getParent() == nullptr || BB->getParent() == Entry.Fn) &&
          "Block/parent mismatch");
+#endif
 
   for (MCSymbol *Sym : Entry.Symbols) {
     if (Sym->isDefined())
