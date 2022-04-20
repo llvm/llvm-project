@@ -23,7 +23,7 @@ define void @fn2(i32* %P, i1 %C) {
 ; IS__TUNIT____:       exit:
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind
+; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2
 ; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull align 4 dereferenceable(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -86,7 +86,7 @@ define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ; IS__TUNIT____:       exit:
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind null_pointer_is_valid
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@fn_no_null_opt
 ; IS__CGSCC____-SAME: (i32* nocapture nofree writeonly align 4 dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -95,7 +95,8 @@ define void @fn_no_null_opt(i32* %P, i1 %C) null_pointer_is_valid {
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[IF_END]], label [[EXIT:%.*]]
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    [[E_2:%.*]] = phi i32* [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
-; IS__CGSCC____-NEXT:    store i32 undef, i32* [[P]], align 4
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* null, align 4294967296
+; IS__CGSCC____-NEXT:    store i32 [[TMP0]], i32* [[P]], align 4
 ; IS__CGSCC____-NEXT:    br label [[FOR_COND1]]
 ; IS__CGSCC____:       exit:
 ; IS__CGSCC____-NEXT:    ret void
@@ -134,7 +135,7 @@ entry:
 ; IS__TUNIT____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind }
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind }
+; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree nosync nounwind }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nofree nosync nounwind null_pointer_is_valid }
 ;.

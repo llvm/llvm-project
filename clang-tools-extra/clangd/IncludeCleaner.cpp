@@ -23,10 +23,14 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
+#include <functional>
 
 namespace clang {
 namespace clangd {
@@ -233,7 +237,8 @@ void findReferencedMacros(const SourceManager &SM, Preprocessor &PP,
   }
 }
 
-static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
+static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
+                              const Config &Cfg) {
   if (Inc.BehindPragmaKeep)
     return false;
 
@@ -257,6 +262,15 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST) {
     dlog("{0} doesn't have header guard and will not be considered unused",
          FE->getName());
     return false;
+  }
+  for (auto &Filter : Cfg.Diagnostics.Includes.IgnoreHeader) {
+    // Convert the path to Unix slashes and try to match aginast the fiilter.
+    llvm::SmallString<64> Path(Inc.Resolved);
+    llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
+    if (Filter(Inc.Resolved)) {
+      dlog("{0} header is filtered out by the configuration", FE->getName());
+      return false;
+    }
   }
   return true;
 }
@@ -369,6 +383,7 @@ getUnused(ParsedAST &AST,
           const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles,
           const llvm::StringSet<> &ReferencedPublicHeaders) {
   trace::Span Tracer("IncludeCleaner::getUnused");
+  const Config &Cfg = Config::current();
   std::vector<const Inclusion *> Unused;
   for (const Inclusion &MFI : AST.getIncludeStructure().MainFileIncludes) {
     if (!MFI.HeaderID)
@@ -377,7 +392,7 @@ getUnused(ParsedAST &AST,
       continue;
     auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
     bool Used = ReferencedFiles.contains(IncludeID);
-    if (!Used && !mayConsiderUnused(MFI, AST)) {
+    if (!Used && !mayConsiderUnused(MFI, AST, Cfg)) {
       dlog("{0} was not used, but is not eligible to be diagnosed as unused",
            MFI.Written);
       continue;

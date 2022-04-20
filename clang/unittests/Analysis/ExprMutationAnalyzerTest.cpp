@@ -1444,7 +1444,7 @@ TEST(ExprMutationAnalyzerTest, UnevaluatedContext) {
 TEST(ExprMutationAnalyzerTest, ReproduceFailureMinimal) {
   const std::string Reproducer =
       "namespace std {"
-      "template <class T> T forward(T & A) { return static_cast<T&&>(A); }"
+      "template <class T> T &forward(T &A) { return static_cast<T&&>(A); }"
       "template <class T> struct __bind {"
       "  T f;"
       "  template <class V> __bind(T v, V &&) : f(forward(v)) {}"

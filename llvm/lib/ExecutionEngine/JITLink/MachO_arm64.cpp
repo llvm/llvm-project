@@ -677,7 +677,10 @@ private:
       break;
     }
     default:
-      llvm_unreachable("Unrecognized edge kind");
+      return make_error<JITLinkError>(
+          "In graph " + G.getName() + ", section " + B.getSection().getName() +
+          "unsupported edge kind" +
+          getMachOARM64RelocationKindName(E.getKind()));
     }
 
     return Error::success();
@@ -716,7 +719,8 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     Config.PrePrunePasses.push_back(
         DWARFRecordSectionSplitter("__TEXT,__eh_frame"));
     Config.PrePrunePasses.push_back(
-        EHFrameEdgeFixer("__TEXT,__eh_frame", 8, Delta64, Delta32, NegDelta32));
+        EHFrameEdgeFixer("__TEXT,__eh_frame", 8, Pointer32, Pointer64, Delta32,
+                         Delta64, NegDelta32));
 
     // Add an in-place GOT/Stubs pass.
     Config.PostPrunePasses.push_back(

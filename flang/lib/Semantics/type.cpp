@@ -12,6 +12,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/characters.h"
+#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -378,6 +379,31 @@ void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
   ComputeOffsets(context(), scope_);
 }
 
+// Walks a parsed expression to prepare it for (re)analysis;
+// clears out the typedExpr analysis results and re-resolves
+// symbol table pointers of type parameters.
+class ComponentInitResetHelper {
+public:
+  explicit ComponentInitResetHelper(Scope &scope) : scope_{scope} {}
+
+  template <typename A> bool Pre(const A &) { return true; }
+
+  template <typename A> void Post(const A &x) {
+    if constexpr (parser::HasTypedExpr<A>()) {
+      x.typedExpr.Reset();
+    }
+  }
+
+  void Post(const parser::Name &name) {
+    if (name.symbol && name.symbol->has<TypeParamDetails>()) {
+      name.symbol = scope_.FindSymbol(name.source);
+    }
+  }
+
+private:
+  Scope &scope_;
+};
+
 void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
   auto pair{scope_.try_emplace(
       oldSymbol.name(), oldSymbol.attrs(), common::Clone(oldSymbol.details()))};
@@ -408,6 +434,18 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
       if (dim.ubound().isExplicit()) {
         dim.ubound().SetExplicit(Fold(std::move(dim.ubound().GetExplicit())));
       }
+    }
+    if (const auto *parsedExpr{details->unanalyzedPDTComponentInit()}) {
+      // Analyze the parsed expression in this PDT instantiation context.
+      ComponentInitResetHelper resetter{scope_};
+      parser::Walk(*parsedExpr, resetter);
+      auto restorer{foldingContext().messages().SetLocation(newSymbol.name())};
+      details->set_init(evaluate::Fold(
+          foldingContext(), AnalyzeExpr(context(), *parsedExpr)));
+      details->set_unanalyzedPDTComponentInit(nullptr);
+      // Remove analysis results to prevent unparsing or other use of
+      // instantiation-specific expressions.
+      parser::Walk(*parsedExpr, resetter);
     }
     if (MaybeExpr & init{details->init()}) {
       // Non-pointer components with default initializers are

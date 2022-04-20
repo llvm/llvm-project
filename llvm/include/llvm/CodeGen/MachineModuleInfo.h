@@ -200,7 +200,6 @@ public:
 
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
-  void setDebugInfoAvailability(bool avail) { DbgInfoAvailable = avail; }
 
   bool usesMSVCFloatingPoint() const { return UsesMSVCFloatingPoint; }
 

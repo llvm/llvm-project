@@ -46,7 +46,7 @@ void ReportShapeFnPass::runOnOperation() {
       return true;
     }
     if (auto symbol = op->getAttrOfType<SymbolRefAttr>(shapeFnId)) {
-      auto fn = cast<FuncOp>(SymbolTable::lookupSymbolIn(module, symbol));
+      auto fn = cast<func::FuncOp>(SymbolTable::lookupSymbolIn(module, symbol));
       op->emitRemark() << "associated shape function: " << fn.getName();
       return true;
     }
@@ -71,7 +71,7 @@ void ReportShapeFnPass::runOnOperation() {
     }
   }
 
-  module.getBodyRegion().walk([&](FuncOp func) {
+  module.getBodyRegion().walk([&](func::FuncOp func) {
     // Skip ops in the shape function library.
     if (isa<shape::FunctionLibraryOp>(func->getParentOp()))
       return;

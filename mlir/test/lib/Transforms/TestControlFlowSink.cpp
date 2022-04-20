@@ -23,7 +23,7 @@ namespace {
 /// This pass will sink ops named `test.sink_me` and tag them with an attribute
 /// `was_sunk` into the first region of `test.sink_target` ops.
 struct TestControlFlowSinkPass
-    : public PassWrapper<TestControlFlowSinkPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestControlFlowSinkPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestControlFlowSinkPass)
 
   /// Get the command-line argument of the test pass.

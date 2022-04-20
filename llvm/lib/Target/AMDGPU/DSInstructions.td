@@ -791,7 +791,7 @@ defm : DSAtomicWritePat_mc <DS_WRITE_B16, i32, "atomic_store_local_16">;
 defm : DSAtomicWritePat_mc <DS_WRITE_B32, i32, "atomic_store_local_32">;
 defm : DSAtomicWritePat_mc <DS_WRITE_B64, i64, "atomic_store_local_64">;
 
-let OtherPredicates = [D16PreservesUnusedBits] in {
+let OtherPredicates = [HasD16LoadStore] in {
 def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_hi16_local>;
 def : DSWritePat <DS_WRITE_B8_D16_HI, i32, truncstorei8_hi16_local>;
 }
@@ -885,9 +885,9 @@ defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_local">;
 }
 
 // Select 128 bit loads and stores aligned less than 4 as a single ds_read_b128/
-// ds_write_b128 as a single instruction as this is faster than ds_read2_b64/
-// ds_write2_b64 which would be used otherwise. In this case a b64 access would
-// still be misaligned, but we will have 2 of them.
+// ds_write_b128 instruction as this is faster than ds_read2_b64/ds_write2_b64
+// which would be used otherwise. In this case a b64 access would still be
+// misaligned, but we will have 2 of them.
 foreach vt = VReg_128.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B128, vt, "load_align_less_than_4_local">;
 defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align_less_than_4_local">;

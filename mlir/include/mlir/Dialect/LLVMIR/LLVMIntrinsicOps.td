@@ -449,6 +449,17 @@ class LLVM_VPSelectBase<string mnem>
       Arguments<(ins LLVM_VectorOf<I1>:$cond, LLVM_AnyVector:$true_val,
                      LLVM_AnyVector:$false_val, I32:$evl)>;
 
+class LLVM_VPCastBase<string mnem, Type element>
+    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [0], [NoSideEffect]>,
+      Arguments<(ins LLVM_VectorOf<element>:$src,
+                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+
+class LLVM_VPCastI<string mnem>   : LLVM_VPCastBase<mnem, AnyInteger>;
+
+class LLVM_VPCastF<string mnem>   : LLVM_VPCastBase<mnem, AnyFloat>;
+
+class LLVM_VPCastPtr<string mnem> : LLVM_VPCastBase<mnem, LLVM_AnyPointer>;
+
 // Integer Binary
 def LLVM_VPAddOp  : LLVM_VPBinaryI<"add">;
 def LLVM_VPSubOp  : LLVM_VPBinaryI<"sub">;
@@ -519,5 +530,21 @@ def LLVM_VPStridedStoreOp
     : LLVM_ZeroResultIntrOp<"experimental.vp.strided.store",[0, 1, 2], []>,
       Arguments<(ins LLVM_AnyVector:$val, LLVM_AnyPointer:$ptr,
                      AnyInteger:$stride, LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+
+def LLVM_VPTruncOp : LLVM_VPCastI<"trunc">;
+def LLVM_VPZExtOp  : LLVM_VPCastI<"zext">;
+def LLVM_VPSExtOp  : LLVM_VPCastI<"sext">;
+
+def LLVM_VPFPTruncOp : LLVM_VPCastF<"fptrunc">;
+def LLVM_VPFPExtOp   : LLVM_VPCastF<"fpext">;
+
+def LLVM_VPFPToUIOp : LLVM_VPCastF<"fptoui">;
+def LLVM_VPFPToSIOp : LLVM_VPCastF<"fptosi">;
+
+def LLVM_VPUIToFPOp : LLVM_VPCastI<"uitofp">;
+def LLVM_VPSIToFPOp : LLVM_VPCastI<"sitofp">;
+
+def LLVM_VPPtrToIntOp : LLVM_VPCastPtr<"ptrtoint">;
+def LLVM_VPIntToPtrOp : LLVM_VPCastI<"inttoptr">;
 
 #endif // LLVM_INTRINSIC_OPS

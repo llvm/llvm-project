@@ -385,8 +385,9 @@ bool ExprTypeKindIsDefault(
 
 // If an analyzed expr or assignment is missing, dump the node and die.
 template <typename T>
-static void CheckMissingAnalysis(bool absent, const T &x) {
-  if (absent) {
+static void CheckMissingAnalysis(
+    bool crash, SemanticsContext *context, const T &x) {
+  if (crash && !(context && context->AnyFatalError())) {
     std::string buf;
     llvm::raw_string_ostream ss{buf};
     ss << "node has not been analyzed:\n";
@@ -395,38 +396,39 @@ static void CheckMissingAnalysis(bool absent, const T &x) {
   }
 }
 
-template <typename T> static const SomeExpr *GetTypedExpr(const T &x) {
-  CheckMissingAnalysis(!x.typedExpr, x);
-  return common::GetPtrFromOptional(x.typedExpr->v);
-}
 const SomeExpr *GetExprHelper::Get(const parser::Expr &x) {
-  return GetTypedExpr(x);
+  CheckMissingAnalysis(crashIfNoExpr_ && !x.typedExpr, context_, x);
+  return x.typedExpr ? common::GetPtrFromOptional(x.typedExpr->v) : nullptr;
 }
 const SomeExpr *GetExprHelper::Get(const parser::Variable &x) {
-  return GetTypedExpr(x);
+  CheckMissingAnalysis(crashIfNoExpr_ && !x.typedExpr, context_, x);
+  return x.typedExpr ? common::GetPtrFromOptional(x.typedExpr->v) : nullptr;
 }
 const SomeExpr *GetExprHelper::Get(const parser::DataStmtConstant &x) {
-  return GetTypedExpr(x);
+  CheckMissingAnalysis(crashIfNoExpr_ && !x.typedExpr, context_, x);
+  return x.typedExpr ? common::GetPtrFromOptional(x.typedExpr->v) : nullptr;
 }
 const SomeExpr *GetExprHelper::Get(const parser::AllocateObject &x) {
-  return GetTypedExpr(x);
+  CheckMissingAnalysis(crashIfNoExpr_ && !x.typedExpr, context_, x);
+  return x.typedExpr ? common::GetPtrFromOptional(x.typedExpr->v) : nullptr;
 }
 const SomeExpr *GetExprHelper::Get(const parser::PointerObject &x) {
-  return GetTypedExpr(x);
+  CheckMissingAnalysis(crashIfNoExpr_ && !x.typedExpr, context_, x);
+  return x.typedExpr ? common::GetPtrFromOptional(x.typedExpr->v) : nullptr;
 }
 
 const evaluate::Assignment *GetAssignment(const parser::AssignmentStmt &x) {
-  CheckMissingAnalysis(!x.typedAssignment, x);
-  return common::GetPtrFromOptional(x.typedAssignment->v);
+  return x.typedAssignment ? common::GetPtrFromOptional(x.typedAssignment->v)
+                           : nullptr;
 }
 const evaluate::Assignment *GetAssignment(
     const parser::PointerAssignmentStmt &x) {
-  CheckMissingAnalysis(!x.typedAssignment, x);
-  return common::GetPtrFromOptional(x.typedAssignment->v);
+  return x.typedAssignment ? common::GetPtrFromOptional(x.typedAssignment->v)
+                           : nullptr;
 }
 
 const Symbol *FindInterface(const Symbol &symbol) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const ProcEntityDetails &details) {
             return details.interface().symbol();
@@ -438,7 +440,7 @@ const Symbol *FindInterface(const Symbol &symbol) {
 }
 
 const Symbol *FindSubprogram(const Symbol &symbol) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const ProcEntityDetails &details) -> const Symbol * {
             if (const Symbol * interface{details.interface().symbol()}) {
@@ -930,7 +932,7 @@ public:
     return false;
   }
   bool operator()(const parser::Statement<parser::ActionStmt> &stmt) {
-    return std::visit(*this, stmt.statement.u);
+    return common::visit(*this, stmt.statement.u);
   }
 
 private:
@@ -941,14 +943,14 @@ private:
 };
 
 bool IsImageControlStmt(const parser::ExecutableConstruct &construct) {
-  return std::visit(ImageControlStmtHelper{}, construct.u);
+  return common::visit(ImageControlStmtHelper{}, construct.u);
 }
 
 std::optional<parser::MessageFixedText> GetImageControlStmtCoarrayMsg(
     const parser::ExecutableConstruct &construct) {
   if (const auto *actionStmt{
           std::get_if<parser::Statement<parser::ActionStmt>>(&construct.u)}) {
-    return std::visit(
+    return common::visit(
         common::visitors{
             [](const common::Indirection<parser::AllocateStmt> &)
                 -> std::optional<parser::MessageFixedText> {
@@ -976,7 +978,7 @@ std::optional<parser::MessageFixedText> GetImageControlStmtCoarrayMsg(
 
 parser::CharBlock GetImageControlStmtLocation(
     const parser::ExecutableConstruct &executableConstruct) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const common::Indirection<parser::ChangeTeamConstruct>
                   &construct) {
@@ -998,7 +1000,7 @@ parser::CharBlock GetImageControlStmtLocation(
 }
 
 bool HasCoarray(const parser::Expr &expression) {
-  if (const auto *expr{GetExpr(expression)}) {
+  if (const auto *expr{GetExpr(nullptr, expression)}) {
     for (const Symbol &symbol : evaluate::CollectSymbols(*expr)) {
       if (evaluate::IsCoarray(symbol)) {
         return true;
@@ -1445,7 +1447,7 @@ bool InCommonBlock(const Symbol &symbol) {
 
 const std::optional<parser::Name> &MaybeGetNodeName(
     const ConstructNode &construct) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const parser::BlockConstruct *blockConstruct)
               -> const std::optional<parser::Name> & {

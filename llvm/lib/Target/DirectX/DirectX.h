@@ -15,6 +15,9 @@ namespace llvm {
 class ModulePass;
 class PassRegistry;
 
+/// Initializer for dxil writer pass
+void initializeWriteDXILPassPass(PassRegistry &);
+
 /// Initializer for DXIL-prepare
 void initializeDXILPrepareModulePass(PassRegistry &);
 

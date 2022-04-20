@@ -222,6 +222,8 @@ private:
   void conditionStart(const SourceLocation &Loc);
   void checkCondition(SourceRange ConditionRange);
   void checkName(const Token &MacroNameTok);
+  void rememberExpressionName(const Token &MacroNameTok);
+  void invalidateExpressionNames();
   void warnMacroEnum(const EnumMacro &Macro) const;
   void fixEnumMacro(const MacroList &MacroList) const;
 
@@ -230,6 +232,7 @@ private:
   const SourceManager &SM;
   SmallVector<MacroList> Enums;
   SmallVector<FileState> Files;
+  std::vector<std::string> ExpressionNames;
   FileState *CurrentFile = nullptr;
 };
 
@@ -284,13 +287,22 @@ void MacroToEnumCallbacks::checkCondition(SourceRange Range) {
 }
 
 void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
-  StringRef Id = getTokenName(MacroNameTok);
+  rememberExpressionName(MacroNameTok);
 
+  StringRef Id = getTokenName(MacroNameTok);
   llvm::erase_if(Enums, [&Id](const MacroList &MacroList) {
     return llvm::any_of(MacroList, [&Id](const EnumMacro &Macro) {
       return getTokenName(Macro.Name) == Id;
     });
   });
+}
+
+void MacroToEnumCallbacks::rememberExpressionName(const Token &MacroNameTok) {
+  std::string Id = getTokenName(MacroNameTok).str();
+  auto Pos = llvm::lower_bound(ExpressionNames, Id);
+  if (Pos == ExpressionNames.end() || *Pos != Id) {
+    ExpressionNames.insert(Pos, Id);
+  }
 }
 
 void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
@@ -384,6 +396,8 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
 void MacroToEnumCallbacks::MacroUndefined(const Token &MacroNameTok,
                                           const MacroDefinition &MD,
                                           const MacroDirective *Undef) {
+  rememberExpressionName(MacroNameTok);
+
   auto MatchesToken = [&MacroNameTok](const EnumMacro &Macro) {
     return getTokenName(Macro.Name) == getTokenName(MacroNameTok);
   };
@@ -447,7 +461,19 @@ void MacroToEnumCallbacks::PragmaDirective(SourceLocation Loc,
     CurrentFile->GuardScanner = IncludeGuard::IfGuard;
 }
 
+void MacroToEnumCallbacks::invalidateExpressionNames() {
+  for (const std::string &Id : ExpressionNames) {
+    llvm::erase_if(Enums, [Id](const MacroList &MacroList) {
+      return llvm::any_of(MacroList, [&Id](const EnumMacro &Macro) {
+        return getTokenName(Macro.Name) == Id;
+      });
+    });
+  }
+}
+
 void MacroToEnumCallbacks::EndOfMainFile() {
+  invalidateExpressionNames();
+
   for (const MacroList &MacroList : Enums) {
     if (MacroList.empty())
       continue;

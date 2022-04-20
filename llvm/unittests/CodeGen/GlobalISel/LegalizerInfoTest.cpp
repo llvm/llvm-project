@@ -13,6 +13,8 @@
 
 using namespace llvm;
 using namespace LegalizeActions;
+using namespace LegalityPredicates;
+using namespace LegalizeMutations;
 
 // Define a couple of pretty printers to help debugging when things go wrong.
 namespace llvm {
@@ -234,12 +236,17 @@ TEST(LegalizerInfoTest, RuleSets) {
   const LLT v2s32 = LLT::fixed_vector(2, 32);
   const LLT v3s32 = LLT::fixed_vector(3, 32);
   const LLT v4s32 = LLT::fixed_vector(4, 32);
+  const LLT v8s32 = LLT::fixed_vector(8, 32);
   const LLT v2s33 = LLT::fixed_vector(2, 33);
   const LLT v2s64 = LLT::fixed_vector(2, 64);
 
   const LLT p0 = LLT::pointer(0, 32);
   const LLT v3p0 = LLT::fixed_vector(3, p0);
   const LLT v4p0 = LLT::fixed_vector(4, p0);
+
+  const LLT s1 = LLT::scalar(1);
+  const LLT v2s1 = LLT::fixed_vector(2, 1);
+  const LLT v4s1 = LLT::fixed_vector(4, 1);
 
   {
     LegalizerInfo LI;
@@ -378,6 +385,47 @@ TEST(LegalizerInfoTest, RuleSets) {
     // Do nothing for vectors.
     EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_AND, {v2s5}));
     EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_AND, {v2s33}));
+  }
+
+  // Test changeElementCountTo
+  {
+    LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
+
+    // Type index form
+    LI.getActionDefinitionsBuilder(G_SELECT)
+      .moreElementsIf(isScalar(1), changeElementCountTo(1, 0));
+
+    // Raw type form
+    LI.getActionDefinitionsBuilder(G_ADD)
+      .fewerElementsIf(typeIs(0, v4s32), changeElementCountTo(0, v2s32))
+      .fewerElementsIf(typeIs(0, v8s32), changeElementCountTo(0, s32))
+      .fewerElementsIf(typeIs(0, LLT::scalable_vector(4, 16)),
+                       changeElementCountTo(0, LLT::scalable_vector(2, 16)))
+      .fewerElementsIf(typeIs(0, LLT::scalable_vector(8, 16)),
+                       changeElementCountTo(0, s16));
+
+    LegacyInfo.computeTables();
+
+    EXPECT_ACTION(MoreElements, 1, v4s1, LegalityQuery(G_SELECT, {v4s32, s1}));
+    EXPECT_ACTION(MoreElements, 1, v2s1, LegalityQuery(G_SELECT, {v2s32, s1}));
+    EXPECT_ACTION(MoreElements, 1, v2s1, LegalityQuery(G_SELECT, {v2s32, s1}));
+    EXPECT_ACTION(MoreElements, 1, v4s1, LegalityQuery(G_SELECT, {v4p0, s1}));
+
+    EXPECT_ACTION(MoreElements, 1, LLT::scalable_vector(2, 1),
+                  LegalityQuery(G_SELECT, {LLT::scalable_vector(2, 32), s1}));
+    EXPECT_ACTION(MoreElements, 1, LLT::scalable_vector(4, 1),
+                  LegalityQuery(G_SELECT, {LLT::scalable_vector(4, 32), s1}));
+    EXPECT_ACTION(MoreElements, 1, LLT::scalable_vector(2, s1),
+                  LegalityQuery(G_SELECT, {LLT::scalable_vector(2, p0), s1}));
+
+    EXPECT_ACTION(FewerElements, 0, v2s32, LegalityQuery(G_ADD, {v4s32}));
+    EXPECT_ACTION(FewerElements, 0, s32, LegalityQuery(G_ADD, {v8s32}));
+
+    EXPECT_ACTION(FewerElements, 0, LLT::scalable_vector(2, 16),
+                  LegalityQuery(G_ADD, {LLT::scalable_vector(4, 16)}));
+    EXPECT_ACTION(FewerElements, 0, s16,
+                  LegalityQuery(G_ADD, {LLT::scalable_vector(8, 16)}));
   }
 }
 

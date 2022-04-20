@@ -507,9 +507,11 @@ AArch64InstructionSelector::AArch64InstructionSelector(
 
 // FIXME: This should be target-independent, inferred from the types declared
 // for each class in the bank.
+//
+/// Given a register bank, and a type, return the smallest register class that
+/// can represent that combination.
 static const TargetRegisterClass *
 getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
-                         const RegisterBankInfo &RBI,
                          bool GetAllRegSet = false) {
   if (RB.getID() == AArch64::GPRRegBankID) {
     if (Ty.getSizeInBits() <= 32)
@@ -850,39 +852,6 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
   return GenericOpc;
 }
 
-#ifndef NDEBUG
-/// Helper function that verifies that we have a valid copy at the end of
-/// selectCopy. Verifies that the source and dest have the expected sizes and
-/// then returns true.
-static bool isValidCopy(const MachineInstr &I, const RegisterBank &DstBank,
-                        const MachineRegisterInfo &MRI,
-                        const TargetRegisterInfo &TRI,
-                        const RegisterBankInfo &RBI) {
-  const Register DstReg = I.getOperand(0).getReg();
-  const Register SrcReg = I.getOperand(1).getReg();
-  const unsigned DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
-  const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
-
-  // Make sure the size of the source and dest line up.
-  assert(
-      (DstSize == SrcSize ||
-       // Copies are a mean to setup initial types, the number of
-       // bits may not exactly match.
-       (Register::isPhysicalRegister(SrcReg) && DstSize <= SrcSize) ||
-       // Copies are a mean to copy bits around, as long as we are
-       // on the same register class, that's fine. Otherwise, that
-       // means we need some SUBREG_TO_REG or AND & co.
-       (((DstSize + 31) / 32 == (SrcSize + 31) / 32) && DstSize > SrcSize)) &&
-      "Copy with different width?!");
-
-  // Check the size of the destination.
-  assert((DstSize <= 64 || DstBank.getID() == AArch64::FPRRegBankID) &&
-         "GPRs cannot get more than 64-bit width values");
-
-  return true;
-}
-#endif
-
 /// Helper function for selectCopy. Inserts a subregister copy from \p SrcReg
 /// to \p *To.
 ///
@@ -957,31 +926,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     return false;
   }
 
-  // A couple helpers below, for making sure that the copy we produce is valid.
-
-  // Set to true if we insert a SUBREG_TO_REG. If we do this, then we don't want
-  // to verify that the src and dst are the same size, since that's handled by
-  // the SUBREG_TO_REG.
-  bool KnownValid = false;
-
-  // Returns true, or asserts if something we don't expect happens. Instead of
-  // returning true, we return isValidCopy() to ensure that we verify the
-  // result.
-  auto CheckCopy = [&]() {
-    // If we have a bitcast or something, we can't have physical registers.
-    assert((I.isCopy() ||
-            (!Register::isPhysicalRegister(I.getOperand(0).getReg()) &&
-             !Register::isPhysicalRegister(I.getOperand(1).getReg()))) &&
-           "No phys reg on generic operator!");
-    bool ValidCopy = true;
-#ifndef NDEBUG
-    ValidCopy = KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI);
-    assert(ValidCopy && "Invalid copy.");
-#endif
-    (void)KnownValid;
-    return ValidCopy;
-  };
-
   // Is this a copy? If so, then we may need to insert a subregister copy.
   if (I.isCopy()) {
     // Yes. Check if there's anything to fix up.
@@ -1026,15 +970,12 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
           .addImm(SubReg);
       MachineOperand &RegOp = I.getOperand(1);
       RegOp.setReg(PromoteReg);
-
-      // Promise that the copy is implicitly validated by the SUBREG_TO_REG.
-      KnownValid = true;
     }
 
     // If the destination is a physical register, then there's nothing to
     // change, so we're done.
     if (Register::isPhysicalRegister(DstReg))
-      return CheckCopy();
+      return true;
   }
 
   // No need to constrain SrcReg. It will get constrained when we hit another
@@ -1054,7 +995,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   }
 
   I.setDesc(TII.get(AArch64::COPY));
-  return CheckCopy();
+  return true;
 }
 
 static unsigned selectFPConvOpc(unsigned GenericOpc, LLT DstTy, LLT SrcTy) {
@@ -1809,7 +1750,6 @@ static Optional<int64_t> getVectorShiftImm(Register Reg,
                                            MachineRegisterInfo &MRI) {
   assert(MRI.getType(Reg).isVector() && "Expected a *vector* shift operand");
   MachineInstr *OpMI = MRI.getVRegDef(Reg);
-  assert(OpMI && "Expected to find a vreg def for vector shift operand");
   return getAArch64VectorSplatScalar(*OpMI, MRI);
 }
 
@@ -1916,7 +1856,7 @@ bool AArch64InstructionSelector::selectVectorAshrLshr(
   unsigned Opc = 0;
   unsigned NegOpc = 0;
   const TargetRegisterClass *RC =
-      getRegClassForTypeOnBank(Ty, RBI.getRegBank(AArch64::FPRRegBankID), RBI);
+      getRegClassForTypeOnBank(Ty, RBI.getRegBank(AArch64::FPRRegBankID));
   if (Ty == LLT::fixed_vector(2, 64)) {
     Opc = IsASHR ? AArch64::SSHLv2i64 : AArch64::USHLv2i64;
     NegOpc = AArch64::NEGv2i64;
@@ -2418,7 +2358,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
           return false;
         }
         const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
-        DefRC = getRegClassForTypeOnBank(DefTy, RB, RBI);
+        DefRC = getRegClassForTypeOnBank(DefTy, RB);
         if (!DefRC) {
           LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
           return false;
@@ -2594,7 +2534,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
       // The case when we have 0.0 is covered by tablegen. Reject it here so we
       // can be sure tablegen works correctly and isn't rescued by this code.
-      // 0.0 is not covered by tablegen for FP128. So we will handle this 
+      // 0.0 is not covered by tablegen for FP128. So we will handle this
       // scenario in the code here.
       if (DefSize != 128 && I.getOperand(1).getFPImm()->isExactlyValue(0.0))
         return false;
@@ -2616,7 +2556,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     if (isFP) {
-      const TargetRegisterClass &FPRRC = *getMinClassForRegBank(RB, DefSize);
+      const TargetRegisterClass &FPRRC = *getRegClassForTypeOnBank(DefTy, RB);
       // For 16, 64, and 128b values, emit a constant pool load.
       switch (DefSize) {
       default:
@@ -2880,7 +2820,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
       unsigned SubReg;
       LLT MemTy = LdSt.getMMO().getMemoryType();
-      auto *RC = getRegClassForTypeOnBank(MemTy, RB, RBI);
+      auto *RC = getRegClassForTypeOnBank(MemTy, RB);
       if (!getSubRegForClass(RC, TRI, SubReg))
         return false;
 
@@ -2896,7 +2836,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       if (RB.getID() == AArch64::FPRRegBankID) {
         unsigned SubReg;
         LLT MemTy = LdSt.getMMO().getMemoryType();
-        auto *RC = getRegClassForTypeOnBank(MemTy, RB, RBI);
+        auto *RC = getRegClassForTypeOnBank(MemTy, RB);
         if (!getSubRegForClass(RC, TRI, SubReg))
           return false;
         Register OldDst = LdSt.getReg(0);
@@ -2910,7 +2850,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
             .addImm(0)
             .addUse(NewDst)
             .addImm(SubReg);
-        auto SubRegRC = getRegClassForTypeOnBank(MRI.getType(OldDst), RB, RBI);
+        auto SubRegRC = getRegClassForTypeOnBank(MRI.getType(OldDst), RB);
         RBI.constrainGenericRegister(OldDst, *SubRegRC, MRI);
         MIB.setInstr(LdSt);
       }
@@ -3040,8 +2980,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       if (!SrcTy.isVector() && SrcTy.getSizeInBits() == 32 &&
           ShiftTy.getSizeInBits() == 64) {
         assert(!ShiftTy.isVector() && "unexpected vector shift ty");
-        assert(MRI.getVRegDef(ShiftReg) &&
-               "could not find a vreg definition for shift amount");
         // Insert a subregister copy to implement a 64->32 trunc
         auto Trunc = MIB.buildInstr(TargetOpcode::COPY, {SrcTy}, {})
                          .addReg(ShiftReg, 0, AArch64::sub_32);
@@ -3128,13 +3066,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     if (DstRB.getID() == AArch64::GPRRegBankID) {
-      const TargetRegisterClass *DstRC =
-          getRegClassForTypeOnBank(DstTy, DstRB, RBI);
+      const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(DstTy, DstRB);
       if (!DstRC)
         return false;
 
-      const TargetRegisterClass *SrcRC =
-          getRegClassForTypeOnBank(SrcTy, SrcRB, RBI);
+      const TargetRegisterClass *SrcRC = getRegClassForTypeOnBank(SrcTy, SrcRB);
       if (!SrcRC)
         return false;
 
@@ -3461,8 +3397,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     const Register DstReg = I.getOperand(0).getReg();
     const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
-    const TargetRegisterClass *DstRC =
-        getRegClassForTypeOnBank(DstTy, DstRB, RBI);
+    const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(DstTy, DstRB);
     RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
     return true;
   }
@@ -3975,7 +3910,7 @@ bool AArch64InstructionSelector::selectVectorICmp(
 
   const RegisterBank &VecRB = *RBI.getRegBank(SrcReg, MRI, TRI);
   const TargetRegisterClass *SrcRC =
-      getRegClassForTypeOnBank(SrcTy, VecRB, RBI, true);
+      getRegClassForTypeOnBank(SrcTy, VecRB, true);
   if (!SrcRC) {
     LLVM_DEBUG(dbgs() << "Could not determine source register class.\n");
     return false;
@@ -4141,7 +4076,7 @@ MachineInstr *AArch64InstructionSelector::emitExtractVectorElt(
   }
 
   const TargetRegisterClass *DstRC =
-      getRegClassForTypeOnBank(ScalarTy, DstRB, RBI, true);
+      getRegClassForTypeOnBank(ScalarTy, DstRB, true);
   if (!DstRC) {
     LLVM_DEBUG(dbgs() << "Could not determine destination register class.\n");
     return nullptr;
@@ -4150,7 +4085,7 @@ MachineInstr *AArch64InstructionSelector::emitExtractVectorElt(
   const RegisterBank &VecRB = *RBI.getRegBank(VecReg, MRI, TRI);
   const LLT &VecTy = MRI.getType(VecReg);
   const TargetRegisterClass *VecRC =
-      getRegClassForTypeOnBank(VecTy, VecRB, RBI, true);
+      getRegClassForTypeOnBank(VecTy, VecRB, true);
   if (!VecRC) {
     LLVM_DEBUG(dbgs() << "Could not determine source register class.\n");
     return nullptr;
@@ -4309,9 +4244,9 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   } else {
     // No. We have to perform subregister inserts. For each insert, create an
     // implicit def and a subregister insert, and save the register we create.
-    const TargetRegisterClass *RC =
-        getMinClassForRegBank(*RBI.getRegBank(SrcReg, MRI, TRI),
-                              WideTy.getScalarSizeInBits() * NumElts);
+    const TargetRegisterClass *RC = getRegClassForTypeOnBank(
+        LLT::fixed_vector(NumElts, WideTy.getScalarSizeInBits()),
+        *RBI.getRegBank(SrcReg, MRI, TRI));
     unsigned SubReg = 0;
     bool Found = getSubRegForClass(RC, TRI, SubReg);
     (void)Found;
@@ -4737,7 +4672,7 @@ MachineInstr *AArch64InstructionSelector::emitVectorConcat(
   const LLT ScalarTy = LLT::scalar(Op1Ty.getSizeInBits());
   const RegisterBank &FPRBank = *RBI.getRegBank(Op1, MRI, TRI);
   const TargetRegisterClass *DstRC =
-      getMinClassForRegBank(FPRBank, Op1Ty.getSizeInBits() * 2);
+      getRegClassForTypeOnBank(Op1Ty.multiplyElements(2), FPRBank);
 
   MachineInstr *WidenedOp1 =
       emitScalarToVector(ScalarTy.getSizeInBits(), DstRC, Op1, MIRBuilder);
@@ -5104,9 +5039,6 @@ bool AArch64InstructionSelector::tryOptSelect(GSelect &I) {
   }
 
   // Is the condition defined by a compare?
-  if (!CondDef)
-    return false;
-
   unsigned CondOpc = CondDef->getOpcode();
   if (CondOpc != TargetOpcode::G_ICMP && CondOpc != TargetOpcode::G_FCMP) {
     if (tryOptSelectConjunction(I, *CondDef))
@@ -5438,7 +5370,7 @@ bool AArch64InstructionSelector::selectInsertElt(MachineInstr &I,
     // the original size to get the result we want.
     Register DemoteVec = InsMI->getOperand(0).getReg();
     const TargetRegisterClass *RC =
-        getMinClassForRegBank(*RBI.getRegBank(DemoteVec, MRI, TRI), VecSize);
+        getRegClassForTypeOnBank(DstTy, *RBI.getRegBank(DemoteVec, MRI, TRI));
     if (RC != &AArch64::FPR32RegClass && RC != &AArch64::FPR64RegClass) {
       LLVM_DEBUG(dbgs() << "Unsupported register class!\n");
       return false;
@@ -5555,12 +5487,11 @@ bool AArch64InstructionSelector::tryOptBuildVecToSubregToReg(
              }))
     return false;
   unsigned SubReg;
-  const TargetRegisterClass *EltRC =
-      getMinClassForRegBank(EltRB, EltTy.getSizeInBits());
+  const TargetRegisterClass *EltRC = getRegClassForTypeOnBank(EltTy, EltRB);
   if (!EltRC)
     return false;
   const TargetRegisterClass *DstRC =
-      getMinClassForRegBank(DstRB, MRI.getType(Dst).getSizeInBits());
+      getRegClassForTypeOnBank(MRI.getType(Dst), DstRB);
   if (!DstRC)
     return false;
   if (!getSubRegForClass(EltRC, TRI, SubReg))
@@ -5618,7 +5549,7 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
   if (DstSize < 128) {
     // Force this to be FPR using the destination vector.
     const TargetRegisterClass *RC =
-        getMinClassForRegBank(*RBI.getRegBank(DstVec, MRI, TRI), DstSize);
+        getRegClassForTypeOnBank(DstTy, *RBI.getRegBank(DstVec, MRI, TRI));
     if (!RC)
       return false;
     if (RC != &AArch64::FPR32RegClass && RC != &AArch64::FPR64RegClass) {
@@ -6134,8 +6065,6 @@ AArch64InstructionSelector::selectExtendedSHL(
 
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
   MachineInstr *OffsetInst = MRI.getVRegDef(Offset.getReg());
-  if (!OffsetInst)
-    return None;
 
   unsigned OffsetOpc = OffsetInst->getOpcode();
   bool LookedThroughZExt = false;
@@ -6289,7 +6218,7 @@ AArch64InstructionSelector::selectAddrModeRegisterOffset(
 
   // We need a GEP.
   MachineInstr *Gep = MRI.getVRegDef(Root.getReg());
-  if (!Gep || Gep->getOpcode() != TargetOpcode::G_PTR_ADD)
+  if (Gep->getOpcode() != TargetOpcode::G_PTR_ADD)
     return None;
 
   // If this is used more than once, let's not bother folding.
@@ -6469,14 +6398,12 @@ AArch64InstructionSelector::selectAddrModeUnscaled(MachineOperand &Root,
     return None;
 
   MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
-  if (!RootDef)
-    return None;
 
   MachineOperand &OffImm = RootDef->getOperand(2);
   if (!OffImm.isReg())
     return None;
   MachineInstr *RHS = MRI.getVRegDef(OffImm.getReg());
-  if (!RHS || RHS->getOpcode() != TargetOpcode::G_CONSTANT)
+  if (RHS->getOpcode() != TargetOpcode::G_CONSTANT)
     return None;
   int64_t RHSC;
   MachineOperand &RHSOp1 = RHS->getOperand(1);
@@ -6544,9 +6471,6 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
     return None;
 
   MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
-  if (!RootDef)
-    return None;
-
   if (RootDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
     return {{
         [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
@@ -6567,21 +6491,20 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
     MachineOperand &RHS = RootDef->getOperand(2);
     MachineInstr *LHSDef = MRI.getVRegDef(LHS.getReg());
     MachineInstr *RHSDef = MRI.getVRegDef(RHS.getReg());
-    if (LHSDef && RHSDef) {
-      int64_t RHSC = (int64_t)RHSDef->getOperand(1).getCImm()->getZExtValue();
-      unsigned Scale = Log2_32(Size);
-      if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Scale)) {
-        if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
-          return {{
-              [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
-              [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
-          }};
 
+    int64_t RHSC = (int64_t)RHSDef->getOperand(1).getCImm()->getZExtValue();
+    unsigned Scale = Log2_32(Size);
+    if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Scale)) {
+      if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
         return {{
-            [=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+            [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
             [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
         }};
-      }
+
+      return {{
+          [=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+          [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
+      }};
     }
   }
 
@@ -6626,8 +6549,6 @@ AArch64InstructionSelector::selectShiftedRegister(MachineOperand &Root,
   // Check if the operand is defined by an instruction which corresponds to
   // a ShiftExtendType. E.g. a G_SHL, G_LSHR, etc.
   MachineInstr *ShiftInst = MRI.getVRegDef(Root.getReg());
-  if (!ShiftInst)
-    return None;
   AArch64_AM::ShiftExtendType ShType = getShiftTypeForInst(*ShiftInst);
   if (ShType == AArch64_AM::InvalidShiftExtend)
     return None;
@@ -6782,7 +6703,7 @@ AArch64InstructionSelector::selectArithExtendedRegister(
     // to.
     if (Ext == AArch64_AM::UXTW && MRI.getType(ExtReg).getSizeInBits() == 32) {
       MachineInstr *ExtInst = MRI.getVRegDef(ExtReg);
-      if (ExtInst && isDef32(*ExtInst))
+      if (isDef32(*ExtInst))
         return None;
     }
   }

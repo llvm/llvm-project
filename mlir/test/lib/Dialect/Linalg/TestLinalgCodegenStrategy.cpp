@@ -30,7 +30,8 @@ using namespace mlir::linalg;
 
 namespace {
 struct TestLinalgCodegenStrategy
-    : public PassWrapper<TestLinalgCodegenStrategy, OperationPass<FuncOp>> {
+    : public PassWrapper<TestLinalgCodegenStrategy,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgCodegenStrategy)
 
   StringRef getArgument() const final { return "test-linalg-codegen-strategy"; }
@@ -222,7 +223,7 @@ void TestLinalgCodegenStrategy::runStrategy(
               .enableContractionLowering()
               .enableTransferToSCFConversion());
   // Created a nested OpPassManager and run.
-  FuncOp funcOp = getOperation();
+  func::FuncOp funcOp = getOperation();
   OpPassManager dynamicPM("func.func");
   strategy.configurePassPipeline(dynamicPM, funcOp.getContext(), runEnablePass);
   if (failed(runPipeline(dynamicPM, funcOp)))
