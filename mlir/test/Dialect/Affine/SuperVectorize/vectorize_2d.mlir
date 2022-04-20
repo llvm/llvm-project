@@ -9,7 +9,7 @@
 // VECT-DAG: #[[$map_proj_d0d1_zerod1:map[0-9]+]] = affine_map<(d0, d1) -> (0, d1)>
 // VECT-DAG: #[[$map_proj_d0d1_d0zero:map[0-9]+]] = affine_map<(d0, d1) -> (d0, 0)>
 
-func @vec2d(%A : memref<?x?x?xf32>) {
+func.func @vec2d(%A : memref<?x?x?xf32>) {
    %c0 = arith.constant 0 : index
    %c1 = arith.constant 1 : index
    %c2 = arith.constant 2 : index
@@ -46,7 +46,7 @@ func @vec2d(%A : memref<?x?x?xf32>) {
    return
 }
 
-func @vector_add_2d(%M : index, %N : index) -> f32 {
+func.func @vector_add_2d(%M : index, %N : index) -> f32 {
   %A = memref.alloc (%M, %N) : memref<?x?xf32, 0>
   %B = memref.alloc (%M, %N) : memref<?x?xf32, 0>
   %C = memref.alloc (%M, %N) : memref<?x?xf32, 0>
@@ -99,7 +99,7 @@ func @vector_add_2d(%M : index, %N : index) -> f32 {
 }
 
 // VECT-LABEL: func @vectorize_matmul
-func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+func.func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %M = memref.dim %arg0, %c0 : memref<?x?xf32>

@@ -34,7 +34,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT:  return
-func @loop_tiling() {
+func.func @loop_tiling() {
   affine.for %i = 0 to 256 {
     affine.for %j = 0 to 512 {
       affine.for %k = 0 to 1024 {
@@ -65,7 +65,7 @@ func @loop_tiling() {
 #lb = affine_map<()[s0] -> (0, s0)>
 #ub = affine_map<()[s0, s1] -> (s0, 4096 floordiv s1)>
 // CHECK-LABEL: func @loop_max_min_bound(%{{.*}}: memref<?xi32>, %{{.*}}: index, %{{.*}}: index) {
-func @loop_max_min_bound(%A : memref<? x i32>, %L : index, %U : index) {
+func.func @loop_max_min_bound(%A : memref<? x i32>, %L : index, %U : index) {
   %c0 = arith.constant 0 : index
   %M = memref.dim %A, %c0 : memref<? x i32>
   affine.for %i = max #lb()[%L] to min #ub()[%M, %U] {
@@ -86,7 +86,7 @@ func @loop_max_min_bound(%A : memref<? x i32>, %L : index, %U : index) {
 // possible here, they are adjusted to 4 x 4 x 5.
 
 // MODEL-LABEL: func @simple_matmul
-func @simple_matmul(%arg0: memref<256x256xvector<64xf32>>, %arg1: memref<256x256xvector<64xf32>>, %arg2: memref<256x256xvector<64xf32>>) -> memref<256x256xvector<64xf32>> {
+func.func @simple_matmul(%arg0: memref<256x256xvector<64xf32>>, %arg1: memref<256x256xvector<64xf32>>, %arg2: memref<256x256xvector<64xf32>>) -> memref<256x256xvector<64xf32>> {
   affine.for %i = 0 to 256 {
     affine.for %j = 0 to 256 {
       affine.for %k = 0 to 250 {
@@ -110,7 +110,7 @@ func @simple_matmul(%arg0: memref<256x256xvector<64xf32>>, %arg1: memref<256x256
 
 // CHECK-DAG: [[$UBMAP:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + 32, s0)>
 
-func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+func.func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %cst = arith.constant 0.000000e+00 : f32
   %c0 = arith.constant 0 : index
   %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
@@ -156,7 +156,7 @@ func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref
 // CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<()[s0, s1] -> (s0 + s1)>
 // CHECK-DAG: [[$UBMAP:#map[0-9]+]] = affine_map<(d0)[s0, s1] -> (d0 + 32, s0 + s1)>
 
-func @tile_with_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: index) {
+func.func @tile_with_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: index) {
   %c0 = arith.constant 0 : index
   %dim0 = memref.dim %arg0, %c0 : memref<?xf32>
   affine.for %i0 = 0 to affine_map<()[s0, s1] -> (s0 + s1)> ()[%dim0, %limit] {
@@ -177,7 +177,7 @@ func @tile_with_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: i
 // CHECK-DAG:  #[[$ID:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-DAG:  [[$UBMAP:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + 160, s0)>
 
-func @tile_loop_with_non_unit_step(%arg0 : memref<50xf32>, %arg1 : index) {
+func.func @tile_loop_with_non_unit_step(%arg0 : memref<50xf32>, %arg1 : index) {
   affine.for %i = 0 to %arg1 step 5 {
     affine.load %arg0[%i] : memref<50xf32>
   }
@@ -192,7 +192,7 @@ func @tile_loop_with_non_unit_step(%arg0 : memref<50xf32>, %arg1 : index) {
 
 // -----
 
-func @tile_size_larger_than_trip_count_symbolic_bound(%M: index, %N :  index) {
+func.func @tile_size_larger_than_trip_count_symbolic_bound(%M: index, %N :  index) {
   affine.for %i = affine_map<(d0) -> (d0)>(%M) to affine_map<(d0) -> (d0 + 2)>(%M) {
     affine.for %j = affine_map<(d0) -> (d0)>(%N) to affine_map<(d0) -> (d0 + 4)>(%N) {
       "test.foo" () : () -> ()
@@ -215,7 +215,7 @@ func @tile_size_larger_than_trip_count_symbolic_bound(%M: index, %N :  index) {
 
 // CHECK-LABEL: func @trip_count_one
 // SEPARATE-LABEL: func @trip_count_one
-func @trip_count_one(%arg0: memref<196608x1xf32>, %arg1: memref<196608x1xf32>)
+func.func @trip_count_one(%arg0: memref<196608x1xf32>, %arg1: memref<196608x1xf32>)
     -> memref<196608x1xf32> {
   affine.for %i1 = 0 to 196608 {
     affine.for %i3 = 0 to 1 {
@@ -231,7 +231,7 @@ func @trip_count_one(%arg0: memref<196608x1xf32>, %arg1: memref<196608x1xf32>)
 
 // -----
 
-func @separate_full_tile_2d(%M : index, %N : index) {
+func.func @separate_full_tile_2d(%M : index, %N : index) {
   affine.for %i = 0 to %M {
     affine.for %j = 0 to %N {
       "test.foo"() : () -> ()
@@ -244,7 +244,7 @@ func @separate_full_tile_2d(%M : index, %N : index) {
 
 #ub = affine_map<(d0)[s0] -> (d0, s0)>
 // CHECK-LABEL: func @non_hyperrectangular_loop
-func @non_hyperrectangular_loop() {
+func.func @non_hyperrectangular_loop() {
   %N = arith.constant 128 : index
   affine.for %i = 0 to %N {
     affine.for %j = 0 to min #ub(%i)[%N] {
@@ -264,7 +264,7 @@ func @non_hyperrectangular_loop() {
 // No tiling supported on loops with yield values.
 
 // CHECK-LABEL: func @yield_values
-func @yield_values(%init : index) {
+func.func @yield_values(%init : index) {
   %r = affine.for %i = 0 to 10 iter_args(%s = %init) -> index {
     "test.foo"() : () -> ()
     affine.yield %s : index
@@ -306,7 +306,7 @@ func @yield_values(%init : index) {
 
 // -----
 
-func @separate_full_tile_1d_max_min(%M : index, %N : index, %P : index, %Q : index) {
+func.func @separate_full_tile_1d_max_min(%M : index, %N : index, %P : index, %Q : index) {
   affine.for %i0 = max affine_map<(d0, d1) -> (d0, d1)>  (%M, %N) to min affine_map< (d0, d1) -> (d0, d1)> (%P, %Q) {
   }
   return

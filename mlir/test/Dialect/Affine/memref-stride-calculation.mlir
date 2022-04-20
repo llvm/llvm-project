@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -pass-pipeline="func.func(test-memref-stride-calculation)" -o /dev/null | FileCheck %s
 
-func @f(%0: index) {
+func.func @f(%0: index) {
 // CHECK-LABEL: Testing: f
   %1 = memref.alloc() : memref<3x4x5xf32>
 // CHECK: MemRefType offset: 0 strides: 20, 5, 1

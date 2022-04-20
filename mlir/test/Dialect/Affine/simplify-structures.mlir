@@ -4,10 +4,10 @@
 // CHECK-DAG: #[[$SET_7_11:.*]] = affine_set<(d0, d1) : (d0 * 7 + d1 * 5 + 88 == 0, d0 * 5 - d1 * 11 + 60 == 0, d0 * 11 + d1 * 7 - 24 == 0, d0 * 7 + d1 * 5 + 88 == 0)>
 
 // An external function that we will use in bodies to avoid DCE.
-func private @external() -> ()
+func.func private @external() -> ()
 
 // CHECK-LABEL: func @test_gaussian_elimination_empty_set0() {
-func @test_gaussian_elimination_empty_set0() {
+func.func @test_gaussian_elimination_empty_set0() {
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
       // CHECK-NOT: affine.if
@@ -20,7 +20,7 @@ func @test_gaussian_elimination_empty_set0() {
 }
 
 // CHECK-LABEL: func @test_gaussian_elimination_empty_set1() {
-func @test_gaussian_elimination_empty_set1() {
+func.func @test_gaussian_elimination_empty_set1() {
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
       // CHECK-NOT: affine.if
@@ -33,7 +33,7 @@ func @test_gaussian_elimination_empty_set1() {
 }
 
 // CHECK-LABEL: func @test_gaussian_elimination_non_empty_set2() {
-func @test_gaussian_elimination_non_empty_set2() {
+func.func @test_gaussian_elimination_non_empty_set2() {
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
       // CHECK: #[[$SET_2D]](%arg0, %arg1)
@@ -46,7 +46,7 @@ func @test_gaussian_elimination_non_empty_set2() {
 }
 
 // CHECK-LABEL: func @test_gaussian_elimination_empty_set3() {
-func @test_gaussian_elimination_empty_set3() {
+func.func @test_gaussian_elimination_empty_set3() {
   %c7 = arith.constant 7 : index
   %c11 = arith.constant 11 : index
   affine.for %arg0 = 1 to 10 {
@@ -67,7 +67,7 @@ func @test_gaussian_elimination_empty_set3() {
                                        d0 * 7 + d1 * 5 + s0 * 11 + s1 == 0)>
 
 // CHECK-LABEL: func @test_gaussian_elimination_non_empty_set4() {
-func @test_gaussian_elimination_non_empty_set4() {
+func.func @test_gaussian_elimination_non_empty_set4() {
   %c7 = arith.constant 7 : index
   %c11 = arith.constant 11 : index
   affine.for %arg0 = 1 to 10 {
@@ -89,7 +89,7 @@ func @test_gaussian_elimination_non_empty_set4() {
                                        d0 - 1 == 0, d0 + 2 == 0)>
 
 // CHECK-LABEL: func @test_gaussian_elimination_empty_set5() {
-func @test_gaussian_elimination_empty_set5() {
+func.func @test_gaussian_elimination_empty_set5() {
   %c7 = arith.constant 7 : index
   %c11 = arith.constant 11 : index
   affine.for %arg0 = 1 to 10 {
@@ -146,7 +146,7 @@ func @test_gaussian_elimination_empty_set5() {
 )>
 
 // CHECK-LABEL: func @test_fuzz_explosion
-func @test_fuzz_explosion(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index) {
+func.func @test_fuzz_explosion(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index) {
   affine.for %arg4 = 1 to 10 {
     affine.for %arg5 = 1 to 100 {
       affine.if #set_fuzz_virus(%arg4, %arg5, %arg0, %arg1, %arg2, %arg3) {
@@ -158,7 +158,7 @@ func @test_fuzz_explosion(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : i
 }
 
 // CHECK-LABEL: func @test_empty_set(%arg0: index) {
-func @test_empty_set(%N : index) {
+func.func @test_empty_set(%N : index) {
   affine.for %i = 0 to 10 {
     affine.for %j = 0 to 10 {
       // CHECK-NOT: affine.if
@@ -235,12 +235,12 @@ func @test_empty_set(%N : index) {
 // -----
 
 // An external function that we will use in bodies to avoid DCE.
-func private @external() -> ()
+func.func private @external() -> ()
 
 // CHECK-DAG: #[[$SET:.*]] = affine_set<()[s0] : (s0 >= 0, -s0 + 50 >= 0)
 
 // CHECK-LABEL: func @simplify_set
-func @simplify_set(%a : index, %b : index) {
+func.func @simplify_set(%a : index, %b : index) {
   // CHECK: affine.if #[[$SET]]
   affine.if affine_set<(d0, d1) : (d0 - d1 + d1 + d0 >= 0, 2 >= 0, d0 >= 0, -d0 + 50 >= 0, -d0 + 100 >= 0)>(%a, %b) {
     call @external() : () -> ()
@@ -261,7 +261,7 @@ func @simplify_set(%a : index, %b : index) {
 // CHECK-DAG: -> (s0 * 2 + 1)
 
 // Test "op local" simplification on affine.apply. DCE on arith.addi will not happen.
-func @affine.apply(%N : index) -> index {
+func.func @affine.apply(%N : index) -> index {
   %v = affine.apply affine_map<(d0, d1) -> (d0 + d1 + 1)>(%N, %N)
   %res = arith.addi %v, %v : index
   // CHECK: affine.apply #map{{.*}}()[%arg0]
@@ -272,7 +272,7 @@ func @affine.apply(%N : index) -> index {
 // -----
 
 // CHECK-LABEL: func @simplify_zero_dim_map
-func @simplify_zero_dim_map(%in : memref<f32>) -> f32 {
+func.func @simplify_zero_dim_map(%in : memref<f32>) -> f32 {
   %out = affine.load %in[] : memref<f32>
   return %out : f32
 }
@@ -285,7 +285,7 @@ func @simplify_zero_dim_map(%in : memref<f32>) -> f32 {
 
 // Tests the simplification of a semi-affine expression with a modulo operation on a floordiv and multiplication.
 // CHECK-LABEL: func @semiaffine_mod
-func @semiaffine_mod(%arg0: index, %arg1: index) -> index {
+func.func @semiaffine_mod(%arg0: index, %arg1: index) -> index {
   %a = affine.apply affine_map<(d0)[s0] ->((-((d0 floordiv s0) * s0) + s0 * s0) mod s0)> (%arg0)[%arg1]
   // CHECK:       %[[CST:.*]] = arith.constant 0
   return %a : index
@@ -293,7 +293,7 @@ func @semiaffine_mod(%arg0: index, %arg1: index) -> index {
 
 // Tests the simplification of a semi-affine expression with a nested floordiv and a floordiv on modulo operation.
 // CHECK-LABEL: func @semiaffine_floordiv
-func @semiaffine_floordiv(%arg0: index, %arg1: index) -> index {
+func.func @semiaffine_floordiv(%arg0: index, %arg1: index) -> index {
   %a = affine.apply affine_map<(d0)[s0] ->((-((d0 floordiv s0) * s0) + ((2 * s0) mod (3 * s0))) floordiv s0)> (%arg0)[%arg1]
   // CHECK: affine.apply #[[$map0]]()[%arg1, %arg0]
   return %a : index
@@ -301,7 +301,7 @@ func @semiaffine_floordiv(%arg0: index, %arg1: index) -> index {
 
 // Tests the simplification of a semi-affine expression with a ceildiv operation and a division of arith.constant 0 by a symbol.
 // CHECK-LABEL: func @semiaffine_ceildiv
-func @semiaffine_ceildiv(%arg0: index, %arg1: index) -> index {
+func.func @semiaffine_ceildiv(%arg0: index, %arg1: index) -> index {
   %a = affine.apply affine_map<(d0)[s0] ->((-((d0 floordiv s0) * s0) + s0 * 42 + ((5-5) floordiv s0)) ceildiv  s0)> (%arg0)[%arg1]
   // CHECK: affine.apply #[[$map1]]()[%arg1, %arg0]
   return %a : index
@@ -309,7 +309,7 @@ func @semiaffine_ceildiv(%arg0: index, %arg1: index) -> index {
 
 // Tests the simplification of a semi-affine expression with a nested ceildiv operation and further simplifications after performing ceildiv.
 // CHECK-LABEL: func @semiaffine_composite_floor
-func @semiaffine_composite_floor(%arg0: index, %arg1: index) -> index {
+func.func @semiaffine_composite_floor(%arg0: index, %arg1: index) -> index {
   %a = affine.apply affine_map<(d0)[s0] ->(((((s0 * 2) ceildiv 4) * 5) + s0 * 42) ceildiv s0)> (%arg0)[%arg1]
   // CHECK:       %[[CST:.*]] = arith.constant 47
   return %a : index
@@ -317,7 +317,7 @@ func @semiaffine_composite_floor(%arg0: index, %arg1: index) -> index {
 
 // Tests the simplification of a semi-affine expression with a modulo operation with a second operand that simplifies to symbol.
 // CHECK-LABEL: func @semiaffine_unsimplified_symbol
-func @semiaffine_unsimplified_symbol(%arg0: index, %arg1: index) -> index {
+func.func @semiaffine_unsimplified_symbol(%arg0: index, %arg1: index) -> index {
   %a = affine.apply affine_map<(d0)[s0] ->(s0 mod (2 * s0 - s0))> (%arg0)[%arg1]
   // CHECK:       %[[CST:.*]] = arith.constant 0
   return %a : index
@@ -326,11 +326,11 @@ func @semiaffine_unsimplified_symbol(%arg0: index, %arg1: index) -> index {
 // -----
 
 // Two external functions that we will use in bodies to avoid DCE.
-func private @external() -> ()
-func private @external1() -> ()
+func.func private @external() -> ()
+func.func private @external1() -> ()
 
 // CHECK-LABEL: func @test_always_true_if_elimination() {
-func @test_always_true_if_elimination() {
+func.func @test_always_true_if_elimination() {
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
       affine.if affine_set<(d0, d1) : (1 >= 0)> (%arg0, %arg1) {
@@ -350,7 +350,7 @@ func @test_always_true_if_elimination() {
 // CHECK-NEXT: }
 
 // CHECK-LABEL: func @test_always_false_if_elimination() {
-func @test_always_false_if_elimination() {
+func.func @test_always_false_if_elimination() {
   // CHECK: affine.for
   affine.for %arg0 = 1 to 10 {
     // CHECK: affine.for
@@ -370,7 +370,7 @@ func @test_always_false_if_elimination() {
 
 // Testing: affine.if is not trivially true or false, nothing happens.
 // CHECK-LABEL: func @test_dimensional_if_elimination() {
-func @test_dimensional_if_elimination() {
+func.func @test_dimensional_if_elimination() {
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
       // CHECK: affine.if
@@ -387,7 +387,7 @@ func @test_dimensional_if_elimination() {
 
 // Testing: affine.if gets removed.
 // CHECK-LABEL: func @test_num_results_if_elimination
-func @test_num_results_if_elimination() -> index {
+func.func @test_num_results_if_elimination() -> index {
   // CHECK: %[[zero:.*]] = arith.constant 0 : index
   %zero = arith.constant 0 : index
   %0 = affine.if affine_set<() : ()> () -> index {
@@ -406,7 +406,7 @@ func @test_num_results_if_elimination() -> index {
 // Testing: affine.if gets removed. `Else` block get promoted.
 // CHECK-LABEL: func @test_trivially_false_returning_two_results
 // CHECK-SAME: (%[[arg0:.*]]: index)
-func @test_trivially_false_returning_two_results(%arg0: index) -> (index, index) {
+func.func @test_trivially_false_returning_two_results(%arg0: index) -> (index, index) {
   // CHECK: %[[c7:.*]] = arith.constant 7 : index
   // CHECK: %[[c13:.*]] = arith.constant 13 : index
   %c7 = arith.constant 7 : index
@@ -428,7 +428,7 @@ func @test_trivially_false_returning_two_results(%arg0: index) -> (index, index)
 
 // Testing: affine.if gets removed. `Then` block get promoted.
 // CHECK-LABEL: func @test_trivially_true_returning_five_results
-func @test_trivially_true_returning_five_results() -> (index, index, index, index, index) {
+func.func @test_trivially_true_returning_five_results() -> (index, index, index, index, index) {
   // CHECK: %[[c12:.*]] = arith.constant 12 : index
   // CHECK: %[[c13:.*]] = arith.constant 13 : index
   %c12 = arith.constant 12 : index
@@ -459,7 +459,7 @@ func @test_trivially_true_returning_five_results() -> (index, index, index, inde
 
 // Testing: affine.if doesn't get removed.
 // CHECK-LABEL: func @test_not_trivially_true_or_false_returning_three_results
-func @test_not_trivially_true_or_false_returning_three_results() -> (index, index, index) {
+func.func @test_not_trivially_true_or_false_returning_three_results() -> (index, index, index) {
   // CHECK: %[[c8:.*]] = arith.constant 8 : index
   // CHECK: %[[c13:.*]] = arith.constant 13 : index
   %c8 = arith.constant 8 : index
@@ -488,7 +488,7 @@ func @test_not_trivially_true_or_false_returning_three_results() -> (index, inde
 // CHECK-DAG:   #[[$MODULO_AND_PRODUCT:.*]] = affine_map<()[s0, s1, s2, s3] -> (s0 * s1 + s3 - (-s0 + s3) mod s2)>
 // CHECK-LABEL: func @semiaffine_simplification_mod
 // CHECK-SAME:  (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index, %[[ARG5:.*]]: index)
-func @semiaffine_simplification_mod(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index, index) {
+func.func @semiaffine_simplification_mod(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index, index) {
   %a = affine.apply affine_map<(d0, d1)[s0, s1, s2, s3] -> ((-(d1 * s0 - (s0 - s1) mod s2) + s3) + (d0 * s1 + d1 * s0))>(%arg0, %arg1)[%arg2, %arg3, %arg4, %arg5]
   %b = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> (d0 mod (s0 - s1 * s2 + s3 - s0))>(%arg0)[%arg0, %arg1, %arg2, %arg3]
   %c = affine.apply affine_map<(d0)[s0, s1, s2] -> (d0 + (d0 + s0) mod s2 + s0 * s1 - (d0 + s0) mod s2 - (d0 - s0) mod s2)>(%arg0)[%arg1, %arg2, %arg3]
@@ -507,7 +507,7 @@ func @semiaffine_simplification_mod(%arg0: index, %arg1: index, %arg2: index, %a
 // CHECK-DAG:   #[[$SIMPLIFIED_CEILDIV_RHS:.*]] = affine_map<()[s0, s1, s2, s3] -> (s3 ceildiv (s2 - s0 * s1))>
 // CHECK-LABEL: func @semiaffine_simplification_floordiv_and_ceildiv
 // CHECK-SAME:  (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index)
-func @semiaffine_simplification_floordiv_and_ceildiv(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) -> (index, index, index) {
+func.func @semiaffine_simplification_floordiv_and_ceildiv(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) -> (index, index, index) {
   %a = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> (d0 floordiv (s0 - s1 * s2 + s3 - s0))>(%arg0)[%arg0, %arg1, %arg2, %arg3]
   %b = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> ((-(d0 * s1 - (s0 - s1) floordiv s2) + s3) + (d0 * s1 + s0))>(%arg0)[%arg1, %arg2, %arg3, %arg4]
   %c = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> (d0 ceildiv (s0 - s1 * s2 + s3 - s0))>(%arg0)[%arg0, %arg1, %arg2, %arg3]
@@ -525,7 +525,7 @@ func @semiaffine_simplification_floordiv_and_ceildiv(%arg0: index, %arg1: index,
 // CHECK-DAG:   #[[$SUM_OF_PRODUCTS:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s2 * s0 + s2 + s3 * s0 + s3 * s1 + s3 + s4 * s1 + s4)>
 // CHECK-LABEL: func @semiaffine_simplification_product
 // CHECK-SAME:  (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index, %[[ARG5:.*]]: index)
-func @semiaffine_simplification_product(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index) {
+func.func @semiaffine_simplification_product(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index) {
   %a = affine.apply affine_map<(d0)[s0, s1, s2, s3] -> ((-(s0 - (s0 - s1) * s2) + s3) + (d0 + s0))>(%arg0)[%arg1, %arg2, %arg3, %arg4]
   %b = affine.apply affine_map<(d0, d1, d2)[s0, s1] -> (d0 + d1 * s1 + d1 + d0 * s0 + d1 * s0 + d2 * s1 + d2)>(%arg0, %arg1, %arg2)[%arg3, %arg4]
   return %a, %b : index, index
@@ -539,7 +539,7 @@ func @semiaffine_simplification_product(%arg0: index, %arg1: index, %arg2: index
 // CHECK-DAG: #[[$SIMPLIFIED_MAP:.*]] = affine_map<()[s0, s1, s2, s3] -> ((-s0 + s2 + s3) mod (s0 + s1))>
 // CHECK-LABEL: func @semi_affine_simplification_euclidean_lemma
 // CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index, %[[ARG5:.*]]: index)
-func @semi_affine_simplification_euclidean_lemma(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index) {
+func.func @semi_affine_simplification_euclidean_lemma(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index) {
   %a = affine.apply affine_map<(d0, d1)[s0, s1] -> ((d0 + d1) - ((d0 + d1) floordiv (s0 - s1)) * (s0 - s1) - (d0 + d1) mod (s0 - s1))>(%arg0, %arg1)[%arg2, %arg3]
   %b = affine.apply affine_map<(d0, d1)[s0, s1] -> ((d0 + d1 - s0) - ((d0 + d1 - s0) floordiv (s0 + s1)) * (s0 + s1))>(%arg0, %arg1)[%arg2, %arg3]
   return %a, %b : index, index

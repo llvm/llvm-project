@@ -3,7 +3,7 @@
 // Permutation maps used in vectorization.
 // CHECK: #[[map_proj_d0d1d2_d2d0:map[0-9]*]] = affine_map<(d0, d1, d2) -> (d2, d0)>
 
-func @vec2d(%A : memref<?x?x?xf32>) {
+func.func @vec2d(%A : memref<?x?x?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -36,7 +36,7 @@ func @vec2d(%A : memref<?x?x?xf32>) {
   return
 }
 
-func @vec2d_imperfectly_nested(%A : memref<?x?x?xf32>) {
+func.func @vec2d_imperfectly_nested(%A : memref<?x?x?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

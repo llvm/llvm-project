@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file -allow-unregistered-dialect -affine-loop-coalescing %s | FileCheck %s
 
 // CHECK-LABEL: @one_3d_nest
-func @one_3d_nest() {
+func.func @one_3d_nest() {
   // Capture original bounds.  Note that for zero-based step-one loops, the
   // upper bound is also the number of iterations.
   // CHECK: %[[orig_lb:.*]] = arith.constant 0
@@ -44,7 +44,7 @@ func @one_3d_nest() {
 // multiple uses of loop induction variables get rewritten to the same values.
 
 // CHECK-LABEL: @multi_use
-func @multi_use() {
+func.func @multi_use() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -72,7 +72,7 @@ func @multi_use() {
   return
 }
 
-func @unnormalized_loops() {
+func.func @unnormalized_loops() {
   // CHECK: %[[orig_step_i:.*]] = arith.constant 2
   // CHECK: %[[orig_step_j:.*]] = arith.constant 3
   // CHECK: %[[orig_lb_i:.*]] = arith.constant 5
@@ -130,7 +130,7 @@ func @unnormalized_loops() {
 // CHECK-SAME: %[[orig_lb2:[A-Za-z0-9]+]]:
 // CHECK-SAME: %[[orig_ub2:[A-Za-z0-9]+]]:
 // CHECK-SAME: %[[orig_step2:[A-Za-z0-9]+]]:
-func @parametric(%lb1 : index, %ub1 : index, %step1 : index,
+func.func @parametric(%lb1 : index, %ub1 : index, %step1 : index,
                  %lb2 : index, %ub2 : index, %step2 : index) {
   // Compute the number of iterations for each of the loops and the total
   // number of iterations.
@@ -166,7 +166,7 @@ func @parametric(%lb1 : index, %ub1 : index, %step1 : index,
 }
 
 // CHECK-LABEL: @two_bands
-func @two_bands() {
+func.func @two_bands() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -201,7 +201,7 @@ func @two_bands() {
 // CHECK-DAG: #[[EIGHT:.*]] = affine_map<() -> (8)>
 // CHECK-DAG: #[[MOD:.*]] = affine_map<(d0)[s0] -> (d0 mod s0)>
 // CHECK-DAG: #[[DIV:.*]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
-func @coalesce_affine_for() {
+func.func @coalesce_affine_for() {
   affine.for %i = 0 to 16 {
     affine.for %j = 0 to 64 {
       affine.for %k = 0 to 8 {
@@ -232,7 +232,7 @@ func @coalesce_affine_for() {
 // CHECK-DAG: #[[PRODUCT:.*]] = affine_map<(d0)[s0] -> (d0 * s0)>
 // CHECK-DAG: #[[MOD:.*]] = affine_map<(d0)[s0] -> (d0 mod s0)>
 // CHECK-DAG: #[[FLOOR:.*]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
-func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
+func.func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %M = memref.dim %arg0, %c0 : memref<?x?xf32>
   %N = memref.dim %arg0, %c0 : memref<?x?xf32>
@@ -271,7 +271,7 @@ func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
 // CHECK-DAG: #[[SIXTY_FOUR:.*]] = affine_map<() -> (64)>
 // CHECK-DAG: #[[MOD:.*]] = affine_map<(d0)[s0] -> (d0 mod s0)>
 // CHECK-DAG: #[[DIV:.*]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
-func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
+func.func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %M = memref.dim %arg0, %c0 : memref<?x?xf32>
   %N = memref.dim %arg0, %c0 : memref<?x?xf32>
@@ -309,7 +309,7 @@ func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
 // CHECK-DAG: #[[MOD:.*]] = affine_map<(d0)[s0] -> (d0 mod s0)>
 // CHECK-DAG: #[[DIV:.*]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
 #myMap = affine_map<()[s1] -> (s1, -s1)>
-func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
+func.func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
  %c0 = arith.constant 0 : index
  %M = memref.dim %arg0, %c0 : memref<?x?xf32>
  %N = memref.dim %arg0, %c0 : memref<?x?xf32>
@@ -346,7 +346,7 @@ func @coalesce_affine_for(%arg0: memref<?x?xf32>) {
 // CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0) -> (696, d0 * 110 + 110)>
 #map0 = affine_map<(d0) -> (d0 * 110)>
 #map1 = affine_map<(d0) -> (696, d0 * 110 + 110)>
-func @test_loops_do_not_get_coalesced() {
+func.func @test_loops_do_not_get_coalesced() {
   affine.for %i = 0 to 7 {
     affine.for %j = #map0(%i) to min #map1(%i) {
     }

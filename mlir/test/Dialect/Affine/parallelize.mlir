@@ -3,7 +3,7 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize='parallel-reductions=1' | FileCheck --check-prefix=REDUCE %s
 
 // CHECK-LABEL:    func @reduce_window_max() {
-func @reduce_window_max() {
+func.func @reduce_window_max() {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = memref.alloc() : memref<1x8x8x64xf32>
   %1 = memref.alloc() : memref<1x18x18x64xf32>
@@ -75,7 +75,7 @@ func @reduce_window_max() {
 // CHECK:        }
 // CHECK:      }
 
-func @loop_nest_3d_outer_two_parallel(%N : index) {
+func.func @loop_nest_3d_outer_two_parallel(%N : index) {
   %0 = memref.alloc() : memref<1024 x 1024 x vector<64xf32>>
   %1 = memref.alloc() : memref<1024 x 1024 x vector<64xf32>>
   %2 = memref.alloc() : memref<1024 x 1024 x vector<64xf32>>
@@ -99,7 +99,7 @@ func @loop_nest_3d_outer_two_parallel(%N : index) {
 // CHECK:          affine.for %[[arg3:.*]] = 0 to %arg0 {
 
 // CHECK-LABEL: unknown_op_conservative
-func @unknown_op_conservative() {
+func.func @unknown_op_conservative() {
   affine.for %i = 0 to 10 {
 // CHECK:  affine.for %[[arg1:.*]] = 0 to 10 {
     "unknown"() : () -> ()
@@ -108,7 +108,7 @@ func @unknown_op_conservative() {
 }
 
 // CHECK-LABEL: non_affine_load
-func @non_affine_load() {
+func.func @non_affine_load() {
   %0 = memref.alloc() : memref<100 x f32>
   affine.for %i = 0 to 100 {
 // CHECK:  affine.for %{{.*}} = 0 to 100 {
@@ -118,7 +118,7 @@ func @non_affine_load() {
 }
 
 // CHECK-LABEL: for_with_minmax
-func @for_with_minmax(%m: memref<?xf32>, %lb0: index, %lb1: index,
+func.func @for_with_minmax(%m: memref<?xf32>, %lb0: index, %lb1: index,
                       %ub0: index, %ub1: index) {
   // CHECK: affine.parallel (%{{.*}}) = (max(%{{.*}}, %{{.*}})) to (min(%{{.*}}, %{{.*}}))
   affine.for %i = max affine_map<(d0, d1) -> (d0, d1)>(%lb0, %lb1)
@@ -129,7 +129,7 @@ func @for_with_minmax(%m: memref<?xf32>, %lb0: index, %lb1: index,
 }
 
 // CHECK-LABEL: nested_for_with_minmax
-func @nested_for_with_minmax(%m: memref<?xf32>, %lb0: index,
+func.func @nested_for_with_minmax(%m: memref<?xf32>, %lb0: index,
                              %ub0: index, %ub1: index) {
   // CHECK: affine.parallel (%[[I:.*]]) =
   affine.for %j = 0 to 10 {
@@ -143,7 +143,7 @@ func @nested_for_with_minmax(%m: memref<?xf32>, %lb0: index,
 }
 
 // MAX-NESTED-LABEL: @max_nested
-func @max_nested(%m: memref<?x?xf32>, %lb0: index, %lb1: index,
+func.func @max_nested(%m: memref<?x?xf32>, %lb0: index, %lb1: index,
                  %ub0: index, %ub1: index) {
   // MAX-NESTED: affine.parallel
   affine.for %i = affine_map<(d0) -> (d0)>(%lb0) to affine_map<(d0) -> (d0)>(%ub0) {
@@ -156,7 +156,7 @@ func @max_nested(%m: memref<?x?xf32>, %lb0: index, %lb1: index,
 }
 
 // MAX-NESTED-LABEL: @max_nested_1
-func @max_nested_1(%arg0: memref<4096x4096xf32>, %arg1: memref<4096x4096xf32>, %arg2: memref<4096x4096xf32>) {
+func.func @max_nested_1(%arg0: memref<4096x4096xf32>, %arg1: memref<4096x4096xf32>, %arg2: memref<4096x4096xf32>) {
   %0 = memref.alloc() : memref<4096x4096xf32>
   // MAX-NESTED: affine.parallel
   affine.for %arg3 = 0 to 4096 {
@@ -178,7 +178,7 @@ func @max_nested_1(%arg0: memref<4096x4096xf32>, %arg1: memref<4096x4096xf32>, %
 
 // CHECK-LABEL: @iter_args
 // REDUCE-LABEL: @iter_args
-func @iter_args(%in: memref<10xf32>) {
+func.func @iter_args(%in: memref<10xf32>) {
   // REDUCE: %[[init:.*]] = arith.constant
   %cst = arith.constant 0.000000e+00 : f32
   // CHECK-NOT: affine.parallel
@@ -197,7 +197,7 @@ func @iter_args(%in: memref<10xf32>) {
 
 // CHECK-LABEL: @nested_iter_args
 // REDUCE-LABEL: @nested_iter_args
-func @nested_iter_args(%in: memref<20x10xf32>) {
+func.func @nested_iter_args(%in: memref<20x10xf32>) {
   %cst = arith.constant 0.000000e+00 : f32
   // CHECK: affine.parallel
   affine.for %i = 0 to 20 {
@@ -214,7 +214,7 @@ func @nested_iter_args(%in: memref<20x10xf32>) {
 }
 
 // REDUCE-LABEL: @strange_butterfly
-func @strange_butterfly() {
+func.func @strange_butterfly() {
   %cst1 = arith.constant 0.0 : f32
   %cst2 = arith.constant 1.0 : f32
   // REDUCE-NOT: affine.parallel
@@ -228,7 +228,7 @@ func @strange_butterfly() {
 // An iter arg is used more than once. This is not a simple reduction and
 // should not be parallelized.
 // REDUCE-LABEL: @repeated_use
-func @repeated_use() {
+func.func @repeated_use() {
   %cst1 = arith.constant 0.0 : f32
   // REDUCE-NOT: affine.parallel
   affine.for %i = 0 to 10 iter_args(%it1 = %cst1) -> (f32) {
@@ -241,7 +241,7 @@ func @repeated_use() {
 // An iter arg is used in the chain of operations defining the value being
 // reduced, this is not a simple reduction and should not be parallelized.
 // REDUCE-LABEL: @use_in_backward_slice
-func @use_in_backward_slice() {
+func.func @use_in_backward_slice() {
   %cst1 = arith.constant 0.0 : f32
   %cst2 = arith.constant 1.0 : f32
   // REDUCE-NOT: affine.parallel
@@ -256,7 +256,7 @@ func @use_in_backward_slice() {
 // REDUCE-LABEL: @nested_min_max
 // CHECK-LABEL: @nested_min_max
 // CHECK: (%{{.*}}, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[UB1:.*]]: index)
-func @nested_min_max(%m: memref<?xf32>, %lb0: index,
+func.func @nested_min_max(%m: memref<?xf32>, %lb0: index,
                      %ub0: index, %ub1: index) {
   // CHECK: affine.parallel (%[[J:.*]]) =
   affine.for %j = 0 to 10 {
@@ -273,7 +273,7 @@ func @nested_min_max(%m: memref<?xf32>, %lb0: index,
 // Test in the presence of locally allocated memrefs.
 
 // CHECK: func @local_alloc
-func @local_alloc() {
+func.func @local_alloc() {
   %cst = arith.constant 0.0 : f32
   affine.for %i = 0 to 100 {
     %m = memref.alloc() : memref<1xf32>
@@ -285,7 +285,7 @@ func @local_alloc() {
 }
 
 // CHECK: func @local_alloc_cast
-func @local_alloc_cast() {
+func.func @local_alloc_cast() {
   %cst = arith.constant 0.0 : f32
   affine.for %i = 0 to 100 {
     %m = memref.alloc() : memref<128xf32>
@@ -314,7 +314,7 @@ func @local_alloc_cast() {
 }
 
 // CHECK-LABEL: @iter_arg_memrefs
-func @iter_arg_memrefs(%in: memref<10xf32>) {
+func.func @iter_arg_memrefs(%in: memref<10xf32>) {
   %mi = memref.alloc() : memref<f32>
   // Loop-carried memrefs are treated as serializing the loop.
   // CHECK: affine.for
