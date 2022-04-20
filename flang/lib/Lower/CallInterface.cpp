@@ -765,8 +765,9 @@ private:
       return true;
     if (const Fortran::semantics::DerivedTypeSpec *derived =
             Fortran::evaluate::GetDerivedTypeSpec(obj.type.type()))
-      // Need to pass type parameters in fir.box if any.
-      return derived->parameters().empty();
+      if (const Fortran::semantics::Scope *scope = derived->scope())
+        // Need to pass length type parameters in fir.box if any.
+        return scope->IsDerivedTypeWithLengthParameter();
     return false;
   }
 

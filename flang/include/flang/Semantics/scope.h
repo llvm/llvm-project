@@ -104,7 +104,10 @@ public:
   bool IsParameterizedDerivedTypeInstantiation() const {
     return kind_ == Kind::DerivedType && !symbol_;
   }
+  /// Does this derived type have at least one kind parameter ?
   bool IsDerivedTypeWithKindParameter() const;
+  /// Does this derived type have at least one length parameter ?
+  bool IsDerivedTypeWithLengthParameter() const;
   Symbol *symbol() { return symbol_; }
   const Symbol *symbol() const { return symbol_; }
   SemanticsContext &context() const { return context_; }

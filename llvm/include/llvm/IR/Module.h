@@ -363,8 +363,6 @@ public:
   /// In all cases, the returned value is a FunctionCallee wrapper around the
   /// 'FunctionType *T' passed in, as well as a 'Value*' either of the Function or
   /// the bitcast to the function.
-  ///
-  /// Note: For library calls getOrInsertLibFunc() should be used instead.
   FunctionCallee getOrInsertFunction(StringRef Name, FunctionType *T,
                                      AttributeList AttributeList);
 

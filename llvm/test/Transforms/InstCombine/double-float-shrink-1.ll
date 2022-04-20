@@ -346,7 +346,7 @@ define float @logb_test1(float %f)   {
 ; LINUX-NEXT:    [[LOGBF:%.*]] = call fast float @logbf(float [[F:%.*]])
 ; LINUX-NEXT:    ret float [[LOGBF]]
 ; MS32:          [[POWF:%.*]] = call fast double @logb(double [[F:%.*]])
-; MS64-NEXT:     [[LOGBF:%.*]] = call fast float @_logbf(float [[F:%.*]])
+; MS64-NEXT:     [[LOGBF:%.*]] = call fast float @logbf(float [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @logb(double %conv)
