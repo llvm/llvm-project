@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
 // -----
-func @invalidStatisticsMismatchedLayerType(%arg0: tensor<8x4x3xf32>) ->
+func.func @invalidStatisticsMismatchedLayerType(%arg0: tensor<8x4x3xf32>) ->
     tensor<8x4x3xf32> {
   // expected-error@+1 {{layerStats must have a floating point element type}}
   %0 = "quant.stats"(%arg0) {
@@ -11,7 +11,7 @@ func @invalidStatisticsMismatchedLayerType(%arg0: tensor<8x4x3xf32>) ->
 }
 
 // -----
-func @invalidStatisticsMismatchedLayerRank(%arg0: tensor<8x4x3xf32>) ->
+func.func @invalidStatisticsMismatchedLayerRank(%arg0: tensor<8x4x3xf32>) ->
     tensor<8x4x3xf32> {
   // expected-error@+1 {{layerStats must have shape [2]}}
   %0 = "quant.stats"(%arg0) {
@@ -21,7 +21,7 @@ func @invalidStatisticsMismatchedLayerRank(%arg0: tensor<8x4x3xf32>) ->
 }
 
 // -----
-func @invalidStatisticsMismatchedLayerShape(%arg0: tensor<8x4x3xf32>) ->
+func.func @invalidStatisticsMismatchedLayerShape(%arg0: tensor<8x4x3xf32>) ->
     tensor<8x4x3xf32> {
   // expected-error@+1 {{layerStats must have shape [2]}}
   %0 = "quant.stats"(%arg0) {
@@ -32,7 +32,7 @@ func @invalidStatisticsMismatchedLayerShape(%arg0: tensor<8x4x3xf32>) ->
 
 // -----
 // CHECK-LABEL: validStatistics
-func @invalidStatisticsMismatchedAxisType(%arg0: tensor<8x4x3xf32>) -> tensor<8x4x3xf32> {
+func.func @invalidStatisticsMismatchedAxisType(%arg0: tensor<8x4x3xf32>) -> tensor<8x4x3xf32> {
   // expected-error@+1 {{axisStats must have a floating point element type}}
   %0 = "quant.stats"(%0) {
     layerStats = dense<[-1.0, 1.0]> : tensor<2xf32>,
@@ -46,7 +46,7 @@ func @invalidStatisticsMismatchedAxisType(%arg0: tensor<8x4x3xf32>) -> tensor<8x
 }
 
 // -----
-func @invalidStatisticsMismatchedAxisSize(%arg0: tensor<8x4x3xf32>) ->
+func.func @invalidStatisticsMismatchedAxisSize(%arg0: tensor<8x4x3xf32>) ->
     tensor<8x4x3xf32> {
   // expected-error@+1 {{axisStats must have shape [N,2] where N = the slice size defined by the axis dim}}
   %0 = "quant.stats"(%arg0) {
@@ -62,7 +62,7 @@ func @invalidStatisticsMismatchedAxisSize(%arg0: tensor<8x4x3xf32>) ->
 }
 
 // -----
-func @invalidStatisticsMismatchedAxisShape(%arg0: tensor<8x4x3xf32>) ->
+func.func @invalidStatisticsMismatchedAxisShape(%arg0: tensor<8x4x3xf32>) ->
     tensor<8x4x3xf32> {
   // expected-error@+1 {{axisStats must have shape [N,2] where N = the slice size defined by the axis dim}}
   %0 = "quant.stats"(%arg0) {
@@ -77,7 +77,7 @@ func @invalidStatisticsMismatchedAxisShape(%arg0: tensor<8x4x3xf32>) ->
 }
 
 // -----
-func @axisIsRequiredForAxisStats(%arg0: tensor<8x4x3xf32>) -> tensor<8x4x3xf32> {
+func.func @axisIsRequiredForAxisStats(%arg0: tensor<8x4x3xf32>) -> tensor<8x4x3xf32> {
   // expected-error@+1 {{axis must be specified for axisStats}}
   %1 = "quant.stats"(%arg0) {
     layerStats = dense<[-1.0, 1.0]> : tensor<2xf32>,

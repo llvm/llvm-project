@@ -9,7 +9,7 @@
 // CHECK:   %[[V1:.*]] = arith.muli %[[ARG1]], %[[ARG1]]
 // CHECK:   scf.yield %[[V1]]
 // CHECK: return %[[V0]]
-func @test_scf_if_sink(%arg0: i1, %arg1: i32) -> i32 {
+func.func @test_scf_if_sink(%arg0: i1, %arg1: i32) -> i32 {
   %0 = arith.addi %arg1, %arg1 : i32
   %1 = arith.muli %arg1, %arg1 : i32
   %result = scf.if %arg0 -> i32 {
@@ -22,14 +22,14 @@ func @test_scf_if_sink(%arg0: i1, %arg1: i32) -> i32 {
 
 // -----
 
-func private @consume(i32) -> ()
+func.func private @consume(i32) -> ()
 
 // CHECK-LABEL: @test_scf_if_then_only_sink
 // CHECK-SAME:  (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i32)
 // CHECK: scf.if %[[ARG0]]
 // CHECK:   %[[V0:.*]] = arith.addi %[[ARG1]], %[[ARG1]]
 // CHECK:   call @consume(%[[V0]])
-func @test_scf_if_then_only_sink(%arg0: i1, %arg1: i32) {
+func.func @test_scf_if_then_only_sink(%arg0: i1, %arg1: i32) {
   %0 = arith.addi %arg1, %arg1 : i32
   scf.if %arg0 {
     call @consume(%0) : (i32) -> ()
@@ -40,7 +40,7 @@ func @test_scf_if_then_only_sink(%arg0: i1, %arg1: i32) {
 
 // -----
 
-func private @consume(i32) -> ()
+func.func private @consume(i32) -> ()
 
 // CHECK-LABEL: @test_scf_if_double_sink
 // CHECK-SAME:  (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i32)
@@ -48,7 +48,7 @@ func private @consume(i32) -> ()
 // CHECK:   scf.if %[[ARG0]]
 // CHECK:     %[[V0:.*]] = arith.addi %[[ARG1]], %[[ARG1]]
 // CHECK:     call @consume(%[[V0]])
-func @test_scf_if_double_sink(%arg0: i1, %arg1: i32) {
+func.func @test_scf_if_double_sink(%arg0: i1, %arg1: i32) {
   %0 = arith.addi %arg1, %arg1 : i32
   scf.if %arg0 {
     scf.if %arg0 {

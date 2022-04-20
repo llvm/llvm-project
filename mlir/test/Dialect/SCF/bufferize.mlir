@@ -14,7 +14,7 @@
 // CHECK:           %[[RESULT_TENSOR:.*]] = bufferization.to_tensor %[[RESULT_MEMREF:.*]] : memref<?xf32>
 // CHECK:           return %[[RESULT_TENSOR]] : tensor<?xf32>
 // CHECK:         }
-func @if(%pred: i1, %true_val: tensor<?xf32>, %false_val: tensor<?xf32>) -> tensor<?xf32> {
+func.func @if(%pred: i1, %true_val: tensor<?xf32>, %false_val: tensor<?xf32>) -> tensor<?xf32> {
   %0 = scf.if %pred -> (tensor<?xf32>) {
     scf.yield %true_val : tensor<?xf32>
   } else {
@@ -34,7 +34,7 @@ func @if(%pred: i1, %true_val: tensor<?xf32>, %false_val: tensor<?xf32>) -> tens
 // CHECK:           %[[VAL_8:.*]] = bufferization.to_tensor %[[VAL_9:.*]] : memref<f32>
 // CHECK:           return %[[VAL_8]] : tensor<f32>
 // CHECK:         }
-func @for(%arg0: tensor<f32>, %lb: index, %ub: index, %step: index) -> tensor<f32> {
+func.func @for(%arg0: tensor<f32>, %lb: index, %ub: index, %step: index) -> tensor<f32> {
   %ret = scf.for %iv = %lb to %ub step %step iter_args(%iter = %arg0) -> tensor<f32> {
     scf.yield %iter : tensor<f32>
   }
@@ -46,7 +46,7 @@ func @for(%arg0: tensor<f32>, %lb: index, %ub: index, %step: index) -> tensor<f3
 // It would previously fail altogether.
 // CHECK-LABEL:   func @if_correct_recursive_legalization_behavior
 // CHECK: "test.munge_tensor"
-func @if_correct_recursive_legalization_behavior(%pred: i1, %tensor: tensor<f32>) -> tensor<f32> {
+func.func @if_correct_recursive_legalization_behavior(%pred: i1, %tensor: tensor<f32>) -> tensor<f32> {
   %0 = scf.if %pred -> (tensor<f32>) {
     %1 = "test.munge_tensor"(%tensor) : (tensor<f32>) -> (tensor<f32>)
     scf.yield %1: tensor<f32>
@@ -70,7 +70,7 @@ func @if_correct_recursive_legalization_behavior(%pred: i1, %tensor: tensor<f32>
 // CHECK:           %[[TENSOR:.*]] = bufferization.to_tensor %[[RESULT:.*]] : memref<f32>
 // CHECK:           return %[[TENSOR]] : tensor<f32>
 // CHECK:         }
-func @for_correct_recursive_legalization_behavior(%arg0: tensor<f32>, %index: index) -> tensor<f32> {
+func.func @for_correct_recursive_legalization_behavior(%arg0: tensor<f32>, %index: index) -> tensor<f32> {
   %ret = scf.for %iv = %index to %index step %index iter_args(%iter = %arg0) -> tensor<f32> {
     %0 = "test.munge_tensor"(%iter) : (tensor<f32>) -> (tensor<f32>)
     scf.yield %0 : tensor<f32>
@@ -87,7 +87,7 @@ func @for_correct_recursive_legalization_behavior(%arg0: tensor<f32>, %index: in
 // CHECK: scf.yield %{{.*}}, %{{.*}} : i64, memref<f32>
 // CHECK:  %[[RES2:.*]] = bufferization.to_tensor %[[RES1]]#2 : memref<f32>
 // CHECK:  return %[[RES1]]#1, %[[RES2]] : i64, tensor<f32>
-func @bufferize_while(%arg0: i64, %arg1: i64, %arg2: tensor<f32>) -> (i64, tensor<f32>) {
+func.func @bufferize_while(%arg0: i64, %arg1: i64, %arg2: tensor<f32>) -> (i64, tensor<f32>) {
   %c2_i64 = arith.constant 2 : i64
   %0:3 = scf.while (%arg3 = %arg0, %arg4 = %arg2) : (i64, tensor<f32>) -> (i64, i64, tensor<f32>) {
     %1 = arith.cmpi slt, %arg3, %arg1 : i64

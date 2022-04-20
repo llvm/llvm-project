@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -pass-pipeline='func.func(scf-parallel-loop-tiling{parallel-loop-tile-sizes=1,4})' -split-input-file | FileCheck %s
 
-func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
                     %arg3 : index, %arg4 : index, %arg5 : index,
 		    %A: memref<?x?xf32>, %B: memref<?x?xf32>,
                     %C: memref<?x?xf32>, %result: memref<?x?xf32>) {
@@ -37,7 +37,7 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // -----
 
-func @static_loop_with_step() {
+func.func @static_loop_with_step() {
   %c0 = arith.constant 0 : index
   %c3 = arith.constant 3 : index
   %c22 = arith.constant 22 : index
@@ -67,7 +67,7 @@ func @static_loop_with_step() {
 
 // -----
 
-func @tile_nested_innermost() {
+func.func @tile_nested_innermost() {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -115,7 +115,7 @@ func @tile_nested_innermost() {
 
 // -----
 
-func @tile_nested_in_non_ploop() {
+func.func @tile_nested_in_non_ploop() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

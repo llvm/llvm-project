@@ -2,7 +2,7 @@
 
 module {
   // CHECK: @no_spec
-  func @no_spec() {
+  func.func @no_spec() {
     // CHECK: alignment = 8
     // CHECK: bitsize = 64
     // CHECK: preferred = 8
@@ -44,7 +44,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.ptr<i8, 5>, dense<[64, 64, 64]> : vector<3xi32>>
 >} {
   // CHECK: @spec
-  func @spec() {
+  func.func @spec() {
     // CHECK: alignment = 4
     // CHECK: bitsize = 32
     // CHECK: preferred = 8
@@ -85,7 +85,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.ptr<i32>, dense<[64, 64, 64]> : vector<3xi32>>
 >} {
-  func @pointer() {
+  func.func @pointer() {
     return
   }
 }
@@ -96,7 +96,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.ptr<i8>, dense<[64.0, 64.0, 64.0]> : vector<3xf32>>
 >} {
-  func @pointer() {
+  func.func @pointer() {
     return
   }
 }
@@ -107,7 +107,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.ptr<i8>, dense<[64, 64, 32]> : vector<3xi32>>
 >} {
-  func @pointer() {
+  func.func @pointer() {
     return
   }
 }
@@ -116,7 +116,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 module {
     // CHECK: @no_spec
-    func @no_spec() {
+    func.func @no_spec() {
         // simple case
         // CHECK: alignment = 4
         // CHECK: bitsize = 32
@@ -161,7 +161,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<()>, dense<[32, 32]> : vector<2xi32>>
 >} {
     // CHECK: @spec
-    func @spec() {
+    func.func @spec() {
         // Strict alignment is applied
         // CHECK: alignment = 4
         // CHECK: bitsize = 16
@@ -199,7 +199,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<()>, dense<[32]> : vector<1xi32>>
 >} {
     // CHECK: @spec_without_preferred
-    func @spec_without_preferred() {
+    func.func @spec_without_preferred() {
         // abi alignment is applied to both preferred and abi
         // CHECK: alignment = 4
         // CHECK: bitsize = 16
@@ -216,7 +216,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<(i8)>, dense<[64, 64]> : vector<2xi32>>
 >} {
-  func @struct() {
+  func.func @struct() {
     return
   }
 }
@@ -227,7 +227,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<()>, dense<[64, 64, 64]> : vector<3xi32>>
 >} {
-  func @struct() {
+  func.func @struct() {
     return
   }
 }
@@ -238,7 +238,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<()>, dense<[64, 32]> : vector<2xi32>>
 >} {
-  func @struct() {
+  func.func @struct() {
     return
   }
 }
@@ -247,7 +247,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 module {
     // CHECK: @arrays
-    func @arrays() {
+    func.func @arrays() {
         // simple case
         // CHECK: alignment = 4
         // CHECK: bitsize = 64
@@ -278,7 +278,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<()>, dense<[64]> : vector<1xi32>>
 >} {
     // CHECK: @overaligned
-    func @overaligned() {
+    func.func @overaligned() {
         // Over aligned element types are respected
         // CHECK: alignment = 8
         // CHECK: bitsize = 128
