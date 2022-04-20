@@ -4975,7 +4975,10 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
   }
 
   if (MO->isReg()) {
-    assert(DefinedRC);
+    if (!DefinedRC) {
+      // This operand allows any register.
+      return true;
+    }
     if (!isLegalRegOperand(MRI, OpInfo, *MO))
       return false;
     bool IsAGPR = RI.isAGPR(MRI, MO->getReg());

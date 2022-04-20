@@ -1589,9 +1589,13 @@ int64_t DynamicReloc::computeAddend() const {
 }
 
 uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
-  if (needsDynSymIndex())
-    return symTab->getSymbolIndex(sym);
-  return 0;
+  if (!needsDynSymIndex())
+    return 0;
+
+  size_t index = symTab->getSymbolIndex(sym);
+  assert((index != 0 || type != target->gotRel && type != target->pltRel) &&
+         "GOT or PLT relocation must refer to symbol in dynamic symbol table");
+  return index;
 }
 
 RelocationBaseSection::RelocationBaseSection(StringRef name, uint32_t type,

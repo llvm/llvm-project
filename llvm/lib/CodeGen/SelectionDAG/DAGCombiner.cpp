@@ -20413,18 +20413,39 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
       int Left = 2 * In;
       int Right = 2 * In + 1;
       SmallVector<int, 8> Mask(NumElems, -1);
-      for (unsigned i = 0; i != NumElems; ++i) {
-        if (VectorMask[i] == Left) {
-          Mask[i] = i;
-          VectorMask[i] = In;
-        } else if (VectorMask[i] == Right) {
-          Mask[i] = i + NumElems;
-          VectorMask[i] = In;
+      SDValue L = Shuffles[Left];
+      ArrayRef<int> LMask;
+      bool IsLeftShuffle = L.getOpcode() == ISD::VECTOR_SHUFFLE &&
+                           L.use_empty() && L.getOperand(1).isUndef() &&
+                           L.getOperand(0).getValueType() == L.getValueType();
+      if (IsLeftShuffle) {
+        LMask = cast<ShuffleVectorSDNode>(L.getNode())->getMask();
+        L = L.getOperand(0);
+      }
+      SDValue R = Shuffles[Right];
+      ArrayRef<int> RMask;
+      bool IsRightShuffle = R.getOpcode() == ISD::VECTOR_SHUFFLE &&
+                            R.use_empty() && R.getOperand(1).isUndef() &&
+                            R.getOperand(0).getValueType() == R.getValueType();
+      if (IsRightShuffle) {
+        RMask = cast<ShuffleVectorSDNode>(R.getNode())->getMask();
+        R = R.getOperand(0);
+      }
+      for (unsigned I = 0; I != NumElems; ++I) {
+        if (VectorMask[I] == Left) {
+          Mask[I] = I;
+          if (IsLeftShuffle)
+            Mask[I] = LMask[I];
+          VectorMask[I] = In;
+        } else if (VectorMask[I] == Right) {
+          Mask[I] = I + NumElems;
+          if (IsRightShuffle)
+            Mask[I] = RMask[I] + NumElems;
+          VectorMask[I] = In;
         }
       }
 
-      Shuffles[In] =
-          DAG.getVectorShuffle(VT, DL, Shuffles[Left], Shuffles[Right], Mask);
+      Shuffles[In] = DAG.getVectorShuffle(VT, DL, L, R, Mask);
     }
   }
   return Shuffles[0];

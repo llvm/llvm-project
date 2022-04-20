@@ -2554,8 +2554,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     return ExprError();
 
   // This could be an implicitly declared function reference (legal in C90,
-  // extension in C99, forbidden in C++).
-  if (R.empty() && HasTrailingLParen && II && !getLangOpts().CPlusPlus) {
+  // extension in C99, forbidden in C++ and C2x).
+  if (R.empty() && HasTrailingLParen && II && !getLangOpts().CPlusPlus &&
+      !getLangOpts().C2x) {
     NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *II, S);
     if (D) R.addDecl(D);
   }
@@ -2696,18 +2697,6 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   }
 
   return BuildDeclarationNameExpr(SS, R, ADL);
-}
-
-ExprResult Sema::ActOnMutableAgnosticIdExpression(Scope *S, CXXScopeSpec &SS,
-                                                  UnqualifiedId &Id) {
-  MutableAgnosticContextRAII Ctx(*this);
-  return ActOnIdExpression(S, SS, /*TemplateKwLoc*/
-                           SourceLocation(), Id,
-                           /*HasTrailingLParen*/ false,
-                           /*IsAddressOfOperand*/ false,
-                           /*CorrectionCandidateCallback*/ nullptr,
-                           /*IsInlineAsmIdentifier*/ false,
-                           /*KeywordReplacement*/ nullptr);
 }
 
 /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified
@@ -16943,10 +16932,12 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   }
 
   PartialDiagnostic FDiag = PDiag(DiagKind);
+  AssignmentAction ActionForDiag = Action;
   if (Action == AA_Passing_CFAudited)
-    FDiag << FirstType << SecondType << AA_Passing << SrcExpr->getSourceRange();
-  else
-    FDiag << FirstType << SecondType << Action << SrcExpr->getSourceRange();
+    ActionForDiag = AA_Passing;
+
+  FDiag << FirstType << SecondType << ActionForDiag
+        << SrcExpr->getSourceRange();
 
   if (DiagKind == diag::ext_typecheck_convert_incompatible_pointer_sign ||
       DiagKind == diag::err_typecheck_convert_incompatible_pointer_sign) {
@@ -18560,11 +18551,6 @@ static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
 static bool CheckCaptureUseBeforeLambdaQualifiers(Sema &S, VarDecl *Var,
                                                   SourceLocation ExprLoc,
                                                   LambdaScopeInfo *LSI) {
-
-  // Allow `[a = 1](decltype(a)) {}` as per CWG2569.
-  if (S.InMutableAgnosticContext)
-    return true;
-
   if (Var->isInvalidDecl())
     return false;
 
@@ -18647,7 +18633,7 @@ bool Sema::tryCaptureVariable(
       LSI = dyn_cast_or_null<LambdaScopeInfo>(
           FunctionScopes[FunctionScopesIndex]);
     if (LSI && LSI->BeforeLambdaQualifiersScope) {
-      if (isa<ParmVarDecl>(Var) && !Var->getDeclContext()->isFunctionOrMethod())
+      if (isa<ParmVarDecl>(Var))
         return true;
       IsInLambdaBeforeQualifiers = true;
       if (!CheckCaptureUseBeforeLambdaQualifiers(*this, Var, ExprLoc, LSI)) {

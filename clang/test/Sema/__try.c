@@ -50,7 +50,7 @@ void TEST(void) {
 }  // expected-error{{expected '__except' or '__finally' block}}
 
 void TEST(void) {
-  __except (FilterExpression()) { // expected-warning{{implicit declaration of function '__except' is invalid in C99}} \
+  __except (FilterExpression()) { // expected-error{{call to undeclared function '__except'; ISO C99 and later do not support implicit function declarations}} \
     // expected-error{{too few arguments to function call, expected 1, have 0}} \
     // expected-error{{expected ';' after expression}}
   }

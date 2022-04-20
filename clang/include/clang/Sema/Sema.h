@@ -787,23 +787,6 @@ public:
   /// context.
   unsigned FunctionScopesStart = 0;
 
-  /// Whether we are currently in the context of a mutable agnostic identifier
-  /// as described by CWG2569.
-  /// We are handling the unqualified-id of a decltype or noexcept expression.
-  bool InMutableAgnosticContext = false;
-
-  /// RAII object used to change the value of \c InMutableAgnosticContext
-  /// within a \c Sema object.
-  class MutableAgnosticContextRAII {
-    Sema &SemaRef;
-
-  public:
-    MutableAgnosticContextRAII(Sema &S) : SemaRef(S) {
-      SemaRef.InMutableAgnosticContext = true;
-    }
-    ~MutableAgnosticContextRAII() { SemaRef.InMutableAgnosticContext = false; }
-  };
-
   ArrayRef<sema::FunctionScopeInfo*> getFunctionScopes() const {
     return llvm::makeArrayRef(FunctionScopes.begin() + FunctionScopesStart,
                               FunctionScopes.end());
@@ -5287,9 +5270,6 @@ public:
       CorrectionCandidateCallback *CCC = nullptr,
       bool IsInlineAsmIdentifier = false, Token *KeywordReplacement = nullptr);
 
-  ExprResult ActOnMutableAgnosticIdExpression(Scope *S, CXXScopeSpec &SS,
-                                              UnqualifiedId &Id);
-
   void DecomposeUnqualifiedId(const UnqualifiedId &Id,
                               TemplateArgumentListInfo &Buffer,
                               DeclarationNameInfo &NameInfo,
@@ -6828,15 +6808,6 @@ public:
                                          unsigned LambdaDependencyKind,
                                          LambdaCaptureDefault CaptureDefault);
 
-  /// Start the definition of a lambda expression.
-  CXXMethodDecl *startLambdaDefinition(CXXRecordDecl *Class,
-                                       SourceRange IntroducerRange,
-                                       TypeSourceInfo *MethodType,
-                                       SourceLocation EndLoc,
-                                       ArrayRef<ParmVarDecl *> Params,
-                                       ConstexprSpecKind ConstexprKind,
-                                       Expr *TrailingRequiresClause);
-
   /// Number lambda for linkage purposes if necessary.
   void handleLambdaNumbering(
       CXXRecordDecl *Class, CXXMethodDecl *Method,
@@ -6849,8 +6820,15 @@ public:
                         LambdaCaptureDefault CaptureDefault,
                         SourceLocation CaptureDefaultLoc,
                         bool ExplicitParams,
-                        bool ExplicitResultType,
                         bool Mutable);
+
+  CXXMethodDecl *CreateLambdaCallOperator(SourceRange IntroducerRange,
+                                          CXXRecordDecl *Class);
+  void CompleteLambdaCallOperator(
+      CXXMethodDecl *Method, SourceLocation LambdaLoc,
+      SourceLocation CallOperatorLoc, Expr *TrailingRequiresClause,
+      TypeSourceInfo *MethodTyInfo, ConstexprSpecKind ConstexprKind,
+      ArrayRef<ParmVarDecl *> Params, bool HasExplicitResultType);
 
   /// Perform initialization analysis of the init-capture and perform
   /// any implicit conversions such as an lvalue-to-rvalue conversion if

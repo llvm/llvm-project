@@ -5270,8 +5270,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       FunctionType::ExtInfo EI(
           getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex));
 
-      if (!FTI.NumParams && !FTI.isVariadic && !LangOpts.CPlusPlus
-                                            && !LangOpts.OpenCL) {
+      // OpenCL disallows functions without a prototype, but it doesn't enforce
+      // strict prototypes as in C2x because it allows a function definition to
+      // have an identifier list. See OpenCL 3.0 6.11/g for more details.
+      if (!FTI.NumParams && !FTI.isVariadic &&
+          !LangOpts.requiresStrictPrototypes() && !LangOpts.OpenCL) {
         // Simple void foo(), where the incoming T is the result type.
         T = Context.getFunctionNoProtoType(T, EI);
       } else {
@@ -5290,8 +5293,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           S.Diag(FTI.Params[0].IdentLoc,
                  diag::err_ident_list_in_fn_declaration);
           D.setInvalidType(true);
-          // Recover by creating a K&R-style function type.
-          T = Context.getFunctionNoProtoType(T, EI);
+          // Recover by creating a K&R-style function type, if possible.
+          T = (!LangOpts.requiresStrictPrototypes() && !LangOpts.OpenCL)
+                  ? Context.getFunctionNoProtoType(T, EI)
+                  : Context.IntTy;
           break;
         }
 

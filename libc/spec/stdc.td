@@ -1,8 +1,5 @@
 def StdC : StandardSpec<"stdc"> {
 
-  NamedType FILE = NamedType<"FILE">;
-  PtrType FILEPtr = PtrType<FILE>;
-  RestrictedPtrType FILERestrictedPtr = RestrictedPtrType<FILE>;
   NamedType StructTmType = NamedType<"struct tm">;
   PtrType StructTmPtr = PtrType<StructTmType>;
   PtrType TimeTTypePtr = PtrType<TimeTType>;

@@ -29,6 +29,7 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -802,6 +803,22 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
   } else if (TT.isOSBinFormatELF()) {
     emitStackMaps(SM);
     FM.serializeToFaultMapSection();
+  }
+
+  // Emit __morestack address if needed for indirect calls.
+  if (TT.getArch() == Triple::x86_64 && TM.getCodeModel() == CodeModel::Large) {
+    if (MCSymbol *AddrSymbol = OutContext.lookupSymbol("__morestack_addr")) {
+      Align Alignment(1);
+      MCSection *ReadOnlySection = getObjFileLowering().getSectionForConstant(
+          getDataLayout(), SectionKind::getReadOnly(),
+          /*C=*/nullptr, Alignment);
+      OutStreamer->SwitchSection(ReadOnlySection);
+      OutStreamer->emitLabel(AddrSymbol);
+
+      unsigned PtrSize = MAI->getCodePointerSize();
+      OutStreamer->emitSymbolValue(GetExternalSymbolSymbol("__morestack"),
+                                   PtrSize);
+    }
   }
 }
 

@@ -63,10 +63,8 @@ void test(void) {
 #if (__OPENCL_C_VERSION__ < CL_VERSION_2_0) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 && !defined(__opencl_c_generic_address_space))
   // expected-error@-2{{implicit declaration of function 'to_local' is invalid in OpenCL}}
   // expected-warning@-3{{incompatible integer to pointer conversion assigning to '__local int *__private' from 'int'}}
-  // expected-note@-4{{did you mean 'to_global'}}
-  // expected-note@15{{'to_global' declared here}}
 #else
-  // expected-warning@-7{{passing non-generic address space pointer to to_local may cause dynamic conversion affecting performance}}
+  // expected-warning@-5{{passing non-generic address space pointer to to_local may cause dynamic conversion affecting performance}}
 #endif
 
   priv = to_global(glob);

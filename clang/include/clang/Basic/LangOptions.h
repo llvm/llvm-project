@@ -521,6 +521,12 @@ public:
   /// as a string.
   std::string getOpenCLVersionString() const;
 
+  /// Returns true if functions without prototypes or functions with an
+  /// identifier list (aka K&R C functions) are not allowed.
+  bool requiresStrictPrototypes() const {
+    return CPlusPlus || C2x || DisableKNRFunctions;
+  }
+
   /// Check if return address signing is enabled.
   bool hasSignReturnAddress() const {
     return getSignReturnAddressScope() != SignReturnAddressScopeKind::None;

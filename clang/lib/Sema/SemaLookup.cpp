@@ -930,9 +930,11 @@ bool Sema::LookupBuiltin(LookupResult &R) {
 
       // If this is a builtin on this (or all) targets, create the decl.
       if (unsigned BuiltinID = II->getBuiltinID()) {
-        // In C++ and OpenCL (spec v1.2 s6.9.f), we don't have any predefined
-        // library functions like 'malloc'. Instead, we'll just error.
-        if ((getLangOpts().CPlusPlus || getLangOpts().OpenCL) &&
+        // In C++, C2x, and OpenCL (spec v1.2 s6.9.f), we don't have any
+        // predefined library functions like 'malloc'. Instead, we'll just
+        // error.
+        if ((getLangOpts().CPlusPlus || getLangOpts().OpenCL ||
+             getLangOpts().C2x) &&
             Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
           return false;
 
