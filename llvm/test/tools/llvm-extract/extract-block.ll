@@ -1,5 +1,5 @@
-; RUN: llvm-extract -S -bb foo:bb4 %s                                      | FileCheck %s --check-prefixes=CHECK,KILL
-; RUN: llvm-extract -S -bb foo:bb4 %s --bb-keep-functions --bb-keep-blocks | FileCheck %s --check-prefixes=CHECK,KEEP
+; RUN: llvm-extract -S -bb foo:bb4                     %s | FileCheck %s --check-prefixes=CHECK,KILL
+; RUN: llvm-extract -S -bb foo:bb4 --replace-with-call %s | FileCheck %s --check-prefixes=CHECK,KEEP
 
 
 ; CHECK: declare void @bar()

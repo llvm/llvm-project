@@ -1,4 +1,4 @@
-; RUN: llvm-extract -S -bb "foo:region_start;extractonly;cleanup;fallback;region_end" %s --bb-keep-functions --bb-keep-blocks | FileCheck %s
+; RUN: llvm-extract -S -bb "foo:region_start;extractonly;cleanup;fallback;region_end" --replace-with-call %s | FileCheck %s
 
 
 ; CHECK-LABEL: define void @foo(i32* %arg, i1 %c) {

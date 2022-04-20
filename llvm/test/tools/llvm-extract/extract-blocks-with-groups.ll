@@ -1,5 +1,5 @@
-; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s                                      | FileCheck %s --check-prefixes=CHECK,KILL
-; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' -S %s --bb-keep-functions --bb-keep-blocks | FileCheck %s --check-prefixes=CHECK,KEEP
+; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20'                     -S %s | FileCheck %s --check-prefixes=CHECK,KILL
+; RUN: llvm-extract -bb 'foo:if;then;else' -bb 'bar:bb14;bb20' --replace-with-call -S %s | FileCheck %s --check-prefixes=CHECK,KEEP
 ; Extract two groups of basic blocks in two different functions.
 
 

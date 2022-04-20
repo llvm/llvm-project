@@ -1,4 +1,4 @@
-; RUN: llvm-extract -S -bb "foo:region_start" %s --bb-keep-functions --bb-keep-blocks | FileCheck %s
+; RUN: llvm-extract -S -bb "foo:region_start" --replace-with-call %s | FileCheck %s
 
 
 

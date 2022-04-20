@@ -92,22 +92,18 @@ static cl::list<std::string> ExtractBlocks(
         "  --bb=f:bb1 --bb=f:bb2 will extract two functions, one with bb1, one "
         "with bb2."),
     cl::ZeroOrMore, cl::value_desc("function:bb1[;bb2...]"),
-    cl::cat(ExtractCat));
+    cl::cat(ExtractCat))
+    ;
 
-static cl::opt<bool> KeepFunctions(
-    "bb-keep-functions",
+
+static cl::opt<bool> ReplaceWithCall(
+    "replace-with-call",
     cl::desc(
         "When extracting blocks from functions, keep the original functions; "
         "extracted code is replaced by function call to new function"),
     cl::cat(ExtractCat));
 
-static cl::opt<bool> KeepBlocks(
-    "bb-keep-blocks",
-    cl::desc("Keep extracted blocks in original function after outlining. This "
-             "permits branches to any selected basic block from outside the "
-             "selection and overlapping code regions, but only branches to the "
-             "first in the group will call the extracted function."),
-    cl::cat(ExtractCat));
+
 
 // ExtractAlias - The alias to extract from the module.
 static cl::list<std::string>
@@ -375,7 +371,8 @@ int main(int argc, char **argv) {
     }
 
     legacy::PassManager PM;
-    PM.add(createBlockExtractorPass(GroupOfBBs, !KeepFunctions, KeepBlocks));
+    PM.add(createBlockExtractorPass(GroupOfBBs,  !ReplaceWithCall, ReplaceWithCall));
+    // TODO: Remove BBs from original function that have become dead.
     PM.run(*M);
   }
 

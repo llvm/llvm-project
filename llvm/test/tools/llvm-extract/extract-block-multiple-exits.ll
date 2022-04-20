@@ -1,4 +1,4 @@
-; RUN: llvm-extract -S -bb "func:region_start;exiting0;exiting1" %s --bb-keep-functions --bb-keep-blocks | FileCheck %s
+; RUN: llvm-extract -S -bb "func:region_start;exiting0;exiting1" --replace-with-call %s | FileCheck %s
 
 
 ; CHECK-LABEL: define void @func(i32* %arg, i1 %c0, i1 %c1, i1 %c2, i8 %dest) {
