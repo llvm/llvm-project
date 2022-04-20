@@ -151,8 +151,11 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
   SmallVector<CoroFreeInst *, 4> CoroFrees;
   bool HasCoroSuspend = false;
   for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
-    if (auto *CB = dyn_cast<CallBase>(&I)) {
-      switch (CB->getIntrinsicID()) {
+    auto *CB = dyn_cast<CallBase>(&I);
+    if (!CB)
+      continue;
+
+    switch (CB->getIntrinsicID()) {
       default:
         continue;
       case Intrinsic::coro_free:
@@ -209,16 +212,18 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_done:
         lowerCoroDone(cast<IntrinsicInst>(&I));
         break;
-      }
-      Changed = true;
     }
+
+    Changed = true;
   }
+
   // Make sure that all CoroFree reference the coro.id intrinsic.
   // Token type is not exposed through coroutine C/C++ builtins to plain C, so
   // we allow specifying none and fixing it up here.
   if (CoroId)
     for (CoroFreeInst *CF : CoroFrees)
       CF->setArgOperand(0, CoroId);
+
   // Coroutine suspention could potentially lead to any argument modified
   // outside of the function, hence arguments should not have noalias
   // attributes.
@@ -226,6 +231,7 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
     for (Argument &A : F.args())
       if (A.hasNoAliasAttr())
         A.removeAttr(Attribute::NoAlias);
+
   return Changed;
 }
 
@@ -243,11 +249,8 @@ PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
     return PreservedAnalyses::all();
 
   Lowerer L(M);
-  bool Changed = false;
   for (auto &F : M)
-    Changed |= L.lowerEarlyIntrinsics(F);
-  if (Changed)
-    return PreservedAnalyses::all();
+    L.lowerEarlyIntrinsics(F);
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
