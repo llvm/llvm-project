@@ -7,7 +7,7 @@
 // RUN: | FileCheck %s
 
 
-func @main() {
+func.func @main() {
   %const = arith.constant dense<[[[1.0, 2.0, 3.0], [2.0, 3.0, 4.0]]]> : tensor<1x2x3xf32>
   %dynamic = tensor.cast %const: tensor<1x2x3xf32> to tensor<1x?x3xf32>
   %offset = arith.constant 2 : index
@@ -30,4 +30,4 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @print_memref_f32(%ptr : tensor<*xf32>)

@@ -22,7 +22,7 @@
 !row_major_B = type memref<${K}x${N}x!elem_type_b>
 !row_major_C = type memref<${M}x${N}x!elem_type_c>
 
-func @matmul(%a: !row_major_A, %b: !row_major_B, %c: !row_major_C)
+func.func @matmul(%a: !row_major_A, %b: !row_major_B, %c: !row_major_C)
 // TODO: activate manually for now.
 // attributes { passthrough = [["target-cpu", "skylake-avx512"], ["prefer-vector-width", "512"]]}
 {
@@ -31,7 +31,7 @@ func @matmul(%a: !row_major_A, %b: !row_major_B, %c: !row_major_C)
   return
 }
 
-func @print_perf(%iters: index, %total_time: f64) {
+func.func @print_perf(%iters: index, %total_time: f64) {
   %c2 = arith.constant 2 : index
   %cM = arith.constant ${M} : index
   %cN = arith.constant ${N} : index
@@ -51,7 +51,7 @@ func @print_perf(%iters: index, %total_time: f64) {
   return
 }
 
-func @main() {
+func.func @main() {
   %v0 = arith.constant 0.0 : !elem_type_a
   %v1 = arith.constant 1.0 : !elem_type_a
 
@@ -106,8 +106,8 @@ func @main() {
   return
 }
 
-func private @rtclock() -> f64
-func private @verifyMemRefF32(memref<*xf32>, memref<*xf32>) -> i64 attributes { llvm.emit_c_interface }
+func.func private @rtclock() -> f64
+func.func private @verifyMemRefF32(memref<*xf32>, memref<*xf32>) -> i64 attributes { llvm.emit_c_interface }
 
 // TODO: init with random, run and check output.
 // func private @fill_random_f32(memref<*xf32>)

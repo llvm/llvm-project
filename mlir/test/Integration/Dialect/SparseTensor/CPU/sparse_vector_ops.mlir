@@ -46,7 +46,7 @@
 
 module {
   // Scales a sparse vector into a new sparse vector.
-  func @vector_scale(%arga: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
+  func.func @vector_scale(%arga: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
     %s = arith.constant 2.0 : f64
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
@@ -62,7 +62,7 @@ module {
   }
 
   // Scales a sparse vector in place.
-  func @vector_scale_inplace(%argx: tensor<?xf64, #SparseVector>
+  func.func @vector_scale_inplace(%argx: tensor<?xf64, #SparseVector>
                              {linalg.inplaceable = true}) -> tensor<?xf64, #SparseVector> {
     %s = arith.constant 2.0 : f64
     %0 = linalg.generic #trait_scale_inpl
@@ -75,7 +75,7 @@ module {
   }
 
   // Adds two sparse vectors into a new sparse vector.
-  func @vector_add(%arga: tensor<?xf64, #SparseVector>,
+  func.func @vector_add(%arga: tensor<?xf64, #SparseVector>,
                    %argb: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
@@ -91,7 +91,7 @@ module {
   }
 
   // Multiplies two sparse vectors into a new sparse vector.
-  func @vector_mul(%arga: tensor<?xf64, #SparseVector>,
+  func.func @vector_mul(%arga: tensor<?xf64, #SparseVector>,
                    %argb: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
@@ -107,7 +107,7 @@ module {
   }
 
   // Multiplies two sparse vectors into a new "annotated" dense vector.
-  func @vector_mul_d(%arga: tensor<?xf64, #SparseVector>,
+  func.func @vector_mul_d(%arga: tensor<?xf64, #SparseVector>,
                      %argb: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #DenseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
@@ -123,7 +123,7 @@ module {
   }
 
   // Sum reduces dot product of two sparse vectors.
-  func @vector_dotprod(%arga: tensor<?xf64, #SparseVector>,
+  func.func @vector_dotprod(%arga: tensor<?xf64, #SparseVector>,
                        %argb: tensor<?xf64, #SparseVector>,
 		       %argx: tensor<f64> {linalg.inplaceable = true}) -> tensor<f64> {
     %0 = linalg.generic #trait_dot
@@ -138,7 +138,7 @@ module {
   }
 
   // Dumps a sparse vector.
-  func @dump(%arg0: tensor<?xf64, #SparseVector>) {
+  func.func @dump(%arg0: tensor<?xf64, #SparseVector>) {
     // Dump the values array to verify only sparse contents are stored.
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1.0 : f64
@@ -155,7 +155,7 @@ module {
   }
 
   // Driver method to call and verify vector kernels.
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %d1 = arith.constant 1.1 : f64
 

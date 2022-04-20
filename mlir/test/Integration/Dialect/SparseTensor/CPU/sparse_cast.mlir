@@ -45,7 +45,7 @@ module {
   // Since all casts are "zero preserving" unary operations, lattice computation
   // and conversion to sparse code is straightforward.
   //
-  func @sparse_cast_s32_to_f32(%arga: tensor<10xi32, #SV>) -> tensor<10xf32> {
+  func.func @sparse_cast_s32_to_f32(%arga: tensor<10xi32, #SV>) -> tensor<10xf32> {
     %argx = arith.constant dense<0.0> : tensor<10xf32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
@@ -56,7 +56,7 @@ module {
     } -> tensor<10xf32>
     return %0 : tensor<10xf32>
   }
-  func @sparse_cast_u32_to_f32(%arga: tensor<10xi32, #SV>) -> tensor<10xf32> {
+  func.func @sparse_cast_u32_to_f32(%arga: tensor<10xi32, #SV>) -> tensor<10xf32> {
     %argx = arith.constant dense<0.0> : tensor<10xf32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
@@ -67,7 +67,7 @@ module {
     } -> tensor<10xf32>
     return %0 : tensor<10xf32>
   }
-  func @sparse_cast_f32_to_s32(%arga: tensor<10xf32, #SV>) -> tensor<10xi32> {
+  func.func @sparse_cast_f32_to_s32(%arga: tensor<10xf32, #SV>) -> tensor<10xi32> {
     %argx = arith.constant dense<0> : tensor<10xi32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf32, #SV>)
@@ -78,7 +78,7 @@ module {
     } -> tensor<10xi32>
     return %0 : tensor<10xi32>
   }
-  func @sparse_cast_f64_to_u32(%arga: tensor<10xf64, #SV>) -> tensor<10xi32> {
+  func.func @sparse_cast_f64_to_u32(%arga: tensor<10xf64, #SV>) -> tensor<10xi32> {
     %argx = arith.constant dense<0> : tensor<10xi32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf64, #SV>)
@@ -89,7 +89,7 @@ module {
     } -> tensor<10xi32>
     return %0 : tensor<10xi32>
   }
-  func @sparse_cast_f32_to_f64(%arga: tensor<10xf32, #SV>) -> tensor<10xf64> {
+  func.func @sparse_cast_f32_to_f64(%arga: tensor<10xf32, #SV>) -> tensor<10xf64> {
     %argx = arith.constant dense<0.0> : tensor<10xf64>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf32, #SV>)
@@ -100,7 +100,7 @@ module {
     } -> tensor<10xf64>
     return %0 : tensor<10xf64>
   }
-  func @sparse_cast_f64_to_f32(%arga: tensor<10xf64, #SV>) -> tensor<10xf32> {
+  func.func @sparse_cast_f64_to_f32(%arga: tensor<10xf64, #SV>) -> tensor<10xf32> {
     %argx = arith.constant dense<0.0> : tensor<10xf32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf64, #SV>)
@@ -111,7 +111,7 @@ module {
     } -> tensor<10xf32>
     return %0 : tensor<10xf32>
   }
-  func @sparse_cast_s32_to_u64(%arga: tensor<10xi32, #SV>) -> tensor<10xi64> {
+  func.func @sparse_cast_s32_to_u64(%arga: tensor<10xi32, #SV>) -> tensor<10xi64> {
     %argx = arith.constant dense<0> : tensor<10xi64>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
@@ -122,7 +122,7 @@ module {
     } -> tensor<10xi64>
     return %0 : tensor<10xi64>
   }
-  func @sparse_cast_u32_to_s64(%arga: tensor<10xi32, #SV>) -> tensor<10xi64> {
+  func.func @sparse_cast_u32_to_s64(%arga: tensor<10xi32, #SV>) -> tensor<10xi64> {
     %argx = arith.constant dense<0> : tensor<10xi64>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
@@ -133,7 +133,7 @@ module {
     } -> tensor<10xi64>
     return %0 : tensor<10xi64>
   }
-  func @sparse_cast_i32_to_i8(%arga: tensor<10xi32, #SV>) -> tensor<10xi8> {
+  func.func @sparse_cast_i32_to_i8(%arga: tensor<10xi32, #SV>) -> tensor<10xi8> {
     %argx = arith.constant dense<0> : tensor<10xi8>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xi32, #SV>)
@@ -144,7 +144,7 @@ module {
     } -> tensor<10xi8>
     return %0 : tensor<10xi8>
   }
-  func @sparse_cast_f32_as_s32(%arga: tensor<10xf32, #SV>) -> tensor<10xi32> {
+  func.func @sparse_cast_f32_as_s32(%arga: tensor<10xf32, #SV>) -> tensor<10xi32> {
     %argx = arith.constant dense<0> : tensor<10xi32>
     %0 = linalg.generic #trait_cast
       ins(%arga: tensor<10xf32, #SV>)
@@ -160,7 +160,7 @@ module {
   // Main driver that converts a dense tensor into a sparse tensor
   // and then calls the sparse casting kernel.
   //
-  func @entry() {
+  func.func @entry() {
     %z = arith.constant 0 : index
     %b = arith.constant 0 : i8
     %i = arith.constant 0 : i32

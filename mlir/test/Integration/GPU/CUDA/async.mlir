@@ -11,7 +11,7 @@
 // RUN:   --entry-point-result=void -O0 \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %c0    = arith.constant 0 : index
   %c1    = arith.constant 1 : index
   %count = arith.constant 2 : index
@@ -70,4 +70,4 @@ func @main() {
   return
 }
 
-func private @print_memref_i32(memref<*xi32>)
+func.func private @print_memref_i32(memref<*xi32>)

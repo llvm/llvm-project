@@ -3,7 +3,7 @@
 // RUN: %lli --entry-function=entry --mattr="avx" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @entry() -> i32 {
+func.func @entry() -> i32 {
   %i0 = arith.constant 0 : i32
 
   %v = arith.constant dense<[0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]> : vector<8xf32>

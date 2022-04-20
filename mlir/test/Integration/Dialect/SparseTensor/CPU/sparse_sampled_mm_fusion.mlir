@@ -49,7 +49,7 @@ module {
   // A kernel that computes a direct sampled matrix matrix multiplication
   // (with dense result).
   //
-  func @sampled_dd(%args: tensor<8x8xf64, #SM>,
+  func.func @sampled_dd(%args: tensor<8x8xf64, #SM>,
                    %arga: tensor<8x8xf64>,
                    %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
     %1 = arith.constant dense<0.0> : tensor<8x8xf64>
@@ -70,7 +70,7 @@ module {
   // A kernel that computes an unfused sampled matrix matrix multiplication
   // (with dense result).
   //
-  func @sampled_dd_unfused(%args: tensor<8x8xf64, #SM>,
+  func.func @sampled_dd_unfused(%args: tensor<8x8xf64, #SM>,
                            %arga: tensor<8x8xf64>,
                            %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
     // Perform dense-dense matrix matrix multiplication.
@@ -98,7 +98,7 @@ module {
   // A kernel that computes a direct sampled matrix matrix multiplication
   // (with sparse result).
   //
-  func @sparse_sampled_dd(%args: tensor<8x8xf64, #SM>,
+  func.func @sparse_sampled_dd(%args: tensor<8x8xf64, #SM>,
                           %arga: tensor<8x8xf64>,
                           %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
     %c8 = arith.constant 8 : index
@@ -120,7 +120,7 @@ module {
   // A kernel that computes an unfused sampled matrix matrix multiplication
   // (with sparse result).
   //
-  func @sparse_sampled_dd_unfused(
+  func.func @sparse_sampled_dd_unfused(
         %args: tensor<8x8xf64, #SM>,
         %arga: tensor<8x8xf64>,
         %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
@@ -150,7 +150,7 @@ module {
   //
   // Main driver.
   //
-  func @entry() {
+  func.func @entry() {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
 

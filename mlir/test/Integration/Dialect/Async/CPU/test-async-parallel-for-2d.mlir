@@ -47,7 +47,7 @@
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_async_runtime%shlibext\
 // RUN: | FileCheck %s --dump-input=always
 
-func @entry() {
+func.func @entry() {
   %c0 = arith.constant 0.0 : f32
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -141,4 +141,4 @@ func @entry() {
   return
 }
 
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }

@@ -9,7 +9,7 @@ dense<[[0.0, 1.0, 2.0],
        [9.0, 10.0, 11.0],
        [12.0, 13.0, 14.0]]>
 
-func @main() {
+func.func @main() {
   %0 = memref.get_global @__constant_5x3xf32 : memref<5x3xf32>
 
   /// Subview with only leading operands.
@@ -60,4 +60,4 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(%ptr : memref<*xf32>)
+func.func private @print_memref_f32(%ptr : memref<*xf32>)

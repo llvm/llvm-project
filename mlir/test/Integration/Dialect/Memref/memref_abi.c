@@ -19,7 +19,7 @@
 /* MLIR_BEGIN
 //--- input.mlir
 // Performs: arg0[i, j] = arg0[i, j] + arg1[i, j]
-func private @add_memref(%arg0: memref<?x?xf64>, %arg1: memref<?x?xf64>) -> i64
+func.func private @add_memref(%arg0: memref<?x?xf64>, %arg1: memref<?x?xf64>) -> i64
    attributes {llvm.emit_c_interface} {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

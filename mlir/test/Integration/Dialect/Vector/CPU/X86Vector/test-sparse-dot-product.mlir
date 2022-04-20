@@ -32,7 +32,7 @@
 }
 
 // Sparse vector dot product of two vectors.
-func @vector_dot(%v_A : vector<8xi64>, %v_B : vector<8xf64>,
+func.func @vector_dot(%v_A : vector<8xi64>, %v_B : vector<8xf64>,
                  %v_C : vector<8xi64>, %v_D : vector<8xf64>) -> f64 {
   // Compute intersection of indices.
   %k0, %k1 = x86vector.avx512.vp2intersect %v_A, %v_C : vector<8xi64>
@@ -51,7 +51,7 @@ func @vector_dot(%v_A : vector<8xi64>, %v_B : vector<8xf64>,
 
 // Fill input memrefs will all zeros, so that they can be used with arbitrary
 // input sizes up to 128 elements per sparse vector.
-func @init_input(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
+func.func @init_input(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
                  %m_C : memref<?xi64>, %m_D : memref<?xf64>) {
   %c0 = arith.constant 0 : index
   %v_data = arith.constant dense<0.0> : vector<128xf64>
@@ -65,7 +65,7 @@ func @init_input(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
   return
 }
 
-func @fill_input_1(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
+func.func @fill_input_1(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
                    %m_C : memref<?xi64>, %m_D : memref<?xf64>)
     -> (index, index){
   call @init_input(%m_A, %m_B, %m_C, %m_D)
@@ -95,7 +95,7 @@ func @fill_input_1(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
   return %M, %N : index, index
 }
 
-func @fill_input_2(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
+func.func @fill_input_2(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
                    %m_C : memref<?xi64>, %m_D : memref<?xf64>)
     -> (index, index){
   call @init_input(%m_A, %m_B, %m_C, %m_D)
@@ -131,7 +131,7 @@ func @fill_input_2(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
 
 // Simple vector dot product implementation: Intersect every segment of size 8
 // in (%m_A, %m_B) with every segment of size 8 in (%m_C, %m_D).
-func @memref_dot_simple(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
+func.func @memref_dot_simple(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
                         %m_C : memref<?xi64>, %m_D : memref<?xf64>,
                         %M : index, %N : index)
     -> f64 {
@@ -174,7 +174,7 @@ func @memref_dot_simple(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
 // that indices in %m_A and %m_C are sorted ascendingly, skip over segments
 // in (%m_C, %m_D) that are know to have no intersection with the current
 // segment from (%m_A, %m_B).
-func @memref_dot_optimized(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
+func.func @memref_dot_optimized(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
                            %m_C : memref<?xi64>, %m_D : memref<?xf64>,
                            %M : index, %N : index)
     -> f64 {
@@ -245,7 +245,7 @@ func @memref_dot_optimized(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
 //     else                     a += 8, b += 8
 //   }
 // }
-func @memref_dot_while(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
+func.func @memref_dot_while(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
                        %m_C : memref<?xi64>, %m_D : memref<?xf64>,
                        %M : index, %N : index)
     -> f64 {
@@ -334,7 +334,7 @@ func @memref_dot_while(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
 //   a += (segA[7] <= segB[7]) * 8
 //   b += (segB[7] <= segA[7]) * 8
 // }
-func @memref_dot_while_branchless(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
+func.func @memref_dot_while_branchless(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
                                   %m_C : memref<?xi64>, %m_D : memref<?xf64>,
                                   %M : index, %N : index)
     -> f64 {
@@ -391,7 +391,7 @@ func @memref_dot_while_branchless(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
   return %r0 : f64
 }
 
-func @entry() -> i32 {
+func.func @entry() -> i32 {
   // Initialize large buffers that can be used for multiple test cases of
   // different sizes.
   %b_A = memref.alloc() : memref<128xi64>

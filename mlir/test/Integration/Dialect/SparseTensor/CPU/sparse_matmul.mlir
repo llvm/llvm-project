@@ -17,7 +17,7 @@ module {
   //
   // Computes C = A x B with all matrices dense.
   //
-  func @matmul1(%A: tensor<4x8xf64>,
+  func.func @matmul1(%A: tensor<4x8xf64>,
                 %B: tensor<8x4xf64>) -> tensor<4x4xf64> {
     %C = arith.constant dense<0.0> : tensor<4x4xf64>
     %D = linalg.matmul
@@ -29,7 +29,7 @@ module {
   //
   // Computes C = A x B with all matrices sparse (SpMSpM) in CSR.
   //
-  func @matmul2(%A: tensor<4x8xf64, #CSR>,
+  func.func @matmul2(%A: tensor<4x8xf64, #CSR>,
                 %B: tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR> {
     %c4 = arith.constant 4 : index
     %C = sparse_tensor.init [%c4, %c4] : tensor<4x4xf64, #CSR>
@@ -42,7 +42,7 @@ module {
   //
   // Computes C = A x B with all matrices sparse (SpMSpM) in DCSR.
   //
-  func @matmul3(%A: tensor<4x8xf64, #DCSR>,
+  func.func @matmul3(%A: tensor<4x8xf64, #DCSR>,
                 %B: tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
     %c4 = arith.constant 4 : index
     %C = sparse_tensor.init [%c4, %c4] : tensor<4x4xf64, #DCSR>
@@ -55,7 +55,7 @@ module {
   //
   // Main driver.
   //
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %d1 = arith.constant -1.0 : f64
 

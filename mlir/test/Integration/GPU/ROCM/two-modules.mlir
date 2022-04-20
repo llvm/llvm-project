@@ -9,7 +9,7 @@
 // RUN: | FileCheck %s
 
 // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-func @main() {
+func.func @main() {
   %arg = memref.alloc() : memref<13xi32>
   %dst = memref.cast %arg : memref<13xi32> to memref<?xi32>
   %c0 = arith.constant 0 : index
@@ -34,5 +34,5 @@ func @main() {
   return
 }
 
-func private @mgpuMemGetDeviceMemRef1dInt32(%ptr : memref<?xi32>) -> (memref<?xi32>)
-func private @print_memref_i32(%ptr : memref<*xi32>)
+func.func private @mgpuMemGetDeviceMemRef1dInt32(%ptr : memref<?xi32>) -> (memref<?xi32>)
+func.func private @print_memref_i32(%ptr : memref<*xi32>)

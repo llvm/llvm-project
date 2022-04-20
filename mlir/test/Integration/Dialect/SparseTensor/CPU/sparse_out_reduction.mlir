@@ -23,7 +23,7 @@
 }
 
 module {
-  func @redsum(%arga: tensor<?x?x?xi32, #SparseTensor>,
+  func.func @redsum(%arga: tensor<?x?x?xi32, #SparseTensor>,
                %argb: tensor<?x?x?xi32, #SparseTensor>)
 	           -> tensor<?x?xi32, #SparseMatrix> {
     %c0 = arith.constant 0 : index
@@ -44,7 +44,7 @@ module {
   }
 
   // Driver method to call and verify tensor kernel.
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %i0 = arith.constant -1 : i32
 

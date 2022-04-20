@@ -9,22 +9,22 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @print_memref_f32(memref<*xf32>)
 
 // Creates and returns a 1-D buffer of size %s1 filled with the value %f
-func @alloc_1d_filled_f32(%s1 : index, %f : f32) -> memref<?xf32> {
+func.func @alloc_1d_filled_f32(%s1 : index, %f : f32) -> memref<?xf32> {
   %buf = memref.alloc(%s1) : memref<?xf32>
   linalg.fill ins(%f : f32) outs(%buf : memref<?xf32>)
   return %buf : memref<?xf32>
 }
 
-func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) {
+func.func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) {
   linalg.conv_1d ins (%arg0, %arg1: memref<?xf32>, memref<?xf32>)
                 outs (%arg2: memref<?xf32>)
   return
 }
 
-func @main() {
+func.func @main() {
   %c3 = arith.constant 3 : index
   %c6 = arith.constant 6 : index
   %c8 = arith.constant 8 : index

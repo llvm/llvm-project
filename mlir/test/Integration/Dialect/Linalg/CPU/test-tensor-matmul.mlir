@@ -15,7 +15,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext,%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %A = arith.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
   %B = arith.constant dense<[[1.0, 2.0, 3.0, 4.0],
                        [5.0, 6.0, 7.0, 8.0],
@@ -36,4 +36,4 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @print_memref_f32(%ptr : tensor<*xf32>)

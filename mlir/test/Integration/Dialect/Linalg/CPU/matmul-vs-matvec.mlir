@@ -3,9 +3,9 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @print_memref_f32(memref<*xf32>)
 
-func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
+func.func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %f0 = arith.constant 0.0 : f32
@@ -18,7 +18,7 @@ func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
   return %C : memref<?x?xf32>
 }
 
-func @matvec(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
+func.func @matvec(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %f0 = arith.constant 0.0 : f32
@@ -36,7 +36,7 @@ func @matvec(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
   return %C : memref<?x?xf32>
 }
 
-func @main() {
+func.func @main() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %m = arith.constant 5 : index

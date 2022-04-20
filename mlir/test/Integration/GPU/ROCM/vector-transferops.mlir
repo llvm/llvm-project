@@ -9,7 +9,7 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
-func @vectransferx2(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>) {
+func.func @vectransferx2(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>) {
   %cst = arith.constant 1 : index
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst, %grid_z = %cst)
              threads(%tx, %ty, %tz) in (%block_x = %cst, %block_y = %cst, %block_z = %cst) {
@@ -31,7 +31,7 @@ func @vectransferx2(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>) {
   return
 }
 
-func @vectransferx4(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>) {
+func.func @vectransferx4(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>) {
   %cst = arith.constant 1 : index
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst, %grid_z = %cst)
              threads(%tx, %ty, %tz) in (%block_x = %cst, %block_y = %cst, %block_z = %cst) {
@@ -52,7 +52,7 @@ func @vectransferx4(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>) {
   return
 }
 
-func @main() {
+func.func @main() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -89,5 +89,5 @@ func @main() {
   return
 }
 
-func private @mgpuMemGetDeviceMemRef1dFloat(%ptr : memref<?xf32>) -> (memref<?xf32>)
-func private @print_memref_f32(%ptr : memref<*xf32>)
+func.func private @mgpuMemGetDeviceMemRef1dFloat(%ptr : memref<?xf32>) -> (memref<?xf32>)
+func.func private @print_memref_f32(%ptr : memref<*xf32>)

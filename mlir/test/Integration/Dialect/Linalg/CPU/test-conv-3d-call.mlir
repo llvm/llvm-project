@@ -9,22 +9,22 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @print_memref_f32(memref<*xf32>)
 
 // Creates and returns 3-D buffer of size (%s1, %s2, %s3) filled with the value %f
-func @alloc_3d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %f : f32) -> memref<?x?x?xf32> {
+func.func @alloc_3d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %f : f32) -> memref<?x?x?xf32> {
   %buf = memref.alloc(%s1, %s2, %s3) : memref<?x?x?xf32>
   linalg.fill ins(%f : f32) outs(%buf : memref<?x?x?xf32>)
   return %buf : memref<?x?x?xf32>
 }
 
-func @conv_3d(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?x?xf32>) {
+func.func @conv_3d(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?x?xf32>) {
   linalg.conv_3d ins (%arg0, %arg1: memref<?x?x?xf32>, memref<?x?x?xf32>)
                 outs (%arg2: memref<?x?x?xf32>)
   return
 }
 
-func @main() {
+func.func @main() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index

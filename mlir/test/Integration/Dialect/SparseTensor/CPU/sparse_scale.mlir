@@ -31,7 +31,7 @@ module {
   //
   // A kernel that scales a sparse matrix A by a factor of 2.0.
   //
-  func @sparse_scale(%argx: tensor<8x8xf32, #CSR>
+  func.func @sparse_scale(%argx: tensor<8x8xf32, #CSR>
                      {linalg.inplaceable = true}) -> tensor<8x8xf32, #CSR> {
     %c = arith.constant 2.0 : f32
     %0 = linalg.generic #trait_scale
@@ -48,7 +48,7 @@ module {
   // and then calls the sparse scaling kernel with the sparse tensor
   // as input argument.
   //
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %f0 = arith.constant 0.0 : f32
 

@@ -13,7 +13,7 @@
 
 !vector_type_R = type vector<7xi64>
 
-func @vector_outerproduct_splat_8x8(%ia: i64, %ib: i64, %ic: i64) -> !vector_type_C {
+func.func @vector_outerproduct_splat_8x8(%ia: i64, %ib: i64, %ic: i64) -> !vector_type_C {
   %a = vector.splat %ia: !vector_type_A
   %b = vector.splat %ib: !vector_type_B
   %c = vector.splat %ic: !vector_type_C
@@ -21,20 +21,20 @@ func @vector_outerproduct_splat_8x8(%ia: i64, %ib: i64, %ic: i64) -> !vector_typ
   return %d: !vector_type_C
 }
 
-func @vector_outerproduct_vec_2x3(%x : !vector_type_X,
+func.func @vector_outerproduct_vec_2x3(%x : !vector_type_X,
                                   %y : !vector_type_Y) -> !vector_type_Z {
   %o = vector.outerproduct %x, %y : !vector_type_X, !vector_type_Y
   return %o: !vector_type_Z
 }
 
-func @vector_outerproduct_vec_2x3_acc(%x : !vector_type_X,
+func.func @vector_outerproduct_vec_2x3_acc(%x : !vector_type_X,
                                       %y : !vector_type_Y,
                                       %z : !vector_type_Z) -> !vector_type_Z {
   %o = vector.outerproduct %x, %y, %z : !vector_type_X, !vector_type_Y
   return %o: !vector_type_Z
 }
 
-func @entry() {
+func.func @entry() {
   %i0 = arith.constant 0: i64
   %i1 = arith.constant 1: i64
   %i2 = arith.constant 2: i64

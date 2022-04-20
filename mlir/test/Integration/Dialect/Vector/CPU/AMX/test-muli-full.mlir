@@ -9,7 +9,7 @@
 // Note: To run this test, your CPU must support AMX.
 
 // Multiply full size tiles into zero destination.
-func @kernel(%arg0: memref<16x64xi8>,
+func.func @kernel(%arg0: memref<16x64xi8>,
              %arg1: memref<16x64xi8>,
              %arg2: memref<16x16xi32>) {
   %0 = arith.constant 0 : index
@@ -21,7 +21,7 @@ func @kernel(%arg0: memref<16x64xi8>,
   return
 }
 
-func @entry() -> i32 {
+func.func @entry() -> i32 {
   %iu = arith.constant -1: i32
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index

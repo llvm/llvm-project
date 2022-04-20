@@ -51,12 +51,12 @@
 // RUN: | FileCheck %s --dump-input=always
 
 // Suppress constant folding by introducing "dynamic" zero value at runtime.
-func private @zero() -> index {
+func.func private @zero() -> index {
   %0 = arith.constant 0 : index
   return %0 : index
 }
 
-func @entry() {
+func.func @entry() {
   %c0 = arith.constant 0.0 : f32
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -132,4 +132,4 @@ func @entry() {
   return
 }
 
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }

@@ -41,7 +41,7 @@ module {
   // a sparse tensor as output, but although the values of the
   // sparse tensor change, its nonzero structure remains the same.
   //
-  func @kernel_eltwise_mult(%argx: tensor<?x?xf64, #DCSR> {linalg.inplaceable = true})
+  func.func @kernel_eltwise_mult(%argx: tensor<?x?xf64, #DCSR> {linalg.inplaceable = true})
     -> tensor<?x?xf64, #DCSR> {
     %0 = linalg.generic #eltwise_mult
       outs(%argx: tensor<?x?xf64, #DCSR>) {
@@ -52,12 +52,12 @@ module {
     return %0 : tensor<?x?xf64, #DCSR>
   }
 
-  func private @getTensorFilename(index) -> (!Filename)
+  func.func private @getTensorFilename(index) -> (!Filename)
 
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
-  func @entry() {
+  func.func @entry() {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
 

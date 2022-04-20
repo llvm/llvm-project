@@ -36,7 +36,7 @@
 
 module {
   // Scales a sparse matrix into a new sparse matrix.
-  func @matrix_scale(%arga: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
+  func.func @matrix_scale(%arga: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
     %s = arith.constant 2.0 : f64
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -54,7 +54,7 @@ module {
   }
 
   // Scales a sparse matrix in place.
-  func @matrix_scale_inplace(%argx: tensor<?x?xf64, #DCSR>
+  func.func @matrix_scale_inplace(%argx: tensor<?x?xf64, #DCSR>
                              {linalg.inplaceable = true}) -> tensor<?x?xf64, #DCSR> {
     %s = arith.constant 2.0 : f64
     %0 = linalg.generic #trait_scale_inpl
@@ -67,7 +67,7 @@ module {
   }
 
   // Adds two sparse matrices element-wise into a new sparse matrix.
-  func @matrix_add(%arga: tensor<?x?xf64, #DCSR>,
+  func.func @matrix_add(%arga: tensor<?x?xf64, #DCSR>,
                    %argb: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -85,7 +85,7 @@ module {
   }
 
   // Multiplies two sparse matrices element-wise into a new sparse matrix.
-  func @matrix_mul(%arga: tensor<?x?xf64, #DCSR>,
+  func.func @matrix_mul(%arga: tensor<?x?xf64, #DCSR>,
                    %argb: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -103,7 +103,7 @@ module {
   }
 
   // Dump a sparse matrix.
-  func @dump(%arg0: tensor<?x?xf64, #DCSR>) {
+  func.func @dump(%arg0: tensor<?x?xf64, #DCSR>) {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
     %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #DCSR> to tensor<?x?xf64>
@@ -115,7 +115,7 @@ module {
   }
 
   // Driver method to call and verify matrix kernels.
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %d1 = arith.constant 1.1 : f64
 
