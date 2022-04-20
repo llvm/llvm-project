@@ -13,14 +13,26 @@ tablegen(LLVM SPIRVGenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(SPIRVCommonTableGen)
 
 add_llvm_target(SPIRVCodeGen
+  SPIRVAsmPrinter.cpp
+  SPIRVCallLowering.cpp
+  SPIRVInstrInfo.cpp
+  SPIRVISelLowering.cpp
+  SPIRVMCInstLower.cpp
+  SPIRVRegisterBankInfo.cpp
+  SPIRVRegisterInfo.cpp
+  SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
 
   LINK_COMPONENTS
+  Analysis
+  AsmPrinter
   CodeGen
   Core
+  GlobalISel
   MC
   SPIRVDesc
   SPIRVInfo
+  SelectionDAG
   Support
   Target
 
