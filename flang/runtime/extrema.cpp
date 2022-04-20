@@ -132,7 +132,7 @@ template <TypeCategory CAT, bool IS_MAX> struct TypedMaxOrMinLocHelper {
     void operator()(const char *intrinsic, Descriptor &result,
         const Descriptor &x, int kind, const char *source, int line,
         const Descriptor *mask, bool back) const {
-      DoMaxOrMinLoc<TypeCategory::Integer, KIND, IS_MAX, NumericCompare>(
+      DoMaxOrMinLoc<CAT, KIND, IS_MAX, NumericCompare>(
           intrinsic, result, x, kind, source, line, mask, back);
     }
   };
