@@ -1251,6 +1251,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
   CVSymbolArray scope =
       cii->m_debug_stream.getSymbolArrayForScope(func_id.offset);
 
+  scope.drop_front();
   auto begin = scope.begin();
   auto end = scope.end();
   std::vector<clang::ParmVarDecl *> params;
@@ -1285,9 +1286,11 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
       break;
     }
     case S_BLOCK32:
-      // All parameters should come before the first block.  If that isn't the
-      // case, then perhaps this is bad debug info that doesn't contain
-      // information about all parameters.
+    case S_INLINESITE:
+    case S_INLINESITE2:
+      // All parameters should come before the first block/inlinesite.  If that
+      // isn't the case, then perhaps this is bad debug info that doesn't
+      // contain information about all parameters.
       return;
     default:
       continue;

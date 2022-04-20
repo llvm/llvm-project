@@ -53,9 +53,10 @@ inline bool pureCall(mlir::Operation *op) {
 ///
 /// If `module` already contains FuncOp `name`, it is returned. Otherwise, a new
 /// FuncOp is created, and that new FuncOp is returned.
-mlir::FuncOp createFuncOp(mlir::Location loc, mlir::ModuleOp module,
-                          llvm::StringRef name, mlir::FunctionType type,
-                          llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+mlir::func::FuncOp
+createFuncOp(mlir::Location loc, mlir::ModuleOp module, llvm::StringRef name,
+             mlir::FunctionType type,
+             llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 
 /// Get or create a GlobalOp in a module.
 fir::GlobalOp createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
@@ -87,7 +88,7 @@ static constexpr llvm::StringRef getHostAssocAttrName() {
 
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
-bool hasHostAssociationArgument(mlir::FuncOp func);
+bool hasHostAssociationArgument(mlir::func::FuncOp func);
 
 /// Tell if \p value is:
 ///   - a function argument that has attribute \p attributeName
@@ -102,7 +103,7 @@ bool valueHasFirAttribute(mlir::Value value, llvm::StringRef attributeName);
 /// Scan the arguments of a FuncOp to determine if any arguments have the
 /// attribute `attr` placed on them. This can be used to determine if the
 /// function has any host associations, for example.
-bool anyFuncArgsHaveAttr(mlir::FuncOp func, llvm::StringRef attr);
+bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
 
 } // namespace fir
 

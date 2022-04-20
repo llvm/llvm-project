@@ -1294,6 +1294,9 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
     getVPValue(0)->printAsOperand(O, SlotTracker);
   } else
     O << " " << VPlanIngredient(IV);
+
+  O << ", ";
+  getStepValue()->printAsOperand(O, SlotTracker);
 }
 
 void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -1748,4 +1751,17 @@ bool vputils::onlyFirstLaneUsed(VPValue *Def) {
   return all_of(Def->users(), [Def](VPUser *U) {
     return cast<VPRecipeBase>(U)->onlyFirstLaneUsed(Def);
   });
+}
+
+VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
+                                                ScalarEvolution &SE) {
+  if (auto *E = dyn_cast<SCEVConstant>(Expr))
+    return Plan.getOrAddExternalDef(E->getValue());
+  if (auto *E = dyn_cast<SCEVUnknown>(Expr))
+    return Plan.getOrAddExternalDef(E->getValue());
+
+  VPBasicBlock *Preheader = Plan.getEntry()->getEntryBasicBlock();
+  VPValue *Step = new VPExpandSCEVRecipe(Expr, SE);
+  Preheader->appendRecipe(cast<VPRecipeBase>(Step->getDef()));
+  return Step;
 }

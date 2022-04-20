@@ -2282,7 +2282,7 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
   let hasCustomAssemblyFormat = 1;
 
   let builders = [
-    OpBuilder<(ins "mlir::FuncOp":$callee,
+    OpBuilder<(ins "mlir::func::FuncOp":$callee,
         CArg<"mlir::ValueRange", "{}">:$operands)>,
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
         "llvm::ArrayRef<mlir::Type>":$results,

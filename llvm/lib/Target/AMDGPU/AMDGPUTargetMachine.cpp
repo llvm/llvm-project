@@ -1476,6 +1476,14 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     return false;
   };
 
+  auto parseOptionalRegister = [&](const yaml::StringValue &RegName,
+                                   Register &RegVal) {
+    return !RegName.Value.empty() && parseRegister(RegName, RegVal);
+  };
+
+  if (parseOptionalRegister(YamlMFI.VGPRForAGPRCopy, MFI->VGPRForAGPRCopy))
+    return true;
+
   auto diagnoseRegisterClass = [&](const yaml::StringValue &RegName) {
     // Create a diagnostic for a the register string literal.
     const MemoryBuffer &Buffer =
@@ -1506,6 +1514,14 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   if (MFI->StackPtrOffsetReg != AMDGPU::SP_REG &&
       !AMDGPU::SGPR_32RegClass.contains(MFI->StackPtrOffsetReg)) {
     return diagnoseRegisterClass(YamlMFI.StackPtrOffsetReg);
+  }
+
+  for (const auto &YamlReg : YamlMFI.WWMReservedRegs) {
+    Register ParsedReg;
+    if (parseRegister(YamlReg, ParsedReg))
+      return true;
+
+    MFI->reserveWWMRegister(ParsedReg);
   }
 
   auto parseAndCheckArgument = [&](const Optional<yaml::SIArgument> &A,

@@ -48,8 +48,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     ImplicitBufferPtr(false),
     ImplicitArgPtr(false),
     GITPtrHigh(0xffffffff),
-    HighBitsOf32BitAddress(0),
-    GDSSize(0) {
+    HighBitsOf32BitAddress(0) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const Function &F = MF.getFunction();
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
@@ -183,10 +182,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   S = A.getValueAsString();
   if (!S.empty())
     S.consumeInteger(0, HighBitsOf32BitAddress);
-
-  S = F.getFnAttribute("amdgpu-gds-size").getValueAsString();
-  if (!S.empty())
-    S.consumeInteger(0, GDSSize);
 
   // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
   // VGPR available at all times.
@@ -453,6 +448,20 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   return HaveSGPRToMemory;
 }
 
+void SIMachineFunctionInfo::allocateWWMReservedSpillSlots(
+    MachineFrameInfo &MFI, const SIRegisterInfo &TRI) {
+  assert(WWMReservedFrameIndexes.empty());
+
+  WWMReservedFrameIndexes.resize(WWMReservedRegs.size());
+
+  int I = 0;
+  for (Register VGPR : WWMReservedRegs) {
+    const TargetRegisterClass *RC = TRI.getPhysRegClass(VGPR);
+    WWMReservedFrameIndexes[I++] = MFI.CreateSpillStackObject(
+        TRI.getSpillSize(*RC), TRI.getSpillAlign(*RC));
+  }
+}
+
 int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
                                          const SIRegisterInfo &TRI) {
   if (ScavengeFI)
@@ -564,6 +573,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     const llvm::MachineFunction &MF)
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
+      GDSSize(MFI.getGDSSize()),
       DynLDSAlign(MFI.getDynLDSAlign()), IsEntryFunction(MFI.isEntryFunction()),
       NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
@@ -574,7 +584,14 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
       FrameOffsetReg(regToString(MFI.getFrameOffsetReg(), TRI)),
       StackPtrOffsetReg(regToString(MFI.getStackPtrOffsetReg(), TRI)),
+      BytesInStackArgArea(MFI.getBytesInStackArgArea()),
+      ReturnsVoid(MFI.returnsVoid()),
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)), Mode(MFI.getMode()) {
+  for (Register Reg : MFI.WWMReservedRegs)
+    WWMReservedRegs.push_back(regToString(Reg, TRI));
+
+  if (MFI.getVGPRForAGPRCopy())
+    VGPRForAGPRCopy = regToString(MFI.getVGPRForAGPRCopy(), TRI);
   auto SFI = MFI.getOptionalScavengeFI();
   if (SFI)
     ScavengeFI = yaml::FrameIndex(*SFI, MF.getFrameInfo());
@@ -590,6 +607,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   ExplicitKernArgSize = YamlMFI.ExplicitKernArgSize;
   MaxKernArgAlign = assumeAligned(YamlMFI.MaxKernArgAlign);
   LDSSize = YamlMFI.LDSSize;
+  GDSSize = YamlMFI.GDSSize;
   DynLDSAlign = YamlMFI.DynLDSAlign;
   HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   Occupancy = YamlMFI.Occupancy;
@@ -599,6 +617,8 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
+  BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
+  ReturnsVoid = YamlMFI.ReturnsVoid;
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());

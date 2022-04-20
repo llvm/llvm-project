@@ -47,7 +47,8 @@ static struct LLVMInitializer {
 static LogicalResult lowerToLLVMDialect(ModuleOp module) {
   PassManager pm(module.getContext());
   pm.addPass(mlir::createMemRefToLLVMPass());
-  pm.addNestedPass<FuncOp>(mlir::arith::createConvertArithmeticToLLVMPass());
+  pm.addNestedPass<func::FuncOp>(
+      mlir::arith::createConvertArithmeticToLLVMPass());
   pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   return pm.run(module);

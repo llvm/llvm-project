@@ -153,6 +153,7 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
       {"cl", "--driver-mode=cl"},
       {"++", "--driver-mode=g++"},
       {"flang", "--driver-mode=flang"},
+      {"clang-dxc", "--driver-mode=dxc"},
   };
 
   for (size_t i = 0; i < llvm::array_lengthof(DriverSuffixes); ++i) {

@@ -2,7 +2,7 @@
 
 // RUN: %clangxx_msan -std=c++11 -O2 %s -o %t && %run %t
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -std=c++11 -O2 %s -o %t && %run %t
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -fsanitize-memory-use-after-dtor -std=c++11 -O2 %s -o %t && MSAN_OPTIONS=poison_in_dtor=1 %run %t
+// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -fsanitize-memory-use-after-dtor -std=c++11 -O2 %s -o %t && %run %t
 
 #include <assert.h>
 #include <atomic>

@@ -128,9 +128,13 @@ define i32 @catch_thing() personality i8* bitcast (i32 (...)* @__gxx_personality
 }
 
 define i32 @catch_thing_user() {
-; CHECK-LABEL: define {{[^@]+}}@catch_thing_user() {
-; CHECK-NEXT:    [[CATCH_THING_CALL:%.*]] = call i32 @catch_thing()
-; CHECK-NEXT:    ret i32 -1
+; IS__TUNIT____-LABEL: define {{[^@]+}}@catch_thing_user() {
+; IS__TUNIT____-NEXT:    [[CATCH_THING_CALL:%.*]] = call i32 @catch_thing()
+; IS__TUNIT____-NEXT:    ret i32 -1
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@catch_thing_user() {
+; IS__CGSCC____-NEXT:    [[CATCH_THING_CALL:%.*]] = call noundef i32 @catch_thing()
+; IS__CGSCC____-NEXT:    ret i32 [[CATCH_THING_CALL]]
 ;
   %catch_thing_call = call i32 @catch_thing()
   ret i32 %catch_thing_call

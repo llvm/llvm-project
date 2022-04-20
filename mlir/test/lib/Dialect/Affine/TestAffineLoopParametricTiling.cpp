@@ -23,7 +23,7 @@ using namespace mlir;
 namespace {
 struct TestAffineLoopParametricTiling
     : public PassWrapper<TestAffineLoopParametricTiling,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAffineLoopParametricTiling)
 
   StringRef getArgument() const final { return "test-affine-parametric-tile"; }
@@ -41,7 +41,7 @@ static void checkIfTilingParametersExist(ArrayRef<AffineForOp> band) {
   assert(!band.empty() && "no loops in input band");
   AffineForOp topLoop = band[0];
 
-  if (FuncOp funcOp = dyn_cast<FuncOp>(topLoop->getParentOp()))
+  if (func::FuncOp funcOp = dyn_cast<func::FuncOp>(topLoop->getParentOp()))
     assert(funcOp.getNumArguments() >= band.size() && "Too few tile sizes");
 }
 

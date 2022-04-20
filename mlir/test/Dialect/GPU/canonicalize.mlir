@@ -28,6 +28,60 @@ func @fold_wait_op_test2(%arg0: i1) -> (memref<5xf16>, memref<5xf16>) {
 // CHECK-NEXT: gpu.alloc async [%[[TOKEN1]]] ()
 // CHECK-NEXT: return
 
+// CHECK-LABEL: func @fold_memcpy_op
+func @fold_memcpy_op(%arg0: i1) {
+    %cst = arith.constant 0.000000e+00 : f16
+    %1 = memref.alloc() : memref<2xf16>
+    %2 = gpu.wait async
+    %memref, %asyncToken = gpu.alloc async [%2] () : memref<2xf16>
+    gpu.wait [%2]
+    affine.store %cst, %memref[0] : memref<2xf16>
+    %3 = gpu.wait async
+    %4 = gpu.memcpy async [%3] %1, %memref : memref<2xf16>, memref<2xf16>
+    gpu.wait [%3]
+    %5 = scf.if %arg0 -> (i1) {
+      memref.dealloc %1 : memref<2xf16>
+      scf.yield %arg0 : i1
+    } else {
+      memref.dealloc %1 : memref<2xf16>
+      scf.yield %arg0 : i1
+    }
+    return
+}
+// CHECK-NOT: gpu.memcpy
+
+// We cannot fold memcpy here as dest is a block argument.
+// CHECK-LABEL: func @do_not_fold_memcpy_op1
+func @do_not_fold_memcpy_op1(%arg0: i1, %arg1: memref<2xf16>) {
+    %cst = arith.constant 0.000000e+00 : f16
+    %2 = gpu.wait async
+    %memref, %asyncToken = gpu.alloc async [%2] () : memref<2xf16>
+    gpu.wait [%2]
+    affine.store %cst, %memref[0] : memref<2xf16>
+    %3 = gpu.wait async
+    %4 = gpu.memcpy async [%3] %arg1, %memref : memref<2xf16>, memref<2xf16>
+    gpu.wait [%3]
+    return
+}
+// CHECK: gpu.memcpy
+
+// We cannot fold gpu.memcpy as it is used by an op having read effect on dest.
+// CHECK-LABEL: func @do_not_fold_memcpy_op2
+func @do_not_fold_memcpy_op2(%arg0: i1, %arg1: index) -> f16 {
+    %cst = arith.constant 0.000000e+00 : f16
+    %1 = memref.alloc() : memref<2xf16>
+    %2 = gpu.wait async
+    %memref, %asyncToken = gpu.alloc async [%2] () : memref<2xf16>
+    gpu.wait [%2]
+    affine.store %cst, %memref[0] : memref<2xf16>
+    %3 = gpu.wait async
+    %4 = gpu.memcpy async [%3] %1, %memref : memref<2xf16>, memref<2xf16>
+    gpu.wait [%3]
+    %5 = memref.load %1[%arg1] : memref<2xf16>
+    return %5 : f16
+}
+// CHECK: gpu.memcpy
+
 // CHECK-LABEL: @memcpy_after_cast
 func @memcpy_after_cast(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
   // CHECK-NOT: memref.cast

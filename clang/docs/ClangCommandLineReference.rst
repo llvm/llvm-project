@@ -801,7 +801,7 @@ Generate Interface Stub Files, emit merged text not binary.
 
 Extract API information
 
-.. option:: -fopenmp-new-driver
+.. option:: -fopenmp-new-driver, fno-openmp-new-driver
 
 Use the new driver for OpenMP offloading.
 

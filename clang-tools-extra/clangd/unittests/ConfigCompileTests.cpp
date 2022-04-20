@@ -263,6 +263,24 @@ TEST_F(ConfigCompileTests, DiagnosticsIncludeCleaner) {
   EXPECT_TRUE(compileAndApply());
   EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
             Config::UnusedIncludesPolicy::Strict);
+
+  Frag = {};
+  EXPECT_TRUE(Conf.Diagnostics.Includes.IgnoreHeader.empty())
+      << Conf.Diagnostics.Includes.IgnoreHeader.size();
+  Frag.Diagnostics.Includes.IgnoreHeader.push_back(
+      Located<std::string>("foo.h"));
+  Frag.Diagnostics.Includes.IgnoreHeader.push_back(
+      Located<std::string>(".*inc"));
+  EXPECT_TRUE(compileAndApply());
+  auto HeaderFilter = [this](llvm::StringRef Path) {
+    for (auto &Filter : Conf.Diagnostics.Includes.IgnoreHeader) {
+      if (Filter(Path))
+        return true;
+    }
+    return false;
+  };
+  EXPECT_TRUE(HeaderFilter("foo.h"));
+  EXPECT_FALSE(HeaderFilter("bar.h"));
 }
 
 TEST_F(ConfigCompileTests, DiagnosticSuppression) {

@@ -98,7 +98,7 @@
 /// We should have an offload action joining the host compile and device
 /// preprocessor and another one joining the device linking outputs to the host
 /// action.
-// RUN:   %clang -ccc-print-phases -fopenmp=libomp -target powerpc64le-ibm-linux-gnu -fopenmp-targets=x86_64-pc-linux-gnu %s 2>&1 \
+// RUN:   %clang -ccc-print-phases -fopenmp=libomp -fno-openmp-new-driver -target powerpc64le-ibm-linux-gnu -fopenmp-targets=x86_64-pc-linux-gnu %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-PHASES %s
 // CHK-PHASES: 0: input, "[[INPUT:.+\.c]]", c, (host-openmp)
 // CHK-PHASES: 1: preprocessor, {0}, cpp-output, (host-openmp)
@@ -122,7 +122,7 @@
 
 /// Check the phases when using multiple targets. Here we also add a library to
 /// make sure it is treated as input by the device.
-// RUN:   %clang -ccc-print-phases -lsomelib -fopenmp=libomp -target powerpc64-ibm-linux-gnu -fopenmp-targets=x86_64-pc-linux-gnu,powerpc64-ibm-linux-gnu %s 2>&1 \
+// RUN:   %clang -ccc-print-phases -lsomelib -fopenmp=libomp -fno-openmp-new-driver -target powerpc64-ibm-linux-gnu -fopenmp-targets=x86_64-pc-linux-gnu,powerpc64-ibm-linux-gnu %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-PHASES-LIB %s
 // CHK-PHASES-LIB: 0: input, "somelib", object, (host-openmp)
 // CHK-PHASES-LIB: 1: input, "[[INPUT:.+\.c]]", c, (host-openmp)
@@ -157,7 +157,7 @@
 
 /// Check the phases when using multiple targets and multiple source files
 // RUN:   echo " " > %t.c
-// RUN:   %clang -ccc-print-phases -lsomelib -fopenmp=libomp -target powerpc64-ibm-linux-gnu -fopenmp-targets=x86_64-pc-linux-gnu,powerpc64-ibm-linux-gnu %s %t.c 2>&1 \
+// RUN:   %clang -ccc-print-phases -lsomelib -fopenmp=libomp -fno-openmp-new-driver -target powerpc64-ibm-linux-gnu -fopenmp-targets=x86_64-pc-linux-gnu,powerpc64-ibm-linux-gnu %s %t.c 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-PHASES-FILES %s
 // CHK-PHASES-FILES: 0: input, "somelib", object, (host-openmp)
 // CHK-PHASES-FILES: 1: input, "[[INPUT1:.+\.c]]", c, (host-openmp)
@@ -209,7 +209,7 @@
 
 /// Check the phases graph when using a single GPU target, and check the OpenMP
 /// and CUDA phases are articulated correctly.
-// RUN:   %clang -ccc-print-phases -fopenmp=libomp -target powerpc64le-ibm-linux-gnu -fopenmp-targets=nvptx64-nvidia-cuda -x cuda %s 2>&1 \
+// RUN:   %clang -ccc-print-phases -fopenmp=libomp -fno-openmp-new-driver -target powerpc64le-ibm-linux-gnu -fopenmp-targets=nvptx64-nvidia-cuda -x cuda %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-PHASES-WITH-CUDA %s
 // CHK-PHASES-WITH-CUDA: 0: input, "[[INPUT:.+\.c]]", cuda, (host-cuda-openmp)
 // CHK-PHASES-WITH-CUDA: 1: preprocessor, {0}, cuda-cpp-output, (host-cuda-openmp)
@@ -250,9 +250,9 @@
 /// the target code generation to gather information about which declaration
 /// really need to be emitted.
 ///
-// RUN:   %clang -### -fopenmp=libomp -o %t.out -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -o %t.out -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-COMMANDS %s
-// RUN:   %clang -### -fopenmp=libomp -o %t.out -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -save-temps -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -o %t.out -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -save-temps -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-COMMANDS-ST %s
 
 //
@@ -337,7 +337,7 @@
 /// ###########################################################################
 
 /// Check separate compilation with offloading - bundling actions
-// RUN:   %clang -### -ccc-print-phases -fopenmp=libomp -c -o %t.o %S/Input/in.so -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -ccc-print-phases -fopenmp=libomp -fno-openmp-new-driver -c -o %t.o %S/Input/in.so -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BUACTIONS %s
 
 // CHK-BUACTIONS: 0: input, "[[INPUT:.+\.c]]", c, (host-openmp)
@@ -365,7 +365,7 @@
 
 /// Check separate compilation with offloading - unbundling actions
 // RUN:   touch %t.i
-// RUN:   %clang -### -ccc-print-phases -fopenmp=libomp -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -ccc-print-phases -fopenmp=libomp -fno-openmp-new-driver -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBACTIONS %s
 
 // CHK-UBACTIONS: 0: input, "somelib", object, (host-openmp)
@@ -397,7 +397,7 @@
 
 /// Check separate compilation with offloading - unbundling/bundling actions
 // RUN:   touch %t.i
-// RUN:   %clang -### -ccc-print-phases -fopenmp=libomp -c -o %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -ccc-print-phases -fopenmp=libomp -fno-openmp-new-driver -c -o %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBUACTIONS %s
 
 // CHK-UBUACTIONS: 0: input, "[[INPUT:.+\.i]]", cpp-output, (host-openmp)
@@ -420,9 +420,9 @@
 /// ###########################################################################
 
 /// Check separate compilation with offloading - bundling jobs construct
-// RUN:   %clang -### -fopenmp=libomp -c -o %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -c -o %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BUJOBS %s
-// RUN:   %clang -### -fopenmp=libomp -c -o %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -save-temps -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -c -o %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -save-temps -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BUJOBS-ST %s
 
 // Create host BC.
@@ -476,14 +476,14 @@
 
 /// Check separate compilation with offloading - unbundling jobs construct
 // RUN:   touch %t.i
-// RUN:   %clang -###  -fopenmp=libomp -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -###  -fopenmp=libomp -fno-openmp-new-driver -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBJOBS %s
-// RUN:   %clang -### -fopenmp=libomp -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -save-temps -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -save-temps -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBJOBS-ST %s
 // RUN:   touch %t.o
-// RUN:   %clang -###  -fopenmp=libomp -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.o -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -###  -fopenmp=libomp -fno-openmp-new-driver -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.o -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBJOBS2 %s
-// RUN:   %clang -### -fopenmp=libomp -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.o %S/Inputs/in.so -save-temps -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.o %S/Inputs/in.so -save-temps -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBJOBS2-ST %s
 
 // Unbundle and create host BC.
@@ -595,9 +595,9 @@
 /// Check separate compilation with offloading - unbundling/bundling jobs
 /// construct
 // RUN:   touch %t.i
-// RUN:   %clang -### -fopenmp=libomp -c %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -c %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBUJOBS %s
-// RUN:   %clang -### -fopenmp=libomp -c %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -save-temps -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -fopenmp=libomp -fno-openmp-new-driver -c %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.i -save-temps -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBUJOBS-ST %s
 
 // Unbundle and create host BC.

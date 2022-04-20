@@ -2154,14 +2154,14 @@ SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
   PrevTokLocation = Tok.getLocation();
 
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
-    if (S->getFlags() & Scope::FnScope) {
+    if (S->isFunctionScope()) {
       cutOffParsing();
       Actions.CodeCompleteOrdinaryName(getCurScope(),
                                        Sema::PCC_RecoveryInFunction);
       return PrevTokLocation;
     }
 
-    if (S->getFlags() & Scope::ClassScope) {
+    if (S->isClassScope()) {
       cutOffParsing();
       Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Class);
       return PrevTokLocation;

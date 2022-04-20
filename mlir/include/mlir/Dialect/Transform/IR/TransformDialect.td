@@ -161,6 +161,7 @@ def Transform_Dialect : Dialect {
 
   let name = "transform";
   let cppNamespace = "::mlir::transform";
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 
   let extraClassDeclaration = [{
     // Make addOperations available to the TransformDialectExtension class.
@@ -171,5 +172,10 @@ def Transform_Dialect : Dialect {
       friend class TransformDialectExtension;
   }];
 }
+
+// Base class for ops that belong to the tranfsorm dialect. Ops defined in
+// extensions of this dialect may also use this.
+class TransformDialectOp<string mnemonic, list<Trait> traits = []>
+    : Op<Transform_Dialect, mnemonic, traits>;
 
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT

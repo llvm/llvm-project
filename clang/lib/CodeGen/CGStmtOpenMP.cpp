@@ -3760,9 +3760,11 @@ void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
           CGM.getOpenMPRuntime().getOMPBuilder();
       llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
           AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
-      OMPBuilder.applyWorkshareLoop(Builder.getCurrentDebugLocation(), CLI,
-                                    AllocaIP, NeedsBarrier, SchedKind,
-                                    ChunkSize);
+      OMPBuilder.applyWorkshareLoop(
+          Builder.getCurrentDebugLocation(), CLI, AllocaIP, NeedsBarrier,
+          SchedKind, ChunkSize, /*HasSimdModifier=*/false,
+          /*HasMonotonicModifier=*/false, /*HasNonmonotonicModifier=*/false,
+          /*HasOrderedClause=*/false);
       return;
     }
 

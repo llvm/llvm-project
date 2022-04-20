@@ -2449,8 +2449,8 @@ void ASTStmtReader::VisitOMPOrderedDirective(OMPOrderedDirective *D) {
 void ASTStmtReader::VisitOMPAtomicDirective(OMPAtomicDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
-  D->IsXLHSInRHSPart = Record.readBool();
-  D->IsPostfixUpdate = Record.readBool();
+  D->Flags.IsXLHSInRHSPart = Record.readBool() ? 1 : 0;
+  D->Flags.IsPostfixUpdate = Record.readBool() ? 1 : 0;
 }
 
 void ASTStmtReader::VisitOMPTargetDirective(OMPTargetDirective *D) {

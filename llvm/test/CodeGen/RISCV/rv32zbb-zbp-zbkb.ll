@@ -349,6 +349,59 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
   ret i64 %1
 }
 
+define i32 @not_shl_one_i32(i32 %x) {
+; RV32I-LABEL: not_shl_one_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 1
+; RV32I-NEXT:    sll a0, a1, a0
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBP-ZBKB-LABEL: not_shl_one_i32:
+; RV32ZBB-ZBP-ZBKB:       # %bb.0:
+; RV32ZBB-ZBP-ZBKB-NEXT:    li a1, -2
+; RV32ZBB-ZBP-ZBKB-NEXT:    rol a0, a1, a0
+; RV32ZBB-ZBP-ZBKB-NEXT:    ret
+  %1 = shl i32 1, %x
+  %2 = xor i32 %1, -1
+  ret i32 %2
+}
+
+define i64 @not_shl_one_i64(i64 %x) {
+; RV32I-LABEL: not_shl_one_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a3, a0, -32
+; RV32I-NEXT:    li a2, 1
+; RV32I-NEXT:    li a1, -1
+; RV32I-NEXT:    bltz a3, .LBB15_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    sll a0, a2, a3
+; RV32I-NEXT:    not a1, a0
+; RV32I-NEXT:    li a0, -1
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB15_2:
+; RV32I-NEXT:    sll a0, a2, a0
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBP-ZBKB-LABEL: not_shl_one_i64:
+; RV32ZBB-ZBP-ZBKB:       # %bb.0:
+; RV32ZBB-ZBP-ZBKB-NEXT:    addi a3, a0, -32
+; RV32ZBB-ZBP-ZBKB-NEXT:    li a2, -2
+; RV32ZBB-ZBP-ZBKB-NEXT:    li a1, -1
+; RV32ZBB-ZBP-ZBKB-NEXT:    bltz a3, .LBB15_2
+; RV32ZBB-ZBP-ZBKB-NEXT:  # %bb.1:
+; RV32ZBB-ZBP-ZBKB-NEXT:    rol a1, a2, a3
+; RV32ZBB-ZBP-ZBKB-NEXT:    li a0, -1
+; RV32ZBB-ZBP-ZBKB-NEXT:    ret
+; RV32ZBB-ZBP-ZBKB-NEXT:  .LBB15_2:
+; RV32ZBB-ZBP-ZBKB-NEXT:    rol a0, a2, a0
+; RV32ZBB-ZBP-ZBKB-NEXT:    ret
+  %1 = shl i64 1, %x
+  %2 = xor i64 %1, -1
+  ret i64 %2
+}
+
 define i8 @srli_i8(i8 %a) nounwind {
 ; RV32I-LABEL: srli_i8:
 ; RV32I:       # %bb.0:

@@ -24,7 +24,7 @@ struct SymbolUsesPass
     return "Test detection of symbol uses";
   }
   WalkResult operateOnSymbol(Operation *symbol, ModuleOp module,
-                             SmallVectorImpl<FuncOp> &deadFunctions) {
+                             SmallVectorImpl<func::FuncOp> &deadFunctions) {
     // Test computing uses on a non symboltable op.
     Optional<SymbolTable::UseRange> symbolUses =
         SymbolTable::getSymbolUses(symbol);
@@ -42,7 +42,7 @@ struct SymbolUsesPass
 
     // Test the functionality of symbolKnownUseEmpty.
     if (SymbolTable::symbolKnownUseEmpty(symbol, &module.getBodyRegion())) {
-      FuncOp funcSymbol = dyn_cast<FuncOp>(symbol);
+      func::FuncOp funcSymbol = dyn_cast<func::FuncOp>(symbol);
       if (funcSymbol && funcSymbol.isExternal())
         deadFunctions.push_back(funcSymbol);
 
@@ -70,7 +70,7 @@ struct SymbolUsesPass
     auto module = getOperation();
 
     // Walk nested symbols.
-    SmallVector<FuncOp, 4> deadFunctions;
+    SmallVector<func::FuncOp, 4> deadFunctions;
     module.getBodyRegion().walk([&](Operation *nestedOp) {
       if (isa<SymbolOpInterface>(nestedOp))
         return operateOnSymbol(nestedOp, module, deadFunctions);

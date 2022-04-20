@@ -1,9 +1,9 @@
 # XFAIL: system-aix
-## Test thin archives do not siletly convert to full archives on write.
+## Test thin archives do not siletly convert to regular archives on write.
 
-# RUN: rm -f %tthin.a %tfull.a 
+# RUN: rm -f %tthin.a %tregular.a 
 
-# RUN: llvm-ar -Trc %tthin.a %S/Inputs/a.txt
+# RUN: llvm-ar -rc --thin %tthin.a %S/Inputs/a.txt
 # RUN: FileCheck --check-prefixes=THIN --input-file=%tthin.a %s
 
 # RUN: llvm-ar -q %tthin.a %S/Inputs/b.txt
@@ -18,10 +18,10 @@
 # RUN: llvm-ar -d %tthin.a %S/Inputs/c.txt
 # RUN: FileCheck --check-prefixes=THIN --input-file=%tthin.a %s
 
-THIN: !<thin>
+# THIN: !<thin>
 
-## Test that you can add a thin archive's contents to a full archive with 'L'
-# RUN: llvm-ar -qcL %tfull.a %tthin.a
-# RUN: FileCheck --check-prefixes=FULL --input-file=%tfull.a %s
+## Test that you can add a thin archive's contents to a regular archive with 'L'
+# RUN: llvm-ar -qcL %tregular.a %tthin.a
+# RUN: FileCheck --check-prefixes=REGULAR --input-file=%tregular.a %s
 
-FULL: !<arch>
+REGULAR: !<arch>

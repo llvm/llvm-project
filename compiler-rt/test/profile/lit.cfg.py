@@ -44,11 +44,9 @@ clang_cxxflags = config.cxx_mode_flags + clang_cflags
 
 def build_invocation(compile_flags, with_lto = False):
   lto_flags = []
-  lto_prefix = []
   if with_lto and config.lto_supported:
     lto_flags += config.lto_flags
-    lto_prefix += config.lto_launch
-  return " " + " ".join(lto_prefix + [config.clang] + lto_flags + compile_flags) + " "
+  return " " + " ".join([config.clang] + lto_flags + compile_flags) + " "
 
 def exclude_unsupported_files_for_aix(dirname):
    for filename in os.listdir(dirname):

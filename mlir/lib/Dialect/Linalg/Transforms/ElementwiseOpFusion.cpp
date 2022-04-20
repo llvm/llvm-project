@@ -1277,7 +1277,7 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
 
   // Compute all the loops with the reduction iterator types.
   SmallVector<int64_t> reductionDims;
-  for (auto iteratorType : llvm::enumerate(genericOp.iterator_types())) {
+  for (const auto &iteratorType : llvm::enumerate(genericOp.iterator_types())) {
     if (isReductionIterator(iteratorType.value())) {
       reductionDims.push_back(iteratorType.index());
     }
@@ -1320,7 +1320,7 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
     // using a more strict definition of reduction for now.
     if (isReductionIterator(startIteratorType)) {
       bool isContiguous = false;
-      for (auto startDim : llvm::enumerate(reductionDims)) {
+      for (const auto &startDim : llvm::enumerate(reductionDims)) {
         // Move window in `reductionDims` to start of the folded iteration dims.
         if (startDim.value() != foldedIterationSpaceDims[0])
           continue;
@@ -1331,7 +1331,8 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
           break;
         // Check that the contiguity is maintained.
         isContiguous = true;
-        for (auto foldedDim : llvm::enumerate(foldedIterationSpaceDims)) {
+        for (const auto &foldedDim :
+             llvm::enumerate(foldedIterationSpaceDims)) {
           if (reductionDims[foldedDim.index() + startDim.index()] !=
               foldedDim.value()) {
             isContiguous = false;
@@ -1398,8 +1399,9 @@ public:
                  return lhs[0] < rhs[0];
                });
     origOpToCollapsedOpIterationDim.resize(origNumLoops);
-    for (auto foldedDims : llvm::enumerate(collapsedOpToOrigOpIterationDim)) {
-      for (auto dim : enumerate(foldedDims.value()))
+    for (const auto &foldedDims :
+         llvm::enumerate(collapsedOpToOrigOpIterationDim)) {
+      for (const auto &dim : enumerate(foldedDims.value()))
         origOpToCollapsedOpIterationDim[dim.value()] =
             std::make_pair<int64_t, unsigned>(foldedDims.index(), dim.index());
     }

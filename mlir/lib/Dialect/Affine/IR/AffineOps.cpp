@@ -1873,6 +1873,13 @@ Optional<OpFoldResult> AffineForOp::getSingleStep() {
   return OpFoldResult(b.getI64IntegerAttr(getStep()));
 }
 
+Optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
+  if (!hasConstantUpperBound())
+    return llvm::None;
+  OpBuilder b(getContext());
+  return OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()));
+}
+
 /// Returns true if the provided value is the induction variable of a
 /// AffineForOp.
 bool mlir::isForInductionVar(Value val) {

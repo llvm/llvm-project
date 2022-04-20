@@ -157,7 +157,7 @@ int loadAndProcessMLIR(mlir::MLIRContext &context,
     pm.addPass(mlir::toy::createLowerToAffinePass());
 
     // Add a few cleanups post lowering.
-    mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+    mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
     optPM.addPass(mlir::createCanonicalizerPass());
     optPM.addPass(mlir::createCSEPass());
 

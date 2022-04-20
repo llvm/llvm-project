@@ -187,6 +187,54 @@ TEST_F(TransferTest, StructVarDecl) {
       });
 }
 
+TEST_F(TransferTest, StructVarDeclWithInit) {
+  std::string Code = R"(
+    struct A {
+      int Bar;
+    };
+
+    A Gen();
+
+    void target() {
+      A Foo = Gen();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        ASSERT_TRUE(FooDecl->getType()->isStructureType());
+        auto FooFields = FooDecl->getType()->getAsRecordDecl()->fields();
+
+        FieldDecl *BarDecl = nullptr;
+        for (FieldDecl *Field : FooFields) {
+          if (Field->getNameAsString() == "Bar") {
+            BarDecl = Field;
+          } else {
+            FAIL() << "Unexpected field: " << Field->getNameAsString();
+          }
+        }
+        ASSERT_THAT(BarDecl, NotNull());
+
+        const auto *FooLoc = cast<AggregateStorageLocation>(
+            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *BarLoc =
+            cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
+
+        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
+        const auto *BarVal = cast<IntegerValue>(FooVal->getChild(*BarDecl));
+        EXPECT_EQ(Env.getValue(*BarLoc), BarVal);
+      });
+}
+
 TEST_F(TransferTest, ClassVarDecl) {
   std::string Code = R"(
     class A {

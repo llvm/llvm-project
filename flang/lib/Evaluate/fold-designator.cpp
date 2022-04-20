@@ -70,7 +70,7 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
             ConstantSubscript lower{lowerBounds->at(dim)};
             ConstantSubscript extent{extents->at(dim)};
             ConstantSubscript upper{lower + extent - 1};
-            if (!std::visit(
+            if (!common::visit(
                     common::visitors{
                         [&](const IndirectSubscriptIntegerExpr &expr) {
                           auto folded{
@@ -169,7 +169,7 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
     const DataRef &dataRef, ConstantSubscript which) {
-  return std::visit(
+  return common::visit(
       [&](const auto &x) { return FoldDesignator(x, which); }, dataRef.u);
 }
 
@@ -317,7 +317,7 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
               // Pick a COMPLEX component
               auto part{
                   offset == 0 ? ComplexPart::Part::RE : ComplexPart::Part::IM};
-              return std::visit(
+              return common::visit(
                   [&](const auto &z) -> std::optional<Expr<SomeType>> {
                     using PartType = typename ResultType<decltype(z)>::Part;
                     return AsGenericExpr(Designator<PartType>{ComplexPart{
@@ -329,7 +329,7 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
                          std::get_if<Expr<SomeCharacter>>(&result->u)}) {
             if (offset > 0 || size != static_cast<std::size_t>(*elementBytes)) {
               // Select a substring
-              return std::visit(
+              return common::visit(
                   [&](const auto &x) -> std::optional<Expr<SomeType>> {
                     using T = typename std::decay_t<decltype(x)>::Result;
                     return AsGenericExpr(Designator<T>{

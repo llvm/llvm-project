@@ -1,16 +1,15 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX900,GFX9,GFX900-MUBUF %s
-; RUN: llc -march=amdgcn -mcpu=gfx906 -amdgpu-sroa=0 -mattr=-promote-alloca,+sram-ecc -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX906,GFX9,NO-D16-HI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-MUBUF %s
+; RxN: llc -march=amdgcn -mcpu=gfx906 -amdgpu-sroa=0 -mattr=-promote-alloca,+sram-ecc -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX803,NO-D16-HI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -mattr=+enable-flat-scratch -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX900,GFX9,GFX900-FLATSCR %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -mattr=+enable-flat-scratch -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
 
 ; GCN-LABEL: {{^}}store_global_hi_v2i16:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: global_store_short_d16_hi v[0:1], v2, off
+; GFX9-NEXT: global_store_short_d16_hi v[0:1], v2, off
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803-NEXT: flat_store_short v[0:1], v2
-; GFX906-NEXT: global_store_short v[0:1], v2, off
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -26,11 +25,10 @@ entry:
 ; GCN-LABEL: {{^}}store_global_hi_v2f16:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: global_store_short_d16_hi v[0:1], v2, off
+; GFX9-NEXT: global_store_short_d16_hi v[0:1], v2, off
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803-NEXT: flat_store_short v[0:1], v2
-; GFX906-NEXT: global_store_short v[0:1], v2, off
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -46,11 +44,10 @@ entry:
 ; GCN-LABEL: {{^}}store_global_hi_i32_shift:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: global_store_short_d16_hi v[0:1], v2, off
+; GFX9-NEXT: global_store_short_d16_hi v[0:1], v2, off
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803-NEXT: flat_store_short v[0:1], v2
-; GFX906-NEXT: global_store_short v[0:1], v2, off
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -65,11 +62,10 @@ entry:
 ; GCN-LABEL: {{^}}store_global_hi_v2i16_i8:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: global_store_byte_d16_hi v[0:1], v2, off
+; GFX9-NEXT: global_store_byte_d16_hi v[0:1], v2, off
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803-NEXT: flat_store_byte v[0:1], v2
-; GFX906-NEXT: global_store_byte v[0:1], v2, off
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -85,11 +81,10 @@ entry:
 ; GCN-LABEL: {{^}}store_global_hi_i8_shift:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: global_store_byte_d16_hi v[0:1], v2, off
+; GFX9-NEXT: global_store_byte_d16_hi v[0:1], v2, off
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803-NEXT: flat_store_byte v[0:1], v2
-; GFX906-NEXT: global_store_byte v[0:1], v2, off
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -103,15 +98,12 @@ entry:
 
 ; GCN-LABEL: {{^}}store_global_hi_v2i16_max_offset:
 ; GCN: s_waitcnt
-; GFX900-NEXT: global_store_short_d16_hi v[0:1], v2, off offset:4094
+; GFX9-NEXT: global_store_short_d16_hi v[0:1], v2, off offset:4094
 
 ; GFX803-DAG: v_add_u32_e32
 ; GFX803-DAG: v_addc_u32_e32
 ; GFX803-DAG: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803: flat_store_short v[0:1], v2{{$}}
-
-; GFX906-NEXT: v_lshrrev_b32_e32 v2, 16, v2
-; GFX906-NEXT: global_store_short v[0:1], v2, off
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -127,15 +119,12 @@ entry:
 
 ; GCN-LABEL: {{^}}store_global_hi_v2i16_min_offset:
 ; GCN: s_waitcnt
-; GFX900-NEXT: global_store_short_d16_hi v[0:1], v2, off offset:-4096{{$}}
+; GFX9-NEXT: global_store_short_d16_hi v[0:1], v2, off offset:-4096{{$}}
 
 ; GFX803-DAG: v_add_u32_e32
 ; GFX803-DAG: v_addc_u32_e32
 ; GFX803-DAG: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803: flat_store_short v[0:1], v{{[0-9]$}}
-
-; GFX906-NEXT: v_lshrrev_b32_e32 v2, 16, v2
-; GFX906-NEXT: global_store_short v[0:1], v2, off
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -150,15 +139,12 @@ entry:
 
 ; GCN-LABEL: {{^}}store_global_hi_v2i16_i8_max_offset:
 ; GCN: s_waitcnt
-; GFX900-NEXT: global_store_byte_d16_hi v[0:1], v2, off offset:4095
+; GFX9-NEXT: global_store_byte_d16_hi v[0:1], v2, off offset:4095
 
 ; GFX803-DAG: v_add_u32_e32
 ; GFX803-DAG: v_addc_u32_e32
 ; GFX803-DAG: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803: flat_store_byte v[0:1], v{{[0-9]$}}
-
-; GFX906-NEXT: v_lshrrev_b32_e32 v2, 16, v2
-; GFX906-NEXT: global_store_byte v[0:1], v2, off
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -174,15 +160,12 @@ entry:
 
 ; GCN-LABEL: {{^}}store_global_hi_v2i16_i8_min_offset:
 ; GCN: s_waitcnt
-; GFX900-NEXT: global_store_byte_d16_hi v[0:1], v2, off offset:-4095
+; GFX9-NEXT: global_store_byte_d16_hi v[0:1], v2, off offset:-4095
 
 ; GFX803-DAG: v_add_u32_e32
 ; GFX803-DAG: v_addc_u32_e32
 ; GFX803-DAG: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803: flat_store_byte v[0:1], v{{[0-9]$}}
-
-; GFX906-NEXT: v_lshrrev_b32_e32 v2, 16, v2
-; GFX906-NEXT: global_store_byte v[0:1], v2, off
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -199,7 +182,7 @@ entry:
 ; GCN-LABEL: {{^}}store_flat_hi_v2i16:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: flat_store_short_d16_hi v[0:1], v2{{$}}
+; GFX9-NEXT: flat_store_short_d16_hi v[0:1], v2{{$}}
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; NO-D16-HI-NEXT: flat_store_short v[0:1], v2
@@ -217,7 +200,7 @@ entry:
 ; GCN-LABEL: {{^}}store_flat_hi_v2f16:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: flat_store_short_d16_hi v[0:1], v2{{$}}
+; GFX9-NEXT: flat_store_short_d16_hi v[0:1], v2{{$}}
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; NO-D16-HI-NEXT: flat_store_short v[0:1], v2
@@ -235,7 +218,7 @@ entry:
 ; GCN-LABEL: {{^}}store_flat_hi_i32_shift:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: flat_store_short_d16_hi v[0:1], v2{{$}}
+; GFX9-NEXT: flat_store_short_d16_hi v[0:1], v2{{$}}
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; NO-D16-HI-NEXT: flat_store_short v[0:1], v2
@@ -253,7 +236,7 @@ entry:
 ; GCN-LABEL: {{^}}store_flat_hi_v2i16_i8:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: flat_store_byte_d16_hi v[0:1], v2{{$}}
+; GFX9-NEXT: flat_store_byte_d16_hi v[0:1], v2{{$}}
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; NO-D16-HI-NEXT: flat_store_byte v[0:1], v2
@@ -272,7 +255,7 @@ entry:
 ; GCN-LABEL: {{^}}store_flat_hi_i8_shift:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: flat_store_byte_d16_hi v[0:1], v2{{$}}
+; GFX9-NEXT: flat_store_byte_d16_hi v[0:1], v2{{$}}
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v2, 16, v2
 ; NO-D16-HI-NEXT: flat_store_byte v[0:1], v2
@@ -289,10 +272,7 @@ entry:
 
 ; GCN-LABEL: {{^}}store_flat_hi_v2i16_max_offset:
 ; GCN: s_waitcnt
-; GFX900-NEXT: flat_store_short_d16_hi v[0:1], v2 offset:4094{{$}}
-
-; GFX906-NEXT: v_lshrrev_b32_e32 v2, 16, v2
-; GFX906-NEXT: flat_store_short v[0:1], v2 offset:4094
+; GFX9-NEXT: flat_store_short_d16_hi v[0:1], v2 offset:4094{{$}}
 
 ; GFX803-DAG: v_add_u32_e32
 ; GFX803-DAG: v_addc_u32_e32
@@ -318,10 +298,7 @@ entry:
 ; GFX9-DAG: v_add_co_u32_e32 v{{[0-9]+}}, vcc, 0xfffff802, v
 ; GFX9-DAG: v_addc_co_u32_e32 v{{[0-9]+}}, vcc, -1, v
 
-; GFX906-DAG: v_lshrrev_b32_e32
-; GFX906: flat_store_short v[0:1], v2{{$}}
-
-; GFX900-NEXT: flat_store_short_d16_hi v[0:1], v2{{$}}
+; GFX9-NEXT: flat_store_short_d16_hi v[0:1], v2{{$}}
 ; GFX803: flat_store_short v[0:1], v2{{$}}
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -336,15 +313,12 @@ entry:
 
 ; GCN-LABEL: {{^}}store_flat_hi_v2i16_i8_max_offset:
 ; GCN: s_waitcnt
-; GFX900-NEXT: flat_store_byte_d16_hi v[0:1], v2 offset:4095{{$}}
+; GFX9-NEXT: flat_store_byte_d16_hi v[0:1], v2 offset:4095{{$}}
 
 ; GFX803-DAG: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803-DAG: v_add_u32_e32
 ; GFX803-DAG: v_addc_u32_e32
 ; GFX803: flat_store_byte v[0:1], v2{{$}}
-
-; GFX906-NEXT: v_lshrrev_b32_e32 v2, 16, v2
-; GFX906-NEXT: flat_store_byte v[0:1], v2 offset:4095{{$}}
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
@@ -367,10 +341,7 @@ entry:
 ; GFX9-DAG: v_add_co_u32_e32 v{{[0-9]+}}, vcc, 0xfffff001, v
 ; GFX9-DAG: v_addc_co_u32_e32 v{{[0-9]+}}, vcc, -1, v{{[0-9]+}}, vcc
 
-; GFX900-NEXT: flat_store_byte_d16_hi v[0:1], v2{{$}}
-
-; GFX906-DAG: v_lshrrev_b32_e32 v2, 16, v2
-; GFX906: flat_store_byte v[0:1], v2{{$}}
+; GFX9-NEXT: flat_store_byte_d16_hi v[0:1], v2{{$}}
 
 ; GFX803-DAG: v_lshrrev_b32_e32 v2, 16, v2
 ; GFX803: flat_store_byte v[0:1], v2{{$}}
@@ -390,8 +361,8 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_v2i16:
 ; GCN: s_waitcnt
 
-; GFX900-MUBUF-NEXT:   buffer_store_short_d16_hi v1, v0, s[0:3], 0 offen{{$}}
-; GFX900-FLATSCR-NEXT: scratch_store_short_d16_hi v0, v1, off
+; GFX9-MUBUF-NEXT:   buffer_store_short_d16_hi v1, v0, s[0:3], 0 offen{{$}}
+; GFX9-FLATSCR-NEXT: scratch_store_short_d16_hi v0, v1, off
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI: buffer_store_short v1, v0, s[0:3], 0 offen{{$}}
@@ -410,8 +381,8 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_v2f16:
 ; GCN: s_waitcnt
 
-; GFX900-MUBUF-NEXT:   buffer_store_short_d16_hi v1, v0, s[0:3], 0 offen{{$}}
-; GFX900-FLATSCR-NEXT: scratch_store_short_d16_hi v0, v1, off{{$}}
+; GFX9-MUBUF-NEXT:   buffer_store_short_d16_hi v1, v0, s[0:3], 0 offen{{$}}
+; GFX9-FLATSCR-NEXT: scratch_store_short_d16_hi v0, v1, off{{$}}
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI: buffer_store_short v1, v0, s[0:3], 0 offen{{$}}
@@ -430,8 +401,8 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_i32_shift:
 ; GCN: s_waitcnt
 
-; GFX900-MUBUF-NEXT:   buffer_store_short_d16_hi v1, v0, s[0:3], 0 offen{{$}}
-; GFX900-FLATSCR-NEXT: scratch_store_short_d16_hi v0, v1, off{{$}}
+; GFX9-MUBUF-NEXT:   buffer_store_short_d16_hi v1, v0, s[0:3], 0 offen{{$}}
+; GFX9-FLATSCR-NEXT: scratch_store_short_d16_hi v0, v1, off{{$}}
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI-NEXT: buffer_store_short v1, v0, s[0:3], 0 offen{{$}}
@@ -449,8 +420,8 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_i8:
 ; GCN: s_waitcnt
 
-; GFX900-MUBUF-NEXT:   buffer_store_byte_d16_hi v1, v0, s[0:3], 0 offen{{$}}
-; GFX900-FLATSCR-NEXT: scratch_store_byte_d16_hi v0, v1, off{{$}}
+; GFX9-MUBUF-NEXT:   buffer_store_byte_d16_hi v1, v0, s[0:3], 0 offen{{$}}
+; GFX9-FLATSCR-NEXT: scratch_store_byte_d16_hi v0, v1, off{{$}}
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI-NEXT: buffer_store_byte v1, v0, s[0:3], 0 offen{{$}}
@@ -469,8 +440,8 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_i8_shift:
 ; GCN: s_waitcnt
 
-; GFX900-MUBUF-NEXT:   buffer_store_byte_d16_hi v1, v0, s[0:3], 0 offen{{$}}
-; GFX900-FLATSCR-NEXT: scratch_store_byte_d16_hi v0, v1, off{{$}}
+; GFX9-MUBUF-NEXT:   buffer_store_byte_d16_hi v1, v0, s[0:3], 0 offen{{$}}
+; GFX9-FLATSCR-NEXT: scratch_store_byte_d16_hi v0, v1, off{{$}}
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI-NEXT: buffer_store_byte v1, v0, s[0:3], 0 offen{{$}}
@@ -487,8 +458,8 @@ entry:
 
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_max_offset:
 ; GCN: s_waitcnt
-; GFX900-MUBUF:   buffer_store_short_d16_hi v0, off, s[0:3], s32 offset:4094{{$}}
-; GFX900-FLATSCR: scratch_store_short_d16_hi off, v0, s32 offset:4094{{$}}
+; GFX9-MUBUF:   buffer_store_short_d16_hi v0, off, s[0:3], s32 offset:4094{{$}}
+; GFX9-FLATSCR: scratch_store_short_d16_hi off, v0, s32 offset:4094{{$}}
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v0, 16, v0
 ; NO-D16-HI-NEXT: buffer_store_short v0, off, s[0:3], s32 offset:4094{{$}}
@@ -509,9 +480,9 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_nooff:
 ; GCN: s_waitcnt
 
-; GFX900-MUBUF-NEXT:   buffer_store_short_d16_hi v0, off, s[0:3], 0{{$}}
-; GFX900-FLATSCR-NEXT: s_mov_b32 [[SOFF:s[0-9]+]], 0
-; GFX900-FLATSCR-NEXT: scratch_store_short_d16_hi off, v0, [[SOFF]]{{$}}
+; GFX9-MUBUF-NEXT:   buffer_store_short_d16_hi v0, off, s[0:3], 0{{$}}
+; GFX9-FLATSCR-NEXT: s_mov_b32 [[SOFF:s[0-9]+]], 0
+; GFX9-FLATSCR-NEXT: scratch_store_short_d16_hi off, v0, [[SOFF]]{{$}}
 
 ; NO-D16-HI-NEXT: v_lshrrev_b32_e32 v0, 16, v0
 ; NO-D16-HI-NEXT: buffer_store_short v0, off, s[0:3], 0{{$}}
@@ -531,9 +502,9 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_i8_nooff:
 ; GCN: s_waitcnt
 
-; GFX900-MUBUF-NEXT:   buffer_store_byte_d16_hi v0, off, s[0:3], 0{{$}}
-; GFX900-FLATSCR-NEXT: s_mov_b32 [[SOFF:s[0-9]+]], 0
-; GFX900-FLATSCR-NEXT: scratch_store_byte_d16_hi off, v0, [[SOFF]]{{$}}
+; GFX9-MUBUF-NEXT:   buffer_store_byte_d16_hi v0, off, s[0:3], 0{{$}}
+; GFX9-FLATSCR-NEXT: s_mov_b32 [[SOFF:s[0-9]+]], 0
+; GFX9-FLATSCR-NEXT: scratch_store_byte_d16_hi off, v0, [[SOFF]]{{$}}
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v0, 16, v0
 ; NO-D16-HI: buffer_store_byte v0, off, s[0:3], 0{{$}}
@@ -552,7 +523,7 @@ entry:
 ; GCN-LABEL: {{^}}store_local_hi_v2i16:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: ds_write_b16_d16_hi v0, v1{{$}}
+; GFX9-NEXT: ds_write_b16_d16_hi v0, v1{{$}}
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI: ds_write_b16 v0, v1
@@ -571,7 +542,7 @@ entry:
 ; GCN-LABEL: {{^}}store_local_hi_v2f16:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: ds_write_b16_d16_hi v0, v1{{$}}
+; GFX9-NEXT: ds_write_b16_d16_hi v0, v1{{$}}
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI: ds_write_b16 v0, v1
@@ -590,7 +561,7 @@ entry:
 ; GCN-LABEL: {{^}}store_local_hi_i32_shift:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: ds_write_b16_d16_hi v0, v1{{$}}
+; GFX9-NEXT: ds_write_b16_d16_hi v0, v1{{$}}
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI: ds_write_b16 v0, v1
@@ -608,7 +579,7 @@ entry:
 ; GCN-LABEL: {{^}}store_local_hi_v2i16_i8:
 ; GCN: s_waitcnt
 
-; GFX900-NEXT: ds_write_b8_d16_hi v0, v1{{$}}
+; GFX9-NEXT: ds_write_b8_d16_hi v0, v1{{$}}
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI: ds_write_b8 v0, v1
@@ -626,7 +597,7 @@ entry:
 
 ; GCN-LABEL: {{^}}store_local_hi_v2i16_max_offset:
 ; GCN: s_waitcnt
-; GFX900-NEXT: ds_write_b16_d16_hi v0, v1 offset:65534{{$}}
+; GFX9-NEXT: ds_write_b16_d16_hi v0, v1 offset:65534{{$}}
 
 ; NO-D16-HI: v_lshrrev_b32_e32 v1, 16, v1
 ; NO-D16-HI: ds_write_b16 v0, v1 offset:65534{{$}}
@@ -645,14 +616,14 @@ entry:
 
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_to_offset:
 ; GCN: s_waitcnt
-; GFX900-MUBUF:        buffer_store_dword
-; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
-; GFX900-MUBUF-NEXT:   buffer_store_short_d16_hi v0, off, s[0:3], s32 offset:4058
-; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
-; GFX900-FLATSCR:      scratch_store_dword
-; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT: scratch_store_short_d16_hi off, v0, s32 offset:4058
-; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
+; GFX9-MUBUF:        buffer_store_dword
+; GFX9-MUBUF-NEXT:   s_waitcnt vmcnt(0)
+; GFX9-MUBUF-NEXT:   buffer_store_short_d16_hi v0, off, s[0:3], s32 offset:4058
+; GFX9-MUBUF-NEXT:   s_waitcnt vmcnt(0)
+; GFX9-FLATSCR:      scratch_store_dword
+; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
+; GFX9-FLATSCR-NEXT: scratch_store_short_d16_hi off, v0, s32 offset:4058
+; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
 define void @store_private_hi_v2i16_to_offset(i32 %arg, [10 x i32] addrspace(5)* %obj0) #0 {
 entry:
   %obj1 = alloca [4096 x i16], align 2, addrspace(5)
@@ -667,13 +638,13 @@ entry:
 
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_i8_to_offset:
 ; GCN: s_waitcnt
-; GFX900-MUBUF:        buffer_store_dword
-; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
-; GFX900-MUBUF-NEXT:   buffer_store_byte_d16_hi v0, off, s[0:3], s32 offset:4059
-; GFX900-FLATSCR:      scratch_store_dword
-; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT: scratch_store_byte_d16_hi off, v0, s32 offset:4059
-; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
+; GFX9-MUBUF:        buffer_store_dword
+; GFX9-MUBUF-NEXT:   s_waitcnt vmcnt(0)
+; GFX9-MUBUF-NEXT:   buffer_store_byte_d16_hi v0, off, s[0:3], s32 offset:4059
+; GFX9-FLATSCR:      scratch_store_dword
+; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
+; GFX9-FLATSCR-NEXT: scratch_store_byte_d16_hi off, v0, s32 offset:4059
+; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
 define void @store_private_hi_v2i16_i8_to_offset(i32 %arg, [10 x i32] addrspace(5)* %obj0) #0 {
 entry:
   %obj1 = alloca [4096 x i8], align 2, addrspace(5)

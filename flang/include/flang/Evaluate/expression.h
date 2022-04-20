@@ -646,7 +646,7 @@ public:
   EVALUATE_UNION_CLASS_BOILERPLATE(Relational)
   static constexpr DynamicType GetType() { return Result::GetType(); }
   int Rank() const {
-    return std::visit([](const auto &x) { return x.Rank(); }, u);
+    return common::visit([](const auto &x) { return x.Rank(); }, u);
   }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const;
   common::MapTemplate<Relational, DirectlyComparableTypes> u;

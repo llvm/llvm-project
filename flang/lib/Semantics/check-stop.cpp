@@ -18,7 +18,7 @@ namespace Fortran::semantics {
 
 void StopChecker::Enter(const parser::StopStmt &stmt) {
   const auto &stopCode{std::get<std::optional<parser::StopCode>>(stmt.t)};
-  if (const auto *expr{GetExpr(stopCode)}) {
+  if (const auto *expr{GetExpr(context_, stopCode)}) {
     const parser::CharBlock &source{parser::FindSourceLocation(stopCode)};
     if (ExprHasTypeCategory(*expr, common::TypeCategory::Integer)) {
       // C1171 default kind

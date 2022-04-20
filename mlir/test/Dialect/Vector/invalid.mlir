@@ -1523,6 +1523,15 @@ func @scan_incompatible_shapes(%arg0: vector<2x3xi32>, %arg1: vector<5xi32>) -> 
 
 // -----
 
+func @scan_unsupported_kind(%arg0: vector<2x3xf32>, %arg1: vector<3xf32>) -> vector<2x3xf32> {
+  // expected-error@+1 {{'vector.scan' op unsupported reduction type 'f32' for kind 'xor'}}
+  %0:2 = vector.scan <xor>, %arg0, %arg1 {inclusive = true, reduction_dim = 0} :
+    vector<2x3xf32>, vector<3xf32>
+  return %0#0 : vector<2x3xf32>
+}
+
+// -----
+
 func @invalid_splat(%v : f32) {
   // expected-error@+1 {{invalid kind of type specified}}
   vector.splat %v : memref<8xf32>

@@ -1,6 +1,9 @@
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-objcopy --only-keep-debug %t1 %t1.dbg
 # RUN: llvm-readelf -S -l -x .note1 -x .note2 -x .debug_abbrev -x .debug_frame -x .debug_info %t1.dbg | FileCheck %s
+## --only-keep-debug suppresses the default --strip-all.
+# RUN: llvm-strip --only-keep-debug %t1
+# RUN: llvm-readelf -S -l -x .note1 -x .note2 -x .debug_abbrev -x .debug_frame -x .debug_info %t1 | FileCheck %s
 
 ## Check that SHT_NOTE and .debug* are kept, but others are changed to SHT_NOBITS.
 ## SHT_NOBITS sections do not occupy space in the output.

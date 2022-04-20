@@ -22,9 +22,6 @@ namespace func {
 class FuncOp;
 } // namespace func
 
-// TODO: Remove when all references have been updated.
-using FuncOp = func::FuncOp;
-
 namespace bufferization {
 struct OneShotBufferizationOptions;
 } // namespace bufferization

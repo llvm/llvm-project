@@ -1082,52 +1082,44 @@ void IntegerRelation::eliminateRedundantLocalId(unsigned posA, unsigned posB) {
 /// of the local ids in each set, without changing the set of points that
 /// lie in `this` and `other`.
 ///
-/// To detect local ids that always take the same in both sets, each local id is
+/// To detect local ids that always take the same value, each local id is
 /// represented as a floordiv with constant denominator in terms of other ids.
-/// After extracting these divisions, local ids with the same division
-/// representation are considered duplicate and are merged. It is possible that
-/// division representation for some local id cannot be obtained, and thus these
-/// local ids are not considered for detecting duplicates.
-void IntegerRelation::mergeLocalIds(IntegerRelation &other) {
-  assert(space.isCompatible(other.getSpace()) &&
-         "Spaces should be compatible.");
-
+/// After extracting these divisions, local ids in `other` with the same
+/// division representation as some other local id in any set are considered
+/// duplicate and are merged.
+///
+/// It is possible that division representation for some local id cannot be
+/// obtained, and thus these local ids are not considered for detecting
+/// duplicates.
+unsigned IntegerRelation::mergeLocalIds(IntegerRelation &other) {
   IntegerRelation &relA = *this;
   IntegerRelation &relB = other;
 
-  // Merge local ids of relA and relB without using division information,
-  // i.e. append local ids of `relB` to `relA` and insert local ids of `relA`
-  // to `relB` at start of its local ids.
-  unsigned initLocals = relA.getNumLocalIds();
-  insertId(IdKind::Local, relA.getNumLocalIds(), relB.getNumLocalIds());
-  relB.insertId(IdKind::Local, 0, initLocals);
-
-  // Get division representations from each rel.
-  std::vector<SmallVector<int64_t, 8>> divsA, divsB;
-  SmallVector<unsigned, 4> denomsA, denomsB;
-  relA.getLocalReprs(divsA, denomsA);
-  relB.getLocalReprs(divsB, denomsB);
-
-  // Copy division information for relB into `divsA` and `denomsA`, so that
-  // these have the combined division information of both rels. Since newly
-  // added local variables in relA and relB have no constraints, they will not
-  // have any division representation.
-  std::copy(divsB.begin() + initLocals, divsB.end(),
-            divsA.begin() + initLocals);
-  std::copy(denomsB.begin() + initLocals, denomsB.end(),
-            denomsA.begin() + initLocals);
+  unsigned oldALocals = relA.getNumLocalIds();
 
   // Merge function that merges the local variables in both sets by treating
   // them as the same identifier.
-  auto merge = [&relA, &relB](unsigned i, unsigned j) -> bool {
+  auto merge = [&relA, &relB, oldALocals](unsigned i, unsigned j) -> bool {
+    // We only merge from local at pos j to local at pos i, where j > i.
+    if (i >= j)
+      return false;
+
+    // If i < oldALocals, we are trying to merge duplicate divs. Since we do not
+    // want to merge duplicates in A, we ignore this call.
+    if (j < oldALocals)
+      return false;
+
+    // Merge local at pos j into local at position i.
     relA.eliminateRedundantLocalId(i, j);
     relB.eliminateRedundantLocalId(i, j);
     return true;
   };
 
-  // Merge all divisions by removing duplicate divisions.
-  unsigned localOffset = getIdKindOffset(IdKind::Local);
-  presburger::removeDuplicateDivs(divsA, denomsA, localOffset, merge);
+  presburger::mergeLocalIds(*this, other, merge);
+
+  // Since we do not remove duplicate divisions in relA, this is guranteed to be
+  // non-negative.
+  return relA.getNumLocalIds() - oldALocals;
 }
 
 void IntegerRelation::removeDuplicateDivs() {
