@@ -25,6 +25,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -36,6 +37,10 @@
 
 using namespace llvm;
 using namespace llvm::dwarf;
+
+static cl::opt<bool>
+    DisableDebugInfoPrinting("disable-debug-info-print", cl::Hidden,
+                             cl::desc("Disable debug info printing"));
 
 // Out of line virtual method.
 MachineModuleInfoImpl::~MachineModuleInfoImpl() = default;
@@ -200,6 +205,7 @@ void MachineModuleInfo::initialize() {
   UsesMSVCFloatingPoint = UsesMorestackAddr = false;
   HasSplitStack = HasNosplitStack = false;
   AddrLabelSymbols = nullptr;
+  DbgInfoAvailable = false;
 }
 
 void MachineModuleInfo::finalize() {
@@ -409,7 +415,8 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
+  MMI.DbgInfoAvailable = !DisableDebugInfoPrinting &&
+                         !M.debug_compile_units().empty();
   return false;
 }
 
@@ -424,6 +431,7 @@ MachineModuleInfo MachineModuleAnalysis::run(Module &M,
                                              ModuleAnalysisManager &) {
   MachineModuleInfo MMI(TM);
   MMI.TheModule = &M;
-  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
+  MMI.DbgInfoAvailable = !DisableDebugInfoPrinting &&
+                         !M.debug_compile_units().empty();
   return MMI;
 }
