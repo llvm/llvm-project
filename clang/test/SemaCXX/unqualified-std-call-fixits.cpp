@@ -6,9 +6,9 @@
 
 namespace std {
 
-int &&move(auto &&a) { return a; }
+void move(auto &&a) {}
 
-int &&forward(auto &a) { return a; }
+void forward(auto &a) {}
 
 } // namespace std
 
@@ -16,8 +16,8 @@ using namespace std;
 
 void f() {
   int i = 0;
-  (void)move(i); // expected-warning {{unqualified call to std::move}}
-  // CHECK: {{^}}  (void)std::move
-  (void)forward(i); // expected-warning {{unqualified call to std::forward}}
-  // CHECK: {{^}}  (void)std::forward
+  move(i); // expected-warning {{unqualified call to std::move}}
+  // CHECK: {{^}}  std::
+  forward(i); // expected-warning {{unqualified call to std::forward}}
+              // CHECK: {{^}}  std::
 }

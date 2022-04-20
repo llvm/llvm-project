@@ -953,12 +953,12 @@ void test6() {
 namespace std {
   void move();
   template<class T>
-  T &&move(T&);
+  void move(T&&);
 
   namespace __1 {
     void move();
     template<class T>
-    T &&move(T&);
+    void move(T&&);
   }
 }
 
@@ -971,7 +971,7 @@ namespace PR18260 {
   void test() {
     x.move();
     std::move();
-    std::move(x); // expected-warning {{ignoring return value}}
+    std::move(x);
     std::__1::move();
     std::__1::move(x);
   }

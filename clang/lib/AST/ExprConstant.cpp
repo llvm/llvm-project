@@ -8127,7 +8127,6 @@ public:
   bool VisitVarDecl(const Expr *E, const VarDecl *VD);
   bool VisitUnaryPreIncDec(const UnaryOperator *UO);
 
-  bool VisitCallExpr(const CallExpr *E);
   bool VisitDeclRefExpr(const DeclRefExpr *E);
   bool VisitPredefinedExpr(const PredefinedExpr *E) { return Success(E); }
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
@@ -8291,20 +8290,6 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
     return false;
   }
   return Success(*V, E);
-}
-
-bool LValueExprEvaluator::VisitCallExpr(const CallExpr *E) {
-  switch (E->getBuiltinCallee()) {
-  case Builtin::BIas_const:
-  case Builtin::BIforward:
-  case Builtin::BImove:
-  case Builtin::BImove_if_noexcept:
-    if (cast<FunctionDecl>(E->getCalleeDecl())->isConstexpr())
-      return Visit(E->getArg(0));
-    break;
-  }
-
-  return ExprEvaluatorBaseTy::VisitCallExpr(E);
 }
 
 bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
@@ -9085,8 +9070,6 @@ static bool isOneByteCharacterType(QualType T) {
 bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                                 unsigned BuiltinOp) {
   switch (BuiltinOp) {
-  case Builtin::BIaddressof:
-  case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
     return evaluateLValue(E->getArg(0), Result);
   case Builtin::BI__builtin_assume_aligned: {

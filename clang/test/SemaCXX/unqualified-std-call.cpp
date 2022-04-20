@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wall -std=c++11 %s -Wno-unused-value
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -std=c++11 %s
 
 namespace std {
 
 template <typename T>
 void dummy(T &&) {}
 template <typename T>
-T &&move(T &&x) { return x; }
+void move(T &&) {}
 template <typename T, typename U>
 void move(T &&, U &&) {}
 
 inline namespace __1 {
 template <typename T>
-T &forward(T &x) { return x; }
+void forward(T &) {}
 } // namespace __1
 
 struct foo {};
