@@ -325,6 +325,20 @@ static bool happensBefore(Operation *a, Operation *b,
   return false;
 }
 
+/// For each given value, find the closest enclosing repetitive region. If this
+/// is the same region for each value, return it. Otherwise return None.
+/// Note: If there is no enclosing repetitive region, return nullptr.
+static Optional<Region *>
+getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values) {
+  if (values.empty())
+    return None;
+  Region *r = getEnclosingRepetitiveRegion(values.front());
+  for (Value value : values.drop_front())
+    if (getEnclosingRepetitiveRegion(value) != r)
+      return None;
+  return r;
+}
+
 /// Annotate IR with details about the detected RaW conflict.
 static void annotateConflict(OpOperand *uRead, OpOperand *uConflictingWrite,
                              Value lastWrite) {
@@ -371,6 +385,15 @@ static bool hasReadAfterWriteInterference(
     AnalysisState &state, const BufferizationAliasInfo &aliasInfo) {
   const BufferizationOptions &options = state.getOptions();
 
+  // Gather all written aliases.
+  SmallVector<Value> writtenAliases;
+  for (OpOperand *uWrite : usesWrite)
+    writtenAliases.push_back(uWrite->get());
+  // Find the inner-most enclosing repetitive region of each alias. If this is
+  // the same region for every alias, save it in `repetitiveRegionOfWrites`.
+  Optional<Region *> repetitiveRegionOfWrites =
+      getCommonEnclosingRepetitiveRegion(writtenAliases);
+
   for (OpOperand *uRead : usesRead) {
     Operation *readingOp = uRead->getOwner();
 
@@ -393,15 +416,60 @@ static bool hasReadAfterWriteInterference(
       // met for uConflictingWrite to be an actual conflict.
       Operation *conflictingWritingOp = uConflictingWrite->getOwner();
 
+      // Check if conflictingWritingOp is in the same repetitive region as all
+      // written aliases. If this is not the case, there is no meaningful
+      // `happensBefore` relationship because conflictingWritingOp may be
+      // executed multiple times. E.g.:
+      //
+      // %0 = ... : tensor<?xf32>
+      // scf.for ... {
+      //   "reading_op"(%0) : tensor<?xf32>
+      //   %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
+      //   ...
+      // }
+      //
+      // In the above example, reading_op happens before writing_op according to
+      // op dominance. However, both ops may happen multiple times; in
+      // particular, the second execution of reading_op happens after the first
+      // execution of writing_op. This is problematic if the tensor they operate
+      // on (%0) is defined outside of the loop.
+      //
+      // Counter example:
+      //
+      // scf.for ... {
+      //   %0 = ... : tensor<?xf32>
+      //   "reading_op"(%0) : tensor<?xf32>
+      //   %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
+      //   ...
+      // }
+      //
+      // In this example, %0 is in the same repetitive region as
+      // conflictingWritingOp, so op dominance can be used to compute the
+      // `happensBefore` relationship.
+      //
+      // Note: iter_args of loops are not aliases of their respective block
+      // arguments, so op domanice can be used when analyzing ops that operate
+      // on them.
+      bool canUseOpDominance =
+          repetitiveRegionOfWrites ==
+          getEnclosingRepetitiveRegion(conflictingWritingOp);
+
       // No conflict if the readingOp dominates conflictingWritingOp, i.e., the
       // write is not visible when reading.
-      if (happensBefore(readingOp, conflictingWritingOp, domInfo))
+      //
+      // Note: If ops are executed multiple times (e.g., because they are inside
+      //       a loop), there may be no meaningful `happensBefore` relationship.
+      if (canUseOpDominance &&
+          happensBefore(readingOp, conflictingWritingOp, domInfo))
         continue;
 
       // No conflict if the reading use equals the use of the conflicting write.
-      // A use cannot conflict with itself. Note: Just being the same op is not
-      // enough. It has to be the same use.
-      if (uConflictingWrite == uRead)
+      // A use cannot conflict with itself.
+      //
+      // Note: Just being the same op is not enough. It has to be the same use.
+      // Note: If the op is executed multiple times (e.g., because it is inside
+      //       a loop), it may be conflicting with itself.
+      if (canUseOpDominance && uConflictingWrite == uRead)
         continue;
 
       // No conflict if the op interface says so.
@@ -416,7 +484,12 @@ static bool hasReadAfterWriteInterference(
             continue;
 
       // Ops are not conflicting if they are in mutually exclusive regions.
-      if (insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp))
+      //
+      // Note: If ops are executed multiple times (e.g., because they are inside
+      //       a loop), mutually exclusive regions may be executed multiple
+      //       times.
+      if (canUseOpDominance &&
+          insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp))
         continue;
 
       // Check all possible last writes.
