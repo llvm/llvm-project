@@ -45,7 +45,7 @@
 //     CHECK-PEEL-12:       linalg.matmul ins({{.*}} : tensor<?x?xf32>, tensor<?x36xf32>) outs({{.*}} : tensor<?x36xf32>)
 //     CHECK-PEEL-12:     }
 //     CHECK-PEEL-12:   }
-func @matmul_static_tensor(%arg0: tensor<1500x1600xf32>, %arg1: tensor<1600x1700xf32>)
+func.func @matmul_static_tensor(%arg0: tensor<1500x1600xf32>, %arg1: tensor<1600x1700xf32>)
     -> tensor<1500x1700xf32> {
   %out = linalg.init_tensor [1500, 1700] : tensor<1500x1700xf32>
   %r = linalg.matmul {__internal_linalg_transform__ = "tile"}
@@ -96,7 +96,7 @@ func @matmul_static_tensor(%arg0: tensor<1500x1600xf32>, %arg1: tensor<1600x1700
 //     CHECK-PEEL-12:       }
 //     CHECK-PEEL-12:     }
 //     CHECK-PEEL-12:   }
-func @matmul_dynamic_tensor(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>)
+func.func @matmul_dynamic_tensor(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>)
     -> tensor<?x?xf32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

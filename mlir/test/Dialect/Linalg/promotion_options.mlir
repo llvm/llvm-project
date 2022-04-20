@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns=test-linalg-promotion-options -split-input-file | FileCheck %s
 
-func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
+func.func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 {
    linalg.matmul {__internal_linalg_transform__ = "START"}
      ins(%a, %b: memref<?x?xf32>, memref<?x?xf32>)

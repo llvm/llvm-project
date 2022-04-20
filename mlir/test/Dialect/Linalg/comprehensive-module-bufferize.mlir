@@ -10,7 +10,7 @@
 
 // CHECK-LABEL: func @transfer_read(%{{.*}}: memref<?xf32, #map>) -> vector<4xf32> {
 // CHECK-NO-LAYOUT-MAP-LABEL: func @transfer_read(%{{.*}}: memref<?xf32>) -> vector<4xf32>
-func @transfer_read(
+func.func @transfer_read(
     %A : tensor<?xf32> {linalg.inplaceable = false})
   -> (vector<4xf32>)
 {
@@ -31,7 +31,7 @@ func @transfer_read(
 // CHECK-LABEL: func @fill_inplace(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
 // CHECK-NO-LAYOUT-MAP-LABEL: func @fill_inplace(%{{.*}}: memref<?xf32>) {
-func @fill_inplace(
+func.func @fill_inplace(
     %A : tensor<?xf32> {linalg.inplaceable = true})
   -> tensor<?xf32>
 {
@@ -51,7 +51,7 @@ func @fill_inplace(
 // -----
 
 // CHECK-LABEL: func @tensor_extract(%{{.*}}: memref<?xf32, #{{.*}}>) -> f32 {
-func @tensor_extract(%A : tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
+func.func @tensor_extract(%A : tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
   %c0 = arith.constant 0 : index
 
 //       CHECK: %[[RES:.*]] = memref.load {{.*}} : memref<?xf32, #{{.*}}>
@@ -69,7 +69,7 @@ func @tensor_extract(%A : tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
 // CHECK-LABEL: func @not_inplace(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>) -> memref<?xf32> {
 // CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?xf32>) -> memref<?xf32>
-func @not_inplace(
+func.func @not_inplace(
     %A : tensor<?xf32> {linalg.inplaceable = false})
   -> tensor<?xf32>
 {
@@ -93,7 +93,7 @@ func @not_inplace(
 // CHECK-LABEL: func @not_inplace
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?x?xf32, #[[$map_2d_dyn]]>) {
 // CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?x?xf32>) {
-func @not_inplace(
+func.func @not_inplace(
     %A : tensor<?x?xf32> {linalg.inplaceable = true})
   -> tensor<?x?xf32>
 {
@@ -120,7 +120,7 @@ func @not_inplace(
 // -----
 
 // CHECK-LABEL: func @not_inplace
-func @not_inplace(%A : tensor<?x?xf32> {linalg.inplaceable = true}) -> tensor<?x?xf32> {
+func.func @not_inplace(%A : tensor<?x?xf32> {linalg.inplaceable = true}) -> tensor<?x?xf32> {
   /// Within op multiple uses of %A, must alloc.
   // CHECK: alloc
   %r = linalg.matmul  ins(%A, %A: tensor<?x?xf32>, tensor<?x?xf32>)
@@ -132,7 +132,7 @@ func @not_inplace(%A : tensor<?x?xf32> {linalg.inplaceable = true}) -> tensor<?x
 // -----
 
 // CHECK-LABEL: func @vec_inplace
-func @vec_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vector<4xf32>)
+func.func @vec_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vector<4xf32>)
     -> tensor<?xf32>
 {
   %c0 = arith.constant 0 : index
@@ -151,7 +151,7 @@ func @vec_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vector<
 
 // CHECK-LABEL: func @vec_not_inplace
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
-func @vec_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vector<4xf32>)
+func.func @vec_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vector<4xf32>)
     -> (tensor<?xf32>, tensor<?xf32>)
 {
   %c0 = arith.constant 0 : index
@@ -182,7 +182,7 @@ func @vec_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vec
 //  CHECK-SAME:   %[[A1:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>,
 //  CHECK-SAME:   %[[t0:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>,
 //  CHECK-SAME:   %[[t1:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>
-func @insert_slice_fun(%A0 : tensor<?xf32> {linalg.inplaceable = false},
+func.func @insert_slice_fun(%A0 : tensor<?xf32> {linalg.inplaceable = false},
                        %A1 : tensor<?xf32> {linalg.inplaceable = true},
                        %t0 : tensor<4xf32> {linalg.inplaceable = false},
                        %t1 : tensor<4xf32> {linalg.inplaceable = true})
@@ -229,7 +229,7 @@ func @insert_slice_fun(%A0 : tensor<?xf32> {linalg.inplaceable = false},
 // CHECK-LABEL: func @insert_slice_fun
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
 //  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>
-func @insert_slice_fun(
+func.func @insert_slice_fun(
     %A : tensor<?xf32> {linalg.inplaceable = true},
     %t : tensor<4xf32> {linalg.inplaceable = false})
   -> tensor<?xf32>
@@ -257,7 +257,7 @@ func @insert_slice_fun(
 // CHECK-LABEL: func @insert_slice_fun
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
 //  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>
-func @insert_slice_fun(
+func.func @insert_slice_fun(
     %A : tensor<?xf32> {linalg.inplaceable = true},
     %t : tensor<4xf32> {linalg.inplaceable = false})
   -> tensor<?xf32>
@@ -285,7 +285,7 @@ func @insert_slice_fun(
 // CHECK-LABEL: func @insert_slice_fun_not_inplace
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
 //  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>
-func @insert_slice_fun_not_inplace(
+func.func @insert_slice_fun_not_inplace(
     %A : tensor<?xf32> {linalg.inplaceable = false},
     %t : tensor<4xf32> {linalg.inplaceable = false})
   -> tensor<?xf32>
@@ -312,7 +312,7 @@ func @insert_slice_fun_not_inplace(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>,
 //  CHECK-SAME:   %[[t:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
 //  CHECK-SAME:   ) -> memref<?xf32> {
-func @scf_for_yield_only(%A : tensor<?xf32> {linalg.inplaceable = false},
+func.func @scf_for_yield_only(%A : tensor<?xf32> {linalg.inplaceable = false},
                          %B : tensor<?xf32> {linalg.inplaceable = true},
                          %lb : index, %ub : index, %step : index)
   -> (tensor<?xf32>, tensor<?xf32>)
@@ -342,7 +342,7 @@ func @scf_for_yield_only(%A : tensor<?xf32> {linalg.inplaceable = false},
 // just want to make sure that it does not crash.
 
 // CHECK-LABEL: func @nested_scf_for
-func @nested_scf_for(%A : tensor<?xf32> {linalg.inplaceable = true},
+func.func @nested_scf_for(%A : tensor<?xf32> {linalg.inplaceable = true},
                      %v : vector<5xf32>) -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -365,7 +365,7 @@ func @nested_scf_for(%A : tensor<?xf32> {linalg.inplaceable = true},
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
 //  CHECK-SAME:   %[[B:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
 //  CHECK-SAME:   %[[C:[a-zA-Z0-9]*]]: memref<4xf32, #[[$map_1d_dyn]]>
-func @scf_for_with_tensor.insert_slice(
+func.func @scf_for_with_tensor.insert_slice(
    %A : tensor<?xf32> {linalg.inplaceable = false},
    %B : tensor<?xf32> {linalg.inplaceable = true},
    %C : tensor<4xf32> {linalg.inplaceable = false},
@@ -407,7 +407,7 @@ func @scf_for_with_tensor.insert_slice(
 
 // CHECK-LABEL: func @execute_region_with_conflict(
 //  CHECK-SAME:     %[[m1:.*]]: memref<?xf32
-func @execute_region_with_conflict(%t1 : tensor<?xf32> {linalg.inplaceable = "true"})
+func.func @execute_region_with_conflict(%t1 : tensor<?xf32> {linalg.inplaceable = "true"})
     -> (f32, tensor<?xf32>, f32)
 {
   %f1 = arith.constant 0.0 : f32
@@ -438,7 +438,7 @@ func @execute_region_with_conflict(%t1 : tensor<?xf32> {linalg.inplaceable = "tr
 // CHECK-SAME:   %[[A:[0-9a-zA-Z]*]]: memref<128x256xf32>
 // CHECK-SAME:   %[[B:[0-9a-zA-Z]*]]: memref<256x192xf32>
 // CHECK-SAME:   %[[C:[0-9a-zA-Z]*]]: memref<128x192xf32>
-func @matmul(
+func.func @matmul(
     %A: tensor<128x256xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = false},
     %B: tensor<256x192xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = false},
     %C: tensor<128x192xf32> {linalg.buffer_layout = affine_map<(d0, d1) -> (d0, d1)>, linalg.inplaceable = true})
@@ -512,7 +512,7 @@ func @matmul(
 //       CHECK:   memref.copy %[[A]], %[[alloc]]
 //       CHECK:   %[[subview:.*]] = memref.subview %[[A]][{{.*}}] [4] [1] : {{.*}} to memref<4xf32
 //       CHECK:   memref.copy %[[alloc]], %[[subview]]
-func @tensor_cast_not_in_place(
+func.func @tensor_cast_not_in_place(
     %A : tensor<?xf32> {linalg.inplaceable = true},
     %B : tensor<?xf32> {linalg.inplaceable = false}, %idx: index)
   -> (tensor<?xf32>)
@@ -532,7 +532,7 @@ func @tensor_cast_not_in_place(
 /// errors in the def-use chains.
 
 // CHECK-LABEL: func @dominance_violation_bug_1
-func @dominance_violation_bug_1(
+func.func @dominance_violation_bug_1(
     %A : tensor<?x?xf32> {linalg.inplaceable = false},
     %idx : index)
   -> tensor<?x?xf32>
@@ -552,7 +552,7 @@ func @dominance_violation_bug_1(
 
 // CHECK-LABEL: func @scf_if_inplace(
 //  CHECK-SAME:     %[[cond:.*]]: i1, %[[t1:.*]]: memref<?xf32{{.*}}>, %[[v:.*]]: vector
-func @scf_if_inplace(%cond: i1,
+func.func @scf_if_inplace(%cond: i1,
                      %t1: tensor<?xf32> {linalg.inplaceable = true},
                      %v: vector<5xf32>, %idx: index) -> tensor<?xf32> {
 
@@ -582,7 +582,7 @@ func @scf_if_inplace(%cond: i1,
 //       CHECK:       vector.transfer_write
 //       CHECK:     }
 //       CHECK:   }
-func @scf_if_inside_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
+func.func @scf_if_inside_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
                       %v: vector<5xf32>, %idx: index,
                       %cond: i1) -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
@@ -604,7 +604,7 @@ func @scf_if_inside_scf_for(%t1: tensor<?xf32> {linalg.inplaceable = true},
 
 // CHECK-LABEL: func @scf_if_non_equiv_yields(
 //  CHECK-SAME:     %[[cond:.*]]: i1, %[[A:.*]]: memref<{{.*}}>, %[[B:.*]]: memref<{{.*}}>) -> memref<{{.*}}>
-func @scf_if_non_equiv_yields(
+func.func @scf_if_non_equiv_yields(
     %b : i1,
     %A : tensor<4xf32> {linalg.inplaceable = false},
     %B : tensor<4xf32> {linalg.inplaceable = false})
@@ -624,7 +624,7 @@ func @scf_if_non_equiv_yields(
 
 // CHECK-LABEL: func @insert_op
 //  CHECK-SAME:     %[[t1:.*]]: memref<?xf32, {{.*}}>, %[[s:.*]]: f32, %[[i:.*]]: index
-func @insert_op(%t1 : tensor<?xf32> {linalg.inplaceable = true},
+func.func @insert_op(%t1 : tensor<?xf32> {linalg.inplaceable = true},
                 %s : f32, %i : index) -> tensor<?xf32> {
   // CHECK: memref.store %[[s]], %[[t1]][%[[i]]]
   %0 = tensor.insert %s into %t1[%i] : tensor<?xf32>
@@ -634,7 +634,7 @@ func @insert_op(%t1 : tensor<?xf32> {linalg.inplaceable = true},
 
 // -----
 
-func @gather_like(
+func.func @gather_like(
     %arg0 : tensor<?x?xf32> {linalg.inplaceable = false},
     %arg1 : tensor<?xi32> {linalg.inplaceable = false},
     %arg2 : tensor<?x?xf32> {linalg.inplaceable = true}) -> tensor<?x?xf32> {
@@ -666,7 +666,7 @@ func @gather_like(
 
 // CHECK-LABEL: func @linalg_op_bufferizes_inplace_with_input
 //  CHECK-SAME:     %[[t1:.*]]: memref<?x?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>, %[[t3:.*]]: memref<?x?xf32, #{{.*}}>
-func @linalg_op_bufferizes_inplace_with_input(
+func.func @linalg_op_bufferizes_inplace_with_input(
     %t1: tensor<?x?xf32> {linalg.inplaceable = true},
     %t2: tensor<?xf32> {linalg.inplaceable = true},
     %t3: tensor<?x?xf32> {linalg.inplaceable = true},
@@ -698,7 +698,7 @@ func @linalg_op_bufferizes_inplace_with_input(
 
 // CHECK-LABEL: func @op_is_reading_but_following_ops_are_not
 //  CHECK-SAME:     %[[t0:.*]]: memref<?xf32
-func @op_is_reading_but_following_ops_are_not(
+func.func @op_is_reading_but_following_ops_are_not(
     %t0 : tensor<?xf32> {linalg.inplaceable = false},
     %cst : f32)
   -> tensor<?xf32>
@@ -729,7 +729,7 @@ func @op_is_reading_but_following_ops_are_not(
 // InitTensorOp elimination would produce SSA violations for the example below.
 //===----------------------------------------------------------------------===//
 
-func @depthwise_conv_1d_nwc_wc(%arg0: index, %arg1: index, %arg2: tensor<8x18x32xf32>)
+func.func @depthwise_conv_1d_nwc_wc(%arg0: index, %arg1: index, %arg2: tensor<8x18x32xf32>)
     -> tensor<?x1x6x8xf32> {
   %c0 = arith.constant 0 : index
   %c32 = arith.constant 32 : index
@@ -750,7 +750,7 @@ func @depthwise_conv_1d_nwc_wc(%arg0: index, %arg1: index, %arg2: tensor<8x18x32
 
 // CHECK-LABEL: func @write_to_select_op_source
 //  CHECK-SAME:     %[[t1:.*]]: memref<?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>
-func @write_to_select_op_source(
+func.func @write_to_select_op_source(
     %t1 : tensor<?xf32> {linalg.inplaceable = true},
     %t2 : tensor<?xf32> {linalg.inplaceable = true},
     %c : i1)
@@ -772,7 +772,7 @@ func @write_to_select_op_source(
 
 // CHECK-LABEL: func @write_after_select_read_one
 //  CHECK-SAME:     %[[t1:.*]]: memref<?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>
-func @write_after_select_read_one(
+func.func @write_after_select_read_one(
     %t1 : tensor<?xf32> {linalg.inplaceable = true},
     %t2 : tensor<?xf32> {linalg.inplaceable = true},
     %c : i1)
@@ -803,7 +803,7 @@ func @write_after_select_read_one(
 // correctly.
 
 // CHECK-LABEL: func @rank_reducing
-func @rank_reducing(
+func.func @rank_reducing(
     %i: index, %j: index,
     %arg0: tensor<8x18x32xf32>)
       -> tensor<?x1x6x8xf32> {
@@ -840,7 +840,7 @@ func @rank_reducing(
 //       CHECK:   %[[r:.*]] = memref.load %[[clone]][%{{.*}}]
 //       CHECK:   memref.dealloc %[[clone]]
 //       CHECK:   return %[[r]]
-func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 {
+func.func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 {
   %r = scf.execute_region -> (tensor<?xf32>) {
     %t2 = linalg.init_tensor [%i] : tensor<?xf32>
     scf.yield %t2 : tensor<?xf32>
@@ -864,7 +864,7 @@ func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 {
 //       CHECK:     memref.copy %[[t]], %[[alloc2]]
 //       CHECK:     scf.yield %[[alloc2]]
 //       CHECK:   return %[[for]]
-func @scf_for_yield_non_equivalent(
+func.func @scf_for_yield_non_equivalent(
     %t: tensor<?xf32>, %lb : index, %ub : index, %step : index) -> tensor<?xf32> {
   %r = scf.for %i = %lb to %ub step %step iter_args(%a = %t) -> tensor<?xf32> {
     scf.yield %t : tensor<?xf32>
@@ -893,7 +893,7 @@ func @scf_for_yield_non_equivalent(
 //       CHECK:     %[[casted3:.*]] = memref.cast %[[alloc3]]
 //       CHECK:     scf.yield %[[casted3]]
 //       CHECK:   return %[[for]]
-func @scf_for_yield_allocation(%t: tensor<?xf32>, %lb : index, %ub : index,
+func.func @scf_for_yield_allocation(%t: tensor<?xf32>, %lb : index, %ub : index,
                                %step : index) -> tensor<?xf32> {
   %r = scf.for %i = %lb to %ub step %step iter_args(%a = %t) -> tensor<?xf32> {
     %t2 = linalg.init_tensor [%i] : tensor<?xf32>
@@ -911,7 +911,7 @@ func @scf_for_yield_allocation(%t: tensor<?xf32>, %lb : index, %ub : index,
 // CHECK-LABEL: func @scf_for_swapping_yields(
 //  CHECK-SAME:     %[[A:.*]]: memref<?xf32, #{{.*}}>, %[[B:.*]]: memref<?xf32, #{{.*}}>
 
-func @scf_for_swapping_yields(
+func.func @scf_for_swapping_yields(
     %A : tensor<?xf32>, %B : tensor<?xf32> {linalg.inplaceable = true},
     %C : tensor<4xf32>, %lb : index, %ub : index, %step : index)
   -> (f32, f32)

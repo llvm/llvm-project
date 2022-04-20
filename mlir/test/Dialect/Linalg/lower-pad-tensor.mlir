@@ -3,7 +3,7 @@
 // CHECK-DAG:   #[[$MAP0:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 // CHECK-DAG:   #[[$MAP1:.*]] = affine_map<(d0, d1, d2, d3) -> (d0 + 1, d1 + 1, d2 + 1, d3 + 2)>
 // CHECK-LABEL: func @pad_tensor_with_memrefs
-func @pad_tensor_with_memrefs(%arg0: memref<1x28x28x1xf32>) -> memref<2x31x31x3xf32> {
+func.func @pad_tensor_with_memrefs(%arg0: memref<1x28x28x1xf32>) -> memref<2x31x31x3xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = bufferization.to_tensor %arg0 : memref<1x28x28x1xf32>
   %1 = tensor.pad %0 low[1, 1, 1, 2] high[0, 2, 2, 0]  {
@@ -23,7 +23,7 @@ func @pad_tensor_with_memrefs(%arg0: memref<1x28x28x1xf32>) -> memref<2x31x31x3x
 // CHECK-DAG:   #[[$MAP2:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-DAG:   #[[$MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0 + 1, d1 + 2, d2 + 2)>
 // CHECK-LABEL: func @pad_tensor_no_memrefs
-func @pad_tensor_no_memrefs(%arg0: tensor<1x28x28xf32>) -> tensor<2x32x32xf32> {
+func.func @pad_tensor_no_memrefs(%arg0: tensor<1x28x28xf32>) -> tensor<2x32x32xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.pad %arg0 low[1, 2, 2] high[0, 2, 2]  {
   ^bb0(%arg1: index, %arg2: index, %arg3: index):  
@@ -41,7 +41,7 @@ func @pad_tensor_no_memrefs(%arg0: tensor<1x28x28xf32>) -> tensor<2x32x32xf32> {
 // CHECK-DAG:   #[[$MAP4:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 // CHECK-DAG:   #[[$MAP5:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1 + 2, d2 + 2, d3)>
 // CHECK-LABEL: func @pad_tensor_detailed
-func @pad_tensor_detailed(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32> {
+func.func @pad_tensor_detailed(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.pad %arg0 low[0, 2, 2, 0] high[0, 2, 2, 0]  {
   ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  

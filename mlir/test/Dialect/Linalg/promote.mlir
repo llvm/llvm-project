@@ -8,7 +8,7 @@
 
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 
-func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
+func.func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c4 = arith.constant 4 : index
   %c3 = arith.constant 3 : index
   %c2 = arith.constant 2 : index
@@ -81,7 +81,7 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 
 // -----
 
-func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
+func.func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c4 = arith.constant 4 : index
   %c3 = arith.constant 3 : index
   %c2 = arith.constant 2 : index

@@ -7,7 +7,7 @@
 // dimensions should be deprecated.
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x?xi32>)
+func.func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x?xi32>)
   -> tensor<?x?x4x?xi32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3]] :
     tensor<?x?x?xi32> into tensor<?x?x4x?xi32>
@@ -40,7 +40,7 @@ func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x?xi32>)
 // -----
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func @generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?x4x5xi32>)
+func.func @generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?x4x5xi32>)
   -> tensor<?x?xi32> {
   %0 = linalg.generic {
     indexing_maps = [#map0, #map0],
@@ -73,7 +73,7 @@ func @generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?x4x5xi32>)
 
 #map2 = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
 #map3 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-func @generic_op_021_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf32>) -> tensor<3x7x5xf32> {
+func.func @generic_op_021_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf32>) -> tensor<3x7x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2]]
       : tensor<3x35xf32> into tensor<3x5x7xf32>
   %1 = linalg.init_tensor [3, 7, 5] : tensor<3x7x5xf32>
@@ -98,7 +98,7 @@ func @generic_op_021_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf3
 
 #map2 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 #map3 = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
-func @generic_op_120_permutation_reshape_producer_fusion(%arg0 : tensor<3x35xf32>) -> tensor<5x7x3xf32> {
+func.func @generic_op_120_permutation_reshape_producer_fusion(%arg0 : tensor<3x35xf32>) -> tensor<5x7x3xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2]]
       : tensor<3x35xf32> into tensor<3x5x7xf32>
   %1 = linalg.init_tensor [5, 7, 3] : tensor<5x7x3xf32>
@@ -125,7 +125,7 @@ func @generic_op_120_permutation_reshape_producer_fusion(%arg0 : tensor<3x35xf32
 #map1 = affine_map<(d0, d1, d2) -> (d1, d2)>
 #map2 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 #map3 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-func @generic_op_102_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf32>) -> tensor<5x3x7xf32> {
+func.func @generic_op_102_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf32>) -> tensor<5x3x7xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2]]
       : tensor<3x35xf32> into tensor<3x5x7xf32>
   %1 = linalg.init_tensor [5, 3, 7] : tensor<5x3x7xf32>
@@ -153,7 +153,7 @@ func @generic_op_102_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf3
 #map1 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 #map2 = affine_map<(d0, d1, d2) -> (d0)>
 #map3 = affine_map<(d0, d1, d2) -> (d1, d2)>
-func @generic_op_102_permultation_reshape_consumer_fusion(%arg0 : tensor<3x5x7xf32>) -> tensor<5x21xf32> {
+func.func @generic_op_102_permultation_reshape_consumer_fusion(%arg0 : tensor<3x5x7xf32>) -> tensor<5x21xf32> {
   %0 = linalg.init_tensor [5, 3, 7] : tensor<5x3x7xf32>
   %1 = linalg.generic
     {indexing_maps = [#map0, #map1],
@@ -181,7 +181,7 @@ func @generic_op_102_permultation_reshape_consumer_fusion(%arg0 : tensor<3x5x7xf
 // -----
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func @generic_op_reshape_consumer_nofusion(%arg0 : tensor<?x?x?x5xf32>,
+func.func @generic_op_reshape_consumer_nofusion(%arg0 : tensor<?x?x?x5xf32>,
                                            %arg1 : tensor<?x?x?x5xf32>) ->
                                            tensor<?x?xf32>
 {
@@ -209,7 +209,7 @@ func @generic_op_reshape_consumer_nofusion(%arg0 : tensor<?x?x?x5xf32>,
 
 // -----
 
-func @generic_op_permultation_reshape_consumer_fusion_unused_dim(%arg0 : tensor<6x1xf32>) -> tensor<6xi32> {
+func.func @generic_op_permultation_reshape_consumer_fusion_unused_dim(%arg0 : tensor<6x1xf32>) -> tensor<6xi32> {
   %0 = linalg.init_tensor [6, 1] : tensor<6x1xi32>
   %1 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                         affine_map<(d0, d1) -> (d0, d1)>],
@@ -238,7 +238,7 @@ func @generic_op_permultation_reshape_consumer_fusion_unused_dim(%arg0 : tensor<
 
 #map0 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d2, d4, d0, d6, d3, d5, d1)>
 #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4, d5, d6)>
-func @permuted_dims_fusion_expand_shape(%arg0 : tensor<3x8x7x240xf32>) -> tensor<4x6x3x8x2x5x7xf32> {
+func.func @permuted_dims_fusion_expand_shape(%arg0 : tensor<3x8x7x240xf32>) -> tensor<4x6x3x8x2x5x7xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3], [4, 5, 6]]
       : tensor<3x8x7x240xf32> into tensor<3x2x4x7x8x5x6xf32>
   %1 = linalg.init_tensor [4, 6, 3, 8, 2, 5, 7] : tensor<4x6x3x8x2x5x7xf32>
@@ -264,7 +264,7 @@ func @permuted_dims_fusion_expand_shape(%arg0 : tensor<3x8x7x240xf32>) -> tensor
 
 #map0 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d2, d4, d0, d6, d3, d5, d1)>
 #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4, d5, d6)>
-func @permuted_dims_fusion_collapse_shape(%arg0 : tensor<4x6x3x8x2x5x7xf32>) -> tensor<3x8x7x240xf32> {
+func.func @permuted_dims_fusion_collapse_shape(%arg0 : tensor<4x6x3x8x2x5x7xf32>) -> tensor<3x8x7x240xf32> {
   %0 = linalg.init_tensor [3, 2, 4, 7, 8, 5, 6] : tensor<3x2x4x7x8x5x6xf32>
   %1 = linalg.generic {
       indexing_maps = [#map1, #map0],

@@ -11,7 +11,7 @@
   iterator_types = ["parallel", "parallel"]
 }
 
-func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
           %rhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
           %sum: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   linalg.generic #pointwise_2d_trait

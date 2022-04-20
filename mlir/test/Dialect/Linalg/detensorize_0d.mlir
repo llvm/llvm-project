@@ -2,7 +2,7 @@
 
 #map = affine_map<() -> ()>
 
-func @detensor_simple(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
+func.func @detensor_simple(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
   %0 = linalg.init_tensor [] : tensor<f32>
   %1 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = []}
     ins(%arg1, %arg2 : tensor<f32>, tensor<f32>)
@@ -21,7 +21,7 @@ func @detensor_simple(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> att
 // CHECK:         %[[new_tensor_res:.*]] = tensor.from_elements %[[detensored_res]]
 // CHECK:         return %[[new_tensor_res]]
 
-func @detensor_op_sequence(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
+func.func @detensor_op_sequence(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
   %0 = linalg.init_tensor [] : tensor<f32>
   %1 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = []}
     ins(%arg1, %arg2 : tensor<f32>, tensor<f32>)
@@ -61,7 +61,7 @@ func @detensor_op_sequence(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32
 // CHECK:         %[[new_tensor_res:.*]] = tensor.from_elements %[[detensored_res3]]
 // CHECK:         return %[[new_tensor_res]]
 
-func @detensor_multiple_ops(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
+func.func @detensor_multiple_ops(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
   %0 = linalg.init_tensor [] : tensor<f32>
   %1 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = []}
     ins(%arg1, %arg2 : tensor<f32>, tensor<f32>)
@@ -82,7 +82,7 @@ func @detensor_multiple_ops(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f3
 // CHECK:         %[[new_tensor_res:.*]] = tensor.from_elements %[[detensored_res2]]
 // CHECK:         return %[[new_tensor_res]]
 
-func @detensor_foreign_op(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
+func.func @detensor_foreign_op(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> attributes {iree.module.export} {
   %0 = linalg.init_tensor [] : tensor<f32>
   %1 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = []}
     ins(%arg1, %arg2 : tensor<f32>, tensor<f32>)

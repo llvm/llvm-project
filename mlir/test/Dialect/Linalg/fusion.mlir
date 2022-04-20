@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-linalg-greedy-fusion -split-input-file | FileCheck %s
 
-func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>,
+func.func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, 1]>,
          %C: memref<?x?xf32, offset: 0, strides: [?, 1]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, 1]>,
@@ -48,7 +48,7 @@ func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>,
 // -----
 
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s0 + d1 * s1)>
-func @f2(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
+func.func @f2(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -100,7 +100,7 @@ func @f2(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s0 + d1 * s1)>
 
-func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
+func.func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -154,7 +154,7 @@ func @f3(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s0 + d1 * s1)>
 
-func @f4(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
+func.func @f4(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -212,7 +212,7 @@ func @f4(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 // -----
 
 // CHECK-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s0 + d1 * s1)>
-func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
+func.func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -290,7 +290,7 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 #map1 = affine_map<(d0) -> (d0 + 4)>
 #map2 = affine_map<(d0) -> (d0 + 3)>
 
-func @f6(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
+func.func @f6(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -345,7 +345,7 @@ func @f6(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 
 // -----
 
-func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
+func.func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -432,7 +432,7 @@ func @f7(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 #map1 = affine_map<(d0) -> (d0 + 4)>
 #map2 = affine_map<(d0) -> (d0 + 3)>
 
-func @f8(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
+func.func @f8(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
          %D: memref<?x?xf32, offset: 0, strides: [?, ?]>,
@@ -492,7 +492,7 @@ func @f8(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   indexing_maps = [#id_2d, #id_2d, #id_2d],
   iterator_types = ["parallel", "parallel"]
 }
-func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
+func.func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
                 %B: memref<?x?xf32, offset: 0, strides: [?, ?]>,
                 %C: memref<?x?xf32, offset: 0, strides: [?, ?]>,
                 %D: memref<?x?xf32, offset: 0, strides: [?, ?]>) {
@@ -549,7 +549,7 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   indexing_maps = [#id_2d, #id_2d, #id_2d],
   iterator_types = ["parallel", "parallel"]
 }
-func @pointwise_no_view(%M: index, %N: index) {
+func.func @pointwise_no_view(%M: index, %N: index) {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c3 = arith.constant 3 : index
@@ -607,7 +607,7 @@ func @pointwise_no_view(%M: index, %N: index) {
 #map1 = affine_map<(d0, d1) -> (d0, d1)>
 #map2 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
-func @fusion_of_three(%arg0: memref<100x10xf32>,
+func.func @fusion_of_three(%arg0: memref<100x10xf32>,
                       %arg1: memref<100xf32>,
                       %arg2: memref<100x10xf32>) {
   %c0 = arith.constant 0 : index
@@ -679,7 +679,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
 #map3 = affine_map<(d0)[s0, s1] -> (s0 + 1, -d0 + s0 + s1)>
 #map4 = affine_map<(d0)[s0, s1] -> (s0 + 2, -d0 + s0 + s1)>
 
-func @fill_and_conv(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+func.func @fill_and_conv(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %cst = arith.constant 0.000000e+00 : f32
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -712,7 +712,7 @@ func @fill_and_conv(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memre
 // -----
 
 // Test that different allocation-like ops are recognized and properly handled.
-func @accept_different_alloc_ops(%dim: index, %s0 : index, %s1: index) {
+func.func @accept_different_alloc_ops(%dim: index, %s0 : index, %s1: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

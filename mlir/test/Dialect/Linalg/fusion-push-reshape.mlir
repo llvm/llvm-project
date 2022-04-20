@@ -11,7 +11,7 @@
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x16xf32>, tensor<16xf32>) outs(%[[RI]] : tensor<?x16xf32>)
 //      CHECK: %[[RR:.*]] = tensor.expand_shape %[[R]] {{\[}}[0, 1], [2]] : tensor<?x16xf32> into tensor<?x112x16xf32>
 //      CHECK: return %[[RR]] : tensor<?x112x16xf32>
-func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf32>) -> tensor<?x112x16xf32> {
+func.func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf32>) -> tensor<?x112x16xf32> {
   %0 = tensor.expand_shape %A [[0, 1], [2]]
       : tensor<?x16xf32> into tensor<?x112x16xf32>
   %2 = linalg.generic {indexing_maps = [
@@ -41,7 +41,7 @@ func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf
 // CHECK-SAME: ins(%[[A]], %[[B]], %[[C]] : tensor<12544x16xf32>, tensor<12544x16xf32>, tensor<16xf32>) outs(%[[RI]] : tensor<12544x16xf32>)
 //      CHECK: %[[RR:.*]] = tensor.expand_shape %[[R]] {{\[}}[0, 1], [2]] : tensor<12544x16xf32> into tensor<112x112x16xf32>
 //      CHECK: return %[[RR]] : tensor<112x112x16xf32>
-func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
+func.func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
   %C: tensor<16xf32>) -> tensor<112x112x16xf32> {
   %0 = tensor.expand_shape %A [[0, 1], [2]]
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
@@ -72,7 +72,7 @@ func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
 // CHECK: tensor.expand_shape {{.*}} : tensor<12544x16xf32> into tensor<112x112x16xf32>
 // CHECK: linalg.generic
 // CHECK: } -> tensor<112x112x16xf32>
-func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<112x112x16xf32> {
+func.func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<112x112x16xf32> {
   %20 = tensor.expand_shape %A [[0, 1], [2]]
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
   %21 = linalg.init_tensor [112, 112, 16] : tensor<112x112x16xf32>
@@ -91,7 +91,7 @@ func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<
 
 // -----
 
-func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
+func.func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
     %arg2 : tensor<5xf32>) -> tensor<2x3x5xf32> {
   %cst_6 = arith.constant 1.000000e+00 : f32
   %cst_7 = arith.constant 7.000000e+00 : f32
@@ -127,7 +127,7 @@ func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
 
 // -----
 
-func @generic_op_index_semantics(%A: tensor<?x16xi64>, %B: tensor<16xi64>, %init: tensor<?x112x16xi64>) -> tensor<?x112x16xi64> {
+func.func @generic_op_index_semantics(%A: tensor<?x16xi64>, %B: tensor<16xi64>, %init: tensor<?x112x16xi64>) -> tensor<?x112x16xi64> {
   %0 = tensor.expand_shape %A [[0, 1], [2]]
       : tensor<?x16xi64> into tensor<?x112x16xi64>
   %2 = linalg.generic {indexing_maps = [
