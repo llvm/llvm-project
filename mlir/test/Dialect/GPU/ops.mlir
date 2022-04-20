@@ -1,4 +1,8 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
+// Verify the printed output can be parsed.
+// RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
+// Verify the generic form can be parsed.
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
 module attributes {gpu.container_module} {
 
@@ -21,6 +25,32 @@ module attributes {gpu.container_module} {
       "use"(%float) : (f32) -> ()
       "use"(%data) : (memref<?xf32,1>) -> ()
       // CHECK: gpu.terminator
+      gpu.terminator
+    }
+    return
+  }
+
+  // CHECK-LABEL:func @launch_async(%{{.*}}: index, %{{.*}}: index) {
+  func @launch_async(%blk : index, %thrd : index) {
+    // CHECK: gpu.launch async [%{{.+}}] blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
+    %t = gpu.wait async
+    %name = gpu.launch async [%t] blocks(%arg0, %arg1, %arg2) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
+               threads(%arg3, %arg4, %arg5) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd) {
+      gpu.terminator
+    }
+    return
+  }
+
+  // CHECK-LABEL:func @launch_async_no_deps(%{{.*}}: index, %{{.*}}: index) {
+  func @launch_async_no_deps(%blk : index, %thrd : index) {
+    // CHECK: %{{.*}} = gpu.launch async blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
+    %t0 = gpu.launch async blocks(%arg0, %arg1, %arg2) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
+               threads(%arg3, %arg4, %arg5) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd) {
+      gpu.terminator
+    }
+    // CHECK: gpu.launch async blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
+    %t1 = gpu.launch async [] blocks(%arg0, %arg1, %arg2) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
+               threads(%arg3, %arg4, %arg5) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd) {
       gpu.terminator
     }
     return

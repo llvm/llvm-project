@@ -420,7 +420,9 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let builders = [
     OpBuilder<(ins "GPUFuncOp":$kernelFunc, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
-      "ValueRange":$kernelOperands)>
+      "ValueRange":$kernelOperands,
+      CArg<"Type", "nullptr">:$asyncTokenType,
+      CArg<"ValueRange", "{}">:$asyncDependencies)>
   ];
 
   let extraClassDeclaration = [{
@@ -466,25 +468,32 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let hasVerifier = 1;
 }
 
-def GPU_LaunchOp : GPU_Op<"launch", [AutomaticAllocationScope]>,
-    Arguments<(ins Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
+def GPU_LaunchOp : GPU_Op<"launch",
+    [AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface]>,
+    Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+               Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
                Optional<I32>:$dynamicSharedMemorySize)>,
-    Results<(outs)> {
+    Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
   let description = [{
     Launch a kernel on the specified grid of thread blocks. The body of the
     kernel is defined by the single region that this operation contains. The
-    operation takes six operands followed by an optional operand: the first
-    three operands are grid sizes along the x,y,z dimensions and the following
-    three are block sizes along the x,y,z dimensions. The last operand is
-    optional and corresponds to the amount of dynamic shared memory a kernel's
-    workgroup should be allocated; when this operand is not present, a zero size
-    is assumed.
+    operation takes an optional list of async dependencies followed by six
+    operands and an optional operand.
 
-    When a lower-dimensional kernel is required, unused sizes must
-    be explicitly set to `1`.
+    The `async` keyword indicates the kernel should be launched asynchronously;
+    the operation returns a new !gpu.async.token when the keyword is specified.
+    The kernel launched does not start executing until the ops producing its
+    async dependencies (optional operands) have completed.
+
+    The first three operands (following any async dependencies) are grid sizes
+    along the x,y,z dimensions and the following three are block sizes along the
+    x,y,z dimensions. When a lower-dimensional kernel is required, unused sizes
+    must be explicitly set to `1`.  The last operand is optional and corresponds
+    to the amount of dynamic shared memory a kernel's workgroup should be
+    allocated; when this operand is not present, a zero size is assumed.
 
     The body region has _twelve_ arguments, grouped as follows:
 
@@ -496,7 +505,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [AutomaticAllocationScope]>,
     Syntax:
 
     ```
-    operation ::= `gpu.launch` `block` `(` ssa-id-list `)` `in` ssa-reassignment
+    operation ::= `gpu.launch` (`async` (`[` ssa-id-list `]`)? )?
+                             `block` `(` ssa-id-list `)` `in` ssa-reassignment
                              `threads` `(` ssa-id-list `)` `in` ssa-reassignment
                              (dynamic_shared_memory_size ssa-use)?
                              region attr-dict?
@@ -548,7 +558,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [AutomaticAllocationScope]>,
     OpBuilder<(ins "Value":$gridSizeX, "Value":$gridSizeY,
       "Value":$gridSizeZ, "Value":$blockSizeX, "Value":$blockSizeY,
       "Value":$blockSizeZ,
-      CArg<"Value", "nullptr">:$dynamic_shared_memory_size)>
+      CArg<"Value", "nullptr">:$dynamicSharedMemorySize,
+      CArg<"Type", "nullptr">:$asyncTokenType,
+      CArg<"ValueRange", "{}">:$asyncDependencies)>
   ];
 
   let extraClassDeclaration = [{
