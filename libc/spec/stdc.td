@@ -484,6 +484,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<FILEPtr>]
           >,
           FunctionSpec<
+              "fflush",
+              RetValSpec<IntType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
               "fopen",
               RetValSpec<FILEPtr>,
               [ArgSpec<ConstCharPtr>,

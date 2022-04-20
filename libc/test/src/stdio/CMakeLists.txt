@@ -8,6 +8,7 @@ add_libc_unittest(
     fileop_test.cpp
   DEPENDS
     libc.src.stdio.fclose
+    libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fread
     libc.src.stdio.fseek
