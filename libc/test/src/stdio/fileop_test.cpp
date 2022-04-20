@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fclose.h"
+#include "src/stdio/fflush.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
@@ -38,6 +39,27 @@ TEST(LlvmLibcStdio, SimpleOperations) {
   ASSERT_EQ(__llvm_libc::fseek(file, -5, SEEK_CUR), 0);
   ASSERT_EQ(__llvm_libc::fread(data, 1, READ_SIZE - 1, file), READ_SIZE - 1);
   ASSERT_STREQ(data, "9098");
+
+  ASSERT_EQ(__llvm_libc::fclose(file), 0);
+}
+
+TEST(LlvmLibcFILE, FFlushTest) {
+  constexpr char FILENAME[] = "testdata/fflush.test";
+  ::FILE *file = __llvm_libc::fopen(FILENAME, "w+");
+  ASSERT_FALSE(file == nullptr);
+  constexpr char CONTENT[] = "1234567890987654321";
+  ASSERT_EQ(sizeof(CONTENT),
+            __llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT), file));
+
+  // Flushing at this point should write the data to disk. So, we should be
+  // able to read it back.
+  ASSERT_EQ(0, __llvm_libc::fflush(file));
+
+  char data[sizeof(CONTENT)];
+  ASSERT_EQ(__llvm_libc::fseek(file, 0, SEEK_SET), 0);
+  ASSERT_EQ(__llvm_libc::fread(data, 1, sizeof(CONTENT), file),
+            sizeof(CONTENT));
+  ASSERT_STREQ(data, CONTENT);
 
   ASSERT_EQ(__llvm_libc::fclose(file), 0);
 }

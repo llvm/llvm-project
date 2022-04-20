@@ -25,6 +25,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fflush
+  SRCS
+    fflush.cpp
+  HDRS
+    fflush.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   flockfile
   SRCS
     flockfile.cpp
