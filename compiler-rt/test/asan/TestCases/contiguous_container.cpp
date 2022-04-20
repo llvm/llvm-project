@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -fexceptions -O %s -o %t && %run %t
+// RUN: %clangxx_asan -fexceptions -O %s -o %t && %env_asan_opts=detect_stack_use_after_return=0 %run %t
 //
 // Test __sanitizer_annotate_contiguous_container.
 

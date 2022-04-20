@@ -15,7 +15,7 @@ following types of bugs:
 * Out-of-bounds accesses to heap, stack and globals
 * Use-after-free
 * Use-after-return (clang flag ``-fsanitize-address-use-after-return=(never|runtime|always)`` default: ``runtime``)
-    * Enable ``runtime`` with: ``ASAN_OPTIONS=detect_stack_use_after_return=1``
+    * Disable ``runtime`` with: ``ASAN_OPTIONS=detect_stack_use_after_return=0``
 * Use-after-scope (clang flag ``-fsanitize-address-use-after-scope``)
 * Double-free, invalid free
 * Memory leaks (experimental)
@@ -143,8 +143,8 @@ Stack Use After Return (UAR)
 AddressSanitizer can optionally detect stack use after return problems.
 This is available by default, or explicitly
 (``-fsanitize-address-use-after-return=runtime``).
-To enable this check at runtime, set the environment variable
-``ASAN_OPTIONS=detect_stack_use_after_return=1``.
+To disable this check at runtime, set the environment variable
+``ASAN_OPTIONS=detect_stack_use_after_return=0``.
 
 Enabling this check (``-fsanitize-address-use-after-return=always``) will
 reduce code size.  The code size may be reduced further by completely
@@ -152,8 +152,8 @@ eliminating this check (``-fsanitize-address-use-after-return=never``).
 
 To summarize: ``-fsanitize-address-use-after-return=<mode>``
   * ``never``: Completely disables detection of UAR errors (reduces code size).
-  * ``runtime``: Adds the code for detection, but must be enabled via the
-    runtime environment (``ASAN_OPTIONS=detect_stack_use_after_return=1``).
+  * ``runtime``: Adds the code for detection, but it can be disable via the
+    runtime environment (``ASAN_OPTIONS=detect_stack_use_after_return=0``).
   * ``always``: Enables detection of UAR errors in all cases. (reduces code
     size, but not as much as ``never``).
 
