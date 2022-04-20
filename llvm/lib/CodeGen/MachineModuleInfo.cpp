@@ -203,7 +203,6 @@ void MachineModuleInfo::initialize() {
   CurCallSite = 0;
   NextFnNum = 0;
   UsesMSVCFloatingPoint = UsesMorestackAddr = false;
-  HasSplitStack = HasNosplitStack = false;
   AddrLabelSymbols = nullptr;
   DbgInfoAvailable = false;
 }
@@ -232,8 +231,6 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
   CurCallSite = MMI.CurCallSite;
   UsesMSVCFloatingPoint = MMI.UsesMSVCFloatingPoint;
   UsesMorestackAddr = MMI.UsesMorestackAddr;
-  HasSplitStack = MMI.HasSplitStack;
-  HasNosplitStack = MMI.HasNosplitStack;
   AddrLabelSymbols = MMI.AddrLabelSymbols;
   ExternalContext = MMI.ExternalContext;
   TheModule = MMI.TheModule;
