@@ -50,18 +50,12 @@ define void @test_phi_extra_use(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[JOIN:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
-; CHECK-NEXT:    [[C2:%.*]] = phi i1 [ true, [[IF]] ], [ false, [[ELSE]] ]
-; CHECK-NEXT:    call void @use.i1(i1 [[C2]])
-; CHECK-NEXT:    br i1 [[C2]], label [[IF2:%.*]], label [[ELSE2:%.*]]
-; CHECK:       if2:
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[JOIN2:%.*]]
-; CHECK:       else2:
+; CHECK:       else:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[JOIN2]]
 ; CHECK:       join2:
