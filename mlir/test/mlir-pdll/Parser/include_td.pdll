@@ -12,7 +12,7 @@
 // CHECK-NEXT: }
 
 // CHECK:      Operation `test.all_single` {
-// CHECK-NEXT:   Attributes { attr : I64Attr }
+// CHECK-NEXT:   Attributes { attr : I64Attr, nonNegativeAttr : I64Attr }
 // CHECK-NEXT:   Operands { operand : I64 }
 // CHECK-NEXT:   Results { result : I64 }
 // CHECK-NEXT: }
