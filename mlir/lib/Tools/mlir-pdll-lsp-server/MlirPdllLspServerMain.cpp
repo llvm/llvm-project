@@ -54,6 +54,10 @@ LogicalResult mlir::MlirPdllLspServerMain(int argc, char **argv) {
   llvm::cl::list<std::string> extraIncludeDirs(
       "pdll-extra-dir", llvm::cl::desc("Extra directory of include files"),
       llvm::cl::value_desc("directory"), llvm::cl::Prefix);
+  llvm::cl::list<std::string> compilationDatabases(
+      "pdll-compilation-database",
+      llvm::cl::desc("Compilation YAML databases containing additional "
+                     "compilation information for .pdll files"));
 
   llvm::cl::ParseCommandLineOptions(argc, argv, "PDLL LSP Language Server");
 
@@ -71,7 +75,7 @@ LogicalResult mlir::MlirPdllLspServerMain(int argc, char **argv) {
   JSONTransport transport(stdin, llvm::outs(), inputStyle, prettyPrint);
 
   // Configure the servers and start the main language server.
-  PDLLServer::Options options(extraIncludeDirs);
+  PDLLServer::Options options(compilationDatabases, extraIncludeDirs);
   PDLLServer server(options);
   return runPdllLSPServer(server, transport);
 }

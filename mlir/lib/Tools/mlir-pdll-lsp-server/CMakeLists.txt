@@ -1,4 +1,5 @@
 llvm_add_library(MLIRPdllLspServerLib
+  CompilationDatabase.cpp
   LSPServer.cpp
   PDLLServer.cpp
   MlirPdllLspServerMain.cpp
