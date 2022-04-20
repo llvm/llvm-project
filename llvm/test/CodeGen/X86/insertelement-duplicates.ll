@@ -11,7 +11,7 @@ define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %des
 ; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-32-NEXT:    xorps %xmm0, %xmm0
 ; SSE-32-NEXT:    xorps %xmm1, %xmm1
-; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],mem[0,0]
+; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],mem[0,0]
 ; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
 ; SSE-32-NEXT:    movups %xmm0, 624(%eax)
 ; SSE-32-NEXT:    movups %xmm1, 608(%eax)
@@ -21,7 +21,7 @@ define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %des
 ; SSE-64:       # %bb.0: # %L.entry
 ; SSE-64-NEXT:    xorps %xmm0, %xmm0
 ; SSE-64-NEXT:    xorps %xmm1, %xmm1
-; SSE-64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],mem[0,0]
+; SSE-64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],mem[0,0]
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
 ; SSE-64-NEXT:    movups %xmm0, 624(%rsi)
 ; SSE-64-NEXT:    movups %xmm1, 608(%rsi)
