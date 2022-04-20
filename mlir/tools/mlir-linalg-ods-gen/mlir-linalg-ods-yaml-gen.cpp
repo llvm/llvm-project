@@ -524,46 +524,16 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
       (ins "ValueRange":$inputs, "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{
-        $_state.addOperands(inputs);
-        $_state.addOperands(outputs);
-        SmallVector<Type> resultTensorTypes;
-        copy_if(outputs.getTypes(),
-                std::back_inserter(resultTensorTypes),
-                [](Type type) {{ return type.isa<RankedTensorType>(); });
-        $_state.addTypes(resultTensorTypes);
-        $_state.addAttribute(
-          "operand_segment_sizes",
-          $_builder.getI32VectorAttr({{
-            static_cast<int32_t>(inputs.size()),
-            static_cast<int32_t>(outputs.size())}));
-        $_state.addAttributes(attributes);
-        createAndFillStructuredOpRegion(
-          $_builder,
-          $_state,
-          TypeRange(inputs),
-          TypeRange(outputs),
-          {0}::getRegionBuilder());
+        buildStructuredOp($_builder, $_state, llvm::None, inputs, outputs,
+          attributes, {0}::getRegionBuilder());
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
             "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{
-        $_state.addOperands(inputs);
-        $_state.addOperands(outputs);
-        $_state.addTypes(resultTensorTypes);
-        $_state.addAttributes(attributes);
-        $_state.addAttribute(
-          "operand_segment_sizes",
-          $_builder.getI32VectorAttr({{
-            static_cast<int32_t>(inputs.size()),
-            static_cast<int32_t>(outputs.size())}));
-        createAndFillStructuredOpRegion(
-          $_builder,
-          $_state,
-          TypeRange(inputs),
-          TypeRange(outputs),
-          {0}::getRegionBuilder());
+        buildStructuredOp($_builder, $_state, resultTensorTypes,
+          inputs, outputs, attributes, {0}::getRegionBuilder());
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
@@ -610,22 +580,9 @@ static const char structuredOpBuilderFormat[] = R"FMT(
        "ValueRange":$outputs, {1},
        CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
   [{{
-    $_state.addOperands(inputs);
-    $_state.addOperands(outputs);
-    $_state.addTypes(resultTensorTypes);
     {2}
-    $_state.addAttributes(attributes);
-    $_state.addAttribute(
-      "operand_segment_sizes",
-      $_builder.getI32VectorAttr({{
-        static_cast<int32_t>(inputs.size()),
-        static_cast<int32_t>(outputs.size())}));
-    createAndFillStructuredOpRegion(
-      $_builder,
-      $_state,
-      TypeRange(inputs),
-      TypeRange(outputs),
-      {0}::getRegionBuilder());
+    buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, outputs,
+      attributes, {0}::getRegionBuilder());
   }]>
 )FMT";
 

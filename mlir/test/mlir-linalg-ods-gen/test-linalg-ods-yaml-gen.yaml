@@ -81,22 +81,8 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:       "ValueRange":$outputs, "Attribute":$cast,
 #  ODS-NEXT:       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
 
-#       ODS:    $_state.addOperands(inputs);
-#  ODS-NEXT:    $_state.addOperands(outputs);
-#  ODS-NEXT:    $_state.addTypes(resultTensorTypes);
-#  ODS-NEXT:    $_state.addAttribute("cast", cast)
-#  ODS-NEXT:    $_state.addAttributes(attributes);
-#  ODS-NEXT:    $_state.addAttribute(
-#  ODS-NEXT:      "operand_segment_sizes",
-#  ODS-NEXT:      $_builder.getI32VectorAttr({
-#  ODS-NEXT:        static_cast<int32_t>(inputs.size()),
-#  ODS-NEXT:        static_cast<int32_t>(outputs.size())}));
-#  ODS-NEXT:    createAndFillStructuredOpRegion(
-#  ODS-NEXT:      $_builder,
-#  ODS-NEXT:      $_state,
-#  ODS-NEXT:      TypeRange(inputs),
-#  ODS-NEXT:      TypeRange(outputs),
-#  ODS-NEXT:      Test1Op::getRegionBuilder()
+#       ODS:    buildStructuredOp($_builder, $_state, resultTensorTypes,
+#  ODS-NEXT:      attributes, Test1Op::getRegionBuilder())
 
 
 # IMPL-LABEL:  void Test1Op::regionBuilder(ImplicitLocOpBuilder &b,
