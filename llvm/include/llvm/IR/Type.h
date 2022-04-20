@@ -368,6 +368,9 @@ public:
 
   /// This method is deprecated without replacement. Pointer element types are
   /// not available with opaque pointers.
+  [[deprecated("Deprecated without replacement, see "
+               "https://llvm.org/docs/OpaquePointers.html for context and "
+               "migration instructions")]]
   Type *getPointerElementType() const {
     return getNonOpaquePointerElementType();
   }
