@@ -313,11 +313,6 @@
 #define LLVM_EXTENSION
 #endif
 
-// LLVM_ATTRIBUTE_DEPRECATED(decl, "message")
-// This macro will be removed.
-// Use C++14's attribute instead: [[deprecated("message")]]
-#define LLVM_ATTRIBUTE_DEPRECATED(decl, message) [[deprecated(message)]] decl
-
 /// LLVM_BUILTIN_UNREACHABLE - On compilers which support it, expands
 /// to an expression which states that it is undefined behavior for the
 /// compiler to reach this point.  Otherwise is not defined.
