@@ -6,7 +6,7 @@
 //       CHECK: } {__test_sort_original_idx__ = 2 : i64}
 //  CHECK-NEXT: arith.addi {{.*}} : i32
 //  CHECK-NEXT: arith.subi {{.*}} : i32
-func @region(
+func.func @region(
   %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index,
   %arg4 : i32, %arg5 : i32, %arg6 : i32,
   %buffer : memref<i32>) {
