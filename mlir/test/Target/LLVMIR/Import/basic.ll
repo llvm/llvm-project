@@ -435,3 +435,109 @@ define i32 @useFenceInst() {
   fence syncscope("") seq_cst
   ret i32 0
 }
+
+; Switch instruction
+declare void @g(i32)
+
+; CHECK-LABEL: llvm.func @simple_switch(%arg0: i32) {
+define void @simple_switch(i32 %val) {
+; CHECK: %[[C0:.+]] = llvm.mlir.constant(11 : i32) : i32
+; CHECK: %[[C1:.+]] = llvm.mlir.constant(87 : i32) : i32
+; CHECK: %[[C2:.+]] = llvm.mlir.constant(78 : i32) : i32
+; CHECK: %[[C3:.+]] = llvm.mlir.constant(94 : i32) : i32
+; CHECK: %[[C4:.+]] = llvm.mlir.constant(1 : i32) : i32
+; CHECK: llvm.switch %arg0 : i32, ^[[BB5:.+]] [
+; CHECK:   0: ^[[BB1:.+]],
+; CHECK:   9: ^[[BB2:.+]],
+; CHECK:   994: ^[[BB3:.+]],
+; CHECK:   1154: ^[[BB4:.+]]
+; CHECK: ]
+  switch i32 %val, label %def [
+    i32 0, label %one
+    i32 9, label %two
+    i32 994, label %three
+    i32 1154, label %four
+  ]
+
+; CHECK: ^[[BB1]]:
+; CHECK: llvm.call @g(%[[C4]]) : (i32) -> ()
+; CHECK: llvm.return
+one:
+  call void @g(i32 1)
+  ret void
+; CHECK: ^[[BB2]]:
+; CHECK: llvm.call @g(%[[C3]]) : (i32) -> ()
+; CHECK: llvm.return
+two:
+  call void @g(i32 94)
+  ret void
+; CHECK: ^[[BB3]]:
+; CHECK: llvm.call @g(%[[C2]]) : (i32) -> ()
+; CHECK: llvm.return
+three:
+  call void @g(i32 78)
+  ret void
+; CHECK: ^[[BB4]]:
+; CHECK: llvm.call @g(%[[C1]]) : (i32) -> ()
+; CHECK: llvm.return
+four:
+  call void @g(i32 87)
+  ret void
+; CHECK: ^[[BB5]]:
+; CHECK: llvm.call @g(%[[C0]]) : (i32) -> ()
+; CHECK: llvm.return
+def:
+  call void @g(i32 11)
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @switch_args(%arg0: i32) {
+define void @switch_args(i32 %val) {
+  ; CHECK: %[[C0:.+]] = llvm.mlir.constant(44 : i32) : i32
+  ; CHECK: %[[C1:.+]] = llvm.mlir.constant(34 : i32) : i32
+  ; CHECK: %[[C2:.+]] = llvm.mlir.constant(33 : i32) : i32
+  %pred = icmp ult i32 %val, 87
+  br i1 %pred, label %bbs, label %bb1
+
+bb1:
+  %vx = add i32 %val, 22
+  %pred2 = icmp ult i32 %val, 94
+  br i1 %pred2, label %bb2, label %bb3
+
+bb2:
+  %vx0 = add i32 %val, 23
+  br label %one
+
+bb3:
+  br label %def
+
+; CHECK: %[[V1:.+]] = llvm.add %arg0, %[[C2]] : i32
+; CHECK: %[[V2:.+]] = llvm.add %arg0, %[[C1]] : i32
+; CHECK: %[[V3:.+]] = llvm.add %arg0, %[[C0]] : i32
+; CHECK: llvm.switch %arg0 : i32, ^[[BBD:.+]](%[[V3]] : i32) [
+; CHECK:   0: ^[[BB1:.+]](%[[V1]], %[[V2]] : i32, i32)
+; CHECK: ]
+bbs:
+  %vy = add i32 %val, 33
+  %vy0 = add i32 %val, 34
+  %vz = add i32 %val, 44
+  switch i32 %val, label %def [
+    i32 0, label %one
+  ]
+
+; CHECK: ^[[BB1]](%[[BA0:.+]]: i32, %[[BA1:.+]]: i32):
+one: ; pred: bb2, bbs
+  %v0 = phi i32 [%vx, %bb2], [%vy, %bbs]
+  %v1 = phi i32 [%vx0, %bb2], [%vy0, %bbs]
+  ; CHECK: llvm.add %[[BA0]], %[[BA1]]  : i32
+  %vf = add i32 %v0, %v1
+  call void @g(i32 %vf)
+  ret void
+
+; CHECK: ^[[BBD]](%[[BA2:.+]]: i32):
+def: ; pred: bb3, bbs
+  %v2 = phi i32 [%vx, %bb3], [%vz, %bbs]
+  ; CHECK: llvm.call @g(%[[BA2]])
+  call void @g(i32 %v2)
+  ret void
+}
