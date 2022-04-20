@@ -162,17 +162,16 @@ not intermediate stores.
 Use-after-destruction detection
 ===============================
 
-You can enable experimental use-after-destruction detection in MemorySanitizer.
-After invocation of the destructor, the object will be considered no longer
-readable, and using underlying memory will lead to error reports in runtime.
-Refer to the standard for `lifetime <https://eel.is/c++draft/basic.life#1>`_ definition.
+MemorySanitizer includes use-after-destruction detection. After invocation of
+the destructor, the object will be considered no longer readable, and using
+underlying memory will lead to error reports in runtime. Refer to the standard
+for `lifetime <https://eel.is/c++draft/basic.life#1>`_ definition.
 
-This feature is still experimental, in order to enable it at runtime you need
-to:
+This feature can be disabled with either:
 
-#. Pass addition Clang option ``-fsanitize-memory-use-after-dtor`` during
+#. Pass addition Clang option ``-fno-sanitize-memory-use-after-dtor`` during
    compilation.
-#. Set environment variable `MSAN_OPTIONS=poison_in_dtor=1` before running
+#. Set environment variable `MSAN_OPTIONS=poison_in_dtor=0` before running
    the program.
 
 Handling external code
