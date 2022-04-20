@@ -22,6 +22,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -1626,6 +1627,16 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   return true;
 }
 
+static bool isZeroSize(Value *Size) {
+  if (auto *I = dyn_cast<Instruction>(Size))
+    if (auto *Res = simplifyInstruction(I, I->getModule()->getDataLayout()))
+      Size = Res;
+  // Treat undef/poison size like zero.
+  if (auto *C = dyn_cast<Constant>(Size))
+    return isa<UndefValue>(C) || C->isNullValue();
+  return false;
+}
+
 /// Perform simplification of memcpy's.  If we have memcpy A
 /// which copies X to Y, and memcpy B which copies Y to Z, then we can rewrite
 /// B to be a memcpy from X to Z (or potentially a memmove, depending on
@@ -1637,6 +1648,14 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
 
   // If the source and destination of the memcpy are the same, then zap it.
   if (M->getSource() == M->getDest()) {
+    ++BBI;
+    eraseInstruction(M);
+    return true;
+  }
+
+  // If the size is zero, remove the memcpy. This also prevents infinite loops
+  // in processMemSetMemCpyDependence, which is a no-op for zero-length memcpys.
+  if (isZeroSize(M->getLength())) {
     ++BBI;
     eraseInstruction(M);
     return true;
