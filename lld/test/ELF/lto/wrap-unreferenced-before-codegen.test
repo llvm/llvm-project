@@ -19,10 +19,9 @@
 # UNWIND-DISASM-LABEL: <__wrap__Unwind_Resume@plt>:
 # UNWIND-DISASM-NEXT:  jmpq *[[#]](%rip) # [[#%#x,RELOC]]
 
-# UNWIND-DYNSYM:      Symbol table '.dynsym' contains 5 entries:
+# UNWIND-DYNSYM:      Symbol table '.dynsym' contains 4 entries:
 # UNWIND-DYNSYM:      NOTYPE  LOCAL  DEFAULT   UND
 # UNWIND-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT   UND throw
-# UNWIND-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT   UND _Unwind_Resume
 # UNWIND-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT   UND __wrap__Unwind_Resume
 # UNWIND-DYNSYM-NEXT: FUNC    GLOBAL DEFAULT     9 _Z1fv
 
@@ -43,9 +42,8 @@
 # USETLS-DISASM-LABEL: <__wrap_malloc@plt>:
 # USETLS-DISASM-NEXT:  jmpq *[[#]](%rip) # [[#%#x,RELOC]]
 
-# USETLS-DYNSYM:      Symbol table '.dynsym' contains 6 entries:
+# USETLS-DYNSYM:      Symbol table '.dynsym' contains 5 entries:
 # USETLS-DYNSYM:      NOTYPE  LOCAL  DEFAULT   UND
-# USETLS-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT   UND malloc
 # USETLS-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT   UND __wrap_malloc
 # USETLS-DYNSYM-NEXT: FUNC    GLOBAL DEFAULT     6 f
 # USETLS-DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT     6 __emutls_get_address
