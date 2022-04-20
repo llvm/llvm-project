@@ -1748,7 +1748,6 @@ static Optional<int64_t> getVectorShiftImm(Register Reg,
                                            MachineRegisterInfo &MRI) {
   assert(MRI.getType(Reg).isVector() && "Expected a *vector* shift operand");
   MachineInstr *OpMI = MRI.getVRegDef(Reg);
-  assert(OpMI && "Expected to find a vreg def for vector shift operand");
   return getAArch64VectorSplatScalar(*OpMI, MRI);
 }
 
@@ -2979,8 +2978,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       if (!SrcTy.isVector() && SrcTy.getSizeInBits() == 32 &&
           ShiftTy.getSizeInBits() == 64) {
         assert(!ShiftTy.isVector() && "unexpected vector shift ty");
-        assert(MRI.getVRegDef(ShiftReg) &&
-               "could not find a vreg definition for shift amount");
         // Insert a subregister copy to implement a 64->32 trunc
         auto Trunc = MIB.buildInstr(TargetOpcode::COPY, {SrcTy}, {})
                          .addReg(ShiftReg, 0, AArch64::sub_32);
@@ -5043,9 +5040,6 @@ bool AArch64InstructionSelector::tryOptSelect(GSelect &I) {
   }
 
   // Is the condition defined by a compare?
-  if (!CondDef)
-    return false;
-
   unsigned CondOpc = CondDef->getOpcode();
   if (CondOpc != TargetOpcode::G_ICMP && CondOpc != TargetOpcode::G_FCMP) {
     if (tryOptSelectConjunction(I, *CondDef))
@@ -6073,8 +6067,6 @@ AArch64InstructionSelector::selectExtendedSHL(
 
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
   MachineInstr *OffsetInst = MRI.getVRegDef(Offset.getReg());
-  if (!OffsetInst)
-    return None;
 
   unsigned OffsetOpc = OffsetInst->getOpcode();
   bool LookedThroughZExt = false;
@@ -6228,7 +6220,7 @@ AArch64InstructionSelector::selectAddrModeRegisterOffset(
 
   // We need a GEP.
   MachineInstr *Gep = MRI.getVRegDef(Root.getReg());
-  if (!Gep || Gep->getOpcode() != TargetOpcode::G_PTR_ADD)
+  if (Gep->getOpcode() != TargetOpcode::G_PTR_ADD)
     return None;
 
   // If this is used more than once, let's not bother folding.
@@ -6408,14 +6400,12 @@ AArch64InstructionSelector::selectAddrModeUnscaled(MachineOperand &Root,
     return None;
 
   MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
-  if (!RootDef)
-    return None;
 
   MachineOperand &OffImm = RootDef->getOperand(2);
   if (!OffImm.isReg())
     return None;
   MachineInstr *RHS = MRI.getVRegDef(OffImm.getReg());
-  if (!RHS || RHS->getOpcode() != TargetOpcode::G_CONSTANT)
+  if (RHS->getOpcode() != TargetOpcode::G_CONSTANT)
     return None;
   int64_t RHSC;
   MachineOperand &RHSOp1 = RHS->getOperand(1);
@@ -6483,9 +6473,6 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
     return None;
 
   MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
-  if (!RootDef)
-    return None;
-
   if (RootDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
     return {{
         [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
@@ -6506,21 +6493,20 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
     MachineOperand &RHS = RootDef->getOperand(2);
     MachineInstr *LHSDef = MRI.getVRegDef(LHS.getReg());
     MachineInstr *RHSDef = MRI.getVRegDef(RHS.getReg());
-    if (LHSDef && RHSDef) {
-      int64_t RHSC = (int64_t)RHSDef->getOperand(1).getCImm()->getZExtValue();
-      unsigned Scale = Log2_32(Size);
-      if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Scale)) {
-        if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
-          return {{
-              [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
-              [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
-          }};
 
+    int64_t RHSC = (int64_t)RHSDef->getOperand(1).getCImm()->getZExtValue();
+    unsigned Scale = Log2_32(Size);
+    if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Scale)) {
+      if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
         return {{
-            [=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+            [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
             [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
         }};
-      }
+
+      return {{
+          [=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+          [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC >> Scale); },
+      }};
     }
   }
 
@@ -6565,8 +6551,6 @@ AArch64InstructionSelector::selectShiftedRegister(MachineOperand &Root,
   // Check if the operand is defined by an instruction which corresponds to
   // a ShiftExtendType. E.g. a G_SHL, G_LSHR, etc.
   MachineInstr *ShiftInst = MRI.getVRegDef(Root.getReg());
-  if (!ShiftInst)
-    return None;
   AArch64_AM::ShiftExtendType ShType = getShiftTypeForInst(*ShiftInst);
   if (ShType == AArch64_AM::InvalidShiftExtend)
     return None;
@@ -6721,7 +6705,7 @@ AArch64InstructionSelector::selectArithExtendedRegister(
     // to.
     if (Ext == AArch64_AM::UXTW && MRI.getType(ExtReg).getSizeInBits() == 32) {
       MachineInstr *ExtInst = MRI.getVRegDef(ExtReg);
-      if (ExtInst && isDef32(*ExtInst))
+      if (isDef32(*ExtInst))
         return None;
     }
   }
