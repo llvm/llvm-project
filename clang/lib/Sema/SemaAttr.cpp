@@ -571,7 +571,7 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
       PP.setCurrentFPEvalMethod(SourceLocation(), PP.getLastFPEvalMethod());
     break;
   case PFC_NoPrecise:
-    if (CurFPFeatures.getFPExceptionMode() == LangOptions::FPE_Strict)
+    if (CurFPFeatures.getExceptionMode() == LangOptions::FPE_Strict)
       Diag(Loc, diag::err_pragma_fc_noprecise_requires_noexcept);
     else if (CurFPFeatures.getAllowFEnvAccess())
       Diag(Loc, diag::err_pragma_fc_noprecise_requires_nofenv);
@@ -587,11 +587,11 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
     if (!isPreciseFPEnabled())
       Diag(Loc, diag::err_pragma_fc_except_requires_precise);
     else
-      NewFPFeatures.setFPExceptionModeOverride(LangOptions::FPE_Strict);
+      NewFPFeatures.setSpecifiedExceptionModeOverride(LangOptions::FPE_Strict);
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
     break;
   case PFC_NoExcept:
-    NewFPFeatures.setFPExceptionModeOverride(LangOptions::FPE_Ignore);
+    NewFPFeatures.setSpecifiedExceptionModeOverride(LangOptions::FPE_Ignore);
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
     break;
   case PFC_Push:
@@ -1294,16 +1294,9 @@ void Sema::ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled) {
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
-void Sema::setRoundingMode(SourceLocation Loc, llvm::RoundingMode FPR) {
-  // C2x: 7.6.2p3  If the FE_DYNAMIC mode is specified and FENV_ACCESS is "off",
-  // the translator may assume that the default rounding mode is in effect.
-  if (FPR == llvm::RoundingMode::Dynamic &&
-      !CurFPFeatures.getAllowFEnvAccess() &&
-      CurFPFeatures.getFPExceptionMode() == LangOptions::FPE_Ignore)
-    FPR = llvm::RoundingMode::NearestTiesToEven;
-
+void Sema::ActOnPragmaFEnvRound(SourceLocation Loc, llvm::RoundingMode FPR) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
-  NewFPFeatures.setRoundingModeOverride(FPR);
+  NewFPFeatures.setConstRoundingModeOverride(FPR);
   FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
@@ -1311,14 +1304,13 @@ void Sema::setRoundingMode(SourceLocation Loc, llvm::RoundingMode FPR) {
 void Sema::setExceptionMode(SourceLocation Loc,
                             LangOptions::FPExceptionModeKind FPE) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
-  NewFPFeatures.setFPExceptionModeOverride(FPE);
+  NewFPFeatures.setSpecifiedExceptionModeOverride(FPE);
   FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
 void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
-  auto LO = getLangOpts();
   if (IsEnabled) {
     // Verify Microsoft restriction:
     // You can't enable fenv_access unless precise semantics are enabled.
@@ -1326,16 +1318,10 @@ void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
     // pragma, or by using the /fp:precise or /fp:strict compiler options
     if (!isPreciseFPEnabled())
       Diag(Loc, diag::err_pragma_fenv_requires_precise);
-    NewFPFeatures.setAllowFEnvAccessOverride(true);
-    // Enabling FENV access sets the RoundingMode to Dynamic.
-    // and ExceptionBehavior to Strict
-    NewFPFeatures.setRoundingModeOverride(llvm::RoundingMode::Dynamic);
-    NewFPFeatures.setFPExceptionModeOverride(LangOptions::FPE_Strict);
-  } else {
-    NewFPFeatures.setAllowFEnvAccessOverride(false);
   }
+  NewFPFeatures.setAllowFEnvAccessOverride(IsEnabled);
   FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
-  CurFPFeatures = NewFPFeatures.applyOverrides(LO);
+  CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
 void Sema::ActOnPragmaFPExceptions(SourceLocation Loc,
