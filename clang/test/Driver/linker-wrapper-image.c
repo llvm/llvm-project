@@ -4,8 +4,8 @@
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,nvptx64-nvida-cuda,sm_70
-// RUN: clang-linker-wrapper --print-wrapped-module --dry-run -linker-path /usr/bin/ld \
-// RUN:   -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OPENMP
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple x86_64-unknown-linux-gnu \
+// RUN:   -linker-path /usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OPENMP
 
 // OPENMP: @__start_omp_offloading_entries = external hidden constant %__tgt_offload_entry
 // OPENMP-NEXT: @__stop_omp_offloading_entries = external hidden constant %__tgt_offload_entry
