@@ -10577,6 +10577,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         all_of(Op->ops().drop_front(4),
                [VT](const SDUse &Use) { return Use.getValueType() == VT; }) &&
         "ppc_[max|min]f[e|l|s] must have uniform type arguments");
+    (void)VT;
     ISD::CondCode CC = ISD::SETGT;
     if (IntrinsicID == Intrinsic::ppc_minfe ||
         IntrinsicID == Intrinsic::ppc_minfl ||
