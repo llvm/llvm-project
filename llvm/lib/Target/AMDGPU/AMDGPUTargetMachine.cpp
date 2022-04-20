@@ -1449,6 +1449,14 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     return diagnoseRegisterClass(YamlMFI.StackPtrOffsetReg);
   }
 
+  for (const auto &YamlReg : YamlMFI.WWMReservedRegs) {
+    Register ParsedReg;
+    if (parseRegister(YamlReg, ParsedReg))
+      return true;
+
+    MFI->reserveWWMRegister(ParsedReg);
+  }
+
   auto parseAndCheckArgument = [&](const Optional<yaml::SIArgument> &A,
                                    const TargetRegisterClass &RC,
                                    ArgDescriptor &Arg, unsigned UserSGPRs,

@@ -589,6 +589,9 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       FrameOffsetReg(regToString(MFI.getFrameOffsetReg(), TRI)),
       StackPtrOffsetReg(regToString(MFI.getStackPtrOffsetReg(), TRI)),
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)), Mode(MFI.getMode()) {
+  for (Register Reg : MFI.WWMReservedRegs)
+    WWMReservedRegs.push_back(regToString(Reg, TRI));
+
   auto SFI = MFI.getOptionalScavengeFI();
   if (SFI)
     ScavengeFI = yaml::FrameIndex(*SFI, MF.getFrameInfo());
