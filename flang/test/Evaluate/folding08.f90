@@ -95,4 +95,33 @@ module m
          lbound(a3, 2) == 1 .and. &
          lbound(a3, 3) == 4
   end subroutine
+  subroutine test4_lbound_parentheses
+    ! Test lbound with (x) expressions
+    integer :: a1(1) = 0
+    logical, parameter :: test_lba1 = all(lbound((a1)) == [1])
+    integer :: a2(0:2) = 0
+    logical, parameter :: test_lba2 = all(lbound((a2)) == [1])
+    integer :: a3(-1:0) = 0
+    logical, parameter :: test_lba3 = all(lbound((a3)) == [1])
+    integer :: a4(-5:-1, 2:5) = 0
+    logical, parameter :: test_lba4 = all(lbound((a4)) == [1, 1])
+
+    ! Exercise with DIM=
+    logical, parameter :: test_lba4_dim = lbound((a4), 1) == 1 .and. &
+         lbound((a4), 2) == 1
+
+    ! Exercise with parameter types
+    integer, parameter :: pa1(1) = 0
+    logical, parameter :: test_lbpa1 = all(lbound((pa1)) == [1])
+    integer, parameter :: pa2(0:2) = 0
+    logical, parameter :: test_lbpa2 = all(lbound((pa2)) == [1])
+    integer, parameter :: pa3(-1:0) = 0
+    logical, parameter :: test_lbpa3 = all(lbound((pa3)) == [1])
+    integer, parameter :: pa4(-5:-1, 2:5) = 0
+    logical, parameter :: test_lbpa4 = all(lbound((pa4)) == [1, 1])
+
+    ! Exercise with DIM=
+    logical, parameter :: test_lbpa4_dim = lbound((pa4), 1) == 1 .and. &
+         lbound((pa4), 2) == 1
+  end
 end
