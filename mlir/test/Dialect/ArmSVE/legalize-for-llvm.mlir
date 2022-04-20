@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-vector-to-llvm="enable-arm-sve" -convert-func-to-llvm -reconcile-unrealized-casts | mlir-opt | FileCheck %s
 
-func @arm_sve_sdot(%a: vector<[16]xi8>,
+func.func @arm_sve_sdot(%a: vector<[16]xi8>,
                    %b: vector<[16]xi8>,
                    %c: vector<[4]xi32>)
     -> vector<[4]xi32> {
@@ -10,7 +10,7 @@ func @arm_sve_sdot(%a: vector<[16]xi8>,
   return %0 : vector<[4]xi32>
 }
 
-func @arm_sve_smmla(%a: vector<[16]xi8>,
+func.func @arm_sve_smmla(%a: vector<[16]xi8>,
                     %b: vector<[16]xi8>,
                     %c: vector<[4]xi32>)
     -> vector<[4]xi32> {
@@ -20,7 +20,7 @@ func @arm_sve_smmla(%a: vector<[16]xi8>,
   return %0 : vector<[4]xi32>
 }
 
-func @arm_sve_udot(%a: vector<[16]xi8>,
+func.func @arm_sve_udot(%a: vector<[16]xi8>,
                    %b: vector<[16]xi8>,
                    %c: vector<[4]xi32>)
     -> vector<[4]xi32> {
@@ -30,7 +30,7 @@ func @arm_sve_udot(%a: vector<[16]xi8>,
   return %0 : vector<[4]xi32>
 }
 
-func @arm_sve_ummla(%a: vector<[16]xi8>,
+func.func @arm_sve_ummla(%a: vector<[16]xi8>,
                     %b: vector<[16]xi8>,
                     %c: vector<[4]xi32>)
     -> vector<[4]xi32> {
@@ -40,7 +40,7 @@ func @arm_sve_ummla(%a: vector<[16]xi8>,
   return %0 : vector<[4]xi32>
 }
 
-func @arm_sve_arithi_masked(%a: vector<[4]xi32>,
+func.func @arm_sve_arithi_masked(%a: vector<[4]xi32>,
                             %b: vector<[4]xi32>,
                             %c: vector<[4]xi32>,
                             %d: vector<[4]xi32>,
@@ -65,7 +65,7 @@ func @arm_sve_arithi_masked(%a: vector<[4]xi32>,
   return %4 : vector<[4]xi32>
 }
 
-func @arm_sve_arithf_masked(%a: vector<[4]xf32>,
+func.func @arm_sve_arithf_masked(%a: vector<[4]xf32>,
                             %b: vector<[4]xf32>,
                             %c: vector<[4]xf32>,
                             %d: vector<[4]xf32>,
@@ -87,7 +87,7 @@ func @arm_sve_arithf_masked(%a: vector<[4]xf32>,
   return %3 : vector<[4]xf32>
 }
 
-func @arm_sve_abs_diff(%a: vector<[4]xi32>,
+func.func @arm_sve_abs_diff(%a: vector<[4]xi32>,
                        %b: vector<[4]xi32>)
                        -> vector<[4]xi32> {
   // CHECK: llvm.mlir.constant(dense<0> : vector<[4]xi32>) : vector<[4]xi32>
@@ -111,7 +111,7 @@ func @arm_sve_abs_diff(%a: vector<[4]xi32>,
   return %3 : vector<[4]xi32>
 }
 
-func @get_vector_scale() -> index {
+func.func @get_vector_scale() -> index {
   // CHECK: llvm.intr.vscale
   %0 = vector.vscale
   return %0 : index

@@ -3,7 +3,7 @@
 
 // CHECK-LABEL: @loop_1d(
 // CHECK-SAME:    %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index
-func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
+func.func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
   // CHECK:      %[[C0:.*]] = arith.constant 0 : index
 
   // CHECK:      %[[RANGE:.*]] = arith.subi %[[UB]], %[[LB]]
@@ -64,7 +64,7 @@ func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
 // -----
 
 // CHECK-LABEL: @loop_2d
-func @loop_2d(%arg0: index, %arg1: index, %arg2: index, // lb, ub, step
+func.func @loop_2d(%arg0: index, %arg1: index, %arg2: index, // lb, ub, step
               %arg3: index, %arg4: index, %arg5: index, // lb, ub, step
               %arg6: memref<?x?xf32>) {
   // CHECK: %[[GROUP:.*]] = async.create_group
