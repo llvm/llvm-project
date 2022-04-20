@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s -check-prefix=CPP-DEFAULT
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
-func @test_if(%arg0: i1, %arg1: f32) {
+func.func @test_if(%arg0: i1, %arg1: f32) {
   scf.if %arg0 {
      %0 = emitc.call "func_const"(%arg1) : (f32) -> i32
   }
@@ -23,7 +23,7 @@ func @test_if(%arg0: i1, %arg1: f32) {
 // CPP-DECLTOP-NEXT: return;
 
 
-func @test_if_else(%arg0: i1, %arg1: f32) {
+func.func @test_if_else(%arg0: i1, %arg1: f32) {
   scf.if %arg0 {
     %0 = emitc.call "func_true"(%arg1) : (f32) -> i32
   } else {
@@ -54,7 +54,7 @@ func @test_if_else(%arg0: i1, %arg1: f32) {
 // CPP-DECLTOP-NEXT: return;
 
 
-func @test_if_yield(%arg0: i1, %arg1: f32) {
+func.func @test_if_yield(%arg0: i1, %arg1: f32) {
   %0 = arith.constant 0 : i8
   %x, %y = scf.if %arg0 -> (i32, f64) {
     %1 = emitc.call "func_true_1"(%arg1) : (f32) -> i32

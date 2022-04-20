@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s -check-prefix=CPP-DEFAULT
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
-func @emitc_call() {
+func.func @emitc_call() {
   %0 = emitc.call "func_a" () : () -> i32
   %1 = emitc.call "func_b" () : () -> i32
   return
@@ -17,7 +17,7 @@ func @emitc_call() {
 // CPP-DECLTOP-NEXT: [[V1:]] = func_b();
 
 
-func @emitc_call_two_results() {
+func.func @emitc_call_two_results() {
   %0 = arith.constant 0 : index
   %1:2 = emitc.call "two_results" () : () -> (i32, i32)
   return

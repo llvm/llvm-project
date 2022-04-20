@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s -check-prefix=CPP-DEFAULT
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
-func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
     %0 = emitc.call "f"() : () -> i32
   }
@@ -20,7 +20,7 @@ func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CPP-DECLTOP-NEXT: }
 // CPP-DECLTOP-NEXT: return;
 
-func @test_for_yield() {
+func.func @test_for_yield() {
   %start = arith.constant 0 : index
   %stop = arith.constant 10 : index
   %step = arith.constant 1 : index
