@@ -68,6 +68,9 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
     // memory.
     LDSSize = alignTo(StaticLDSSize, DynLDSAlign);
   } else {
+    assert(GV.getAddressSpace() == AMDGPUAS::REGION_ADDRESS &&
+           "expected region address space");
+
     Offset = StaticGDSSize = alignTo(StaticGDSSize, Alignment);
     StaticGDSSize += DL.getTypeAllocSize(GV.getValueType());
 
