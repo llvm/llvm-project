@@ -1,17 +1,19 @@
-set(LIBS
+set(LLVM_LINK_COMPONENTS
+  Demangle
+  Support
+  TableGen
+)
+
+add_tablegen(mlir-pdll MLIR_PDLL
+  mlir-pdll.cpp
+  )
+
+set_target_properties(mlir-pdll PROPERTIES FOLDER "Tablegenning")
+target_link_libraries(mlir-pdll
+  PRIVATE
   MLIRPDLLAST
   MLIRPDLLCodeGen
   MLIRPDLLParser
   )
-
-add_llvm_tool(mlir-pdll
-  mlir-pdll.cpp
-
-  DEPENDS
-  ${LIBS}
-  )
-
-target_link_libraries(mlir-pdll PRIVATE ${LIBS})
-llvm_update_compile_flags(mlir-pdll)
 
 mlir_check_all_link_libraries(mlir-pdll)
