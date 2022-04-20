@@ -65,14 +65,13 @@ void BinarySymExpr::dumpToStreamImpl(raw_ostream &OS,
 }
 
 void SymbolCast::dumpToStream(raw_ostream &os) const {
-  os << '(' << ToTy.getAsString() << ") (";
+  os << '(' << ToTy << ") (";
   Operand->dumpToStream(os);
   os << ')';
 }
 
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
-  os << getKindStr() << getSymbolID() << '{' << T.getAsString() << ", LC"
-     << LCtx->getID();
+  os << getKindStr() << getSymbolID() << '{' << T << ", LC" << LCtx->getID();
   if (S)
     os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
   else
@@ -90,15 +89,13 @@ void SymbolExtent::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolMetadata::dumpToStream(raw_ostream &os) const {
-  os << getKindStr() << getSymbolID() << '{' << getRegion() << ','
-     << T.getAsString() << '}';
+  os << getKindStr() << getSymbolID() << '{' << getRegion() << ',' << T << '}';
 }
 
 void SymbolData::anchor() {}
 
 void SymbolRegionValue::dumpToStream(raw_ostream &os) const {
-  os << getKindStr() << getSymbolID() << '<' << getType().getAsString() << ' '
-     << R << '>';
+  os << getKindStr() << getSymbolID() << '<' << getType() << ' ' << R << '>';
 }
 
 bool SymExpr::symbol_iterator::operator==(const symbol_iterator &X) const {

@@ -60,7 +60,7 @@ public:
     if (const auto *F = Init->getAnyMember()) {
       OS << " '" << F->getNameAsString() << "'";
     } else if (auto const *TSI = Init->getTypeSourceInfo()) {
-      OS << " '" << TSI->getType().getAsString() << "'";
+      OS << " '" << TSI->getType() << "'";
     }
   }
 
@@ -81,7 +81,7 @@ public:
     OS << "TemplateArgument";
     switch (A.getKind()) {
     case TemplateArgument::Type: {
-      OS << " type " << A.getAsType().getAsString();
+      OS << " type " << A.getAsType();
       break;
     }
     default:

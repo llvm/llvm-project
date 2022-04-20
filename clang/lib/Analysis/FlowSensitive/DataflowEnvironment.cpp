@@ -488,8 +488,8 @@ Value *Environment::createValue(QualType Type) {
   Value *Val = createValueUnlessSelfReferential(Type, Visited, /*Depth=*/0,
                                                 CreatedValuesCount);
   if (CreatedValuesCount > MaxCompositeValueSize) {
-    llvm::errs() << "Attempting to initialize a huge value of type: "
-                 << Type.getAsString() << "\n";
+    llvm::errs() << "Attempting to initialize a huge value of type: " << Type
+                 << '\n';
   }
   return Val;
 }

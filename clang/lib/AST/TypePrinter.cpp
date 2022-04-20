@@ -2307,3 +2307,9 @@ void QualType::getAsStringInternal(const Type *ty, Qualifiers qs,
   std::string str = std::string(StrOS.str());
   buffer.swap(str);
 }
+
+raw_ostream &clang::operator<<(raw_ostream &OS, QualType QT) {
+  SplitQualType S = QT.split();
+  TypePrinter(LangOptions()).print(S.Ty, S.Quals, OS, /*PlaceHolder=*/"");
+  return OS;
+}

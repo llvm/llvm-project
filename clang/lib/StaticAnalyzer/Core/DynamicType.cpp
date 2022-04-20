@@ -209,7 +209,7 @@ static raw_ostream &printJson(const DynamicTypeInfo &DTI, raw_ostream &Out,
     if (ToPrint->isAnyPointerType())
       ToPrint = ToPrint->getPointeeType();
 
-    Out << '\"' << ToPrint.getAsString() << "\", \"sub_classable\": "
+    Out << '\"' << ToPrint << "\", \"sub_classable\": "
         << (DTI.canBeASubClass() ? "true" : "false");
   }
   return Out;
@@ -217,9 +217,9 @@ static raw_ostream &printJson(const DynamicTypeInfo &DTI, raw_ostream &Out,
 
 static raw_ostream &printJson(const DynamicCastInfo &DCI, raw_ostream &Out,
                               const char *NL, unsigned int Space, bool IsDot) {
-  return Out << "\"from\": \"" << DCI.from().getAsString() << "\", \"to\": \""
-             << DCI.to().getAsString() << "\", \"kind\": \""
-             << (DCI.succeeds() ? "success" : "fail") << "\"";
+  return Out << "\"from\": \"" << DCI.from() << "\", \"to\": \"" << DCI.to()
+             << "\", \"kind\": \"" << (DCI.succeeds() ? "success" : "fail")
+             << "\"";
 }
 
 template <class T, class U>
