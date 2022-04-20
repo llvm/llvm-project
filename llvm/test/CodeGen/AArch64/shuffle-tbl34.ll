@@ -519,7 +519,8 @@ define <4 x i32> @shuffle3_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip1 v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-NEXT:    dup v1.4s, v2.s[0]
+; CHECK-NEXT:    mov v0.s[2], v1.s[2]
 ; CHECK-NEXT:    ret
   %x = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %y = shufflevector <4 x i32> %c, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -592,53 +593,73 @@ define <8 x i8> @insert4_v8i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c, <16 x i8> 
 }
 
 ; CHECK: .LCPI15_0:
-; CHECK: .byte 255                             // 0xff
-; CHECK: .byte 255                             // 0xff
-; CHECK: .byte 15                              // 0xf
-; CHECK: .byte 27                              // 0x1b
-; CHECK: .byte 255                             // 0xff
-; CHECK: .byte 255                             // 0xff
-; CHECK: .byte 24                              // 0x18
-; CHECK: .byte 12                              // 0xc
-; CHECK: .byte 255                             // 0xff
-; CHECK: .byte 255                             // 0xff
-; CHECK: .byte 15                              // 0xf
-; CHECK: .byte 27                              // 0x1b
-; CHECK: .byte 255                             // 0xff
-; CHECK: .byte 255                             // 0xff
-; CHECK: .byte 24                              // 0x18
-; CHECK: .byte 12                              // 0xc
+; CHECK: 	.byte	4                               // 0x4
+; CHECK: 	.byte	8                               // 0x8
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	14                              // 0xe
+; CHECK: 	.byte	3                               // 0x3
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	4                               // 0x4
+; CHECK: 	.byte	8                               // 0x8
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	14                              // 0xe
+; CHECK: 	.byte	3                               // 0x3
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	255                             // 0xff
 ; CHECK: .LCPI15_1:
-; CHECK: .byte 20                              // 0x14
-; CHECK: .byte 24                              // 0x18
-; CHECK: .byte 2                               // 0x2
-; CHECK: .byte 3                               // 0x3
-; CHECK: .byte 30                              // 0x1e
-; CHECK: .byte 19                              // 0x13
-; CHECK: .byte 6                               // 0x6
-; CHECK: .byte 7                               // 0x7
-; CHECK: .byte 20                              // 0x14
-; CHECK: .byte 24                              // 0x18
-; CHECK: .byte 10                              // 0xa
-; CHECK: .byte 11                              // 0xb
-; CHECK: .byte 30                              // 0x1e
-; CHECK: .byte 19                              // 0x13
-; CHECK: .byte 14                              // 0xe
-; CHECK: .byte 15                              // 0xf
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	15                              // 0xf
+; CHECK: 	.byte	27                              // 0x1b
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	24                              // 0x18
+; CHECK: 	.byte	12                              // 0xc
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	15                              // 0xf
+; CHECK: 	.byte	27                              // 0x1b
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	255                             // 0xff
+; CHECK: 	.byte	24                              // 0x18
+; CHECK: 	.byte	12                              // 0xc
+; CHECK: .LCPI15_2:
+; CHECK: 	.byte	16                              // 0x10
+; CHECK: 	.byte	17                              // 0x11
+; CHECK: 	.byte	2                               // 0x2
+; CHECK: 	.byte	3                               // 0x3
+; CHECK: 	.byte	20                              // 0x14
+; CHECK: 	.byte	21                              // 0x15
+; CHECK: 	.byte	6                               // 0x6
+; CHECK: 	.byte	7                               // 0x7
+; CHECK: 	.byte	24                              // 0x18
+; CHECK: 	.byte	25                              // 0x19
+; CHECK: 	.byte	10                              // 0xa
+; CHECK: 	.byte	11                              // 0xb
+; CHECK: 	.byte	28                              // 0x1c
+; CHECK: 	.byte	29                              // 0x1d
+; CHECK: 	.byte	14                              // 0xe
+; CHECK: 	.byte	15                              // 0xf
 define <16 x i8> @insert4_v16i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c, <16 x i8> %d) {
 ; CHECK-LABEL: insert4_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI15_0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q31_q0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x9, .LCPI15_1
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v4.16b, v3.16b
-; CHECK-NEXT:    mov v3.16b, v1.16b
-; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI15_0]
-; CHECK-NEXT:    adrp x8, .LCPI15_1
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
-; CHECK-NEXT:    tbl v31.16b, { v3.16b, v4.16b }, v5.16b
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI15_1]
-; CHECK-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-NEXT:    mov v4.16b, v3.16b
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI15_0]
+; CHECK-NEXT:    adrp x8, .LCPI15_2
+; CHECK-NEXT:    ldr q5, [x9, :lo12:.LCPI15_1]
+; CHECK-NEXT:    mov v3.16b, v1.16b
+; CHECK-NEXT:    tbl v1.16b, { v0.16b }, v2.16b
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI15_2]
+; CHECK-NEXT:    tbl v0.16b, { v3.16b, v4.16b }, v5.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
   %e1 = extractelement <8 x i8> %a, i32 4
   %e2 = extractelement <8 x i8> %c, i32 0
