@@ -2642,6 +2642,28 @@ define <2 x i8> @partial_cond_freeze_constant_true_val_vec(<2 x i8> %x) {
   ret <2 x i8> %s
 }
 
+define <2 x i8> @partial_cond_freeze_constant_false_val_vec(<2 x i8> %x) {
+; CHECK-LABEL: @partial_cond_freeze_constant_false_val_vec(
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze <2 x i1> <i1 true, i1 undef>
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND_FR]], <2 x i8> [[X:%.*]], <2 x i8> <i8 1, i8 2>
+; CHECK-NEXT:    ret <2 x i8> [[S]]
+;
+  %cond.fr = freeze <2 x i1> <i1 true, i1 undef>
+  %s = select <2 x i1> %cond.fr, <2 x i8> %x, <2 x i8> <i8 1, i8 2>
+  ret <2 x i8> %s
+}
+
+define <2 x i8> @partial_cond_freeze_both_arms_constant_vec() {
+; CHECK-LABEL: @partial_cond_freeze_both_arms_constant_vec(
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze <2 x i1> <i1 false, i1 undef>
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND_FR]], <2 x i8> <i8 1, i8 2>, <2 x i8> <i8 42, i8 43>
+; CHECK-NEXT:    ret <2 x i8> [[S]]
+;
+  %cond.fr = freeze <2 x i1> <i1 false, i1 undef>
+  %s = select <2 x i1> %cond.fr, <2 x i8> <i8 1, i8 2>, <2 x i8> <i8 42, i8 43>
+  ret <2 x i8> %s
+}
+
 declare void @foo2(i8, i8)
 
 define void @cond_freeze_multipleuses(i8 %x, i8 %y) {

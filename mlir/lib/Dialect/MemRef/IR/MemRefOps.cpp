@@ -1833,7 +1833,7 @@ computeCollapsedLayoutMap(MemRefType srcType,
 
   // Validate that each reassociation group is contiguous.
   unsigned resultStrideIndex = resultStrides.size() - 1;
-  for (ReassociationIndices reassoc : llvm::reverse(reassociation)) {
+  for (const ReassociationIndices &reassoc : llvm::reverse(reassociation)) {
     auto trailingReassocs = ArrayRef<int64_t>(reassoc).drop_front();
     using saturated_arith::Wrapper;
     auto stride = Wrapper::stride(resultStrides[resultStrideIndex--]);

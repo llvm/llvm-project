@@ -1271,7 +1271,7 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   auto threadprivateOp = cast<omp::ThreadprivateOp>(opInst);
 
   Value symAddr = threadprivateOp.sym_addr();
-  auto symOp = symAddr.getDefiningOp();
+  auto *symOp = symAddr.getDefiningOp();
   if (!isa<LLVM::AddressOfOp>(symOp))
     return opInst.emitError("Addressing symbol not found");
   LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);

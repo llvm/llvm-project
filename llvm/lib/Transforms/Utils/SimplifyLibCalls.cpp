@@ -1254,7 +1254,8 @@ static Value *valueHasFloatPrecision(Value *Val) {
 
 /// Shrink double -> float functions.
 static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
-                               bool isBinary, bool isPrecise = false) {
+                               bool isBinary, const TargetLibraryInfo *TLI,
+                               bool isPrecise = false) {
   Function *CalleeFn = CI->getCalledFunction();
   if (!CI->getType()->isDoubleTy() || !CalleeFn)
     return nullptr;
@@ -1304,22 +1305,25 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
     R = isBinary ? B.CreateCall(Fn, V) : B.CreateCall(Fn, V[0]);
   } else {
     AttributeList CalleeAttrs = CalleeFn->getAttributes();
-    R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], CalleeName, B, CalleeAttrs)
-                 : emitUnaryFloatFnCall(V[0], CalleeName, B, CalleeAttrs);
+    R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
+                                         CalleeAttrs)
+                 : emitUnaryFloatFnCall(V[0], TLI, CalleeName, B, CalleeAttrs);
   }
   return B.CreateFPExt(R, B.getDoubleTy());
 }
 
 /// Shrink double -> float for unary functions.
 static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilderBase &B,
+                                    const TargetLibraryInfo *TLI,
                                     bool isPrecise = false) {
-  return optimizeDoubleFP(CI, B, false, isPrecise);
+  return optimizeDoubleFP(CI, B, false, TLI, isPrecise);
 }
 
 /// Shrink double -> float for binary functions.
 static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilderBase &B,
+                                     const TargetLibraryInfo *TLI,
                                      bool isPrecise = false) {
-  return optimizeDoubleFP(CI, B, true, isPrecise);
+  return optimizeDoubleFP(CI, B, true, TLI, isPrecise);
 }
 
 // cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
@@ -1787,7 +1791,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   // unless the result is expected to be double precision.
   if (UnsafeFPShrink && Name == TLI->getName(LibFunc_pow) &&
       hasFloatVersion(Name)) {
-    if (Value *Shrunk = optimizeBinaryDoubleFP(Pow, B, true))
+    if (Value *Shrunk = optimizeBinaryDoubleFP(Pow, B, TLI, true))
       return Shrunk;
   }
 
@@ -1801,7 +1805,7 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   Value *Ret = nullptr;
   if (UnsafeFPShrink && Name == TLI->getName(LibFunc_exp2) &&
       hasFloatVersion(Name))
-    Ret = optimizeUnaryDoubleFP(CI, B, true);
+    Ret = optimizeUnaryDoubleFP(CI, B, TLI, true);
 
   Type *Ty = CI->getType();
   Value *Op = CI->getArgOperand(0);
@@ -1825,7 +1829,7 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
   Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
   if ((Name == "fmin" || Name == "fmax") && hasFloatVersion(Name))
-    if (Value *Ret = optimizeBinaryDoubleFP(CI, B))
+    if (Value *Ret = optimizeBinaryDoubleFP(CI, B, TLI))
       return Ret;
 
   // The LLVM intrinsics minnum/maxnum correspond to fmin/fmax. Canonicalize to
@@ -1857,7 +1861,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Value *Ret = nullptr;
 
   if (UnsafeFPShrink && hasFloatVersion(LogNm))
-    Ret = optimizeUnaryDoubleFP(Log, B, true);
+    Ret = optimizeUnaryDoubleFP(Log, B, TLI, true);
 
   // The earlier call must also be 'fast' in order to do these transforms.
   CallInst *Arg = dyn_cast<CallInst>(Log->getArgOperand(0));
@@ -1965,7 +1969,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
         Log->doesNotAccessMemory()
             ? B.CreateCall(Intrinsic::getDeclaration(Mod, LogID, Ty),
                            Arg->getOperand(0), "log")
-            : emitUnaryFloatFnCall(Arg->getOperand(0), LogNm, B, Attrs);
+            : emitUnaryFloatFnCall(Arg->getOperand(0), TLI, LogNm, B, Attrs);
     Value *MulY = B.CreateFMul(Arg->getArgOperand(1), LogX, "mul");
     // Since pow() may have side effects, e.g. errno,
     // dead code elimination may not be trusted to remove it.
@@ -1988,7 +1992,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
     Value *LogE = Log->doesNotAccessMemory()
                       ? B.CreateCall(Intrinsic::getDeclaration(Mod, LogID, Ty),
                                      Eul, "log")
-                      : emitUnaryFloatFnCall(Eul, LogNm, B, Attrs);
+                      : emitUnaryFloatFnCall(Eul, TLI, LogNm, B, Attrs);
     Value *MulY = B.CreateFMul(Arg->getArgOperand(0), LogE, "mul");
     // Since exp() may have side effects, e.g. errno,
     // dead code elimination may not be trusted to remove it.
@@ -2007,7 +2011,7 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
   // condition below.
   if (TLI->has(LibFunc_sqrtf) && (Callee->getName() == "sqrt" ||
                                   Callee->getIntrinsicID() == Intrinsic::sqrt))
-    Ret = optimizeUnaryDoubleFP(CI, B, true);
+    Ret = optimizeUnaryDoubleFP(CI, B, TLI, true);
 
   if (!CI->isFast())
     return Ret;
@@ -2073,7 +2077,7 @@ Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilderBase &B) {
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && Name == "tan" && hasFloatVersion(Name))
-    Ret = optimizeUnaryDoubleFP(CI, B, true);
+    Ret = optimizeUnaryDoubleFP(CI, B, TLI, true);
 
   Value *Op1 = CI->getArgOperand(0);
   auto *OpC = dyn_cast<CallInst>(Op1);
@@ -3010,11 +3014,11 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_sinh:
   case LibFunc_tanh:
     if (UnsafeFPShrink && hasFloatVersion(CI->getCalledFunction()->getName()))
-      return optimizeUnaryDoubleFP(CI, Builder, true);
+      return optimizeUnaryDoubleFP(CI, Builder, TLI, true);
     return nullptr;
   case LibFunc_copysign:
     if (hasFloatVersion(CI->getCalledFunction()->getName()))
-      return optimizeBinaryDoubleFP(CI, Builder);
+      return optimizeBinaryDoubleFP(CI, Builder, TLI);
     return nullptr;
   case LibFunc_fminf:
   case LibFunc_fmin:

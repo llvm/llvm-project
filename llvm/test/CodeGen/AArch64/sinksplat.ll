@@ -336,9 +336,8 @@ define <4 x i32> @smull_nonsplat(<4 x i16> %x, <4 x i16> *%y) {
 ; CHECK-NEXT:    fmov d1, d0
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    dup v2.4h, v1.h[3]
-; CHECK-NEXT:    ext v2.8b, v1.8b, v2.8b, #4
-; CHECK-NEXT:    ext v1.8b, v1.8b, v2.8b, #6
+; CHECK-NEXT:    trn2 v2.4h, v1.4h, v1.4h
+; CHECK-NEXT:    zip2 v1.4h, v2.4h, v1.4h
 ; CHECK-NEXT:  .LBB10_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d2, [x0]

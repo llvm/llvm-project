@@ -1738,6 +1738,8 @@ $fix[[  $diag[[#include "unused.h"]]
 ]]
   #include "used.h"
 
+  #include "ignore.h"
+
   #include <system_header.h>
 
   void foo() {
@@ -1754,12 +1756,19 @@ $fix[[  $diag[[#include "unused.h"]]
     #pragma once
     void used() {}
   )cpp";
+  TU.AdditionalFiles["ignore.h"] = R"cpp(
+    #pragma once
+    void ignore() {}
+  )cpp";
   TU.AdditionalFiles["system/system_header.h"] = "";
   TU.ExtraArgs = {"-isystem" + testPath("system")};
   // Off by default.
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
   Config Cfg;
   Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
+  // Set filtering.
+  Cfg.Diagnostics.Includes.IgnoreHeader.emplace_back(
+      [](llvm::StringRef Header) { return Header.endswith("ignore.h"); });
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
   EXPECT_THAT(
       *TU.build().getDiagnostics(),

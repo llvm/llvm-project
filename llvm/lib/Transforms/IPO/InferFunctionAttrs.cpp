@@ -29,7 +29,7 @@ static bool inferAllPrototypeAttributes(
     // explicitly visited by CGSCC passes in the new pass manager.)
     if (F.isDeclaration() && !F.hasOptNone()) {
       if (!F.hasFnAttribute(Attribute::NoBuiltin))
-        Changed |= inferLibFuncAttributes(F, GetTLI(F));
+        Changed |= inferNonMandatoryLibFuncAttrs(F, GetTLI(F));
       Changed |= inferAttributesFromOthers(F);
     }
 
