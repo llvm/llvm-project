@@ -399,13 +399,14 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
           reassociateShiftAmtsOfTwoSameDirectionShifts(&I, SQ)))
     return NewShift;
 
-  // (C1 shift (A add C2)) -> (C1 shift C2) shift A)
-  // iff A and C2 are both positive.
+  // C0 shift (A add C) -> (C0 shift C) shift A
+  // iff A and C2 are both positive or the add has 'nuw'.
   Value *A;
   Constant *C;
   if (match(Op0, m_Constant()) && match(Op1, m_Add(m_Value(A), m_Constant(C))))
-    if (isKnownNonNegative(A, DL, 0, &AC, &I, &DT) &&
-        isKnownNonNegative(C, DL, 0, &AC, &I, &DT))
+    if (cast<BinaryOperator>(Op1)->hasNoUnsignedWrap() ||
+        (isKnownNonNegative(A, DL, 0, &AC, &I, &DT) &&
+         isKnownNonNegative(C, DL, 0, &AC, &I, &DT)))
       return BinaryOperator::Create(
           I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), Op0, C), A);
 

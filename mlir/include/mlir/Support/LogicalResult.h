@@ -98,6 +98,25 @@ private:
   using Optional<T>::hasValue;
 };
 
+/// This class represents success/failure for parsing-like operations that find
+/// it important to chain together failable operations with `||`.  This is an
+/// extended version of `LogicalResult` that allows for explicit conversion to
+/// bool.
+///
+/// This class should not be used for general error handling cases - we prefer
+/// to keep the logic explicit with the `succeeded`/`failed` predicates.
+/// However, traditional monadic-style parsing logic can sometimes get
+/// swallowed up in boilerplate without this, so we provide this for narrow
+/// cases where it is important.
+///
+class ParseResult : public LogicalResult {
+public:
+  ParseResult(LogicalResult result = success()) : LogicalResult(result) {}
+
+  /// Failure is true in a boolean context.
+  explicit operator bool() const { return failed(); }
+};
+
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_LOGICALRESULT_H

@@ -1,0 +1,12 @@
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
+
+---
+name: invalid_reg
+machineFunctionInfo:
+# ERR: [[@LINE+1]]:21: unknown register name 'arst'
+  vgprForAGPRCopy: '$arst'
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...

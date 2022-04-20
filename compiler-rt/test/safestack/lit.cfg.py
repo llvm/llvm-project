@@ -16,7 +16,7 @@ config.substitutions.append( ("%clang_nosafestack ", config.clang + " -O0 -fno-s
 config.substitutions.append( ("%clang_safestack ", config.clang + " -O0 -fsanitize=safe-stack ") )
 
 if config.lto_supported:
-  config.substitutions.append((r"%clang_lto_safestack ", ' '.join(config.lto_launch + [config.clang] + config.lto_flags + ['-fsanitize=safe-stack '])))
+  config.substitutions.append((r"%clang_lto_safestack ", ' '.join([config.clang] + config.lto_flags + ['-fsanitize=safe-stack '])))
 
 if config.host_os not in ['Linux', 'FreeBSD', 'NetBSD']:
    config.unsupported = True

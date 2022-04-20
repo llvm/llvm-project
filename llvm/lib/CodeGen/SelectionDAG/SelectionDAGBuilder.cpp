@@ -6158,8 +6158,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::eh_sjlj_callsite: {
     MachineModuleInfo &MMI = DAG.getMachineFunction().getMMI();
-    ConstantInt *CI = dyn_cast<ConstantInt>(I.getArgOperand(0));
-    assert(CI && "Non-constant call site value in eh.sjlj.callsite!");
+    ConstantInt *CI = cast<ConstantInt>(I.getArgOperand(0));
     assert(MMI.getCurrentCallSite() == 0 && "Overlapping call sites!");
 
     MMI.setCurrentCallSite(CI->getZExtValue());

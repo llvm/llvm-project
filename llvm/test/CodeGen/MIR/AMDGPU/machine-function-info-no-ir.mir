@@ -8,6 +8,7 @@
 # FULL-NEXT: explicitKernArgSize: 128
 # FULL-NEXT: maxKernArgAlign: 64
 # FULL-NEXT: ldsSize: 2048
+# FULL-NEXT: gdsSize: 256
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -18,6 +19,8 @@
 # FULL-NEXT: scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
 # FULL-NEXT: frameOffsetReg:  '$sgpr12'
 # FULL-NEXT: stackPtrOffsetReg:  '$sgpr13'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
@@ -41,12 +44,14 @@
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
 # SIMPLE-NEXT: explicitKernArgSize: 128
 # SIMPLE-NEXT: maxKernArgAlign: 64
 # SIMPLE-NEXT: ldsSize: 2048
+# SIMPLE-NEXT: gdsSize: 256
 # SIMPLE-NEXT: isEntryFunction: true
 # SIMPLE-NEXT: memoryBound: true
 # SIMPLE-NEXT: waveLimiter: true
@@ -74,6 +79,7 @@ machineFunctionInfo:
   explicitKernArgSize: 128
   maxKernArgAlign: 64
   ldsSize: 2048
+  gdsSize: 256
   isEntryFunction: true
   noSignedZerosFPMath: false
   memoryBound:     true
@@ -100,6 +106,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -110,6 +117,8 @@ body:             |
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
@@ -131,6 +140,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -163,6 +173,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -173,6 +184,8 @@ body:             |
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
@@ -194,6 +207,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -227,6 +241,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -237,6 +252,8 @@ body:             |
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
@@ -258,6 +275,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -387,6 +405,7 @@ body:             |
 # ALL-LABEL: name: dyn_lds_with_alignment
 
 # FULL: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 8
 
 # SIMPLE: dynLDSAlign: 8
@@ -438,5 +457,66 @@ machineFunctionInfo:
 body:             |
   bb.0:
     S_ENDPGM 0
+
+...
+
+---
+# ALL-LABEL: name: bytes_in_stack_arg_area
+# ALL: bytesInStackArgArea: 444
+name: bytes_in_stack_arg_area
+machineFunctionInfo:
+  bytesInStackArgArea: 444
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: returns_void_true
+# FULL: returnsVoid: true
+# SIMPLE-NOT: returnsVoid
+name: returns_void_true
+machineFunctionInfo:
+  returnsVoid: true
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+---
+# ALL-LABEL: name: returns_void_false
+# ALL: returnsVoid: false
+name: returns_void_false
+machineFunctionInfo:
+  returnsVoid: false
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: vgpr_for_agpr_copy
+# ALL: vgprForAGPRCopy: '$vgpr2'
+name: vgpr_for_agpr_copy
+machineFunctionInfo:
+  vgprForAGPRCopy: '$vgpr2'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: vgpr_for_agpr_copy_noreg
+# FULL: vgprForAGPRCopy: ''
+# SIMPLE-NOT: vgprForAGPRCopy
+name: vgpr_for_agpr_copy_noreg
+machineFunctionInfo:
+  vgprForAGPRCopy: '$noreg'
+body:             |
+  bb.0:
+    SI_RETURN
 
 ...

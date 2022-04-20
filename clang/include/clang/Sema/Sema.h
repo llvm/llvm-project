@@ -787,6 +787,23 @@ public:
   /// context.
   unsigned FunctionScopesStart = 0;
 
+  /// Whether we are currently in the context of a mutable agnostic identifier
+  /// as described by CWG2569.
+  /// We are handling the unqualified-id of a decltype or noexcept expression.
+  bool InMutableAgnosticContext = false;
+
+  /// RAII object used to change the value of \c InMutableAgnosticContext
+  /// within a \c Sema object.
+  class MutableAgnosticContextRAII {
+    Sema &SemaRef;
+
+  public:
+    MutableAgnosticContextRAII(Sema &S) : SemaRef(S) {
+      SemaRef.InMutableAgnosticContext = true;
+    }
+    ~MutableAgnosticContextRAII() { SemaRef.InMutableAgnosticContext = false; }
+  };
+
   ArrayRef<sema::FunctionScopeInfo*> getFunctionScopes() const {
     return llvm::makeArrayRef(FunctionScopes.begin() + FunctionScopesStart,
                               FunctionScopes.end());
@@ -4235,8 +4252,8 @@ public:
                                 = NotForRedeclaration);
   bool LookupBuiltin(LookupResult &R);
   void LookupNecessaryTypesForBuiltin(Scope *S, unsigned ID);
-  bool LookupName(LookupResult &R, Scope *S,
-                  bool AllowBuiltinCreation = false);
+  bool LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation = false,
+                  bool ForceNoCPlusPlus = false);
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
                            bool InUnqualifiedLookup = false);
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
@@ -5269,6 +5286,9 @@ public:
       UnqualifiedId &Id, bool HasTrailingLParen, bool IsAddressOfOperand,
       CorrectionCandidateCallback *CCC = nullptr,
       bool IsInlineAsmIdentifier = false, Token *KeywordReplacement = nullptr);
+
+  ExprResult ActOnMutableAgnosticIdExpression(Scope *S, CXXScopeSpec &SS,
+                                              UnqualifiedId &Id);
 
   void DecomposeUnqualifiedId(const UnqualifiedId &Id,
                               TemplateArgumentListInfo &Buffer,

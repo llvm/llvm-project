@@ -32,7 +32,7 @@ OpFoldResult TestInvolutionTraitSuccesfulOperationFolderOp::fold(
 
 namespace {
 struct TestTraitFolder
-    : public PassWrapper<TestTraitFolder, OperationPass<FuncOp>> {
+    : public PassWrapper<TestTraitFolder, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTraitFolder)
 
   StringRef getArgument() const final { return "test-trait-folder"; }

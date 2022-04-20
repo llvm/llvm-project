@@ -212,7 +212,7 @@ public:
   AttributeVariable *
   getUnitAttrParsingElement(ArrayRef<FormatElement *> pelement) {
     if (pelement.size() == 1) {
-      auto attrElem = dyn_cast<AttributeVariable>(pelement[0]);
+      auto *attrElem = dyn_cast<AttributeVariable>(pelement[0]);
       if (attrElem && attrElem->isUnitAttr())
         return attrElem;
     }
@@ -1892,8 +1892,8 @@ void collect(FormatElement *element,
       })
       .Case([&](OIListElement *oilist) {
         for (ArrayRef<FormatElement *> arg : oilist->getParsingElements())
-          for (FormatElement *arg_ : arg)
-            collect(arg_, variables);
+          for (FormatElement *arg : arg)
+            collect(arg, variables);
       });
 }
 

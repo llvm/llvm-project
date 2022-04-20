@@ -34,7 +34,7 @@
 
 // Hangs
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newDriver
+// UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
 
 #if ADD_REDUCTION
 # define REDUCTION(...) reduction(__VA_ARGS__)

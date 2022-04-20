@@ -1,0 +1,15 @@
+# XFAIL: system-aix
+## Test regular archives do not convert to thin archives.
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-ar qc %t/archive.a %s
+# RUN: not llvm-ar q --thin %t/archive.a %s 2>&1 | FileCheck %s
+# RUN: not llvm-ar r --thin %t/archive.a %s 2>&1 | FileCheck %s
+
+# CHECK: error: cannot convert a regular archive to a thin one
+
+## Test that you can add a regular archive's contents to a thin archive with 'L'
+# RUN: llvm-ar -qcL --thin %t/thin.a %t/archive.a
+# RUN: FileCheck --check-prefixes=THIN --input-file=%t/thin.a %s
+
+THIN: !<thin>

@@ -78,7 +78,7 @@ public:
   }
   template <typename... A>
   Result operator()(const std::variant<A...> &u) const {
-    return std::visit(visitor_, u);
+    return common::visit(visitor_, u);
   }
   template <typename A> Result operator()(const std::vector<A> &x) const {
     return CombineContents(x);

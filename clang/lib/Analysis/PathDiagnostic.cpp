@@ -434,8 +434,8 @@ void PathDiagnosticConsumer::FlushDiagnostics(
 }
 
 PathDiagnosticConsumer::FilesMade::~FilesMade() {
-  for (PDFileEntry &Entry : Set)
-    Entry.~PDFileEntry();
+  for (auto It = Set.begin(); It != Set.end();)
+    (It++)->~PDFileEntry();
 }
 
 void PathDiagnosticConsumer::FilesMade::addDiagnostic(const PathDiagnostic &PD,

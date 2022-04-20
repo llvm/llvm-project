@@ -544,7 +544,8 @@ public:
   };
   virtual ~PerfReaderBase() = default;
   static std::unique_ptr<PerfReaderBase> create(ProfiledBinary *Binary,
-                                                PerfInputFile &PerfInput);
+                                                PerfInputFile &PerfInput,
+                                                Optional<uint32_t> PIDFilter);
 
   // Entry of the reader to parse multiple perf traces
   virtual void parsePerfTraces() = 0;
@@ -568,14 +569,16 @@ protected:
 // Read perf script to parse the events and samples.
 class PerfScriptReader : public PerfReaderBase {
 public:
-  PerfScriptReader(ProfiledBinary *B, StringRef PerfTrace)
-      : PerfReaderBase(B, PerfTrace){};
+  PerfScriptReader(ProfiledBinary *B, StringRef PerfTrace,
+                   Optional<uint32_t> PID)
+      : PerfReaderBase(B, PerfTrace), PIDFilter(PID){};
 
   // Entry of the reader to parse multiple perf traces
   virtual void parsePerfTraces() override;
   // Generate perf script from perf data
   static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
-                                              PerfInputFile &File);
+                                              PerfInputFile &File,
+                                              Optional<uint32_t> PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);
 
@@ -635,6 +638,8 @@ protected:
   AggregatedCounter AggregatedSamples;
   // Keep track of all invalid return addresses
   std::set<uint64_t> InvalidReturnAddresses;
+  // PID for the process of interest
+  Optional<uint32_t> PIDFilter;
 };
 
 /*
@@ -645,8 +650,9 @@ protected:
 */
 class LBRPerfReader : public PerfScriptReader {
 public:
-  LBRPerfReader(ProfiledBinary *Binary, StringRef PerfTrace)
-      : PerfScriptReader(Binary, PerfTrace){};
+  LBRPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
+                Optional<uint32_t> PID)
+      : PerfScriptReader(Binary, PerfTrace, PID){};
   // Parse the LBR only sample.
   virtual void parseSample(TraceStream &TraceIt, uint64_t Count) override;
 };
@@ -662,8 +668,9 @@ public:
 */
 class HybridPerfReader : public PerfScriptReader {
 public:
-  HybridPerfReader(ProfiledBinary *Binary, StringRef PerfTrace)
-      : PerfScriptReader(Binary, PerfTrace){};
+  HybridPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
+                   Optional<uint32_t> PID)
+      : PerfScriptReader(Binary, PerfTrace, PID){};
   // Parse the hybrid sample including the call and LBR line
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateUnsymbolizedProfile() override;

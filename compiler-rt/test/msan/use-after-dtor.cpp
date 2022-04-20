@@ -1,16 +1,16 @@
-// RUN: %clangxx_msan %s -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan %s -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-UAD < %t.out
 
-// RUN: %clangxx_msan %s -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan %s -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-UAD < %t.out
 
-// RUN: %clangxx_msan %s -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan %s -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-UAD < %t.out
 
-// RUN: %clangxx_msan %s -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -fsanitize-memory-track-origins -o %t && MSAN_OPTIONS=poison_in_dtor=1 not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan %s -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -fsanitize-memory-track-origins -o %t && not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefixes=CHECK-UAD,CHECK-ORIGINS < %t.out
 
-// RUN: %clangxx_msan %s -fno-sanitize-memory-use-after-dtor -o %t && MSAN_OPTIONS=poison_in_dtor=1 not %run %t > %t.out 2>&1
+// RUN: %clangxx_msan %s -fno-sanitize-memory-use-after-dtor -o %t && not %run %t > %t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-UAD-OFF < %t.out
 
 #include <sanitizer/msan_interface.h>

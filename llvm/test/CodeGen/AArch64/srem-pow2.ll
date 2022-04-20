@@ -43,10 +43,9 @@ define i16 @fold_srem_2_i16(i16 %x) {
 define i32 @fold_srem_2_i64(i32 %x) {
 ; CHECK-LABEL: fold_srem_2_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, #0x1
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cinc w8, w0, lt
-; CHECK-NEXT:    and w8, w8, #0xfffffffe
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    cneg w0, w8, lt
 ; CHECK-NEXT:    ret
   %1 = srem i32 %x, 2
   ret i32 %1
@@ -55,10 +54,9 @@ define i32 @fold_srem_2_i64(i32 %x) {
 define i64 @fold_srem_2_i32(i64 %x) {
 ; CHECK-LABEL: fold_srem_2_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    and x8, x0, #0x1
 ; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cinc x8, x0, lt
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffffe
-; CHECK-NEXT:    sub x0, x0, x8
+; CHECK-NEXT:    cneg x0, x8, lt
 ; CHECK-NEXT:    ret
   %1 = srem i64 %x, 2
   ret i64 %1
@@ -80,11 +78,10 @@ define i16 @fold_srem_pow2_i16(i16 %x) {
 define i32 @fold_srem_pow2_i32(i32 %x) {
 ; CHECK-LABEL: fold_srem_pow2_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #63
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel w8, w8, w0, lt
-; CHECK-NEXT:    and w8, w8, #0xffffffc0
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    negs w8, w0
+; CHECK-NEXT:    and w9, w0, #0x3f
+; CHECK-NEXT:    and w8, w8, #0x3f
+; CHECK-NEXT:    csneg w0, w9, w8, mi
 ; CHECK-NEXT:    ret
   %1 = srem i32 %x, 64
   ret i32 %1
@@ -93,11 +90,10 @@ define i32 @fold_srem_pow2_i32(i32 %x) {
 define i64 @fold_srem_pow2_i64(i64 %x) {
 ; CHECK-LABEL: fold_srem_pow2_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #63
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    csel x8, x8, x0, lt
-; CHECK-NEXT:    and x8, x8, #0xffffffffffffffc0
-; CHECK-NEXT:    sub x0, x0, x8
+; CHECK-NEXT:    negs x8, x0
+; CHECK-NEXT:    and x9, x0, #0x3f
+; CHECK-NEXT:    and x8, x8, #0x3f
+; CHECK-NEXT:    csneg x0, x9, x8, mi
 ; CHECK-NEXT:    ret
   %1 = srem i64 %x, 64
   ret i64 %1
@@ -119,12 +115,10 @@ define i16 @fold_srem_smax_i16(i16 %x) {
 define i32 @fold_srem_smax_i32(i32 %x) {
 ; CHECK-LABEL: fold_srem_smax_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    add w8, w0, w8
-; CHECK-NEXT:    csel w8, w8, w0, lt
-; CHECK-NEXT:    and w8, w8, #0x80000000
-; CHECK-NEXT:    add w0, w0, w8
+; CHECK-NEXT:    negs w8, w0
+; CHECK-NEXT:    and w9, w0, #0x7fffffff
+; CHECK-NEXT:    and w8, w8, #0x7fffffff
+; CHECK-NEXT:    csneg w0, w9, w8, mi
 ; CHECK-NEXT:    ret
   %1 = srem i32 %x, 2147483648
   ret i32 %1
@@ -133,12 +127,10 @@ define i32 @fold_srem_smax_i32(i32 %x) {
 define i64 @fold_srem_smax_i64(i64 %x) {
 ; CHECK-LABEL: fold_srem_smax_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9223372036854775807
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    add x8, x0, x8
-; CHECK-NEXT:    csel x8, x8, x0, lt
-; CHECK-NEXT:    and x8, x8, #0x8000000000000000
-; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    negs x8, x0
+; CHECK-NEXT:    and x9, x0, #0x7fffffffffffffff
+; CHECK-NEXT:    and x8, x8, #0x7fffffffffffffff
+; CHECK-NEXT:    csneg x0, x9, x8, mi
 ; CHECK-NEXT:    ret
   %1 = srem i64 %x, -9223372036854775808
   ret i64 %1

@@ -168,27 +168,25 @@ public:
         auto &Val =
             Env.takeOwnership(std::make_unique<ReferenceValue>(*InitExprLoc));
         Env.setValue(Loc, Val);
-      } else {
-        // FIXME: The initializer expression must always be assigned a value.
-        // Replace this with an assert when we have sufficient coverage of
-        // language features.
-        if (Value *Val = Env.createValue(D.getType()))
-          Env.setValue(Loc, *Val);
+        return;
       }
+    } else if (auto *InitExprVal = Env.getValue(*InitExpr, SkipPast::None)) {
+      Env.setValue(Loc, *InitExprVal);
       return;
     }
 
-    if (auto *InitExprVal = Env.getValue(*InitExpr, SkipPast::None)) {
-      Env.setValue(Loc, *InitExprVal);
-    } else if (!D.getType()->isStructureOrClassType()) {
-      // FIXME: The initializer expression must always be assigned a value.
-      // Replace this with an assert when we have sufficient coverage of
-      // language features.
-      if (Value *Val = Env.createValue(D.getType()))
-        Env.setValue(Loc, *Val);
-    } else {
-      llvm_unreachable("structs and classes must always be assigned values");
-    }
+    // We arrive here in (the few) cases where an expression is intentionally
+    // "uninterpreted". There are two ways to handle this situation: propagate
+    // the status, so that uninterpreted initializers result in uninterpreted
+    // variables, or provide a default value. We choose the latter so that later
+    // refinements of the variable can be used for reasoning about the
+    // surrounding code.
+    //
+    // FIXME. If and when we interpret all language cases, change this to assert
+    // that `InitExpr` is interpreted, rather than supplying a default value
+    // (assuming we don't update the environment API to return references).
+    if (Value *Val = Env.createValue(D.getType()))
+      Env.setValue(Loc, *Val);
   }
 
   void VisitImplicitCastExpr(const ImplicitCastExpr *S) {

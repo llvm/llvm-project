@@ -61,12 +61,12 @@ public:
   }
 };
 
-struct MangleNameOnFuncOp : public mlir::OpRewritePattern<mlir::FuncOp> {
+struct MangleNameOnFuncOp : public mlir::OpRewritePattern<mlir::func::FuncOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::FuncOp op,
+  matchAndRewrite(mlir::func::FuncOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
     auto result = fir::NameUniquer::deconstruct(op.getSymName());
@@ -143,7 +143,7 @@ void ExternalNameConversionPass::runOnOperation() {
     return true;
   });
 
-  target.addDynamicallyLegalOp<mlir::FuncOp>([](mlir::FuncOp op) {
+  target.addDynamicallyLegalOp<mlir::func::FuncOp>([](mlir::func::FuncOp op) {
     return !fir::NameUniquer::needExternalNameMangling(op.getSymName());
   });
 

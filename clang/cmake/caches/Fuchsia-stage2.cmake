@@ -298,6 +298,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   clang-scan-deps
   clang-tidy
   clangd
+  find-all-symbols
   builtins
   runtimes
   ${LLVM_TOOLCHAIN_TOOLS}

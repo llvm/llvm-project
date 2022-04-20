@@ -224,9 +224,14 @@ static cl::opt<bool> AddSelfRelocations(
     cl::desc("Add relocations to function pointers to the current function"),
     cl::init(false), cl::cat(JITLinkCategory));
 
-ExitOnError ExitOnErr;
+static cl::opt<bool>
+    ShowErrFailedToMaterialize("show-err-failed-to-materialize",
+                               cl::desc("Show FailedToMaterialize errors"),
+                               cl::init(false), cl::cat(JITLinkCategory));
 
-LLVM_ATTRIBUTE_USED void linkComponents() {
+static ExitOnError ExitOnErr;
+
+static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
          << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
          << (void *)&llvm_orc_registerJITLoaderGDBWrapper;
@@ -242,6 +247,41 @@ llvm_jitlink_setTestResultOverride(int64_t Value) {
 }
 
 static Error addSelfRelocations(LinkGraph &G);
+
+namespace {
+
+template <typename ErrT>
+
+class ConditionalPrintErr {
+public:
+  ConditionalPrintErr(bool C) : C(C) {}
+  void operator()(ErrT &EI) {
+    if (C) {
+      errs() << "llvm-jitlink error: ";
+      EI.log(errs());
+      errs() << "\n";
+    }
+  }
+
+private:
+  bool C;
+};
+
+Expected<std::unique_ptr<MemoryBuffer>> getFile(const Twine &FileName) {
+  if (auto F = MemoryBuffer::getFile(FileName))
+    return std::move(*F);
+  else
+    return createFileError(FileName, F.getError());
+}
+
+void reportLLVMJITLinkError(Error Err) {
+  handleAllErrors(
+      std::move(Err),
+      ConditionalPrintErr<orc::FailedToMaterialize>(ShowErrFailedToMaterialize),
+      ConditionalPrintErr<ErrorInfoBase>(true));
+}
+
+} // end anonymous namespace
 
 namespace llvm {
 
@@ -1010,6 +1050,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   ErrorAsOutParameter _(&Err);
 
+  ES.setErrorReporter(reportLLVMJITLinkError);
+
   if (auto MainJDOrErr = ES.createJITDylib("main"))
     MainJD = &*MainJDOrErr;
   else {
@@ -1059,8 +1101,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   for (auto &HarnessFile : TestHarnesses) {
     HarnessFiles.insert(HarnessFile);
 
-    auto ObjBuffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(HarnessFile)));
+    auto ObjBuffer = ExitOnErr(getFile(HarnessFile));
 
     auto ObjInterface =
         ExitOnErr(getObjectFileInterface(ES, ObjBuffer->getMemBufferRef()));
@@ -1211,8 +1252,7 @@ static Triple getFirstFileTriple() {
   static Triple FirstTT = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
     for (auto InputFile : InputFiles) {
-      auto ObjBuffer =
-          ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFile)));
+      auto ObjBuffer = ExitOnErr(getFile(InputFile));
       switch (identify_magic(ObjBuffer->getBuffer())) {
       case file_magic::elf_relocatable:
       case file_magic::macho_object:
@@ -1421,7 +1461,7 @@ static Error addTestHarnesses(Session &S) {
   LLVM_DEBUG(dbgs() << "Adding test harness objects...\n");
   for (auto HarnessFile : TestHarnesses) {
     LLVM_DEBUG(dbgs() << "  " << HarnessFile << "\n");
-    auto ObjBuffer = errorOrToExpected(MemoryBuffer::getFile(HarnessFile));
+    auto ObjBuffer = getFile(HarnessFile);
     if (!ObjBuffer)
       return ObjBuffer.takeError();
     if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(*ObjBuffer)))
@@ -1445,7 +1485,7 @@ static Error addObjects(Session &S,
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
                       << "\" to " << JD.getName() << "\n";);
-    auto ObjBuffer = errorOrToExpected(MemoryBuffer::getFile(InputFile));
+    auto ObjBuffer = getFile(InputFile);
     if (!ObjBuffer)
       return ObjBuffer.takeError();
 
@@ -1857,8 +1897,7 @@ static Error runChecks(Session &S) {
 
   std::string CheckLineStart = "# " + CheckName + ":";
   for (auto &CheckFile : CheckFiles) {
-    auto CheckerFileBuf =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(CheckFile)));
+    auto CheckerFileBuf = ExitOnErr(getFile(CheckFile));
     if (!Checker.checkAllRulesInBuffer(CheckLineStart, &*CheckerFileBuf))
       ExitOnErr(make_error<StringError>(
           "Some checks in " + CheckFile + " failed", inconvertibleErrorCode()));
@@ -1968,7 +2007,12 @@ int main(int argc, char *argv[]) {
     TimeRegion TR(Timers ? &Timers->LinkTimer : nullptr);
     // Find the entry-point function unconditionally, since we want to force
     // it to be materialized to collect stats.
-    EntryPoint = ExitOnErr(getMainEntryPoint(*S));
+    if (auto EP = getMainEntryPoint(*S))
+      EntryPoint = *EP;
+    else {
+      reportLLVMJITLinkError(EP.takeError());
+      exit(1);
+    }
     LLVM_DEBUG({
       dbgs() << "Using entry point \"" << EntryPointName
              << "\": " << formatv("{0:x16}", EntryPoint.getAddress()) << "\n";
@@ -1977,7 +2021,12 @@ int main(int argc, char *argv[]) {
     // If we're running with the ORC runtime then replace the entry-point
     // with the __orc_rt_run_program symbol.
     if (!OrcRuntime.empty()) {
-      EntryPoint = ExitOnErr(getOrcRuntimeEntryPoint(*S));
+      if (auto EP = getOrcRuntimeEntryPoint(*S))
+        EntryPoint = *EP;
+      else {
+        reportLLVMJITLinkError(EP.takeError());
+        exit(1);
+      }
       LLVM_DEBUG({
         dbgs() << "(called via __orc_rt_run_program_wrapper at "
                << formatv("{0:x16}", EntryPoint.getAddress()) << ")\n";

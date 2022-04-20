@@ -521,6 +521,17 @@ func @fold_extract_broadcast(%a : f32) -> f32 {
 
 // -----
 
+// CHECK-LABEL: fold_extract_broadcast_negative
+//       CHECK:   vector.broadcast %{{.*}} : vector<1x1xf32> to vector<1x1x4xf32>
+//       CHECK:   vector.extract %{{.*}}[0, 0] : vector<1x1x4xf32>
+func @fold_extract_broadcast_negative(%a : vector<1x1xf32>) -> vector<4xf32> {
+  %b = vector.broadcast %a : vector<1x1xf32> to vector<1x1x4xf32>
+  %r = vector.extract %b[0, 0] : vector<1x1x4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: fold_extract_splat
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
@@ -1470,6 +1481,17 @@ func @transpose_splat_constant() -> vector<8x4xf32> {
   %cst = arith.constant dense<5.0> : vector<4x8xf32>
   %0 = vector.transpose %cst, [1, 0] : vector<4x8xf32> to vector<8x4xf32>
   return %0 : vector<8x4xf32>
+}
+
+// CHECK-LABEL:   func @transpose_splat2(
+// CHECK-SAME:                           %[[VAL_0:.*]]: f32) -> vector<3x4xf32> {
+// CHECK:           %[[VAL_1:.*]] = vector.splat %[[VAL_0]] : vector<3x4xf32>
+// CHECK:           return %[[VAL_1]] : vector<3x4xf32>
+// CHECK:         }
+func @transpose_splat2(%arg : f32) -> vector<3x4xf32> {
+  %splat = vector.splat %arg : vector<4x3xf32>
+  %0 = vector.transpose %splat, [1, 0] : vector<4x3xf32> to vector<3x4xf32>
+  return %0 : vector<3x4xf32>
 }
 
 // -----

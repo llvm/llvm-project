@@ -106,7 +106,7 @@ Status RemoteOffloadImpl::GetNumberOfDevices(ServerContext *Context,
 
 Status RemoteOffloadImpl::InitDevice(ServerContext *Context,
                                      const I32 *DeviceNum, I32 *Reply) {
-  Reply->set_number(PM->Devices[DeviceNum->number()].RTL->init_device(
+  Reply->set_number(PM->Devices[DeviceNum->number()]->RTL->init_device(
       mapHostRTLDeviceId(DeviceNum->number())));
 
   SERVER_DBG("Initialized device %d", DeviceNum->number())
@@ -116,8 +116,8 @@ Status RemoteOffloadImpl::InitDevice(ServerContext *Context,
 Status RemoteOffloadImpl::InitRequires(ServerContext *Context,
                                        const I64 *RequiresFlag, I32 *Reply) {
   for (auto &Device : PM->Devices)
-    if (Device.RTL->init_requires)
-      Device.RTL->init_requires(RequiresFlag->number());
+    if (Device->RTL->init_requires)
+      Device->RTL->init_requires(RequiresFlag->number());
   Reply->set_number(RequiresFlag->number());
 
   SERVER_DBG("Initialized requires for devices")
@@ -129,7 +129,7 @@ Status RemoteOffloadImpl::LoadBinary(ServerContext *Context,
   __tgt_device_image *Image =
       HostToRemoteDeviceImage[(void *)Binary->image_ptr()];
 
-  Table = PM->Devices[Binary->device_id()].RTL->load_binary(
+  Table = PM->Devices[Binary->device_id()]->RTL->load_binary(
       mapHostRTLDeviceId(Binary->device_id()), Image);
   if (Table)
     loadTargetTable(Table, *Reply, Image);
@@ -144,10 +144,10 @@ Status RemoteOffloadImpl::IsDataExchangeable(ServerContext *Context,
                                              I32 *Reply) {
   Reply->set_number(-1);
   if (PM->Devices[mapHostRTLDeviceId(Request->src_dev_id())]
-          .RTL->is_data_exchangable)
+          ->RTL->is_data_exchangable)
     Reply->set_number(PM->Devices[mapHostRTLDeviceId(Request->src_dev_id())]
-                          .RTL->is_data_exchangable(Request->src_dev_id(),
-                                                    Request->dst_dev_id()));
+                          ->RTL->is_data_exchangable(Request->src_dev_id(),
+                                                     Request->dst_dev_id()));
 
   SERVER_DBG("Checked if data exchangeable between device %d and device %d",
              Request->src_dev_id(), Request->dst_dev_id())
@@ -156,9 +156,10 @@ Status RemoteOffloadImpl::IsDataExchangeable(ServerContext *Context,
 
 Status RemoteOffloadImpl::DataAlloc(ServerContext *Context,
                                     const AllocData *Request, Pointer *Reply) {
-  uint64_t TgtPtr = (uint64_t)PM->Devices[Request->device_id()].RTL->data_alloc(
-      mapHostRTLDeviceId(Request->device_id()), Request->size(),
-      (void *)Request->hst_ptr(), TARGET_ALLOC_DEFAULT);
+  uint64_t TgtPtr =
+      (uint64_t)PM->Devices[Request->device_id()]->RTL->data_alloc(
+          mapHostRTLDeviceId(Request->device_id()), Request->size(),
+          (void *)Request->hst_ptr(), TARGET_ALLOC_DEFAULT);
   Reply->set_number(TgtPtr);
 
   SERVER_DBG("Allocated at " DPxMOD "", DPxPTR((void *)TgtPtr))
@@ -175,7 +176,7 @@ Status RemoteOffloadImpl::DataSubmit(ServerContext *Context,
     if (Request.start() == 0 && Request.size() == Request.data().size()) {
       Reader->SendInitialMetadata();
 
-      Reply->set_number(PM->Devices[Request.device_id()].RTL->data_submit(
+      Reply->set_number(PM->Devices[Request.device_id()]->RTL->data_submit(
           mapHostRTLDeviceId(Request.device_id()), (void *)Request.tgt_ptr(),
           (void *)Request.data().data(), Request.data().size()));
 
@@ -194,7 +195,7 @@ Status RemoteOffloadImpl::DataSubmit(ServerContext *Context,
            Request.data().size());
   }
 
-  Reply->set_number(PM->Devices[Request.device_id()].RTL->data_submit(
+  Reply->set_number(PM->Devices[Request.device_id()]->RTL->data_submit(
       mapHostRTLDeviceId(Request.device_id()), (void *)Request.tgt_ptr(),
       HostCopy, Request.size()));
 
@@ -211,7 +212,7 @@ Status RemoteOffloadImpl::DataRetrieve(ServerContext *Context,
                                        ServerWriter<Data> *Writer) {
   auto HstPtr = std::make_unique<char[]>(Request->size());
 
-  auto Ret = PM->Devices[Request->device_id()].RTL->data_retrieve(
+  auto Ret = PM->Devices[Request->device_id()]->RTL->data_retrieve(
       mapHostRTLDeviceId(Request->device_id()), HstPtr.get(),
       (void *)Request->tgt_ptr(), Request->size());
 
@@ -262,8 +263,8 @@ Status RemoteOffloadImpl::DataRetrieve(ServerContext *Context,
 Status RemoteOffloadImpl::DataExchange(ServerContext *Context,
                                        const ExchangeData *Request,
                                        I32 *Reply) {
-  if (PM->Devices[Request->src_dev_id()].RTL->data_exchange) {
-    int32_t Ret = PM->Devices[Request->src_dev_id()].RTL->data_exchange(
+  if (PM->Devices[Request->src_dev_id()]->RTL->data_exchange) {
+    int32_t Ret = PM->Devices[Request->src_dev_id()]->RTL->data_exchange(
         mapHostRTLDeviceId(Request->src_dev_id()), (void *)Request->src_ptr(),
         mapHostRTLDeviceId(Request->dst_dev_id()), (void *)Request->dst_ptr(),
         Request->size());
@@ -282,7 +283,7 @@ Status RemoteOffloadImpl::DataExchange(ServerContext *Context,
 
 Status RemoteOffloadImpl::DataDelete(ServerContext *Context,
                                      const DeleteData *Request, I32 *Reply) {
-  auto Ret = PM->Devices[Request->device_id()].RTL->data_delete(
+  auto Ret = PM->Devices[Request->device_id()]->RTL->data_delete(
       mapHostRTLDeviceId(Request->device_id()), (void *)Request->tgt_ptr());
   Reply->set_number(Ret);
 
@@ -305,7 +306,7 @@ Status RemoteOffloadImpl::RunTargetRegion(ServerContext *Context,
 
   void *TgtEntryPtr = ((__tgt_offload_entry *)Request->tgt_entry_ptr())->addr;
 
-  int32_t Ret = PM->Devices[Request->device_id()].RTL->run_region(
+  int32_t Ret = PM->Devices[Request->device_id()]->RTL->run_region(
       mapHostRTLDeviceId(Request->device_id()), TgtEntryPtr,
       (void **)TgtArgs.data(), TgtOffsets.data(), Request->arg_num());
 
@@ -330,7 +331,7 @@ Status RemoteOffloadImpl::RunTargetTeamRegion(ServerContext *Context,
 
   void *TgtEntryPtr = ((__tgt_offload_entry *)Request->tgt_entry_ptr())->addr;
 
-  int32_t Ret = PM->Devices[Request->device_id()].RTL->run_team_region(
+  int32_t Ret = PM->Devices[Request->device_id()]->RTL->run_team_region(
       mapHostRTLDeviceId(Request->device_id()), TgtEntryPtr,
       (void **)TgtArgs.data(), TgtOffsets.data(), Request->arg_num(),
       Request->team_num(), Request->thread_limit(), Request->loop_tripcount());
