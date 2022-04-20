@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s  -split-input-file -loop-invariant-code-motion | FileCheck %s
 
-func @nested_loops_both_having_invariant_code() {
+func.func @nested_loops_both_having_invariant_code() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %cf8 = arith.constant 8.0 : f32
@@ -27,7 +27,7 @@ func @nested_loops_both_having_invariant_code() {
 
 // -----
 
-func @nested_loops_code_invariant_to_both() {
+func.func @nested_loops_code_invariant_to_both() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %cf8 = arith.constant 8.0 : f32
@@ -48,7 +48,7 @@ func @nested_loops_code_invariant_to_both() {
 
 // -----
 
-func @single_loop_nothing_invariant() {
+func.func @single_loop_nothing_invariant() {
   %m1 = memref.alloc() : memref<10xf32>
   %m2 = memref.alloc() : memref<10xf32>
   affine.for %arg0 = 0 to 10 {
@@ -71,7 +71,7 @@ func @single_loop_nothing_invariant() {
 
 // -----
 
-func @invariant_code_inside_affine_if() {
+func.func @invariant_code_inside_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
 
@@ -99,7 +99,7 @@ func @invariant_code_inside_affine_if() {
 
 // -----
 
-func @invariant_affine_if() {
+func.func @invariant_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -124,7 +124,7 @@ func @invariant_affine_if() {
 
 // -----
 
-func @invariant_affine_if2() {
+func.func @invariant_affine_if2() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -151,7 +151,7 @@ func @invariant_affine_if2() {
 
 // -----
 
-func @invariant_affine_nested_if() {
+func.func @invariant_affine_nested_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -183,7 +183,7 @@ func @invariant_affine_nested_if() {
 
 // -----
 
-func @invariant_affine_nested_if_else() {
+func.func @invariant_affine_nested_if_else() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -221,7 +221,7 @@ func @invariant_affine_nested_if_else() {
 
 // -----
 
-func @invariant_loop_dialect() {
+func.func @invariant_loop_dialect() {
   %ci0 = arith.constant 0 : index
   %ci10 = arith.constant 10 : index
   %ci1 = arith.constant 1 : index
@@ -244,7 +244,7 @@ func @invariant_loop_dialect() {
 
 // -----
 
-func @variant_loop_dialect() {
+func.func @variant_loop_dialect() {
   %ci0 = arith.constant 0 : index
   %ci10 = arith.constant 10 : index
   %ci1 = arith.constant 1 : index
@@ -265,7 +265,7 @@ func @variant_loop_dialect() {
 
 // -----
 
-func @parallel_loop_with_invariant() {
+func.func @parallel_loop_with_invariant() {
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
@@ -294,10 +294,10 @@ func @parallel_loop_with_invariant() {
 
 // -----
 
-func private @make_val() -> (index)
+func.func private @make_val() -> (index)
 
 // CHECK-LABEL: func @nested_uses_inside
-func @nested_uses_inside(%lb: index, %ub: index, %step: index) {
+func.func @nested_uses_inside(%lb: index, %ub: index, %step: index) {
   %true = arith.constant true
 
   // Check that ops that contain nested uses to values not defiend outside 
@@ -328,7 +328,7 @@ func @nested_uses_inside(%lb: index, %ub: index, %step: index) {
 // dominance in non-graph regions.
 // CHECK-LABEL: func @invariant_subgraph
 // CHECK-SAME: %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %[[ARG:.*]]: i32
-func @invariant_subgraph(%lb: index, %ub: index, %step: index, %arg: i32) {
+func.func @invariant_subgraph(%lb: index, %ub: index, %step: index, %arg: i32) {
   // CHECK:      %[[V0:.*]] = arith.addi %[[ARG]], %[[ARG]]
   // CHECK-NEXT: %[[V1:.*]] = arith.addi %[[ARG]], %[[V0]]
   // CHECK-NEXT: scf.for
@@ -345,7 +345,7 @@ func @invariant_subgraph(%lb: index, %ub: index, %step: index, %arg: i32) {
 
 // Test invariant nested loop is hoisted.
 // CHECK-LABEL: func @test_invariant_nested_loop
-func @test_invariant_nested_loop() {
+func.func @test_invariant_nested_loop() {
   // CHECK: %[[C:.*]] = arith.constant
   %0 = arith.constant 5 : i32
   // CHECK: %[[V0:.*]] = arith.addi %[[C]], %[[C]]
@@ -374,7 +374,7 @@ func @test_invariant_nested_loop() {
 
 // Test ops in a graph region are hoisted.
 // CHECK-LABEL: func @test_invariants_in_graph_region
-func @test_invariants_in_graph_region() {
+func.func @test_invariants_in_graph_region() {
   // CHECK: test.single_no_terminator_op
   test.single_no_terminator_op : {
     // CHECK-NEXT: %[[C:.*]] = arith.constant
@@ -395,7 +395,7 @@ func @test_invariants_in_graph_region() {
 // Test ops in a graph region are hoisted in topological order into non-graph
 // regions and that dominance is preserved.
 // CHECK-LABEL: func @test_invariant_backedge
-func @test_invariant_backedge() {
+func.func @test_invariant_backedge() {
   // CHECK-NEXT: %[[C:.*]] = arith.constant
   // CHECK-NEXT: %[[V1:.*]] = arith.addi %[[C]], %[[C]]
   // CHECK-NEXT: %[[V0:.*]] = arith.addi %[[C]], %[[V1]]
@@ -414,7 +414,7 @@ func @test_invariant_backedge() {
 
 // Test that cycles aren't hoisted from graph regions to non-graph regions.
 // CHECK-LABEL: func @test_invariant_cycle_not_hoisted
-func @test_invariant_cycle_not_hoisted() {
+func.func @test_invariant_cycle_not_hoisted() {
   // CHECK: test.graph_loop
   test.graph_loop {
     // CHECK-NEXT: %[[A:.*]] = "test.a"(%[[B:.*]]) :

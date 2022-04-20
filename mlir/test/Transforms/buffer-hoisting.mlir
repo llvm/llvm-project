@@ -13,7 +13,7 @@
 // the entry block.
 
 // CHECK-LABEL: func @condBranch
-func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -42,7 +42,7 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // %0 in bb2.
 
 // CHECK-LABEL: func @condBranchDynamicType
-func @condBranchDynamicType(
+func.func @condBranchDynamicType(
   %arg0: i1,
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
@@ -84,7 +84,7 @@ func @condBranchDynamicType(
 // %0 in bb2.
 
 // CHECK-LABEL: func @condBranchDynamicTypeNested
-func @condBranchDynamicTypeNested(
+func.func @condBranchDynamicTypeNested(
   %arg0: i1,
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
@@ -127,7 +127,7 @@ func @condBranchDynamicTypeNested(
 // the entry block.
 
 // CHECK-LABEL: func @criticalEdge
-func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
 ^bb1:
   %0 = memref.alloc() : memref<2xf32>
@@ -152,7 +152,7 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // BufferHoisting expected behavior: It shouldn't move the AllocOps.
 
 // CHECK-LABEL: func @ifElse
-func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -190,7 +190,7 @@ func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // BufferHoisting expected behavior: It shouldn't move the AllocOp.
 
 // CHECK-LABEL: func @ifElseNoUsers
-func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -222,7 +222,7 @@ func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // BufferHoisting expected behavior: AllocOps shouldn't be moved.
 
 // CHECK-LABEL: func @ifElseNested
-func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -258,7 +258,7 @@ func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // BufferHoisting expected behavior: It shouldn't move the AllocOps.
 
 // CHECK-LABEL: func @redundantOperations
-func @redundantOperations(%arg0: memref<2xf32>) {
+func.func @redundantOperations(%arg0: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg0: memref<2xf32>) out(%0: memref<2xf32>)
   %1 = memref.alloc() : memref<2xf32>
@@ -283,7 +283,7 @@ func @redundantOperations(%arg0: memref<2xf32>) {
 // entry block.
 
 // CHECK-LABEL: func @moving_alloc_and_inserting_missing_dealloc
-func @moving_alloc_and_inserting_missing_dealloc(
+func.func @moving_alloc_and_inserting_missing_dealloc(
   %cond: i1,
     %arg0: memref<2xf32>,
     %arg1: memref<2xf32>) {
@@ -318,7 +318,7 @@ func @moving_alloc_and_inserting_missing_dealloc(
 // block.
 
 // CHECK-LABEL: func @moving_invalid_dealloc_op_complex
-func @moving_invalid_dealloc_op_complex(
+func.func @moving_invalid_dealloc_op_complex(
   %cond: i1,
     %arg0: memref<2xf32>,
     %arg1: memref<2xf32>) {
@@ -347,7 +347,7 @@ func @moving_invalid_dealloc_op_complex(
 // RegionBufferBasedOp should be moved to the entry block.
 
 // CHECK-LABEL: func @nested_regions_and_cond_branch
-func @nested_regions_and_cond_branch(
+func.func @nested_regions_and_cond_branch(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
@@ -381,7 +381,7 @@ func @nested_regions_and_cond_branch(
 // both if branches until it is finally returned.
 
 // CHECK-LABEL: func @nested_region_control_flow
-func @nested_region_control_flow(
+func.func @nested_region_control_flow(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = arith.cmpi eq, %arg0, %arg1 : index
@@ -407,7 +407,7 @@ func @nested_region_control_flow(
 // The alloc positions of %1 does not need to be changed. %3 is moved upwards.
 
 // CHECK-LABEL: func @nested_region_control_flow_div
-func @nested_region_control_flow_div(
+func.func @nested_region_control_flow_div(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = arith.cmpi eq, %arg0, %arg1 : index
@@ -433,7 +433,7 @@ func @nested_region_control_flow_div(
 // moved upwards.
 
 // CHECK-LABEL: func @nested_region_control_flow_div_nested
-func @nested_region_control_flow_div_nested(
+func.func @nested_region_control_flow_div_nested(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = arith.cmpi eq, %arg0, %arg1 : index
@@ -464,7 +464,7 @@ func @nested_region_control_flow_div_nested(
 // this region.
 
 // CHECK-LABEL: func @nested_region_control_flow_div_nested_dependencies
-func @nested_region_control_flow_div_nested_dependencies(
+func.func @nested_region_control_flow_div_nested_dependencies(
   %arg0: i32,
   %arg1: i1,
   %arg2: index) -> memref<?x?xf32> {
@@ -503,7 +503,7 @@ func @nested_region_control_flow_div_nested_dependencies(
 // The alloc positions of %0 does not need to be changed.
 
 // CHECK-LABEL: func @inner_region_control_flow
-func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
+func.func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
   %0 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %1 = test.region_if %0 : memref<?x?xf32> -> (memref<?x?xf32>) then {
     ^bb0(%arg1 : memref<?x?xf32>):
@@ -528,7 +528,7 @@ func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
 // The alloc positions of %0 does not need to be changed. %2 is moved upwards.
 
 // CHECK-LABEL: func @inner_region_control_flow_div
-func @inner_region_control_flow_div(
+func.func @inner_region_control_flow_div(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
@@ -555,7 +555,7 @@ func @inner_region_control_flow_div(
 // Test Case: Alloca operations shouldn't be moved.
 
 // CHECK-LABEL: func @condBranchAlloca
-func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -580,7 +580,7 @@ func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // shouldn't be moved analogously to the ifElseNested test.
 
 // CHECK-LABEL: func @ifElseNestedAlloca
-func @ifElseNestedAlloca(
+func.func @ifElseNestedAlloca(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
@@ -619,7 +619,7 @@ func @ifElseNestedAlloca(
 // be moved in the beginning analogous to the nestedRegionsAndCondBranch test.
 
 // CHECK-LABEL: func @nestedRegionsAndCondBranchAlloca
-func @nestedRegionsAndCondBranchAlloca(
+func.func @nestedRegionsAndCondBranchAlloca(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
@@ -652,7 +652,7 @@ func @nestedRegionsAndCondBranchAlloca(
 // The alloc positions of %3 will be moved upwards.
 
 // CHECK-LABEL: func @loop_alloc
-func @loop_alloc(
+func.func @loop_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -680,7 +680,7 @@ func @loop_alloc(
 // The allocation %4 is not moved upwards.
 
 // CHECK-LABEL: func @loop_nested_if_alloc
-func @loop_nested_if_alloc(
+func.func @loop_nested_if_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -711,7 +711,7 @@ func @loop_nested_if_alloc(
 // Same behavior is an loop_nested_if_alloc: The allocs are not moved upwards.
 
 // CHECK-LABEL: func @loop_nested_alloc
-func @loop_nested_alloc(
+func.func @loop_nested_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -752,7 +752,7 @@ func @loop_nested_alloc(
 // -----
 
 // CHECK-LABEL: func @loop_nested_alloc_dyn_dependency
-func @loop_nested_alloc_dyn_dependency(
+func.func @loop_nested_alloc_dyn_dependency(
   %lb: index,
   %ub: index,
   %step: index,

@@ -19,7 +19,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @outline_if_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
+func.func @outline_if_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
   %r = scf.if %cond -> (i8) {
     %r = "some_op"(%cond, %b) : (i1, memref<?xf32>) -> (i8)
     scf.yield %r : i8
@@ -41,7 +41,7 @@ func @outline_if_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @outline_if(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
+func.func @outline_if(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
   scf.if %cond {
     "some_op"(%cond, %b) : (i1, memref<?xf32>) -> ()
     scf.yield
@@ -66,7 +66,7 @@ func @outline_if(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @outline_empty_if_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
+func.func @outline_empty_if_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
   scf.if %cond {
   } else {
     "some_op"(%cond, %b) : (i1, memref<?xf32>) -> ()

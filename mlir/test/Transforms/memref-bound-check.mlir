@@ -3,7 +3,7 @@
 // -----
 
 // CHECK-LABEL: func @test() {
-func @test() {
+func.func @test() {
   %zero = arith.constant 0 : index
   %minusone = arith.constant -1 : index
   %sym = arith.constant 111 : index
@@ -39,7 +39,7 @@ func @test() {
 }
 
 // CHECK-LABEL: func @test_mod_floordiv_ceildiv
-func @test_mod_floordiv_ceildiv() {
+func.func @test_mod_floordiv_ceildiv() {
   %zero = arith.constant 0 : index
   %A = memref.alloc() : memref<128 x 64 x 64 x i32>
 
@@ -62,7 +62,7 @@ func @test_mod_floordiv_ceildiv() {
 }
 
 // CHECK-LABEL: func @test_no_out_of_bounds()
-func @test_no_out_of_bounds() {
+func.func @test_no_out_of_bounds() {
   %zero = arith.constant 0 : index
   %A = memref.alloc() : memref<257 x 256 x i32>
   %C = memref.alloc() : memref<257 x i32>
@@ -88,7 +88,7 @@ func @test_no_out_of_bounds() {
 }
 
 // CHECK-LABEL: func @mod_div
-func @mod_div() {
+func.func @mod_div() {
   %zero = arith.constant 0 : index
   %A = memref.alloc() : memref<128 x 64 x 64 x i32>
 
@@ -112,7 +112,7 @@ func @mod_div() {
 
 // Tests with nested mod's and floordiv's.
 // CHECK-LABEL: func @mod_floordiv_nested() {
-func @mod_floordiv_nested() {
+func.func @mod_floordiv_nested() {
   %A = memref.alloc() : memref<256 x 256 x i32>
   affine.for %i = 0 to 256 {
     affine.for %j = 0 to 256 {
@@ -125,7 +125,7 @@ func @mod_floordiv_nested() {
 }
 
 // CHECK-LABEL: func @test_semi_affine_bailout
-func @test_semi_affine_bailout(%N : index) {
+func.func @test_semi_affine_bailout(%N : index) {
   %B = memref.alloc() : memref<10 x i32>
   affine.for %i = 0 to 10 {
     %idx = affine.apply affine_map<(d0)[s0] -> (d0 * s0)>(%i)[%N]
@@ -136,7 +136,7 @@ func @test_semi_affine_bailout(%N : index) {
 }
 
 // CHECK-LABEL: func @multi_mod_floordiv
-func @multi_mod_floordiv() {
+func.func @multi_mod_floordiv() {
   %A = memref.alloc() : memref<2x2xi32>
   affine.for %ii = 0 to 64 {
       %idx0 = affine.apply affine_map<(d0) -> ((d0 mod 147456) floordiv 1152)> (%ii)
@@ -147,7 +147,7 @@ func @multi_mod_floordiv() {
 }
 
 // CHECK-LABEL: func @delinearize_mod_floordiv
-func @delinearize_mod_floordiv() {
+func.func @delinearize_mod_floordiv() {
   %c0 = arith.constant 0 : index
   %in = memref.alloc() : memref<2x2x3x3x16x1xi32>
   %out = memref.alloc() : memref<64x9xi32>
@@ -177,7 +177,7 @@ func @delinearize_mod_floordiv() {
 }
 
 // CHECK-LABEL: func @zero_d_memref
-func @zero_d_memref(%arg0: memref<i32>) {
+func.func @zero_d_memref(%arg0: memref<i32>) {
   %c0 = arith.constant 0 : i32
   // A 0-d memref always has in-bound accesses!
   affine.store %c0, %arg0[] : memref<i32>
@@ -185,7 +185,7 @@ func @zero_d_memref(%arg0: memref<i32>) {
 }
 
 // CHECK-LABEL: func @out_of_bounds
-func @out_of_bounds() {
+func.func @out_of_bounds() {
   %in = memref.alloc() : memref<1xi32>
   %c9 = arith.constant 9 : i32
 
@@ -206,7 +206,7 @@ func @out_of_bounds() {
 #map4 = affine_map<(d0, d1) -> ((d0 * 72 + d1) mod 2304 - (((d0 * 72 + d1) mod 2304) floordiv 1152) * 1151 - ((((d0 * 72 + d1) mod 2304) mod 1152) floordiv 9) * 9 - (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) floordiv 3) * 3)>
 #map5 = affine_map<(d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) floordiv 9) floordiv 8)>
 // CHECK-LABEL: func @test_complex_mod_floordiv
-func @test_complex_mod_floordiv(%arg0: memref<4x4x16x1xf32>) {
+func.func @test_complex_mod_floordiv(%arg0: memref<4x4x16x1xf32>) {
   %c0 = arith.constant 0 : index
   %0 = memref.alloc() : memref<1x2x3x3x16x1xf32>
   affine.for %i0 = 0 to 64 {
@@ -227,7 +227,7 @@ func @test_complex_mod_floordiv(%arg0: memref<4x4x16x1xf32>) {
 #map1 = affine_map<(d0) -> (d0 mod 4 + 4)>
 
 // CHECK-LABEL: func @test_mod_bound
-func @test_mod_bound() {
+func.func @test_mod_bound() {
   %0 = memref.alloc() : memref<7 x f32>
   %1 = memref.alloc() : memref<6 x f32>
   affine.for %i0 = 0 to 4096 {
@@ -247,7 +247,7 @@ func @test_mod_bound() {
 #map2 = affine_map<(d0) -> (4 * (d0 floordiv 4)  + d0 mod 4)>
 
 // CHECK-LABEL: func @test_floordiv_bound
-func @test_floordiv_bound() {
+func.func @test_floordiv_bound() {
   %0 = memref.alloc() : memref<1027 x f32>
   %1 = memref.alloc() : memref<1026 x f32>
   %2 = memref.alloc() : memref<4096 x f32>
@@ -275,7 +275,7 @@ func @test_floordiv_bound() {
 #map_ub = affine_map<(d0) -> (d0 + 4)>
 
 // CHECK-LABEL: func @non_composed_bound_operand
-func @non_composed_bound_operand(%arg0: memref<1024xf32>) {
+func.func @non_composed_bound_operand(%arg0: memref<1024xf32>) {
   affine.for %i0 = 4 to 1028 step 4 {
     %i1 = affine.apply affine_map<(d0) -> (d0 - 4)> (%i0)
     affine.for %i2 = #map_lb(%i1) to #map_ub(%i1) {
@@ -286,7 +286,7 @@ func @non_composed_bound_operand(%arg0: memref<1024xf32>) {
 }
 
 // CHECK-LABEL: func @zero_d_memref
-func @zero_d_memref() {
+func.func @zero_d_memref() {
   %Z = memref.alloc() : memref<f32>
   affine.for %i = 0 to 100 {
     affine.load %Z[] : memref<f32>

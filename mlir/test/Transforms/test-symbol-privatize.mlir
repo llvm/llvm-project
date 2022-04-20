@@ -3,9 +3,9 @@
 // CHECK-LABEL: module attributes {test.simple}
 module attributes {test.simple} {
   // CHECK: func @aap
-  func @aap() { return }
+  func.func @aap() { return }
 
   // CHECK: func private @kat
-  func @kat() { return }
+  func.func @kat() { return }
 }
 

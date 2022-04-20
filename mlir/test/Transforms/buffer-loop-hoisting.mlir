@@ -12,7 +12,7 @@
 // BufferLoopHoisting expected behavior: It should not move the AllocOp.
 
 // CHECK-LABEL: func @condBranch
-func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -41,7 +41,7 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // %0 in bb2.
 
 // CHECK-LABEL: func @condBranchDynamicType
-func @condBranchDynamicType(
+func.func @condBranchDynamicType(
   %arg0: i1,
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
@@ -73,7 +73,7 @@ func @condBranchDynamicType(
 // the RegionBufferBasedOp should not be moved during this pass.
 
 // CHECK-LABEL: func @nested_regions_and_cond_branch
-func @nested_regions_and_cond_branch(
+func.func @nested_regions_and_cond_branch(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
@@ -107,7 +107,7 @@ func @nested_regions_and_cond_branch(
 // both if branches until it is finally returned.
 
 // CHECK-LABEL: func @nested_region_control_flow
-func @nested_region_control_flow(
+func.func @nested_region_control_flow(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = arith.cmpi eq, %arg0, %arg1 : index
@@ -132,7 +132,7 @@ func @nested_region_control_flow(
 // The alloc positions of %3 should not be changed.
 
 // CHECK-LABEL: func @loop_alloc
-func @loop_alloc(
+func.func @loop_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -160,7 +160,7 @@ func @loop_alloc(
 // The allocation %4 should not be moved upwards due to a back-edge dependency.
 
 // CHECK-LABEL: func @loop_nested_if_alloc
-func @loop_nested_if_alloc(
+func.func @loop_nested_if_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -192,7 +192,7 @@ func @loop_nested_if_alloc(
 // in their positions.
 
 // CHECK-LABEL: func @loop_nested_alloc
-func @loop_nested_alloc(
+func.func @loop_nested_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -238,7 +238,7 @@ func @loop_nested_alloc(
 // -----
 
 // CHECK-LABEL: func @loop_nested_alloc_dyn_dependency
-func @loop_nested_alloc_dyn_dependency(
+func.func @loop_nested_alloc_dyn_dependency(
   %lb: index,
   %ub: index,
   %step: index,
@@ -281,7 +281,7 @@ func @loop_nested_alloc_dyn_dependency(
 // -----
 
 // CHECK-LABEL: func @hoist_one_loop
-func @hoist_one_loop(
+func.func @hoist_one_loop(
   %lb: index,
   %ub: index,
   %step: index,
@@ -304,7 +304,7 @@ func @hoist_one_loop(
 // -----
 
 // CHECK-LABEL: func @no_hoist_one_loop
-func @no_hoist_one_loop(
+func.func @no_hoist_one_loop(
   %lb: index,
   %ub: index,
   %step: index,
@@ -325,7 +325,7 @@ func @no_hoist_one_loop(
 // -----
 
 // CHECK-LABEL: func @hoist_multiple_loop
-func @hoist_multiple_loop(
+func.func @hoist_multiple_loop(
   %lb: index,
   %ub: index,
   %step: index,
@@ -352,7 +352,7 @@ func @hoist_multiple_loop(
 // -----
 
 // CHECK-LABEL: func @no_hoist_one_loop_conditional
-func @no_hoist_one_loop_conditional(
+func.func @no_hoist_one_loop_conditional(
   %lb: index,
   %ub: index,
   %step: index,
@@ -380,7 +380,7 @@ func @no_hoist_one_loop_conditional(
 // -----
 
 // CHECK-LABEL: func @hoist_one_loop_conditional
-func @hoist_one_loop_conditional(
+func.func @hoist_one_loop_conditional(
   %lb: index,
   %ub: index,
   %step: index,
@@ -411,7 +411,7 @@ func @hoist_one_loop_conditional(
 // -----
 
 // CHECK-LABEL: func @no_hoist_one_loop_dependency
-func @no_hoist_one_loop_dependency(
+func.func @no_hoist_one_loop_dependency(
   %lb: index,
   %ub: index,
   %step: index,
@@ -434,7 +434,7 @@ func @no_hoist_one_loop_dependency(
 // -----
 
 // CHECK-LABEL: func @partial_hoist_multiple_loop_dependency
-func @partial_hoist_multiple_loop_dependency(
+func.func @partial_hoist_multiple_loop_dependency(
   %lb: index,
   %ub: index,
   %step: index,
@@ -464,7 +464,7 @@ func @partial_hoist_multiple_loop_dependency(
 // Test with allocas to ensure that op is also considered.
 
 // CHECK-LABEL: func @hoist_alloca
-func @hoist_alloca(
+func.func @hoist_alloca(
   %lb: index,
   %ub: index,
   %step: index,

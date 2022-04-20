@@ -18,7 +18,7 @@
 
 // CHECK-LABEL:  test_norm_dynamic12
 // CHECK-SAME:   ([[ARG_0_:%.+]]: memref<1x?x?x1x?x64xf32>) {
-func @test_norm_dynamic12(%arg0 : memref<1x?x?x14xf32, #map_tiled>) -> () {
+func.func @test_norm_dynamic12(%arg0 : memref<1x?x?x14xf32, #map_tiled>) -> () {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
     %0 = memref.dim %arg0, %c1 :memref<1x?x?x14xf32, #map_tiled>
@@ -60,7 +60,7 @@ func @test_norm_dynamic12(%arg0 : memref<1x?x?x14xf32, #map_tiled>) -> () {
 
 // CHECK-LABEL:  test_norm_dynamic1234
 // CHECK-SAME:   ([[ARG_0_:%.+]]: memref<?x?x?x?x?x?xf32>) {
-func @test_norm_dynamic1234(%arg0 : memref<?x?x?x?xf32, #map_tiled1>) -> () {
+func.func @test_norm_dynamic1234(%arg0 : memref<?x?x?x?xf32, #map_tiled1>) -> () {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
@@ -106,7 +106,7 @@ func @test_norm_dynamic1234(%arg0 : memref<?x?x?x?xf32, #map_tiled1>) -> () {
 
 // CHECK-LABEL:  func @test_norm_dynamic_not_tiled0
 // CHECK-SAME:   ([[ARG_0_:%.+]]: memref<1x?x?x14xf32, #[[$MAP6]]>) {
-func @test_norm_dynamic_not_tiled0(%arg0 : memref<1x?x?x14xf32, #map_not_tiled0>) -> () {
+func.func @test_norm_dynamic_not_tiled0(%arg0 : memref<1x?x?x14xf32, #map_not_tiled0>) -> () {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
     %0 = memref.dim %arg0, %c1 :memref<1x?x?x14xf32, #map_not_tiled0>
@@ -137,7 +137,7 @@ func @test_norm_dynamic_not_tiled0(%arg0 : memref<1x?x?x14xf32, #map_not_tiled0>
 
 // CHECK-LABEL:  func @test_norm_dynamic_not_tiled1
 // CHECK-SAME:   ([[ARG_0_:%.+]]: memref<1x?x?x14xf32, #[[$MAP6]]>) {
-func @test_norm_dynamic_not_tiled1(%arg0 : memref<1x?x?x14xf32, #map_not_tiled1>) -> () {
+func.func @test_norm_dynamic_not_tiled1(%arg0 : memref<1x?x?x14xf32, #map_not_tiled1>) -> () {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
     %0 = memref.dim %arg0, %c1 :memref<1x?x?x14xf32, #map_not_tiled1>
@@ -168,7 +168,7 @@ func @test_norm_dynamic_not_tiled1(%arg0 : memref<1x?x?x14xf32, #map_not_tiled1>
 
 // CHECK-LABEL:  func @test_norm_dynamic_not_tiled2
 // CHECK-SAME:   ([[ARG_0_:%.+]]: memref<1x?x?x14xf32, #[[$MAP7]]>) {
-func @test_norm_dynamic_not_tiled2(%arg0 : memref<1x?x?x14xf32, #map_not_tiled2>) -> () {
+func.func @test_norm_dynamic_not_tiled2(%arg0 : memref<1x?x?x14xf32, #map_not_tiled2>) -> () {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
     %0 = memref.dim %arg0, %c1 :memref<1x?x?x14xf32, #map_not_tiled2>
@@ -199,7 +199,7 @@ func @test_norm_dynamic_not_tiled2(%arg0 : memref<1x?x?x14xf32, #map_not_tiled2>
 
 // CHECK-LABEL:  func @test_norm_dynamic_not_tiled3
 // CHECK-SAME:   ([[ARG_0_:%.+]]: memref<1x?x?x14xf32, #[[$MAP8]]>) {
-func @test_norm_dynamic_not_tiled3(%arg0 : memref<1x?x?x14xf32, #map_not_tiled3>) -> () {
+func.func @test_norm_dynamic_not_tiled3(%arg0 : memref<1x?x?x14xf32, #map_not_tiled3>) -> () {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
     %0 = memref.dim %arg0, %c1 :memref<1x?x?x14xf32, #map_not_tiled3>
@@ -230,7 +230,7 @@ func @test_norm_dynamic_not_tiled3(%arg0 : memref<1x?x?x14xf32, #map_not_tiled3>
 
 // CHECK-LABEL:  func @test_norm_dynamic_not_tiled4
 // CHECK-SAME:   ([[ARG_0_:%.+]]: memref<1x?x?x14xf32, #[[$MAP9]]>) {
-func @test_norm_dynamic_not_tiled4(%arg0 : memref<1x?x?x14xf32, #map_not_tiled4>) -> () {
+func.func @test_norm_dynamic_not_tiled4(%arg0 : memref<1x?x?x14xf32, #map_not_tiled4>) -> () {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
     %0 = memref.dim %arg0, %c1 :memref<1x?x?x14xf32, #map_not_tiled4>
