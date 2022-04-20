@@ -41,6 +41,7 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceInstructionsMIR.cpp
   deltas/ReduceInstructionFlagsMIR.cpp
   deltas/ReduceIRReferences.cpp
+  deltas/ReduceVirtualRegisters.cpp
   llvm-reduce.cpp
 
   DEPENDS
