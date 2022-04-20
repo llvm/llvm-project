@@ -14,6 +14,7 @@
 #ifndef LLVMIR_OP_BASE
 #define LLVMIR_OP_BASE
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
