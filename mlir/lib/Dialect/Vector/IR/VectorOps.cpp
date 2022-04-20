@@ -4588,6 +4588,13 @@ LogicalResult ScanOp::verify() {
     return emitOpError("incompatible input/initial value shapes");
   }
 
+  // Verify supported reduction kind.
+  Type eltType = getDestType().getElementType();
+  if (!isSupportedCombiningKind(getKind(), eltType))
+    return emitOpError("unsupported reduction type ")
+           << eltType << " for kind '" << stringifyCombiningKind(getKind())
+           << "'";
+
   return success();
 }
 
