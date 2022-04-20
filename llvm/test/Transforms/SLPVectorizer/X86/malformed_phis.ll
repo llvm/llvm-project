@@ -56,5 +56,58 @@ bb1:                                              ; preds = %bb1, %bb
   br label %bb1
 }
 
+define void @test_2(i8 addrspace(1)* %arg, i32 %arg1) #0 {
+; CHECK-LABEL: @test_2(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB:%.*]] ], [ undef, [[BB2]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 0, [[BB]] ], [ undef, [[BB2]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP]], undef
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 undef, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 undef, [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i32 undef, [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 undef, [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 undef, [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i32 undef, [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[TMP]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = add i32 undef, [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = add i32 undef, [[TMP18]]
+; CHECK-NEXT:    call void @use(i32 [[TMP19]])
+; CHECK-NEXT:    br label [[BB2]]
+;
+bb:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %bb
+  %tmp = phi i32 [ undef, %bb ], [ undef, %bb2 ]
+  %tmp3 = phi i32 [ 0, %bb ], [ undef, %bb2 ]
+  %tmp4 = add i32 %tmp, undef
+  %tmp5 = add i32 undef, %tmp4
+  %tmp6 = add i32 %tmp, %tmp5
+  %tmp7 = add i32 undef, %tmp6
+  %tmp8 = add i32 %tmp, %tmp7
+  %tmp9 = add i32 undef, %tmp8
+  %tmp10 = add i32 %tmp, %tmp9
+  %tmp11 = add i32 undef, %tmp10
+  %tmp12 = add i32 %tmp, %tmp11
+  %tmp13 = add i32 undef, %tmp12
+  %tmp14 = add i32 %tmp, %tmp13
+  %tmp15 = add i32 undef, %tmp14
+  %tmp16 = add i32 %tmp, %tmp15
+  %tmp17 = add i32 undef, %tmp16
+  %tmp18 = add i32 %tmp, %tmp17
+  %tmp19 = add i32 undef, %tmp18
+  call void @use(i32 %tmp19)
+  br label %bb2
+}
+
+declare void @use(i32) #0
 
 attributes #0 = { "target-features"="+sse4.1" }
