@@ -4,7 +4,7 @@
 // spv.AccessChain
 //===----------------------------------------------------------------------===//
 
-func @access_chain_struct() -> () {
+func.func @access_chain_struct() -> () {
   %0 = spv.Constant 1: i32
   %1 = spv.Variable : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>
   // CHECK: spv.AccessChain {{.*}}[{{.*}}, {{.*}}] : !spv.ptr<!spv.struct<(f32, !spv.array<4 x f32>)>, Function>
@@ -12,14 +12,14 @@ func @access_chain_struct() -> () {
   return
 }
 
-func @access_chain_1D_array(%arg0 : i32) -> () {
+func.func @access_chain_1D_array(%arg0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.array<4xf32>, Function>
   // CHECK: spv.AccessChain {{.*}}[{{.*}}] : !spv.ptr<!spv.array<4 x f32>, Function>
   %1 = spv.AccessChain %0[%arg0] : !spv.ptr<!spv.array<4xf32>, Function>, i32
   return
 }
 
-func @access_chain_2D_array_1(%arg0 : i32) -> () {
+func.func @access_chain_2D_array_1(%arg0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   // CHECK: spv.AccessChain {{.*}}[{{.*}}, {{.*}}] : !spv.ptr<!spv.array<4 x !spv.array<4 x f32>>, Function>
   %1 = spv.AccessChain %0[%arg0, %arg0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>, i32, i32
@@ -27,7 +27,7 @@ func @access_chain_2D_array_1(%arg0 : i32) -> () {
   return
 }
 
-func @access_chain_2D_array_2(%arg0 : i32) -> () {
+func.func @access_chain_2D_array_2(%arg0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   // CHECK: spv.AccessChain {{.*}}[{{.*}}] : !spv.ptr<!spv.array<4 x !spv.array<4 x f32>>, Function>
   %1 = spv.AccessChain %0[%arg0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>, i32
@@ -35,7 +35,7 @@ func @access_chain_2D_array_2(%arg0 : i32) -> () {
   return
 }
 
-func @access_chain_rtarray(%arg0 : i32) -> () {
+func.func @access_chain_rtarray(%arg0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.rtarray<f32>, Function>
   // CHECK: spv.AccessChain {{.*}}[{{.*}}] : !spv.ptr<!spv.rtarray<f32>, Function>
   %1 = spv.AccessChain %0[%arg0] : !spv.ptr<!spv.rtarray<f32>, Function>, i32
@@ -45,7 +45,7 @@ func @access_chain_rtarray(%arg0 : i32) -> () {
 
 // -----
 
-func @access_chain_non_composite() -> () {
+func.func @access_chain_non_composite() -> () {
   %0 = spv.Constant 1: i32
   %1 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{cannot extract from non-composite type 'f32' with index 0}}
@@ -55,7 +55,7 @@ func @access_chain_non_composite() -> () {
 
 // -----
 
-func @access_chain_no_indices(%index0 : i32) -> () {
+func.func @access_chain_no_indices(%index0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   // expected-error @+1 {{expected at least one index}}
   %1 = spv.AccessChain %0[] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>, i32
@@ -64,7 +64,7 @@ func @access_chain_no_indices(%index0 : i32) -> () {
 
 // -----
 
-func @access_chain_missing_comma(%index0 : i32) -> () {
+func.func @access_chain_missing_comma(%index0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   // expected-error @+1 {{expected ','}}
   %1 = spv.AccessChain %0[%index0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function> i32
@@ -73,7 +73,7 @@ func @access_chain_missing_comma(%index0 : i32) -> () {
 
 // -----
 
-func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
+func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   // expected-error @+1 {{'spv.AccessChain' op indices types' count must be equal to indices info count}}
   %1 = spv.AccessChain %0[%index0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>, i32, i32
@@ -82,7 +82,7 @@ func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
 
 // -----
 
-func @access_chain_missing_indices_type(%index0 : i32) -> () {
+func.func @access_chain_missing_indices_type(%index0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   // expected-error @+1 {{'spv.AccessChain' op indices types' count must be equal to indices info count}}
   %1 = spv.AccessChain %0[%index0, %index0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>, i32
@@ -91,7 +91,7 @@ func @access_chain_missing_indices_type(%index0 : i32) -> () {
 
 // -----
 
-func @access_chain_invalid_type(%index0 : i32) -> () {
+func.func @access_chain_invalid_type(%index0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   %1 = spv.Load "Function" %0 ["Volatile"] : !spv.array<4x!spv.array<4xf32>>
   // expected-error @+1 {{expected a pointer to composite type, but provided '!spv.array<4 x !spv.array<4 x f32>>'}}
@@ -101,7 +101,7 @@ func @access_chain_invalid_type(%index0 : i32) -> () {
 
 // -----
 
-func @access_chain_invalid_index_1(%index0 : i32) -> () {
+func.func @access_chain_invalid_index_1(%index0 : i32) -> () {
    %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   // expected-error @+1 {{expected SSA operand}}
   %1 = spv.AccessChain %0[%index, 4] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>, i32, i32
@@ -110,7 +110,7 @@ func @access_chain_invalid_index_1(%index0 : i32) -> () {
 
 // -----
 
-func @access_chain_invalid_index_2(%index0 : i32) -> () {
+func.func @access_chain_invalid_index_2(%index0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>
   // expected-error @+1 {{index must be an integer spv.Constant to access element of spv.struct}}
   %1 = spv.AccessChain %0[%index0, %index0] : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>, i32, i32
@@ -119,7 +119,7 @@ func @access_chain_invalid_index_2(%index0 : i32) -> () {
 
 // -----
 
-func @access_chain_invalid_constant_type_1() -> () {
+func.func @access_chain_invalid_constant_type_1() -> () {
   %0 = arith.constant 1: i32
   %1 = spv.Variable : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>
   // expected-error @+1 {{index must be an integer spv.Constant to access element of spv.struct, but provided arith.constant}}
@@ -129,7 +129,7 @@ func @access_chain_invalid_constant_type_1() -> () {
 
 // -----
 
-func @access_chain_out_of_bounds() -> () {
+func.func @access_chain_out_of_bounds() -> () {
   %index0 = "spv.Constant"() { value = 12: i32} : () -> i32
   %0 = spv.Variable : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Function>
   // expected-error @+1 {{'spv.AccessChain' op index 12 out of bounds for '!spv.struct<(f32, !spv.array<4 x f32>)>'}}
@@ -139,7 +139,7 @@ func @access_chain_out_of_bounds() -> () {
 
 // -----
 
-func @access_chain_invalid_accessing_type(%index0 : i32) -> () {
+func.func @access_chain_invalid_accessing_type(%index0 : i32) -> () {
   %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   // expected-error @+1 {{cannot extract from non-composite type 'f32' with index 0}}
   %1 = spv.AccessChain %0[%index, %index0, %index0] : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>, i32, i32, i32
@@ -152,7 +152,7 @@ func @access_chain_invalid_accessing_type(%index0 : i32) -> () {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @simple_load
-func @simple_load() -> () {
+func.func @simple_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load "Function" %{{.*}} : f32
   %1 = spv.Load "Function" %0 : f32
@@ -160,7 +160,7 @@ func @simple_load() -> () {
 }
 
 // CHECK-LABEL: @load_none_access
-func @load_none_access() -> () {
+func.func @load_none_access() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load "Function" %{{.*}} ["None"] : f32
   %1 = spv.Load "Function" %0 ["None"] : f32
@@ -168,7 +168,7 @@ func @load_none_access() -> () {
 }
 
 // CHECK-LABEL: @volatile_load
-func @volatile_load() -> () {
+func.func @volatile_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load "Function" %{{.*}} ["Volatile"] : f32
   %1 = spv.Load "Function" %0 ["Volatile"] : f32
@@ -176,7 +176,7 @@ func @volatile_load() -> () {
 }
 
 // CHECK-LABEL: @aligned_load
-func @aligned_load() -> () {
+func.func @aligned_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load "Function" %{{.*}} ["Aligned", 4] : f32
   %1 = spv.Load "Function" %0 ["Aligned", 4] : f32
@@ -184,7 +184,7 @@ func @aligned_load() -> () {
 }
 
 // CHECK-LABEL: @volatile_aligned_load
-func @volatile_aligned_load() -> () {
+func.func @volatile_aligned_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load "Function" %{{.*}} ["Volatile|Aligned", 4] : f32
   %1 = spv.Load "Function" %0 ["Volatile|Aligned", 4] : f32
@@ -194,7 +194,7 @@ func @volatile_aligned_load() -> () {
 // -----
 
 // CHECK-LABEL: load_none_access
-func @load_none_access() -> () {
+func.func @load_none_access() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load
   // CHECK-SAME: ["None"]
@@ -203,7 +203,7 @@ func @load_none_access() -> () {
 }
 
 // CHECK-LABEL: volatile_load
-func @volatile_load() -> () {
+func.func @volatile_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load
   // CHECK-SAME: ["Volatile"]
@@ -212,7 +212,7 @@ func @volatile_load() -> () {
 }
 
 // CHECK-LABEL: aligned_load
-func @aligned_load() -> () {
+func.func @aligned_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load
   // CHECK-SAME: ["Aligned", 4]
@@ -221,7 +221,7 @@ func @aligned_load() -> () {
 }
 
 // CHECK-LABEL: volatile_aligned_load
-func @volatile_aligned_load() -> () {
+func.func @volatile_aligned_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load
   // CHECK-SAME: ["Volatile|Aligned", 4]
@@ -231,7 +231,7 @@ func @volatile_aligned_load() -> () {
 
 // -----
 
-func @simple_load_missing_storageclass() -> () {
+func.func @simple_load_missing_storageclass() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected non-function type}}
   %1 = spv.Load %0 : f32
@@ -240,7 +240,7 @@ func @simple_load_missing_storageclass() -> () {
 
 // -----
 
-func @simple_load_missing_operand() -> () {
+func.func @simple_load_missing_operand() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected SSA operand}}
   %1 = spv.Load "Function" : f32
@@ -249,7 +249,7 @@ func @simple_load_missing_operand() -> () {
 
 // -----
 
-func @simple_load_missing_rettype() -> () {
+func.func @simple_load_missing_rettype() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+2 {{expected ':'}}
   %1 = spv.Load "Function" %0
@@ -258,7 +258,7 @@ func @simple_load_missing_rettype() -> () {
 
 // -----
 
-func @volatile_load_missing_lbrace() -> () {
+func.func @volatile_load_missing_lbrace() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ':'}}
   %1 = spv.Load "Function" %0 "Volatile"] : f32
@@ -267,7 +267,7 @@ func @volatile_load_missing_lbrace() -> () {
 
 // -----
 
-func @volatile_load_missing_rbrace() -> () {
+func.func @volatile_load_missing_rbrace() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ']'}}
   %1 = spv.Load "Function" %0 ["Volatile"} : f32
@@ -276,7 +276,7 @@ func @volatile_load_missing_rbrace() -> () {
 
 // -----
 
-func @aligned_load_missing_alignment() -> () {
+func.func @aligned_load_missing_alignment() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ','}}
   %1 = spv.Load "Function" %0 ["Aligned"] : f32
@@ -285,7 +285,7 @@ func @aligned_load_missing_alignment() -> () {
 
 // -----
 
-func @aligned_load_missing_comma() -> () {
+func.func @aligned_load_missing_comma() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ','}}
   %1 = spv.Load "Function" %0 ["Aligned" 4] : f32
@@ -294,7 +294,7 @@ func @aligned_load_missing_comma() -> () {
 
 // -----
 
-func @load_incorrect_attributes() -> () {
+func.func @load_incorrect_attributes() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ']'}}
   %1 = spv.Load "Function" %0 ["Volatile", 4] : f32
@@ -303,7 +303,7 @@ func @load_incorrect_attributes() -> () {
 
 // -----
 
-func @load_unknown_memory_access() -> () {
+func.func @load_unknown_memory_access() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{custom op 'spv.Load' invalid memory_access attribute specification: "Something"}}
   %1 = spv.Load "Function" %0 ["Something"] : f32
@@ -312,7 +312,7 @@ func @load_unknown_memory_access() -> () {
 
 // -----
 
-func @load_unknown_memory_access() -> () {
+func.func @load_unknown_memory_access() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{custom op 'spv.Load' invalid memory_access attribute specification: "Volatile|Something"}}
   %1 = spv.Load "Function" %0 ["Volatile|Something"] : f32
@@ -321,7 +321,7 @@ func @load_unknown_memory_access() -> () {
 
 // -----
 
-func @load_unknown_memory_access() -> () {
+func.func @load_unknown_memory_access() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{failed to satisfy constraint: valid SPIR-V MemoryAccess}}
   %1 = "spv.Load"(%0) {memory_access = 0x80000000 : i32} : (!spv.ptr<f32, Function>) -> (f32)
@@ -330,7 +330,7 @@ func @load_unknown_memory_access() -> () {
 
 // -----
 
-func @aligned_load_incorrect_attributes() -> () {
+func.func @aligned_load_incorrect_attributes() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ']'}}
   %1 = spv.Load "Function" %0 ["Aligned", 4, 23] : f32
@@ -360,7 +360,7 @@ spv.module Logical GLSL450 {
 // spv.StoreOp
 //===----------------------------------------------------------------------===//
 
-func @simple_store(%arg0 : f32) -> () {
+func.func @simple_store(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Store  "Function" %0, %arg0 : f32
   spv.Store  "Function" %0, %arg0 : f32
@@ -368,7 +368,7 @@ func @simple_store(%arg0 : f32) -> () {
 }
 
 // CHECK_LABEL: @volatile_store
-func @volatile_store(%arg0 : f32) -> () {
+func.func @volatile_store(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Store  "Function" %0, %arg0 ["Volatile"] : f32
   spv.Store  "Function" %0, %arg0 ["Volatile"] : f32
@@ -376,7 +376,7 @@ func @volatile_store(%arg0 : f32) -> () {
 }
 
 // CHECK_LABEL: @aligned_store
-func @aligned_store(%arg0 : f32) -> () {
+func.func @aligned_store(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Store  "Function" %0, %arg0 ["Aligned", 4] : f32
   spv.Store  "Function" %0, %arg0 ["Aligned", 4] : f32
@@ -385,7 +385,7 @@ func @aligned_store(%arg0 : f32) -> () {
 
 // -----
 
-func @simple_store_missing_ptr_type(%arg0 : f32) -> () {
+func.func @simple_store_missing_ptr_type(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected non-function type}}
   spv.Store  %0, %arg0 : f32
@@ -394,7 +394,7 @@ func @simple_store_missing_ptr_type(%arg0 : f32) -> () {
 
 // -----
 
-func @simple_store_missing_operand(%arg0 : f32) -> () {
+func.func @simple_store_missing_operand(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{custom op 'spv.Store' invalid operand}} : f32
   spv.Store  "Function" , %arg0 : f32
@@ -403,7 +403,7 @@ func @simple_store_missing_operand(%arg0 : f32) -> () {
 
 // -----
 
-func @simple_store_missing_operand(%arg0 : f32) -> () {
+func.func @simple_store_missing_operand(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{custom op 'spv.Store' expected 2 operands}} : f32
   spv.Store  "Function" %0 : f32
@@ -412,7 +412,7 @@ func @simple_store_missing_operand(%arg0 : f32) -> () {
 
 // -----
 
-func @volatile_store_missing_lbrace(%arg0 : f32) -> () {
+func.func @volatile_store_missing_lbrace(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ':'}}
   spv.Store  "Function" %0, %arg0 "Volatile"] : f32
@@ -421,7 +421,7 @@ func @volatile_store_missing_lbrace(%arg0 : f32) -> () {
 
 // -----
 
-func @volatile_store_missing_rbrace(%arg0 : f32) -> () {
+func.func @volatile_store_missing_rbrace(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ']'}}
   spv.Store "Function" %0, %arg0 ["Volatile"} : f32
@@ -430,7 +430,7 @@ func @volatile_store_missing_rbrace(%arg0 : f32) -> () {
 
 // -----
 
-func @aligned_store_missing_alignment(%arg0 : f32) -> () {
+func.func @aligned_store_missing_alignment(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ','}}
   spv.Store  "Function" %0, %arg0 ["Aligned"] : f32
@@ -439,7 +439,7 @@ func @aligned_store_missing_alignment(%arg0 : f32) -> () {
 
 // -----
 
-func @aligned_store_missing_comma(%arg0 : f32) -> () {
+func.func @aligned_store_missing_comma(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ','}}
   spv.Store  "Function" %0, %arg0 ["Aligned" 4] : f32
@@ -448,7 +448,7 @@ func @aligned_store_missing_comma(%arg0 : f32) -> () {
 
 // -----
 
-func @load_incorrect_attributes(%arg0 : f32) -> () {
+func.func @load_incorrect_attributes(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ']'}}
   spv.Store  "Function" %0, %arg0 ["Volatile", 4] : f32
@@ -457,7 +457,7 @@ func @load_incorrect_attributes(%arg0 : f32) -> () {
 
 // -----
 
-func @aligned_store_incorrect_attributes(%arg0 : f32) -> () {
+func.func @aligned_store_incorrect_attributes(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{expected ']'}}
   spv.Store  "Function" %0, %arg0 ["Aligned", 4, 23] : f32
@@ -482,7 +482,7 @@ spv.module Logical GLSL450 {
 // spv.Variable
 //===----------------------------------------------------------------------===//
 
-func @variable(%arg0: f32) -> () {
+func.func @variable(%arg0: f32) -> () {
   // CHECK: spv.Variable : !spv.ptr<f32, Function>
   %0 = spv.Variable : !spv.ptr<f32, Function>
   return
@@ -490,7 +490,7 @@ func @variable(%arg0: f32) -> () {
 
 // -----
 
-func @variable_init_normal_constant() -> () {
+func.func @variable_init_normal_constant() -> () {
   // CHECK: %[[cst:.*]] = spv.Constant
   %0 = spv.Constant 4.0 : f32
   // CHECK: spv.Variable init(%[[cst]]) : !spv.ptr<f32, Function>
@@ -525,7 +525,7 @@ spv.module Logical GLSL450 {
 
 // -----
 
-func @variable_bind() -> () {
+func.func @variable_bind() -> () {
   // expected-error @+1 {{cannot have 'descriptor_set' attribute (only allowed in spv.GlobalVariable)}}
   %0 = spv.Variable bind(1, 2) : !spv.ptr<f32, Function>
   return
@@ -533,7 +533,7 @@ func @variable_bind() -> () {
 
 // -----
 
-func @variable_init_bind() -> () {
+func.func @variable_init_bind() -> () {
   %0 = spv.Constant 4.0 : f32
   // expected-error @+1 {{cannot have 'binding' attribute (only allowed in spv.GlobalVariable)}}
   %1 = spv.Variable init(%0) {binding = 5 : i32} : !spv.ptr<f32, Function>
@@ -542,7 +542,7 @@ func @variable_init_bind() -> () {
 
 // -----
 
-func @variable_builtin() -> () {
+func.func @variable_builtin() -> () {
   // expected-error @+1 {{cannot have 'built_in' attribute (only allowed in spv.GlobalVariable)}}
   %1 = spv.Variable built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Function>
   return
@@ -550,7 +550,7 @@ func @variable_builtin() -> () {
 
 // -----
 
-func @expect_ptr_result_type(%arg0: f32) -> () {
+func.func @expect_ptr_result_type(%arg0: f32) -> () {
   // expected-error @+1 {{expected spv.ptr type}}
   %0 = spv.Variable : f32
   return
@@ -558,7 +558,7 @@ func @expect_ptr_result_type(%arg0: f32) -> () {
 
 // -----
 
-func @variable_init(%arg0: f32) -> () {
+func.func @variable_init(%arg0: f32) -> () {
   // expected-error @+1 {{op initializer must be the result of a constant or spv.GlobalVariable op}}
   %0 = spv.Variable init(%arg0) : !spv.ptr<f32, Function>
   return
@@ -566,7 +566,7 @@ func @variable_init(%arg0: f32) -> () {
 
 // -----
 
-func @cannot_be_generic_storage_class(%arg0: f32) -> () {
+func.func @cannot_be_generic_storage_class(%arg0: f32) -> () {
   // expected-error @+1 {{op can only be used to model function-level variables. Use spv.GlobalVariable for module-level variables}}
   %0 = spv.Variable : !spv.ptr<f32, Generic>
   return
@@ -574,7 +574,7 @@ func @cannot_be_generic_storage_class(%arg0: f32) -> () {
 
 // -----
 
-func @copy_memory_incompatible_ptrs() {
+func.func @copy_memory_incompatible_ptrs() {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   %1 = spv.Variable : !spv.ptr<i32, Function>
   // expected-error @+1 {{both operands must be pointers to the same type}}
@@ -584,7 +584,7 @@ func @copy_memory_incompatible_ptrs() {
 
 // -----
 
-func @copy_memory_invalid_maa() {
+func.func @copy_memory_invalid_maa() {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   %1 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{missing alignment value}}
@@ -594,7 +594,7 @@ func @copy_memory_invalid_maa() {
 
 // -----
 
-func @copy_memory_invalid_source_maa() {
+func.func @copy_memory_invalid_source_maa() {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   %1 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{invalid alignment specification with non-aligned memory access specification}}
@@ -604,7 +604,7 @@ func @copy_memory_invalid_source_maa() {
 
 // -----
 
-func @copy_memory_invalid_source_maa2() {
+func.func @copy_memory_invalid_source_maa2() {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   %1 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{missing alignment value}}
@@ -614,7 +614,7 @@ func @copy_memory_invalid_source_maa2() {
 
 // -----
 
-func @copy_memory_print_maa() {
+func.func @copy_memory_print_maa() {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   %1 = spv.Variable : !spv.ptr<f32, Function>
 
@@ -643,7 +643,7 @@ func @copy_memory_print_maa() {
 // CHECK-SAME:    %[[ARG0:.*]]: !spv.ptr<f32, CrossWorkgroup>,
 // CHECK-SAME:    %[[ARG1:.*]]: i64)
 // CHECK: spv.PtrAccessChain %[[ARG0]][%[[ARG1]]] : !spv.ptr<f32, CrossWorkgroup>, i64
-func @ptr_access_chain1(%arg0: !spv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
+func.func @ptr_access_chain1(%arg0: !spv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
   %0 = spv.PtrAccessChain %arg0[%arg1] : !spv.ptr<f32, CrossWorkgroup>, i64
   return
 }
@@ -658,7 +658,7 @@ func @ptr_access_chain1(%arg0: !spv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> ()
 // CHECK-SAME:    %[[ARG0:.*]]: !spv.ptr<f32, CrossWorkgroup>,
 // CHECK-SAME:    %[[ARG1:.*]]: i64)
 // CHECK: spv.InBoundsPtrAccessChain %[[ARG0]][%[[ARG1]]] : !spv.ptr<f32, CrossWorkgroup>, i64
-func @inbounds_ptr_access_chain1(%arg0: !spv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
+func.func @inbounds_ptr_access_chain1(%arg0: !spv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
   %0 = spv.InBoundsPtrAccessChain %arg0[%arg1] : !spv.ptr<f32, CrossWorkgroup>, i64
   return
 }
