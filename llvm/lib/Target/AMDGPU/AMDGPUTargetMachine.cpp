@@ -1417,6 +1417,14 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     return false;
   };
 
+  auto parseOptionalRegister = [&](const yaml::StringValue &RegName,
+                                   Register &RegVal) {
+    return !RegName.Value.empty() && parseRegister(RegName, RegVal);
+  };
+
+  if (parseOptionalRegister(YamlMFI.VGPRForAGPRCopy, MFI->VGPRForAGPRCopy))
+    return true;
+
   auto diagnoseRegisterClass = [&](const yaml::StringValue &RegName) {
     // Create a diagnostic for a the register string literal.
     const MemoryBuffer &Buffer =

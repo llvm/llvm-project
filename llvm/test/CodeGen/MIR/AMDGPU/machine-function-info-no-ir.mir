@@ -44,6 +44,7 @@
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -139,6 +140,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -205,6 +207,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -272,6 +275,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -486,6 +490,31 @@ body:             |
 name: returns_void_false
 machineFunctionInfo:
   returnsVoid: false
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: vgpr_for_agpr_copy
+# ALL: vgprForAGPRCopy: '$vgpr2'
+name: vgpr_for_agpr_copy
+machineFunctionInfo:
+  vgprForAGPRCopy: '$vgpr2'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: vgpr_for_agpr_copy_noreg
+# FULL: vgprForAGPRCopy: ''
+# SIMPLE-NOT: vgprForAGPRCopy
+name: vgpr_for_agpr_copy_noreg
+machineFunctionInfo:
+  vgprForAGPRCopy: '$noreg'
 body:             |
   bb.0:
     SI_RETURN
