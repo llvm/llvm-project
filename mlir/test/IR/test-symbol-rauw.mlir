@@ -6,11 +6,11 @@
 // CHECK-SAME: @symbol_foo
 module attributes {sym.outside_use = @symbol_foo } {
   // CHECK: func private @replaced_foo
-  func private @symbol_foo() attributes {sym.new_name = "replaced_foo" }
+  func.func private @symbol_foo() attributes {sym.new_name = "replaced_foo" }
 
   // CHECK: func @symbol_bar
   // CHECK: @replaced_foo
-  func @symbol_bar() attributes {sym.use = @symbol_foo} {
+  func.func @symbol_bar() attributes {sym.use = @symbol_foo} {
     // CHECK: foo.op
     // CHECK-SAME: non_symbol_attr,
     // CHECK-SAME: use = [{nested_symbol = [@replaced_foo], other_use = @symbol_bar, z_use = @replaced_foo}],
@@ -39,7 +39,7 @@ module {
   // CHECK: module @module_a
   module @module_a {
     // CHECK: func nested @replaced_foo
-    func nested @foo() attributes {sym.new_name = "replaced_foo" }
+    func.func nested @foo() attributes {sym.new_name = "replaced_foo" }
   }
 
   // CHECK: module @replaced_module_b
@@ -47,12 +47,12 @@ module {
     // CHECK: module @replaced_module_c
     module @module_c attributes {sym.new_name = "replaced_module_c"} {
       // CHECK: func nested @replaced_foo
-      func nested @foo() attributes {sym.new_name = "replaced_foo" }
+      func.func nested @foo() attributes {sym.new_name = "replaced_foo" }
     }
   }
 
   // CHECK: func @symbol_bar
-  func @symbol_bar() {
+  func.func @symbol_bar() {
     // CHECK: foo.op
     // CHECK-SAME: use_1 = @module_a::@replaced_foo
     // CHECK-SAME: use_2 = @replaced_module_b::@replaced_module_c::@replaced_foo
@@ -68,7 +68,7 @@ module {
 // Check that the replacement fails for potentially unknown symbol tables.
 module {
   // CHECK: func private @failed_repl
-  func private @failed_repl() attributes {sym.new_name = "replaced_name" }
+  func.func private @failed_repl() attributes {sym.new_name = "replaced_name" }
 
   "foo.possibly_unknown_symbol_table"() ({
   }) : () -> ()
@@ -79,10 +79,10 @@ module {
 // Check that replacement works in any implementations of SubElementsAttrInterface
 module {
     // CHECK: func private @replaced_foo
-    func private @symbol_foo() attributes {sym.new_name = "replaced_foo" }
+    func.func private @symbol_foo() attributes {sym.new_name = "replaced_foo" }
 
     // CHECK: func @symbol_bar
-    func @symbol_bar() {
+    func.func @symbol_bar() {
       // CHECK: foo.op
       // CHECK-SAME: non_symbol_attr,
       // CHECK-SAME: use = [#test.sub_elements_access<[@replaced_foo], @symbol_bar, @replaced_foo>],
