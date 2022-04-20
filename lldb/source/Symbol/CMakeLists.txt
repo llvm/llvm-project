@@ -27,6 +27,7 @@ add_lldb_library(lldbSymbol
   Symbol.cpp
   SymbolContext.cpp
   SymbolFile.cpp
+  SymbolFileOnDemand.cpp
   SymbolVendor.cpp
   Symtab.cpp
   Type.cpp

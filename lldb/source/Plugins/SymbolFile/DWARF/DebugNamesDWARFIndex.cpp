@@ -65,8 +65,8 @@ bool DebugNamesDWARFIndex::ProcessEntry(
   llvm::Optional<DIERef> ref = ToDIERef(entry);
   if (!ref)
     return true;
-  SymbolFileDWARF &dwarf =
-      *llvm::cast<SymbolFileDWARF>(m_module.GetSymbolFile());
+  SymbolFileDWARF &dwarf = *llvm::cast<SymbolFileDWARF>(
+      m_module.GetSymbolFile()->GetBackingSymbolFile());
   DWARFDIE die = dwarf.GetDIE(*ref);
   if (!die)
     return true;

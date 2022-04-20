@@ -68,7 +68,8 @@ DWARFIndex::DIERefCallbackImpl::DIERefCallbackImpl(
     const DWARFIndex &index, llvm::function_ref<bool(DWARFDIE die)> callback,
     llvm::StringRef name)
     : m_index(index),
-      m_dwarf(*llvm::cast<SymbolFileDWARF>(index.m_module.GetSymbolFile())),
+      m_dwarf(*llvm::cast<SymbolFileDWARF>(
+          index.m_module.GetSymbolFile()->GetBackingSymbolFile())),
       m_callback(callback), m_name(name) {}
 
 bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {

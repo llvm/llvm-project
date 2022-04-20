@@ -3987,8 +3987,8 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
   if (m_debug_map_symfile == nullptr) {
     lldb::ModuleSP module_sp(m_debug_map_module_wp.lock());
     if (module_sp) {
-      m_debug_map_symfile =
-          static_cast<SymbolFileDWARFDebugMap *>(module_sp->GetSymbolFile());
+      m_debug_map_symfile = llvm::cast<SymbolFileDWARFDebugMap>(
+          module_sp->GetSymbolFile()->GetBackingSymbolFile());
     }
   }
   return m_debug_map_symfile;

@@ -77,6 +77,10 @@ public:
 
   ~SymbolFile() override = default;
 
+  /// SymbolFileOnDemand class overrides this to return the underlying
+  /// backing SymbolFile implementation that loads on-demand.
+  virtual SymbolFile *GetBackingSymbolFile() { return this; }
+
   /// Get a mask of what this symbol file supports for the object file
   /// that it was constructed with.
   ///
@@ -119,6 +123,16 @@ public:
   /// initialization can happen in this function which will get called
   /// prior to any other functions in the SymbolFile protocol.
   virtual void InitializeObject() {}
+
+  /// Whether debug info will be loaded or not.
+  ///
+  /// It will be true for most implementations except SymbolFileOnDemand.
+  virtual bool GetLoadDebugInfoEnabled() { return true; }
+
+  /// Specify debug info should be loaded.
+  ///
+  /// It will be no-op for most implementations except SymbolFileOnDemand.
+  virtual void SetLoadDebugInfoEnabled() { return; }
 
   // Compile Unit function calls
   // Approach 1 - iterator
