@@ -53,8 +53,9 @@ public:
   }
 
   template <typename T> ConstantSubscripts GetLbound(const Parentheses<T> &x) {
-    // Strip off the parentheses
-    return GetLbound(x.left());
+    // LBOUND for (x) is [1, ..., 1] cause of temp variable inside
+    // parentheses (lower bound is omitted, the default value is 1).
+    return ConstantSubscripts(x.Rank(), ConstantSubscript{1});
   }
 
   template <typename T> ConstantSubscripts GetLbound(const Expr<T> &x) {
