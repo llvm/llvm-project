@@ -74,7 +74,7 @@
 // CHECK-VEC4:       }
 // CHECK-VEC4:       return
 //
-func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
+func.func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
   %0 = linalg.generic #trait_scale_d
     ins(%arga: tensor<1024xf32, #DenseVector>)
     outs(%argx: tensor<1024xf32>) {
@@ -216,7 +216,7 @@ func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor<1024
 // CHECK-VEC4:       }
 // CHECK-VEC4:       return
 //
-func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
+func.func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
   %0 = linalg.generic #trait_mul_s
     ins(%arga, %argb: tensor<1024xf32, #SparseVector>, tensor<1024xf32>)
     outs(%argx: tensor<1024xf32>) {
@@ -312,7 +312,7 @@ func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %ar
 // CHECK-VEC4:       %{{.*}} = vector.reduction <add>, %[[red]] : vector<[4]xf32> into f32
 // CHECK-VEC4:       return
 //
-func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>, %argx: tensor<f32>) -> tensor<f32> {
+func.func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>, %argx: tensor<f32>) -> tensor<f32> {
   %0 = linalg.generic #trait_reduction_d
     ins(%arga, %argb: tensor<1024xf32, #DenseVector>, tensor<1024xf32>)
     outs(%argx: tensor<f32>) {
@@ -475,7 +475,7 @@ func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>
 // CHECK-VEC4:       }
 // CHECK-VEC4:       return
 //
-func @mul_ds(%arga: tensor<512x1024xf32, #SparseMatrix>, %argb: tensor<512x1024xf32>, %argx: tensor<512x1024xf32>) -> tensor<512x1024xf32> {
+func.func @mul_ds(%arga: tensor<512x1024xf32, #SparseMatrix>, %argb: tensor<512x1024xf32>, %argx: tensor<512x1024xf32>) -> tensor<512x1024xf32> {
   %0 = linalg.generic #trait_mul_ds
     ins(%arga, %argb: tensor<512x1024xf32, #SparseMatrix>, tensor<512x1024xf32>)
     outs(%argx: tensor<512x1024xf32>) {
@@ -584,7 +584,7 @@ func @mul_ds(%arga: tensor<512x1024xf32, #SparseMatrix>, %argb: tensor<512x1024x
 // CHECK-VEC4:       }
 // CHECK-VEC4:       return
 //
-func @add_dense(%arga: tensor<32x64xf64, #SparseMatrix>,
+func.func @add_dense(%arga: tensor<32x64xf64, #SparseMatrix>,
                 %argx: tensor<33x64xf64> {linalg.inplaceable = true}) -> tensor<33x64xf64> {
   %0 = linalg.generic #trait_affine
      ins(%arga: tensor<32x64xf64, #SparseMatrix>)

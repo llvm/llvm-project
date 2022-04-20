@@ -56,7 +56,7 @@
 // CHECK-PAR4:           scf.parallel
 // CHECK-PAR4:         return
 //
-func @scale_dd(%scale: f32,
+func.func @scale_dd(%scale: f32,
                %arga: tensor<?x?xf32, #DenseMatrix>,
 	       %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic #trait_dd
@@ -104,7 +104,7 @@ func @scale_dd(%scale: f32,
 // CHECK-PAR4:           scf.parallel
 // CHECK-PAR4:         return
 //
-func @scale_ss(%scale: f32,
+func.func @scale_ss(%scale: f32,
                %arga: tensor<?x?xf32, #SparseMatrix>,
 	       %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic #trait_ss
@@ -153,7 +153,7 @@ func @scale_ss(%scale: f32,
 // CHECK-PAR4:           scf.for
 // CHECK-PAR4:         return
 //
-func @matvec(%arga: tensor<16x32xf32, #CSR>,
+func.func @matvec(%arga: tensor<16x32xf32, #CSR>,
              %argb: tensor<32xf32>,
 	     %argx: tensor<16xf32>) -> tensor<16xf32> {
   %0 = linalg.generic #trait_matvec

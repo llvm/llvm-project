@@ -48,7 +48,7 @@
 // CHECK:           %[[VAL_20:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<8xi64>
 // CHECK:           return %[[VAL_20]] : tensor<8xi64>
 // CHECK:         }
-func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
+func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
   %init = linalg.init_tensor [8] : tensor<8xi64>
   %r = linalg.generic #trait_1d
       ins(%arga: tensor<8xi64, #SparseVector>)
@@ -109,7 +109,7 @@ func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64>
 // CHECK:           %[[VAL_35:.*]] = bufferization.to_tensor %[[VAL_9]] : memref<8xi64>
 // CHECK:           return %[[VAL_35]] : tensor<8xi64>
 // CHECK:         }
-func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
+func.func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
   %init = linalg.init_tensor [8] : tensor<8xi64>
   %r = linalg.generic #trait_1d
       ins(%arga: tensor<8xi64, #SparseVector>)

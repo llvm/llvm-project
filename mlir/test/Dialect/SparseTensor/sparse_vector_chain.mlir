@@ -112,7 +112,7 @@
 // CHECK:           %[[VAL_87:.*]] = bufferization.to_tensor %[[VAL_15]] : memref<f64>
 // CHECK:           return %[[VAL_87]] : tensor<f64>
 // CHECK:         }
-func @sparse_matrix_sum(%argx: tensor<f64> {linalg.inplaceable = true},
+func.func @sparse_matrix_sum(%argx: tensor<f64> {linalg.inplaceable = true},
                          %arga: tensor<64x32xf64, #SparseMatrix>,
                          %argb: tensor<64x32xf64, #SparseMatrix>) -> tensor<f64> {
   %0 = linalg.generic #trait

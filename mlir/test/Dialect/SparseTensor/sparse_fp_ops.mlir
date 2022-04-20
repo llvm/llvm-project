@@ -50,7 +50,7 @@
 // CHECK:           }
 // CHECK:           %[[VAL_14:.*]] = bufferization.to_tensor %[[VAL_7]] : memref<32xf64>
 // CHECK:           return %[[VAL_14]] : tensor<32xf64>
-func @abs(%arga: tensor<32xf64, #SV>,
+func.func @abs(%arga: tensor<32xf64, #SV>,
           %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf64, #SV>)
@@ -82,7 +82,7 @@ func @abs(%arga: tensor<32xf64, #SV>,
 // CHECK:           %[[VAL_14:.*]] = bufferization.to_tensor %[[VAL_7]] : memref<32xf64>
 // CHECK:           return %[[VAL_14]] : tensor<32xf64>
 // CHECK:         }
-func @ceil(%arga: tensor<32xf64, #SV>,
+func.func @ceil(%arga: tensor<32xf64, #SV>,
            %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf64, #SV>)
@@ -114,7 +114,7 @@ func @ceil(%arga: tensor<32xf64, #SV>,
 // CHECK:           %[[VAL_14:.*]] = bufferization.to_tensor %[[VAL_7]] : memref<32xf64>
 // CHECK:           return %[[VAL_14]] : tensor<32xf64>
 // CHECK:         }
-func @floor(%arga: tensor<32xf64, #SV>,
+func.func @floor(%arga: tensor<32xf64, #SV>,
             %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf64, #SV>)
@@ -146,7 +146,7 @@ func @floor(%arga: tensor<32xf64, #SV>,
 // CHECK:           %[[VAL_14:.*]] = bufferization.to_tensor %[[VAL_7]] : memref<32xf64>
 // CHECK:           return %[[VAL_14]] : tensor<32xf64>
 // CHECK:         }
-func @neg(%arga: tensor<32xf64, #SV>,
+func.func @neg(%arga: tensor<32xf64, #SV>,
           %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf64, #SV>)
@@ -205,7 +205,7 @@ func @neg(%arga: tensor<32xf64, #SV>,
 // CHECK:           %[[VAL_33:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<32xf64>
 // CHECK:           return %[[VAL_33]] : tensor<32xf64>
 // CHECK:         }
-func @add(%arga: tensor<32xf64, #SV>,
+func.func @add(%arga: tensor<32xf64, #SV>,
           %argb: tensor<32xf64>,
           %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
   %0 = linalg.generic #trait2
@@ -267,7 +267,7 @@ func @add(%arga: tensor<32xf64, #SV>,
 // CHECK:           %[[VAL_35:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<32xf64>
 // CHECK:           return %[[VAL_35]] : tensor<32xf64>
 // CHECK:         }
-func @sub(%arga: tensor<32xf64, #SV>,
+func.func @sub(%arga: tensor<32xf64, #SV>,
           %argb: tensor<32xf64>,
           %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
   %0 = linalg.generic #trait2
@@ -303,7 +303,7 @@ func @sub(%arga: tensor<32xf64, #SV>,
 // CHECK:           %[[VAL_17:.*]] = bufferization.to_tensor %[[VAL_9]] : memref<32xf64>
 // CHECK:           return %[[VAL_17]] : tensor<32xf64>
 // CHECK:         }
-func @mul(%arga: tensor<32xf64, #SV>,
+func.func @mul(%arga: tensor<32xf64, #SV>,
           %argb: tensor<32xf64>,
           %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
   %0 = linalg.generic #trait2
@@ -337,7 +337,7 @@ func @mul(%arga: tensor<32xf64, #SV>,
 // CHECK:           %[[VAL_15:.*]] = bufferization.to_tensor %[[VAL_8]] : memref<32xf64>
 // CHECK:           return %[[VAL_15]] : tensor<32xf64>
 // CHECK:         }
-func @divbyc(%arga: tensor<32xf64, #SV>,
+func.func @divbyc(%arga: tensor<32xf64, #SV>,
            %argx: tensor<32xf64> {linalg.inplaceable = true}) -> tensor<32xf64> {
   %c = arith.constant 2.0 : f64
   %0 = linalg.generic #traitc

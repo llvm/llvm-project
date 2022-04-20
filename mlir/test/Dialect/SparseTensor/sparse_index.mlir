@@ -46,7 +46,7 @@
 // CHECK:           %[[VAL_21:.*]] = sparse_tensor.load %[[VAL_5]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:           return %[[VAL_21]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:         }
-func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
+func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
                       -> tensor<?x?xi64, #DenseMatrix> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 0 : index
@@ -104,7 +104,7 @@ func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 // CHECK:           %[[VAL_27:.*]] = sparse_tensor.load %[[VAL_6]] hasInserts : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:           return %[[VAL_27]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:         }
-func @sparse_index(%arga: tensor<?x?xi64, #SparseMatrix>)
+func.func @sparse_index(%arga: tensor<?x?xi64, #SparseMatrix>)
                        -> tensor<?x?xi64, #SparseMatrix> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 0 : index

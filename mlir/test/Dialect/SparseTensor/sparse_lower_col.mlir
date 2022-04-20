@@ -116,7 +116,7 @@
 // CHECK-LIR:           return %[[VAL_10]] : memref<32xf64>
 // CHECK-LIR:         }
 
-func @matvec(%arga: tensor<32x64xf64, #CSC>,
+func.func @matvec(%arga: tensor<32x64xf64, #CSC>,
              %argb: tensor<64xf64>,
              %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait_matvec
