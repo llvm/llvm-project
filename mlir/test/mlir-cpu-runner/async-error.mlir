@@ -6,7 +6,7 @@
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
 // RUN: | FileCheck %s --dump-input=always
 
-func @main() {
+func.func @main() {
   %false = arith.constant 0 : i1
 
   // ------------------------------------------------------------------------ //

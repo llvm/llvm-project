@@ -3,9 +3,9 @@
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
-func @main() -> () {
+func.func @main() -> () {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
 
@@ -35,7 +35,7 @@ func @main() -> () {
   return
 }
 
-func @cast_ranked_memref_to_static_shape(%input : memref<2x3xf32>) {
+func.func @cast_ranked_memref_to_static_shape(%input : memref<2x3xf32>) {
   %output = memref.reinterpret_cast %input to
            offset: [0], sizes: [6, 1], strides: [1, 1]
            : memref<2x3xf32> to memref<6x1xf32>
@@ -53,7 +53,7 @@ func @cast_ranked_memref_to_static_shape(%input : memref<2x3xf32>) {
   return
 }
 
-func @cast_ranked_memref_to_dynamic_shape(%input : memref<2x3xf32>) {
+func.func @cast_ranked_memref_to_dynamic_shape(%input : memref<2x3xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c6 = arith.constant 6 : index
@@ -69,7 +69,7 @@ func @cast_ranked_memref_to_dynamic_shape(%input : memref<2x3xf32>) {
   return
 }
 
-func @cast_unranked_memref_to_static_shape(%input : memref<2x3xf32>) {
+func.func @cast_unranked_memref_to_static_shape(%input : memref<2x3xf32>) {
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
   %output = memref.reinterpret_cast %unranked_input to
            offset: [0], sizes: [6, 1], strides: [1, 1]
@@ -88,7 +88,7 @@ func @cast_unranked_memref_to_static_shape(%input : memref<2x3xf32>) {
   return
 }
 
-func @cast_unranked_memref_to_dynamic_shape(%input : memref<2x3xf32>) {
+func.func @cast_unranked_memref_to_dynamic_shape(%input : memref<2x3xf32>) {
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

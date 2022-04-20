@@ -1,11 +1,11 @@
 // RUN: mlir-opt %s -pass-pipeline="func.func(convert-arith-to-llvm),convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
-func private @print_memref_i32(memref<*xi32>) attributes { llvm.emit_c_interface }
-func private @printNewline() -> ()
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_i32(memref<*xi32>) attributes { llvm.emit_c_interface }
+func.func private @printNewline() -> ()
 
 memref.global "private" @gv0 : memref<4xf32> = dense<[0.0, 1.0, 2.0, 3.0]>
-func @test1DMemref() {
+func.func @test1DMemref() {
   %0 = memref.get_global @gv0 : memref<4xf32>
   %U = memref.cast %0 : memref<4xf32> to memref<*xf32>
   // CHECK: rank = 1
@@ -34,7 +34,7 @@ func @test1DMemref() {
 }
 
 memref.global constant @gv1 : memref<3x2xi32> = dense<[[0, 1],[2, 3],[4, 5]]>
-func @testConstantMemref() {
+func.func @testConstantMemref() {
   %0 = memref.get_global @gv1 : memref<3x2xi32>
   %U = memref.cast %0 : memref<3x2xi32> to memref<*xi32>
   // CHECK: rank = 2
@@ -50,7 +50,7 @@ func @testConstantMemref() {
 }
 
 memref.global "private" @gv2 : memref<4x2xf32> = dense<[[0.0, 1.0], [2.0, 3.0], [4.0, 5.0], [6.0, 7.0]]>
-func @test2DMemref() {
+func.func @test2DMemref() {
   %0 = memref.get_global @gv2 : memref<4x2xf32>
   %U = memref.cast %0 : memref<4x2xf32> to memref<*xf32>
   // CHECK: rank = 2
@@ -83,7 +83,7 @@ func @test2DMemref() {
 }
 
 memref.global @gv3 : memref<i32> = dense<11>
-func @testScalarMemref() {
+func.func @testScalarMemref() {
   %0 = memref.get_global @gv3 : memref<i32>
   %U = memref.cast %0 : memref<i32> to memref<*xi32>
   // CHECK: rank = 0
@@ -96,7 +96,7 @@ func @testScalarMemref() {
   return
 }
 
-func @main() -> () {
+func.func @main() -> () {
   call @test1DMemref() : () -> ()
   call @testConstantMemref() : () -> ()
   call @test2DMemref() : () -> ()

@@ -1,6 +1,6 @@
 // RUN: mlir-opt -pass-pipeline="func.func(convert-linalg-to-loops,lower-affine,convert-scf-to-cf,convert-arith-to-llvm),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" %s | mlir-cpu-runner -O3 -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
-func @main() {
+func.func @main() {
   %A = memref.alloc() : memref<16x16xf32>
   %B = memref.alloc() : memref<16x16xf32>
   %C = memref.alloc() : memref<16x16xf32>
@@ -49,7 +49,7 @@ func @main() {
 }
 // CHECK: 17
 
-func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: memref<16x16xf32>) {
+func.func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   affine.for %arg3 = 0 to 16 {
     affine.for %arg4 = 0 to 16 {
@@ -72,5 +72,5 @@ func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: mem
   return
 }
 
-func private @print_flops(f64)
-func private @rtclock() -> f64
+func.func private @print_flops(f64)
+func.func private @rtclock() -> f64

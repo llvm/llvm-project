@@ -35,7 +35,7 @@
 // CHECK-SAME: sizes = [4, 3]
 // CHECK-SAME: strides = [3, 1]
 // CHECK-COUNT-4: [1, 1, 1]
-func @main() -> () {
+func.func @main() -> () {
     %A = memref.alloc() : memref<10x3xf32, 0>
     %f2 = arith.constant 2.00000e+00 : f32
     %f5 = arith.constant 5.00000e+00 : f32
@@ -73,10 +73,10 @@ func @main() -> () {
     return
 }
 
-func private @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
-func @return_two_var_memref_caller() {
+func.func @return_two_var_memref_caller() {
   %0 = memref.alloca() : memref<4x3xf32>
   %c0f32 = arith.constant 1.0 : f32
   linalg.fill ins(%c0f32 : f32) outs(%0 : memref<4x3xf32>)
@@ -86,12 +86,12 @@ func @return_two_var_memref_caller() {
   return
  }
 
- func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>) {
+ func.func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>) {
   %0 = memref.cast %arg0 : memref<4x3xf32> to memref<*xf32>
   return %0, %0 : memref<*xf32>, memref<*xf32>
 }
 
-func @return_var_memref_caller() {
+func.func @return_var_memref_caller() {
   %0 = memref.alloca() : memref<4x3xf32>
   %c0f32 = arith.constant 1.0 : f32
   linalg.fill ins(%c0f32 : f32) outs(%0 : memref<4x3xf32>)
@@ -100,15 +100,15 @@ func @return_var_memref_caller() {
   return
 }
 
-func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
+func.func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
   %0 = memref.cast %arg0: memref<4x3xf32> to memref<*xf32>
   return %0 : memref<*xf32>
 }
 
-func private @printU64(index) -> ()
-func private @printNewline() -> ()
+func.func private @printU64(index) -> ()
+func.func private @printNewline() -> ()
 
-func @dim_op_of_unranked() {
+func.func @dim_op_of_unranked() {
   %ranked = memref.alloca() : memref<4x3xf32>
   %unranked = memref.cast %ranked: memref<4x3xf32> to memref<*xf32>
 

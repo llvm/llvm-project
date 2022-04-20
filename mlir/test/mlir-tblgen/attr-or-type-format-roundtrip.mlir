@@ -3,7 +3,7 @@
 // CHECK-LABEL: @test_roundtrip_parameter_parsers
 // CHECK: !test.type_with_format<111, three = #test<"attr_ugly begin 5 : index end">, two = "foo">
 // CHECK: !test.type_with_format<2147, three = "hi", two = "hi">
-func private @test_roundtrip_parameter_parsers(!test.type_with_format<111, three = #test<"attr_ugly begin 5 : index end">, two = "foo">) -> !test.type_with_format<2147, two = "hi", three = "hi">
+func.func private @test_roundtrip_parameter_parsers(!test.type_with_format<111, three = #test<"attr_ugly begin 5 : index end">, two = "foo">) -> !test.type_with_format<2147, two = "hi", three = "hi">
 attributes {
   // CHECK: #test.attr_with_format<3 : two = "hello", four = [1, 2, 3] : 42 : i64>
   attr0 = #test.attr_with_format<3 : two = "hello", four = [1, 2, 3] : 42 : i64>,
@@ -53,7 +53,7 @@ attributes {
 // CHECK: !test.custom_type_string<"foo" foo>
 // CHECK: !test.custom_type_string<"bar" bar>
 
-func private @test_roundtrip_default_parsers_struct(
+func.func private @test_roundtrip_default_parsers_struct(
   !test.no_parser<255, [1, 2, 3, 4, 5], "foobar", 4>
 ) -> (
   !test.struct_capture_all<v3 = 3, v1 = 1, v2 = 2, v0 = 0>,

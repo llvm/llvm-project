@@ -26,7 +26,7 @@ class ValueShapeRangeTest : public testing::Test {
 protected:
   void SetUp() override {
     const char *ir = R"MLIR(
-      func @map(%arg : tensor<1xi64>) {
+      func.func @map(%arg : tensor<1xi64>) {
         %0 = arith.constant dense<[10]> : tensor<1xi64>
         %1 = arith.addi %arg, %0 : tensor<1xi64>
         return

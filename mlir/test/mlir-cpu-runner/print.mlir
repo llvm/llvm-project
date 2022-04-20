@@ -7,7 +7,7 @@
 llvm.mlir.global internal constant @str_global("String to print\0A")
 llvm.func @print_c_string(!llvm.ptr<i8>)
 
-func @main() {
+func.func @main() {
   %0 = llvm.mlir.addressof @str_global : !llvm.ptr<array<16 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
