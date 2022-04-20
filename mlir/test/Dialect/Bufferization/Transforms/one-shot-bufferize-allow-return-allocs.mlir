@@ -7,7 +7,7 @@
 
 // CHECK-LABEL: func @buffer_not_deallocated(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
-func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> {
+func.func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> {
   // CHECK: %[[r:.*]] = scf.if %{{.*}} {
   %r = scf.if %c -> tensor<?xf32> {
     // CHECK: %[[some_op:.*]] = "test.some_op"

@@ -1,6 +1,6 @@
 // RUN: mlir-opt -test-gpu-greedy-parallel-loop-mapping -split-input-file %s | FileCheck %s
 
-func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
                     %arg3 : index) {
   %zero = arith.constant 0 : index
   %one = arith.constant 1 : index
@@ -26,7 +26,7 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // -----
 
-func @parallel_loop_4d(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_loop_4d(%arg0 : index, %arg1 : index, %arg2 : index,
                        %arg3 : index) {
   %zero = arith.constant 0 : index
   %one = arith.constant 1 : index

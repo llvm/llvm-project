@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: func @create_of_real_and_imag
 // CHECK-SAME: (%[[CPLX:.*]]: complex<f32>)
-func @create_of_real_and_imag(%cplx: complex<f32>) -> complex<f32> {
+func.func @create_of_real_and_imag(%cplx: complex<f32>) -> complex<f32> {
   // CHECK-NEXT: return %[[CPLX]] : complex<f32>
   %real = complex.re %cplx : complex<f32>
   %imag = complex.im %cplx : complex<f32>
@@ -12,7 +12,7 @@ func @create_of_real_and_imag(%cplx: complex<f32>) -> complex<f32> {
 
 // CHECK-LABEL: func @create_of_real_and_imag_different_operand
 // CHECK-SAME: (%[[CPLX:.*]]: complex<f32>, %[[CPLX2:.*]]: complex<f32>)
-func @create_of_real_and_imag_different_operand(
+func.func @create_of_real_and_imag_different_operand(
     %cplx: complex<f32>, %cplx2 : complex<f32>) -> complex<f32> {
   // CHECK-NEXT: %[[REAL:.*]] = complex.re %[[CPLX]] : complex<f32>
   // CHECK-NEXT: %[[IMAG:.*]] = complex.im %[[CPLX2]] : complex<f32>
@@ -24,7 +24,7 @@ func @create_of_real_and_imag_different_operand(
 }
 
 // CHECK-LABEL: func @real_of_const(
-func @real_of_const() -> f32 {
+func.func @real_of_const() -> f32 {
   // CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
   // CHECK-NEXT: return %[[CST]] : f32
   %complex = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
@@ -33,7 +33,7 @@ func @real_of_const() -> f32 {
 }
 
 // CHECK-LABEL: func @real_of_create_op(
-func @real_of_create_op() -> f32 {
+func.func @real_of_create_op() -> f32 {
   // CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
   // CHECK-NEXT: return %[[CST]] : f32
   %real = arith.constant 1.0 : f32
@@ -44,7 +44,7 @@ func @real_of_create_op() -> f32 {
 }
 
 // CHECK-LABEL: func @imag_of_const(
-func @imag_of_const() -> f32 {
+func.func @imag_of_const() -> f32 {
   // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
   // CHECK-NEXT: return %[[CST]] : f32
   %complex = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
@@ -53,7 +53,7 @@ func @imag_of_const() -> f32 {
 }
 
 // CHECK-LABEL: func @imag_of_create_op(
-func @imag_of_create_op() -> f32 {
+func.func @imag_of_create_op() -> f32 {
   // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
   // CHECK-NEXT: return %[[CST]] : f32
   %real = arith.constant 1.0 : f32

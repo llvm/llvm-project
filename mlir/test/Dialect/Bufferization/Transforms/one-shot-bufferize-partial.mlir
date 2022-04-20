@@ -17,7 +17,7 @@
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?xf32>
 // CHECK-NO-LAYOUT-MAP-LABEL: func @use_of_unknown_op_1(
 //  CHECK-NO-LAYOUT-MAP-SAME:     %[[t1:.*]]: tensor<?xf32>
-func @use_of_unknown_op_1(%t1: tensor<?xf32>)
+func.func @use_of_unknown_op_1(%t1: tensor<?xf32>)
     -> vector<5xf32> {
   // ToTensorOp is generated because the function is bufferized and has a
   // memref block argument.
@@ -39,7 +39,7 @@ func @use_of_unknown_op_1(%t1: tensor<?xf32>)
 
 // CHECK-LABEL: func @use_of_unknown_op_2(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?xf32>
-func @use_of_unknown_op_2(%t1: tensor<?xf32>) -> tensor<?xf32> {
+func.func @use_of_unknown_op_2(%t1: tensor<?xf32>) -> tensor<?xf32> {
   // CHECK: %[[dummy1:.*]] = "test.dummy_op"(%[[t1]])
   %0 = "test.dummy_op"(%t1) : (tensor<?xf32>) -> tensor<?xf32>
   // CHECK: %[[dummy2:.*]] = "test.another_dummy_op"(%[[dummy1]])
@@ -55,7 +55,7 @@ func @use_of_unknown_op_2(%t1: tensor<?xf32>) -> tensor<?xf32> {
 
 // CHECK-LABEL: func @use_of_unknown_op_3(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?xf32>
-func @use_of_unknown_op_3(%t1: tensor<?xf32>)
+func.func @use_of_unknown_op_3(%t1: tensor<?xf32>)
     -> (vector<5xf32>, vector<5xf32>) {
   %idx = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
@@ -77,7 +77,7 @@ func @use_of_unknown_op_3(%t1: tensor<?xf32>)
 
 // CHECK-LABEL: func @use_of_unknown_op_4(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?xf32>
-func @use_of_unknown_op_4(%t1: tensor<?xf32>)
+func.func @use_of_unknown_op_4(%t1: tensor<?xf32>)
     -> (vector<5xf32>, tensor<?xf32>) {
   %idx = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
@@ -100,7 +100,7 @@ func @use_of_unknown_op_4(%t1: tensor<?xf32>)
 
 // CHECK-LABEL: func @use_of_bufferizable_op_in_unbufferizable_op
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?xf32>
-func @use_of_bufferizable_op_in_unbufferizable_op(
+func.func @use_of_bufferizable_op_in_unbufferizable_op(
     %t1: tensor<?xf32>, %o: index, %s: index) -> (tensor<?xf32>, tensor<?xf32>) {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]]
   // CHECK: %[[subview:.*]] = memref.subview %[[m1]]
@@ -116,7 +116,7 @@ func @use_of_bufferizable_op_in_unbufferizable_op(
 
 // CHECK-LABEL: func @unused_unknown_op(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?xf32>
-func @unused_unknown_op(%t1 : tensor<?xf32>) -> vector<5xf32> {
+func.func @unused_unknown_op(%t1 : tensor<?xf32>) -> vector<5xf32> {
   %idx = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
 
@@ -133,7 +133,7 @@ func @unused_unknown_op(%t1 : tensor<?xf32>) -> vector<5xf32> {
 // -----
 
 // CHECK-LABEL: func @unknown_op_may_read(
-func @unknown_op_may_read(%v: vector<5xf32>)
+func.func @unknown_op_may_read(%v: vector<5xf32>)
     -> (tensor<10xf32>, tensor<10xf32>) {
   %idx = arith.constant 0 : index
   %cst = arith.constant 5.0 : f32
@@ -167,7 +167,7 @@ func @unknown_op_may_read(%v: vector<5xf32>)
 
 // CHECK-LABEL: func @unknown_op_not_writable
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?xf32>
-func @unknown_op_not_writable(
+func.func @unknown_op_not_writable(
     %t1 : tensor<?xf32>, %v :  vector<5xf32>, %idx : index) -> tensor<?xf32> {
   // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[t1]])
   // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]]
@@ -189,7 +189,7 @@ func @unknown_op_not_writable(
 
 // CHECK-TENSOR-LABEL: func @simple_tensor_test(
 //  CHECK-TENSOR-SAME:     %[[t1:.*]]: tensor<?xf32>
-func @simple_tensor_test(%t1 : tensor<?xf32>, %f : f32) -> tensor<?xf32> {
+func.func @simple_tensor_test(%t1 : tensor<?xf32>, %f : f32) -> tensor<?xf32> {
   // CHECK-TENSOR: %[[t1_memref:.*]] = bufferization.to_memref %[[t1]]
   %c0 = arith.constant 0 : index
   // CHECK-TENSOR: %[[alloc:.*]] = memref.alloc
@@ -205,7 +205,7 @@ func @simple_tensor_test(%t1 : tensor<?xf32>, %f : f32) -> tensor<?xf32> {
 
 // CHECK-SCF-LABEL: func @simple_scf_if(
 //  CHECK-SCF-SAME:     %[[t1:.*]]: tensor<?xf32> {linalg.inplaceable = true}, %[[c:.*]]: i1, %[[pos:.*]]: index
-func @simple_scf_if(%t1: tensor<?xf32> {linalg.inplaceable = true}, %c: i1, %pos: index, %f: f32)
+func.func @simple_scf_if(%t1: tensor<?xf32> {linalg.inplaceable = true}, %c: i1, %pos: index, %f: f32)
     -> (tensor<?xf32>, index) {
   // CHECK-SCF: %[[r:.*]] = scf.if %[[c]] -> (memref<?xf32, #{{.*}}>) {
   %r1, %r2 = scf.if %c -> (tensor<?xf32>, index) {

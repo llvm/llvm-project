@@ -3,7 +3,7 @@
 // RUN: mlir-opt -verify-diagnostics %s | mlir-opt -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: func @opaque_types() {
-func @opaque_types() {
+func.func @opaque_types() {
   // CHECK-NEXT: !emitc.opaque<"int">
   emitc.call "f"() {template_args = [!emitc<"opaque<\"int\">">]} : () -> ()
   // CHECK-NEXT: !emitc.opaque<"byte">
@@ -19,7 +19,7 @@ func @opaque_types() {
 }
 
 // CHECK-LABEL: func @pointer_types() {
-func @pointer_types() {
+func.func @pointer_types() {
   // CHECK-NEXT: !emitc.ptr<i32>
   emitc.call "f"() {template_args = [!emitc<"ptr<i32>">]} : () -> ()
   // CHECK-NEXT: !emitc.ptr<i64>

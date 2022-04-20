@@ -7,10 +7,10 @@ module attributes {gpu.container_module} {
     gpu.func @kernel() kernel { gpu.return }
   }
 
-  func private @foo() -> ()
+  func.func private @foo() -> ()
 
   // CHECK-LABEL:func @async(%{{.*}}: index)
-  func @async(%sz : index) {
+  func.func @async(%sz : index) {
     // CHECK: %[[t0:.*]] = gpu.wait async
     // CHECK: %[[t1:.*]] = gpu.launch_func async [%[[t0]]]
     gpu.launch_func @kernels::@kernel
@@ -29,7 +29,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:func @defer_wait(%{{.*}}: index)
-  func @defer_wait(%sz : index) {
+  func.func @defer_wait(%sz : index) {
     // CHECK: %[[a0:.*]], %[[f0:.*]] = async.execute
     %a0 = async.execute {
       // CHECK: %[[t:.*]] = gpu.launch_func async
@@ -59,7 +59,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:func @defer_wait_blocked_by_side_effect(%{{.*}}: index)
-  func @defer_wait_blocked_by_side_effect(%sz : index) {
+  func.func @defer_wait_blocked_by_side_effect(%sz : index) {
     // CHECK: %[[a:.*]] = async.execute
     %a = async.execute {
       // CHECK: %[[t:.*]] = gpu.launch_func async
@@ -77,7 +77,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:func @defer_wait_pass_through(%{{.*}}: index)
-  func @defer_wait_pass_through(%sz : index) {
+  func.func @defer_wait_pass_through(%sz : index) {
     // CHECK: %[[a0:.*]], %[[f0:.*]] = async.execute
     %a0 = async.execute {
       // CHECK: %[[t:.*]] = gpu.launch_func async
@@ -104,7 +104,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:func @async_execute_with_result(%{{.*}}: index)
-  func @async_execute_with_result(%sz : index) -> index {
+  func.func @async_execute_with_result(%sz : index) -> index {
     // CHECK: %[[a0:.*]], %[[f0:.*]]:2 = async.execute
     // CHECK-SAME: -> (!async.value<index>, !async.value<!gpu.async.token>)
     %a0, %f0 = async.execute -> !async.value<index> {
@@ -127,7 +127,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:func @async_execute_no_use(%{{.*}}: index)
-  func @async_execute_no_use(%sz : index) {
+  func.func @async_execute_no_use(%sz : index) {
     // CHECK: async.execute {
     %a0 = async.execute {
       // CHECK: %[[t:.*]] = gpu.launch_func async
@@ -140,7 +140,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:func @async_execute_fork(%{{.*}}: index)
-  func @async_execute_fork(%sz : index) {
+  func.func @async_execute_fork(%sz : index) {
     // CHECK: %[[a0:.*]], %[[f0:.*]]:2 = async.execute
     // CHECK-SAME: -> (!async.value<!gpu.async.token>, !async.value<!gpu.async.token>)
     %a0 = async.execute {
@@ -171,7 +171,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:func @existing_tokens()
-  func @existing_tokens() {
+  func.func @existing_tokens() {
     // CHECK: %[[t0:.*]] = gpu.wait async
     // CHECK-NOT: [{{.*}}]
     %t0 = gpu.wait async
