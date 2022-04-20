@@ -178,7 +178,7 @@ public:
   /// Push an include of the given file. This will cause the lexer to start
   /// processing the provided file. Returns failure if the file could not be
   /// opened, success otherwise.
-  LogicalResult pushInclude(StringRef filename);
+  LogicalResult pushInclude(StringRef filename, SMRange includeLoc);
 
   /// Lex the next token and return it.
   Token lexToken();
