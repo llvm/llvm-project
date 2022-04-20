@@ -3128,7 +3128,6 @@ void X86FrameLowering::adjustForSegmentedStacks(
         .addReg(0)
         .addExternalSymbol("__morestack_addr")
         .addReg(0);
-    MF.getMMI().setUsesMorestackAddr(true);
   } else {
     if (Is64Bit)
       BuildMI(allocMBB, DL, TII.get(X86::CALL64pcrel32))

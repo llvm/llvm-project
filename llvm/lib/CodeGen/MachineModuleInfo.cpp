@@ -202,7 +202,7 @@ void MachineModuleInfo::initialize() {
   ObjFileMMI = nullptr;
   CurCallSite = 0;
   NextFnNum = 0;
-  UsesMSVCFloatingPoint = UsesMorestackAddr = false;
+  UsesMSVCFloatingPoint = false;
   AddrLabelSymbols = nullptr;
   DbgInfoAvailable = false;
 }
@@ -230,7 +230,6 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
   ObjFileMMI = MMI.ObjFileMMI;
   CurCallSite = MMI.CurCallSite;
   UsesMSVCFloatingPoint = MMI.UsesMSVCFloatingPoint;
-  UsesMorestackAddr = MMI.UsesMorestackAddr;
   AddrLabelSymbols = MMI.AddrLabelSymbols;
   ExternalContext = MMI.ExternalContext;
   TheModule = MMI.TheModule;
