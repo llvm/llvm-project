@@ -170,6 +170,9 @@ Changes in existing checks
   <clang-tidy/checks/performance-inefficient-vector-operation>` to work when
   the vector is a member of a structure.
 
+- Fixed nonsensical suggestion of :doc:`altera-struct-pack-align
+  <clang-tidy/checks/altera-struct-pack-align>` check for empty structs.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
