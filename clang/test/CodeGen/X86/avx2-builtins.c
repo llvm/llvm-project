@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
 
 
 #include <immintrin.h>
@@ -466,8 +468,11 @@ __m128i test_mm_mask_i32gather_epi64(__m128i a, long long const *b, __m128i c, _
 }
 
 __m256i test_mm256_i32gather_epi64(long long const *b, __m128i c) {
-  // CHECK-LABEL: test_mm256_i32gather_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> zeroinitializer, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm256_i32gather_epi64
+  // X64: call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> zeroinitializer, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm256_i32gather_epi64
+  // X86: call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> %{{.*}}, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
   return _mm256_i32gather_epi64(b, c, 2);
 }
 
@@ -478,11 +483,17 @@ __m256i test_mm256_mask_i32gather_epi64(__m256i a, long long const *b, __m128i c
 }
 
 __m128d test_mm_i32gather_pd(double const *b, __m128i c) {
-  // CHECK-LABEL: test_mm_i32gather_pd
-  // CHECK:         [[CMP:%.*]] = fcmp oeq <2 x double>
-  // CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[CMP]] to <2 x i64>
-  // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
-  // CHECK: call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> zeroinitializer, i8* %{{.*}}, <4 x i32> %{{.*}}, <2 x double> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm_i32gather_pd
+  // X64:         [[CMP:%.*]] = fcmp oeq <2 x double>
+  // X64-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[CMP]] to <2 x i64>
+  // X64-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
+  // X64: call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> zeroinitializer, i8* %{{.*}}, <4 x i32> %{{.*}}, <2 x double> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm_i32gather_pd
+  // X86:         [[CMP:%.*]] = fcmp oeq <2 x double>
+  // X86-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[CMP]] to <2 x i64>
+  // X86-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
+  // X86: call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> %{{.*}}, i8* %{{.*}}, <4 x i32> %{{.*}}, <2 x double> %{{.*}}, i8 2)
   return _mm_i32gather_pd(b, c, 2);
 }
 
@@ -493,11 +504,17 @@ __m128d test_mm_mask_i32gather_pd(__m128d a, double const *b, __m128i c, __m128d
 }
 
 __m256d test_mm256_i32gather_pd(double const *b, __m128i c) {
-  // CHECK-LABEL: test_mm256_i32gather_pd
-  // CHECK:         [[CMP:%.*]] = fcmp oeq <4 x double>
-  // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-  // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i64> [[SEXT]] to <4 x double>
-  // CHECK: call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> zeroinitializer, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x double> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm256_i32gather_pd
+  // X64:         [[CMP:%.*]] = fcmp oeq <4 x double>
+  // X64-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
+  // X64-NEXT:    [[BC:%.*]] = bitcast <4 x i64> [[SEXT]] to <4 x double>
+  // X64: call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> zeroinitializer, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x double> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm256_i32gather_pd
+  // X86:         [[CMP:%.*]] = fcmp oeq <4 x double>
+  // X86-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
+  // X86-NEXT:    [[BC:%.*]] = bitcast <4 x i64> [[SEXT]] to <4 x double>
+  // X86: call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> %{{.*}}, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x double> %{{.*}}, i8 2)
   return _mm256_i32gather_pd(b, c, 2);
 }
 
@@ -508,11 +525,17 @@ __m256d test_mm256_mask_i32gather_pd(__m256d a, double const *b, __m128i c, __m2
 }
 
 __m128 test_mm_i32gather_ps(float const *b, __m128i c) {
-  // CHECK-LABEL: test_mm_i32gather_ps
-  // CHECK:         [[CMP:%.*]] = fcmp oeq <4 x float>
-  // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
-  // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
-  // CHECK: call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> zeroinitializer, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x float> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm_i32gather_ps
+  // X64:         [[CMP:%.*]] = fcmp oeq <4 x float>
+  // X64-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+  // X64-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
+  // X64: call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> zeroinitializer, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x float> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm_i32gather_ps
+  // X86:         [[CMP:%.*]] = fcmp oeq <4 x float>
+  // X86-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+  // X86-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
+  // X86: call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> %{{.*}}, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x float> %{{.*}}, i8 2)
   return _mm_i32gather_ps(b, c, 2);
 }
 
@@ -523,11 +546,17 @@ __m128 test_mm_mask_i32gather_ps(__m128 a, float const *b, __m128i c, __m128 d) 
 }
 
 __m256 test_mm256_i32gather_ps(float const *b, __m256i c) {
-  // CHECK-LABEL: test_mm256_i32gather_ps
-  // CHECK:         [[CMP:%.*]] = fcmp oeq <8 x float>
-  // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-  // CHECK-NEXT:    [[BC:%.*]] = bitcast <8 x i32> [[SEXT]] to <8 x float>
-  // CHECK: call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> zeroinitializer, i8* %{{.*}}, <8 x i32> %{{.*}}, <8 x float> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm256_i32gather_ps
+  // X64:         [[CMP:%.*]] = fcmp oeq <8 x float>
+  // X64-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
+  // X64-NEXT:    [[BC:%.*]] = bitcast <8 x i32> [[SEXT]] to <8 x float>
+  // X64: call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> zeroinitializer, i8* %{{.*}}, <8 x i32> %{{.*}}, <8 x float> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm256_i32gather_ps
+  // X86:         [[CMP:%.*]] = fcmp oeq <8 x float>
+  // X86-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
+  // X86-NEXT:    [[BC:%.*]] = bitcast <8 x i32> [[SEXT]] to <8 x float>
+  // X86: call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> %{{.*}}, i8* %{{.*}}, <8 x i32> %{{.*}}, <8 x float> %{{.*}}, i8 2)
   return _mm256_i32gather_ps(b, c, 2);
 }
 
@@ -574,8 +603,11 @@ __m128i test_mm_mask_i64gather_epi64(__m128i a, long long const *b, __m128i c, _
 }
 
 __m256i test_mm256_i64gather_epi64(long long const *b, __m256i c) {
-  // CHECK-LABEL: test_mm256_i64gather_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> zeroinitializer, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm256_i64gather_epi64
+  // X64: call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> zeroinitializer, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm256_i64gather_epi64
+  // X86: call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> %{{.*}}, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, i8 2)
   return _mm256_i64gather_epi64(b, c, 2);
 }
 
@@ -586,11 +618,17 @@ __m256i test_mm256_mask_i64gather_epi64(__m256i a, long long const *b, __m256i c
 }
 
 __m128d test_mm_i64gather_pd(double const *b, __m128i c) {
-  // CHECK-LABEL: test_mm_i64gather_pd
-  // CHECK:         [[CMP:%.*]] = fcmp oeq <2 x double>
-  // CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[CMP]] to <2 x i64>
-  // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
-  // CHECK: call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> zeroinitializer, i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x double> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm_i64gather_pd
+  // X64:         [[CMP:%.*]] = fcmp oeq <2 x double>
+  // X64-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[CMP]] to <2 x i64>
+  // X64-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
+  // X64: call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> zeroinitializer, i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x double> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm_i64gather_pd
+  // X86:         [[CMP:%.*]] = fcmp oeq <2 x double>
+  // X86-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[CMP]] to <2 x i64>
+  // X86-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
+  // X86: call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> %{{.*}}, i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x double> %{{.*}}, i8 2)
   return _mm_i64gather_pd(b, c, 2);
 }
 
@@ -601,9 +639,13 @@ __m128d test_mm_mask_i64gather_pd(__m128d a, double const *b, __m128i c, __m128d
 }
 
 __m256d test_mm256_i64gather_pd(double const *b, __m256i c) {
-  // CHECK-LABEL: test_mm256_i64gather_pd
-  // CHECK: fcmp oeq <4 x double> %{{.*}}, %{{.*}}
-  // CHECK: call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> zeroinitializer, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x double> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm256_i64gather_pd
+  // X64: fcmp oeq <4 x double> %{{.*}}, %{{.*}}
+  // X64: call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> zeroinitializer, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x double> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm256_i64gather_pd
+  // X86: fcmp oeq <4 x double> %{{.*}}, %{{.*}}
+  // X86: call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> %{{.*}}, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x double> %{{.*}}, i8 2)
   return _mm256_i64gather_pd(b, c, 2);
 }
 
@@ -614,11 +656,17 @@ __m256d test_mm256_mask_i64gather_pd(__m256d a, double const *b, __m256i c, __m2
 }
 
 __m128 test_mm_i64gather_ps(float const *b, __m128i c) {
-  // CHECK-LABEL: test_mm_i64gather_ps
-  // CHECK:         [[CMP:%.*]] = fcmp oeq <4 x float>
-  // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
-  // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
-  // CHECK: call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> zeroinitializer, i8* %{{.*}}, <2 x i64> %{{.*}}, <4 x float> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm_i64gather_ps
+  // X64:         [[CMP:%.*]] = fcmp oeq <4 x float>
+  // X64-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+  // X64-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
+  // X64: call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> zeroinitializer, i8* %{{.*}}, <2 x i64> %{{.*}}, <4 x float> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm_i64gather_ps
+  // X86:         [[CMP:%.*]] = fcmp oeq <4 x float>
+  // X86-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+  // X86-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
+  // X86: call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> %{{.*}}, i8* %{{.*}}, <2 x i64> %{{.*}}, <4 x float> %{{.*}}, i8 2)
   return _mm_i64gather_ps(b, c, 2);
 }
 
@@ -629,11 +677,17 @@ __m128 test_mm_mask_i64gather_ps(__m128 a, float const *b, __m128i c, __m128 d) 
 }
 
 __m128 test_mm256_i64gather_ps(float const *b, __m256i c) {
-  // CHECK-LABEL: test_mm256_i64gather_ps
-  // CHECK:         [[CMP:%.*]] = fcmp oeq <4 x float>
-  // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
-  // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
-  // CHECK: call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> zeroinitializer, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x float> %{{.*}}, i8 2)
+  // X64-LABEL: test_mm256_i64gather_ps
+  // X64:         [[CMP:%.*]] = fcmp oeq <4 x float>
+  // X64-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+  // X64-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
+  // X64: call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> zeroinitializer, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x float> %{{.*}}, i8 2)
+  //
+  // X86-LABEL: test_mm256_i64gather_ps
+  // X86:         [[CMP:%.*]] = fcmp oeq <4 x float>
+  // X86-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+  // X86-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
+  // X86: call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> %{{.*}}, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x float> %{{.*}}, i8 2)
   return _mm256_i64gather_ps(b, c, 2);
 }
 
