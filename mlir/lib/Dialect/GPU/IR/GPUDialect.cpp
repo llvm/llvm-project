@@ -1124,55 +1124,6 @@ LogicalResult MemcpyOp::verify() {
   return success();
 }
 
-namespace {
-
-/// Erases a common case of copy ops where a destination value is used only by
-/// the copy op, alloc and dealloc ops.
-struct EraseTrivialCopyOp : public OpRewritePattern<MemcpyOp> {
-  using OpRewritePattern<MemcpyOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(MemcpyOp op,
-                                PatternRewriter &rewriter) const override {
-    Value dest = op.dst();
-    // If `dest` is a block argument, we cannot remove `op`.
-    if (dest.isa<BlockArgument>())
-      return failure();
-    auto isDeallocLikeOpActingOnVal = [](Operation *op, Value val) {
-      auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
-      if (!memOp)
-        return false;
-      llvm::SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4>
-          memOpEffects;
-      memOp.getEffects(memOpEffects);
-      return llvm::none_of(memOpEffects, [val](auto &effect) {
-        return effect.getValue() == val &&
-               !isa<MemoryEffects::Free>(effect.getEffect());
-      });
-    };
-    // We can erase `op` iff `dest` has no other use apart from its
-    // use by `op` and dealloc ops.
-    if (llvm::any_of(dest.getUsers(), [isDeallocLikeOpActingOnVal, op,
-                                       dest](Operation *user) {
-          return user != op && !isDeallocLikeOpActingOnVal(user, dest);
-        }))
-      return failure();
-
-    if (op.asyncDependencies().size() > 1 ||
-        ((op.asyncDependencies().empty() && op.asyncToken()) ||
-         (!op.asyncDependencies().empty() && !op.asyncToken())))
-      return failure();
-    rewriter.replaceOp(op, op.asyncDependencies());
-    return success();
-  }
-};
-
-} // end anonymous namespace
-
-void MemcpyOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                           MLIRContext *context) {
-  results.add<EraseTrivialCopyOp>(context);
-}
-
 //===----------------------------------------------------------------------===//
 // GPU_SubgroupMmaLoadMatrixOp
 //===----------------------------------------------------------------------===//
