@@ -538,6 +538,38 @@ TEST(IncludeCleaner, IWYUPragmas) {
   EXPECT_THAT(Unused, IsEmpty());
 }
 
+TEST(IncludeCleaner, RecursiveInclusion) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "foo.h"
+
+    void baz() {
+      foo();
+    }
+    )cpp";
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+    #ifndef FOO_H
+    #define FOO_H
+
+    void foo() {}
+
+    #include "bar.h"
+
+    #endif
+  )cpp";
+  TU.AdditionalFiles["bar.h"] = guard(R"cpp(
+    #include "foo.h"
+  )cpp");
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles = findReferencedFiles(
+      findReferencedLocations(AST), AST.getIncludeStructure(),
+      AST.getCanonicalIncludes(), AST.getSourceManager());
+  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
+  auto Unused = computeUnusedIncludes(AST);
+  EXPECT_THAT(Unused, IsEmpty());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
