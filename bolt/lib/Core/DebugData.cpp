@@ -12,9 +12,11 @@
 
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAddr.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -118,6 +120,7 @@ DebugRangesSectionWriter::DebugRangesSectionWriter() {
   // Add an empty range as the first entry;
   SectionOffset +=
       writeAddressRanges(*RangesStream.get(), DebugAddressRangesVector{});
+  Kind = RangesWriterKind::DebugRangesWriter;
 }
 
 uint64_t DebugRangesSectionWriter::addRanges(
@@ -153,6 +156,94 @@ DebugRangesSectionWriter::addRanges(const DebugAddressRangesVector &Ranges) {
 uint64_t DebugRangesSectionWriter::getSectionOffset() {
   std::lock_guard<std::mutex> Lock(WriterMutex);
   return SectionOffset;
+}
+
+DebugAddrWriter *DebugRangeListsSectionWriter::AddrWriter = nullptr;
+
+uint64_t DebugRangeListsSectionWriter::addRanges(
+    DebugAddressRangesVector &&Ranges,
+    std::map<DebugAddressRangesVector, uint64_t> &CachedRanges) {
+  return addRanges(Ranges);
+}
+
+struct LocListsRangelistsHeader {
+  UnitLengthType UnitLength; // Size of loclist entris section, not including
+                             // size of header.
+  VersionType Version;
+  AddressSizeType AddressSize;
+  SegmentSelectorType SegmentSelector;
+  OffsetEntryCountType OffsetEntryCount;
+};
+
+static std::unique_ptr<DebugBufferVector>
+getDWARF5Header(const LocListsRangelistsHeader &Header) {
+  std::unique_ptr<DebugBufferVector> HeaderBuffer =
+      std::make_unique<DebugBufferVector>();
+  std::unique_ptr<raw_svector_ostream> HeaderStream =
+      std::make_unique<raw_svector_ostream>(*HeaderBuffer);
+
+  // 7.29 length of the set of entries for this compilation unit, not including
+  // the length field itself
+  const uint32_t HeaderSize =
+      getDWARF5RngListLocListHeaderSize() - sizeof(UnitLengthType);
+
+  support::endian::write(*HeaderStream, Header.UnitLength + HeaderSize,
+                         support::little);
+  support::endian::write(*HeaderStream, Header.Version, support::little);
+  support::endian::write(*HeaderStream, Header.AddressSize, support::little);
+  support::endian::write(*HeaderStream, Header.SegmentSelector,
+                         support::little);
+  support::endian::write(*HeaderStream, Header.OffsetEntryCount,
+                         support::little);
+  return HeaderBuffer;
+}
+
+uint64_t DebugRangeListsSectionWriter::addRanges(
+    const DebugAddressRangesVector &Ranges) {
+  std::lock_guard<std::mutex> Lock(WriterMutex);
+
+  RangeEntries.push_back(CurrentOffset);
+  for (const DebugAddressRange &Range : Ranges) {
+    support::endian::write(*CUBodyStream,
+                           static_cast<uint8_t>(dwarf::DW_RLE_startx_length),
+                           support::little);
+    const uint32_t Index = AddrWriter->getIndexFromAddress(Range.LowPC, CUID);
+    encodeULEB128(Index, *CUBodyStream);
+    encodeULEB128(Range.HighPC - Range.LowPC, *CUBodyStream);
+  }
+  support::endian::write(*CUBodyStream,
+                         static_cast<uint8_t>(dwarf::DW_RLE_end_of_list),
+                         support::little);
+  CurrentOffset = CUBodyBuffer->size();
+  return RangeEntries.size() - 1;
+}
+
+void DebugRangeListsSectionWriter::finalizeSection() {
+  std::unique_ptr<DebugBufferVector> CUArrayBuffer =
+      std::make_unique<DebugBufferVector>();
+  std::unique_ptr<raw_svector_ostream> CUArrayStream =
+      std::make_unique<raw_svector_ostream>(*CUArrayBuffer);
+  constexpr uint32_t SizeOfArrayEntry = 4;
+  const uint32_t SizeOfArraySection = RangeEntries.size() * SizeOfArrayEntry;
+  for (uint32_t Offset : RangeEntries)
+    support::endian::write(*CUArrayStream, Offset + SizeOfArraySection,
+                           support::little);
+
+  std::unique_ptr<DebugBufferVector> Header = getDWARF5Header(
+      {static_cast<uint32_t>(SizeOfArraySection + CUBodyBuffer.get()->size()),
+       5, 8, 0, static_cast<uint32_t>(RangeEntries.size())});
+  *RangesStream << *Header;
+  *RangesStream << *CUArrayBuffer;
+  *RangesStream << *CUBodyBuffer;
+  SectionOffset = RangesBuffer->size();
+}
+
+void DebugRangeListsSectionWriter::initSection(uint64_t CUId_) {
+  CUBodyBuffer = std::make_unique<DebugBufferVector>();
+  CUBodyStream = std::make_unique<raw_svector_ostream>(*CUBodyBuffer);
+  RangeEntries.clear();
+  CurrentOffset = 0;
+  CUID = CUId_;
 }
 
 void DebugARangesSectionWriter::addCURanges(uint64_t CUOffset,
@@ -220,13 +311,12 @@ void DebugAddrWriter::AddressForDWOCU::dump() {
   for (auto &Pair : SortedMap)
     dbgs() << Twine::utohexstr(Pair.second) << "\t" << Pair.first << "\n";
 }
-uint32_t DebugAddrWriter::getIndexFromAddress(uint64_t Address,
-                                              uint64_t DWOId) {
+uint32_t DebugAddrWriter::getIndexFromAddress(uint64_t Address, uint64_t CUID) {
   std::lock_guard<std::mutex> Lock(WriterMutex);
-  if (!AddressMaps.count(DWOId))
-    AddressMaps[DWOId] = AddressForDWOCU();
+  if (!AddressMaps.count(CUID))
+    AddressMaps[CUID] = AddressForDWOCU();
 
-  AddressForDWOCU &Map = AddressMaps[DWOId];
+  AddressForDWOCU &Map = AddressMaps[CUID];
   auto Entry = Map.find(Address);
   if (Entry == Map.end()) {
     auto Index = Map.getNextIndex();
@@ -240,9 +330,9 @@ uint32_t DebugAddrWriter::getIndexFromAddress(uint64_t Address,
 // IndexToAddrss. Case3) Address is in the map but Index is lower. Need to
 // update AddressToIndex and IndexToAddress
 void DebugAddrWriter::addIndexAddress(uint64_t Address, uint32_t Index,
-                                      uint64_t DWOId) {
+                                      uint64_t CUID) {
   std::lock_guard<std::mutex> Lock(WriterMutex);
-  AddressForDWOCU &Map = AddressMaps[DWOId];
+  AddressForDWOCU &Map = AddressMaps[CUID];
   auto Entry = Map.find(Address);
   if (Entry != Map.end()) {
     if (Entry->second > Index)
@@ -265,6 +355,7 @@ AddressSectionBuffer DebugAddrWriter::finalize() {
     if (!DWOId)
       continue;
     auto AM = AddressMaps.find(*DWOId);
+    assert(AM != AddressMaps.end() && "Address Map not found.");
     // Adding to map even if it did not contribute to .debug_addr.
     // The Skeleton CU will still have DW_AT_GNU_addr_base.
     DWOIdToOffsetMap[*DWOId] = Buffer.size();
@@ -306,9 +397,97 @@ AddressSectionBuffer DebugAddrWriter::finalize() {
 
   return Buffer;
 }
+AddressSectionBuffer DebugAddrWriterDwarf5::finalize() {
+  // Need to layout all sections within .debug_addr
+  // Within each section sort Address by index.
+  AddressSectionBuffer Buffer;
+  raw_svector_ostream AddressStream(Buffer);
+  const endianness Endian =
+      BC->DwCtx->isLittleEndian() ? support::little : support::big;
+  const DWARFSection &AddrSec = BC->DwCtx->getDWARFObj().getAddrSection();
+  DWARFDataExtractor AddrData(BC->DwCtx->getDWARFObj(), AddrSec, Endian, 0);
+  DWARFDebugAddrTable AddrTable;
+  DIDumpOptions DumpOpts;
+  constexpr uint32_t HeaderSize = 8;
+  for (std::unique_ptr<DWARFUnit> &CU : BC->DwCtx->compile_units()) {
+    const uint64_t CUID = CU->getOffset();
+    const uint8_t AddrSize = CU->getAddressByteSize();
+    auto Iter = AddressMaps.find(CUID);
+    // A case where CU has entry in .debug_addr, but we don't modify addresses
+    // for it.
+    if (Iter == AddressMaps.end()) {
+      Iter = AddressMaps.insert({CUID, AddressForDWOCU()}).first;
+      Optional<uint64_t> BaseOffset = CU->getAddrOffsetSectionBase();
+      if (!BaseOffset)
+        continue;
+      // Address base offset is to the first entry.
+      // The size of header is 8 bytes.
+      uint64_t Offset = *BaseOffset - HeaderSize;
+      if (Error Err = AddrTable.extract(AddrData, &Offset, 5, AddrSize,
+                                        DumpOpts.WarningHandler)) {
+        DumpOpts.RecoverableErrorHandler(std::move(Err));
+        continue;
+      }
+      uint32_t Index = 0;
+      for (uint64_t Addr : AddrTable.getAddressEntries())
+        Iter->second.insert(Addr, Index++);
+    }
 
-uint64_t DebugAddrWriter::getOffset(uint64_t DWOId) {
-  auto Iter = DWOIdToOffsetMap.find(DWOId);
+    DWOIdToOffsetMap[CUID] = Buffer.size() + HeaderSize;
+
+    std::vector<IndexAddressPair> SortedMap(Iter->second.indexToAddressBegin(),
+                                            Iter->second.indexToAdddessEnd());
+    // Sorting address in increasing order of indices.
+    std::sort(SortedMap.begin(), SortedMap.end(),
+              [](const IndexAddressPair &A, const IndexAddressPair &B) {
+                return A.first < B.first;
+              });
+    // Writing out Header
+    const uint32_t Length = SortedMap.size() * AddrSize + 4;
+    support::endian::write(AddressStream, Length, Endian);
+    support::endian::write(AddressStream, static_cast<uint16_t>(5), Endian);
+    support::endian::write(AddressStream, static_cast<uint8_t>(AddrSize),
+                           Endian);
+    support::endian::write(AddressStream, static_cast<uint8_t>(0), Endian);
+
+    uint32_t Counter = 0;
+    auto writeAddress = [&](uint64_t Address) -> void {
+      ++Counter;
+      switch (AddrSize) {
+      default:
+        llvm_unreachable("Address Size is invalid.");
+        break;
+      case 4:
+        support::endian::write(AddressStream, static_cast<uint32_t>(Address),
+                               Endian);
+        break;
+      case 8:
+        support::endian::write(AddressStream, Address, Endian);
+        break;
+      }
+    };
+
+    for (const IndexAddressPair &Val : SortedMap) {
+      while (Val.first > Counter)
+        writeAddress(0);
+      writeAddress(Val.second);
+    }
+  }
+
+  return Buffer;
+}
+
+uint64_t DebugAddrWriter::getOffset(DWARFUnit &Unit) {
+  Optional<uint64_t> DWOId = Unit.getDWOId();
+  assert(DWOId && "Can't get offset, not a skeleton CU.");
+  auto Iter = DWOIdToOffsetMap.find(*DWOId);
+  assert(Iter != DWOIdToOffsetMap.end() &&
+         "Offset in to.debug_addr was not found for DWO ID.");
+  return Iter->second;
+}
+
+uint64_t DebugAddrWriterDwarf5::getOffset(DWARFUnit &Unit) {
+  auto Iter = DWOIdToOffsetMap.find(Unit.getOffset());
   assert(Iter != DWOIdToOffsetMap.end() &&
          "Offset in to.debug_addr was not found for DWO ID.");
   return Iter->second;
@@ -319,7 +498,7 @@ DebugLocWriter::DebugLocWriter(BinaryContext *BC) {
   LocStream = std::make_unique<raw_svector_ostream>(*LocBuffer);
 }
 
-void DebugLocWriter::addList(uint64_t AttrOffset,
+void DebugLocWriter::addList(uint64_t AttrOffset, uint32_t LocListIndex,
                              DebugLocationsVector &&LocList) {
   if (LocList.empty()) {
     EmptyAttrLists.push_back(AttrOffset);
@@ -345,9 +524,9 @@ void DebugLocWriter::addList(uint64_t AttrOffset,
   LocListDebugInfoPatches.push_back({AttrOffset, EntryOffset});
 }
 
-void DebugLoclistWriter::addList(uint64_t AttrOffset,
+void DebugLoclistWriter::addList(uint64_t AttrOffset, uint32_t LocListIndex,
                                  DebugLocationsVector &&LocList) {
-  Patches.push_back({AttrOffset, std::move(LocList)});
+  Patches.push_back({AttrOffset, LocListIndex, std::move(LocList)});
 }
 
 std::unique_ptr<DebugBufferVector> DebugLocWriter::getBuffer() {
@@ -368,8 +547,95 @@ void DebugLocWriter::finalize(uint64_t SectionOffset,
                                   DebugLocWriter::EmptyListOffset);
 }
 
-void DebugLoclistWriter::finalize(uint64_t SectionOffset,
-                                  SimpleBinaryPatcher &DebugInfoPatcher) {
+static void writeEmptyListDwarf5(raw_svector_ostream &Stream) {
+  support::endian::write(Stream, static_cast<uint32_t>(4), support::little);
+  support::endian::write(Stream, static_cast<uint8_t>(dwarf::DW_LLE_start_end),
+                         support::little);
+
+  const char Zeroes[16] = {0};
+  Stream << StringRef(Zeroes, 16);
+  encodeULEB128(0, Stream);
+  support::endian::write(
+      Stream, static_cast<uint8_t>(dwarf::DW_LLE_end_of_list), support::little);
+}
+
+void DebugLoclistWriter::finalizeDWARF5(uint64_t SectionOffset,
+                                        SimpleBinaryPatcher &DebugInfoPatcher) {
+
+  std::unique_ptr<DebugBufferVector> LocArrayBuffer =
+      std::make_unique<DebugBufferVector>();
+  std::unique_ptr<raw_svector_ostream> LocArrayStream =
+      std::make_unique<raw_svector_ostream>(*LocArrayBuffer);
+  std::unique_ptr<DebugBufferVector> LocBodyBuffer =
+      std::make_unique<DebugBufferVector>();
+  std::unique_ptr<raw_svector_ostream> LocBodyStream =
+      std::make_unique<raw_svector_ostream>(*LocBodyBuffer);
+
+  const uint32_t SizeOfArraySection = Patches.size() * sizeof(uint32_t);
+  std::sort(Patches.begin(), Patches.end(),
+            [](const LocPatch &P1, const LocPatch &P2) -> bool {
+              return P1.Index < P2.Index;
+            });
+
+  if (LocListsBaseAttrOffset != InvalidLocListsBaseAttrOffset)
+    DebugInfoPatcher.addLE32Patch(LocListsBaseAttrOffset,
+                                  SectionOffset +
+                                      getDWARF5RngListLocListHeaderSize());
+
+  uint32_t Index{0};
+  for (LocPatch &Patch : Patches) {
+    const uint32_t EntryOffset = LocBodyBuffer->size();
+    if (Patch.LocList.empty()) {
+      if (Patch.Index == DebugLoclistWriter::InvalidIndex)
+        DebugInfoPatcher.addLE32Patch(Patch.AttrOffset, EntryOffset);
+
+      writeEmptyListDwarf5(*LocBodyStream);
+      continue;
+    }
+
+    assert(Patch.Index == DebugLoclistWriter::InvalidIndex ||
+           Patch.Index == Index++ && "Gap in LocList Index Array.");
+
+    std::vector<uint64_t> OffsetsArray;
+    for (const DebugLocationEntry &Entry : Patch.LocList) {
+      support::endian::write(*LocBodyStream,
+                             static_cast<uint8_t>(dwarf::DW_LLE_startx_length),
+                             support::little);
+      const uint32_t Index = AddrWriter->getIndexFromAddress(Entry.LowPC, CUID);
+      encodeULEB128(Index, *LocBodyStream);
+      encodeULEB128(Entry.HighPC - Entry.LowPC, *LocBodyStream);
+      encodeULEB128(Entry.Expr.size(), *LocBodyStream);
+      *LocBodyStream << StringRef(
+          reinterpret_cast<const char *>(Entry.Expr.data()), Entry.Expr.size());
+    }
+    support::endian::write(*LocBodyStream,
+                           static_cast<uint8_t>(dwarf::DW_LLE_end_of_list),
+                           support::little);
+
+    // Write out IndexArray
+    support::endian::write(
+        *LocArrayStream,
+        static_cast<uint32_t>(SizeOfArraySection + EntryOffset),
+        support::little);
+    // Don't need to patch Index since we are re-using them.
+    if (Patch.Index == DebugLoclistWriter::InvalidIndex)
+      DebugInfoPatcher.addLE32Patch(Patch.AttrOffset, EntryOffset);
+    clearList(Patch.LocList);
+  }
+  if (!Patches.empty()) {
+    std::unique_ptr<DebugBufferVector> Header =
+        getDWARF5Header({static_cast<uint32_t>(SizeOfArraySection +
+                                               LocBodyBuffer.get()->size()),
+                         5, 8, 0, static_cast<uint32_t>(Patches.size())});
+    *LocStream << *Header;
+    *LocStream << *LocArrayBuffer;
+    *LocStream << *LocBodyBuffer;
+  }
+  clearList(Patches);
+}
+
+void DebugLoclistWriter::finalizeDWARFLegacy(
+    uint64_t SectionOffset, SimpleBinaryPatcher &DebugInfoPatcher) {
   for (LocPatch &Patch : Patches) {
     if (Patch.LocList.empty()) {
       DebugInfoPatcher.addLE32Patch(Patch.AttrOffset,
@@ -381,7 +647,7 @@ void DebugLoclistWriter::finalize(uint64_t SectionOffset,
       support::endian::write(*LocStream,
                              static_cast<uint8_t>(dwarf::DW_LLE_startx_length),
                              support::little);
-      uint32_t Index = AddrWriter->getIndexFromAddress(Entry.LowPC, DWOId);
+      const uint32_t Index = AddrWriter->getIndexFromAddress(Entry.LowPC, CUID);
       encodeULEB128(Index, *LocStream);
 
       // TODO: Support DWARF5
@@ -401,6 +667,14 @@ void DebugLoclistWriter::finalize(uint64_t SectionOffset,
     clearList(Patch.LocList);
   }
   clearList(Patches);
+}
+
+void DebugLoclistWriter::finalize(uint64_t SectionOffset,
+                                  SimpleBinaryPatcher &DebugInfoPatcher) {
+  if (DwarfVersion < 5)
+    finalizeDWARFLegacy(SectionOffset, DebugInfoPatcher);
+  else
+    finalizeDWARF5(SectionOffset, DebugInfoPatcher);
 }
 
 DebugAddrWriter *DebugLoclistWriter::AddrWriter = nullptr;
@@ -1154,7 +1428,7 @@ static inline void emitDwarfLineTable(
       MCOS->emitULEB128IntValue(Column);
     }
     if (Discriminator != LineEntry.getDiscriminator() &&
-        MCOS->getContext().getDwarfVersion() >= 4) {
+        MCOS->getContext().getDwarfVersion() >= 2) {
       Discriminator = LineEntry.getDiscriminator();
       unsigned Size = getULEB128Size(Discriminator);
       MCOS->emitInt8(dwarf::DW_LNS_extended_op);
@@ -1228,6 +1502,31 @@ void DwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   MCOS->emitLabel(LineEndSym);
 }
 
+// Helper function to parse .debug_line_str, and populate one we are using.
+// For functions that we do not modify we output them as raw data.
+// Re-constructing .debug_line_str so that offsets are correct for those
+// debut line tables.
+// Bonus is that when we output a final binary we can re-use .debug_line_str
+// section. So we don't have to do the SHF_ALLOC trick we did with
+// .debug_line.
+static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,
+                                         MCDwarfLineStr &LineStr,
+                                         BinaryContext &BC,
+                                         MCStreamer &Streamer) {
+  DataExtractor StrData(LineStrSection.getContents(),
+                        BC.DwCtx->isLittleEndian(), 0);
+  uint64_t Offset = 0;
+  while (StrData.isValidOffset(Offset)) {
+    Error Err = Error::success();
+    const char *CStr = StrData.getCStr(&Offset, &Err);
+    if (Err) {
+      errs() << "BOLT-ERROR: could not extract string from .debug_line_str";
+      continue;
+    }
+    LineStr.emitRef(&Streamer, CStr);
+  }
+}
+
 void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
   MCAssembler &Assembler =
       static_cast<MCObjectStreamer *>(&Streamer)->getAssembler();
@@ -1240,18 +1539,38 @@ void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
   // in doing so create an unnecessary (if empty) section.
   if (LineTables.empty())
     return;
-
   // In a v5 non-split line table, put the strings in a separate section.
   Optional<MCDwarfLineStr> LineStr(None);
-  if (BC.Ctx->getDwarfVersion() >= 5)
+  ErrorOr<BinarySection &> LineStrSection =
+      BC.getUniqueSectionByName(".debug_line_str");
+  // Some versions of GCC output DWARF5 .debug_info, but DWARF4 or lower
+  // .debug_line
+  if (LineStrSection) {
     LineStr = MCDwarfLineStr(*BC.Ctx);
+    parseAndPopulateDebugLineStr(*LineStrSection, *LineStr, BC, Streamer);
+  }
 
   // Switch to the section where the table will be emitted into.
   Streamer.SwitchSection(BC.MOFI->getDwarfLineSection());
 
+  const uint16_t DwarfVersion = BC.Ctx->getDwarfVersion();
   // Handle the rest of the Compile Units.
   for (auto &CUIDTablePair : LineTables) {
+    Streamer.getContext().setDwarfVersion(
+        CUIDTablePair.second.getDwarfVersion());
     CUIDTablePair.second.emitCU(&Streamer, Params, LineStr, BC);
+  }
+
+  // Resetting DWARF version for rest of the flow.
+  BC.Ctx->setDwarfVersion(DwarfVersion);
+
+  // Still need to write the section out for the ExecutionEngine, and temp in
+  // memory object we are constructing.
+  if (LineStr) {
+    LineStr->emitSection(&Streamer);
+    SmallString<0> Data = LineStr->getFinalizedData();
+    BC.registerOrUpdateNoteSection(".debug_line_str", copyByteArray(Data.str()),
+                                   Data.size());
   }
 }
 
