@@ -2511,12 +2511,6 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
     // zero so we can copy the metadata over as is.
     NewGlobal->copyMetadata(G, 0);
 
-    LLVMContext &C = NewGlobal->getContext();
-    MDBuilder MDB{C};
-    MDTuple *MDN = MDNode::get(C, MDB.createConstant(ConstantInt::get(
-                                      Type::getInt64Ty(C), SizeInBytes)));
-    NewGlobal->setMetadata("explicit_size", MDN);
-
     Value *Indices2[2];
     Indices2[0] = IRB.getInt32(0);
     Indices2[1] = IRB.getInt32(0);

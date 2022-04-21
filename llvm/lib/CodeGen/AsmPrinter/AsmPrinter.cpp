@@ -858,17 +858,10 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 
-  if (MAI->hasDotTypeDotSizeDirective()) {
-    if (const MDNode *ExplicitValue = GV->getMetadata("explicit_size")) {
-      const auto *MetadataValue =
-          cast<ValueAsMetadata>(ExplicitValue->getOperand(0));
-      const auto *CI = cast<ConstantInt>(MetadataValue->getValue());
-      Size = CI->getZExtValue();
-    }
+  if (MAI->hasDotTypeDotSizeDirective())
     // .size foo, 42
     OutStreamer->emitELFSize(EmittedInitSym,
                              MCConstantExpr::create(Size, OutContext));
-  }
 
   OutStreamer->AddBlankLine();
 }
