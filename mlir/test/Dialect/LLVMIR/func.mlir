@@ -1,5 +1,6 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | mlir-opt | FileCheck %s
 // RUN: mlir-opt -split-input-file -verify-diagnostics -mlir-print-op-generic %s | FileCheck %s --check-prefix=GENERIC
+// RUN: mlir-opt -split-input-file -verify-diagnostics %s -mlir-print-debuginfo | mlir-opt -mlir-print-debuginfo | FileCheck %s --check-prefix=LOCINFO
 
 module {
   // GENERIC: "llvm.func"
@@ -93,7 +94,8 @@ module {
   }
 
   // CHECK: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret})
-  llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret}) {
+  // LOCINFO: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret} loc("some_source_loc"))
+  llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret} loc("some_source_loc")) {
     llvm.return
   }
 
