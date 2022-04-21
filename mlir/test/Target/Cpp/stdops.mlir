@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s -check-prefix=CPP-DEFAULT
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
-func @std_constant() {
+func.func @std_constant() {
   %c0 = arith.constant 0 : i32
   %c1 = arith.constant 2 : index
   %c2 = arith.constant 2.0 : f32
@@ -32,7 +32,7 @@ func @std_constant() {
 // CPP-DECLTOP-NEXT: [[V4]] = {0, 1};
 // CPP-DECLTOP-NEXT: [[V5]] = {(float)0.0e+00, (float)1.000000000e+00, (float)2.000000000e+00, (float)3.000000000e+00};
 
-func @std_call() {
+func.func @std_call() {
   %0 = call @one_result () : () -> i32
   %1 = call @one_result () : () -> i32
   return
@@ -48,7 +48,7 @@ func @std_call() {
 // CPP-DECLTOP-NEXT: [[V1]] = one_result();
 
 
-func @std_call_two_results() {
+func.func @std_call_two_results() {
   %c = arith.constant 0 : i8
   %0:2 = call @two_results () : () -> (i32, f32)
   %1:2 = call @two_results () : () -> (i32, f32)
@@ -74,7 +74,7 @@ func @std_call_two_results() {
 // CPP-DECLTOP-NEXT: std::tie([[V3]], [[V4]]) = two_results();
 
 
-func @one_result() -> i32 {
+func.func @one_result() -> i32 {
   %0 = arith.constant 0 : i32
   return %0 : i32
 }
@@ -88,7 +88,7 @@ func @one_result() -> i32 {
 // CPP-DECLTOP-NEXT: return [[V0]];
 
 
-func @two_results() -> (i32, f32) {
+func.func @two_results() -> (i32, f32) {
   %0 = arith.constant 0 : i32
   %1 = arith.constant 1.0 : f32
   return %0, %1 : i32, f32
@@ -106,7 +106,7 @@ func @two_results() -> (i32, f32) {
 // CPP-DECLTOP: return std::make_tuple([[V0]], [[V1]]);
 
 
-func @single_return_statement(%arg0 : i32) -> i32 {
+func.func @single_return_statement(%arg0 : i32) -> i32 {
   return %arg0 : i32
 }
 // CPP-DEFAULT: int32_t single_return_statement(int32_t [[V0:[^ ]*]]) {
