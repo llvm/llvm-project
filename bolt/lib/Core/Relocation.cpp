@@ -74,7 +74,9 @@ bool isSupportedAArch64(uint64_t Type) {
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:
   case ELF::R_AARCH64_TLSDESC_CALL:
   case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+  case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
+  case ELF::R_AARCH64_PREL64:
   case ELF::R_AARCH64_ABS16:
   case ELF::R_AARCH64_ABS32:
   case ELF::R_AARCH64_ABS64:
@@ -121,6 +123,7 @@ size_t getSizeForTypeAArch64(uint64_t Type) {
     errs() << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type) << '\n';
     llvm_unreachable("unsupported relocation type");
   case ELF::R_AARCH64_ABS16:
+  case ELF::R_AARCH64_PREL16:
     return 2;
   case ELF::R_AARCH64_CALL26:
   case ELF::R_AARCH64_JUMP26:
@@ -157,6 +160,7 @@ size_t getSizeForTypeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_ABS32:
     return 4;
   case ELF::R_AARCH64_ABS64:
+  case ELF::R_AARCH64_PREL64:
     return 8;
   }
 }
@@ -258,7 +262,9 @@ uint64_t adjustValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
     llvm_unreachable("not supported relocation");
   case ELF::R_AARCH64_ABS32:
     break;
+  case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
+  case ELF::R_AARCH64_PREL64:
     Value -= PC;
     break;
   }
@@ -282,8 +288,12 @@ uint64_t extractValueAArch64(uint64_t Type, uint64_t Contents, uint64_t PC) {
   case ELF::R_AARCH64_ABS32:
   case ELF::R_AARCH64_ABS64:
     return Contents;
+  case ELF::R_AARCH64_PREL16:
+    return static_cast<int64_t>(PC) + SignExtend64<16>(Contents & 0xffff);
   case ELF::R_AARCH64_PREL32:
     return static_cast<int64_t>(PC) + SignExtend64<32>(Contents & 0xffffffff);
+  case ELF::R_AARCH64_PREL64:
+    return static_cast<int64_t>(PC) + Contents;
   case ELF::R_AARCH64_TLSDESC_CALL:
   case ELF::R_AARCH64_JUMP26:
   case ELF::R_AARCH64_CALL26:
@@ -505,7 +515,9 @@ bool isPCRelativeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
   case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
+  case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
+  case ELF::R_AARCH64_PREL64:
     return true;
   }
 }
