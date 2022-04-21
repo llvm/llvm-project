@@ -452,12 +452,6 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       return false;
     }
 
-    if (OldOpndValue->getParent()->getParent() != MovMI.getParent()) {
-      LLVM_DEBUG(dbgs() <<
-        "  failed: old reg def and mov should be in the same BB\n");
-      return false;
-    }
-
     if (OldOpndValue->getImm() == 0) {
       if (MaskAllLanes) {
         assert(!BoundCtrlZero); // by check [1]
