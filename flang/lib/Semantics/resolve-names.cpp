@@ -6962,16 +6962,18 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
       info.Resolve(existing);
       return;
     }
-    if (ultimate.has<SubprogramDetails>() ||
-        ultimate.has<SubprogramNameDetails>()) {
-      genericDetails.set_specific(ultimate);
-    } else if (ultimate.has<DerivedTypeDetails>()) {
-      genericDetails.set_derivedType(ultimate);
-    } else {
-      SayAlreadyDeclared(symbolName, *existing);
-      return;
+    if (&existing->owner() == &currScope()) {
+      if (ultimate.has<SubprogramDetails>() ||
+          ultimate.has<SubprogramNameDetails>()) {
+        genericDetails.set_specific(ultimate);
+      } else if (ultimate.has<DerivedTypeDetails>()) {
+        genericDetails.set_derivedType(ultimate);
+      } else {
+        SayAlreadyDeclared(symbolName, *existing);
+        return;
+      }
+      EraseSymbol(*existing);
     }
-    EraseSymbol(*existing);
   }
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
 }
