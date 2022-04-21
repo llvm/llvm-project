@@ -746,17 +746,17 @@ define <4 x i8> @buildvec_not_vid_v4i8_2() {
   ret <4 x i8> <i8 3, i8 3, i8 1, i8 0>
 }
 
-; FIXME: This is not a valid way to emit this vid sequence: shift-right for
-; division only works for non-negative numbers!
+; We match this as a VID sequence (-3 / 8) + 5 but choose not to introduce
+; division to compute it.
 define <16 x i8> @buildvec_not_vid_v16i8() {
 ; CHECK-LABEL: buildvec_not_vid_v16i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 3
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    li a0, -3
-; CHECK-NEXT:    vmul.vx v8, v8, a0
-; CHECK-NEXT:    vsrl.vi v8, v8, 3
-; CHECK-NEXT:    vadd.vi v8, v8, 5
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 7, e8, m1, tu, mu
+; CHECK-NEXT:    vslideup.vi v8, v9, 6
 ; CHECK-NEXT:    ret
   ret <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 3, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 0>
 }
