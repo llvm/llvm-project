@@ -3,7 +3,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @entry() {
+func.func @entry() {
   %f1 = arith.constant 1.0: f32
   %f2 = arith.constant 2.0: f32
   %f3 = arith.constant 3.0: f32

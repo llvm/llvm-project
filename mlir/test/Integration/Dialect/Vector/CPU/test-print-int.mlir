@@ -6,7 +6,7 @@
 //
 // Test various signless, signed, unsigned integer types.
 //
-func @entry() {
+func.func @entry() {
   %0 = arith.constant dense<[true, false, -1, 0, 1]> : vector<5xi1>
   vector.print %0 : vector<5xi1>
   // CHECK: ( 1, 0, 1, 0, 1 )

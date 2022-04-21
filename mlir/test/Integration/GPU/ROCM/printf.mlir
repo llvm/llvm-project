@@ -18,7 +18,7 @@ module attributes {gpu.container_module} {
         }
     }
 
-    func @main() {
+    func.func @main() {
         %c2 = arith.constant 2 : index
         %c1 = arith.constant 1 : index
         gpu.launch_func @kernels::@hello

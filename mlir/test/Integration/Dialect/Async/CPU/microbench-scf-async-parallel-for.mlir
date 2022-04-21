@@ -56,7 +56,7 @@
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 
-func @scf_parallel(%lhs: memref<?x?xf32>,
+func.func @scf_parallel(%lhs: memref<?x?xf32>,
                    %rhs: memref<?x?xf32>,
                    %sum: memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
@@ -75,7 +75,7 @@ func @scf_parallel(%lhs: memref<?x?xf32>,
   return
 }
 
-func @entry() {
+func.func @entry() {
   %f1 = arith.constant 1.0 : f32
   %f4 = arith.constant 4.0 : f32
   %c0 = arith.constant 0 : index
@@ -150,7 +150,7 @@ func @entry() {
   return
 }
 
-func private @rtclock() -> f64
+func.func private @rtclock() -> f64
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @print_memref_f32(memref<*xf32>)
   attributes { llvm.emit_c_interface }
