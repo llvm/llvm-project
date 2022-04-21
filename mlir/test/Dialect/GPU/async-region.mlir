@@ -66,7 +66,7 @@ module attributes {gpu.container_module} {
       gpu.launch_func @kernels::@kernel
           blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
       // CHECK: gpu.wait [%[[t]]]
-      call @foo() : () -> ()
+      func.call @foo() : () -> ()
       async.yield
     }
 

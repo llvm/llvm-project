@@ -311,8 +311,8 @@ func.func @nested_uses_inside(%lb: index, %ub: index, %step: index) {
   // CHECK-NEXT:   else
   // CHECK-NEXT:     scf.yield
   scf.for %i = %lb to %ub step %step {
-    %val = call @make_val() : () -> (index)
-    %val2 = call @make_val() : () -> (index)
+    %val = func.call @make_val() : () -> (index)
+    %val2 = func.call @make_val() : () -> (index)
     %r = scf.if %true -> (index) {
       scf.yield %val: index
     } else {

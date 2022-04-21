@@ -35,13 +35,13 @@ func.func @main() {
     // CHECK: Current thread id: [[THREAD0:.*]]
     // CHECK: [1, 2, 0, 0]
     memref.store %c2, %A[%i1]: memref<4xf32>
-    call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-    call @print_memref_f32(%U): (memref<*xf32>) -> ()
+    func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
+    func.call @print_memref_f32(%U): (memref<*xf32>) -> ()
 
     // No op async region to create a token for testing async dependency.
     %noop = async.execute {
       // CHECK: Current thread id: [[THREAD1:.*]]
-      call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
+      func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
       async.yield
     }
 
@@ -49,8 +49,8 @@ func.func @main() {
       // CHECK: Current thread id: [[THREAD2:.*]]
       // CHECK: [1, 2, 3, 0]
       memref.store %c3, %A[%i2]: memref<4xf32>
-      call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-      call @print_memref_f32(%U): (memref<*xf32>) -> ()
+      func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
+      func.call @print_memref_f32(%U): (memref<*xf32>) -> ()
 
       async.yield
     }
@@ -59,8 +59,8 @@ func.func @main() {
     // CHECK: Current thread id: [[THREAD3:.*]]
     // CHECK: [1, 2, 3, 4]
     memref.store %c4, %A[%i3]: memref<4xf32>
-    call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-    call @print_memref_f32(%U): (memref<*xf32>) -> ()
+    func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
+    func.call @print_memref_f32(%U): (memref<*xf32>) -> ()
 
     async.yield
   }

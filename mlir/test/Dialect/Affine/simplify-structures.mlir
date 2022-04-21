@@ -12,7 +12,7 @@ func.func @test_gaussian_elimination_empty_set0() {
     affine.for %arg1 = 1 to 100 {
       // CHECK-NOT: affine.if
       affine.if affine_set<(d0, d1) : (2 == 0)>(%arg0, %arg1) {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       }
     }
   }
@@ -25,7 +25,7 @@ func.func @test_gaussian_elimination_empty_set1() {
     affine.for %arg1 = 1 to 100 {
       // CHECK-NOT: affine.if
       affine.if affine_set<(d0, d1) : (1 >= 0, -1 >= 0)> (%arg0, %arg1) {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       }
     }
   }
@@ -38,7 +38,7 @@ func.func @test_gaussian_elimination_non_empty_set2() {
     affine.for %arg1 = 1 to 100 {
       // CHECK: #[[$SET_2D]](%arg0, %arg1)
       affine.if affine_set<(d0, d1) : (d0 - 100 == 0, d1 - 10 == 0, -d0 + 100 >= 0, d1 >= 0, d1 + 101 >= 0)>(%arg0, %arg1) {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       }
     }
   }
@@ -53,7 +53,7 @@ func.func @test_gaussian_elimination_empty_set3() {
     affine.for %arg1 = 1 to 100 {
       // CHECK-NOT: affine.if
       affine.if affine_set<(d0, d1)[s0, s1] : (d0 - s0 == 0, d0 + s0 == 0, s0 - 1 == 0)>(%arg0, %arg1)[%c7, %c11] {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       }
     }
   }
@@ -74,7 +74,7 @@ func.func @test_gaussian_elimination_non_empty_set4() {
     affine.for %arg1 = 1 to 100 {
       // CHECK: #[[$SET_7_11]](%arg0, %arg1)
       affine.if #set_2d_non_empty(%arg0, %arg1)[%c7, %c11] {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       }
     }
   }
@@ -96,7 +96,7 @@ func.func @test_gaussian_elimination_empty_set5() {
     affine.for %arg1 = 1 to 100 {
       // CHECK-NOT: affine.if
       affine.if #set_2d_empty(%arg0, %arg1)[%c7, %c11] {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       }
     }
   }
@@ -150,7 +150,7 @@ func.func @test_fuzz_explosion(%arg0 : index, %arg1 : index, %arg2 : index, %arg
   affine.for %arg4 = 1 to 10 {
     affine.for %arg5 = 1 to 100 {
       affine.if #set_fuzz_virus(%arg4, %arg5, %arg0, %arg1, %arg2, %arg3) {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       }
     }
   }
@@ -243,15 +243,15 @@ func.func private @external() -> ()
 func.func @simplify_set(%a : index, %b : index) {
   // CHECK: affine.if #[[$SET]]
   affine.if affine_set<(d0, d1) : (d0 - d1 + d1 + d0 >= 0, 2 >= 0, d0 >= 0, -d0 + 50 >= 0, -d0 + 100 >= 0)>(%a, %b) {
-    call @external() : () -> ()
+    func.call @external() : () -> ()
   }
   // CHECK-NOT: affine.if
   affine.if affine_set<(d0, d1) : (d0 mod 2 - 1 == 0, d0 - 2 * (d0 floordiv 2) == 0)>(%a, %b) {
-    call @external() : () -> ()
+    func.call @external() : () -> ()
   }
   // CHECK-NOT: affine.if
   affine.if affine_set<(d0, d1) : (1 >= 0, 3 >= 0)>(%a, %b) {
-    call @external() : () -> ()
+    func.call @external() : () -> ()
   }
 	return
 }
@@ -334,9 +334,9 @@ func.func @test_always_true_if_elimination() {
   affine.for %arg0 = 1 to 10 {
     affine.for %arg1 = 1 to 100 {
       affine.if affine_set<(d0, d1) : (1 >= 0)> (%arg0, %arg1) {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       } else {
-        call @external1() : () -> ()
+        func.call @external1() : () -> ()
       }
     }
   }
@@ -358,9 +358,9 @@ func.func @test_always_false_if_elimination() {
       // CHECK: call @external1()
       // CHECK-NOT: affine.if
       affine.if affine_set<(d0, d1) : (-1 >= 0)> (%arg0, %arg1) {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       } else {
-        call @external1() : () -> ()
+        func.call @external1() : () -> ()
       }
     }
   }
@@ -376,9 +376,9 @@ func.func @test_dimensional_if_elimination() {
       // CHECK: affine.if
       // CHECK: } else {
       affine.if affine_set<(d0, d1) : (d0-1 == 0)> (%arg0, %arg1) {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       } else {
-        call @external() : () -> ()
+        func.call @external() : () -> ()
       }
     }
   }

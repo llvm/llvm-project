@@ -95,7 +95,7 @@ func.func @tensor.generate(%m : index, %n : index)
   %tnsr = tensor.generate %m, %n {
     ^bb0(%i : index, %j : index, %k : index):
       %elem = arith.constant 8.0 : f32
-      return %elem : f32
+      func.return %elem : f32
   } : tensor<?x3x?xf32>
   return %tnsr : tensor<?x3x?xf32>
 }

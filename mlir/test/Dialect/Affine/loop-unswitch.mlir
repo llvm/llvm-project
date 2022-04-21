@@ -12,7 +12,7 @@ func.func @if_else_imperfect(%A : memref<100xi32>, %B : memref<100xi32>, %v : i3
       affine.if affine_set<(d0) : (d0 - 2 >= 0)>(%i) {
         affine.store %v, %B[%j] : memref<100xi32>
       }
-      call @external() : () -> ()
+      func.call @external() : () -> ()
     }
     affine.store %v, %A[%i] : memref<100xi32>
   }
@@ -70,15 +70,15 @@ func.func @if_else_perfect(%A : memref<100xi32>, %v : i32) {
   affine.for %i = 0 to 99 {
     affine.for %j = 0 to 100 {
       affine.for %k = 0 to 100 {
-        call @foo() : () -> ()
+        func.call @foo() : () -> ()
         affine.if affine_set<(d0, d1) : (d0 - 2 >= 0, -d1 + 80 >= 0)>(%i, %j) {
           affine.store %v, %A[%i] : memref<100xi32>
-          call @abc() : () -> ()
+          func.call @abc() : () -> ()
         } else {
           affine.store %v, %A[%i + 1] : memref<100xi32>
-          call @xyz() : () -> ()
+          func.call @xyz() : () -> ()
         }
-        call @bar() : () -> ()
+        func.call @bar() : () -> ()
       }
     }
   }
@@ -134,7 +134,7 @@ func.func @hoist_after_canonicalize() {
       affine.if affine_set<(d0) : (d0 - 2 >= 0)>(%j)  {
         affine.if affine_set<(d0, d1) : (d0 - 1 >= 0, -d0 + 99 >= 0)>(%i, %j)  {
           // The call to external is to avoid DCE on affine.if.
-          call @foo() : () -> ()
+          func.call @foo() : () -> ()
         }
       }
     }
@@ -236,11 +236,11 @@ func.func @perfect_if_else(%arg0 : memref<?x?xf64>, %arg1 : memref<?x?xf64>, %v 
 // CHECK-LABEL: func @multiple_if
 func.func @multiple_if(%N : index) {
   affine.if affine_set<() : (0 == 0)>() {
-    call @external() : () -> ()
+    func.call @external() : () -> ()
   }
   affine.for %i = 0 to 100 {
     affine.if affine_set<()[s0] : (s0 >= 0)>()[%N] {
-      call @external() : () -> ()
+      func.call @external() : () -> ()
     }
   }
   return

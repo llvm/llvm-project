@@ -15,7 +15,7 @@ func.func @main() {
   %t_start = call @rtclock() : () -> f64
   affine.for %arg0 = 0 to 5 {
     linalg.fill ins(%cf1 : f32) outs(%C : memref<16x16xf32>)
-    call @sgemm_naive(%A, %B, %C) : (memref<16x16xf32>, memref<16x16xf32>, memref<16x16xf32>) -> ()
+    func.call @sgemm_naive(%A, %B, %C) : (memref<16x16xf32>, memref<16x16xf32>, memref<16x16xf32>) -> ()
   }
   %t_end = call @rtclock() : () -> f64
   %t = arith.subf %t_end, %t_start : f64

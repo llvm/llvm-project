@@ -72,7 +72,7 @@ func.func @main() {
   scf.for %arg0 = %c0 to %iters step %c1 {
     %z = arith.constant 0.0 : !elem_type_c
     linalg.fill ins(%z : !elem_type_c) outs(%C : !row_major_C)
-    call @matmul(%A, %B, %C) : (!row_major_A, !row_major_B, !row_major_C) -> ()
+    func.call @matmul(%A, %B, %C) : (!row_major_A, !row_major_B, !row_major_C) -> ()
   }
   %t_start_matmul = call @rtclock() : () -> f64
   scf.for %arg0 = %c0 to %iters step %c1 {
@@ -82,7 +82,7 @@ func.func @main() {
     // be easy.
     %z = arith.constant 0.0 : !elem_type_c
     linalg.fill ins(%z : !elem_type_c) outs(%C : !row_major_C)
-    call @matmul(%A, %B, %C) : (!row_major_A, !row_major_B, !row_major_C) -> ()
+    func.call @matmul(%A, %B, %C) : (!row_major_A, !row_major_B, !row_major_C) -> ()
   }
   %t_end_matmul = call @rtclock() : () -> f64
   %tmatmul = arith.subf %t_end_matmul, %t_start_matmul: f64

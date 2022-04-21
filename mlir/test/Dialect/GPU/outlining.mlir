@@ -239,8 +239,8 @@ func.func @function_call(%arg0 : memref<?xf32>) {
                                        %grid_z = %cst)
              threads(%tx, %ty, %tz) in (%block_x = %cst, %block_y = %cst,
                                         %block_z = %cst) {
-    call @device_function() : () -> ()
-    call @device_function() : () -> ()
+    func.call @device_function() : () -> ()
+    func.call @device_function() : () -> ()
     %0 = llvm.mlir.addressof @global : !llvm.ptr<i64>
     gpu.terminator
   }

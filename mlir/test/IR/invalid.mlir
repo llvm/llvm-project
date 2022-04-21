@@ -543,7 +543,7 @@ func.func @return_type_mismatch() -> i32 {
 func.func @return_inside_loop() {
   affine.for %i = 1 to 100 {
     // expected-error@+1 {{'func.return' op expects parent op 'func.func'}}
-    return
+    func.return
   }
   return
 }
@@ -681,7 +681,7 @@ func.func @calls(%arg0: i32) {
 }
 // -----
 // expected-error@+1 {{expected SSA operand}}
-func@n(){^b(
+func.func @n(){^b(
 // -----
 
 func.func @elementsattr_non_tensor_type() -> () {
