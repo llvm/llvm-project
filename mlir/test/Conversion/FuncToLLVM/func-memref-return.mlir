@@ -11,7 +11,7 @@
 // CHECK-SAME: -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-LABEL: func @check_static_return
 // BAREPTR-SAME: (%[[arg:.*]]: !llvm.ptr<f32>) -> !llvm.ptr<f32> {
-func @check_static_return(%static : memref<32x18xf32>) -> memref<32x18xf32> {
+func.func @check_static_return(%static : memref<32x18xf32>) -> memref<32x18xf32> {
 // CHECK:  llvm.return %{{.*}} : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 
 // BAREPTR: %[[udf:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
@@ -40,7 +40,7 @@ func @check_static_return(%static : memref<32x18xf32>) -> memref<32x18xf32> {
 // CHECK-SAME: -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-LABEL: func @check_static_return_with_offset
 // BAREPTR-SAME: (%[[arg:.*]]: !llvm.ptr<f32>) -> !llvm.ptr<f32> {
-func @check_static_return_with_offset(%static : memref<32x18xf32, offset:7, strides:[22,1]>) -> memref<32x18xf32, offset:7, strides:[22,1]> {
+func.func @check_static_return_with_offset(%static : memref<32x18xf32, offset:7, strides:[22,1]>) -> memref<32x18xf32, offset:7, strides:[22,1]> {
 // CHECK:  llvm.return %{{.*}} : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 
 // BAREPTR: %[[udf:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
@@ -64,11 +64,11 @@ func @check_static_return_with_offset(%static : memref<32x18xf32, offset:7, stri
 // -----
 
 // BAREPTR: llvm.func @foo(!llvm.ptr<i8>) -> !llvm.ptr<i8>
-func private @foo(memref<10xi8>) -> memref<20xi8>
+func.func private @foo(memref<10xi8>) -> memref<20xi8>
 
 // BAREPTR-LABEL: func @check_memref_func_call
 // BAREPTR-SAME:    %[[in:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
-func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
+func.func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
   // BAREPTR:         %[[inDesc:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 0]
   // BAREPTR-NEXT:    %[[barePtr:.*]] = llvm.extractvalue %[[inDesc]][1] : !llvm.struct<(ptr<i8>, ptr<i8>, i64, array<1 x i64>, array<1 x i64>)>
   // BAREPTR-NEXT:    %[[call:.*]] = llvm.call @foo(%[[barePtr]]) : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
@@ -91,7 +91,7 @@ func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
 
 // BAREPTR-LABEL: func @check_return(
 // BAREPTR-SAME: %{{.*}}: memref<?xi8>) -> memref<?xi8> 
-func @check_return(%in : memref<?xi8>) -> memref<?xi8> {
+func.func @check_return(%in : memref<?xi8>) -> memref<?xi8> {
   // BAREPTR: llvm.return {{.*}} : !llvm.struct<(ptr<i8>, ptr<i8>, i64, array<1 x i64>, array<1 x i64>)>
   return %in : memref<?xi8>
 }

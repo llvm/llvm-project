@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: func @while_test
 // CHECK-SAME: ([[ARG0:%.+]]: tensor<i32>)
-func @while_test(%arg0 : tensor<i32>) -> (tensor<i32>) {
+func.func @while_test(%arg0 : tensor<i32>) -> (tensor<i32>) {
   // CHECK: [[WHILE:%.+]] = scf.while ([[ARG1:%.+]] = [[ARG0]])
   %1 = "tosa.while_loop"(%arg0) ({
   ^bb0(%arg2: tensor<i32>):
@@ -34,7 +34,7 @@ func @while_test(%arg0 : tensor<i32>) -> (tensor<i32>) {
 
 // CHECK-LABEL: func @if_test
 // CHECK-SAME: ([[ARG0:%.+]]: tensor<f32>, [[ARG1:%.+]]: tensor<f32>, [[ARG2:%.+]]: tensor<i1>)
-func @if_test(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : tensor<i1>) -> (tensor<f32>) {
+func.func @if_test(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : tensor<i1>) -> (tensor<f32>) {
   // CHECK: [[EX:%.+]] = tensor.extract [[ARG2]]
   // CHECK: [[IF:%.+]] = scf.if [[EX]] -> (tensor<f32>) {
   %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({

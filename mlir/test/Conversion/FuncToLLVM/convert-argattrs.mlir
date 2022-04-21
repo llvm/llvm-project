@@ -3,7 +3,7 @@
 // CHECK-LABEL: func @check_attributes
 // When expanding the memref to multiple arguments, argument attributes are replicated.
 // CHECK-COUNT-7: {dialect.a = true, dialect.b = 4 : i64}
-func @check_attributes(%static: memref<10x20xf32> {dialect.a = true, dialect.b = 4 : i64 }) {
+func.func @check_attributes(%static: memref<10x20xf32> {dialect.a = true, dialect.b = 4 : i64 }) {
   return
 }
 
@@ -12,6 +12,6 @@ func @check_attributes(%static: memref<10x20xf32> {dialect.a = true, dialect.b =
 // commas in the argument list for this purpose.
 // CHECK: %{{.*}}: !llvm{{.*}} {first.arg = true}, %{{.*}}: !llvm{{.*}} {first.arg = true}, %{{.*}}: i{{.*}} {first.arg = true},
 // CHECK-SAME: %{{.*}}: !llvm{{.*}} {second.arg = 42 : i32}, %{{.*}}: !llvm{{.*}} {second.arg = 42 : i32}, %{{.*}}: i{{.*}} {second.arg = 42 : i32})
-func @check_multiple(%first: memref<f32> {first.arg = true}, %second: memref<f32> {second.arg = 42 : i32}) {
+func.func @check_multiple(%first: memref<f32> {first.arg = true}, %second: memref<f32> {second.arg = 42 : i32}) {
   return
 }
