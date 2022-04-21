@@ -4027,7 +4027,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   if (LinkerInputs.empty()) {
     Arg *FinalPhaseArg;
     if (getFinalPhase(Args, &FinalPhaseArg) == phases::Link)
-      OffloadBuilder.appendDeviceLinkActions(Actions);
+      if (!UseNewOffloadingDriver)
+        OffloadBuilder.appendDeviceLinkActions(Actions);
   }
 
   if (!LinkerInputs.empty()) {
