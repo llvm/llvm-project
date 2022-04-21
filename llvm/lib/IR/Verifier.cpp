@@ -776,6 +776,20 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
                      "DIGlobalVariableExpression");
   }
 
+  MDs.clear();
+  GV.getMetadata("explicit_size", MDs);
+  if (MDs.size()) {
+    Check(MDs.size() == 1,
+          "only one !explicit_size can be attached to a global variable");
+    Check(MDs[0]->getNumOperands() == 1,
+          "!explicit_size must have exactly one operand");
+    const auto *MetadataValue =
+        dyn_cast<ValueAsMetadata>(MDs[0]->getOperand(0));
+    Check(MetadataValue, "!explicit_size operand must be a value");
+    const auto *CI = dyn_cast<ConstantInt>(MetadataValue->getValue());
+    Check(CI, "!explicit_size value must be an integer");
+  }
+
   // Scalable vectors cannot be global variables, since we don't know
   // the runtime size. If the global is an array containing scalable vectors,
   // that will be caught by the isValidElementType methods in StructType or

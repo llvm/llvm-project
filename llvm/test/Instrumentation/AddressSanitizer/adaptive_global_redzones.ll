@@ -6,14 +6,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Here we check that the global redzone sizes grow with the object size.
 
 @G10 = global [10 x i8] zeroinitializer, align 1
-; CHECK: @G10 = global { [10 x i8], [22 x i8] }
+; CHECK: @G10 = global { [10 x i8], [22 x i8] } zeroinitializer, align 32, !explicit_size ![[#TAG10:]]
 
 @G31 = global [31 x i8] zeroinitializer, align 1
 @G32 = global [32 x i8] zeroinitializer, align 1
 @G33 = global [33 x i8] zeroinitializer, align 1
-; CHECK: @G31 = global { [31 x i8], [33 x i8] }
-; CHECK: @G32 = global { [32 x i8], [32 x i8] }
-; CHECK: @G33 = global { [33 x i8], [63 x i8] }
+; CHECK: @G31 = global { [31 x i8], [33 x i8] } zeroinitializer, align 32, !explicit_size ![[#TAG31:]]
+; CHECK: @G32 = global { [32 x i8], [32 x i8] } zeroinitializer, align 32, !explicit_size ![[#TAG32:]]
+; CHECK: @G33 = global { [33 x i8], [63 x i8] } zeroinitializer, align 32, !explicit_size ![[#TAG33:]]
 
 @G63 = global [63 x i8] zeroinitializer, align 1
 @G64 = global [64 x i8] zeroinitializer, align 1
@@ -53,6 +53,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @G1000000 = global [1000000 x i8] zeroinitializer, align 1
 @G10000000 = global [10000000 x i8] zeroinitializer, align 1
 @G100000000 = global [100000000 x i8] zeroinitializer, align 1
-; CHECK: @G1000000 = global { [1000000 x i8], [249984 x i8] }
-; CHECK: @G10000000 = global { [10000000 x i8], [262144 x i8] }
-; CHECK: @G100000000 = global { [100000000 x i8], [262144 x i8] }
+; CHECK: @G1000000 = global { [1000000 x i8], [249984 x i8] } zeroinitializer, align 32, !explicit_size ![[#]]
+; CHECK: @G10000000 = global { [10000000 x i8], [262144 x i8] } zeroinitializer, align 32, !explicit_size ![[#]]
+; CHECK: @G100000000 = global { [100000000 x i8], [262144 x i8] } zeroinitializer, align 32, !explicit_size ![[#TAGBIG:]]
+
+; CHECK: ![[#TAG10]] = !{i64 10}
+; CHECK: ![[#TAG31]] = !{i64 31}
+; CHECK: ![[#TAG32]] = !{i64 32}
+; CHECK: ![[#TAG33]] = !{i64 33}
+; CHECK: ![[#TAGBIG]] = !{i64 100000000}
