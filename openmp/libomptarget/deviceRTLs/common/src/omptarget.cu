@@ -368,7 +368,7 @@ int32_t __kmpc_target_init_v1(ident_t *Ident, int8_t Mode,
                               int8_t UseGenericStateMachine,
                               int8_t RequiresFullRuntime) {
 
-  if (Mode & OMP_TGT_EXEC_MODE_SPMD) {
+  if (!RequiresFullRuntime && (Mode & OMP_TGT_EXEC_MODE_SPMD)) {
     setExecutionParameters(OMP_TGT_EXEC_MODE_SPMD,
 
                            OMP_TGT_RUNTIME_UNINITIALIZED);
