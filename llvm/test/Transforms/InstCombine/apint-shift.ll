@@ -28,7 +28,7 @@ declare void @use(i55 %0)
 define i55 @test6a_negative_oneuse(i55 %A) {
 ; CHECK-LABEL: @test6a_negative_oneuse(
 ; CHECK-NEXT:    [[B:%.*]] = mul i55 [[A:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = shl i55 [[B]], 1
+; CHECK-NEXT:    [[C:%.*]] = mul i55 [[A]], 6
 ; CHECK-NEXT:    call void @use(i55 [[B]])
 ; CHECK-NEXT:    ret i55 [[C]]
 ;
