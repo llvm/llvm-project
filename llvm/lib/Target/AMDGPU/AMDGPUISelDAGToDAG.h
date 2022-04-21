@@ -188,6 +188,8 @@ private:
                          SDValue &VOffset, SDValue &Offset) const;
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
+  bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,
+                                     uint64_t ImmOffset) const;
   bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
                            SDValue &SAddr, SDValue &Offset) const;
 
