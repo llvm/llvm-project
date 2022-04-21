@@ -428,7 +428,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     // this is an error. (The actual typo correction is nice too).
     // We restore the original severity in the level adjuster.
     // FIXME: It would be better to have a real API for this, but what?
-    for (auto ID : {diag::ext_implicit_function_decl,
+    for (auto ID : {diag::ext_implicit_function_decl_c99,
+                    diag::ext_implicit_lib_function_decl_c99,
                     diag::warn_implicit_function_decl}) {
       OverriddenSeverity.try_emplace(
           ID, Clang->getDiagnostics().getDiagnosticLevel(ID, SourceLocation()));

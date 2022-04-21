@@ -170,6 +170,15 @@ Changes in existing checks
   <clang-tidy/checks/performance-inefficient-vector-operation>` to work when
   the vector is a member of a structure.
 
+- Fixed nonsensical suggestion of :doc:`altera-struct-pack-align
+  <clang-tidy/checks/altera-struct-pack-align>` check for empty structs.
+
+- Fixed incorrect suggestions for :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability-container-size-empty>` when smart pointers are involved.
+
+- Fixed some false positives in :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone-infinite-loop>` involving dependent expressions.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

@@ -18,6 +18,8 @@
 
 int x = 1;
 
+int atoi(const char *);
+
 int main(int argc, char **argv) {
   // CHECK: Cause: global-overflow
   // RSYM: is located 0 bytes to the right of 4-byte global variable x {{.*}} in {{.*}}global.c.tmp

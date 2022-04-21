@@ -399,16 +399,15 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
           reassociateShiftAmtsOfTwoSameDirectionShifts(&I, SQ)))
     return NewShift;
 
-  // C0 shift (A add C) -> (C0 shift C) shift A
-  // iff A and C2 are both positive or the add has 'nuw'.
+  // Pre-shift a constant shifted by a variable amount with constant offset:
+  // C shift (A add nuw C1) --> (C shift C1) shift A
   Value *A;
-  Constant *C;
-  if (match(Op0, m_Constant()) && match(Op1, m_Add(m_Value(A), m_Constant(C))))
-    if (cast<BinaryOperator>(Op1)->hasNoUnsignedWrap() ||
-        (isKnownNonNegative(A, DL, 0, &AC, &I, &DT) &&
-         isKnownNonNegative(C, DL, 0, &AC, &I, &DT)))
-      return BinaryOperator::Create(
-          I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), Op0, C), A);
+  Constant *C, *C1;
+  if (match(Op0, m_Constant(C)) &&
+      match(Op1, m_NUWAdd(m_Value(A), m_Constant(C1)))) {
+    Constant *NewC = ConstantExpr::get(I.getOpcode(), C, C1);
+    return BinaryOperator::Create(I.getOpcode(), NewC, A);
+  }
 
   // X shift (A srem C) -> X shift (A and (C - 1)) iff C is a power of 2.
   // Because shifts by negative values (which could occur if A were negative)
@@ -1164,15 +1163,32 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
-    // Look for a "splat" mul pattern - it replicates bits across each half of
-    // a value, so a right shift is just a mask of the low bits:
-    // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
-    // TODO: Generalize to allow more than just half-width shifts?
     const APInt *MulC;
-    if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC))) &&
-        BitWidth > 2 && ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
-        MulC->logBase2() == ShAmtC)
-      return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
+    if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC)))) {
+      // Look for a "splat" mul pattern - it replicates bits across each half of
+      // a value, so a right shift is just a mask of the low bits:
+      // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
+      // TODO: Generalize to allow more than just half-width shifts?
+      if (BitWidth > 2 && ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
+          MulC->logBase2() == ShAmtC)
+        return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
+
+      // The one-use check is not strictly necessary, but codegen may not be
+      // able to invert the transform and perf may suffer with an extra mul
+      // instruction.
+      if (Op0->hasOneUse()) {
+        APInt NewMulC = MulC->lshr(ShAmtC);
+        // if c is divisible by (1 << ShAmtC):
+        // lshr (mul nuw x, MulC), ShAmtC -> mul nuw x, (MulC >> ShAmtC)
+        if (MulC->eq(NewMulC.shl(ShAmtC))) {
+          auto *NewMul =
+              BinaryOperator::CreateNUWMul(X, ConstantInt::get(Ty, NewMulC));
+          BinaryOperator *OrigMul = cast<BinaryOperator>(Op0);
+          NewMul->setHasNoSignedWrap(OrigMul->hasNoSignedWrap());
+          return NewMul;
+        }
+      }
+    }
 
     // Try to narrow a bswap:
     // (bswap (zext X)) >> C --> zext (bswap X >> C')

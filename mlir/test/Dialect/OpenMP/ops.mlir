@@ -583,6 +583,10 @@ omp.critical.declare @mutex6 hint(contended, nonspeculative)
 omp.critical.declare @mutex7 hint(uncontended, speculative)
 // CHECK: omp.critical.declare @mutex8 hint(contended, speculative)
 omp.critical.declare @mutex8 hint(contended, speculative)
+// CHECK: omp.critical.declare @mutex9 hint(none)
+omp.critical.declare @mutex9 hint(none)
+// CHECK: omp.critical.declare @mutex10
+omp.critical.declare @mutex10
 
 
 // CHECK-LABEL: omp_critical
@@ -657,6 +661,8 @@ func @omp_atomic_read(%v: memref<i32>, %x: memref<i32>) {
   omp.atomic.read %v = %x hint(nonspeculative, contended) : memref<i32>
   // CHECK: omp.atomic.read %[[v]] = %[[x]] memory_order(seq_cst) hint(contended, speculative) : memref<i32>
   omp.atomic.read %v = %x hint(speculative, contended) memory_order(seq_cst) : memref<i32>
+  // CHECK: omp.atomic.read %[[v]] = %[[x]] memory_order(seq_cst) hint(none) : memref<i32>
+  omp.atomic.read %v = %x hint(none) memory_order(seq_cst) : memref<i32>
   return
 }
 
@@ -673,6 +679,8 @@ func @omp_atomic_write(%addr : memref<i32>, %val : i32) {
   omp.atomic.write %addr = %val memory_order(relaxed) : memref<i32>, i32
   // CHECK: omp.atomic.write %[[ADDR]] = %[[VAL]] hint(uncontended, speculative) : memref<i32>, i32
   omp.atomic.write %addr = %val hint(speculative, uncontended) : memref<i32>, i32
+  // CHECK: omp.atomic.write %[[ADDR]] = %[[VAL]] hint(none) : memref<i32>, i32
+  omp.atomic.write %addr = %val hint(none) : memref<i32>, i32
   return
 }
 
@@ -728,6 +736,97 @@ func @omp_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>, %exp
     %newval = llvm.icmp "eq" %xval, %exprBool : i1
     omp.yield(%newval : i1)
   }
+
+  // CHECK: omp.atomic.update hint(none) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
+  omp.atomic.update hint(none) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield(%newval : i32)
+  }
+
+  // CHECK: omp.atomic.update hint(uncontended) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
+  omp.atomic.update hint(uncontended) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield(%newval : i32)
+  }
+
+  // CHECK: omp.atomic.update hint(contended) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
+  omp.atomic.update hint(contended) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield(%newval : i32)
+  }
+
+  // CHECK: omp.atomic.update hint(nonspeculative) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
+  omp.atomic.update hint(nonspeculative) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield(%newval : i32)
+  }
+
+  // CHECK: omp.atomic.update hint(speculative) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
+  omp.atomic.update hint(speculative) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield(%newval : i32)
+  }
+
+  // CHECK: omp.atomic.update hint(uncontended, nonspeculative) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
+  omp.atomic.update hint(uncontended, nonspeculative) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield(%newval : i32)
+  }
+
+  // CHECK: omp.atomic.update hint(contended, nonspeculative) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
+  omp.atomic.update hint(contended, nonspeculative) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield(%newval : i32)
+  }
+
+  // CHECK: omp.atomic.update hint(uncontended, speculative) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
+  omp.atomic.update hint(uncontended, speculative) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield(%newval : i32)
+  }
+
+  // CHECK: omp.atomic.update hint(contended, speculative) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
+  omp.atomic.update hint(contended, speculative) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield(%newval : i32)
+  }
+
   return
 }
 
@@ -773,6 +872,159 @@ func @omp_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
   omp.atomic.capture{
     omp.atomic.read %v = %x : memref<i32>
     omp.atomic.write %x = %expr : memref<i32>, i32
+  }
+
+  // CHECK: omp.atomic.capture hint(none) {
+  // CHECK-NEXT: omp.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   omp.yield(%[[newval]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: }
+  omp.atomic.capture hint(none) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+
+  // CHECK: omp.atomic.capture hint(uncontended) {
+  // CHECK-NEXT: omp.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   omp.yield(%[[newval]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: }
+  omp.atomic.capture hint(uncontended) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+
+  // CHECK: omp.atomic.capture hint(contended) {
+  // CHECK-NEXT: omp.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   omp.yield(%[[newval]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: }
+  omp.atomic.capture hint(contended) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+
+  // CHECK: omp.atomic.capture hint(nonspeculative) {
+  // CHECK-NEXT: omp.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   omp.yield(%[[newval]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: }
+  omp.atomic.capture hint(nonspeculative) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+
+  // CHECK: omp.atomic.capture hint(speculative) {
+  // CHECK-NEXT: omp.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   omp.yield(%[[newval]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: }
+  omp.atomic.capture hint(speculative) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+
+  // CHECK: omp.atomic.capture hint(uncontended, nonspeculative) {
+  // CHECK-NEXT: omp.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   omp.yield(%[[newval]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: }
+  omp.atomic.capture hint(uncontended, nonspeculative) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+
+  // CHECK: omp.atomic.capture hint(contended, nonspeculative) {
+  // CHECK-NEXT: omp.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   omp.yield(%[[newval]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: }
+  omp.atomic.capture hint(contended, nonspeculative) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+
+  // CHECK: omp.atomic.capture hint(uncontended, speculative) {
+  // CHECK-NEXT: omp.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   omp.yield(%[[newval]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: }
+  omp.atomic.capture hint(uncontended, speculative) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+
+  // CHECK: omp.atomic.capture hint(contended, speculative) {
+  // CHECK-NEXT: omp.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   omp.yield(%[[newval]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: }
+  omp.atomic.capture hint(contended, speculative) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
   }
   return
 }

@@ -149,3 +149,33 @@ func @loop_region_branch_terminator_op(%arg1 : i32) {
   }
   return
 }
+
+/// Check that propgation happens for affine.for -- tests its region branch op
+/// interface as well.
+
+// CHECK-LABEL: func @affine_loop_one_iter(
+func @affine_loop_one_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
+  // CHECK: %[[C1:.*]] = arith.constant 1 : i32
+  %s0 = arith.constant 0 : i32
+  %s1 = arith.constant 1 : i32
+  %result = affine.for %i = 0 to 1 iter_args(%si = %s0) -> (i32) {
+    %sn = arith.addi %si, %s1 : i32
+    affine.yield %sn : i32
+  }
+  // CHECK: return %[[C1]] : i32
+  return %result : i32
+}
+
+// CHECK-LABEL: func @affine_loop_zero_iter(
+func @affine_loop_zero_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
+  // This exposes a crash in sccp/forward data flow analysis: https://github.com/llvm/llvm-project/issues/54928
+  // CHECK: %[[C0:.*]] = arith.constant 0 : i32
+  %s0 = arith.constant 0 : i32
+  // %result = affine.for %i = 0 to 0 iter_args(%si = %s0) -> (i32) {
+  //  %sn = arith.addi %si, %si : i32
+  //  affine.yield %sn : i32
+  // }
+  // return %result : i32
+  // CHECK: return %[[C0]] : i32
+  return %s0 : i32
+}

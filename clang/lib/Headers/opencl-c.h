@@ -14376,6 +14376,7 @@ bool __ovld atomic_compare_exchange_weak(volatile __local atomic_ulong *, __priv
 #endif // (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 || __OPENCL_CPP_VERSION__ >= 202100)
 #endif
 
+#if defined(__opencl_c_atomic_scope_device)
 #if defined(__opencl_c_generic_address_space)
 bool __ovld atomic_compare_exchange_strong_explicit(volatile atomic_int *, int *, int, memory_order, memory_order);
 bool __ovld atomic_compare_exchange_strong_explicit(volatile atomic_uint *, uint *, uint, memory_order, memory_order);
@@ -14472,6 +14473,7 @@ bool __ovld atomic_compare_exchange_weak_explicit(volatile __local atomic_ulong 
 bool __ovld atomic_compare_exchange_weak_explicit(volatile __local atomic_ulong *, __private ulong *, ulong, memory_order, memory_order);
 #endif //defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 #endif // (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 || __OPENCL_CPP_VERSION__ >= 202100)
+#endif //defined(__opencl_c_atomic_scope_device)
 
 #if defined(__opencl_c_generic_address_space)
 bool __ovld atomic_compare_exchange_strong_explicit(volatile atomic_int *, int *, int, memory_order, memory_order, memory_scope);
