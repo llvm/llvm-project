@@ -692,7 +692,7 @@
 // CHECK-PGO-LTO:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-PGO-LTO:     "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-PGO-LTO:     "{{.*}}ld{{(.exe)?}}"
-// CHECK-PGO-LTO-NOT: "-bdbg:namedsects"
+// CHECK-PGO-LTO:     "-bdbg:namedsects"
 // CHECK-PGO-LTO:     "-b32"
 // CHECK-PGO-LTO:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-PGO-LTO:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"

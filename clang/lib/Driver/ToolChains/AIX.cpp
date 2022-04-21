@@ -98,9 +98,10 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-bnoentry");
   }
 
-  // Specify PGO linker option without LTO
-  if (!D.isUsingLTO() &&
-      (Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
+  // PGO instrumentation generates symbols belonging to special sections, and
+  // the linker needs to place all symbols in a particular section together in
+  // memory; the AIX linker does that under an option.
+  if (Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
                     false) ||
        Args.hasFlag(options::OPT_fprofile_generate,
                     options::OPT_fno_profile_generate, false) ||
@@ -115,7 +116,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
        Args.hasFlag(options::OPT_fcs_profile_generate_EQ,
                     options::OPT_fno_profile_generate, false) ||
        Args.hasArg(options::OPT_fcreate_profile) ||
-       Args.hasArg(options::OPT_coverage)))
+       Args.hasArg(options::OPT_coverage))
     CmdArgs.push_back("-bdbg:namedsects");
 
   // Specify linker output file.
