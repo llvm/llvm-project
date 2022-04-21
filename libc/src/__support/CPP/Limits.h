@@ -52,6 +52,7 @@ public:
   static constexpr unsigned long long max() { return ULLONG_MAX; }
   static constexpr unsigned long long min() { return 0; }
 };
+#ifdef __SIZEOF_INT128__
 template <> class NumericLimits<__uint128_t> {
 public:
   static constexpr __uint128_t max() { return ~__uint128_t(0); }
@@ -62,7 +63,7 @@ public:
   static constexpr __int128_t max() { return ~__uint128_t(0) >> 1; }
   static constexpr __int128_t min() { return __int128_t(1) << 127; }
 };
-
+#endif
 } // namespace cpp
 } // namespace __llvm_libc
 

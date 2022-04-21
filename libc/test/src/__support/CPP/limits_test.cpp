@@ -29,6 +29,7 @@ TEST(LlvmLibcLimitsTest, LimitsFollowSpec) {
             ULLONG_MAX);
 }
 
+#ifdef __SIZEOF_INT128__
 // This checks that the current environment supports 128 bit integers.
 TEST(LlvmLibcLimitsTest, Int128Works) {
   __int128_t max128 = ~__uint128_t(0) >> 1;
@@ -47,3 +48,4 @@ TEST(LlvmLibcLimitsTest, Int128Works) {
       __uint128_t(__llvm_libc::cpp::NumericLimits<unsigned long long>::max()));
   ASSERT_EQ(__llvm_libc::cpp::NumericLimits<__uint128_t>::max(), umax128);
 }
+#endif
