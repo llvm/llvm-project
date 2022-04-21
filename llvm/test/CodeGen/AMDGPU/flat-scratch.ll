@@ -4075,11 +4075,10 @@ define void @store_load_i32_large_negative_unaligned(i8 addrspace(5)* nocapture 
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 1
-; GFX11-NEXT:    s_movk_i32 s0, 0xef7f
-; GFX11-NEXT:    scratch_store_b8 v0, v1, s0 dlc
+; GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_add_nc_u32 v0, 0xfffff000, v0
+; GFX11-NEXT:    scratch_store_b8 v0, v1, off offset:-129 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    scratch_load_u8 v0, v0, s0 glc dlc
+; GFX11-NEXT:    scratch_load_u8 v0, v0, off offset:-129 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4133,11 +4132,10 @@ define void @store_load_i32_large_negative_unaligned(i8 addrspace(5)* nocapture 
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-PAL-NEXT:    v_mov_b32_e32 v1, 1
-; GFX11-PAL-NEXT:    s_movk_i32 s0, 0xef7f
-; GFX11-PAL-NEXT:    scratch_store_b8 v0, v1, s0 dlc
+; GFX11-PAL-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_add_nc_u32 v0, 0xfffff000, v0
+; GFX11-PAL-NEXT:    scratch_store_b8 v0, v1, off offset:-129 dlc
 ; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-PAL-NEXT:    scratch_load_u8 v0, v0, s0 glc dlc
+; GFX11-PAL-NEXT:    scratch_load_u8 v0, v0, off offset:-129 glc dlc
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
