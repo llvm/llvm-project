@@ -29,17 +29,17 @@ define void @remat_regcopy_avoids_spill(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 
 ; GFX908-LABEL: remat_regcopy_avoids_spill:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, v0
-; GFX908-NEXT:    v_accvgpr_write_b32 a2, v1
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, v2
-; GFX908-NEXT:    v_accvgpr_write_b32 a4, v3
-; GFX908-NEXT:    v_accvgpr_write_b32 a0, v8
+; GFX908-NEXT:    v_accvgpr_write_b32 a2, v0
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, v1
+; GFX908-NEXT:    v_accvgpr_write_b32 a4, v2
+; GFX908-NEXT:    v_accvgpr_write_b32 a0, v7
+; GFX908-NEXT:    v_accvgpr_write_b32 a1, v8
+; GFX908-NEXT:    v_accvgpr_write_b32 a5, v3
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, v4
-; GFX908-NEXT:    v_accvgpr_write_b32 a2, v5
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, v6
-; GFX908-NEXT:    v_accvgpr_write_b32 a4, v7
+; GFX908-NEXT:    v_accvgpr_write_b32 a2, v4
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, v5
+; GFX908-NEXT:    v_accvgpr_write_b32 a4, v6
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]

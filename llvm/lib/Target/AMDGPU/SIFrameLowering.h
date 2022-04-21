@@ -47,6 +47,9 @@ public:
     MachineFunction &MF,
     RegScavenger *RS = nullptr) const override;
 
+  void processFunctionBeforeFrameIndicesReplaced(
+      MachineFunction &MF, RegScavenger *RS = nullptr) const override;
+
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,
                                 MachineBasicBlock &MBB,
