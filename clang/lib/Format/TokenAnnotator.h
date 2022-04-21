@@ -76,6 +76,10 @@ public:
     }
   }
 
+  bool isComment() const {
+    return First && First->is(tok::comment) && !First->getNextNonComment();
+  }
+
   /// \c true if this line starts with the given tokens in order, ignoring
   /// comments.
   template <typename... Ts> bool startsWith(Ts... Tokens) const {
