@@ -273,7 +273,7 @@ void ASTFieldVisitor::ReportError(QualType T) {
       os << (*I)->getName();
     }
   }
-  os << " (type " << FieldChain.back()->getType().getAsString() << ")";
+  os << " (type " << FieldChain.back()->getType() << ")";
 
   // Note that this will fire for every translation unit that uses this
   // class.  This is suboptimal, but at least scan-build will merge

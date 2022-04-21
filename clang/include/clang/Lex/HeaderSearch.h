@@ -155,7 +155,7 @@ public:
 /// This structure is used to record entries in our framework cache.
 struct FrameworkCacheEntry {
   /// The directory entry which should be used for the cached framework.
-  const DirectoryEntry *Directory;
+  Optional<DirectoryEntryRef> Directory;
 
   /// Whether this framework has been "user-specified" to be treated as if it
   /// were a system framework (even if it was found outside a system framework

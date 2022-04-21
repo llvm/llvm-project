@@ -2297,6 +2297,11 @@ defm implicit_modules : BoolFOption<"implicit-modules",
 def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-system-headers">, Group<f_Group>, Flags<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"RetainCommentsFromSystemHeaders">>;
 
+def fno_knr_functions : Flag<["-"], "fno-knr-functions">, Group<f_Group>,
+  MarshallingInfoFlag<LangOpts<"DisableKNRFunctions">>,
+  HelpText<"Disable support for K&R C function declarations">,
+  Flags<[CC1Option, CoreOption]>;
+
 def fmudflapth : Flag<["-"], "fmudflapth">, Group<f_Group>;
 def fmudflap : Flag<["-"], "fmudflap">, Group<f_Group>;
 def fnested_functions : Flag<["-"], "fnested-functions">, Group<f_Group>;

@@ -1052,16 +1052,21 @@ static ParseResult parseAsyncDependencies(
                                  OpAsmParser::Delimiter::OptionalSquare);
 }
 
+/// Prints optional async dependencies with its leading keyword.
+///   (`async`)? (`[` ssa-id-list `]`)?
+// Used by the tablegen assembly format for several async ops.
 static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
                                    Type asyncTokenType,
                                    OperandRange asyncDependencies) {
   if (asyncTokenType)
-    printer << "async ";
+    printer << "async";
   if (asyncDependencies.empty())
     return;
-  printer << "[";
+  if (asyncTokenType)
+    printer << ' ';
+  printer << '[';
   llvm::interleaveComma(asyncDependencies, printer);
-  printer << "]";
+  printer << ']';
 }
 
 namespace {

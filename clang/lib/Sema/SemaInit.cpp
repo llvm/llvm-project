@@ -3467,7 +3467,7 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
     D->printQualifiedName(OS);
   }
 
-  OS << " '" << getType().getAsString() << "'\n";
+  OS << " '" << getType() << "'\n";
 
   return Depth + 1;
 }
@@ -9800,7 +9800,7 @@ void InitializationSequence::dump(raw_ostream &OS) const {
       break;
     }
 
-    OS << " [" << S->Type.getAsString() << ']';
+    OS << " [" << S->Type << ']';
   }
 
   OS << '\n';

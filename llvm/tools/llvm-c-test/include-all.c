@@ -36,7 +36,6 @@
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Transforms/AggressiveInstCombine.h"
-#include "llvm-c/Transforms/Coroutines.h"
 #include "llvm-c/Transforms/InstCombine.h"
 #include "llvm-c/Transforms/IPO.h"
 #include "llvm-c/Transforms/PassManagerBuilder.h"

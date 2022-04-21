@@ -708,6 +708,42 @@ func @omp_atomic_update9(%x: memref<i32>, %expr: i32) {
 
 // -----
 
+func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
+  omp.atomic.update hint(uncontended, contended) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield (%newval : i32)
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
+  omp.atomic.update hint(nonspeculative, speculative) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield (%newval : i32)
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
+  // expected-error @below {{invalid_hint is not a valid hint}}
+  omp.atomic.update hint(invalid_hint) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    omp.yield (%newval : i32)
+  }
+  return
+}
+
+// -----
+
 func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   // expected-error @below {{expected three operations in omp.atomic.capture region}}
   omp.atomic.capture {
@@ -844,6 +880,66 @@ func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %exp
     omp.atomic.write %y = %expr : memref<i32>, i32
     omp.terminator
   }
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
+  omp.atomic.capture hint(contended, uncontended) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
+  omp.atomic.capture hint(nonspeculative, speculative) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  // expected-error @below {{invalid_hint is not a valid hint}}
+  omp.atomic.capture hint(invalid_hint) {
+    omp.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  // expected-error @below {{operations inside capture region must not have hint clause}}
+  omp.atomic.capture {
+    omp.atomic.update hint(uncontended) %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>
+  }
+  return
 }
 
 // -----

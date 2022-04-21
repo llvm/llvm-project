@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
 // RUN:         -triple x86_64--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
 // RUN:         -triple x86_64--linux -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
 // RUN:         -triple aarch64--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM-ARM64
-// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
 // RUN:         -triple aarch64--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM
-// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions \
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
 // RUN:         -triple armv7--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM
 

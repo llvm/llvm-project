@@ -3771,9 +3771,6 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
       ImmOffset = ConstOffset;
     } else {
       auto PtrBaseDef = getDefSrcRegIgnoringCopies(PtrBase, *MRI);
-      if (!PtrBaseDef)
-        return None;
-
       if (isSGPR(PtrBaseDef->Reg)) {
         if (ConstOffset > 0) {
           // Offset is too large.
@@ -3819,11 +3816,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
     }
   }
 
-  auto AddrDef = getDefSrcRegIgnoringCopies(Addr, *MRI);
-  if (!AddrDef)
-    return None;
-
   // Match the variable offset.
+  auto AddrDef = getDefSrcRegIgnoringCopies(Addr, *MRI);
   if (AddrDef->MI->getOpcode() == AMDGPU::G_PTR_ADD) {
     // Look through the SGPR->VGPR copy.
     Register SAddr =
@@ -3889,9 +3883,6 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
   }
 
   auto AddrDef = getDefSrcRegIgnoringCopies(Addr, *MRI);
-  if (!AddrDef)
-    return None;
-
   if (AddrDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX) {
     int FI = AddrDef->MI->getOperand(1).getIndex();
     return {{
@@ -3908,8 +3899,7 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
     auto LHSDef = getDefSrcRegIgnoringCopies(LHS, *MRI);
     auto RHSDef = getDefSrcRegIgnoringCopies(RHS, *MRI);
 
-    if (LHSDef && RHSDef &&
-        LHSDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX &&
+    if (LHSDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX &&
         isSGPR(RHSDef->Reg)) {
       int FI = LHSDef->MI->getOperand(1).getIndex();
       MachineInstr &I = *Root.getParent();
@@ -3950,9 +3940,6 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
   }
 
   auto AddrDef = getDefSrcRegIgnoringCopies(Addr, *MRI);
-  if (!AddrDef)
-    return None;
-
   if (AddrDef->MI->getOpcode() != AMDGPU::G_PTR_ADD)
     return None;
 
@@ -3963,7 +3950,7 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
   Register LHS = AddrDef->MI->getOperand(1).getReg();
   auto LHSDef = getDefSrcRegIgnoringCopies(LHS, *MRI);
 
-  if (LHSDef && LHSDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX) {
+  if (LHSDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX) {
     int FI = LHSDef->MI->getOperand(1).getIndex();
     return {{
         [=](MachineInstrBuilder &MIB) { MIB.addReg(RHS); }, // vaddr

@@ -1861,8 +1861,6 @@ private:
                                      Token &Replacement);
   ExprResult ParseCXXIdExpression(bool isAddressOfOperand = false);
 
-  ExprResult ParseCXXMaybeMutableAgnosticExpression();
-
   bool areTokensAdjacent(const Token &A, const Token &B);
 
   void CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectTypePtr,
@@ -1903,8 +1901,6 @@ private:
   ParseLambdaIntroducer(LambdaIntroducer &Intro,
                         LambdaIntroducerTentativeParse *Tentative = nullptr);
   ExprResult ParseLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro);
-  void ParseLambdaLexedGNUAttributeArgs(LateParsedAttribute &LA,
-                                        ParsedAttributes &Attrs, Declarator &D);
 
   //===--------------------------------------------------------------------===//
   // C++ 5.2p1: C++ Casts

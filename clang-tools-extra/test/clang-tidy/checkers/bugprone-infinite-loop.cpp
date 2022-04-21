@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-infinite-loop %t \
-// RUN:                   -- -- -fexceptions -fblocks
+// RUN:                   -- -- -fexceptions -fblocks -fno-delayed-template-parsing
 
 void simple_infinite_loop1() {
   int i = 0;
@@ -621,4 +621,32 @@ void test_volatile_concrete_address(int i, int size) {
   for (; *(int *)0x1234 < size;) {
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (size) are updated in the loop body [bugprone-infinite-loop]
   }
+}
+
+template <typename T>
+int some_template_fn() { return 1; }
+
+template <typename T>
+void test_dependent_condition() {
+  const int error = some_template_fn<T>();
+  do {
+  } while (false && error == 0);
+
+  const int val = some_template_fn<T>();
+  for (; !(val == 0 || true);) {
+  }
+
+  const int val2 = some_template_fn<T>();
+  for (; !(val2 == 0 || false);) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (val2) are updated in the loop body [bugprone-infinite-loop]
+  }
+
+  const int val3 = some_template_fn<T>();
+  do {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (val3) are updated in the loop body [bugprone-infinite-loop]
+  } while (1, (true) && val3 == 1);
+
+  const int val4 = some_template_fn<T>();
+  do {
+  } while (1, (false) && val4 == 1);
 }
