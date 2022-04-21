@@ -97,7 +97,6 @@ void llvm::initializeInstrumentation(PassRegistry &Registry) {
   initializeModuleMemProfilerLegacyPassPass(Registry);
   initializeBoundsCheckingLegacyPassPass(Registry);
   initializeControlHeightReductionLegacyPassPass(Registry);
-  initializeGCOVProfilerLegacyPassPass(Registry);
   initializeCGProfileLegacyPassPass(Registry);
   initializeInstrOrderFileLegacyPassPass(Registry);
   initializeInstrProfilingLegacyPassPass(Registry);
