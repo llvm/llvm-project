@@ -12,11 +12,17 @@
 
 namespace mlir {
 class LLVMTypeConverter;
+class ConversionTarget;
 class MLIRContext;
 class ModuleOp;
 template <typename T>
 class OperationPass;
 class RewritePatternSet;
+
+/// Configure dynamic conversion legality of regionless operations from OpenMP
+/// to LLVM.
+void configureOpenMPToLLVMConversionLegality(ConversionTarget &target,
+                                             LLVMTypeConverter &typeConverter);
 
 /// Populate the given list with patterns that convert from OpenMP to LLVM.
 void populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,

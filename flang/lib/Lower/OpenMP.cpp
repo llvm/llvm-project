@@ -452,6 +452,145 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+static void genOmpAtomicHintAndMemoryOrderClauses(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::OmpAtomicClauseList &clauseList,
+    mlir::IntegerAttr &hint,
+    mlir::omp::ClauseMemoryOrderKindAttr &memory_order) {
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  for (const auto &clause : clauseList.v) {
+    if (auto ompClause = std::get_if<Fortran::parser::OmpClause>(&clause.u)) {
+      if (auto hintClause =
+              std::get_if<Fortran::parser::OmpClause::Hint>(&ompClause->u)) {
+        const auto *expr = Fortran::semantics::GetExpr(hintClause->v);
+        uint64_t hintExprValue = *Fortran::evaluate::ToInt64(*expr);
+        hint = firOpBuilder.getI64IntegerAttr(hintExprValue);
+      }
+    } else if (auto ompMemoryOrderClause =
+                   std::get_if<Fortran::parser::OmpMemoryOrderClause>(
+                       &clause.u)) {
+      if (std::get_if<Fortran::parser::OmpClause::Acquire>(
+              &ompMemoryOrderClause->v.u)) {
+        memory_order = mlir::omp::ClauseMemoryOrderKindAttr::get(
+            firOpBuilder.getContext(), omp::ClauseMemoryOrderKind::Acquire);
+      } else if (std::get_if<Fortran::parser::OmpClause::Relaxed>(
+                     &ompMemoryOrderClause->v.u)) {
+        memory_order = mlir::omp::ClauseMemoryOrderKindAttr::get(
+            firOpBuilder.getContext(), omp::ClauseMemoryOrderKind::Relaxed);
+      } else if (std::get_if<Fortran::parser::OmpClause::SeqCst>(
+                     &ompMemoryOrderClause->v.u)) {
+        memory_order = mlir::omp::ClauseMemoryOrderKindAttr::get(
+            firOpBuilder.getContext(), omp::ClauseMemoryOrderKind::Seq_cst);
+      } else if (std::get_if<Fortran::parser::OmpClause::Release>(
+                     &ompMemoryOrderClause->v.u)) {
+        memory_order = mlir::omp::ClauseMemoryOrderKindAttr::get(
+            firOpBuilder.getContext(), omp::ClauseMemoryOrderKind::Release);
+      }
+    }
+  }
+}
+
+static void
+genOmpAtomicWrite(Fortran::lower::AbstractConverter &converter,
+                  Fortran::lower::pft::Evaluation &eval,
+                  const Fortran::parser::OmpAtomicWrite &atomicWrite) {
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  auto currentLocation = converter.getCurrentLocation();
+  mlir::Value address;
+  // If no hint clause is specified, the effect is as if
+  // hint(omp_sync_hint_none) had been specified.
+  mlir::IntegerAttr hint = nullptr;
+  mlir::omp::ClauseMemoryOrderKindAttr memory_order = nullptr;
+  const Fortran::parser::OmpAtomicClauseList &rightHandClauseList =
+      std::get<2>(atomicWrite.t);
+  const Fortran::parser::OmpAtomicClauseList &leftHandClauseList =
+      std::get<0>(atomicWrite.t);
+  const auto &assignmentStmtExpr =
+      std::get<Fortran::parser::Expr>(std::get<3>(atomicWrite.t).statement.t);
+  const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
+      std::get<3>(atomicWrite.t).statement.t);
+  Fortran::lower::StatementContext stmtCtx;
+  auto value = fir::getBase(converter.genExprValue(
+      *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
+  if (auto varDesignator = std::get_if<
+          Fortran::common::Indirection<Fortran::parser::Designator>>(
+          &assignmentStmtVariable.u)) {
+    if (const auto *name = getDesignatorNameIfDataRef(varDesignator->value())) {
+      address = converter.getSymbolAddress(*name->symbol);
+    }
+  }
+
+  genOmpAtomicHintAndMemoryOrderClauses(converter, leftHandClauseList, hint,
+                                        memory_order);
+  genOmpAtomicHintAndMemoryOrderClauses(converter, rightHandClauseList, hint,
+                                        memory_order);
+  firOpBuilder.create<mlir::omp::AtomicWriteOp>(currentLocation, address, value,
+                                                hint, memory_order);
+}
+
+static void genOmpAtomicRead(Fortran::lower::AbstractConverter &converter,
+                             Fortran::lower::pft::Evaluation &eval,
+                             const Fortran::parser::OmpAtomicRead &atomicRead) {
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  auto currentLocation = converter.getCurrentLocation();
+  mlir::Value to_address;
+  mlir::Value from_address;
+  // If no hint clause is specified, the effect is as if
+  // hint(omp_sync_hint_none) had been specified.
+  mlir::IntegerAttr hint = nullptr;
+  mlir::omp::ClauseMemoryOrderKindAttr memory_order = nullptr;
+  const Fortran::parser::OmpAtomicClauseList &rightHandClauseList =
+      std::get<2>(atomicRead.t);
+  const Fortran::parser::OmpAtomicClauseList &leftHandClauseList =
+      std::get<0>(atomicRead.t);
+  const auto &assignmentStmtExpr =
+      std::get<Fortran::parser::Expr>(std::get<3>(atomicRead.t).statement.t);
+  const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
+      std::get<3>(atomicRead.t).statement.t);
+  if (auto exprDesignator = std::get_if<
+          Fortran::common::Indirection<Fortran::parser::Designator>>(
+          &assignmentStmtExpr.u)) {
+    if (const auto *name =
+            getDesignatorNameIfDataRef(exprDesignator->value())) {
+      from_address = converter.getSymbolAddress(*name->symbol);
+    }
+  }
+
+  if (auto varDesignator = std::get_if<
+          Fortran::common::Indirection<Fortran::parser::Designator>>(
+          &assignmentStmtVariable.u)) {
+    if (const auto *name = getDesignatorNameIfDataRef(varDesignator->value())) {
+      to_address = converter.getSymbolAddress(*name->symbol);
+    }
+  }
+
+  genOmpAtomicHintAndMemoryOrderClauses(converter, leftHandClauseList, hint,
+                                        memory_order);
+  genOmpAtomicHintAndMemoryOrderClauses(converter, rightHandClauseList, hint,
+                                        memory_order);
+  firOpBuilder.create<mlir::omp::AtomicReadOp>(currentLocation, from_address,
+                                               to_address, hint, memory_order);
+}
+
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
+  std::visit(Fortran::common::visitors{
+                 [&](const Fortran::parser::OmpAtomicRead &atomicRead) {
+                   genOmpAtomicRead(converter, eval, atomicRead);
+                 },
+                 [&](const Fortran::parser::OmpAtomicWrite &atomicWrite) {
+                   genOmpAtomicWrite(converter, eval, atomicWrite);
+                 },
+                 [&](const auto &) {
+                   TODO(converter.getCurrentLocation(),
+                        "Atomic update & capture");
+                 },
+             },
+             atomicConstruct.u);
+}
+
 void Fortran::lower::genOpenMPConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &eval,
@@ -485,7 +624,7 @@ void Fortran::lower::genOpenMPConstruct(
             genOMP(converter, eval, blockConstruct);
           },
           [&](const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
-            TODO(converter.getCurrentLocation(), "OpenMPAtomicConstruct");
+            genOMP(converter, eval, atomicConstruct);
           },
           [&](const Fortran::parser::OpenMPCriticalConstruct
                   &criticalConstruct) {
