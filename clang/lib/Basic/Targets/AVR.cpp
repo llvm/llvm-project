@@ -384,6 +384,9 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
     auto It = llvm::find_if(
         AVRMcus, [&](const MCUInfo &Info) { return Info.Name == this->CPU; });
 
+    if (It->IsTiny)
+      Builder.defineMacro("__AVR_TINY__", "1");
+
     if (It != std::end(AVRMcus)) {
       Builder.defineMacro(It->DefineName);
       if (It->NumFlashBanks >= 1)
