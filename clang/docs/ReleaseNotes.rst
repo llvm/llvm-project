@@ -156,6 +156,12 @@ Improvements to Clang's diagnostics
   without a prototype and with no arguments is an invalid redeclaration of a
   function with a prototype. e.g., ``void f(int); void f() {}`` is now properly
   diagnosed.
+- The ``-Wimplicit-function-declaration`` warning diagnostic now defaults to
+  an error in C99 and later. Prior to C2x, it may be downgraded to a warning
+  with ``-Wno-error=implicit-function-declaration``, or disabled entirely with
+  ``-Wno-implicit-function-declaration``. As of C2x, support for implicit
+  function declarations has been removed, and the warning options will have no
+  effect.
 
 - ``-Wmisexpect`` warns when the branch weights collected during profiling
   conflict with those added by ``llvm.expect``.
@@ -170,6 +176,11 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+- Added the ``-fno-knr-functions`` flag to allow users to opt into the C2x
+  behavior where a function with an empty parameter list is treated as though
+  the parameter list were ``void``. There is no ``-fknr-functions`` or
+  ``-fno-no-knr-functions`` flag; this feature cannot be disabled in language
+  modes where it is required, such as C++ or C2x.
 
 Deprecated Compiler Flags
 -------------------------
@@ -230,6 +241,11 @@ C2x Feature Support
 - Implemented the `*_WIDTH` macros to complete support for
   `WG14 N2412 Two's complement sign representation for C2x <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2412.pdf>`_.
 - Implemented `WG14 N2418 Adding the u8 character prefix <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2418.pdf>`_.
+- Removed support for implicit function declarations. This was a C89 feature
+  that was removed in C99, but cannot be supported in C2x because it requires
+  support for functions without prototypes, which no longer exist in C2x.
+- Implemented `WG14 N2841 No function declarators without prototypes <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2841.htm>`_
+  and `WG14 N2432 Remove support for function definitions with identifier lists <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2432.pdf>`_.
 
 C++ Language Changes in Clang
 -----------------------------
@@ -262,11 +278,6 @@ C++2b Feature Support
 - Implemented `P2128R6: Multidimensional subscript operator <https://wg21.link/P2128R6>`_.
 - Implemented `P0849R8: auto(x): decay-copy in the language <https://wg21.link/P0849R8>`_.
 - Implemented `P2242R3: Non-literal variables (and labels and gotos) in constexpr functions	<https://wg21.link/P2242R3>`_.
-- Implemented `P2036R3: Change scope of lambda trailing-return-type <https://wg21.link/P2036R3>`_.
-  This proposal modifies how variables captured in lambdas can appear in trailing return type
-  expressions and how their types are deduced therein, in all C++ language versions.
-  `CWG2569 <https://cplusplus.github.io/CWG/issues/2569.html>`_ is also partially implemented so that
-  `[x](decltype(x)){}` doesn't become ill-formed with the adoption of P2036R3.
 
 CUDA Language Changes in Clang
 ------------------------------

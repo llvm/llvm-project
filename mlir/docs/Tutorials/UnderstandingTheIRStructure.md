@@ -192,7 +192,7 @@ Operation, for example the following will apply the callback only on `LinalgOp`
 operations nested inside the function:
 
 ```c++
-  getFunction.walk([](LinalgOp linalgOp) {
+  getFunction().walk([](LinalgOp linalgOp) {
     // process LinalgOp `linalgOp`.
   });
 ```

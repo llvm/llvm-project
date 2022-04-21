@@ -307,9 +307,13 @@ private:
           // TODO: Use IndentTracker to avoid loop?
           // Find the last line with lower level.
           auto J = I - 1;
-          for (; J != AnnotatedLines.begin(); --J)
-            if (!(*J)->InPPDirective && (*J)->Level < TheLine->Level)
-              break;
+          if (!TheLine->InPPDirective) {
+            for (; J != AnnotatedLines.begin(); --J) {
+              if (!(*J)->InPPDirective && (*J)->Level < TheLine->Level)
+                break;
+            }
+          }
+
           if ((*J)->Level >= TheLine->Level)
             return false;
 

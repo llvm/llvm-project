@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown     -w -S -o - -emit-llvm              %s | FileCheck %s --check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown     -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown-gnu -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows-msvc -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm              %s | FileCheck %s --check-prefix=NO__ERRNO
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown-gnu -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows-msvc -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
 
 // Test attributes and builtin codegen of math library calls.
 
@@ -51,7 +51,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @frexpf(float noundef, i32* noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
 
-  ldexp(f,f);    ldexpf(f,f);   ldexpl(f,f);  
+  ldexp(f,f);    ldexpf(f,f);   ldexpl(f,f);
 
 // NO__ERRNO: declare double @ldexp(double noundef, i32 noundef) [[READNONE]]
 // NO__ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[READNONE]]
@@ -60,7 +60,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[NOT_READNONE]]
 
-  modf(f,d);       modff(f,fp);      modfl(f,l); 
+  modf(f,d);       modff(f,fp);      modfl(f,l);
 
 // NO__ERRNO: declare double @modf(double noundef, double* noundef) [[NOT_READNONE]]
 // NO__ERRNO: declare float @modff(float noundef, float* noundef) [[NOT_READNONE]]
@@ -69,7 +69,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @modff(float noundef, float* noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, x86_fp80* noundef) [[NOT_READNONE]]
 
-  nan(c);        nanf(c);       nanl(c);  
+  nan(c);        nanf(c);       nanl(c);
 
 // NO__ERRNO: declare double @nan(i8* noundef) [[READONLY:#[0-9]+]]
 // NO__ERRNO: declare float @nanf(i8* noundef) [[READONLY]]
@@ -97,7 +97,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @acosf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @acosl(x86_fp80 noundef) [[NOT_READNONE]]
 
-  acosh(f);      acoshf(f);     acoshl(f);  
+  acosh(f);      acoshf(f);     acoshl(f);
 
 // NO__ERRNO: declare double @acosh(double noundef) [[READNONE]]
 // NO__ERRNO: declare float @acoshf(float noundef) [[READNONE]]
@@ -106,7 +106,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @acoshf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @acoshl(x86_fp80 noundef) [[NOT_READNONE]]
 
-  asin(f);       asinf(f);      asinl(f); 
+  asin(f);       asinf(f);      asinl(f);
 
 // NO__ERRNO: declare double @asin(double noundef) [[READNONE]]
 // NO__ERRNO: declare float @asinf(float noundef) [[READNONE]]
@@ -133,7 +133,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @atanf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @atanl(x86_fp80 noundef) [[NOT_READNONE]]
 
-  atanh(f);      atanhf(f);     atanhl(f); 
+  atanh(f);      atanhf(f);     atanhl(f);
 
 // NO__ERRNO: declare double @atanh(double noundef) [[READNONE]]
 // NO__ERRNO: declare float @atanhf(float noundef) [[READNONE]]
@@ -160,7 +160,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @llvm.ceil.f32(float) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare x86_fp80 @llvm.ceil.f80(x86_fp80) [[READNONE_INTRINSIC]]
 
-  cos(f);        cosf(f);       cosl(f); 
+  cos(f);        cosf(f);       cosl(f);
 
 // NO__ERRNO: declare double @llvm.cos.f64(double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.cos.f32(float) [[READNONE_INTRINSIC]]
@@ -205,7 +205,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @expf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @expl(x86_fp80 noundef) [[NOT_READNONE]]
 
-  exp2(f);       exp2f(f);      exp2l(f); 
+  exp2(f);       exp2f(f);      exp2l(f);
 
 // NO__ERRNO: declare double @llvm.exp2.f64(double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.exp2.f32(float) [[READNONE_INTRINSIC]]
@@ -288,7 +288,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @hypotf(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @hypotl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
 
-  ilogb(f);      ilogbf(f);     ilogbl(f); 
+  ilogb(f);      ilogbf(f);     ilogbl(f);
 
 // NO__ERRNO: declare i32 @ilogb(double noundef) [[READNONE]]
 // NO__ERRNO: declare i32 @ilogbf(float noundef) [[READNONE]]
@@ -486,7 +486,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @sinhf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @sinhl(x86_fp80 noundef) [[NOT_READNONE]]
 
-  sqrt(f);       sqrtf(f);      sqrtl(f); 
+  sqrt(f);       sqrtf(f);      sqrtl(f);
 
 // NO__ERRNO: declare double @llvm.sqrt.f64(double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.sqrt.f32(float) [[READNONE_INTRINSIC]]

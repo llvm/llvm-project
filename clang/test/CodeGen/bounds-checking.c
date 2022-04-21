@@ -18,6 +18,7 @@ void f2(void) {
   a[1] = 42;
 
 #ifndef NO_DYNAMIC
+  extern void *malloc(__typeof__(sizeof(0)));
   short *b = malloc(64);
   b[5] = *a + a[1] + 2;
 #endif

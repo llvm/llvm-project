@@ -4,6 +4,7 @@
 #include "DD.h"
 
 long double __gcc_qsub(long double x, long double y);
+int memcmp(const void *, const void *, __typeof__(sizeof(0)));
 
 double testAccuracy();
 int testEdgeCases();
@@ -11,10 +12,10 @@ int testEdgeCases();
 int main(int argc, char *argv[]) {
 	if (testEdgeCases())
 		return 1;
-	
+
 	if (testAccuracy() > 1.0)
 		return 1;
-	
+
 	return 0;
 }
 
@@ -114,13 +115,13 @@ int testEdgeCases() {
 		b.lo = edgeCases[i].ylo;
 		r.hi = edgeCases[i].rhi;
 		r.lo = edgeCases[i].rlo;
-		
+
 		int error;
-		
+
 		long double computed = __gcc_qsub(a.ld, b.ld);
-		
+
 		DD c = { .ld = computed };
-		
+
 		if (r.hi != r.hi) {
 			if (c.hi == c.hi)
 				error = 1;
@@ -132,16 +133,16 @@ int testEdgeCases() {
 
 		else if (r.hi == 0.0)
 			error = memcmp(&c, &r, sizeof(DD));
-		
+
 		else
 			error = ((c.hi != r.hi) || (c.lo != r.lo));
-		
+
 		if (error) {
 			printf("Error on edge case %a - %a: expected (%a, %a), got (%a, %a).\n", a.hi, b.hi, r.hi, r.lo, c.hi, c.lo);
 			return 1;
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -149,117 +150,117 @@ int testEdgeCases() {
 /*
 
  Code for generating the test cases, requires the mpfr package to run.
- 
+
  #include <stdio.h>
  #include <stdlib.h>
  #include <mpfr.h>
- 
+
  #ifdef __x86_64__
  #define randlength 2
  #else
  #define randlength 4
  #endif
- 
- 
+
+
  int main(int argc, char *argv[]) {
- 
+
  MPFR_DECL_INIT(a, 106);
  MPFR_DECL_INIT(b, 106);
  MPFR_DECL_INIT(c, 106);
- 
+
  MPFR_DECL_INIT(tmp, 53);
- 
+
  int exponent_range = atoi(argv[1]);
- 
+
  int i;
  for (i=0; i<128; ++i) {
  mpfr_random2(a, randlength, exponent_range);
  mpfr_random2(b, randlength, exponent_range);
  mpfr_add(c, a, b, GMP_RNDN);
- 
+
  double ahi = mpfr_get_d(a, GMP_RNDN);
  mpfr_set_d(tmp, ahi, GMP_RNDN);
  mpfr_sub(tmp, a, tmp, GMP_RNDN);
  double alo = mpfr_get_d(tmp, GMP_RNDN);
  printf("{%0.13a, %0.13a, ", ahi, alo);
- 
+
  double bhi = mpfr_get_d(b, GMP_RNDN);
  mpfr_set_d(tmp, bhi, GMP_RNDN);
  mpfr_sub(tmp, b, tmp, GMP_RNDN);
  double blo = mpfr_get_d(tmp, GMP_RNDN);
  printf("%0.13a, %0.13a, ", bhi, blo);
- 
+
  double chi = mpfr_get_d(c, GMP_RNDN);
  mpfr_set_d(tmp, chi, GMP_RNDN);
  mpfr_sub(tmp, c, tmp, GMP_RNDN);
  double clo = mpfr_get_d(tmp, GMP_RNDN);
  printf("%0.13a, %0.13a},\n", chi, clo);
- 
+
  mpfr_neg(b, b, GMP_RNDN);
  mpfr_add(c, a, b, GMP_RNDN);
- 
+
  ahi = mpfr_get_d(a, GMP_RNDN);
  mpfr_set_d(tmp, ahi, GMP_RNDN);
  mpfr_sub(tmp, a, tmp, GMP_RNDN);
  alo = mpfr_get_d(tmp, GMP_RNDN);
  printf("{%0.13a, %0.13a, ", ahi, alo);
- 
+
  bhi = mpfr_get_d(b, GMP_RNDN);
  mpfr_set_d(tmp, bhi, GMP_RNDN);
  mpfr_sub(tmp, b, tmp, GMP_RNDN);
  blo = mpfr_get_d(tmp, GMP_RNDN);
  printf("%0.13a, %0.13a, ", bhi, blo);
- 
+
  chi = mpfr_get_d(c, GMP_RNDN);
  mpfr_set_d(tmp, chi, GMP_RNDN);
  mpfr_sub(tmp, c, tmp, GMP_RNDN);
  clo = mpfr_get_d(tmp, GMP_RNDN);
  printf("%0.13a, %0.13a},\n", chi, clo);
- 
+
  mpfr_neg(a, a, GMP_RNDN);
  mpfr_neg(b, b, GMP_RNDN);
  mpfr_add(c, a, b, GMP_RNDN);
- 
+
  ahi = mpfr_get_d(a, GMP_RNDN);
  mpfr_set_d(tmp, ahi, GMP_RNDN);
  mpfr_sub(tmp, a, tmp, GMP_RNDN);
  alo = mpfr_get_d(tmp, GMP_RNDN);
  printf("{%0.13a, %0.13a, ", ahi, alo);
- 
+
  bhi = mpfr_get_d(b, GMP_RNDN);
  mpfr_set_d(tmp, bhi, GMP_RNDN);
  mpfr_sub(tmp, b, tmp, GMP_RNDN);
  blo = mpfr_get_d(tmp, GMP_RNDN);
  printf("%0.13a, %0.13a, ", bhi, blo);
- 
+
  chi = mpfr_get_d(c, GMP_RNDN);
  mpfr_set_d(tmp, chi, GMP_RNDN);
  mpfr_sub(tmp, c, tmp, GMP_RNDN);
  clo = mpfr_get_d(tmp, GMP_RNDN);
  printf("%0.13a, %0.13a},\n", chi, clo);
- 
+
  mpfr_neg(b, b, GMP_RNDN);
  mpfr_add(c, a, b, GMP_RNDN);
- 
+
  ahi = mpfr_get_d(a, GMP_RNDN);
  mpfr_set_d(tmp, ahi, GMP_RNDN);
  mpfr_sub(tmp, a, tmp, GMP_RNDN);
  alo = mpfr_get_d(tmp, GMP_RNDN);
  printf("{%0.13a, %0.13a, ", ahi, alo);
- 
+
  bhi = mpfr_get_d(b, GMP_RNDN);
  mpfr_set_d(tmp, bhi, GMP_RNDN);
  mpfr_sub(tmp, b, tmp, GMP_RNDN);
  blo = mpfr_get_d(tmp, GMP_RNDN);
  printf("%0.13a, %0.13a, ", bhi, blo);
- 
+
  chi = mpfr_get_d(c, GMP_RNDN);
  mpfr_set_d(tmp, chi, GMP_RNDN);
  mpfr_sub(tmp, c, tmp, GMP_RNDN);
  clo = mpfr_get_d(tmp, GMP_RNDN);
  printf("%0.13a, %0.13a},\n", chi, clo);
  }
- 
+
  return 0;
  }
 
@@ -1815,9 +1816,9 @@ const int numAccuracyTests = sizeof(accuracyTests) / sizeof(struct testVector);
 double testAccuracy() {
 	int i;
 	DD a, b, c, r;
-	
+
 	double worstUlps = 0.5;
-	
+
 	for (i=0; i<numAccuracyTests; ++i) {
 		a.hi = accuracyTests[i].xhi;
 		a.lo = accuracyTests[i].xlo;
@@ -1825,17 +1826,17 @@ double testAccuracy() {
 		b.lo = -accuracyTests[i].ylo;
 		r.hi = accuracyTests[i].rhi;
 		r.lo = accuracyTests[i].rlo;
-		
+
 		DD c = { .ld = __gcc_qsub(a.ld, b.ld) };
-		
+
 		double error = __builtin_fabs(((r.hi - c.hi) + r.lo) - c.lo);
-		
+
 		if (error != 0.0) {
-		
+
 			int exponent = ilogb(r.hi);
 			exponent = (exponent < -1022 ? -1022 : exponent);
 			double ulpError = scalbn(error, 106 - exponent);
-		
+
 			if (ulpError > worstUlps) {
 #ifdef PRINT_ACCURACY_INFORMATION
 				printf("New worst rounding error for (%a,%a) + (%a,%a):\n", a.hi, a.lo, b.hi, b.lo);
@@ -1847,7 +1848,7 @@ double testAccuracy() {
 			}
 		}
 	}
-	
+
 	return worstUlps;
 }
 

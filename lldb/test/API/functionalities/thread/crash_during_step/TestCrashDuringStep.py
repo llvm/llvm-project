@@ -20,6 +20,7 @@ class CrashDuringStepTestCase(TestBase):
 
     # IO error due to breakpoint at invalid address
     @expectedFailureAll(triple=re.compile('^mips'))
+    @skipIf(oslist=['windows'], archs=['aarch64'])
     def test_step_inst_with(self):
         """Test thread creation during step-inst handling."""
         self.build()

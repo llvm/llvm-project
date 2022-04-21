@@ -72,6 +72,9 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -145,6 +148,9 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -215,6 +221,9 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, i32* %ptr) optsize 
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -312,6 +321,9 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -407,6 +419,9 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32 %x, i8 
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
