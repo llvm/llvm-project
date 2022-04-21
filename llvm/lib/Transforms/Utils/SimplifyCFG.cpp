@@ -2975,6 +2975,24 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   return true;
 }
 
+static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
+                                        BasicBlock *To) {
+  // Don't look past the block defining the value, we might get the value from
+  // a previous loop iteration.
+  auto *I = dyn_cast<Instruction>(V);
+  if (I && I->getParent() == To)
+    return nullptr;
+
+  // We know the value if the From block branches on it.
+  auto *BI = dyn_cast<BranchInst>(From->getTerminator());
+  if (BI && BI->isConditional() && BI->getCondition() == V &&
+      BI->getSuccessor(0) != BI->getSuccessor(1))
+    return BI->getSuccessor(0) == To ? ConstantInt::getTrue(BI->getContext())
+                                     : ConstantInt::getFalse(BI->getContext());
+
+  return nullptr;
+}
+
 /// If we have a conditional branch on something for which we know the constant
 /// value in predecessors (e.g. a phi node in the current block), thread edges
 /// from the predecessor to their ultimate destination.
@@ -2984,7 +3002,8 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
                                             AssumptionCache *AC) {
   SmallDenseMap<BasicBlock *, ConstantInt *> KnownValues;
   BasicBlock *BB = BI->getParent();
-  PHINode *PN = dyn_cast<PHINode>(BI->getCondition());
+  Value *Cond = BI->getCondition();
+  PHINode *PN = dyn_cast<PHINode>(Cond);
   if (PN && PN->getParent() == BB) {
     // Degenerate case of a single entry PHI.
     if (PN->getNumIncomingValues() == 1) {
@@ -2995,6 +3014,11 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     for (Use &U : PN->incoming_values())
       if (auto *CB = dyn_cast<ConstantInt>(U))
         KnownValues.insert({PN->getIncomingBlock(U), CB});
+  } else {
+    for (BasicBlock *Pred : predecessors(BB)) {
+      if (ConstantInt *CB = getKnownValueOnEdge(Cond, Pred, BB))
+        KnownValues.insert({Pred, CB});
+    }
   }
 
   if (KnownValues.empty())
@@ -4044,42 +4068,14 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   if (PBI->getCondition() == BI->getCondition() &&
       PBI->getSuccessor(0) != PBI->getSuccessor(1)) {
     // Okay, the outcome of this conditional branch is statically
-    // knowable.  If this block had a single pred, handle specially.
+    // knowable.  If this block had a single pred, handle specially, otherwise
+    // FoldCondBranchOnValueKnownInPredecessor() will handle it.
     if (BB->getSinglePredecessor()) {
       // Turn this into a branch on constant.
       bool CondIsTrue = PBI->getSuccessor(0) == BB;
       BI->setCondition(
           ConstantInt::get(Type::getInt1Ty(BB->getContext()), CondIsTrue));
       return true; // Nuke the branch on constant.
-    }
-
-    // Otherwise, if there are multiple predecessors, insert a PHI that merges
-    // in the constant and simplify the block result.  Subsequent passes of
-    // simplifycfg will thread the block.
-    if (BlockIsSimpleEnoughToThreadThrough(BB)) {
-      pred_iterator PB = pred_begin(BB), PE = pred_end(BB);
-      PHINode *NewPN = PHINode::Create(
-          Type::getInt1Ty(BB->getContext()), std::distance(PB, PE),
-          BI->getCondition()->getName() + ".pr", &BB->front());
-      // Okay, we're going to insert the PHI node.  Since PBI is not the only
-      // predecessor, compute the PHI'd conditional value for all of the preds.
-      // Any predecessor where the condition is not computable we keep symbolic.
-      for (pred_iterator PI = PB; PI != PE; ++PI) {
-        BasicBlock *P = *PI;
-        if ((PBI = dyn_cast<BranchInst>(P->getTerminator())) && PBI != BI &&
-            PBI->isConditional() && PBI->getCondition() == BI->getCondition() &&
-            PBI->getSuccessor(0) != PBI->getSuccessor(1)) {
-          bool CondIsTrue = PBI->getSuccessor(0) == BB;
-          NewPN->addIncoming(
-              ConstantInt::get(Type::getInt1Ty(BB->getContext()), CondIsTrue),
-              P);
-        } else {
-          NewPN->addIncoming(BI->getCondition(), P);
-        }
-      }
-
-      BI->setCondition(NewPN);
-      return true;
     }
   }
 
