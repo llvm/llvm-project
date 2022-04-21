@@ -6383,19 +6383,21 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
 def HLSLSV_ShaderTypeAttrDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``shader`` type attribute applies to HLSL shader entry functions to 
+The ``shader`` type attribute applies to HLSL shader entry functions to
 identify the shader type for the entry function.
 The syntax is:
+
+.. code-block:: text
+
   ``[shader(string-literal)]``
+
 where the string literal is one of: "pixel", "vertex", "geometry", "hull",
- "domain", "compute", "raygeneration", "intersection", "anyhit", "closesthit",
- "miss", "callable", "mesh", "amplification".
-Normally the shader type is set by shader target with the ``-T`` option like
-``-Tps_6_1``.
-When compiling to a library target like ``lib_6_3``, the shader type attribute
- can help the compiler to identify the shader type.
-It is mostly used by Raytracing shaders where shaders must be compiled into a
-library and linked at runtime.
+"domain", "compute", "raygeneration", "intersection", "anyhit", "closesthit",
+"miss", "callable", "mesh", "amplification". Normally the shader type is set
+by shader target with the ``-T`` option like ``-Tps_6_1``. When compiling to a
+library target like ``lib_6_3``, the shader type attribute can help the
+compiler to identify the shader type. It is mostly used by Raytracing shaders
+where shaders must be compiled into a library and linked at runtime.
   }];
 }
 
