@@ -351,23 +351,25 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-LABEL: v2i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x2, x6
-; CHECK-NEXT:    eor x10, x3, x7
+; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    adcs x9, x3, x7
-; CHECK-NEXT:    eor x11, x3, x9
-; CHECK-NEXT:    asr x12, x9, #63
-; CHECK-NEXT:    bics xzr, x11, x10
-; CHECK-NEXT:    eor x10, x1, x5
-; CHECK-NEXT:    csel x2, x12, x8, lt
-; CHECK-NEXT:    eor x8, x12, #0x8000000000000000
-; CHECK-NEXT:    csel x3, x8, x9, lt
+; CHECK-NEXT:    cset w10, vs
+; CHECK-NEXT:    asr x11, x9, #63
+; CHECK-NEXT:    cmp w10, #0
+; CHECK-NEXT:    csel x2, x11, x8, ne
+; CHECK-NEXT:    eor x8, x11, #0x8000000000000000
+; CHECK-NEXT:    csel x3, x8, x9, ne
 ; CHECK-NEXT:    adds x8, x0, x4
+; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    adcs x9, x1, x5
-; CHECK-NEXT:    eor x11, x1, x9
-; CHECK-NEXT:    asr x12, x9, #63
-; CHECK-NEXT:    bics xzr, x11, x10
-; CHECK-NEXT:    eor x10, x12, #0x8000000000000000
-; CHECK-NEXT:    csel x8, x12, x8, lt
-; CHECK-NEXT:    csel x1, x10, x9, lt
+; CHECK-NEXT:    cset w10, vs
+; CHECK-NEXT:    asr x11, x9, #63
+; CHECK-NEXT:    cmp w10, #0
+; CHECK-NEXT:    eor x10, x11, #0x8000000000000000
+; CHECK-NEXT:    csel x8, x11, x8, ne
+; CHECK-NEXT:    csel x1, x10, x9, ne
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    fmov x0, d0
