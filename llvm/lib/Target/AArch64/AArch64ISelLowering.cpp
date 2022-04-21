@@ -3339,7 +3339,7 @@ static SDValue overflowFlagToValue(SDValue Flag, EVT VT, SelectionDAG &DAG) {
 }
 
 // This lowering is inefficient, but it will get cleaned up by
-// `performAddSubCombine`
+// `foldOverflowCheck`
 static SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG, unsigned Opcode,
                                 bool IsSigned) {
   EVT VT0 = Op.getValue(0).getValueType();
@@ -15538,6 +15538,46 @@ static SDValue performAddSubLongCombine(SDNode *N,
   return DAG.getNode(N->getOpcode(), SDLoc(N), VT, LHS, RHS);
 }
 
+static bool isCMP(SDValue Op) {
+  return Op.getOpcode() == AArch64ISD::SUBS &&
+         !Op.getNode()->hasAnyUseOfValue(0);
+}
+
+// (CSEL 1 0 CC Cond) => CC
+// (CSEL 0 1 CC Cond) => !CC
+static Optional<AArch64CC::CondCode> getCSETCondCode(SDValue Op) {
+  if (Op.getOpcode() != AArch64ISD::CSEL)
+    return None;
+  auto CC = static_cast<AArch64CC::CondCode>(Op.getConstantOperandVal(2));
+  if (CC == AArch64CC::AL || CC == AArch64CC::NV)
+    return None;
+  SDValue OpLHS = Op.getOperand(0);
+  SDValue OpRHS = Op.getOperand(1);
+  if (isOneConstant(OpLHS) && isNullConstant(OpRHS))
+    return CC;
+  if (isNullConstant(OpLHS) && isOneConstant(OpRHS))
+    return getInvertedCondCode(CC);
+
+  return None;
+}
+
+// (ADC{S} l r (CMP (CSET HS carry) 1)) => (ADC{S} l r carry)
+// (SBC{S} l r (CMP (CSET LO carry) 1)) => (SBC{S} l r carry)
+static SDValue foldOverflowCheck(SDNode *Op, SelectionDAG &DAG, bool IsAdd) {
+  SDValue CmpOp = Op->getOperand(2);
+  if (!(isCMP(CmpOp) && isOneConstant(CmpOp.getOperand(1))))
+    return SDValue();
+
+  SDValue CsetOp = CmpOp->getOperand(0);
+  auto CC = getCSETCondCode(CsetOp);
+  if (CC != (IsAdd ? AArch64CC::HS : AArch64CC::LO))
+    return SDValue();
+
+  return DAG.getNode(Op->getOpcode(), SDLoc(Op), Op->getVTList(),
+                     Op->getOperand(0), Op->getOperand(1),
+                     CsetOp.getOperand(3));
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -18745,6 +18785,12 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ADD:
   case ISD::SUB:
     return performAddSubCombine(N, DCI, DAG);
+  case AArch64ISD::ADC:
+  case AArch64ISD::ADCS:
+    return foldOverflowCheck(N, DAG, /* IsAdd */ true);
+  case AArch64ISD::SBC:
+  case AArch64ISD::SBCS:
+    return foldOverflowCheck(N, DAG, /* IsAdd */ false);
   case ISD::XOR:
     return performXorCombine(N, DAG, DCI, Subtarget);
   case ISD::MUL:

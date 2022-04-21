@@ -354,8 +354,6 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-LABEL: v2i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x2, x6
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    sbcs x9, x3, x7
 ; CHECK-NEXT:    cset w10, vs
 ; CHECK-NEXT:    asr x11, x9, #63
@@ -364,8 +362,6 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-NEXT:    eor x8, x11, #0x8000000000000000
 ; CHECK-NEXT:    csel x3, x8, x9, ne
 ; CHECK-NEXT:    subs x8, x0, x4
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    sbcs x9, x1, x5
 ; CHECK-NEXT:    cset w10, vs
 ; CHECK-NEXT:    asr x11, x9, #63

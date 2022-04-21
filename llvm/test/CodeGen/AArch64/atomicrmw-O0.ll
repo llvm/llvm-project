@@ -219,8 +219,6 @@ define i128 @test_rmw_add_128(i128* %dst)   {
 ; NOLSE-NEXT:    ldr x8, [sp, #32] // 8-byte Folded Reload
 ; NOLSE-NEXT:    ldr x13, [sp, #24] // 8-byte Folded Reload
 ; NOLSE-NEXT:    adds x14, x8, #1
-; NOLSE-NEXT:    cset w9, hs
-; NOLSE-NEXT:    subs w9, w9, #1
 ; NOLSE-NEXT:    mov x9, xzr
 ; NOLSE-NEXT:    adcs x15, x11, x9
 ; NOLSE-NEXT:  .LBB4_2: // %atomicrmw.start
@@ -274,8 +272,6 @@ define i128 @test_rmw_add_128(i128* %dst)   {
 ; LSE-NEXT:    ldr x8, [sp, #64] // 8-byte Folded Reload
 ; LSE-NEXT:    ldr x9, [sp, #56] // 8-byte Folded Reload
 ; LSE-NEXT:    adds x2, x8, #1
-; LSE-NEXT:    cset w11, hs
-; LSE-NEXT:    subs w11, w11, #1
 ; LSE-NEXT:    mov x11, xzr
 ; LSE-NEXT:    adcs x11, x10, x11
 ; LSE-NEXT:    // kill: def $x2 killed $x2 def $x2_x3

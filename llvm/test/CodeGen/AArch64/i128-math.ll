@@ -23,8 +23,6 @@ define i128 @u128_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    adcs x1, x1, x3
 ; CHECK-NEXT:    ret
   %1 = add i128 %x, %y
@@ -35,8 +33,6 @@ define { i128, i8 } @u128_checked_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_checked_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    adcs x1, x1, x3
 ; CHECK-NEXT:    cset w8, hs
 ; CHECK-NEXT:    eor w2, w8, #0x1
@@ -55,8 +51,6 @@ define { i128, i8 } @u128_overflowing_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_overflowing_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    adcs x1, x1, x3
 ; CHECK-NEXT:    cset w2, hs
 ; CHECK-NEXT:    ret
@@ -73,8 +67,6 @@ define i128 @u128_saturating_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_saturating_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x0, x2
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    adcs x9, x1, x3
 ; CHECK-NEXT:    cset w10, hs
 ; CHECK-NEXT:    cmp w10, #0
@@ -89,8 +81,6 @@ define i128 @u128_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    sbcs x1, x1, x3
 ; CHECK-NEXT:    ret
   %1 = sub i128 %x, %y
@@ -101,8 +91,6 @@ define { i128, i8 } @u128_checked_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_checked_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    sbcs x1, x1, x3
 ; CHECK-NEXT:    cset w8, hs
 ; CHECK-NEXT:    eor w2, w8, #0x1
@@ -121,8 +109,6 @@ define { i128, i8 } @u128_overflowing_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_overflowing_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    sbcs x1, x1, x3
 ; CHECK-NEXT:    cset w2, hs
 ; CHECK-NEXT:    ret
@@ -139,8 +125,6 @@ define i128 @u128_saturating_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_saturating_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x2
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    sbcs x9, x1, x3
 ; CHECK-NEXT:    cset w10, hs
 ; CHECK-NEXT:    cmp w10, #0
@@ -155,8 +139,6 @@ define i128 @i128_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    adcs x1, x1, x3
 ; CHECK-NEXT:    ret
   %1 = add i128 %x, %y
@@ -167,8 +149,6 @@ define { i128, i8 } @i128_checked_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_checked_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    adcs x1, x1, x3
 ; CHECK-NEXT:    cset w8, vs
 ; CHECK-NEXT:    eor w2, w8, #0x1
@@ -187,8 +167,6 @@ define { i128, i8 } @i128_overflowing_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_overflowing_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    adcs x1, x1, x3
 ; CHECK-NEXT:    cset w2, vs
 ; CHECK-NEXT:    ret
@@ -205,8 +183,6 @@ define i128 @i128_saturating_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_saturating_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x0, x2
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    adcs x9, x1, x3
 ; CHECK-NEXT:    asr x10, x9, #63
 ; CHECK-NEXT:    cset w11, vs
@@ -223,8 +199,6 @@ define i128 @i128_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    sbcs x1, x1, x3
 ; CHECK-NEXT:    ret
   %1 = sub i128 %x, %y
@@ -235,8 +209,6 @@ define { i128, i8 } @i128_checked_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_checked_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    sbcs x1, x1, x3
 ; CHECK-NEXT:    cset w8, vs
 ; CHECK-NEXT:    eor w2, w8, #0x1
@@ -255,8 +227,6 @@ define { i128, i8 } @i128_overflowing_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_overflowing_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    sbcs x1, x1, x3
 ; CHECK-NEXT:    cset w2, vs
 ; CHECK-NEXT:    ret
@@ -273,8 +243,6 @@ define i128 @i128_saturating_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_saturating_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x2
-; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    sbcs x9, x1, x3
 ; CHECK-NEXT:    asr x10, x9, #63
 ; CHECK-NEXT:    cset w11, vs
