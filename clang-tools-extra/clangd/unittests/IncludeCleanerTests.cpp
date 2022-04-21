@@ -511,11 +511,13 @@ TEST(IncludeCleaner, IWYUPragmas) {
   TestTU TU;
   TU.Code = R"cpp(
     #include "behind_keep.h" // IWYU pragma: keep
+    #include "exported.h" // IWYU pragma: export
     #include "public.h"
 
     void bar() { foo(); }
     )cpp";
   TU.AdditionalFiles["behind_keep.h"] = guard("");
+  TU.AdditionalFiles["exported.h"] = guard("");
   TU.AdditionalFiles["public.h"] = guard("#include \"private.h\"");
   TU.AdditionalFiles["private.h"] = guard(R"cpp(
     // IWYU pragma: private, include "public.h"
