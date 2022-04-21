@@ -266,7 +266,7 @@ func.func @main() {
 //  CHECK-DAG:   memref.copy %[[A]], %[[alloc]]
 //      CHECK:   call @some_external_func_within_scf_execute(%[[B]]) : (memref<4xi32, #[[$DYN_1D_MAP]]>) -> ()
   scf.execute_region {
-    call @some_external_func_within_scf_execute(%A) : (tensor<4xi32>) -> ()
+    func.call @some_external_func_within_scf_execute(%A) : (tensor<4xi32>) -> ()
     scf.yield
   }
 
@@ -511,7 +511,7 @@ func.func @equivalent_func_arg(%t0: tensor<?xf32> {linalg.inplaceable = true},
   // CHECK-NOT: copy
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
     // CHECK: call @inner_func(%[[arg0]])
-    %3 = call @inner_func(%t1) : (tensor<?xf32>) -> tensor<?xf32>
+    %3 = func.call @inner_func(%t1) : (tensor<?xf32>) -> tensor<?xf32>
     scf.yield %3 : tensor<?xf32>
   }
   return %1: tensor<?xf32>
@@ -544,7 +544,7 @@ func.func @equivalent_func_arg_2(%t0: tensor<?xf32> {linalg.inplaceable = true},
     // CHECK: call @inner_func_2(%[[casted]])
     // CHECK: memref.dealloc %[[alloc]]
     // CHECK-NOT: scf.yield
-    %3 = call @inner_func_2(%t1) : (tensor<?xf32>) -> tensor<?xf32>
+    %3 = func.call @inner_func_2(%t1) : (tensor<?xf32>) -> tensor<?xf32>
     scf.yield %t1 : tensor<?xf32>
   }
   return %1: tensor<?xf32>

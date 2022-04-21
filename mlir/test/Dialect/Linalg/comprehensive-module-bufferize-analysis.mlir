@@ -650,7 +650,7 @@ func.func @scf_for_deps(
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
   //      CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "false"]}
   %r0 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
-    call @some_use(%t) : (tensor<?xf32>) -> ()
+    func.call @some_use(%t) : (tensor<?xf32>) -> ()
     scf.yield %t : tensor<?xf32>
   }
 
@@ -662,7 +662,7 @@ func.func @scf_for_deps(
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
   //      CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "true"]}
   %r1 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
-    call @some_use(%t) : (tensor<?xf32>) -> ()
+    func.call @some_use(%t) : (tensor<?xf32>) -> ()
     scf.yield %t : tensor<?xf32>
   }
 
@@ -1678,7 +1678,7 @@ func.func @equivalent_func_arg(%c0: index, %c10: index, %c1: index, %t0: tensor<
   // This test does not check IR. It just asserts there is no failure due to
   // non-equivalent scf.for yield values.
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
-    %3 = call @inner_func(%t1) : (tensor<?xf32>) -> tensor<?xf32>
+    %3 = func.call @inner_func(%t1) : (tensor<?xf32>) -> tensor<?xf32>
     scf.yield %3 : tensor<?xf32>
   }
   return %1: tensor<?xf32>
@@ -1700,7 +1700,7 @@ func.func @equivalent_func_arg_2(%c0: index, %c10: index, %c1: index, %t0: tenso
   // This test does not check IR. It just asserts there is no failure due to
   // non-equivalent scf.for yield values.
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
-    %3 = call @inner_func_2(%t1) : (tensor<?xf32>) -> tensor<?xf32>
+    %3 = func.call @inner_func_2(%t1) : (tensor<?xf32>) -> tensor<?xf32>
     scf.yield %3 : tensor<?xf32>
   }
   return %1: tensor<?xf32>

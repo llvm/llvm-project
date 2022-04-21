@@ -105,7 +105,7 @@ func.func @verifyNativeCodeCallBinding(%arg0 : i32) -> (i32) {
 }
 
 // CHECK-LABEL: verifyMultipleNativeCodeCallBinding
-func@verifyMultipleNativeCodeCallBinding(%arg0 : i32) -> (i32) {
+func.func @verifyMultipleNativeCodeCallBinding(%arg0 : i32) -> (i32) {
   %0 = "test.op_k"() : () -> (i32)
   %1 = "test.op_k"() : () -> (i32)
   // CHECK: %[[A:.*]] = "test.native_code_call7"(%1) : (i32) -> i32

@@ -389,7 +389,7 @@ func.func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
       scf.reduce.return %1 : f32
     }
 
-    %2 = call @generate() : () -> i64
+    %2 = func.call @generate() : () -> i64
     scf.reduce(%2) : i64 {
     ^bb0(%lhs: i64, %rhs: i64):
       %3 = arith.ori %lhs, %rhs : i64

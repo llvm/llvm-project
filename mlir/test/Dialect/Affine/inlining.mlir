@@ -30,7 +30,7 @@ func.func @not_inline_in_affine_op() {
   // CHECK-NOT: affine.if
   // CHECK: call
   affine.for %i = 1 to 10 {
-    call @func_with_affine_ops(%c) : (index) -> ()
+    func.call @func_with_affine_ops(%c) : (index) -> ()
   }
   return
 }
@@ -63,7 +63,7 @@ func.func @func_noop() {
 func.func @inline_into_affine_ops() {
   // CHECK-NOT: call @func_noop
   affine.for %i = 1 to 10 {
-    call @func_noop() : () -> ()
+    func.call @func_noop() : () -> ()
   }
   return
 }
@@ -83,7 +83,7 @@ func.func @inline_dimension(%arg0: memref<?xf32>) {
   affine.for %i = 1 to 42 {
     // CHECK-NOT: call @func_dim
     // CHECK: affine.load %[[ARG0]][%[[IV]]]
-    call @func_dim(%i, %arg0) : (index, memref<?xf32>) -> ()
+    func.call @func_dim(%i, %arg0) : (index, memref<?xf32>) -> ()
   }
   return
 }
@@ -103,7 +103,7 @@ func.func @inline_dimension_vector(%arg0: memref<32xf32>) {
   affine.for %i = 1 to 42 {
     // CHECK-NOT: call @func_dim
     // CHECK: affine.vector_load %[[ARG0]][%[[IV]]]
-    call @func_vector_dim(%i, %arg0) : (index, memref<32xf32>) -> ()
+    func.call @func_vector_dim(%i, %arg0) : (index, memref<32xf32>) -> ()
   }
   return
 }
@@ -124,7 +124,7 @@ func.func @func_top_level(%arg0: memref<?xf32>) {
 func.func @no_inline_not_top_level(%arg0: memref<?xf32>) {
   affine.for %i = 1 to 42 {
     // CHECK: call @func_top_level
-    call @func_top_level(%arg0) : (memref<?xf32>) -> ()
+    func.call @func_top_level(%arg0) : (memref<?xf32>) -> ()
   }
   return
 }

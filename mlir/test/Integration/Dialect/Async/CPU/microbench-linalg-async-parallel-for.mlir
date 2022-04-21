@@ -111,7 +111,7 @@ func.func @entry() {
 
   %t0 = call @rtclock() : () -> f64
   scf.for %i = %c0 to %cN step %c1 {
-    call @linalg_generic(%LHS0, %RHS0, %DST0)
+    func.call @linalg_generic(%LHS0, %RHS0, %DST0)
       : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
   }
   %t1 = call @rtclock() : () -> f64

@@ -87,7 +87,7 @@ run(testInvalidNesting)
 def testRunPipeline():
   with Context():
     pm = PassManager.parse("print-op-stats")
-    module = Module.parse(r"""func @successfulParse() { return }""")
+    module = Module.parse(r"""func.func @successfulParse() { return }""")
     pm.run(module)
 # CHECK: Operations encountered:
 # CHECK: builtin.module    , 1

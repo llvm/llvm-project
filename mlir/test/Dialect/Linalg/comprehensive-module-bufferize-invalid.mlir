@@ -120,7 +120,7 @@ func.func @scf_yield_needs_copy(%A : tensor<?xf32> {linalg.inplaceable = true}, 
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %res = scf.for %arg0 = %c0 to %iters step %c1 iter_args(%bbarg = %A) -> (tensor<?xf32>) {
-    %r = call @foo(%A) : (tensor<?xf32>) -> (tensor<?xf32>)
+    %r = func.call @foo(%A) : (tensor<?xf32>) -> (tensor<?xf32>)
     // expected-error @+1 {{Yield operand #0 does not bufferize to a buffer that is aliasing}}
     scf.yield %r : tensor<?xf32>
   }

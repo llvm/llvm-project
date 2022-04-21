@@ -19,7 +19,7 @@ func.func private @body(index) -> ()
 // CHECK-NEXT: }
 func.func @simple_loop() {
   affine.for %i = 1 to 42 {
-    call @body(%i) : (index) -> ()
+    func.call @body(%i) : (index) -> ()
   }
   return
 }
@@ -72,11 +72,11 @@ func.func private @post(index) -> ()
 // CHECK-NEXT: }
 func.func @imperfectly_nested_loops() {
   affine.for %i = 0 to 42 {
-    call @pre(%i) : (index) -> ()
+    func.call @pre(%i) : (index) -> ()
     affine.for %j = 7 to 56 step 2 {
-      call @body2(%i, %j) : (index, index) -> ()
+      func.call @body2(%i, %j) : (index, index) -> ()
     }
-    call @post(%i) : (index) -> ()
+    func.call @post(%i) : (index) -> ()
   }
   return
 }
@@ -111,15 +111,15 @@ func.func private @body3(index, index) -> ()
 // CHECK-NEXT: }
 func.func @more_imperfectly_nested_loops() {
   affine.for %i = 0 to 42 {
-    call @pre(%i) : (index) -> ()
+    func.call @pre(%i) : (index) -> ()
     affine.for %j = 7 to 56 step 2 {
-      call @body2(%i, %j) : (index, index) -> ()
+      func.call @body2(%i, %j) : (index, index) -> ()
     }
-    call @mid(%i) : (index) -> ()
+    func.call @mid(%i) : (index) -> ()
     affine.for %k = 18 to 37 step 3 {
-      call @body3(%i, %k) : (index, index) -> ()
+      func.call @body3(%i, %k) : (index, index) -> ()
     }
-    call @post(%i) : (index) -> ()
+    func.call @post(%i) : (index) -> ()
   }
   return
 }
@@ -139,7 +139,7 @@ func.func @more_imperfectly_nested_loops() {
 func.func @affine_apply_loops_shorthand(%N : index) {
   affine.for %i = 0 to %N {
     affine.for %j = affine_map<(d0)[]->(d0)>(%i)[] to 42 {
-      call @body2(%i, %j) : (index, index) -> ()
+      func.call @body2(%i, %j) : (index, index) -> ()
     }
   }
   return
@@ -168,7 +168,7 @@ func.func private @get_idx() -> (index)
 func.func @if_only() {
   %i = call @get_idx() : () -> (index)
   affine.if #set1(%i) {
-    call @body(%i) : (index) -> ()
+    func.call @body(%i) : (index) -> ()
   }
   return
 }
@@ -191,9 +191,9 @@ func.func @if_only() {
 func.func @if_else() {
   %i = call @get_idx() : () -> (index)
   affine.if #set1(%i) {
-    call @body(%i) : (index) -> ()
+    func.call @body(%i) : (index) -> ()
   } else {
-    call @mid(%i) : (index) -> ()
+    func.call @mid(%i) : (index) -> ()
   }
   return
 }
@@ -229,11 +229,11 @@ func.func @nested_ifs() {
   %i = call @get_idx() : () -> (index)
   affine.if #set1(%i) {
     affine.if #set2(%i) {
-      call @body(%i) : (index) -> ()
+      func.call @body(%i) : (index) -> ()
     }
   } else {
     affine.if #set2(%i) {
-      call @mid(%i) : (index) -> ()
+      func.call @mid(%i) : (index) -> ()
     }
   }
   return
@@ -303,9 +303,9 @@ func.func @if_with_yield() -> (i64) {
 func.func @multi_cond(%N : index, %M : index, %K : index, %L : index) {
   %i = call @get_idx() : () -> (index)
   affine.if #setN(%i)[%N,%M,%K,%L] {
-    call @body(%i) : (index) -> ()
+    func.call @body(%i) : (index) -> ()
   } else {
-    call @mid(%i) : (index) -> ()
+    func.call @mid(%i) : (index) -> ()
   }
   return
 }
@@ -334,7 +334,7 @@ func.func @if_for() {
   affine.if #set1(%i) {
     affine.for %j = 0 to 42 {
       affine.if #set2(%j) {
-        call @body2(%i, %j) : (index, index) -> ()
+        func.call @body2(%i, %j) : (index, index) -> ()
       }
     }
   }
@@ -354,7 +354,7 @@ func.func @if_for() {
   affine.for %k = 0 to 42 {
     affine.if #set2(%k) {
       affine.for %l = 0 to 42 {
-        call @body3(%k, %l) : (index, index) -> ()
+        func.call @body3(%k, %l) : (index, index) -> ()
       }
     }
   }
@@ -389,7 +389,7 @@ func.func @if_for() {
 func.func @loop_min_max(%N : index) {
   affine.for %i = 0 to 42 {
     affine.for %j = max #lbMultiMap(%i)[%N] to min #ubMultiMap(%i)[%N] {
-      call @body2(%i, %j) : (index, index) -> ()
+      func.call @body2(%i, %j) : (index, index) -> ()
     }
   }
   return
@@ -422,7 +422,7 @@ func.func @loop_min_max(%N : index) {
 // CHECK-NEXT: }
 func.func @min_reduction_tree(%v1 : index, %v2 : index, %v3 : index, %v4 : index, %v5 : index, %v6 : index, %v7 : index) {
   affine.for %i = 0 to min #map_7_values(%v1, %v2, %v3, %v4, %v5, %v6, %v7)[] {
-    call @body(%i) : (index) -> ()
+    func.call @body(%i) : (index) -> ()
   }
   return
 }

@@ -841,7 +841,7 @@ func.func @assume_alignment(%0: memref<4x4xf16>) {
 "alloca_without_scoped_alloc_parent"() ({
   memref.alloca() : memref<1xf32>
   // expected-error@-1 {{requires an ancestor op with AutomaticAllocationScope trait}}
-  return
+  func.return
 }) : () -> ()
 
 // -----
