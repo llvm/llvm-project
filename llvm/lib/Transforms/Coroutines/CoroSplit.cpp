@@ -2084,8 +2084,6 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   for (LazyCallGraph::Node *N : Coroutines) {
     Function &F = N->getFunction();
     LLVM_DEBUG(dbgs() << "CoroSplit: Processing coroutine '" << F.getName()
-                      << "' state: "
-                      << F.getFnAttribute(CORO_PRESPLIT_ATTR).getValueAsString()
                       << "\n");
     F.removeFnAttr(CORO_PRESPLIT_ATTR);
 
