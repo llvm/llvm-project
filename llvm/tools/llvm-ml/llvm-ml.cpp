@@ -243,6 +243,13 @@ int main(int Argc, char **Argv) {
         << "' option\n";
   }
 
+  if (InputArgs.hasArg(OPT_debug)) {
+    DebugFlag = true;
+  }
+  for (auto *Arg : InputArgs.filtered(OPT_debug_only)) {
+    setCurrentDebugTypes(Arg->getValues().data(), Arg->getNumValues());
+  }
+
   if (InputArgs.hasArg(OPT_help)) {
     std::string Usage = llvm::formatv("{0} [ /options ] file", ProgName).str();
     T.printHelp(outs(), Usage.c_str(), "LLVM MASM Assembler",
