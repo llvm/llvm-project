@@ -1169,8 +1169,7 @@ provide the following output from the device runtime library.
 
 .. code-block:: console
 
-    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -fopenmp-target-new-runtime \
-      -fopenmp-target-debug=3
+    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -fopenmp-target-debug=3
     $ env LIBOMPTARGET_DEVICE_RTL_DEBUG=3 ./zaxpy
 
 .. code-block:: text
