@@ -244,7 +244,7 @@ void reinitializationTest(int i) {
     A a;
     if (i == 1) { // peaceful-note 2 {{'i' is not equal to 1}}
                   // peaceful-note@-1 2 {{Taking false branch}}
-      (void)std::move(a);
+      std::move(a);
     }
     if (i == 2) { // peaceful-note 2 {{'i' is not equal to 2}}
                   // peaceful-note@-1 2 {{Taking false branch}}
@@ -494,7 +494,7 @@ void templateArgIsNotUseTest() {
 // Moves of global variables are not reported.
 A global_a;
 void globalVariablesTest() {
-  (void)std::move(global_a);
+  std::move(global_a);
   global_a.foo(); // no-warning
 }
 
