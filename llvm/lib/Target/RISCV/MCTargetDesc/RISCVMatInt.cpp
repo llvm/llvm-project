@@ -73,6 +73,12 @@ static void generateInstSeqImpl(int64_t Val,
 
   assert(IsRV64 && "Can't emit >32-bit imm for non-RV64 target");
 
+  // Use BSETI for a single bit.
+  if (ActiveFeatures[RISCV::FeatureStdExtZbs] && isPowerOf2_64(Val)) {
+    Res.push_back(RISCVMatInt::Inst(RISCV::BSETI, Log2_64(Val)));
+    return;
+  }
+
   // In the worst case, for a full 64-bit constant, a sequence of 8 instructions
   // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emitted. Note
   // that the first two instructions (LUI+ADDIW) can contribute up to 32 bits
