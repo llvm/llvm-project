@@ -826,7 +826,7 @@ func.func @mixed_named_arguments(f32,
 func.func @f(f32) {
 ^bb0(%a : f32):
   %18 = arith.cmpi slt, %idx, %idx : index
-  tensor<42 x index  // expected-error {{custom op 'tensor' is unknown}}
+  tensor<42 x index  // expected-error {{custom op 'func.tensor' is unknown}}
   return
 }
 

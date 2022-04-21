@@ -38,8 +38,8 @@
 module {
   // Creates a new sparse vector using the minimum values from two input sparse vectors.
   // When there is no overlap, include the present value in the output.
-  func @vector_min(%arga: tensor<?xf64, #SparseVector>,
-                   %argb: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
+  func.func @vector_min(%arga: tensor<?xf64, #SparseVector>,
+                        %argb: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
     %xv = sparse_tensor.init [%d] : tensor<?xf64, #SparseVector>
@@ -63,8 +63,8 @@ module {
 
   // Creates a new sparse vector by multiplying a sparse vector with a dense vector.
   // When there is no overlap, leave the result empty.
-  func @vector_mul(%arga: tensor<?xf64, #SparseVector>,
-                   %argb: tensor<?xf64>) -> tensor<?xf64, #SparseVector> {
+  func.func @vector_mul(%arga: tensor<?xf64, #SparseVector>,
+                        %argb: tensor<?xf64>) -> tensor<?xf64, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
     %xv = sparse_tensor.init [%d] : tensor<?xf64, #SparseVector>
@@ -87,8 +87,8 @@ module {
 
   // Take a set difference of two sparse vectors. The result will include only those
   // sparse elements present in the first, but not the second vector.
-  func @vector_setdiff(%arga: tensor<?xf64, #SparseVector>,
-                       %argb: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
+  func.func @vector_setdiff(%arga: tensor<?xf64, #SparseVector>,
+                            %argb: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
     %xv = sparse_tensor.init [%d] : tensor<?xf64, #SparseVector>
@@ -106,7 +106,7 @@ module {
   }
 
   // Return the index of each entry
-  func @vector_index(%arga: tensor<?xf64, #SparseVector>) -> tensor<?xi32, #SparseVector> {
+  func.func @vector_index(%arga: tensor<?xf64, #SparseVector>) -> tensor<?xi32, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
     %xv = sparse_tensor.init [%d] : tensor<?xi32, #SparseVector>
@@ -130,8 +130,8 @@ module {
 
   // Adds two sparse matrices when they intersect. Where they don't intersect,
   // negate the 2nd argument's values; ignore 1st argument-only values.
-  func @matrix_intersect(%arga: tensor<?x?xf64, #DCSR>,
-                         %argb: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
+  func.func @matrix_intersect(%arga: tensor<?x?xf64, #DCSR>,
+                              %argb: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #DCSR>
@@ -159,7 +159,7 @@ module {
   }
 
   // Dumps a sparse vector of type f64.
-  func @dump_vec(%arg0: tensor<?xf64, #SparseVector>) {
+  func.func @dump_vec(%arg0: tensor<?xf64, #SparseVector>) {
     // Dump the values array to verify only sparse contents are stored.
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1.0 : f64
@@ -176,7 +176,7 @@ module {
   }
 
   // Dumps a sparse vector of type i32.
-  func @dump_vec_i32(%arg0: tensor<?xi32, #SparseVector>) {
+  func.func @dump_vec_i32(%arg0: tensor<?xi32, #SparseVector>) {
     // Dump the values array to verify only sparse contents are stored.
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1 : i32
@@ -193,7 +193,7 @@ module {
   }
 
   // Dump a sparse matrix.
-  func @dump_mat(%arg0: tensor<?x?xf64, #DCSR>) {
+  func.func @dump_mat(%arg0: tensor<?x?xf64, #DCSR>) {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
     %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #DCSR> to tensor<?x?xf64>
@@ -205,7 +205,7 @@ module {
   }
 
   // Driver method to call and verify vector kernels.
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
 
     // Setup sparse vectors.

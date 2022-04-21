@@ -2,7 +2,7 @@
 
 module {
     // CHECK: %[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32, %[[ARG2:.+]]: i32
-    func @foo(%arg0: i32, %arg1: i32, %arg3: i32) -> i32 {
+    func.func @foo(%arg0: i32, %arg1: i32, %arg3: i32) -> i32 {
         // CHECK-NEXT: // %[[ARG0]] is used by %[[ARG0U1:.+]], %[[ARG0U2:.+]], %[[ARG0U3:.+]]
         // CHECK-NEXT: // %[[ARG1]] is used by %[[ARG1U1:.+]], %[[ARG1U2:.+]]
         // CHECK-NEXT: // %[[ARG2]] is unused

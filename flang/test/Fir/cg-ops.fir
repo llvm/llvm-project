@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: func @codegen(
 // CHECK-SAME: %[[arg:.*]]: !fir
-func @codegen(%addr : !fir.ref<!fir.array<?xi32>>) {
+func.func @codegen(%addr : !fir.ref<!fir.array<?xi32>>) {
   // CHECK: %[[zero:.*]] = arith.constant 0 : index
   %0 = arith.constant 0 : index
   %1 = fir.shape_shift %0, %0 : (index, index) -> !fir.shapeshift<1>
@@ -37,7 +37,7 @@ fir.global @box_global : !fir.box<!fir.array<?xi32>> {
 
 // CHECK-LABEL: func @codegen(
 // CHECK-SAME: %[[arg:.*]]: !fir
-func @codegen(%addr : !fir.ref<!fir.array<?xi32>>) {
+func.func @codegen(%addr : !fir.ref<!fir.array<?xi32>>) {
   // CHECK: %[[zero:.*]] = arith.constant 0 : index
   %0 = arith.constant 0 : index
   %1 = fir.shape_shift %0, %0 : (index, index) -> !fir.shapeshift<1>
@@ -53,7 +53,7 @@ func @codegen(%addr : !fir.ref<!fir.array<?xi32>>) {
 
 // CHECK-LABEL: func @codegen(
 // CHECK-SAME: %[[arg:.*]]: !fir
-func @codegen(%addr : !fir.box<!fir.array<?xf32>>) {
+func.func @codegen(%addr : !fir.box<!fir.array<?xf32>>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index

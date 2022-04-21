@@ -4,12 +4,12 @@
 // RUN: fir-opt --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
 
 // CHECK:  func private @takes_char_proc(() -> () {fir.char_proc}, i64)
-func private @takes_char_proc(tuple<() -> (), i64> {fir.char_proc})
+func.func private @takes_char_proc(tuple<() -> (), i64> {fir.char_proc})
 
-func private @takes_char(!fir.boxchar<1>)
-func private @char_proc(!fir.ref<!fir.char<1,7>>, index) -> !fir.boxchar<1>
+func.func private @takes_char(!fir.boxchar<1>)
+func.func private @char_proc(!fir.ref<!fir.char<1,7>>, index) -> !fir.boxchar<1>
 
-func @_QPcst_len() {
+func.func @_QPcst_len() {
   %0 = fir.address_of(@char_proc) : (!fir.ref<!fir.char<1,7>>, index) -> !fir.boxchar<1>
   %c7_i64 = arith.constant 7 : i64
   %1 = fir.convert %0 : ((!fir.ref<!fir.char<1,7>>, index) -> !fir.boxchar<1>) -> (() -> ())
@@ -26,7 +26,7 @@ func @_QPcst_len() {
 
 // CHECK:  func @test_dummy_proc_that_takes_dummy_char_proc(
 // CHECK-SAME: %[[ARG0:.*]]: () -> ()) {
-func @test_dummy_proc_that_takes_dummy_char_proc(%arg0: () -> ()) {
+func.func @test_dummy_proc_that_takes_dummy_char_proc(%arg0: () -> ()) {
   %0 = fir.address_of(@char_proc) : (!fir.ref<!fir.char<1,7>>, index) -> !fir.boxchar<1>
   %c7_i64 = arith.constant 7 : i64
   %1 = fir.convert %0 : ((!fir.ref<!fir.char<1,7>>, index) -> !fir.boxchar<1>) -> (() -> ())
@@ -48,7 +48,7 @@ func @test_dummy_proc_that_takes_dummy_char_proc(%arg0: () -> ()) {
 // CHECK-SAME: %[[C_ADDR:.*]]: !fir.ref<!fir.char<1,?>>,
 // CHECK-SAME: %[[PROC_LEN:.*]]: i64,
 // CHECK-SAME: %[[C_LEN:.*]]: i64) {
-func @takes_dummy_char_proc_impl(%arg0: tuple<() -> (), i64> {fir.char_proc}, %arg1: !fir.boxchar<1>) {
+func.func @takes_dummy_char_proc_impl(%arg0: tuple<() -> (), i64> {fir.char_proc}, %arg1: !fir.boxchar<1>) {
   // CHECK:    %[[UNDEF:.*]] = fir.undefined tuple<() -> (), i64>
   // CHECK:    %[[TUPLE0:.*]] = fir.insert_value %[[UNDEF]], %[[PROC_ADDR]], [0 : index] : (tuple<() -> (), i64>, () -> ()) -> tuple<() -> (), i64>
   // CHECK:    %[[TUPLE1:.*]] = fir.insert_value %[[TUPLE0]], %[[PROC_LEN]], [1 : index] : (tuple<() -> (), i64>, i64) -> tuple<() -> (), i64>

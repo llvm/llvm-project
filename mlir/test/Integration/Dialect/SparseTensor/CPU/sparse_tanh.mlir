@@ -16,7 +16,7 @@
 
 module {
   // Performs zero-preserving math to sparse vector.
-  func @sparse_tanh(%vec: tensor<?xf64, #SparseVector>
+  func.func @sparse_tanh(%vec: tensor<?xf64, #SparseVector>
                           {linalg.inplaceable = true})
                        -> tensor<?xf64, #SparseVector> {
     %0 = linalg.generic #trait_op
@@ -29,7 +29,7 @@ module {
   }
 
   // Dumps a sparse vector of type f64.
-  func @dump_vec_f64(%arg0: tensor<?xf64, #SparseVector>) {
+  func.func @dump_vec_f64(%arg0: tensor<?xf64, #SparseVector>) {
     // Dump the values array to verify only sparse contents are stored.
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1.0 : f64
@@ -48,7 +48,7 @@ module {
   }
 
   // Driver method to call and verify vector kernels.
-  func @entry() {
+  func.func @entry() {
     // Setup sparse vector.
     %v1 = arith.constant sparse<
        [ [0], [3], [11], [17], [20], [21], [28], [29], [31] ],

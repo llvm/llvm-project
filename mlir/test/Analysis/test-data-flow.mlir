@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: Testing : "loop-arg-pessimistic"
 module attributes {test.name = "loop-arg-pessimistic"} {
-  func @f() -> index {
+  func.func @f() -> index {
     // CHECK: Visiting : %{{.*}} = arith.constant 0
     // CHECK-NEXT: Result 0 moved from uninitialized to 1
     %c0 = arith.constant 0 : index

@@ -9,7 +9,7 @@
 // X64-LABEL: func @returncomplex4() -> !fir.vector<2:!fir.real<4>>
 // AARCH64-LABEL: func @returncomplex4() -> tuple<!fir.real<4>, !fir.real<4>>
 // PPC-LABEL: func @returncomplex4() -> tuple<!fir.real<4>, !fir.real<4>>
-func @returncomplex4() -> !fir.complex<4> {
+func.func @returncomplex4() -> !fir.complex<4> {
   // I32: fir.insert_value
   // I32: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value
   // X64: fir.insert_value
@@ -57,7 +57,7 @@ func @returncomplex4() -> !fir.complex<4> {
 // X64-LABEL: func @returncomplex8() -> tuple<!fir.real<8>, !fir.real<8>>
 // AARCH64-LABEL: func @returncomplex8() -> tuple<!fir.real<8>, !fir.real<8>>
 // PPC-LABEL: func @returncomplex8() -> tuple<!fir.real<8>, !fir.real<8>>
-func @returncomplex8() -> !fir.complex<8> {
+func.func @returncomplex8() -> !fir.complex<8> {
   // I32: fir.insert_value
   // I32: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value {{.*}}
   // X64: fir.insert_value
@@ -100,14 +100,14 @@ func @returncomplex8() -> !fir.complex<8> {
 // X64-LABEL: func private @paramcomplex4(!fir.vector<2:!fir.real<4>>)
 // AARCH64-LABEL: func private @paramcomplex4(!fir.array<2x!fir.real<4>>)
 // PPC-LABEL: func private @paramcomplex4(!fir.real<4>, !fir.real<4>)
-func private @paramcomplex4(!fir.complex<4>) -> ()
+func.func private @paramcomplex4(!fir.complex<4>) -> ()
 
 // Test that we rewrite calls to functions that return or accept complex<4>.
 // I32-LABEL: func @callcomplex4()
 // X64-LABEL: func @callcomplex4()
 // AARCH64-LABEL: func @callcomplex4()
 // PPC-LABEL: func @callcomplex4()
-func @callcomplex4() {
+func.func @callcomplex4() {
 
   // I32: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex4() : () -> i64
   // X64: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex4() : () -> !fir.vector<2:!fir.real<4>>
@@ -160,14 +160,14 @@ func @callcomplex4() {
 // X64-LABEL: func private @paramcomplex8(!fir.real<8>, !fir.real<8>)
 // AARCH64-LABEL: func private @paramcomplex8(!fir.array<2x!fir.real<8>>)
 // PPC-LABEL: func private @paramcomplex8(!fir.real<8>, !fir.real<8>)
-func private @paramcomplex8(!fir.complex<8>) -> ()
+func.func private @paramcomplex8(!fir.complex<8>) -> ()
 
 // Test that we rewrite calls to functions that return or accept complex<8>.
 // I32-LABEL: func @callcomplex8()
 // X64-LABEL: func @callcomplex8()
 // AARCH64-LABEL: func @callcomplex8()
 // PPC-LABEL: func @callcomplex8()
-func @callcomplex8() {
+func.func @callcomplex8() {
   // I32: [[RES:%[0-9A-Za-z]+]] = fir.alloca tuple<!fir.real<8>, !fir.real<8>>
   // I32: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<!fir.real<8>, !fir.real<8>>>) -> ()
   // X64: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex8() : () -> tuple<!fir.real<8>, !fir.real<8>>
@@ -216,7 +216,7 @@ func @callcomplex8() {
 // X64-LABEL: func private @calleemultipleparamscomplex4(!fir.vector<2:!fir.real<4>>, !fir.vector<2:!fir.real<4>>, !fir.vector<2:!fir.real<4>>)
 // AARCH64-LABEL: func private @calleemultipleparamscomplex4(!fir.array<2x!fir.real<4>>, !fir.array<2x!fir.real<4>>, !fir.array<2x!fir.real<4>>)
 // PPC-LABEL: func private @calleemultipleparamscomplex4(!fir.real<4>, !fir.real<4>, !fir.real<4>, !fir.real<4>, !fir.real<4>, !fir.real<4>)
-func private @calleemultipleparamscomplex4(!fir.complex<4>, !fir.complex<4>, !fir.complex<4>) -> ()
+func.func private @calleemultipleparamscomplex4(!fir.complex<4>, !fir.complex<4>, !fir.complex<4>) -> ()
 
 // I32-LABEL: func @multipleparamscomplex4
 // I32-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval}, [[Z3:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval})
@@ -226,7 +226,7 @@ func private @calleemultipleparamscomplex4(!fir.complex<4>, !fir.complex<4>, !fi
 // AARCH64-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.array<2x!fir.real<4>>, [[Z2:%[0-9A-Za-z]+]]: !fir.array<2x!fir.real<4>>, [[Z3:%[0-9A-Za-z]+]]: !fir.array<2x!fir.real<4>>)
 // PPC-LABEL: func @multipleparamscomplex4
 // PPC-SAME: ([[A1:%[0-9A-Za-z]+]]: !fir.real<4>, [[B1:%[0-9A-Za-z]+]]: !fir.real<4>, [[A2:%[0-9A-Za-z]+]]: !fir.real<4>, [[B2:%[0-9A-Za-z]+]]: !fir.real<4>, [[A3:%[0-9A-Za-z]+]]: !fir.real<4>, [[B3:%[0-9A-Za-z]+]]: !fir.real<4>)
-func @multipleparamscomplex4(%z1 : !fir.complex<4>, %z2 : !fir.complex<4>, %z3 : !fir.complex<4>) {
+func.func @multipleparamscomplex4(%z1 : !fir.complex<4>, %z2 : !fir.complex<4>, %z3 : !fir.complex<4>) {
   // I32-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<!fir.real<4>, !fir.real<4>>>) -> !fir.ref<!fir.complex<4>>
   // I32-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<!fir.complex<4>>
   // I32-DAG: [[Z2_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z2]] : (!fir.ref<tuple<!fir.real<4>, !fir.real<4>>>) -> !fir.ref<!fir.complex<4>>
@@ -340,7 +340,7 @@ func @multipleparamscomplex4(%z1 : !fir.complex<4>, %z2 : !fir.complex<4>, %z3 :
 // PPC-LABEL: func private @mlircomplexf32
 // PPC-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32)
 // PPC-SAME: -> tuple<f32, f32>
-func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> complex<f32> {
+func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> complex<f32> {
 
   // I32-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // I32-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
@@ -459,7 +459,7 @@ func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> complex<f3
 // X64-LABEL: func @addrof()
 // AARCH64-LABEL: func @addrof()
 // PPC-LABEL: func @addrof()
-func @addrof() {
+func.func @addrof() {
   // I32: {{%.*}} = fir.address_of(@returncomplex4) : () -> i64
   // X64: {{%.*}} = fir.address_of(@returncomplex4) : () -> !fir.vector<2:!fir.real<4>>
   // AARCH64: {{%.*}} = fir.address_of(@returncomplex4) : () -> tuple<!fir.real<4>, !fir.real<4>>

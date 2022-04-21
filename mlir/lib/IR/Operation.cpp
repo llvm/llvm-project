@@ -630,10 +630,6 @@ void OpState::printOpName(Operation *op, OpAsmPrinter &p,
   StringRef name = op->getName().getStringRef();
   if (name.startswith((defaultDialect + ".").str()))
     name = name.drop_front(defaultDialect.size() + 1);
-  // TODO: remove this special case (and update test/IR/parser.mlir)
-  else if ((defaultDialect.empty() || defaultDialect == "builtin") &&
-           name.startswith("func."))
-    name = name.drop_front(5);
   p.getStream() << name;
 }
 

@@ -209,7 +209,7 @@ def ConstantOp : Func_Op<"constant",
 
 def FuncOp : Func_Op<"func", [
   AffineScope, AutomaticAllocationScope, CallableOpInterface,
-  FunctionOpInterface, IsolatedFromAbove, Symbol
+  FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface, Symbol
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{
@@ -307,6 +307,13 @@ def FuncOp : Func_Op<"func", [
 
     /// Returns the result types of this function.
     ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Allow the dialect prefix to be omitted.
+    static StringRef getDefaultDialect() { return "func"; }
 
     //===------------------------------------------------------------------===//
     // SymbolOpInterface Methods

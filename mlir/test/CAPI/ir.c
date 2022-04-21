@@ -387,7 +387,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "Terminator: ");
   mlirOperationPrint(terminator, printToStderr, NULL);
   fprintf(stderr, "\n");
-  // CHECK: Terminator: return
+  // CHECK: Terminator: func.return
 
   // Get the attribute by index.
   MlirNamedAttribute namedAttr0 = mlirOperationGetAttribute(operation, 0);
@@ -1850,10 +1850,10 @@ int testTypeID(MlirContext ctx) {
 int testSymbolTable(MlirContext ctx) {
   fprintf(stderr, "@testSymbolTable\n");
 
-  const char *moduleString = "func private @foo()"
-                             "func private @bar()";
-  const char *otherModuleString = "func private @qux()"
-                                  "func private @foo()";
+  const char *moduleString = "func.func private @foo()"
+                             "func.func private @bar()";
+  const char *otherModuleString = "func.func private @qux()"
+                                  "func.func private @foo()";
 
   MlirModule module =
       mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));

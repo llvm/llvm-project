@@ -1,7 +1,7 @@
 // RUN: fir-opt --cfg-conversion="always-execute-loop-body=true" %s | FileCheck %s
 // RUN: fir-opt --cfg-conversion %s | FileCheck %s --check-prefix=NOOPT
 
-func @x(%addr : !fir.ref<index>) {
+func.func @x(%addr : !fir.ref<index>) {
   %bound = arith.constant 452 : index
   %step = arith.constant 1 : index
   fir.do_loop %iv = %bound to %bound step %step {
@@ -10,7 +10,7 @@ func @x(%addr : !fir.ref<index>) {
   return
 }
 
-func private @y(%addr : !fir.ref<index>)
+func.func private @y(%addr : !fir.ref<index>)
 
 
 // CHECK-LABEL:   func @x(

@@ -21,7 +21,7 @@ transform.with_pdl_patterns {
 // CHECK-SAME:    %[[TB:[0-9a-z]+]]: tensor<128x128xf32>
 // CHECK-SAME:    %[[TC:[0-9a-z]+]]: tensor<128x128xf32>
 // CHECK-SAME:  -> tensor<128x128xf32> {
-func @tile_linalg_matmul(
+func.func @tile_linalg_matmul(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
 //      CHECK: %[[TD0:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC0:.*]] = %[[TC]]) -> (tensor<128x128xf32>) {

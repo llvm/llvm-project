@@ -14,6 +14,6 @@
 // CHECK-SAME: %{{.*}}: !llvm.struct<"[[T1:.*]]", (ptr<struct<"[[T1]]">>)>
 // CHECK-SAME: %{{.*}}: !llvm.struct<"[[T2:.*]]", (f32, ptr<struct<"[[T2]]">>, i32, ptr<struct<"[[T2]]">>)>
 // CHECK-SAME: %{{.*}}: !llvm.struct<"[[T3:.*]]", (ptr<struct<"[[T4:.*]]", (ptr<struct<"[[T3]]">>)>>)>, %{{.*}}: !llvm.struct<"[[T4]]", (ptr<struct<"[[T3]]", (ptr<struct<"[[T4]]">>)>>)>)
-func @recursiveTypes(%a : !t1, %b : !t2, %c : !t3, %d : !t4) {
+func.func @recursiveTypes(%a : !t1, %b : !t2, %c : !t3, %d : !t4) {
   return
 }

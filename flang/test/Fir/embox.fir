@@ -2,12 +2,12 @@
 
 
 // CHECK-LABEL: define void @_QPtest_callee({ i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %0)
-func @_QPtest_callee(%arg0: !fir.box<!fir.array<?xi32>>) {
+func.func @_QPtest_callee(%arg0: !fir.box<!fir.array<?xi32>>) {
   return
 }
 
 // CHECK-LABEL: define void @_QPtest_slice()
-func @_QPtest_slice() {
+func.func @_QPtest_slice() {
 // CHECK:  %[[a1:.*]] = alloca { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8,
 // CHECK:  %[[a2:.*]] = alloca [20 x i32], i64 1, align 4,
 // CHECK:  %[[a3:.*]] = getelementptr [20 x i32], [20 x i32]* %[[a2]], i64 0, i64 0,
@@ -29,12 +29,12 @@ func @_QPtest_slice() {
 }
 
 // CHECK-LABEL: define void @_QPtest_dt_callee({ i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %0)
-func @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>) {
+func.func @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>) {
   return
 }
 
 // CHECK-LABEL: define void @_QPtest_dt_slice()
-func @_QPtest_dt_slice() {
+func.func @_QPtest_dt_slice() {
 // CHECK:  %[[a1:.*]] = alloca { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8,
 // CHECK:  %[[a3:.*]] = alloca [20 x %_QFtest_dt_sliceTt], i64 1, align 8,
 // CHECK:  %[[a4:.*]] = getelementptr [20 x %_QFtest_dt_sliceTt], [20 x %_QFtest_dt_sliceTt]* %[[a3]], i64 0, i64 0, i32 0,
@@ -60,10 +60,10 @@ func @_QPtest_dt_slice() {
   return
 }
 
-func private @do_something(!fir.box<!fir.array<?xf32>>) -> ()
+func.func private @do_something(!fir.box<!fir.array<?xf32>>) -> ()
 // CHECK: define void @fir_dev_issue_1416
 // CHECK-SAME: [40 x float]* %[[base_addr:.*]], i64 %[[low:.*]], i64 %[[up:.*]], i64 %[[at:.*]])
-func @fir_dev_issue_1416(%arg0: !fir.ref<!fir.array<40x?xf32>>, %low: index, %up: index, %at : index) {
+func.func @fir_dev_issue_1416(%arg0: !fir.ref<!fir.array<40x?xf32>>, %low: index, %up: index, %at : index) {
     // Test fir.embox with a constant interior array shape.
     %c1 = arith.constant 1 : index
     %c40 = arith.constant 40 : index

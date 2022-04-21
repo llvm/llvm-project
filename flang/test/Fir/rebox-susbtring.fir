@@ -7,7 +7,7 @@
 
 // CHECK-LABEL: llvm.func @char_section(
 // CHECK-SAME:                          %[[VAL_0:.*]]: !llvm.ptr<[[char20_descriptor_t:.*]]>)>>) {
-func @char_section(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
+func.func @char_section(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
   %c7_i64 = arith.constant 7 : i64
   %c1_i64 = arith.constant 1 : i64
   %c0 = arith.constant 0 : index
@@ -38,8 +38,8 @@ func @char_section(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
 
 // CHECK-LABEL: llvm.func @foo(
 // CHECK-SAME:                 %[[VAL_0:.*]]: !llvm.ptr<struct<(ptr<[[struct_t:.*]]>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr<i8>, array<1 x i64>)>>) {
-func private @bar(!fir.box<!fir.array<?x!fir.char<1,?>>>)
-func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}>>>) {
+func.func private @bar(!fir.box<!fir.array<?x!fir.char<1,?>>>)
+func.func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}>>>) {
   %c7_i64 = arith.constant 7 : i64
   %c1_i64 = arith.constant 1 : i64
   %c9_i64 = arith.constant 9 : i64

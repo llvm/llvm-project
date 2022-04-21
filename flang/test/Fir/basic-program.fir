@@ -4,7 +4,7 @@
 // Check that tco is working with a basic test.
 // Also check the passes in the default pipeline.
 
-func @_QQmain() {
+func.func @_QQmain() {
   return
 }
 

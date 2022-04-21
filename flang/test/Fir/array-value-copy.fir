@@ -2,7 +2,7 @@
 // RUN: fir-opt --split-input-file --array-value-copy %s | FileCheck %s
 
 // Test simple fir.array_load/fir.array_fetch conversion to fir.array_coor
-func @array_fetch_conversion(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m: index, %n: index) {
+func.func @array_fetch_conversion(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m: index, %n: index) {
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %s = fir.shape %m, %n : (index, index) -> !fir.shape<2>
@@ -27,7 +27,7 @@ func @array_fetch_conversion(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m: index, %
 // -----
 
 // Test simple fir.array_load/fir.array_update conversion without copy-in/copy-out
-func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, %n: index) {
+func.func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, %n: index) {
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %c1 = arith.constant 1 : index
@@ -49,7 +49,7 @@ func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, 
 // -----
 
 // Test simple fir.array_load/fir.array_update conversion without copy-in/copy-out
-func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, %n: index, %cond: i1) {
+func.func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, %n: index, %cond: i1) {
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %c1 = arith.constant 1 : index
@@ -78,7 +78,7 @@ func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, 
 //  end
 // ```
 
-func @conversion_with_temporary(%arr0 : !fir.ref<!fir.array<10xi32>>) {
+func.func @conversion_with_temporary(%arr0 : !fir.ref<!fir.array<10xi32>>) {
   %c10 = arith.constant 10 : index
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arr0(%1) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.array<10xi32>
@@ -137,7 +137,7 @@ func @conversion_with_temporary(%arr0 : !fir.ref<!fir.array<10xi32>>) {
 // Test fir.array_load/fir.array_fetch/fir.array_update conversion with
 // an introduced copy-in/copy-out on a multidimensional array.
 
-func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>) {
+func.func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>) {
   %c10 = arith.constant 10 : index
   %c5 = arith.constant 5 : index
   %1 = fir.shape %c10, %c5 : (index, index) -> !fir.shape<2>
@@ -216,7 +216,7 @@ func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>) {
 // -----
 
 // Test fir.array_modify conversion with no overlap.
-func @array_modify_no_overlap(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
+func.func @array_modify_no_overlap(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
   %c100 = arith.constant 100 : index
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
@@ -236,7 +236,7 @@ func @array_modify_no_overlap(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.
   return
 }
 
-func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
+func.func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 
 // CHECK-LABEL:   func @array_modify_no_overlap(
 // CHECK-SAME:                                  %[[ARR0:.*]]: !fir.ref<!fir.array<100xf32>>,
@@ -255,7 +255,7 @@ func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 
 // Test fir.array_modify conversion with an overlap.
 // Test user_defined_assignment(arg0(:), arg0(100:1:-1))
-func @array_modify_overlap(%arg0: !fir.ref<!fir.array<100xf32>>) {
+func.func @array_modify_overlap(%arg0: !fir.ref<!fir.array<100xf32>>) {
   %c100 = arith.constant 100 : index
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
@@ -277,7 +277,7 @@ func @array_modify_overlap(%arg0: !fir.ref<!fir.array<100xf32>>) {
   return
 }
 
-func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
+func.func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 
 // CHECK-LABEL:   func @array_modify_overlap(
 // CHECK-SAME:                               %[[ARR0:.*]]: !fir.ref<!fir.array<100xf32>>) {
@@ -316,7 +316,7 @@ func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 // -----
 
 // Test array of types with no overlap
-func @array_of_types() {
+func.func @array_of_types() {
   %0 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QEj"}
   %1 = fir.address_of(@_QEtypes) : !fir.ref<!fir.array<10x!fir.type<_QTd{i:!fir.array<10xi32>}>>>
   %c1_i32 = arith.constant 1 : i32
@@ -372,7 +372,7 @@ func @array_of_types() {
 // -----
 
 // Test fir.array_load/boxed array
-func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10xi32>>) {
+func.func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10xi32>>) {
   %c10 = arith.constant 10 : index
   %1:3 = fir.box_dims %arr0, %c10 : (!fir.box<!fir.array<10xi32>>, index) -> (index, index, index)
   %shift = fir.shift %1#0 : (index) -> !fir.shift<1>
@@ -430,7 +430,7 @@ func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10xi32>>
 // -----
 
 // Test simple fir.array_update with Fortran.offsets attribute.
-func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, %n: index) {
+func.func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, %n: index) {
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %c1 = arith.constant 1 : index
@@ -450,7 +450,7 @@ func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, 
 // -----
 
 // Test fir.array_fetch on derived type members in an array of derived types.
-func @array_fetch_derived_type(%0 : !fir.ref<!fir.array<10x!fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>>>) {
+func.func @array_fetch_derived_type(%0 : !fir.ref<!fir.array<10x!fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>>>) {
   %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QEi"}
   %c1_i32 = arith.constant 1 : i32
   %2 = fir.convert %c1_i32 : (i32) -> index
@@ -492,7 +492,7 @@ func @array_fetch_derived_type(%0 : !fir.ref<!fir.array<10x!fir.type<_QTu{mt:!fi
 // -----
 
 // Test simple fir.array_load/fir.array_update conversion without copy-in/copy-out with a `fir.box`
-func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, %n: index) {
+func.func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, %n: index) {
   %c10 = arith.constant 10 : index
   %c20 = arith.constant 20 : index
   %c1 = arith.constant 1 : index
@@ -507,7 +507,7 @@ func @array_update_conversion(%arr1 : !fir.box<!fir.array<?x?xf32>>, %m: index, 
 
 // Test array operation with conditional update.
 
-func @array_operation_with_cond_update(%arg0: !fir.ref<!fir.array<100xf32>>, %cond1: i1) {
+func.func @array_operation_with_cond_update(%arg0: !fir.ref<!fir.array<100xf32>>, %cond1: i1) {
   %c100 = arith.constant 100 : index
   %c1 = arith.constant 1 : index
   %c-1 = arith.constant -1 : index

@@ -5,7 +5,7 @@
 // CHECK: ^bb{{[0-9]+}}(%{{[0-9]+}}: index,
 // CHECK-NOT: ^bb{{[0-9]+}}(%{{[0-9]+}}: index,
 // CHECK: return
-func @_QPslice1(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i32>, %arg2: !fir.ref<i32>) {
+func.func @_QPslice1(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i32>, %arg2: !fir.ref<i32>) {
   %c1_i64 = arith.constant 1 : i64
   %0 = fir.convert %c1_i64 : (i64) -> index
   %1 = fir.load %arg1 : !fir.ref<i32>
@@ -45,7 +45,7 @@ func @_QPslice1(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i32>, %arg2:
 // CHECK: ^bb{{[0-9]+}}(%{{[0-9]+}}: index,
 // CHECK: fir.freemem
 // CHECK: return
-func @_QPslice2(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i32>, %arg2: !fir.ref<i32>) {
+func.func @_QPslice2(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i32>, %arg2: !fir.ref<i32>) {
   %c1_i64 = arith.constant 1 : i64
   %0 = fir.convert %c1_i64 : (i64) -> index
   %c1_i64_0 = arith.constant 1 : i64

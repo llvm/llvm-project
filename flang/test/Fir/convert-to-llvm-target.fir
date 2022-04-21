@@ -9,7 +9,7 @@
 
 // Test fir.emboxchar
 
-func @test_embox(%char_array : !fir.ref<!fir.char<1,?>>) -> () {
+func.func @test_embox(%char_array : !fir.ref<!fir.char<1,?>>) -> () {
   %c10 = arith.constant 10 : i64
   %box_char = fir.emboxchar %char_array, %c10 : (!fir.ref<!fir.char<1,?>>, i64) -> !fir.boxchar<1>
   return
@@ -36,7 +36,7 @@ func @test_embox(%char_array : !fir.ref<!fir.char<1,?>>) -> () {
 
 // Test fir.unboxchar
 
-func @unboxchar_i8(%arg0 : !fir.boxchar<1>) -> () {
+func.func @unboxchar_i8(%arg0 : !fir.boxchar<1>) -> () {
   %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1>>, i64)
   return
 }
@@ -54,7 +54,7 @@ func @unboxchar_i8(%arg0 : !fir.boxchar<1>) -> () {
 // INT32:  %{{.*}} = llvm.sext %[[len_unextended]] : i32 to i64
 // INT32-NEXT:  llvm.return
 
-func @unboxchar_i32(%arg0 : !fir.boxchar<4>) -> () {
+func.func @unboxchar_i32(%arg0 : !fir.boxchar<4>) -> () {
   fir.unboxchar %arg0 : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4>>, i64)
   return
 }
@@ -76,7 +76,7 @@ func @unboxchar_i32(%arg0 : !fir.boxchar<4>) -> () {
 
 // Test fir.boxchar_len
 
-func @boxchar_len_i8_i32(%arg0 : !fir.boxchar<1>) -> () {
+func.func @boxchar_len_i8_i32(%arg0 : !fir.boxchar<1>) -> () {
   fir.boxchar_len %arg0 : (!fir.boxchar<1>) -> i32
   return
 }
@@ -94,7 +94,7 @@ func @boxchar_len_i8_i32(%arg0 : !fir.boxchar<1>) -> () {
 // INT32-NOT:  llvm.sext
 // INT32-NEXT:  llvm.return
 
-func @boxchar_len_i8_i64(%arg0 : !fir.boxchar<1>) -> () {
+func.func @boxchar_len_i8_i64(%arg0 : !fir.boxchar<1>) -> () {
   fir.boxchar_len %arg0 : (!fir.boxchar<1>) -> i64
   return
 }
@@ -112,7 +112,7 @@ func @boxchar_len_i8_i64(%arg0 : !fir.boxchar<1>) -> () {
 // INT32:  %{{.*}} = llvm.sext %0 : i32 to i64
 // INT32-NEXT:  llvm.return
 
-func @boxchar_len_i32_i32(%arg0 : !fir.boxchar<4>) -> () {
+func.func @boxchar_len_i32_i32(%arg0 : !fir.boxchar<4>) -> () {
   fir.boxchar_len %arg0 : (!fir.boxchar<4>) -> i32
   return
 }
@@ -130,7 +130,7 @@ func @boxchar_len_i32_i32(%arg0 : !fir.boxchar<4>) -> () {
 // INT32-NOT:  llvm.sext
 // INT32-NEXT:  llvm.return
 
-func @boxchar_len_i32_i64(%arg0 : !fir.boxchar<4>) -> (i64) {
+func.func @boxchar_len_i32_i64(%arg0 : !fir.boxchar<4>) -> (i64) {
   %0 = fir.boxchar_len %arg0 : (!fir.boxchar<4>) -> i64
   return %0 : i64
 }

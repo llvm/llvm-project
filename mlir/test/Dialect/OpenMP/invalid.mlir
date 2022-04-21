@@ -708,7 +708,7 @@ func.func @omp_atomic_update9(%x: memref<i32>, %expr: i32) {
 
 // -----
 
-func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
+func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
   // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
   omp.atomic.update hint(uncontended, contended) %x : memref<i32> {
   ^bb0(%xval: i32):
@@ -720,7 +720,7 @@ func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
 
 // -----
 
-func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
+func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
   // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
   omp.atomic.update hint(nonspeculative, speculative) %x : memref<i32> {
   ^bb0(%xval: i32):
@@ -732,7 +732,7 @@ func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
 
 // -----
 
-func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
+func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
   // expected-error @below {{invalid_hint is not a valid hint}}
   omp.atomic.update hint(invalid_hint) %x : memref<i32> {
   ^bb0(%xval: i32):
@@ -884,7 +884,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
 
 // -----
 
-func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   // expected-error @below {{the hints omp_sync_hint_uncontended and omp_sync_hint_contended cannot be combined}}
   omp.atomic.capture hint(contended, uncontended) {
     omp.atomic.update %x : memref<i32> {
@@ -899,7 +899,7 @@ func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 // -----
 
-func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined}}
   omp.atomic.capture hint(nonspeculative, speculative) {
     omp.atomic.update %x : memref<i32> {
@@ -914,7 +914,7 @@ func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 // -----
 
-func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   // expected-error @below {{invalid_hint is not a valid hint}}
   omp.atomic.capture hint(invalid_hint) {
     omp.atomic.update %x : memref<i32> {
@@ -929,7 +929,7 @@ func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 // -----
 
-func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
   // expected-error @below {{operations inside capture region must not have hint clause}}
   omp.atomic.capture {
     omp.atomic.update hint(uncontended) %x : memref<i32> {
@@ -1146,7 +1146,7 @@ func.func @omp_task(%mem: memref<1xf32>) {
 
 // -----
 
-func @omp_cancel() {
+func.func @omp_cancel() {
   omp.sections {
     // expected-error @below {{cancel parallel must appear inside a parallel region}}
     omp.cancel cancellation_construct_type(parallel)
@@ -1158,7 +1158,7 @@ func @omp_cancel() {
 
 // -----
 
-func @omp_cancel1() {
+func.func @omp_cancel1() {
   omp.parallel {
     // expected-error @below {{cancel sections must appear inside a sections region}}
     omp.cancel cancellation_construct_type(sections)
@@ -1170,7 +1170,7 @@ func @omp_cancel1() {
 
 // -----
 
-func @omp_cancel2() {
+func.func @omp_cancel2() {
   omp.sections {
     // expected-error @below {{cancel loop must appear inside a worksharing-loop region}}
     omp.cancel cancellation_construct_type(loop)
@@ -1182,7 +1182,7 @@ func @omp_cancel2() {
 
 // -----
 
-func @omp_cancel3(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
+func.func @omp_cancel3(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
   omp.wsloop nowait
     for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
     // expected-error @below {{A worksharing construct that is canceled must not have a nowait clause}}
@@ -1195,7 +1195,7 @@ func @omp_cancel3(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
 
 // -----
 
-func @omp_cancel4(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
+func.func @omp_cancel4(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
   omp.wsloop ordered(1)
     for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
     // expected-error @below {{A worksharing construct that is canceled must not have an ordered clause}}
@@ -1208,7 +1208,7 @@ func @omp_cancel4(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
 
 // -----
 
-func @omp_cancel5() -> () {
+func.func @omp_cancel5() -> () {
   omp.sections nowait {
     omp.section {
       // expected-error @below {{A sections construct that is canceled must not have a nowait clause}}
@@ -1223,7 +1223,7 @@ func @omp_cancel5() -> () {
 
 // -----
 
-func @omp_cancellationpoint() {
+func.func @omp_cancellationpoint() {
   omp.sections {
     // expected-error @below {{cancellation point parallel must appear inside a parallel region}}
     omp.cancellationpoint cancellation_construct_type(parallel)
@@ -1235,7 +1235,7 @@ func @omp_cancellationpoint() {
 
 // -----
 
-func @omp_cancellationpoint1() {
+func.func @omp_cancellationpoint1() {
   omp.parallel {
     // expected-error @below {{cancellation point sections must appear inside a sections region}}
     omp.cancellationpoint cancellation_construct_type(sections)
@@ -1247,7 +1247,7 @@ func @omp_cancellationpoint1() {
 
 // -----
 
-func @omp_cancellationpoint2() {
+func.func @omp_cancellationpoint2() {
   omp.sections {
     // expected-error @below {{cancellation point loop must appear inside a worksharing-loop region}}
     omp.cancellationpoint cancellation_construct_type(loop)

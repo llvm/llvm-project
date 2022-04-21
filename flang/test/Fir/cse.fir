@@ -1,7 +1,7 @@
 // RUN: fir-opt --cse -split-input-file %s | FileCheck %s
 
 // Check that the redundant fir.load is removed.
-func @fun(%arg0: !fir.ref<i64>) -> i64 {
+func.func @fun(%arg0: !fir.ref<i64>) -> i64 {
     %0 = fir.load %arg0 : !fir.ref<i64>
     %1 = fir.load %arg0 : !fir.ref<i64>
     %2 = arith.addi %0, %1 : i64
@@ -16,7 +16,7 @@ func @fun(%arg0: !fir.ref<i64>) -> i64 {
 
 // CHECK-LABEL: func @fun(
 // CHECK-SAME:            %[[A:.*]]: !fir.ref<i64>
-func @fun(%a : !fir.ref<i64>) -> i64 {
+func.func @fun(%a : !fir.ref<i64>) -> i64 {
   // CHECK: %[[LOAD:.*]] = fir.load %[[A]] : !fir.ref<i64>
   %1 = fir.load %a : !fir.ref<i64>
   %2 = fir.load %a : !fir.ref<i64>
@@ -43,7 +43,7 @@ func @fun(%a : !fir.ref<i64>) -> i64 {
 
 // -----
 
-func @fun(%a : !fir.ref<i64>) -> i64 {
+func.func @fun(%a : !fir.ref<i64>) -> i64 {
   cf.br ^bb1
 ^bb1:
   %1 = fir.load %a : !fir.ref<i64>

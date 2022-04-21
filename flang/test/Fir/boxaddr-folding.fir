@@ -1,7 +1,7 @@
 // RUN: fir-opt --canonicalize %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @check_no_folding
-func @check_no_folding(%arg0 : !fir.ref<!fir.array<?xi32>>) {
+func.func @check_no_folding(%arg0 : !fir.ref<!fir.array<?xi32>>) {
   %0 = fir.alloca i32 {adapt.valuebyref}
   %c1_i32 = arith.constant 1 : i32
   %1 = fir.load %0 : !fir.ref<i32>
@@ -19,14 +19,14 @@ func @check_no_folding(%arg0 : !fir.ref<!fir.array<?xi32>>) {
   return
 }
 
-func @check(%arg0: !fir.ref<!fir.array<?xi32>>) {
+func.func @check(%arg0: !fir.ref<!fir.array<?xi32>>) {
   return
 }
 
 // -----
 
 // CHECK-LABEL: func @check_folding
-func @check_folding(%arg0 : !fir.ref<!fir.array<?xi32>>) {
+func.func @check_folding(%arg0 : !fir.ref<!fir.array<?xi32>>) {
   %0 = fir.alloca i32 {adapt.valuebyref}
   %c1_i32 = arith.constant 1 : i32
   %1 = fir.load %0 : !fir.ref<i32>
@@ -41,6 +41,6 @@ func @check_folding(%arg0 : !fir.ref<!fir.array<?xi32>>) {
   return
 }
 
-func @check(%arg0: !fir.ref<!fir.array<?xi32>>) {
+func.func @check(%arg0: !fir.ref<!fir.array<?xi32>>) {
   return
 }
