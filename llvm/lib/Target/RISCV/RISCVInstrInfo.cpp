@@ -1246,12 +1246,7 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
   if (MI.isPosition()) {
     // We can manually strip out CFI instructions later.
     if (MI.isCFIInstruction())
-      // If current function has exception handling code, we can't outline &
-      // strip these CFI instructions since it may break .eh_frame section
-      // needed in unwinding.
-      return MI.getMF()->getFunction().needsUnwindTableEntry()
-                 ? outliner::InstrType::Illegal
-                 : outliner::InstrType::Invisible;
+      return outliner::InstrType::Invisible;
 
     return outliner::InstrType::Illegal;
   }
