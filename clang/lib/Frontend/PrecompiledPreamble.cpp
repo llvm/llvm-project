@@ -234,10 +234,9 @@ private:
 
 class PrecompilePreambleAction : public ASTFrontendAction {
 public:
-  PrecompilePreambleAction(std::shared_ptr<PCHBuffer> Buffer, bool WritePCHFile,
+  PrecompilePreambleAction(std::string *InMemStorage,
                            PreambleCallbacks &Callbacks)
-      : Buffer(std::move(Buffer)), WritePCHFile(WritePCHFile),
-        Callbacks(Callbacks) {}
+      : InMemStorage(InMemStorage), Callbacks(Callbacks) {}
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
@@ -245,12 +244,6 @@ public:
   bool hasEmittedPreamblePCH() const { return HasEmittedPreamblePCH; }
 
   void setEmittedPreamblePCH(ASTWriter &Writer) {
-    if (FileOS) {
-      *FileOS << Buffer->Data;
-      // Make sure it hits disk now.
-      FileOS->flush();
-    }
-
     this->HasEmittedPreamblePCH = true;
     Callbacks.AfterPCHEmitted(Writer);
   }
@@ -269,9 +262,7 @@ private:
   friend class PrecompilePreambleConsumer;
 
   bool HasEmittedPreamblePCH = false;
-  std::shared_ptr<PCHBuffer> Buffer;
-  bool WritePCHFile; // otherwise the PCH is written into the PCHBuffer only.
-  std::unique_ptr<llvm::raw_pwrite_stream> FileOS; // null if in-memory
+  std::string *InMemStorage;
   PreambleCallbacks &Callbacks;
 };
 
@@ -281,11 +272,12 @@ public:
                              const Preprocessor &PP,
                              InMemoryModuleCache &ModuleCache,
                              StringRef isysroot,
-                             std::shared_ptr<PCHBuffer> Buffer)
-      : PCHGenerator(PP, ModuleCache, "", isysroot, std::move(Buffer),
+                             std::unique_ptr<raw_ostream> Out)
+      : PCHGenerator(PP, ModuleCache, "", isysroot,
+                     std::make_shared<PCHBuffer>(),
                      ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
                      /*AllowASTWithErrors=*/true),
-        Action(Action) {}
+        Action(Action), Out(std::move(Out)) {}
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
     Action.Callbacks.HandleTopLevelDecl(DG);
@@ -296,6 +288,15 @@ public:
     PCHGenerator::HandleTranslationUnit(Ctx);
     if (!hasEmittedPCH())
       return;
+
+    // Write the generated bitstream to "Out".
+    *Out << getPCH();
+    // Make sure it hits disk now.
+    Out->flush();
+    // Free the buffer.
+    llvm::SmallVector<char, 0> Empty;
+    getPCH() = std::move(Empty);
+
     Action.setEmittedPreamblePCH(getWriter());
   }
 
@@ -305,6 +306,7 @@ public:
 
 private:
   PrecompilePreambleAction &Action;
+  std::unique_ptr<raw_ostream> Out;
 };
 
 std::unique_ptr<ASTConsumer>
@@ -314,18 +316,21 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
   if (!GeneratePCHAction::ComputeASTConsumerArguments(CI, Sysroot))
     return nullptr;
 
-  if (WritePCHFile) {
-    std::string OutputFile; // unused
-    FileOS = GeneratePCHAction::CreateOutputFile(CI, InFile, OutputFile);
-    if (!FileOS)
-      return nullptr;
+  std::unique_ptr<llvm::raw_ostream> OS;
+  if (InMemStorage) {
+    OS = std::make_unique<llvm::raw_string_ostream>(*InMemStorage);
+  } else {
+    std::string OutputFile;
+    OS = GeneratePCHAction::CreateOutputFile(CI, InFile, OutputFile);
   }
+  if (!OS)
+    return nullptr;
 
   if (!CI.getFrontendOpts().RelocatablePCH)
     Sysroot.clear();
 
   return std::make_unique<PrecompilePreambleConsumer>(
-      *this, CI.getPreprocessor(), CI.getModuleCache(), Sysroot, Buffer);
+      *this, CI.getPreprocessor(), CI.getModuleCache(), Sysroot, std::move(OS));
 }
 
 template <class T> bool moveOnNoError(llvm::ErrorOr<T> Val, T &Output) {
@@ -351,9 +356,9 @@ public:
     S->File = std::move(File);
     return S;
   }
-  static std::unique_ptr<PCHStorage> inMemory(std::shared_ptr<PCHBuffer> Buf) {
+  static std::unique_ptr<PCHStorage> inMemory() {
     std::unique_ptr<PCHStorage> S(new PCHStorage());
-    S->Memory = std::move(Buf);
+    S->Memory.emplace();
     return S;
   }
 
@@ -371,7 +376,11 @@ public:
   }
   llvm::StringRef memoryContents() const {
     assert(getKind() == Kind::InMemory);
-    return StringRef(Memory->Data.data(), Memory->Data.size());
+    return *Memory;
+  }
+  std::string &memoryBufferForWrite() {
+    assert(getKind() == Kind::InMemory);
+    return *Memory;
   }
 
 private:
@@ -379,7 +388,7 @@ private:
   PCHStorage(const PCHStorage &) = delete;
   PCHStorage &operator=(const PCHStorage &) = delete;
 
-  std::shared_ptr<PCHBuffer> Memory;
+  llvm::Optional<std::string> Memory;
   std::unique_ptr<TempPCHFile> File;
 };
 
@@ -402,10 +411,9 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   PreprocessorOptions &PreprocessorOpts =
       PreambleInvocation->getPreprocessorOpts();
 
-  std::shared_ptr<PCHBuffer> Buffer = std::make_shared<PCHBuffer>();
   std::unique_ptr<PCHStorage> Storage;
   if (StoreInMemory) {
-    Storage = PCHStorage::inMemory(Buffer);
+    Storage = PCHStorage::inMemory();
   } else {
     // Create a temporary file for the precompiled preamble. In rare
     // circumstances, this can fail.
@@ -487,10 +495,9 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
                                      PreambleInputBuffer.release());
   }
 
-  auto Act = std::make_unique<PrecompilePreambleAction>(
-      std::move(Buffer),
-      /*WritePCHFile=*/Storage->getKind() == PCHStorage::Kind::TempFile,
-      Callbacks);
+  std::unique_ptr<PrecompilePreambleAction> Act;
+  Act.reset(new PrecompilePreambleAction(
+      StoreInMemory ? &Storage->memoryBufferForWrite() : nullptr, Callbacks));
   if (!Act->BeginSourceFile(*Clang.get(), Clang->getFrontendOpts().Inputs[0]))
     return BuildPreambleError::BeginSourceFileFailed;
 
@@ -520,7 +527,6 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   if (!Act->hasEmittedPreamblePCH())
     return BuildPreambleError::CouldntEmitPCH;
-  Act.reset(); // Frees the PCH buffer frees, unless Storage keeps it in memory.
 
   // Keep track of all of the files that the source manager knows about,
   // so we can verify whether they have changed or not.
