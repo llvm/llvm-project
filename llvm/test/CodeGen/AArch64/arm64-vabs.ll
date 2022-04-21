@@ -1749,27 +1749,35 @@ define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: uabd_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    fmov x11, d1
+; CHECK-NEXT:    fmov x10, d1
 ; CHECK-NEXT:    mov.d x8, v0[1]
-; CHECK-NEXT:    mov.d x10, v1[1]
-; CHECK-NEXT:    asr x12, x9, #63
-; CHECK-NEXT:    asr x13, x11, #63
-; CHECK-NEXT:    subs x9, x9, x11
-; CHECK-NEXT:    sbcs x11, x12, x13
-; CHECK-NEXT:    asr x12, x8, #63
-; CHECK-NEXT:    asr x13, x10, #63
-; CHECK-NEXT:    subs x8, x8, x10
-; CHECK-NEXT:    sbcs x10, x12, x13
-; CHECK-NEXT:    negs x12, x8
-; CHECK-NEXT:    ngcs x13, x10
-; CHECK-NEXT:    cmp x10, #0
-; CHECK-NEXT:    csel x2, x12, x8, lt
-; CHECK-NEXT:    csel x3, x13, x10, lt
-; CHECK-NEXT:    negs x8, x9
-; CHECK-NEXT:    ngcs x10, x11
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    csel x8, x8, x9, lt
-; CHECK-NEXT:    csel x1, x10, x11, lt
+; CHECK-NEXT:    mov.d x11, v1[1]
+; CHECK-NEXT:    subs x12, x9, x10
+; CHECK-NEXT:    asr x9, x9, #63
+; CHECK-NEXT:    cset w13, lo
+; CHECK-NEXT:    asr x10, x10, #63
+; CHECK-NEXT:    cmp w13, #1
+; CHECK-NEXT:    sbcs x9, x9, x10
+; CHECK-NEXT:    subs x10, x8, x11
+; CHECK-NEXT:    asr x8, x8, #63
+; CHECK-NEXT:    cset w13, lo
+; CHECK-NEXT:    asr x11, x11, #63
+; CHECK-NEXT:    cmp w13, #1
+; CHECK-NEXT:    sbcs x8, x8, x11
+; CHECK-NEXT:    asr x11, x8, #63
+; CHECK-NEXT:    eor x10, x10, x11
+; CHECK-NEXT:    eor x8, x8, x11
+; CHECK-NEXT:    subs x2, x10, x11
+; CHECK-NEXT:    asr x10, x9, #63
+; CHECK-NEXT:    cset w13, lo
+; CHECK-NEXT:    eor x12, x12, x10
+; CHECK-NEXT:    cmp w13, #1
+; CHECK-NEXT:    eor x9, x9, x10
+; CHECK-NEXT:    sbcs x3, x8, x11
+; CHECK-NEXT:    subs x8, x12, x10
+; CHECK-NEXT:    cset w11, lo
+; CHECK-NEXT:    cmp w11, #1
+; CHECK-NEXT:    sbcs x1, x9, x10
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov.d v0[1], x1
 ; CHECK-NEXT:    fmov x0, d0

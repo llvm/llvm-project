@@ -526,6 +526,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UMULO, MVT::i32, Custom);
   setOperationAction(ISD::UMULO, MVT::i64, Custom);
 
+  setOperationAction(ISD::ADDCARRY, MVT::i32, Custom);
+  setOperationAction(ISD::ADDCARRY, MVT::i64, Custom);
+  setOperationAction(ISD::SUBCARRY, MVT::i32, Custom);
+  setOperationAction(ISD::SUBCARRY, MVT::i64, Custom);
+  setOperationAction(ISD::SADDO_CARRY, MVT::i32, Custom);
+  setOperationAction(ISD::SADDO_CARRY, MVT::i64, Custom);
+  setOperationAction(ISD::SSUBO_CARRY, MVT::i32, Custom);
+  setOperationAction(ISD::SSUBO_CARRY, MVT::i64, Custom);
+
   setOperationAction(ISD::FSIN, MVT::f32, Expand);
   setOperationAction(ISD::FSIN, MVT::f64, Expand);
   setOperationAction(ISD::FCOS, MVT::f32, Expand);
@@ -3299,6 +3308,62 @@ static SDValue LowerADDC_ADDE_SUBC_SUBE(SDValue Op, SelectionDAG &DAG) {
                      Op.getOperand(2));
 }
 
+// Sets 'C' bit of NZCV to 0 if value is 0, else sets 'C' bit to 1
+static SDValue valueToCarryFlag(SDValue Value, SelectionDAG &DAG) {
+  SDLoc DL(Value);
+  SDValue One = DAG.getConstant(1, DL, Value.getValueType());
+  SDValue Cmp =
+      DAG.getNode(AArch64ISD::SUBS, DL,
+                  DAG.getVTList(Value.getValueType(), MVT::Glue), Value, One);
+  return Cmp.getValue(1);
+}
+
+// Value is 1 if 'C' bit of NZCV is 1, else 0
+static SDValue carryFlagToValue(SDValue Flag, EVT VT, SelectionDAG &DAG) {
+  assert(Flag.getResNo() == 1);
+  SDLoc DL(Flag);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue CC = DAG.getConstant(AArch64CC::HS, DL, MVT::i32);
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, One, Zero, CC, Flag);
+}
+
+// Value is 1 if 'V' bit of NZCV is 1, else 0
+static SDValue overflowFlagToValue(SDValue Flag, EVT VT, SelectionDAG &DAG) {
+  assert(Flag.getResNo() == 1);
+  SDLoc DL(Flag);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue CC = DAG.getConstant(AArch64CC::VS, DL, MVT::i32);
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, One, Zero, CC, Flag);
+}
+
+// This lowering is inefficient, but it will get cleaned up by
+// `performAddSubCombine`
+static SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG, unsigned Opcode,
+                                bool IsSigned) {
+  EVT VT0 = Op.getValue(0).getValueType();
+  EVT VT1 = Op.getValue(1).getValueType();
+
+  if (VT0 != MVT::i32 && VT0 != MVT::i64)
+    return SDValue();
+
+  SDValue OpLHS = Op.getOperand(0);
+  SDValue OpRHS = Op.getOperand(1);
+  SDValue OpCarryIn = valueToCarryFlag(Op.getOperand(2), DAG);
+
+  SDLoc DL(Op);
+  SDVTList VTs = DAG.getVTList(VT0, VT1);
+
+  SDValue Sum = DAG.getNode(Opcode, DL, DAG.getVTList(VT0, MVT::Glue), OpLHS,
+                            OpRHS, OpCarryIn);
+
+  SDValue OutFlag = IsSigned ? overflowFlagToValue(Sum.getValue(1), VT1, DAG)
+                             : carryFlagToValue(Sum.getValue(1), VT1, DAG);
+
+  return DAG.getNode(ISD::MERGE_VALUES, DL, VTs, Sum, OutFlag);
+}
+
 static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   // Let legalize expand this if it isn't a legal type yet.
   if (!DAG.getTargetLoweringInfo().isTypeLegal(Op.getValueType()))
@@ -5147,6 +5212,14 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::SUBC:
   case ISD::SUBE:
     return LowerADDC_ADDE_SUBC_SUBE(Op, DAG);
+  case ISD::ADDCARRY:
+    return lowerADDSUBCARRY(Op, DAG, AArch64ISD::ADCS, false /*unsigned*/);
+  case ISD::SUBCARRY:
+    return lowerADDSUBCARRY(Op, DAG, AArch64ISD::SBCS, false /*unsigned*/);
+  case ISD::SADDO_CARRY:
+    return lowerADDSUBCARRY(Op, DAG, AArch64ISD::ADCS, true /*signed*/);
+  case ISD::SSUBO_CARRY:
+    return lowerADDSUBCARRY(Op, DAG, AArch64ISD::SBCS, true /*signed*/);
   case ISD::SADDO:
   case ISD::UADDO:
   case ISD::SSUBO:

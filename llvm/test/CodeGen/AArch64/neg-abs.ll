@@ -52,6 +52,8 @@ define i128 @neg_abs128(i128 %x) {
 ; CHECK-NEXT:    eor x9, x0, x8
 ; CHECK-NEXT:    eor x10, x1, x8
 ; CHECK-NEXT:    subs x0, x8, x9
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    sbcs x1, x8, x10
 ; CHECK-NEXT:    ret
   %abs = tail call i128 @llvm.abs.i128(i128 %x, i1 true)
@@ -95,11 +97,13 @@ define i16 @abs16(i16 %x) {
 define i128 @abs128(i128 %x) {
 ; CHECK-LABEL: abs128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    negs x8, x0
-; CHECK-NEXT:    ngcs x9, x1
-; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    csel x0, x8, x0, lt
-; CHECK-NEXT:    csel x1, x9, x1, lt
+; CHECK-NEXT:    asr x8, x1, #63
+; CHECK-NEXT:    eor x9, x0, x8
+; CHECK-NEXT:    eor x10, x1, x8
+; CHECK-NEXT:    subs x0, x9, x8
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    cmp w9, #1
+; CHECK-NEXT:    sbcs x1, x10, x8
 ; CHECK-NEXT:    ret
   %abs = tail call i128 @llvm.abs.i128(i128 %x, i1 true)
   ret i128 %abs
