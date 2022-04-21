@@ -18,7 +18,8 @@
 
 namespace scudo {
 
-#if (__clang_major__ >= 12 && defined(__aarch64__)) || defined(SCUDO_FUZZ)
+#if (__clang_major__ >= 12 && defined(__aarch64__) && !defined(__ILP32__)) ||  \
+    defined(SCUDO_FUZZ)
 
 // We assume that Top-Byte Ignore is enabled if the architecture supports memory
 // tagging. Not all operating systems enable TBI, so we only claim architectural
@@ -57,7 +58,7 @@ inline NORETURN uint8_t extractTag(uptr Ptr) {
 
 #endif
 
-#if __clang_major__ >= 12 && defined(__aarch64__)
+#if __clang_major__ >= 12 && defined(__aarch64__) && !defined(__ILP32__)
 
 #if SCUDO_LINUX
 
