@@ -12267,7 +12267,9 @@ bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
   // anonymous name space needs to be externalized to avoid duplicate symbols.
   return (IsStaticVar &&
           (D->hasAttr<HIPManagedAttr>() || IsExplicitDeviceVar)) ||
-         (D->hasAttr<CUDAGlobalAttr>() && D->isInAnonymousNamespace());
+         (D->hasAttr<CUDAGlobalAttr>() &&
+          basicGVALinkageForFunction(*this, cast<FunctionDecl>(D)) ==
+              GVA_Internal);
 }
 
 bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
