@@ -972,10 +972,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       return BinaryOperator::CreateShl(ConstantExpr::getShl(C2, C1), X);
 
     // (X * C2) << C1 --> X * (C2 << C1)
-    // The one-use check is not strictly necessary, but codegen may not be
-    // able to invert the transform and perf may suffer with an extra mul
-    // instruction.
-    if (match(Op0, m_OneUse(m_Mul(m_Value(X), m_Constant(C2)))))
+    if (match(Op0, m_Mul(m_Value(X), m_Constant(C2))))
       return BinaryOperator::CreateMul(X, ConstantExpr::getShl(C2, C1));
 
     // shl (zext i1 X), C1 --> select (X, 1 << C1, 0)
