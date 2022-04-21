@@ -988,23 +988,6 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     return BinaryOperator::CreateLShr(
         ConstantInt::get(Ty, APInt::getSignMask(BitWidth)), X);
 
-  // Try to pre-shift a constant shifted by a variable amount:
-  // C << (X + AddC) --> (C >> -AddC) << X
-  // This requires a no-wrap flag and negative offset constant.
-  const APInt *AddC;
-  if ((I.hasNoSignedWrap() || I.hasNoUnsignedWrap()) &&
-      match(Op0, m_APInt(C)) &&
-      match(Op1, m_Add(m_Value(X), m_APInt(AddC))) && AddC->isNegative()) {
-    assert(!C->isZero() && "Expected simplify of shifted zero");
-    unsigned PosOffset = (-*AddC).getLimitedValue();
-    if (C->eq(C->lshr(PosOffset).shl(PosOffset))) {
-      Constant *NewC = ConstantInt::get(Ty, C->lshr(PosOffset));
-      Instruction *NewShl = BinaryOperator::CreateShl(NewC, X);
-      NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-      return NewShl;
-    }
-  }
-
   return nullptr;
 }
 
