@@ -2975,54 +2975,23 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   return true;
 }
 
-static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
-                                        BasicBlock *To) {
-  // Don't look past the block defining the value, we might get the value from
-  // a previous loop iteration.
-  auto *I = dyn_cast<Instruction>(V);
-  if (I && I->getParent() == To)
-    return nullptr;
-
-  // We know the value if the From block branches on it.
-  auto *BI = dyn_cast<BranchInst>(From->getTerminator());
-  if (BI && BI->isConditional() && BI->getCondition() == V &&
-      BI->getSuccessor(0) != BI->getSuccessor(1))
-    return BI->getSuccessor(0) == To ? ConstantInt::getTrue(BI->getContext())
-                                     : ConstantInt::getFalse(BI->getContext());
-
-  return nullptr;
-}
-
-/// If we have a conditional branch on something for which we know the constant
-/// value in predecessors (e.g. a phi node in the current block), thread edges
-/// from the predecessor to their ultimate destination.
-static Optional<bool>
-FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
-                                            const DataLayout &DL,
-                                            AssumptionCache *AC) {
-  SmallDenseMap<BasicBlock *, ConstantInt *> KnownValues;
+/// If we have a conditional branch on a PHI node value that is defined in the
+/// same block as the branch and if any PHI entries are constants, thread edges
+/// corresponding to that entry to be branches to their ultimate destination.
+static Optional<bool> FoldCondBranchOnPHIImpl(BranchInst *BI,
+                                              DomTreeUpdater *DTU,
+                                              const DataLayout &DL,
+                                              AssumptionCache *AC) {
   BasicBlock *BB = BI->getParent();
-  Value *Cond = BI->getCondition();
-  PHINode *PN = dyn_cast<PHINode>(Cond);
-  if (PN && PN->getParent() == BB) {
-    // Degenerate case of a single entry PHI.
-    if (PN->getNumIncomingValues() == 1) {
-      FoldSingleEntryPHINodes(PN->getParent());
-      return true;
-    }
-
-    for (Use &U : PN->incoming_values())
-      if (auto *CB = dyn_cast<ConstantInt>(U))
-        KnownValues.insert({PN->getIncomingBlock(U), CB});
-  } else {
-    for (BasicBlock *Pred : predecessors(BB)) {
-      if (ConstantInt *CB = getKnownValueOnEdge(Cond, Pred, BB))
-        KnownValues.insert({Pred, CB});
-    }
-  }
-
-  if (KnownValues.empty())
+  PHINode *PN = dyn_cast<PHINode>(BI->getCondition());
+  if (!PN || PN->getParent() != BB)
     return false;
+
+  // Degenerate case of a single entry PHI.
+  if (PN->getNumIncomingValues() == 1) {
+    FoldSingleEntryPHINodes(PN->getParent());
+    return true;
+  }
 
   // Now we know that this block has multiple preds and two succs.
   // Check that the block is small enough and values defined in the block are
@@ -3030,11 +2999,16 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   if (!BlockIsSimpleEnoughToThreadThrough(BB))
     return false;
 
-  for (const auto &Pair : KnownValues) {
+  // Okay, this is a simple enough basic block.  See if any phi values are
+  // constants.
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+    ConstantInt *CB = dyn_cast<ConstantInt>(PN->getIncomingValue(i));
+    if (!CB || !CB->getType()->isIntegerTy(1))
+      continue;
+
     // Okay, we now know that all edges from PredBB should be revectored to
     // branch to RealDest.
-    ConstantInt *CB = Pair.second;
-    BasicBlock *PredBB = Pair.first;
+    BasicBlock *PredBB = PN->getIncomingBlock(i);
     BasicBlock *RealDest = BI->getSuccessor(!CB->getZExtValue());
 
     if (RealDest == BB)
@@ -3128,15 +3102,13 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   return false;
 }
 
-static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
-                                                    DomTreeUpdater *DTU,
-                                                    const DataLayout &DL,
-                                                    AssumptionCache *AC) {
+static bool FoldCondBranchOnPHI(BranchInst *BI, DomTreeUpdater *DTU,
+                                const DataLayout &DL, AssumptionCache *AC) {
   Optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = FoldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, AC);
+    Result = FoldCondBranchOnPHIImpl(BI, DTU, DL, AC);
     EverChanged |= Result == None || *Result;
   } while (Result == None);
   return EverChanged;
@@ -4068,14 +4040,42 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   if (PBI->getCondition() == BI->getCondition() &&
       PBI->getSuccessor(0) != PBI->getSuccessor(1)) {
     // Okay, the outcome of this conditional branch is statically
-    // knowable.  If this block had a single pred, handle specially, otherwise
-    // FoldCondBranchOnValueKnownInPredecessor() will handle it.
+    // knowable.  If this block had a single pred, handle specially.
     if (BB->getSinglePredecessor()) {
       // Turn this into a branch on constant.
       bool CondIsTrue = PBI->getSuccessor(0) == BB;
       BI->setCondition(
           ConstantInt::get(Type::getInt1Ty(BB->getContext()), CondIsTrue));
       return true; // Nuke the branch on constant.
+    }
+
+    // Otherwise, if there are multiple predecessors, insert a PHI that merges
+    // in the constant and simplify the block result.  Subsequent passes of
+    // simplifycfg will thread the block.
+    if (BlockIsSimpleEnoughToThreadThrough(BB)) {
+      pred_iterator PB = pred_begin(BB), PE = pred_end(BB);
+      PHINode *NewPN = PHINode::Create(
+          Type::getInt1Ty(BB->getContext()), std::distance(PB, PE),
+          BI->getCondition()->getName() + ".pr", &BB->front());
+      // Okay, we're going to insert the PHI node.  Since PBI is not the only
+      // predecessor, compute the PHI'd conditional value for all of the preds.
+      // Any predecessor where the condition is not computable we keep symbolic.
+      for (pred_iterator PI = PB; PI != PE; ++PI) {
+        BasicBlock *P = *PI;
+        if ((PBI = dyn_cast<BranchInst>(P->getTerminator())) && PBI != BI &&
+            PBI->isConditional() && PBI->getCondition() == BI->getCondition() &&
+            PBI->getSuccessor(0) != PBI->getSuccessor(1)) {
+          bool CondIsTrue = PBI->getSuccessor(0) == BB;
+          NewPN->addIncoming(
+              ConstantInt::get(Type::getInt1Ty(BB->getContext()), CondIsTrue),
+              P);
+        } else {
+          NewPN->addIncoming(BI->getCondition(), P);
+        }
+      }
+
+      BI->setCondition(NewPN);
+      return true;
     }
   }
 
@@ -6903,11 +6903,12 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
         return requestResimplify();
   }
 
-  // If this is a branch on something for which we know the constant value in
-  // predecessors (e.g. a phi node in the current block), thread control
-  // through this block.
-  if (FoldCondBranchOnValueKnownInPredecessor(BI, DTU, DL, Options.AC))
-    return requestResimplify();
+  // If this is a branch on a phi node in the current block, thread control
+  // through this block if any PHI node entries are constants.
+  if (PHINode *PN = dyn_cast<PHINode>(BI->getCondition()))
+    if (PN->getParent() == BI->getParent())
+      if (FoldCondBranchOnPHI(BI, DTU, DL, Options.AC))
+        return requestResimplify();
 
   // Scan predecessor blocks for conditional branches.
   for (BasicBlock *Pred : predecessors(BB))
