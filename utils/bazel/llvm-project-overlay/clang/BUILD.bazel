@@ -979,6 +979,7 @@ cc_library(
 
 cc_library(
     name = "testing",
+    testonly = 1,
     srcs = glob([
         "lib/Testing/*.cpp",
     ]),
@@ -986,7 +987,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":basic",
+        ":frontend",
         "//llvm:Support",
+        "//llvm:gtest",
     ],
 )
 
