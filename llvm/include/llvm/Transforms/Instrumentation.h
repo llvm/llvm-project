@@ -75,9 +75,6 @@ struct GCOVOptions {
   std::string Exclude;
 };
 
-ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
-                                   GCOVOptions::getDefault());
-
 ModulePass *createCGProfileLegacyPass();
 
 // The pgo-specific indirect call promotion function declared below is used by
