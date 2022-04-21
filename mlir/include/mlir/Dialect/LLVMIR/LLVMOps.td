@@ -334,16 +334,6 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
 
     /// Returns the type pointed to by the pointer argument of this GEP.
     Type getSourceElementType();
-
-    /// Populates `indices` with positions of GEP indices that correspond to
-    /// LLVMStructTypes potentially nested in the given `sourceElementType`,
-    /// which is the type pointed to by the pointer argument of a GEP. If
-    /// `structSizes` is provided, it is populated with sizes of the indexed
-    /// structs for bounds verification purposes.
-    static void findKnownStructIndices(
-        Type sourceElementType, SmallVectorImpl<unsigned> &indices,
-        SmallVectorImpl<unsigned> *structSizes = nullptr);
-
   }];
   let hasFolder = 1;
   let hasVerifier = 1;

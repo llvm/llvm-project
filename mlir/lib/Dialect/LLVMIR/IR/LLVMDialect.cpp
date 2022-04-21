@@ -29,6 +29,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/SourceMgr.h"
 
@@ -398,55 +399,139 @@ SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
 
 constexpr int GEPOp::kDynamicIndex;
 
-/// Populates `indices` with positions of GEP indices that would correspond to
-/// LLVMStructTypes potentially nested in the given type. The type currently
-/// visited gets `currentIndex` and LLVM container types are visited
-/// recursively. The recursion is bounded and takes care of recursive types by
-/// means of the `visited` set.
-static void recordStructIndices(Type type, unsigned currentIndex,
-                                SmallVectorImpl<unsigned> &indices,
-                                SmallVectorImpl<unsigned> *structSizes,
-                                SmallPtrSet<Type, 4> &visited) {
-  if (visited.contains(type))
-    return;
+namespace {
+/// Base class for llvm::Error related to GEP index.
+class GEPIndexError : public llvm::ErrorInfo<GEPIndexError> {
+protected:
+  unsigned indexPos;
 
-  visited.insert(type);
+public:
+  static char ID;
 
-  llvm::TypeSwitch<Type>(type)
-      .Case<LLVMStructType>([&](LLVMStructType structType) {
-        indices.push_back(currentIndex);
-        if (structSizes)
-          structSizes->push_back(structType.getBody().size());
-        for (Type elementType : structType.getBody())
-          recordStructIndices(elementType, currentIndex + 1, indices,
-                              structSizes, visited);
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+
+  explicit GEPIndexError(unsigned pos) : indexPos(pos) {}
+};
+
+/// llvm::Error for out-of-bound GEP index.
+struct GEPIndexOutOfBoundError
+    : public llvm::ErrorInfo<GEPIndexOutOfBoundError, GEPIndexError> {
+  static char ID;
+
+  using ErrorInfo::ErrorInfo;
+
+  void log(llvm::raw_ostream &os) const override {
+    os << "index " << indexPos << " indexing a struct is out of bounds";
+  }
+};
+
+/// llvm::Error for non-static GEP index indexing a struct.
+struct GEPStaticIndexError
+    : public llvm::ErrorInfo<GEPStaticIndexError, GEPIndexError> {
+  static char ID;
+
+  using ErrorInfo::ErrorInfo;
+
+  void log(llvm::raw_ostream &os) const override {
+    os << "expected index " << indexPos << " indexing a struct "
+       << "to be constant";
+  }
+};
+} // end anonymous namespace
+
+char GEPIndexError::ID = 0;
+char GEPIndexOutOfBoundError::ID = 0;
+char GEPStaticIndexError::ID = 0;
+
+/// For the given `structIndices` and `indices`, check if they're complied
+/// with `baseGEPType`, especially check against LLVMStructTypes nested within,
+/// and refine/promote struct index from `indices` to `updatedStructIndices`
+/// if the latter argument is not null.
+static llvm::Error
+recordStructIndices(Type baseGEPType, unsigned indexPos,
+                    ArrayRef<int32_t> structIndices, ValueRange indices,
+                    SmallVectorImpl<int32_t> *updatedStructIndices,
+                    SmallVectorImpl<Value> *remainingIndices) {
+  if (indexPos >= structIndices.size())
+    // Stop searching
+    return llvm::Error::success();
+
+  int32_t gepIndex = structIndices[indexPos];
+  bool isStaticIndex = gepIndex != GEPOp::kDynamicIndex;
+
+  unsigned dynamicIndexPos = indexPos;
+  if (!isStaticIndex)
+    dynamicIndexPos = llvm::count(structIndices.take_front(indexPos + 1),
+                                  LLVM::GEPOp::kDynamicIndex) - 1;
+
+  return llvm::TypeSwitch<Type, llvm::Error>(baseGEPType)
+      .Case<LLVMStructType>([&](LLVMStructType structType) -> llvm::Error {
+        // We don't always want to refine the index (e.g. when performing
+        // verification), so we only refine when updatedStructIndices is not
+        // null.
+        if (!isStaticIndex && updatedStructIndices) {
+          // Try to refine.
+          APInt staticIndexValue;
+          isStaticIndex = matchPattern(indices[dynamicIndexPos],
+                                       m_ConstantInt(&staticIndexValue));
+          if (isStaticIndex) {
+            assert(staticIndexValue.getBitWidth() <= 64 &&
+                   llvm::isInt<32>(staticIndexValue.getLimitedValue()) &&
+                   "struct index can't fit within int32_t");
+            gepIndex = static_cast<int32_t>(staticIndexValue.getSExtValue());
+          }
+        }
+        if (!isStaticIndex)
+          return llvm::make_error<GEPStaticIndexError>(indexPos);
+
+        ArrayRef<Type> elementTypes = structType.getBody();
+        if (gepIndex < 0 ||
+            static_cast<size_t>(gepIndex) >= elementTypes.size())
+          return llvm::make_error<GEPIndexOutOfBoundError>(indexPos);
+
+        if (updatedStructIndices)
+          (*updatedStructIndices)[indexPos] = gepIndex;
+
+        // Instead of recusively going into every children types, we only
+        // dive into the one indexed by gepIndex.
+        return recordStructIndices(elementTypes[gepIndex], indexPos + 1,
+                                   structIndices, indices, updatedStructIndices,
+                                   remainingIndices);
       })
       .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
-            LLVMArrayType>([&](auto containerType) {
-        recordStructIndices(containerType.getElementType(), currentIndex + 1,
-                            indices, structSizes, visited);
-      });
+            LLVMArrayType>([&](auto containerType) -> llvm::Error {
+        // Currently we don't refine non-struct index even if it's static.
+        if (remainingIndices)
+          remainingIndices->push_back(indices[dynamicIndexPos]);
+        return recordStructIndices(containerType.getElementType(), indexPos + 1,
+                                   structIndices, indices, updatedStructIndices,
+                                   remainingIndices);
+      })
+      .Default(
+          [](auto otherType) -> llvm::Error { return llvm::Error::success(); });
 }
 
-/// Populates `indices` with positions of GEP indices that correspond to
-/// LLVMStructTypes potentially nested in the given `baseGEPType`, which must
-/// be either an LLVMPointer type or a vector thereof. If `structSizes` is
-/// provided, it is populated with sizes of the indexed structs for bounds
-/// verification purposes.
-void GEPOp::findKnownStructIndices(Type sourceElementType,
-                                   SmallVectorImpl<unsigned> &indices,
-                                   SmallVectorImpl<unsigned> *structSizes) {
-  SmallPtrSet<Type, 4> visited;
-  recordStructIndices(sourceElementType, /*currentIndex=*/1, indices,
-                      structSizes, visited);
+/// Driver function around `recordStructIndices`. Note that we always check
+/// from the second GEP index since the first one is always dynamic.
+static llvm::Error
+findStructIndices(Type baseGEPType, ArrayRef<int32_t> structIndices,
+                  ValueRange indices,
+                  SmallVectorImpl<int32_t> *updatedStructIndices = nullptr,
+                  SmallVectorImpl<Value> *remainingIndices = nullptr) {
+  if (remainingIndices)
+    // The first GEP index is always dynamic.
+    remainingIndices->push_back(indices[0]);
+  return recordStructIndices(baseGEPType, /*indexPos=*/1, structIndices,
+                             indices, updatedStructIndices, remainingIndices);
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Value basePtr, ValueRange operands,
                   ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultType, basePtr, operands,
-        SmallVector<int32_t>(operands.size(), LLVM::GEPOp::kDynamicIndex),
-        attributes);
+        SmallVector<int32_t>(operands.size(), kDynamicIndex), attributes);
 }
 
 /// Returns the elemental type of any LLVM-compatible vector type or self.
@@ -480,44 +565,10 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   SmallVector<Value> remainingIndices;
   SmallVector<int32_t> updatedStructIndices(structIndices.begin(),
                                             structIndices.end());
-  SmallVector<unsigned> structRelatedPositions;
-  findKnownStructIndices(elementType, structRelatedPositions);
-
-  SmallVector<unsigned> operandsToErase;
-  for (unsigned pos : structRelatedPositions) {
-    // GEP may not be indexing as deep as some structs are located.
-    if (pos >= structIndices.size())
-      continue;
-
-    // If the index is already static, it's fine.
-    if (structIndices[pos] != kDynamicIndex)
-      continue;
-
-    // Find the corresponding operand.
-    unsigned operandPos =
-        std::count(structIndices.begin(), std::next(structIndices.begin(), pos),
-                   kDynamicIndex);
-
-    // Extract the constant value from the operand and put it into the attribute
-    // instead.
-    APInt staticIndexValue;
-    bool matched =
-        matchPattern(indices[operandPos], m_ConstantInt(&staticIndexValue));
-    (void)matched;
-    assert(matched && "index into a struct must be a constant");
-    assert(staticIndexValue.sge(APInt::getSignedMinValue(/*numBits=*/32)) &&
-           "struct index underflows 32-bit integer");
-    assert(staticIndexValue.sle(APInt::getSignedMaxValue(/*numBits=*/32)) &&
-           "struct index overflows 32-bit integer");
-    auto staticIndex = static_cast<int32_t>(staticIndexValue.getSExtValue());
-    updatedStructIndices[pos] = staticIndex;
-    operandsToErase.push_back(operandPos);
-  }
-
-  for (unsigned i = 0, e = indices.size(); i < e; ++i) {
-    if (!llvm::is_contained(operandsToErase, i))
-      remainingIndices.push_back(indices[i]);
-  }
+  if (llvm::Error err =
+          findStructIndices(elementType, structIndices, indices,
+                            &updatedStructIndices, &remainingIndices))
+    llvm::report_fatal_error(StringRef(llvm::toString(std::move(err))));
 
   assert(remainingIndices.size() == static_cast<size_t>(llvm::count(
                                         updatedStructIndices, kDynamicIndex)) &&
@@ -582,24 +633,16 @@ LogicalResult LLVM::GEPOp::verify() {
           getElemType())))
     return failure();
 
-  SmallVector<unsigned> indices;
-  SmallVector<unsigned> structSizes;
-  findKnownStructIndices(getSourceElementType(), indices, &structSizes);
-  DenseIntElementsAttr structIndices = getStructIndices();
-  for (unsigned i : llvm::seq<unsigned>(0, indices.size())) {
-    unsigned index = indices[i];
-    // GEP may not be indexing as deep as some structs nested in the type.
-    if (index >= structIndices.getNumElements())
-      continue;
+  auto structIndexRange = getStructIndices().getValues<int32_t>();
+  // structIndexRange is a kind of iterator, which cannot be converted
+  // to ArrayRef directly.
+  SmallVector<int32_t> structIndices(structIndexRange.size());
+  for (unsigned i : llvm::seq<unsigned>(0, structIndexRange.size()))
+    structIndices[i] = structIndexRange[i];
+  if (llvm::Error err = findStructIndices(getSourceElementType(), structIndices,
+                                          getIndices()))
+    return emitOpError() << llvm::toString(std::move(err));
 
-    int32_t staticIndex = structIndices.getValues<int32_t>()[index];
-    if (staticIndex == LLVM::GEPOp::kDynamicIndex)
-      return emitOpError() << "expected index " << index
-                           << " indexing a struct to be constant";
-    if (staticIndex < 0 || static_cast<unsigned>(staticIndex) >= structSizes[i])
-      return emitOpError() << "index " << index
-                           << " indexing a struct is out of bounds";
-  }
   return success();
 }
 
