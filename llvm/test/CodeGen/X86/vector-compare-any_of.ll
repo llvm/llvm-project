@@ -1330,3 +1330,58 @@ define i1 @bool_reduction_v32i8(<32 x i8> %x, <32 x i8> %y) {
   %g = extractelement <32 x i1> %f, i32 0
   ret i1 %g
 }
+
+define {i32, i1} @test_v16i8_muti_uses(<16 x i8> %x, <16 x i8>%y, <16 x i8> %z) {
+; SSE-LABEL: test_v16i8_muti_uses:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqb %xmm1, %xmm2
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    pmovmskb %xmm2, %eax
+; SSE-NEXT:    shll $16, %eax
+; SSE-NEXT:    orl %ecx, %eax
+; SSE-NEXT:    sete %dl
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: test_v16i8_muti_uses:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    vpmovmskb %xmm1, %eax
+; AVX1-NEXT:    shll $16, %eax
+; AVX1-NEXT:    orl %ecx, %eax
+; AVX1-NEXT:    sete %dl
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_v16i8_muti_uses:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm2, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpmovmskb %ymm2, %eax
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX2-NEXT:    testl %ecx, %ecx
+; AVX2-NEXT:    sete %dl
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_v16i8_muti_uses:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
+; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm2, %k1
+; AVX512-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX512-NEXT:    kortestd %k0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    sete %dl
+; AVX512-NEXT:    retq
+  %t1 = icmp eq <16 x i8> %x, %y
+  %t2 = icmp eq <16 x i8> %z, %y
+  %a = shufflevector <16 x i1> %t1, <16 x i1> %t2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, 0
+  %r1 = insertvalue {i32, i1} poison, i32 %b, 0
+  %r2 = insertvalue {i32, i1} %r1, i1 %c, 1
+  ret {i32, i1} %r2
+}
