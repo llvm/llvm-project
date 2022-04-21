@@ -18,6 +18,7 @@
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
 // REQUIRES: locale.ru_RU.UTF-8
+// XFAIL: LIBCXX-AIX-FIXME
 
 // <locale>
 

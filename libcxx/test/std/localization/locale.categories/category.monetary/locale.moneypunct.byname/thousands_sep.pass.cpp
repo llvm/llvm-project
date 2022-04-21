@@ -8,6 +8,7 @@
 
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
+// XFAIL: LIBCXX-AIX-FIXME
 
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
