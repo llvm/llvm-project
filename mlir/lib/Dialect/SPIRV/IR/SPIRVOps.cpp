@@ -2198,7 +2198,6 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   SmallVector<NamedAttrList> resultAttrs;
   SmallVector<Type> argTypes;
   SmallVector<Type> resultTypes;
-  SmallVector<Location> argLocations;
   auto &builder = parser.getBuilder();
 
   // Parse the name as a symbol.
@@ -2211,7 +2210,7 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   bool isVariadic = false;
   if (function_interface_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/false, entryArgs, argTypes, argAttrs,
-          argLocations, isVariadic, resultTypes, resultAttrs))
+          isVariadic, resultTypes, resultAttrs))
     return failure();
 
   auto fnType = builder.getFunctionType(argTypes, resultTypes);

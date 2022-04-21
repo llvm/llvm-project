@@ -2151,7 +2151,6 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<NamedAttrList> resultAttrs;
   SmallVector<Type> argTypes;
   SmallVector<Type> resultTypes;
-  SmallVector<Location> argLocations;
   bool isVariadic;
 
   auto signatureLocation = parser.getCurrentLocation();
@@ -2159,7 +2158,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
                              result.attributes) ||
       function_interface_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/true, entryArgs, argTypes, argAttrs,
-          argLocations, isVariadic, resultTypes, resultAttrs))
+          isVariadic, resultTypes, resultAttrs))
     return failure();
 
   auto type =

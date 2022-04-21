@@ -643,7 +643,7 @@ ParseResult IsolatedRegionOp::parse(OpAsmParser &parser,
 
   // Parse the body region, and reuse the operand info as the argument info.
   Region *body = result.addRegion();
-  return parser.parseRegion(*body, argInfo, argType, /*argLocations=*/{},
+  return parser.parseRegion(*body, argInfo, argType,
                             /*enableNameShadowing=*/true);
 }
 
