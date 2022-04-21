@@ -826,7 +826,7 @@ public:
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
                                       unsigned AddressSpace = 0,
                                       Align Alignment = Align(1),
-                                      bool *Fast = nullptr) const;
+                                      unsigned *Fast = nullptr) const;
 
   /// Return hardware support for population count.
   PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) const;
@@ -1691,7 +1691,7 @@ public:
                                               unsigned BitWidth,
                                               unsigned AddressSpace,
                                               Align Alignment,
-                                              bool *Fast) = 0;
+                                              unsigned *Fast) = 0;
   virtual PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) = 0;
   virtual bool haveFastSqrt(Type *Ty) = 0;
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) = 0;
@@ -2182,7 +2182,7 @@ public:
   }
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
                                       unsigned AddressSpace, Align Alignment,
-                                      bool *Fast) override {
+                                      unsigned *Fast) override {
     return Impl.allowsMisalignedMemoryAccesses(Context, BitWidth, AddressSpace,
                                                Alignment, Fast);
   }

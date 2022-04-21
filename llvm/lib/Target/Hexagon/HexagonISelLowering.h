@@ -326,12 +326,12 @@ public:
   bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
                           unsigned AddrSpace, Align Alignment,
                           MachineMemOperand::Flags Flags,
-                          bool *Fast) const override;
+                          unsigned *Fast) const override;
 
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
                                       Align Alignment,
                                       MachineMemOperand::Flags Flags,
-                                      bool *Fast) const override;
+                                      unsigned *Fast) const override;
 
   /// Returns relocation base for the given PIC jumptable.
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
@@ -442,10 +442,10 @@ private:
   SDValue opCastElem(SDValue Vec, MVT ElemTy, SelectionDAG &DAG) const;
 
   bool allowsHvxMemoryAccess(MVT VecTy, MachineMemOperand::Flags Flags,
-                             bool *Fast) const;
+                             unsigned *Fast) const;
   bool allowsHvxMisalignedMemoryAccesses(MVT VecTy,
                                          MachineMemOperand::Flags Flags,
-                                         bool *Fast) const;
+                                         unsigned *Fast) const;
   void AdjustHvxInstrPostInstrSelection(MachineInstr &MI, SDNode *Node) const;
 
   bool isHvxSingleTy(MVT Ty) const;
