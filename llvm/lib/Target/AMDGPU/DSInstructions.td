@@ -626,6 +626,8 @@ def DS_READ_ADDTID_B32 : DS_0A_RET<"ds_read_addtid_b32">;
 
 def DS_CONSUME       : DS_0A_RET<"ds_consume">;
 def DS_APPEND        : DS_0A_RET<"ds_append">;
+
+let SubtargetPredicate = isNotGFX90APlus in
 def DS_ORDERED_COUNT : DS_1A_RET_GDS<"ds_ordered_count">;
 
 //===----------------------------------------------------------------------===//
