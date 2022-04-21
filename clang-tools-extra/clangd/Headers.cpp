@@ -17,11 +17,13 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
+#include <cstring>
 
 namespace clang {
 namespace clangd {
 
 const char IWYUPragmaKeep[] = "// IWYU pragma: keep";
+const char IWYUPragmaExport[] = "// IWYU pragma: export";
 
 class IncludeStructure::RecordHeaders : public PPCallbacks,
                                         public CommentHandler {
@@ -136,15 +138,16 @@ public:
   // 2. HandleComment("// IWYU pragma: keep")
   // 3. InclusionDirective("bar.h")
   //
-  // HandleComment will store the last location of "IWYU pragma: keep" comment
-  // in the main file, so that when InclusionDirective is called, it will know
-  // that the next inclusion is behind the IWYU pragma.
+  // HandleComment will store the last location of "IWYU pragma: keep" (or
+  // export) comment in the main file, so that when InclusionDirective is
+  // called, it will know that the next inclusion is behind the IWYU pragma.
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
     if (!inMainFile() || Range.getBegin().isMacroID())
       return false;
     bool Err = false;
     llvm::StringRef Text = SM.getCharacterData(Range.getBegin(), &Err);
-    if (Err || !Text.consume_front(IWYUPragmaKeep))
+    if (Err && !Text.consume_front(IWYUPragmaKeep) &&
+        !Text.consume_front(IWYUPragmaExport))
       return false;
     unsigned Offset = SM.getFileOffset(Range.getBegin());
     LastPragmaKeepInMainFileLine =
