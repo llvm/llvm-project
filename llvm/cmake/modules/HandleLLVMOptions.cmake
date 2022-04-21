@@ -7,6 +7,7 @@
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
 include(CheckCompilerVersion)
+include(CheckProblematicConfigurations)
 include(HandleLLVMStdlib)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
