@@ -5,23 +5,23 @@
 // containing the interesting behavior.
 
 // CHECK-NOT: func @simple1() {
-func @simple1() {
+func.func @simple1() {
   return
 }
 
 // CHECK-NOT: func @simple2() {
-func @simple2() {
+func.func @simple2() {
   return
 }
 
 // CHECK-LABEL: func @simple3() {
-func @simple3() {
+func.func @simple3() {
   "test.op_crash" () : () -> ()
   return
 }
 
 // CHECK-NOT: func @simple4() {
-func @simple4(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @simple4(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -34,6 +34,6 @@ func @simple4(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 }
 
 // CHECK-NOT: func @simple5() {
-func @simple5() {
+func.func @simple5() {
   return
 }

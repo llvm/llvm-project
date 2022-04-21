@@ -6,7 +6,7 @@
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %i0 = arith.constant 0 : index
   %i1 = arith.constant 1 : index
   %i2 = arith.constant 2 : index
@@ -76,6 +76,6 @@ func @main() {
   return
 }
 
-func private @mlirAsyncRuntimePrintCurrentThreadId() -> ()
+func.func private @mlirAsyncRuntimePrintCurrentThreadId() -> ()
 
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
