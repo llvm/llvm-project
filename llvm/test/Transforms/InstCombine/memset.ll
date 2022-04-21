@@ -53,10 +53,10 @@ define void @memset_undef_volatile(i8* %p) {
 
 define void @memset_poison(i8* %p) {
 ; CHECK-LABEL: @memset_poison(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(8) [[P:%.*]], i8 undef, i32 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(8) [[P:%.*]], i8 poison, i32 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.memset.p0i8.i32(i8* %p, i8 undef, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %p, i8 poison, i32 8, i1 false)
   ret void
 }
 
