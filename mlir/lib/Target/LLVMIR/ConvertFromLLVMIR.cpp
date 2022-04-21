@@ -619,8 +619,8 @@ static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
       // FIXME: extractelement
       // FIXME: insertelement
       // FIXME: shufflevector
-      // FIXME: extractvalue
-      // FIXME: insertvalue
+      // InsertValue is handled specially.
+      // ExtractValue is handled specially.
       // FIXME: landingpad
   };
 #undef INST
@@ -1029,6 +1029,41 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       return failure();
     instMap[inst] = b.create<GEPOp>(loc, type, sourceElementType, basePtr,
                                     dynamicIndices, staticIndices);
+    return success();
+  }
+  case llvm::Instruction::InsertValue: {
+    auto *ivInst = cast<llvm::InsertValueInst>(inst);
+    Value inserted = processValue(ivInst->getInsertedValueOperand());
+    if (!inserted)
+      return failure();
+    Value aggOperand = processValue(ivInst->getAggregateOperand());
+    if (!aggOperand)
+      return failure();
+
+    SmallVector<int32_t> idxValues;
+    for (unsigned idx : ivInst->getIndices())
+      idxValues.push_back(static_cast<int32_t>(idx));
+    ArrayAttr indices = b.getI32ArrayAttr(idxValues);
+
+    instMap[inst] = b.create<InsertValueOp>(loc, aggOperand, inserted, indices);
+    return success();
+  }
+  case llvm::Instruction::ExtractValue: {
+    auto *evInst = cast<llvm::ExtractValueInst>(inst);
+    Value aggOperand = processValue(evInst->getAggregateOperand());
+    if (!aggOperand)
+      return failure();
+
+    Type type = processType(inst->getType());
+    if (!type)
+      return failure();
+
+    SmallVector<int32_t> idxValues;
+    for (unsigned idx : evInst->getIndices())
+      idxValues.push_back(static_cast<int32_t>(idx));
+    ArrayAttr indices = b.getI32ArrayAttr(idxValues);
+
+    instMap[inst] = b.create<ExtractValueOp>(loc, type, aggOperand, indices);
     return success();
   }
   }
