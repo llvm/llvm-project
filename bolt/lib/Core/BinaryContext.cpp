@@ -251,7 +251,7 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
 
   BC->HasFixedLoadAddress = !IsPIC;
 
-  return BC;
+  return std::move(BC);
 }
 
 bool BinaryContext::forceSymbolRelocations(StringRef SymbolName) const {
