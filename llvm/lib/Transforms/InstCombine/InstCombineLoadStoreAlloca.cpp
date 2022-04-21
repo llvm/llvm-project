@@ -1435,6 +1435,8 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   }
 
   // store undef, Ptr -> noop
+  // FIXME: This is technically incorrect because it might overwrite a poison
+  // value. Change to PoisonValue once #52930 is resolved.
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
