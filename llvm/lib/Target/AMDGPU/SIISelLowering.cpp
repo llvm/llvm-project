@@ -1545,6 +1545,16 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       // can do a 4 byte aligned, 8 byte access in a single operation using
       // ds_read2/write2_b32 with adjacent offsets.
       RequiredAlignment = Align(4);
+
+      if (Subtarget->hasUnalignedDSAccessEnabled()) {
+        // We will either select ds_read_b64/ds_write_b64 or ds_read2_b32/
+        // ds_write2_b32 depending on the alignment. In either case with either
+        // alignment there is no faster way of doing this.
+        if (IsFast)
+          *IsFast = true;
+        return true;
+      }
+
       break;
     case 96:
       if (!Subtarget->hasDS96AndDS128())
@@ -1593,14 +1603,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       break;
     }
 
-    if (IsFast) {
-      // FIXME: Lie it is fast if +unaligned-access-mode is passed so that
-      // DS accesses get vectorized. Do this only for sizes below 96 as
-      // b96 and b128 cases already properly handled.
-      // Remove Subtarget check once all sizes properly handled.
-      *IsFast = Alignment >= RequiredAlignment ||
-                (Subtarget->hasUnalignedDSAccessEnabled() && Size < 96);
-    }
+    if (IsFast)
+      *IsFast = Alignment >= RequiredAlignment;
 
     return Alignment >= RequiredAlignment ||
            Subtarget->hasUnalignedDSAccessEnabled();
