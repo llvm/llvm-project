@@ -7,6 +7,7 @@
 ; AFTER-PEI-NEXT: explicitKernArgSize: 12
 ; AFTER-PEI-NEXT: maxKernArgAlign: 8
 ; AFTER-PEI-NEXT: ldsSize:         0
+; AFTER-PEI-NEXT: gdsSize:         0
 ; AFTER-PEI-NEXT: dynLDSAlign:     1
 ; AFTER-PEI-NEXT: isEntryFunction: true
 ; AFTER-PEI-NEXT: noSignedZerosFPMath: false
@@ -17,6 +18,8 @@
 ; AFTER-PEI-NEXT: scratchRSrcReg:  '$sgpr68_sgpr69_sgpr70_sgpr71'
 ; AFTER-PEI-NEXT: frameOffsetReg:  '$fp_reg'
 ; AFTER-PEI-NEXT: stackPtrOffsetReg: '$sgpr32'
+; AFTER-PEI-NEXT: bytesInStackArgArea: 0
+; AFTER-PEI-NEXT: returnsVoid: true
 ; AFTER-PEI-NEXT: argumentInfo:
 ; AFTER-PEI-NEXT:   privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; AFTER-PEI-NEXT:   kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
@@ -33,6 +36,7 @@
 ; AFTER-PEI-NEXT: highBitsOf32BitAddress: 0
 ; AFTER-PEI-NEXT: occupancy: 5
 ; AFTER-PEI-NEXT: scavengeFI: '%fixed-stack.0'
+; AFTER-PEI-NEXT: vgprForAGPRCopy: ''
 ; AFTER-PEI-NEXT: body:
 define amdgpu_kernel void @scavenge_fi(i32 addrspace(1)* %out, i32 %in) #0 {
   %wide.sgpr0 = call <32 x i32>  asm sideeffect "; def $0", "=s" () #0

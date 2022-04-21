@@ -31,6 +31,7 @@ cc_binary(
     ],
     stamp = 0,
     deps = [
+        ":support",
         "//llvm:Support",
         "//llvm:TableGen",
         "//llvm:config",
@@ -1665,6 +1666,20 @@ gentbl(
         "include/clang/Basic/AttrDocs.td",
         "include/clang/Basic/DeclNodes.td",
         "include/clang/Basic/StmtNodes.td",
+    ],
+)
+
+cc_library(
+    name = "support",
+    srcs = glob([
+        "lib/Support/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/Support/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        "//llvm:Support",
     ],
 )
 

@@ -5,13 +5,13 @@
 // RUN: mlir-opt %s -inline='op-pipelines=func.func(canonicalize,cse)' | FileCheck %s --check-prefix INLINE_SIMPLIFY
 
 // Inline a function that takes an argument.
-func @func_with_arg(%c : i32) -> i32 {
+func.func @func_with_arg(%c : i32) -> i32 {
   %b = arith.addi %c, %c : i32
   return %b : i32
 }
 
 // CHECK-LABEL: func @inline_with_arg
-func @inline_with_arg(%arg0 : i32) -> i32 {
+func.func @inline_with_arg(%arg0 : i32) -> i32 {
   // CHECK-NEXT: arith.addi
   // CHECK-NEXT: return
 
@@ -20,7 +20,7 @@ func @inline_with_arg(%arg0 : i32) -> i32 {
 }
 
 // Inline a function that has multiple return operations.
-func @func_with_multi_return(%a : i1) -> (i32) {
+func.func @func_with_multi_return(%a : i1) -> (i32) {
   cf.cond_br %a, ^bb1, ^bb2
 
 ^bb1:
@@ -33,7 +33,7 @@ func @func_with_multi_return(%a : i1) -> (i32) {
 }
 
 // CHECK-LABEL: func @inline_with_multi_return() -> i32
-func @inline_with_multi_return() -> i32 {
+func.func @inline_with_multi_return() -> i32 {
 // CHECK-NEXT:    [[VAL_7:%.*]] = arith.constant false
 // CHECK-NEXT:    cf.cond_br [[VAL_7]], ^bb1, ^bb2
 // CHECK:       ^bb1:
@@ -51,13 +51,13 @@ func @inline_with_multi_return() -> i32 {
 }
 
 // Check that location information is updated for inlined instructions.
-func @func_with_locations(%c : i32) -> i32 {
+func.func @func_with_locations(%c : i32) -> i32 {
   %b = arith.addi %c, %c : i32 loc("mysource.cc":10:8)
   return %b : i32 loc("mysource.cc":11:2)
 }
 
 // INLINE-LOC-LABEL: func @inline_with_locations
-func @inline_with_locations(%arg0 : i32) -> i32 {
+func.func @inline_with_locations(%arg0 : i32) -> i32 {
   // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32 loc(callsite("mysource.cc":10:8 at "mysource.cc":55:14))
   // INLINE-LOC-NEXT: return
 
@@ -67,26 +67,26 @@ func @inline_with_locations(%arg0 : i32) -> i32 {
 
 
 // Check that external function declarations are not inlined.
-func private @func_external()
+func.func private @func_external()
 
 // CHECK-LABEL: func @no_inline_external
-func @no_inline_external() {
+func.func @no_inline_external() {
   // CHECK-NEXT: call @func_external()
   call @func_external() : () -> ()
   return
 }
 
 // Check that multiple levels of calls will be inlined.
-func @multilevel_func_a() {
+func.func @multilevel_func_a() {
   return
 }
-func @multilevel_func_b() {
+func.func @multilevel_func_b() {
   call @multilevel_func_a() : () -> ()
   return
 }
 
 // CHECK-LABEL: func @inline_multilevel
-func @inline_multilevel() {
+func.func @inline_multilevel() {
   // CHECK-NOT: call
   %fn = "test.functional_region_op"() ({
     call @multilevel_func_b() : () -> ()
@@ -99,7 +99,7 @@ func @inline_multilevel() {
 
 // Check that recursive calls are not inlined.
 // CHECK-LABEL: func @no_inline_recursive
-func @no_inline_recursive() {
+func.func @no_inline_recursive() {
   // CHECK: test.functional_region_op
   // CHECK-NOT: test.functional_region_op
   %fn = "test.functional_region_op"() ({
@@ -110,19 +110,19 @@ func @no_inline_recursive() {
 }
 
 // Check that we can convert types for inputs and results as necessary.
-func @convert_callee_fn(%arg : i32) -> i32 {
+func.func @convert_callee_fn(%arg : i32) -> i32 {
   return %arg : i32
 }
-func @convert_callee_fn_multi_arg(%a : i32, %b : i32) -> () {
+func.func @convert_callee_fn_multi_arg(%a : i32, %b : i32) -> () {
   return
 }
-func @convert_callee_fn_multi_res() -> (i32, i32) {
+func.func @convert_callee_fn_multi_res() -> (i32, i32) {
   %res = arith.constant 0 : i32
   return %res, %res : i32, i32
 }
 
 // CHECK-LABEL: func @inline_convert_call
-func @inline_convert_call() -> i16 {
+func.func @inline_convert_call() -> i16 {
   // CHECK: %[[INPUT:.*]] = arith.constant
   %test_input = arith.constant 0 : i16
 
@@ -133,7 +133,7 @@ func @inline_convert_call() -> i16 {
   return %res : i16
 }
 
-func @convert_callee_fn_multiblock() -> i32 {
+func.func @convert_callee_fn_multiblock() -> i32 {
   cf.br ^bb0
 ^bb0:
   %0 = arith.constant 0 : i32
@@ -141,7 +141,7 @@ func @convert_callee_fn_multiblock() -> i32 {
 }
 
 // CHECK-LABEL: func @inline_convert_result_multiblock
-func @inline_convert_result_multiblock() -> i16 {
+func.func @inline_convert_result_multiblock() -> i16 {
 // CHECK:   cf.br ^bb1 {inlined_conversion}
 // CHECK: ^bb1:
 // CHECK:   %[[C:.+]] = arith.constant {inlined_conversion} 0 : i32
@@ -155,7 +155,7 @@ func @inline_convert_result_multiblock() -> i16 {
 }
 
 // CHECK-LABEL: func @no_inline_convert_call
-func @no_inline_convert_call() {
+func.func @no_inline_convert_call() {
   // CHECK: "test.conversion_call_op"
   %test_input_i16 = arith.constant 0 : i16
   %test_input_i64 = arith.constant 0 : i64
@@ -167,18 +167,18 @@ func @no_inline_convert_call() {
 }
 
 // Check that we properly simplify when inlining.
-func @simplify_return_constant() -> i32 {
+func.func @simplify_return_constant() -> i32 {
   %res = arith.constant 0 : i32
   return %res : i32
 }
 
-func @simplify_return_reference() -> (() -> i32) {
+func.func @simplify_return_reference() -> (() -> i32) {
   %res = constant @simplify_return_constant : () -> i32
   return %res : () -> i32
 }
 
 // INLINE_SIMPLIFY-LABEL: func @inline_simplify
-func @inline_simplify() -> i32 {
+func.func @inline_simplify() -> i32 {
   // INLINE_SIMPLIFY-NEXT: %[[CST:.*]] = arith.constant 0 : i32
   // INLINE_SIMPLIFY-NEXT: return %[[CST]]
   %fn = call @simplify_return_reference() : () -> (() -> i32)
@@ -187,18 +187,18 @@ func @inline_simplify() -> i32 {
 }
 
 // CHECK-LABEL: func @no_inline_invalid_call
-func @no_inline_invalid_call() -> i32 {
+func.func @no_inline_invalid_call() -> i32 {
   %res = "test.conversion_call_op"() { callee=@convert_callee_fn_multiblock, noinline } : () -> (i32)
   return %res : i32
 }
 
-func @gpu_alloc() -> memref<1024xf32> {
+func.func @gpu_alloc() -> memref<1024xf32> {
   %m = gpu.alloc [] () : memref<1024xf32>
   return %m : memref<1024xf32>
 }
 
 // CHECK-LABEL: func @inline_gpu_ops
-func @inline_gpu_ops() -> memref<1024xf32> {
+func.func @inline_gpu_ops() -> memref<1024xf32> {
   // CHECK-NEXT: gpu.alloc
   %m = call @gpu_alloc() : () -> memref<1024xf32>
   return %m : memref<1024xf32>
@@ -206,7 +206,7 @@ func @inline_gpu_ops() -> memref<1024xf32> {
 
 // Test block arguments location propagation.
 // Use two call-sites to force cloning.
-func @func_with_block_args_location(%arg0 : i32) {
+func.func @func_with_block_args_location(%arg0 : i32) {
   cf.br ^bb1(%arg0 : i32)
 ^bb1(%x : i32 loc("foo")):
   "test.foo" (%x) : (i32) -> () loc("bar")
@@ -216,13 +216,13 @@ func @func_with_block_args_location(%arg0 : i32) {
 // INLINE-LOC-LABEL: func @func_with_block_args_location_callee1
 // INLINE-LOC: cf.br
 // INLINE-LOC: ^bb{{[0-9]+}}(%{{.*}}: i32 loc("foo")
-func @func_with_block_args_location_callee1(%arg0 : i32) {
+func.func @func_with_block_args_location_callee1(%arg0 : i32) {
   call @func_with_block_args_location(%arg0) : (i32) -> ()
   return
 }
 
 // CHECK-LABEL: func @func_with_block_args_location_callee2
-func @func_with_block_args_location_callee2(%arg0 : i32) {
+func.func @func_with_block_args_location_callee2(%arg0 : i32) {
   call @func_with_block_args_location(%arg0) : (i32) -> ()
   return
 }

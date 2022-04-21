@@ -5,13 +5,13 @@
 
 // Note: To run this test, your CPU must support AMX.
 
-func @tilezero(%arg0: memref<?x?xi32>, %i: index, %j: index) {
+func.func @tilezero(%arg0: memref<?x?xi32>, %i: index, %j: index) {
   %1 = amx.tile_zero : vector<16x16xi32>
   amx.tile_store %arg0[%i, %j], %1 : memref<?x?xi32>, vector<16x16xi32>
   return
 }
 
-func @entry() -> i32 {
+func.func @entry() -> i32 {
   %i0 = arith.constant 0: i32
   %i1 = arith.constant 1: i32
   %c0 = arith.constant 0: index

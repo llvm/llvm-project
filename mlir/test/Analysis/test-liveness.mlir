@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -pass-pipeline="func.func(test-print-liveness)" -split-input-file 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : func_empty
-func @func_empty() {
+func.func @func_empty() {
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut:{{ *$}}
@@ -13,7 +13,7 @@ func @func_empty() {
 // -----
 
 // CHECK-LABEL: Testing : func_simpleBranch
-func @func_simpleBranch(%arg0: i32, %arg1 : i32) -> i32 {
+func.func @func_simpleBranch(%arg0: i32, %arg1 : i32) -> i32 {
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg0@0 arg1@0
@@ -36,7 +36,7 @@ func @func_simpleBranch(%arg0: i32, %arg1 : i32) -> i32 {
 // -----
 
 // CHECK-LABEL: Testing : func_condBranch
-func @func_condBranch(%cond : i1, %arg1: i32, %arg2 : i32) -> i32 {
+func.func @func_condBranch(%cond : i1, %arg1: i32, %arg2 : i32) -> i32 {
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg1@0 arg2@0
@@ -69,7 +69,7 @@ func @func_condBranch(%cond : i1, %arg1: i32, %arg2 : i32) -> i32 {
 // -----
 
 // CHECK-LABEL: Testing : func_loop
-func @func_loop(%arg0 : i32, %arg1 : i32) -> i32 {
+func.func @func_loop(%arg0 : i32, %arg1 : i32) -> i32 {
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg1@0
@@ -115,7 +115,7 @@ func @func_loop(%arg0 : i32, %arg1 : i32) -> i32 {
 // -----
 
 // CHECK-LABEL: Testing : func_ranges
-func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32 {
+func.func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32 {
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg2@0 val_9 val_10
@@ -194,7 +194,7 @@ func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32 {
 
 // CHECK-LABEL: Testing : nested_region
 
-func @nested_region(
+func.func @nested_region(
   %arg0 : index, %arg1 : index, %arg2 : index,
   %arg3 : i32, %arg4 : i32, %arg5 : i32,
   %buffer : memref<i32>) -> i32 {
@@ -230,7 +230,7 @@ func @nested_region(
 
 // CHECK-LABEL: Testing : nested_region2
 
-func @nested_region2(
+func.func @nested_region2(
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut:{{ *$}}
@@ -275,7 +275,7 @@ func @nested_region2(
 
 // CHECK-LABEL: Testing : nested_region3
 
-func @nested_region3(
+func.func @nested_region3(
   // CHECK: Block: 0
   // CHECK-NEXT: LiveIn:{{ *$}}
   // CHECK-NEXT: LiveOut: arg0@0 arg1@0 arg2@0 arg6@0 val_7 val_8

@@ -724,23 +724,39 @@ define <8 x i16> @splat_idx_v8i16(<8 x i16> %v, i64 %idx) {
   ret <8 x i16> %splat
 }
 
-; FIXME: This is not a vid sequence!
 define <4 x i8> @buildvec_not_vid_v4i8_1() {
 ; CHECK-LABEL: buildvec_not_vid_v4i8_1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI37_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI37_0)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
   ret <4 x i8> <i8 0, i8 0, i8 2, i8 3>
 }
 
-; FIXME: This is not a vid sequence!
 define <4 x i8> @buildvec_not_vid_v4i8_2() {
 ; CHECK-LABEL: buildvec_not_vid_v4i8_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI38_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI38_0)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vrsub.vi v8, v8, 3
+; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
   ret <4 x i8> <i8 3, i8 3, i8 1, i8 0>
+}
+
+; We match this as a VID sequence (-3 / 8) + 5 but choose not to introduce
+; division to compute it.
+define <16 x i8> @buildvec_not_vid_v16i8() {
+; CHECK-LABEL: buildvec_not_vid_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 3
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 7, e8, m1, tu, mu
+; CHECK-NEXT:    vslideup.vi v8, v9, 6
+; CHECK-NEXT:    ret
+  ret <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 3, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 0>
 }

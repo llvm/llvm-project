@@ -73,15 +73,19 @@ protected:
   uint32_t nameSize;
 
 public:
+  // The next three fields have the same meaning as the ELF symbol attributes.
+  // type and binding are placed in this order to optimize generating st_info,
+  // which is defined as (binding << 4) + (type & 0xf), on a little-endian
+  // system.
+  uint8_t type : 4; // symbol type
+
   // Symbol binding. This is not overwritten by replace() to track
   // changes during resolution. In particular:
   //  - An undefined weak is still weak when it resolves to a shared library.
   //  - An undefined weak will not extract archive members, but we have to
   //    remember it is weak.
-  uint8_t binding;
+  uint8_t binding : 4;
 
-  // The following fields have the same meaning as the ELF symbol attributes.
-  uint8_t type;    // symbol type
   uint8_t stOther; // st_other field value
 
   uint8_t symbolKind;
@@ -236,8 +240,8 @@ private:
 protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
-      : file(file), nameData(name.data()), nameSize(name.size()),
-        binding(binding), type(type), stOther(stOther), symbolKind(k),
+      : file(file), nameData(name.data()), nameSize(name.size()), type(type),
+        binding(binding), stOther(stOther), symbolKind(k),
         visibility(stOther & 3), isPreemptible(false),
         isUsedInRegularObj(false), used(false), exportDynamic(false),
         inDynamicList(false), referenced(false), traced(false),

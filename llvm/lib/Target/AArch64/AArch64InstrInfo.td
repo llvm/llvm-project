@@ -2432,7 +2432,8 @@ def : Pat<(AArch64call texternalsym:$func), (BL texternalsym:$func)>;
 // Exception generation instructions.
 //===----------------------------------------------------------------------===//
 let isTrap = 1 in {
-def BRK   : ExceptionGeneration<0b001, 0b00, "brk">;
+def BRK   : ExceptionGeneration<0b001, 0b00, "brk",
+                                [(int_aarch64_break timm32_0_65535:$imm)]>;
 }
 def DCPS1 : ExceptionGeneration<0b101, 0b01, "dcps1">;
 def DCPS2 : ExceptionGeneration<0b101, 0b10, "dcps2">;

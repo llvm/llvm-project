@@ -1407,7 +1407,7 @@ TEST(IncludeFixerTest, NoCrashOnTemplateInstantiations) {
 TEST(IncludeFixerTest, HeaderNamedInDiag) {
   Annotations Test(R"cpp(
     $insert[[]]int main() {
-      [[printf]]("");
+      [[printf]](""); // error-ok
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
@@ -1418,16 +1418,19 @@ TEST(IncludeFixerTest, HeaderNamedInDiag) {
   EXPECT_THAT(
       *TU.build().getDiagnostics(),
       ElementsAre(AllOf(
-          Diag(Test.range(), "implicitly declaring library function 'printf' "
-                             "with type 'int (const char *, ...)'"),
+          Diag(Test.range(), "call to undeclared library function 'printf' "
+                             "with type 'int (const char *, ...)'; ISO C99 "
+                             "and later do not support implicit function "
+                             "declarations"),
           withFix(Fix(Test.range("insert"), "#include <stdio.h>\n",
                       "Include <stdio.h> for symbol printf")))));
 }
 
 TEST(IncludeFixerTest, CImplicitFunctionDecl) {
-  Annotations Test("void x() { [[foo]](); }");
+  Annotations Test("void x() { [[foo]](); /* error-ok */ }");
   auto TU = TestTU::withCode(Test.code());
   TU.Filename = "test.c";
+  TU.ExtraArgs.push_back("-std=c99");
 
   Symbol Sym = func("foo");
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
@@ -1444,7 +1447,8 @@ TEST(IncludeFixerTest, CImplicitFunctionDecl) {
       *TU.build().getDiagnostics(),
       ElementsAre(AllOf(
           Diag(Test.range(),
-               "implicit declaration of function 'foo' is invalid in C99"),
+               "call to undeclared function 'foo'; ISO C99 and later do not "
+               "support implicit function declarations"),
           withFix(Fix(Range{}, "#include \"foo.h\"\n",
                       "Include \"foo.h\" for symbol foo")))));
 }
@@ -1736,6 +1740,8 @@ $fix[[  $diag[[#include "unused.h"]]
 ]]
   #include "used.h"
 
+  #include "ignore.h"
+
   #include <system_header.h>
 
   void foo() {
@@ -1752,12 +1758,19 @@ $fix[[  $diag[[#include "unused.h"]]
     #pragma once
     void used() {}
   )cpp";
+  TU.AdditionalFiles["ignore.h"] = R"cpp(
+    #pragma once
+    void ignore() {}
+  )cpp";
   TU.AdditionalFiles["system/system_header.h"] = "";
   TU.ExtraArgs = {"-isystem" + testPath("system")};
   // Off by default.
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
   Config Cfg;
   Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
+  // Set filtering.
+  Cfg.Diagnostics.Includes.IgnoreHeader.emplace_back(
+      [](llvm::StringRef Header) { return Header.endswith("ignore.h"); });
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
   EXPECT_THAT(
       *TU.build().getDiagnostics(),

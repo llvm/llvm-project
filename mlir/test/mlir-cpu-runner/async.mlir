@@ -6,7 +6,7 @@
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %i0 = arith.constant 0 : index
   %i1 = arith.constant 1 : index
   %i2 = arith.constant 2 : index
@@ -35,13 +35,13 @@ func @main() {
     // CHECK: Current thread id: [[THREAD0:.*]]
     // CHECK: [1, 2, 0, 0]
     memref.store %c2, %A[%i1]: memref<4xf32>
-    call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-    call @print_memref_f32(%U): (memref<*xf32>) -> ()
+    func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
+    func.call @print_memref_f32(%U): (memref<*xf32>) -> ()
 
     // No op async region to create a token for testing async dependency.
     %noop = async.execute {
       // CHECK: Current thread id: [[THREAD1:.*]]
-      call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
+      func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
       async.yield
     }
 
@@ -49,8 +49,8 @@ func @main() {
       // CHECK: Current thread id: [[THREAD2:.*]]
       // CHECK: [1, 2, 3, 0]
       memref.store %c3, %A[%i2]: memref<4xf32>
-      call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-      call @print_memref_f32(%U): (memref<*xf32>) -> ()
+      func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
+      func.call @print_memref_f32(%U): (memref<*xf32>) -> ()
 
       async.yield
     }
@@ -59,8 +59,8 @@ func @main() {
     // CHECK: Current thread id: [[THREAD3:.*]]
     // CHECK: [1, 2, 3, 4]
     memref.store %c4, %A[%i3]: memref<4xf32>
-    call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-    call @print_memref_f32(%U): (memref<*xf32>) -> ()
+    func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
+    func.call @print_memref_f32(%U): (memref<*xf32>) -> ()
 
     async.yield
   }
@@ -76,6 +76,6 @@ func @main() {
   return
 }
 
-func private @mlirAsyncRuntimePrintCurrentThreadId() -> ()
+func.func private @mlirAsyncRuntimePrintCurrentThreadId() -> ()
 
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }

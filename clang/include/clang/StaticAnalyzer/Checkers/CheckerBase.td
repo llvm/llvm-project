@@ -86,15 +86,14 @@ class ParentPackage<Package P> { Package ParentPackage = P; }
 class HelpText<string text> { string HelpText = text; }
 
 /// Describes what kind of documentation exists for the checker.
-class DocumentationEnum<bits<2> val> {
-  bits<2> Documentation = val;
+class DocumentationEnum<bits<1> val> {
+  bits<1> Documentation = val;
 }
 def NotDocumented : DocumentationEnum<0>;
 def HasDocumentation : DocumentationEnum<1>;
-def HasAlphaDocumentation : DocumentationEnum<2>;
 
 class Documentation<DocumentationEnum val> {
-  bits<2> Documentation = val.Documentation;
+  bits<1> Documentation = val.Documentation;
 }
 
 /// Describes a checker. Every builtin checker has to be registered with the use
@@ -114,7 +113,7 @@ class Checker<string name = ""> {
   list<Checker>       Dependencies;
   // This field is optional.
   list<Checker>       WeakDependencies;
-  bits<2>             Documentation;
+  bits<1>             Documentation;
   Package             ParentPackage;
   bit                 Hidden = 0;
 }

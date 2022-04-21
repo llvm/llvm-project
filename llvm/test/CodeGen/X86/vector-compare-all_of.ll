@@ -881,6 +881,64 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
   ret i8 %11
 }
 
+; FIXME: Should not "MOVMSK(PCMPEQ(..)) -> PTESTZ(..)" when cmp result has muti-uses.
+define i32 @test_v32i8_muti_uses(<32 x i8> %x, <32 x i8>%y, i32 %z) {
+; SSE-LABEL: test_v32i8_muti_uses:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqb %xmm2, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    pcmpeqb %xmm3, %xmm1
+; SSE-NEXT:    pmovmskb %xmm1, %ecx
+; SSE-NEXT:    shll $16, %ecx
+; SSE-NEXT:    orl %eax, %ecx
+; SSE-NEXT:    cmpl $-1, %ecx
+; SSE-NEXT:    movl $16, %eax
+; SSE-NEXT:    cmovnel %ecx, %eax
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: test_v32i8_muti_uses:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vpmovmskb %xmm2, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %eax, %ecx
+; AVX1-NEXT:    cmpl $-1, %ecx
+; AVX1-NEXT:    movl $16, %eax
+; AVX1-NEXT:    cmovnel %ecx, %eax
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_v32i8_muti_uses:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpmovmskb %ymm2, %ecx
+; AVX2-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vptest %ymm0, %ymm0
+; AVX2-NEXT:    movl $16, %eax
+; AVX2-NEXT:    cmovnel %ecx, %eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_v32i8_muti_uses:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0
+; AVX512-NEXT:    kortestd %k0, %k0
+; AVX512-NEXT:    kmovd %k0, %ecx
+; AVX512-NEXT:    movl $16, %eax
+; AVX512-NEXT:    cmovael %ecx, %eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %a = icmp eq <32 x i8> %x, %y
+  %b = bitcast <32 x i1> %a to i32
+  %c = icmp eq i32 %b, -1
+  %res = select i1 %c, i32 16, i32 %b
+  ret i32 %res
+}
+
 define i1 @bool_reduction_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SSE-LABEL: bool_reduction_v2f64:
 ; SSE:       # %bb.0:

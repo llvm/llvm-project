@@ -25,12 +25,12 @@ void test_audio() {
   unsigned long long c;
 
   // CHECK-ERR-CXX: error: use of undeclared identifier 'Q6_R_clip_RI'
-  // CHECK-ERR-C99: error: implicit declaration of function 'Q6_R_clip_RI' is invalid in C99
+  // CHECK-ERR-C99: error: call to undeclared function 'Q6_R_clip_RI'
   // CHECK: call i32 @llvm.hexagon.A7.clip
   b = Q6_R_clip_RI(b, 9);
 
   // CHECK-ERR-CXX: error: use of undeclared identifier 'Q6_P_cround_PI'
-  // CHECK-ERR-C99: error: implicit declaration of function 'Q6_P_cround_PI' is invalid in C99
+  // CHECK-ERR-C99: error: call to undeclared function 'Q6_P_cround_PI'
   // CHECK: call i64 @llvm.hexagon.A7.cround
   c = Q6_P_cround_PI(c, 12);
 }

@@ -181,6 +181,12 @@
 #define USE_IFDEF 1
 #define USE_IFNDEF 1
 
+// Undef'ing first and then defining later should still exclude this macro
+#undef USE_UINT64
+#define USE_UINT64 0
+#undef USE_INT64
+#define USE_INT64 0
+
 #if defined(USE_FOO) && USE_FOO
 extern void foo();
 #else
@@ -242,6 +248,27 @@ inline void used_ifndef() {}
 #ifndef GOINK
 #define IFNDEF3 3
 #endif
+
+// Macros used in conditions are invalidated, even if they look
+// like enums after they are used in conditions.
+#if DEFINED_LATER1
+#endif
+#ifdef DEFINED_LATER2
+#endif
+#ifndef DEFINED_LATER3
+#endif
+#undef DEFINED_LATER4
+#if ((defined(DEFINED_LATER5) || DEFINED_LATER6) && DEFINED_LATER7) || (DEFINED_LATER8 > 10)
+#endif
+
+#define DEFINED_LATER1 1
+#define DEFINED_LATER2 2
+#define DEFINED_LATER3 3
+#define DEFINED_LATER4 4
+#define DEFINED_LATER5 5
+#define DEFINED_LATER6 6
+#define DEFINED_LATER7 7
+#define DEFINED_LATER8 8
 
 // Sometimes an argument to ifdef can be classified as a keyword token.
 #ifdef __restrict

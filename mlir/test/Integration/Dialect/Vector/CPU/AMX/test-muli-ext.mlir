@@ -5,7 +5,7 @@
 
 // Note: To run this test, your CPU must support AMX.
 
-func @print(%arg0: memref<16x4xi32>) {
+func.func @print(%arg0: memref<16x4xi32>) {
   %iu = arith.constant -1: i32
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
@@ -17,7 +17,7 @@ func @print(%arg0: memref<16x4xi32>) {
   return
 }
 
-func @kernel1(%arg0: memref<16x16xi8>,
+func.func @kernel1(%arg0: memref<16x16xi8>,
               %arg1: memref<4x16xi8>,
               %arg2: memref<16x4xi32>) {
   %0 = arith.constant 0 : index
@@ -29,7 +29,7 @@ func @kernel1(%arg0: memref<16x16xi8>,
   return
 }
 
-func @kernel2(%arg0: memref<16x16xi8>,
+func.func @kernel2(%arg0: memref<16x16xi8>,
               %arg1: memref<4x16xi8>,
               %arg2: memref<16x4xi32>) {
   %0 = arith.constant 0 : index
@@ -41,7 +41,7 @@ func @kernel2(%arg0: memref<16x16xi8>,
   return
 }
 
-func @kernel3(%arg0: memref<16x16xi8>,
+func.func @kernel3(%arg0: memref<16x16xi8>,
               %arg1: memref<4x16xi8>,
               %arg2: memref<16x4xi32>) {
   %0 = arith.constant 0 : index
@@ -53,7 +53,7 @@ func @kernel3(%arg0: memref<16x16xi8>,
   return
 }
 
-func @kernel4(%arg0: memref<16x16xi8>,
+func.func @kernel4(%arg0: memref<16x16xi8>,
               %arg1: memref<4x16xi8>,
               %arg2: memref<16x4xi32>) {
   %0 = arith.constant 0 : index
@@ -65,7 +65,7 @@ func @kernel4(%arg0: memref<16x16xi8>,
   return
 }
 
-func @entry() -> i32 {
+func.func @entry() -> i32 {
   %c0 = arith.constant 0: index
 
   // Set up memory.

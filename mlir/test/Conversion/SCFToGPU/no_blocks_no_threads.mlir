@@ -3,7 +3,7 @@
 
 // CHECK-THREADS-LABEL: @one_d_loop
 // CHECK-BLOCKS-LABEL: @one_d_loop
-func @one_d_loop(%A : memref<?xf32>, %B : memref<?xf32>) {
+func.func @one_d_loop(%A : memref<?xf32>, %B : memref<?xf32>) {
   // Bounds of the loop, its range and step.
   // CHECK-THREADS-NEXT: %{{.*}} = arith.constant 0 : index
   // CHECK-THREADS-NEXT: %{{.*}} = arith.constant 42 : index

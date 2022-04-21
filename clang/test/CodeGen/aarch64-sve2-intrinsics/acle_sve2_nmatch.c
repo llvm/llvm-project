@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify=overload -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -29,8 +29,8 @@
 //
 svbool_t test_svnmatch_s8(svbool_t pg, svint8_t op1, svint8_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svnmatch'}}
-  // expected-warning@+1 {{implicit declaration of function 'svnmatch_s8'}}
+  // overload-warning@+2 {{call to undeclared function 'svnmatch'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svnmatch_s8'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svnmatch,_s8,,)(pg, op1, op2);
 }
 
@@ -50,8 +50,8 @@ svbool_t test_svnmatch_s8(svbool_t pg, svint8_t op1, svint8_t op2)
 //
 svbool_t test_svnmatch_s16(svbool_t pg, svint16_t op1, svint16_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svnmatch'}}
-  // expected-warning@+1 {{implicit declaration of function 'svnmatch_s16'}}
+  // overload-warning@+2 {{call to undeclared function 'svnmatch'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svnmatch_s16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svnmatch,_s16,,)(pg, op1, op2);
 }
 
@@ -67,8 +67,8 @@ svbool_t test_svnmatch_s16(svbool_t pg, svint16_t op1, svint16_t op2)
 //
 svbool_t test_svnmatch_u8(svbool_t pg, svuint8_t op1, svuint8_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svnmatch'}}
-  // expected-warning@+1 {{implicit declaration of function 'svnmatch_u8'}}
+  // overload-warning@+2 {{call to undeclared function 'svnmatch'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svnmatch_u8'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svnmatch,_u8,,)(pg, op1, op2);
 }
 
@@ -88,7 +88,7 @@ svbool_t test_svnmatch_u8(svbool_t pg, svuint8_t op1, svuint8_t op2)
 //
 svbool_t test_svnmatch_u16(svbool_t pg, svuint16_t op1, svuint16_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svnmatch'}}
-  // expected-warning@+1 {{implicit declaration of function 'svnmatch_u16'}}
+  // overload-warning@+2 {{call to undeclared function 'svnmatch'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svnmatch_u16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svnmatch,_u16,,)(pg, op1, op2);
 }

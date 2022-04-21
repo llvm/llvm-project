@@ -24,7 +24,7 @@
 //  TILE-02-DAG: #[[$stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>
 // TILE-234-DAG: #[[$stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>
 
-func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %arg2: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   linalg.matmul
@@ -99,7 +99,7 @@ func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // the "min" in subview size computation. This test uses buffer sizes divisible
 // by respective tile sizes (M=10 divisble by 2, N=12 divisible by 2 and 3,
 // K=16 divisble by 2 and 4).
-func @matmul_static(%arg0: memref<10x16xf32, offset: ?, strides: [?, 1]>,
+func.func @matmul_static(%arg0: memref<10x16xf32, offset: ?, strides: [?, 1]>,
                     %arg1: memref<16x12xf32, offset: ?, strides: [?, 1]>,
                     %arg2: memref<10x12xf32, offset: ?, strides: [?, 1]>) {
   linalg.matmul
@@ -155,7 +155,7 @@ func @matmul_static(%arg0: memref<10x16xf32, offset: ?, strides: [?, 1]>,
 //
 //       TILE-234:        linalg.matmul ins(%[[sAik]], %[[sBkj]]{{.*}} outs(%[[sCij]]
 
-func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>, %arg2: memref<?xf32, offset: ?, strides: [1]>) {
+func.func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>, %arg2: memref<?xf32, offset: ?, strides: [1]>) {
   linalg.matvec
     ins(%arg0, %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                       memref<?xf32, offset: ?, strides: [1]>)
@@ -219,7 +219,7 @@ func @matvec(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?
 //
 //       TILE-234:      linalg.matvec ins(%[[sAij]], %[[sBj]]{{.*}} outs(%[[sCi]]
 
-func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>, %arg2: memref<f32>) {
+func.func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>, %arg2: memref<f32>) {
   linalg.dot
     ins(%arg0, %arg1: memref<?xf32, offset: ?, strides: [1]>, memref<?xf32, offset: ?, strides: [1]>)
    outs(%arg2: memref<f32>)
@@ -253,7 +253,7 @@ func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, of
 //       TILE-234:    %[[sBi:.*]] = memref.subview %{{.*}}[%[[I]]] [%[[szM]]] [1] : memref<?xf32, #[[$strided1D]]> to memref<?xf32, #[[$strided1D]]>
 //       TILE-234:    linalg.dot ins(%[[sAi]], %[[sBi]]{{.*}} outs(
 
-func @fill_static(%arg0: memref<127x99xf32>, %arg1: f32) {
+func.func @fill_static(%arg0: memref<127x99xf32>, %arg1: f32) {
   linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<127x99xf32>)
   return
 }
@@ -281,7 +281,7 @@ func @fill_static(%arg0: memref<127x99xf32>, %arg1: f32) {
 //       TILE-234:       linalg.fill{{.*}} : memref<?x3xf32, #[[$stride_99_1_layout_map]]>
 
 
-func @fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: f32) {
+func.func @fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: f32) {
   linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?xf32, offset: ?, strides: [?, 1]>)
   return
 }
@@ -313,7 +313,7 @@ func @fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: f32) {
   iterator_types = ["parallel", "parallel"]
 }
 
-func @pointwise(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @pointwise(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                 %arg2: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   linalg.generic #pointwise_2d_trait
     ins(%arg0, %arg1 : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>)

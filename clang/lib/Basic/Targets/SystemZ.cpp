@@ -59,6 +59,17 @@ bool SystemZTargetInfo::validateAsmConstraint(
   default:
     return false;
 
+  case 'Z':
+    switch (Name[1]) {
+    default:
+      return false;
+    case 'Q': // Address with base and unsigned 12-bit displacement
+    case 'R': // Likewise, plus an index
+    case 'S': // Address with base and signed 20-bit displacement
+    case 'T': // Likewise, plus an index
+      break;
+    }
+    LLVM_FALLTHROUGH;
   case 'a': // Address register
   case 'd': // Data register (equivalent to 'r')
   case 'f': // Floating-point register

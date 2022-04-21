@@ -12,7 +12,7 @@
 //  CHECK-SAME:   %[[UB:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[STEP:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[CMP:[a-zA-Z0-9]*]]: i1
-func @hoist_vector_transfer_pairs(
+func.func @hoist_vector_transfer_pairs(
     %memref0: memref<?x?xf32>, %memref1: memref<?x?xf32>, %memref2: memref<?x?xf32>,
     %memref3: memref<?x?xf32>, %memref4: memref<?x?xf32>, %memref5: memref<?x?xf32>,
     %val: index, %lb : index, %ub : index, %step: index, %cmp: i1) {
@@ -87,7 +87,7 @@ func @hoist_vector_transfer_pairs(
 //  CHECK-SAME:   %[[STEP:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[RANDOM:[a-zA-Z0-9]*]]: index,
 //  CHECK-SAME:   %[[CMP:[a-zA-Z0-9]*]]: i1
-func @hoist_vector_transfer_pairs_disjoint(
+func.func @hoist_vector_transfer_pairs_disjoint(
     %memref0: memref<?x?xf32>, %memref1: memref<?x?xf32>,
     %memref2: memref<?x?xf32>, %memref3: memref<?x?xf32>, %val: index, %lb : index, %ub : index,
     %step: index, %random_index : index, %cmp: i1) {
@@ -158,7 +158,7 @@ func @hoist_vector_transfer_pairs_disjoint(
 // -----
 
 // CHECK-LABEL: func @hoist_vector_transfer_pairs_tensor
-func @hoist_vector_transfer_pairs_tensor(
+func.func @hoist_vector_transfer_pairs_tensor(
     %tensor0: tensor<?x?xf32>, %tensor1: tensor<?x?xf32>, %tensor2: tensor<?x?xf32>,
     %tensor3: tensor<?x?xf32>, %tensor4: tensor<?x?xf32>, %tensor5: tensor<?x?xf32>,
     %val: index, %lb : index, %ub : index, %step: index) ->
@@ -243,7 +243,7 @@ func @hoist_vector_transfer_pairs_tensor(
 //  CHECK-SAME:   %[[TENSOR1:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[TENSOR2:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[TENSOR3:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
-func @hoist_vector_transfer_pairs_disjoint_tensor(
+func.func @hoist_vector_transfer_pairs_disjoint_tensor(
     %tensor0: tensor<?x?xf32>, %tensor1: tensor<?x?xf32>,
     %tensor2: tensor<?x?xf32>, %tensor3: tensor<?x?xf32>,
     %val: index, %lb : index, %ub : index, %step: index,
@@ -332,7 +332,7 @@ func @hoist_vector_transfer_pairs_disjoint_tensor(
 //  CHECK-SAME:   %[[TENSOR3:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[TENSOR4:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[TENSOR5:[a-zA-Z0-9]*]]: tensor<?x?xf32>
-func @hoist_vector_transfer_pairs_tensor_and_slices(
+func.func @hoist_vector_transfer_pairs_tensor_and_slices(
     %tensor0: tensor<?x?xf32>, %tensor1: tensor<?x?xf32>, %tensor2: tensor<?x?xf32>,
     %tensor3: tensor<?x?xf32>, %tensor4: tensor<?x?xf32>, %tensor5: tensor<?x?xf32>,
     %val: index, %lb : index, %ub : index, %step: index) ->

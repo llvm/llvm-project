@@ -2,7 +2,7 @@
 
 module attributes {gpu.container_module} {
 
-  func @foo() {
+  func.func @foo() {
     // CHECK: %[[t0:.*]] = llvm.call @mgpuStreamCreate
     // CHECK: %[[e0:.*]] = llvm.call @mgpuEventCreate
     // CHECK: llvm.call @mgpuEventRecord(%[[e0]], %[[t0]])

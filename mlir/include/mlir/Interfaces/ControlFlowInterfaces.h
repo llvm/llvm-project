@@ -216,6 +216,16 @@ private:
 /// RegionBranchOpInterface.
 bool insideMutuallyExclusiveRegions(Operation *a, Operation *b);
 
+/// Return the first enclosing region of the given op that may be executed
+/// repetitively as per RegionBranchOpInterface or `nullptr` if no such region
+/// exists.
+Region *getEnclosingRepetitiveRegion(Operation *op);
+
+/// Return the first enclosing region of the given Value that may be executed
+/// repetitively as per RegionBranchOpInterface or `nullptr` if no such region
+/// exists.
+Region *getEnclosingRepetitiveRegion(Value value);
+
 //===----------------------------------------------------------------------===//
 // RegionBranchTerminatorOpInterface
 //===----------------------------------------------------------------------===//

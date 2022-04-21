@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -std=c99 -verify=overload -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -29,8 +29,8 @@
 //
 svuint8_t test_svhistseg_s8(svint8_t op1, svint8_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svhistseg'}}
-  // expected-warning@+1 {{implicit declaration of function 'svhistseg_s8'}}
+  // overload-warning@+2 {{call to undeclared function 'svhistseg'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svhistseg_s8'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svhistseg,_s8,,)(op1, op2);
 }
 
@@ -46,7 +46,7 @@ svuint8_t test_svhistseg_s8(svint8_t op1, svint8_t op2)
 //
 svuint8_t test_svhistseg_u8(svuint8_t op1, svuint8_t op2)
 {
-  // overload-warning@+2 {{implicit declaration of function 'svhistseg'}}
-  // expected-warning@+1 {{implicit declaration of function 'svhistseg_u8'}}
+  // overload-warning@+2 {{call to undeclared function 'svhistseg'; ISO C99 and later do not support implicit function declarations}}
+  // expected-warning@+1 {{call to undeclared function 'svhistseg_u8'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svhistseg,_u8,,)(op1, op2);
 }

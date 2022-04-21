@@ -32,7 +32,7 @@ module attributes {
     }
   }
 
-  func @main() {
+  func.func @main() {
     %input1 = memref.alloc() : memref<3xf32>
     %input2 = memref.alloc() : memref<3x3xf32>
     %output = memref.alloc() : memref<3x3x3xf32>
@@ -54,8 +54,8 @@ module attributes {
     call @print_memref_f32(%result) : (memref<*xf32>) -> ()
     return
   }
-  func private @fillF32Buffer1D(%arg0 : memref<?xf32>, %arg1 : f32)
-  func private @fillF32Buffer2D(%arg0 : memref<?x?xf32>, %arg1 : f32)
-  func private @fillF32Buffer3D(%arg0 : memref<?x?x?xf32>, %arg1 : f32)
-  func private @print_memref_f32(%arg0 : memref<*xf32>)
+  func.func private @fillF32Buffer1D(%arg0 : memref<?xf32>, %arg1 : f32)
+  func.func private @fillF32Buffer2D(%arg0 : memref<?x?xf32>, %arg1 : f32)
+  func.func private @fillF32Buffer3D(%arg0 : memref<?x?x?xf32>, %arg1 : f32)
+  func.func private @print_memref_f32(%arg0 : memref<*xf32>)
 }

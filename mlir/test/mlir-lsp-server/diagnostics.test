@@ -5,7 +5,7 @@
   "uri":"test:///foo.mlir",
   "languageId":"mlir",
   "version":1,
-  "text":"func ()"
+  "text":"func.func ()"
 }}}
 // CHECK: "method": "textDocument/publishDiagnostics",
 // CHECK-NEXT: "params": {
@@ -15,11 +15,11 @@
 // CHECK-NEXT:         "message": "custom op 'func.func' expected valid '@'-identifier for symbol name",
 // CHECK-NEXT:         "range": {
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "character": 7,
+// CHECK-NEXT:             "character": 12,
 // CHECK-NEXT:             "line": 0
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "character": 6,
+// CHECK-NEXT:             "character": 11,
 // CHECK-NEXT:             "line": 0
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },

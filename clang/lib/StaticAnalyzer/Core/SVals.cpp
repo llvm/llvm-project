@@ -401,7 +401,7 @@ void NonLoc::dumpToStream(raw_ostream &os) const {
         else
           os << ", ";
 
-        os << (*I).getType().getAsString();
+        os << I->getType();
       }
 
       os << '}';
