@@ -4,7 +4,7 @@
 // CHECK: module attributes {gpu.container_module}
 
 // CHECK-LABEL: func @launch()
-func @launch() {
+func.func @launch() {
   // CHECK: %[[ARG0:.*]] = "op"() : () -> f32
   %0 = "op"() : () -> (f32)
   // CHECK: %[[ARG1:.*]] = "op"() : () -> memref<?xf32, 1>
@@ -63,7 +63,7 @@ func @launch() {
 
 // CHECK: module attributes {gpu.container_module}
 // CHECK-LABEL: @multiple_launches
-func @multiple_launches() {
+func.func @multiple_launches() {
   // CHECK: %[[CST:.*]] = arith.constant 8 : index
   %cst = arith.constant 8 : index
   // CHECK: gpu.launch_func @multiple_launches_kernel::@multiple_launches_kernel blocks in (%[[CST]], %[[CST]], %[[CST]]) threads in (%[[CST]], %[[CST]], %[[CST]])
@@ -94,7 +94,7 @@ func @multiple_launches() {
 // -----
 
 // CHECK-LABEL: @extra_constants_not_inlined
-func @extra_constants_not_inlined(%arg0: memref<?xf32>) {
+func.func @extra_constants_not_inlined(%arg0: memref<?xf32>) {
   // CHECK: %[[CST:.*]] = arith.constant 8 : index
   %cst = arith.constant 8 : index
   %cst2 = arith.constant 2 : index
@@ -120,7 +120,7 @@ func @extra_constants_not_inlined(%arg0: memref<?xf32>) {
 
 // CHECK-LABEL: @extra_constants
 // CHECK-SAME: %[[ARG0:.*]]: memref<?xf32>
-func @extra_constants(%arg0: memref<?xf32>) {
+func.func @extra_constants(%arg0: memref<?xf32>) {
   // CHECK: %[[CST:.*]] = arith.constant 8 : index
   %cst = arith.constant 8 : index
   %cst2 = arith.constant 2 : index
@@ -149,7 +149,7 @@ func @extra_constants(%arg0: memref<?xf32>) {
 
 // CHECK-LABEL: @extra_constants_noarg
 // CHECK-SAME: %[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>
-func @extra_constants_noarg(%arg0: memref<?xf32>, %arg1: memref<?xf32>) {
+func.func @extra_constants_noarg(%arg0: memref<?xf32>, %arg1: memref<?xf32>) {
   // CHECK: %[[CST:.*]] = arith.constant 8 : index
   %cst = arith.constant 8 : index
   %cst2 = arith.constant 2 : index
@@ -177,7 +177,7 @@ func @extra_constants_noarg(%arg0: memref<?xf32>, %arg1: memref<?xf32>) {
 // -----
 
 // CHECK-LABEL: @multiple_uses
-func @multiple_uses(%arg0 : memref<?xf32>) {
+func.func @multiple_uses(%arg0 : memref<?xf32>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   // CHECK: gpu.func {{.*}} {
@@ -202,7 +202,7 @@ func @multiple_uses(%arg0 : memref<?xf32>) {
 // -----
 
 // CHECK-LABEL: @multiple_uses2
-func @multiple_uses2(%arg0 : memref<*xf32>) {
+func.func @multiple_uses2(%arg0 : memref<*xf32>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %d = memref.dim %arg0, %c2 : memref<*xf32>
@@ -233,7 +233,7 @@ func @multiple_uses2(%arg0 : memref<*xf32>) {
 llvm.mlir.global internal @global(42 : i64) : i64
 
 //CHECK-LABEL: @function_call
-func @function_call(%arg0 : memref<?xf32>) {
+func.func @function_call(%arg0 : memref<?xf32>) {
   %cst = arith.constant 8 : index
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst,
                                        %grid_z = %cst)
@@ -247,12 +247,12 @@ func @function_call(%arg0 : memref<?xf32>) {
   return
 }
 
-func @device_function() {
+func.func @device_function() {
   call @recursive_device_function() : () -> ()
   return
 }
 
-func @recursive_device_function() {
+func.func @recursive_device_function() {
   call @recursive_device_function() : () -> ()
   return
 }

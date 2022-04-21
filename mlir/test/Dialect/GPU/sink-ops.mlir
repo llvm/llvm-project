@@ -3,7 +3,7 @@
 
 // CHECK-LABEL: @extra_constants
 // CHECK-SAME: %[[ARG0:.*]]: memref<?xf32>
-func @extra_constants(%arg0: memref<?xf32>) {
+func.func @extra_constants(%arg0: memref<?xf32>) {
   %cst = arith.constant 8 : index
   %cst2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
@@ -29,7 +29,7 @@ func @extra_constants(%arg0: memref<?xf32>) {
 
 // CHECK-LABEL: @extra_constants_not_inlined
 // CHECK-SAME: %[[ARG0:.*]]: memref<?xf32>
-func @extra_constants_not_inlined(%arg0: memref<?xf32>) {
+func.func @extra_constants_not_inlined(%arg0: memref<?xf32>) {
   %cst = arith.constant 8 : index
   %cst2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
@@ -54,7 +54,7 @@ func @extra_constants_not_inlined(%arg0: memref<?xf32>) {
 // -----
 
 // CHECK-LABEL: @multiple_uses
-func @multiple_uses(%arg0 : memref<?xf32>) {
+func.func @multiple_uses(%arg0 : memref<?xf32>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   // CHECK: gpu.launch blocks
@@ -76,7 +76,7 @@ func @multiple_uses(%arg0 : memref<?xf32>) {
 // -----
 
 // CHECK-LABEL: @multiple_uses2
-func @multiple_uses2(%arg0 : memref<*xf32>) {
+func.func @multiple_uses2(%arg0 : memref<*xf32>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %d = memref.dim %arg0, %c2 : memref<*xf32>
