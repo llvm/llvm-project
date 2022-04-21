@@ -1679,9 +1679,17 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
   SmallVector<llvm::Metadata *, 16> Elts;
   // First element is always return type. For 'void' functions it is NULL.
   QualType temp = Func->getReturnType();
-  if (temp->getTypeClass() == Type::Auto && decl)
-    Elts.push_back(CreateType(cast<AutoType>(temp)));
-  else
+  if (temp->getTypeClass() == Type::Auto && decl) {
+    const AutoType *AT = cast<AutoType>(temp);
+
+    // It may be tricky in some cases to link the specification back the lambda
+    // call operator and so we skip emitting "auto" for lambdas. This is
+    // consistent with gcc as well.
+    if (AT->isDeduced() && ThisPtr->getPointeeCXXRecordDecl()->isLambda())
+      Elts.push_back(getOrCreateType(AT->getDeducedType(), Unit));
+    else
+      Elts.push_back(CreateType(AT));
+  } else
     Elts.push_back(Args[0]);
 
   // "this" pointer is always first argument.
