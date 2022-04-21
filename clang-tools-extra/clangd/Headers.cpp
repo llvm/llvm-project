@@ -106,10 +106,17 @@ public:
         InBuiltinFile = false;
       // At file exit time HeaderSearchInfo is valid and can be used to
       // determine whether the file was a self-contained header or not.
-      if (const FileEntry *FE = SM.getFileEntryForID(PrevFID))
-        if (!isSelfContainedHeader(FE, PrevFID, SM, HeaderInfo))
+      if (const FileEntry *FE = SM.getFileEntryForID(PrevFID)) {
+        // isSelfContainedHeader only returns true once the full header-guard
+        // structure has been seen, i.e. when exiting the *outer* copy of the
+        // file. So last result wins.
+        if (isSelfContainedHeader(FE, PrevFID, SM, HeaderInfo))
+          Out->NonSelfContained.erase(
+              *Out->getID(SM.getFileEntryForID(PrevFID)));
+        else
           Out->NonSelfContained.insert(
               *Out->getID(SM.getFileEntryForID(PrevFID)));
+      }
       break;
     }
     case PPCallbacks::RenameFile:
