@@ -45,7 +45,7 @@
 
 // RUN: not %clang_cc1 -triple systemz--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix SYSTEMZ
 // SYSTEMZ: error: unknown target CPU 'not-a-cpu'
-// SYSTEMZ-NEXT: note: valid target CPU values are: arch8, z10, arch9, z196, arch10, zEC12, arch11, z13, arch12, z14, arch13, z15, arch14{{$}}
+// SYSTEMZ-NEXT: note: valid target CPU values are: arch8, z10, arch9, z196, arch10, zEC12, arch11, z13, arch12, z14, arch13, z15, arch14, z16{{$}}
 
 // RUN: not %clang_cc1 -triple sparc--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix SPARC
 // SPARC: error: unknown target CPU 'not-a-cpu'

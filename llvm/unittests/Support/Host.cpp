@@ -326,7 +326,7 @@ TEST(getLinuxHostCPUName, s390x) {
 
   // Model Id: 3931
   ExpectedCPUs.push_back("zEC12");
-  ExpectedCPUs.push_back("arch14");
+  ExpectedCPUs.push_back("z16");
 
   // Model Id: 8561
   ExpectedCPUs.push_back("zEC12");

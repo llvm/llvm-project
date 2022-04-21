@@ -1,5 +1,5 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 -target-cpu arch14 -triple s390x-linux-gnu \
+// RUN: %clang_cc1 -target-cpu z16 -triple s390x-linux-gnu \
 // RUN: -fzvector -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -fsyntax-only -verify %s
 
