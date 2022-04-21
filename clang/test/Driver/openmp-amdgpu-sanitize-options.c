@@ -2,34 +2,34 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack- -fsanitize=address -fgpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack- -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=XNACK-DAG,GPUSAN,XNACKNEG %s
 
-// RUN:   %clang -### -fopenmp --offload-arch=gfx908:xnack- -fsanitize=address -fgpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp --offload-arch=gfx908:xnack- -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=XNACK-DAG,GPUSAN,XNACKNEG %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908 -fsanitize=address -fgpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908 -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=XNACKNONE-DAG,GPUSAN,XNACKNONE %s
 
-// RUN:   %clang -### -fopenmp --offload-arch=gfx908 -fsanitize=address -fgpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp --offload-arch=gfx908 -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=XNACKNONE-DAG,GPUSAN,XNACKNONE %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack+ -fsanitize=address -fgpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack+ -fsanitize=address -fgpu-sanitize  --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=GPUSAN,XNACKPOS %s
 
-// RUN:   %clang -### -fopenmp --offload-arch=gfx908:xnack+ -fsanitize=address -fgpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp --offload-arch=gfx908:xnack+ -fsanitize=address -fgpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=GPUSAN,XNACKPOS %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack+ -fsanitize=address -fno-gpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack+ -fsanitize=address -fno-gpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOGPUSAN,XNACKPOS %s
 
-// RUN:   %clang -### -fopenmp --offload-arch=gfx908:xnack+ -fsanitize=address -fno-gpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp --offload-arch=gfx908:xnack+ -fsanitize=address -fno-gpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOGPUSAN,XNACKPOS %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack- -fsanitize=address -fno-gpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack- -fsanitize=address -fno-gpu-sanitize --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOGPUSAN,XNACKNEG %s
 
-// RUN:   %clang -### -fopenmp --offload-arch=gfx908:xnack- -fsanitize=address -fno-gpu-sanitize  %s 2>&1 \
+// RUN:   %clang -### -fopenmp --offload-arch=gfx908:xnack- -fsanitize=address -fno-gpu-sanitize  --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOGPUSAN,XNACKNEG %s
 
 // XNACK-DAG: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx908:xnack-'. Use it with an offload arch containing 'xnack+' instead
