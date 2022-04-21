@@ -17,7 +17,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/MD5.h"
 #include <cstddef>
 #include <memory>
@@ -86,8 +85,9 @@ public:
         std::shared_ptr<PCHContainerOperations> PCHContainerOps,
         bool StoreInMemory, PreambleCallbacks &Callbacks);
 
-  PrecompiledPreamble(PrecompiledPreamble &&) = default;
-  PrecompiledPreamble &operator=(PrecompiledPreamble &&) = default;
+  PrecompiledPreamble(PrecompiledPreamble &&);
+  PrecompiledPreamble &operator=(PrecompiledPreamble &&);
+  ~PrecompiledPreamble();
 
   /// PreambleBounds used to build the preamble.
   PreambleBounds getBounds() const;
@@ -128,78 +128,11 @@ public:
                         llvm::MemoryBuffer *MainFileBuffer) const;
 
 private:
-  PrecompiledPreamble(PCHStorage Storage, std::vector<char> PreambleBytes,
+  PrecompiledPreamble(std::unique_ptr<PCHStorage> Storage,
+                      std::vector<char> PreambleBytes,
                       bool PreambleEndsAtStartOfLine,
                       llvm::StringMap<PreambleFileHash> FilesInPreamble,
                       llvm::StringSet<> MissingFiles);
-
-  /// A temp file that would be deleted on destructor call. If destructor is not
-  /// called for any reason, the file will be deleted at static objects'
-  /// destruction.
-  /// An assertion will fire if two TempPCHFiles are created with the same name,
-  /// so it's not intended to be used outside preamble-handling.
-  class TempPCHFile {
-  public:
-    // A main method used to construct TempPCHFile.
-    static llvm::ErrorOr<TempPCHFile> CreateNewPreamblePCHFile();
-
-  private:
-    TempPCHFile(std::string FilePath);
-
-  public:
-    TempPCHFile(TempPCHFile &&Other);
-    TempPCHFile &operator=(TempPCHFile &&Other);
-
-    TempPCHFile(const TempPCHFile &) = delete;
-    ~TempPCHFile();
-
-    /// A path where temporary file is stored.
-    llvm::StringRef getFilePath() const;
-
-  private:
-    void RemoveFileIfPresent();
-
-  private:
-    llvm::Optional<std::string> FilePath;
-  };
-
-  class InMemoryPreamble {
-  public:
-    std::string Data;
-  };
-
-  class PCHStorage {
-  public:
-    enum class Kind { Empty, InMemory, TempFile };
-
-    PCHStorage() = default;
-    PCHStorage(TempPCHFile File);
-    PCHStorage(InMemoryPreamble Memory);
-
-    PCHStorage(const PCHStorage &) = delete;
-    PCHStorage &operator=(const PCHStorage &) = delete;
-
-    PCHStorage(PCHStorage &&Other);
-    PCHStorage &operator=(PCHStorage &&Other);
-
-    ~PCHStorage();
-
-    Kind getKind() const;
-
-    TempPCHFile &asFile();
-    const TempPCHFile &asFile() const;
-
-    InMemoryPreamble &asMemory();
-    const InMemoryPreamble &asMemory() const;
-
-  private:
-    void destroy();
-    void setEmpty();
-
-  private:
-    Kind StorageKind = Kind::Empty;
-    llvm::AlignedCharArrayUnion<TempPCHFile, InMemoryPreamble> Storage = {};
-  };
 
   /// Data used to determine if a file used in the preamble has been changed.
   struct PreambleFileHash {
@@ -245,7 +178,7 @@ private:
                        IntrusiveRefCntPtr<llvm::vfs::FileSystem> &VFS);
 
   /// Manages the memory buffer or temporary file that stores the PCH.
-  PCHStorage Storage;
+  std::unique_ptr<PCHStorage> Storage;
   /// Keeps track of the files that were used when computing the
   /// preamble, with both their buffer size and their modification time.
   ///
