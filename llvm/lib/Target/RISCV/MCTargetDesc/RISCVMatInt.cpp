@@ -18,10 +18,9 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
 
   int Cost = 0;
   for (auto Instr : Res) {
-    bool Compressed;
+    // Assume instructions that aren't listed aren't compressible.
+    bool Compressed = false;
     switch (Instr.Opc) {
-    default:
-      llvm_unreachable("Unexpected opcode");
     case RISCV::SLLI:
     case RISCV::SRLI:
       Compressed = true;
@@ -30,9 +29,6 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
     case RISCV::ADDIW:
     case RISCV::LUI:
       Compressed = isInt<6>(Instr.Imm);
-      break;
-    case RISCV::ADD_UW:
-      Compressed = false;
       break;
     }
     // Two RVC instructions take the same space as one RVI instruction, but
