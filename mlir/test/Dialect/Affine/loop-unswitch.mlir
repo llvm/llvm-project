@@ -3,7 +3,7 @@
 // CHECK-DAG: #[[$SET:.*]] = affine_set<(d0) : (d0 - 2 >= 0)>
 
 // CHECK-LABEL: func @if_else_imperfect
-func @if_else_imperfect(%A : memref<100xi32>, %B : memref<100xi32>, %v : i32) {
+func.func @if_else_imperfect(%A : memref<100xi32>, %B : memref<100xi32>, %v : i32) {
 // CHECK: %[[A:.*]]: memref<100xi32>, %[[B:.*]]: memref
   affine.for %i = 0 to 100 {
     affine.store %v, %A[%i] : memref<100xi32>
@@ -18,7 +18,7 @@ func @if_else_imperfect(%A : memref<100xi32>, %B : memref<100xi32>, %v : i32) {
   }
   return
 }
-func private @external()
+func.func private @external()
 
 // CHECK:       affine.for %[[I:.*]] = 0 to 100 {
 // CHECK-NEXT:    affine.store %{{.*}}, %[[A]][%[[I]]]
@@ -40,13 +40,13 @@ func private @external()
 
 // -----
 
-func private @foo()
-func private @bar()
-func private @abc()
-func private @xyz()
+func.func private @foo()
+func.func private @bar()
+func.func private @abc()
+func.func private @xyz()
 
 // CHECK-LABEL: func @if_then_perfect
-func @if_then_perfect(%A : memref<100xi32>, %v : i32) {
+func.func @if_then_perfect(%A : memref<100xi32>, %v : i32) {
   affine.for %i = 0 to 100 {
     affine.for %j = 0 to 100 {
       affine.for %k = 0 to 100 {
@@ -66,7 +66,7 @@ func @if_then_perfect(%A : memref<100xi32>, %v : i32) {
 
 
 // CHECK-LABEL: func @if_else_perfect
-func @if_else_perfect(%A : memref<100xi32>, %v : i32) {
+func.func @if_else_perfect(%A : memref<100xi32>, %v : i32) {
   affine.for %i = 0 to 99 {
     affine.for %j = 0 to 100 {
       affine.for %k = 0 to 100 {
@@ -105,7 +105,7 @@ func @if_else_perfect(%A : memref<100xi32>, %v : i32) {
 // CHECK-NEXT: }
 
 // CHECK-LABEL: func @if_then_imperfect
-func @if_then_imperfect(%A : memref<100xi32>, %N : index, %v: i32) {
+func.func @if_then_imperfect(%A : memref<100xi32>, %N : index, %v: i32) {
   affine.for %i = 0 to 100 {
     affine.store %v, %A[0] : memref<100xi32>
     affine.if affine_set<(d0) : (d0 - 2 >= 0)>(%N) {
@@ -128,7 +128,7 @@ func @if_then_imperfect(%A : memref<100xi32>, %N : index, %v: i32) {
 
 // Check if unused operands are dropped: hence, hoisting is possible.
 // CHECK-LABEL: func @hoist_after_canonicalize
-func @hoist_after_canonicalize() {
+func.func @hoist_after_canonicalize() {
   affine.for %i = 0 to 100 {
     affine.for %j = 0 to 100 {
       affine.if affine_set<(d0) : (d0 - 2 >= 0)>(%j)  {
@@ -153,7 +153,7 @@ func @hoist_after_canonicalize() {
 // CHECK-NEXT: return
 
 // CHECK-LABEL: func @handle_dead_if
-func @handle_dead_if(%N : index) {
+func.func @handle_dead_if(%N : index) {
   affine.for %i = 0 to 100 {
       affine.if affine_set<(d0) : (d0 - 1 >= 0, -d0 + 99 >= 0)>(%N)  {
       }
@@ -182,7 +182,7 @@ func @handle_dead_if(%N : index) {
 #set0 = affine_set<(d0, d1)[s0, s1] : (d0 * -16 + s0 - 16 >= 0, d1 * -3 + s1 - 3 >= 0)>
 
 // CHECK-LABEL: func @perfect_if_else
-func @perfect_if_else(%arg0 : memref<?x?xf64>, %arg1 : memref<?x?xf64>, %v : f64,
+func.func @perfect_if_else(%arg0 : memref<?x?xf64>, %arg1 : memref<?x?xf64>, %v : f64,
             %arg4 : index, %arg5 : index, %arg6 : index, %sym : index) {
   affine.for %arg7 = #lb0(%arg5) to min #ub0(%arg5)[%sym] {
     affine.parallel (%i0, %j0) = (0, 0) to (symbol(%sym), 100) step (10, 10) {
@@ -234,7 +234,7 @@ func @perfect_if_else(%arg0 : memref<?x?xf64>, %arg1 : memref<?x?xf64>, %v : f64
 // op that it is able to successfully hoist.
 
 // CHECK-LABEL: func @multiple_if
-func @multiple_if(%N : index) {
+func.func @multiple_if(%N : index) {
   affine.if affine_set<() : (0 == 0)>() {
     call @external() : () -> ()
   }
@@ -253,4 +253,4 @@ func @multiple_if(%N : index) {
 // CHECK-NEXT: }
 // CHECK-NEXT: return
 
-func private @external()
+func.func private @external()
