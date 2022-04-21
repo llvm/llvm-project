@@ -115,7 +115,7 @@ TemplateDecl *TemplateName::getAsTemplateDecl() const {
   }
 
   if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName())
-    return QTN->getTemplateDecl();
+    return QTN->getUnderlyingTemplate().getAsTemplateDecl();
 
   if (SubstTemplateTemplateParmStorage *sub = getAsSubstTemplateTemplateParm())
     return sub->getReplacement().getAsTemplateDecl();
@@ -273,14 +273,15 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     if (Qual == Qualified::Fully &&
         getDependence() !=
             TemplateNameDependenceScope::DependentInstantiation) {
-      QTN->getTemplateDecl()->printQualifiedName(OS, Policy);
+      QTN->getUnderlyingTemplate().getAsTemplateDecl()->printQualifiedName(
+          OS, Policy);
       return;
     }
     if (Qual == Qualified::AsWritten)
       QTN->getQualifier()->print(OS, Policy);
     if (QTN->hasTemplateKeyword())
       OS << "template ";
-    OS << *QTN->getTemplateDecl();
+    OS << *QTN->getUnderlyingTemplate().getAsTemplateDecl();
   } else if (DependentTemplateName *DTN = getAsDependentTemplateName()) {
     if (Qual == Qualified::AsWritten && DTN->getQualifier())
       DTN->getQualifier()->print(OS, Policy);
