@@ -1038,6 +1038,12 @@ def DepCtrMatchClass : AsmOperandClass {
   let ParserMethod = "parseDepCtrOps";
 }
 
+def SDelayMatchClass : AsmOperandClass {
+  let Name = "SDelayAlu";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSDelayAluOps";
+}
+
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
@@ -1067,6 +1073,11 @@ def WAIT_FLAG : Operand <i32> {
 def DepCtrImm : Operand <i32> {
   let ParserMatchClass = DepCtrMatchClass;
   let PrintMethod = "printDepCtr";
+}
+
+def DELAY_FLAG : Operand <i32> {
+  let ParserMatchClass = SDelayMatchClass;
+  let PrintMethod = "printDelayFlag";
 }
 } // End OperandType = "OPERAND_IMMEDIATE"
 
