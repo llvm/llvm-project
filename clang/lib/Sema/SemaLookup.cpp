@@ -1558,17 +1558,39 @@ llvm::DenseSet<Module*> &Sema::getLookupModules() {
   return LookupModulesCache;
 }
 
-/// Determine whether the module M is part of the current module from the
-/// perspective of a module-private visibility check.
-static bool isInCurrentModule(const Module *M, const LangOptions &LangOpts) {
+/// Determine if we could use all the declarations in the module.
+bool Sema::isUsableModule(const Module *M) {
+  assert(M && "We shouldn't check nullness for module here");
+  // Return quickly if we cached the result.
+  if (UsableModuleUnitsCache.count(M))
+    return true;
+
   // If M is the global module fragment of a module that we've not yet finished
-  // parsing, then it must be part of the current module.
-  // If it's a partition, then it must be visible to an importer (since only
-  // another partition or the named module can import it).
-  return M->getTopLevelModuleName() == LangOpts.CurrentModule ||
-         (M->Kind == Module::GlobalModuleFragment && !M->Parent) ||
-         M->Kind == Module::ModulePartitionInterface ||
-         M->Kind == Module::ModulePartitionImplementation;
+  // parsing, then M should be the global module fragment in current TU. So it
+  // should be usable.
+  // [module.global.frag]p1:
+  //   The global module fragment can be used to provide declarations that are
+  //   attached to the global module and usable within the module unit.
+  if ((M->isGlobalModule() && !M->Parent) ||
+      // If M is the private module fragment, it is usable only if it is within
+      // the current module unit. And it must be the current parsing module unit
+      // if it is within the current module unit according to the grammar of the
+      // private module fragment.
+      // NOTE: This is covered by the following condition. The intention of the
+      // check is to avoid string comparison as much as possible.
+      (M->isPrivateModule() && M == getCurrentModule()) ||
+      // The module unit which is in the same module with the current module
+      // unit is usable.
+      //
+      // FIXME: Here we judge if they are in the same module by comparing the
+      // string. Is there any better solution?
+      (M->getPrimaryModuleInterfaceName() ==
+       llvm::StringRef(getLangOpts().CurrentModule).split(':').first)) {
+    UsableModuleUnitsCache.insert(M);
+    return true;
+  }
+
+  return false;
 }
 
 bool Sema::hasVisibleMergedDefinition(NamedDecl *Def) {
@@ -1580,7 +1602,7 @@ bool Sema::hasVisibleMergedDefinition(NamedDecl *Def) {
 
 bool Sema::hasMergedDefinitionInCurrentModule(NamedDecl *Def) {
   for (const Module *Merged : Context.getModulesWithMergedDefinition(Def))
-    if (isInCurrentModule(Merged, getLangOpts()))
+    if (isUsableModule(Merged))
       return true;
   return false;
 }
@@ -1762,7 +1784,7 @@ bool Sema::isModuleVisible(const Module *M, bool ModulePrivate) {
   // means it is part of the current module. For any other query, that means it
   // is in our visible module set.
   if (ModulePrivate) {
-    if (isInCurrentModule(M, getLangOpts()))
+    if (isUsableModule(M))
       return true;
     else if (M->Kind == Module::ModuleKind::ModulePartitionImplementation &&
              isModuleDirectlyImported(M))
