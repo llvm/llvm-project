@@ -39,4 +39,5 @@ def : ProcessorModel<"arch13", Z15Model, Arch13SupportedFeatures.List>;
 def : ProcessorModel<"z15", Z15Model, Arch13SupportedFeatures.List>;
 
 def : ProcessorModel<"arch14", Z15Model, Arch14SupportedFeatures.List>;
+def : ProcessorModel<"z16", Z15Model, Arch14SupportedFeatures.List>;
 

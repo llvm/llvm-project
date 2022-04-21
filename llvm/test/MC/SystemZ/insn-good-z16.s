@@ -1,5 +1,5 @@
-# For arch14 and above.
-# RUN: llvm-mc -triple s390x-linux-gnu -mcpu=arch14 -show-encoding %s \
+# For z16 and above.
+# RUN: llvm-mc -triple s390x-linux-gnu -mcpu=z16 -show-encoding %s \
 # RUN:   | FileCheck %s
 
 #CHECK: lbear	0                       # encoding: [0xb2,0x00,0x00,0x00]
