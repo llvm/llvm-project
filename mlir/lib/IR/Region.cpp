@@ -82,6 +82,18 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
   if (empty())
     return;
 
+  // The below clone implementation takes special care to be read only for the
+  // sake of multi threading. That essentially means not adding any uses to any
+  // of the blocks or operation results contained within this region as that
+  // would lead to a write in their use-def list. This is unavoidable for
+  // 'Value's from outside the region however, in which case it is not read
+  // only. Using the BlockAndValueMapper it is possible to remap such 'Value's
+  // to ones owned by the calling thread however, making it read only once
+  // again.
+
+  // First clone all the blocks and block arguments and map them, but don't yet
+  // clone the operations, as they may otherwise add a use to a block that has
+  // not yet been mapped
   for (Block &block : *this) {
     Block *newBlock = new Block();
     mapper.map(&block, newBlock);
@@ -93,26 +105,47 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
       if (!mapper.contains(arg))
         mapper.map(arg, newBlock->addArgument(arg.getType(), arg.getLoc()));
 
-    // Clone and remap the operations within this block.
-    for (auto &op : block)
-      newBlock->push_back(op.clone(mapper));
-
     dest->getBlocks().insert(destPos, newBlock);
   }
 
-  // Now that each of the blocks have been cloned, go through and remap the
-  // operands of each of the operations.
-  auto remapOperands = [&](Operation *op) {
-    for (auto &operand : op->getOpOperands())
-      if (auto mappedOp = mapper.lookupOrNull(operand.get()))
-        operand.set(mappedOp);
-    for (auto &succOp : op->getBlockOperands())
-      if (auto *mappedOp = mapper.lookupOrNull(succOp.get()))
-        succOp.set(mappedOp);
-  };
+  auto newBlocksRange =
+      llvm::make_range(Region::iterator(mapper.lookup(&front())), destPos);
 
-  for (iterator it(mapper.lookup(&front())); it != destPos; ++it)
-    it->walk(remapOperands);
+  // Now follow up with creating the operations, but don't yet clone their
+  // regions, nor set their operands. Setting the successors is safe as all have
+  // already been mapped. We are essentially just creating the operation results
+  // to be able to map them.
+  // Cloning the operands and region as well would lead to uses of operations
+  // not yet mapped.
+  auto cloneOptions =
+      Operation::CloneOptions::all().cloneRegions(false).cloneOperands(false);
+  for (auto zippedBlocks : llvm::zip(*this, newBlocksRange)) {
+    Block &sourceBlock = std::get<0>(zippedBlocks);
+    Block &clonedBlock = std::get<1>(zippedBlocks);
+    // Clone and remap the operations within this block.
+    for (Operation &op : sourceBlock)
+      clonedBlock.push_back(op.clone(mapper, cloneOptions));
+  }
+
+  // Finally now that all operation results have been mapped, set the operands
+  // and clone the regions.
+  SmallVector<Value> operands;
+  for (auto zippedBlocks : llvm::zip(*this, newBlocksRange)) {
+    for (auto ops :
+         llvm::zip(std::get<0>(zippedBlocks), std::get<1>(zippedBlocks))) {
+      Operation &source = std::get<0>(ops);
+      Operation &clone = std::get<1>(ops);
+
+      operands.resize(source.getNumOperands());
+      llvm::transform(
+          source.getOperands(), operands.begin(),
+          [&](Value operand) { return mapper.lookupOrDefault(operand); });
+      clone.setOperands(operands);
+
+      for (auto regions : llvm::zip(source.getRegions(), clone.getRegions()))
+        std::get<0>(regions).cloneInto(&std::get<1>(regions), mapper);
+    }
+  }
 }
 
 /// Returns 'block' if 'block' lies in this region, or otherwise finds the

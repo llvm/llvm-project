@@ -72,23 +72,75 @@ public:
   /// Remove the operation from its parent block, but don't delete it.
   void remove();
 
+  /// Class encompassing various options related to cloning an operation. Users
+  /// of this class should pass it to Operation's 'clone' methods.
+  /// Current options include:
+  /// * Whether cloning should recursively traverse into the regions of the
+  ///   operation or not.
+  /// * Whether cloning should also clone the operands of the operation.
+  class CloneOptions {
+  public:
+    /// Default constructs an option with all flags set to false. That means all
+    /// parts of an operation that may optionally not be cloned, are not cloned.
+    CloneOptions();
+
+    /// Constructs an instance with the clone regions and clone operands flags
+    /// set accordingly.
+    CloneOptions(bool cloneRegions, bool cloneOperands);
+
+    /// Returns an instance with all flags set to true. This is the default
+    /// when using the clone method and clones all parts of the operation.
+    static CloneOptions all();
+
+    /// Configures whether cloning should traverse into any of the regions of
+    /// the operation. If set to true, the operation's regions are recursively
+    /// cloned. If set to false, cloned operations will have the same number of
+    /// regions, but they will be empty.
+    /// Cloning of nested operations in the operation's regions are currently
+    /// unaffected by other flags.
+    CloneOptions &cloneRegions(bool enable = true);
+
+    /// Returns whether regions of the operation should be cloned as well.
+    bool shouldCloneRegions() const { return cloneRegionsFlag; }
+
+    /// Configures whether operation' operands should be cloned. Otherwise the
+    /// resulting clones will simply have zero operands.
+    CloneOptions &cloneOperands(bool enable = true);
+
+    /// Returns whether operands should be cloned as well.
+    bool shouldCloneOperands() const { return cloneOperandsFlag; }
+
+  private:
+    /// Whether regions should be cloned.
+    bool cloneRegionsFlag : 1;
+    /// Whether operands should be cloned.
+    bool cloneOperandsFlag : 1;
+  };
+
   /// Create a deep copy of this operation, remapping any operands that use
   /// values outside of the operation using the map that is provided (leaving
   /// them alone if no entry is present).  Replaces references to cloned
   /// sub-operations to the corresponding operation that is copied, and adds
   /// those mappings to the map.
-  Operation *clone(BlockAndValueMapping &mapper);
-  Operation *clone();
+  /// Optionally, one may configure what parts of the operation to clone using
+  /// the options parameter.
+  ///
+  /// Calling this method from multiple threads is generally safe if through the
+  /// process of cloning no new uses of 'Value's from outside the operation are
+  /// created. Cloning an isolated-from-above operation with no operands, such
+  /// as top level function operations, is therefore always safe. Using the
+  /// mapper, it is possible to avoid adding uses to outside operands by
+  /// remapping them to 'Value's owned by the caller thread.
+  Operation *clone(BlockAndValueMapping &mapper,
+                   CloneOptions options = CloneOptions::all());
+  Operation *clone(CloneOptions options = CloneOptions::all());
 
   /// Create a partial copy of this operation without traversing into attached
   /// regions. The new operation will have the same number of regions as the
   /// original one, but they will be left empty.
   /// Operands are remapped using `mapper` (if present), and `mapper` is updated
   /// to contain the results.
-  /// The `mapResults` argument specifies whether the results of the operation
-  /// should also be mapped.
-  Operation *cloneWithoutRegions(BlockAndValueMapping &mapper,
-                                 bool mapResults = true);
+  Operation *cloneWithoutRegions(BlockAndValueMapping &mapper);
 
   /// Create a partial copy of this operation without traversing into attached
   /// regions. The new operation will have the same number of regions as the
