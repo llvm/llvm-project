@@ -41,10 +41,10 @@ define amdgpu_ps void @i1_sgpr_to_vcc_copy(i32 inreg %val, float %a0, float %a1,
 ; WAVE32-LABEL: i1_sgpr_to_vcc_copy:
 ; WAVE32:       ; %bb.0: ; %main_body
 ; WAVE32-NEXT:    s_cmp_eq_u32 s0, 2
-; WAVE32-NEXT:    s_cselect_b32 vcc_lo, 1, 0
-; WAVE32-NEXT:    s_and_b32 s0, 1, vcc_lo
-; WAVE32-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; WAVE32-NEXT:    s_cselect_b32 s0, 1, 0
+; WAVE32-NEXT:    s_and_b32 s0, 1, s0
 ; WAVE32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s0
+; WAVE32-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; WAVE32-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc_lo
 ; WAVE32-NEXT:    exp mrt0 v0, v1, v0, v0 done vm
 ; WAVE32-NEXT:    s_endpgm
