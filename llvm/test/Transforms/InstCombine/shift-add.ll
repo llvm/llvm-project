@@ -217,3 +217,25 @@ define i32 @shl_nsw_add_positive_invalid_constant(i32 %x) {
   %r = shl nsw i32 4, %a
   ret i32 %r
 }
+
+define i32 @shl_nsw_add_negative_invalid_constant2(i32 %x) {
+; CHECK-LABEL: @shl_nsw_add_negative_invalid_constant2(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -33
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -33
+  %r = shl nsw i32 2, %a
+  ret i32 %r
+}
+
+define i4 @shl_nsw_add_negative_invalid_constant3(i4 %x) {
+; CHECK-LABEL: @shl_nsw_add_negative_invalid_constant3(
+; CHECK-NEXT:    [[A:%.*]] = xor i4 [[X:%.*]], -8
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i4 2, [[A]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %a = add i4 %x, 8
+  %r = shl nsw i4 2, %a
+  ret i4 %r
+}
