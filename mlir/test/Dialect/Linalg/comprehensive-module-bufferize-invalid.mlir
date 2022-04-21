@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize -split-input-file -verify-diagnostics
 
-func private @foo() -> tensor<?xf32>
+func.func private @foo() -> tensor<?xf32>
 
-func @bar() -> tensor<?xf32> {
+func.func @bar() -> tensor<?xf32> {
   %foo = constant @foo : () -> (tensor<?xf32>)
 // expected-error @+1 {{expected a CallOp}}
   %res = call_indirect %foo() : () -> (tensor<?xf32>)
@@ -12,12 +12,12 @@ func @bar() -> tensor<?xf32> {
 // -----
 
 // expected-error @+1 {{cannot bufferize bodiless function that returns a tensor}}
-func private @foo() -> tensor<?xf32>
+func.func private @foo() -> tensor<?xf32>
 
 // -----
 
 // expected-error @+1 {{cannot bufferize a FuncOp with tensors and without a unique ReturnOp}}
-func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>)
+func.func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>)
     -> (tensor<f32>, tensor<f32>)
 {
   cf.cond_br %cond1, ^bb1, ^bb2
@@ -35,7 +35,7 @@ func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>)
 
 // -----
 
-func @scf_if_not_equivalent(
+func.func @scf_if_not_equivalent(
     %cond: i1, %t1: tensor<?xf32> {linalg.inplaceable = true},
     %idx: index) -> tensor<?xf32> {
   %r = scf.if %cond -> (tensor<?xf32>) {
@@ -52,7 +52,7 @@ func @scf_if_not_equivalent(
 
 // -----
 
-func @scf_if_not_aliasing(
+func.func @scf_if_not_aliasing(
     %cond: i1, %t1: tensor<?xf32> {linalg.inplaceable = true},
     %idx: index) -> f32 {
   %r = scf.if %cond -> (tensor<?xf32>) {
@@ -71,19 +71,19 @@ func @scf_if_not_aliasing(
 
 // expected-error @-3 {{expected callgraph to be free of circular dependencies}}
 
-func @foo() {
+func.func @foo() {
   call @bar() : () -> ()
   return
 }
 
-func @bar() {
+func.func @bar() {
   call @foo() : () -> ()
   return
 }
 
 // -----
 
-func @scf_for(%A : tensor<?xf32>,
+func.func @scf_for(%A : tensor<?xf32>,
               %B : tensor<?xf32> {linalg.inplaceable = true},
               %C : tensor<4xf32>,
               %lb : index, %ub : index, %step : index)
@@ -109,14 +109,14 @@ func @scf_for(%A : tensor<?xf32>,
 
 // -----
 
-func private @fun_with_side_effects(%A: tensor<?xf32> {linalg.inplaceable = true})
+func.func private @fun_with_side_effects(%A: tensor<?xf32> {linalg.inplaceable = true})
 
-func @foo(%A: tensor<?xf32> {linalg.inplaceable = true}) -> (tensor<?xf32>) {
+func.func @foo(%A: tensor<?xf32> {linalg.inplaceable = true}) -> (tensor<?xf32>) {
   call @fun_with_side_effects(%A) : (tensor<?xf32>) -> ()
   return %A: tensor<?xf32>
 }
 
-func @scf_yield_needs_copy(%A : tensor<?xf32> {linalg.inplaceable = true}, %iters : index) {
+func.func @scf_yield_needs_copy(%A : tensor<?xf32> {linalg.inplaceable = true}, %iters : index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %res = scf.for %arg0 = %c0 to %iters step %c1 iter_args(%bbarg = %A) -> (tensor<?xf32>) {
@@ -130,7 +130,7 @@ func @scf_yield_needs_copy(%A : tensor<?xf32> {linalg.inplaceable = true}, %iter
 
 // -----
 
-func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
+func.func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
   ->  tensor<4xf32>
 {
   // This bufferizes to a pattern that the cross-function boundary pass needs to
@@ -147,7 +147,7 @@ func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
 
 // -----
 
-func @scf_yield(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32>
+func.func @scf_yield(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32>
 {
   %r = scf.if %b -> (tensor<4xf32>) {
     scf.yield %A : tensor<4xf32>
@@ -160,7 +160,7 @@ func @scf_yield(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32
 
 // -----
 
-func @unknown_op(%A : tensor<4xf32>) -> tensor<4xf32>
+func.func @unknown_op(%A : tensor<4xf32>) -> tensor<4xf32>
 {
   // expected-error: @+1 {{op was not bufferized}}
   %r = "marklar"(%A) : (tensor<4xf32>) -> (tensor<4xf32>)
@@ -170,7 +170,7 @@ func @unknown_op(%A : tensor<4xf32>) -> tensor<4xf32>
 
 // -----
 
-func @mini_test_case1() -> tensor<10x20xf32> {
+func.func @mini_test_case1() -> tensor<10x20xf32> {
   %f0 = arith.constant 0.0 : f32
   %t = linalg.init_tensor [10, 20] : tensor<10x20xf32>
   %r = linalg.fill ins(%f0 : f32) outs(%t : tensor<10x20xf32>) -> tensor<10x20xf32>
@@ -180,7 +180,7 @@ func @mini_test_case1() -> tensor<10x20xf32> {
 
 // -----
 
-func @main() -> tensor<4xi32> {
+func.func @main() -> tensor<4xi32> {
   %r = scf.execute_region -> tensor<4xi32> {
     %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
     scf.yield %A: tensor<4xi32>
@@ -192,7 +192,7 @@ func @main() -> tensor<4xi32> {
 
 // -----
 
-func @to_memref_op_is_writing(
+func.func @to_memref_op_is_writing(
     %t1: tensor<?xf32> {linalg.inplaceable = true}, %idx1: index,
     %idx2: index, %idx3: index, %v1: vector<5xf32>) -> (vector<5xf32>, vector<5xf32>) {
   // This is a RaW conflict because to_memref is an inplace write and %t1 is
@@ -213,16 +213,16 @@ func @to_memref_op_is_writing(
 // -----
 
 // expected-error @+1 {{cannot bufferize bodiless function that returns a tensor}}
-func private @foo(%t : tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
+func.func private @foo(%t : tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
 
-func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
+func.func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
   call @foo(%t) : (tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
   return
 }
 
 // -----
 
-func @foo(%t : tensor<5xf32>) -> (tensor<5xf32>) {
+func.func @foo(%t : tensor<5xf32>) -> (tensor<5xf32>) {
   %0 = linalg.init_tensor [5] : tensor<5xf32>
   // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
   return %0 : tensor<5xf32>
@@ -230,14 +230,14 @@ func @foo(%t : tensor<5xf32>) -> (tensor<5xf32>) {
 
 // Note: This function is not analyzed because there was an error in the
 // previous one.
-func @call_to_func_returning_non_equiv_tensor(%t : tensor<5xf32>) {
+func.func @call_to_func_returning_non_equiv_tensor(%t : tensor<5xf32>) {
   call @foo(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
   return
 }
 
 // -----
 
-func @destination_passing_style_dominance_test_1(%cst : f32, %idx : index,
+func.func @destination_passing_style_dominance_test_1(%cst : f32, %idx : index,
                                                  %idx2 : index) -> f32 {
   %0 = scf.execute_region -> tensor<?xf32> {
     %1 = linalg.init_tensor [%idx] : tensor<?xf32>
@@ -251,7 +251,7 @@ func @destination_passing_style_dominance_test_1(%cst : f32, %idx : index,
 
 // -----
 
-func @destination_passing_style_dominance_test_2(%cst : f32, %idx : index,
+func.func @destination_passing_style_dominance_test_2(%cst : f32, %idx : index,
                                                  %idx2 : index) -> f32 {
   %1 = linalg.init_tensor [%idx] : tensor<?xf32>
 

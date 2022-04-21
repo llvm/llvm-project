@@ -11,10 +11,10 @@
 // Bufferization of bodiless function with no tensor return value.
 
 // CHECK-LABEL: func private @private_func
-func private @private_func(tensor<?xf32>) -> ()
+func.func private @private_func(tensor<?xf32>) -> ()
 
 // CHECK-LABEL: func @empty_func()
-func @empty_func() -> () {
+func.func @empty_func() -> () {
   return
 }
 
@@ -23,12 +23,12 @@ func @empty_func() -> () {
 // A bodiless function that returns something that is not a tensor.
 
 // CHECK: func private @external_func_with_return_val(memref<4xi32, #{{.*}}>) -> f32
-func private @external_func_with_return_val(tensor<4xi32>) -> f32
+func.func private @external_func_with_return_val(tensor<4xi32>) -> f32
 
 // -----
 
 // CHECK-LABEL: func private @private_func
-func private @private_func(tensor<?xf32>) -> (f32)
+func.func private @private_func(tensor<?xf32>) -> (f32)
 
 // private_func may modify the buffer arg, but that's OK because %t is writable.
 // No alloc/copy should be inserted.
@@ -38,7 +38,7 @@ func private @private_func(tensor<?xf32>) -> (f32)
 //   CHECK-NOT: alloc
 //   CHECK-NOT: copy
 //       CHECK: call @private_func(%[[t]])
-func @main(%t: tensor<?xf32> {linalg.inplaceable = true}) -> (f32) {
+func.func @main(%t: tensor<?xf32> {linalg.inplaceable = true}) -> (f32) {
   %0 = call @private_func(%t) : (tensor<?xf32>) -> (f32)
   return %0 : f32
 }
@@ -46,7 +46,7 @@ func @main(%t: tensor<?xf32> {linalg.inplaceable = true}) -> (f32) {
 // -----
 
 // CHECK-LABEL: func private @private_func
-func private @private_func(tensor<?xf32>) -> (f32)
+func.func private @private_func(tensor<?xf32>) -> (f32)
 
 // private_func may modify the buffer arg, %t is not writable. A copy is needed.
 
@@ -57,7 +57,7 @@ func private @private_func(tensor<?xf32>) -> (f32)
 //   CHECK-DAG: %[[casted:.*]] = memref.cast %[[alloc]]
 //       CHECK: call @private_func(%[[casted]])
 //       CHECK: memref.dealloc %[[alloc]]
-func @main(%t: tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
+func.func @main(%t: tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
   %0 = call @private_func(%t) : (tensor<?xf32>) -> (f32)
   return %0 : f32
 }
@@ -67,7 +67,7 @@ func @main(%t: tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
 // Test bufferization of a function without tensor args.
 
 // CHECK-LABEL: func @func_without_tensor_args
-func @func_without_tensor_args(%v : vector<10xf32>) -> () {
+func.func @func_without_tensor_args(%v : vector<10xf32>) -> () {
   // CHECK: %[[alloc:.*]] = memref.alloc()
   %0 = linalg.init_tensor[10] : tensor<10xf32>
 
@@ -90,7 +90,7 @@ func @func_without_tensor_args(%v : vector<10xf32>) -> () {
 
 // CHECK-LABEL: func @inner_func(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
-func @inner_func(%t: tensor<?xf32>) -> (tensor<?xf32>, f32) {
+func.func @inner_func(%t: tensor<?xf32>) -> (tensor<?xf32>, f32) {
   // CHECK-NOT: copy
   %f = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
@@ -105,7 +105,7 @@ func @inner_func(%t: tensor<?xf32>) -> (tensor<?xf32>, f32) {
 
 // CHECK-LABEL: func @call_func_with_non_tensor_return(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
-func @call_func_with_non_tensor_return(
+func.func @call_func_with_non_tensor_return(
     %t0: tensor<?xf32> {linalg.inplaceable = true}) -> (f32, tensor<?xf32>) {
   // CHECK-NOT: alloc
   // CHECK-NOT: copy
@@ -122,7 +122,7 @@ func @call_func_with_non_tensor_return(
 
 // CHECK-LABEL: func @inner_func(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
-func @inner_func(%t: tensor<?xf32>) -> (tensor<?xf32>, f32) {
+func.func @inner_func(%t: tensor<?xf32>) -> (tensor<?xf32>, f32) {
   // CHECK-NOT: copy
   %f = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
@@ -137,7 +137,7 @@ func @inner_func(%t: tensor<?xf32>) -> (tensor<?xf32>, f32) {
 
 // CHECK-LABEL: func @call_func_with_non_tensor_return(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
-func @call_func_with_non_tensor_return(
+func.func @call_func_with_non_tensor_return(
     %t0: tensor<?xf32> {linalg.inplaceable = false}) -> (f32, tensor<?xf32>) {
   // CHECK: %[[alloc:.*]] = memref.alloc
   // CHECK-DAG: memref.copy %[[arg0]], %[[alloc]]
@@ -157,13 +157,13 @@ func @call_func_with_non_tensor_return(
 // inserted then. (No copies in the other functions.)
 
 // CHECK-LABEL: func private @f0(
-func private @f0(tensor<?xf32>) -> (f32)
+func.func private @f0(tensor<?xf32>) -> (f32)
 
 // CHECK-LABEL: func @f1(
 //  CHECK-SAME:     %[[t1:.*]]: memref<?xf32
 //       CHECK:   %[[r1:.*]] = call @f0(%[[t1]])
 //       CHECK:   return %[[r1]]
-func @f1(%t: tensor<?xf32>) -> (f32) {
+func.func @f1(%t: tensor<?xf32>) -> (f32) {
   %0 = call @f0(%t) : (tensor<?xf32>) -> (f32)
   return %0 : f32
 }
@@ -172,7 +172,7 @@ func @f1(%t: tensor<?xf32>) -> (f32) {
 //  CHECK-SAME:     %[[t2:.*]]: memref<?xf32
 //       CHECK:   %[[r2:.*]] = call @f1(%[[t2]])
 //       CHECK:   return %[[r2]]
-func @f2(%t: tensor<?xf32>) -> (f32) {
+func.func @f2(%t: tensor<?xf32>) -> (f32) {
   %0 = call @f1(%t) : (tensor<?xf32>) -> (f32)
   return %0 : f32
 }
@@ -184,7 +184,7 @@ func @f2(%t: tensor<?xf32>) -> (f32) {
 //   CHECK-DAG: %[[casted:.*]] = memref.cast %[[alloc]]
 //       CHECK: call @f2(%[[casted]])
 //       CHECK: memref.dealloc %[[alloc]]
-func @main(%t: tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
+func.func @main(%t: tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
   %0 = call @f2(%t) : (tensor<?xf32>) -> (f32)
   return %0 : f32
 }
@@ -196,7 +196,7 @@ func @main(%t: tensor<?xf32> {linalg.inplaceable = false}) -> (f32) {
 // CHECK-LABEL: func @does_not_read(
 //   CHECK-NOT:   alloc
 //   CHECK-NOT:   copy
-func @does_not_read(%t: tensor<?xf32>) -> tensor<?xf32> {
+func.func @does_not_read(%t: tensor<?xf32>) -> tensor<?xf32> {
   %f0 = arith.constant 0.0 : f32
   %r = linalg.fill ins(%f0 : f32) outs(%t : tensor<?xf32>) -> tensor<?xf32>
   return %r : tensor<?xf32>
@@ -211,7 +211,7 @@ func @does_not_read(%t: tensor<?xf32>) -> tensor<?xf32> {
 //       CHECK:   call @does_not_read(%[[casted]])
 //       CHECK:   %[[r:.*]] = memref.load %[[alloc]]
 //       CHECK:   memref.dealloc %[[alloc]]
-func @main(%t: tensor<?xf32> {linalg.inplaceable = false}) -> f32 {
+func.func @main(%t: tensor<?xf32> {linalg.inplaceable = false}) -> f32 {
   %0 = call @does_not_read(%t) : (tensor<?xf32>) -> (tensor<?xf32>)
   %idx = arith.constant 4 : index
   %r = tensor.extract %0[%idx] : tensor<?xf32>
@@ -226,10 +226,10 @@ func @main(%t: tensor<?xf32> {linalg.inplaceable = false}) -> f32 {
 
 //      CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]>
 //      CHECK: func private @some_external_func(memref<4xi32, #[[$DYN_1D_MAP]]>)
-func private @some_external_func(tensor<4xi32>)
+func.func private @some_external_func(tensor<4xi32>)
 
 //      CHECK: func @main()
-func @main() {
+func.func @main() {
 //  CHECK-DAG:   %[[A:.*]] = memref.get_global @__constant_4xi32 : memref<4xi32>
   %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
 
@@ -252,10 +252,10 @@ func @main() {
 
 //      CHECK: memref.global "private" constant @__constant_4xi32 : memref<4xi32> = dense<[1, 2, 3, 4]>
 //      CHECK: func private @some_external_func_within_scf_execute(memref<4xi32, #[[$DYN_1D_MAP]]>)
-func private @some_external_func_within_scf_execute(tensor<4xi32>)
+func.func private @some_external_func_within_scf_execute(tensor<4xi32>)
 
 //      CHECK: func @main()
-func @main() {
+func.func @main() {
 //  CHECK-DAG:   %[[A:.*]] = memref.get_global @__constant_4xi32 : memref<4xi32>
   %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
 
@@ -280,7 +280,7 @@ func @main() {
 
 // CHECK-LABEL: func @execute_region_test(
 //  CHECK-SAME:     %[[m1:.*]]: memref<?xf32
-func @execute_region_test(%t1 : tensor<?xf32>)
+func.func @execute_region_test(%t1 : tensor<?xf32>)
     -> (f32, tensor<?xf32>, f32)
 {
   %f1 = arith.constant 0.0 : f32
@@ -307,13 +307,13 @@ func @execute_region_test(%t1 : tensor<?xf32>)
 //      CHECK: #[[$DYN_1D_MAP:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
 //      CHECK:  func private @some_external_func(memref<?xf32, #[[$DYN_1D_MAP]]>)
-func private @some_external_func(tensor<?xf32>)
+func.func private @some_external_func(tensor<?xf32>)
 
 //      CHECK:  func @scf_for_with_tensor_insert_slice(
 // CHECK-SAME:    %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$DYN_1D_MAP]]>
 // CHECK-SAME:    %[[B:[a-zA-Z0-9]*]]: memref<?xf32, #[[$DYN_1D_MAP]]>
 // CHECK-SAME:    %[[C:[a-zA-Z0-9]*]]: memref<4xf32, #[[$DYN_1D_MAP]]>
-func @scf_for_with_tensor_insert_slice(
+func.func @scf_for_with_tensor_insert_slice(
     %A : tensor<?xf32>, %B : tensor<?xf32>, %C : tensor<4xf32>,
     %lb : index, %ub : index, %step : index)
   -> (tensor<?xf32>, tensor<?xf32>)
@@ -343,7 +343,7 @@ func @scf_for_with_tensor_insert_slice(
 // CHECK-SAME:    %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$DYN_1D_MAP]]>
 // CHECK-SAME:    %[[B:[a-zA-Z0-9]*]]: memref<?xf32, #[[$DYN_1D_MAP]]>
 // CHECK-SAME:    %[[C:[a-zA-Z0-9]*]]: memref<4xf32, #[[$DYN_1D_MAP]]>
-func @bar(
+func.func @bar(
     %A : tensor<?xf32> {linalg.inplaceable = true},
     %B : tensor<?xf32> {linalg.inplaceable = true},
     %C : tensor<4xf32> {linalg.inplaceable = true},
@@ -375,7 +375,7 @@ func @bar(
 // CHECK-SAME:    %[[A:[a-zA-Z0-9]*]]: memref<64xf32, #[[$DYN_1D_MAP]]>
 // CHECK-SAME:    %[[B:[a-zA-Z0-9]*]]: memref<64xf32, #[[$DYN_1D_MAP]]>
 // CHECK-SAME:    %[[C:[a-zA-Z0-9]*]]: memref<f32, #[[$DYN_0D_MAP]]>
-func @init_and_dot(%a: tensor<64xf32>, %b: tensor<64xf32>, %c: tensor<f32>) -> tensor<f32> {
+func.func @init_and_dot(%a: tensor<64xf32>, %b: tensor<64xf32>, %c: tensor<f32>) -> tensor<f32> {
   // CHECK-NEXT:   %[[C0:.*]] = arith.constant 0{{.*}} : f32
   %v0 = arith.constant 0.0 : f32
 
@@ -391,7 +391,7 @@ func @init_and_dot(%a: tensor<64xf32>, %b: tensor<64xf32>, %c: tensor<f32>) -> t
 }
 
 //      CHECK:  func @main()
-func @main() {
+func.func @main() {
   //  CHECK-DAG:   %[[C0:.*]] = arith.constant 0{{.*}} : f32
   //  CHECK-DAG:   %[[C1:.*]] = arith.constant 1{{.*}} : f32
   //  CHECK-DAG:   %[[C2:.*]] = arith.constant 2{{.*}} : f32
@@ -434,20 +434,20 @@ func @main() {
 }
 
 //     CHECK:   func private @print_memref_f32(memref<*xf32>)
-func private @print_memref_f32(tensor<*xf32>)
+func.func private @print_memref_f32(tensor<*xf32>)
 
 // -----
 
 // CHECK: #[[$DYNAMIC:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
 // CHECK: func private @external_func(memref<?xf32, #[[$DYNAMIC]]>)
-func private @external_func(tensor<?xf32>)
+func.func private @external_func(tensor<?xf32>)
 
 //      CHECK: func @callee(
 // CHECK-SAME:   %[[A:[0-9a-zA-Z]*]]: memref<?xf32>
 // CHECK-SAME:   %[[B:[0-9a-zA-Z]*]]: memref<?xf32, #[[$DYNAMIC]]>
 // CHECK-SAME:   %[[C:[0-9a-zA-Z]*]]: memref<?xf32, #[[$DYNAMIC]]>
-func @callee(%A : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] -> (i)>},
+func.func @callee(%A : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] -> (i)>},
              %B : tensor<?xf32>,
              %C : tensor<?xf32>) {
 // CHECK-NEXT: %[[CASTED:.*]] = memref.cast %[[A]] : memref<?xf32> to memref<?xf32, #[[$DYNAMIC]]>
@@ -467,7 +467,7 @@ func @callee(%A : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] -
 // CHECK-SAME:   %[[A:[0-9a-zA-Z]*]]: memref<?xf32>
 // CHECK-SAME:   %[[B:[0-9a-zA-Z]*]]: memref<?xf32>
 // CHECK-SAME:   %[[C:[0-9a-zA-Z]*]]: memref<?xf32, #[[$DYNAMIC]]>
-func @entry(%A : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] -> (i)>, linalg.inplaceable = false},
+func.func @entry(%A : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] -> (i)>, linalg.inplaceable = false},
             %B : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] -> (i)>, linalg.inplaceable = false},
             %C : tensor<?xf32> {linalg.inplaceable = false}) {
 // Note: `callee` does not write to its bbArg directly, but `external_func`
@@ -495,7 +495,7 @@ func @entry(%A : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] ->
 
 // CHECK-LABEL: func @inner_func(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
-func @inner_func(%t: tensor<?xf32>) -> tensor<?xf32> {
+func.func @inner_func(%t: tensor<?xf32>) -> tensor<?xf32> {
   %f = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
   // CHECK: memref.store %{{.*}}, %[[arg0]]
@@ -505,7 +505,7 @@ func @inner_func(%t: tensor<?xf32>) -> tensor<?xf32> {
 
 // CHECK-LABEL: func @equivalent_func_arg(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
-func @equivalent_func_arg(%t0: tensor<?xf32> {linalg.inplaceable = true},
+func.func @equivalent_func_arg(%t0: tensor<?xf32> {linalg.inplaceable = true},
                           %c0: index, %c10: index, %c1: index) -> tensor<?xf32> {
   // CHECK-NOT: alloc
   // CHECK-NOT: copy
@@ -524,7 +524,7 @@ func @equivalent_func_arg(%t0: tensor<?xf32> {linalg.inplaceable = true},
 
 // CHECK-LABEL: func @inner_func_2(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
-func @inner_func_2(%t: tensor<?xf32>) -> tensor<?xf32> {
+func.func @inner_func_2(%t: tensor<?xf32>) -> tensor<?xf32> {
   %f = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
   // CHECK: memref.store %{{.*}}, %[[arg0]]
@@ -534,7 +534,7 @@ func @inner_func_2(%t: tensor<?xf32>) -> tensor<?xf32> {
 
 // CHECK-LABEL: func @equivalent_func_arg_2(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
-func @equivalent_func_arg_2(%t0: tensor<?xf32> {linalg.inplaceable = true},
+func.func @equivalent_func_arg_2(%t0: tensor<?xf32> {linalg.inplaceable = true},
                             %c0: index, %c10: index, %c1: index) -> tensor<?xf32> {
   // CHECK: scf.for {{.*}} {
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
