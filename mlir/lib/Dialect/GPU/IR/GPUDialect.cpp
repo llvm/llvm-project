@@ -275,6 +275,44 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
   return walkResult.wasInterrupted() ? failure() : success();
 }
 
+/// Parses an optional list of async operands with an optional leading keyword.
+/// (`async`)? (`[` ssa-id-list `]`)?
+///
+/// This method is used by the tablegen assembly format for async ops as well.
+static ParseResult parseAsyncDependencies(
+    OpAsmParser &parser, Type &asyncTokenType,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &asyncDependencies) {
+  auto loc = parser.getCurrentLocation();
+  if (succeeded(parser.parseOptionalKeyword("async"))) {
+    if (parser.getNumResults() == 0)
+      return parser.emitError(loc, "needs to be named when marked 'async'");
+    asyncTokenType = parser.getBuilder().getType<AsyncTokenType>();
+  }
+  return parser.parseOperandList(asyncDependencies,
+                                 OpAsmParser::Delimiter::OptionalSquare);
+}
+
+/// Prints optional async dependencies with its leading keyword.
+///   (`async`)? (`[` ssa-id-list `]`)?
+// Used by the tablegen assembly format for several async ops.
+static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
+                                   Type asyncTokenType,
+                                   OperandRange asyncDependencies) {
+  if (asyncTokenType)
+    printer << "async";
+  if (asyncDependencies.empty())
+    return;
+  if (asyncTokenType)
+    printer << ' ';
+  printer << '[';
+  llvm::interleaveComma(asyncDependencies, printer);
+  printer << ']';
+}
+
+//===----------------------------------------------------------------------===//
+// AllReduceOp
+//===----------------------------------------------------------------------===//
+
 LogicalResult gpu::AllReduceOp::verifyRegions() {
   if (body().empty() != op().hasValue())
     return emitError("expected either an op attribute or a non-empty body");
@@ -358,7 +396,12 @@ void gpu::addAsyncDependency(Operation *op, Value token) {
 void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Value gridSizeX, Value gridSizeY, Value gridSizeZ,
                      Value blockSizeX, Value blockSizeY, Value blockSizeZ,
-                     Value dynamicSharedMemorySize) {
+                     Value dynamicSharedMemorySize, Type asyncTokenType,
+                     ValueRange asyncDependencies) {
+  result.addOperands(asyncDependencies);
+  if (asyncTokenType)
+    result.types.push_back(builder.getType<AsyncTokenType>());
+
   // Add grid and block sizes as op operands, followed by the data operands.
   result.addOperands(
       {gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ});
@@ -373,6 +416,11 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   for (unsigned i = 0; i < kNumConfigRegionAttributes; ++i)
     body->addArgument(builder.getIndexType(), result.location);
   kernelRegion->push_back(body);
+  SmallVector<int32_t, 8> segmentSizes(8, 1);
+  segmentSizes.front() = asyncDependencies.size();
+  segmentSizes.back() = dynamicSharedMemorySize ? 1 : 0;
+  result.addAttribute(getOperandSegmentSizeAttr(),
+                      builder.getI32VectorAttr(segmentSizes));
 }
 
 KernelDim3 LaunchOp::getBlockIds() {
@@ -400,11 +448,13 @@ KernelDim3 LaunchOp::getBlockSize() {
 }
 
 KernelDim3 LaunchOp::getGridSizeOperandValues() {
-  return KernelDim3{getOperand(0), getOperand(1), getOperand(2)};
+  auto operands = getOperands().drop_front(asyncDependencies().size());
+  return KernelDim3{operands[0], operands[1], operands[2]};
 }
 
 KernelDim3 LaunchOp::getBlockSizeOperandValues() {
-  return KernelDim3{getOperand(3), getOperand(4), getOperand(5)};
+  auto operands = getOperands().drop_front(asyncDependencies().size());
+  return KernelDim3{operands[3], operands[4], operands[5]};
 }
 
 LogicalResult LaunchOp::verifyRegions() {
@@ -412,9 +462,9 @@ LogicalResult LaunchOp::verifyRegions() {
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
   // for block/thread identifiers and grid/block sizes.
   if (!body().empty()) {
-    if (body().getNumArguments() != LaunchOp::kNumConfigOperands +
-                                        getNumOperands() -
-                                        (dynamicSharedMemorySize() ? 1 : 0))
+    if (body().getNumArguments() !=
+        LaunchOp::kNumConfigOperands + getNumOperands() -
+            (dynamicSharedMemorySize() ? 1 : 0) - asyncDependencies().size())
       return emitOpError("unexpected number of region arguments");
   }
 
@@ -435,6 +485,9 @@ LogicalResult LaunchOp::verifyRegions() {
     }
   }
 
+  if (getNumResults() == 0 && asyncToken())
+    return emitOpError("needs to be named when async keyword is specified");
+
   return success();
 }
 
@@ -451,6 +504,11 @@ static void printSizeAssignment(OpAsmPrinter &p, KernelDim3 size,
 }
 
 void LaunchOp::print(OpAsmPrinter &p) {
+  if (asyncToken()) {
+    p << " async";
+    if (!asyncDependencies().empty())
+      p << " [" << asyncDependencies() << ']';
+  }
   // Print the launch configuration.
   p << ' ' << getBlocksKeyword();
   printSizeAssignment(p, getGridSize(), getGridSizeOperandValues(),
@@ -464,7 +522,8 @@ void LaunchOp::print(OpAsmPrinter &p) {
 
   p << ' ';
   p.printRegion(body(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
+                              LaunchOp::getOperandSegmentSizeAttr()});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -498,11 +557,10 @@ parseSizeAssignment(OpAsmParser &parser,
 }
 
 /// Parses a Launch operation.
-/// operation ::= `gpu.launch` `blocks` `(` ssa-id-list `)` `in`
-/// ssa-reassignment
-///                           `threads` `(` ssa-id-list `)` `in`
-///                           ssa-reassignment
-///                            region attr-dict?
+/// operation ::= `gpu.launch` (`async` `[` ssa-id-list `]`)?
+//        `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
+///       `threads` `(` ssa-id-list `)` `in` ssa-reassignment
+///       region attr-dict?
 /// ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
 ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   // Sizes of the grid and block.
@@ -517,6 +575,17 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 16> regionArgs(
       LaunchOp::kNumConfigRegionAttributes);
   MutableArrayRef<OpAsmParser::UnresolvedOperand> regionArgsRef(regionArgs);
+
+  // Parse optional async dependencies.
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> asyncDependencies;
+  Type asyncTokenType;
+  if (failed(
+          parseAsyncDependencies(parser, asyncTokenType, asyncDependencies)) ||
+      parser.resolveOperands(asyncDependencies, asyncTokenType,
+                             result.operands))
+    return failure();
+  if (parser.getNumResults() > 0)
+    result.types.push_back(asyncTokenType);
 
   // Parse the size assignment segments: the first segment assigns grid sizes
   // and defines values for block identifiers; the second segment assigns block
@@ -536,13 +605,16 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   OpAsmParser::UnresolvedOperand dynamicSharedMemorySize;
+  bool hasDynamicSharedMemorySize = false;
   if (!parser.parseOptionalKeyword(
-          LaunchOp::getDynamicSharedMemorySizeKeyword()))
+          LaunchOp::getDynamicSharedMemorySizeKeyword())) {
+    hasDynamicSharedMemorySize = true;
     if (parser.parseOperand(dynamicSharedMemorySize) ||
         parser.resolveOperand(dynamicSharedMemorySize,
                               parser.getBuilder().getI32Type(),
                               result.operands))
       return failure();
+  }
 
   // Introduce the body region and parse it. The region has
   // kNumConfigRegionAttributes arguments that correspond to
@@ -551,8 +623,16 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<Type, LaunchOp::kNumConfigRegionAttributes> dataTypes(
       LaunchOp::kNumConfigRegionAttributes, index);
   Region *body = result.addRegion();
-  return failure(parser.parseRegion(*body, regionArgs, dataTypes) ||
-                 parser.parseOptionalAttrDict(result.attributes));
+  if (parser.parseRegion(*body, regionArgs, dataTypes) ||
+      parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  SmallVector<int32_t, 8> segmentSizes(8, 1);
+  segmentSizes.front() = asyncDependencies.size();
+  segmentSizes.back() = hasDynamicSharedMemorySize ? 1 : 0;
+  result.addAttribute(LaunchOp::getOperandSegmentSizeAttr(),
+                      parser.getBuilder().getI32VectorAttr(segmentSizes));
+  return success();
 }
 
 /// Simplify the gpu.launch when the range of a thread or block ID is
@@ -602,7 +682,12 @@ void LaunchOp::getCanonicalizationPatterns(RewritePatternSet &rewrites,
 void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          GPUFuncOp kernelFunc, KernelDim3 gridSize,
                          KernelDim3 blockSize, Value dynamicSharedMemorySize,
-                         ValueRange kernelOperands) {
+                         ValueRange kernelOperands, Type asyncTokenType,
+                         ValueRange asyncDependencies) {
+  result.addOperands(asyncDependencies);
+  if (asyncTokenType)
+    result.types.push_back(builder.getType<AsyncTokenType>());
+
   // Add grid and block sizes as op operands, followed by the data operands.
   result.addOperands({gridSize.x, gridSize.y, gridSize.z, blockSize.x,
                       blockSize.y, blockSize.z});
@@ -615,7 +700,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          {SymbolRefAttr::get(kernelFunc.getNameAttr())});
   result.addAttribute(getKernelAttrName(), kernelSymbol);
   SmallVector<int32_t, 9> segmentSizes(9, 1);
-  segmentSizes.front() = 0; // Initially no async dependencies.
+  segmentSizes.front() = asyncDependencies.size();
   segmentSizes[segmentSizes.size() - 2] = dynamicSharedMemorySize ? 1 : 0;
   segmentSizes.back() = static_cast<int32_t>(kernelOperands.size());
   result.addAttribute(getOperandSegmentSizeAttr(),
@@ -1037,36 +1122,6 @@ LogicalResult MemcpyOp::verify() {
     return emitOpError("arguments have incompatible shape");
 
   return success();
-}
-
-static ParseResult parseAsyncDependencies(
-    OpAsmParser &parser, Type &asyncTokenType,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &asyncDependencies) {
-  auto loc = parser.getCurrentLocation();
-  if (succeeded(parser.parseOptionalKeyword("async"))) {
-    if (parser.getNumResults() == 0)
-      return parser.emitError(loc, "needs to be named when marked 'async'");
-    asyncTokenType = parser.getBuilder().getType<AsyncTokenType>();
-  }
-  return parser.parseOperandList(asyncDependencies,
-                                 OpAsmParser::Delimiter::OptionalSquare);
-}
-
-/// Prints optional async dependencies with its leading keyword.
-///   (`async`)? (`[` ssa-id-list `]`)?
-// Used by the tablegen assembly format for several async ops.
-static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
-                                   Type asyncTokenType,
-                                   OperandRange asyncDependencies) {
-  if (asyncTokenType)
-    printer << "async";
-  if (asyncDependencies.empty())
-    return;
-  if (asyncTokenType)
-    printer << ' ';
-  printer << '[';
-  llvm::interleaveComma(asyncDependencies, printer);
-  printer << ']';
 }
 
 namespace {

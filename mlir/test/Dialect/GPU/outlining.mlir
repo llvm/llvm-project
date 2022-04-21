@@ -80,6 +80,26 @@ func.func @multiple_launches() {
                                            %block_z2 = %cst) {
     gpu.terminator
   }
+
+  // With async and async deps.
+  // CHECK: %[[TOKEN:.*]] = gpu.wait async
+  // CHECK: gpu.launch_func async [%[[TOKEN]]] @multiple_launches_kernel_1::@multiple_launches_kernel blocks in (%[[CST]], %[[CST]], %[[CST]]) threads in (%[[CST]], %[[CST]], %[[CST]])
+  %t = gpu.wait async
+  %u = gpu.launch async [%t] blocks(%bx2, %by2, %bz2) in (%grid_x2 = %cst, %grid_y2 = %cst,
+                                          %grid_z2 = %cst)
+             threads(%tx2, %ty2, %tz2) in (%block_x2 = %cst, %block_y2 = %cst,
+                                           %block_z2 = %cst) {
+    gpu.terminator
+  }
+
+  // CHECK: gpu.launch_func async @multiple_launches_kernel_2::@multiple_launches_kernel blocks in (%[[CST]], %[[CST]], %[[CST]]) threads in (%[[CST]], %[[CST]], %[[CST]])
+  %v = gpu.launch async blocks(%bx2, %by2, %bz2) in (%grid_x2 = %cst, %grid_y2 = %cst,
+                                     %grid_z2 = %cst)
+             threads(%tx2, %ty2, %tz2) in (%block_x2 = %cst, %block_y2 = %cst,
+                                           %block_z2 = %cst) {
+    gpu.terminator
+  }
+
   return
 }
 
