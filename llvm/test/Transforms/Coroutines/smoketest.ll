@@ -1,13 +1,13 @@
 ; Test that all coroutine passes run in the correct order at all optimization
-; levels and -enable-coroutines adds coroutine passes to the pipeline.
+; levels adds coroutine passes to the pipeline.
 ;
-; RUN: opt < %s -disable-output -passes='default<O0>' -enable-coroutines \
+; RUN: opt < %s -disable-output -passes='default<O0>' \
 ; RUN:     -debug-pass-manager 2>&1 | FileCheck %s --check-prefixes=CHECK-ALL
-; RUN: opt < %s -disable-output -passes='default<O1>' -enable-coroutines \
+; RUN: opt < %s -disable-output -passes='default<O1>' \
 ; RUN:     -debug-pass-manager 2>&1 | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-OPT
-; RUN: opt < %s -disable-output -passes='default<O2>' -enable-coroutines \
+; RUN: opt < %s -disable-output -passes='default<O2>' \
 ; RUN:     -debug-pass-manager 2>&1 | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-OPT
-; RUN: opt < %s -disable-output -passes='default<O3>' -enable-coroutines \
+; RUN: opt < %s -disable-output -passes='default<O3>' \
 ; RUN:     -debug-pass-manager 2>&1 | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-OPT
 ; RUN: opt < %s -disable-output -debug-pass-manager \
 ; RUN:     -passes='module(coro-early),function(coro-elide),cgscc(coro-split),function(coro-cleanup)' 2>&1 \

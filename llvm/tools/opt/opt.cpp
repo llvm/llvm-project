@@ -52,7 +52,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
@@ -249,11 +248,6 @@ static cl::opt<bool> DiscardValueNames(
     cl::desc("Discard names from Value (other than GlobalValue)."),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> Coroutines(
-  "enable-coroutines",
-  cl::desc("Enable coroutine passes."),
-  cl::init(false), cl::Hidden);
-
 static cl::opt<bool> TimeTrace(
     "time-trace",
     cl::desc("Record time trace"));
@@ -370,9 +364,6 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
 
   if (TM)
     TM->adjustPassManager(Builder);
-
-  if (Coroutines)
-    addCoroutinePassesToExtensionPoints(Builder);
 
   switch (PGOKindFlag) {
   case InstrGen:
@@ -539,7 +530,6 @@ int main(int argc, char **argv) {
   // Initialize passes
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeCore(Registry);
-  initializeCoroutines(Registry);
   initializeScalarOpts(Registry);
   initializeObjCARCOpts(Registry);
   initializeVectorization(Registry);

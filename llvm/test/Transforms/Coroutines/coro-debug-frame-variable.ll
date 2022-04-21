@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='default<O0>' -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -passes='default<O0>' -S | FileCheck %s
 
 ; Define a function 'f' that resembles the Clang frontend's output for the
 ; following C++ coroutine:

@@ -370,26 +370,6 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
   return true;
 }
 
-// See if there are any coro.subfn.addr instructions referring to coro.devirt
-// trigger, if so, replace them with a direct call to devirt trigger function.
-static bool replaceDevirtTrigger(Function &F) {
-  SmallVector<CoroSubFnInst *, 1> DevirtAddr;
-  for (auto &I : instructions(F))
-    if (auto *SubFn = dyn_cast<CoroSubFnInst>(&I))
-      if (SubFn->getIndex() == CoroSubFnInst::RestartTrigger)
-        DevirtAddr.push_back(SubFn);
-
-  if (DevirtAddr.empty())
-    return false;
-
-  Module &M = *F.getParent();
-  Function *DevirtFn = M.getFunction(CORO_DEVIRT_TRIGGER_FN);
-  assert(DevirtFn && "coro.devirt.fn not found");
-  replaceWithConstant(DevirtFn, DevirtAddr);
-
-  return true;
-}
-
 static bool declaresCoroElideIntrinsics(Module &M) {
   return coro::declaresIntrinsics(M, {"llvm.coro.id", "llvm.coro.id.async"});
 }
@@ -415,62 +395,3 @@ PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
-
-namespace {
-struct CoroElideLegacy : FunctionPass {
-  static char ID;
-  CoroElideLegacy() : FunctionPass(ID) {
-    initializeCoroElideLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  std::unique_ptr<Lowerer> L;
-
-  bool doInitialization(Module &M) override {
-    if (declaresCoroElideIntrinsics(M))
-      L = std::make_unique<Lowerer>(M);
-    return false;
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!L)
-      return false;
-
-    bool Changed = false;
-
-    if (F.hasFnAttribute(CORO_PRESPLIT_ATTR))
-      Changed = replaceDevirtTrigger(F);
-
-    L->CoroIds.clear();
-    L->collectPostSplitCoroIds(&F);
-    // If we did not find any coro.id, there is nothing to do.
-    if (L->CoroIds.empty())
-      return Changed;
-
-    AAResults &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-    for (auto *CII : L->CoroIds)
-      Changed |= L->processCoroId(CII, AA, DT);
-
-    return Changed;
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-  }
-  StringRef getPassName() const override { return "Coroutine Elision"; }
-};
-}
-
-char CoroElideLegacy::ID = 0;
-INITIALIZE_PASS_BEGIN(
-    CoroElideLegacy, "coro-elide",
-    "Coroutine frame allocation elision and indirect calls replacement", false,
-    false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(
-    CoroElideLegacy, "coro-elide",
-    "Coroutine frame allocation elision and indirect calls replacement", false,
-    false)
-
-Pass *llvm::createCoroElideLegacyPass() { return new CoroElideLegacy(); }

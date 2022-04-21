@@ -48,9 +48,6 @@ void initializeInstrumentation(PassRegistry&);
 /// Initialize all passes linked into the Analysis library.
 void initializeAnalysis(PassRegistry&);
 
-/// Initialize all passes linked into the Coroutines library.
-void initializeCoroutines(PassRegistry&);
-
 /// Initialize all passes linked into the CodeGen library.
 void initializeCodeGen(PassRegistry&);
 
