@@ -1,0 +1,106 @@
+# RUN: llc -march=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: | FileCheck -check-prefixes=OUTLINED,RV32I-MO %s
+# RUN: llc -march=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: | FileCheck -check-prefixes=OUTLINED,RV64I-MO %s
+
+# CFIs are invisible (they can be outlined, but won't actually impact the outlining result) if there
+# is no need to unwind. CFIs will be stripped when we build outlined functions.
+
+--- |
+  define void @func1(i32 %a, i32 %b) { ret void }
+
+  define void @func2(i32 %a, i32 %b) { ret void }
+
+  define void @func3(i32 %a, i32 %b) { ret void }
+...
+---
+name:            func1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+    ; RV32I-MO-LABEL: name: func1
+    ; RV32I-MO: liveins: $x10, $x11
+    ; RV32I-MO-NEXT: {{  $}}
+    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV32I-MO-NEXT: PseudoRET
+    ; RV64I-MO-LABEL: name: func1
+    ; RV64I-MO: liveins: $x10, $x11
+    ; RV64I-MO-NEXT: {{  $}}
+    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV64I-MO-NEXT: PseudoRET
+    $x10 = ORI $x10, 1023
+    CFI_INSTRUCTION offset $x1, 0
+    $x11 = ORI $x11, 1023
+    CFI_INSTRUCTION offset $x1, -4
+    $x12 = ADDI $x10, 17
+    CFI_INSTRUCTION offset $x1, -8
+    $x11 = AND $x12, $x11
+    CFI_INSTRUCTION offset $x1, -12
+    $x10 = SUB $x10, $x11
+    PseudoRET
+...
+---
+name:            func2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+    ; RV32I-MO-LABEL: name: func2
+    ; RV32I-MO: liveins: $x10, $x11
+    ; RV32I-MO-NEXT: {{  $}}
+    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV32I-MO-NEXT: PseudoRET
+    ; RV64I-MO-LABEL: name: func2
+    ; RV64I-MO: liveins: $x10, $x11
+    ; RV64I-MO-NEXT: {{  $}}
+    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV64I-MO-NEXT: PseudoRET
+    $x10 = ORI $x10, 1023
+    CFI_INSTRUCTION offset $x1, 0
+    $x11 = ORI $x11, 1023
+    CFI_INSTRUCTION offset $x1, -8
+    $x12 = ADDI $x10, 17
+    CFI_INSTRUCTION offset $x1, -4
+    $x11 = AND $x12, $x11
+    CFI_INSTRUCTION offset $x1, -12
+    $x10 = SUB $x10, $x11
+    PseudoRET
+...
+---
+name:            func3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+    ; RV32I-MO-LABEL: name: func3
+    ; RV32I-MO: liveins: $x10, $x11
+    ; RV32I-MO-NEXT: {{  $}}
+    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV32I-MO-NEXT: PseudoRET
+    ; RV64I-MO-LABEL: name: func3
+    ; RV64I-MO: liveins: $x10, $x11
+    ; RV64I-MO-NEXT: {{  $}}
+    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV64I-MO-NEXT: PseudoRET
+    $x10 = ORI $x10, 1023
+    CFI_INSTRUCTION offset $x1, -12
+    $x11 = ORI $x11, 1023
+    CFI_INSTRUCTION offset $x1, -8
+    $x12 = ADDI $x10, 17
+    CFI_INSTRUCTION offset $x1, -4
+    $x11 = AND $x12, $x11
+    CFI_INSTRUCTION offset $x1, 0
+    $x10 = SUB $x10, $x11
+    PseudoRET
+
+
+# OUTLINED-LABEL: name: OUTLINED_FUNCTION_0
+# OUTLINED: liveins: $x11, $x10, $x5
+# OUTLINED-NEXT: {{  $}}
+# OUTLINED-NEXT: $x10 = ORI $x10, 1023
+# OUTLINED-NEXT: $x11 = ORI $x11, 1023
+# OUTLINED-NEXT: $x12 = ADDI $x10, 17
+# OUTLINED-NEXT: $x11 = AND $x12, $x11
+# OUTLINED-NEXT: $x10 = SUB $x10, $x11
+# OUTLINED-NEXT: $x0 = JALR $x5, 0
