@@ -137,7 +137,7 @@ public:
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<Value *> Args = None);
+                                 ArrayRef<const Value *> Args = None);
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,

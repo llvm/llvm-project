@@ -5328,7 +5328,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
              "No reused scalars expected for broadcast.");
       return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
                                  /*Mask=*/None, /*Index=*/0,
-                                 /*SubTp=*/nullptr, /*Args=*/VL);
+                                 /*SubTp=*/nullptr, /*Args=*/VL[0]);
     }
     InstructionCost ReuseShuffleCost = 0;
     if (NeedToShuffleReuses)
