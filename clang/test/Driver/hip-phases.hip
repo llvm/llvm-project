@@ -520,3 +520,25 @@
 // MIXED2-DAG: input, "{{.*}}empty.cpp", hip, (device-hip, gfx803)
 // MIXED2-DAG: input, "{{.*}}empty.cpp", hip, (device-hip, gfx900)
 // MIXED2-NEG-NOT: input, "{{.*}}empty.cpp", c++
+
+// Test HIP bitcode to bitcode linking. Input should be bundled or unbundled bitcode, and
+// output should be unbundled linked bitcode
+
+// RUN: touch %T/bitcodeA.bc
+// RUN: touch %T/bitcodeB.bc
+// RUN: %clang -ccc-print-phases --hip-link -emit-llvm --cuda-device-only \
+// RUN: --offload-arch=gfx906 %T/bitcodeA.bc %T/bitcodeB.bc 2>&1 \
+// RUN: | FileCheck -check-prefixes=CHECK %s
+
+// CHECK: [[A0:[0-9]+]]: input, "{{.*}}bitcodeA.bc", ir
+// CHECK: [[A1:[0-9]+]]: clang-offload-unbundler, {[[A0]]}, ir
+// CHECK: [[A2:[0-9]+]]: compiler, {[[A1]]}, ir, (device-hip, [[ARCH:gfx906]])
+// CHECK: [[A3:[0-9]+]]: backend, {[[A2]]}, ir, (device-hip, [[ARCH]])
+
+// CHECK: [[B0:[0-9]+]]: input, "{{.*}}bitcodeB.bc", ir
+// CHECK: [[B1:[0-9]+]]: clang-offload-unbundler, {[[B0]]}, ir
+// CHECK: [[B2:[0-9]+]]: compiler, {[[B1]]}, ir, (device-hip, [[ARCH]])
+// CHECK: [[B3:[0-9]+]]: backend, {[[B2]]}, ir, (device-hip, [[ARCH]])
+
+// CHECK: [[L0:[0-9]+]]: linker, {[[A3]], [[B3]]}, ir, (device-hip, [[ARCH]])
+// CHECK: offload, "device-hip (amdgcn-amd-amdhsa:[[ARCH]])" {[[L0]]}, ir
