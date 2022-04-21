@@ -20,7 +20,7 @@ def log(*args):
 
 
 elemwise_boiler = """
-func @main() -> f32 attributes {llvm.emit_c_interface} {
+func.func @main() -> f32 attributes {llvm.emit_c_interface} {
   %v0 = arith.constant 0.0 : f32
   %v1 = arith.constant 1.0 : f32
   %v2 = arith.constant 2.0 : f32
@@ -51,7 +51,7 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
 """
 
 matmul_boiler = """
-func @main() -> f32 attributes {llvm.emit_c_interface} {
+func.func @main() -> f32 attributes {llvm.emit_c_interface} {
   %v0 = arith.constant 0.0 : f32
   %v1 = arith.constant -1 : i8
   %v2 = arith.constant 2.0 : f32
@@ -82,7 +82,7 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
 """
 
 fill_boiler = """
-func @main() -> i32 attributes {llvm.emit_c_interface} {
+func.func @main() -> i32 attributes {llvm.emit_c_interface} {
   %O0 = memref.alloc() : memref<i32>
   %O1 = memref.alloc() : memref<16xi32>
   %O2 = memref.alloc() : memref<4x16xi32>
@@ -111,7 +111,7 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
 """
 
 fill_rng_boiler = """
-func @main() -> i32 attributes {llvm.emit_c_interface} {
+func.func @main() -> i32 attributes {llvm.emit_c_interface} {
   %O = memref.alloc() : memref<4x16xi32>
   %min = arith.constant -1000.0 : f64
   %max = arith.constant 1000.0 : f64
@@ -129,7 +129,7 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
 """
 
 conv_boiler = """
-func @main() -> i32 attributes {llvm.emit_c_interface} {
+func.func @main() -> i32 attributes {llvm.emit_c_interface} {
   %v0 = arith.constant 0 : i32
   %v1 = arith.constant 1.0 : f64
   %v2 = arith.constant 2.0 : f64
@@ -153,7 +153,7 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
 """
 
 pooling_boiler = """
-func @main() -> i32 attributes {llvm.emit_c_interface} {
+func.func @main() -> i32 attributes {llvm.emit_c_interface} {
   %v0 = arith.constant 0 : i32
   %v42 = arith.constant 42.0 : f64
   %v77 = arith.constant 77.0 : f64

@@ -18,7 +18,7 @@ def test_insert_at_block_end():
   ctx.allow_unregistered_dialects = True
   with Location.unknown(ctx):
     module = Module.parse(r"""
-      func @foo() -> () {
+      func.func @foo() -> () {
         "custom.op1"() : () -> ()
       }
     """)
@@ -38,7 +38,7 @@ def test_insert_before_operation():
   ctx.allow_unregistered_dialects = True
   with Location.unknown(ctx):
     module = Module.parse(r"""
-      func @foo() -> () {
+      func.func @foo() -> () {
         "custom.op1"() : () -> ()
         "custom.op2"() : () -> ()
       }
@@ -60,7 +60,7 @@ def test_insert_at_block_begin():
   ctx.allow_unregistered_dialects = True
   with Location.unknown(ctx):
     module = Module.parse(r"""
-      func @foo() -> () {
+      func.func @foo() -> () {
         "custom.op2"() : () -> ()
       }
     """)
@@ -88,7 +88,7 @@ def test_insert_at_terminator():
   ctx.allow_unregistered_dialects = True
   with Location.unknown(ctx):
     module = Module.parse(r"""
-      func @foo() -> () {
+      func.func @foo() -> () {
         "custom.op1"() : () -> ()
         return
       }
@@ -109,7 +109,7 @@ def test_insert_at_block_terminator_missing():
   ctx.allow_unregistered_dialects = True
   with ctx:
     module = Module.parse(r"""
-      func @foo() -> () {
+      func.func @foo() -> () {
         "custom.op1"() : () -> ()
       }
     """)
@@ -130,7 +130,7 @@ def test_insert_at_end_with_terminator_errors():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
     module = Module.parse(r"""
-      func @foo() -> () {
+      func.func @foo() -> () {
         return
       }
     """)
@@ -151,7 +151,7 @@ def test_insertion_point_context():
   ctx.allow_unregistered_dialects = True
   with Location.unknown(ctx):
     module = Module.parse(r"""
-      func @foo() -> () {
+      func.func @foo() -> () {
         "custom.op1"() : () -> ()
       }
     """)
