@@ -34,10 +34,6 @@ void LLVMAddThreadSanitizerPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createThreadSanitizerLegacyPassPass());
 }
 
-void LLVMAddMemorySanitizerLegacyPassPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createMemorySanitizerLegacyPassPass());
-}
-
 void LLVMAddDataFlowSanitizerPass(LLVMPassManagerRef PM,
                                   int ABIListFilesNum,
                                   const char **ABIListFiles) {

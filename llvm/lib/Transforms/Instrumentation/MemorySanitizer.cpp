@@ -631,33 +631,6 @@ void insertModuleCtor(Module &M) {
       });
 }
 
-/// A legacy function pass for msan instrumentation.
-///
-/// Instruments functions to detect uninitialized reads.
-struct MemorySanitizerLegacyPass : public FunctionPass {
-  // Pass identification, replacement for typeid.
-  static char ID;
-
-  MemorySanitizerLegacyPass(MemorySanitizerOptions Options = {})
-      : FunctionPass(ID), Options(Options) {
-    initializeMemorySanitizerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-  StringRef getPassName() const override { return "MemorySanitizerLegacyPass"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-
-  bool runOnFunction(Function &F) override {
-    return MSan->sanitizeFunction(
-        F, getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F));
-  }
-  bool doInitialization(Module &M) override;
-
-  Optional<MemorySanitizer> MSan;
-  MemorySanitizerOptions Options;
-};
-
 template <class T> T getOptOrDefault(const cl::opt<T> &Opt, T Default) {
   return (Opt.getNumOccurrences() > 0) ? Opt : Default;
 }
@@ -700,21 +673,6 @@ void MemorySanitizerPass::printPipeline(
     OS << "eager-checks;";
   OS << "track-origins=" << Options.TrackOrigins;
   OS << ">";
-}
-
-char MemorySanitizerLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(MemorySanitizerLegacyPass, "msan",
-                      "MemorySanitizer: detects uninitialized reads.", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(MemorySanitizerLegacyPass, "msan",
-                    "MemorySanitizer: detects uninitialized reads.", false,
-                    false)
-
-FunctionPass *
-llvm::createMemorySanitizerLegacyPassPass(MemorySanitizerOptions Options) {
-  return new MemorySanitizerLegacyPass(Options);
 }
 
 /// Create a non-const global initialized with the given string.
@@ -1012,13 +970,6 @@ void MemorySanitizer::initializeModule(Module &M) {
                                   IRB.getInt32(Recover), "__msan_keep_going");
       });
 }
-}
-
-bool MemorySanitizerLegacyPass::doInitialization(Module &M) {
-  if (!Options.Kernel)
-    insertModuleCtor(M);
-  MSan.emplace(M, Options);
-  return true;
 }
 
 namespace {
