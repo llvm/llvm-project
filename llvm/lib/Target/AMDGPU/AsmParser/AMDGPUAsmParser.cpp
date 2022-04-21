@@ -4394,7 +4394,8 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     if (CPol & CPol::GLC) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
-      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("glc")]);
+      S = SMLoc::getFromPointer(
+          &CStr.data()[CStr.find(isGFX940() ? "sc0" : "glc")]);
       Error(S, isGFX940() ? "instruction must not use sc0"
                           : "instruction must not use glc");
       return false;
