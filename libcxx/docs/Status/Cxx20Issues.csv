@@ -234,7 +234,7 @@
 "`3304 <https://wg21.link/LWG3304>`__","Allocate functions of ``std::polymorphic_allocator``\  should require ``[[nodiscard]]``\ ","Prague","",""
 "`3307 <https://wg21.link/LWG3307>`__","``std::allocator<void>().allocate(n)``\ ","Prague","",""
 "`3310 <https://wg21.link/LWG3310>`__","Replace ``SIZE_MAX``\  with ``numeric_limits<size_t>::max()``\ ","Prague","",""
-"`3313 <https://wg21.link/LWG3313>`__","``join_view::iterator::operator--``\  is incorrectly constrained","Prague","","","|ranges|"
+"`3313 <https://wg21.link/LWG3313>`__","``join_view::iterator::operator--``\  is incorrectly constrained","Prague","|Complete|","14.0","|ranges|"
 "`3314 <https://wg21.link/LWG3314>`__","Is stream insertion behavior locale dependent when ``Period::type``\  is ``micro``\ ?","Prague","","","|chrono|"
 "`3315 <https://wg21.link/LWG3315>`__","Correct Allocator Default Behavior","Prague","",""
 "`3316 <https://wg21.link/LWG3316>`__","Correctly define epoch for ``utc_clock``\  / ``utc_timepoint``\ ","Prague","","","|chrono|"

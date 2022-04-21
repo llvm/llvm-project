@@ -29,6 +29,24 @@ struct InputView : std::ranges::view_base {
   sentinel_wrapper<cpp17_input_iterator<T*>> end() const;
 };
 
+template <class T, class V>
+struct diff_type_iter {
+  using iterator_category = std::input_iterator_tag;
+  using value_type = V;
+  using difference_type = T;
+
+  V& operator*() const;
+  diff_type_iter& operator++();
+  void operator++(int);
+  friend constexpr bool operator==(diff_type_iter, diff_type_iter) = default;
+};
+
+template <class T, class V = int>
+struct DiffTypeRange : std::ranges::view_base {
+  diff_type_iter<T, V> begin() const;
+  diff_type_iter<T, V> end() const;
+};
+
 template<class T>
 concept HasIterCategory = requires { typename T::iterator_category; };
 
@@ -38,25 +56,70 @@ void test() {
     std::ranges::join_view jv(buffer);
     using Iter = std::ranges::iterator_t<decltype(jv)>;
 
-    ASSERT_SAME_TYPE(Iter::iterator_concept, std::bidirectional_iterator_tag);
-    ASSERT_SAME_TYPE(Iter::iterator_category, std::bidirectional_iterator_tag);
-    ASSERT_SAME_TYPE(Iter::difference_type, std::ptrdiff_t);
-    ASSERT_SAME_TYPE(Iter::value_type, int);
+    static_assert(std::is_same_v<Iter::iterator_concept, std::bidirectional_iterator_tag>);
+    static_assert(std::is_same_v<Iter::iterator_category, std::bidirectional_iterator_tag>);
+    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<Iter::value_type, int>);
+    static_assert(HasIterCategory<Iter>);
   }
+
   {
     using Iter = std::ranges::iterator_t<std::ranges::join_view<ForwardView<ForwardView<int>>>>;
 
-    ASSERT_SAME_TYPE(Iter::iterator_concept, std::forward_iterator_tag);
-    ASSERT_SAME_TYPE(Iter::iterator_category, std::forward_iterator_tag);
-    ASSERT_SAME_TYPE(Iter::difference_type, std::ptrdiff_t);
-    ASSERT_SAME_TYPE(Iter::value_type, int);
+    static_assert(std::is_same_v<Iter::iterator_concept, std::forward_iterator_tag>);
+    static_assert(std::is_same_v<Iter::iterator_category, std::forward_iterator_tag>);
+    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<Iter::value_type, int>);
+    static_assert(HasIterCategory<Iter>);
   }
+
   {
     using Iter = std::ranges::iterator_t<std::ranges::join_view<InputView<InputView<int>>>>;
 
-    ASSERT_SAME_TYPE(Iter::iterator_concept, std::input_iterator_tag);
+    static_assert(std::is_same_v<Iter::iterator_concept, std::input_iterator_tag>);
     static_assert(!HasIterCategory<Iter>);
-    ASSERT_SAME_TYPE(Iter::difference_type, std::ptrdiff_t);
-    ASSERT_SAME_TYPE(Iter::value_type, int);
+    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<Iter::value_type, int>);
+  }
+
+  {
+    // LWG3535 `join_view::iterator::iterator_category` and `::iterator_concept` lie
+    // Bidi non common inner range should not have bidirectional_iterator_tag
+    using Base = BidiCommonOuter<BidiNonCommonInner>;
+    using Iter = std::ranges::iterator_t<std::ranges::join_view<Base>>;
+    static_assert(std::is_same_v<Iter::iterator_concept, std::forward_iterator_tag>);
+    static_assert(std::is_same_v<Iter::iterator_category, std::forward_iterator_tag>);
+    static_assert(HasIterCategory<Iter>);
+    static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<Iter::value_type, int>);
+  }
+
+  {
+    // !ref-is-glvalue
+    using Outer = InnerRValue<BidiCommonOuter<BidiCommonInner>>;
+    using Iter = std::ranges::iterator_t<std::ranges::join_view<Outer>>;
+    static_assert(!HasIterCategory<Iter>);
+    static_assert(std::is_same_v<Iter::iterator_concept, std::input_iterator_tag>);
+  }
+
+  {
+    // value_type == inner's value_type
+    using Inner = IterMoveSwapAwareView;
+    using InnerValue = std::ranges::range_value_t<Inner>;
+    using InnerReference = std::ranges::range_reference_t<Inner>;
+    static_assert(!std::is_same_v<InnerValue, std::remove_cvref<InnerReference>>);
+
+    using Outer = BidiCommonOuter<Inner>;
+    using Iter = std::ranges::iterator_t<std::ranges::join_view<Outer>>;
+    static_assert(std::is_same_v<InnerValue, std::pair<int, int>>);
+    static_assert(std::is_same_v<Iter::value_type, std::pair<int, int>>);
+  }
+
+  {
+    // difference_type
+    using Inner = DiffTypeRange<std::intptr_t>;
+    using Outer = DiffTypeRange<std::ptrdiff_t, Inner>;
+    using Iter = std::ranges::iterator_t<std::ranges::join_view<Outer>>;
+    static_assert(std::is_same_v<Iter::difference_type, std::common_type_t<std::intptr_t, std::ptrdiff_t>>);
   }
 }
