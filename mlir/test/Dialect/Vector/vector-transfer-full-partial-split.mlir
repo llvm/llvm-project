@@ -21,7 +21,7 @@
 //  LINALG-SAME: %[[A:[a-zA-Z0-9]*]]: memref
 //  LINALG-SAME: %[[i:[a-zA-Z0-9]*]]: index
 //  LINALG-SAME: %[[j:[a-zA-Z0-9]*]]: index
-func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -> vector<4x8xf32> {
+func.func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -> vector<4x8xf32> {
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
 
@@ -105,7 +105,7 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
 //  LINALG-SAME: %[[A:[a-zA-Z0-9]*]]: memref
 //  LINALG-SAME: %[[i:[a-zA-Z0-9]*]]: index
 //  LINALG-SAME: %[[j:[a-zA-Z0-9]*]]: index
-func @split_vector_transfer_read_strided_2d(
+func.func @split_vector_transfer_read_strided_2d(
     %A: memref<7x8xf32, offset:?, strides:[?, 1]>,
     %i: index, %j: index) -> vector<4x8xf32> {
   %c0 = arith.constant 0 : index
@@ -191,7 +191,7 @@ func @split_vector_transfer_read_strided_2d(
 
 // -----
 
-func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf32>, %i: index, %j: index) {
+func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf32>, %i: index, %j: index) {
   vector.transfer_write %V, %A[%i, %j] :
     vector<4x8xf32>, memref<?x8xf32>
   return
@@ -287,7 +287,7 @@ func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf32>, %
 
 // -----
 
-func @split_vector_transfer_write_strided_2d(
+func.func @split_vector_transfer_write_strided_2d(
     %V: vector<4x8xf32>, %A: memref<7x8xf32, offset:?, strides:[?, 1]>,
     %i: index, %j: index) {
   vector.transfer_write %V, %A[%i, %j] :
@@ -396,10 +396,10 @@ func @split_vector_transfer_write_strided_2d(
 
 // -----
 
-func private @fake_side_effecting_fun(%0: vector<2x2xf32>) -> ()
+func.func private @fake_side_effecting_fun(%0: vector<2x2xf32>) -> ()
 
 // CHECK-LABEL: transfer_read_within_async_execute
-func @transfer_read_within_async_execute(%A : memref<?x?xf32>) -> !async.token {
+func.func @transfer_read_within_async_execute(%A : memref<?x?xf32>) -> !async.token {
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
   // CHECK-NOT: alloca
