@@ -58,5 +58,69 @@ TEST(TemplateName, PrintUsingTemplate) {
             "vector");
 }
 
+TEST(TemplateName, QualifiedUsingTemplate) {
+  std::string Code = R"cpp(
+    namespace std {
+      template <typename> struct vector {};
+    }
+    namespace absl { using std::vector; }
+
+    template<template <typename> class T> class X;
+
+    using A = X<absl::vector>; // QualifiedTemplateName in a template argument.
+  )cpp";
+  auto AST = tooling::buildASTFromCode(Code);
+  // Match the template argument absl::vector in X<absl::vector>.
+  auto Matcher = templateArgumentLoc().bind("id");
+  auto MatchResults = match(Matcher, AST->getASTContext());
+  const auto *TAL = MatchResults.front().getNodeAs<TemplateArgumentLoc>("id");
+  ASSERT_TRUE(TAL);
+  TemplateName TN = TAL->getArgument().getAsTemplate();
+  EXPECT_EQ(TN.getKind(), TemplateName::QualifiedTemplate);
+  const auto *QTN = TN.getAsQualifiedTemplateName();
+  // Verify that we have the Using template name in the QualifiedTemplateName.
+  const auto *USD = QTN->getUnderlyingTemplate().getAsUsingShadowDecl();
+  EXPECT_TRUE(USD);
+  EXPECT_EQ(USD->getTargetDecl(), TN.getAsTemplateDecl());
+}
+
+TEST(TemplateName, UsingTemplate) {
+  auto AST = tooling::buildASTFromCode(R"cpp(
+    namespace std {
+      template <typename T> struct vector { vector(T); };
+    }
+    namespace absl { using std::vector; }
+    // The "absl::vector<int>" is an elaborated TemplateSpecializationType with
+    // an inner Using TemplateName (not a Qualified TemplateName, the qualifiers
+    // are rather part of the ElaboratedType)!
+    absl::vector<int> v(123);
+  )cpp");
+  auto Matcher = elaboratedTypeLoc(
+      hasNamedTypeLoc(loc(templateSpecializationType().bind("id"))));
+  auto MatchResults = match(Matcher, AST->getASTContext());
+  const auto *TST =
+      MatchResults.front().getNodeAs<TemplateSpecializationType>("id");
+  ASSERT_TRUE(TST);
+  EXPECT_EQ(TST->getTemplateName().getKind(), TemplateName::UsingTemplate);
+
+  AST = tooling::buildASTFromCodeWithArgs(R"cpp(
+    namespace std {
+      template <typename T> struct vector { vector(T); };
+    }
+    namespace absl { using std::vector; }
+    // Similiar to the TemplateSpecializationType, absl::vector is an elaborated
+    // DeducedTemplateSpecializationType with an inner Using TemplateName!
+    absl::vector DTST(123);
+    )cpp",
+                                          {"-std=c++17"});
+  Matcher = elaboratedTypeLoc(
+      hasNamedTypeLoc(loc(deducedTemplateSpecializationType().bind("id"))));
+  MatchResults = match(Matcher, AST->getASTContext());
+  const auto *DTST =
+      MatchResults.front().getNodeAs<DeducedTemplateSpecializationType>("id");
+  ASSERT_TRUE(DTST);
+  EXPECT_EQ(DTST->getTemplateName().getKind(), TemplateName::UsingTemplate);
+}
+
 } // namespace
 } // namespace clang
