@@ -170,6 +170,22 @@ li x10, 0xE000000001FFFFFF
 # CHECK-ALIAS-NEXT: addi a1, a1, 2047
 li x11, 0xFFFC007FFFFFF7FF
 
+# CHECK-INST: lui a2, 349525
+# CHECK-INST-NEXT: addiw a2, a2, 1365
+# CHECK-INST-NEXT: slli a2, a2, 1
+# CHECK-ALIAS: lui a2, 349525
+# CHECK-ALIAS-NEXT: addiw a2, a2, 1365
+# CHECK-ALIAS-NEXT: slli a2, a2, 1
+li x12, 0xaaaaaaaa
+
+# CHECK-INST: lui a3, 699051
+# CHECK-INST-NEXT: addiw a3, a3, -1365
+# CHECK-INST-NEXT: slli a3, a3, 1
+# CHECK-ALIAS: lui a3, 699051
+# CHECK-ALIAS-NEXT: addiw a3, a3, -1365
+# CHECK-ALIAS-NEXT: slli a3, a3, 1
+li x13, 0xffffffff55555556
+
 # CHECK-INST: addi a0, zero, 1110
 # CHECK-ALIAS: li a0, 1110
 li a0, %lo(0x123456)
