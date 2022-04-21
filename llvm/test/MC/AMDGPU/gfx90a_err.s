@@ -278,3 +278,9 @@ ds_gws_barrier a3 offset:4 gds
 
 ds_gws_barrier a255 offset:4 gds
 // GFX90A: error: vgpr must be even aligned
+
+ds_ordered_count v5, v1 offset:65535 gds
+// GFX90A: error: instruction not supported on this GPU
+
+exp pos0 v3, v2, v1, v0
+// GFX90A: error: instruction not supported on this GPU
