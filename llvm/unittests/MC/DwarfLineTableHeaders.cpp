@@ -131,8 +131,13 @@ public:
     LineEntries.push_back(LineEntry);
     MCDwarfLineTable::emitOne(TheStreamer, Section, LineEntries);
     TheStreamer->emitLabel(LineEndSym);
-    if (LineStr)
-      LineStr->emitSection(TheStreamer);
+    if (LineStr) {
+      SmallString<0> Data = LineStr->getFinalizedData();
+      TheStreamer->SwitchSection(TheStreamer->getContext()
+                                     .getObjectFileInfo()
+                                     ->getDwarfLineStrSection());
+      TheStreamer->emitBinaryData(Data.str());
+    }
   }
 
   /// Check contents of .debug_line section
@@ -156,15 +161,37 @@ public:
     llvm_unreachable(".debug_line not found");
   }
 
+  /// Check contents of .debug_line_str section
+  void verifyDebugLineStrContents(const llvm::object::ObjectFile &E) {
+    for (const llvm::object::SectionRef &Section : E.sections()) {
+      Expected<StringRef> SectionNameOrErr = Section.getName();
+      ASSERT_TRUE(static_cast<bool>(SectionNameOrErr));
+      StringRef SectionName = *SectionNameOrErr;
+      if (SectionName.empty() || SectionName != ".debug_line_str")
+        continue;
+      Expected<StringRef> ContentsOrErr = Section.getContents();
+      ASSERT_TRUE(static_cast<bool>(ContentsOrErr));
+      StringRef Contents = *ContentsOrErr;
+      ASSERT_TRUE(Contents.find("dir") != StringRef::npos);
+      ASSERT_TRUE(Contents.find("file") != StringRef::npos);
+      ASSERT_TRUE(Contents.size() == 9);
+      return;
+    }
+    llvm_unreachable(".debug_line_str not found");
+  }
+
   ///  Open ObjFileData as an object file and read its .debug_line section
-  void readAndCheckDebugLineContents(StringRef ObjFileData,
-                                     ArrayRef<uint8_t> Expected) {
+  void readAndCheckDebugContents(StringRef ObjFileData,
+                                     ArrayRef<uint8_t> Expected, uint8_t DwarfVersion) {
     std::unique_ptr<MemoryBuffer> MB =
         MemoryBuffer::getMemBuffer(ObjFileData, "", false);
     std::unique_ptr<object::Binary> Bin =
         cantFail(llvm::object::createBinary(MB->getMemBufferRef()));
     if (auto *E = dyn_cast<llvm::object::ELFObjectFileBase>(&*Bin)) {
-      return verifyDebugLineContents(*E, Expected);
+      verifyDebugLineContents(*E, Expected);
+      if (DwarfVersion >= 5)
+        verifyDebugLineStrContents(*E);
+      return;
     }
     llvm_unreachable("ELF object file not found");
   }
@@ -178,20 +205,21 @@ TEST_F(DwarfLineTableHeaders, TestDWARF4HeaderEmission) {
   SmallString<0> EmittedBinContents;
   raw_svector_ostream VecOS(EmittedBinContents);
   StreamerContext C = createStreamer(VecOS);
-  C.Ctx->setDwarfVersion(4);
+  constexpr uint8_t DwarfVersion = 4;
+  C.Ctx->setDwarfVersion(DwarfVersion);
   emitDebugLineSection(C);
   C.Streamer->Finish();
-  readAndCheckDebugLineContents(
+  readAndCheckDebugContents(
       EmittedBinContents.str(),
       {/*    Total length=*/0x30, 0, 0, 0,
-       /*   DWARF version=*/4, 0,
+       /*   DWARF version=*/DwarfVersion, 0,
        /* Prologue length=*/0x14, 0, 0, 0,
        /* min_inst_length=*/1,
        /*max_ops_per_inst=*/1,
        /* default_is_stmt=*/DWARF2_LINE_DEFAULT_IS_STMT,
        /*       line_base=*/static_cast<uint8_t>(-5),
        /*      line_range=*/14,
-       /*     opcode_base=*/13});
+       /*     opcode_base=*/13}, DwarfVersion);
 }
 
 TEST_F(DwarfLineTableHeaders, TestDWARF5HeaderEmission) {
@@ -201,13 +229,14 @@ TEST_F(DwarfLineTableHeaders, TestDWARF5HeaderEmission) {
   SmallString<0> EmittedBinContents;
   raw_svector_ostream VecOS(EmittedBinContents);
   StreamerContext C = createStreamer(VecOS);
-  C.Ctx->setDwarfVersion(5);
+  constexpr uint8_t DwarfVersion = 5;
+  C.Ctx->setDwarfVersion(DwarfVersion);
   emitDebugLineSection(C);
   C.Streamer->Finish();
-  readAndCheckDebugLineContents(
+  readAndCheckDebugContents(
       EmittedBinContents.str(),
       {/*    Total length=*/0x43, 0, 0, 0,
-       /*   DWARF version=*/5, 0,
+       /*   DWARF version=*/DwarfVersion, 0,
        /*        ptr size=*/8,
        /*         segment=*/0,
        /* Prologue length=*/0x25, 0, 0, 0,
@@ -216,5 +245,5 @@ TEST_F(DwarfLineTableHeaders, TestDWARF5HeaderEmission) {
        /* default_is_stmt=*/DWARF2_LINE_DEFAULT_IS_STMT,
        /*       line_base=*/static_cast<uint8_t>(-5),
        /*      line_range=*/14,
-       /*     opcode_base=*/13});
+       /*     opcode_base=*/13}, DwarfVersion);
 }

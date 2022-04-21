@@ -62,6 +62,9 @@ public:
 
   /// Emit the .debug_line_str section if appropriate.
   void emitSection(MCStreamer *MCOS);
+
+  /// Returns finalized section.
+  SmallString<0> getFinalizedData();
 };
 
 /// Instances of this class represent the name of the dwarf .file directive and
