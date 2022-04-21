@@ -1115,13 +1115,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Constant *NumBytes = dyn_cast<Constant>(MI->getLength())) {
       if (NumBytes->isNullValue())
         return eraseInstFromFunction(CI);
-
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(NumBytes))
-        if (CI->getZExtValue() == 1) {
-          // Replace the instruction with just byte operations.  We would
-          // transform other cases to loads/stores, but we don't know if
-          // alignment is sufficient.
-        }
     }
 
     // No other transformations apply to volatile transfers.
