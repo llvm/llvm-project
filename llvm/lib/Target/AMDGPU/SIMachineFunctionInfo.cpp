@@ -184,9 +184,11 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     S.consumeInteger(0, HighBitsOf32BitAddress);
 
   // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
-  // VGPR available at all times.
+  // VGPR available at all times. For now, reserve highest available VGPR. After
+  // RA, shift it to the lowest available unused VGPR if the one exist.
   if (ST.hasMAIInsts() && !ST.hasGFX90AInsts()) {
-    VGPRForAGPRCopy = AMDGPU::VGPR_32RegClass.getRegister(32);
+    VGPRForAGPRCopy =
+        AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
 }
 

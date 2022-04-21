@@ -4,6 +4,7 @@
 // RUN: %run %t
 
 // Test that safe stack works with LTO.
+int puts(const char *);
 
 int main() {
   char c[] = "hello world";

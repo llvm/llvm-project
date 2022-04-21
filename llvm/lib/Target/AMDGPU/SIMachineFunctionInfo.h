@@ -524,6 +524,10 @@ public:
     return VGPRForAGPRCopy;
   }
 
+  void setVGPRForAGPRCopy(Register NewVGPRForAGPRCopy) {
+    VGPRForAGPRCopy = NewVGPRForAGPRCopy;
+  }
+
 public: // FIXME
   /// If this is set, an SGPR used for save/restore of the register used for the
   /// frame pointer.

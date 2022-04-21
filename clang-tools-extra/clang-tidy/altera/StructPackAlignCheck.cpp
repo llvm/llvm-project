@@ -77,7 +77,8 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
   uint64_t CharSize = Result.Context->getCharWidth();
   CharUnits CurrSize = Result.Context->getASTRecordLayout(Struct).getSize();
   CharUnits MinByteSize =
-      CharUnits::fromQuantity(ceil((float)TotalBitSize / CharSize));
+      CharUnits::fromQuantity(std::max<clang::CharUnits::QuantityType>(
+          ceil(static_cast<float>(TotalBitSize) / CharSize), 1));
   CharUnits MaxAlign = CharUnits::fromQuantity(
       ceil((float)Struct->getMaxAlignment() / CharSize));
   CharUnits CurrAlign =

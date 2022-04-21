@@ -696,3 +696,25 @@ void instantiator() {
   instantiatedTemplateWithSizeCall<TypeWithSize>();
   instantiatedTemplateWithSizeCall<std::vector<int>>();
 }
+
+namespace std {
+template <typename T>
+struct unique_ptr {
+  T *operator->() const;
+  T &operator*() const;
+};
+} // namespace std
+
+bool call_through_unique_ptr(const std::unique_ptr<std::vector<int>> &ptr) {
+  return ptr->size() > 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :9:8: note: method 'vector'::empty() defined here
+  // CHECK-FIXES: {{^  }}return !ptr->empty();
+}
+
+bool call_through_unique_ptr_deref(const std::unique_ptr<std::vector<int>> &ptr) {
+  return (*ptr).size() > 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :9:8: note: method 'vector'::empty() defined here
+  // CHECK-FIXES: {{^  }}return !(*ptr).empty();
+}

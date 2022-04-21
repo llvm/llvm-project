@@ -162,10 +162,17 @@ template<class T>
 #include <__availability>
 #include <__concepts/invocable.h>
 #include <__config>
+#include <__functional/hash.h>
+#include <__functional/invoke.h>
+#include <__functional/unary_function.h>
+#include <__memory/construct_at.h>
+#include <__tuple>
+#include <__utility/forward.h>
 #include <__utility/in_place.h>
+#include <__utility/move.h>
 #include <__utility/swap.h>
 #include <compare>
-#include <functional>
+#include <functional> // TODO: Remove this include
 #include <initializer_list>
 #include <new>
 #include <stdexcept>

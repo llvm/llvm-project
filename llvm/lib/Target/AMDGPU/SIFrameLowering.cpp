@@ -1212,6 +1212,32 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
+void SIFrameLowering::processFunctionBeforeFrameIndicesReplaced(
+    MachineFunction &MF, RegScavenger *RS) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
+  if (ST.hasMAIInsts() && !ST.hasGFX90AInsts()) {
+    // On gfx908, we had initially reserved highest available VGPR for AGPR
+    // copy. Now since we are done with RA, check if there exist an unused VGPR
+    // which is lower than the eariler reserved VGPR before RA. If one exist,
+    // use it for AGPR copy instead of one reserved before RA.
+    Register VGPRForAGPRCopy = FuncInfo->getVGPRForAGPRCopy();
+    Register UnusedLowVGPR =
+        TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
+    if (UnusedLowVGPR && (TRI->getHWRegIndex(UnusedLowVGPR) <
+                          TRI->getHWRegIndex(VGPRForAGPRCopy))) {
+      // Call to setVGPRForAGPRCopy() should happen first before calling
+      // freezeReservedRegs() so that getReservedRegs() can reserve this newly
+      // identified VGPR (for AGPR copy).
+      FuncInfo->setVGPRForAGPRCopy(UnusedLowVGPR);
+      MRI.freezeReservedRegs(MF);
+    }
+  }
+}
+
 // Only report VGPRs to generic code.
 void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                            BitVector &SavedVGPRs,

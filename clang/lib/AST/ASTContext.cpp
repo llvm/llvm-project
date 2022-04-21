@@ -4239,6 +4239,13 @@ static bool isCanonicalResultType(QualType T) {
 QualType
 ASTContext::getFunctionNoProtoType(QualType ResultTy,
                                    const FunctionType::ExtInfo &Info) const {
+  // FIXME: This assertion cannot be enabled (yet) because the ObjC rewriter
+  // functionality creates a function without a prototype regardless of
+  // language mode (so it makes them even in C++). Once the rewriter has been
+  // fixed, this assertion can be enabled again.
+  //assert(!LangOpts.requiresStrictPrototypes() &&
+  //       "strict prototypes are disabled");
+
   // Unique functions, to guarantee there is only one function of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
@@ -11235,7 +11242,7 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
 
 
   // We really shouldn't be making a no-proto type here.
-  if (ArgTypes.empty() && Variadic && !getLangOpts().CPlusPlus)
+  if (ArgTypes.empty() && Variadic && !getLangOpts().requiresStrictPrototypes())
     return getFunctionNoProtoType(ResType, EI);
 
   FunctionProtoType::ExtProtoInfo EPI;

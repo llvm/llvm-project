@@ -15,6 +15,7 @@
 //            (forward_range<V> || tiny-range<Pattern>)
 // class lazy_split_view;
 
+#include <functional>
 #include <ranges>
 
 #include "test_iterators.h"

@@ -22,6 +22,7 @@ def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
+
 class ImmAsmOperand<string prefix, int width, string suffix>
     : AsmOperandClass {
   let Name = prefix # "Imm" # width # suffix;
@@ -111,10 +112,12 @@ def simm26_lsl2 : Operand<GRLenVT> {
 //===----------------------------------------------------------------------===//
 
 include "LoongArchInstrFormats.td"
+include "LoongArchFloatInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
+
 class ALU_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), opstr, "$rd, $rj, $rk">;
 class ALU_2R<bits<22> op, string opstr>
@@ -203,7 +206,7 @@ class SCBase<bits<8> op, string opstr>
                opstr, "$rd, $rj, $imm14">;
 
 //===----------------------------------------------------------------------===//
-// Instructions
+// Basic Integer Instructions
 //===----------------------------------------------------------------------===//
 
 // Arithmetic Operation Instructions
@@ -523,5 +526,13 @@ def : PatGprImm_32<add, ADDI_W, simm12>;
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
 //===----------------------------------------------------------------------===//
+
 def : InstAlias<"nop", (ANDI R0, R0, 0)>;
 def : InstAlias<"move $dst, $src", (OR GPR:$dst, GPR:$src, R0)>;
+
+//===----------------------------------------------------------------------===//
+// Basic Floating-Point Instructions
+//===----------------------------------------------------------------------===//
+
+include "LoongArchFloat32InstrInfo.td"
+include "LoongArchFloat64InstrInfo.td"

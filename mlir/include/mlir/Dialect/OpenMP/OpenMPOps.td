@@ -946,6 +946,7 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
     $region attr-dict
   }];
   let hasRegionVerifier = 1;
+  let hasVerifier = 1;
   let extraClassDeclaration = [{
     /// Returns the first operation in atomic capture region
     Operation* getFirstOp();

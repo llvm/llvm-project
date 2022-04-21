@@ -20,7 +20,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
@@ -2166,108 +2168,352 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
                                                   SDValue &Lo, SDValue &Hi) {
   // The low and high parts of the original input give four input vectors.
   SDValue Inputs[4];
-  SDLoc dl(N);
+  SDLoc DL(N);
   GetSplitVector(N->getOperand(0), Inputs[0], Inputs[1]);
   GetSplitVector(N->getOperand(1), Inputs[2], Inputs[3]);
   EVT NewVT = Inputs[0].getValueType();
   unsigned NewElts = NewVT.getVectorNumElements();
 
+  auto &&IsConstant = [](const SDValue &N) {
+    APInt SplatValue;
+    return N.getResNo() == 0 &&
+           (ISD::isConstantSplatVector(N.getNode(), SplatValue) ||
+            ISD::isBuildVectorOfConstantSDNodes(N.getNode()));
+  };
+  auto &&BuildVector = [NewElts, &DAG = DAG, NewVT, &DL](SDValue &Input1,
+                                                         SDValue &Input2,
+                                                         ArrayRef<int> Mask) {
+    assert(Input1->getOpcode() == ISD::BUILD_VECTOR &&
+           Input2->getOpcode() == ISD::BUILD_VECTOR &&
+           "Expected build vector node.");
+    EVT EltVT = NewVT.getVectorElementType();
+    SmallVector<SDValue> Ops(NewElts, DAG.getUNDEF(EltVT));
+    for (unsigned I = 0; I < NewElts; ++I) {
+      if (Mask[I] == UndefMaskElem)
+        continue;
+      unsigned Idx = Mask[I];
+      if (Idx >= NewElts)
+        Ops[I] = Input2.getOperand(Idx - NewElts);
+      else
+        Ops[I] = Input1.getOperand(Idx);
+      // Make the type of all elements the same as the element type.
+      if (Ops[I].getValueType().bitsGT(EltVT))
+        Ops[I] = DAG.getNode(ISD::TRUNCATE, DL, EltVT, Ops[I]);
+    }
+    return DAG.getBuildVector(NewVT, DL, Ops);
+  };
+
   // If Lo or Hi uses elements from at most two of the four input vectors, then
   // express it as a vector shuffle of those two inputs.  Otherwise extract the
   // input elements by hand and construct the Lo/Hi output using a BUILD_VECTOR.
-  SmallVector<int, 16> Ops;
+  SmallVector<int> OrigMask(N->getMask().begin(), N->getMask().end());
+  // Try to pack incoming shuffles/inputs.
+  auto &&TryPeekThroughShufflesInputs = [&Inputs, &NewVT, this, NewElts,
+                                         &DL](SmallVectorImpl<int> &Mask) {
+    // Check if all inputs are shuffles of the same operands or non-shuffles.
+    MapVector<std::pair<SDValue, SDValue>, SmallVector<unsigned>> ShufflesIdxs;
+    for (unsigned Idx = 0; Idx < array_lengthof(Inputs); ++Idx) {
+      SDValue Input = Inputs[Idx];
+      auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Input.getNode());
+      if (!Shuffle ||
+          Input.getOperand(0).getValueType() != Input.getValueType())
+        continue;
+      ShufflesIdxs[std::make_pair(Input.getOperand(0), Input.getOperand(1))]
+          .push_back(Idx);
+      ShufflesIdxs[std::make_pair(Input.getOperand(1), Input.getOperand(0))]
+          .push_back(Idx);
+    }
+    for (auto &P : ShufflesIdxs) {
+      if (P.second.size() < 2)
+        continue;
+      // Use shuffles operands instead of shuffles themselves.
+      // 1. Adjust mask.
+      for (int &Idx : Mask) {
+        if (Idx == UndefMaskElem)
+          continue;
+        unsigned SrcRegIdx = Idx / NewElts;
+        if (Inputs[SrcRegIdx].isUndef()) {
+          Idx = UndefMaskElem;
+          continue;
+        }
+        auto *Shuffle =
+            dyn_cast<ShuffleVectorSDNode>(Inputs[SrcRegIdx].getNode());
+        if (!Shuffle || !is_contained(P.second, SrcRegIdx))
+          continue;
+        int MaskElt = Shuffle->getMaskElt(Idx % NewElts);
+        if (MaskElt == UndefMaskElem) {
+          Idx = UndefMaskElem;
+          continue;
+        }
+        Idx = MaskElt % NewElts +
+              P.second[Shuffle->getOperand(MaskElt / NewElts) == P.first.first
+                           ? 0
+                           : 1] *
+                  NewElts;
+      }
+      // 2. Update inputs.
+      Inputs[P.second[0]] = P.first.first;
+      Inputs[P.second[1]] = P.first.second;
+      // Clear the pair data.
+      P.second.clear();
+      ShufflesIdxs[std::make_pair(P.first.second, P.first.first)].clear();
+    }
+    // Check if any concat_vectors can be simplified.
+    SmallBitVector UsedSubVector(2 * array_lengthof(Inputs));
+    for (int &Idx : Mask) {
+      if (Idx == UndefMaskElem)
+        continue;
+      unsigned SrcRegIdx = Idx / NewElts;
+      if (Inputs[SrcRegIdx].isUndef()) {
+        Idx = UndefMaskElem;
+        continue;
+      }
+      TargetLowering::LegalizeTypeAction TypeAction =
+          getTypeAction(Inputs[SrcRegIdx].getValueType());
+      if (Inputs[SrcRegIdx].getOpcode() == ISD::CONCAT_VECTORS &&
+          Inputs[SrcRegIdx].getNumOperands() == 2 &&
+          !Inputs[SrcRegIdx].getOperand(1).isUndef() &&
+          (TypeAction == TargetLowering::TypeLegal ||
+           TypeAction == TargetLowering::TypeWidenVector))
+        UsedSubVector.set(2 * SrcRegIdx + (Idx % NewElts) / (NewElts / 2));
+    }
+    if (UsedSubVector.count() > 1) {
+      SmallVector<SmallVector<std::pair<unsigned, int>, 2>> Pairs;
+      for (unsigned I = 0; I < array_lengthof(Inputs); ++I) {
+        if (UsedSubVector.test(2 * I) == UsedSubVector.test(2 * I + 1))
+          continue;
+        if (Pairs.empty() || Pairs.back().size() == 2)
+          Pairs.emplace_back();
+        if (UsedSubVector.test(2 * I)) {
+          Pairs.back().emplace_back(I, 0);
+        } else {
+          assert(UsedSubVector.test(2 * I + 1) &&
+                 "Expected to be used one of the subvectors.");
+          Pairs.back().emplace_back(I, 1);
+        }
+      }
+      if (!Pairs.empty() && Pairs.front().size() > 1) {
+        // Adjust mask.
+        for (int &Idx : Mask) {
+          if (Idx == UndefMaskElem)
+            continue;
+          unsigned SrcRegIdx = Idx / NewElts;
+          auto *It = find_if(
+              Pairs, [SrcRegIdx](ArrayRef<std::pair<unsigned, int>> Idxs) {
+                return Idxs.front().first == SrcRegIdx ||
+                       Idxs.back().first == SrcRegIdx;
+              });
+          if (It == Pairs.end())
+            continue;
+          Idx = It->front().first * NewElts + (Idx % NewElts) % (NewElts / 2) +
+                (SrcRegIdx == It->front().first ? 0 : (NewElts / 2));
+        }
+        // Adjust inputs.
+        for (ArrayRef<std::pair<unsigned, int>> Idxs : Pairs) {
+          Inputs[Idxs.front().first] = DAG.getNode(
+              ISD::CONCAT_VECTORS, DL,
+              Inputs[Idxs.front().first].getValueType(),
+              Inputs[Idxs.front().first].getOperand(Idxs.front().second),
+              Inputs[Idxs.back().first].getOperand(Idxs.back().second));
+        }
+      }
+    }
+    bool Changed;
+    do {
+      // Try to remove extra shuffles (except broadcasts) and shuffles with the
+      // reused operands.
+      Changed = false;
+      for (unsigned I = 0; I < array_lengthof(Inputs); ++I) {
+        auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Inputs[I].getNode());
+        if (!Shuffle)
+          continue;
+        if (Shuffle->getOperand(0).getValueType() != NewVT)
+          continue;
+        int Op = -1;
+        if (!Inputs[I].hasOneUse() && Shuffle->getOperand(1).isUndef() &&
+            !Shuffle->isSplat()) {
+          Op = 0;
+        } else if (!Inputs[I].hasOneUse() &&
+                   !Shuffle->getOperand(1).isUndef()) {
+          // Find the only used operand, if possible.
+          for (int &Idx : Mask) {
+            if (Idx == UndefMaskElem)
+              continue;
+            unsigned SrcRegIdx = Idx / NewElts;
+            if (SrcRegIdx != I)
+              continue;
+            int MaskElt = Shuffle->getMaskElt(Idx % NewElts);
+            if (MaskElt == UndefMaskElem) {
+              Idx = UndefMaskElem;
+              continue;
+            }
+            int OpIdx = MaskElt / NewElts;
+            if (Op == -1) {
+              Op = OpIdx;
+              continue;
+            }
+            if (Op != OpIdx) {
+              Op = -1;
+              break;
+            }
+          }
+        }
+        if (Op < 0) {
+          // Try to check if one of the shuffle operands is used already.
+          for (int OpIdx = 0; OpIdx < 2; ++OpIdx) {
+            if (Shuffle->getOperand(OpIdx).isUndef())
+              continue;
+            auto *It = find(Inputs, Shuffle->getOperand(OpIdx));
+            if (It == std::end(Inputs))
+              continue;
+            int FoundOp = std::distance(std::begin(Inputs), It);
+            // Found that operand is used already.
+            // 1. Fix the mask for the reused operand.
+            for (int &Idx : Mask) {
+              if (Idx == UndefMaskElem)
+                continue;
+              unsigned SrcRegIdx = Idx / NewElts;
+              if (SrcRegIdx != I)
+                continue;
+              int MaskElt = Shuffle->getMaskElt(Idx % NewElts);
+              if (MaskElt == UndefMaskElem) {
+                Idx = UndefMaskElem;
+                continue;
+              }
+              int MaskIdx = MaskElt / NewElts;
+              if (OpIdx == MaskIdx)
+                Idx = MaskElt % NewElts + FoundOp * NewElts;
+            }
+            // 2. Set Op to the unused OpIdx.
+            Op = (OpIdx + 1) % 2;
+            break;
+          }
+        }
+        if (Op >= 0) {
+          Changed = true;
+          Inputs[I] = Shuffle->getOperand(Op);
+          // Adjust mask.
+          for (int &Idx : Mask) {
+            if (Idx == UndefMaskElem)
+              continue;
+            unsigned SrcRegIdx = Idx / NewElts;
+            if (SrcRegIdx != I)
+              continue;
+            int MaskElt = Shuffle->getMaskElt(Idx % NewElts);
+            int OpIdx = MaskElt / NewElts;
+            if (OpIdx != Op)
+              continue;
+            Idx = MaskElt % NewElts + SrcRegIdx * NewElts;
+          }
+        }
+      }
+    } while (Changed);
+  };
+  TryPeekThroughShufflesInputs(OrigMask);
+  // Proces unique inputs.
+  auto &&MakeUniqueInputs = [&Inputs, &IsConstant,
+                             NewElts](SmallVectorImpl<int> &Mask) {
+    SetVector<SDValue> UniqueInputs;
+    SetVector<SDValue> UniqueConstantInputs;
+    for (unsigned I = 0; I < array_lengthof(Inputs); ++I) {
+      if (IsConstant(Inputs[I]))
+        UniqueConstantInputs.insert(Inputs[I]);
+      else if (!Inputs[I].isUndef())
+        UniqueInputs.insert(Inputs[I]);
+    }
+    // Adjust mask in case of reused inputs. Also, need to insert constant
+    // inputs at first, otherwise it affects the final outcome.
+    if (UniqueInputs.size() != array_lengthof(Inputs)) {
+      auto &&UniqueVec = UniqueInputs.takeVector();
+      auto &&UniqueConstantVec = UniqueConstantInputs.takeVector();
+      unsigned ConstNum = UniqueConstantVec.size();
+      for (int &Idx : Mask) {
+        if (Idx == UndefMaskElem)
+          continue;
+        unsigned SrcRegIdx = Idx / NewElts;
+        if (Inputs[SrcRegIdx].isUndef()) {
+          Idx = UndefMaskElem;
+          continue;
+        }
+        const auto It = find(UniqueConstantVec, Inputs[SrcRegIdx]);
+        if (It != UniqueConstantVec.end()) {
+          Idx = (Idx % NewElts) +
+                NewElts * std::distance(UniqueConstantVec.begin(), It);
+          assert(Idx >= 0 && "Expected defined mask idx.");
+          continue;
+        }
+        const auto RegIt = find(UniqueVec, Inputs[SrcRegIdx]);
+        assert(RegIt != UniqueVec.end() && "Cannot find non-const value.");
+        Idx = (Idx % NewElts) +
+              NewElts * (std::distance(UniqueVec.begin(), RegIt) + ConstNum);
+        assert(Idx >= 0 && "Expected defined mask idx.");
+      }
+      copy(UniqueConstantVec, std::begin(Inputs));
+      copy(UniqueVec, std::next(std::begin(Inputs), ConstNum));
+    }
+  };
+  MakeUniqueInputs(OrigMask);
+  SDValue OrigInputs[4];
+  copy(Inputs, std::begin(OrigInputs));
   for (unsigned High = 0; High < 2; ++High) {
     SDValue &Output = High ? Hi : Lo;
 
     // Build a shuffle mask for the output, discovering on the fly which
-    // input vectors to use as shuffle operands (recorded in InputUsed).
-    // If building a suitable shuffle vector proves too hard, then bail
-    // out with useBuildVector set.
-    unsigned InputUsed[2] = { -1U, -1U }; // Not yet discovered.
+    // input vectors to use as shuffle operands.
     unsigned FirstMaskIdx = High * NewElts;
-    bool useBuildVector = false;
-    for (unsigned MaskOffset = 0; MaskOffset < NewElts; ++MaskOffset) {
-      // The mask element.  This indexes into the input.
-      int Idx = N->getMaskElt(FirstMaskIdx + MaskOffset);
-
-      // The input vector this mask element indexes into.
-      unsigned Input = (unsigned)Idx / NewElts;
-
-      if (Input >= array_lengthof(Inputs)) {
-        // The mask element does not index into any input vector.
-        Ops.push_back(-1);
-        continue;
+    SmallVector<int> Mask(NewElts * array_lengthof(Inputs), UndefMaskElem);
+    copy(makeArrayRef(OrigMask).slice(FirstMaskIdx, NewElts), Mask.begin());
+    assert(!Output && "Expected default initialized initial value.");
+    TryPeekThroughShufflesInputs(Mask);
+    MakeUniqueInputs(Mask);
+    SDValue TmpInputs[4];
+    copy(Inputs, std::begin(TmpInputs));
+    // Track changes in the output registers.
+    int UsedIdx = -1;
+    bool SecondIteration = false;
+    auto &&AccumulateResults = [&UsedIdx, &SecondIteration](unsigned Idx) {
+      if (UsedIdx < 0) {
+        UsedIdx = Idx;
+        return false;
       }
-
-      // Turn the index into an offset from the start of the input vector.
-      Idx -= Input * NewElts;
-
-      // Find or create a shuffle vector operand to hold this input.
-      unsigned OpNo;
-      for (OpNo = 0; OpNo < array_lengthof(InputUsed); ++OpNo) {
-        if (InputUsed[OpNo] == Input) {
-          // This input vector is already an operand.
-          break;
-        } else if (InputUsed[OpNo] == -1U) {
-          // Create a new operand for this input vector.
-          InputUsed[OpNo] = Input;
-          break;
-        }
-      }
-
-      if (OpNo >= array_lengthof(InputUsed)) {
-        // More than two input vectors used!  Give up on trying to create a
-        // shuffle vector.  Insert all elements into a BUILD_VECTOR instead.
-        useBuildVector = true;
-        break;
-      }
-
-      // Add the mask index for the new shuffle vector.
-      Ops.push_back(Idx + OpNo * NewElts);
-    }
-
-    if (useBuildVector) {
-      EVT EltVT = NewVT.getVectorElementType();
-      SmallVector<SDValue, 16> SVOps;
-
-      // Extract the input elements by hand.
-      for (unsigned MaskOffset = 0; MaskOffset < NewElts; ++MaskOffset) {
-        // The mask element.  This indexes into the input.
-        int Idx = N->getMaskElt(FirstMaskIdx + MaskOffset);
-
-        // The input vector this mask element indexes into.
-        unsigned Input = (unsigned)Idx / NewElts;
-
-        if (Input >= array_lengthof(Inputs)) {
-          // The mask element is "undef" or indexes off the end of the input.
-          SVOps.push_back(DAG.getUNDEF(EltVT));
-          continue;
-        }
-
-        // Turn the index into an offset from the start of the input vector.
-        Idx -= Input * NewElts;
-
-        // Extract the vector element by hand.
-        SVOps.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT,
-                                    Inputs[Input],
-                                    DAG.getVectorIdxConstant(Idx, dl)));
-      }
-
-      // Construct the Lo/Hi output using a BUILD_VECTOR.
-      Output = DAG.getBuildVector(NewVT, dl, SVOps);
-    } else if (InputUsed[0] == -1U) {
-      // No input vectors were used!  The result is undefined.
-      Output = DAG.getUNDEF(NewVT);
-    } else {
-      SDValue Op0 = Inputs[InputUsed[0]];
-      // If only one input was used, use an undefined vector for the other.
-      SDValue Op1 = InputUsed[1] == -1U ?
-        DAG.getUNDEF(NewVT) : Inputs[InputUsed[1]];
-      // At least one input vector was used.  Create a new shuffle vector.
-      Output =  DAG.getVectorShuffle(NewVT, dl, Op0, Op1, Ops);
-    }
-
-    Ops.clear();
+      if (UsedIdx >= 0 && static_cast<unsigned>(UsedIdx) == Idx)
+        SecondIteration = true;
+      return SecondIteration;
+    };
+    processShuffleMasks(
+        Mask, array_lengthof(Inputs), array_lengthof(Inputs),
+        /*NumOfUsedRegs=*/1,
+        [&Output, &DAG = DAG, NewVT]() { Output = DAG.getUNDEF(NewVT); },
+        [&Output, &DAG = DAG, NewVT, &DL, &Inputs,
+         &BuildVector](ArrayRef<int> Mask, unsigned Idx) {
+          if (Inputs[Idx]->getOpcode() == ISD::BUILD_VECTOR)
+            Output = BuildVector(Inputs[Idx], Inputs[Idx], Mask);
+          else
+            Output = DAG.getVectorShuffle(NewVT, DL, Inputs[Idx],
+                                          DAG.getUNDEF(NewVT), Mask);
+          Inputs[Idx] = Output;
+        },
+        [&AccumulateResults, &Output, &DAG = DAG, NewVT, &DL, &Inputs,
+         &TmpInputs,
+         &BuildVector](ArrayRef<int> Mask, unsigned Idx1, unsigned Idx2) {
+          if (AccumulateResults(Idx1)) {
+            if (Inputs[Idx1]->getOpcode() == ISD::BUILD_VECTOR &&
+                Inputs[Idx2]->getOpcode() == ISD::BUILD_VECTOR)
+              Output = BuildVector(Inputs[Idx1], Inputs[Idx2], Mask);
+            else
+              Output = DAG.getVectorShuffle(NewVT, DL, Inputs[Idx1],
+                                            Inputs[Idx2], Mask);
+          } else {
+            if (TmpInputs[Idx1]->getOpcode() == ISD::BUILD_VECTOR &&
+                TmpInputs[Idx2]->getOpcode() == ISD::BUILD_VECTOR)
+              Output = BuildVector(TmpInputs[Idx1], TmpInputs[Idx2], Mask);
+            else
+              Output = DAG.getVectorShuffle(NewVT, DL, TmpInputs[Idx1],
+                                            TmpInputs[Idx2], Mask);
+          }
+          Inputs[Idx1] = Output;
+        });
+    copy(OrigInputs, std::begin(Inputs));
   }
 }
 

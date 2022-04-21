@@ -107,6 +107,27 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   llvm_unreachable("Invalid machine function property");
 }
 
+void setUnsafeStackSize(const Function &F, MachineFrameInfo &FrameInfo) {
+  if (!F.hasFnAttribute(Attribute::SafeStack))
+    return;
+
+  auto *Existing =
+      dyn_cast_or_null<MDTuple>(F.getMetadata(LLVMContext::MD_annotation));
+
+  if (!Existing || Existing->getNumOperands() != 2)
+    return;
+
+  auto *MetadataName = "unsafe-stack-size";
+  if (auto &N = Existing->getOperand(0)) {
+    if (cast<MDString>(N.get())->getString() == MetadataName) {
+      if (auto &Op = Existing->getOperand(1)) {
+        auto Val = mdconst::extract<ConstantInt>(Op)->getZExtValue();
+        FrameInfo.setUnsafeStackSize(Val);
+      }
+    }
+  }
+}
+
 // Pin the vtable to this file.
 void MachineFunction::Delegate::anchor() {}
 
@@ -174,6 +195,8 @@ void MachineFunction::init() {
       getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
       /*ForcedRealign=*/CanRealignSP &&
           F.hasFnAttribute(Attribute::StackAlignment));
+
+  setUnsafeStackSize(F, *FrameInfo);
 
   if (F.hasFnAttribute(Attribute::StackAlignment))
     FrameInfo->ensureMaxAlignment(*F.getFnStackAlign());
