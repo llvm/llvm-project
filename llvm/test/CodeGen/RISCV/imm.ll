@@ -354,8 +354,7 @@ define i64 @imm64_1() nounwind {
 ;
 ; RV64IZBS-LABEL: imm64_1:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    li a0, 1
-; RV64IZBS-NEXT:    slli a0, a0, 31
+; RV64IZBS-NEXT:    bseti a0, zero, 31
 ; RV64IZBS-NEXT:    ret
   ret i64 2147483648 ; 0x8000_0000
 }
@@ -420,8 +419,7 @@ define i64 @imm64_3() nounwind {
 ;
 ; RV64IZBS-LABEL: imm64_3:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    li a0, 1
-; RV64IZBS-NEXT:    slli a0, a0, 32
+; RV64IZBS-NEXT:    bseti a0, zero, 32
 ; RV64IZBS-NEXT:    ret
   ret i64 4294967296 ; 0x1_0000_0000
 }
@@ -453,8 +451,7 @@ define i64 @imm64_4() nounwind {
 ;
 ; RV64IZBS-LABEL: imm64_4:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    li a0, -1
-; RV64IZBS-NEXT:    slli a0, a0, 63
+; RV64IZBS-NEXT:    bseti a0, zero, 63
 ; RV64IZBS-NEXT:    ret
   ret i64 9223372036854775808 ; 0x8000_0000_0000_0000
 }
@@ -486,8 +483,7 @@ define i64 @imm64_5() nounwind {
 ;
 ; RV64IZBS-LABEL: imm64_5:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    li a0, -1
-; RV64IZBS-NEXT:    slli a0, a0, 63
+; RV64IZBS-NEXT:    bseti a0, zero, 63
 ; RV64IZBS-NEXT:    ret
   ret i64 -9223372036854775808 ; 0x8000_0000_0000_0000
 }
