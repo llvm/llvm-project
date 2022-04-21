@@ -240,6 +240,7 @@ public:
   /// Takes body of another region (that region will have no body after this
   /// operation completes).  The current body of this region is cleared.
   void takeBody(Region &other) {
+    dropAllReferences();
     blocks.clear();
     blocks.splice(blocks.end(), other.getBlocks());
   }
