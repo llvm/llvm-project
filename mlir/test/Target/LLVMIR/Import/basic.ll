@@ -572,3 +572,14 @@ define void @insert_extract_value_array([4 x [4 x i8]] %x1) {
   ret void
 }
 
+; Shufflevector
+; CHECK-LABEL: llvm.func @shuffle_vec
+define <4 x half> @shuffle_vec(<4 x half>* %arg0, <4 x half>* %arg1) {
+  ; CHECK: %[[V0:.+]] = llvm.load %{{.+}} : !llvm.ptr<vector<4xf16>>
+  %val0 = load <4 x half>, <4 x half>* %arg0
+  ; CHECK: %[[V1:.+]] = llvm.load %{{.+}} : !llvm.ptr<vector<4xf16>>
+  %val1 = load <4 x half>, <4 x half>* %arg1
+  ; CHECK: llvm.shufflevector %[[V0]], %[[V1]] [2 : i32, 3 : i32, -1 : i32, -1 : i32] : vector<4xf16>, vector<4xf16>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  ret <4 x half> %shuffle
+}

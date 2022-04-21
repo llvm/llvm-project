@@ -618,7 +618,7 @@ static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
       // FIXME: vaarg
       // FIXME: extractelement
       // FIXME: insertelement
-      // FIXME: shufflevector
+      // ShuffleVector is handled specially.
       // InsertValue is handled specially.
       // ExtractValue is handled specially.
       // FIXME: landingpad
@@ -1064,6 +1064,20 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     ArrayAttr indices = b.getI32ArrayAttr(idxValues);
 
     instMap[inst] = b.create<ExtractValueOp>(loc, type, aggOperand, indices);
+    return success();
+  }
+  case llvm::Instruction::ShuffleVector: {
+    auto *svInst = cast<llvm::ShuffleVectorInst>(inst);
+    Value vec1 = processValue(svInst->getOperand(0));
+    if (!vec1)
+      return failure();
+    Value vec2 = processValue(svInst->getOperand(1));
+    if (!vec2)
+      return failure();
+
+    ArrayAttr mask = b.getI32ArrayAttr(svInst->getShuffleMask());
+
+    instMap[inst] = b.create<ShuffleVectorOp>(loc, vec1, vec2, mask);
     return success();
   }
   }
