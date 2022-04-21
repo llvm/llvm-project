@@ -3527,7 +3527,7 @@ bool CombinerHelper::matchLoadOrCombine(
   // Load must be allowed and fast on the target.
   LLVMContext &C = MF.getFunction().getContext();
   auto &DL = MF.getDataLayout();
-  bool Fast = false;
+  unsigned Fast = 0;
   if (!getTargetLowering().allowsMemoryAccess(C, DL, Ty, *NewMMO, &Fast) ||
       !Fast)
     return false;
@@ -3732,7 +3732,7 @@ bool CombinerHelper::matchTruncStoreMerge(MachineInstr &MI,
   const auto &DL = LastStore.getMF()->getDataLayout();
   auto &C = LastStore.getMF()->getFunction().getContext();
   // Check that a store of the wide type is both allowed and fast on the target
-  bool Fast = false;
+  unsigned Fast = 0;
   bool Allowed = getTargetLowering().allowsMemoryAccess(
       C, DL, WideStoreTy, LowestIdxStore->getMMO(), &Fast);
   if (!Allowed || !Fast)

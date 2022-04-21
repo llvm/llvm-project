@@ -2057,7 +2057,7 @@ MVT AArch64TargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
 
 bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
-    bool *Fast) const {
+    unsigned *Fast) const {
   if (Subtarget->requiresStrictAlign())
     return false;
 
@@ -2082,7 +2082,7 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
 // Same as above but handling LLTs instead.
 bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
     LLT Ty, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
-    bool *Fast) const {
+    unsigned *Fast) const {
   if (Subtarget->requiresStrictAlign())
     return false;
 
@@ -14329,7 +14329,7 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
   auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
     if (Op.isAligned(AlignCheck))
       return true;
-    bool Fast;
+    unsigned Fast;
     return allowsMisalignedMemoryAccesses(VT, 0, Align(1),
                                           MachineMemOperand::MONone, &Fast) &&
            Fast;
@@ -14359,7 +14359,7 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
   auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
     if (Op.isAligned(AlignCheck))
       return true;
-    bool Fast;
+    unsigned Fast;
     return allowsMisalignedMemoryAccesses(VT, 0, Align(1),
                                           MachineMemOperand::MONone, &Fast) &&
            Fast;
