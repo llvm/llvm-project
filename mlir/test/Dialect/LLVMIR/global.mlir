@@ -63,7 +63,7 @@ llvm.mlir.global external @has_thr_local(42 : i64) {thr_local} : i64
 llvm.mlir.global external @has_dso_local(42 : i64) {dso_local} : i64
 
 // CHECK-LABEL: references
-func @references() {
+func.func @references() {
   // CHECK: llvm.mlir.addressof @global : !llvm.ptr<i64>
   %0 = llvm.mlir.addressof @global : !llvm.ptr<i64>
 
@@ -109,7 +109,7 @@ llvm.mlir.global internal constant @constant(37.0) : !llvm.label
 
 // -----
 
-func @foo() {
+func.func @foo() {
   // expected-error @+1 {{must appear at the module level}}
   llvm.mlir.global internal @bar(42) : i32
 
@@ -135,14 +135,14 @@ llvm.mlir.global internal @more_than_one_type(0) : i64, i32
 
 llvm.mlir.global internal @foo(0: i32) : i32
 
-func @bar() {
+func.func @bar() {
   // expected-error @+2{{expected ':'}}
   llvm.mlir.addressof @foo
 }
 
 // -----
 
-func @foo() {
+func.func @foo() {
   // The attribute parser will consume the first colon-type, so we put two of
   // them to trigger the attribute type mismatch error.
   // expected-error @+1 {{invalid kind of attribute specified}}
@@ -151,7 +151,7 @@ func @foo() {
 
 // -----
 
-func @foo() {
+func.func @foo() {
   // expected-error @+1 {{must reference a global defined by 'llvm.mlir.global'}}
   llvm.mlir.addressof @foo : !llvm.ptr<func<void ()>>
 }
@@ -160,7 +160,7 @@ func @foo() {
 
 llvm.mlir.global internal @foo(0: i32) : i32
 
-func @bar() {
+func.func @bar() {
   // expected-error @+1 {{the type must be a pointer to the type of the referenced global}}
   llvm.mlir.addressof @foo : !llvm.ptr<i64>
 }
@@ -200,7 +200,7 @@ llvm.mlir.global internal @g(43 : i64) : i64 {
 // -----
 
 llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
-func @mismatch_addr_space_implicit_global() {
+func.func @mismatch_addr_space_implicit_global() {
   // expected-error @+1 {{op the type must be a pointer to the type of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<i64>
 }
@@ -208,7 +208,7 @@ func @mismatch_addr_space_implicit_global() {
 // -----
 
 llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
-func @mismatch_addr_space() {
+func.func @mismatch_addr_space() {
   // expected-error @+1 {{op the type must be a pointer to the type of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<i64, 4>
 }

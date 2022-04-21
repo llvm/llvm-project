@@ -5,7 +5,7 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
 // RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=6 unroll-up-to-factor=true' | FileCheck %s --check-prefix UNROLL-UP-TO
 
-func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3: memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
@@ -83,7 +83,7 @@ func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //  UNROLL-BY-3-NEXT:  }
 //  UNROLL-BY-3-NEXT:  return
 
-func @dynamic_loop_unroll_outer_by_2(
+func.func @dynamic_loop_unroll_outer_by_2(
   %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index,
   %arg5 : index, %arg6: memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
@@ -118,7 +118,7 @@ func @dynamic_loop_unroll_outer_by_2(
 //  UNROLL-OUTER-BY-2-NEXT:  }
 //  UNROLL-OUTER-BY-2-NEXT:  return
 
-func @dynamic_loop_unroll_inner_by_2(
+func.func @dynamic_loop_unroll_inner_by_2(
   %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index,
   %arg5 : index, %arg6: memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
@@ -154,7 +154,7 @@ func @dynamic_loop_unroll_inner_by_2(
 
 // Test that no epilogue clean-up loop is generated because the trip count is
 // a multiple of the unroll factor.
-func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
+func.func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   %lb = arith.constant 0 : index
   %ub = arith.constant 20 : index
@@ -186,7 +186,7 @@ func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
 
 // Test that epilogue clean up loop is generated (trip count is not
 // a multiple of unroll factor).
-func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {
+func.func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   %lb = arith.constant 0 : index
   %ub = arith.constant 20 : index
@@ -223,7 +223,7 @@ func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {
 
 // Test that the single iteration epilogue loop body is promoted to the loops
 // containing block.
-func @static_loop_unroll_by_3_promote_epilogue(%arg0 : memref<?xf32>) {
+func.func @static_loop_unroll_by_3_promote_epilogue(%arg0 : memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   %lb = arith.constant 0 : index
   %ub = arith.constant 10 : index
@@ -256,7 +256,7 @@ func @static_loop_unroll_by_3_promote_epilogue(%arg0 : memref<?xf32>) {
 //  UNROLL-BY-3-NEXT:  return
 
 // Test unroll-up-to functionality.
-func @static_loop_unroll_up_to_factor(%arg0 : memref<?xf32>) {
+func.func @static_loop_unroll_up_to_factor(%arg0 : memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   %lb = arith.constant 0 : index
   %ub = arith.constant 2 : index
