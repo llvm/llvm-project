@@ -382,6 +382,10 @@ static ParseResult parseSynchronizationHint(OpAsmParser &parser,
                                             IntegerAttr &hintAttr) {
   StringRef hintKeyword;
   int64_t hint = 0;
+  if (succeeded(parser.parseOptionalKeyword("none"))) {
+    hintAttr = IntegerAttr::get(parser.getBuilder().getI64Type(), 0);
+    return success();
+  }
   do {
     if (failed(parser.parseKeyword(&hintKeyword)))
       return failure();
@@ -406,8 +410,10 @@ static void printSynchronizationHint(OpAsmPrinter &p, Operation *op,
                                      IntegerAttr hintAttr) {
   int64_t hint = hintAttr.getInt();
 
-  if (hint == 0)
+  if (hint == 0) {
+    p << "none";
     return;
+  }
 
   // Helper function to get n-th bit from the right end of `value`
   auto bitn = [](int value, int n) -> bool { return value & (1 << n); };
@@ -864,7 +870,7 @@ LogicalResult AtomicUpdateOp::verify() {
                      "element type is the same as that of the region argument");
   }
 
-  return success();
+  return verifySynchronizationHint(*this, hint_val());
 }
 
 LogicalResult AtomicUpdateOp::verifyRegions() {
@@ -915,6 +921,10 @@ AtomicUpdateOp AtomicCaptureOp::getAtomicUpdateOp() {
   return dyn_cast<AtomicUpdateOp>(getSecondOp());
 }
 
+LogicalResult AtomicCaptureOp::verify() {
+  return verifySynchronizationHint(*this, hint_val());
+}
+
 LogicalResult AtomicCaptureOp::verifyRegions() {
   Block::OpListType &ops = region().front().getOperations();
   if (ops.size() != 3)
@@ -949,6 +959,10 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
     return firstReadStmt.emitError()
            << "captured variable in omp.atomic.read must be updated in "
               "second operation";
+
+  if (getFirstOp()->getAttr("hint_val") || getSecondOp()->getAttr("hint_val"))
+    return emitOpError(
+        "operations inside capture region must not have hint clause");
   return success();
 }
 

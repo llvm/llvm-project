@@ -1,5 +1,5 @@
 ; Fourth example from Doc/Coroutines.rst (coroutine promise)
-; RUN: opt < %s -passes='default<O2>' -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s
 
 define i8* @f(i32 %n) "coroutine.presplit"="0" {
 entry:

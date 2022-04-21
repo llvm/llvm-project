@@ -1,0 +1,108 @@
+//=-- LoongArchInstrInfoF.td - Single-Precision Float instr --*- tablegen -*-=//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file describes the baisc single-precision floating-point instructions.
+//
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasBasicF] in {
+
+// Arithmetic Operation Instructions
+def FADD_S : FP_ALU_3R<0b00000001000000001, "fadd.s", FPR32>;
+def FSUB_S : FP_ALU_3R<0b00000001000000101, "fsub.s", FPR32>;
+def FMUL_S : FP_ALU_3R<0b00000001000001001, "fmul.s", FPR32>;
+def FDIV_S : FP_ALU_3R<0b00000001000001101, "fdiv.s", FPR32>;
+def FMADD_S  : FP_ALU_4R<0b000010000001, "fmadd.s", FPR32>;
+def FMSUB_S  : FP_ALU_4R<0b000010000101, "fmsub.s", FPR32>;
+def FNMADD_S : FP_ALU_4R<0b000010001001, "fnmadd.s", FPR32>;
+def FNMSUB_S : FP_ALU_4R<0b000010001101, "fnmsub.s", FPR32>;
+def FMAX_S  : FP_ALU_3R<0b00000001000010001, "fmax.s", FPR32>;
+def FMIN_S  : FP_ALU_3R<0b00000001000010101, "fmin.s", FPR32>;
+def FMAXA_S : FP_ALU_3R<0b00000001000011001, "fmaxa.s", FPR32>;
+def FMINA_S : FP_ALU_3R<0b00000001000011101, "fmina.s", FPR32>;
+def FABS_S   : FP_ALU_2R<0b0000000100010100000001, "fabs.s", FPR32>;
+def FNEG_S   : FP_ALU_2R<0b0000000100010100000101, "fneg.s", FPR32>;
+def FSQRT_S  : FP_ALU_2R<0b0000000100010100010001, "fsqrt.s", FPR32>;
+def FRECIP_S : FP_ALU_2R<0b0000000100010100010101, "frecip.s", FPR32>;
+def FRSQRT_S : FP_ALU_2R<0b0000000100010100011001, "frsqrt.s", FPR32>;
+def FSCALEB_S : FP_ALU_3R<0b00000001000100001, "fscaleb.s", FPR32>;
+def FLOGB_S   : FP_ALU_2R<0b0000000100010100001001, "flogb.s", FPR32>;
+def FCOPYSIGN_S : FP_ALU_3R<0b00000001000100101, "fcopysign.s", FPR32>;
+def FCLASS_S  : FP_ALU_2R<0b0000000100010100001101, "fclass.s", FPR32>;
+
+
+// Comparison Instructions
+def FCMP_CAF_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CAF, "fcmp.caf.s", FPR32>;
+def FCMP_CUN_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CUN, "fcmp.cun.s", FPR32>;
+def FCMP_CEQ_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CEQ, "fcmp.ceq.s", FPR32>;
+def FCMP_CUEQ_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CUEQ, "fcmp.cueq.s", FPR32>;
+def FCMP_CLT_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CLT, "fcmp.clt.s", FPR32>;
+def FCMP_CULT_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CULT, "fcmp.cult.s", FPR32>;
+def FCMP_CLE_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CLE, "fcmp.cle.s", FPR32>;
+def FCMP_CULE_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CULE, "fcmp.cule.s", FPR32>;
+def FCMP_CNE_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CNE, "fcmp.cne.s", FPR32>;
+def FCMP_COR_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_COR, "fcmp.cor.s", FPR32>;
+def FCMP_CUNE_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_CUNE, "fcmp.cune.s", FPR32>;
+def FCMP_SAF_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SAF, "fcmp.saf.s", FPR32>;
+def FCMP_SUN_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SUN, "fcmp.sun.s", FPR32>;
+def FCMP_SEQ_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SEQ, "fcmp.seq.s", FPR32>;
+def FCMP_SUEQ_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SUEQ, "fcmp.sueq.s", FPR32>;
+def FCMP_SLT_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SLT, "fcmp.slt.s", FPR32>;
+def FCMP_SULT_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SULT, "fcmp.sult.s", FPR32>;
+def FCMP_SLE_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SLE, "fcmp.sle.s", FPR32>;
+def FCMP_SULE_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SULE, "fcmp.sule.s", FPR32>;
+def FCMP_SNE_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SNE, "fcmp.sne.s", FPR32>;
+def FCMP_SOR_S  : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SOR, "fcmp.sor.s", FPR32>;
+def FCMP_SUNE_S : FP_CMP<FPCMP_OPC_S, FPCMP_COND_SUNE, "fcmp.sune.s", FPR32>;
+
+// Conversion Instructions
+def FFINT_S_W    : FP_CONV<0b0000000100011101000100, "ffint.s.w", FPR32, FPR32>;
+def FTINT_W_S    : FP_CONV<0b0000000100011011000001, "ftint.w.s", FPR32, FPR32>;
+def FTINTRM_W_S  : FP_CONV<0b0000000100011010000001, "ftintrm.w.s", FPR32,
+                           FPR32>;
+def FTINTRP_W_S  : FP_CONV<0b0000000100011010010001, "ftintrp.w.s", FPR32,
+                           FPR32>;
+def FTINTRZ_W_S  : FP_CONV<0b0000000100011010100001, "ftintrz.w.s", FPR32,
+                           FPR32>;
+def FTINTRNE_W_S : FP_CONV<0b0000000100011010110001, "ftintrne.w.s", FPR32,
+                           FPR32>;
+def FRINT_S      : FP_CONV<0b0000000100011110010001, "frint.s", FPR32, FPR32>;
+
+// Move Instructions
+def FSEL_S : FP_SEL<0b00001101000000, "fsel", FPR32>;
+def FMOV_S     : FP_MOV<0b0000000100010100100101, "fmov.s", FPR32, FPR32>;
+def MOVGR2FR_W : FP_MOV<0b0000000100010100101001, "movgr2fr.w", FPR32, GPR>;
+def MOVFR2GR_S : FP_MOV<0b0000000100010100101101, "movfr2gr.s", GPR, FPR32>;
+def MOVGR2FCSR : FP_MOV<0b0000000100010100110000, "movgr2fcsr", FCSR, GPR>;
+def MOVFCSR2GR : FP_MOV<0b0000000100010100110010, "movfcsr2gr", GPR, FCSR>;
+def MOVFR2CF_S : FP_MOV<0b0000000100010100110100, "movfr2cf", CFR, FPR32>;
+def MOVCF2FR_S : FP_MOV<0b0000000100010100110101, "movcf2fr", FPR32, CFR>;
+def MOVGR2CF   : FP_MOV<0b0000000100010100110110, "movgr2cf", CFR, GPR>;
+def MOVCF2GR   : FP_MOV<0b0000000100010100110111, "movcf2gr", GPR, CFR>;
+
+// Branch Instructions
+def BCEQZ : FP_BRANCH<0b01001000, "bceqz">;
+def BCNEZ : FP_BRANCH<0b01001001, "bcnez">;
+
+// Common Memory Access Instructions
+def FLD_S : FP_LOAD_2RI12<0b0010101100, "fld.s", FPR32>;
+def FST_S : FP_STORE_2RI12<0b0010101101, "fst.s", FPR32>;
+def FLDX_S : FP_LOAD_3R<0b00111000001100000, "fldx.s", FPR32>;
+def FSTX_S : FP_STORE_3R<0b00111000001110000, "fstx.s", FPR32>;
+
+// Bound Check Memory Access Instructions
+def FLDGT_S : FP_LOAD_3R<0b00111000011101000, "fldgt.s", FPR32>;
+def FLDLE_S : FP_LOAD_3R<0b00111000011101010, "fldle.s", FPR32>;
+def FSTGT_S : FP_STORE_3R<0b00111000011101100, "fstgt.s", FPR32>;
+def FSTLE_S : FP_STORE_3R<0b00111000011101110, "fstle.s", FPR32>;
+
+} // Predicates = [HasBasicF]
