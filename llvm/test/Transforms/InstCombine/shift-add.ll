@@ -174,7 +174,8 @@ define i32 @shl_add_nsw(i32 %x) {
 
 define i32 @shl_nsw_add_negative(i32 %x) {
 ; CHECK-LABEL: @shl_nsw_add_negative(
-; CHECK-NEXT:    [[R:%.*]] = shl i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 2, [[A]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, -1
@@ -182,14 +183,11 @@ define i32 @shl_nsw_add_negative(i32 %x) {
   ret i32 %r
 }
 
-; vectors and extra uses are allowed
-; nuw propagates to the new shift
-
 define <2 x i8> @shl_nuw_add_negative_splat_uses(<2 x i8> %x, <2 x i8>* %p) {
 ; CHECK-LABEL: @shl_nuw_add_negative_splat_uses(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -2, i8 -2>
 ; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> <i8 3, i8 3>, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> <i8 12, i8 12>, [[A]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -2, i8 -2>
@@ -197,8 +195,6 @@ define <2 x i8> @shl_nuw_add_negative_splat_uses(<2 x i8> %x, <2 x i8>* %p) {
   %r = shl nuw <2 x i8> <i8 12, i8 12>, %a
   ret <2 x i8> %r
 }
-
-; negative test - shift constant must have enough trailing zeros to allow the pre-shift
 
 define i32 @shl_nsw_add_negative_invalid_constant(i32 %x) {
 ; CHECK-LABEL: @shl_nsw_add_negative_invalid_constant(
@@ -210,8 +206,6 @@ define i32 @shl_nsw_add_negative_invalid_constant(i32 %x) {
   %r = shl nsw i32 2, %a
   ret i32 %r
 }
-
-; negative test - the offset constant must be negative
 
 define i32 @shl_nsw_add_positive_invalid_constant(i32 %x) {
 ; CHECK-LABEL: @shl_nsw_add_positive_invalid_constant(
