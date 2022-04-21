@@ -260,8 +260,6 @@ define void @fetch_and_add(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldaxp x9, x8, [x0]
 ; CHECK-NEXT:    adds x10, x9, x2
-; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    cmp w11, #1
 ; CHECK-NEXT:    adcs x11, x8, x3
 ; CHECK-NEXT:    stlxp w12, x10, x11, [x0]
 ; CHECK-NEXT:    cbnz w12, .LBB6_1
@@ -283,8 +281,6 @@ define void @fetch_and_sub(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldaxp x9, x8, [x0]
 ; CHECK-NEXT:    subs x10, x9, x2
-; CHECK-NEXT:    cset w11, lo
-; CHECK-NEXT:    cmp w11, #1
 ; CHECK-NEXT:    sbcs x11, x8, x3
 ; CHECK-NEXT:    stlxp w12, x10, x11, [x0]
 ; CHECK-NEXT:    cbnz w12, .LBB7_1

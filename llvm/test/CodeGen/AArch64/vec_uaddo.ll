@@ -277,13 +277,9 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
 ; CHECK-LABEL: uaddo_v2i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x2, x6
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    adcs x9, x3, x7
 ; CHECK-NEXT:    cset w10, hs
 ; CHECK-NEXT:    adds x11, x0, x4
-; CHECK-NEXT:    cset w12, hs
-; CHECK-NEXT:    cmp w12, #1
 ; CHECK-NEXT:    adcs x12, x1, x5
 ; CHECK-NEXT:    cset w13, hs
 ; CHECK-NEXT:    fmov s0, w13

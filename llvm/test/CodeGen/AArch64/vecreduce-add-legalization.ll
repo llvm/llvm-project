@@ -149,8 +149,6 @@ define i128 @test_v2i128(<2 x i128> %a) nounwind {
 ; CHECK-LABEL: test_v2i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    adcs x1, x1, x3
 ; CHECK-NEXT:    ret
   %b = call i128 @llvm.vector.reduce.add.v2i128(<2 x i128> %a)

@@ -6,27 +6,22 @@
 define void @f(i256* nocapture %a, i256* nocapture %b, i256* nocapture %cc, i256* nocapture %dd) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp x8, x10, [x2]
-; CHECK-NEXT:    ldp x9, x11, [x3]
-; CHECK-NEXT:    ldp x12, x13, [x2, #16]
-; CHECK-NEXT:    adds x8, x8, x9
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    cmp w9, #1
-; CHECK-NEXT:    adcs x10, x10, x11
-; CHECK-NEXT:    orr x14, x13, #0x100
-; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    cmp w11, #1
-; CHECK-NEXT:    ldp x9, x11, [x3, #16]
-; CHECK-NEXT:    stp x8, x10, [x0]
-; CHECK-NEXT:    adcs x9, x12, x9
-; CHECK-NEXT:    cset w12, hs
-; CHECK-NEXT:    cmp w12, #1
-; CHECK-NEXT:    adcs x13, x13, x11
-; CHECK-NEXT:    cmp w12, #1
-; CHECK-NEXT:    adcs x11, x14, x11
-; CHECK-NEXT:    stp x9, x13, [x0, #16]
-; CHECK-NEXT:    stp x8, x10, [x1]
-; CHECK-NEXT:    stp x9, x11, [x1, #16]
+; CHECK-NEXT:    ldp x9, x8, [x2]
+; CHECK-NEXT:    ldp x11, x10, [x3]
+; CHECK-NEXT:    adds x9, x9, x11
+; CHECK-NEXT:    ldp x12, x11, [x2, #16]
+; CHECK-NEXT:    adcs x8, x8, x10
+; CHECK-NEXT:    ldp x13, x10, [x3, #16]
+; CHECK-NEXT:    adcs x12, x12, x13
+; CHECK-NEXT:    mrs x13, NZCV
+; CHECK-NEXT:    adcs x14, x11, x10
+; CHECK-NEXT:    orr x11, x11, #0x100
+; CHECK-NEXT:    msr NZCV, x13
+; CHECK-NEXT:    stp x9, x8, [x0]
+; CHECK-NEXT:    adcs x10, x11, x10
+; CHECK-NEXT:    stp x12, x14, [x0, #16]
+; CHECK-NEXT:    stp x9, x8, [x1]
+; CHECK-NEXT:    stp x12, x10, [x1, #16]
 ; CHECK-NEXT:    ret
 entry:
   %c = load i256, i256* %cc
