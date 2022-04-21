@@ -6809,6 +6809,12 @@ bool CodeGenModule::stopAutoInit() {
 
 void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                                     const Decl *D) const {
-  OS << (isa<VarDecl>(D) ? "__static__" : ".anon.")
-     << getContext().getCUIDHash();
+  StringRef Tag;
+  // ptxas does not allow '.' in symbol names. On the other hand, HIP prefers
+  // postfix beginning with '.' since the symbol name can be demangled.
+  if (LangOpts.HIP)
+    Tag = (isa<VarDecl>(D) ? ".static." : ".intern.");
+  else
+    Tag = (isa<VarDecl>(D) ? "__static__" : "__intern__");
+  OS << Tag << getContext().getCUIDHash();
 }

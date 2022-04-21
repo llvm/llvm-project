@@ -40,6 +40,11 @@
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.host
 // RUN: cat %t.host | FileCheck -check-prefix=HOST-NEG %s
 
+// Check postfix for CUDA.
+
+// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx -fcuda-is-device -cuid=abc \
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - %s | FileCheck \
+// RUN:   -check-prefixes=CUDA %s
 
 #include "Inputs/cuda.h"
 
@@ -55,11 +60,12 @@
 // INT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x\00"
 
 // Test externalized static device variables
-// EXT-DEV-DAG: @_ZL1x__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
-// EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x__static__[[HASH:.*]]\00"
+// EXT-DEV-DAG: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
+// EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH:.*]]\00"
+// CUDA-DAG: @_ZL1x__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
 
-// POSTFIX: @_ZL1x__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
-// POSTFIX: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x__static__[[HASH]]\00"
+// POSTFIX: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
+// POSTFIX: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH]]\00"
 
 static __device__ int x;
 
@@ -73,8 +79,8 @@ static __device__ int x2;
 // INT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y\00"
 
 // Test externalized static device variables
-// EXT-DEV-DAG: @_ZL1y__static__[[HASH]] = addrspace(4) externally_initialized global i32 0
-// EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y__static__[[HASH]]\00"
+// EXT-DEV-DAG: @_ZL1y.static.[[HASH]] = addrspace(4) externally_initialized global i32 0
+// EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y.static.[[HASH]]\00"
 
 static __constant__ int y;
 
