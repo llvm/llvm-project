@@ -363,7 +363,12 @@ public:
     Builder.SetInsertPoint(ExitBB);
     // YKFIXME: We need to return the value of interpreted return and the return
     // type must be that of the control point's caller.
-    Builder.CreateRet(ConstantInt::get(Type::getInt32Ty(Context), 0));
+    Type *RetTy = Caller->getReturnType();
+    if (RetTy->isVoidTy()) {
+      Builder.CreateRetVoid();
+    } else {
+      Builder.CreateRet(ConstantInt::get(Type::getInt32Ty(Context), 0));
+    }
 
     // To do so we need to first split up the current block and then
     // insert a conditional branch that either continues or returns.
