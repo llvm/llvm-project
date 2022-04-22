@@ -81,6 +81,8 @@ const char *IostatErrorString(int iostat) {
     return "UNIT number is out of range";
   case IostatBadRealInput:
     return "Bad REAL input value";
+  case IostatBadScaleFactor:
+    return "Bad REAL output scale factor (kP)";
   default:
     return nullptr;
   }
