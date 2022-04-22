@@ -2333,8 +2333,7 @@ define i32 @test_partial_unswitch_all_conds_guaranteed_non_poison(i1 noundef %c.
 ; CHECK-LABEL: @test_partial_unswitch_all_conds_guaranteed_non_poison(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[C_1:%.*]], [[C_2:%.*]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i1 [[TMP0]]
-; CHECK-NEXT:    br i1 [[DOTFR]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_US:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_US:%.*]]
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_US:%.*]]
 ; CHECK:       loop.us:

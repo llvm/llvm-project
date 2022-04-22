@@ -13,6 +13,7 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
+include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 
 def PDLMatchOp : TransformDialectOp<"pdl_match",
@@ -35,29 +36,30 @@ def PDLMatchOp : TransformDialectOp<"pdl_match",
     could not be looked up or compiled.
   }];
 
-  let arguments = (ins PDL_Operation:$root, SymbolRefAttr:$pattern_name);
-  let results = (outs PDL_Operation:$matched);
+  let arguments = (ins
+    Arg<PDL_Operation, "Payload IR scope to match within",
+        [TransformMappingRead, PayloadIRRead]>:$root, 
+    SymbolRefAttr:$pattern_name);
+  let results = (outs
+    Res<PDL_Operation, "Handle to the matched Payload IR ops",
+        [TransformMappingAlloc, TransformMappingWrite]>:$matched);
 
   let assemblyFormat = "$pattern_name `in` $root attr-dict";
 }
 
 def SequenceOp : TransformDialectOp<"sequence",
-    [DeclareOpInterfaceMethods<TransformOpInterface>, OpAsmOpInterface,
-     PossibleTopLevelTransformOpTrait,
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     OpAsmOpInterface, PossibleTopLevelTransformOpTrait,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">]> {
   let summary = "Contains a sequence of other transform ops to apply";
   let description = [{
     The transformations indicated by the sequence are applied in order of their
     appearance. Each value produced by a transformation within the sequence
     corresponds to an operation or a group of operations in the payload IR.
-    Each value may be used at most once by another transformation operation as
-    the transformation is likely to replace the transformed operation with
-    another operation or a group thereof. In such cases, the transformation
-    operation is expected to produce a new value to denote the newly produced
-    operations that can be transformed further. During application, if any
-    transformation in the sequence fails, the entire sequence fails immediately
-    leaving the payload IR in potentially invalid state, i.e., this operation
-    offers no transformation rollback capabilities.
+    During application, if any transformation in the sequence fails, the entire
+    sequence fails immediately leaving the payload IR in potentially invalid
+    state, i.e., this operation offers no transformation rollback capabilities.
 
     The entry block of this operation has a single argument that maps to either
     the operand if provided or the top-level container operation of the payload
@@ -83,7 +85,8 @@ def SequenceOp : TransformDialectOp<"sequence",
 
 def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
     [DeclareOpInterfaceMethods<TransformOpInterface>, NoTerminator,
-     OpAsmOpInterface, PossibleTopLevelTransformOpTrait, SymbolTable]> {
+     OpAsmOpInterface, PossibleTopLevelTransformOpTrait, RecursiveSideEffects,
+     SymbolTable]> {
   let summary = "Contains PDL patterns available for use in transforms";
   let description = [{
     This op contains a set of named PDL patterns that are available for the
@@ -120,7 +123,9 @@ def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
     ops associated with its operand when provided.
   }];
 
-  let arguments = (ins Optional<PDL_Operation>:$root);
+  let arguments = (ins
+    Arg<Optional<PDL_Operation>, "Root operation of the Payload IR",
+        [TransformMappingRead]>:$root);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat = "($root^)? attr-dict-with-keyword regions";
 
@@ -140,7 +145,9 @@ def YieldOp : TransformDialectOp<"yield", [Terminator]> {
     any transformation on the payload IR and is used for flow purposes only.
   }];
 
-  let arguments = (ins Variadic<AnyType>:$operands);
+  let arguments = (ins 
+    Arg<Variadic<AnyType>, "Opration handles yielded back to the parent",
+        [TransformMappingRead]>:$operands);
   let assemblyFormat = "operands attr-dict (`:` type($operands)^)?";
 
   let builders = [

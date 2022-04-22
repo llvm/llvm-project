@@ -7682,6 +7682,7 @@ td_library(
     deps = [
         ":OpBaseTdFiles",
         ":PDLDialectTdFiles",
+        ":SideEffectInterfacesTdFiles",
     ],
 )
 
@@ -7756,6 +7757,7 @@ cc_library(
         ":PDLDialect",
         ":PDLInterpDialect",
         ":Rewrite",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformDialectIncGen",
         ":TransformDialectInterfacesIncGen",

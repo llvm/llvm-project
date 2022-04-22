@@ -17,16 +17,13 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringMap.h"
 
-#include "mlir/Dialect/Transform/IR/TransformDialect.h.inc"
-
 namespace mlir {
 namespace transform {
-
 #ifndef NDEBUG
 namespace detail {
 /// Asserts that the operations provided as template arguments implement the
-/// TransformOpInterface. This must be a dynamic assertion since interface
-/// implementations may be registered at runtime.
+/// TransformOpInterface and MemoryEffectsOpInterface. This must be a dynamic
+/// assertion since interface implementations may be registered at runtime.
 template <typename OpTy>
 static inline void checkImplementsTransformInterface(MLIRContext *context) {
   // Since the operation is being inserted into the Transform dialect and the
@@ -34,12 +31,23 @@ static inline void checkImplementsTransformInterface(MLIRContext *context) {
   // itself having the interface implementation.
   RegisteredOperationName opName =
       *RegisteredOperationName::lookup(OpTy::getOperationName(), context);
-  assert(opName.hasInterface<TransformOpInterface>() &&
+  assert((opName.hasInterface<TransformOpInterface>() ||
+          opName.hasTrait<OpTrait::IsTerminator>()) &&
+         "non-terminator ops injected into the transform dialect must "
+         "implement TransformOpInterface");
+  assert(opName.hasInterface<MemoryEffectOpInterface>() &&
          "ops injected into the transform dialect must implement "
-         "TransformOpInterface");
+         "MemoryEffectsOpInterface");
 }
 } // namespace detail
 #endif // NDEBUG
+} // namespace transform
+} // namespace mlir
+
+#include "mlir/Dialect/Transform/IR/TransformDialect.h.inc"
+
+namespace mlir {
+namespace transform {
 
 /// Base class for extensions of the Transform dialect that supports injecting
 /// operations into the Transform dialect at load time. Concrete extensions are
@@ -66,19 +74,12 @@ public:
 
 protected:
   /// Injects the operations into the Transform dialect. The operations must
-  /// implement the TransformOpInterface and the implementation must be already
-  /// available when the operation is injected.
+  /// implement the TransformOpInterface and MemoryEffectsOpInterface, and the
+  /// implementations must be already available when the operation is injected.
   template <typename... OpTys>
   void registerTransformOps() {
     opInitializers.push_back([](TransformDialect *transformDialect) {
-      transformDialect->addOperations<OpTys...>();
-
-#ifndef NDEBUG
-      (void)std::initializer_list<int>{
-          (detail::checkImplementsTransformInterface<OpTys>(
-               transformDialect->getContext()),
-           0)...};
-#endif // NDEBUG
+      transformDialect->addOperationsChecked<OpTys...>();
     });
   }
 
