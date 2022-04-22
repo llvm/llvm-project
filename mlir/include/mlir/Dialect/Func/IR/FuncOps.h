@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_FUNC_IR_OPS_H
 #define MLIR_DIALECT_FUNC_IR_OPS_H
 
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"

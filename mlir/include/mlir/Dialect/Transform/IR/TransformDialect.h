@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H
 
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/PatternMatch.h"
