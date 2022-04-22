@@ -88,7 +88,7 @@ body:             |
   ; CHECK-NEXT:   $x2 = frame-setup SUB $x2, killed $x10
   ; CHECK-NEXT:   $x2 = frame-setup ANDI $x2, -128
   ; CHECK-NEXT:   dead renamable $x15 = PseudoVSETIVLI 1, 72, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   renamable $v25 = PseudoVMV_V_X_M1 killed renamable $x12, $noreg, 16, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   renamable $v25 = PseudoVMV_V_X_M1 killed renamable $x12, $noreg, 4, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   $x11 = PseudoReadVLENB
   ; CHECK-NEXT:   $x10 = ADDI $x0, 50
   ; CHECK-NEXT:   $x11 = MUL killed $x11, killed $x10
@@ -141,8 +141,8 @@ body:             |
   ; CHECK-NEXT:   $x5 = LD $x2, 0 :: (load (s64) from %stack.16)
   ; CHECK-NEXT:   renamable $v0 = PseudoVRELOAD_M1 killed $x1 :: (load unknown-size from %stack.1, align 8)
   ; CHECK-NEXT:   $x1 = LD $x2, 8 :: (load (s64) from %stack.15)
-  ; CHECK-NEXT:   renamable $v0 = PseudoVSLIDEDOWN_VX_M1 undef renamable $v0, killed renamable $v0, killed renamable $x13, $noreg, 8, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   renamable $x13 = PseudoVMV_X_S_M1 killed renamable $v0, 8, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   renamable $v0 = PseudoVSLIDEDOWN_VX_M1 undef renamable $v0, killed renamable $v0, killed renamable $x13, $noreg, 3, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   renamable $x13 = PseudoVMV_X_S_M1 killed renamable $v0, 3, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   BLT killed renamable $x16, renamable $x27, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -176,7 +176,7 @@ body:             |
     liveins: $x12
 
     dead renamable $x15 = PseudoVSETIVLI 1, 72, implicit-def $vl, implicit-def $vtype
-    renamable $v25 = PseudoVMV_V_X_M1 killed renamable $x12, $noreg, 16, implicit $vl, implicit $vtype
+    renamable $v25 = PseudoVMV_V_X_M1 killed renamable $x12, $noreg, 4, implicit $vl, implicit $vtype
     PseudoVSPILL_M1 killed renamable $v25, %stack.1 :: (store unknown-size into %stack.1, align 8)
     renamable $x1 = ADDI $x0, 255
     renamable $x5 = nuw ADDI %stack.0, 256
@@ -209,8 +209,8 @@ body:             |
     dead renamable $x13 = PseudoVSETIVLI 1, 64, implicit-def $vl, implicit-def $vtype
     renamable $x13 = nsw ADDI renamable $x16, -2
     renamable $v0 = PseudoVRELOAD_M1 %stack.1 :: (load unknown-size from %stack.1, align 8)
-    renamable $v0 = PseudoVSLIDEDOWN_VX_M1 undef renamable $v0, killed renamable $v0, killed renamable $x13, $noreg, 8, implicit $vl, implicit $vtype
-    renamable $x13 = PseudoVMV_X_S_M1 killed renamable $v0, 8, implicit $vl, implicit $vtype
+    renamable $v0 = PseudoVSLIDEDOWN_VX_M1 undef renamable $v0, killed renamable $v0, killed renamable $x13, $noreg, 3, implicit $vl, implicit $vtype
+    renamable $x13 = PseudoVMV_X_S_M1 killed renamable $v0, 3, implicit $vl, implicit $vtype
     BLT killed renamable $x16, renamable $x27, %bb.2
 
   bb.1:
