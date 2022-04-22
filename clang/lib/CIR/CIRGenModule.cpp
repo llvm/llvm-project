@@ -732,8 +732,47 @@ void CIRGenModule::buildDeferred() {
   CurDeclsToEmit.swap(DeferredDeclsToEmit);
 
   for (auto &D : CurDeclsToEmit) {
-    (void)D;
-    llvm_unreachable("NYI");
+    // We should call GetAddrOfGlobal with IsForDefinition set to true in order
+    // to get a Value with exactly the type we need, not something that might
+    // have been created for another decl with the same mangled name but
+    // different type.
+    auto *Op = GetAddrOfGlobal(D, ForDefinition);
+
+    // In case of different address spaces, we may still get a cast, even with
+    // IsForDefinition equal to true. Query mangled names table to get
+    // GlobalValue.
+    if (!Op) {
+      Op = GetGlobalValue(getMangledName(D));
+    }
+
+    // Make sure GetGlobalValue returned non-null.
+    assert(Op);
+
+    // Check to see if we've already emitted this. This is necessary for a
+    // couple of reasons: first, decls can end up in deferred-decls queue
+    // multiple times, and second, decls can end up with definitions in unusual
+    // ways (e.g. by an extern inline function acquiring a strong function
+    // redefinition). Just ignore those cases.
+    // TODO: Not sure what to map this to for MLIR
+    if (auto Fn = cast<mlir::FuncOp>(Op))
+      if (!Fn.isDeclaration())
+        continue;
+
+    // If this is OpenMP, check if it is legal to emit this global normally.
+    if (getLangOpts().OpenMP) {
+      llvm_unreachable("NYI");
+    }
+
+    // Otherwise, emit the definition and move on to the next one.
+    buildGlobalDefinition(D, Op);
+
+    // If we found out that we need to emit more decls, do that recursively.
+    // This has the advantage that the decls are emitted in a DFS and related
+    // ones are close together, which is convenient for testing.
+    if (!DeferredVTables.empty() || !DeferredDeclsToEmit.empty()) {
+      buildDeferred();
+      assert(DeferredVTables.empty() && DeferredDeclsToEmit.empty());
+    }
   }
 }
 
