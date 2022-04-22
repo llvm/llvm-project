@@ -37,6 +37,7 @@ void registerShapeFunctionTestPasses();
 void registerSideEffectTestPasses();
 void registerSliceAnalysisTestPass();
 void registerSymbolTestPasses();
+void registerRegionTestPasses();
 void registerTestAffineDataCopyPass();
 void registerTestAffineLoopUnswitchingPass();
 void registerTestAllReduceLoweringPass();
@@ -128,6 +129,7 @@ void registerTestPasses() {
   registerSideEffectTestPasses();
   registerSliceAnalysisTestPass();
   registerSymbolTestPasses();
+  registerRegionTestPasses();
   registerTestAffineDataCopyPass();
   registerTestAffineLoopUnswitchingPass();
   registerTestAllReduceLoweringPass();

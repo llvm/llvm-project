@@ -232,7 +232,7 @@ public:
   bool isLegalMaskedStore(Type *DataType, Align Alignment);
   bool isLegalNTLoad(Type *DataType, Align Alignment);
   bool isLegalNTStore(Type *DataType, Align Alignment);
-  bool isLegalBroadcastLoad(Type *ElementTy, unsigned NumElements) const;
+  bool isLegalBroadcastLoad(Type *ElementTy, ElementCount NumElements) const;
   bool forceScalarizeMaskedGather(VectorType *VTy, Align Alignment);
   bool forceScalarizeMaskedScatter(VectorType *VTy, Align Alignment) {
     return forceScalarizeMaskedGather(VTy, Alignment);

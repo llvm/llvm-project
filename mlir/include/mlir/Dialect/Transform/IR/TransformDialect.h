@@ -9,9 +9,13 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H
 
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/StringMap.h"
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h.inc"
 
@@ -57,6 +61,7 @@ public:
       loader(context);
     for (const Initializer &init : opInitializers)
       init(transformDialect);
+    transformDialect->mergeInPDLMatchHooks(std::move(pdlMatchConstraintFns));
   }
 
 protected:
@@ -88,9 +93,30 @@ protected:
         [](MLIRContext *context) { context->loadDialect<DialectTy>(); });
   }
 
+  /// Injects the named constraint to make it available for use with the
+  /// PDLMatchOp in the transform dialect.
+  void registerPDLMatchConstraintFn(StringRef name,
+                                    PDLConstraintFunction &&fn) {
+    pdlMatchConstraintFns.try_emplace(name,
+                                      std::forward<PDLConstraintFunction>(fn));
+  }
+  template <typename ConstraintFnTy>
+  void registerPDLMatchConstraintFn(StringRef name, ConstraintFnTy &&fn) {
+    pdlMatchConstraintFns.try_emplace(
+        name, ::mlir::detail::pdl_function_builder::buildConstraintFn(
+                  std::forward<ConstraintFnTy>(fn)));
+  }
+
 private:
   SmallVector<Initializer> opInitializers;
   SmallVector<DialectLoader> dialectLoaders;
+
+  /// A list of constraints that should be made availble to PDL patterns
+  /// processed by PDLMatchOp in the Transform dialect.
+  ///
+  /// Declared as mutable so its contents can be moved in the `apply` const
+  /// method, which is only called once.
+  mutable llvm::StringMap<PDLConstraintFunction> pdlMatchConstraintFns;
 };
 
 } // namespace transform

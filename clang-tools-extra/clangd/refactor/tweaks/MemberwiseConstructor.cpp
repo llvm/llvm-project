@@ -178,6 +178,8 @@ private:
 
   // Decide what to do with a field of type C.
   static FieldAction considerClassValue(const CXXRecordDecl &C) {
+    if (!C.hasDefinition())
+      return Skip;
     // We can't always tell if C is copyable/movable without doing Sema work.
     // We assume operations are possible unless we can prove not.
     bool CanCopy = C.hasUserDeclaredCopyConstructor() ||

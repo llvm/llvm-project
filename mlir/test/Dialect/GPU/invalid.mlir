@@ -4,7 +4,7 @@ func.func @not_enough_sizes(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands, but found 5}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz) ({
     gpu.return
-  }) : (index, index, index, index, index) -> ()
+  }) {operand_segment_sizes = dense<[0, 1, 1, 1, 1, 1, 1, 0]> : vector<8xi32>} : (index, index, index, index, index) -> ()
   return
 }
 
@@ -12,11 +12,11 @@ func.func @not_enough_sizes(%sz : index) {
 
 func.func @no_region_attrs(%sz : index) {
   // expected-error@+1 {{unexpected number of region arguments}}
- "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
+  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
   ^bb1(%bx: index, %by: index, %bz: index,
        %tx: index, %ty: index, %tz: index):
     gpu.terminator
-  }) : (index, index, index, index, index, index) -> ()
+  }) {operand_segment_sizes = dense<[0, 1, 1, 1, 1, 1, 1, 0]> : vector<8xi32>} : (index, index, index, index, index, index) -> ()
   return
 }
 

@@ -1635,14 +1635,11 @@ define zeroext i32 @grev7_i32_zext(i32 zeroext %a) nounwind {
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    slli a1, a0, 4
-; RV64I-NEXT:    lui a2, 241
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a0, a0, 4
 ; RV64I-NEXT:    lui a2, 61681
 ; RV64I-NEXT:    addiw a2, a2, -241
+; RV64I-NEXT:    slli a3, a2, 4
+; RV64I-NEXT:    and a1, a1, a3
+; RV64I-NEXT:    srli a0, a0, 4
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -3195,15 +3192,12 @@ define i64 @shfl8_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-NEXT:    and a1, a0, a1
 ; RV64I-NEXT:    slli a2, a0, 8
 ; RV64I-NEXT:    li a3, 255
-; RV64I-NEXT:    slli a4, a3, 32
-; RV64I-NEXT:    addi a4, a4, 255
-; RV64I-NEXT:    slli a4, a4, 16
+; RV64I-NEXT:    slli a3, a3, 32
+; RV64I-NEXT:    addi a3, a3, 255
+; RV64I-NEXT:    slli a4, a3, 16
 ; RV64I-NEXT:    and a2, a2, a4
 ; RV64I-NEXT:    srli a0, a0, 8
-; RV64I-NEXT:    slli a3, a3, 24
-; RV64I-NEXT:    addi a3, a3, 1
-; RV64I-NEXT:    slli a3, a3, 16
-; RV64I-NEXT:    addi a3, a3, -256
+; RV64I-NEXT:    slli a3, a3, 8
 ; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    or a0, a2, a0

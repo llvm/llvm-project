@@ -2,7 +2,7 @@
 
 // amdgcn does not have printf definition
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-newDriver
+// XFAIL: amdgcn-amd-amdhsa-oldDriver
 
 #include <stdio.h>
 #include <stdint.h>

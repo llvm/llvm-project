@@ -3000,7 +3000,7 @@ static Optional<bool>
 FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
                                             const DataLayout &DL,
                                             AssumptionCache *AC) {
-  SmallDenseMap<BasicBlock *, ConstantInt *> KnownValues;
+  SmallMapVector<BasicBlock *, ConstantInt *, 8> KnownValues;
   BasicBlock *BB = BI->getParent();
   Value *Cond = BI->getCondition();
   PHINode *PN = dyn_cast<PHINode>(Cond);
