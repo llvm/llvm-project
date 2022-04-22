@@ -32,13 +32,13 @@ bool t9(bool b) { return b; }
 // CHECK: func @t7(%arg0: f64 loc({{.*}})) -> f64 {
 // CHECK: func @t8() {
 
-// CHECK-CPP: func @t0(%arg0: i32 loc({{.*}})) -> i32 {
-// CHECK-CPP: func @t1(%arg0: i32 loc({{.*}})) -> i32 {
-// CHECK-CPP: func @t2(%arg0: i8 loc({{.*}})) -> i8 {
-// CHECK-CPP: func @t3(%arg0: i8 loc({{.*}})) -> i8 {
-// CHECK-CPP: func @t4(%arg0: i16 loc({{.*}})) -> i16 {
-// CHECK-CPP: func @t5(%arg0: i16 loc({{.*}})) -> i16 {
-// CHECK-CPP: func @t6(%arg0: f32 loc({{.*}})) -> f32 {
-// CHECK-CPP: func @t7(%arg0: f64 loc({{.*}})) -> f64 {
-// CHECK-CPP: func @t8() {
-// CHECK-CPP: func @t9(%arg0: !cir.bool loc({{.*}})) -> !cir.bool {
+// CHECK-CPP: func @_Z2t0i(%arg0: i32 loc({{.*}})) -> i32 {
+// CHECK-CPP: func @_Z2t1j(%arg0: i32 loc({{.*}})) -> i32 {
+// CHECK-CPP: func @_Z2t2c(%arg0: i8 loc({{.*}})) -> i8 {
+// CHECK-CPP: func @_Z2t3h(%arg0: i8 loc({{.*}})) -> i8 {
+// CHECK-CPP: func @_Z2t4s(%arg0: i16 loc({{.*}})) -> i16 {
+// CHECK-CPP: func @_Z2t5t(%arg0: i16 loc({{.*}})) -> i16 {
+// CHECK-CPP: func @_Z2t6f(%arg0: f32 loc({{.*}})) -> f32 {
+// CHECK-CPP: func @_Z2t7d(%arg0: f64 loc({{.*}})) -> f64 {
+// CHECK-CPP: func @_Z2t8v() {
+// CHECK-CPP: func @_Z2t9b(%arg0: !cir.bool loc({{.*}})) -> !cir.bool {
