@@ -24,9 +24,16 @@ using namespace cir;
 using namespace clang;
 using namespace mlir::cir;
 
-CIRGenFunction::CIRGenFunction(CIRGenModule &CGM, mlir::OpBuilder &builder)
+CIRGenFunction::CIRGenFunction(CIRGenModule &CGM, mlir::OpBuilder &builder,
+                               bool suppressNewContext)
     : CGM{CGM}, builder(builder), CurFuncDecl(nullptr),
-      SanOpts(CGM.getLangOpts().Sanitize), ShouldEmitLifetimeMarkers(false) {}
+      SanOpts(CGM.getLangOpts().Sanitize), ShouldEmitLifetimeMarkers(false) {
+  if (!suppressNewContext)
+    CGM.getCXXABI().getMangleContext().startNewFunction();
+  // TODO(CIR): EHStack.setCGF(this);
+
+  // TODO(CIR): SetFastMathFlags(CurFPFeatures);
+}
 
 clang::ASTContext &CIRGenFunction::getContext() const {
   return CGM.getASTContext();
