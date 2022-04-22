@@ -87,6 +87,9 @@ public:
     return false;
   }
 
+  void addImplicitStructorParams(CIRGenFunction &CGF, QualType &ResTy,
+                                 FunctionArgList &Params) override;
+
   void buildCXXConstructors(const clang::CXXConstructorDecl *D) override;
 
   void buildCXXStructor(clang::GlobalDecl GD) override;
@@ -205,6 +208,18 @@ void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
     llvm_unreachable("NYI");
   } else {
     CGM.maybeSetTrivialComdat(*MD, Fn);
+  }
+}
+
+void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &CGF,
+                                                    QualType &ResTY,
+                                                    FunctionArgList &Params) {
+  const auto *MD = cast<CXXMethodDecl>(CGF.CurGD.getDecl());
+  assert(isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD));
+
+  // Check if we need a VTT parameter as well.
+  if (NeedsVTTParameter(CGF.CurGD)) {
+    llvm_unreachable("NYI");
   }
 }
 
