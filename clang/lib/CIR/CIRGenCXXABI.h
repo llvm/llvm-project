@@ -91,6 +91,15 @@ public:
   /// Gets the mangle context.
   clang::MangleContext &getMangleContext() { return *MangleCtx; }
 
+  /// Build a parameter variable suitable for 'this'.
+  void buildThisParam(CIRGenFunction &CGF, FunctionArgList &Params);
+
+  /// Determine whether there's something special about the rules of the ABI
+  /// tell us that 'this' is a complete object within the given function.
+  /// Obvious common logic like being defined on a final class will have been
+  /// taken care of by the caller.
+  virtual bool isThisCompleteObject(clang::GlobalDecl GD) const = 0;
+
   /// Emit constructor variants required by this ABI.
   virtual void buildCXXConstructors(const clang::CXXConstructorDecl *D) = 0;
 

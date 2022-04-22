@@ -292,8 +292,12 @@ public:
   std::optional<mlir::Type> FnRetCIRTy;
   std::optional<mlir::Value> FnRetAlloca;
 
-  // Holds the Decl for the current outermost non-closure context
+  /// CXXThisDecl - When generating code for a C++ member function, this will
+  /// hold the implicit 'this' declaration.
+  clang::ImplicitParamDecl *CXXABIThisDecl = nullptr;
+  mlir::Operation *CXXABIThisValue = nullptr;
   mlir::Operation *CXXThisValue = nullptr;
+  clang::CharUnits CXXABIThisAlignment;
   clang::CharUnits CXXThisAlignment;
 
   /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
@@ -307,6 +311,10 @@ public:
   const CIRGenFunctionInfo *CurFnInfo;
   clang::QualType FnRetTy;
   mlir::FuncOp CurFn = nullptr;
+
+  /// CXXStructorImplicitParamDecl - When generating code for a constructor or
+  /// destructor, this will hold the implicit argument (e.g. VTT).
+  clang::ImplicitParamDecl *CXXStructorImplicitParamDecl = nullptr;
 
   // The CallExpr within the current statement that the musttail attribute
   // applies to. nullptr if there is no 'musttail' on the current statement.

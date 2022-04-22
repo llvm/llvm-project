@@ -13,8 +13,10 @@
 
 #include "CIRGenCXXABI.h"
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/RecordLayout.h"
 
 using namespace cir;
 using namespace clang;
@@ -38,3 +40,28 @@ CIRGenCXXABI::AddedStructorArgCounts CIRGenCXXABI::addImplicitConstructorArgs(
 }
 
 bool CIRGenCXXABI::NeedsVTTParameter(GlobalDecl GD) { return false; }
+
+void CIRGenCXXABI::buildThisParam(CIRGenFunction &CGF,
+                                  FunctionArgList &params) {
+  const auto *MD = cast<CXXMethodDecl>(CGF.CurGD.getDecl());
+
+  // FIXME: I'm not entirely sure I like using a fake decl just for code
+  // generation. Maybe we can come up with a better way?
+  auto *ThisDecl =
+      ImplicitParamDecl::Create(CGM.getASTContext(), nullptr, MD->getLocation(),
+                                &CGM.getASTContext().Idents.get("this"),
+                                MD->getThisType(), ImplicitParamKind::CXXThis);
+  params.push_back(ThisDecl);
+  CGF.CXXABIThisDecl = ThisDecl;
+
+  // Compute the presumed alignment of 'this', which basically comes down to
+  // whether we know it's a complete object or not.
+  auto &Layout = CGF.getContext().getASTRecordLayout(MD->getParent());
+  if (MD->getParent()->getNumVBases() == 0 ||
+      MD->getParent()->isEffectivelyFinal() ||
+      isThisCompleteObject(CGF.CurGD)) {
+    CGF.CXXABIThisAlignment = Layout.getAlignment();
+  } else {
+    llvm_unreachable("NYI");
+  }
+}
