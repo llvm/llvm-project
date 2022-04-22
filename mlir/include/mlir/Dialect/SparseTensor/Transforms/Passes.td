@@ -36,7 +36,7 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
     }
 
     // Multiply a sparse matrix A with a dense vector b into a dense vector x.
-    func @kernel_matvec(%arga: tensor<?x?xf64, #SparseMatrix>,
+    func.func @kernel_matvec(%arga: tensor<?x?xf64, #SparseMatrix>,
                         %argb: tensor<?xf64>,
                         %argx: tensor<?xf64>) -> tensor<?xf64> {
       %0 = linalg.generic #matvec

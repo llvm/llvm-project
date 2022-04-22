@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding %s -O3 -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding %s -O3 -triple=i386-apple-darwin -target-feature +avx -emit-llvm -o - | FileCheck %s
 // FIXME: This is testing optimized generation of shuffle instructions and should be fixed.
 
 

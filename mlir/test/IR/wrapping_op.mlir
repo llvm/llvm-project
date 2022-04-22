@@ -3,7 +3,7 @@
 
 // CHECK-LABEL: func @wrapping_op
 // CHECK-GENERIC: "func.func"
-func @wrapping_op(%arg0 : i32, %arg1 : f32) -> (i3, i2, i1) {
+func.func @wrapping_op(%arg0 : i32, %arg1 : f32) -> (i3, i2, i1) {
 // CHECK: %0:3 = test.wrapping_region wraps "some.op"(%arg1, %arg0) {test.attr = "attr"} : (f32, i32) -> (i1, i2, i3)
 // CHECK-GENERIC: "test.wrapping_region"() ({
 // CHECK-GENERIC:   %[[NESTED_RES:.*]]:3 = "some.op"(%arg1, %arg0) {test.attr = "attr"} : (f32, i32) -> (i1, i2, i3) loc("some_NameLoc")

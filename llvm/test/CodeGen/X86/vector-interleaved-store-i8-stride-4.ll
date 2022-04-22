@@ -139,41 +139,15 @@ define void @store_i8_stride4_vf8(<8 x i8>* %in.vecptr0, <8 x i8>* %in.vecptr1, 
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
-; SSE-NEXT:    movq {{.*#+}} xmm4 = mem[0],zero
-; SSE-NEXT:    pxor %xmm5, %xmm5
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3],xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3],xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
-; SSE-NEXT:    movdqa %xmm3, %xmm2
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[2,2,3,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm2[0,0,1,1]
-; SSE-NEXT:    packuswb %xmm6, %xmm7
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,0,65535,0,65535,0]
-; SSE-NEXT:    movdqa %xmm2, %xmm6
-; SSE-NEXT:    pandn %xmm7, %xmm6
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1],xmm1[2],xmm5[2],xmm1[3],xmm5[3],xmm1[4],xmm5[4],xmm1[5],xmm5[5],xmm1[6],xmm5[6],xmm1[7],xmm5[7]
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1],xmm0[2],xmm5[2],xmm0[3],xmm5[3],xmm0[4],xmm5[4],xmm0[5],xmm5[5],xmm0[6],xmm5[6],xmm0[7],xmm5[7]
-; SSE-NEXT:    movdqa %xmm0, %xmm5
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm1[0],xmm5[1],xmm1[1],xmm5[2],xmm1[2],xmm5[3],xmm1[3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[2,1,3,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,1,1,3]
-; SSE-NEXT:    packuswb %xmm7, %xmm5
-; SSE-NEXT:    pand %xmm2, %xmm5
-; SSE-NEXT:    por %xmm6, %xmm5
-; SSE-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,2,3,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
-; SSE-NEXT:    packuswb %xmm4, %xmm3
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,1,3,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm3, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movdqa %xmm2, 16(%r8)
-; SSE-NEXT:    movdqa %xmm5, (%r8)
+; SSE-NEXT:    movdqa %xmm0, 16(%r8)
+; SSE-NEXT:    movdqa %xmm2, (%r8)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: store_i8_stride4_vf8:

@@ -11,7 +11,7 @@ image_load_pck v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D d16
 // NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 image_load v[0:1], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
-// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: image data size does not match dmask and tfe
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: image data size does not match dmask, d16 and tfe
 
 image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 // NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: image address size does not match dim and a16

@@ -3,7 +3,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @entry() {
+func.func @entry() {
   // Construct test vector.
   %i1 = arith.constant 1: i32
   %i2 = arith.constant 2: i32

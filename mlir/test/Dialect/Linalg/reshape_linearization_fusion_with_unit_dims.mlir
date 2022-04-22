@@ -1,7 +1,7 @@
 // RUN: mlir-opt -linalg-fold-reshape-ops-by-linearization=allow-folding-unit-dim-reshapes -split-input-file %s | FileCheck %s
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
-func @do_not_fold1(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?x1xf32>
+func.func @do_not_fold1(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?x1xf32>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -27,7 +27,7 @@ func @do_not_fold1(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?
 // -----
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
-func @do_not_fold2(%arg0 : tensor<?x?x1xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?xf32>
+func.func @do_not_fold2(%arg0 : tensor<?x?x1xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?xf32>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

@@ -8,7 +8,7 @@
   iterator_types = []
 }
 
-func @main(%farg0: tensor<i32>, %farg1: tensor<i32>) -> tensor<i32> attributes {} {
+func.func @main(%farg0: tensor<i32>, %farg1: tensor<i32>) -> tensor<i32> attributes {} {
   cf.br ^bb1(%farg0 : tensor<i32>)
 
 ^bb1(%0: tensor<i32>):  // 2 preds: ^bb0, ^bb2

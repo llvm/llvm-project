@@ -480,7 +480,7 @@ void CompoundLiteralRegion::dumpToStream(raw_ostream &os) const {
 }
 
 void CXXTempObjectRegion::dumpToStream(raw_ostream &os) const {
-  os << "temp_object{" << getValueType().getAsString() << ", "
+  os << "temp_object{" << getValueType() << ", "
      << "S" << Ex->getID(getContext()) << '}';
 }
 
@@ -497,8 +497,8 @@ void CXXThisRegion::dumpToStream(raw_ostream &os) const {
 }
 
 void ElementRegion::dumpToStream(raw_ostream &os) const {
-  os << "Element{" << superRegion << ','
-     << Index << ',' << getElementType().getAsString() << '}';
+  os << "Element{" << superRegion << ',' << Index << ',' << getElementType()
+     << '}';
 }
 
 void FieldRegion::dumpToStream(raw_ostream &os) const {
@@ -1033,8 +1033,10 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
             T = TSI->getType();
           if (T.isNull())
             T = getContext().VoidTy;
-          if (!T->getAs<FunctionType>())
-            T = getContext().getFunctionNoProtoType(T);
+          if (!T->getAs<FunctionType>()) {
+            FunctionProtoType::ExtProtoInfo Ext;
+            T = getContext().getFunctionType(T, None, Ext);
+          }
           T = getContext().getBlockPointerType(T);
 
           const BlockCodeRegion *BTR =

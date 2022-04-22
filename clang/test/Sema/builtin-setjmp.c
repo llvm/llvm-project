@@ -35,10 +35,10 @@ void use(void) {
   setjmp(0);
   #if NO_SETJMP
   // cxx-error@-2 {{undeclared identifier 'setjmp'}}
-  // c-warning@-3 {{implicit declaration of function 'setjmp' is invalid in C99}}
+  // c-error@-3 {{call to undeclared function 'setjmp'; ISO C99 and later do not support implicit function declarations}}
   #elif ONLY_JMP_BUF
   // cxx-error@-5 {{undeclared identifier 'setjmp'}}
-  // c-warning@-6 {{implicitly declaring library function 'setjmp' with type 'int (jmp_buf)' (aka 'int (int *)')}}
+  // c-error@-6 {{call to undeclared library function 'setjmp' with type 'int (jmp_buf)' (aka 'int (int *)'); ISO C99 and later do not support implicit function declarations}}
   // c-note@-7 {{include the header <setjmp.h> or explicitly provide a declaration for 'setjmp'}}
   #else
   // cxx-no-diagnostics

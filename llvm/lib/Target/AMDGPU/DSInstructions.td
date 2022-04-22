@@ -626,6 +626,8 @@ def DS_READ_ADDTID_B32 : DS_0A_RET<"ds_read_addtid_b32">;
 
 def DS_CONSUME       : DS_0A_RET<"ds_consume">;
 def DS_APPEND        : DS_0A_RET<"ds_append">;
+
+let SubtargetPredicate = isNotGFX90APlus in
 def DS_ORDERED_COUNT : DS_1A_RET_GDS<"ds_ordered_count">;
 
 //===----------------------------------------------------------------------===//
@@ -791,7 +793,7 @@ defm : DSAtomicWritePat_mc <DS_WRITE_B16, i32, "atomic_store_local_16">;
 defm : DSAtomicWritePat_mc <DS_WRITE_B32, i32, "atomic_store_local_32">;
 defm : DSAtomicWritePat_mc <DS_WRITE_B64, i64, "atomic_store_local_64">;
 
-let OtherPredicates = [D16PreservesUnusedBits] in {
+let OtherPredicates = [HasD16LoadStore] in {
 def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_hi16_local>;
 def : DSWritePat <DS_WRITE_B8_D16_HI, i32, truncstorei8_hi16_local>;
 }

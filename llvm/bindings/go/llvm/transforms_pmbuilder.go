@@ -14,7 +14,6 @@ package llvm
 
 /*
 #include "llvm-c/Transforms/PassManagerBuilder.h"
-#include "llvm-c/Transforms/Coroutines.h"
 */
 import "C"
 
@@ -43,10 +42,6 @@ func (pmb PassManagerBuilder) PopulateFunc(pm PassManager) {
 	C.LLVMPassManagerBuilderPopulateFunctionPassManager(pmb.C, pm.C)
 }
 
-func (pmb PassManagerBuilder) PopulateLTOPassManager(pm PassManager, internalize bool, runInliner bool) {
-	C.LLVMPassManagerBuilderPopulateLTOPassManager(pmb.C, pm.C, boolToLLVMBool(internalize), boolToLLVMBool(runInliner))
-}
-
 func (pmb PassManagerBuilder) Dispose() {
 	C.LLVMPassManagerBuilderDispose(pmb.C)
 }
@@ -65,8 +60,4 @@ func (pmb PassManagerBuilder) SetDisableSimplifyLibCalls(val bool) {
 
 func (pmb PassManagerBuilder) UseInlinerWithThreshold(threshold uint) {
 	C.LLVMPassManagerBuilderUseInlinerWithThreshold(pmb.C, C.uint(threshold))
-}
-
-func (pmb PassManagerBuilder) AddCoroutinePassesToExtensionPoints() {
-	C.LLVMPassManagerBuilderAddCoroutinePassesToExtensionPoints(pmb.C);
 }

@@ -156,6 +156,15 @@ Improvements to Clang's diagnostics
   without a prototype and with no arguments is an invalid redeclaration of a
   function with a prototype. e.g., ``void f(int); void f() {}`` is now properly
   diagnosed.
+- The ``-Wimplicit-function-declaration`` warning diagnostic now defaults to
+  an error in C99 and later. Prior to C2x, it may be downgraded to a warning
+  with ``-Wno-error=implicit-function-declaration``, or disabled entirely with
+  ``-Wno-implicit-function-declaration``. As of C2x, support for implicit
+  function declarations has been removed, and the warning options will have no
+  effect.
+
+- ``-Wmisexpect`` warns when the branch weights collected during profiling
+  conflict with those added by ``llvm.expect``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -167,6 +176,11 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+- Added the ``-fno-knr-functions`` flag to allow users to opt into the C2x
+  behavior where a function with an empty parameter list is treated as though
+  the parameter list were ``void``. There is no ``-fknr-functions`` or
+  ``-fno-no-knr-functions`` flag; this feature cannot be disabled in language
+  modes where it is required, such as C++ or C2x.
 
 Deprecated Compiler Flags
 -------------------------
@@ -226,6 +240,12 @@ C2x Feature Support
 - Implemented `WG14 N2775 Literal suffixes for bit-precise integers <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2775.pdf>`_.
 - Implemented the `*_WIDTH` macros to complete support for
   `WG14 N2412 Two's complement sign representation for C2x <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2412.pdf>`_.
+- Implemented `WG14 N2418 Adding the u8 character prefix <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2418.pdf>`_.
+- Removed support for implicit function declarations. This was a C89 feature
+  that was removed in C99, but cannot be supported in C2x because it requires
+  support for functions without prototypes, which no longer exist in C2x.
+- Implemented `WG14 N2841 No function declarators without prototypes <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2841.htm>`_
+  and `WG14 N2432 Remove support for function definitions with identifier lists <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2432.pdf>`_.
 
 C++ Language Changes in Clang
 -----------------------------
@@ -276,18 +296,7 @@ ABI Changes in Clang
 OpenMP Support in Clang
 -----------------------
 
-- ``clang-nvlink-wrapper`` tool introduced to support linking of cubin files
-  archived in an archive. See :doc:`ClangNvlinkWrapper`.
-- ``clang-linker-wrapper`` tool introduced to support linking using a new OpenMP
-  target offloading method. See :doc:`ClangLinkerWrapper`.
-- Support for a new driver for OpenMP target offloading has been added as an
-  opt-in feature. The new driver can be selected using ``-fopenmp-new-driver``
-  with clang. Device-side LTO can also be enabled using the new driver by
-  passing ``-foffload-lto=`` as well. The new driver supports the following
-  features:
-  - Linking AMDGPU and NVPTX offloading targets.
-  - Static linking using archive files.
-  - Device-side LTO.
+...
 
 CUDA Support in Clang
 ---------------------
@@ -302,11 +311,6 @@ DWARF Support in Clang
 
 Arm and AArch64 Support in Clang
 --------------------------------
-
-- When using ``-mbranch-protection=bti`` with AArch64, calls to setjmp will
-  now be followed by a BTI instruction. This is done to be compatible with
-  setjmp implementations that return with a br instead of a ret. You can
-  disable this behaviour using the ``-mno-bti-at-return-twice`` option.
 
 Floating Point Support in Clang
 -------------------------------

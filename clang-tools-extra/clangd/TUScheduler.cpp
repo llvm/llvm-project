@@ -798,7 +798,7 @@ ASTWorker::~ASTWorker() {
 
 void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
                        bool ContentChanged) {
-  std::string TaskName = llvm::formatv("Update ({0})", Inputs.Version);
+  llvm::StringLiteral TaskName = "Update";
   auto Task = [=]() mutable {
     // Get the actual command as `Inputs` does not have a command.
     // FIXME: some build systems like Bazel will take time to preparing

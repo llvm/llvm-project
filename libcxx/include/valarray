@@ -350,9 +350,14 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <__algorithm/unwrap_iter.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__functional/operations.h>
+#include <__memory/allocator.h>
+#include <__memory/uninitialized_algorithms.h>
+#include <__utility/move.h>
+#include <__utility/swap.h>
 #include <cmath>
 #include <cstddef>
-#include <functional>
+#include <functional> // TODO: Remove this include
 #include <initializer_list>
 #include <new>
 #include <version>

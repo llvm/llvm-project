@@ -373,7 +373,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
 
       // This module creates a separate compilation unit for the GPU compiler.
       gpu.module @kernels {
-        func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>)
+        func.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>)
             attributes { nvvm.kernel = true } {
 
           // Operations that produce block/thread IDs and dimensions are
@@ -999,6 +999,7 @@ def GPU_MemcpyOp : GPU_Op<"memcpy", [GPU_AsyncOpInterface]> {
   }];
   let hasFolder = 1;
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def GPU_MemsetOp : GPU_Op<"memset",

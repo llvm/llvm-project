@@ -3,7 +3,7 @@
 module attributes {gpu.container_module} {
   // CHECK-LABEL: llvm.func @main
   // CHECK-SAME: %[[size:.*]]: i64
-  func @main(%size : index) {
+  func.func @main(%size : index) {
     // CHECK: %[[stream:.*]] = llvm.call @mgpuStreamCreate()
     %0 = gpu.wait async
     // CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}}[%[[size]]]

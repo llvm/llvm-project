@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(scf-parallel-loop-fusion)' -split-input-file | FileCheck %s
 
-func @fuse_empty_loops() {
+func.func @fuse_empty_loops() {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -24,7 +24,7 @@ func @fuse_empty_loops() {
 
 // -----
 
-func @fuse_two(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
+func.func @fuse_two(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
                     %C: memref<2x2xf32>, %result: memref<2x2xf32>) {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
@@ -70,7 +70,7 @@ func @fuse_two(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
 
 // -----
 
-func @fuse_three(%lhs: memref<100x10xf32>, %rhs: memref<100xf32>,
+func.func @fuse_three(%lhs: memref<100x10xf32>, %rhs: memref<100xf32>,
                       %result: memref<100x10xf32>) {
   %c100 = arith.constant 100 : index
   %c10 = arith.constant 10 : index
@@ -127,7 +127,7 @@ func @fuse_three(%lhs: memref<100x10xf32>, %rhs: memref<100xf32>,
 
 // -----
 
-func @do_not_fuse_nested_ploop1() {
+func.func @do_not_fuse_nested_ploop1() {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -149,7 +149,7 @@ func @do_not_fuse_nested_ploop1() {
 
 // -----
 
-func @do_not_fuse_nested_ploop2() {
+func.func @do_not_fuse_nested_ploop2() {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -171,7 +171,7 @@ func @do_not_fuse_nested_ploop2() {
 
 // -----
 
-func @do_not_fuse_loops_unmatching_num_loops() {
+func.func @do_not_fuse_loops_unmatching_num_loops() {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -189,7 +189,7 @@ func @do_not_fuse_loops_unmatching_num_loops() {
 
 // -----
 
-func @do_not_fuse_loops_with_side_effecting_ops_in_between() {
+func.func @do_not_fuse_loops_with_side_effecting_ops_in_between() {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -208,7 +208,7 @@ func @do_not_fuse_loops_with_side_effecting_ops_in_between() {
 
 // -----
 
-func @do_not_fuse_loops_unmatching_iteration_space() {
+func.func @do_not_fuse_loops_unmatching_iteration_space() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -227,7 +227,7 @@ func @do_not_fuse_loops_unmatching_iteration_space() {
 
 // -----
 
-func @do_not_fuse_unmatching_write_read_patterns(
+func.func @do_not_fuse_unmatching_write_read_patterns(
     %A: memref<2x2xf32>, %B: memref<2x2xf32>,
     %C: memref<2x2xf32>, %result: memref<2x2xf32>) {
   %c2 = arith.constant 2 : index
@@ -258,7 +258,7 @@ func @do_not_fuse_unmatching_write_read_patterns(
 
 // -----
 
-func @do_not_fuse_unmatching_read_write_patterns(
+func.func @do_not_fuse_unmatching_read_write_patterns(
     %A: memref<2x2xf32>, %B: memref<2x2xf32>, %common_buf: memref<2x2xf32>) {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
@@ -288,7 +288,7 @@ func @do_not_fuse_unmatching_read_write_patterns(
 
 // -----
 
-func @do_not_fuse_loops_with_memref_defined_in_loop_bodies() {
+func.func @do_not_fuse_loops_with_memref_defined_in_loop_bodies() {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -310,7 +310,7 @@ func @do_not_fuse_loops_with_memref_defined_in_loop_bodies() {
 
 // -----
 
-func @nested_fuse(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
+func.func @nested_fuse(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
                     %C: memref<2x2xf32>, %result: memref<2x2xf32>) {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index

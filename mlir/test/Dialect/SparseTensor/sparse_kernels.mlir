@@ -45,7 +45,7 @@
 // CHECK:           %[[VAL_29:.*]] = bufferization.to_tensor %[[VAL_13]] : memref<10x30xf32>
 // CHECK:           return %[[VAL_29]] : tensor<10x30xf32>
 // CHECK:         }
-func @matmul1(%a: tensor<10x20xf32, #DCSR>,
+func.func @matmul1(%a: tensor<10x20xf32, #DCSR>,
               %b: tensor<20x30xf32>,
               %c: tensor<10x30xf32>) -> tensor<10x30xf32> {
   %0 = linalg.matmul
@@ -144,7 +144,7 @@ func @matmul1(%a: tensor<10x20xf32, #DCSR>,
 // CHECK:           %[[VAL_77:.*]] = sparse_tensor.load %[[VAL_8]] hasInserts : tensor<4x4xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           return %[[VAL_77]] : tensor<4x4xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:         }
-func @matmul2(%A: tensor<4x8xf64, #DCSR>,
+func.func @matmul2(%A: tensor<4x8xf64, #DCSR>,
               %B: tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
   %c4 = arith.constant 4 : index
   %C = sparse_tensor.init [%c4, %c4] : tensor<4x4xf64, #DCSR>
@@ -196,7 +196,7 @@ func @matmul2(%A: tensor<4x8xf64, #DCSR>,
 // CHECK:           %[[VAL_32:.*]] = bufferization.to_tensor %[[VAL_13]] : memref<6x6xi32>
 // CHECK:           return %[[VAL_32]] : tensor<6x6xi32>
 // CHECK:         }
-func @conv2d(%input:  tensor<8x8xi32>,
+func.func @conv2d(%input:  tensor<8x8xi32>,
              %filter: tensor<3x3xi32, #DCSR>,
              %output: tensor<6x6xi32>) -> tensor<6x6xi32> {
   %0 = linalg.conv_2d
@@ -247,7 +247,7 @@ func @conv2d(%input:  tensor<8x8xi32>,
 // CHECK:           %[[VAL_33:.*]] = bufferization.to_tensor %[[VAL_14]] : memref<5x6xi64>
 // CHECK:           return %[[VAL_33]] : tensor<5x6xi64>
 // CHECK:         }
-func @quantized_matmul(%input1: tensor<5x3xi8>,
+func.func @quantized_matmul(%input1: tensor<5x3xi8>,
                        %input2: tensor<3x6xi8, #DCSR>,
                        %output: tensor<5x6xi64>) -> tensor<5x6xi64> {
   %c0 = arith.constant 0 : i32
@@ -310,7 +310,7 @@ func @quantized_matmul(%input1: tensor<5x3xi8>,
 // CHECK:           %[[VAL_48:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<f32>
 // CHECK:           return %[[VAL_48]] : tensor<f32>
 // CHECK:         }
-func @sparse_dot(%a: tensor<1024xf32, #SparseVector>,
+func.func @sparse_dot(%a: tensor<1024xf32, #SparseVector>,
                  %b: tensor<1024xf32, #SparseVector>,
 		 %x: tensor<f32>) -> tensor<f32> {
   %dot = linalg.dot ins(%a, %b: tensor<1024xf32, #SparseVector>,
