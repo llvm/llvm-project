@@ -25,7 +25,8 @@ namespace {
 /// applied. This op is defined in C++ to test that C++ definitions also work
 /// for op injection into the Transform dialect.
 class TestTransformOp
-    : public Op<TestTransformOp, transform::TransformOpInterface::Trait> {
+    : public Op<TestTransformOp, transform::TransformOpInterface::Trait,
+                MemoryEffectOpInterface::Trait> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTransformOp)
 
@@ -63,6 +64,9 @@ public:
     if (getMessage())
       printer << " " << getMessage();
   }
+
+  // No side effects.
+  void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
 };
 
 /// A test op to exercise the verifier of the PossibleTopLevelTransformOpTrait
@@ -72,7 +76,8 @@ public:
 class TestTransformUnrestrictedOpNoInterface
     : public Op<TestTransformUnrestrictedOpNoInterface,
                 transform::PossibleTopLevelTransformOpTrait,
-                transform::TransformOpInterface::Trait> {
+                transform::TransformOpInterface::Trait,
+                MemoryEffectOpInterface::Trait> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestTransformUnrestrictedOpNoInterface)
@@ -90,6 +95,9 @@ public:
                       transform::TransformState &state) {
     return success();
   }
+
+  // No side effects.
+  void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
 };
 } // namespace
 

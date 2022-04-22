@@ -64,6 +64,15 @@ def Transform_Dialect : Dialect {
     correspond to groups of outer and inner loops, respectively, produced by
     the tiling transformation.
 
+    Overall, Transform IR ops are expected to be contained in a single top-level
+    op. Such top-level ops specify how to apply the transformations described
+    by the operations they contain, e.g., `transform.sequence` executes
+    transformations one by one and fails if any of them fails. Such ops are
+    expected to have the `PossibleTopLevelTransformOpTrait` and may be used
+    without arguments.
+
+    ## Dialect Extension Mechanism
+
     This dialect is designed to be extensible, that is, clients of this dialect
     are allowed to inject additional operations into this dialect using the
     `TransformDialectExtension` mechanism. This allows the dialect to avoid a
@@ -84,12 +93,63 @@ def Transform_Dialect : Dialect {
     `LoopTransformDialectExtension` in the cases above. Unprefixed operation
     names are reserved for ops defined directly in the Transform dialect.
 
-    Overall, Transform IR ops are expected to be contained in a single top-level
-    op. Such top-level ops specifie how to apply the transformations described
-    by operations they contain, e.g., `transform.sequence` executes
-    transformations one by one and fails if any of them fails. Such ops are
-    expected to have the `PossibleTopLevelTransformOpTrait` and may be used
-    without arguments.
+    Operations injected into the dialect must:
+
+      * Implement the `TransformOpInterface` to execute the corresponding
+        transformation on the payload IR.
+
+      * Implement the `MemoryEffectsOpInterface` to annotate the effects of
+        the transform IR operation on the payload IR as well as on the mapping
+        between transform IR values and payload IR operations. See below for
+        the description of available effects.
+
+    The presence of interface implementations is checked at runtime when the
+    dialect is loaded to allow for those implementations to be supplied by
+    separate dialect extensions if desired.
+
+    ## Side Effects
+
+    The Transform dialect relies on MLIR side effect modelling to enable
+    optimization of the transform IR. More specifically, it provides several
+    side effect resource objects and expects operations to describe their
+    effects on these resources.
+
+      * `TransformMappingResource` - side effect resource corresponding to the
+        mapping between transform IR values and payload IR operations.
+        
+        - An `Allocate` effect from this resource means creating a new mapping
+          entry, it is always accompanied by a `Write` effet.
+          
+        - A `Read` effect from this resource means accessing the mapping.
+        
+        - A `Free` effect on this resource indicates the removal of the mapping
+          entry, typically after a transformation that modifies the payload IR
+          operations associated with one of the transform IR operation's
+          operands. It is always accompanied by a `Read` effect.
+
+      * `PayloadIRResource` - side effect resource corresponding to the payload
+        IR itself.
+
+        - A `Read` effect from this resource means accessing the payload IR.
+
+        - A `Write` effect on this resource means mutating the payload IR. It is
+          almost always accompanied by a `Read`.
+
+    The typical flow of values in the transform IR is as follows. Most
+    operations produce new transform IR values and immediately associate them
+    with a list of payload IR operations. This corresponds to `Allocate` and
+    `Write` effects on the `TransformMappingResource`, and often requires at
+    least a `Read` effect on the `PayloadIRResource`. Transform operations that
+    only inspect the payload IR to produce new handles are usually limited to
+    these effects on their operands. Transform operations that mutate the
+    payload IR are thought to _consume_ the handles provided as operands, that
+    is have the `Read` and `Free` effects on them. As with the usual memory
+    effects, using a value after it was freed is incorrect. In case of the
+    transform IR, this value is likely associated with payload IR operations
+    that were modified or even removed by the transformation, so it is
+    meaningless to refer to them. When further transformations are desired, the
+    transform operations can return _new_ handles that can be read or consumed
+    by subsequent operations.
 
     ## Intended Use and Integrations
 
@@ -182,8 +242,18 @@ def Transform_Dialect : Dialect {
       getPDLConstraintHooks() const;
 
     private:
-      // Make addOperations available to the TransformDialectExtension class.
-      using ::mlir::Dialect::addOperations;
+      /// Registers operations specified as template parameters with this
+      /// dialect. Checks that they implement the required interfaces.
+      template <typename... OpTys>
+      void addOperationsChecked() {
+        addOperations<OpTys...>();
+
+        #ifndef NDEBUG
+        (void)std::initializer_list<int>{
+          (detail::checkImplementsTransformInterface<OpTys>(getContext()),
+           0)...};
+        #endif // NDEBUG
+      }
 
       template <typename, typename...>
       friend class TransformDialectExtension;

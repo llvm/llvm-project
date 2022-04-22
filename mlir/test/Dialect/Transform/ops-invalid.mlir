@@ -26,24 +26,6 @@ transform.sequence {
 
 // -----
 
-transform.sequence {
-^bb0(%arg0: !pdl.operation):
-  // expected-error @below {{result #0 has more than one use}}
-  %0 = transform.sequence %arg0 {
-  ^bb1(%arg1: !pdl.operation):
-  } : !pdl.operation
-  // expected-note @below {{used here as operand #0}}
-  transform.sequence %0 {
-  ^bb2(%arg2: !pdl.operation):
-  }
-  // expected-note @below {{used here as operand #0}}
-  transform.sequence %0 {
-  ^bb3(%arg3: !pdl.operation):
-  }
-}
-
-// -----
-
 // expected-error @below {{expects the types of the terminator operands to match the types of the resul}}
 %0 = transform.sequence {
 ^bb0(%arg0: !pdl.operation):
@@ -111,3 +93,63 @@ transform.with_pdl_patterns {
 ^bb1:
   "test.potential_terminator"() : () -> ()
 }) : () -> ()
+
+// -----
+
+transform.sequence {
+^bb0(%arg0: !pdl.operation):
+  // expected-error @below {{result #0 has more than one potential consumer}}
+  %0 = test_produce_param_or_forward_operand 42
+  // expected-note @below {{used here as operand #0}}
+  test_consume_operand_if_matches_param_or_fail %0[42]
+  // expected-note @below {{used here as operand #0}}
+  test_consume_operand_if_matches_param_or_fail %0[42]
+}
+
+// -----
+
+transform.sequence {
+^bb0(%arg0: !pdl.operation):
+  // expected-error @below {{result #0 has more than one potential consumer}}
+  %0 = test_produce_param_or_forward_operand 42
+  // expected-note @below {{used here as operand #0}}
+  test_consume_operand_if_matches_param_or_fail %0[42]
+  // expected-note @below {{used here as operand #0}}
+  transform.sequence %0 {
+  ^bb1(%arg1: !pdl.operation):
+    test_consume_operand_if_matches_param_or_fail %arg1[42]
+  }
+}
+
+// -----
+
+transform.sequence {
+^bb0(%arg0: !pdl.operation):
+  // expected-error @below {{result #0 has more than one potential consumer}}
+  %0 = test_produce_param_or_forward_operand 42
+  // expected-note @below {{used here as operand #0}}
+  test_consume_operand_if_matches_param_or_fail %0[42]
+  transform.sequence %0 {
+  ^bb1(%arg1: !pdl.operation):
+    // expected-note @below {{used here as operand #0}}
+    test_consume_operand_if_matches_param_or_fail %0[42]
+  }
+}
+
+// -----
+
+transform.sequence {
+^bb0(%arg0: !pdl.operation):
+  // expected-error @below {{result #0 has more than one potential consumer}}
+  %0 = test_produce_param_or_forward_operand 42
+  // expected-note @below {{used here as operand #0}}
+  test_consume_operand_if_matches_param_or_fail %0[42]
+  // expected-note @below {{used here as operand #0}}
+  transform.sequence %0 {
+  ^bb1(%arg1: !pdl.operation):
+    transform.sequence %arg1 {
+    ^bb2(%arg2: !pdl.operation):
+      test_consume_operand_if_matches_param_or_fail %arg2[42]
+    }
+  }
+}
