@@ -1,4 +1,3 @@
-
 //===--- CGCXX.cpp - Emit LLVM Code for declarations ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
