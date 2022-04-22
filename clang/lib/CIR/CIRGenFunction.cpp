@@ -894,7 +894,11 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl GD,
 
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
   if (MD && MD->isInstance()) {
-    llvm_unreachable("NYI");
+    if (CGM.getCXXABI().HasThisReturn(GD))
+      llvm_unreachable("NYI");
+    else if (CGM.getCXXABI().hasMostDerivedReturn(GD))
+      llvm_unreachable("NYI");
+    CGM.getCXXABI().buildThisParam(*this, Args);
   }
 
   // The base version of an inheriting constructor whose constructed base is a

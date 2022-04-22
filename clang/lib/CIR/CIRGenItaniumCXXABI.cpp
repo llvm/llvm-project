@@ -59,6 +59,34 @@ public:
 
   bool classifyReturnType(CIRGenFunctionInfo &FI) const override;
 
+  bool isThisCompleteObject(GlobalDecl GD) const override {
+    // The Itanium ABI has separate complete-object vs. base-object variants of
+    // both constructors and destructors.
+    if (isa<CXXDestructorDecl>(GD.getDecl())) {
+      llvm_unreachable("NYI");
+    }
+    if (isa<CXXConstructorDecl>(GD.getDecl())) {
+      switch (GD.getCtorType()) {
+      case Ctor_Complete:
+        return true;
+
+      case Ctor_Base:
+        return false;
+
+      case Ctor_CopyingClosure:
+      case Ctor_DefaultClosure:
+        llvm_unreachable("closure ctors in Itanium ABI?");
+
+      case Ctor_Comdat:
+        llvm_unreachable("emitting ctor comdat as function?");
+      }
+      llvm_unreachable("bad dtor kind");
+    }
+
+    // No other kinds.
+    return false;
+  }
+
   void buildCXXConstructors(const clang::CXXConstructorDecl *D) override;
 
   void buildCXXStructor(clang::GlobalDecl GD) override;
