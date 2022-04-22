@@ -7,9 +7,8 @@
 
 define i32 @add_mask_sign_i32(i32 %x) {
 ; CHECK-LABEL: @add_mask_sign_i32(
-; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[A]], 8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[M]], [[A]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i32 7, i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = ashr i32 %x, 31
@@ -20,9 +19,8 @@ define i32 @add_mask_sign_i32(i32 %x) {
 
 define i32 @add_mask_sign_commute_i32(i32 %x) {
 ; CHECK-LABEL: @add_mask_sign_commute_i32(
-; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[A]], 8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[A]], [[M]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i32 7, i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = ashr i32 %x, 31
@@ -33,9 +31,8 @@ define i32 @add_mask_sign_commute_i32(i32 %x) {
 
 define <2 x i32> @add_mask_sign_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: @add_mask_sign_v2i32(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[M:%.*]] = and <2 x i32> [[A]], <i32 8, i32 8>
-; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[M]], [[A]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[ISNEG]], <2 x i32> <i32 7, i32 7>, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = ashr <2 x i32> %x, <i32 31, i32 31>
@@ -59,9 +56,8 @@ define <2 x i32> @add_mask_sign_v2i32_nonuniform(<2 x i32> %x) {
 
 define i32 @add_mask_ashr28_i32(i32 %x) {
 ; CHECK-LABEL: @add_mask_ashr28_i32(
-; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 28
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[A]], 8
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[M]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 28
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], 7
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = ashr i32 %x, 28
