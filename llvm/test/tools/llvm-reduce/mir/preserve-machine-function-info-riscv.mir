@@ -1,5 +1,5 @@
 # REQUIRES: riscv-registered-target
-# RUN: llvm-reduce -simplify-mir -mtriple=riscv64-- --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -simplify-mir --delta-passes=instructions -mtriple=riscv64-- --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS: ADDW
