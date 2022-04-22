@@ -1423,8 +1423,21 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
         // We will either select ds_read_b64/ds_write_b64 or ds_read2_b32/
         // ds_write2_b32 depending on the alignment. In either case with either
         // alignment there is no faster way of doing this.
+
+        // The numbers returned here and below are not additive, it is a 'speed
+        // rank'. They are just meant to be compared to decide if a certain way
+        // of lowering an operation is faster than another. For that purpose
+        // naturally aligned operation gets it bitsize to indicate that "it
+        // operates with a speed comparable to N-bit wide load". With the full
+        // alignment ds128 is slower than ds96 for example. If underaligned it
+        // is comparable to a speed of a single dword access, which would then
+        // mean 32 < 128 and it is faster to issue a wide load regardless.
+        // 1 is simply "slow, don't do it". I.e. comparing an aligned load to a
+        // wider load which will not be aligned anymore the latter is slower.
         if (IsFast)
-          *IsFast = 1;
+          *IsFast = (Alignment >= RequiredAlignment) ? 64
+                    : (Alignment < Align(4))         ? 32
+                                                     : 1;
         return true;
       }
 
@@ -1442,8 +1455,12 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
         // be equally slow as a single ds_read_b96/ds_write_b96, but there will
         // be more of them, so overall we will pay less penalty issuing a single
         // instruction.
+
+        // See comment on the values above.
         if (IsFast)
-          *IsFast = Alignment >= RequiredAlignment || Alignment < Align(4);
+          *IsFast = (Alignment >= RequiredAlignment) ? 96
+                    : (Alignment < Align(4))         ? 32
+                                                     : 1;
         return true;
       }
 
@@ -1463,8 +1480,12 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
         // be equally slow as a single ds_read_b128/ds_write_b128, but there
         // will be more of them, so overall we will pay less penalty issuing a
         // single instruction.
+
+        // See comment on the values above.
         if (IsFast)
-          *IsFast= Alignment >= RequiredAlignment || Alignment < Align(4);
+          *IsFast = (Alignment >= RequiredAlignment) ? 128
+                    : (Alignment < Align(4))         ? 32
+                                                     : 1;
         return true;
       }
 
@@ -1476,8 +1497,11 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       break;
     }
 
+    // See comment on the values above.
+    // Note that we have a single-dword or sub-dword here, so if underaligned
+    // it is a slowest possible access, hence returned value is 0.
     if (IsFast)
-      *IsFast = Alignment >= RequiredAlignment;
+      *IsFast = (Alignment >= RequiredAlignment) ? Size : 0;
 
     return Alignment >= RequiredAlignment ||
            Subtarget->hasUnalignedDSAccessEnabled();
@@ -1535,22 +1559,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
 bool SITargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *IsFast) const {
-  bool Allow = allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
-                                                  Alignment, Flags, IsFast);
-
-  if (Allow && IsFast && Subtarget->hasUnalignedDSAccessEnabled() &&
-      (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-       AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
-    // Lie it is fast if +unaligned-access-mode is passed so that DS accesses
-    // get vectorized. We could use ds_read2_b*/ds_write2_b* instructions on a
-    // misaligned data which is faster than a pair of ds_read_b*/ds_write_b*
-    // which would be equally misaligned.
-    // This is only used by the common passes, selection always calls the
-    // allowsMisalignedMemoryAccessesImpl version.
-    *IsFast= 1;
-  }
-
-  return Allow;
+  return allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
+                                            Alignment, Flags, IsFast);
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
@@ -8785,7 +8795,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     auto Flags = Load->getMemOperand()->getFlags();
     if (allowsMisalignedMemoryAccessesImpl(MemVT.getSizeInBits(), AS,
                                            Load->getAlign(), Flags, &Fast) &&
-        Fast)
+        Fast > 1)
       return SDValue();
 
     if (MemVT.isVector())
@@ -9284,7 +9294,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     auto Flags = Store->getMemOperand()->getFlags();
     if (allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AS,
                                            Store->getAlign(), Flags, &Fast) &&
-        Fast)
+        Fast > 1)
       return SDValue();
 
     if (VT.isVector())
