@@ -523,12 +523,20 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   // Lookup the entry, lazily creating it if necessary.
   mlir::Operation *Entry = GetGlobalValue(MangledName);
   if (Entry) {
-    // TODO: WeakRefReferences
-    // TODO: Handle dropped DLL attributes.
-    // TODO: If there are two attempts to define the same mangled name, issue an
-    //       error.
+    if (WeakRefReferences.erase(Entry)) {
+      llvm_unreachable("NYI");
+    }
 
+    // Handle dropped DLL attributes.
+    if (D && !D->hasAttr<DLLImportAttr>() && !D->hasAttr<DLLExportAttr>()) {
+      // TODO(CIR): Entry->setDLLStorageClass
+      setDSOLocal(Entry);
+    }
+
+    // TODO(CIR): If there are two attempts to define the same mangled name,
+    // issue an error.
     auto Fn = cast<mlir::FuncOp>(Entry);
+
     if (Fn && Fn.getFunctionType() == Ty) {
       return Fn;
     }

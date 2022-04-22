@@ -88,6 +88,11 @@ private:
   /// for FunctionDecls's.
   CIRGenFunction *CurCGF = nullptr;
 
+  // A set of references that have only been set via a weakref so far. This is
+  // used to remove the weak of the reference if we ever see a direct reference
+  // or a definition.
+  llvm::SmallPtrSet<mlir::Operation *, 10> WeakRefReferences;
+
   /// -------
   /// Declaring variables
   /// -------
