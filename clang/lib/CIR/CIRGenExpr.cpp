@@ -657,8 +657,8 @@ mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
                                                       mlir::Location loc,
                                                       const Stmt *thenS,
                                                       const Stmt *elseS) {
-  // TODO: scoped ApplyDebugLocation DL(*this, Cond);
-  // TODO: __builtin_unpredictable and profile counts?
+  // TODO(CIR): scoped ApplyDebugLocation DL(*this, Cond);
+  // TODO(CIR): __builtin_unpredictable and profile counts?
   cond = cond->IgnoreParens();
   mlir::Value condV = evaluateExprAsBool(cond);
   mlir::LogicalResult resThen = mlir::success(), resElse = mlir::success();
