@@ -122,6 +122,17 @@ public:
   virtual RecordArgABI
   getRecordArgABI(const clang::CXXRecordDecl *RD) const = 0;
 
+  /// Insert any ABI-specific implicit parameters into the parameter list for a
+  /// function. This generally involves extra data for constructors and
+  /// destructors.
+  ///
+  /// ABIs may also choose to override the return type, which has been
+  /// initialized with the type of 'this' if HasThisReturn(CGF.CurGD) is true or
+  /// the formal return type of the function otherwise.
+  virtual void addImplicitStructorParams(CIRGenFunction &CGF,
+                                         clang::QualType &ResTy,
+                                         FunctionArgList &Params) = 0;
+
   /// Checks if ABI requires to initialize vptrs for given dynamic class.
   virtual bool
   doStructorsInitializeVPtrs(const clang::CXXRecordDecl *VTableClass) = 0;
