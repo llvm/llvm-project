@@ -9,7 +9,7 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
-func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
+func.func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
   %cst = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %cst2 = memref.dim %arg1, %c0 : memref<?xf32>
@@ -23,7 +23,7 @@ func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
 
 // CHECK: [1, 1, 1, 1, 1]
 // CHECK: ( 1, 1 )
-func @main() {
+func.func @main() {
   %v0 = arith.constant 0.0 : f32
   %c0 = arith.constant 0: index
   %arg0 = memref.alloc() : memref<5xf32>
@@ -40,4 +40,4 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(%ptr : memref<*xf32>)
+func.func private @print_memref_f32(%ptr : memref<*xf32>)

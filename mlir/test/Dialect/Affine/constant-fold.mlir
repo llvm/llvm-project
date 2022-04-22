@@ -1,7 +1,7 @@
 // RUN: mlir-opt -test-constant-fold -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @affine_apply
-func @affine_apply(%variable : index) -> (index, index, index) {
+func.func @affine_apply(%variable : index) -> (index, index, index) {
   %c177 = arith.constant 177 : index
   %c211 = arith.constant 211 : index
   %N = arith.constant 1075 : index
@@ -24,7 +24,7 @@ func @affine_apply(%variable : index) -> (index, index, index) {
 
 // CHECK: #[[map:.*]] = affine_map<(d0, d1) -> (42, d1)
 
-func @affine_min(%variable: index) -> (index, index) {
+func.func @affine_min(%variable: index) -> (index, index) {
   // CHECK: %[[C42:.*]] = arith.constant 42
   %c42 = arith.constant 42 : index
   %c44 = arith.constant 44 : index
@@ -44,7 +44,7 @@ func @affine_min(%variable: index) -> (index, index) {
 
 // CHECK: #[[map:.*]] = affine_map<(d0, d1) -> (42, d1)
 
-func @affine_min(%variable: index) -> (index, index) {
+func.func @affine_min(%variable: index) -> (index, index) {
   // CHECK: %[[C42:.*]] = arith.constant 42
   %c42 = arith.constant 42 : index
   // CHECK: %[[C44:.*]] = arith.constant 44

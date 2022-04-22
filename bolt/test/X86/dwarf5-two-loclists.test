@@ -1,0 +1,78 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5_main.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5_helper.s -o %thelper.o
+# RUN: %clang %cflags -dwarf-5 %tmain.o %thelper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
+# RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
+
+# This tests checks that re-writing of .debug_loclists is handled correctly for two CUs,
+# and two loclist entries.
+
+# PRECHECK: version = 0x0005
+# PRECHECK: DW_AT_loclists_base [DW_FORM_sec_offset] (0x0000000c)
+# PRECHECK-EMPTY:
+# PRECHECK: DW_TAG_variable
+# PRECHECK: DW_AT_location [DW_FORM_loclistx]
+# PRECHECK-SAME: indexed (0x0)
+# PRECHECK-SAME: loclist = 0x00000014
+# PRECHECK: DW_AT_location [DW_FORM_loclistx]
+# PRECHECK-SAME: indexed (0x1)
+# PRECHECK-SAME: loclist = 0x00000028
+# PRECHECK: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x00000043)
+# PRECHECK-EMPTY:
+# PRECHECK: DW_TAG_variable
+# PRECHECK: DW_TAG_variable
+# PRECHECK: DW_AT_location [DW_FORM_loclistx]
+# PRECHECK-SAME: indexed (0x0)
+# PRECHECK-SAME: loclist = 0x00000047
+
+# POSTCHECK: Addrs: [
+# POSTCHECK-NEXT: 0x
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR:]]
+# POSTCHECK-NEXT: 0x
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR2:]]
+# For second CU.
+# POSTCHECK: Addrs: [
+# POSTCHECK-NEXT: 0x
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR3:]]
+# POSTCHECK-NEXT: 0x
+# POSTCHECK-NEXT: 0x
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR4:]]
+
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x0000000c)
+# POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x0000000c)
+# POSTCHECK-EMPTY
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK: DW_AT_location [DW_FORM_loclistx]
+# POSTCHECK-SAME: indexed (0x0)
+# POSTCHECK-SAME: loclist = 0x00000014
+# POSTCHECK-NEXT: [0x[[#ADDR]]
+# POSTCHECK-SAME: 0x[[#ADDR + 6]]
+# POSTCHECK-NEXT: [0x[[#ADDR2]]
+# POSTCHECK-SAME: 0x[[#ADDR2 + 6]]
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK: DW_AT_location [DW_FORM_loclistx]
+# POSTCHECK-SAME: indexed (0x1)
+# POSTCHECK-SAME: loclist = 0x00000028
+# POSTCHECK-NEXT: [0x[[#ADDR2]]
+# POSTCHECK-SAME: 0x[[#ADDR2 + 2]]
+
+# Checking second CU
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x00000043)
+# POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x00000033)
+# POSTCHECK-EMPTY:
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK: DW_AT_location [DW_FORM_loclistx]
+# POSTCHECK-SAME: indexed (0x0)
+# POSTCHECK-SAME: loclist = 0x00000047
+# POSTCHECK-NEXT: [0x[[#ADDR3]]
+# POSTCHECK-SAME: 0x[[#ADDR3 + 3]]
+# POSTCHECK-NEXT: [0x[[#ADDR4]]
+# POSTCHECK-SAME: 0x[[#ADDR4 + 1]]

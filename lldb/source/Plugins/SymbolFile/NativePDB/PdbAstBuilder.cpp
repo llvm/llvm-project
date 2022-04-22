@@ -1255,7 +1255,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
   auto begin = scope.begin();
   auto end = scope.end();
   std::vector<clang::ParmVarDecl *> params;
-  while (begin != end && param_count > 0) {
+  for (uint32_t i = 0; i < param_count && begin != end;) {
     uint32_t record_offset = begin.offset();
     CVSymbol sym = *begin++;
 
@@ -1307,10 +1307,10 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
 
     m_uid_to_decl[toOpaqueUid(param_uid)] = param;
     params.push_back(param);
-    --param_count;
+    ++i;
   }
 
-  if (!params.empty())
+  if (!params.empty() && params.size() == param_count)
     m_clang.SetFunctionParameters(&function_decl, params);
 }
 

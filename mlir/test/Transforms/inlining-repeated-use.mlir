@@ -2,32 +2,32 @@
 
 // This could crash the inliner, make sure it does not.
 
-func @A() {
+func.func @A() {
   call @B() { inA } : () -> ()
   return
 }
 
-func @B() {
+func.func @B() {
   call @E() : () -> ()
   return
 }
 
-func @C() {
+func.func @C() {
   call @D() : () -> ()
   return
 }
 
-func private @D() {
+func.func private @D() {
   call @B() { inD } : () -> ()
   return
 }
 
-func @E() {
+func.func @E() {
   call @fabsf() : () -> ()
   return
 }
 
-func private @fabsf()
+func.func private @fabsf()
 
 // CHECK: func @A() {
 // CHECK:   call @fabsf() : () -> ()

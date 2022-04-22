@@ -1171,3 +1171,6 @@
 // PPC-DARWIN:#define __WINT_WIDTH__ 32
 // PPC-DARWIN:#define __powerpc__ 1
 // PPC-DARWIN:#define __ppc__ 1
+
+// RUN: %clang_cc1 -E -dM -triple=powerpc-unknown-openbsd -x c++ < /dev/null | FileCheck -match-full-lines -check-prefix PPC-OPENBSD-CXX %s
+// PPC-OPENBSD-CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL

@@ -9,7 +9,7 @@
 // CHECK-DAG: #[[$nm:.*]] = affine_map<(d0, d1, d2) -> (d1, d0)>
 // CHECK-DAG: #[[$km:.*]] = affine_map<(d0, d1, d2) -> (d2, d0)>
 
-func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
+func.func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
           %y: memref<?xf32, offset: ?, strides: [1]>,
           %v: memref<f32>) {
   linalg.dot { __internal_linalg_transform__ = "MEM" }
@@ -32,7 +32,7 @@ func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
 // CHECK:               arith.addf
 // CHECK:               store
 
-func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %x: memref<?xf32, offset: ?, strides: [1]>,
              %y: memref<?xf32, offset: ?, strides: [1]>) {
   linalg.matvec
@@ -51,7 +51,7 @@ func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:               ins({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?xf32, #[[$STRIDED_1D]]>)
 // CHECK:              outs({{.*}}: memref<?xf32, #[[$STRIDED_1D]]>)
 
-func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   linalg.matmul { __internal_linalg_transform__ = "MEM" }
@@ -102,7 +102,7 @@ func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
   library_call = "linalg_matmul",
   iterator_types = ["parallel", "parallel", "reduction"]
 }
-func @permute_generic(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @permute_generic(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
            %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
            %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   linalg.generic #generic_matmul_trait
@@ -125,7 +125,7 @@ func @permute_generic(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-SAME:     memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK-SAME:     memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 
-func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %x: memref<?xf32, offset: ?, strides: [1]>,
              %y: memref<?xf32, offset: ?, strides: [1]>) {
   linalg.matvec {__internal_linalg_transform__ = "__with_perm__"}
@@ -144,7 +144,7 @@ func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:               ins({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?xf32, #[[$STRIDED_1D]]>)
 // CHECK:              outs({{.*}}: memref<?xf32, #[[$STRIDED_1D]]>)
 
-func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
              %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   linalg.matmul {__internal_linalg_transform__ = "__with_perm__"}
@@ -177,7 +177,7 @@ func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:                                  ins({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
 // CHECK:                                   outs({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
 
-func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                              %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                              %arg2: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   %c2000 = arith.constant 2000 : index
@@ -236,7 +236,7 @@ func @promote_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK-SAME:                 ins(%[[v0]], %[[v1]] : memref<?x?xf32>, memref<?x?xf32>)
 // CHECK-SAME:                outs(%[[v2]] : memref<?x?xf32>)
 
-func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                              %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                              %arg2: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   %c2000 = arith.constant 2000 : index
@@ -288,7 +288,7 @@ func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?
 // CHECK-SAME:           ins(%[[v0]], %[[s1]] : memref<?x?xf32>, memref<?x?xf32, #[[$STRIDED_2D]]>)
 // CHECK-SAME:          outs(%[[s2]] : memref<?x?xf32, #[[$STRIDED_2D]]>)
 
-func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+func.func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   %c2000 = arith.constant 2000 : index
   %c4000 = arith.constant 4000 : index
   %c0 = arith.constant 0 : index
@@ -310,7 +310,7 @@ func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
 // CHECK:         memref.copy %[[s0]], %[[l0]] : memref<?x?xf32, #map{{.*}}> to memref<?x?xf32, #map{{.*}}>
 // CHECK:         linalg.fill ins(%[[cf]] : f32) outs(%[[v0]] : memref<?x?xf32>)
 
-func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, offset: ?, strides: [?, 1]>) {
+func.func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, offset: ?, strides: [?, 1]>) {
   %c2000 = arith.constant 2000 : index
   %c4000 = arith.constant 4000 : index
   %c0 = arith.constant 0 : index
@@ -333,7 +333,7 @@ func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, offset: ?, st
 // CHECK:         memref.copy %[[s0]], %[[l0]] : memref<?x?xcomplex<f32>, #map{{.*}}> to memref<?x?xcomplex<f32>, #map{{.*}}>
 // CHECK:         linalg.fill ins(%[[cc]] : complex<f32>) outs(%[[v0]] : memref<?x?xcomplex<f32>>)
 
-func @tile_permute_parallel_loop(%arg0: memref<?x?xf32>,
+func.func @tile_permute_parallel_loop(%arg0: memref<?x?xf32>,
                                  %arg1: memref<?x?xf32>,
                                  %arg2: memref<?x?xf32>) {
   linalg.matmul {__internal_linalg_transform__ = "par__with_perm__"}

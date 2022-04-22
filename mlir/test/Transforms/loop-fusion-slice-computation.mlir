@@ -3,7 +3,7 @@
 // -----
 
 // CHECK-LABEL: func @slice_depth1_loop_nest() {
-func @slice_depth1_loop_nest() {
+func.func @slice_depth1_loop_nest() {
   %0 = memref.alloc() : memref<100xf32>
   %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
@@ -20,7 +20,7 @@ func @slice_depth1_loop_nest() {
 // -----
 
 // CHECK-LABEL: func @forward_slice_slice_depth1_loop_nest() {
-func @forward_slice_slice_depth1_loop_nest() {
+func.func @forward_slice_slice_depth1_loop_nest() {
   %0 = memref.alloc() : memref<100xf32>
   %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 5 {
@@ -40,7 +40,7 @@ func @forward_slice_slice_depth1_loop_nest() {
 // Slice loop bounds should be adjusted such that the load/store are for the
 // same location.
 // CHECK-LABEL: func @slice_depth1_loop_nest_with_offsets() {
-func @slice_depth1_loop_nest_with_offsets() {
+func.func @slice_depth1_loop_nest_with_offsets() {
   %0 = memref.alloc() : memref<100xf32>
   %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
@@ -61,7 +61,7 @@ func @slice_depth1_loop_nest_with_offsets() {
 // Slices at loop depth 1 should only slice the loop bounds of the first scf.
 // Slices at loop depth 2 should slice loop bounds of both loops.
 // CHECK-LABEL: func @slice_depth2_loop_nest() {
-func @slice_depth2_loop_nest() {
+func.func @slice_depth2_loop_nest() {
   %0 = memref.alloc() : memref<100x100xf32>
   %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
@@ -87,7 +87,7 @@ func @slice_depth2_loop_nest() {
 // greater than 1. However, loop nest %i2 can be sliced into loop nest %i0 at
 // depths 1 and 2 because the dependent store in loop nest %i0 is at depth 2.
 // CHECK-LABEL: func @slice_depth2_loop_nest_two_loads() {
-func @slice_depth2_loop_nest_two_loads() {
+func.func @slice_depth2_loop_nest_two_loads() {
   %0 = memref.alloc() : memref<100x100xf32>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 7.000000e+00 : f32
@@ -115,7 +115,7 @@ func @slice_depth2_loop_nest_two_loads() {
 // sliced into loop nest %i2 at depths 1 and 2 because the dependent load in
 // loop nest %i2 is at depth 2.
 // CHECK-LABEL: func @slice_depth2_loop_nest_two_stores() {
-func @slice_depth2_loop_nest_two_stores() {
+func.func @slice_depth2_loop_nest_two_stores() {
   %0 = memref.alloc() : memref<100x100xf32>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 7.000000e+00 : f32
@@ -140,7 +140,7 @@ func @slice_depth2_loop_nest_two_stores() {
 
 // Test loop nest which has a smaller outer trip count than its inner scf.
 // CHECK-LABEL: func @slice_loop_nest_with_smaller_outer_trip_count() {
-func @slice_loop_nest_with_smaller_outer_trip_count() {
+func.func @slice_loop_nest_with_smaller_outer_trip_count() {
   %0 = memref.alloc() : memref<100x100xf32>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 7.000000e+00 : f32

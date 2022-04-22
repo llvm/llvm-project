@@ -22,7 +22,7 @@
 // CHECK-NEXT:   test.region_if_yield %[[V3]]
 // CHECK-NEXT: }
 // CHECK-NEXT: return %[[V1]]
-func @test_simple_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
+func.func @test_simple_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   %0 = arith.subi %arg1, %arg2 : i32
   %1 = arith.subi %arg2, %arg1 : i32
   %2 = arith.addi %arg1, %arg1 : i32
@@ -68,7 +68,7 @@ func @test_simple_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
 // CHECK-NEXT:   test.region_if_yield %[[ARG2]]
 // CHECK-NEXT: }
 // CHECK-NEXT: return %[[V0]]
-func @test_region_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
+func.func @test_region_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   %0 = arith.subi %arg1, %arg2 : i32
   %1 = test.region_if %arg0: i32 -> i32 then {
   ^bb0(%arg3: i32):
@@ -114,7 +114,7 @@ func @test_region_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
 // CHECK-NEXT:   test.region_if_yield %[[ARG2]]
 // CHECK-NEXT: }
 // CHECK-NEXT: return %[[V0]]
-func @test_subgraph_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
+func.func @test_subgraph_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   %0 = arith.addi %arg1, %arg2 : i32
   %1 = arith.subi %arg1, %arg2 : i32
   %2 = arith.subi %arg2, %arg1 : i32
@@ -149,7 +149,7 @@ func @test_subgraph_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
 // CHECK-NEXT: })
 // CHECK-NEXT: %[[V2:.*]] = arith.addi %[[V0]], %[[V1]]
 // CHECK-NEXT: return %[[V2]]
-func @test_multiblock_region_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
+func.func @test_multiblock_region_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
   %0 = arith.addi %arg1, %arg2 : i32
   %1 = arith.addi %0, %arg2 : i32
   %2 = arith.addi %1, %arg1 : i32
@@ -189,7 +189,7 @@ func @test_multiblock_region_sink(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
 // CHECK-NEXT:   test.region_if_yield %[[ARG1]]
 // CHECK-NEXT: }
 // CHECK-NEXT: return %[[V0]]
-func @test_nested_region_sink(%arg0: i32, %arg1: i32) -> i32 {
+func.func @test_nested_region_sink(%arg0: i32, %arg1: i32) -> i32 {
   %0 = arith.addi %arg1, %arg1 : i32
   %1 = test.region_if %arg0: i32 -> i32 then {
   ^bb0(%arg3: i32):
@@ -226,7 +226,7 @@ func @test_nested_region_sink(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK-NEXT:   "test.yield"(%[[V1]]) : (i32) -> ()
 // CHECK-NEXT: })
 // CHECK-NEXT: return %[[V0]]
-func @test_not_sunk_deeply(%arg0: i32) -> i32 {
+func.func @test_not_sunk_deeply(%arg0: i32) -> i32 {
   %0 = arith.addi %arg0, %arg0 : i32
   %1 = "test.any_cond"() ({
     cf.br ^bb1

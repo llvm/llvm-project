@@ -11,6 +11,7 @@ unittest("ToolingTests") {
     "//clang/lib/Frontend",
     "//clang/lib/Lex",
     "//clang/lib/Rewrite",
+    "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Core",
     "//clang/lib/Tooling/DependencyScanning",

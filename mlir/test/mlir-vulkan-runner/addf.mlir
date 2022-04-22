@@ -18,7 +18,7 @@ module attributes {
     }
   }
 
-  func @main() {
+  func.func @main() {
     %arg0 = memref.alloc() : memref<8xf32>
     %arg1 = memref.alloc() : memref<8xf32>
     %arg2 = memref.alloc() : memref<8xf32>
@@ -44,7 +44,7 @@ module attributes {
     call @print_memref_f32(%arg6) : (memref<*xf32>) -> ()
     return
   }
-  func private @fillResource1DFloat(%0 : memref<?xf32>, %1 : f32)
-  func private @print_memref_f32(%ptr : memref<*xf32>)
+  func.func private @fillResource1DFloat(%0 : memref<?xf32>, %1 : f32)
+  func.func private @print_memref_f32(%ptr : memref<*xf32>)
 }
 

@@ -7772,6 +7772,8 @@ cc_library(
     deps = [
         ":IR",
         ":PDLDialect",
+        ":PDLInterpDialect",
+        ":Rewrite",
         ":Support",
         ":TransformDialectIncGen",
         ":TransformDialectInterfacesIncGen",

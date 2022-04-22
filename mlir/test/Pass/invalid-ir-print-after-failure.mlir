@@ -11,6 +11,6 @@
 
 // CHECK-CUSTOM: func @TestCreateInvalidCallInPass
 // CHECK-GENERIC: "func.func"
-func @TestCreateInvalidCallInPass() {
+func.func @TestCreateInvalidCallInPass() {
   return
 }

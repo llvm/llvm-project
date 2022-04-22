@@ -12,6 +12,7 @@
 #include "TestTU.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -72,6 +73,41 @@ TEST(FeatureModulesTest, SuppressDiags) {
   Annotations Code("[[test]]; /* error-ok */");
   TestTU TU;
   TU.Code = Code.code().str();
+
+  {
+    auto AST = TU.build();
+    EXPECT_THAT(*AST.getDiagnostics(), testing::Not(testing::IsEmpty()));
+  }
+
+  TU.FeatureModules = &FMS;
+  {
+    auto AST = TU.build();
+    EXPECT_THAT(*AST.getDiagnostics(), testing::IsEmpty());
+  }
+}
+
+TEST(FeatureModulesTest, BeforeExecute) {
+  struct BeforeExecuteModule final : public FeatureModule {
+    struct Listener : public FeatureModule::ASTListener {
+      void beforeExecute(CompilerInstance &CI) override {
+        CI.getPreprocessor().SetSuppressIncludeNotFoundError(true);
+      }
+    };
+    std::unique_ptr<ASTListener> astListeners() override {
+      return std::make_unique<Listener>();
+    };
+  };
+  FeatureModuleSet FMS;
+  FMS.add(std::make_unique<BeforeExecuteModule>());
+
+  TestTU TU = TestTU::withCode(R"cpp(
+    /*error-ok*/
+    #include "not_found.h"
+
+    void foo() {
+      #include "not_found_not_preamble.h"
+    }
+  )cpp");
 
   {
     auto AST = TU.build();

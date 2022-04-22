@@ -23,7 +23,7 @@
 // UNROLL-BY-4-DAG: [[$MAP11:#map[0-9]+]] = affine_map<(d0) -> (d0)>
 
 // UNROLL-FULL-LABEL: func @loop_nest_simplest() {
-func @loop_nest_simplest() {
+func.func @loop_nest_simplest() {
   // UNROLL-FULL: affine.for %arg0 = 0 to 100 step 2 {
   affine.for %i = 0 to 100 step 2 {
     // UNROLL-FULL: %c1_i32 = arith.constant 1 : i32
@@ -38,7 +38,7 @@ func @loop_nest_simplest() {
 }         // UNROLL-FULL }
 
 // UNROLL-FULL-LABEL: func @loop_nest_simple_iv_use() {
-func @loop_nest_simple_iv_use() {
+func.func @loop_nest_simple_iv_use() {
   // UNROLL-FULL: %c0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: affine.for %arg0 = 0 to 100 step 2 {
   affine.for %i = 0 to 100 step 2 {
@@ -58,7 +58,7 @@ func @loop_nest_simple_iv_use() {
 
 // Operations in the loop body have results that are used therein.
 // UNROLL-FULL-LABEL: func @loop_nest_body_def_use() {
-func @loop_nest_body_def_use() {
+func.func @loop_nest_body_def_use() {
   // UNROLL-FULL: %c0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: affine.for %arg0 = 0 to 100 step 2 {
   affine.for %i = 0 to 100 step 2 {
@@ -85,7 +85,7 @@ func @loop_nest_body_def_use() {
 }         // UNROLL-FULL }
 
 // UNROLL-FULL-LABEL: func @loop_nest_strided() {
-func @loop_nest_strided() {
+func.func @loop_nest_strided() {
   // UNROLL-FULL: %c2 = arith.constant 2 : index
   // UNROLL-FULL-NEXT: %c2_0 = arith.constant 2 : index
   // UNROLL-FULL-NEXT: affine.for %arg0 = 0 to 100 {
@@ -118,7 +118,7 @@ func @loop_nest_strided() {
 }         // UNROLL-FULL }
 
 // UNROLL-FULL-LABEL: func @loop_nest_multiple_results() {
-func @loop_nest_multiple_results() {
+func.func @loop_nest_multiple_results() {
   // UNROLL-FULL: %c0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: affine.for %arg0 = 0 to 100 {
   affine.for %i = 0 to 100 {
@@ -144,7 +144,7 @@ func @loop_nest_multiple_results() {
 
 // Imperfect loop nest. Unrolling innermost here yields a perfect nest.
 // UNROLL-FULL-LABEL: func @loop_nest_seq_imperfect(%arg0: memref<128x128xf32>) {
-func @loop_nest_seq_imperfect(%a : memref<128x128xf32>) {
+func.func @loop_nest_seq_imperfect(%a : memref<128x128xf32>) {
   // UNROLL-FULL: %c0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: %c128 = arith.constant 128 : index
   %c128 = arith.constant 128 : index
@@ -182,7 +182,7 @@ func @loop_nest_seq_imperfect(%a : memref<128x128xf32>) {
 }
 
 // UNROLL-FULL-LABEL: func @loop_nest_seq_multiple() {
-func @loop_nest_seq_multiple() {
+func.func @loop_nest_seq_multiple() {
   // UNROLL-FULL: c0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: %c0_0 = arith.constant 0 : index
   // UNROLL-FULL-NEXT: %0 = affine.apply [[$MAP0]](%c0_0)
@@ -228,7 +228,7 @@ func @loop_nest_seq_multiple() {
 }         // UNROLL-FULL }
 
 // UNROLL-FULL-LABEL: func @loop_nest_unroll_full() {
-func @loop_nest_unroll_full() {
+func.func @loop_nest_unroll_full() {
   // UNROLL-FULL-NEXT: %0 = "foo"() : () -> i32
   // UNROLL-FULL-NEXT: %1 = "bar"() : () -> i32
   // UNROLL-FULL-NEXT:  return
@@ -240,7 +240,7 @@ func @loop_nest_unroll_full() {
 } // UNROLL-FULL }
 
 // SHORT-LABEL: func @loop_nest_outer_unroll() {
-func @loop_nest_outer_unroll() {
+func.func @loop_nest_outer_unroll() {
   // SHORT:      affine.for %arg0 = 0 to 4 {
   // SHORT-NEXT:   %0 = affine.apply [[$MAP0]](%arg0)
   // SHORT-NEXT:   %1 = "addi32"(%0, %0) : (index, index) -> index
@@ -263,7 +263,7 @@ func @loop_nest_outer_unroll() {
 // successfully run. Both %x and %y will get unrolled here as the min trip
 // count threshold set to 2.
 // SHORT-LABEL: func @loop_nest_seq_long() -> i32 {
-func @loop_nest_seq_long() -> i32 {
+func.func @loop_nest_seq_long() -> i32 {
   %A = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
   %B = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
   %C = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
@@ -316,7 +316,7 @@ func @loop_nest_seq_long() -> i32 {
 }
 
 // UNROLL-BY-4-LABEL: func @unroll_unit_stride_no_cleanup() {
-func @unroll_unit_stride_no_cleanup() {
+func.func @unroll_unit_stride_no_cleanup() {
   // UNROLL-BY-4: affine.for %arg0 = 0 to 100 {
   affine.for %i = 0 to 100 {
     // UNROLL-BY-4: for [[L1:%arg[0-9]+]] = 0 to 8 step 4 {
@@ -345,7 +345,7 @@ func @unroll_unit_stride_no_cleanup() {
 }
 
 // UNROLL-BY-4-LABEL: func @unroll_unit_stride_cleanup() {
-func @unroll_unit_stride_cleanup() {
+func.func @unroll_unit_stride_cleanup() {
   // UNROLL-BY-4: affine.for %arg0 = 0 to 100 {
   affine.for %i = 0 to 100 {
     // UNROLL-BY-4: for [[L1:%arg[0-9]+]] = 0 to 8 step 4 {
@@ -374,7 +374,7 @@ func @unroll_unit_stride_cleanup() {
 }
 
 // UNROLL-BY-4-LABEL: func @unroll_non_unit_stride_cleanup() {
-func @unroll_non_unit_stride_cleanup() {
+func.func @unroll_non_unit_stride_cleanup() {
   // UNROLL-BY-4: affine.for %arg0 = 0 to 100 {
   affine.for %i = 0 to 100 {
     // UNROLL-BY-4: for [[L1:%arg[0-9]+]] = 2 to 42 step 20 {
@@ -404,7 +404,7 @@ func @unroll_non_unit_stride_cleanup() {
 
 // Both the unrolled loop and the cleanup loop are single iteration loops.
 // UNROLL-BY-4-LABEL: func @loop_nest_single_iteration_after_unroll
-func @loop_nest_single_iteration_after_unroll(%N: index) {
+func.func @loop_nest_single_iteration_after_unroll(%N: index) {
   // UNROLL-BY-4: %c0 = arith.constant 0 : index
   // UNROLL-BY-4: %c4 = arith.constant 4 : index
   // UNROLL-BY-4: affine.for %arg1 = 0 to %arg0 {
@@ -429,7 +429,7 @@ func @loop_nest_single_iteration_after_unroll(%N: index) {
 
 // No cleanup will be generated here.
 // UNROLL-BY-4-LABEL: func @loop_nest_operand1() {
-func @loop_nest_operand1() {
+func.func @loop_nest_operand1() {
 // UNROLL-BY-4:      affine.for %arg0 = 0 to 100 step 2 {
 // UNROLL-BY-4-NEXT:   affine.for %arg1 = 0 to #map{{[0-9]+}}(%arg0) step 4
 // UNROLL-BY-4-NEXT:      %0 = "foo"() : () -> i32
@@ -449,7 +449,7 @@ func @loop_nest_operand1() {
 
 // No cleanup will be generated here.
 // UNROLL-BY-4-LABEL: func @loop_nest_operand2() {
-func @loop_nest_operand2() {
+func.func @loop_nest_operand2() {
 // UNROLL-BY-4:      affine.for %arg0 = 0 to 100 step 2 {
 // UNROLL-BY-4-NEXT:   affine.for %arg1 = [[$MAP11]](%arg0) to #map{{[0-9]+}}(%arg0) step 4 {
 // UNROLL-BY-4-NEXT:     %0 = "foo"() : () -> i32
@@ -468,7 +468,7 @@ func @loop_nest_operand2() {
 }
 
 // UNROLL-BY-4-LABEL: func @floordiv_mod_ub
-func @floordiv_mod_ub(%M : index, %N : index) {
+func.func @floordiv_mod_ub(%M : index, %N : index) {
   affine.for %i = 0 to %N step 4 {
     // A cleanup should be generated here.
     affine.for %j = 0 to min affine_map<(d0)[s0] -> ((16 * d0) floordiv (4 * s0))>(%i)[%N] {
@@ -494,7 +494,7 @@ func @floordiv_mod_ub(%M : index, %N : index) {
 // Difference between loop bounds is constant, but not a multiple of unroll
 // factor. The cleanup loop happens to be a single iteration one and is promoted.
 // UNROLL-BY-4-LABEL: func @loop_nest_operand3() {
-func @loop_nest_operand3() {
+func.func @loop_nest_operand3() {
   // UNROLL-BY-4: affine.for %arg0 = 0 to 100 step 2 {
   affine.for %i = 0 to 100 step 2 {
     // UNROLL-BY-4: affine.for %arg1 = [[$MAP11]](%arg0) to #map{{[0-9]+}}(%arg0) step 4 {
@@ -512,7 +512,7 @@ func @loop_nest_operand3() {
 }
 
 // UNROLL-BY-4-LABEL: func @loop_nest_symbolic_bound(%arg0: index) {
-func @loop_nest_symbolic_bound(%N : index) {
+func.func @loop_nest_symbolic_bound(%N : index) {
   // UNROLL-BY-4: affine.for %arg1 = 0 to 100 {
   affine.for %i = 0 to 100 {
     // UNROLL-BY-4: affine.for %arg2 = 0 to #map{{[0-9]+}}()[%arg0] step 4 {
@@ -534,7 +534,7 @@ func @loop_nest_symbolic_bound(%N : index) {
 
 // UNROLL-BY-4-LABEL: func @loop_nest_symbolic_bound_with_step
 // UNROLL-BY-4-SAME: %[[N:.*]]: index
-func @loop_nest_symbolic_bound_with_step(%N : index) {
+func.func @loop_nest_symbolic_bound_with_step(%N : index) {
   // UNROLL-BY-4: affine.for %arg1 = 0 to 100 {
   affine.for %i = 0 to 100 {
     affine.for %j = 0 to %N step 3 {
@@ -555,7 +555,7 @@ func @loop_nest_symbolic_bound_with_step(%N : index) {
 }
 
 // UNROLL-BY-4-LABEL: func @loop_nest_symbolic_and_min_upper_bound
-func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index) {
+func.func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index) {
   affine.for %i = %M to min affine_map<()[s0, s1] -> (s0, s1, 1024)>()[%N, %K] {
     "test.foo"() : () -> ()
   }
@@ -570,7 +570,7 @@ func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index)
 // The trip count here is a multiple of four, but this can be inferred only
 // through composition. Check for no cleanup scf.
 // UNROLL-BY-4-LABEL: func @loop_nest_non_trivial_multiple_upper_bound
-func @loop_nest_non_trivial_multiple_upper_bound(%M : index, %N : index) {
+func.func @loop_nest_non_trivial_multiple_upper_bound(%M : index, %N : index) {
   %T = affine.apply affine_map<(d0) -> (4*d0 + 1)>(%M)
   %K = affine.apply affine_map<(d0) -> (d0 - 1)> (%T)
   affine.for %i = 0 to min affine_map<(d0, d1) -> (4 * d0, d1, 1024)>(%N, %K) {
@@ -583,7 +583,7 @@ func @loop_nest_non_trivial_multiple_upper_bound(%M : index, %N : index) {
 // UNROLL-BY-4: return
 
 // UNROLL-BY-4-LABEL: func @multi_upper_bound
-func @multi_upper_bound(%arg0: index) {
+func.func @multi_upper_bound(%arg0: index) {
   affine.for %i = 0 to min affine_map<()[s0] -> (8 * s0, 12 * s0)>()[%arg0] {
     "test.foo"() : () -> ()
   }
@@ -593,7 +593,7 @@ func @multi_upper_bound(%arg0: index) {
 }
 
 // UNROLL-BY-4-LABEL: func @multi_lower_bound
-func @multi_lower_bound(%arg0: index) {
+func.func @multi_lower_bound(%arg0: index) {
   affine.for %i = max affine_map<()[s0] -> (8 * s0, 12 * s0)>()[%arg0] to 100 {
     "test.foo"() : () -> ()
   }
@@ -605,7 +605,7 @@ func @multi_lower_bound(%arg0: index) {
 }
 
 // UNROLL-BY-4-LABEL: func @loop_nest_non_trivial_multiple_upper_bound_alt
-func @loop_nest_non_trivial_multiple_upper_bound_alt(%M : index, %N : index) {
+func.func @loop_nest_non_trivial_multiple_upper_bound_alt(%M : index, %N : index) {
   %K = affine.apply affine_map<(d0) -> (4*d0)> (%M)
   affine.for %i = 0 to min affine_map<()[s0, s1] -> (4 * s0, s1, 1024)>()[%N, %K] {
     "foo"() : () -> ()
@@ -621,7 +621,7 @@ func @loop_nest_non_trivial_multiple_upper_bound_alt(%M : index, %N : index) {
 }
 
 // UNROLL-BY-1-LABEL: func @unroll_by_one_should_promote_single_iteration_loop()
-func @unroll_by_one_should_promote_single_iteration_loop() {
+func.func @unroll_by_one_should_promote_single_iteration_loop() {
   affine.for %i = 0 to 1 {
     %x = "foo"(%i) : (index) -> i32
   }
@@ -634,7 +634,7 @@ func @unroll_by_one_should_promote_single_iteration_loop() {
 // Test unrolling with affine.for iter_args.
 
 // UNROLL-BY-4-LABEL: loop_unroll_with_iter_args_and_cleanup
-func @loop_unroll_with_iter_args_and_cleanup(%arg0 : f32, %arg1 : f32, %n : index) -> (f32,f32) {
+func.func @loop_unroll_with_iter_args_and_cleanup(%arg0 : f32, %arg1 : f32, %n : index) -> (f32,f32) {
   %cf1 = arith.constant 1.0 : f32
   %cf2 = arith.constant 2.0 : f32
   %sum:2 = affine.for %iv = 0 to 10 iter_args(%i0 = %arg0, %i1 = %arg1) -> (f32, f32) {
@@ -662,7 +662,7 @@ func @loop_unroll_with_iter_args_and_cleanup(%arg0 : f32, %arg1 : f32, %n : inde
 // The epilogue being a single iteration loop gets promoted here.
 
 // UNROLL-BY-4-LABEL: unroll_with_iter_args_and_promotion
-func @unroll_with_iter_args_and_promotion(%arg0 : f32, %arg1 : f32) -> f32 {
+func.func @unroll_with_iter_args_and_promotion(%arg0 : f32, %arg1 : f32) -> f32 {
   %from = arith.constant 0 : index
   %to = arith.constant 10 : index
   %step = arith.constant 1 : index
@@ -683,7 +683,7 @@ func @unroll_with_iter_args_and_promotion(%arg0 : f32, %arg1 : f32) -> f32 {
 }
 
 // UNROLL-FULL: func @unroll_zero_trip_count_case
-func @unroll_zero_trip_count_case() {
+func.func @unroll_zero_trip_count_case() {
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 0
   affine.for %i = 0 to 0 {
   }

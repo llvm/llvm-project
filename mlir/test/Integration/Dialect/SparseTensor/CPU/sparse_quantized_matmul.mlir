@@ -18,7 +18,7 @@
 // operation.
 module {
 
-  func @quantized_matmul(%input1: tensor<5x3xi8>,
+  func.func @quantized_matmul(%input1: tensor<5x3xi8>,
                          %input2: tensor<3x6xi8, #DCSR>,
                          %output: tensor<5x6xi32>) -> tensor<5x6xi32> {
     %c0 = arith.constant 0 : i32
@@ -29,7 +29,7 @@ module {
     return %0: tensor<5x6xi32>
   }
 
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %i0 = arith.constant 0 : i32
 

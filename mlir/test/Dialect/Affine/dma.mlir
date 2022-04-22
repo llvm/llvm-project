@@ -3,7 +3,7 @@
 // -----
 
 // Test with loop IVs.
-func @test0(%arg0 : index, %arg1 : index) {
+func.func @test0(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   %1 = memref.alloc() : memref<100x100xf32, affine_map<(d0, d1) -> (d0, d1)>, 2>
   %2 = memref.alloc() : memref<1xi32>
@@ -24,7 +24,7 @@ func @test0(%arg0 : index, %arg1 : index) {
 // -----
 
 // Test with loop IVs and optional stride arguments.
-func @test1(%arg0 : index, %arg1 : index) {
+func.func @test1(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   %1 = memref.alloc() : memref<100x100xf32, affine_map<(d0, d1) -> (d0, d1)>, 2>
   %2 = memref.alloc() : memref<1xi32>
@@ -47,7 +47,7 @@ func @test1(%arg0 : index, %arg1 : index) {
 // -----
 
 // Test with loop IVs and symbols (without symbol keyword).
-func @test2(%arg0 : index, %arg1 : index) {
+func.func @test2(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   %1 = memref.alloc() : memref<100x100xf32, affine_map<(d0, d1) -> (d0, d1)>, 2>
   %2 = memref.alloc() : memref<1xi32>
@@ -69,7 +69,7 @@ func @test2(%arg0 : index, %arg1 : index) {
 // -----
 
 // Test with loop IVs and symbols (with symbol keyword).
-func @test3(%arg0 : index, %arg1 : index) {
+func.func @test3(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   %1 = memref.alloc() : memref<100x100xf32, affine_map<(d0, d1) -> (d0, d1)>, 2>
   %2 = memref.alloc() : memref<1xi32>
@@ -92,7 +92,7 @@ func @test3(%arg0 : index, %arg1 : index) {
 // -----
 
 // Test with loop IVs, symbols and constants in nested affine expressions.
-func @test4(%arg0 : index, %arg1 : index) {
+func.func @test4(%arg0 : index, %arg1 : index) {
   %0 = memref.alloc() : memref<100x100xf32>
   %1 = memref.alloc() : memref<100x100xf32, 2>
   %2 = memref.alloc() : memref<1xi32>

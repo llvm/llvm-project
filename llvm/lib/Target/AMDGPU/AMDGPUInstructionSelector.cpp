@@ -81,8 +81,11 @@ bool AMDGPUInstructionSelector::isVCC(Register Reg,
       RegClassOrBank.dyn_cast<const TargetRegisterClass*>();
   if (RC) {
     const LLT Ty = MRI.getType(Reg);
-    return RC->hasSuperClassEq(TRI.getBoolRC()) &&
-           Ty.isValid() && Ty.getSizeInBits() == 1;
+    if (!Ty.isValid() || Ty.getSizeInBits() != 1)
+      return false;
+    // G_TRUNC s1 result is never vcc.
+    return MRI.getVRegDef(Reg)->getOpcode() != AMDGPU::G_TRUNC &&
+           RC->hasSuperClassEq(TRI.getBoolRC());
   }
 
   const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();

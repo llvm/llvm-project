@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
-func @loop_for_lb(%arg0: f32, %arg1: index) {
+func.func @loop_for_lb(%arg0: f32, %arg1: index) {
   // expected-error@+1 {{operand #0 must be index}}
   "scf.for"(%arg0, %arg1, %arg1) ({}) : (f32, index, index) -> ()
   return
@@ -8,7 +8,7 @@ func @loop_for_lb(%arg0: f32, %arg1: index) {
 
 // -----
 
-func @loop_for_ub(%arg0: f32, %arg1: index) {
+func.func @loop_for_ub(%arg0: f32, %arg1: index) {
   // expected-error@+1 {{operand #1 must be index}}
   "scf.for"(%arg1, %arg0, %arg1) ({}) : (index, f32, index) -> ()
   return
@@ -16,7 +16,7 @@ func @loop_for_ub(%arg0: f32, %arg1: index) {
 
 // -----
 
-func @loop_for_step(%arg0: f32, %arg1: index) {
+func.func @loop_for_step(%arg0: f32, %arg1: index) {
   // expected-error@+1 {{operand #2 must be index}}
   "scf.for"(%arg1, %arg1, %arg0) ({}) : (index, index, f32) -> ()
   return
@@ -24,7 +24,7 @@ func @loop_for_step(%arg0: f32, %arg1: index) {
 
 // -----
 
-func @loop_for_step_positive(%arg0: index) {
+func.func @loop_for_step_positive(%arg0: index) {
   // expected-error@+2 {{constant step operand must be positive}}
   %c0 = arith.constant 0 : index
   "scf.for"(%arg0, %arg0, %c0) ({
@@ -36,7 +36,7 @@ func @loop_for_step_positive(%arg0: index) {
 
 // -----
 
-func @loop_for_one_region(%arg0: index) {
+func.func @loop_for_one_region(%arg0: index) {
   // expected-error@+1 {{requires one region}}
   "scf.for"(%arg0, %arg0, %arg0) (
     {scf.yield},
@@ -47,7 +47,7 @@ func @loop_for_one_region(%arg0: index) {
 
 // -----
 
-func @loop_for_single_block(%arg0: index) {
+func.func @loop_for_single_block(%arg0: index) {
   // expected-error@+1 {{expects region #0 to have 0 or 1 blocks}}
   "scf.for"(%arg0, %arg0, %arg0) (
     {
@@ -62,7 +62,7 @@ func @loop_for_single_block(%arg0: index) {
 
 // -----
 
-func @loop_for_single_index_argument(%arg0: index) {
+func.func @loop_for_single_index_argument(%arg0: index) {
   // expected-error@+1 {{op expected body first argument to be an index argument for the induction variable}}
   "scf.for"(%arg0, %arg0, %arg0) (
     {
@@ -75,7 +75,7 @@ func @loop_for_single_index_argument(%arg0: index) {
 
 // -----
 
-func @loop_if_not_i1(%arg0: index) {
+func.func @loop_if_not_i1(%arg0: index) {
   // expected-error@+1 {{operand #0 must be 1-bit signless integer}}
   "scf.if"(%arg0) ({}, {}) : (index) -> ()
   return
@@ -83,7 +83,7 @@ func @loop_if_not_i1(%arg0: index) {
 
 // -----
 
-func @loop_if_more_than_2_regions(%arg0: i1) {
+func.func @loop_if_more_than_2_regions(%arg0: i1) {
   // expected-error@+1 {{expected 2 regions}}
   "scf.if"(%arg0) ({}, {}, {}): (i1) -> ()
   return
@@ -91,7 +91,7 @@ func @loop_if_more_than_2_regions(%arg0: i1) {
 
 // -----
 
-func @loop_if_not_one_block_per_region(%arg0: i1) {
+func.func @loop_if_not_one_block_per_region(%arg0: i1) {
   // expected-error@+1 {{expects region #0 to have 0 or 1 blocks}}
   "scf.if"(%arg0) ({
     ^bb0:
@@ -104,7 +104,7 @@ func @loop_if_not_one_block_per_region(%arg0: i1) {
 
 // -----
 
-func @loop_if_illegal_block_argument(%arg0: i1) {
+func.func @loop_if_illegal_block_argument(%arg0: i1) {
   // expected-error@+1 {{region #0 should have no arguments}}
   "scf.if"(%arg0) ({
     ^bb0(%0 : index):
@@ -115,7 +115,7 @@ func @loop_if_illegal_block_argument(%arg0: i1) {
 
 // -----
 
-func @parallel_arguments_different_tuple_size(
+func.func @parallel_arguments_different_tuple_size(
     %arg0: index, %arg1: index, %arg2: index) {
   // expected-error@+1 {{custom op 'scf.parallel' expected 1 operands}}
   scf.parallel (%i0) = (%arg0) to (%arg1, %arg2) step () {
@@ -125,7 +125,7 @@ func @parallel_arguments_different_tuple_size(
 
 // -----
 
-func @parallel_body_arguments_wrong_type(
+func.func @parallel_body_arguments_wrong_type(
     %arg0: index, %arg1: index, %arg2: index) {
   // expected-error@+1 {{'scf.parallel' op expects arguments for the induction variable to be of index type}}
   "scf.parallel"(%arg0, %arg1, %arg2) ({
@@ -137,7 +137,7 @@ func @parallel_body_arguments_wrong_type(
 
 // -----
 
-func @parallel_body_wrong_number_of_arguments(
+func.func @parallel_body_wrong_number_of_arguments(
     %arg0: index, %arg1: index, %arg2: index) {
   // expected-error@+1 {{'scf.parallel' op expects the same number of induction variables: 2 as bound and step values: 1}}
   "scf.parallel"(%arg0, %arg1, %arg2) ({
@@ -149,7 +149,7 @@ func @parallel_body_wrong_number_of_arguments(
 
 // -----
 
-func @parallel_no_tuple_elements() {
+func.func @parallel_no_tuple_elements() {
   // expected-error@+1 {{'scf.parallel' op needs at least one tuple element for lowerBound, upperBound and step}}
   scf.parallel () = () to () step () {
   }
@@ -158,7 +158,7 @@ func @parallel_no_tuple_elements() {
 
 // -----
 
-func @parallel_step_not_positive(
+func.func @parallel_step_not_positive(
     %arg0: index, %arg1: index, %arg2: index, %arg3: index) {
   // expected-error@+3 {{constant step operand must be positive}}
   %c0 = arith.constant 1 : index
@@ -170,7 +170,7 @@ func @parallel_step_not_positive(
 
 // -----
 
-func @parallel_fewer_results_than_reduces(
+func.func @parallel_fewer_results_than_reduces(
     %arg0 : index, %arg1: index, %arg2: index) {
   // expected-error@+1 {{expects number of results: 0 to be the same as number of reductions: 1}}
   scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
@@ -185,7 +185,7 @@ func @parallel_fewer_results_than_reduces(
 
 // -----
 
-func @parallel_more_results_than_reduces(
+func.func @parallel_more_results_than_reduces(
     %arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+2 {{expects number of results: 1 to be the same as number of reductions: 0}}
   %zero = arith.constant 1.0 : f32
@@ -197,7 +197,7 @@ func @parallel_more_results_than_reduces(
 
 // -----
 
-func @parallel_more_results_than_initial_values(
+func.func @parallel_more_results_than_initial_values(
     %arg0 : index, %arg1: index, %arg2: index) {
   // expected-error@+1 {{expects number of results: 1 to be the same as number of initial values: 0}}
   %res = scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) -> f32 {
@@ -210,7 +210,7 @@ func @parallel_more_results_than_initial_values(
 
 // -----
 
-func @parallel_different_types_of_results_and_reduces(
+func.func @parallel_different_types_of_results_and_reduces(
     %arg0 : index, %arg1: index, %arg2: index) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg1)
@@ -226,7 +226,7 @@ func @parallel_different_types_of_results_and_reduces(
 
 // -----
 
-func @top_level_reduce(%arg0 : f32) {
+func.func @top_level_reduce(%arg0 : f32) {
   // expected-error@+1 {{expects parent op 'scf.parallel'}}
   scf.reduce(%arg0) : f32 {
     ^bb0(%lhs : f32, %rhs : f32):
@@ -237,7 +237,7 @@ func @top_level_reduce(%arg0 : f32) {
 
 // -----
 
-func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
+func.func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
@@ -251,7 +251,7 @@ func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
 
 // -----
 
-func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
+func.func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
@@ -266,7 +266,7 @@ func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
 
 // -----
 
-func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
+func.func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
@@ -282,7 +282,7 @@ func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
 
 // -----
 
-func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
+func.func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
@@ -297,7 +297,7 @@ func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
 
 // -----
 
-func @reduceReturn_wrong_type(%arg0 : index, %arg1: f32) {
+func.func @reduceReturn_wrong_type(%arg0 : index, %arg1: f32) {
   %zero = arith.constant 0.0 : f32
   %res = scf.parallel (%i0) = (%arg0) to (%arg0)
                                        step (%arg0) init (%zero) -> f32 {
@@ -313,7 +313,7 @@ func @reduceReturn_wrong_type(%arg0 : index, %arg1: f32) {
 
 // -----
 
-func @reduceReturn_not_inside_reduce(%arg0 : f32) {
+func.func @reduceReturn_not_inside_reduce(%arg0 : f32) {
   "foo.region"() ({
     // expected-error@+1 {{expects parent op 'scf.reduce'}}
     scf.reduce.return %arg0 : f32
@@ -323,7 +323,7 @@ func @reduceReturn_not_inside_reduce(%arg0 : f32) {
 
 // -----
 
-func @std_if_incorrect_yield(%arg0: i1, %arg1: f32)
+func.func @std_if_incorrect_yield(%arg0: i1, %arg1: f32)
 {
   // expected-error@+1 {{region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 2}}
   %x, %y = scf.if %arg0 -> (f32, f32) {
@@ -338,7 +338,7 @@ func @std_if_incorrect_yield(%arg0: i1, %arg1: f32)
 
 // -----
 
-func @std_if_missing_else(%arg0: i1, %arg1: f32)
+func.func @std_if_missing_else(%arg0: i1, %arg1: f32)
 {
   // expected-error@+1 {{must have an else block if defining values}}
   %x = scf.if %arg0 -> (f32) {
@@ -350,7 +350,7 @@ func @std_if_missing_else(%arg0: i1, %arg1: f32)
 
 // -----
 
-func @std_for_operands_mismatch(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @std_for_operands_mismatch(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = arith.constant 0.0 : f32
   %t0 = arith.constant 1 : i32
   // expected-error@+1 {{mismatch in number of loop-carried values and defined values}}
@@ -365,7 +365,7 @@ func @std_for_operands_mismatch(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
-func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = arith.constant 0.0 : f32
   %t0 = arith.constant 1 : i32
   %u0 = arith.constant 1.0 : f32
@@ -382,7 +382,7 @@ func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
-func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-note@+1 {{prior use here}}
   %s0 = arith.constant 0.0 : f32
   %t0 = arith.constant 1.0 : f32
@@ -398,7 +398,7 @@ func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
-func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = arith.constant 0.0 : f32
   %t0 = arith.constant 1.0 : f32
   // expected-error @+1 {{along control flow edge from Region #0 to Region #0: source type #1 'i32' should match input type #1 'f32'}}
@@ -414,7 +414,7 @@ func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
-func @parallel_invalid_yield(
+func.func @parallel_invalid_yield(
     %arg0: index, %arg1: index, %arg2: index) {
   scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
     %c0 = arith.constant 1.0 : f32
@@ -426,7 +426,7 @@ func @parallel_invalid_yield(
 
 // -----
 
-func @yield_invalid_parent_op() {
+func.func @yield_invalid_parent_op() {
   "my.op"() ({
    // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.execute_region, scf.for, scf.if, scf.parallel, scf.while'}}
    scf.yield
@@ -436,7 +436,7 @@ func @yield_invalid_parent_op() {
 
 // -----
 
-func @while_parser_type_mismatch() {
+func.func @while_parser_type_mismatch() {
   %true = arith.constant true
   // expected-error@+1 {{expected as many input types as operands (expected 0 got 1)}}
   scf.while : (i32) -> () {
@@ -448,7 +448,7 @@ func @while_parser_type_mismatch() {
 
 // -----
 
-func @while_bad_terminator() {
+func.func @while_bad_terminator() {
   // expected-error@+1 {{expects the 'before' region to terminate with 'scf.condition'}}
   scf.while : () -> () {
     // expected-note@+1 {{terminator here}}
@@ -460,7 +460,7 @@ func @while_bad_terminator() {
 
 // -----
 
-func @while_cross_region_type_mismatch() {
+func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
   // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to Region #1: source has 0 operands, but target successor needs 1}}
   scf.while : () -> () {
@@ -473,7 +473,7 @@ func @while_cross_region_type_mismatch() {
 
 // -----
 
-func @while_cross_region_type_mismatch() {
+func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
   // expected-error@+1 {{'scf.while' op  along control flow edge from Region #0 to Region #1: source type #0 'i1' should match input type #0 'i32'}}
   scf.while : () -> () {
@@ -486,7 +486,7 @@ func @while_cross_region_type_mismatch() {
 
 // -----
 
-func @while_result_type_mismatch() {
+func.func @while_result_type_mismatch() {
   %true = arith.constant true
   // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
   scf.while : () -> () {
@@ -499,7 +499,7 @@ func @while_result_type_mismatch() {
 
 // -----
 
-func @while_bad_terminator() {
+func.func @while_bad_terminator() {
   %true = arith.constant true
   // expected-error@+1 {{expects the 'after' region to terminate with 'scf.yield'}}
   scf.while : () -> () {
@@ -512,7 +512,7 @@ func @while_bad_terminator() {
 
 // -----
 
-func @execute_region() {
+func.func @execute_region() {
   // expected-error @+1 {{region cannot have any arguments}}
   "scf.execute_region"() ({
   ^bb0(%i : i32):

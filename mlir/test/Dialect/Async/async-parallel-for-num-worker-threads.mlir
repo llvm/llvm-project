@@ -3,7 +3,7 @@
 
 // CHECK-LABEL: @num_worker_threads(
 // CHECK:       %[[MEMREF:.*]]: memref<?xf32>
-func @num_worker_threads(%arg0: memref<?xf32>) {
+func.func @num_worker_threads(%arg0: memref<?xf32>) {
 
   // CHECK-DAG: %[[scalingCstInit:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-DAG: %[[bracketLowerBound4:.*]] = arith.constant 4 : index

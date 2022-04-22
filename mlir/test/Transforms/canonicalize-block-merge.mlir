@@ -3,7 +3,7 @@
 // Check the simple case of single operation blocks with a return.
 
 // CHECK-LABEL: func @return_blocks(
-func @return_blocks() {
+func.func @return_blocks() {
   // CHECK: "foo.cond_br"()[^bb1, ^bb1]
   // CHECK: ^bb1:
   // CHECK-NEXT: return
@@ -20,7 +20,7 @@ func @return_blocks() {
 // Check the case of identical blocks with matching arguments.
 
 // CHECK-LABEL: func @matching_arguments(
-func @matching_arguments() -> i32 {
+func.func @matching_arguments() -> i32 {
   // CHECK: "foo.cond_br"()[^bb1, ^bb1]
   // CHECK: ^bb1(%{{.*}}: i32):
   // CHECK-NEXT: return
@@ -38,7 +38,7 @@ func @matching_arguments() -> i32 {
 // update th predecessor.
 
 // CHECK-LABEL: func @mismatch_unknown_terminator
-func @mismatch_unknown_terminator(%arg0 : i32, %arg1 : i32) -> i32 {
+func.func @mismatch_unknown_terminator(%arg0 : i32, %arg1 : i32) -> i32 {
   // CHECK: "foo.cond_br"()[^bb1, ^bb2]
 
   "foo.cond_br"() [^bb1, ^bb2] : () -> ()
@@ -54,7 +54,7 @@ func @mismatch_unknown_terminator(%arg0 : i32, %arg1 : i32) -> i32 {
 
 // CHECK-LABEL: func @mismatch_operands
 // CHECK-SAME: %[[COND:.*]]: i1, %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
-func @mismatch_operands(%cond : i1, %arg0 : i32, %arg1 : i32) -> i32 {
+func.func @mismatch_operands(%cond : i1, %arg0 : i32, %arg1 : i32) -> i32 {
   // CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG1]]
   // CHECK: return %[[RES]]
 
@@ -70,7 +70,7 @@ func @mismatch_operands(%cond : i1, %arg0 : i32, %arg1 : i32) -> i32 {
 
 // CHECK-LABEL: func @mismatch_operands_matching_arguments(
 // CHECK-SAME: %[[COND:.*]]: i1, %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
-func @mismatch_operands_matching_arguments(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32) {
+func.func @mismatch_operands_matching_arguments(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32) {
   // CHECK: %[[RES0:.*]] = arith.select %[[COND]], %[[ARG1]], %[[ARG0]]
   // CHECK: %[[RES1:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG1]]
   // CHECK: return %[[RES1]], %[[RES0]]
@@ -86,7 +86,7 @@ func @mismatch_operands_matching_arguments(%cond : i1, %arg0 : i32, %arg1 : i32)
 // Check that merging does not occur if the uses of the arguments differ.
 
 // CHECK-LABEL: func @mismatch_argument_uses(
-func @mismatch_argument_uses(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32) {
+func.func @mismatch_argument_uses(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32) {
   // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
 
   cf.cond_br %cond, ^bb1(%arg1 : i32), ^bb2(%arg0 : i32)
@@ -100,7 +100,7 @@ func @mismatch_argument_uses(%cond : i1, %arg0 : i32, %arg1 : i32) -> (i32, i32)
 // Check that merging does not occur if the types of the arguments differ.
 
 // CHECK-LABEL: func @mismatch_argument_types(
-func @mismatch_argument_types(%cond : i1, %arg0 : i32, %arg1 : i16) {
+func.func @mismatch_argument_types(%cond : i1, %arg0 : i32, %arg1 : i16) {
   // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
 
   cf.cond_br %cond, ^bb1(%arg0 : i32), ^bb2(%arg1 : i16)
@@ -114,7 +114,7 @@ func @mismatch_argument_types(%cond : i1, %arg0 : i32, %arg1 : i16) {
 // Check that merging does not occur if the number of the arguments differ.
 
 // CHECK-LABEL: func @mismatch_argument_count(
-func @mismatch_argument_count(%cond : i1, %arg0 : i32) {
+func.func @mismatch_argument_count(%cond : i1, %arg0 : i32) {
   // CHECK: cf.cond_br %{{.*}}, ^bb1(%{{.*}}), ^bb2
 
   cf.cond_br %cond, ^bb1(%arg0 : i32), ^bb2
@@ -128,7 +128,7 @@ func @mismatch_argument_count(%cond : i1, %arg0 : i32) {
 // Check that merging does not occur if the operations differ.
 
 // CHECK-LABEL: func @mismatch_operations(
-func @mismatch_operations(%cond : i1) {
+func.func @mismatch_operations(%cond : i1) {
   // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
   cf.cond_br %cond, ^bb1, ^bb2
@@ -142,7 +142,7 @@ func @mismatch_operations(%cond : i1) {
 // Check that merging does not occur if the number of operations differ.
 
 // CHECK-LABEL: func @mismatch_operation_count(
-func @mismatch_operation_count(%cond : i1) {
+func.func @mismatch_operation_count(%cond : i1) {
   // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
   cf.cond_br %cond, ^bb1, ^bb2
@@ -157,7 +157,7 @@ func @mismatch_operation_count(%cond : i1) {
 // Check that merging does not occur if the blocks contain regions.
 
 // CHECK-LABEL: func @contains_regions(
-func @contains_regions(%cond : i1) {
+func.func @contains_regions(%cond : i1) {
   // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
   cf.cond_br %cond, ^bb1, ^bb2
@@ -178,7 +178,7 @@ func @contains_regions(%cond : i1) {
 
 // CHECK-LABEL: func @mismatch_loop(
 // CHECK-SAME: %[[ARG:.*]]: i1, %[[ARG2:.*]]: i1
-func @mismatch_loop(%cond : i1, %cond2 : i1) {
+func.func @mismatch_loop(%cond : i1, %cond2 : i1) {
   // CHECK-NEXT: %[[LOOP_CARRY:.*]] = "foo.op"
   // CHECK: cf.cond_br %{{.*}}, ^bb1(%[[ARG2]] : i1), ^bb2
 
@@ -204,7 +204,7 @@ func @mismatch_loop(%cond : i1, %cond2 : i1) {
 // Check that blocks are not merged if the types of the operands differ.
 
 // CHECK-LABEL: func @mismatch_operand_types(
-func @mismatch_operand_types(%arg0 : i1, %arg1 : memref<i32>, %arg2 : memref<i1>) {
+func.func @mismatch_operand_types(%arg0 : i1, %arg1 : memref<i32>, %arg2 : memref<i1>) {
   %c0_i32 = arith.constant 0 : i32
   %true = arith.constant true
   cf.br ^bb1
@@ -227,9 +227,9 @@ func @mismatch_operand_types(%arg0 : i1, %arg1 : memref<i32>, %arg2 : memref<i1>
 // with an external user. Incorrectly performing the optimization
 // anyways will result in print(merged, merged) rather than
 // distinct operands.
-func private @print(%arg0: i32, %arg1: i32)
+func.func private @print(%arg0: i32, %arg1: i32)
 // CHECK-LABEL: @nomerge
-func @nomerge(%arg0: i32, %i: i32) {
+func.func @nomerge(%arg0: i32, %i: i32) {
   %c1_i32 = arith.constant 1 : i32
   %icmp = arith.cmpi slt, %i, %arg0 : i32
   cf.cond_br %icmp, ^bb2, ^bb3
@@ -254,7 +254,7 @@ func @nomerge(%arg0: i32, %i: i32) {
 
 
 // CHECK-LABEL: func @mismatch_dominance(
-func @mismatch_dominance() -> i32 {
+func.func @mismatch_dominance() -> i32 {
   // CHECK: %[[RES:.*]] = "test.producing_br"()
   %0 = "test.producing_br"()[^bb1, ^bb2] {
         operand_segment_sizes = dense<0> : vector<2 x i32>

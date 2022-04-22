@@ -1717,3 +1717,6 @@
 // X86_64-NETBSD:#define __amd64__ 1
 // X86_64-NETBSD:#define __x86_64 1
 // X86_64-NETBSD:#define __x86_64__ 1
+
+// RUN: %clang_cc1 -E -dM -triple=i386-unknown-openbsd -x c++ < /dev/null | FileCheck -match-full-lines -check-prefix I386-OPENBSD-CXX %s
+// I386-OPENBSD-CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL

@@ -3,7 +3,7 @@
 // CHECK-LABEL:   func @identity(
 // CHECK-SAME:                   %[[ARG:.*]]: memref<f32>) -> memref<f32> {
 // CHECK:           return %[[ARG]] : memref<f32>
-func @identity(%arg0: tensor<f32>) -> tensor<f32> {
+func.func @identity(%arg0: tensor<f32>) -> tensor<f32> {
   return %arg0 : tensor<f32>
 }
 
@@ -12,7 +12,7 @@ func @identity(%arg0: tensor<f32>) -> tensor<f32> {
 // CHECK:           cf.br ^bb1(%[[ARG]] : memref<f32>)
 // CHECK:         ^bb1(%[[BBARG:.*]]: memref<f32>):
 // CHECK:           return %[[BBARG]] : memref<f32>
-func @block_arguments(%arg0: tensor<f32>) -> tensor<f32> {
+func.func @block_arguments(%arg0: tensor<f32>) -> tensor<f32> {
   cf.br ^bb1(%arg0: tensor<f32>)
 ^bb1(%bbarg: tensor<f32>):
   return %bbarg : tensor<f32>
@@ -22,8 +22,8 @@ func @block_arguments(%arg0: tensor<f32>) -> tensor<f32> {
 // CHECK-LABEL:   func @call_source() -> memref<f32> {
 // CHECK:           %[[RET:.*]] = call @source() : () -> memref<f32>
 // CHECK:           return %[[RET]] : memref<f32>
-func private @source() -> tensor<f32>
-func @call_source() -> tensor<f32> {
+func.func private @source() -> tensor<f32>
+func.func @call_source() -> tensor<f32> {
   %0 = call @source() : () -> tensor<f32>
   return %0 : tensor<f32>
 }
@@ -31,8 +31,8 @@ func @call_source() -> tensor<f32> {
 // CHECK-SAME:                    %[[ARG:.*]]: memref<f32>) {
 // CHECK:           call @sink(%[[ARG]]) : (memref<f32>) -> ()
 // CHECK:           return
-func private @sink(tensor<f32>)
-func @call_sink(%arg0: tensor<f32>) {
+func.func private @sink(tensor<f32>)
+func.func @call_sink(%arg0: tensor<f32>) {
   call @sink(%arg0) : (tensor<f32>) -> ()
   return
 }
@@ -41,7 +41,7 @@ func @call_sink(%arg0: tensor<f32>) {
 // CHECK:           %[[TENSOR:.*]] = "test.source"() : () -> tensor<f32>
 // CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<f32>
 // CHECK:           return %[[MEMREF]] : memref<f32>
-func @unconverted_op_in_body() -> tensor<f32> {
+func.func @unconverted_op_in_body() -> tensor<f32> {
   %0 = "test.source"() : () -> tensor<f32>
   return %0 : tensor<f32>
 }
@@ -50,7 +50,7 @@ func @unconverted_op_in_body() -> tensor<f32> {
 
 // Because this pass updates block arguments, it needs to also atomically
 // update all terminators and issue an error if that is not possible.
-func @unable_to_update_terminator(%arg0: tensor<f32>) -> tensor<f32> {
+func.func @unable_to_update_terminator(%arg0: tensor<f32>) -> tensor<f32> {
     %0 = arith.constant true
     cf.cond_br %0, ^bb1(%arg0: tensor<f32>), ^bb2(%arg0: tensor<f32>)
   ^bb1(%bbarg0: tensor<f32>):
@@ -69,7 +69,7 @@ func @unable_to_update_terminator(%arg0: tensor<f32>) -> tensor<f32> {
 // CHECK: bufferize_while
 // CHECK: scf.while
 // CHECK: scf.condition
-func @bufferize_while(%arg0: i64, %arg1: i64) -> i64 {
+func.func @bufferize_while(%arg0: i64, %arg1: i64) -> i64 {
   %c2_i64 = arith.constant 2 : i64
   %0:2 = scf.while (%arg2 = %arg0) : (i64) -> (i64, i64) {
     %1 = arith.cmpi slt, %arg2, %arg1 : i64

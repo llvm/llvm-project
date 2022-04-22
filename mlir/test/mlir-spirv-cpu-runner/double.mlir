@@ -43,7 +43,7 @@ module attributes {
       gpu.return
     }
   }
-  func @main() {
+  func.func @main() {
     %input = memref.alloc() : memref<6xi32>
     %output = memref.alloc() : memref<6xi32>
     %four = arith.constant 4 : i32
@@ -62,6 +62,6 @@ module attributes {
     return
   }
 
-  func private @fillI32Buffer(%arg0 : memref<?xi32>, %arg1 : i32)
-  func private @print_memref_i32(%ptr : memref<*xi32>)
+  func.func private @fillI32Buffer(%arg0 : memref<?xi32>, %arg1 : i32)
+  func.func private @print_memref_i32(%ptr : memref<*xi32>)
 }

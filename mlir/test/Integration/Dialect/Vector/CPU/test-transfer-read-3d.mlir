@@ -18,7 +18,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @transfer_read_3d(%A : memref<?x?x?x?xf32>,
+func.func @transfer_read_3d(%A : memref<?x?x?x?xf32>,
                        %o: index, %a: index, %b: index, %c: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
@@ -27,7 +27,7 @@ func @transfer_read_3d(%A : memref<?x?x?x?xf32>,
   return
 }
 
-func @transfer_read_3d_and_extract(%A : memref<?x?x?x?xf32>,
+func.func @transfer_read_3d_and_extract(%A : memref<?x?x?x?xf32>,
                                    %o: index, %a: index, %b: index, %c: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
@@ -38,7 +38,7 @@ func @transfer_read_3d_and_extract(%A : memref<?x?x?x?xf32>,
   return
 }
 
-func @transfer_read_3d_broadcast(%A : memref<?x?x?x?xf32>,
+func.func @transfer_read_3d_broadcast(%A : memref<?x?x?x?xf32>,
                                  %o: index, %a: index, %b: index, %c: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
@@ -48,7 +48,7 @@ func @transfer_read_3d_broadcast(%A : memref<?x?x?x?xf32>,
   return
 }
 
-func @transfer_read_3d_mask_broadcast(
+func.func @transfer_read_3d_mask_broadcast(
     %A : memref<?x?x?x?xf32>, %o: index, %a: index, %b: index, %c: index) {
   %fm42 = arith.constant -42.0: f32
   %mask = arith.constant dense<[0, 1]> : vector<2xi1>
@@ -59,7 +59,7 @@ func @transfer_read_3d_mask_broadcast(
   return
 }
 
-func @transfer_read_3d_transposed(%A : memref<?x?x?x?xf32>,
+func.func @transfer_read_3d_transposed(%A : memref<?x?x?x?xf32>,
                                   %o: index, %a: index, %b: index, %c: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
@@ -69,7 +69,7 @@ func @transfer_read_3d_transposed(%A : memref<?x?x?x?xf32>,
   return
 }
 
-func @transfer_write_3d(%A : memref<?x?x?x?xf32>,
+func.func @transfer_write_3d(%A : memref<?x?x?x?xf32>,
                         %o: index, %a: index, %b: index, %c: index) {
   %fn1 = arith.constant -1.0 : f32
   %vf0 = vector.splat %fn1 : vector<2x9x3xf32>
@@ -78,7 +78,7 @@ func @transfer_write_3d(%A : memref<?x?x?x?xf32>,
   return
 }
 
-func @entry() {
+func.func @entry() {
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
   %c2 = arith.constant 2: index

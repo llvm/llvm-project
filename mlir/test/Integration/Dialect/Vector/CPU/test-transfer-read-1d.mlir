@@ -28,7 +28,7 @@ memref.global "private" @gv : memref<5x6xf32> =
            [40., 41., 42., 43., 44., 45.]]>
 
 // Non-contiguous, strided load.
-func @transfer_read_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
+func.func @transfer_read_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
       {permutation_map = affine_map<(d0, d1) -> (d0)>}
@@ -41,7 +41,7 @@ func @transfer_read_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
 #map1 = affine_map<(d0, d1) -> (6 * d0 + 2 * d1)>
 
 // Vector load with unit stride only on last dim.
-func @transfer_read_1d_unit_stride(%A : memref<?x?xf32>) {
+func.func @transfer_read_1d_unit_stride(%A : memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -64,7 +64,7 @@ func @transfer_read_1d_unit_stride(%A : memref<?x?xf32>) {
 
 // Vector load with unit stride only on last dim. Strides are not static, so
 // codegen must go through VectorToSCF 1D lowering.
-func @transfer_read_1d_non_static_unit_stride(%A : memref<?x?xf32>) {
+func.func @transfer_read_1d_non_static_unit_stride(%A : memref<?x?xf32>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %c6 = arith.constant 6 : index
@@ -78,7 +78,7 @@ func @transfer_read_1d_non_static_unit_stride(%A : memref<?x?xf32>) {
 }
 
 // Vector load where last dim has non-unit stride.
-func @transfer_read_1d_non_unit_stride(%A : memref<?x?xf32>) {
+func.func @transfer_read_1d_non_unit_stride(%A : memref<?x?xf32>) {
   %B = memref.reinterpret_cast %A to offset: [0], sizes: [4, 3], strides: [6, 2]
       : memref<?x?xf32> to memref<4x3xf32, #map1>
   %c1 = arith.constant 1 : index
@@ -90,7 +90,7 @@ func @transfer_read_1d_non_unit_stride(%A : memref<?x?xf32>) {
 }
 
 // Broadcast.
-func @transfer_read_1d_broadcast(
+func.func @transfer_read_1d_broadcast(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
@@ -101,7 +101,7 @@ func @transfer_read_1d_broadcast(
 }
 
 // Non-contiguous, strided load.
-func @transfer_read_1d_in_bounds(
+func.func @transfer_read_1d_in_bounds(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
@@ -112,7 +112,7 @@ func @transfer_read_1d_in_bounds(
 }
 
 // Non-contiguous, strided load.
-func @transfer_read_1d_mask(
+func.func @transfer_read_1d_mask(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %mask = arith.constant dense<[1, 0, 1, 0, 1, 1, 1, 0, 1]> : vector<9xi1>
@@ -124,7 +124,7 @@ func @transfer_read_1d_mask(
 }
 
 // Non-contiguous, strided load.
-func @transfer_read_1d_mask_in_bounds(
+func.func @transfer_read_1d_mask_in_bounds(
     %A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fm42 = arith.constant -42.0: f32
   %mask = arith.constant dense<[1, 0, 1]> : vector<3xi1>
@@ -136,7 +136,7 @@ func @transfer_read_1d_mask_in_bounds(
 }
 
 // Non-contiguous, strided store.
-func @transfer_write_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
+func.func @transfer_write_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fn1 = arith.constant -1.0 : f32
   %vf0 = vector.splat %fn1 : vector<7xf32>
   vector.transfer_write %vf0, %A[%base1, %base2]
@@ -146,7 +146,7 @@ func @transfer_write_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
 }
 
 // Non-contiguous, strided store.
-func @transfer_write_1d_mask(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
+func.func @transfer_write_1d_mask(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fn1 = arith.constant -2.0 : f32
   %vf0 = vector.splat %fn1 : vector<7xf32>
   %mask = arith.constant dense<[1, 0, 1, 0, 1, 1, 1]> : vector<7xi1>
@@ -156,7 +156,7 @@ func @transfer_write_1d_mask(%A : memref<?x?xf32>, %base1 : index, %base2 : inde
   return
 }
 
-func @entry() {
+func.func @entry() {
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
   %c2 = arith.constant 2: index

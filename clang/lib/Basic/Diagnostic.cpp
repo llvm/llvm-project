@@ -1138,6 +1138,14 @@ StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
 {
 }
 
+llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
+                                     const StoredDiagnostic &SD) {
+  if (SD.getLocation().hasManager())
+    OS << SD.getLocation().printToString(SD.getLocation().getManager()) << ": ";
+  OS << SD.getMessage();
+  return OS;
+}
+
 /// IncludeInDiagnosticCounts - This method (whose default implementation
 ///  returns true) indicates whether the diagnostics handled by this
 ///  DiagnosticConsumer should be included in the number of diagnostics

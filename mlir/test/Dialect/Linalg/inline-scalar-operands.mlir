@@ -5,7 +5,7 @@
 #map3 = affine_map<(d0) -> ()>
 
 // CHECK: func @inline_zerod(%[[ARG:.*]]: tensor<4xf32>, %[[SCALAR:.*]]: tensor<f32>)
-func @inline_zerod(%arg0: tensor<4xf32>, %scalar: tensor<f32>) -> tensor<4xf32> {
+func.func @inline_zerod(%arg0: tensor<4xf32>, %scalar: tensor<f32>) -> tensor<4xf32> {
     %0 = linalg.init_tensor [4] : tensor<4xf32>
     // CHECK: linalg.generic {indexing_maps = [#[[MAP]], #[[MAP]]],
     // CHECK-SAME: iterator_types = ["parallel"]} ins(%[[ARG]] : tensor<4xf32>)
@@ -29,7 +29,7 @@ func @inline_zerod(%arg0: tensor<4xf32>, %scalar: tensor<f32>) -> tensor<4xf32> 
 #map3 = affine_map<(d0) -> (0)>
 
 // CHECK: func @inline_oned(%[[ARG:.*]]: tensor<4xf32>, %[[SCALAR:.*]]: tensor<1xf32>)
-func @inline_oned(%arg0: tensor<4xf32>, %scalar: tensor<1xf32>) -> tensor<4xf32> {
+func.func @inline_oned(%arg0: tensor<4xf32>, %scalar: tensor<1xf32>) -> tensor<4xf32> {
     // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
     %0 = linalg.init_tensor [4] : tensor<4xf32>
     // CHECK: linalg.generic {indexing_maps = [#[[MAP]], #[[MAP]]],

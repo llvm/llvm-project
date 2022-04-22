@@ -38,7 +38,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<
 // CHECK-LABEL: @index
 module @index attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<index, 32>>} {
-  func @query() {
+  func.func @query() {
     // CHECK: bitsize = 32
     "test.data_layout_query"() : () -> index
     return
@@ -49,7 +49,7 @@ module @index attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // CHECK-LABEL: @index_default
 module @index_default {
-  func @query() {
+  func.func @query() {
     // CHECK: bitsize = 64
     "test.data_layout_query"() : () -> index
     return
