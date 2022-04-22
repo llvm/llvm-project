@@ -2384,12 +2384,12 @@ define i1 @and_icmp_ne_B_0_icmp_uge_A_B_wrong_op1(i64 %a, i64 %b) {
 define i1 @and_icmp_ne_B_0_icmp_uge_A_B_wrong_op2(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_wrong_op2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[C:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[A:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %1 = icmp ne i64 %b, 0
-  %2 = icmp uge i64 %c, %b
+  %2 = icmp uge i64 %a, %c
   %3 = and i1 %1, %2
   ret i1 %3
 }
