@@ -327,11 +327,9 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::tapi_file:
-    if (DylibFile *dylibFile = loadDylib(mbref)) {
-      if (isExplicit)
-        dylibFile->explicitlyLinked = true;
+    if (DylibFile *dylibFile =
+            loadDylib(mbref, nullptr, /*isBundleLoader=*/false, isExplicit))
       newFile = dylibFile;
-    }
     break;
   case file_magic::bitcode:
     newFile = make<BitcodeFile>(mbref, "", 0, isLazy);
