@@ -152,6 +152,11 @@ struct AsmPrinterOptions {
       "mlir-print-local-scope", llvm::cl::init(false),
       llvm::cl::desc("Print with local scope and inline information (eliding "
                      "aliases for attributes, types, and locations")};
+
+  llvm::cl::opt<bool> printValueUsers{
+      "mlir-print-value-users", llvm::cl::init(false),
+      llvm::cl::desc(
+          "Print users of operation results and block arguments as a comment")};
 };
 } // namespace
 
@@ -168,7 +173,7 @@ void mlir::registerAsmPrinterCLOptions() {
 OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), assumeVerifiedFlag(false),
-      printLocalScope(false) {
+      printLocalScope(false), printValueUsersFlag(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -179,6 +184,7 @@ OpPrintingFlags::OpPrintingFlags()
   printGenericOpFormFlag = clOptions->printGenericOpFormOpt;
   assumeVerifiedFlag = clOptions->assumeVerifiedOpt;
   printLocalScope = clOptions->printLocalScopeOpt;
+  printValueUsersFlag = clOptions->printValueUsers;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -219,6 +225,12 @@ OpPrintingFlags &OpPrintingFlags::useLocalScope() {
   return *this;
 }
 
+/// Print users of values as comments.
+OpPrintingFlags &OpPrintingFlags::printValueUsers() {
+  printValueUsersFlag = true;
+  return *this;
+}
+
 /// Return if the given ElementsAttr should be elided.
 bool OpPrintingFlags::shouldElideElementsAttr(ElementsAttr attr) const {
   return elementsAttrElementLimit.hasValue() &&
@@ -253,6 +265,11 @@ bool OpPrintingFlags::shouldAssumeVerified() const {
 
 /// Return if the printer should use local scope when dumping the IR.
 bool OpPrintingFlags::shouldUseLocalScope() const { return printLocalScope; }
+
+/// Return if the printer should print users of values.
+bool OpPrintingFlags::shouldPrintValueUsers() const {
+  return printValueUsersFlag;
+}
 
 /// Returns true if an ElementsAttr with the given number of elements should be
 /// printed with hex.
@@ -831,6 +848,9 @@ public:
   /// of this value.
   void printValueID(Value value, bool printResultNo, raw_ostream &stream) const;
 
+  /// Print the operation identifier.
+  void printOperationID(Operation *op, raw_ostream &stream) const;
+
   /// Return the result indices for each of the result groups registered by this
   /// operation, or empty if none exist.
   ArrayRef<int> getOpResultGroups(Operation *op);
@@ -867,6 +887,10 @@ private:
   /// then the valueID has an entry in valueNames.
   DenseMap<Value, unsigned> valueIDs;
   DenseMap<Value, StringRef> valueNames;
+
+  /// When printing users of values, an operation without a result might
+  /// be the user. This map holds ids for such operations.
+  DenseMap<Operation *, unsigned> operationIDs;
 
   /// This is a map of operations that contain multiple named result groups,
   /// i.e. there may be multiple names for the results of the operation. The
@@ -988,6 +1012,15 @@ void SSANameState::printValueID(Value value, bool printResultNo,
 
   if (resultNo.hasValue() && printResultNo)
     stream << '#' << resultNo;
+}
+
+void SSANameState::printOperationID(Operation *op, raw_ostream &stream) const {
+  auto it = operationIDs.find(op);
+  if (it == operationIDs.end()) {
+    stream << "<<UNKOWN OPERATION>>";
+  } else {
+    stream << '%' << it->second;
+  }
 }
 
 ArrayRef<int> SSANameState::getOpResultGroups(Operation *op) {
@@ -1121,8 +1154,14 @@ void SSANameState::numberValuesInOp(Operation &op) {
   }
 
   unsigned numResults = op.getNumResults();
-  if (numResults == 0)
+  if (numResults == 0) {
+    // If value users should be printed, operations with no result need an id.
+    if (printerFlags.shouldPrintValueUsers()) {
+      if (operationIDs.try_emplace(&op, nextValueID).second)
+        ++nextValueID;
+    }
     return;
+  }
   Value resultBegin = op.getResult(0);
 
   // If the first result wasn't numbered, give it a default number.
@@ -2481,6 +2520,10 @@ public:
   void printValueID(Value value, bool printResultNo = true,
                     raw_ostream *streamOverride = nullptr) const;
 
+  /// Print the ID of the given operation.
+  void printOperationID(Operation *op,
+                        raw_ostream *streamOverride = nullptr) const;
+
   //===--------------------------------------------------------------------===//
   // OpAsmPrinter methods
   //===--------------------------------------------------------------------===//
@@ -2549,6 +2592,19 @@ public:
   void printAffineExprOfSSAIds(AffineExpr expr, ValueRange dimOperands,
                                ValueRange symOperands) override;
 
+  /// Print users of this operation or id of this operation if it has no result.
+  void printUsersComment(Operation *op);
+
+  /// Print users of this block arg.
+  void printUsersComment(BlockArgument arg);
+
+  /// Print the users of a value.
+  void printValueUsers(Value value);
+
+  /// Print either the ids of the result values or the id of the operation if
+  /// the operation has no results.
+  void printUserIDs(Operation *user, bool prefixComma = false);
+
 private:
   // Contains the stack of default dialects to use when printing regions.
   // A new dialect is pushed to the stack before parsing regions nested under an
@@ -2602,6 +2658,8 @@ void OperationPrinter::print(Operation *op) {
   os.indent(currentIndent);
   printOperation(op);
   printTrailingLocation(op->getLoc());
+  if (printerFlags.shouldPrintValueUsers())
+    printUsersComment(op);
 }
 
 void OperationPrinter::printOperation(Operation *op) {
@@ -2655,6 +2713,80 @@ void OperationPrinter::printOperation(Operation *op) {
 
   // Otherwise print with the generic assembly form.
   printGenericOp(op, /*printOpName=*/true);
+}
+
+void OperationPrinter::printUsersComment(Operation *op) {
+  unsigned numResults = op->getNumResults();
+  if (!numResults && op->getNumOperands()) {
+    os << " // id: ";
+    printOperationID(op);
+  } else if (numResults && op->use_empty()) {
+    os << " // unused";
+  } else if (numResults && !op->use_empty()) {
+    // Print "user" if the operation has one result used to compute one other
+    // result, or is used in one operation with no result.
+    unsigned usedInNResults = 0;
+    unsigned usedInNOperations = 0;
+    SmallPtrSet<Operation *, 1> userSet;
+    for (Operation *user : op->getUsers()) {
+      if (userSet.insert(user).second) {
+        ++usedInNOperations;
+        usedInNResults += user->getNumResults();
+      }
+    }
+
+    // We already know that users is not empty.
+    bool exactlyOneUniqueUse =
+        usedInNResults <= 1 && usedInNOperations <= 1 && numResults == 1;
+    os << " // " << (exactlyOneUniqueUse ? "user" : "users") << ": ";
+    bool shouldPrintBrackets = numResults > 1;
+    auto printOpResult = [&](OpResult opResult) {
+      if (shouldPrintBrackets)
+        os << "(";
+      printValueUsers(opResult);
+      if (shouldPrintBrackets)
+        os << ")";
+    };
+
+    interleaveComma(op->getResults(), printOpResult);
+  }
+}
+
+void OperationPrinter::printUsersComment(BlockArgument arg) {
+  os << "// ";
+  printValueID(arg);
+  if (arg.use_empty()) {
+    os << " is unused";
+  } else {
+    os << " is used by ";
+    printValueUsers(arg);
+  }
+  os << newLine;
+}
+
+void OperationPrinter::printValueUsers(Value value) {
+  if (value.use_empty())
+    os << "unused";
+
+  // One value might be used as the operand of an operation more than once.
+  // Only print the operations results once in that case.
+  SmallPtrSet<Operation *, 1> userSet;
+  for (auto &indexedUser : enumerate(value.getUsers())) {
+    if (userSet.insert(indexedUser.value()).second)
+      printUserIDs(indexedUser.value(), indexedUser.index());
+  }
+}
+
+void OperationPrinter::printUserIDs(Operation *user, bool prefixComma) {
+  if (prefixComma)
+    os << ", ";
+
+  if (!user->getNumResults()) {
+    printOperationID(user);
+  } else {
+    interleaveComma(user->getResults(),
+                    [this](Value result) { printValueID(result); });
+  }
 }
 
 void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
@@ -2745,6 +2877,14 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
   }
 
   currentIndent += indentWidth;
+
+  if (printerFlags.shouldPrintValueUsers()) {
+    for (BlockArgument arg : block->getArguments()) {
+      os.indent(currentIndent);
+      printUsersComment(arg);
+    }
+  }
+
   bool hasTerminator =
       !block->empty() && block->back().hasTrait<OpTrait::IsTerminator>();
   auto range = llvm::make_range(
@@ -2762,6 +2902,12 @@ void OperationPrinter::printValueID(Value value, bool printResultNo,
                                     raw_ostream *streamOverride) const {
   state->getSSANameState().printValueID(value, printResultNo,
                                         streamOverride ? *streamOverride : os);
+}
+
+void OperationPrinter::printOperationID(Operation *op,
+                                        raw_ostream *streamOverride) const {
+  state->getSSANameState().printOperationID(op, streamOverride ? *streamOverride
+                                                               : os);
 }
 
 void OperationPrinter::printSuccessor(Block *successor) {

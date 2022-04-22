@@ -752,6 +752,9 @@ public:
   /// the full module.
   OpPrintingFlags &useLocalScope();
 
+  /// Print users of values as comments.
+  OpPrintingFlags &printValueUsers();
+
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
@@ -773,6 +776,9 @@ public:
   /// Return if the printer should use local scope when dumping the IR.
   bool shouldUseLocalScope() const;
 
+  /// Return if the printer should print users of values.
+  bool shouldPrintValueUsers() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -790,6 +796,9 @@ private:
 
   /// Print operations with numberings local to the current operation.
   bool printLocalScope : 1;
+
+  /// Print users of values.
+  bool printValueUsersFlag : 1;
 };
 
 //===----------------------------------------------------------------------===//
