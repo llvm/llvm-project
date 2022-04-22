@@ -16,8 +16,11 @@ add_llvm_library(clangTesting
 
 clang_target_link_libraries(clangTesting
   PRIVATE
+  clangAST
   clangBasic
   clangFrontend
+  clangLex
+  clangSerialization
   )
 
 target_link_libraries(clangTesting
