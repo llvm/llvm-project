@@ -2328,3 +2328,39 @@ a.latch:
 exit:
   ret void
 }
+
+define i32 @test_partial_unswitch_all_conds_guaranteed_non_poison(i1 noundef %c.1, i1 noundef %c.2) {
+; CHECK-LABEL: @test_partial_unswitch_all_conds_guaranteed_non_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[C_1:%.*]], [[C_2:%.*]]
+; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i1 [[TMP0]]
+; CHECK-NEXT:    br i1 [[DOTFR]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_US:%.*]]
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br label [[LOOP_US:%.*]]
+; CHECK:       loop.us:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @a()
+; CHECK-NEXT:    br label [[EXIT_SPLIT_US:%.*]]
+; CHECK:       exit.split.us:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @a()
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 true, i1 true, i1 false
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT_SPLIT:%.*]]
+; CHECK:       exit.split:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  call i32 @a()
+  %sel = select i1 %c.1, i1 %c.2, i1 false
+  br i1 %sel, label %loop, label %exit
+
+exit:
+  ret i32 0
+}

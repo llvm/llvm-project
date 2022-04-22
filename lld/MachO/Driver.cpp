@@ -408,7 +408,8 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
         config->hasReexports = true;
         dylibFile->reexport = true;
       }
-    } else if (isa<ObjFile>(file) || isa<BitcodeFile>(file)) {
+    } else if (isa_and_nonnull<ObjFile>(file) ||
+               isa_and_nonnull<BitcodeFile>(file)) {
       // Cache frameworks containing object or bitcode files to avoid duplicate
       // symbols. Frameworks containing static archives are cached separately
       // in addFile() to share caching with libraries, and frameworks

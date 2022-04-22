@@ -110,6 +110,27 @@ namespace llvm {
   llvm::Error
   writeFileAtomically(StringRef TempPathModel, StringRef FinalPath,
                       std::function<llvm::Error(llvm::raw_ostream &)> Writer);
+
+  /// FilePermssionsApplier helps to copy permissions from an input file to
+  /// an output one. It memorizes the status of the input file and can apply
+  /// permissions and dates to the output file.
+  class FilePermissionsApplier {
+  public:
+    static Expected<FilePermissionsApplier> create(StringRef InputFilename);
+
+    /// Apply stored permissions to the \p OutputFilename.
+    /// Copy LastAccess and ModificationTime if \p CopyDates is true.
+    /// Overwrite stored permissions if \p OverwritePermissions is specified.
+    Error apply(StringRef OutputFilename, bool CopyDates = false,
+                Optional<sys::fs::perms> OverwritePermissions = None);
+
+  private:
+    FilePermissionsApplier(StringRef InputFilename, sys::fs::file_status Status)
+        : InputFilename(InputFilename), InputStatus(Status) {}
+
+    StringRef InputFilename;
+    sys::fs::file_status InputStatus;
+  };
 } // End llvm namespace
 
 #endif
