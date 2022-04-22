@@ -9,7 +9,7 @@ void l0() {
   }
 }
 
-// CPPSCOPE: func @l0() {
+// CPPSCOPE: func @_Z2l0v() {
 // CPPSCOPE-NEXT:   cir.scope {
 // CPPSCOPE-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
 // CPPSCOPE-NEXT:     %1 = cir.alloca i32, cir.ptr <i32>, ["j", cinit] {alignment = 4 : i64}

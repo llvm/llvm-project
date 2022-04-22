@@ -6,7 +6,7 @@ void l0() {
   }
 }
 
-// CHECK: func @l0
+// CHECK: func @_Z2l0v
 // CHECK: cir.loop for(cond :  {
 // CHECK-NEXT:   %0 = cir.cst(true) : !cir.bool
 // CHECK-NEXT:   cir.brcond %0 ^bb1, ^bb2
@@ -27,7 +27,7 @@ void l1() {
   }
 }
 
-// CHECK: func @l1
+// CHECK: func @_Z2l1v
 // CHECK: cir.loop for(cond :  {
 // CHECK-NEXT:   %4 = cir.load %2 : cir.ptr <i32>, i32
 // CHECK-NEXT:   %5 = cir.cst(10 : i32) : i32
@@ -64,7 +64,7 @@ void l2(bool cond) {
   }
 }
 
-// CHECK: func @l2
+// CHECK: func @_Z2l2b
 // CHECK:         cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %3 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
@@ -134,7 +134,7 @@ void l3(bool cond) {
   } while (1);
 }
 
-// CHECK: func @l3
+// CHECK: func @_Z2l3b
 // CHECK: cir.scope {
 // CHECK-NEXT:   cir.loop dowhile(cond :  {
 // CHECK-NEXT:   %3 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
@@ -201,7 +201,7 @@ void l4() {
   }
 }
 
-// CHECK: func @l4
+// CHECK: func @_Z2l4v
 // CHECK: cir.loop while(cond :  {
 // CHECK-NEXT:   %4 = cir.cst(true) : !cir.bool
 // CHECK-NEXT:   cir.brcond %4 ^bb1, ^bb2
@@ -230,7 +230,7 @@ void l5() {
   } while (0);
 }
 
-// CHECK: func @l5() {
+// CHECK: func @_Z2l5v() {
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop dowhile(cond :  {
 // CHECK-NEXT:       %0 = cir.cst(0 : i32) : i32
@@ -255,7 +255,7 @@ void l6() {
   }
 }
 
-// CHECK: func @l6() {
+// CHECK: func @_Z2l6v() {
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %0 = cir.cst(true) : !cir.bool

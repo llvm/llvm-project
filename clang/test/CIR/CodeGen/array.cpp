@@ -5,7 +5,7 @@ void a0() {
   int a[10];
 }
 
-// CHECK: func @a0() {
+// CHECK: func @_Z2a0v() {
 // CHECK-NEXT:   %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["a", uninitialized] {alignment = 16 : i64}
 
 void a1() {
@@ -13,7 +13,7 @@ void a1() {
   a[0] = 1;
 }
 
-// CHECK: func @a1() {
+// CHECK: func @_Z2a1v() {
 // CHECK-NEXT:   %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["a", uninitialized] {alignment = 16 : i64}
 // CHECK-NEXT:   %1 = cir.cst(1 : i32) : i32
 // CHECK-NEXT:   %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
@@ -26,7 +26,7 @@ int *a2() {
   return &a[0];
 }
 
-// CHECK: func @a2() -> !cir.ptr<i32> {
+// CHECK: func @_Z2a2v() -> !cir.ptr<i32> {
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval", uninitialized] {alignment = 8 : i64}
 // CHECK-NEXT:   %1 = cir.alloca !cir.array<i32 x 4>, cir.ptr <!cir.array<i32 x 4>>, ["a", uninitialized] {alignment = 16 : i64}
 // CHECK-NEXT:   %2 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<i32 x 4>>), !cir.ptr<i32>
