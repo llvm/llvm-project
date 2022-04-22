@@ -4,7 +4,7 @@
 // -----
 
 // Emit the first available call stack in the fused location.
-func @constant_out_of_range() {
+func.func @constant_out_of_range() {
   // CHECK: mysource1:0:0: error: 'arith.constant' op failed to verify that result and attribute have the same type
   // CHECK-NEXT: mysource2:1:0: note: called from
   // CHECK-NEXT: mysource3:2:0: note: called from

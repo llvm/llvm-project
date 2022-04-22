@@ -3,7 +3,7 @@
 #map0 = affine_map<()[s0, s1] -> (1024, s0 - s1)>
 #map1 = affine_map<()[s0, s1] -> (64, s0 - s1)>
 
-func @for(%outer: index, %A: memref<?xf32>, %B: memref<?xf32>,
+func.func @for(%outer: index, %A: memref<?xf32>, %B: memref<?xf32>,
           %C: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

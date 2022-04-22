@@ -5,7 +5,7 @@
 // CHECK-LABEL: @uniform_arg
 // CHECK-SAME:  %[[in:.*]]: memref<512xf32>,
 // CHECK-SAME:  %[[uniform:.*]]: f32
-func @uniform_arg(%in : memref<512xf32>, %uniform : f32) {
+func.func @uniform_arg(%in : memref<512xf32>, %uniform : f32) {
   affine.for %i = 0 to 512 {
     %ld = affine.load %in[%i] : memref<512xf32>
     %add = arith.addf %ld, %uniform : f32
@@ -22,7 +22,7 @@ func @uniform_arg(%in : memref<512xf32>, %uniform : f32) {
 // CHECK-LABEL: @multi_use_uniform_arg
 // CHECK-SAME:  %[[in:.*]]: memref<512xf32>
 // CHECK-SAME:  %[[uniform:.*]]: f32
-func @multi_use_uniform_arg(%in : memref<512xf32>, %uniform : f32) {
+func.func @multi_use_uniform_arg(%in : memref<512xf32>, %uniform : f32) {
   affine.for %i = 0 to 512 {
     %ld = affine.load %in[%i] : memref<512xf32>
     %user0 = arith.addf %ld, %uniform : f32
@@ -40,7 +40,7 @@ func @multi_use_uniform_arg(%in : memref<512xf32>, %uniform : f32) {
 // -----
 
 // CHECK-LABEL: @uniform_load
-func @uniform_load(%A : memref<?x?xf32>, %C : memref<?x?xf32>) {
+func.func @uniform_load(%A : memref<?x?xf32>, %C : memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %N = memref.dim %A, %c0 : memref<?x?xf32>
   affine.for %i = 0 to %N {

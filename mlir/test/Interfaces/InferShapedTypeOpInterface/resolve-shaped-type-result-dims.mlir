@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -resolve-shaped-type-result-dims -split-input-file | FileCheck %s
 
-func @result_shape(%arg0 : tensor<2x3x?xf32>, %arg1 : tensor<?x5xf32>)
+func.func @result_shape(%arg0 : tensor<2x3x?xf32>, %arg1 : tensor<?x5xf32>)
     -> (index, index, index, index, index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -27,7 +27,7 @@ func @result_shape(%arg0 : tensor<2x3x?xf32>, %arg1 : tensor<?x5xf32>)
 
 // -----
 
-func @result_shape_per_dim(%arg0 : tensor<2x3x?xf32>, %arg1 : tensor<?x5xf32>)
+func.func @result_shape_per_dim(%arg0 : tensor<2x3x?xf32>, %arg1 : tensor<?x5xf32>)
     -> (index, index, index, index, index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

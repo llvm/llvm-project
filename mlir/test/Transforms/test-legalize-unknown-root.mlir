@@ -2,7 +2,7 @@
 
 // Test that all `test` dialect operations are removed.
 // CHECK-LABEL: func @remove_all_ops
-func @remove_all_ops(%arg0: i32) {
+func.func @remove_all_ops(%arg0: i32) {
   // CHECK-NEXT: return
   %0 = "test.illegal_op_a"() : () -> i32
   %1 = "test.illegal_op_b"() : () -> i32

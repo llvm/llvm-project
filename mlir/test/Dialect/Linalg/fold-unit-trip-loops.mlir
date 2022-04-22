@@ -11,7 +11,7 @@
   library_call = "some_external_func"
 }
 
-func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %shape: tensor<?x1x?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
+func.func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %shape: tensor<?x1x?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
 {
   %0 = linalg.generic #trait
     ins(%arg0 : tensor<?x1x?xf32>)
@@ -38,7 +38,7 @@ func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %shape: tensor<?x1x?x1x?xf3
   library_call = "some_external_func"
 }
 
-func @drop_all_loops(%arg0 : tensor<1x1xf32>) -> tensor<1x1xf32>
+func.func @drop_all_loops(%arg0 : tensor<1x1xf32>) -> tensor<1x1xf32>
 {
   %0 = linalg.generic #trait
      ins(%arg0 : tensor<1x1xf32>)
@@ -64,7 +64,7 @@ func @drop_all_loops(%arg0 : tensor<1x1xf32>) -> tensor<1x1xf32>
   library_call = "some_external_func"
 }
 
-func @drop_all_loops(%arg0 : memref<1x1xf32>, %arg1 : memref<1x1xf32>)
+func.func @drop_all_loops(%arg0 : memref<1x1xf32>, %arg1 : memref<1x1xf32>)
 {
   linalg.generic #trait
      ins(%arg0 : memref<1x1xf32>)
@@ -93,7 +93,7 @@ func @drop_all_loops(%arg0 : memref<1x1xf32>, %arg1 : memref<1x1xf32>)
   library_call = "some_external_fn"
 }
 
-func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>, %shape: tensor<5xf32>) -> tensor<5xf32> {
+func.func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>, %shape: tensor<5xf32>) -> tensor<5xf32> {
   %0 = linalg.generic #trait
        ins(%arg0 : tensor<1x5xf32>)
       outs(%shape : tensor<5xf32>) {

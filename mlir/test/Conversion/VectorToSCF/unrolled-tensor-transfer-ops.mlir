@@ -11,7 +11,7 @@
 //       CHECK: %[[V3:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{.*}} {in_bounds = [true]} : tensor<?x?xf32>, vector<9xf32>
 //       CHECK: %[[I3:.*]] = vector.insert %[[V3]], %[[I2]] [3] : vector<9xf32> into vector<4x9xf32>
 //       CHECK: return %[[I3]] : vector<4x9xf32>
-func @transfer_read_2d(%A : tensor<?x?xf32>, %base1 : index, %base2 : index)
+func.func @transfer_read_2d(%A : tensor<?x?xf32>, %base1 : index, %base2 : index)
     -> (vector<4x9xf32>){
   %p = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %p {in_bounds = [true, true]}
@@ -27,7 +27,7 @@ func @transfer_read_2d(%A : tensor<?x?xf32>, %base1 : index, %base2 : index)
 //       CHECK:   %[[V1:.*]] = vector.extract %{{.*}}[1] : vector<2x3xf32>
 //       CHECK:   %[[T1:.*]] = vector.transfer_write %[[V1]], %[[T0]][{{.*}}] {in_bounds = [true]} : vector<3xf32>, tensor<?x?xf32>
 //       CHECK:   return %[[T1]] : tensor<?x?xf32>
-func @transfer_write_2d(%A : tensor<?x?xf32>, %vec : vector<2x3xf32>,
+func.func @transfer_write_2d(%A : tensor<?x?xf32>, %vec : vector<2x3xf32>,
                         %base1 : index, %base2 : index) -> (tensor<?x?xf32>) {
   %t = vector.transfer_write %vec, %A[%base1, %base2] {in_bounds = [true, true]}
       : vector<2x3xf32>, tensor<?x?xf32>

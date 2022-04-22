@@ -4,7 +4,7 @@
 
 // Verify that we can schedule a dynamic pipeline on a nested operation
 
-func @f() {
+func.func @f() {
   return
 }
 

@@ -17,7 +17,7 @@
 // CHECK: llvm.atomicrmw fadd %[[ARG0]], %[[RHS]] monotonic
 
 // CHECK-LABEL: @reduction1
-func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
                  %arg3 : index, %arg4 : index) {
   // CHECK: %[[CST:.*]] = arith.constant 0.0
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1
@@ -63,7 +63,7 @@ func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK-NOT: atomic
 
 // CHECK-LABEL: @reduction2
-func @reduction2(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @reduction2(%arg0 : index, %arg1 : index, %arg2 : index,
                  %arg3 : index, %arg4 : index) {
   %step = arith.constant 1 : index
   %zero = arith.constant 0.0 : f32
@@ -97,7 +97,7 @@ func @reduction2(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK-NOT: atomic
 
 // CHECK-LABEL: @reduction3
-func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
                  %arg3 : index, %arg4 : index) {
   %step = arith.constant 1 : index
   %zero = arith.constant 0.0 : f32
@@ -148,7 +148,7 @@ func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK: llvm.atomicrmw max %[[ARG0]], %[[RHS]] monotonic
 
 // CHECK-LABEL: @reduction4
-func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
                  %arg3 : index, %arg4 : index) -> (f32, i64) {
   %step = arith.constant 1 : index
   // CHECK: %[[ZERO:.*]] = arith.constant 0.0

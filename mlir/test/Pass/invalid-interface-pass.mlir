@@ -4,6 +4,6 @@
 
 // CHECK: unable to schedule pass '{{.*}}' on a PassManager intended to run on 'builtin.module'!
 
-func @main() {
+func.func @main() {
   return
 }

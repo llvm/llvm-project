@@ -2182,7 +2182,7 @@ public:
 
   TemplateName getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                         bool TemplateKeyword,
-                                        TemplateDecl *Template) const;
+                                        TemplateName Template) const;
 
   TemplateName getDependentTemplateName(NestedNameSpecifier *NNS,
                                         const IdentifierInfo *Name) const;

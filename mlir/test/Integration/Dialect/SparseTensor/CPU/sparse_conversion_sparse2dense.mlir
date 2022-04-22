@@ -42,62 +42,62 @@ module {
   //
   // Utilities for output and releasing memory.
   //
-  func @dump(%arg0: tensor<2x3x4xf64>) {
+  func.func @dump(%arg0: tensor<2x3x4xf64>) {
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1.0 : f64
     %0 = vector.transfer_read %arg0[%c0, %c0, %c0], %d0: tensor<2x3x4xf64>, vector<2x3x4xf64>
     vector.print %0 : vector<2x3x4xf64>
     return
   }
-  func @dumpAndRelease_234(%arg0: tensor<2x3x4xf64>) {
+  func.func @dumpAndRelease_234(%arg0: tensor<2x3x4xf64>) {
     call @dump(%arg0) : (tensor<2x3x4xf64>) -> ()
     %1 = bufferization.to_memref %arg0 : memref<2x3x4xf64>
     memref.dealloc %1 : memref<2x3x4xf64>
     return
   }
-  func @dumpAndRelease_p34(%arg0: tensor<?x3x4xf64>) {
+  func.func @dumpAndRelease_p34(%arg0: tensor<?x3x4xf64>) {
     %0 = tensor.cast %arg0 : tensor<?x3x4xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %1 = bufferization.to_memref %arg0 : memref<?x3x4xf64>
     memref.dealloc %1 : memref<?x3x4xf64>
     return
   }
-  func @dumpAndRelease_2p4(%arg0: tensor<2x?x4xf64>) {
+  func.func @dumpAndRelease_2p4(%arg0: tensor<2x?x4xf64>) {
     %0 = tensor.cast %arg0 : tensor<2x?x4xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %1 = bufferization.to_memref %arg0 : memref<2x?x4xf64>
     memref.dealloc %1 : memref<2x?x4xf64>
     return
   }
-  func @dumpAndRelease_23p(%arg0: tensor<2x3x?xf64>) {
+  func.func @dumpAndRelease_23p(%arg0: tensor<2x3x?xf64>) {
     %0 = tensor.cast %arg0 : tensor<2x3x?xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %1 = bufferization.to_memref %arg0 : memref<2x3x?xf64>
     memref.dealloc %1 : memref<2x3x?xf64>
     return
   }
-  func @dumpAndRelease_2pp(%arg0: tensor<2x?x?xf64>) {
+  func.func @dumpAndRelease_2pp(%arg0: tensor<2x?x?xf64>) {
     %0 = tensor.cast %arg0 : tensor<2x?x?xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %1 = bufferization.to_memref %arg0 : memref<2x?x?xf64>
     memref.dealloc %1 : memref<2x?x?xf64>
     return
   }
-  func @dumpAndRelease_p3p(%arg0: tensor<?x3x?xf64>) {
+  func.func @dumpAndRelease_p3p(%arg0: tensor<?x3x?xf64>) {
     %0 = tensor.cast %arg0 : tensor<?x3x?xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %1 = bufferization.to_memref %arg0 : memref<?x3x?xf64>
     memref.dealloc %1 : memref<?x3x?xf64>
     return
   }
-  func @dumpAndRelease_pp4(%arg0: tensor<?x?x4xf64>) {
+  func.func @dumpAndRelease_pp4(%arg0: tensor<?x?x4xf64>) {
     %0 = tensor.cast %arg0 : tensor<?x?x4xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %1 = bufferization.to_memref %arg0 : memref<?x?x4xf64>
     memref.dealloc %1 : memref<?x?x4xf64>
     return
   }
-  func @dumpAndRelease_ppp(%arg0: tensor<?x?x?xf64>) {
+  func.func @dumpAndRelease_ppp(%arg0: tensor<?x?x?xf64>) {
     %0 = tensor.cast %arg0 : tensor<?x?x?xf64> to tensor<2x3x4xf64>
     call @dump(%0) : (tensor<2x3x4xf64>) -> ()
     %1 = bufferization.to_memref %arg0 : memref<?x?x?xf64>
@@ -108,7 +108,7 @@ module {
   //
   // Main driver.
   //
-  func @entry() {
+  func.func @entry() {
     //
     // Initialize a 3-dim dense tensor.
     //

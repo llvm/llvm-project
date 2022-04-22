@@ -159,8 +159,8 @@ def ForOp : SCF_Op<"for",
     For example, to sum-reduce a memref:
 
     ```mlir
-    func @reduce(%buffer: memref<1024xf32>, %lb: index,
-                 %ub: index, %step: index) -> (f32) {
+    func.func @reduce(%buffer: memref<1024xf32>, %lb: index,
+                      %ub: index, %step: index) -> (f32) {
       // Initial sum set to 0.
       %sum_0 = arith.constant 0.0 : f32
       // iter_args binds initial values to the loop's region arguments.
@@ -184,8 +184,8 @@ def ForOp : SCF_Op<"for",
     perform conditional reduction:
 
     ```mlir
-    func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index,
-                             %ub: index, %step: index) -> (f32) {
+    func.func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index,
+                                  %ub: index, %step: index) -> (f32) {
       %sum_0 = arith.constant 0.0 : f32
       %c0 = arith.constant 0.0 : f32
       %sum = scf.for %iv = %lb to %ub step %step

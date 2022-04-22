@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s
 
 // CHECK-LABEL: void opaque_types() {
-func @opaque_types() {
+func.func @opaque_types() {
   // CHECK-NEXT: f<int>();
   emitc.call "f"() {template_args = [!emitc<"opaque<\"int\">">]} : () -> ()
   // CHECK-NEXT: f<byte>();
@@ -17,7 +17,7 @@ func @opaque_types() {
 }
 
 // CHECK-LABEL: void ptr_types() {
-func @ptr_types() {
+func.func @ptr_types() {
   // CHECK-NEXT: f<int32_t*>();
   emitc.call "f"() {template_args = [!emitc<"ptr<i32>">]} : () -> ()
   // CHECK-NEXT: f<int64_t*>();

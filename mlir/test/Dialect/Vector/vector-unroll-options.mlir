@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-vector-unrolling-patterns=unroll-based-on-type | FileCheck %s
 
-func @vector_contract_f32(%lhs : vector<8x8xf32>, %rhs : vector<8x8xf32>,
+func.func @vector_contract_f32(%lhs : vector<8x8xf32>, %rhs : vector<8x8xf32>,
                           %init : vector<8x8xf32>) -> vector<8x8xf32> {
   %0 = vector.contract
          {indexing_maps = [affine_map<(i, j, k) -> (i, k)>,
@@ -45,7 +45,7 @@ func @vector_contract_f32(%lhs : vector<8x8xf32>, %rhs : vector<8x8xf32>,
 //  CHECK-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 //       CHECK:   return
 
-func @vector_contract_f16(%lhs : vector<8x8xf16>, %rhs : vector<8x8xf16>,
+func.func @vector_contract_f16(%lhs : vector<8x8xf16>, %rhs : vector<8x8xf16>,
                           %init : vector<8x8xf16>) -> vector<8x8xf16> {
   %0 = vector.contract
          {indexing_maps = [affine_map<(i, j, k) -> (i, k)>,
@@ -74,14 +74,14 @@ func @vector_contract_f16(%lhs : vector<8x8xf16>, %rhs : vector<8x8xf16>,
 //  CHECK-SAME:     vector<4x4xf16>, vector<4x4xf16> into vector<4x4xf16>
 //       CHECK:   return
 
-func @vector_fma(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %c: vector<4x4xf32>) -> vector<4x4xf32> {
+func.func @vector_fma(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %c: vector<4x4xf32>) -> vector<4x4xf32> {
   %0 = vector.fma %a, %b, %c: vector<4x4xf32>
   return %0 : vector<4x4xf32>
 }
 //   CHECK-LABEL: func @vector_fma
 // CHECK-COUNT-4: vector.fma %{{.+}}, %{{.+}}, %{{.+}} : vector<2x2xf32>
 
-func @vector_multi_reduction(%v : vector<4x6xf32>) -> vector<4xf32> {
+func.func @vector_multi_reduction(%v : vector<4x6xf32>) -> vector<4xf32> {
   %0 = vector.multi_reduction #vector.kind<add>, %v [1] : vector<4x6xf32> to vector<4xf32>
   return %0 : vector<4xf32>
 }
@@ -108,7 +108,7 @@ func @vector_multi_reduction(%v : vector<4x6xf32>) -> vector<4xf32> {
 //       CHECK:   return %[[V2]] : vector<4xf32>
 
 
-func @vector_reduction(%v : vector<8xf32>) -> f32 {
+func.func @vector_reduction(%v : vector<8xf32>) -> f32 {
   %0 = vector.reduction <add>, %v : vector<8xf32> into f32
   return %0 : f32
 }
@@ -127,7 +127,7 @@ func @vector_reduction(%v : vector<8xf32>) -> f32 {
 //       CHECK:   %[[add3:.*]] = arith.addf %[[add2]], %[[r3]]
 //       CHECK:   return %[[add3]]
 
-func @vector_tranpose(%v : vector<2x4x3x8xf32>) -> vector<2x3x8x4xf32> {
+func.func @vector_tranpose(%v : vector<2x4x3x8xf32>) -> vector<2x3x8x4xf32> {
   %t = vector.transpose %v, [0, 2, 3, 1] : vector<2x4x3x8xf32> to vector<2x3x8x4xf32>
   return %t : vector<2x3x8x4xf32>
 }

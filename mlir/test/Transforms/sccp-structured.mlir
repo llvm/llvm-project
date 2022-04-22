@@ -3,7 +3,7 @@
 /// Check that a constant is properly propagated when only one edge is taken.
 
 // CHECK-LABEL: func @simple(
-func @simple(%arg0 : i32) -> i32 {
+func.func @simple(%arg0 : i32) -> i32 {
   // CHECK: %[[CST:.*]] = arith.constant 1 : i32
   // CHECK-NOT: scf.if
   // CHECK: return %[[CST]] : i32
@@ -22,7 +22,7 @@ func @simple(%arg0 : i32) -> i32 {
 /// same value.
 
 // CHECK-LABEL: func @simple_both_same(
-func @simple_both_same(%cond : i1) -> i32 {
+func.func @simple_both_same(%cond : i1) -> i32 {
   // CHECK: %[[CST:.*]] = arith.constant 1 : i32
   // CHECK-NOT: scf.if
   // CHECK: return %[[CST]] : i32
@@ -41,7 +41,7 @@ func @simple_both_same(%cond : i1) -> i32 {
 /// a specific successor is taken.
 
 // CHECK-LABEL: func @overdefined_unknown_condition(
-func @overdefined_unknown_condition(%cond : i1, %arg0 : i32) -> i32 {
+func.func @overdefined_unknown_condition(%cond : i1, %arg0 : i32) -> i32 {
   // CHECK: %[[RES:.*]] = scf.if
   // CHECK: return %[[RES]] : i32
 
@@ -58,7 +58,7 @@ func @overdefined_unknown_condition(%cond : i1, %arg0 : i32) -> i32 {
 /// constants.
 
 // CHECK-LABEL: func @overdefined_different_constants(
-func @overdefined_different_constants(%cond : i1) -> i32 {
+func.func @overdefined_different_constants(%cond : i1) -> i32 {
   // CHECK: %[[RES:.*]] = scf.if
   // CHECK: return %[[RES]] : i32
 
@@ -75,7 +75,7 @@ func @overdefined_different_constants(%cond : i1) -> i32 {
 /// Check that arguments are properly merged across loop-like control flow.
 
 // CHECK-LABEL: func @simple_loop(
-func @simple_loop(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
+func.func @simple_loop(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
   // CHECK: %[[CST:.*]] = arith.constant 0 : i32
   // CHECK-NOT: scf.for
   // CHECK: return %[[CST]] : i32
@@ -92,7 +92,7 @@ func @simple_loop(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
 /// conflicting value.
 
 // CHECK-LABEL: func @loop_overdefined(
-func @loop_overdefined(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
+func.func @loop_overdefined(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
   // CHECK: %[[RES:.*]] = scf.for
   // CHECK: return %[[RES]] : i32
 
@@ -109,7 +109,7 @@ func @loop_overdefined(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
 /// of the analysis.
 
 // CHECK-LABEL: func @loop_inner_control_flow(
-func @loop_inner_control_flow(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
+func.func @loop_inner_control_flow(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
   // CHECK: %[[CST:.*]] = arith.constant 1 : i32
   // CHECK-NOT: scf.for
   // CHECK-NOT: scf.if
@@ -135,7 +135,7 @@ func @loop_inner_control_flow(%arg0 : index, %arg1 : index, %arg2 : index) -> i3
 /// implements the RegionBranchTerminatorOpInterface.
 
 // CHECK-LABEL: func @loop_region_branch_terminator_op(
-func @loop_region_branch_terminator_op(%arg1 : i32) {
+func.func @loop_region_branch_terminator_op(%arg1 : i32) {
   // CHECK:      %c2_i32 = arith.constant 2 : i32
   // CHECK-NEXT: return
 
@@ -154,7 +154,7 @@ func @loop_region_branch_terminator_op(%arg1 : i32) {
 /// interface as well.
 
 // CHECK-LABEL: func @affine_loop_one_iter(
-func @affine_loop_one_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
+func.func @affine_loop_one_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
   // CHECK: %[[C1:.*]] = arith.constant 1 : i32
   %s0 = arith.constant 0 : i32
   %s1 = arith.constant 1 : i32
@@ -167,7 +167,7 @@ func @affine_loop_one_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
 }
 
 // CHECK-LABEL: func @affine_loop_zero_iter(
-func @affine_loop_zero_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
+func.func @affine_loop_zero_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
   // This exposes a crash in sccp/forward data flow analysis: https://github.com/llvm/llvm-project/issues/54928
   // CHECK: %[[C0:.*]] = arith.constant 0 : i32
   %s0 = arith.constant 0 : i32

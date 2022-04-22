@@ -3,7 +3,7 @@
 module attributes {shape.lib = [@shape_lib]} {
 
 // expected-remark@+1 {{associated shape function: same_result_shape}}
-func @tanh(%arg: tensor<10x20xf32>) -> tensor<10x20xf32>
+func.func @tanh(%arg: tensor<10x20xf32>) -> tensor<10x20xf32>
     attributes {shape.function = @shape_lib::@same_result_shape} {
   // expected-remark@+1 {{no associated way}}
   %0 = math.tanh %arg : tensor<10x20xf32>

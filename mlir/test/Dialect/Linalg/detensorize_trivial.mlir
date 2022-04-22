@@ -9,7 +9,7 @@
   iterator_types = []
 }
 
-func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
+func.func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
   %c10 = arith.constant 10 : i32
   %1 = tensor.from_elements %c10 : tensor<i32>
   %3 = linalg.init_tensor [] : tensor<i1>

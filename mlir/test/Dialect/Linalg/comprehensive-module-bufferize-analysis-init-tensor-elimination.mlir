@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: func @buffer_forwarding_conflict
-func @buffer_forwarding_conflict(%arg0: tensor<?xf32> {linalg.inplaceable = true}, %arg1: index) -> (tensor<?xf32>, tensor<?xf32>) {
+func.func @buffer_forwarding_conflict(%arg0: tensor<?xf32> {linalg.inplaceable = true}, %arg1: index) -> (tensor<?xf32>, tensor<?xf32>) {
   %cst = arith.constant 0.000000e+00 : f32
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["false", "none"]
@@ -34,7 +34,7 @@ func @buffer_forwarding_conflict(%arg0: tensor<?xf32> {linalg.inplaceable = true
 // -----
 
 // CHECK-LABEL: func @buffer_forwarding_no_conflict
-func @buffer_forwarding_no_conflict(%arg0: tensor<?xf32> {linalg.inplaceable = true}, %arg1: index) -> (tensor<?xf32>, tensor<?xf32>) {
+func.func @buffer_forwarding_no_conflict(%arg0: tensor<?xf32> {linalg.inplaceable = true}, %arg1: index) -> (tensor<?xf32>, tensor<?xf32>) {
   %cst = arith.constant 0.000000e+00 : f32
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "none"]

@@ -13,7 +13,7 @@
 // CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<f32>
 // CHECK:           %[[EXTENT:.*]] = memref.dim %[[MEMREF]], %[[INDEX]] : memref<f32>
 // CHECK:           return %[[EXTENT]] : index
-func @dim(%arg0: tensor<f32>, %arg1: index) -> index {
+func.func @dim(%arg0: tensor<f32>, %arg1: index) -> index {
   %0 = tensor.dim %arg0, %arg1 : tensor<f32>
   return %0 : index
 }
@@ -22,7 +22,7 @@ func @dim(%arg0: tensor<f32>, %arg1: index) -> index {
 // CHECK-SAME:    %[[TENSOR:.*]]: tensor<*xf32>) -> index {
 // CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]]
 // CHECK:           %[[EXTENT:.*]] = memref.rank %[[MEMREF]] : memref<*xf32>
-func @rank(%arg0: tensor<*xf32>) -> index {
+func.func @rank(%arg0: tensor<*xf32>) -> index {
   %0 = tensor.rank %arg0 : tensor<*xf32>
   return %0 : index
 }
@@ -33,7 +33,7 @@ func @rank(%arg0: tensor<*xf32>) -> index {
 // CHECK:           %[[CASTED:.*]] = memref.cast %[[MEMREF]] : memref<?xindex> to memref<2xindex>
 // CHECK:           %[[RET:.*]] = bufferization.to_tensor %[[CASTED]]
 // CHECK:           return %[[RET]] : tensor<2xindex>
-func @tensor.cast(%arg0: tensor<?xindex>) -> tensor<2xindex> {
+func.func @tensor.cast(%arg0: tensor<?xindex>) -> tensor<2xindex> {
   %0 = tensor.cast %arg0 : tensor<?xindex> to tensor<2xindex>
   return %0 : tensor<2xindex>
 }
@@ -44,7 +44,7 @@ func @tensor.cast(%arg0: tensor<?xindex>) -> tensor<2xindex> {
 // CHECK:           %[[CASTED_MEMREF:.*]] = memref.cast %[[MEMREF]] : memref<*xf32> to memref<2xf32>
 // CHECK:           %[[RET:.*]] = bufferization.to_tensor %[[CASTED_MEMREF]] : memref<2xf32>
 // CHECK:           return %[[RET]] : tensor<2xf32>
-func @tensor.cast_from_unranked(%arg0: tensor<*xf32>) -> tensor<2xf32> {
+func.func @tensor.cast_from_unranked(%arg0: tensor<*xf32>) -> tensor<2xf32> {
   %0 = tensor.cast %arg0 : tensor<*xf32> to tensor<2xf32>
   return %0 : tensor<2xf32>
 }
@@ -55,7 +55,7 @@ func @tensor.cast_from_unranked(%arg0: tensor<*xf32>) -> tensor<2xf32> {
 // CHECK:           %[[CASTED_MEMREF:.*]] = memref.cast %[[MEMREF]] : memref<2xf32> to memref<*xf32>
 // CHECK:           %[[RET:.*]] = bufferization.to_tensor %[[CASTED_MEMREF]] : memref<*xf32>
 // CHECK:           return %[[RET]] : tensor<*xf32>
-func @tensor.cast_to_unranked(%arg0: tensor<2xf32>) -> tensor<*xf32> {
+func.func @tensor.cast_to_unranked(%arg0: tensor<2xf32>) -> tensor<*xf32> {
   %0 = tensor.cast %arg0 : tensor<2xf32> to tensor<*xf32>
   return %0 : tensor<*xf32>
 }
@@ -67,7 +67,7 @@ func @tensor.cast_to_unranked(%arg0: tensor<2xf32>) -> tensor<*xf32> {
 // CHECK:           %[[RET:.*]] = memref.load %[[MEMREF]][%[[IDX]]] : memref<?xf32>
 // CHECK:           return %[[RET]] : f32
 // CHECK:         }
-func @tensor.extract(%arg0: tensor<?xf32>, %arg1: index) -> f32 {
+func.func @tensor.extract(%arg0: tensor<?xf32>, %arg1: index) -> f32 {
   %0 = tensor.extract %arg0[%arg1] : tensor<?xf32>
   return %0 : f32
 }
@@ -75,7 +75,7 @@ func @tensor.extract(%arg0: tensor<?xf32>, %arg1: index) -> f32 {
 // CHECK-LABEL:   func @tensor.from_elements_no_elements() -> tensor<0xindex> {
 // CHECK:           %[[RET:.*]] = arith.constant dense<> : tensor<0xindex>
 // CHECK:           return %[[RET]] : tensor<0xindex>
-func @tensor.from_elements_no_elements() -> tensor<0xindex> {
+func.func @tensor.from_elements_no_elements() -> tensor<0xindex> {
   %0 = tensor.from_elements : tensor<0xindex>
   return %0 : tensor<0xindex>
 }
@@ -86,7 +86,7 @@ func @tensor.from_elements_no_elements() -> tensor<0xindex> {
 // CHECK:           store %[[ELEM0]], %[[MEMREF]]
 // CHECK:           %[[RET:.*]] = bufferization.to_tensor %[[MEMREF]]
 // CHECK:           return %[[RET]] : tensor<index>
-func @tensor.from_elements_0d(%arg0: index) -> tensor<index> {
+func.func @tensor.from_elements_0d(%arg0: index) -> tensor<index> {
   %0 = tensor.from_elements %arg0 : tensor<index>
   return %0 : tensor<index>
 }
@@ -101,7 +101,7 @@ func @tensor.from_elements_0d(%arg0: index) -> tensor<index> {
 // CHECK:           store %[[ELEM1]], %[[MEMREF]][%[[C1]]]
 // CHECK:           %[[RET:.*]] = bufferization.to_tensor %[[MEMREF]]
 // CHECK:           return %[[RET]] : tensor<2xindex>
-func @tensor.from_elements_1d(%arg0: index, %arg1: index) -> tensor<2xindex> {
+func.func @tensor.from_elements_1d(%arg0: index, %arg1: index) -> tensor<2xindex> {
   %0 = tensor.from_elements %arg0, %arg1 : tensor<2xindex>
   return %0 : tensor<2xindex>
 }
@@ -121,7 +121,7 @@ func @tensor.from_elements_1d(%arg0: index, %arg1: index) -> tensor<2xindex> {
 // CHECK:         store %[[ELEM1]], %[[MEMREF]][%[[C2]], %[[C1]]]
 // CHECK:         %[[RET:.*]] = bufferization.to_tensor %[[MEMREF]]
 // CHECK:         return %[[RET]] : tensor<3x2xindex>
-func @tensor.from_elements_2d(%arg0: index, %arg1: index) -> tensor<3x2xindex> {
+func.func @tensor.from_elements_2d(%arg0: index, %arg1: index) -> tensor<3x2xindex> {
   %0 = tensor.from_elements %arg0, %arg1, %arg0, %arg1, %arg0, %arg1
          : tensor<3x2xindex>
   return %0 : tensor<3x2xindex>
@@ -163,7 +163,7 @@ func @tensor.from_elements_2d(%arg0: index, %arg1: index) -> tensor<3x2xindex> {
 
 // CHECK: %[[RET:.*]] = bufferization.to_tensor %[[MEMREF]]
 // CHECK: return %[[RET]] : tensor<3x2x2xf32>
-func @tensor.from_elements_3d(%f0 : f32) -> tensor<3x2x2xf32> {
+func.func @tensor.from_elements_3d(%f0 : f32) -> tensor<3x2x2xf32> {
   %f1 = arith.constant 1.0 : f32
   %f2 = arith.constant 2.0 : f32
   %f3 = arith.constant 3.0 : f32
@@ -195,7 +195,7 @@ func @tensor.from_elements_3d(%f0 : f32) -> tensor<3x2x2xf32> {
 // CHECK:           %[[RET:.*]] = bufferization.to_tensor %[[MEMREF]] : memref<?xindex>
 // CHECK:           return %[[RET]] : tensor<?xindex>
 // CHECK:         }
-func @tensor.generate(%arg: tensor<*xf32>, %dynamic_extent: index) -> tensor<?xindex> {
+func.func @tensor.generate(%arg: tensor<*xf32>, %dynamic_extent: index) -> tensor<?xindex> {
   %result = tensor.generate %dynamic_extent {
   ^bb0(%i : index):
     %elem = tensor.dim %arg, %i : tensor<*xf32>
@@ -221,7 +221,7 @@ func @tensor.generate(%arg: tensor<*xf32>, %dynamic_extent: index) -> tensor<?xi
 // CHECK:           %[[RET:.*]] = bufferization.to_tensor %[[MEMREF]] : memref<16x?xindex>
 // CHECK:           return %[[RET]] : tensor<16x?xindex>
 // CHECK:         }
-func @tensor.generate_static_and_dynamic(%arg0: index) -> tensor<16x?xindex> {
+func.func @tensor.generate_static_and_dynamic(%arg0: index) -> tensor<16x?xindex> {
   %result = tensor.generate %arg0 {
   ^bb0(%i: index, %j: index):
     %sum = arith.addi %i, %j : index
@@ -231,7 +231,7 @@ func @tensor.generate_static_and_dynamic(%arg0: index) -> tensor<16x?xindex> {
 }
 
 // CHECK-LABEL: func @tensor.generate_unknown_ops_in_body
-func @tensor.generate_unknown_ops_in_body(%arg0: index) -> tensor<?xindex> {
+func.func @tensor.generate_unknown_ops_in_body(%arg0: index) -> tensor<?xindex> {
   // CHECK-NOT: tensor.generate
   %tensor = tensor.generate %arg0 {
   ^bb0(%iv: index):
@@ -244,7 +244,7 @@ func @tensor.generate_unknown_ops_in_body(%arg0: index) -> tensor<?xindex> {
 
 // CHECK-LABEL: func @tensor.extract_slice(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x?xf32>, %[[idx1:.*]]: index, %[[idx2:.*]]: index
-func @tensor.extract_slice(
+func.func @tensor.extract_slice(
     %t1: tensor<?x?xf32>, %idx1: index, %idx2: index) -> tensor<?x10xf32> {
   // CHECK: %[[m:.*]] = bufferization.to_memref %[[t1]] : memref<?x?xf32>
   // CHECK: %[[r:.*]] = memref.subview %[[m]][5, %[[idx2]]] [%[[idx1]], 10] [1, 1] : memref<?x?xf32> to memref<?x10xf32, #[[$MAP0]]>
@@ -258,7 +258,7 @@ func @tensor.extract_slice(
 // CHECK-LABEL: func @tensor.extract_slice_rank_reducing(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x10x?xf32>, %[[idx1:.*]]: index,
 //  CHECK-SAME:     %[[idx2:.*]]: index
-func @tensor.extract_slice_rank_reducing(
+func.func @tensor.extract_slice_rank_reducing(
     %t1: tensor<?x10x?xf32>, %idx1: index, %idx2: index) -> tensor<?x15xf32> {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x10x?xf32>
   // CHECK: %[[r:.*]] = memref.subview %[[m1]][5, %[[idx1]], 10] [%[[idx2]], 1, 15] [1, 1, 1] : memref<?x10x?xf32> to memref<?x15xf32, #[[$MAP0]]>
@@ -272,7 +272,7 @@ func @tensor.extract_slice_rank_reducing(
 // CHECK-LABEL: func @tensor.insert_slice(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x?xf32>, %[[t2:.*]]: tensor<?x10xf32>,
 //  CHECK-SAME:     %[[idx1:.*]]: index, %[[idx2:.*]]: index
-func @tensor.insert_slice(%t1: tensor<?x?xf32>, %t2: tensor<?x10xf32>,
+func.func @tensor.insert_slice(%t1: tensor<?x?xf32>, %t2: tensor<?x10xf32>,
                           %idx1: index, %idx2: index) -> tensor<?x?xf32> {
   // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
   // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
@@ -295,7 +295,7 @@ func @tensor.insert_slice(%t1: tensor<?x?xf32>, %t2: tensor<?x10xf32>,
 // CHECK-LABEL: func @tensor.insert(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<5xf32>, %[[idx1:.*]]: index,
 //  CHECK-SAME:     %[[f:.*]]: f32
-func @tensor.insert(%t1: tensor<5xf32>, %idx1: index, %f: f32) -> tensor<5xf32> {
+func.func @tensor.insert(%t1: tensor<5xf32>, %idx1: index, %f: f32) -> tensor<5xf32> {
   // CHECK-DAG: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
   // CHECK-DAG: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<5xf32>
   // CHECK: memref.copy %[[m1]], %[[alloc]]
@@ -309,7 +309,7 @@ func @tensor.insert(%t1: tensor<5xf32>, %idx1: index, %f: f32) -> tensor<5xf32> 
 
 // CHECK-LABEL: func @tensor.expand_shape(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x10xf32>
-func @tensor.expand_shape(%t1: tensor<?x10xf32>) -> tensor<2x?x10xf32> {
+func.func @tensor.expand_shape(%t1: tensor<?x10xf32>) -> tensor<2x?x10xf32> {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x10xf32>
   // CHECK: %[[expanded:.*]] = memref.expand_shape %[[m1]] [
   // CHECK-SAME: [0, 1], [2]] : memref<?x10xf32> into memref<2x?x10xf32>
@@ -323,7 +323,7 @@ func @tensor.expand_shape(%t1: tensor<?x10xf32>) -> tensor<2x?x10xf32> {
 
 // CHECK-LABEL: func @tensor.expand_shape_of_slice(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x20xf32>
-func @tensor.expand_shape_of_slice(
+func.func @tensor.expand_shape_of_slice(
     %t1: tensor<?x20xf32>, %o1: index, %s1: index) -> tensor<?x7x2x5xf32> {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x20xf32>
   // CHECK: %[[subview:.*]] = memref.subview %[[m1]][%{{.*}}, 5] [%{{.*}}, 10] [1, 1] : memref<?x20xf32> to memref<?x10xf32, #[[$MAP1]]>
@@ -340,7 +340,7 @@ func @tensor.expand_shape_of_slice(
 
 // CHECK-LABEL: func @tensor.expand_shape_of_slice2(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<1x2xf32>
-func @tensor.expand_shape_of_slice2(%t1: tensor<1x2xf32>) -> tensor<1xf32> {
+func.func @tensor.expand_shape_of_slice2(%t1: tensor<1x2xf32>) -> tensor<1xf32> {
   // CHECK: memref.subview {{.*}} : memref<1x2xf32> to memref<1x1xf32, #[[$MAP5]]>
   %0 = tensor.extract_slice %t1[0, 0][1, 1][1, 1] : tensor<1x2xf32> to tensor<1x1xf32>
   // CHECK: memref.collapse_shape %{{.*}} [
@@ -351,7 +351,7 @@ func @tensor.expand_shape_of_slice2(%t1: tensor<1x2xf32>) -> tensor<1xf32> {
 
 // CHECK-LABEL: func @tensor.collapse_shape(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<2x?x?xf32>
-func @tensor.collapse_shape(%t1: tensor<2x?x?xf32>) -> tensor<?x?xf32> {
+func.func @tensor.collapse_shape(%t1: tensor<2x?x?xf32>) -> tensor<?x?xf32> {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<2x?x?xf32>
   // CHECK: %[[collapsed:.*]] = memref.collapse_shape %[[m1]] [
   // CHECK-SAME: [0, 1], [2]] : memref<2x?x?xf32> into memref<?x?xf32>
@@ -365,7 +365,7 @@ func @tensor.collapse_shape(%t1: tensor<2x?x?xf32>) -> tensor<?x?xf32> {
 
 // CHECK-LABEL: func @tensor.collapse_shape_to_scalar(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<1x1x1xf32>
-func @tensor.collapse_shape_to_scalar(%t1: tensor<1x1x1xf32>) -> tensor<f32> {
+func.func @tensor.collapse_shape_to_scalar(%t1: tensor<1x1x1xf32>) -> tensor<f32> {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<1x1x1xf32>
   // CHECK: %[[collapsed:.*]] = memref.collapse_shape %[[m1]] [] : memref<1x1x1xf32> into memref<f32>
   %0 = tensor.collapse_shape %t1 []
@@ -377,7 +377,7 @@ func @tensor.collapse_shape_to_scalar(%t1: tensor<1x1x1xf32>) -> tensor<f32> {
 }
 
 // CHECK-LABEL: func @tensor.collapse_shape_of_slice(
-func @tensor.collapse_shape_of_slice(%arg0: tensor<2xi32>) -> tensor<i32> {
+func.func @tensor.collapse_shape_of_slice(%arg0: tensor<2xi32>) -> tensor<i32> {
   // CHECK: memref.subview %{{.*}}[1] [1] [1] : memref<2xi32> to memref<1xi32, #[[$MAP3]]>
   %0 = tensor.extract_slice %arg0[1] [1] [1] : tensor<2xi32> to tensor<1xi32>
   // CHECK: memref.collapse_shape %{{.*}} [] : memref<1xi32, #[[$MAP3]]> into memref<i32, #[[$MAP4]]>
@@ -386,7 +386,7 @@ func @tensor.collapse_shape_of_slice(%arg0: tensor<2xi32>) -> tensor<i32> {
 }
 
 // CHECK-LABEL: func @tensor.collapse_shape_of_slice2(
-func @tensor.collapse_shape_of_slice2(
+func.func @tensor.collapse_shape_of_slice2(
     %arg0: tensor<?x?x?x?xi64>, %o1: index, %o2: index, %o3: index, %o4: index)
     -> tensor<87x63648xi64> {
   // CHECK: %[[subview:.*]] = memref.subview %{{.*}} : memref<?x?x?x?xi64> to memref<87x78x68x12xi64, #{{.*}}>

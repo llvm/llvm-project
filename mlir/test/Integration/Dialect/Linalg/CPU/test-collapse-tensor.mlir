@@ -7,7 +7,7 @@
 // RUN: | FileCheck %s
 
 
-func @main() {
+func.func @main() {
   %const = arith.constant dense<[[[[-3.9058,0.9072],[-2.9470,-2.2055],[18.3946,8.2997]],[[3.4700,5.9006],[-17.2267,4.9777],[1.0450,-0.8201]]],[[[17.6996,-11.1763],[26.7775,-3.8823],[-4.2492,-5.8966]],[[2.1259,13.1794],[-10.7136,0.8428],[16.4233,9.4589]]]]> : tensor<2x2x3x2xf32>
   %dynamic = tensor.cast %const: tensor<2x2x3x2xf32> to tensor<2x?x?x?xf32>
   %collapsed = call @collapse_dynamic_shape(%dynamic) : (tensor<2x?x?x?xf32>) -> (tensor<2x?x?xf32>)
@@ -30,9 +30,9 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @print_memref_f32(%ptr : tensor<*xf32>)
 
-func @collapse_dynamic_shape(%arg0 : tensor<2x?x?x?xf32>) -> tensor<2x?x?xf32> {
+func.func @collapse_dynamic_shape(%arg0 : tensor<2x?x?x?xf32>) -> tensor<2x?x?xf32> {
   %0 = tensor.collapse_shape %arg0 [[0], [1, 2], [3]]: tensor<2x?x?x?xf32> into tensor<2x?x?xf32>
   return %0 : tensor<2x?x?xf32>
 }
