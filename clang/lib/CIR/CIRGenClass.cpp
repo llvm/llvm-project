@@ -222,7 +222,9 @@ public:
     }
   }
 
-  void finish() { buildAggregatedInits(); }
+  void finish() {
+    buildAggregatedInits();
+  }
 
 private:
   bool MemcpyableCtor;
