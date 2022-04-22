@@ -144,7 +144,7 @@ struct CollapseShapeOpInterface
     // If the dims are not collapsible (due to an incompatible source layout
     // map), force an out-of-place bufferization, i.e., a buffer copy. This
     // newly allocated buffer will have no layout map and thus be collapsible.
-    bool canBeCollapsed = memref::ExpandShapeOp::isGuaranteedCollapsible(
+    bool canBeCollapsed = memref::CollapseShapeOp::isGuaranteedCollapsible(
         bufferType, collapseShapeOp.getReassociationIndices());
     Optional<BufferizationState::ForceInPlacability> overrideInPlace =
         canBeCollapsed
