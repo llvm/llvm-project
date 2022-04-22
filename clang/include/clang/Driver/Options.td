@@ -906,14 +906,6 @@ def fconvergent_functions : Flag<["-"], "fconvergent-functions">, Group<f_Group>
 def gpu_use_aux_triple_only : Flag<["--"], "gpu-use-aux-triple-only">,
   InternalDriverOpt, HelpText<"Prepare '-aux-triple' only without populating "
                               "'-aux-target-cpu' and '-aux-target-feature'.">;
-def cuda_device_only : Flag<["--"], "cuda-device-only">,
-  HelpText<"Compile CUDA code for device only">;
-def cuda_host_only : Flag<["--"], "cuda-host-only">,
-  HelpText<"Compile CUDA code for host only.  Has no effect on non-CUDA "
-           "compilations.">;
-def cuda_compile_host_device : Flag<["--"], "cuda-compile-host-device">,
-  HelpText<"Compile CUDA code for both host and device (default).  Has no "
-           "effect on non-CUDA compilations.">;
 def cuda_include_ptx_EQ : Joined<["--"], "cuda-include-ptx=">, Flags<[NoXarchOption]>,
   HelpText<"Include PTX for the following GPU architecture (e.g. sm_35) or 'all'. May be specified more than once.">;
 def no_cuda_include_ptx_EQ : Joined<["--"], "no-cuda-include-ptx=">, Flags<[NoXarchOption]>,
@@ -2538,6 +2530,19 @@ def offload_new_driver : Flag<["--"], "offload-new-driver">, Flags<[CC1Option]>,
   HelpText<"Use the new driver for offloading compilation.">;
 def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Don't Use the new driver for offloading compilation.">;
+def offload_device_only : Flag<["--"], "offload-device-only">,
+  HelpText<"Only compile for the offloading device.">;
+def offload_host_only : Flag<["--"], "offload-host-only">,
+  HelpText<"Only compile for the offloading host.">;
+def offload_host_device : Flag<["--"], "offload-host-device">,
+  HelpText<"Only compile for the offloading host.">;
+def cuda_device_only : Flag<["--"], "cuda-device-only">, Alias<offload_device_only>,
+  HelpText<"Compile CUDA code for device only">;
+def cuda_host_only : Flag<["--"], "cuda-host-only">, Alias<offload_host_only>,
+  HelpText<"Compile CUDA code for host only. Has no effect on non-CUDA compilations.">;
+def cuda_compile_host_device : Flag<["--"], "cuda-compile-host-device">, Alias<offload_host_device>,
+  HelpText<"Compile CUDA code for both host and device (default). Has no "
+           "effect on non-CUDA compilations.">;
 def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Use the new driver for OpenMP offloading.">;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,

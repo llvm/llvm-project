@@ -16,3 +16,18 @@
 
 // RUN: %clang -### -nocudalib --offload-new-driver %s 2>&1 | FileCheck -check-prefix RDC %s
 // RDC: error: Using '--offload-new-driver' requires '-fgpu-rdc'
+
+// RUN: %clang -### -target x86_64-linux-gnu -nocudalib -ccc-print-bindings -fgpu-rdc \
+// RUN:        --offload-new-driver --offload-arch=sm_35 --offload-arch=sm_70 %s 2>&1 \
+// RUN: | FileCheck -check-prefix BINDINGS-HOST %s
+
+// BINDINGS-HOST: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[OUTPUT:.+]]"
+// BINDINGS-HOST: # "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[OUTPUT]]"], output: "a.out"
+
+// RUN: %clang -### -target x86_64-linux-gnu -nocudalib -ccc-print-bindings -fgpu-rdc \
+// RUN:        --offload-new-driver --offload-arch=sm_35 --offload-arch=sm_70 %s 2>&1 \
+// RUN: | FileCheck -check-prefix BINDINGS-DEVICE %s
+
+// BINDINGS-DEVICE: # "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[PTX:.+]]"
+// BINDINGS-DEVICE: # "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[PTX]]"], output: "[[CUBIN:.+]]"
+// BINDINGS-DEVICE: # "nvptx64-nvidia-cuda" - "NVPTX::Linker", inputs: ["[[CUBIN]]", "[[PTX]]"], output: "{{.*}}.fatbin"

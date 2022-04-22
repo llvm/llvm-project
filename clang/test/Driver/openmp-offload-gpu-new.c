@@ -3,7 +3,6 @@
 ///
 
 // REQUIRES: x86-registered-target
-// REQUIRES: powerpc-registered-target
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
 
@@ -50,3 +49,18 @@
 // RUN:   | FileCheck -check-prefix=DRIVER_EMBEDDING %s
 
 // DRIVER_EMBEDDING: -fembed-offload-object=[[CUBIN:.*\.cubin]],openmp,nvptx64-nvidia-cuda,sm_70
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:     --offload-host-only -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-HOST-ONLY
+// CHECK-HOST-ONLY: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.*]]"], output: "[[OUTPUT:.*]]"
+// CHECK-HOST-ONLY: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[OUTPUT]]"], output: "a.out"
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:     --offload-device-only -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-ONLY
+// CHECK-DEVICE-ONLY: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.*]]"], output: "[[HOST_BC:.*]]"
+// CHECK-DEVICE-ONLY: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[DEVICE_ASM:.*]]"
+// CHECK-DEVICE-ONLY: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "{{.*}}-openmp-nvptx64-nvidia-cuda.o"
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:     --offload-device-only -E -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-ONLY-PP
+// CHECK-DEVICE-ONLY-PP: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT:.*]]"], output: "-"
