@@ -424,6 +424,7 @@ public:
   }
 
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const { return 0; }
+  unsigned getStoreMinimumVF(unsigned VF, Type *, Type *) const { return VF; }
 
   bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) const {

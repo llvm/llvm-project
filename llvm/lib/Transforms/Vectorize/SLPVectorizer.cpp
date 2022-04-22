@@ -8737,11 +8737,8 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   // If V is a store, just return the width of the stored value (or value
   // truncated just before storing) without traversing the expression tree.
   // This is the common case.
-  if (auto *Store = dyn_cast<StoreInst>(V)) {
-    if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
-      return DL->getTypeSizeInBits(Trunc->getSrcTy());
+  if (auto *Store = dyn_cast<StoreInst>(V))
     return DL->getTypeSizeInBits(Store->getValueOperand()->getType());
-  }
 
   if (auto *IEI = dyn_cast<InsertElementInst>(V))
     return getVectorElementSize(IEI->getOperand(1));
@@ -9175,11 +9172,10 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 }
 
 bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
-                                            unsigned Idx) {
+                                            unsigned Idx, unsigned MinVF) {
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
-  const unsigned MinVF = R.getMinVecRegSize() / Sz;
   unsigned VF = Chain.size();
 
   if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF)
@@ -9318,9 +9314,15 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
     unsigned EltSize = R.getVectorElementSize(Operands[0]);
     unsigned MaxElts = llvm::PowerOf2Floor(MaxVecRegSize / EltSize);
 
-    unsigned MinVF = R.getMinVF(EltSize);
     unsigned MaxVF = std::min(R.getMaximumVF(EltSize, Instruction::Store),
                               MaxElts);
+    auto *Store = cast<StoreInst>(Operands[0]);
+    Type *StoreTy = Store->getValueOperand()->getType();
+    Type *ValueTy = StoreTy;
+    if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
+      ValueTy = Trunc->getSrcTy();
+    unsigned MinVF = TTI->getStoreMinimumVF(
+        R.getMinVF(DL->getTypeSizeInBits(ValueTy)), StoreTy, ValueTy);
 
     // FIXME: Is division-by-2 the correct step? Should we assert that the
     // register size is a power-of-2?
@@ -9330,7 +9332,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         ArrayRef<Value *> Slice = makeArrayRef(Operands).slice(Cnt, Size);
         if (!VectorizedStores.count(Slice.front()) &&
             !VectorizedStores.count(Slice.back()) &&
-            vectorizeStoreChain(Slice, R, Cnt)) {
+            vectorizeStoreChain(Slice, R, Cnt, MinVF)) {
           // Mark the vectorized stores so that we don't vectorize them again.
           VectorizedStores.insert(Slice.begin(), Slice.end());
           Changed = true;

@@ -133,7 +133,7 @@ private:
   bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
   bool vectorizeStoreChain(ArrayRef<Value *> Chain, slpvectorizer::BoUpSLP &R,
-                           unsigned Idx);
+                           unsigned Idx, unsigned MinVF);
 
   bool vectorizeStores(ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R);
 

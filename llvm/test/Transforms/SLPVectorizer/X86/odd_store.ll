@@ -65,9 +65,10 @@ define void @test_v4f32_v2f32_store(<4 x float> %f, float* %p){
 ; CHECK-LABEL: @test_v4f32_v2f32_store(
 ; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
 ; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[F]], i64 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
-; CHECK-NEXT:    store float [[X0]], float* [[P]], align 4
-; CHECK-NEXT:    store float [[X1]], float* [[P1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[X1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[P:%.*]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP2]], <2 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x0 = extractelement <4 x float> %f, i64 0
@@ -98,10 +99,11 @@ define void @test_v4f32_v3f32_store(<4 x float> %f, float* %p){
 ; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
 ; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[F]], i64 1
 ; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x float> [[F]], i64 2
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
-; CHECK-NEXT:    store float [[X0]], float* [[P]], align 4
-; CHECK-NEXT:    store float [[X1]], float* [[P1]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[X1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[P]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP2]], <2 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    store float [[X2]], float* [[P2]], align 4
 ; CHECK-NEXT:    ret void
 ;

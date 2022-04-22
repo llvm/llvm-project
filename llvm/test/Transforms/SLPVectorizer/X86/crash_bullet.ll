@@ -14,23 +14,18 @@ define void @_ZN23btGeneric6DofConstraint8getInfo1EPN17btTypedConstraint17btCons
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[M_NUMCONSTRAINTROWS4:%.*]] = getelementptr inbounds %"struct.btTypedConstraint::btConstraintInfo1.17.157.357.417.477.960", %"struct.btTypedConstraint::btConstraintInfo1.17.157.357.417.477.960"* [[INFO:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[NUB5:%.*]] = getelementptr inbounds %"struct.btTypedConstraint::btConstraintInfo1.17.157.357.417.477.960", %"struct.btTypedConstraint::btConstraintInfo1.17.157.357.417.477.960"* [[INFO]], i64 0, i32 1
 ; CHECK-NEXT:    br i1 undef, label [[LAND_LHS_TRUE_I_1:%.*]], label [[IF_THEN7_1:%.*]]
 ; CHECK:       land.lhs.true.i.1:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_INC_1:%.*]], label [[IF_THEN7_1]]
 ; CHECK:       if.then7.1:
-; CHECK-NEXT:    [[INC_1:%.*]] = add nsw i32 0, 1
-; CHECK-NEXT:    store i32 [[INC_1]], i32* [[M_NUMCONSTRAINTROWS4]], align 4
-; CHECK-NEXT:    [[DEC_1:%.*]] = add nsw i32 6, -1
-; CHECK-NEXT:    store i32 [[DEC_1]], i32* [[NUB5]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[M_NUMCONSTRAINTROWS4]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 5>, <2 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC_1]]
 ; CHECK:       for.inc.1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[DEC_1]], [[IF_THEN7_1]] ], [ 6, [[LAND_LHS_TRUE_I_1]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[INC_1]], [[IF_THEN7_1]] ], [ 0, [[LAND_LHS_TRUE_I_1]] ]
-; CHECK-NEXT:    [[INC_2:%.*]] = add nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    store i32 [[INC_2]], i32* [[M_NUMCONSTRAINTROWS4]], align 4
-; CHECK-NEXT:    [[DEC_2:%.*]] = add nsw i32 [[TMP0]], -1
-; CHECK-NEXT:    store i32 [[DEC_2]], i32* [[NUB5]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ <i32 1, i32 5>, [[IF_THEN7_1]] ], [ <i32 0, i32 6>, [[LAND_LHS_TRUE_I_1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[M_NUMCONSTRAINTROWS4]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], <2 x i32>* [[TMP3]], align 4
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -74,15 +69,14 @@ define void @_ZN30GIM_TRIANGLE_CALCULATION_CACHE18triangle_collisionERK9btVector
 ; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [[CLASS_GIM_TRIANGLE_CALCULATION_CACHE_9_34_69_94_119_144_179_189_264_284_332:%.*]], %class.GIM_TRIANGLE_CALCULATION_CACHE.9.34.69.94.119.144.179.189.264.284.332* [[THIS:%.*]], i64 0, i32 2, i64 0, i32 0, i64 1
 ; CHECK-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds [[CLASS_GIM_TRIANGLE_CALCULATION_CACHE_9_34_69_94_119_144_179_189_264_284_332]], %class.GIM_TRIANGLE_CALCULATION_CACHE.9.34.69.94.119.144.179.189.264.284.332* [[THIS]], i64 0, i32 2, i64 0, i32 0, i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[ARRAYIDX36]], align 4
-; CHECK-NEXT:    [[ADD587:%.*]] = fadd float undef, undef
-; CHECK-NEXT:    [[SUB600:%.*]] = fsub float [[ADD587]], undef
-; CHECK-NEXT:    store float [[SUB600]], float* undef, align 4
-; CHECK-NEXT:    [[SUB613:%.*]] = fsub float [[ADD587]], [[SUB600]]
-; CHECK-NEXT:    store float [[SUB613]], float* [[ARRAYIDX26]], align 4
-; CHECK-NEXT:    [[ADD626:%.*]] = fadd float [[TMP0]], undef
-; CHECK-NEXT:    [[SUB639:%.*]] = fsub float [[ADD626]], undef
-; CHECK-NEXT:    [[SUB652:%.*]] = fsub float [[ADD626]], [[SUB639]]
-; CHECK-NEXT:    store float [[SUB652]], float* [[ARRAYIDX36]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float undef, float poison>, float [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], undef
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x float> [[TMP2]], undef
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    store float [[TMP4]], float* undef, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[ARRAYIDX26]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP5]], <2 x float>* [[TMP6]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[IF_ELSE1609:%.*]], label [[IF_THEN1595:%.*]]
 ; CHECK:       if.then1595:
 ; CHECK-NEXT:    br i1 undef, label [[RETURN:%.*]], label [[FOR_BODY_LR_PH_I_I1702:%.*]]
