@@ -2580,11 +2580,12 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
   // (icmp1 A, B) | (icmp2 A, B) --> (icmp3 A, B)
   if (predicatesFoldable(PredL, PredR)) {
-    if (LHS0 == RHS1 && LHS1 == RHS0)
-      LHS->swapOperands();
+    if (LHS0 == RHS1 && LHS1 == RHS0) {
+      PredL = ICmpInst::getSwappedPredicate(PredL);
+      std::swap(LHS0, LHS1);
+    }
     if (LHS0 == RHS0 && LHS1 == RHS1) {
-      unsigned Code =
-          getICmpCode(LHS->getPredicate()) | getICmpCode(RHS->getPredicate());
+      unsigned Code = getICmpCode(PredL) | getICmpCode(PredR);
       bool IsSigned = LHS->isSigned() || RHS->isSigned();
       return getNewICmpValue(Code, IsSigned, LHS0, LHS1, Builder);
     }
