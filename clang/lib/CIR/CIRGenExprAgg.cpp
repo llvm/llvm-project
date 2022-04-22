@@ -49,9 +49,7 @@ public:
 
 void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   AggValueSlot Slot = EnsureSlot(E->getType());
-  llvm_unreachable("NYI");
-  (void)CGF;
-  (void)Slot;
+  CGF.buildCXXConstructExpr(E, Slot);
 }
 
 void CIRGenFunction::buildAggExpr(const Expr *E, AggValueSlot Slot) {
