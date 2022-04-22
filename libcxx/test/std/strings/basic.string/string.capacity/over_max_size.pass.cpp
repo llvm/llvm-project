@@ -9,6 +9,11 @@
 // UNSUPPORTED: no-exceptions
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
+// Prior to http://llvm.org/D123580, there was a bug with how the max_size()
+// was calculated. That was inlined into some functions in the dylib, which leads
+// to failures when running this test against an older system dylib.
+// XFAIL: use_system_cxx_lib && target=arm64-apple-macosx{{11.0|12.0}}
+
 // <string>
 
 // size_type max_size() const;

@@ -578,20 +578,22 @@ static std::string lowerDash(StringRef s) {
                      map_iterator(s.end(), toLowerDash));
 }
 
-// Has the side-effect of setting Config::platformInfo.
-static PlatformType parsePlatformVersion(const ArgList &args) {
-  const Arg *arg = args.getLastArg(OPT_platform_version);
-  if (!arg) {
-    error("must specify -platform_version");
-    return PLATFORM_UNKNOWN;
-  }
+struct PlatformVersion {
+  PlatformType platform = PLATFORM_UNKNOWN;
+  llvm::VersionTuple minimum;
+  llvm::VersionTuple sdk;
+};
 
+static PlatformVersion parsePlatformVersion(const Arg *arg) {
+  assert(arg->getOption().getID() == OPT_platform_version);
   StringRef platformStr = arg->getValue(0);
   StringRef minVersionStr = arg->getValue(1);
   StringRef sdkVersionStr = arg->getValue(2);
 
+  PlatformVersion platformVersion;
+
   // TODO(compnerd) see if we can generate this case list via XMACROS
-  PlatformType platform =
+  platformVersion.platform =
       StringSwitch<PlatformType>(lowerDash(platformStr))
           .Cases("macos", "1", PLATFORM_MACOS)
           .Cases("ios", "2", PLATFORM_IOS)
@@ -604,17 +606,52 @@ static PlatformType parsePlatformVersion(const ArgList &args) {
           .Cases("watchos-simulator", "9", PLATFORM_WATCHOSSIMULATOR)
           .Cases("driverkit", "10", PLATFORM_DRIVERKIT)
           .Default(PLATFORM_UNKNOWN);
-  if (platform == PLATFORM_UNKNOWN)
+  if (platformVersion.platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
   // TODO: check validity of version strings, which varies by platform
   // NOTE: ld64 accepts version strings with 5 components
   // llvm::VersionTuple accepts no more than 4 components
   // Has Apple ever published version strings with 5 components?
-  if (config->platformInfo.minimum.tryParse(minVersionStr))
+  if (platformVersion.minimum.tryParse(minVersionStr))
     error(Twine("malformed minimum version: ") + minVersionStr);
-  if (config->platformInfo.sdk.tryParse(sdkVersionStr))
+  if (platformVersion.sdk.tryParse(sdkVersionStr))
     error(Twine("malformed sdk version: ") + sdkVersionStr);
-  return platform;
+  return platformVersion;
+}
+
+// Has the side-effect of setting Config::platformInfo.
+static PlatformType parsePlatformVersions(const ArgList &args) {
+  std::map<PlatformType, PlatformVersion> platformVersions;
+  const PlatformVersion *lastVersionInfo = nullptr;
+  for (const Arg *arg : args.filtered(OPT_platform_version)) {
+    PlatformVersion version = parsePlatformVersion(arg);
+
+    // For each platform, the last flag wins:
+    // `-platform_version macos 2 3 -platform_version macos 4 5` has the same
+    // effect as just passing `-platform_version macos 4 5`.
+    // FIXME: ld64 warns on multiple flags for one platform. Should we?
+    platformVersions[version.platform] = version;
+    lastVersionInfo = &platformVersions[version.platform];
+  }
+
+  if (platformVersions.empty()) {
+    error("must specify -platform_version");
+    return PLATFORM_UNKNOWN;
+  }
+  if (platformVersions.size() > 2) {
+    error("must specify -platform_version at most twice");
+    return PLATFORM_UNKNOWN;
+  }
+  if (platformVersions.size() == 2) {
+    // FIXME: If you implement support for this, add a diagnostic if
+    // outputType is not dylib or bundle -- linkers shouldn't be able to
+    // write zippered executables.
+    warn("writing zippered outputs not yet implemented, "
+         "ignoring all but last -platform_version flag");
+  }
+  config->platformInfo.minimum = lastVersionInfo->minimum;
+  config->platformInfo.sdk = lastVersionInfo->sdk;
+  return lastVersionInfo->platform;
 }
 
 // Has the side-effect of setting Config::target.
@@ -625,7 +662,7 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
     return nullptr;
   }
 
-  PlatformType platform = parsePlatformVersion(args);
+  PlatformType platform = parsePlatformVersions(args);
   config->platformInfo.target =
       MachO::Target(getArchitectureFromName(archName), platform);
 

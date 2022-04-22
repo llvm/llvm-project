@@ -140,6 +140,89 @@ public:
   };
   friend class RegionScope;
 
+  /// Base class for TransformState extensions that allow TransformState to
+  /// contain user-specified information in the state object. Clients are
+  /// expected to derive this class, add the desired fields, and make the
+  /// derived class compatible with the MLIR TypeID mechanism:
+  ///
+  /// ```mlir
+  /// class MyExtension final : public TransformState::Extension {
+  /// public:
+  ///   MyExtension(TranfsormState &state, int myData)
+  ///     : Extension(state) {...}
+  /// private:
+  ///   int mySupplementaryData;
+  /// };
+  /// ```
+  ///
+  /// Instances of this and derived classes are not expected to be created by
+  /// the user, instead they are directly constructed within a TransformState. A
+  /// TransformState can only contain one extension with the given TypeID.
+  /// Extensions can be obtained from a TransformState instance, and can be
+  /// removed when they are no longer required.
+  ///
+  /// ```mlir
+  /// transformState.addExtension<MyExtension>(/*myData=*/42);
+  /// MyExtension *ext = transformState.getExtension<MyExtension>();
+  /// ext->doSomething();
+  /// ```
+  class Extension {
+    // Allow TransformState to allocate Extensions.
+    friend class TransformState;
+
+  public:
+    /// Base virtual destructor.
+    // Out-of-line definition ensures symbols are emitted in a single object
+    // file.
+    virtual ~Extension();
+
+  protected:
+    /// Constructs an extension of the given TransformState object.
+    Extension(TransformState &state) : state(state) {}
+
+  private:
+    /// Back-reference to the state that is being extended.
+    TransformState &state;
+  };
+
+  /// Adds a new Extension of the type specified as template parameter,
+  /// constructing it with the arguments provided. The extension is owned by the
+  /// TransformState. It is expected that the state does not already have an
+  /// extension of the same type. Extension constructors are expected to take
+  /// a reference to TransformState as first argument, automatically supplied
+  /// by this call.
+  template <typename Ty, typename... Args>
+  Ty &addExtension(Args &&...args) {
+    static_assert(
+        std::is_base_of<Extension, Ty>::value,
+        "only an class derived from TransformState::Extension is allowed here");
+    auto ptr = std::make_unique<Ty>(*this, std::forward<Args>(args)...);
+    auto result = extensions.try_emplace(TypeID::get<Ty>(), std::move(ptr));
+    assert(result.second && "extension already added");
+    return *static_cast<Ty *>(result.first->second.get());
+  }
+
+  /// Returns the extension of the specified type.
+  template <typename Ty>
+  Ty *getExtension() {
+    static_assert(
+        std::is_base_of<Extension, Ty>::value,
+        "only an class derived from TransformState::Extension is allowed here");
+    auto iter = extensions.find(TypeID::get<Ty>());
+    if (iter == extensions.end())
+      return nullptr;
+    return static_cast<Ty *>(iter->second.get());
+  }
+
+  /// Removes the extension of the specified type.
+  template <typename Ty>
+  void removeExtension() {
+    static_assert(
+        std::is_base_of<Extension, Ty>::value,
+        "only an class derived from TransformState::Extension is allowed here");
+    extensions.erase(TypeID::get<Ty>());
+  }
+
 private:
   /// Identifier for storing top-level value in the `operations` mapping.
   static constexpr Value kTopLevelValue = Value();
@@ -196,6 +279,10 @@ private:
   /// the region in which the transform IR values are defined.
   llvm::SmallDenseMap<Region *, Mappings> mappings;
 
+  /// Extensions attached to the TransformState, identified by the TypeID of
+  /// their type. Only one extension of any given type is allowed.
+  DenseMap<TypeID, std::unique_ptr<Extension>> extensions;
+
   /// The top-level operation that contains all payload IR, typically a module.
   Operation *topLevel;
 
@@ -240,6 +327,54 @@ private:
 TransformState::RegionScope TransformState::make_region_scope(Region &region) {
   return RegionScope(*this, region);
 }
+
+namespace detail {
+/// Maps the only block argument of the op with PossibleTopLevelTransformOpTrait
+/// to either the list of operations associated with its operand or the root of
+/// the payload IR, depending on what is available in the context.
+LogicalResult
+mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
+                                             Operation *op);
+
+/// Verification hook for PossibleTopLevelTransformOpTrait.
+LogicalResult verifyPossibleTopLevelTransformOpTrait(Operation *op);
+} // namespace detail
+
+/// This trait is supposed to be attached to Transform dialect operations that
+/// can be standalone top-level transforms. Such operations typically contain
+/// other Transform dialect operations that can be executed following some
+/// control flow logic specific to the current operation. The operations with
+/// this trait are expected to have exactly one single-block region with one
+/// argument of PDL Operation type. The operations are also expected to be valid
+/// without operands, in which case they are considered top-level, and with one
+/// or more arguments, in which case they are considered nested. Top-level
+/// operations have the block argument of the entry block in the Transform IR
+/// correspond to the root operation of Payload IR. Nested operations have the
+/// block argument of the entry block in the Transform IR correspond to a list
+/// of Payload IR operations mapped to the first operand of the Transform IR
+/// operation. The operation must implement TransformOpInterface.
+template <typename OpTy>
+class PossibleTopLevelTransformOpTrait
+    : public OpTrait::TraitBase<OpTy, PossibleTopLevelTransformOpTrait> {
+public:
+  /// Verifies that `op` satisfies the invariants of this trait. Not expected to
+  /// be called directly.
+  static LogicalResult verifyTrait(Operation *op) {
+    return detail::verifyPossibleTopLevelTransformOpTrait(op);
+  }
+
+  /// Returns the single block of the op's only region.
+  Block *getBodyBlock() { return &this->getOperation()->getRegion(0).front(); }
+
+  /// Sets up the mapping between the entry block of the only region of this op
+  /// and the relevant list of Payload IR operations in the given state. The
+  /// state is expected to be already scoped at the region of this operation.
+  /// Returns failure if the mapping failed, e.g., the value is already mapped.
+  LogicalResult mapBlockArguments(TransformState &state) {
+    return detail::mapPossibleTopLevelTransformOpBlockArguments(
+        state, this->getOperation());
+  }
+};
 
 } // namespace transform
 } // namespace mlir

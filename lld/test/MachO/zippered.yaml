@@ -6,9 +6,9 @@
 # RUN: echo "" | llvm-mc -filetype=obj -triple=x86_64-apple-ios13.15.0 -o %t/test_ios.o
 
 # RUN: %lld -lSystem -dylib %t/test.dylib %t/test_macos.o -o /dev/null
-# RUN: %lld -lSystem -dylib -platform_version mac-catalyst 13.15.0 14.0 %t/test.dylib %t/test_maccatalyst.o -o /dev/null
+# RUN: %no-arg-lld -syslibroot %S/Inputs/MacOSX.sdk -lSystem -dylib -arch x86_64 -platform_version mac-catalyst 13.15.0 14.0 %t/test.dylib %t/test_maccatalyst.o -o /dev/null
 
-# RUN: not %lld -lSystem -dylib -platform_version ios 13.15.0 14.0 %t/test.dylib %t/test_ios.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not %no-arg-lld -syslibroot %S/Inputs/MacOSX.sdk -lSystem -dylib -arch x86_64 -platform_version ios 13.15.0 14.0 %t/test.dylib %t/test_ios.o -o /dev/null 2>&1 | FileCheck %s
 # CHECK: test.dylib has platform macOS/macCatalyst, which is different from target platform iOS
 
 --- !mach-o

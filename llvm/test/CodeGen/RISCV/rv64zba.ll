@@ -717,24 +717,6 @@ define i64 @imm_zextw() nounwind {
   ret i64 4294967294 ; -2 in 32 bits.
 }
 
-define i64 @imm_zextw2() nounwind {
-; RV64I-LABEL: imm_zextw2:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a0, 171
-; RV64I-NEXT:    addiw a0, a0, -1365
-; RV64I-NEXT:    slli a0, a0, 12
-; RV64I-NEXT:    addi a0, a0, -1366
-; RV64I-NEXT:    ret
-;
-; RV64ZBA-LABEL: imm_zextw2:
-; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    lui a0, 699051
-; RV64ZBA-NEXT:    addiw a0, a0, -1366
-; RV64ZBA-NEXT:    zext.w a0, a0
-; RV64ZBA-NEXT:    ret
-  ret i64 2863311530 ; 0xAAAAAAAA
-}
-
 define i64 @mul11(i64 %a) {
 ; RV64I-LABEL: mul11:
 ; RV64I:       # %bb.0:

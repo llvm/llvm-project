@@ -13,14 +13,15 @@
 // RUN: env "PATH=%t:%PATH%" %clang -### -target x86_64-scei-ps4  %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PS4-LINKER %s
 // RUN: env "PATH=%t:%PATH%" %clang -### -target x86_64-scei-ps4  %s -shared 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-PS4-LINKER %s
+// RUN:   | FileCheck --check-prefixes=CHECK-PS4-LINKER,SHARED %s
 // RUN: env "PATH=%t:%PATH%" %clang -### -target x86_64-sie-ps5  %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PS5-LINKER %s
 // RUN: env "PATH=%t:%PATH%" %clang -### -target x86_64-sie-ps5  %s -shared 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-PS5-LINKER %s
+// RUN:   | FileCheck --check-prefixes=CHECK-PS5-LINKER,SHARED %s
 
 // CHECK-PS4-LINKER: /orbis-ld
 // CHECK-PS5-LINKER: /prospero-lld
+// SHARED: "--shared"
 
 // RUN: env "PATH=%t:%PATH%" %clang -### -target x86_64-scei-ps4 %s -fuse-ld=gold 2>&1 \
 // RUN:   | FileCheck --check-prefix=ERROR %s

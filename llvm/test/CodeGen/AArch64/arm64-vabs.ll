@@ -1760,16 +1760,16 @@ define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    asr x13, x10, #63
 ; CHECK-NEXT:    subs x8, x8, x10
 ; CHECK-NEXT:    sbcs x10, x12, x13
-; CHECK-NEXT:    negs x12, x8
-; CHECK-NEXT:    ngcs x13, x10
-; CHECK-NEXT:    cmp x10, #0
-; CHECK-NEXT:    csel x2, x12, x8, lt
-; CHECK-NEXT:    csel x3, x13, x10, lt
-; CHECK-NEXT:    negs x8, x9
-; CHECK-NEXT:    ngcs x10, x11
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    csel x8, x8, x9, lt
-; CHECK-NEXT:    csel x1, x10, x11, lt
+; CHECK-NEXT:    asr x13, x11, #63
+; CHECK-NEXT:    asr x12, x10, #63
+; CHECK-NEXT:    eor x8, x8, x12
+; CHECK-NEXT:    eor x10, x10, x12
+; CHECK-NEXT:    subs x2, x8, x12
+; CHECK-NEXT:    eor x8, x9, x13
+; CHECK-NEXT:    sbcs x3, x10, x12
+; CHECK-NEXT:    eor x9, x11, x13
+; CHECK-NEXT:    subs x8, x8, x13
+; CHECK-NEXT:    sbcs x1, x9, x13
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov.d v0[1], x1
 ; CHECK-NEXT:    fmov x0, d0

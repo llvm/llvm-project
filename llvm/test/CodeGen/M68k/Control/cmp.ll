@@ -171,7 +171,7 @@ define i32 @test11(i64 %l) nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (4,%sp), %d0
 ; CHECK-NEXT:    and.l #-32768, %d0
-; CHECK-NEXT:    eori.l #32768, %d0
+; CHECK-NEXT:    sub.l #32768, %d0
 ; CHECK-NEXT:    seq %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    rts

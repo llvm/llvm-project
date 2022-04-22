@@ -10,13 +10,31 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr iterator& operator--();
+//              requires ref-is-glvalue && bidirectional_­range<Base> &&
+//                       bidirectional_­range<range_reference_t<Base>> &&
+//                       common_­range<range_reference_t<Base>>;
 // constexpr iterator operator--(int);
+//              requires ref-is-glvalue && bidirectional_­range<Base> &&
+//                       bidirectional_­range<range_reference_t<Base>> &&
+//                       common_­range<range_reference_t<Base>>;
 
 #include <cassert>
 #include <ranges>
+#include <type_traits>
 
-#include "test_macros.h"
 #include "../types.h"
+
+template <class T>
+concept CanPreDecrement = requires(T& t) { --t; };
+
+template <class T>
+concept CanPostDecrement = requires(T& t) { t--; };
+
+constexpr void noDecrementTest(auto&& jv) {
+  auto iter = jv.begin();
+  static_assert(!CanPreDecrement<decltype(iter)>);
+  static_assert(!CanPostDecrement<decltype(iter)>);
+}
 
 constexpr bool test() {
   int buffer[4][4] = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
@@ -29,6 +47,7 @@ constexpr bool test() {
       assert(*--iter == i);
     }
   }
+
   {
     // outer == ranges::end
     std::ranges::join_view jv(buffer);
@@ -37,6 +56,7 @@ constexpr bool test() {
       assert(*--iter == i);
     }
   }
+
   {
     // outer != ranges::end
     std::ranges::join_view jv(buffer);
@@ -45,6 +65,7 @@ constexpr bool test() {
       assert(*--iter == i);
     }
   }
+
   {
     // outer != ranges::end
     std::ranges::join_view jv(buffer);
@@ -53,6 +74,7 @@ constexpr bool test() {
       assert(*--iter == i);
     }
   }
+
   {
     int small[2][1] = {{1}, {2}};
     std::ranges::join_view jv(small);
@@ -60,6 +82,72 @@ constexpr bool test() {
     for (int i = 2; i != 0; --i) {
       assert(*--iter == i);
     }
+  }
+
+  {
+#if defined(__GNUG__) && !defined(__clang__)
+    // This seems to be a gcc bug where evaluating the following code
+    // at compile time results in wrong array index
+    if (!std::is_constant_evaluated()) {
+#endif
+      // skip empty inner
+      BidiCommonInner inners[4] = {buffer[0], {nullptr, 0}, {nullptr, 0}, buffer[1]};
+      std::ranges::join_view jv(inners);
+      auto iter = jv.end();
+      for (int i = 8; i != 0; --i) {
+        assert(*--iter == i);
+      }
+#if defined(__GNUG__) && !defined(__clang__)
+    }
+#endif
+  }
+
+  {
+    // basic type checking
+    std::ranges::join_view jv(buffer);
+    auto iter1 = std::ranges::next(jv.begin(), 4);
+    using iterator = decltype(iter1);
+
+    decltype(auto) iter2 = --iter1;
+    static_assert(std::same_as<decltype(iter2), iterator&>);
+    assert(&iter1 == &iter2);
+
+    std::same_as<iterator> decltype(auto) iter3 = iter1--;
+    assert(iter3 == std::next(iter1));
+  }
+
+  {
+    // !ref-is-glvalue
+    BidiCommonInner inners[2] = {buffer[0], buffer[1]};
+    InnerRValue<BidiCommonOuter<BidiCommonInner>> outer{inners};
+    std::ranges::join_view jv(outer);
+    noDecrementTest(jv);
+  }
+
+  {
+    // !bidirectional_­range<Base>
+    BidiCommonInner inners[2] = {buffer[0], buffer[1]};
+    SimpleForwardCommonOuter<BidiCommonInner> outer{inners};
+    std::ranges::join_view jv(outer);
+    noDecrementTest(jv);
+  }
+
+  {
+    // !bidirectional_­range<range_reference_t<Base>>
+    ForwardCommonInner inners[2] = {buffer[0], buffer[1]};
+    std::ranges::join_view jv(inners);
+    noDecrementTest(jv);
+  }
+
+  {
+    // LWG3313 `join_view::iterator::operator--` is incorrectly constrained
+    // `join_view::iterator` should not have `operator--` if
+    // !common_­range<range_reference_t<Base>>
+    BidiNonCommonInner inners[2] = {buffer[0], buffer[1]};
+    std::ranges::join_view jv(inners);
+    auto iter = jv.begin();
+    static_assert(!CanPreDecrement<decltype(iter)>);
+    static_assert(!CanPostDecrement<decltype(iter)>);
   }
 
   return true;
