@@ -56,24 +56,39 @@ public:
   /// non-integer types this is 0.
   static unsigned getStorageBitwidth(Type type);
 
-  /// Create an `IntRangeAttrs` where `min` is both the signed and unsigned
-  /// minimum and `max` is both the signed and unsigned maximum.
-  static ConstantIntRanges range(const APInt &min, const APInt &max);
+  /// Create a `ConstantIntRanges` with the maximum bounds for the width
+  /// `bitwidth`, that is - [0, uint_max(width)]/[sint_min(width),
+  /// sint_max(width)].
+  static ConstantIntRanges maxRange(unsigned bitwidth);
 
-  /// Create an `IntRangeAttrs` with the signed minimum and maximum equal
+  /// Create a `ConstantIntRanges` with a constant value - that is, with the
+  /// bounds [value, value] for both its signed interpretations.
+  static ConstantIntRanges constant(const APInt &value);
+
+  /// Create a `ConstantIntRanges` whose minimum is `min` and maximum is `max`
+  /// with `isSigned` specifying if the min and max should be interpreted as
+  /// signed or unsigned.
+  static ConstantIntRanges range(const APInt &min, const APInt &max,
+                                 bool isSigned);
+
+  /// Create an `ConstantIntRanges` with the signed minimum and maximum equal
   /// to `smin` and `smax`, where the unsigned bounds are constructed from the
   /// signed ones if they correspond to a contigious range of bit patterns when
   /// viewed as unsigned values and are left at [0, int_max()] otherwise.
   static ConstantIntRanges fromSigned(const APInt &smin, const APInt &smax);
 
-  /// Create an `IntRangeAttrs` with the unsigned minimum and maximum equal
+  /// Create an `ConstantIntRanges` with the unsigned minimum and maximum equal
   /// to `umin` and `umax` and the signed part equal to `umin` and `umax`
   /// unless the sign bit changes between the minimum and maximum.
   static ConstantIntRanges fromUnsigned(const APInt &umin, const APInt &umax);
 
   /// Returns the union (computed separately for signed and unsigned bounds)
-  /// of `a` and `b`.
+  /// of this range and `other`.
   ConstantIntRanges rangeUnion(const ConstantIntRanges &other) const;
+
+  /// Returns the intersection (computed separately for signed and unsigned
+  /// bounds) of this range and `other`.
+  ConstantIntRanges intersection(const ConstantIntRanges &other) const;
 
   /// If either the signed or unsigned interpretations of the range
   /// indicate that the value it bounds is a constant, return that constant

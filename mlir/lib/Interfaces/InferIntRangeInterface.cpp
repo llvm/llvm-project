@@ -35,8 +35,19 @@ unsigned ConstantIntRanges::getStorageBitwidth(Type type) {
   return 0;
 }
 
-ConstantIntRanges ConstantIntRanges::range(const APInt &min, const APInt &max) {
-  return {min, max, min, max};
+ConstantIntRanges ConstantIntRanges::maxRange(unsigned bitwidth) {
+  return fromUnsigned(APInt::getZero(bitwidth), APInt::getMaxValue(bitwidth));
+}
+
+ConstantIntRanges ConstantIntRanges::constant(const APInt &value) {
+  return {value, value, value, value};
+}
+
+ConstantIntRanges ConstantIntRanges::range(const APInt &min, const APInt &max,
+                                           bool isSigned) {
+  if (isSigned)
+    return fromSigned(min, max);
+  return fromUnsigned(min, max);
 }
 
 ConstantIntRanges ConstantIntRanges::fromSigned(const APInt &smin,
@@ -82,6 +93,23 @@ ConstantIntRanges::rangeUnion(const ConstantIntRanges &other) const {
   const APInt &smaxUnion = smax().sgt(other.smax()) ? smax() : other.smax();
 
   return {uminUnion, umaxUnion, sminUnion, smaxUnion};
+}
+
+ConstantIntRanges
+ConstantIntRanges::intersection(const ConstantIntRanges &other) const {
+  // "Not an integer" poisons everything and also cannot be fed to comparison
+  // operators.
+  if (umin().getBitWidth() == 0)
+    return *this;
+  if (other.umin().getBitWidth() == 0)
+    return other;
+
+  const APInt &uminIntersect = umin().ugt(other.umin()) ? umin() : other.umin();
+  const APInt &umaxIntersect = umax().ult(other.umax()) ? umax() : other.umax();
+  const APInt &sminIntersect = smin().sgt(other.smin()) ? smin() : other.smin();
+  const APInt &smaxIntersect = smax().slt(other.smax()) ? smax() : other.smax();
+
+  return {uminIntersect, umaxIntersect, sminIntersect, smaxIntersect};
 }
 
 Optional<APInt> ConstantIntRanges::getConstantValue() const {

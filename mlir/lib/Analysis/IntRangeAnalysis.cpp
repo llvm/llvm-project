@@ -43,7 +43,7 @@ struct IntRangeLattice {
   /// value being marked overdefined is even an integer.
   static IntRangeLattice getPessimisticValueState(MLIRContext *context) {
     APInt noIntValue = APInt::getZeroWidth();
-    return ConstantIntRanges::range(noIntValue, noIntValue);
+    return ConstantIntRanges(noIntValue, noIntValue, noIntValue, noIntValue);
   }
 
   /// Create a maximal range ([0, uint_max(t)] / [int_min(t), int_max(t)])
