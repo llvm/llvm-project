@@ -2382,13 +2382,13 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
 }
 
 // (icmp eq X, 0) | (icmp ult Other, X) -> (icmp ule Other, X-1)
+// (icmp ne X, 0) & (icmp uge Other, X) -> (icmp ugt Other, X-1)
 Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
                                     IRBuilderBase &Builder) {
-  if (IsAnd)
-    return nullptr;
-
-  ICmpInst::Predicate LPred = LHS->getPredicate();
-  ICmpInst::Predicate RPred = RHS->getPredicate();
+  ICmpInst::Predicate LPred =
+      IsAnd ? LHS->getInversePredicate() : LHS->getPredicate();
+  ICmpInst::Predicate RPred =
+      IsAnd ? RHS->getInversePredicate() : RHS->getPredicate();
   Value *LHS0 = LHS->getOperand(0);
   if (LPred != ICmpInst::ICMP_EQ || !match(LHS->getOperand(1), m_Zero()) ||
       !LHS0->getType()->isIntOrIntVectorTy() ||
@@ -2404,7 +2404,7 @@ Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
     return nullptr;
 
   return Builder.CreateICmp(
-      ICmpInst::ICMP_UGE,
+      IsAnd ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE,
       Builder.CreateAdd(LHS0, Constant::getAllOnesValue(LHS0->getType())),
       Other);
 }
