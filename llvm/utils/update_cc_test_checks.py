@@ -340,17 +340,17 @@ def main():
       # Now generate all the checks.
       def check_generator(my_output_lines, prefixes, func):
         if '-emit-llvm' in clang_args:
-          common.add_ir_checks(my_output_lines, '//',
-                               prefixes,
-                               func_dict, func, False,
-                               ti.args.function_signature,
-                               global_vars_seen_dict,
-                               is_filtered=builder.is_filtered())
+          return common.add_ir_checks(my_output_lines, '//',
+                                      prefixes,
+                                      func_dict, func, False,
+                                      ti.args.function_signature,
+                                      global_vars_seen_dict,
+                                      is_filtered=builder.is_filtered())
         else:
-          asm.add_checks(my_output_lines, '//',
-                             prefixes,
-                             func_dict, func, global_vars_seen_dict,
-                             is_filtered=builder.is_filtered())
+          return asm.add_checks(my_output_lines, '//',
+                                prefixes,
+                                func_dict, func, global_vars_seen_dict,
+                                is_filtered=builder.is_filtered())
 
       if ti.args.check_globals:
         common.add_global_checks(builder.global_var_dict(), '//', run_list,
