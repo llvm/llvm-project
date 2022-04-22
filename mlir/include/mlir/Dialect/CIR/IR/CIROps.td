@@ -760,6 +760,56 @@ def BrOp : CIR_Op<"br",
 }
 
 //===----------------------------------------------------------------------===//
+// BrCondOp
+//===----------------------------------------------------------------------===//
+
+def BrCondOp : CIR_Op<"brcond",
+      [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+       Pure, Terminator, SameVariadicOperandSize]> {
+  let summary = "conditional branch operation";
+  let description = [{
+    The `cir.brcond %cond, ^bb0, ^bb1` branches to 'bb0' block in case
+    %cond (which must be a !cir.bool type) evaluates to true, otherwise
+    it branches to 'bb1'.
+
+    Example:
+
+    ```mlir
+      ...
+        cir.brcond %a, ^bb3, ^bb4
+      ^bb3:
+        cir.return
+      ^bb4:
+        cir.yield
+    ```
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$cond, "Block *":$destTrue, "Block *":$destFalse,
+               CArg<"ValueRange", "{}">:$destOperandsTrue,
+               CArg<"ValueRange", "{}">:$destOperandsFalse), [{
+      $_state.addOperands(cond);
+      $_state.addSuccessors(destTrue);
+      $_state.addSuccessors(destFalse);
+      $_state.addOperands(destOperandsTrue);
+      $_state.addOperands(destOperandsFalse);
+    }]>
+  ];
+
+  let arguments = (ins CIR_BoolType:$cond,
+                       Variadic<AnyType>:$destOperandsTrue,
+                       Variadic<AnyType>:$destOperandsFalse);
+  let successors = (successor AnySuccessor:$destTrue, AnySuccessor:$destFalse);
+  let assemblyFormat = [{
+    $cond
+    $destTrue (`(` $destOperandsTrue^ `:` type($destOperandsTrue) `)`)?
+    `,`
+    $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOp
 //===----------------------------------------------------------------------===//
 
@@ -783,7 +833,7 @@ def LoopOp : CIR_Op<"loop",
   }];
 
   let arguments = (ins Arg<LoopOpKind, "loop kind">:$kind);
-  let regions = (region SizedRegion<1>:$cond, AnyRegion:$body,
+  let regions = (region AnyRegion:$cond, AnyRegion:$body,
                         SizedRegion<1>:$step);
 
   let assemblyFormat = [{
