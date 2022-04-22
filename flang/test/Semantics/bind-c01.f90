@@ -6,11 +6,11 @@ module m1
   !ERROR: Two symbols have the same BIND(C) name 'x1'
   integer, bind(c, name=" x1 ") :: x2
  contains
-  !ERROR: Two symbols have the same BIND(C) name 'x3'
   subroutine x3() bind(c, name="x3")
   end subroutine
 end module
 
+!ERROR: Two symbols have the same BIND(C) name 'x3'
 subroutine x4() bind(c, name=" x3 ")
 end subroutine
 
@@ -22,4 +22,10 @@ module m2
  end interface
 end module
 subroutine x5() bind(c, name=" x5 ")
+end subroutine
+
+! Ensure no error in this situation
+subroutine foo() bind(c, name="x6")
+end subroutine
+subroutine foo() bind(c, name="x7")
 end subroutine

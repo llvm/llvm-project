@@ -81,6 +81,13 @@ public:
   bool HasModulePrefix() const; // in function or subroutine stmt
   Scope *scope() const { return scope_; }
   void set_scope(Scope &);
+  const parser::LanguageBindingSpec *bindingSpec() const {
+    return bindingSpec_;
+  }
+  ProgramTree &set_bindingSpec(const parser::LanguageBindingSpec *spec) {
+    bindingSpec_ = spec;
+    return *this;
+  }
   void AddChild(ProgramTree &&);
   void AddEntry(const parser::EntryStmt &);
   void AddGeneric(const parser::GenericSpec &);
@@ -108,6 +115,7 @@ private:
   Scope *scope_{nullptr};
   const parser::CharBlock *endStmt_{nullptr};
   bool isSpecificationPartResolved_{false};
+  const parser::LanguageBindingSpec *bindingSpec_{nullptr};
 };
 
 } // namespace Fortran::semantics
