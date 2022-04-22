@@ -78,23 +78,7 @@ struct BufferizationOptions {
   /// unless they are explicitly marked as DENY. If the filter has at least one
   /// ALLOW rule, ops are ignored by default and only bufferized if they match
   /// an ALLOW rule and no DENY rule.
-  bool isOpAllowed(Operation *op) const {
-    bool isAllowed = !filterHasAllowRule();
-    for (const OpFilterEntry &entry : opFilter) {
-      bool filterResult = entry.fn(op);
-      switch (entry.type) {
-      case OpFilterEntry::ALLOW:
-        isAllowed |= filterResult;
-        break;
-      case OpFilterEntry::DENY:
-        if (filterResult)
-          // DENY filter matches. This op is no allowed. (Even if other ALLOW
-          // filters may match.)
-          return false;
-      };
-    }
-    return isAllowed;
-  }
+  bool isOpAllowed(Operation *op) const;
 
   /// Allow the given dialects in the filter.
   ///
@@ -181,6 +165,10 @@ struct BufferizationOptions {
   /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
   /// the boundaries.
   bool allowUnknownOps = false;
+
+  /// Specifies whether function boundaries (ops in the func dialect) should be
+  /// bufferized or not.
+  bool bufferizeFunctionBoundaries = false;
 
   /// Specifies whether dealloc ops should be generated along with alloc ops. If
   /// not, new memory allocations will leak.
@@ -356,6 +344,12 @@ public:
   /// any given tensor.
   virtual bool isTensorYielded(Value tensor) const = 0;
 
+  /// Return `true` if the given dialect state exists.
+  bool hasDialectState(StringRef name) const {
+    auto it = dialectState.find(name);
+    return it != dialectState.end();
+  }
+
   /// Return dialect-specific bufferization state.
   template <typename StateT>
   Optional<const StateT *> getDialectState(StringRef name) const {
@@ -369,7 +363,7 @@ public:
   template <typename StateT>
   StateT &getOrCreateDialectState(StringRef name) {
     // Create state if it does not exist yet.
-    if (!dialectState.count(name))
+    if (!hasDialectState(name))
       dialectState[name] = std::make_unique<StateT>();
     return static_cast<StateT &>(*dialectState[name]);
   }
