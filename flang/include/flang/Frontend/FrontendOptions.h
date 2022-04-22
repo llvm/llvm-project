@@ -20,8 +20,6 @@
 namespace Fortran::frontend {
 
 enum ActionKind {
-  InvalidAction = 0,
-
   /// -test-io mode
   InputOutputTest,
 
@@ -244,7 +242,7 @@ struct FrontendOptions {
   std::string outputFile;
 
   /// The frontend action to perform.
-  frontend::ActionKind programAction;
+  frontend::ActionKind programAction = ParseSyntaxOnly;
 
   // The form to process files in, if specified.
   FortranForm fortranForm = FortranForm::Unknown;

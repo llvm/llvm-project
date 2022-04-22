@@ -98,9 +98,6 @@ static void ParseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
 
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
-  assert(opts.programAction != Fortran::frontend::InvalidAction &&
-      "Fortran frontend action not set!");
-
   if (opts.programAction == DebugDumpParsingLog)
     opts.instrumentedParse = true;
 
