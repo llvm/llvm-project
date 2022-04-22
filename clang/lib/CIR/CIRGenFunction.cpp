@@ -14,6 +14,7 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenModule.h"
 
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/TargetInfo.h"
 
@@ -469,6 +470,15 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
   return Fn;
 }
 
+mlir::Operation *CIRGenFunction::createLoad(const VarDecl *VD,
+                                            const char *Name) {
+  auto addr = GetAddrOfLocalVar(VD);
+  auto ret = builder.create<LoadOp>(getLoc(VD->getLocation()),
+                                    addr.getElementType(), addr.getPointer());
+
+  return ret;
+}
+
 static bool isMemcpyEquivalentSpecialMember(const CXXMethodDecl *D) {
   auto *CD = llvm::dyn_cast<CXXConstructorDecl>(D);
   if (!(CD && CD->isCopyOrMoveConstructor()) &&
@@ -825,7 +835,35 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   if (D && isa<CXXMethodDecl>(D) && cast<CXXMethodDecl>(D)->isInstance()) {
-    llvm_unreachable("NYI");
+    CGM.getCXXABI().buildInstanceFunctionProlog(*this);
+
+    const auto *MD = cast<CXXMethodDecl>(D);
+    if (MD->getParent()->isLambda() && MD->getOverloadedOperator() == OO_Call) {
+      llvm_unreachable("NYI");
+    } else {
+      // Not in a lambda; just use 'this' from the method.
+      // FIXME: Should we generate a new load for each use of 'this'? The fast
+      // register allocator would be happier...
+      CXXThisValue = CXXABIThisValue;
+    }
+
+    // Check the 'this' pointer once per function, if it's available
+    if (CXXABIThisValue) {
+      SanitizerSet SkippedChecks;
+      SkippedChecks.set(SanitizerKind::ObjectSize, true);
+      QualType ThisTy = MD->getThisType();
+      (void)ThisTy;
+
+      // If this is the call operator of a lambda with no capture-default, it
+      // may have a staic invoker function, which may call this operator with
+      // a null 'this' pointer.
+      if (isLambdaCallOperator(MD) &&
+          MD->getParent()->getLambdaCaptureDefault() == LCD_None)
+        llvm_unreachable("NYI");
+      ;
+
+      // TODO(CIR): buildTypeCheck
+    }
   }
 
   // If any of the arguments have a variably modified type, make sure to emit

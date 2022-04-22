@@ -87,6 +87,8 @@ public:
     return false;
   }
 
+  void buildInstanceFunctionProlog(CIRGenFunction &CGF) override;
+
   void addImplicitStructorParams(CIRGenFunction &CGF, QualType &ResTy,
                                  FunctionArgList &Params) override;
 
@@ -221,6 +223,43 @@ void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &CGF,
   if (NeedsVTTParameter(CGF.CurGD)) {
     llvm_unreachable("NYI");
   }
+}
+
+mlir::Operation *CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &CGF) {
+  return CGF.createLoad(getThisDecl(CGF), "this");
+}
+
+void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &CGF,
+                                      mlir::Operation *ThisPtr) {
+  /// Initialize the 'this' slot.
+  assert(getThisDecl(CGF) && "no 'this' variable for function");
+  CGF.CXXABIThisValue = ThisPtr;
+}
+
+void CIRGenItaniumCXXABI::buildInstanceFunctionProlog(CIRGenFunction &CGF) {
+  // Naked functions have no prolog.
+  if (CGF.CurFuncDecl && CGF.CurFuncDecl->hasAttr<NakedAttr>())
+    llvm_unreachable("NYI");
+
+  /// Initialize the 'this' slot. In the Itanium C++ ABI, no prologue
+  /// adjustments are required, because they are all handled by thunks.
+  setCXXABIThisValue(CGF, loadIncomingCXXThis(CGF));
+
+  /// Initialize the 'vtt' slot if needed.
+  if (getStructorImplicitParamDecl(CGF)) {
+    llvm_unreachable("NYI");
+  }
+
+  /// If this is a function that the ABI specifies returns 'this', initialize
+  /// the return slot to this' at the start of the function.
+  ///
+  /// Unlike the setting of return types, this is done within the ABI
+  /// implementation instead of by clients of CIRGenCXXBI because:
+  /// 1) getThisValue is currently protected
+  /// 2) in theory, an ABI could implement 'this' returns some other way;
+  ///    HasThisReturn only specifies a contract, not the implementation
+  if (HasThisReturn(CGF.CurGD))
+    llvm_unreachable("NYI");
 }
 
 void CIRGenItaniumCXXABI::buildCXXConstructors(const CXXConstructorDecl *D) {

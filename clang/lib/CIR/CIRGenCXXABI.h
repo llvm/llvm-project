@@ -77,9 +77,16 @@ public:
                              clang::CXXCtorType Type, bool ForVirtualBase,
                              bool Delegating, CallArgList &Args);
 
+  clang::ImplicitParamDecl *getThisDecl(CIRGenFunction &CGF) {
+    return CGF.CXXABIThisDecl;
+  }
+
   virtual AddedStructorArgs getImplicitConstructorArgs(
       CIRGenFunction &CGF, const clang::CXXConstructorDecl *D,
       clang::CXXCtorType Type, bool ForVirtualBase, bool Delegating) = 0;
+
+  /// Emit the ABI-specific prolog for the function
+  virtual void buildInstanceFunctionProlog(CIRGenFunction &CGF) = 0;
 
   /// Return whether the given global decl needs a VTT parameter.
   virtual bool NeedsVTTParameter(clang::GlobalDecl GD);
@@ -91,8 +98,15 @@ public:
   /// Gets the mangle context.
   clang::MangleContext &getMangleContext() { return *MangleCtx; }
 
+  clang::ImplicitParamDecl *&getStructorImplicitParamDecl(CIRGenFunction &CGF) {
+    return CGF.CXXStructorImplicitParamDecl;
+  }
+
   /// Build a parameter variable suitable for 'this'.
   void buildThisParam(CIRGenFunction &CGF, FunctionArgList &Params);
+
+  /// Loads the incoming C++ this pointer as it was passed by the caller.
+  mlir::Operation *loadIncomingCXXThis(CIRGenFunction &CGF);
 
   /// Determine whether there's something special about the rules of the ABI
   /// tell us that 'this' is a complete object within the given function.
@@ -150,6 +164,8 @@ public:
   }
 
   virtual ~CIRGenCXXABI();
+
+  void setCXXABIThisValue(CIRGenFunction &CGF, mlir::Operation *ThisPtr);
 
   /// Emit a single constructor/destructor with the gien type from a C++
   /// constructor Decl.
