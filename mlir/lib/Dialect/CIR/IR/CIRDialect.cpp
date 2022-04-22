@@ -550,12 +550,26 @@ void printBinOpKind(OpAsmPrinter &p, BinOp binOp, BinOpKindAttr kindAttr) {
 mlir::SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
   // Current block targets do not have operands.
-  // TODO(CIR): This is a hacky avoidance of actually implementing this since
-  // MLIR moved it "because nobody used the std::optional::None case.........."
   return mlir::SuccessorOperands(MutableOperandRange(getOperation(), 0, 0));
 }
 
 Block *BrOp::getSuccessorForOperands(ArrayRef<Attribute>) { return getDest(); }
+
+//===----------------------------------------------------------------------===//
+// BrCondOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands BrCondOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getDestOperandsTrueMutable()
+                                      : getDestOperandsFalseMutable());
+}
+
+Block *BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
+    return condAttr.getValue().isOne() ? getDestTrue() : getDestFalse();
+  return nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 // SwitchOp
