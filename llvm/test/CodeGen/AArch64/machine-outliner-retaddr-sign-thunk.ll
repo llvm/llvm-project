@@ -11,8 +11,10 @@ define i32 @a() #0 {
 ; CHECK:        // %bb.0:                               // %entry
 ; V8A-NEXT:         hint #25
 ; V83A-NEXT:        paciasp
+; CHECK-NEXT:       .cfi_negate_ra_state
 ; V8A:              hint #29
 ; V83A:             autiasp
+; CHECK-NEXT:       .cfi_negate_ra_state
 ; CHECK-NEXT:       ret
 entry:
   %call = tail call i32 @thunk_called_fn(i32 1, i32 2, i32 3, i32 4)
@@ -28,6 +30,7 @@ define i32 @b() #0 {
 ; CHECK-NEXT:       .cfi_negate_ra_state
 ; V8A:              hint #29
 ; V83A:             autiasp
+; CHECK-NEXT:       .cfi_negate_ra_state
 ; CHECK-NEXT:       ret
 entry:
   %call = tail call i32 @thunk_called_fn(i32 1, i32 2, i32 3, i32 4)
@@ -43,6 +46,7 @@ define hidden i32 @c(i32 (i32, i32, i32, i32)* %fptr) #0 {
 ; CHECK-NEXT:       .cfi_negate_ra_state
 ; V8A:              hint #29
 ; V83A:             autiasp
+; CHECK-NEXT:       .cfi_negate_ra_state
 ; CHECK-NEXT:       ret
 entry:
   %call = tail call i32 %fptr(i32 1, i32 2, i32 3, i32 4)
@@ -58,6 +62,7 @@ define hidden i32 @d(i32 (i32, i32, i32, i32)* %fptr) #0 {
 ; CHECK-NEXT:       .cfi_negate_ra_state
 ; V8A:              hint #29
 ; V83A:             autiasp
+; CHECK-NEXT:       .cfi_negate_ra_state
 ; CHECK-NEXT:       ret
 entry:
   %call = tail call i32 %fptr(i32 1, i32 2, i32 3, i32 4)
