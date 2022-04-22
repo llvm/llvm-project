@@ -125,6 +125,7 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
   assert(currSrcLoc && "must pass in source location");
   builder.create<mlir::cir::StoreOp>(*currSrcLoc, Value, Addr.getPointer());
 }
+
 void CIRGenFunction::buldStoreThroughLValue(RValue Src, LValue Dst,
                                             const Decl *InitDecl) {
   assert(Dst.isSimple() && "only implemented simple");
@@ -135,6 +136,7 @@ void CIRGenFunction::buldStoreThroughLValue(RValue Src, LValue Dst,
 
 LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
   const NamedDecl *ND = E->getDecl();
+  QualType T = E->getType();
 
   assert(E->isNonOdrUse() != NOUR_Unevaluated &&
          "should not emit an unevaluated operand");
@@ -144,17 +146,75 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
     assert(VD->getStorageClass() != SC_Register && "not implemented");
     assert(E->isNonOdrUse() != NOUR_Constant && "not implemented");
     assert(!E->refersToEnclosingVariableOrCapture() && "not implemented");
-    assert(!(VD->hasLinkage() || VD->isStaticDataMember()) &&
-           "not implemented");
-    assert(!VD->isEscapingByref() && "not implemented");
-    assert(!VD->getType()->isReferenceType() && "not implemented");
+  }
+
+  // FIXME(CIR): We should be able to assert this for FunctionDecls as well!
+  // FIXME(CIR): We should be able to assert this for all DeclRefExprs, not just
+  // those with a valid source location.
+  assert((ND->isUsed(false) || !isa<VarDecl>(ND) || E->isNonOdrUse() ||
+          !E->getLocation().isValid()) &&
+         "Should not use decl without marking it used!");
+
+  if (ND->hasAttr<WeakRefAttr>()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (const auto *VD = dyn_cast<VarDecl>(ND)) {
+    // Check if this is a global variable
+    if (VD->hasLinkage() || VD->isStaticDataMember())
+      llvm_unreachable("not implemented");
+
+    Address addr = Address::invalid();
+
+    // The variable should generally be present in the local decl map.
+    auto iter = LocalDeclMap.find(VD);
+    if (iter != LocalDeclMap.end()) {
+      addr = iter->second;
+    }
+    // Otherwise, it might be static local we haven't emitted yet for some
+    // reason; most likely, because it's in an outer function.
+    else if (VD->isStaticLocal()) {
+      llvm_unreachable("NYI");
+    } else {
+      llvm_unreachable("DeclRefExpr for decl not entered in LocalDeclMap?");
+    }
+
+    // Check for OpenMP threadprivate variables.
+    if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd &&
+        VD->hasAttr<OMPThreadPrivateDeclAttr>()) {
+      llvm_unreachable("NYI");
+    }
+
+    // Drill into block byref variables.
+    bool isBlockByref = VD->isEscapingByref();
+    if (isBlockByref) {
+      llvm_unreachable("NYI");
+    }
+
+    // Drill into reference types.
+    assert(!VD->getType()->isReferenceType() && "NYI");
+    LValue LV = makeAddrLValue(addr, T, AlignmentSource::Decl);
+
     assert(symbolTable.count(VD) && "should be already mapped");
+
+    bool isLocalStorage = VD->hasLocalStorage();
+
+    bool NonGCable =
+        isLocalStorage && !VD->getType()->isReferenceType() && !isBlockByref;
+
+    if (NonGCable) {
+      // TODO: nongcable
+    }
+
+    bool isImpreciseLifetime =
+        (isLocalStorage && !VD->hasAttr<ObjCPreciseLifetimeAttr>());
+    if (isImpreciseLifetime)
+      ; // TODO: LV.setARCPreciseLifetime
+    // TODO: setObjCGCLValueClass(getContext(), E, LV);
 
     mlir::Value V = symbolTable.lookup(VD);
     assert(V && "Name lookup must succeed");
 
-    LValue LV = LValue::makeAddr(Address(V, CharUnits::fromQuantity(4)),
-                                 VD->getType(), AlignmentSource::Decl);
     return LV;
   }
 
