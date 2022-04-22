@@ -419,6 +419,8 @@ public:
                                clang::SourceLocation Loc,
                                bool NewPointerIsChecked);
 
+  mlir::Operation *createLoad(const clang::VarDecl *VD, const char *Name);
+
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
   struct PrototypeWrapper {
