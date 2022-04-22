@@ -113,8 +113,71 @@ bool CIRGenItaniumCXXABI::classifyReturnType(CIRGenFunctionInfo &FI) const {
   return false;
 }
 
+// Find out how to cirgen the complete destructor and constructor
+namespace {
+enum class StructorCIRGen { Emit, RAUW, Alias, COMDAT };
+}
+
+static StructorCIRGen getCIRGenToUse(CIRGenModule &CGM,
+                                     const CXXMethodDecl *MD) {
+  if (!CGM.getCodeGenOpts().CXXCtorDtorAliases)
+    return StructorCIRGen::Emit;
+
+  llvm_unreachable("Nothing else implemented yet");
+}
+
 void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
-  llvm_unreachable("NYI");
+  auto *MD = cast<CXXMethodDecl>(GD.getDecl());
+  auto *CD = dyn_cast<CXXConstructorDecl>(MD);
+  const CXXDestructorDecl *DD = CD ? nullptr : cast<CXXDestructorDecl>(MD);
+
+  StructorCIRGen CIRGenType = getCIRGenToUse(CGM, MD);
+
+  if (CD ? GD.getCtorType() == Ctor_Complete
+         : GD.getDtorType() == Dtor_Complete) {
+    GlobalDecl BaseDecl;
+    if (CD)
+      BaseDecl = GD.getWithCtorType(Ctor_Base);
+    else
+      BaseDecl = GD.getWithDtorType(Dtor_Base);
+
+    if (CIRGenType == StructorCIRGen::Alias ||
+        CIRGenType == StructorCIRGen::COMDAT) {
+      llvm_unreachable("NYI");
+    }
+
+    if (CIRGenType == StructorCIRGen::RAUW) {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  // The base destructor is equivalent to the base destructor of its base class
+  // if there is exactly one non-virtual base class with a non-trivial
+  // destructor, there are no fields with a non-trivial destructor, and the body
+  // of the destructor is trivial.
+  if (DD && GD.getDtorType() == Dtor_Base &&
+      CIRGenType != StructorCIRGen::COMDAT)
+    llvm_unreachable("NYI");
+
+  // FIXME: The deleting destructor is equivalent to the selected operator
+  // delete if:
+  //  * either the delete is a destroying operator delete or the destructor
+  //    would be trivial if it weren't virtual.
+  //  * the conversion from the 'this' parameter to the first parameter of the
+  //    destructor is equivalent to a bitcast,
+  //  * the destructor does not have an implicit "this" return, and
+  //  * the operator delete has the same calling convention and CIR function
+  //    type as the destructor.
+  // In such cases we should try to emit the deleting dtor as an alias to the
+  // selected 'operator delete'.
+
+  mlir::FuncOp Fn = CGM.codegenCXXStructor(GD);
+
+  if (CIRGenType == StructorCIRGen::COMDAT) {
+    llvm_unreachable("NYI");
+  } else {
+    CGM.maybeSetTrivialComdat(*MD, Fn);
+  }
 }
 
 void CIRGenItaniumCXXABI::buildCXXConstructors(const CXXConstructorDecl *D) {
