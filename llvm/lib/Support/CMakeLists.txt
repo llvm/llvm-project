@@ -104,6 +104,7 @@ endif()
 add_subdirectory(BLAKE3)
 
 add_llvm_component_library(LLVMSupport
+  AddressRanges.cpp
   AArch64TargetParser.cpp
   ABIBreak.cpp
   ARMTargetParser.cpp
