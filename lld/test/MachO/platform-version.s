@@ -61,10 +61,10 @@
 # FAIL-PLATFORM-NOT: malformed {{minimum|sdk}} version: {{.*}}
 
 # RUN: not %no-arg-lld -arch x86_64 -o %t %t.o -fatal_warnings 2>&1 \
-# RUN:        -platform_version 'mac catalyst' 14.0 15.0 \
+# RUN:        -platform_version iOS 14.0 15.0 \
 # RUN:        -platform_version macos 12.0 12.0 \
 # RUN:     | FileCheck --check-prefix=FAIL-TODO %s
-# FAIL-TODO: writing zippered outputs not yet implemented, ignoring all but last -platform_version flag
+# FAIL-TODO: lld supports writing zippered outputs only for macos and mac-catalyst
 
 # RUN: not %no-arg-lld -arch x86_64 -o %t %t.o 2>&1 \
 # RUN:        -platform_version bridgeOS 1 5 \

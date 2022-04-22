@@ -642,12 +642,27 @@ static PlatformType parsePlatformVersions(const ArgList &args) {
     return PLATFORM_UNKNOWN;
   }
   if (platformVersions.size() == 2) {
-    // FIXME: If you implement support for this, add a diagnostic if
-    // outputType is not dylib or bundle -- linkers shouldn't be able to
-    // write zippered executables.
-    warn("writing zippered outputs not yet implemented, "
-         "ignoring all but last -platform_version flag");
+    bool isZipperedCatalyst = platformVersions.count(PLATFORM_MACOS) &&
+                              platformVersions.count(PLATFORM_MACCATALYST);
+
+    if (!isZipperedCatalyst) {
+      error("lld supports writing zippered outputs only for "
+            "macos and mac-catalyst");
+    } else if (config->outputType != MH_DYLIB &&
+               config->outputType != MH_BUNDLE) {
+      error("writing zippered outputs only valid for -dylib and -bundle");
+    } else {
+      config->platformInfo.minimum = platformVersions[PLATFORM_MACOS].minimum;
+      config->platformInfo.sdk = platformVersions[PLATFORM_MACOS].sdk;
+      config->secondaryPlatformInfo = PlatformInfo{};
+      config->secondaryPlatformInfo->minimum =
+          platformVersions[PLATFORM_MACCATALYST].minimum;
+      config->secondaryPlatformInfo->sdk =
+          platformVersions[PLATFORM_MACCATALYST].sdk;
+    }
+    return PLATFORM_MACOS;
   }
+
   config->platformInfo.minimum = lastVersionInfo->minimum;
   config->platformInfo.sdk = lastVersionInfo->sdk;
   return lastVersionInfo->platform;
@@ -664,6 +679,10 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   PlatformType platform = parsePlatformVersions(args);
   config->platformInfo.target =
       MachO::Target(getArchitectureFromName(archName), platform);
+  if (config->secondaryPlatformInfo) {
+    config->secondaryPlatformInfo->target =
+        MachO::Target(getArchitectureFromName(archName), PLATFORM_MACCATALYST);
+  }
 
   uint32_t cpuType;
   uint32_t cpuSubtype;
@@ -1128,6 +1147,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   config = std::make_unique<Configuration>();
   symtab = std::make_unique<SymbolTable>();
+  config->outputType = getOutputType(args);
   target = createTargetInfo(args);
   depTracker = std::make_unique<DependencyTracker>(
       args.getLastArgValue(OPT_dependency_info));
@@ -1234,7 +1254,6 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->printEachFile = args.hasArg(OPT_t);
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->omitDebugInfo = args.hasArg(OPT_S);
-  config->outputType = getOutputType(args);
   config->errorForArchMismatch = args.hasArg(OPT_arch_errors_fatal);
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)

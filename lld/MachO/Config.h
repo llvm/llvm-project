@@ -151,6 +151,7 @@ struct Configuration {
   bool deadStrip = false;
   bool errorForArchMismatch = false;
   PlatformInfo platformInfo;
+  llvm::Optional<PlatformInfo> secondaryPlatformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
       UndefinedSymbolTreatment::error;
