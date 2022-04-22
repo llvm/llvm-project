@@ -72,17 +72,22 @@ CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
   return {};
 }
 
+/// Return whether the given global decl needs a VTT parameter, which it does if
+/// it's a base constructor or destructor with virtual bases.
 bool CIRGenItaniumCXXABI::NeedsVTTParameter(GlobalDecl GD) {
   auto *MD = cast<CXXMethodDecl>(GD.getDecl());
 
-  assert(!MD->getParent()->getNumVBases() && "virtual bases NYI");
+  // We don't have any virtual bases, just return early.
+  if (!MD->getParent()->getNumVBases())
+    return false;
 
-  assert(isa<CXXConstructorDecl>(MD) && GD.getCtorType() == Ctor_Base &&
-         "No other reason we should hit this function yet.");
+  // Check if we have a base constructor.
   if (isa<CXXConstructorDecl>(MD) && GD.getCtorType() == Ctor_Base)
     return true;
 
-  assert(!isa<CXXDestructorDecl>(MD) && "Destructors NYI");
+  // Check if we have a base destructor.
+  if (isa<CXXDestructorDecl>(MD) && GD.getDtorType() == Dtor_Base)
+    llvm_unreachable("NYI");
 
   return false;
 }
