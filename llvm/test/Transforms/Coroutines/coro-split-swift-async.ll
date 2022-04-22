@@ -1,5 +1,5 @@
-; RUN: opt < %s -O0 -enable-coroutines -S | FileCheck %s
-; RUN: opt < %s -passes='default<O0>' -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -O0 -S | FileCheck %s
+; RUN: opt < %s -passes='default<O0>' -S | FileCheck %s
 ;
 ; llvm-extracted from:
 ;
