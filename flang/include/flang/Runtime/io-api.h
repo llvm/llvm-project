@@ -248,9 +248,7 @@ bool IONAME(OutputInteger8)(Cookie, std::int8_t);
 bool IONAME(OutputInteger16)(Cookie, std::int16_t);
 bool IONAME(OutputInteger32)(Cookie, std::int32_t);
 bool IONAME(OutputInteger64)(Cookie, std::int64_t);
-#ifdef __SIZEOF_INT128__
 bool IONAME(OutputInteger128)(Cookie, common::int128_t);
-#endif
 bool IONAME(InputInteger)(Cookie, std::int64_t &, int kind = 8);
 bool IONAME(OutputReal32)(Cookie, float);
 bool IONAME(InputReal32)(Cookie, float &);

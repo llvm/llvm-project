@@ -263,6 +263,14 @@ bool isAllocatableType(mlir::Type ty) {
   return false;
 }
 
+bool isUnlimitedPolymorphicType(mlir::Type ty) {
+  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
+    ty = refTy;
+  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
+    return boxTy.getEleTy().isa<mlir::NoneType>();
+  return false;
+}
+
 bool isRecordWithAllocatableMember(mlir::Type ty) {
   if (auto recTy = ty.dyn_cast<fir::RecordType>())
     for (auto [field, memTy] : recTy.getTypeList()) {
@@ -274,6 +282,28 @@ bool isRecordWithAllocatableMember(mlir::Type ty) {
         return true;
     }
   return false;
+}
+
+mlir::Type unwrapAllRefAndSeqType(mlir::Type ty) {
+  while (true) {
+    mlir::Type nt = unwrapSequenceType(unwrapRefType(ty));
+    if (auto vecTy = nt.dyn_cast<fir::VectorType>())
+      nt = vecTy.getEleTy();
+    if (nt == ty)
+      return ty;
+    ty = nt;
+  }
+}
+
+mlir::Type unwrapSeqOrBoxedSeqType(mlir::Type ty) {
+  if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
+    return seqTy.getEleTy();
+  if (auto boxTy = ty.dyn_cast<fir::BoxType>()) {
+    auto eleTy = unwrapRefType(boxTy.getEleTy());
+    if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
+      return seqTy.getEleTy();
+  }
+  return ty;
 }
 
 } // namespace fir

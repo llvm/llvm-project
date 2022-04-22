@@ -164,22 +164,6 @@ void createAnyMaskedArrayAssignment(AbstractConverter &converter,
                                     ImplicitIterSpace &implicitIterSpace,
                                     SymMap &symMap, StatementContext &stmtCtx);
 
-/// In the context of a FORALL, a pointer assignment is allowed. The pointer
-/// assignment can be elementwise on an array of pointers. The bounds
-/// expressions as well as the component path may contain references to the
-/// concurrent control variables. The explicit iteration space must be defined.
-void createAnyArrayPointerAssignment(
-    AbstractConverter &converter, const SomeExpr &lhs, const SomeExpr &rhs,
-    const evaluate::Assignment::BoundsSpec &bounds,
-    ExplicitIterSpace &explicitIterSpace, ImplicitIterSpace &implicitIterSpace,
-    SymMap &symMap);
-/// Support the bounds remapping flavor of pointer assignment.
-void createAnyArrayPointerAssignment(
-    AbstractConverter &converter, const SomeExpr &lhs, const SomeExpr &rhs,
-    const evaluate::Assignment::BoundsRemapping &bounds,
-    ExplicitIterSpace &explicitIterSpace, ImplicitIterSpace &implicitIterSpace,
-    SymMap &symMap);
-
 /// Lower an assignment to an allocatable array, allocating the array if
 /// it is not allocated yet or reallocation it if it does not conform
 /// with the right hand side.
@@ -189,6 +173,17 @@ void createAllocatableArrayAssignment(AbstractConverter &converter,
                                       ImplicitIterSpace &implicitIterSpace,
                                       SymMap &symMap,
                                       StatementContext &stmtCtx);
+
+/// Lower a pointer assignment in an explicit iteration space. The explicit
+/// space iterates over a data structure with a type of `!fir.array<...
+/// !fir.box<!fir.ptr<T>> ...>`. Lower the assignment by copying the rhs box
+/// value to each array element.
+void createArrayOfPointerAssignment(
+    AbstractConverter &converter, const SomeExpr &lhs, const SomeExpr &rhs,
+    ExplicitIterSpace &explicitIterSpace, ImplicitIterSpace &implicitIterSpace,
+    const llvm::SmallVector<mlir::Value> &lbounds,
+    llvm::Optional<llvm::SmallVector<mlir::Value>> ubounds, SymMap &symMap,
+    StatementContext &stmtCtx);
 
 /// Lower an array expression with "parallel" semantics. Such a rhs expression
 /// is fully evaluated prior to being assigned back to a temporary array.

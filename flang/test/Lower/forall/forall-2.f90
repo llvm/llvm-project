@@ -1,7 +1,11 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc %s -o - | FileCheck --check-prefix=POSTOPT %s
 
 ! CHECK-LABEL: func @_QPimplied_iters_allocatable(
 ! CHECK-SAME: %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.type<_QFimplied_iters_allocatableTt{oui:!fir.logical<4>,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>{{.*}}, %[[VAL_1:.*]]: !fir.box<!fir.array<?xf32>>{{.*}}) {
+! CHECK: return
+! CHECK: }
+
 subroutine implied_iters_allocatable(thing, a1)
   ! No dependence between lhs and rhs.
   ! Lhs may need to be reallocated to conform.
@@ -14,17 +18,13 @@ subroutine implied_iters_allocatable(thing, a1)
   integer :: i
   
   forall (i=5:13)
-  ! commenting out this test for the moment
+  ! commenting out this test for the moment (hits assert)
   !  thing(i)%arr = a1
   end forall
-  ! CHECK: return
-  ! CHECK: }
 end subroutine implied_iters_allocatable
 
-! CHECK-LABEL: func @_QPconflicting_allocatable(
-! CHECK-SAME: %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.type<_QFconflicting_allocatableTt{oui:!fir.logical<4>,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<i32>{{.*}}, %[[VAL_2:.*]]: !fir.ref<i32>{{.*}}) {
 subroutine conflicting_allocatable(thing, lo, hi)
-  ! Introduce a crossing dependence to incite a (deep) copy.
+  ! Introduce a crossing dependence to produce copy-in/copy-out code.
   integer :: lo,hi
   type t
      logical :: oui
@@ -34,34 +34,68 @@ subroutine conflicting_allocatable(thing, lo, hi)
   integer :: i
   
   forall (i = lo:hi)
-  ! commenting out this test for the moment
+  ! commenting out this test for the moment (hits assert)
   !  thing(i)%arr = thing(hi-i)%arr
   end forall
-  ! CHECK: return
-  ! CHECK: }
 end subroutine conflicting_allocatable
 
 ! CHECK-LABEL: func @_QPforall_pointer_assign(
-! CHECK-SAME: %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>{{.*}}, %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.type<_QFforall_pointer_assignTu{targ:!fir.array<20xf32>}>>> {fir.bindc_name = "at", fir.target}, %[[VAL_2:.*]]: !fir.ref<i32>{{.*}}, %[[VAL_3:.*]]: !fir.ref<i32>{{.*}}) {
+! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>> {fir.bindc_name = "ap"}, %[[VAL_1:.*]]: !fir.ref<f32> {fir.bindc_name = "at"}, %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "ii"}, %[[VAL_3:.*]]: !fir.ref<i32> {fir.bindc_name = "ij"}) {
+! CHECK:         %[[VAL_4:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}
+! CHECK:         %[[VAL_5:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
+! CHECK:         %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> index
+! CHECK:         %[[VAL_7:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
+! CHECK:         %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> index
+! CHECK:         %[[VAL_9:.*]] = arith.constant 8 : i32
+! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
+! CHECK:         %[[VAL_11:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>) -> !fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK:         %[[VAL_12:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>) -> !fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK:         %[[VAL_13:.*]] = fir.do_loop %[[VAL_14:.*]] = %[[VAL_6]] to %[[VAL_8]] step %[[VAL_10]] unordered iter_args(%[[VAL_15:.*]] = %[[VAL_11]]) -> (!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) {
+! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_14]] : (index) -> i32
+! CHECK:           fir.store %[[VAL_16]] to %[[VAL_4]] : !fir.ref<i32>
+! CHECK-DAG:       %[[VAL_17:.*]] = arith.constant 1 : index
+! CHECK-DAG:       %[[VAL_18:.*]] = arith.constant 1 : i32
+! CHECK-DAG:       %[[VAL_19:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
+! CHECK:           %[[VAL_20:.*]] = arith.subi %[[VAL_19]], %[[VAL_18]] : i32
+! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> i64
+! CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (i64) -> index
+! CHECK:           %[[VAL_23:.*]] = arith.subi %[[VAL_22]], %[[VAL_17]] : index
+! CHECK:           %[[VAL_24:.*]] = fir.field_index ptr, !fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
+! CHECK:           %[[VAL_25:.*]] = fir.array_fetch %[[VAL_12]], %[[VAL_23]], %[[VAL_24]] : (!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, index, !fir.field) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK:           %[[VAL_26:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_27:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
+! CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_27]] : (i32) -> i64
+! CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (i64) -> index
+! CHECK:           %[[VAL_30:.*]] = arith.subi %[[VAL_29]], %[[VAL_26]] : index
+! CHECK:           %[[VAL_31:.*]] = fir.field_index ptr, !fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
+! CHECK:           %[[VAL_32:.*]] = fir.array_update %[[VAL_15]], %[[VAL_25]], %[[VAL_30]], %[[VAL_31]] : (!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.box<!fir.ptr<!fir.array<?xf32>>>, index, !fir.field) -> !fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK:           fir.result %[[VAL_32]] : !fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK:         }
+! CHECK:         fir.array_merge_store %[[VAL_11]], %[[VAL_33:.*]] to %[[VAL_0]] : !fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.box<!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>
+! CHECK:         return
+! CHECK:       }
+
+! POSTOPT-LABEL: func @_QPforall_pointer_assign(
+! POSTOPT:         %[[VAL_15:.*]] = fir.allocmem !fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, %{{.*}}#1
+! POSTOPT:       ^bb{{[0-9]+}}(%[[VAL_16:.*]]: index, %[[VAL_17:.*]]: index):
+! POSTOPT:       ^bb{{[0-9]+}}(%[[VAL_30:.*]]: index, %[[VAL_31:.*]]: index):
+! POSTOPT:       ^bb{{[0-9]+}}(%[[VAL_46:.*]]: index, %[[VAL_47:.*]]: index):
+! POSTOPT-NOT:   ^bb{{[0-9]+}}(%{{.*}}: index, %{{.*}}: index):
+! POSTOPT:         fir.freemem %[[VAL_15]] : !fir.heap<!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>
+! POSTOPT:       }
+
 subroutine forall_pointer_assign(ap, at, ii, ij)
-  ! Set pointer members in an array of derived type to targets.
-  ! No conflicts (multiple-assignment being forbidden, of course).
+  ! Set pointer members in an array of derived type of pointers to arrays.
+  ! Introduce a loop carried dependence to produce copy-in/copy-out code.
   type t
      real, pointer :: ptr(:)
   end type t
-  type u
-     real :: targ(20)
-  end type u
   type(t) :: ap(:)
-  type(u), target :: at(:)
   integer :: ii, ij
 
   forall (i = ii:ij:8)
-  ! commenting out this test for the moment
-  !   ap(i)%ptr => at(i-4)%targ
+     ap(i)%ptr => ap(i-1)%ptr
   end forall
-  ! CHECK: return
-  ! CHECK: }  
 end subroutine forall_pointer_assign
 
 ! CHECK-LABEL: func @_QPslice_with_explicit_iters() {

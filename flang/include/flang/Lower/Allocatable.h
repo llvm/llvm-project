@@ -13,6 +13,7 @@
 #ifndef FORTRAN_LOWER_ALLOCATABLE_H
 #define FORTRAN_LOWER_ALLOCATABLE_H
 
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -23,55 +24,55 @@ class Location;
 } // namespace mlir
 
 namespace fir {
-class MutableBoxValue;
-}
+class FirOpBuilder;
+} // namespace fir
 
-namespace Fortran::parser {
+namespace Fortran {
+namespace parser {
 struct AllocateStmt;
 struct DeallocateStmt;
-} // namespace Fortran::parser
+} // namespace parser
 
-namespace Fortran::evaluate {
-template <typename T>
-class Expr;
-struct SomeType;
-} // namespace Fortran::evaluate
+namespace lower {
+struct SymbolBox;
 
-namespace Fortran::lower {
-class AbstractConverter;
 class StatementContext;
 
-namespace pft {
-struct Variable;
-}
+bool isArraySectionWithoutVectorSubscript(const SomeExpr &expr);
 
 /// Lower an allocate statement to fir.
-void genAllocateStmt(Fortran::lower::AbstractConverter &,
-                     const Fortran::parser::AllocateStmt &, mlir::Location);
+void genAllocateStmt(AbstractConverter &converter,
+                     const parser::AllocateStmt &stmt, mlir::Location loc);
 
 /// Lower a deallocate statement to fir.
-void genDeallocateStmt(Fortran::lower::AbstractConverter &,
-                       const Fortran::parser::DeallocateStmt &, mlir::Location);
+void genDeallocateStmt(AbstractConverter &converter,
+                       const parser::DeallocateStmt &stmt, mlir::Location loc);
 
 /// Create a MutableBoxValue for an allocatable or pointer entity.
 /// If the variables is a local variable that is not a dummy, it will be
 /// initialized to unallocated/diassociated status.
-fir::MutableBoxValue createMutableBox(Fortran::lower::AbstractConverter &,
-                                      mlir::Location,
-                                      const Fortran::lower::pft::Variable &var,
+fir::MutableBoxValue createMutableBox(AbstractConverter &converter,
+                                      mlir::Location loc,
+                                      const pft::Variable &var,
                                       mlir::Value boxAddr,
                                       mlir::ValueRange nonDeferredParams);
 
-/// Update a MutableBoxValue to describe the entity designated by the expression
-/// \p source. This version takes care of \p source lowering.
-/// If \lbounds is not empty, it is used to defined the MutableBoxValue
-/// lower bounds, otherwise, the lower bounds from \p source are used.
-void associateMutableBox(
-    Fortran::lower::AbstractConverter &, mlir::Location,
-    const fir::MutableBoxValue &,
-    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &source,
-    mlir::ValueRange lbounds, Fortran::lower::StatementContext &);
+/// Assign a boxed value to a boxed variable, \p box (known as a
+/// MutableBoxValue). Expression \p source will be lowered to build the
+/// assignment. If \p lbounds is not empty, it is used to define the result's
+/// lower bounds. Otherwise, the lower bounds from \p source will be used.
+void associateMutableBox(AbstractConverter &converter, mlir::Location loc,
+                         const fir::MutableBoxValue &box,
+                         const SomeExpr &source, mlir::ValueRange lbounds,
+                         StatementContext &stmtCtx);
 
-} // namespace Fortran::lower
+/// Is \p expr a reference to an entity with the ALLOCATABLE attribute?
+bool isWholeAllocatable(const SomeExpr &expr);
+
+/// Is \p expr a reference to an entity with the POINTER attribute?
+bool isWholePointer(const SomeExpr &expr);
+
+} // namespace lower
+} // namespace Fortran
 
 #endif // FORTRAN_LOWER_ALLOCATABLE_H

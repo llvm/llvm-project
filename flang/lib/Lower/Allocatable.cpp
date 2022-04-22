@@ -13,6 +13,7 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
@@ -58,12 +59,12 @@ struct ErrorManager {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     hasStat = builder.createBool(loc, statExpr != nullptr);
     statAddr = statExpr
-                   ? fir::getBase(converter.genExprAddr(statExpr, stmtCtx, loc))
+                   ? fir::getBase(converter.genExprAddr(loc, statExpr, stmtCtx))
                    : mlir::Value{};
     errMsgAddr =
         statExpr && errMsgExpr
             ? builder.createBox(loc,
-                                converter.genExprAddr(errMsgExpr, stmtCtx, loc))
+                                converter.genExprAddr(loc, errMsgExpr, stmtCtx))
             : builder.create<fir::AbsentOp>(
                   loc,
                   fir::BoxType::get(mlir::NoneType::get(builder.getContext())));
@@ -343,7 +344,7 @@ private:
         if (const std::optional<Fortran::parser::BoundExpr> &lbExpr =
                 std::get<0>(shapeSpec.t)) {
           lb = fir::getBase(converter.genExprValue(
-              Fortran::semantics::GetExpr(*lbExpr), stmtCtx, loc));
+              loc, Fortran::semantics::GetExpr(*lbExpr), stmtCtx));
           lb = builder.createConvert(loc, idxTy, lb);
         } else {
           lb = one;
@@ -351,7 +352,7 @@ private:
         lbounds.emplace_back(lb);
       }
       mlir::Value ub = fir::getBase(converter.genExprValue(
-          Fortran::semantics::GetExpr(std::get<1>(shapeSpec.t)), stmtCtx, loc));
+          loc, Fortran::semantics::GetExpr(std::get<1>(shapeSpec.t)), stmtCtx));
       ub = builder.createConvert(loc, idxTy, ub);
       if (lb) {
         mlir::Value diff = builder.create<mlir::arith::SubIOp>(loc, ub, lb);
@@ -404,11 +405,11 @@ private:
       if (const std::optional<Fortran::parser::BoundExpr> &lbExpr =
               std::get<0>(bounds))
         lb = fir::getBase(converter.genExprValue(
-            Fortran::semantics::GetExpr(*lbExpr), stmtCtx, loc));
+            loc, Fortran::semantics::GetExpr(*lbExpr), stmtCtx));
       else
         lb = builder.createIntegerConstant(loc, idxTy, 1);
       mlir::Value ub = fir::getBase(converter.genExprValue(
-          Fortran::semantics::GetExpr(std::get<1>(bounds)), stmtCtx, loc));
+          loc, Fortran::semantics::GetExpr(std::get<1>(bounds)), stmtCtx));
       mlir::Value dimIndex =
           builder.createIntegerConstant(loc, i32Ty, iter.index());
       // Runtime call
@@ -438,7 +439,7 @@ private:
         Fortran::lower::StatementContext stmtCtx;
         Fortran::lower::SomeExpr lenExpr{*intExpr};
         lenParams.push_back(
-            fir::getBase(converter.genExprValue(lenExpr, stmtCtx, &loc)));
+            fir::getBase(converter.genExprValue(loc, lenExpr, stmtCtx)));
       }
     }
   }
@@ -526,8 +527,8 @@ static void genDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
 void Fortran::lower::genDeallocateStmt(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::DeallocateStmt &stmt, mlir::Location loc) {
-  const Fortran::lower::SomeExpr *statExpr{nullptr};
-  const Fortran::lower::SomeExpr *errMsgExpr{nullptr};
+  const Fortran::lower::SomeExpr *statExpr = nullptr;
+  const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
   for (const Fortran::parser::StatOrErrmsg &statOrErr :
        std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t))
     std::visit(Fortran::common::visitors{
@@ -671,8 +672,8 @@ fir::MutableBoxValue Fortran::lower::createMutableBox(
 // MutableBoxValue reading interface implementation
 //===----------------------------------------------------------------------===//
 
-static bool
-isArraySectionWithoutVectorSubscript(const Fortran::lower::SomeExpr &expr) {
+bool Fortran::lower::isArraySectionWithoutVectorSubscript(
+    const Fortran::lower::SomeExpr &expr) {
   return expr.Rank() > 0 && Fortran::evaluate::IsVariable(expr) &&
          !Fortran::evaluate::UnwrapWholeSymbolDataRef(expr) &&
          !Fortran::evaluate::HasVectorSubscript(expr);
@@ -687,12 +688,28 @@ void Fortran::lower::associateMutableBox(
     fir::factory::disassociateMutableBox(builder, loc, box);
     return;
   }
-  // The right hand side must not be evaluated in a temp.
-  // Array sections can be described by fir.box without making a temp.
-  // Otherwise, do not generate a fir.box to avoid having to later use a
-  // fir.rebox to implement the pointer association.
+
+  // The right hand side is not be evaluated into a temp. Array sections can
+  // typically be represented as a value of type `!fir.box`. However, an
+  // expression that uses vector subscripts cannot be emboxed. In that case,
+  // generate a reference to avoid having to later use a fir.rebox to implement
+  // the pointer association.
   fir::ExtendedValue rhs = isArraySectionWithoutVectorSubscript(source)
-                               ? converter.genExprBox(source, stmtCtx, loc)
-                               : converter.genExprAddr(source, stmtCtx);
+                               ? converter.genExprBox(loc, source, stmtCtx)
+                               : converter.genExprAddr(loc, source, stmtCtx);
   fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
+}
+
+bool Fortran::lower::isWholeAllocatable(const Fortran::lower::SomeExpr &expr) {
+  if (const Fortran::semantics::Symbol *sym =
+          Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr))
+    return Fortran::semantics::IsAllocatable(*sym);
+  return false;
+}
+
+bool Fortran::lower::isWholePointer(const Fortran::lower::SomeExpr &expr) {
+  if (const Fortran::semantics::Symbol *sym =
+          Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(expr))
+    return Fortran::semantics::IsPointer(*sym);
+  return false;
 }
