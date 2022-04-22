@@ -135,85 +135,37 @@ define <8 x i1> @bitcast_i8_8i1(i8 zeroext %a0) {
 define <8 x i1> @bitcast_i8_8i1_freeze(i8 zeroext %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_i8_8i1_freeze:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movl %edi, %eax
-; SSE2-SSSE3-NEXT:    shrb %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movzbl %al, %eax
-; SSE2-SSSE3-NEXT:    movl %edi, %ecx
-; SSE2-SSSE3-NEXT:    andb $1, %cl
-; SSE2-SSSE3-NEXT:    movzbl %cl, %ecx
-; SSE2-SSSE3-NEXT:    movd %ecx, %xmm0
-; SSE2-SSSE3-NEXT:    pinsrw $1, %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movl %edi, %eax
-; SSE2-SSSE3-NEXT:    shrb $2, %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movzbl %al, %eax
-; SSE2-SSSE3-NEXT:    pinsrw $2, %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movl %edi, %eax
-; SSE2-SSSE3-NEXT:    shrb $3, %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movzbl %al, %eax
-; SSE2-SSSE3-NEXT:    pinsrw $3, %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movl %edi, %eax
-; SSE2-SSSE3-NEXT:    shrb $4, %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movzbl %al, %eax
-; SSE2-SSSE3-NEXT:    pinsrw $4, %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movl %edi, %eax
-; SSE2-SSSE3-NEXT:    shrb $5, %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movzbl %al, %eax
-; SSE2-SSSE3-NEXT:    pinsrw $5, %eax, %xmm0
-; SSE2-SSSE3-NEXT:    movl %edi, %eax
-; SSE2-SSSE3-NEXT:    shrb $6, %al
-; SSE2-SSSE3-NEXT:    andb $1, %al
-; SSE2-SSSE3-NEXT:    movzbl %al, %eax
-; SSE2-SSSE3-NEXT:    pinsrw $6, %eax, %xmm0
-; SSE2-SSSE3-NEXT:    shrb $7, %dil
 ; SSE2-SSSE3-NEXT:    movzbl %dil, %eax
-; SSE2-SSSE3-NEXT:    pinsrw $7, %eax, %xmm0
+; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
+; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    pcmpeqw %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    psrlw $15, %xmm0
 ; SSE2-SSSE3-NEXT:    retq
 ;
-; AVX12-LABEL: bitcast_i8_8i1_freeze:
-; AVX12:       # %bb.0:
-; AVX12-NEXT:    movl %edi, %eax
-; AVX12-NEXT:    shrb %al
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movzbl %al, %eax
-; AVX12-NEXT:    movl %edi, %ecx
-; AVX12-NEXT:    andb $1, %cl
-; AVX12-NEXT:    movzbl %cl, %ecx
-; AVX12-NEXT:    vmovd %ecx, %xmm0
-; AVX12-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
-; AVX12-NEXT:    movl %edi, %eax
-; AVX12-NEXT:    shrb $2, %al
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movzbl %al, %eax
-; AVX12-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
-; AVX12-NEXT:    movl %edi, %eax
-; AVX12-NEXT:    shrb $3, %al
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movzbl %al, %eax
-; AVX12-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; AVX12-NEXT:    movl %edi, %eax
-; AVX12-NEXT:    shrb $4, %al
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movzbl %al, %eax
-; AVX12-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
-; AVX12-NEXT:    movl %edi, %eax
-; AVX12-NEXT:    shrb $5, %al
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movzbl %al, %eax
-; AVX12-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
-; AVX12-NEXT:    movl %edi, %eax
-; AVX12-NEXT:    shrb $6, %al
-; AVX12-NEXT:    andb $1, %al
-; AVX12-NEXT:    movzbl %al, %eax
-; AVX12-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; AVX12-NEXT:    shrb $7, %dil
-; AVX12-NEXT:    movzbl %dil, %eax
-; AVX12-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; AVX12-NEXT:    retq
+; AVX1-LABEL: bitcast_i8_8i1_freeze:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movzbl %dil, %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: bitcast_i8_8i1_freeze:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_i8_8i1_freeze:
 ; AVX512:       # %bb.0:
