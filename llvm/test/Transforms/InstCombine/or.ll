@@ -37,6 +37,20 @@ define i1 @test14(i32 %A, i32 %B) {
   ret i1 %D
 }
 
+define i1 @test14_commuted(i32 %A, i32 %B) {
+; CHECK-LABEL: @test14_commuted(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[B]], [[A]]
+; CHECK-NEXT:    [[D:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = icmp ult i32 %A, %B
+  %C2 = icmp ult i32 %B, %A
+  ; (A < B) | (A > B) === A != B
+  %D = or i1 %C1, %C2
+  ret i1 %D
+}
+
 define i1 @test14_logical(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test14_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
