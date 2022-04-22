@@ -127,3 +127,25 @@ func.func @cast3(%p: !cir.ptr<i32>) {
   %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<f32> // expected-error {{requires same type for array element and pointee result}}
   cir.return
 }
+
+// -----
+
+func.func @b0() {
+  cir.scope {
+    cir.loop while(cond :  {  // expected-error {{cond region must be terminated with 'cir.yield' or 'cir.yield continue'}}
+      %0 = cir.cst(true) : !cir.bool
+      cir.brcond %0 ^bb1, ^bb2
+      ^bb1:
+        cir.yield break
+      ^bb2:
+        cir.yield
+    }, step :  {
+      cir.yield
+    })  {
+      cir.br ^bb1
+    ^bb1:
+      cir.return
+    }
+  }
+  cir.return
+}
