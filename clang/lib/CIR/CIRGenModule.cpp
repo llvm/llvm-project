@@ -492,7 +492,15 @@ static std::string getMangledNameImpl(CIRGenModule &CGM, GlobalDecl GD,
 
 StringRef CIRGenModule::getMangledName(GlobalDecl GD) {
   auto CanonicalGD = GD.getCanonicalDecl();
-  assert(!dyn_cast<CXXConstructorDecl>(CanonicalGD.getDecl()) && "NYI");
+
+  // Some ABIs don't have constructor variants. Make sure that base and complete
+  // constructors get mangled the same.
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(CanonicalGD.getDecl())) {
+    if (!getTarget().getCXXABI().hasConstructorVariants()) {
+      assert(false && "NYI");
+    }
+  }
+
   assert(!langOpts.CUDAIsDevice && "NYI");
 
   // Keep the first result in the case of a mangling collision.
