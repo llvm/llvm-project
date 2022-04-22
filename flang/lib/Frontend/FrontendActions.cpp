@@ -36,9 +36,11 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Target/TargetMachine.h"
 #include <clang/Basic/Diagnostic.h>
 #include <memory>
@@ -48,6 +50,7 @@ using namespace Fortran::frontend;
 //===----------------------------------------------------------------------===//
 // Custom BeginSourceFileAction
 //===----------------------------------------------------------------------===//
+
 bool PrescanAction::BeginSourceFileAction() { return RunPrescan(); }
 
 bool PrescanAndParseAction::BeginSourceFileAction() {
@@ -409,6 +412,12 @@ void GetSymbolsSourcesAction::ExecuteAction() {
   ci.semantics().DumpSymbolsSources(llvm::outs());
 }
 
+//===----------------------------------------------------------------------===//
+// CodeGenActions
+//===----------------------------------------------------------------------===//
+
+CodeGenAction::~CodeGenAction() = default;
+
 #include "flang/Tools/CLOptions.inc"
 
 // Lower the previously generated MLIR module into an LLVM IR module
@@ -451,107 +460,8 @@ void CodeGenAction::GenerateLLVMIR() {
   }
 }
 
-void EmitLLVMAction::ExecuteAction() {
+void CodeGenAction::SetUpTargetMachine() {
   CompilerInstance &ci = this->instance();
-  GenerateLLVMIR();
-
-  // If set, use the predefined outupt stream to print the generated module.
-  if (!ci.IsOutputStreamNull()) {
-    llvmModule->print(
-        ci.GetOutputStream(), /*AssemblyAnnotationWriter=*/nullptr);
-    return;
-  }
-
-  // No predefined output stream was set. Create an output file and dump the
-  // generated module there.
-  std::unique_ptr<llvm::raw_ostream> os = ci.CreateDefaultOutputFile(
-      /*Binary=*/false, /*InFile=*/GetCurrentFileOrBufferName(), "ll");
-  if (!os) {
-    unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "failed to create the output file");
-    ci.diagnostics().Report(diagID);
-    return;
-  }
-  llvmModule->print(*os, /*AssemblyAnnotationWriter=*/nullptr);
-}
-
-void EmitLLVMBitcodeAction::ExecuteAction() {
-  CompilerInstance &ci = this->instance();
-  // Generate an LLVM module if it's not already present (it will already be
-  // present if the input file is an LLVM IR/BC file).
-  if (!llvmModule)
-    GenerateLLVMIR();
-
-  // Set the triple based on the CompilerInvocation set-up
-  const std::string &theTriple = ci.invocation().targetOpts().triple;
-  if (llvmModule->getTargetTriple() != theTriple) {
-    ci.diagnostics().Report(clang::diag::warn_fe_override_module) << theTriple;
-    llvmModule->setTargetTriple(theTriple);
-  }
-
-  // Create `Target`
-  std::string error;
-  const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(theTriple, error);
-  assert(theTarget && "Failed to create Target");
-
-  // Create and configure `TargetMachine`
-  std::unique_ptr<llvm::TargetMachine> TM(
-      theTarget->createTargetMachine(theTriple, /*CPU=*/"",
-          /*Features=*/"", llvm::TargetOptions(), llvm::None));
-  assert(TM && "Failed to create TargetMachine");
-  llvmModule->setDataLayout(TM->createDataLayout());
-
-  // Generate an output file
-  std::unique_ptr<llvm::raw_ostream> os = ci.CreateDefaultOutputFile(
-      /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName(), "bc");
-  if (!os) {
-    unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "failed to create the output file");
-    ci.diagnostics().Report(diagID);
-    return;
-  }
-
-  // Set-up the pass manager
-  llvm::ModulePassManager MPM;
-  llvm::ModuleAnalysisManager MAM;
-  llvm::PassBuilder PB(TM.get());
-  PB.registerModuleAnalyses(MAM);
-  MPM.addPass(llvm::BitcodeWriterPass(*os));
-
-  // Run the passes
-  MPM.run(*llvmModule, MAM);
-}
-
-void EmitMLIRAction::ExecuteAction() {
-  CompilerInstance &ci = this->instance();
-
-  // Print the output. If a pre-defined output stream exists, dump the MLIR
-  // content there.
-  if (!ci.IsOutputStreamNull()) {
-    mlirModule->print(ci.GetOutputStream());
-    return;
-  }
-
-  // ... otherwise, print to a file.
-  std::unique_ptr<llvm::raw_pwrite_stream> os{ci.CreateDefaultOutputFile(
-      /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName(), "mlir")};
-  if (!os) {
-    unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "failed to create the output file");
-    ci.diagnostics().Report(diagID);
-    return;
-  }
-
-  mlirModule->print(*os);
-}
-
-void BackendAction::ExecuteAction() {
-  CompilerInstance &ci = this->instance();
-  // Generate an LLVM module if it's not already present (it will already be
-  // present if the input file is an LLVM IR/BC file).
-  if (!llvmModule)
-    GenerateLLVMIR();
 
   // Set the triple based on the CompilerInvocation set-up
   const std::string &theTriple = ci.invocation().targetOpts().triple;
@@ -567,11 +477,103 @@ void BackendAction::ExecuteAction() {
   assert(theTarget && "Failed to create Target");
 
   // Create `TargetMachine`
-  std::unique_ptr<llvm::TargetMachine> TM(
-      theTarget->createTargetMachine(theTriple, /*CPU=*/"",
-          /*Features=*/"", llvm::TargetOptions(), llvm::None));
+  TM.reset(theTarget->createTargetMachine(theTriple, /*CPU=*/"",
+                                          /*Features=*/"",
+                                          llvm::TargetOptions(), llvm::None));
   assert(TM && "Failed to create TargetMachine");
   llvmModule->setDataLayout(TM->createDataLayout());
+}
+
+static std::unique_ptr<llvm::raw_pwrite_stream>
+GetOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
+                BackendActionTy action) {
+  switch (action) {
+  case BackendActionTy::Backend_EmitAssembly:
+    return ci.CreateDefaultOutputFile(
+        /*Binary=*/false, inFile, /*extension=*/"s");
+  case BackendActionTy::Backend_EmitLL:
+    return ci.CreateDefaultOutputFile(
+        /*Binary=*/false, inFile, /*extension=*/"ll");
+  case BackendActionTy::Backend_EmitMLIR:
+    return ci.CreateDefaultOutputFile(
+        /*Binary=*/false, inFile, /*extension=*/"mlir");
+  case BackendActionTy::Backend_EmitBC:
+    return ci.CreateDefaultOutputFile(
+        /*Binary=*/true, inFile, /*extension=*/"bc");
+  case BackendActionTy::Backend_EmitObj:
+    return ci.CreateDefaultOutputFile(
+        /*Binary=*/true, inFile, /*extension=*/"o");
+  }
+
+  llvm_unreachable("Invalid action!");
+}
+
+/// Generate target-specific machine-code or assembly file from the input LLVM
+/// module.
+///
+/// \param [in] diags Diagnostics engine for reporting errors
+/// \param [in] TM Target machine to aid the code-gen pipeline set-up
+/// \param [in] act Backend act to run (assembly vs machine-code generation)
+/// \param [in] llvmModule LLVM module to lower to assembly/machine-code
+/// \param [out] os Output stream to emit the generated code to
+static void GenerateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
+                                              llvm::TargetMachine &TM,
+                                              BackendActionTy act,
+                                              llvm::Module &llvmModule,
+                                              llvm::raw_pwrite_stream &os) {
+  assert((act == BackendActionTy::Backend_EmitObj) ||
+         (act == BackendActionTy::Backend_EmitAssembly) &&
+             "Unsupported action");
+
+  // Set-up the pass manager, i.e create an LLVM code-gen pass pipeline.
+  // Currently only the legacy pass manager is supported.
+  // TODO: Switch to the new PM once it's available in the backend.
+  llvm::legacy::PassManager CodeGenPasses;
+  CodeGenPasses.add(
+      createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
+
+  llvm::Triple triple(llvmModule.getTargetTriple());
+  std::unique_ptr<llvm::TargetLibraryInfoImpl> TLII =
+      std::make_unique<llvm::TargetLibraryInfoImpl>(triple);
+  assert(TLII && "Failed to create TargetLibraryInfo");
+  CodeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*TLII));
+
+  llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
+                                   ? llvm::CodeGenFileType::CGFT_AssemblyFile
+                                   : llvm::CodeGenFileType::CGFT_ObjectFile;
+  if (TM.addPassesToEmitFile(CodeGenPasses, os, nullptr, cgft)) {
+    unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "emission of this file type is not supported");
+    diags.Report(diagID);
+    return;
+  }
+
+  // Run the passes
+  CodeGenPasses.run(llvmModule);
+}
+
+/// Generate LLVM byte code file from the input LLVM module.
+///
+/// \param [in] TM Target machine to aid the code-gen pipeline set-up
+/// \param [in] llvmModule LLVM module to lower to assembly/machine-code
+/// \param [out] os Output stream to emit the generated code to
+static void GenerateLLVMBCImpl(llvm::TargetMachine &TM,
+                               llvm::Module &llvmModule,
+                               llvm::raw_pwrite_stream &os) {
+  // Set-up the pass manager
+  llvm::ModulePassManager MPM;
+  llvm::ModuleAnalysisManager MAM;
+  llvm::PassBuilder PB(&TM);
+  PB.registerModuleAnalyses(MAM);
+  MPM.addPass(llvm::BitcodeWriterPass(os));
+
+  // Run the passes
+  MPM.run(llvmModule, MAM);
+}
+
+void CodeGenAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
 
   // If the output stream is a file, generate it and define the corresponding
   // output stream. If a pre-defined output stream is available, we will use
@@ -587,17 +589,8 @@ void BackendAction::ExecuteAction() {
   // updated to use it).
   std::unique_ptr<llvm::raw_pwrite_stream> os;
   if (ci.IsOutputStreamNull()) {
-    // Get the output buffer/file
-    switch (action) {
-    case BackendActionTy::Backend_EmitAssembly:
-      os = ci.CreateDefaultOutputFile(
-          /*Binary=*/false, /*InFile=*/GetCurrentFileOrBufferName(), "s");
-      break;
-    case BackendActionTy::Backend_EmitObj:
-      os = ci.CreateDefaultOutputFile(
-          /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName(), "o");
-      break;
-    }
+    os = GetOutputStream(ci, GetCurrentFileOrBufferName(), action);
+
     if (!os) {
       unsigned diagID = ci.diagnostics().getCustomDiagID(
           clang::DiagnosticsEngine::Error, "failed to create the output file");
@@ -606,34 +599,35 @@ void BackendAction::ExecuteAction() {
     }
   }
 
-  // Create an LLVM code-gen pass pipeline. Currently only the legacy pass
-  // manager is supported.
-  // TODO: Switch to the new PM once it's available in the backend.
-  llvm::legacy::PassManager CodeGenPasses;
-  CodeGenPasses.add(
-      createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
-  llvm::Triple triple(theTriple);
-
-  std::unique_ptr<llvm::TargetLibraryInfoImpl> TLII =
-      std::make_unique<llvm::TargetLibraryInfoImpl>(triple);
-  assert(TLII && "Failed to create TargetLibraryInfo");
-  CodeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*TLII));
-
-  llvm::CodeGenFileType cgft = (action == BackendActionTy::Backend_EmitAssembly)
-      ? llvm::CodeGenFileType::CGFT_AssemblyFile
-      : llvm::CodeGenFileType::CGFT_ObjectFile;
-  if (TM->addPassesToEmitFile(CodeGenPasses,
-          ci.IsOutputStreamNull() ? *os : ci.GetOutputStream(), nullptr,
-          cgft)) {
-    unsigned diagID =
-        ci.diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
-            "emission of this file type is not supported");
-    ci.diagnostics().Report(diagID);
+  if (action == BackendActionTy::Backend_EmitMLIR) {
+    mlirModule->print(ci.IsOutputStreamNull() ? *os : ci.GetOutputStream());
     return;
   }
 
-  // Run the code-gen passes
-  CodeGenPasses.run(*llvmModule);
+  // Generate an LLVM module if it's not already present (it will already be
+  // present if the input file is an LLVM IR/BC file).
+  if (!llvmModule)
+    GenerateLLVMIR();
+
+  if (action == BackendActionTy::Backend_EmitLL) {
+    llvmModule->print(ci.IsOutputStreamNull() ? *os : ci.GetOutputStream(),
+                      /*AssemblyAnnotationWriter=*/nullptr);
+    return;
+  }
+
+  SetUpTargetMachine();
+  if (action == BackendActionTy::Backend_EmitBC) {
+    GenerateLLVMBCImpl(*TM, *llvmModule, *os);
+    return;
+  }
+
+  if (action == BackendActionTy::Backend_EmitAssembly ||
+      action == BackendActionTy::Backend_EmitObj) {
+    GenerateMachineCodeOrAssemblyImpl(
+        ci.diagnostics(), *TM, action, *llvmModule,
+        ci.IsOutputStreamNull() ? *os : ci.GetOutputStream());
+    return;
+  }
 }
 
 void InitOnlyAction::ExecuteAction() {
