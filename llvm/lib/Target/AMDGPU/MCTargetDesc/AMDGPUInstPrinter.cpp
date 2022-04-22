@@ -595,6 +595,16 @@ void AMDGPUInstPrinter::printDefaultVccOperand(unsigned OpNo,
     O << ", ";
 }
 
+void AMDGPUInstPrinter::printWaitVDST(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  uint8_t Imm = MI->getOperand(OpNo).getImm();
+  if (Imm != 0) {
+    O << " wait_vdst:";
+    printU4ImmDecOperand(MI, OpNo, O);
+  }
+}
+
 void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {

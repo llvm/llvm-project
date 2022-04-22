@@ -1291,6 +1291,8 @@ def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 }
 
+def wait_vdst : NamedOperandU8<"WaitVDST", NamedMatchClass<"WaitVDST">>;
+
 } // End OperandType = "OPERAND_IMMEDIATE"
 
 class KImmMatchClass<int size> : AsmOperandClass {

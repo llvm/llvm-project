@@ -161,6 +161,7 @@ public:
     ImmTyCBSZ,
     ImmTyABID,
     ImmTyEndpgm,
+    ImmTyWaitVDST,
   };
 
   enum ImmKindTy {
@@ -835,6 +836,7 @@ public:
   bool isS16Imm() const;
   bool isU16Imm() const;
   bool isEndpgm() const;
+  bool isWaitVDST() const;
 
   StringRef getExpressionAsToken() const {
     assert(isExpr());
@@ -1042,6 +1044,7 @@ public:
     case ImmTyCBSZ: OS << "CBSZ"; break;
     case ImmTyABID: OS << "ABID"; break;
     case ImmTyEndpgm: OS << "Endpgm"; break;
+    case ImmTyWaitVDST: OS << "WaitVDST"; break;
     }
   }
 
@@ -1758,6 +1761,9 @@ public:
 
   OperandMatchResultTy parseEndpgmOp(OperandVector &Operands);
   AMDGPUOperand::Ptr defaultEndpgmImmOperands() const;
+
+  OperandMatchResultTy parseWaitVDST(OperandVector &Operands);
+  AMDGPUOperand::Ptr defaultWaitVDST() const;
 };
 
 struct OptionalOperand {
@@ -3969,7 +3975,7 @@ Optional<StringRef> AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
     const auto &Src = Inst.getOperand(SrcIdx);
     if (Src.isReg() && Src.getReg() == LDS_DIRECT) {
 
-      if (isGFX90A())
+      if (isGFX90A() || isGFX11Plus())
         return StringRef("lds_direct is not supported on this GPU");
 
       if (IsRevOpcode(Opcode) || (Desc.TSFlags & SIInstrFlags::SDWA))
@@ -7834,7 +7840,8 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"neg_hi", AMDGPUOperand::ImmTyNegHi, false, nullptr},
   {"blgp", AMDGPUOperand::ImmTyBLGP, false, nullptr},
   {"cbsz", AMDGPUOperand::ImmTyCBSZ, false, nullptr},
-  {"abid", AMDGPUOperand::ImmTyABID, false, nullptr}
+  {"abid", AMDGPUOperand::ImmTyABID, false, nullptr},
+  {"wait_vdst", AMDGPUOperand::ImmTyWaitVDST, false, nullptr}
 };
 
 void AMDGPUAsmParser::onBeginOfFile() {
@@ -8839,3 +8846,15 @@ OperandMatchResultTy AMDGPUAsmParser::parseEndpgmOp(OperandVector &Operands) {
 }
 
 bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
+
+//===----------------------------------------------------------------------===//
+// LDSDIR
+//===----------------------------------------------------------------------===//
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitVDST() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyWaitVDST);
+}
+
+bool AMDGPUOperand::isWaitVDST() const {
+  return isImmTy(ImmTyWaitVDST) && isUInt<4>(getImm());
+}
