@@ -11,6 +11,38 @@
 
 namespace Fortran::evaluate {
 
+template <typename T>
+static Expr<T> FoldTransformationalBessel(
+    FunctionRef<T> &&funcRef, FoldingContext &context) {
+  CHECK(funcRef.arguments().size() == 3);
+  /// Bessel runtime functions use `int` integer arguments. Convert integer
+  /// arguments to Int4, any overflow error will be reported during the
+  /// conversion folding.
+  using Int4 = Type<TypeCategory::Integer, 4>;
+  if (auto args{
+          GetConstantArguments<Int4, Int4, T>(context, funcRef.arguments())}) {
+    const std::string &name{std::get<SpecificIntrinsic>(funcRef.proc().u).name};
+    if (auto elementalBessel{GetHostRuntimeWrapper<T, Int4, T>(name)}) {
+      std::vector<Scalar<T>> results;
+      int n1{static_cast<int>(
+          std::get<0>(*args)->GetScalarValue().value().ToInt64())};
+      int n2{static_cast<int>(
+          std::get<1>(*args)->GetScalarValue().value().ToInt64())};
+      Scalar<T> x{std::get<2>(*args)->GetScalarValue().value()};
+      for (int i{n1}; i <= n2; ++i) {
+        results.emplace_back((*elementalBessel)(context, Scalar<Int4>{i}, x));
+      }
+      return Expr<T>{Constant<T>{
+          std::move(results), ConstantSubscripts{std::max(n2 - n1 + 1, 0)}}};
+    } else {
+      context.messages().Say(
+          "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_warn_en_US,
+          name, T::kind);
+    }
+  }
+  return Expr<T>{std::move(funcRef)};
+}
+
 template <int KIND>
 Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
@@ -63,6 +95,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_warn_en_US,
             name, KIND);
       }
+    } else {
+      return FoldTransformationalBessel<T>(std::move(funcRef), context);
     }
   } else if (name == "abs") { // incl. zabs & cdabs
     // Argument can be complex or real
@@ -245,7 +279,6 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   // TODO: dim, dot_product, fraction, matmul,
   // modulo, norm2, rrspacing,
   // set_exponent, spacing, transfer,
-  // bessel_jn (transformational) and bessel_yn (transformational)
   return Expr<T>{std::move(funcRef)};
 }
 
