@@ -58,6 +58,9 @@ public:
   }
 
   bool classifyReturnType(CIRGenFunctionInfo &FI) const override;
+
+  void buildCXXConstructors(const clang::CXXConstructorDecl *D) override;
+
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *VTableClass) override {
     return true;
   }
@@ -106,4 +109,20 @@ bool CIRGenItaniumCXXABI::classifyReturnType(CIRGenFunctionInfo &FI) const {
   auto *RD = FI.getReturnType()->getAsCXXRecordDecl();
   assert(!RD && "RecordDecl return types NYI");
   return false;
+}
+
+void CIRGenItaniumCXXABI::buildCXXConstructors(const CXXConstructorDecl *D) {
+  // Just make sure we're in sync with TargetCXXABI.
+  assert(CGM.getTarget().getCXXABI().hasConstructorVariants());
+
+  // The constructor used for constructing this as a base class;
+  // ignores virtual bases.
+  CGM.buildGlobal(GlobalDecl(D, Ctor_Base));
+
+  // The constructor used for constructing this as a complete class;
+  // constructs the virtual bases, then calls the base constructor.
+  if (!D->getParent()->isAbstract()) {
+    // We don't need to emit the complete ctro if the class is abstract.
+    CGM.buildGlobal(GlobalDecl(D, Ctor_Complete));
+  }
 }
