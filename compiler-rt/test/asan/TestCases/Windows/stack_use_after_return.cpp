@@ -1,5 +1,6 @@
 // RUN: %clang_cl_asan -Od %s -Fe%t
 // RUN: %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
+// RUN: not %run %t 2>&1 | FileCheck %s
 // RUN: %clang_cl_asan -Od %s -Fe%t -fsanitize-address-use-after-return=always
 // RUN: not %run %t 2>&1 | FileCheck %s
 

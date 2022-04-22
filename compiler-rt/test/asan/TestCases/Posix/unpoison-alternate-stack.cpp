@@ -4,7 +4,7 @@
 // Don't optimize, otherwise the variables which create redzones might be
 // dropped.
 // RUN: %clangxx_asan -fexceptions -O0 %s -o %t -pthread
-// RUN: %run %t
+// RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t
 
 #include <algorithm>
 #include <cassert>
