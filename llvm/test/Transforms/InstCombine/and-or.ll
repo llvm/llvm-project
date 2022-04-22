@@ -335,3 +335,87 @@ define i8 @and_or_do_not_hoist_mask(i8 %a, i8 %b) {
   ret i8 %extra_use_of_or
 }
 
+; ((B & C0) | A) | (B & C1) -> (B & C0|C1) | A
+define i64 @or_or_and(i64 %x) {
+; CHECK-LABEL: @or_or_and(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 8
+; CHECK-NEXT:    [[SHL:%.*]] = and i64 [[TMP1]], 71776119061217280
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[X]], 8
+; CHECK-NEXT:    [[SHL3:%.*]] = and i64 [[TMP2]], -72057594037927936
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SHL]], [[SHL3]]
+; CHECK-NEXT:    [[SHL6:%.*]] = and i64 [[TMP1]], 1095216660480
+; CHECK-NEXT:    [[OR7:%.*]] = or i64 [[OR]], [[SHL6]]
+; CHECK-NEXT:    ret i64 [[OR7]]
+;
+  %1 = lshr i64 %x, 8
+  %shl = and i64 %1, 71776119061217280
+  %2 = shl i64 %x, 8
+  %shl3 = and i64 %2, -72057594037927936
+  %or = or i64 %shl, %shl3
+  %shl6 = and i64 %1, 1095216660480
+  %or7 = or i64 %or, %shl6
+  ret i64 %or7
+}
+
+; (A | (B & C0)) | (B & C1) -> A | (B & C0|C1)
+define i64 @or_or_and_commute0(i64 %x) {
+; CHECK-LABEL: @or_or_and_commute0(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 8
+; CHECK-NEXT:    [[SHL:%.*]] = and i64 [[TMP1]], 71776119061217280
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[X]], 8
+; CHECK-NEXT:    [[SHL3:%.*]] = and i64 [[TMP2]], -72057594037927936
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SHL3]], [[SHL]]
+; CHECK-NEXT:    [[SHL6:%.*]] = and i64 [[TMP1]], 1095216660480
+; CHECK-NEXT:    [[OR7:%.*]] = or i64 [[OR]], [[SHL6]]
+; CHECK-NEXT:    ret i64 [[OR7]]
+;
+  %1 = lshr i64 %x, 8
+  %shl = and i64 %1, 71776119061217280
+  %2 = shl i64 %x, 8
+  %shl3 = and i64 %2, -72057594037927936
+  %or = or i64 %shl3, %shl
+  %shl6 = and i64 %1, 1095216660480
+  %or7 = or i64 %or, %shl6
+  ret i64 %or7
+}
+
+define i64 @or_or_or_and_complex(i64 noundef %i) {
+; CHECK-LABEL: @or_or_or_and_complex(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[I:%.*]], 8
+; CHECK-NEXT:    [[SHL:%.*]] = and i64 [[TMP1]], 71776119061217280
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[I]], 8
+; CHECK-NEXT:    [[SHL3:%.*]] = and i64 [[TMP2]], -72057594037927936
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SHL]], [[SHL3]]
+; CHECK-NEXT:    [[SHL6:%.*]] = and i64 [[TMP1]], 1095216660480
+; CHECK-NEXT:    [[OR7:%.*]] = or i64 [[OR]], [[SHL6]]
+; CHECK-NEXT:    [[SHL10:%.*]] = and i64 [[TMP2]], 280375465082880
+; CHECK-NEXT:    [[OR11:%.*]] = or i64 [[OR7]], [[SHL10]]
+; CHECK-NEXT:    [[SHL14:%.*]] = and i64 [[TMP1]], 16711680
+; CHECK-NEXT:    [[OR15:%.*]] = or i64 [[OR11]], [[SHL14]]
+; CHECK-NEXT:    [[SHL18:%.*]] = and i64 [[TMP2]], 4278190080
+; CHECK-NEXT:    [[OR19:%.*]] = or i64 [[OR15]], [[SHL18]]
+; CHECK-NEXT:    [[AND21:%.*]] = and i64 [[TMP1]], 255
+; CHECK-NEXT:    [[OR23:%.*]] = or i64 [[OR19]], [[AND21]]
+; CHECK-NEXT:    [[SHL26:%.*]] = and i64 [[TMP2]], 65280
+; CHECK-NEXT:    [[OR27:%.*]] = or i64 [[OR23]], [[SHL26]]
+; CHECK-NEXT:    ret i64 [[OR27]]
+;
+  %1 = lshr i64 %i, 8
+  %shl = and i64 %1, 71776119061217280
+  %2 = shl i64 %i, 8
+  %shl3 = and i64 %2, -72057594037927936
+  %or = or i64 %shl, %shl3
+  %shl6 = and i64 %1, 1095216660480
+  %or7 = or i64 %or, %shl6
+  %shl10 = and i64 %2, 280375465082880
+  %or11 = or i64 %or7, %shl10
+  %shl14 = and i64 %1, 16711680
+  %or15 = or i64 %or11, %shl14
+  %shl18 = and i64 %2, 4278190080
+  %or19 = or i64 %or15, %shl18
+  %and21 = and i64 %1, 255
+  %or23 = or i64 %or19, %and21
+  %shl26 = and i64 %2, 65280
+  %or27 = or i64 %or23, %shl26
+  ret i64 %or27
+}
