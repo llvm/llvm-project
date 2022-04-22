@@ -936,7 +936,7 @@ void TraceSwitchPartImpl(ThreadState* thr) {
     // Pathologically large stacks may not fit into the part.
     // In these cases we log only fixed number of top frames.
     const uptr kMaxFrames = 1000;
-    // Sanity check that kMaxFrames won't consume the whole part.
+    // Check that kMaxFrames won't consume the whole part.
     static_assert(kMaxFrames < TracePart::kSize / 2, "kMaxFrames is too big");
     uptr* pos = Max(&thr->shadow_stack[0], thr->shadow_stack_pos - kMaxFrames);
     for (; pos < thr->shadow_stack_pos; pos++) {
