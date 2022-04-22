@@ -125,6 +125,7 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.file_seek_macros
+    .llvm-libc-types.cookie_io_functions_t
     .llvm-libc-types.FILE
     .llvm-libc-types.size_t
 )

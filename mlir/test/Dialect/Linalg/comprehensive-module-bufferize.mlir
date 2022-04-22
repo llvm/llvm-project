@@ -884,8 +884,8 @@ func.func @scf_for_yield_non_equivalent(
 //       CHECK:   %[[cloned:.*]] = bufferization.clone %[[t]]
 //       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[cloned]])
 // This alloc is for the linalg.init_tensor.
-//       CHECK:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
-//       CHECK:     memref.dealloc %[[iter]]
+//   CHECK-DAG:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
+//   CHECK-DAG:     memref.dealloc %[[iter]]
 // This alloc is for the scf.yield.
 //       CHECK:     %[[alloc3:.*]] = memref.alloc(%{{.*}})
 //       CHECK:     memref.copy %[[alloc2]], %[[alloc3]]

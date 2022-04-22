@@ -11,6 +11,7 @@ func.func @bar() -> tensor<?xf32> {
 
 // -----
 
+// expected-error @+2 {{op was not bufferized}}
 // expected-error @+1 {{cannot bufferize bodiless function that returns a tensor}}
 func.func private @foo() -> tensor<?xf32>
 
@@ -212,6 +213,7 @@ func.func @to_memref_op_is_writing(
 
 // -----
 
+// expected-error @+2 {{op was not bufferized}}
 // expected-error @+1 {{cannot bufferize bodiless function that returns a tensor}}
 func.func private @foo(%t : tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
 

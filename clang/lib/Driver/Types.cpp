@@ -65,9 +65,16 @@ static bool isPreprocessedModuleType(ID Id) {
   return Id == TY_CXXModule || Id == TY_PP_CXXModule;
 }
 
+static bool isPreprocessedHeaderUnitType(ID Id) {
+  return Id == TY_CXXSHeader || Id == TY_CXXUHeader || Id == TY_CXXHUHeader ||
+         Id == TY_PP_CXXHeaderUnit;
+}
+
 types::ID types::getPrecompiledType(ID Id) {
   if (isPreprocessedModuleType(Id))
     return TY_ModuleFile;
+  if (isPreprocessedHeaderUnitType(Id))
+    return TY_HeaderUnit;
   if (onlyPrecompileType(Id))
     return TY_PCH;
   return TY_INVALID;
@@ -139,6 +146,10 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_CLHeader:
   case TY_ObjCHeader: case TY_PP_ObjCHeader:
   case TY_CXXHeader: case TY_PP_CXXHeader:
+  case TY_CXXSHeader:
+  case TY_CXXUHeader:
+  case TY_CXXHUHeader:
+  case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
   case TY_CXXModule: case TY_PP_CXXModule:
   case TY_AST: case TY_ModuleFile: case TY_PCH:
@@ -210,6 +221,10 @@ bool types::isCXX(ID Id) {
   case TY_CXX: case TY_PP_CXX:
   case TY_ObjCXX: case TY_PP_ObjCXX: case TY_PP_ObjCXX_Alias:
   case TY_CXXHeader: case TY_PP_CXXHeader:
+  case TY_CXXSHeader:
+  case TY_CXXUHeader:
+  case TY_CXXHUHeader:
+  case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
   case TY_CXXModule: case TY_PP_CXXModule:
   case TY_CUDA: case TY_PP_CUDA: case TY_CUDA_DEVICE:
@@ -323,6 +338,7 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
            .Case("hpp", TY_CXXHeader)
            .Case("hxx", TY_CXXHeader)
            .Case("iim", TY_PP_CXXModule)
+           .Case("iih", TY_PP_CXXHeaderUnit)
            .Case("lib", TY_Object)
            .Case("mii", TY_PP_ObjCXX)
            .Case("obj", TY_Object)
