@@ -2,7 +2,6 @@
 // RUN: FileCheck --input-file=%t.cpp.cir %s --check-prefix=CPPSCOPE
 // RUN: %clang_cc1 -x c -std=c11 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.c.cir
 // RUN: FileCheck --input-file=%t.c.cir %s --check-prefix=CSCOPE
-// XFAIL: *
 
 void l0() {
   for (int i = 0;;) {

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
-// XFAIL: *
 
 void l0() {
   for (;;) {
@@ -10,7 +9,11 @@ void l0() {
 // CHECK: func @l0
 // CHECK: cir.loop for(cond :  {
 // CHECK-NEXT:   %0 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:   cir.yield loopcondition %0 : !cir.bool
+// CHECK-NEXT:   cir.brcond %0 ^bb1, ^bb2
+// CHECK-NEXT:   ^bb1:
+// CHECK-NEXT:     cir.yield continue
+// CHECK-NEXT:   ^bb2:
+// CHECK-NEXT:     cir.yield
 // CHECK-NEXT: }, step :  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: })  {
@@ -29,7 +32,11 @@ void l1() {
 // CHECK-NEXT:   %4 = cir.load %2 : cir.ptr <i32>, i32
 // CHECK-NEXT:   %5 = cir.cst(10 : i32) : i32
 // CHECK-NEXT:   %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
-// CHECK-NEXT:   cir.yield loopcondition %6 : !cir.bool
+// CHECK-NEXT:   cir.brcond %6 ^bb1, ^bb2
+// CHECK-NEXT:   ^bb1:
+// CHECK-NEXT:     cir.yield continue
+// CHECK-NEXT:   ^bb2:
+// CHECK-NEXT:     cir.yield
 // CHECK-NEXT: }, step :  {
 // CHECK-NEXT:   %4 = cir.load %2 : cir.ptr <i32>, i32
 // CHECK-NEXT:   %5 = cir.cst(1 : i32) : i32
@@ -61,7 +68,11 @@ void l2(bool cond) {
 // CHECK:         cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %3 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
-// CHECK-NEXT:       cir.yield loopcondition %3 : !cir.bool
+// CHECK-NEXT:       cir.brcond %3 ^bb1, ^bb2
+// CHECK-NEXT:       ^bb1:
+// CHECK-NEXT:         cir.yield continue
+// CHECK-NEXT:       ^bb2:
+// CHECK-NEXT:         cir.yield
 // CHECK-NEXT:     }, step :  {
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     })  {
@@ -75,7 +86,11 @@ void l2(bool cond) {
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %3 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:       cir.yield loopcondition %3 : !cir.bool
+// CHECK-NEXT:       cir.brcond %3 ^bb1, ^bb2
+// CHECK-NEXT:       ^bb1:
+// CHECK-NEXT:         cir.yield continue
+// CHECK-NEXT:       ^bb2:
+// CHECK-NEXT:         cir.yield
 // CHECK-NEXT:     }, step :  {
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     })  {
@@ -90,7 +105,11 @@ void l2(bool cond) {
 // CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %3 = cir.cst(1 : i32) : i32
 // CHECK-NEXT:       %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
-// CHECK-NEXT:       cir.yield loopcondition %4 : !cir.bool
+// CHECK-NEXT:       cir.brcond %4 ^bb1, ^bb2
+// CHECK-NEXT:       ^bb1:
+// CHECK-NEXT:         cir.yield continue
+// CHECK-NEXT:       ^bb2:
+// CHECK-NEXT:         cir.yield
 // CHECK-NEXT:     }, step :  {
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     })  {
@@ -119,7 +138,11 @@ void l3(bool cond) {
 // CHECK: cir.scope {
 // CHECK-NEXT:   cir.loop dowhile(cond :  {
 // CHECK-NEXT:   %3 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
-// CHECK-NEXT:   cir.yield loopcondition %3 : !cir.bool
+// CHECK-NEXT:   cir.brcond %3 ^bb1, ^bb2
+// CHECK-NEXT:   ^bb1:
+// CHECK-NEXT:     cir.yield continue
+// CHECK-NEXT:   ^bb2:
+// CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT:   })  {
@@ -133,7 +156,11 @@ void l3(bool cond) {
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT:   cir.loop dowhile(cond :  {
 // CHECK-NEXT:   %3 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:   cir.yield loopcondition %3 : !cir.bool
+// CHECK-NEXT:   cir.brcond %3 ^bb1, ^bb2
+// CHECK-NEXT:   ^bb1:
+// CHECK-NEXT:     cir.yield continue
+// CHECK-NEXT:   ^bb2:
+// CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT:   })  {
@@ -148,7 +175,11 @@ void l3(bool cond) {
 // CHECK-NEXT:   cir.loop dowhile(cond :  {
 // CHECK-NEXT:   %3 = cir.cst(1 : i32) : i32
 // CHECK-NEXT:   %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
-// CHECK-NEXT:   cir.yield loopcondition %4 : !cir.bool
+// CHECK-NEXT:   cir.brcond %4 ^bb1, ^bb2
+// CHECK-NEXT:   ^bb1:
+// CHECK-NEXT:     cir.yield continue
+// CHECK-NEXT:   ^bb2:
+// CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT:   })  {
@@ -173,7 +204,11 @@ void l4() {
 // CHECK: func @l4
 // CHECK: cir.loop while(cond :  {
 // CHECK-NEXT:   %4 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:   cir.yield loopcondition %4 : !cir.bool
+// CHECK-NEXT:   cir.brcond %4 ^bb1, ^bb2
+// CHECK-NEXT:   ^bb1:
+// CHECK-NEXT:     cir.yield continue
+// CHECK-NEXT:   ^bb2:
+// CHECK-NEXT:     cir.yield
 // CHECK-NEXT: }, step :  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: })  {
@@ -200,7 +235,11 @@ void l5() {
 // CHECK-NEXT:     cir.loop dowhile(cond :  {
 // CHECK-NEXT:       %0 = cir.cst(0 : i32) : i32
 // CHECK-NEXT:       %1 = cir.cast(int_to_bool, %0 : i32), !cir.bool
-// CHECK-NEXT:       cir.yield loopcondition %1 : !cir.bool
+// CHECK-NEXT:       cir.brcond %1 ^bb1, ^bb2
+// CHECK-NEXT:       ^bb1:
+// CHECK-NEXT:         cir.yield continue
+// CHECK-NEXT:       ^bb2:
+// CHECK-NEXT:         cir.yield
 // CHECK-NEXT:     }, step :  {
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     })  {
@@ -220,7 +259,11 @@ void l6() {
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       %0 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:       cir.yield loopcondition %0 : !cir.bool
+// CHECK-NEXT:       cir.brcond %0 ^bb1, ^bb2
+// CHECK-NEXT:       ^bb1:
+// CHECK-NEXT:         cir.yield continue
+// CHECK-NEXT:       ^bb2:
+// CHECK-NEXT:         cir.yield
 // CHECK-NEXT:     }, step :  {
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     })  {

@@ -391,13 +391,12 @@ def IfOp : CIR_Op<"if",
 
 def YieldOpKind_BK : I32EnumAttrCase<"Break", 1, "break">;
 def YieldOpKind_FT : I32EnumAttrCase<"Fallthrough", 2, "fallthrough">;
-def YieldOpKind_LC : I32EnumAttrCase<"Loopcondition", 3, "loopcondition">;
-def YieldOpKind_CE : I32EnumAttrCase<"Continue", 4, "continue">;
+def YieldOpKind_CE : I32EnumAttrCase<"Continue", 3, "continue">;
 
 def YieldOpKind : I32EnumAttr<
     "YieldOpKind",
     "yield kind",
-    [YieldOpKind_BK, YieldOpKind_FT, YieldOpKind_LC, YieldOpKind_CE]> {
+    [YieldOpKind_BK, YieldOpKind_FT, YieldOpKind_CE]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -438,12 +437,6 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
       }, ...
     ]
 
-    cir.loop (cond : {
-      ...
-      %4 = ... : cir.bool
-      cir.yield loopcondition %4
-    } ... ) {}
-
     cir.loop (cond : {...}, step : {...}) {
       ...
       cir.yield continue
@@ -455,11 +448,10 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
                        Variadic<AnyType>:$args);
   let builders = [
     OpBuilder<(ins), [{ /* nothing to do */ }]>,
-    OpBuilder<(ins "Value":$cond), [{
-      $_state.addOperands(cond);
-      mlir::cir::YieldOpKindAttr kind = mlir::cir::YieldOpKindAttr::get(
-                $_builder.getContext(), mlir::cir::YieldOpKind::Loopcondition);
-      $_state.addAttribute(getKindAttrName($_state.name), kind);
+    OpBuilder<(ins "YieldOpKind":$kind), [{
+      mlir::cir::YieldOpKindAttr kattr = mlir::cir::YieldOpKindAttr::get(
+        $_builder.getContext(), kind);
+      $_state.addAttribute(getKindAttrName($_state.name), kattr);
     }]>
   ];
 
@@ -477,9 +469,6 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     }
     bool isBreak() {
       return !isPlain() && *getKind() == YieldOpKind::Break;
-    }
-    bool isLoopCondition() {
-      return !isPlain() && *getKind() == YieldOpKind::Loopcondition;
     }
     bool isContinue() {
       return !isPlain() && *getKind() == YieldOpKind::Continue;

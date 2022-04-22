@@ -571,12 +571,32 @@ mlir::LogicalResult CIRGenFunction::buildDefaultStmt(const DefaultStmt &S,
   return res;
 }
 
+static mlir::LogicalResult buildLoopCondYield(mlir::OpBuilder &builder,
+                                              mlir::Location loc,
+                                              mlir::Value cond) {
+  mlir::Block *trueBB = nullptr, *falseBB = nullptr;
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    trueBB = builder.createBlock(builder.getBlock()->getParent());
+    builder.create<mlir::cir::YieldOp>(loc, YieldOpKind::Continue);
+  }
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    falseBB = builder.createBlock(builder.getBlock()->getParent());
+    builder.create<mlir::cir::YieldOp>(loc);
+  }
+
+  assert((trueBB && falseBB) && "expected both blocks to exist");
+  builder.create<mlir::cir::BrCondOp>(loc, cond, trueBB, falseBB);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
   mlir::cir::LoopOp loopOp;
 
   // TODO: pass in array of attributes.
   auto forStmtBuilder = [&]() -> mlir::LogicalResult {
-    auto forRes = mlir::success();
+    auto loopRes = mlir::success();
     // Evaluate the first part before the loop.
     if (S.getInit())
       if (buildStmt(S.getInit(), /*useCurrentScope=*/true).failed())
@@ -602,7 +622,8 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
                 loc, mlir::cir::BoolType::get(b.getContext()),
                 b.getBoolAttr(true));
           }
-          b.create<YieldOp>(loc, condVal);
+          if (buildLoopCondYield(b, loc, condVal).failed())
+            loopRes = mlir::failure();
         },
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -613,16 +634,16 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
           bool useCurrentScope =
               CGM.getASTContext().getLangOpts().CPlusPlus ? true : false;
           if (buildStmt(S.getBody(), useCurrentScope).failed())
-            forRes = mlir::failure();
+            loopRes = mlir::failure();
         },
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           if (S.getInc())
             if (buildStmt(S.getInc(), /*useCurrentScope=*/true).failed())
-              forRes = mlir::failure();
+              loopRes = mlir::failure();
           builder.create<YieldOp>(loc);
         });
-    return forRes;
+    return loopRes;
   };
 
   auto res = mlir::success();
@@ -651,7 +672,7 @@ mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
 
   // TODO: pass in array of attributes.
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
-    auto forRes = mlir::success();
+    auto loopRes = mlir::success();
 
     loopOp = builder.create<LoopOp>(
         getLoc(S.getSourceRange()), mlir::cir::LoopOpKind::DoWhile,
@@ -662,18 +683,19 @@ mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
           // expression compares unequal to 0. The condition must be a
           // scalar type.
           mlir::Value condVal = evaluateExprAsBool(S.getCond());
-          b.create<YieldOp>(loc, condVal);
+          if (buildLoopCondYield(b, loc, condVal).failed())
+            loopRes = mlir::failure();
         },
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           if (buildStmt(S.getBody(), /*useCurrentScope=*/true).failed())
-            forRes = mlir::failure();
+            loopRes = mlir::failure();
         },
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           builder.create<YieldOp>(loc);
         });
-    return forRes;
+    return loopRes;
   };
 
   auto res = mlir::success();
@@ -702,7 +724,7 @@ mlir::LogicalResult CIRGenFunction::buildWhileStmt(const WhileStmt &S) {
 
   // TODO: pass in array of attributes.
   auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
-    auto forRes = mlir::success();
+    auto loopRes = mlir::success();
 
     loopOp = builder.create<LoopOp>(
         getLoc(S.getSourceRange()), mlir::cir::LoopOpKind::While,
@@ -718,18 +740,19 @@ mlir::LogicalResult CIRGenFunction::buildWhileStmt(const WhileStmt &S) {
           // expression compares unequal to 0. The condition must be a
           // scalar type.
           condVal = evaluateExprAsBool(S.getCond());
-          b.create<YieldOp>(loc, condVal);
+          if (buildLoopCondYield(b, loc, condVal).failed())
+            loopRes = mlir::failure();
         },
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           if (buildStmt(S.getBody(), /*useCurrentScope=*/true).failed())
-            forRes = mlir::failure();
+            loopRes = mlir::failure();
         },
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           builder.create<YieldOp>(loc);
         });
-    return forRes;
+    return loopRes;
   };
 
   auto res = mlir::success();
