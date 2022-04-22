@@ -450,7 +450,11 @@ bool ReducerWorkItem::verify(raw_fd_ostream *OS) const {
 
   for (const Function &F : getModule()) {
     if (const MachineFunction *MF = MMI->getMachineFunction(F)) {
-      if (!MF->verify(nullptr, "", /*AbortOnError=*/false))
+      // With the current state of quality, most reduction attempts fail the
+      // machine verifier. Avoid spamming large function dumps on nearly every
+      // attempt until the situation is better.
+      if (!MF->verify(nullptr, "", /*AbortOnError=*/false,
+                      /*PrintFuncOnError=*/false))
         return true;
     }
   }

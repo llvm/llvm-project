@@ -94,16 +94,18 @@ using namespace llvm;
 namespace {
 
   struct MachineVerifier {
-    MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b)
-        : MFAM(&MFAM), Banner(b) {}
+    MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b,
+                    bool PrintFuncOnError = true)
+        : MFAM(&MFAM), Banner(b), PrintFuncOnError(PrintFuncOnError) {}
 
-    MachineVerifier(Pass *pass, const char *b) : PASS(pass), Banner(b) {}
+    MachineVerifier(Pass *pass, const char *b, bool PrintFuncOnError = true)
+        : PASS(pass), Banner(b), PrintFuncOnError(PrintFuncOnError) {}
 
     MachineVerifier(const char *b, LiveVariables *LiveVars,
                     LiveIntervals *LiveInts, LiveStacks *LiveStks,
-                    SlotIndexes *Indexes)
-        : Banner(b), LiveVars(LiveVars), LiveInts(LiveInts), LiveStks(LiveStks),
-          Indexes(Indexes) {}
+                    SlotIndexes *Indexes, bool PrintFuncOnError = true)
+        : Banner(b), PrintFuncOnError(PrintFuncOnError), LiveVars(LiveVars),
+          LiveInts(LiveInts), LiveStks(LiveStks), Indexes(Indexes) {}
 
     unsigned verify(const MachineFunction &MF);
 
@@ -118,6 +120,7 @@ namespace {
     const RegisterBankInfo *RBI = nullptr;
 
     unsigned foundErrors = 0;
+    bool PrintFuncOnError = false;
 
     // Avoid querying the MachineFunctionProperties for each operand.
     bool isFunctionRegBankSelected = false;
@@ -379,10 +382,11 @@ void llvm::verifyMachineFunction(const std::string &Banner,
     report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
 }
 
-bool MachineFunction::verify(Pass *p, const char *Banner, bool AbortOnErrors)
-    const {
+bool MachineFunction::verify(Pass *p, const char *Banner, bool AbortOnErrors,
+                             bool PrintFuncOnError) const {
   MachineFunction &MF = const_cast<MachineFunction&>(*this);
-  unsigned FoundErrors = MachineVerifier(p, Banner).verify(MF);
+  unsigned FoundErrors =
+      MachineVerifier(p, Banner, PrintFuncOnError).verify(MF);
   if (AbortOnErrors && FoundErrors)
     report_fatal_error("Found "+Twine(FoundErrors)+" machine code errors.");
   return FoundErrors == 0;
@@ -544,10 +548,13 @@ void MachineVerifier::report(const char *msg, const MachineFunction *MF) {
   if (!foundErrors++) {
     if (Banner)
       errs() << "# " << Banner << '\n';
-    if (LiveInts != nullptr)
-      LiveInts->print(errs());
-    else
-      MF->print(errs(), Indexes);
+
+    if (PrintFuncOnError) {
+      if (LiveInts != nullptr)
+        LiveInts->print(errs());
+      else
+        MF->print(errs(), Indexes);
+    }
   }
   errs() << "*** Bad machine code: " << msg << " ***\n"
       << "- function:    " << MF->getName() << "\n";

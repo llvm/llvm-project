@@ -897,7 +897,7 @@ public:
   /// for debugger use.
   /// \returns true if no problems were found.
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
-              bool AbortOnError = true) const;
+              bool AbortOnError = true, bool PrintFuncOnError = true) const;
 
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
