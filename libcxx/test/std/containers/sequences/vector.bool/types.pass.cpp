@@ -24,6 +24,7 @@
 //     typedef typename allocator_type::const_pointer   const_pointer;
 //     typedef std::reverse_iterator<iterator>          reverse_iterator;
 //     typedef std::reverse_iterator<const_iterator>    const_reverse_iterator;
+//     typedef bool                                     const_reference;
 // };
 
 #include <vector>
@@ -66,6 +67,9 @@ test()
     static_assert((std::is_same<
         typename C::const_reverse_iterator,
         std::reverse_iterator<typename C::const_iterator> >::value), "");
+#if !defined(_LIBCPP_VERSION) || defined(_LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL)
+    static_assert(std::is_same<typename C::const_reference, bool>::value, "");
+#endif
 }
 
 int main(int, char**)
