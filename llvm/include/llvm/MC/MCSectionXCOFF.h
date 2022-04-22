@@ -95,6 +95,9 @@ public:
   XCOFF::StorageClass getStorageClass() const {
     return QualName->getStorageClass();
   }
+  XCOFF::VisibilityType getVisibilityType() const {
+    return QualName->getVisibilityType();
+  }
   XCOFF::SymbolType getCSectType() const {
     assert(isCsect() && "Only csect section has symbol type property!");
     return CsectProp->Type;
