@@ -717,6 +717,10 @@ public:
     return llvm::DenormalMode::getIEEE();
   }
 
+  virtual Optional<llvm::Triple> getTargetVariantTriple() const {
+    return llvm::None;
+  }
+
   // We want to expand the shortened versions of the triples passed in to
   // the values used for the bitcode libraries.
   static llvm::Triple getOpenMPTriple(StringRef TripleStr) {
