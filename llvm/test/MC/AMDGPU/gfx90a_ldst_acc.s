@@ -10333,30 +10333,6 @@ ds_append a5 offset:4
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_append a5 offset:65535 gds
 
-// GFX90A: ds_ordered_count a5, v1 offset:65535 gds ; encoding: [0xff,0xff,0x7f,0xdb,0x01,0x00,0x00,0x05]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-ds_ordered_count a5, v1 offset:65535 gds
-
-// GFX90A: ds_ordered_count a255, v1 offset:65535 gds ; encoding: [0xff,0xff,0x7f,0xdb,0x01,0x00,0x00,0xff]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-ds_ordered_count a255, v1 offset:65535 gds
-
-// GFX90A: ds_ordered_count a5, v255 offset:65535 gds ; encoding: [0xff,0xff,0x7f,0xdb,0xff,0x00,0x00,0x05]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-ds_ordered_count a5, v255 offset:65535 gds
-
-// GFX90A: ds_ordered_count a5, v1 gds     ; encoding: [0x00,0x00,0x7f,0xdb,0x01,0x00,0x00,0x05]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-ds_ordered_count a5, v1 gds
-
-// GFX90A: ds_ordered_count a5, v1 gds     ; encoding: [0x00,0x00,0x7f,0xdb,0x01,0x00,0x00,0x05]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-ds_ordered_count a5, v1 gds
-
-// GFX90A: ds_ordered_count a5, v1 offset:4 gds ; encoding: [0x04,0x00,0x7f,0xdb,0x01,0x00,0x00,0x05]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-ds_ordered_count a5, v1 offset:4 gds
-
 // GFX90A: ds_write_b96 v1, a[2:4] offset:65535 ; encoding: [0xff,0xff,0xbc,0xdb,0x01,0x02,0x00,0x00]
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_write_b96 v1, a[2:4] offset:65535

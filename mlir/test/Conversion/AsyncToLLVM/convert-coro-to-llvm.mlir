@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -convert-async-to-llvm | FileCheck %s
 
 // CHECK-LABEL: @coro_id
-func @coro_id() {
+func.func @coro_id() {
   // CHECK: %0 = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %1 = llvm.mlir.null : !llvm.ptr<i8>
   // CHECK: %2 = llvm.intr.coro.id %0, %1, %1, %1 : !llvm.token
@@ -10,7 +10,7 @@ func @coro_id() {
 }
 
 // CHECK-LABEL: @coro_begin
-func @coro_begin() {
+func.func @coro_begin() {
   // CHECK: %[[ID:.*]] = llvm.intr.coro.id
   %0 = async.coro.id
   // CHECK: %[[SIZE:.*]] = llvm.intr.coro.size : i64
@@ -28,7 +28,7 @@ func @coro_begin() {
 }
 
 // CHECK-LABEL: @coro_free
-func @coro_free() {
+func.func @coro_free() {
   // CHECK: %[[ID:.*]] = llvm.intr.coro.id
   %0 = async.coro.id
   // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
@@ -40,7 +40,7 @@ func @coro_free() {
 }
 
 // CHECK-LABEL: @coro_end
-func @coro_end() {
+func.func @coro_end() {
   %0 = async.coro.id
   // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
@@ -51,7 +51,7 @@ func @coro_end() {
 }
 
 // CHECK-LABEL: @coro_save
-func @coro_save() {
+func.func @coro_save() {
   %0 = async.coro.id
   // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0
@@ -61,7 +61,7 @@ func @coro_save() {
 }
 
 // CHECK-LABEL: @coro_suspend
-func @coro_suspend() {
+func.func @coro_suspend() {
   %0 = async.coro.id
   // CHECK: %[[HDL:.*]] = llvm.intr.coro.begin
   %1 = async.coro.begin %0

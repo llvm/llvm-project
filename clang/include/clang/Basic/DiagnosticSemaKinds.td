@@ -4852,7 +4852,7 @@ def ext_adl_only_template_id : ExtWarn<
   "with explicit template arguments is a C++20 extension">, InGroup<CXX20>;
 
 def warn_unqualified_call_to_std_cast_function : Warning<
-  "unqualified call to %0">, InGroup<DiagGroup<"unqualified-std-cast-call">>;
+  "unqualified call to '%0'">, InGroup<DiagGroup<"unqualified-std-cast-call">>;
 
 // C++ Template Argument Lists
 def err_template_missing_args : Error<

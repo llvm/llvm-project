@@ -2,7 +2,7 @@
 // RUN:   | FileCheck %s --dump-input=always
 
 // CHECK-LABEL: @execute_no_async_args
-func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
+func.func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
   %token = async.execute {
     %c0 = arith.constant 0 : index
     memref.store %arg0, %arg1[%c0] : memref<1xf32>
@@ -44,7 +44,7 @@ func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 // -----
 
 // CHECK-LABEL: @nested_async_execute
-func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
+func.func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn_0(%arg0, %arg2, %arg1)
   %token0 = async.execute {
     %c0 = arith.constant 0 : index
@@ -123,7 +123,7 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // -----
 
 // CHECK-LABEL: @async_execute_token_dependency
-func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
+func.func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn
   %token = async.execute {
     %c0 = arith.constant 0 : index
@@ -182,7 +182,7 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 // -----
 
 // CHECK-LABEL: @async_group_await_all
-func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
+func.func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
   // CHECK: %[[C:.*]] = arith.constant 1 : index
   %c = arith.constant 1 : index
   // CHECK: %[[GROUP:.*]] = async.runtime.create_group %[[C]] : !async.group
@@ -237,7 +237,7 @@ func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
 // -----
 
 // CHECK-LABEL: @execute_and_return_f32
-func @execute_and_return_f32() -> f32 {
+func.func @execute_and_return_f32() -> f32 {
  // CHECK: %[[RET:.*]]:2 = call @async_execute_fn
   %token, %result = async.execute -> !async.value<f32> {
     %c0 = arith.constant 123.0 : f32
@@ -276,7 +276,7 @@ func @execute_and_return_f32() -> f32 {
 // -----
 
 // CHECK-LABEL: @async_value_operands
-func @async_value_operands() {
+func.func @async_value_operands() {
   // CHECK: %[[RET:.*]]:2 = call @async_execute_fn
   %token, %result = async.execute -> !async.value<f32> {
     %c0 = arith.constant 123.0 : f32
@@ -333,7 +333,7 @@ func @async_value_operands() {
 // -----
 
 // CHECK-LABEL: @execute_assertion
-func @execute_assertion(%arg0: i1) {
+func.func @execute_assertion(%arg0: i1) {
   %token = async.execute {
     cf.assert %arg0, "error"
     async.yield
@@ -384,7 +384,7 @@ func @execute_assertion(%arg0: i1) {
 // lowered to branch-based control flow to enable coroutine CFG rewrite.
 
 // CHECK-LABEL: @lower_scf_to_cfg
-func @lower_scf_to_cfg(%arg0: f32, %arg1: memref<1xf32>, %arg2: i1) {
+func.func @lower_scf_to_cfg(%arg0: f32, %arg1: memref<1xf32>, %arg2: i1) {
   %token0 = async.execute { async.yield }
   %token1 = async.execute {
     scf.if %arg2 {
@@ -416,7 +416,7 @@ func @lower_scf_to_cfg(%arg0: f32, %arg1: memref<1xf32>, %arg2: i1) {
 // outline async execute function.
 
 // CHECK-LABEL: @clone_constants
-func @clone_constants(%arg0: f32, %arg1: memref<1xf32>) {
+func.func @clone_constants(%arg0: f32, %arg1: memref<1xf32>) {
   %c0 = arith.constant 0 : index
   %token = async.execute {
     memref.store %arg0, %arg1[%c0] : memref<1xf32>

@@ -10,12 +10,13 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr auto begin();
-// constexpr auto begin() const;
+// constexpr auto begin() const
+//    requires input_­range<const V> &&
+//             is_reference_v<range_reference_t<const V>>;
 
 #include <cassert>
 #include <ranges>
 
-#include "test_macros.h"
 #include "types.h"
 
 struct NonSimpleParentView : std::ranges::view_base {
@@ -29,6 +30,16 @@ struct SimpleParentView : std::ranges::view_base {
   const ChildView* end() const;
 };
 
+struct ConstNotRange : std::ranges::view_base {
+  const ChildView* begin();
+  const ChildView* end();
+};
+static_assert(std::ranges::range<ConstNotRange>);
+static_assert(!std::ranges::range<const ConstNotRange>);
+
+template <class T>
+concept HasConstBegin = requires(const T& t) { t.begin(); };
+
 constexpr bool test() {
   int buffer[4][4] = {{1111, 2222, 3333, 4444}, {555, 666, 777, 888}, {99, 1010, 1111, 1212}, {13, 14, 15, 16}};
 
@@ -39,49 +50,61 @@ constexpr bool test() {
   }
 
   {
-    CopyableChild children[4] = {CopyableChild(buffer[0], 4), CopyableChild(buffer[1], 0), CopyableChild(buffer[2], 1), CopyableChild(buffer[3], 0)};
+    CopyableChild children[4] = {CopyableChild(buffer[0], 4), CopyableChild(buffer[1], 0), CopyableChild(buffer[2], 1),
+                                 CopyableChild(buffer[3], 0)};
     auto jv = std::ranges::join_view(ParentView{children});
     assert(*jv.begin() == 1111);
   }
+
   // Parent is empty.
   {
-    CopyableChild children[4] = {CopyableChild(buffer[0]), CopyableChild(buffer[1]), CopyableChild(buffer[2]), CopyableChild(buffer[3])};
+    CopyableChild children[4] = {CopyableChild(buffer[0]), CopyableChild(buffer[1]), CopyableChild(buffer[2]),
+                                 CopyableChild(buffer[3])};
     std::ranges::join_view jv(ParentView(children, 0));
     assert(jv.begin() == jv.end());
   }
+
   // Parent size is one.
   {
     CopyableChild children[1] = {CopyableChild(buffer[0])};
     std::ranges::join_view jv(ParentView(children, 1));
     assert(*jv.begin() == 1111);
   }
+
   // Parent and child size is one.
   {
     CopyableChild children[1] = {CopyableChild(buffer[0], 1)};
     std::ranges::join_view jv(ParentView(children, 1));
     assert(*jv.begin() == 1111);
   }
+
   // Parent size is one child is empty
   {
     CopyableChild children[1] = {CopyableChild(buffer[0], 0)};
     std::ranges::join_view jv(ParentView(children, 1));
     assert(jv.begin() == jv.end());
   }
+
   // Has all empty children.
   {
-    CopyableChild children[4] = {CopyableChild(buffer[0], 0), CopyableChild(buffer[1], 0), CopyableChild(buffer[2], 0), CopyableChild(buffer[3], 0)};
+    CopyableChild children[4] = {CopyableChild(buffer[0], 0), CopyableChild(buffer[1], 0), CopyableChild(buffer[2], 0),
+                                 CopyableChild(buffer[3], 0)};
     auto jv = std::ranges::join_view(ParentView{children});
     assert(jv.begin() == jv.end());
   }
+
   // First child is empty, others are not.
   {
-    CopyableChild children[4] = {CopyableChild(buffer[0], 4), CopyableChild(buffer[1], 0), CopyableChild(buffer[2], 0), CopyableChild(buffer[3], 0)};
+    CopyableChild children[4] = {CopyableChild(buffer[0], 4), CopyableChild(buffer[1], 0), CopyableChild(buffer[2], 0),
+                                 CopyableChild(buffer[3], 0)};
     auto jv = std::ranges::join_view(ParentView{children});
     assert(*jv.begin() == 1111);
   }
+
   // Last child is empty, others are not.
   {
-    CopyableChild children[4] = {CopyableChild(buffer[0], 4), CopyableChild(buffer[1], 4), CopyableChild(buffer[2], 4), CopyableChild(buffer[3], 0)};
+    CopyableChild children[4] = {CopyableChild(buffer[0], 4), CopyableChild(buffer[1], 4), CopyableChild(buffer[2], 4),
+                                 CopyableChild(buffer[3], 0)};
     auto jv = std::ranges::join_view(ParentView{children});
     assert(*jv.begin() == 1111);
   }
@@ -94,20 +117,33 @@ constexpr bool test() {
   {
     const std::ranges::join_view jv(buffer);
     assert(*jv.begin() == 1111);
+    static_assert(HasConstBegin<decltype(jv)>);
+  }
+
+  // !input_­range<const V>
+  {
+    std::ranges::join_view jv{ConstNotRange{}};
+    static_assert(!HasConstBegin<decltype(jv)>);
+  }
+
+  // !is_reference_v<range_reference_t<const V>>
+  {
+    auto innerRValueRange = std::views::iota(0, 5) | std::views::transform([](int) { return ChildView{}; });
+    static_assert(!std::is_reference_v<std::ranges::range_reference_t<const decltype(innerRValueRange)>>);
+    std::ranges::join_view jv{innerRValueRange};
+    static_assert(!HasConstBegin<decltype(jv)>);
   }
 
   // !simple-view<V>
   {
     std::ranges::join_view<NonSimpleParentView> jv;
-    static_assert(!std::same_as<decltype(jv.begin()),
-                                decltype(std::as_const(jv).begin())>);
+    static_assert(!std::same_as<decltype(jv.begin()), decltype(std::as_const(jv).begin())>);
   }
 
   // simple-view<V> && is_reference_v<range_reference_t<V>>;
   {
     std::ranges::join_view<SimpleParentView> jv;
-    static_assert(std::same_as<decltype(jv.begin()),
-                               decltype(std::as_const(jv).begin())>);
+    static_assert(std::same_as<decltype(jv.begin()), decltype(std::as_const(jv).begin())>);
   }
 
   return true;

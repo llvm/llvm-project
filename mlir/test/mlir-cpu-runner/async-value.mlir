@@ -6,7 +6,7 @@
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
 // RUN: | FileCheck %s --dump-input=always
 
-func @main() {
+func.func @main() {
 
   // ------------------------------------------------------------------------ //
   // Blocking async.await outside of the async.execute.
@@ -74,5 +74,5 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @print_memref_f32(memref<*xf32>)
   attributes { llvm.emit_c_interface }

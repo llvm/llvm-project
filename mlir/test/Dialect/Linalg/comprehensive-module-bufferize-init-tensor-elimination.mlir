@@ -5,8 +5,8 @@
 //      CHECK: func @buffer_forwarding_conflict(
 // CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
 // CHECK-SAME:   %[[sz:[0-9a-zA-Z]*]]: index
-func @buffer_forwarding_conflict(
-  %t: tensor<?xf32> {linalg.buffer_layout = affine_map<(d0) -> (d0)>, linalg.inplaceable = true},
+func.func @buffer_forwarding_conflict(
+  %t: tensor<?xf32> {bufferization.buffer_layout = affine_map<(d0) -> (d0)>, bufferization.writable = true},
   %sz: index)
     -> (tensor<?xf32>, tensor<?xf32>)
 {
@@ -42,8 +42,8 @@ func @buffer_forwarding_conflict(
 //      CHECK: func @buffer_forwarding_no_conflict(
 // CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
 // CHECK-SAME:   %[[sz:[0-9a-zA-Z]*]]: index
-func @buffer_forwarding_no_conflict(
-  %t: tensor<?xf32> {linalg.buffer_layout = affine_map<(d0) -> (d0)>, linalg.inplaceable = true},
+func.func @buffer_forwarding_no_conflict(
+  %t: tensor<?xf32> {bufferization.buffer_layout = affine_map<(d0) -> (d0)>, bufferization.writable = true},
   %sz: index)
     -> (tensor<?xf32>)
 {
@@ -67,7 +67,7 @@ func @buffer_forwarding_no_conflict(
 
 //      CHECK: func @insertion_point_inside_loop(
 // CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index)
-func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tensor<?xf32>) {
+func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c5 = arith.constant 5 : index
@@ -96,7 +96,7 @@ func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tensor<?x
 
 //      CHECK: func @insertion_point_outside_loop(
 // CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index, %[[idx:.*]]: index)
-func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
+func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
                                    %idx : index) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

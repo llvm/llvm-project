@@ -19,3 +19,15 @@ void transform::TransformDialect::initialize() {
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
 }
+
+void transform::TransformDialect::mergeInPDLMatchHooks(
+    llvm::StringMap<PDLConstraintFunction> &&constraintFns) {
+  // Steal the constraint functions form the given map.
+  for (auto &it : constraintFns)
+    pdlMatchHooks.registerConstraintFunction(it.getKey(), std::move(it.second));
+}
+
+const llvm::StringMap<PDLConstraintFunction> &
+transform::TransformDialect::getPDLConstraintHooks() const {
+  return pdlMatchHooks.getConstraintFunctions();
+}

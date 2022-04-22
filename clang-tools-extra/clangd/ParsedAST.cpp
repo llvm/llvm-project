@@ -550,6 +550,12 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // Collect tokens of the main file.
   syntax::TokenCollector CollectTokens(Clang->getPreprocessor());
 
+  // To remain consistent with preamble builds, these callbacks must be called
+  // exactly here, after preprocessor is initialized and BeginSourceFile() was
+  // called already.
+  for (const auto &L : ASTListeners)
+    L->beforeExecute(*Clang);
+
   if (llvm::Error Err = Action->Execute())
     log("Execute() failed when building AST for {0}: {1}", MainInput.getFile(),
         toString(std::move(Err)));

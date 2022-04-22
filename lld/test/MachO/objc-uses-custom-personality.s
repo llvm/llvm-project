@@ -5,9 +5,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-iossimulator %t/defined.s -o %t/defined.o
 # RUN: yaml2obj %t/combined.yaml > %t/combined.o
 # RUN: llvm-ar r %t/pack.a %t/defined.o %t/combined.o
-# RUN: %lld -dylib -arch x86_64 -platform_version ios-simulator 12.0.0 15.0 -ObjC %t/pack.a -o %t/a.dylib
+# RUN: %no-arg-lld -dylib -arch x86_64 -platform_version ios-simulator 12.0.0 15.0 -ObjC %t/pack.a -o %t/a.dylib
 # RUN: llvm-objdump --macho --syms %t/a.dylib | FileCheck %s
-# RUN: %lld -dylib -arch x86_64 -platform_version ios-simulator 12.0.0 15.0 -ObjC --start-lib %t/defined.o %t/combined.o --end-lib -o %t/a.dylib
+# RUN: %no-arg-lld -dylib -arch x86_64 -platform_version ios-simulator 12.0.0 15.0 -ObjC --start-lib %t/defined.o %t/combined.o --end-lib -o %t/a.dylib
 # RUN: llvm-objdump --macho --syms %t/a.dylib | FileCheck %s
 
 # CHECK: SYMBOL TABLE:

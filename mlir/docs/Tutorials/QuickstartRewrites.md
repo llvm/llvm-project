@@ -275,7 +275,7 @@ the legalization pass test in TensorFlow Lite) such as:
 ```mlir
 // RUN: mlir-opt -tfl-legalize-tf %s | FileCheck %s
 
-func @LeakyRelu(%arg0: tensor<1xf32>) -> tensor<1xf32> {
+func.func @LeakyRelu(%arg0: tensor<1xf32>) -> tensor<1xf32> {
   %2 = "tf.LeakyRelu"(%arg0) {alpha: 0.1} : (tensor<1xf32>) -> tensor<1xf32>
   return %2: tensor<1xf32>
 

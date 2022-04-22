@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: func @num_elements_to_reduce
 // CHECK-SAME:  ([[ARG:%.*]]: !shape.shape) -> !shape.size
-func @num_elements_to_reduce(%shape : !shape.shape) -> !shape.size {
+func.func @num_elements_to_reduce(%shape : !shape.shape) -> !shape.size {
   %num_elements = shape.num_elements %shape : !shape.shape -> !shape.size
   return %num_elements : !shape.size
 }
@@ -18,7 +18,7 @@ func @num_elements_to_reduce(%shape : !shape.shape) -> !shape.size {
 
 // CHECK-LABEL: func @num_elements_to_reduce_on_index
 // CHECK-SAME:  ([[ARG:%.*]]: tensor<?xindex>) -> index
-func @num_elements_to_reduce_on_index(%shape : tensor<?xindex>) -> index {
+func.func @num_elements_to_reduce_on_index(%shape : tensor<?xindex>) -> index {
   %num_elements = shape.num_elements %shape : tensor<?xindex> -> index
   return %num_elements : index
 }

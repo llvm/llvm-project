@@ -3,7 +3,7 @@
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // RUN: mlir-opt %s -convert-linalg-to-affine-loops -convert-linalg-to-llvm -o=/dev/null 2>&1
 
-func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
+func.func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %A = memref.view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
@@ -17,7 +17,7 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 //----------------------------------------------------------------------------//
 // Named ops to loops.
 //----------------------------------------------------------------------------//
-func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?x?xf32>) {
+func.func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?x?xf32>) {
   linalg.batch_matmul ins(%A, %B: memref<?x?x?xf32>, memref<?x?x?xf32>)
                      outs(%C : memref<?x?x?xf32>)
   return

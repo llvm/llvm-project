@@ -14,7 +14,7 @@
 
 // CHECK-LABEL: @loop_1d(
 // CHECK:       %[[MEMREF:.*]]: memref<?xf32>
-func @loop_1d(%arg0: memref<?xf32>) {
+func.func @loop_1d(%arg0: memref<?xf32>) {
   // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
   // CHECK-DAG: %[[C100:.*]] = arith.constant 100 : index

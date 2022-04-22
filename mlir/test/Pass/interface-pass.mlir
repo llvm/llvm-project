@@ -3,6 +3,6 @@
 // Test that we run the interface pass on the function.
 
 // expected-remark@below {{Executing interface pass on operation}}
-func @main() {
+func.func @main() {
   return
 }

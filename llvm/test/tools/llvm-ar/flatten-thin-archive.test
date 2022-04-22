@@ -11,8 +11,9 @@
 # RUN: llvm-ar rcs --thin %t-a-plus-b.a %t-a.txt %t-b.txt
 # RUN: llvm-ar rcs %t-d-plus-e.a %t-d.txt %t-e.txt
 # RUN: llvm-ar rcs --thin %t.a %t-a-plus-b.a %t-c.txt %t-d-plus-e.a
-# RUN: llvm-ar t %t.a | FileCheck %s
+# RUN: FileCheck --input-file=%t.a %s
 
+# CHECK:      !<thin>
 # CHECK:      a.txt
 # CHECK-NEXT: b.txt
 # CHECK-NEXT: c.txt

@@ -14,7 +14,7 @@
 // -----
 
 // CHECK-LABEL: func @should_fuse_raw_dep_for_locality() {
-func @should_fuse_raw_dep_for_locality() {
+func.func @should_fuse_raw_dep_for_locality() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -35,7 +35,7 @@ func @should_fuse_raw_dep_for_locality() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_reduction_to_pointwise() {
-func @should_fuse_reduction_to_pointwise() {
+func.func @should_fuse_reduction_to_pointwise() {
   %a = memref.alloc() : memref<10x10xf32>
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
@@ -78,7 +78,7 @@ func @should_fuse_reduction_to_pointwise() {
 // CHECK-DAG: [[$MAP_SHIFT_D1_BY_ONE:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + 1)>
 
 // CHECK-LABEL: func @should_fuse_loop_nests_with_shifts() {
-func @should_fuse_loop_nests_with_shifts() {
+func.func @should_fuse_loop_nests_with_shifts() {
   %a = memref.alloc() : memref<10x10xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -118,7 +118,7 @@ func @should_fuse_loop_nests_with_shifts() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_loop_nest() {
-func @should_fuse_loop_nest() {
+func.func @should_fuse_loop_nest() {
   %a = memref.alloc() : memref<10x10xf32>
   %b = memref.alloc() : memref<10x10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -157,7 +157,7 @@ func @should_fuse_loop_nest() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_across_intermediate_loop_with_no_deps() {
-func @should_fuse_across_intermediate_loop_with_no_deps() {
+func.func @should_fuse_across_intermediate_loop_with_no_deps() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
@@ -192,7 +192,7 @@ func @should_fuse_across_intermediate_loop_with_no_deps() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_all_loops() {
-func @should_fuse_all_loops() {
+func.func @should_fuse_all_loops() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -226,7 +226,7 @@ func @should_fuse_all_loops() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_first_and_second_loops() {
-func @should_fuse_first_and_second_loops() {
+func.func @should_fuse_first_and_second_loops() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
@@ -262,7 +262,7 @@ func @should_fuse_first_and_second_loops() {
 // -----
 
 // CHECK-LABEL: func @should_not_fuse_would_create_cycle() {
-func @should_not_fuse_would_create_cycle() {
+func.func @should_not_fuse_would_create_cycle() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
@@ -305,7 +305,7 @@ func @should_not_fuse_would_create_cycle() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_producer_consumer() {
-func @should_fuse_producer_consumer() {
+func.func @should_fuse_producer_consumer() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -335,7 +335,7 @@ func @should_fuse_producer_consumer() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_and_move_to_preserve_war_dep() {
-func @should_fuse_and_move_to_preserve_war_dep() {
+func.func @should_fuse_and_move_to_preserve_war_dep() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -368,7 +368,7 @@ func @should_fuse_and_move_to_preserve_war_dep() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_if_top_level_access() {
-func @should_fuse_if_top_level_access() {
+func.func @should_fuse_if_top_level_access() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -397,7 +397,7 @@ func @should_fuse_if_top_level_access() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_but_not_remove_src() {
-func @should_fuse_but_not_remove_src() {
+func.func @should_fuse_but_not_remove_src() {
   %m = memref.alloc() : memref<100xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -426,7 +426,7 @@ func @should_fuse_but_not_remove_src() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_no_top_level_access() {
-func @should_fuse_no_top_level_access() {
+func.func @should_fuse_no_top_level_access() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -449,7 +449,7 @@ func @should_fuse_no_top_level_access() {
 #set0 = affine_set<(d0) : (1 == 0)>
 
 // CHECK-LABEL: func @should_not_fuse_if_op_at_top_level() {
-func @should_not_fuse_if_op_at_top_level() {
+func.func @should_not_fuse_if_op_at_top_level() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -477,7 +477,7 @@ func @should_not_fuse_if_op_at_top_level() {
 #set0 = affine_set<(d0) : (1 == 0)>
 
 // CHECK-LABEL: func @should_not_fuse_if_op_in_loop_nest() {
-func @should_not_fuse_if_op_in_loop_nest() {
+func.func @should_not_fuse_if_op_in_loop_nest() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %c4 = arith.constant 4 : index
@@ -508,7 +508,7 @@ func @should_not_fuse_if_op_in_loop_nest() {
 #set = affine_set<(d0) : (d0 - 1 >= 0)>
 
 // CHECK-LABEL: func @should_fuse_if_op_in_loop_nest_not_sandwiched() -> memref<10xf32> {
-func @should_fuse_if_op_in_loop_nest_not_sandwiched() -> memref<10xf32> {
+func.func @should_fuse_if_op_in_loop_nest_not_sandwiched() -> memref<10xf32> {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -547,7 +547,7 @@ func @should_fuse_if_op_in_loop_nest_not_sandwiched() -> memref<10xf32> {
 #set = affine_set<(d0) : (d0 - 1 >= 0)>
 
 // CHECK-LABEL: func @should_not_fuse_if_op_in_loop_nest_between_src_and_dest() -> memref<10xf32> {
-func @should_not_fuse_if_op_in_loop_nest_between_src_and_dest() -> memref<10xf32> {
+func.func @should_not_fuse_if_op_in_loop_nest_between_src_and_dest() -> memref<10xf32> {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -583,7 +583,7 @@ func @should_not_fuse_if_op_in_loop_nest_between_src_and_dest() -> memref<10xf32
 // -----
 
 // CHECK-LABEL: func @permute_and_fuse() {
-func @permute_and_fuse() {
+func.func @permute_and_fuse() {
   %m = memref.alloc() : memref<10x20x30xf32>
 
   %cf7 = arith.constant 7.0 : f32
@@ -624,7 +624,7 @@ func @permute_and_fuse() {
 
 // Reshape from a 64 x f32 to 16 x 4 x f32.
 // CHECK-LABEL: func @fuse_reshape_64_16_4
-func @fuse_reshape_64_16_4(%in : memref<64xf32>) {
+func.func @fuse_reshape_64_16_4(%in : memref<64xf32>) {
   %out = memref.alloc() : memref<16x4xf32>
 
   affine.for %i0 = 0 to 64 {
@@ -654,7 +654,7 @@ func @fuse_reshape_64_16_4(%in : memref<64xf32>) {
 
 // Reshape a 16x4xf32 to 64xf32.
 // CHECK-LABEL: func @fuse_reshape_16_4_64
-func @fuse_reshape_16_4_64() {
+func.func @fuse_reshape_16_4_64() {
   %in = memref.alloc() : memref<16x4xf32>
   %out = memref.alloc() : memref<64xf32>
 
@@ -687,7 +687,7 @@ func @fuse_reshape_16_4_64() {
 
 // All three loop nests below (6-d one, 2-d one, 2-d one is fused into a single
 // 2-d loop nest).
-func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
+func.func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
   %in = memref.alloc() : memref<2x2x3x3x16x1xi32>
   %out = memref.alloc() : memref<64x9xi32>
   %live_out = memref.alloc() : memref<64x9xi32>
@@ -781,7 +781,7 @@ func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 // -----
 
 // CHECK-LABEL: func @fuse_symbolic_bounds
-func @fuse_symbolic_bounds(%M : index, %N : index) {
+func.func @fuse_symbolic_bounds(%M : index, %N : index) {
   %N_plus_5 = affine.apply affine_map<(d0) -> (d0 + 5)>(%N)
   %m = memref.alloc(%M, %N_plus_5) : memref<? x ? x f32>
 
@@ -806,7 +806,7 @@ func @fuse_symbolic_bounds(%M : index, %N : index) {
 // -----
 
 // CHECK-LABEL: func @should_fuse_reduction_at_depth_of_one
-func @should_fuse_reduction_at_depth_of_one() {
+func.func @should_fuse_reduction_at_depth_of_one() {
   %a = memref.alloc() : memref<10x100xf32>
   %b = memref.alloc() : memref<10xf32>
 
@@ -851,7 +851,7 @@ func @should_fuse_reduction_at_depth_of_one() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_at_src_depth1_and_dst_depth1
-func @should_fuse_at_src_depth1_and_dst_depth1() {
+func.func @should_fuse_at_src_depth1_and_dst_depth1() {
   %a = memref.alloc() : memref<100x16xf32>
   %b = memref.alloc() : memref<100x16xf32>
 
@@ -899,7 +899,7 @@ func @should_fuse_at_src_depth1_and_dst_depth1() {
 // CHECK: [[$MAP0:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 * 10 + d1)>
 
 // CHECK-LABEL: func @should_fuse_src_depth1_at_dst_depth2
-func @should_fuse_src_depth1_at_dst_depth2() {
+func.func @should_fuse_src_depth1_at_dst_depth2() {
   %a = memref.alloc() : memref<100xf32>
   %c0 = arith.constant 0.0 : f32
 
@@ -930,7 +930,7 @@ func @should_fuse_src_depth1_at_dst_depth2() {
 // -----
 
 // CHECK-LABEL: func @fusion_at_depth0_not_currently_supported
-func @fusion_at_depth0_not_currently_supported() {
+func.func @fusion_at_depth0_not_currently_supported() {
   %0 = memref.alloc() : memref<10xf32>
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
@@ -954,7 +954,7 @@ func @fusion_at_depth0_not_currently_supported() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_deep_loop_nests
-func @should_fuse_deep_loop_nests() {
+func.func @should_fuse_deep_loop_nests() {
   %0 = memref.alloc() : memref<2x2x3x3x16x10xf32, 2>
   %1 = memref.alloc() : memref<2x2x3x3x16x10xf32, 2>
   %2 = memref.alloc() : memref<3x3x3x3x16x10xf32, 2>
@@ -1058,7 +1058,7 @@ func @should_fuse_deep_loop_nests() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_at_depth1_and_reduce_slice_trip_count
-func @should_fuse_at_depth1_and_reduce_slice_trip_count() {
+func.func @should_fuse_at_depth1_and_reduce_slice_trip_count() {
   %a = memref.alloc() : memref<4x256xf32>
   %b = memref.alloc() : memref<4x256xf32>
 
@@ -1107,7 +1107,7 @@ func @should_fuse_at_depth1_and_reduce_slice_trip_count() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_at_depth1_with_trip_count_20
-func @should_fuse_at_depth1_with_trip_count_20() {
+func.func @should_fuse_at_depth1_with_trip_count_20() {
   %a = memref.alloc() : memref<100xf32>
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
@@ -1148,7 +1148,7 @@ func @should_fuse_at_depth1_with_trip_count_20() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_at_depth1_with_trip_count_19
-func @should_fuse_at_depth1_with_trip_count_19() {
+func.func @should_fuse_at_depth1_with_trip_count_19() {
   %a = memref.alloc() : memref<100xf32>
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
@@ -1190,7 +1190,7 @@ func @should_fuse_at_depth1_with_trip_count_19() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_with_private_memrefs_with_diff_shapes() {
-func @should_fuse_with_private_memrefs_with_diff_shapes() {
+func.func @should_fuse_with_private_memrefs_with_diff_shapes() {
   %m = memref.alloc() : memref<100xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -1222,7 +1222,7 @@ func @should_fuse_with_private_memrefs_with_diff_shapes() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_live_out_arg_but_preserve_src_loop(%{{.*}}: memref<10xf32>) {
-func @should_fuse_live_out_arg_but_preserve_src_loop(%arg0: memref<10xf32>) {
+func.func @should_fuse_live_out_arg_but_preserve_src_loop(%arg0: memref<10xf32>) {
   %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
@@ -1250,7 +1250,7 @@ func @should_fuse_live_out_arg_but_preserve_src_loop(%arg0: memref<10xf32>) {
 // -----
 
 // CHECK-LABEL: func @should_fuse_live_out_arg(%{{.*}}: memref<10xf32>) {
-func @should_fuse_live_out_arg(%arg0: memref<10xf32>) {
+func.func @should_fuse_live_out_arg(%arg0: memref<10xf32>) {
   %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
@@ -1273,7 +1273,7 @@ func @should_fuse_live_out_arg(%arg0: memref<10xf32>) {
 // -----
 
 // CHECK-LABEL: func @should_fuse_escaping_memref_but_preserve_src_loop() -> memref<10xf32>
-func @should_fuse_escaping_memref_but_preserve_src_loop() -> memref<10xf32> {
+func.func @should_fuse_escaping_memref_but_preserve_src_loop() -> memref<10xf32> {
   %cf7 = arith.constant 7.0 : f32
   %m = memref.alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
@@ -1300,7 +1300,7 @@ func @should_fuse_escaping_memref_but_preserve_src_loop() -> memref<10xf32> {
 // -----
 
 // This should fuse with the %in becoming a 1x1x1.
-func @R3_to_R2_reshape() {
+func.func @R3_to_R2_reshape() {
   %in = memref.alloc() : memref<2x3x16xi32>
 
   %c0 = arith.constant 0 : index
@@ -1344,7 +1344,7 @@ func @R3_to_R2_reshape() {
 
 // -----
 
-func @should_fuse_multi_output_producer() {
+func.func @should_fuse_multi_output_producer() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
 
@@ -1372,7 +1372,7 @@ func @should_fuse_multi_output_producer() {
 // -----
 
 // CHECK-LABEL: func @fusion_preventing_deps_on_middle_loop() {
-func @fusion_preventing_deps_on_middle_loop() {
+func.func @fusion_preventing_deps_on_middle_loop() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
@@ -1413,7 +1413,7 @@ func @fusion_preventing_deps_on_middle_loop() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_and_move_to_preserve_war_dep() {
-func @should_fuse_and_move_to_preserve_war_dep() {
+func.func @should_fuse_and_move_to_preserve_war_dep() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
@@ -1468,7 +1468,7 @@ func @should_fuse_and_move_to_preserve_war_dep() {
 // -----
 
 // CHECK-LABEL: func @fusion_preventing_dep_on_constant() {
-func @fusion_preventing_dep_on_constant() {
+func.func @fusion_preventing_dep_on_constant() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>
@@ -1509,7 +1509,7 @@ func @fusion_preventing_dep_on_constant() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_and_preserve_dep_on_constant() {
-func @should_fuse_and_preserve_dep_on_constant() {
+func.func @should_fuse_and_preserve_dep_on_constant() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %c = memref.alloc() : memref<10xf32>

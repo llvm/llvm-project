@@ -708,11 +708,9 @@ define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(double add
 ; GFX9-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-UNALIGNED-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
 ; GFX9-UNALIGNED-NEXT:    v_add_u32_e32 v2, s4, v2
-; GFX9-UNALIGNED-NEXT:    v_add_u32_e32 v3, 5, v2
-; GFX9-UNALIGNED-NEXT:    v_add_u32_e32 v2, 9, v2
 ; GFX9-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v3, v0, v1 offset1:1
-; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v2, v0, v1 offset1:1
+; GFX9-UNALIGNED-NEXT:    ds_write_b64 v2, v[0:1] offset:5
+; GFX9-UNALIGNED-NEXT:    ds_write_b64 v2, v[0:1] offset:9
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr double, double addrspace(1)* %in, i32 %x.i
@@ -1043,10 +1041,10 @@ define amdgpu_kernel void @write2_v2i32_align1_odd_offset() {
 ;
 ; GFX9-UNALIGNED-LABEL: write2_v2i32_align1_odd_offset:
 ; GFX9-UNALIGNED:       ; %bb.0: ; %entry
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0x41
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v1, 0x7b
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 0x1c8
-; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0x7b
+; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v1, 0x1c8
+; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-UNALIGNED-NEXT:    ds_write_b64 v2, v[0:1] offset:65
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
 entry:
   store <2 x i32> <i32 123, i32 456>, <2 x i32> addrspace(3)* bitcast (i8 addrspace(3)* getelementptr (i8, i8 addrspace(3)* bitcast ([100 x <2 x i32>] addrspace(3)* @v2i32_align1 to i8 addrspace(3)*), i32 65) to <2 x i32> addrspace(3)*), align 1

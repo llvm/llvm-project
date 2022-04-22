@@ -5,7 +5,7 @@
 
 // Note: To run this test, your CPU must support AVX512 vp2intersect.
 
-func @entry() -> i32 {
+func.func @entry() -> i32 {
   %i0 = arith.constant 0 : i32
   %i1 = arith.constant 1: i32
   %i2 = arith.constant 2: i32

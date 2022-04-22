@@ -1123,36 +1123,26 @@ void SIScheduleBlockCreator::colorExports() {
   for (unsigned SUNum : DAG->TopDownIndex2SU) {
     const SUnit &SU = DAG->SUnits[SUNum];
     if (SIInstrInfo::isEXP(*SU.getInstr())) {
-      // Check the EXP can be added to the group safely,
-      // ie without needing any other instruction.
-      // The EXP is allowed to depend on other EXP
-      // (they will be in the same group).
-      for (unsigned j : ExpGroup) {
-        bool HasSubGraph;
-        std::vector<int> SubGraph;
-        // By construction (topological order), if SU and
-        // DAG->SUnits[j] are linked, DAG->SUnits[j] is necessary
-        // in the parent graph of SU.
-#ifndef NDEBUG
-        SubGraph = DAG->GetTopo()->GetSubGraph(SU, DAG->SUnits[j],
-                                               HasSubGraph);
-        assert(!HasSubGraph);
-#endif
-        SubGraph = DAG->GetTopo()->GetSubGraph(DAG->SUnits[j], SU,
-                                               HasSubGraph);
-        if (!HasSubGraph)
-          continue; // No dependencies between each other
+      // SU is an export instruction. Check whether one of its successor
+      // dependencies is a non-export, in which case we skip export grouping.
+      for (const SDep &SuccDep : SU.Succs) {
+        const SUnit *SuccSU = SuccDep.getSUnit();
+        if (SuccDep.isWeak() || SuccSU->NodeNum >= DAG->SUnits.size()) {
+          // Ignore these dependencies.
+          continue;
+        }
+        assert(SuccSU->isInstr() &&
+               "SUnit unexpectedly not representing an instruction!");
 
-        // SubGraph contains all the instructions required
-        // between EXP SUnits[j] and EXP SU.
-        for (unsigned k : SubGraph) {
-          if (!SIInstrInfo::isEXP(*DAG->SUnits[k].getInstr()))
-            // Other instructions than EXP would be required in the group.
-            // Abort the grouping.
-            return;
+        if (!SIInstrInfo::isEXP(*SuccSU->getInstr())) {
+          // A non-export depends on us. Skip export grouping.
+          // Note that this is a bit pessimistic: We could still group all other
+          // exports that are not depended on by non-exports, directly or
+          // indirectly. Simply skipping this particular export but grouping all
+          // others would not account for indirect dependencies.
+          return;
         }
       }
-
       ExpGroup.push_back(SUNum);
     }
   }
