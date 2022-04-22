@@ -322,7 +322,19 @@ void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
       return;
 
     if (const auto *Method = dyn_cast<CXXMethodDecl>(D)) {
-      llvm_unreachable("NYI");
+      // Make sure to emit the definition(s) before we emit the thunks. This is
+      // necessary for the generation of certain thunks.
+      if (isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method))
+        ABI->buildCXXStructor(GD);
+      else if (FD->isMultiVersion())
+        llvm_unreachable("NYI");
+      else
+        buildGlobalFunctionDefinition(GD, Op);
+
+      if (Method->isVirtual())
+        llvm_unreachable("NYI");
+
+      return;
     }
 
     if (FD->isMultiVersion())
