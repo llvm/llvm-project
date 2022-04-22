@@ -2313,9 +2313,13 @@ static void unswitchNontrivialInvariants(
     if (PartiallyInvariant)
       buildPartialInvariantUnswitchConditionalBranch(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH, L, MSSAU);
-    else
-      buildPartialUnswitchConditionalBranch(*SplitBB, Invariants, Direction,
-                                            *ClonedPH, *LoopPH, InsertFreeze);
+    else {
+      buildPartialUnswitchConditionalBranch(
+          *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH,
+          InsertFreeze && any_of(Invariants, [&](Value *C) {
+            return !isGuaranteedNotToBeUndefOrPoison(C, &AC, BI, &DT);
+          }));
+    }
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 
     if (MSSAU) {
