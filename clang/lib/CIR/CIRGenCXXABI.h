@@ -91,6 +91,9 @@ public:
   /// Gets the mangle context.
   clang::MangleContext &getMangleContext() { return *MangleCtx; }
 
+  /// Emit constructor variants required by this ABI.
+  virtual void buildCXXConstructors(const clang::CXXConstructorDecl *D) = 0;
+
   /// Specify how one should pass an argument of a record type.
   enum class RecordArgABI {
     /// Pass it using the normal C aggregate rules for the ABI, potentially

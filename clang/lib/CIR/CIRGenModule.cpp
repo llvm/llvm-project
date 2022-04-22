@@ -363,6 +363,9 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
         buildTopLevelDecl(childDecl);
     break;
   }
+  case Decl::CXXConstructor:
+    getCXXABI().buildCXXConstructors(cast<CXXConstructorDecl>(decl));
+    break;
   case Decl::Record:
     // There's nothing to do here, we emit everything pertaining to `Record`s
     // lazily.
