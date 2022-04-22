@@ -54,6 +54,13 @@ add_dependencies(
   libc.src.__support.CPP.array_ref
 )
 
+if(NOT LLVM_LIBC_FULL_BUILD) # TODO(michaelrj): make a more permanant solution.
+  return()
+endif()
+
+#currently stdio is fullbuild only, so this matcher that depends on a piece of
+#printf also has to be fullbuild only.
+
 add_library(
   LibcPrintfHelpers
     PrintfMatcher.h
