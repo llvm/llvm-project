@@ -133,17 +133,6 @@ LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
                              << " to be used on function-like operations";
     return success();
   }
-  if (attr.getName() == BufferizableOpInterface::kBufferLayoutAttrName) {
-    if (!attr.getValue().isa<AffineMapAttr>()) {
-      return op->emitError()
-             << "'" << BufferizableOpInterface::kBufferLayoutAttrName
-             << "' is expected to be a affine map attribute";
-    }
-    if (!isa<FunctionOpInterface>(op))
-      return op->emitError() << "expected " << attr.getName()
-                             << " to be used on function-like operations";
-    return success();
-  }
   if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName)
     return success();
   return op->emitError() << "attribute '" << attr.getName()
