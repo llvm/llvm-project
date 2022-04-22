@@ -6,7 +6,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @kernel_simple_selection
-func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
+func.func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
   %value = arith.constant 0.0 : f32
   %i = arith.constant 0 : index
 
@@ -26,7 +26,7 @@ func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
 }
 
 // CHECK-LABEL: @kernel_nested_selection
-func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %arg5 : i1, %arg6 : i1) {
+func.func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %arg5 : i1, %arg6 : i1) {
   %i = arith.constant 0 : index
   %j = arith.constant 9 : index
 
@@ -80,7 +80,7 @@ func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %a
 }
 
 // CHECK-LABEL: @simple_if_yield
-func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
+func.func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
   // CHECK: %[[VAR1:.*]] = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: %[[VAR2:.*]] = spv.Variable : !spv.ptr<f32, Function>
   // CHECK:       spv.mlir.selection {
@@ -124,7 +124,7 @@ func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
 // TODO: The transformation should only be legal if VariablePointer capability
 // is supported. This test is still useful to make sure we can handle scf op
 // result with type change.
-func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>, %arg4 : i1) {
+func.func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>, %arg4 : i1) {
   // CHECK-LABEL: @simple_if_yield_type_change
   // CHECK:       %[[VAR:.*]] = spv.Variable : !spv.ptr<!spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>, Function>
   // CHECK:       spv.mlir.selection {

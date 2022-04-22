@@ -9,7 +9,7 @@
 // CHECK:           %[[RET0:.*]] = "test.get_tuple_element"(%[[ARG_MATERIALIZED]]) {index = 0 : i32} : (tuple<i1, i32>) -> i1
 // CHECK:           %[[RET1:.*]] = "test.get_tuple_element"(%[[ARG_MATERIALIZED]]) {index = 1 : i32} : (tuple<i1, i32>) -> i32
 // CHECK:           return %[[RET0]], %[[RET1]] : i1, i32
-func @identity(%arg0: tuple<i1, i32>) -> tuple<i1, i32> {
+func.func @identity(%arg0: tuple<i1, i32>) -> tuple<i1, i32> {
   return %arg0 : tuple<i1, i32>
 }
 
@@ -20,7 +20,7 @@ func @identity(%arg0: tuple<i1, i32>) -> tuple<i1, i32> {
 // CHECK-LABEL:   func @identity_1_to_1_no_materializations(
 // CHECK-SAME:                                              %[[ARG0:.*]]: i1) -> i1 {
 // CHECK:           return %[[ARG0]] : i1
-func @identity_1_to_1_no_materializations(%arg0: tuple<i1>) -> tuple<i1> {
+func.func @identity_1_to_1_no_materializations(%arg0: tuple<i1>) -> tuple<i1> {
   return %arg0 : tuple<i1>
 }
 
@@ -31,7 +31,7 @@ func @identity_1_to_1_no_materializations(%arg0: tuple<i1>) -> tuple<i1> {
 // CHECK-LABEL:   func @recursive_decomposition(
 // CHECK-SAME:                                   %[[ARG0:.*]]: i1) -> i1 {
 // CHECK:           return %[[ARG0]] : i1
-func @recursive_decomposition(%arg0: tuple<tuple<tuple<i1>>>) -> tuple<tuple<tuple<i1>>> {
+func.func @recursive_decomposition(%arg0: tuple<tuple<tuple<i1>>>) -> tuple<tuple<tuple<i1>>> {
   return %arg0 : tuple<tuple<tuple<i1>>>
 }
 
@@ -40,7 +40,7 @@ func @recursive_decomposition(%arg0: tuple<tuple<tuple<i1>>>) -> tuple<tuple<tup
 // Test case: Check decomposition of calls.
 
 // CHECK-LABEL:   func private @callee(i1, i32) -> (i1, i32)
-func private @callee(tuple<i1, i32>) -> tuple<i1, i32>
+func.func private @callee(tuple<i1, i32>) -> tuple<i1, i32>
 
 // CHECK-LABEL:   func @caller(
 // CHECK-SAME:                 %[[ARG0:.*]]: i1,
@@ -53,7 +53,7 @@ func private @callee(tuple<i1, i32>) -> tuple<i1, i32>
 // CHECK:           %[[RET0:.*]] = "test.get_tuple_element"(%[[CALL_RESULT_RECOMPOSED]]) {index = 0 : i32} : (tuple<i1, i32>) -> i1
 // CHECK:           %[[RET1:.*]] = "test.get_tuple_element"(%[[CALL_RESULT_RECOMPOSED]]) {index = 1 : i32} : (tuple<i1, i32>) -> i32
 // CHECK:           return %[[RET0]], %[[RET1]] : i1, i32
-func @caller(%arg0: tuple<i1, i32>) -> tuple<i1, i32> {
+func.func @caller(%arg0: tuple<i1, i32>) -> tuple<i1, i32> {
   %0 = call @callee(%arg0) : (tuple<i1, i32>) -> tuple<i1, i32>
   return %0 : tuple<i1, i32>
 }
@@ -63,11 +63,11 @@ func @caller(%arg0: tuple<i1, i32>) -> tuple<i1, i32> {
 // Test case: Type that decomposes to nothing (that is, a 1:0 decomposition).
 
 // CHECK-LABEL:   func private @callee()
-func private @callee(tuple<>) -> tuple<>
+func.func private @callee(tuple<>) -> tuple<>
 // CHECK-LABEL:   func @caller() {
 // CHECK:           call @callee() : () -> ()
 // CHECK:           return
-func @caller(%arg0: tuple<>) -> tuple<> {
+func.func @caller(%arg0: tuple<>) -> tuple<> {
   %0 = call @callee(%arg0) : (tuple<>) -> (tuple<>)
   return %0 : tuple<>
 }
@@ -82,7 +82,7 @@ func @caller(%arg0: tuple<>) -> tuple<> {
 // CHECK:           %[[RET0:.*]] = "test.get_tuple_element"(%[[UNCONVERTED_VALUE]]) {index = 0 : i32} : (tuple<i1, i32>) -> i1
 // CHECK:           %[[RET1:.*]] = "test.get_tuple_element"(%[[UNCONVERTED_VALUE]]) {index = 1 : i32} : (tuple<i1, i32>) -> i32
 // CHECK:           return %[[RET0]], %[[RET1]] : i1, i32
-func @unconverted_op_result() -> tuple<i1, i32> {
+func.func @unconverted_op_result() -> tuple<i1, i32> {
   %0 = "test.source"() : () -> (tuple<i1, i32>)
   return %0 : tuple<i1, i32>
 }
@@ -93,7 +93,7 @@ func @unconverted_op_result() -> tuple<i1, i32> {
 // This makes sure to test the cases if 1:0, 1:1, and 1:N decompositions.
 
 // CHECK-LABEL:   func private @callee(i1, i2, i3, i4, i5, i6) -> (i1, i2, i3, i4, i5, i6)
-func private @callee(tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6) -> (tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6)
+func.func private @callee(tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6) -> (tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6)
 
 // CHECK-LABEL:   func @caller(
 // CHECK-SAME:                 %[[I1:.*]]: i1,
@@ -110,7 +110,7 @@ func private @callee(tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6) -> (tuple<>,
 // CHECK:           %[[RET_TUPLE_0:.*]] = "test.get_tuple_element"(%[[RET_TUPLE]]) {index = 0 : i32} : (tuple<i4, i5>) -> i4
 // CHECK:           %[[RET_TUPLE_1:.*]] = "test.get_tuple_element"(%[[RET_TUPLE]]) {index = 1 : i32} : (tuple<i4, i5>) -> i5
 // CHECK:           return %[[CALL]]#0, %[[CALL]]#1, %[[CALL]]#2, %[[RET_TUPLE_0]], %[[RET_TUPLE_1]], %[[CALL]]#5 : i1, i2, i3, i4, i5, i6
-func @caller(%arg0: tuple<>, %arg1: i1, %arg2: tuple<i2>, %arg3: i3, %arg4: tuple<i4, i5>, %arg5: i6) -> (tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6) {
+func.func @caller(%arg0: tuple<>, %arg1: i1, %arg2: tuple<i2>, %arg3: i3, %arg4: tuple<i4, i5>, %arg5: i6) -> (tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6) {
   %0, %1, %2, %3, %4, %5 = call @callee(%arg0, %arg1, %arg2, %arg3, %arg4, %arg5) : (tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6) -> (tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6)
   return %0, %1, %2, %3, %4, %5 : tuple<>, i1, tuple<i2>, i3, tuple<i4, i5>, i6
 }

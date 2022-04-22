@@ -1087,6 +1087,7 @@ public:
     SMLoc location;  // Location of the token.
     StringRef name;  // Value name, e.g. %42 or %abc
     unsigned number; // Number, e.g. 12 for an operand like %xyz#12
+    Optional<Location> sourceLoc; // Source location specifier if present.
   };
 
   /// Parse different components, viz., use-info of operand(s), successor(s),
@@ -1212,23 +1213,20 @@ public:
 
   /// Parses a region. Any parsed blocks are appended to 'region' and must be
   /// moved to the op regions after the op is created. The first block of the
-  /// region takes 'arguments' of types 'argTypes'. If `argLocations` is
-  /// non-empty it contains a location to be attached to each argument. If
-  /// 'enableNameShadowing' is set to true, the argument names are allowed to
-  /// shadow the names of other existing SSA values defined above the region
-  /// scope. 'enableNameShadowing' can only be set to true for regions attached
-  /// to operations that are 'IsolatedFromAbove'.
+  /// region takes 'arguments' of types 'argTypes'.  If 'enableNameShadowing' is
+  /// set to true, the argument names are allowed to shadow the names of other
+  /// existing SSA values defined above the region scope. 'enableNameShadowing'
+  /// can only be set to true for regions attached to operations that are
+  /// 'IsolatedFromAbove'.
   virtual ParseResult parseRegion(Region &region,
                                   ArrayRef<UnresolvedOperand> arguments = {},
                                   ArrayRef<Type> argTypes = {},
-                                  ArrayRef<Location> argLocations = {},
                                   bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present.
   virtual OptionalParseResult parseOptionalRegion(
       Region &region, ArrayRef<UnresolvedOperand> arguments = {},
-      ArrayRef<Type> argTypes = {}, ArrayRef<Location> argLocations = {},
-      bool enableNameShadowing = false) = 0;
+      ArrayRef<Type> argTypes = {}, bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present. If the region is present, a new region is
   /// allocated and placed in `region`. If no region is present or on failure,

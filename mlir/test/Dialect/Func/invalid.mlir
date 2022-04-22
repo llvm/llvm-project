@@ -1,6 +1,6 @@
 // RUN: mlir-opt -split-input-file %s -verify-diagnostics
 
-func @unsupported_attribute() {
+func.func @unsupported_attribute() {
   // expected-error @+1 {{invalid kind of attribute specified}}
   %0 = constant "" : index
   return
@@ -8,9 +8,9 @@ func @unsupported_attribute() {
 
 // -----
 
-func private @return_i32_f32() -> (i32, f32)
+func.func private @return_i32_f32() -> (i32, f32)
 
-func @call() {
+func.func @call() {
   // expected-error @+3 {{op result type mismatch at index 0}}
   // expected-note @+2 {{op result types: 'f32', 'i32'}}
   // expected-note @+1 {{function result types: 'i32', 'f32'}}

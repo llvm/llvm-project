@@ -19,7 +19,7 @@
 // CMP64: %[[T4:.*]] = arith.cmpi slt, %[[T0]], %[[T3]] : vector<11xi64>
 // CMP64: return %[[T4]] : vector<11xi1>
 
-func @genbool_var_1d(%arg0: index) -> vector<11xi1> {
+func.func @genbool_var_1d(%arg0: index) -> vector<11xi1> {
   %0 = vector.create_mask %arg0 : vector<11xi1>
   return %0 : vector<11xi1>
 }
@@ -42,7 +42,7 @@ func @genbool_var_1d(%arg0: index) -> vector<11xi1> {
 // CMP64: %[[T4:.*]] = arith.cmpi slt, %[[T0]], %[[T3]] : vector<[11]xi64>
 // CMP64: return %[[T4]] : vector<[11]xi1>
 
-func @genbool_var_1d_scalable(%arg0: index) -> vector<[11]xi1> {
+func.func @genbool_var_1d_scalable(%arg0: index) -> vector<[11]xi1> {
   %0 = vector.create_mask %arg0 : vector<[11]xi1>
   return %0 : vector<[11]xi1>
 }
@@ -71,7 +71,7 @@ func @genbool_var_1d_scalable(%arg0: index) -> vector<[11]xi1> {
 // CMP64: %[[L:.*]] = llvm.intr.masked.load %{{.*}}, %[[M]], %{{.*}}
 // CMP64: return %[[L]] : vector<16xf32>
 
-func @transfer_read_1d(%A : memref<?xf32>, %i: index) -> vector<16xf32> {
+func.func @transfer_read_1d(%A : memref<?xf32>, %i: index) -> vector<16xf32> {
   %d = arith.constant -1.0: f32
   %f = vector.transfer_read %A[%i], %d {permutation_map = affine_map<(d0) -> (d0)>} : memref<?xf32>, vector<16xf32>
   return %f : vector<16xf32>

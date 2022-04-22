@@ -243,7 +243,7 @@ diagnostic. Example usage of this handler can be seen in the `mlir-opt` tool.
 $ mlir-opt foo.mlir
 
 /tmp/test.mlir:6:24: error: expected non-function type
-func @foo() -> (index, ind) {
+func.func @foo() -> (index, ind) {
                        ^
 ```
 
@@ -306,12 +306,12 @@ A few examples are shown below:
 
 ```mlir
 // Expect an error on the same line.
-func @bad_branch() {
+func.func @bad_branch() {
   cf.br ^missing  // expected-error {{reference to an undefined block}}
 }
 
 // Expect an error on an adjacent line.
-func @foo(%a : f32) {
+func.func @foo(%a : f32) {
   // expected-error@+1 {{unknown comparison predicate "foo"}}
   %result = arith.cmpf "foo", %a, %a : f32
   return
@@ -320,10 +320,10 @@ func @foo(%a : f32) {
 // Expect an error on the next line that does not contain a designator.
 // expected-remark@below {{remark on function below}}
 // expected-remark@below {{another remark on function below}}
-func @bar(%a : f32)
+func.func @bar(%a : f32)
 
 // Expect an error on the previous line that does not contain a designator.
-func @baz(%a : f32)
+func.func @baz(%a : f32)
 // expected-remark@above {{remark on function above}}
 // expected-remark@above {{another remark on function above}}
 
@@ -336,7 +336,7 @@ any expected diagnostics weren't.
 $ mlir-opt foo.mlir
 
 /tmp/test.mlir:6:24: error: unexpected error: expected non-function type
-func @foo() -> (index, ind) {
+func.func @foo() -> (index, ind) {
                        ^
 
 /tmp/test.mlir:15:4: error: expected remark "expected some remark" was not produced

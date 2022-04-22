@@ -1,4 +1,3 @@
-; RUN: opt -O3 -S < %s -enable-new-pm=0 | FileCheck %s
 ; RUN: opt -passes='default<O3>' -S < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"

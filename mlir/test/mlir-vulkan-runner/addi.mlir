@@ -20,7 +20,7 @@ module attributes {
     }
   }
 
-  func @main() {
+  func.func @main() {
     %arg0 = memref.alloc() : memref<8xi32>
     %arg1 = memref.alloc() : memref<8x8xi32>
     %arg2 = memref.alloc() : memref<8x8x8xi32>
@@ -43,9 +43,9 @@ module attributes {
     call @print_memref_i32(%arg6) : (memref<*xi32>) -> ()
     return
   }
-  func private @fillResource1DInt(%0 : memref<?xi32>, %1 : i32)
-  func private @fillResource2DInt(%0 : memref<?x?xi32>, %1 : i32)
-  func private @fillResource3DInt(%0 : memref<?x?x?xi32>, %1 : i32)
-  func private @print_memref_i32(%ptr : memref<*xi32>)
+  func.func private @fillResource1DInt(%0 : memref<?xi32>, %1 : i32)
+  func.func private @fillResource2DInt(%0 : memref<?x?xi32>, %1 : i32)
+  func.func private @fillResource3DInt(%0 : memref<?x?x?xi32>, %1 : i32)
+  func.func private @print_memref_i32(%ptr : memref<*xi32>)
 }
 

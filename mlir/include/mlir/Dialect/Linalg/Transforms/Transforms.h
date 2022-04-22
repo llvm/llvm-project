@@ -37,10 +37,6 @@ struct LinalgElementwiseFusionOptions;
 struct LinalgFusionOptions;
 struct LinalgTilingOptions;
 
-/// Default function to control reshape folding. Skips folding unit dimension
-/// reshapes.
-bool skipUnitDimReshape(const OpResult &producer, OpOperand &consumer);
-
 //===----------------------------------------------------------------------===//
 // Transformations exposed as function calls.
 //===----------------------------------------------------------------------===//
@@ -91,24 +87,6 @@ void populateFoldReshapeOpsByCollapsingPatterns(
 void populateConstantFoldLinalgOperations(RewritePatternSet &patterns,
                                           const ControlFusionFn &controlFn);
 
-/// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
-/// producer (consumer) generic operation by linearizing the indexing map used
-/// to access the source (target) of the reshape operation in the generic
-/// operation.
-/// TODO(ravishankarm): These patterns are to be deprecated in favor of using
-/// the `populateFoldReshapeByCollapsingPatterns`.
-void populateFoldReshapeOpsByLinearizationPatterns(RewritePatternSet &patterns);
-
-/// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
-/// producer (consumer) generic operation by linearizing the indexing map used
-/// to access the source (target) of the reshape operation in the generic
-/// operation. The patterns are applied only when the tensor reshape involved is
-/// collapsing (introducing) unit-extent dimensions.
-/// TODO(ravishankarm): These patterns are to be deprecated in favor of using
-/// the `populateFoldReshapeByCollapsingPatterns`.
-void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
-    RewritePatternSet &patterns);
-
 /// Pattern to fuse a `tensor.pad` operation with the producer of its source,
 /// if the producer is a `linalg` operation with all parallel iterator types.
 void populateFuseTensorPadWithProducerLinalgOpPatterns(
@@ -127,12 +105,6 @@ void populateInlineConstantOperandsPatterns(RewritePatternSet &patterns);
 
 /// Patterns that are used to bubble up extract slice op above linalg op.
 void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
-
-/// Patterns to push reshape op towards the end of the graph in order to expose
-/// more fusion opportunities.
-/// TODO(ravishankarm): These patterns are to be deprecated in favor of using
-/// the `populateFoldReshapeByCollapsingPatterns`.
-void populatePushReshapeOpsPatterns(RewritePatternSet &patterns);
 
 /// Perform standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`

@@ -20,7 +20,7 @@
 
 module {
   // Sparse kernel.
-  func @sparse_mult_elt(
+  func.func @sparse_mult_elt(
       %arga: tensor<32x16xf32, #DCSR>, %argb: tensor<32x16xf32, #DCSR>) -> tensor<32x16xf32, #DCSR> {
     %c16 = arith.constant 16 : index
     %c32 = arith.constant 32 : index
@@ -36,7 +36,7 @@ module {
   }
 
   // Driver method to call and verify kernel.
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %f1 = arith.constant -1.0 : f32
 

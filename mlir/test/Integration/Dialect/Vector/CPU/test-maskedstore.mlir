@@ -3,7 +3,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @maskedstore16(%base: memref<?xf32>,
+func.func @maskedstore16(%base: memref<?xf32>,
                     %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0: index
   vector.maskedstore %base[%c0], %mask, %value
@@ -11,7 +11,7 @@ func @maskedstore16(%base: memref<?xf32>,
   return
 }
 
-func @maskedstore16_at8(%base: memref<?xf32>,
+func.func @maskedstore16_at8(%base: memref<?xf32>,
                         %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c8 = arith.constant 8: index
   vector.maskedstore %base[%c8], %mask, %value
@@ -19,7 +19,7 @@ func @maskedstore16_at8(%base: memref<?xf32>,
   return
 }
 
-func @printmem16(%A: memref<?xf32>) {
+func.func @printmem16(%A: memref<?xf32>) {
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
   %c16 = arith.constant 16: index
@@ -36,7 +36,7 @@ func @printmem16(%A: memref<?xf32>) {
   return
 }
 
-func @entry() {
+func.func @entry() {
   // Set up memory.
   %f0 = arith.constant 0.0: f32
   %c0 = arith.constant 0: index

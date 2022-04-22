@@ -4,7 +4,7 @@
 
 // CHECK-LABEL: func @ops(
 // CHECK-SAME:            %[[F:.*]]: f32) {
-func @ops(%f: f32) {
+func.func @ops(%f: f32) {
   // CHECK: complex.constant [1.{{.*}}, -1.{{.*}}] : complex<f64>
   %cst_f64 = complex.constant [0.1, -1.0] : complex<f64>
 

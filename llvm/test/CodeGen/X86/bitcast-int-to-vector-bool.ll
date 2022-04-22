@@ -131,6 +131,100 @@ define <8 x i1> @bitcast_i8_8i1(i8 zeroext %a0) {
   ret <8 x i1> %1
 }
 
+; PR54911
+define <8 x i1> @bitcast_i8_8i1_freeze(i8 zeroext %a0) {
+; SSE2-SSSE3-LABEL: bitcast_i8_8i1_freeze:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    movl %edi, %eax
+; SSE2-SSSE3-NEXT:    shrb %al
+; SSE2-SSSE3-NEXT:    andb $1, %al
+; SSE2-SSSE3-NEXT:    movzbl %al, %eax
+; SSE2-SSSE3-NEXT:    movl %edi, %ecx
+; SSE2-SSSE3-NEXT:    andb $1, %cl
+; SSE2-SSSE3-NEXT:    movzbl %cl, %ecx
+; SSE2-SSSE3-NEXT:    movd %ecx, %xmm0
+; SSE2-SSSE3-NEXT:    pinsrw $1, %eax, %xmm0
+; SSE2-SSSE3-NEXT:    movl %edi, %eax
+; SSE2-SSSE3-NEXT:    shrb $2, %al
+; SSE2-SSSE3-NEXT:    andb $1, %al
+; SSE2-SSSE3-NEXT:    movzbl %al, %eax
+; SSE2-SSSE3-NEXT:    pinsrw $2, %eax, %xmm0
+; SSE2-SSSE3-NEXT:    movl %edi, %eax
+; SSE2-SSSE3-NEXT:    shrb $3, %al
+; SSE2-SSSE3-NEXT:    andb $1, %al
+; SSE2-SSSE3-NEXT:    movzbl %al, %eax
+; SSE2-SSSE3-NEXT:    pinsrw $3, %eax, %xmm0
+; SSE2-SSSE3-NEXT:    movl %edi, %eax
+; SSE2-SSSE3-NEXT:    shrb $4, %al
+; SSE2-SSSE3-NEXT:    andb $1, %al
+; SSE2-SSSE3-NEXT:    movzbl %al, %eax
+; SSE2-SSSE3-NEXT:    pinsrw $4, %eax, %xmm0
+; SSE2-SSSE3-NEXT:    movl %edi, %eax
+; SSE2-SSSE3-NEXT:    shrb $5, %al
+; SSE2-SSSE3-NEXT:    andb $1, %al
+; SSE2-SSSE3-NEXT:    movzbl %al, %eax
+; SSE2-SSSE3-NEXT:    pinsrw $5, %eax, %xmm0
+; SSE2-SSSE3-NEXT:    movl %edi, %eax
+; SSE2-SSSE3-NEXT:    shrb $6, %al
+; SSE2-SSSE3-NEXT:    andb $1, %al
+; SSE2-SSSE3-NEXT:    movzbl %al, %eax
+; SSE2-SSSE3-NEXT:    pinsrw $6, %eax, %xmm0
+; SSE2-SSSE3-NEXT:    shrb $7, %dil
+; SSE2-SSSE3-NEXT:    movzbl %dil, %eax
+; SSE2-SSSE3-NEXT:    pinsrw $7, %eax, %xmm0
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX12-LABEL: bitcast_i8_8i1_freeze:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    movl %edi, %eax
+; AVX12-NEXT:    shrb %al
+; AVX12-NEXT:    andb $1, %al
+; AVX12-NEXT:    movzbl %al, %eax
+; AVX12-NEXT:    movl %edi, %ecx
+; AVX12-NEXT:    andb $1, %cl
+; AVX12-NEXT:    movzbl %cl, %ecx
+; AVX12-NEXT:    vmovd %ecx, %xmm0
+; AVX12-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; AVX12-NEXT:    movl %edi, %eax
+; AVX12-NEXT:    shrb $2, %al
+; AVX12-NEXT:    andb $1, %al
+; AVX12-NEXT:    movzbl %al, %eax
+; AVX12-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
+; AVX12-NEXT:    movl %edi, %eax
+; AVX12-NEXT:    shrb $3, %al
+; AVX12-NEXT:    andb $1, %al
+; AVX12-NEXT:    movzbl %al, %eax
+; AVX12-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
+; AVX12-NEXT:    movl %edi, %eax
+; AVX12-NEXT:    shrb $4, %al
+; AVX12-NEXT:    andb $1, %al
+; AVX12-NEXT:    movzbl %al, %eax
+; AVX12-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
+; AVX12-NEXT:    movl %edi, %eax
+; AVX12-NEXT:    shrb $5, %al
+; AVX12-NEXT:    andb $1, %al
+; AVX12-NEXT:    movzbl %al, %eax
+; AVX12-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
+; AVX12-NEXT:    movl %edi, %eax
+; AVX12-NEXT:    shrb $6, %al
+; AVX12-NEXT:    andb $1, %al
+; AVX12-NEXT:    movzbl %al, %eax
+; AVX12-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
+; AVX12-NEXT:    shrb $7, %dil
+; AVX12-NEXT:    movzbl %dil, %eax
+; AVX12-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512-LABEL: bitcast_i8_8i1_freeze:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    kmovd %edi, %k0
+; AVX512-NEXT:    vpmovm2w %k0, %xmm0
+; AVX512-NEXT:    retq
+  %1 = bitcast i8 %a0 to <8 x i1>
+  %2 = freeze <8 x i1> %1
+  ret <8 x i1> %2
+}
+
 define <16 x i1> @bitcast_i16_16i1(i16 zeroext %a0) {
 ; SSE2-LABEL: bitcast_i16_16i1:
 ; SSE2:       # %bb.0:

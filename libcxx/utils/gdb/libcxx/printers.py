@@ -192,26 +192,6 @@ def _value_of_pair_first(value):
 class StdStringPrinter(object):
     """Print a std::string."""
 
-    def _get_short_size(self, short_field, short_size):
-        """Short size depends on both endianness and a compile-time define."""
-
-        # If the padding field is present after all this indirection, then string
-        # was compiled with _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT defined.
-        field = short_field.type.fields()[1].type.fields()[0]
-        libcpp_abi_alternate_string_layout = field.name and "__padding" in field.name
-
-        # This logical structure closely follows the original code (which is clearer
-        # in C++).  Keep them parallel to make them easier to compare.
-        if libcpp_abi_alternate_string_layout:
-            if _libcpp_big_endian:
-                return short_size >> 1
-            else:
-                return short_size
-        elif _libcpp_big_endian:
-            return short_size
-        else:
-            return short_size >> 1
-
     def __init__(self, val):
         self.val = val
 
@@ -223,18 +203,13 @@ class StdStringPrinter(object):
         short_size = short_field["__size_"]
         if short_size == 0:
             return ""
-        short_mask = self.val["__short_mask"]
-        # Counter intuitive to compare the size and short_mask to see if the string
-        # is long, but that's the way the implementation does it. Note that
-        # __is_long() doesn't use get_short_size in C++.
-        is_long = short_size & short_mask
-        if is_long:
+        if short_field["__is_long_"]:
             long_field = value_field["__l"]
             data = long_field["__data_"]
             size = long_field["__size_"]
         else:
             data = short_field["__data_"]
-            size = self._get_short_size(short_field, short_size)
+            size = short_field["__size_"]
         return data.lazy_string(length=size)
 
     def display_hint(self):

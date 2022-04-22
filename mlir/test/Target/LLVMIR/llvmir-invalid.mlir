@@ -1,7 +1,7 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
 // expected-error @+1 {{cannot be converted to LLVM IR}}
-func @foo() {
+func.func @foo() {
   llvm.return
 }
 

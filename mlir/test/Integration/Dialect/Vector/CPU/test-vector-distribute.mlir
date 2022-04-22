@@ -11,9 +11,9 @@
 // RUN: mlir-opt %s -pass-pipeline="func.func(test-vector-to-forloop)" | FileCheck %s -check-prefix=TRANSFORM
 
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @print_memref_f32(memref<*xf32>)
 
-func @alloc_1d_filled_inc_f32(%arg0: index, %arg1: f32) -> memref<?xf32> {
+func.func @alloc_1d_filled_inc_f32(%arg0: index, %arg1: f32) -> memref<?xf32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0 = memref.alloc(%arg0) : memref<?xf32>
@@ -27,7 +27,7 @@ func @alloc_1d_filled_inc_f32(%arg0: index, %arg1: f32) -> memref<?xf32> {
 }
 
 // Large vector addf that can be broken down into a loop of smaller vector addf.
-func @main() {
+func.func @main() {
   %cf0 = arith.constant 0.0 : f32
   %cf1 = arith.constant 1.0 : f32
   %cf2 = arith.constant 2.0 : f32

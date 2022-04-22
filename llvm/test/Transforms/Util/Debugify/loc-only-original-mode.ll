@@ -6,6 +6,15 @@
 ; RUN:     -verify-each-debuginfo-preserve \
 ; RUN:     -debugify-level=location+variables -S 2>&1 | FileCheck %s --check-prefix=CHECK-DROP
 
+; RUN: opt < %s -deadargelim -enable-new-pm=false \
+; RUN:     -verify-each-debuginfo-preserve \
+; RUN:     -debugify-func-limit=0 -S 2>&1 | FileCheck %s
+
+; RUN: opt < %s -deadargelim -enable-new-pm=false \
+; RUN:     -verify-each-debuginfo-preserve \
+; RUN:     -debugify-func-limit=2 -S 2>&1 | FileCheck %s --check-prefix=CHECK-DROP
+
+
 ; CHECK-NOT: drops dbg.value()/dbg.declare()
 ; CHECK-DROP: drops dbg.value()/dbg.declare()
 

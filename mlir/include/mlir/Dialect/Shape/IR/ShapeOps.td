@@ -552,7 +552,7 @@ def Shape_ReduceOp : Shape_Op<"reduce",
     number of elements can be computed as follows:
 
     ```mlir
-    func @reduce(%shape : !shape.shape, %init : !shape.size) -> !shape.size {
+    func.func @reduce(%shape : !shape.shape, %init : !shape.size) -> !shape.size {
       %num_elements = shape.reduce(%shape, %init) -> !shape.size  {
         ^bb0(%index: index, %dim: !shape.size, %acc: !shape.size):
           %updated_acc = "shape.mul"(%acc, %dim) :
@@ -662,7 +662,7 @@ def Shape_WithOp : Shape_Op<"with_shape", [NoSideEffect]> {
     and/or call one shape function from another. E.g.,
 
     ```mlir
-    func @shape_foobah(%a: !shape.value_shape,
+    func.func @shape_foobah(%a: !shape.value_shape,
                        %b: !shape.value_shape,
                        %c: !shape.value_shape) -> !shape.shape {
       %0 = call @shape_foo(%a, %b) :
@@ -1005,7 +1005,7 @@ def Shape_FunctionLibraryOp : Shape_Op<"function_library",
 
     ```mlir
     shape.function_library {
-      func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+      func.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
         %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
         return %0 : !shape.shape
       }

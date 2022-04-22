@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=push-expanding-reshape -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=fuse-with-reshape-by-collapsing -split-input-file | FileCheck %s
 
 // CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0, d1) -> (d1)>
@@ -11,7 +11,7 @@
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x16xf32>, tensor<16xf32>) outs(%[[RI]] : tensor<?x16xf32>)
 //      CHECK: %[[RR:.*]] = tensor.expand_shape %[[R]] {{\[}}[0, 1], [2]] : tensor<?x16xf32> into tensor<?x112x16xf32>
 //      CHECK: return %[[RR]] : tensor<?x112x16xf32>
-func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf32>) -> tensor<?x112x16xf32> {
+func.func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf32>) -> tensor<?x112x16xf32> {
   %0 = tensor.expand_shape %A [[0, 1], [2]]
       : tensor<?x16xf32> into tensor<?x112x16xf32>
   %2 = linalg.generic {indexing_maps = [
@@ -41,7 +41,7 @@ func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf
 // CHECK-SAME: ins(%[[A]], %[[B]], %[[C]] : tensor<12544x16xf32>, tensor<12544x16xf32>, tensor<16xf32>) outs(%[[RI]] : tensor<12544x16xf32>)
 //      CHECK: %[[RR:.*]] = tensor.expand_shape %[[R]] {{\[}}[0, 1], [2]] : tensor<12544x16xf32> into tensor<112x112x16xf32>
 //      CHECK: return %[[RR]] : tensor<112x112x16xf32>
-func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
+func.func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
   %C: tensor<16xf32>) -> tensor<112x112x16xf32> {
   %0 = tensor.expand_shape %A [[0, 1], [2]]
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
@@ -72,7 +72,7 @@ func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
 // CHECK: tensor.expand_shape {{.*}} : tensor<12544x16xf32> into tensor<112x112x16xf32>
 // CHECK: linalg.generic
 // CHECK: } -> tensor<112x112x16xf32>
-func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<112x112x16xf32> {
+func.func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<112x112x16xf32> {
   %20 = tensor.expand_shape %A [[0, 1], [2]]
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
   %21 = linalg.init_tensor [112, 112, 16] : tensor<112x112x16xf32>
@@ -91,7 +91,7 @@ func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<
 
 // -----
 
-func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
+func.func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
     %arg2 : tensor<5xf32>) -> tensor<2x3x5xf32> {
   %cst_6 = arith.constant 1.000000e+00 : f32
   %cst_7 = arith.constant 7.000000e+00 : f32
@@ -124,30 +124,3 @@ func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
 //  CHECK-SAME:   outs(%{{.+}} : tensor<6x5xf32>)
 //       CHECK:   tensor.expand_shape %[[OP]]
 //  CHECK-SAME:   tensor<6x5xf32> into tensor<2x3x5xf32>
-
-// -----
-
-func @generic_op_index_semantics(%A: tensor<?x16xi64>, %B: tensor<16xi64>, %init: tensor<?x112x16xi64>) -> tensor<?x112x16xi64> {
-  %0 = tensor.expand_shape %A [[0, 1], [2]]
-      : tensor<?x16xi64> into tensor<?x112x16xi64>
-  %2 = linalg.generic {indexing_maps = [
-    affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d2)>,
-    affine_map<(d0, d1, d2) -> (d0, d1, d2)>],
-    iterator_types = ["parallel", "parallel", "parallel"]}
-  ins(%0, %B : tensor<?x112x16xi64>, tensor<16xi64>)
-  outs(%init : tensor<?x112x16xi64>) {
-  ^bb0(%arg1: i64, %arg2: i64, %arg3: i64):  // no predecessors
-    %index = linalg.index 0 : index
-    %1 = arith.index_cast %index : index to i64
-    %add = arith.addi %arg1, %1 : i64
-    %s = arith.subi %add, %arg2 : i64
-    linalg.yield %s : i64
-  } -> tensor<?x112x16xi64>
-  return %2 : tensor<?x112x16xi64>
-}
-//      CHECK: func @generic_op_index_semantics
-// CHECK-SAME:     %[[ARG0:.+]]: tensor<?x16xi64>
-//      CHECK:   %[[RESHAPE:.+]] = tensor.expand_shape %[[ARG0]]
-//      CHECK:   %[[RESULT:.+]] = linalg.generic
-// CHECK-SAME:       ins(%[[RESHAPE]]
-//      CHECK:   return %[[RESULT]]

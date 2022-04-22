@@ -249,6 +249,22 @@ module m
     (-0.93219375976297402797143831776338629424571990966796875_8))
    TEST_R8(erfc_scaled, erfc_scaled(0.1_8), &
     0.89645697996912654392787089818739332258701324462890625_8)
+
+  real(4), parameter :: bessel_jn_transformational(*) = bessel_jn(1,3, 3.2_4)
+  logical, parameter :: test_bessel_jn_shape = size(bessel_jn_transformational, 1).eq.3
+  logical, parameter :: test_bessel_jn_t1 = bessel_jn_transformational(1).eq.bessel_jn(1, 3.2_4)
+  logical, parameter :: test_bessel_jn_t2 = bessel_jn_transformational(2).eq.bessel_jn(2, 3.2_4)
+  logical, parameter :: test_bessel_jn_t3 = bessel_jn_transformational(3).eq.bessel_jn(3, 3.2_4)
+  real(4), parameter :: bessel_jn_empty(*) = bessel_jn(3,1, 3.2_4)
+  logical, parameter :: test_bessel_jn_empty = size(bessel_jn_empty, 1).eq.0
+
+  real(4), parameter :: bessel_yn_transformational(*) = bessel_yn(1,3, 1.6_4)
+  logical, parameter :: test_bessel_yn_shape = size(bessel_yn_transformational, 1).eq.3
+  logical, parameter :: test_bessel_yn_t1 = bessel_yn_transformational(1).eq.bessel_yn(1, 1.6_4)
+  logical, parameter :: test_bessel_yn_t2 = bessel_yn_transformational(2).eq.bessel_yn(2, 1.6_4)
+  logical, parameter :: test_bessel_yn_t3 = bessel_yn_transformational(3).eq.bessel_yn(3, 1.6_4)
+  real(4), parameter :: bessel_yn_empty(*) = bessel_yn(3,1, 3.2_4)
+  logical, parameter :: test_bessel_yn_empty = size(bessel_yn_empty, 1).eq.0
 #endif
 
 ! Test exponentiation by real or complex folding (it is using host runtime)

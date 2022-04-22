@@ -326,17 +326,12 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           && !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
     }
 
-    // TODO: The following two attributes should belong to the tensor dialect.
-    // The corresponding verifier should also be in the tensor dialect.
+    // TODO: This attribute is deprecated. Use `bufferization.writable` or add
+    // a new attribute in a different dialect.
     /// Attribute name used to mark region arguments that can be bufferized
     /// in-place during one-shot bufferization.
     constexpr const static ::llvm::StringLiteral
-      kInplaceableAttrName = "linalg.inplaceable";
-
-    /// Attribute name used to mark the bufferization layout for region
-    /// arguments during one-shot bufferization.
-    constexpr const static ::llvm::StringLiteral
-      kBufferLayoutAttrName = "linalg.buffer_layout";
+        kInplaceableAttrName = "linalg.inplaceable";
   }];
 }
 

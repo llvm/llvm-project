@@ -2,10 +2,10 @@
 
 // CHECK-LABEL: func @linalg_op_bufferizes_inplace_with_input
 //  CHECK-SAME:     %[[t1:.*]]: memref<?x?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>, %[[t3:.*]]: memref<?x?xf32, #{{.*}}>
-func @linalg_op_bufferizes_inplace_with_input(
-    %t1: tensor<?x?xf32> {linalg.inplaceable = true},
-    %t2: tensor<?xf32> {linalg.inplaceable = false},
-    %t3: tensor<?x?xf32> {linalg.inplaceable = false},
+func.func @linalg_op_bufferizes_inplace_with_input(
+    %t1: tensor<?x?xf32> {bufferization.writable = true},
+    %t2: tensor<?xf32> {bufferization.writable = false},
+    %t3: tensor<?x?xf32> {bufferization.writable = false},
     %s1: index, %s2: index, %cst: f32) -> tensor<?x?xf32> {
   // CHECK: linalg.generic {{.*}} ins(%[[t1]], %[[t2]] : {{.*}}) outs(%[[t1]] : {{.*}})
   %r = linalg.generic {
@@ -26,10 +26,10 @@ func @linalg_op_bufferizes_inplace_with_input(
 
 // CHECK-LABEL: func @linalg_op_bufferizes_out_of_place_with_input
 //  CHECK-SAME:     %[[t1:.*]]: memref<?x?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>, %[[t3:.*]]: memref<?x?xf32, #{{.*}}>
-func @linalg_op_bufferizes_out_of_place_with_input(
-    %t1: tensor<?x?xf32> {linalg.inplaceable = false},
-    %t2: tensor<?xf32> {linalg.inplaceable = false},
-    %t3: tensor<?x?xf32> {linalg.inplaceable = false},
+func.func @linalg_op_bufferizes_out_of_place_with_input(
+    %t1: tensor<?x?xf32> {bufferization.writable = false},
+    %t2: tensor<?xf32> {bufferization.writable = false},
+    %t3: tensor<?x?xf32> {bufferization.writable = false},
     %s1: index, %s2: index, %cst: f32) -> tensor<?x?xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc
   // CHECK: memref.copy %[[t1]], %[[alloc]]
@@ -53,10 +53,10 @@ func @linalg_op_bufferizes_out_of_place_with_input(
 
 // CHECK-LABEL: func @linalg_op_output_cannot_alias_with_input
 //  CHECK-SAME:     %[[t1:.*]]: memref<?x?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>, %[[t3:.*]]: memref<?x?xf32, #{{.*}}>
-func @linalg_op_output_cannot_alias_with_input(
-    %t1: tensor<?x?xf32> {linalg.inplaceable = true},
-    %t2: tensor<?xf32> {linalg.inplaceable = false},
-    %t3: tensor<?x?xf32> {linalg.inplaceable = true},
+func.func @linalg_op_output_cannot_alias_with_input(
+    %t1: tensor<?x?xf32> {bufferization.writable = true},
+    %t2: tensor<?xf32> {bufferization.writable = false},
+    %t3: tensor<?x?xf32> {bufferization.writable = true},
     %s1: index, %s2: index, %cst: f32) -> tensor<?x?xf32> {
   // CHECK: linalg.generic {{.*}} ins(%[[t1]], %[[t2]] : {{.*}}) outs(%[[t3]] : {{.*}})
   %r = linalg.generic {

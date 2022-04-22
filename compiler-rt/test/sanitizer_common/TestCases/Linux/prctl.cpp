@@ -22,7 +22,7 @@ int main() {
   int res;
   res = prctl(PR_SCHED_CORE, PR_SCHED_CORE_CREATE, 0, 0, 0);
   if (res < 0) {
-    assert(errno == EINVAL);
+    assert(errno == EINVAL || errno == ENODEV);
     return 0;
   }
 

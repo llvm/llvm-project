@@ -47,7 +47,7 @@
 //       TILE1:     tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][0, {{.*}}] [%[[DIM0]], {{.*}}] [1, 1]
 //       TILE1:   return %[[RESULT]]
 
-func @dynamic_pad_tensor(%input_tensor: tensor<?x?xf32>,
+func.func @dynamic_pad_tensor(%input_tensor: tensor<?x?xf32>,
                          %pad_value: f32) -> tensor<?x?xf32> {
   %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
@@ -90,7 +90,7 @@ func @dynamic_pad_tensor(%input_tensor: tensor<?x?xf32>,
 //       TILE1:     tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][0, {{.*}}] [15, {{.*}}] [1, 1]
 //       TILE1:   return %[[RESULT]]
 
-func @static_pad_tensor(%input_tensor: tensor<7x9xf32>,
+func.func @static_pad_tensor(%input_tensor: tensor<7x9xf32>,
                         %pad_value: f32) -> tensor<15x16xf32> {
   %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
     ^bb0(%arg1: index, %arg2: index):
@@ -117,7 +117,7 @@ func @static_pad_tensor(%input_tensor: tensor<7x9xf32>,
 //       TILE1:     %[[R3:.*]] = tensor.insert_slice %[[R2]] into %[[INNER_OUT]][0, %[[IV]]] [14, 3] [1, 1] : tensor<14x3xf32> into tensor<14x15xf32>
 //       TILE1:     scf.yield %[[R3]] : tensor<14x15xf32>
 //       TILE1:   return %[[RESULT]] : tensor<14x15xf32>
-func @static_pad_tile_evenly(%input_tensor: tensor<7x9xf32>,
+func.func @static_pad_tile_evenly(%input_tensor: tensor<7x9xf32>,
                              %output_tensor: tensor<14x15xf32>,
                              %pad_value: f32) -> tensor<14x15xf32> {
   %0 = tensor.pad %input_tensor low[0, 0] high[7, 6] {

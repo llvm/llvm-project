@@ -91,7 +91,7 @@ MachORewriteInstance::createMachORewriteInstance(
       std::make_unique<MachORewriteInstance>(InputFile, ToolPath, Err);
   if (Err)
     return std::move(Err);
-  return MachORI;
+  return std::move(MachORI);
 }
 
 MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,

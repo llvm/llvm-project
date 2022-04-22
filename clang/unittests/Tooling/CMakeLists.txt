@@ -88,6 +88,7 @@ clang_target_link_libraries(ToolingTests
 target_link_libraries(ToolingTests
   PRIVATE
   LLVMTestingSupport
+  clangTesting
 )
 
 add_subdirectory(Syntax)

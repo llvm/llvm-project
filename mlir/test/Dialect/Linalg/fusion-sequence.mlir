@@ -1,7 +1,7 @@
 // RUN: mlir-opt -pass-pipeline="func.func(test-linalg-tile-and-fuse{tile-sizes=16,32,64}),resolve-shaped-type-result-dims,canonicalize,cse" -split-input-file %s | FileCheck %s
 
 module {
-  func @three_op_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
+  func.func @three_op_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                         %arg2: memref<?xf32>, %arg3 : memref<?x?xf32>) {
     %cst = arith.constant 0.000000e+00 : f32
     %c0 = arith.constant 0 : index
@@ -57,7 +57,7 @@ module {
 // -----
 
 module {
-  func @sequence_of_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
+  func.func @sequence_of_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                            %arg2: memref<?x?xf32>, %arg3: memref<?x?xf32>,
                            %arg4: memref<?x?xf32>) {
     %cst = arith.constant 0.000000e+00 : f32
@@ -140,7 +140,7 @@ module {
 // -----
 
 module {
-  func @tensor_op_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
+  func.func @tensor_op_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
                          %arg2: tensor<?x?xf32>, %arg3: tensor<?xf32>)
     -> tensor<?x?xf32> {
     %c0 = arith.constant 0 : index
@@ -193,7 +193,7 @@ module {
 // -----
 
 module {
-  func @tensor_matmul_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
+  func.func @tensor_matmul_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
                              %arg2: tensor<?x?xf32>, %arg3: tensor<?x?xf32>,
            %arg4: tensor<?x?xf32>, %arg5: tensor<?x?xf32>,
            %arg6: tensor<?x?xf32>) -> tensor<?x?xf32> {

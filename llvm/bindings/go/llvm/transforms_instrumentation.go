@@ -19,20 +19,8 @@ package llvm
 import "C"
 import "unsafe"
 
-func (pm PassManager) AddAddressSanitizerFunctionPass() {
-	C.LLVMAddAddressSanitizerFunctionPass(pm.C)
-}
-
-func (pm PassManager) AddAddressSanitizerModulePass() {
-	C.LLVMAddAddressSanitizerModulePass(pm.C)
-}
-
 func (pm PassManager) AddThreadSanitizerPass() {
 	C.LLVMAddThreadSanitizerPass(pm.C)
-}
-
-func (pm PassManager) AddMemorySanitizerLegacyPassPass() {
-	C.LLVMAddMemorySanitizerLegacyPassPass(pm.C)
 }
 
 func (pm PassManager) AddDataFlowSanitizerPass(abilist []string) {

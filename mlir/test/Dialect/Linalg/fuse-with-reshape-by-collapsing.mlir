@@ -7,7 +7,7 @@
 #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2)>
 #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d3, d4, d5, d6)>
 #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4, d5, d6, d7)>
-func @fuse_by_collapsing(%arg0 : tensor<2x12x5x336x9xi32>,
+func.func @fuse_by_collapsing(%arg0 : tensor<2x12x5x336x9xi32>,
     %arg1 : tensor<2x3x4xi32>, %arg2 : tensor<5x6x7x8xi32>) -> tensor<2x3x4x5x6x7x8x9xi32> {
   %expand = tensor.expand_shape %arg0 [[0], [1, 2], [3], [4, 5, 6], [7]]
       : tensor<2x12x5x336x9xi32> into tensor<2x3x4x5x6x7x8x9xi32>
@@ -58,7 +58,7 @@ func @fuse_by_collapsing(%arg0 : tensor<2x12x5x336x9xi32>,
 #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2)>
 #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d3, d4, d5, d6)>
 #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4, d5, d6, d7)>
-func @fuse_by_collapsing_indexing_op(%arg0 : tensor<2x12x5x336x9xi32>,
+func.func @fuse_by_collapsing_indexing_op(%arg0 : tensor<2x12x5x336x9xi32>,
     %arg1 : tensor<2x3x4xi32>, %arg2 : tensor<5x6x7x8xi32>) -> tensor<2x3x4x5x6x7x8x9xi32> {
   %expand = tensor.expand_shape %arg0 [[0], [1, 2], [3], [4, 5, 6], [7]]
       : tensor<2x12x5x336x9xi32> into tensor<2x3x4x5x6x7x8x9xi32>
@@ -120,7 +120,7 @@ func @fuse_by_collapsing_indexing_op(%arg0 : tensor<2x12x5x336x9xi32>,
 #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d0)>
 #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d4, d1, d2, d3)>
 #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4, d5, d6, d7)>
-func @fuse_by_collapsing_change_reshape_order(%arg0 : tensor<9x56x2x60x6xi32>,
+func.func @fuse_by_collapsing_change_reshape_order(%arg0 : tensor<9x56x2x60x6xi32>,
     %arg1 : tensor<7x8x2xi32>, %arg2 : tensor<6x3x4x5xi32>) -> tensor<2x3x4x5x6x7x8x9xi32> {
   %expand = tensor.expand_shape %arg0 [[0], [1, 2], [3], [4, 5, 6], [7]]
       : tensor<9x56x2x60x6xi32> into tensor<9x7x8x2x3x4x5x6xi32>
@@ -164,7 +164,7 @@ func @fuse_by_collapsing_change_reshape_order(%arg0 : tensor<9x56x2x60x6xi32>,
 #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d0)>
 #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d4, d1, d2, d3)>
 #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4, d5, d6, d7)>
-func @fuse_by_collapsing_dynamic(%arg0 : tensor<?x?x?x?x?xi32>,
+func.func @fuse_by_collapsing_dynamic(%arg0 : tensor<?x?x?x?x?xi32>,
     %arg1 : tensor<?x?x?xi32>, %arg2 : tensor<?x?x?x?xi32>) -> tensor<?x3x?x5x?x7x?x?xi32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -224,7 +224,7 @@ func @fuse_by_collapsing_dynamic(%arg0 : tensor<?x?x?x?x?xi32>,
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
-func @fuse_reductions(%arg0 : tensor<2x?x5xf32>, %arg1 : tensor<2x5xf32>) -> tensor<2x5xf32> {
+func.func @fuse_reductions(%arg0 : tensor<2x?x5xf32>, %arg1 : tensor<2x5xf32>) -> tensor<2x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3]] : tensor<2x?x5xf32> into tensor<2x6x?x5xf32>
   %1 = linalg.generic {
       indexing_maps = [#map0, #map1],
@@ -252,7 +252,7 @@ func @fuse_reductions(%arg0 : tensor<2x?x5xf32>, %arg1 : tensor<2x5xf32>) -> ten
 // Test no fusion because the folded dimensions are not all preserved.
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
-func @no_fuse_unpreserved_folding(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2x3xf32>) -> tensor<2x3x4x5xf32> {
+func.func @no_fuse_unpreserved_folding(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2x3xf32>) -> tensor<2x3x4x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3]] : tensor<2x12x5xf32> into tensor<2x3x4x5xf32>
   %init = linalg.init_tensor [2, 3, 4, 5] : tensor<2x3x4x5xf32>
   %1 = linalg.generic {
@@ -279,7 +279,7 @@ func @no_fuse_unpreserved_folding(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2x3
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1, d3)>
-func @no_fuse_unpreserved_folding_transpose(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2xf32>) -> tensor<2x4x3x5xf32> {
+func.func @no_fuse_unpreserved_folding_transpose(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2xf32>) -> tensor<2x4x3x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3]] : tensor<2x12x5xf32> into tensor<2x3x4x5xf32>
   %init = linalg.init_tensor [2, 4, 3, 5] : tensor<2x4x3x5xf32>
   %1 = linalg.generic {
@@ -306,7 +306,7 @@ func @no_fuse_unpreserved_folding_transpose(%arg0 : tensor<2x12x5xf32>, %arg1 : 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
-func @no_fuse_mismatched_iterator_types(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2x3xf32>) -> tensor<2x5xf32> {
+func.func @no_fuse_mismatched_iterator_types(%arg0 : tensor<2x12x5xf32>, %arg1 : tensor<2x3xf32>) -> tensor<2x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2], [3]] : tensor<2x12x5xf32> into tensor<2x3x4x5xf32>
   %init = linalg.init_tensor [2, 5] : tensor<2x5xf32>
   %1 = linalg.generic {
@@ -334,7 +334,7 @@ func @no_fuse_mismatched_iterator_types(%arg0 : tensor<2x12x5xf32>, %arg1 : tens
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func @control_fusion(%arg0 : tensor<6xf32>, %arg1 : tensor<20xf32>) -> tensor<2x3x4x5xf32> {
+func.func @control_fusion(%arg0 : tensor<6xf32>, %arg1 : tensor<20xf32>) -> tensor<2x3x4x5xf32> {
   %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<6xf32> into tensor<2x3xf32>
   %1 = tensor.expand_shape %arg1 [[0, 1]] : tensor<20xf32> into tensor<4x5xf32>
     %init = linalg.init_tensor [2, 3, 4, 5] : tensor<2x3x4x5xf32>
@@ -381,7 +381,7 @@ func @control_fusion(%arg0 : tensor<6xf32>, %arg1 : tensor<20xf32>) -> tensor<2x
 
 // Corner case that isnt handled currently.
 #map = affine_map<(d0) -> (d0)>
-func @zero_D_test(%arg0: tensor<f32>) -> tensor<1xf32> {
+func.func @zero_D_test(%arg0: tensor<f32>) -> tensor<1xf32> {
   %0 = tensor.expand_shape %arg0 [] : tensor<f32> into tensor<1xf32>
   %init = linalg.init_tensor [1] : tensor<1xf32>
   %1 = linalg.generic {
@@ -404,7 +404,7 @@ func @zero_D_test(%arg0: tensor<f32>) -> tensor<1xf32> {
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d1, d0, d2, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-func @fuse_only_one_reassociation(%arg0 : tensor<?x?xf32>, %arg1 : tensor<4x?x?x8xf32>) -> tensor<4x?x?x8xf32> {
+func.func @fuse_only_one_reassociation(%arg0 : tensor<?x?xf32>, %arg1 : tensor<4x?x?x8xf32>) -> tensor<4x?x?x8xf32> {
   %0 = tensor.expand_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?xf32> into tensor<?x4x?x8xf32>
   %1 = linalg.generic {
       indexing_maps = [#map0, #map1, #map1],
@@ -438,7 +438,7 @@ func @fuse_only_one_reassociation(%arg0 : tensor<?x?xf32>, %arg1 : tensor<4x?x?x
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3, d1)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d3, d1, d0, d2)>
-func @fold_non_consecutive_dims(%arg0 : tensor<?x?xi32>) -> tensor<?x8x?x4xi32> {
+func.func @fold_non_consecutive_dims(%arg0 : tensor<?x?xi32>) -> tensor<?x8x?x4xi32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %0 = tensor.expand_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?xi32> into tensor<?x4x?x8xi32>
@@ -496,7 +496,7 @@ func @fold_non_consecutive_dims(%arg0 : tensor<?x?xi32>) -> tensor<?x8x?x4xi32> 
 // So no change in the code.
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3, d1)>
 #map1 = affine_map<(d0, d1, d2, d3) -> ()>
-func @no_fold_non_consecutive_reduction_dims(%arg0 : tensor<?x?xi32>) -> tensor<i32> {
+func.func @no_fold_non_consecutive_reduction_dims(%arg0 : tensor<?x?xi32>) -> tensor<i32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %0 = tensor.expand_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?xi32> into tensor<?x4x?x8xi32>
