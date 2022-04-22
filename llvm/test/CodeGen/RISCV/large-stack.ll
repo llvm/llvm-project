@@ -59,13 +59,12 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-FPELIM-NEXT:    sub sp, sp, a1
 ; RV32I-FPELIM-NEXT:    .cfi_def_cfa_offset 400016
 ; RV32I-FPELIM-NEXT:    lui a1, 78
-; RV32I-FPELIM-NEXT:    addi a1, a1, 512
 ; RV32I-FPELIM-NEXT:    addi a2, sp, 8
 ; RV32I-FPELIM-NEXT:    add a1, a2, a1
 ; RV32I-FPELIM-NEXT:    #APP
 ; RV32I-FPELIM-NEXT:    nop
 ; RV32I-FPELIM-NEXT:    #NO_APP
-; RV32I-FPELIM-NEXT:    sw a0, 0(a1)
+; RV32I-FPELIM-NEXT:    sw a0, 512(a1)
 ; RV32I-FPELIM-NEXT:    #APP
 ; RV32I-FPELIM-NEXT:    nop
 ; RV32I-FPELIM-NEXT:    #NO_APP
@@ -95,7 +94,6 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-WITHFP-NEXT:    addi a1, a1, 688
 ; RV32I-WITHFP-NEXT:    sub sp, sp, a1
 ; RV32I-WITHFP-NEXT:    lui a1, 78
-; RV32I-WITHFP-NEXT:    addi a1, a1, 512
 ; RV32I-WITHFP-NEXT:    lui a2, 1048478
 ; RV32I-WITHFP-NEXT:    addi a2, a2, 1388
 ; RV32I-WITHFP-NEXT:    add a2, s0, a2
@@ -103,7 +101,7 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-WITHFP-NEXT:    #APP
 ; RV32I-WITHFP-NEXT:    nop
 ; RV32I-WITHFP-NEXT:    #NO_APP
-; RV32I-WITHFP-NEXT:    sw a0, 0(a1)
+; RV32I-WITHFP-NEXT:    sw a0, 512(a1)
 ; RV32I-WITHFP-NEXT:    #APP
 ; RV32I-WITHFP-NEXT:    nop
 ; RV32I-WITHFP-NEXT:    #NO_APP
