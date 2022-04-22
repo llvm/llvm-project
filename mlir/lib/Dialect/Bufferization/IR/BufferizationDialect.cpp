@@ -7,12 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;
 
 #include "mlir/Dialect/Bufferization/IR/BufferizationOpsDialect.cpp.inc"
+
+/// Attribute name used to mark function arguments who's buffers can be written
+/// to during One-Shot Module Bufferize.
+constexpr const ::llvm::StringLiteral BufferizationDialect::kWritableAttrName;
+
+/// Attribute name used to mark the bufferization layout for region arguments
+/// during One-Shot Module Bufferize.
+constexpr const ::llvm::StringLiteral
+    BufferizationDialect::kBufferLayoutAttrName;
 
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Interfaces
@@ -40,4 +50,34 @@ void mlir::bufferization::BufferizationDialect::initialize() {
 #include "mlir/Dialect/Bufferization/IR/BufferizationOps.cpp.inc"
       >();
   addInterfaces<BufferizationInlinerInterface>();
+}
+
+LogicalResult
+BufferizationDialect::verifyOperationAttribute(Operation *op,
+                                               NamedAttribute attr) {
+  using bufferization::BufferizableOpInterface;
+
+  if (attr.getName() == kWritableAttrName) {
+    if (!attr.getValue().isa<BoolAttr>()) {
+      return op->emitError() << "'" << kWritableAttrName
+                             << "' is expected to be a boolean attribute";
+    }
+    if (!isa<FunctionOpInterface>(op))
+      return op->emitError() << "expected " << attr.getName()
+                             << " to be used on function-like operations";
+    return success();
+  }
+  if (attr.getName() == kBufferLayoutAttrName) {
+    if (!attr.getValue().isa<AffineMapAttr>()) {
+      return op->emitError() << "'" << kBufferLayoutAttrName
+                             << "' is expected to be a affine map attribute";
+    }
+    if (!isa<FunctionOpInterface>(op))
+      return op->emitError() << "expected " << attr.getName()
+                             << " to be used on function-like operations";
+    return success();
+  }
+
+  return op->emitError() << "attribute '" << attr.getName()
+                         << "' not supported by the bufferization dialect";
 }

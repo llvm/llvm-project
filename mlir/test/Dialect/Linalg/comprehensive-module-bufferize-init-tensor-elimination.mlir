@@ -6,7 +6,7 @@
 // CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
 // CHECK-SAME:   %[[sz:[0-9a-zA-Z]*]]: index
 func.func @buffer_forwarding_conflict(
-  %t: tensor<?xf32> {linalg.buffer_layout = affine_map<(d0) -> (d0)>, linalg.inplaceable = true},
+  %t: tensor<?xf32> {bufferization.buffer_layout = affine_map<(d0) -> (d0)>, bufferization.writable = true},
   %sz: index)
     -> (tensor<?xf32>, tensor<?xf32>)
 {
@@ -43,7 +43,7 @@ func.func @buffer_forwarding_conflict(
 // CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
 // CHECK-SAME:   %[[sz:[0-9a-zA-Z]*]]: index
 func.func @buffer_forwarding_no_conflict(
-  %t: tensor<?xf32> {linalg.buffer_layout = affine_map<(d0) -> (d0)>, linalg.inplaceable = true},
+  %t: tensor<?xf32> {bufferization.buffer_layout = affine_map<(d0) -> (d0)>, bufferization.writable = true},
   %sz: index)
     -> (tensor<?xf32>)
 {

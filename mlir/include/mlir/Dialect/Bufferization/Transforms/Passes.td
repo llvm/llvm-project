@@ -200,6 +200,34 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     prints analysis results and explains why an OpOperand was decided to
     bufferize out-of-place. This is useful for understanding why One-Shot
     Bufferize chose to insert a certain buffer copy.
+
+    `bufferize-function-boundaries` is an experimental flag for bufferizing
+    `FuncOp`, `ReturnOp` and `CallOp`. This feature is still under development
+    and supports only simple cases at the moment. In particular:
+
+    * Recursive or circular function call graphs are not supported.
+    * If a newly allocated buffer is returned from a function (with
+      `allow-return-allocs`), the buffer will never be deallocated and leak.
+      Such IR needs special handling, e.g., allocation hoisting or reference
+      counting.
+    * External functions (without bodies) that return a tensor are not
+      supported.
+    * Function with multiple blocks or multiple ReturnOps are not supported.
+
+    One-Shot Bufferize implements the following contract around function calls:
+    The buffer of function arguments is always writable (unless annotated with
+    `bufferization.writable = false`). A buffer copy may be inserted at the call
+    site where necessary. Alias sets and equivalence info is propagated through
+    function calls. Whenever a function is bufferized, all other functions that
+    are being called were already analyzed and bufferized, so exact alias and
+    equivalence information is available. This is why recursive function calls
+    are not yet supported.
+
+    One-Shot Bufferize gathers additional information during the analysis phase
+    when function boundary bufferization is activated. E.g., whether a function
+    argument is read/written and which returned values are aliasing/equivalent.
+    For debugging purposes, such information can be printed with
+    `test-analysis-only`.
   }];
   let options = [
     Option<"allowReturnAllocs", "allow-return-allocs", "bool",
@@ -211,6 +239,9 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
            /*default=*/"0",
            "Test only: Analyze ops in random order with a given seed (fuzzer)">,
+    Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
+           "bool", /*default=*/"0",
+           "Bufferize function boundaries (experimental).">,
     Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
            "Specify if buffers should be deallocated. For compatibility with "
            "core bufferization passes.">,
