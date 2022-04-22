@@ -10,20 +10,20 @@ define void @splat_loads_double(double *%array1, double *%array2, double *%ptrA,
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP_1_0:%.*]] = getelementptr inbounds double, double* [[ARRAY1:%.*]], i64 0
 ; CHECK-NEXT:    [[GEP_2_0:%.*]] = getelementptr inbounds double, double* [[ARRAY2:%.*]], i64 0
-; CHECK-NEXT:    [[GEP_2_1:%.*]] = getelementptr inbounds double, double* [[ARRAY2]], i64 1
-; CHECK-NEXT:    [[LD_2_0:%.*]] = load double, double* [[GEP_2_0]], align 8
-; CHECK-NEXT:    [[LD_2_1:%.*]] = load double, double* [[GEP_2_1]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[GEP_1_0]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[LD_2_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[LD_2_0]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[LD_2_1]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[LD_2_1]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP1]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[GEP_1_0]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[GEP_2_0]] to <2 x double>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[SHUFFLE]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP4]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast double* [[GEP_1_0]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP10]], <2 x double>* [[TMP11]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -57,20 +57,20 @@ define void @splat_loads_float(float *%array1, float *%array2, float *%ptrA, flo
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP_1_0:%.*]] = getelementptr inbounds float, float* [[ARRAY1:%.*]], i64 0
 ; CHECK-NEXT:    [[GEP_2_0:%.*]] = getelementptr inbounds float, float* [[ARRAY2:%.*]], i64 0
-; CHECK-NEXT:    [[GEP_2_1:%.*]] = getelementptr inbounds float, float* [[ARRAY2]], i64 1
-; CHECK-NEXT:    [[LD_2_0:%.*]] = load float, float* [[GEP_2_0]], align 8
-; CHECK-NEXT:    [[LD_2_1:%.*]] = load float, float* [[GEP_2_1]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[GEP_1_0]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[LD_2_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[LD_2_0]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[LD_2_1]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[LD_2_1]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP1]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[GEP_1_0]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP8]], <2 x float>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[GEP_2_0]] to <2 x float>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x float> [[TMP1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x float> [[TMP4]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast float* [[GEP_1_0]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP10]], <2 x float>* [[TMP11]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -104,20 +104,20 @@ define void @splat_loads_i64(i64 *%array1, i64 *%array2, i64 *%ptrA, i64 *%ptrB)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP_1_0:%.*]] = getelementptr inbounds i64, i64* [[ARRAY1:%.*]], i64 0
 ; CHECK-NEXT:    [[GEP_2_0:%.*]] = getelementptr inbounds i64, i64* [[ARRAY2:%.*]], i64 0
-; CHECK-NEXT:    [[GEP_2_1:%.*]] = getelementptr inbounds i64, i64* [[ARRAY2]], i64 1
-; CHECK-NEXT:    [[LD_2_0:%.*]] = load i64, i64* [[GEP_2_0]], align 8
-; CHECK-NEXT:    [[LD_2_1:%.*]] = load i64, i64* [[GEP_2_1]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[GEP_1_0]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[LD_2_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[LD_2_0]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[LD_2_1]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[LD_2_1]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i64> [[TMP1]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64* [[GEP_1_0]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP8]], <2 x i64>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[GEP_2_0]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* [[TMP2]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i64> [[TMP1]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[SHUFFLE]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i64> [[TMP1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i64> [[TMP4]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64* [[GEP_1_0]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP10]], <2 x i64>* [[TMP11]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -151,20 +151,20 @@ define void @splat_loads_i32(i32 *%array1, i32 *%array2, i32 *%ptrA, i32 *%ptrB)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP_1_0:%.*]] = getelementptr inbounds i32, i32* [[ARRAY1:%.*]], i64 0
 ; CHECK-NEXT:    [[GEP_2_0:%.*]] = getelementptr inbounds i32, i32* [[ARRAY2:%.*]], i64 0
-; CHECK-NEXT:    [[GEP_2_1:%.*]] = getelementptr inbounds i32, i32* [[ARRAY2]], i64 1
-; CHECK-NEXT:    [[LD_2_0:%.*]] = load i32, i32* [[GEP_2_0]], align 8
-; CHECK-NEXT:    [[LD_2_1:%.*]] = load i32, i32* [[GEP_2_1]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[GEP_1_0]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LD_2_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[LD_2_0]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[LD_2_1]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[LD_2_1]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> [[TMP1]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[GEP_1_0]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP8]], <2 x i32>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[GEP_2_0]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, <2 x i32>* [[TMP2]], align 8
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP1]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[SHUFFLE]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i32> [[TMP1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP4]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[GEP_1_0]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP10]], <2 x i32>* [[TMP11]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
