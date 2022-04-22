@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.13.4)
 
 add_library (ompd SHARED TargetValue.cpp omp-debug.cpp omp-state.cpp omp-icv.cpp)
 
-add_dependencies(ompd omp) # ensure generated import library is created first
+target_link_libraries(ompd omp) # ensure generated import library is created first
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
