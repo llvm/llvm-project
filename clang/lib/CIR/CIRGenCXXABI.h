@@ -130,6 +130,10 @@ public:
   }
 
   virtual ~CIRGenCXXABI();
+
+  /// Emit a single constructor/destructor with the gien type from a C++
+  /// constructor Decl.
+  virtual void buildCXXStructor(clang::GlobalDecl GD) = 0;
 };
 
 /// Creates and Itanium-family ABI

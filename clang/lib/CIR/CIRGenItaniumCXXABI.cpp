@@ -61,6 +61,8 @@ public:
 
   void buildCXXConstructors(const clang::CXXConstructorDecl *D) override;
 
+  void buildCXXStructor(clang::GlobalDecl GD) override;
+
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *VTableClass) override {
     return true;
   }
@@ -112,6 +114,10 @@ bool CIRGenItaniumCXXABI::classifyReturnType(CIRGenFunctionInfo &FI) const {
   auto *RD = FI.getReturnType()->getAsCXXRecordDecl();
   assert(!RD && "RecordDecl return types NYI");
   return false;
+}
+
+void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
+  llvm_unreachable("NYI");
 }
 
 void CIRGenItaniumCXXABI::buildCXXConstructors(const CXXConstructorDecl *D) {
