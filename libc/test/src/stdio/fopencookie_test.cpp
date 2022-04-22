@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/stdio/clearerr.h"
 #include "src/stdio/fclose.h"
+#include "src/stdio/feof.h"
+#include "src/stdio/ferror.h"
 #include "src/stdio/fflush.h"
 #include "src/stdio/fopencookie.h"
 #include "src/stdio/fread.h"
@@ -102,11 +105,20 @@ TEST(LlvmLibcFOpenCookie, ReadOnlyCookieTest) {
             __llvm_libc::fread(read_data, 1, sizeof(CONTENT), f));
   ASSERT_STREQ(read_data, CONTENT);
 
+  // Reading another time should trigger eof.
+  ASSERT_NE(sizeof(CONTENT),
+            __llvm_libc::fread(read_data, 1, sizeof(CONTENT), f));
+  ASSERT_NE(__llvm_libc::feof(f), 0);
+
   ASSERT_EQ(0, __llvm_libc::fseek(f, 0, SEEK_SET));
   // Should be an error to write.
   ASSERT_EQ(size_t(0), __llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT), f));
-  ASSERT_EQ(errno, EBADF);
+  ASSERT_NE(__llvm_libc::ferror(f), 0);
+  ASSERT_NE(errno, 0);
   errno = 0;
+
+  __llvm_libc::clearerr(f);
+  ASSERT_EQ(__llvm_libc::ferror(f), 0);
 
   ASSERT_EQ(0, __llvm_libc::fclose(f));
   free(ss);
@@ -134,8 +146,12 @@ TEST(LlvmLibcFOpenCookie, WriteOnlyCookieTest) {
   char read_data[sizeof(WRITE_DATA)];
   // Should be an error to read.
   ASSERT_EQ(size_t(0), __llvm_libc::fread(read_data, 1, sizeof(WRITE_DATA), f));
+  ASSERT_NE(__llvm_libc::ferror(f), 0);
   ASSERT_EQ(errno, EBADF);
   errno = 0;
+
+  __llvm_libc::clearerr(f);
+  ASSERT_EQ(__llvm_libc::ferror(f), 0);
 
   ASSERT_EQ(0, __llvm_libc::fclose(f));
   free(ss);
@@ -159,8 +175,12 @@ TEST(LlvmLibcFOpenCookie, AppendOnlyCookieTest) {
   char read_data[READ_SIZE];
   // This is not a readable file.
   ASSERT_EQ(__llvm_libc::fread(read_data, 1, READ_SIZE, f), size_t(0));
+  ASSERT_NE(__llvm_libc::ferror(f), 0);
   EXPECT_NE(errno, 0);
   errno = 0;
+
+  __llvm_libc::clearerr(f);
+  ASSERT_EQ(__llvm_libc::ferror(f), 0);
 
   ASSERT_EQ(__llvm_libc::fwrite(WRITE_DATA, 1, sizeof(WRITE_DATA), f),
             sizeof(WRITE_DATA));
