@@ -158,3 +158,55 @@ func.func @l0() {
 // CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }
+
+func.func @l1() {
+  cir.scope {
+    cir.loop while(cond :  {
+      cir.yield continue
+    }, step :  {
+      cir.yield
+    })  {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: func @l1
+// CHECK-NEXT:  cir.scope {
+// CHECK-NEXT:    cir.loop while(cond :  {
+// CHECK-NEXT:      cir.yield continue
+// CHECK-NEXT:    }, step :  {
+// CHECK-NEXT:      cir.yield
+// CHECK-NEXT:    })  {
+// CHECK-NEXT:      cir.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// CHECK-NEXT:  cir.return
+// CHECK-NEXT: }
+
+func.func @l2() {
+  cir.scope {
+    cir.loop while(cond :  {
+      cir.yield
+    }, step :  {
+      cir.yield
+    })  {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: func @l2
+// CHECK-NEXT:  cir.scope {
+// CHECK-NEXT:    cir.loop while(cond :  {
+// CHECK-NEXT:      cir.yield
+// CHECK-NEXT:    }, step :  {
+// CHECK-NEXT:      cir.yield
+// CHECK-NEXT:    })  {
+// CHECK-NEXT:      cir.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// CHECK-NEXT:  cir.return
+// CHECK-NEXT: }
