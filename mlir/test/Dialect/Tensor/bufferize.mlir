@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -tensor-bufferize | FileCheck %s
+// RUN: mlir-opt %s -tensor-bufferize -cse | FileCheck %s
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 20 + s0 + d1)>
@@ -70,14 +70,6 @@ func.func @tensor.cast_to_unranked(%arg0: tensor<2xf32>) -> tensor<*xf32> {
 func.func @tensor.extract(%arg0: tensor<?xf32>, %arg1: index) -> f32 {
   %0 = tensor.extract %arg0[%arg1] : tensor<?xf32>
   return %0 : f32
-}
-
-// CHECK-LABEL:   func @tensor.from_elements_no_elements() -> tensor<0xindex> {
-// CHECK:           %[[RET:.*]] = arith.constant dense<> : tensor<0xindex>
-// CHECK:           return %[[RET]] : tensor<0xindex>
-func.func @tensor.from_elements_no_elements() -> tensor<0xindex> {
-  %0 = tensor.from_elements : tensor<0xindex>
-  return %0 : tensor<0xindex>
 }
 
 // CHECK-LABEL:   func @tensor.from_elements_0d(
@@ -185,8 +177,8 @@ func.func @tensor.from_elements_3d(%f0 : f32) -> tensor<3x2x2xf32> {
 // CHECK-SAME:                                       %[[DYNAMIC_EXTENT:.*]]: index) -> tensor<?xindex> {
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
-// CHECK:           %[[CASTED:.*]] = bufferization.to_memref %[[ARG]] : memref<*xf32>
-// CHECK:           %[[MEMREF:.*]] = memref.alloc(%[[DYNAMIC_EXTENT]]) {{.*}} : memref<?xindex>
+// CHECK-DAG:       %[[CASTED:.*]] = bufferization.to_memref %[[ARG]] : memref<*xf32>
+// CHECK-DAG:       %[[MEMREF:.*]] = memref.alloc(%[[DYNAMIC_EXTENT]]) {{.*}} : memref<?xindex>
 // CHECK:           scf.parallel (%[[I:.*]]) = (%[[C0]]) to (%[[DYNAMIC_EXTENT]]) step (%[[C1]]) {
 // CHECK:             %[[ELEM:.*]] = memref.dim %[[CASTED]], %[[I]] : memref<*xf32>
 // CHECK:             store %[[ELEM]], %[[MEMREF]][%[[I]]] : memref<?xindex>
@@ -212,7 +204,7 @@ func.func @tensor.generate(%arg: tensor<*xf32>, %dynamic_extent: index) -> tenso
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[C16:.*]] = arith.constant 16 : index
-// CHECK:           %[[MEMREF:.*]] = memref.alloc(%[[DYNAMIC_EXTENT]]) {{.*}} : memref<16x?xindex>
+// CHECK-DAG:       %[[MEMREF:.*]] = memref.alloc(%[[DYNAMIC_EXTENT]]) {{.*}} : memref<16x?xindex>
 // CHECK:           scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[C0]], %[[C0]]) to (%[[C16]], %[[DYNAMIC_EXTENT]]) step (%[[C1]], %[[C1]]) {
 // CHECK:             %[[VAL_7:.*]] = arith.addi %[[I]], %[[J]] : index
 // CHECK:             store %[[VAL_7]], %[[MEMREF]][%[[I]], %[[J]]] : memref<16x?xindex>
@@ -278,8 +270,8 @@ func.func @tensor.insert_slice(%t1: tensor<?x?xf32>, %t2: tensor<?x10xf32>,
   // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
   // CHECK-DAG: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x?xf32>
   // CHECK-DAG: %[[m2:.*]] = bufferization.to_memref %[[t2]] : memref<?x10xf32>
-  //     CHECK: %[[dim0:.*]] = memref.dim %[[m1]], %[[c0]]
-  //     CHECK: %[[dim1:.*]] = memref.dim %[[m1]], %[[c1]]
+  // CHECK-DAG: %[[dim0:.*]] = memref.dim %[[m1]], %[[c0]]
+  // CHECK-DAG: %[[dim1:.*]] = memref.dim %[[m1]], %[[c1]]
   //     CHECK: %[[alloc:.*]] = memref.alloc(%[[dim0]], %[[dim1]])
   //     CHECK: memref.copy %[[m1]], %[[alloc]]
   //     CHECK: %[[subview:.*]] = memref.subview %[[alloc]][%[[idx1]], 5] [%[[idx2]], 10] [1, 1]

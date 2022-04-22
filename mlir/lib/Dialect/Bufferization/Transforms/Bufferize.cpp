@@ -242,65 +242,6 @@ static bool hasTensorSemantics(Operation *op) {
   return hasTensorResult || hasTensorOperand;
 }
 
-/// Rewrite pattern that bufferizes bufferizable ops.
-struct BufferizationPattern
-    : public OpInterfaceRewritePattern<BufferizableOpInterface> {
-  BufferizationPattern(MLIRContext *context, BufferizationState &state,
-                       PatternBenefit benefit = 1)
-      : OpInterfaceRewritePattern<BufferizableOpInterface>(context, benefit),
-        state(&state) {}
-
-  LogicalResult matchAndRewrite(BufferizableOpInterface bufferizableOp,
-                                PatternRewriter &rewriter) const override {
-    const BufferizationOptions &options = state->getOptions();
-
-    // No tensors => no buffers.
-    if (!hasTensorSemantics(bufferizableOp.getOperation()))
-      return failure();
-    if (!options.isOpAllowed(bufferizableOp.getOperation()))
-      return failure();
-    return bufferizableOp.bufferize(rewriter, *state);
-  }
-
-private:
-  BufferizationState *const state;
-};
-
-/// Check the result of bufferization. Return an error if an op was not
-/// bufferized, unless partial bufferization is allowed.
-static LogicalResult
-checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
-  if (!options.allowUnknownOps) {
-    // Check if all ops were bufferized.
-    LogicalResult status = success();
-    op->walk([&](Operation *op) {
-      if (!hasTensorSemantics(op))
-        return WalkResult::advance();
-
-      // Bufferization dialect ops will canonicalize away if all other ops are
-      // bufferized.
-      if (isa<bufferization::ToMemrefOp, bufferization::ToTensorOp>(op))
-        return WalkResult::advance();
-
-      // Ops that are not in the allow list can be ignored.
-      if (!options.isOpAllowed(op))
-        return WalkResult::advance();
-
-      // Ops without any uses and no side effects will fold away.
-      if (op->getUses().empty() && MemoryEffectOpInterface::hasNoEffect(op))
-        return WalkResult::advance();
-
-      status = op->emitError("op was not bufferized");
-      return WalkResult::interrupt();
-    });
-
-    if (failed(status))
-      return status;
-  }
-
-  return success();
-}
-
 LogicalResult
 bufferization::finalizeBuffers(Operation *op,
                                const BufferizationOptions &options) {
@@ -335,35 +276,131 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   return success();
 }
 
+namespace {
+/// A rewriter that keeps track of extra information during bufferization.
+class BufferizationRewriter : public IRRewriter {
+public:
+  BufferizationRewriter(MLIRContext *ctx, DenseSet<Operation *> &erasedOps,
+                        DenseSet<Operation *> &toMemrefOps,
+                        SmallVector<Operation *> &worklist)
+      : IRRewriter(ctx), erasedOps(erasedOps), toMemrefOps(toMemrefOps),
+        worklist(worklist) {}
+
+protected:
+  void notifyOperationRemoved(Operation *op) override {
+    IRRewriter::notifyOperationRemoved(op);
+    erasedOps.insert(op);
+  }
+
+  void notifyOperationInserted(Operation *op) override {
+    IRRewriter::notifyOperationInserted(op);
+
+    // Keep track of to_memref ops.
+    if (isa<ToMemrefOp>(op)) {
+      toMemrefOps.insert(op);
+      return;
+    }
+
+    // Skip to_tensor ops.
+    if (isa<ToTensorOp>(op))
+      return;
+
+    // A new bufferizable op was inserted. Add it to the worklist.
+    if (hasTensorSemantics(op))
+      worklist.push_back(op);
+  }
+
+private:
+  /// A set of all erased ops.
+  DenseSet<Operation *> &erasedOps;
+
+  /// A set of all to_memref ops.
+  DenseSet<Operation *> &toMemrefOps;
+
+  /// The list of bufferizable ops.
+  SmallVector<Operation *> &worklist;
+};
+} // namespace
+
 LogicalResult
 bufferization::bufferizeOp(Operation *op,
                            BufferizationState &bufferizationState) {
-  // Bufferize the op and its nested ops.
-  RewritePatternSet patterns(op->getContext());
-  patterns.add<BufferizationPattern>(patterns.getContext(), bufferizationState);
+  const auto &options = bufferizationState.getOptions();
 
-  // Bufferize ops top-to-bottom. When creating a new op, we should ideally
-  // know the exact memref type of all operands. Otherwise, we have to use a
-  // memref type with a fully dynamic layout map, which has to canonicalize
-  // away. This is less efficient.
+  // Keep track of to_memref ops.
+  DenseSet<Operation *> toMemrefOps;
+  op->walk([&](ToMemrefOp toMemrefOp) { toMemrefOps.insert(toMemrefOp); });
+
+  // Gather all bufferizable ops in top-to-bottom order.
   //
-  // Note: If "fullyDynamicLayoutMaps = false", we may have to insert buffer
-  // copies to fold ("finalize") to_memref(to_tensor(x)) ops with non-cast-
-  // compatible layout maps when doing a traversal other than top-to-bottom.
-  // There are currently no canonicalization patterns to fold these away.
-  GreedyRewriteConfig config;
-  config.useTopDownTraversal = true;
+  // We should ideally know the exact memref type of all operands when
+  // bufferizing an op. (This is the case when bufferizing top-to-bottom.)
+  // Otherwise, we have to use a memref type with a fully dynamic layout map,
+  // which has to canonicalize away. This is less efficient.
+  //
+  // If "fullyDynamicLayoutMaps = false", we would have to insert buffer copies
+  // to fold ("finalize") to_memref(to_tensor(x)) ops with non-cast-compatible
+  // layout maps when doing a traversal other than top-to-bottom. These would
+  // not easily fold away.
+  SmallVector<Operation *> worklist;
+  op->walk<WalkOrder::PreOrder>([&](Operation *op) {
+    if (hasTensorSemantics(op))
+      worklist.push_back(op);
+  });
 
-  // TODO: Perform a preorder walk instead of the greedy pattern rewriter. This
-  // would be more efficient because every bufferization pattern is guaranteed
-  // to apply only a single time (otherwise, an assertion would be triggered).
-  // However, there are restrictions wrt. erasing ops during a preorder walk,
-  // which would likely require a larger refactoring.
-  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
-    return failure();
+  // Keep track of all erased ops.
+  DenseSet<Operation *> erasedOps;
 
-  if (failed(checkBufferizationResult(op, bufferizationState.getOptions())))
-    return failure();
+  // Bufferize all ops.
+  BufferizationRewriter rewriter(op->getContext(), erasedOps, toMemrefOps,
+                                 worklist);
+  for (unsigned i = 0; i < worklist.size(); ++i) {
+    Operation *op = worklist[i];
+    // Skip ops that were erased.
+    if (erasedOps.contains(op))
+      continue;
+    // Skip ops that are not bufferizable.
+    auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
+    if (!bufferizableOp)
+      continue;
+    // Continue ops that are not allowed.
+    if (!options.isOpAllowed(op))
+      continue;
+    // Bufferize the op.
+    rewriter.setInsertionPoint(op);
+    (void)bufferizableOp.bufferize(rewriter, bufferizationState);
+  }
+
+  // Fold all to_memref(to_tensor(x)) pairs.
+  for (Operation *op : toMemrefOps) {
+    if (erasedOps.contains(op))
+      continue;
+    rewriter.setInsertionPoint(op);
+    (void)bufferization::foldToMemrefToTensorPair(rewriter,
+                                                  cast<ToMemrefOp>(op));
+  }
+
+  /// Check the result of bufferization. Return an error if an op was not
+  /// bufferized, unless partial bufferization is allowed.
+  if (bufferizationState.getOptions().allowUnknownOps)
+    return success();
+
+  for (Operation *op : worklist) {
+    // Skip ops that are entirely gone.
+    if (erasedOps.contains(op))
+      continue;
+    // Ops that no longer have tensor semantics (because they were updated
+    // in-place) are allowed.
+    if (!hasTensorSemantics(op))
+      continue;
+    // Continue ops that are not allowed.
+    if (!options.isOpAllowed(op))
+      continue;
+    // Ops without any uses and no side effects will fold away.
+    if (op->getUses().empty() && MemoryEffectOpInterface::hasNoEffect(op))
+      continue;
+    return op->emitError("op was not bufferized");
+  }
 
   return success();
 }
