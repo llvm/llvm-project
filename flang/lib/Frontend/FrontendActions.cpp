@@ -73,6 +73,19 @@ bool PrescanAndSemaDebugAction::BeginSourceFileAction() {
 }
 
 bool CodeGenAction::BeginSourceFileAction() {
+  llvmCtx = std::make_unique<llvm::LLVMContext>();
+
+  // If the input is an LLVM file, just parse it and return.
+  if (this->currentInput().kind().GetLanguage() == Language::LLVM_IR) {
+    llvm::SMDiagnostic err;
+    llvmModule = llvm::parseIRFile(currentInput().file(), err, *llvmCtx);
+
+    return (nullptr != llvmModule);
+  }
+
+  // Otherwise, generate an MLIR module from the input Fortran source
+  assert(currentInput().kind().GetLanguage() == Language::Fortran &&
+         "Invalid input type - expecting a Fortran file");
   bool res = RunPrescan() && RunParse() && RunSemanticChecks();
   if (!res)
     return res;
@@ -448,7 +461,6 @@ void CodeGenAction::GenerateLLVMIR() {
 
   // Translate to LLVM IR
   llvm::Optional<llvm::StringRef> moduleName = mlirModule->getName();
-  llvmCtx = std::make_unique<llvm::LLVMContext>();
   llvmModule = mlir::translateModuleToLLVMIR(
       *mlirModule, *llvmCtx, moduleName ? *moduleName : "FIRModule");
 

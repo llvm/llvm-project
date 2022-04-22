@@ -159,6 +159,20 @@ bool types::isAcceptedByClang(ID Id) {
   }
 }
 
+bool types::isAcceptedByFlang(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+
+  case TY_Fortran:
+  case TY_PP_Fortran:
+    return true;
+  case TY_LLVM_IR:
+  case TY_LLVM_BC:
+    return true;
+  }
+}
+
 bool types::isDerivedFromC(ID Id) {
   switch (Id) {
   default:
@@ -268,16 +282,6 @@ bool types::isHIP(ID Id) {
   case TY_HIP:
   case TY_PP_HIP:
   case TY_HIP_DEVICE:
-    return true;
-  }
-}
-
-bool types::isFortran(ID Id) {
-  switch (Id) {
-  default:
-    return false;
-
-  case TY_Fortran: case TY_PP_Fortran:
     return true;
   }
 }
