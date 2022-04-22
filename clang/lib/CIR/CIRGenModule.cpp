@@ -496,6 +496,15 @@ void CIRGenModule::setDSOLocal(mlir::Operation *Op) const {
   // TODO: Op->setDSOLocal
 }
 
+bool CIRGenModule::lookupRepresentativeDecl(StringRef MangledName,
+                                            GlobalDecl &Result) const {
+  auto Res = Manglings.find(MangledName);
+  if (Res == Manglings.end())
+    return false;
+  Result = Res->getValue();
+  return true;
+}
+
 /// GetOrCreateCIRFunction - If the specified mangled name is not in the module,
 /// create and return a CIR Function with the specified type. If there is
 /// something in the module with the specified name, return it potentially
@@ -533,9 +542,22 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
       setDSOLocal(Entry);
     }
 
-    // TODO(CIR): If there are two attempts to define the same mangled name,
-    // issue an error.
+    // If there are two attempts to define the same mangled name, issue an
+    // error.
     auto Fn = cast<mlir::FuncOp>(Entry);
+    if (IsForDefinition && Fn && !Fn.isDeclaration()) {
+      GlobalDecl OtherGD;
+      // CHeck that GD is not yet in DiagnosedConflictingDefinitions is required
+      // to make sure that we issue and error only once.
+      if (lookupRepresentativeDecl(MangledName, OtherGD) &&
+          (GD.getCanonicalDecl().getDecl()) &&
+          DiagnosedConflictingDefinitions.insert(GD).second) {
+        getDiags().Report(D->getLocation(), diag::err_duplicate_mangled_name)
+            << MangledName;
+        getDiags().Report(OtherGD.getDecl()->getLocation(),
+                          diag::note_previous_definition);
+      }
+    }
 
     if (Fn && Fn.getFunctionType() == Ty) {
       return Fn;

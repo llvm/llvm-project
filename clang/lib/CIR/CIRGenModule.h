@@ -97,6 +97,11 @@ private:
   /// Declaring variables
   /// -------
 
+  /// Set of global decls for which we already diagnosed mangled name conflict.
+  /// Required to not issue a warning (on a mangling conflict) multiple times
+  /// for the same decl.
+  llvm::DenseSet<clang::GlobalDecl> DiagnosedConflictingDefinitions;
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   mlir::OpBuilder &getBuilder() { return builder; }
@@ -255,6 +260,9 @@ public:
   // apply any ABI rules about which other constructors/destructors are needed
   // or if they are alias to each other.
   mlir::FuncOp codegenCXXStructor(clang::GlobalDecl GD);
+
+  bool lookupRepresentativeDecl(llvm::StringRef MangledName,
+                                clang::GlobalDecl &Result) const;
 
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &D, mlir::Operation *Op);
