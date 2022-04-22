@@ -1114,18 +1114,14 @@ Corrected:
 
       UsingShadowDecl *FoundUsingShadow =
           dyn_cast<UsingShadowDecl>(*Result.begin());
-
-      if (SS.isNotEmpty()) {
-        // FIXME: support using shadow-declaration in qualified template name.
-        Template =
-            Context.getQualifiedTemplateName(SS.getScopeRep(),
-                                             /*TemplateKeyword=*/false, TD);
-      } else {
-        assert(!FoundUsingShadow ||
-               TD == cast<TemplateDecl>(FoundUsingShadow->getTargetDecl()));
-        Template = FoundUsingShadow ? TemplateName(FoundUsingShadow)
-                                    : TemplateName(TD);
-      }
+      assert(!FoundUsingShadow ||
+             TD == cast<TemplateDecl>(FoundUsingShadow->getTargetDecl()));
+      Template =
+          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
+      if (SS.isNotEmpty())
+        Template = Context.getQualifiedTemplateName(SS.getScopeRep(),
+                                                    /*TemplateKeyword=*/false,
+                                                    Template);
     } else {
       // All results were non-template functions. This is a function template
       // name.
@@ -2810,6 +2806,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *NT = dyn_cast<HLSLNumThreadsAttr>(Attr))
     NewAttr =
         S.mergeHLSLNumThreadsAttr(D, *NT, NT->getX(), NT->getY(), NT->getZ());
+  else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
+    NewAttr = S.mergeHLSLShaderAttr(D, *SA, SA->getType());
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
 

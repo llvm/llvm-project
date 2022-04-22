@@ -40,7 +40,7 @@ module {
   // A kernel that multiplies a sparse matrix A with a dense matrix B
   // into a dense matrix X.
   //
-  func @kernel_spmm(%arga: tensor<?x?xf64, #SparseMatrix>,
+  func.func @kernel_spmm(%arga: tensor<?x?xf64, #SparseMatrix>,
                     %argb: tensor<?x?xf64>,
                     %argx: tensor<?x?xf64> {linalg.inplaceable = true}) -> tensor<?x?xf64> {
     %0 = linalg.generic #spmm
@@ -54,12 +54,12 @@ module {
     return %0 : tensor<?x?xf64>
   }
 
-  func private @getTensorFilename(index) -> (!Filename)
+  func.func private @getTensorFilename(index) -> (!Filename)
 
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
-  func @entry() {
+  func.func @entry() {
     %i0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index

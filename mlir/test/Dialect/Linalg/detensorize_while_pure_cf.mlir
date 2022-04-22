@@ -7,7 +7,7 @@
   iterator_types = []
 }
 
-func @main() -> () attributes {} {
+func.func @main() -> () attributes {} {
   %c0 = arith.constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<1xi32>
   %reshaped0 = tensor.collapse_shape %0 [] : tensor<1xi32> into tensor<i32>

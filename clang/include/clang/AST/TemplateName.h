@@ -414,13 +414,19 @@ class QualifiedTemplateName : public llvm::FoldingSetNode {
   /// this name with DependentTemplateName).
   llvm::PointerIntPair<NestedNameSpecifier *, 1> Qualifier;
 
-  /// The template declaration or set of overloaded function templates
-  /// that this qualified name refers to.
-  TemplateDecl *Template;
+  /// The underlying template name, it is either
+  ///  1) a Template -- a template declaration that this qualified name refers
+  ///     to.
+  ///  2) or a UsingTemplate -- a template declaration introduced by a
+  ///     using-shadow declaration.
+  TemplateName UnderlyingTemplate;
 
   QualifiedTemplateName(NestedNameSpecifier *NNS, bool TemplateKeyword,
-                        TemplateDecl *Template)
-      : Qualifier(NNS, TemplateKeyword? 1 : 0), Template(Template) {}
+                        TemplateName Template)
+      : Qualifier(NNS, TemplateKeyword ? 1 : 0), UnderlyingTemplate(Template) {
+    assert(UnderlyingTemplate.getKind() == TemplateName::Template ||
+           UnderlyingTemplate.getKind() == TemplateName::UsingTemplate);
+  }
 
 public:
   /// Return the nested name specifier that qualifies this name.
@@ -430,19 +436,25 @@ public:
   /// keyword.
   bool hasTemplateKeyword() const { return Qualifier.getInt(); }
 
+  /// Return the underlying template name.
+  TemplateName getUnderlyingTemplate() const { return UnderlyingTemplate; }
+
   /// The template declaration to which this qualified name
   /// refers.
-  TemplateDecl *getTemplateDecl() const { return Template; }
+  /// FIXME: remove this and use getUnderlyingTemplate() instead.
+  TemplateDecl *getTemplateDecl() const {
+    return UnderlyingTemplate.getAsTemplateDecl();
+  }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getQualifier(), hasTemplateKeyword(), getTemplateDecl());
+    Profile(ID, getQualifier(), hasTemplateKeyword(), UnderlyingTemplate);
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, NestedNameSpecifier *NNS,
-                      bool TemplateKeyword, TemplateDecl *Template) {
+                      bool TemplateKeyword, TemplateName TN) {
     ID.AddPointer(NNS);
     ID.AddBoolean(TemplateKeyword);
-    ID.AddPointer(Template);
+    ID.AddPointer(TN.getAsVoidPointer());
   }
 };
 

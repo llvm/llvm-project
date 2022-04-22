@@ -511,11 +511,13 @@ TEST(IncludeCleaner, IWYUPragmas) {
   TestTU TU;
   TU.Code = R"cpp(
     #include "behind_keep.h" // IWYU pragma: keep
+    #include "exported.h" // IWYU pragma: export
     #include "public.h"
 
     void bar() { foo(); }
     )cpp";
   TU.AdditionalFiles["behind_keep.h"] = guard("");
+  TU.AdditionalFiles["exported.h"] = guard("");
   TU.AdditionalFiles["public.h"] = guard("#include \"private.h\"");
   TU.AdditionalFiles["private.h"] = guard(R"cpp(
     // IWYU pragma: private, include "public.h"
@@ -533,6 +535,38 @@ TEST(IncludeCleaner, IWYUPragmas) {
       ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
   EXPECT_TRUE(
       ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
+  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
+  auto Unused = computeUnusedIncludes(AST);
+  EXPECT_THAT(Unused, IsEmpty());
+}
+
+TEST(IncludeCleaner, RecursiveInclusion) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "foo.h"
+
+    void baz() {
+      foo();
+    }
+    )cpp";
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+    #ifndef FOO_H
+    #define FOO_H
+
+    void foo() {}
+
+    #include "bar.h"
+
+    #endif
+  )cpp";
+  TU.AdditionalFiles["bar.h"] = guard(R"cpp(
+    #include "foo.h"
+  )cpp");
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles = findReferencedFiles(
+      findReferencedLocations(AST), AST.getIncludeStructure(),
+      AST.getCanonicalIncludes(), AST.getSourceManager());
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   auto Unused = computeUnusedIncludes(AST);
   EXPECT_THAT(Unused, IsEmpty());

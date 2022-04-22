@@ -903,11 +903,7 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   ucontext_t *ucontext = (ucontext_t*)context;
 # if defined(__aarch64__)
   *pc = AARCH64_GET_REG(pc);
-#   if defined(__IPHONE_8_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_8_0
   *bp = AARCH64_GET_REG(fp);
-#   else
-  *bp = AARCH64_GET_REG(lr);
-#   endif
   *sp = AARCH64_GET_REG(sp);
 # elif defined(__x86_64__)
   *pc = ucontext->uc_mcontext->__ss.__rip;

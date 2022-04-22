@@ -71,7 +71,7 @@ Here's an example of an MLIR module:
 // Compute A*B using an implementation of multiply kernel and print the
 // result using a TensorFlow op. The dimensions of A and B are partially
 // known. The shapes are assumed to match.
-func @mul(%A: tensor<100x?xf32>, %B: tensor<?x50xf32>) -> (tensor<100x50xf32>) {
+func.func @mul(%A: tensor<100x?xf32>, %B: tensor<?x50xf32>) -> (tensor<100x50xf32>) {
   // Compute the inner dimension of %A using the dim operation.
   %n = memref.dim %A, 1 : tensor<100x?xf32>
 
@@ -102,7 +102,7 @@ func @mul(%A: tensor<100x?xf32>, %B: tensor<?x50xf32>) -> (tensor<100x50xf32>) {
 }
 
 // A function that multiplies two memrefs and returns the result.
-func @multiply(%A: memref<100x?xf32>, %B: memref<?x50xf32>)
+func.func @multiply(%A: memref<100x?xf32>, %B: memref<?x50xf32>)
           -> (memref<100x50xf32>)  {
   // Compute the inner dimension of %A.
   %n = memref.dim %A, 1 : memref<100x?xf32>
@@ -389,7 +389,7 @@ Here is a simple example function showing branches, returns, and block
 arguments:
 
 ```mlir
-func @simple(i64, i1) -> i64 {
+func.func @simple(i64, i1) -> i64 {
 ^bb0(%a: i64, %cond: i1): // Code dominated by ^bb0 may refer to %a
   cf.cond_br %cond, ^bb1, ^bb2
 
@@ -529,7 +529,7 @@ region, for example if a function call does not return.
 Example:
 
 ```mlir
-func @accelerator_compute(i64, i1) -> i64 { // An SSACFG region
+func.func @accelerator_compute(i64, i1) -> i64 { // An SSACFG region
 ^bb0(%a: i64, %cond: i1): // Code dominated by ^bb0 may refer to %a
   cf.cond_br %cond, ^bb1, ^bb2
 

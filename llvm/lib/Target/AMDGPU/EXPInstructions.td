@@ -54,10 +54,12 @@ class EXP_Real_Row<bit row, bit done, string pseudo, int subtarget>
 
 // DONE variants have mayLoad = 1.
 // ROW variants have an implicit use of M0.
+let SubtargetPredicate = isNotGFX90APlus in {
 def EXP          : EXP_Pseudo<0, 0>;
 def EXP_DONE     : EXP_Pseudo<0, 1>;
 def EXP_ROW      : EXP_Pseudo<1, 0>;
 def EXP_ROW_DONE : EXP_Pseudo<1, 1>;
+} // let SubtargetPredicate = isNotGFX90APlus
 
 //===----------------------------------------------------------------------===//
 // SI
@@ -80,6 +82,7 @@ def EXP_DONE_si : EXP_Real_si<1, "EXP_DONE">;
 class EXP_Real_vi<bit _done, string pseudo>
   : EXP_Real_ComprVM<_done, pseudo, SIEncodingFamily.VI>, EXPe_vi {
   let AssemblerPredicate = isGFX8GFX9;
+  let SubtargetPredicate = isNotGFX90APlus;
   let DecoderNamespace = "GFX8";
   let done = _done;
 }

@@ -1,5 +1,5 @@
 ; To test that __tsan_func_exit always happen before musttaill call and no exception handling code.
-; RUN: opt < %s -tsan -S | FileCheck %s
+; RUN: opt < %s -passes=tsan -S | FileCheck %s
 
 define internal i32 @preallocated_musttail(i32* preallocated(i32) %p) sanitize_thread {
   %rv = load i32, i32* %p

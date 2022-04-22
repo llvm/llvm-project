@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="func.func(test-clone)" -split-input-file 
 
 module {
-  func @fixpoint(%arg1 : i32) -> i32 {
+  func.func @fixpoint(%arg1 : i32) -> i32 {
     %r = "test.use"(%arg1) ({
        "test.yield"(%arg1) : (i32) -> ()
     }) : (i32) -> i32

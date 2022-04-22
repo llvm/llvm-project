@@ -4939,6 +4939,255 @@ static bool hasPartialRegUpdate(unsigned Opcode,
   case X86::SQRTSDr_Int:
   case X86::SQRTSDm_Int:
     return true;
+  case X86::VFCMULCPHZ128rm:
+  case X86::VFCMULCPHZ128rmb:
+  case X86::VFCMULCPHZ128rmbkz:
+  case X86::VFCMULCPHZ128rmkz:
+  case X86::VFCMULCPHZ128rr:
+  case X86::VFCMULCPHZ128rrkz:
+  case X86::VFCMULCPHZ256rm:
+  case X86::VFCMULCPHZ256rmb:
+  case X86::VFCMULCPHZ256rmbkz:
+  case X86::VFCMULCPHZ256rmkz:
+  case X86::VFCMULCPHZ256rr:
+  case X86::VFCMULCPHZ256rrkz:
+  case X86::VFCMULCPHZrm:
+  case X86::VFCMULCPHZrmb:
+  case X86::VFCMULCPHZrmbkz:
+  case X86::VFCMULCPHZrmkz:
+  case X86::VFCMULCPHZrr:
+  case X86::VFCMULCPHZrrb:
+  case X86::VFCMULCPHZrrbkz:
+  case X86::VFCMULCPHZrrkz:
+  case X86::VFMULCPHZ128rm:
+  case X86::VFMULCPHZ128rmb:
+  case X86::VFMULCPHZ128rmbkz:
+  case X86::VFMULCPHZ128rmkz:
+  case X86::VFMULCPHZ128rr:
+  case X86::VFMULCPHZ128rrkz:
+  case X86::VFMULCPHZ256rm:
+  case X86::VFMULCPHZ256rmb:
+  case X86::VFMULCPHZ256rmbkz:
+  case X86::VFMULCPHZ256rmkz:
+  case X86::VFMULCPHZ256rr:
+  case X86::VFMULCPHZ256rrkz:
+  case X86::VFMULCPHZrm:
+  case X86::VFMULCPHZrmb:
+  case X86::VFMULCPHZrmbkz:
+  case X86::VFMULCPHZrmkz:
+  case X86::VFMULCPHZrr:
+  case X86::VFMULCPHZrrb:
+  case X86::VFMULCPHZrrbkz:
+  case X86::VFMULCPHZrrkz:
+  case X86::VFCMULCSHZrm:
+  case X86::VFCMULCSHZrmkz:
+  case X86::VFCMULCSHZrr:
+  case X86::VFCMULCSHZrrb:
+  case X86::VFCMULCSHZrrbkz:
+  case X86::VFCMULCSHZrrkz:
+  case X86::VFMULCSHZrm:
+  case X86::VFMULCSHZrmkz:
+  case X86::VFMULCSHZrr:
+  case X86::VFMULCSHZrrb:
+  case X86::VFMULCSHZrrbkz:
+  case X86::VFMULCSHZrrkz:
+    return Subtarget.hasMULCFalseDeps();
+  case X86::VPERMDYrm:
+  case X86::VPERMDYrr:
+  case X86::VPERMQYmi:
+  case X86::VPERMQYri:
+  case X86::VPERMPSYrm:
+  case X86::VPERMPSYrr:
+  case X86::VPERMPDYmi:
+  case X86::VPERMPDYri:
+  case X86::VPERMDZ256rm:
+  case X86::VPERMDZ256rmb:
+  case X86::VPERMDZ256rmbkz:
+  case X86::VPERMDZ256rmkz:
+  case X86::VPERMDZ256rr:
+  case X86::VPERMDZ256rrkz:
+  case X86::VPERMDZrm:
+  case X86::VPERMDZrmb:
+  case X86::VPERMDZrmbkz:
+  case X86::VPERMDZrmkz:
+  case X86::VPERMDZrr:
+  case X86::VPERMDZrrkz:
+  case X86::VPERMQZ256mbi:
+  case X86::VPERMQZ256mbikz:
+  case X86::VPERMQZ256mi:
+  case X86::VPERMQZ256mikz:
+  case X86::VPERMQZ256ri:
+  case X86::VPERMQZ256rikz:
+  case X86::VPERMQZ256rm:
+  case X86::VPERMQZ256rmb:
+  case X86::VPERMQZ256rmbkz:
+  case X86::VPERMQZ256rmkz:
+  case X86::VPERMQZ256rr:
+  case X86::VPERMQZ256rrkz:
+  case X86::VPERMQZmbi:
+  case X86::VPERMQZmbikz:
+  case X86::VPERMQZmi:
+  case X86::VPERMQZmikz:
+  case X86::VPERMQZri:
+  case X86::VPERMQZrikz:
+  case X86::VPERMQZrm:
+  case X86::VPERMQZrmb:
+  case X86::VPERMQZrmbkz:
+  case X86::VPERMQZrmkz:
+  case X86::VPERMQZrr:
+  case X86::VPERMQZrrkz:
+  case X86::VPERMPSZ256rm:
+  case X86::VPERMPSZ256rmb:
+  case X86::VPERMPSZ256rmbkz:
+  case X86::VPERMPSZ256rmkz:
+  case X86::VPERMPSZ256rr:
+  case X86::VPERMPSZ256rrkz:
+  case X86::VPERMPSZrm:
+  case X86::VPERMPSZrmb:
+  case X86::VPERMPSZrmbkz:
+  case X86::VPERMPSZrmkz:
+  case X86::VPERMPSZrr:
+  case X86::VPERMPSZrrkz:
+  case X86::VPERMPDZ256mbi:
+  case X86::VPERMPDZ256mbikz:
+  case X86::VPERMPDZ256mi:
+  case X86::VPERMPDZ256mikz:
+  case X86::VPERMPDZ256ri:
+  case X86::VPERMPDZ256rikz:
+  case X86::VPERMPDZ256rm:
+  case X86::VPERMPDZ256rmb:
+  case X86::VPERMPDZ256rmbkz:
+  case X86::VPERMPDZ256rmkz:
+  case X86::VPERMPDZ256rr:
+  case X86::VPERMPDZ256rrkz:
+  case X86::VPERMPDZmbi:
+  case X86::VPERMPDZmbikz:
+  case X86::VPERMPDZmi:
+  case X86::VPERMPDZmikz:
+  case X86::VPERMPDZri:
+  case X86::VPERMPDZrikz:
+  case X86::VPERMPDZrm:
+  case X86::VPERMPDZrmb:
+  case X86::VPERMPDZrmbkz:
+  case X86::VPERMPDZrmkz:
+  case X86::VPERMPDZrr:
+  case X86::VPERMPDZrrkz:
+    return Subtarget.hasPERMFalseDeps();
+  case X86::VRANGEPDZ128rmbi:
+  case X86::VRANGEPDZ128rmbikz:
+  case X86::VRANGEPDZ128rmi:
+  case X86::VRANGEPDZ128rmikz:
+  case X86::VRANGEPDZ128rri:
+  case X86::VRANGEPDZ128rrikz:
+  case X86::VRANGEPDZ256rmbi:
+  case X86::VRANGEPDZ256rmbikz:
+  case X86::VRANGEPDZ256rmi:
+  case X86::VRANGEPDZ256rmikz:
+  case X86::VRANGEPDZ256rri:
+  case X86::VRANGEPDZ256rrikz:
+  case X86::VRANGEPDZrmbi:
+  case X86::VRANGEPDZrmbikz:
+  case X86::VRANGEPDZrmi:
+  case X86::VRANGEPDZrmikz:
+  case X86::VRANGEPDZrri:
+  case X86::VRANGEPDZrrib:
+  case X86::VRANGEPDZrribkz:
+  case X86::VRANGEPDZrrikz:
+  case X86::VRANGEPSZ128rmbi:
+  case X86::VRANGEPSZ128rmbikz:
+  case X86::VRANGEPSZ128rmi:
+  case X86::VRANGEPSZ128rmikz:
+  case X86::VRANGEPSZ128rri:
+  case X86::VRANGEPSZ128rrikz:
+  case X86::VRANGEPSZ256rmbi:
+  case X86::VRANGEPSZ256rmbikz:
+  case X86::VRANGEPSZ256rmi:
+  case X86::VRANGEPSZ256rmikz:
+  case X86::VRANGEPSZ256rri:
+  case X86::VRANGEPSZ256rrikz:
+  case X86::VRANGEPSZrmbi:
+  case X86::VRANGEPSZrmbikz:
+  case X86::VRANGEPSZrmi:
+  case X86::VRANGEPSZrmikz:
+  case X86::VRANGEPSZrri:
+  case X86::VRANGEPSZrrib:
+  case X86::VRANGEPSZrribkz:
+  case X86::VRANGEPSZrrikz:
+  case X86::VRANGESDZrmi:
+  case X86::VRANGESDZrmikz:
+  case X86::VRANGESDZrri:
+  case X86::VRANGESDZrrib:
+  case X86::VRANGESDZrribkz:
+  case X86::VRANGESDZrrikz:
+  case X86::VRANGESSZrmi:
+  case X86::VRANGESSZrmikz:
+  case X86::VRANGESSZrri:
+  case X86::VRANGESSZrrib:
+  case X86::VRANGESSZrribkz:
+  case X86::VRANGESSZrrikz:
+    return Subtarget.hasRANGEFalseDeps();
+  case X86::VGETMANTSSZrmi:
+  case X86::VGETMANTSSZrmikz:
+  case X86::VGETMANTSSZrri:
+  case X86::VGETMANTSSZrrib:
+  case X86::VGETMANTSSZrribkz:
+  case X86::VGETMANTSSZrrikz:
+  case X86::VGETMANTSDZrmi:
+  case X86::VGETMANTSDZrmikz:
+  case X86::VGETMANTSDZrri:
+  case X86::VGETMANTSDZrrib:
+  case X86::VGETMANTSDZrribkz:
+  case X86::VGETMANTSDZrrikz:
+  case X86::VGETMANTSHZrmi:
+  case X86::VGETMANTSHZrmikz:
+  case X86::VGETMANTSHZrri:
+  case X86::VGETMANTSHZrrib:
+  case X86::VGETMANTSHZrribkz:
+  case X86::VGETMANTSHZrrikz:
+  case X86::VGETMANTPSZ128rmbi:
+  case X86::VGETMANTPSZ128rmbikz:
+  case X86::VGETMANTPSZ128rmi:
+  case X86::VGETMANTPSZ128rmikz:
+  case X86::VGETMANTPSZ256rmbi:
+  case X86::VGETMANTPSZ256rmbikz:
+  case X86::VGETMANTPSZ256rmi:
+  case X86::VGETMANTPSZ256rmikz:
+  case X86::VGETMANTPSZrmbi:
+  case X86::VGETMANTPSZrmbikz:
+  case X86::VGETMANTPSZrmi:
+  case X86::VGETMANTPSZrmikz:
+  case X86::VGETMANTPDZ128rmbi:
+  case X86::VGETMANTPDZ128rmbikz:
+  case X86::VGETMANTPDZ128rmi:
+  case X86::VGETMANTPDZ128rmikz:
+  case X86::VGETMANTPDZ256rmbi:
+  case X86::VGETMANTPDZ256rmbikz:
+  case X86::VGETMANTPDZ256rmi:
+  case X86::VGETMANTPDZ256rmikz:
+  case X86::VGETMANTPDZrmbi:
+  case X86::VGETMANTPDZrmbikz:
+  case X86::VGETMANTPDZrmi:
+  case X86::VGETMANTPDZrmikz:
+    return Subtarget.hasGETMANTFalseDeps();
+  case X86::VPMULLQZ128rm:
+  case X86::VPMULLQZ128rmb:
+  case X86::VPMULLQZ128rmbkz:
+  case X86::VPMULLQZ128rmkz:
+  case X86::VPMULLQZ128rr:
+  case X86::VPMULLQZ128rrkz:
+  case X86::VPMULLQZ256rm:
+  case X86::VPMULLQZ256rmb:
+  case X86::VPMULLQZ256rmbkz:
+  case X86::VPMULLQZ256rmkz:
+  case X86::VPMULLQZ256rr:
+  case X86::VPMULLQZ256rrkz:
+  case X86::VPMULLQZrm:
+  case X86::VPMULLQZrmb:
+  case X86::VPMULLQZrmbkz:
+  case X86::VPMULLQZrmkz:
+  case X86::VPMULLQZrr:
+  case X86::VPMULLQZrrkz:
+    return Subtarget.hasMULLQFalseDeps();
   // GPR
   case X86::POPCNT32rm:
   case X86::POPCNT32rr:
@@ -5361,6 +5610,28 @@ void X86InstrInfo::breakPartialRegDependency(
     // It wants to read and write the xmm sub-register.
     Register XReg = TRI->getSubReg(Reg, X86::sub_xmm);
     BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(X86::VXORPSrr), XReg)
+        .addReg(XReg, RegState::Undef)
+        .addReg(XReg, RegState::Undef)
+        .addReg(Reg, RegState::ImplicitDefine);
+    MI.addRegisterKilled(Reg, TRI, true);
+  } else if (X86::VR128XRegClass.contains(Reg)) {
+    // Only handle VLX targets.
+    if (!Subtarget.hasVLX())
+      return;
+    // Since vxorps requires AVX512DQ, vpxord should be the best choice.
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(X86::VPXORDZ128rr), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
+    MI.addRegisterKilled(Reg, TRI, true);
+  } else if (X86::VR256XRegClass.contains(Reg) ||
+             X86::VR512RegClass.contains(Reg)) {
+    // Only handle VLX targets.
+    if (!Subtarget.hasVLX())
+      return;
+    // Use vpxord to clear the full ymm/zmm register.
+    // It wants to read and write the xmm sub-register.
+    Register XReg = TRI->getSubReg(Reg, X86::sub_xmm);
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(X86::VPXORDZ128rr), XReg)
         .addReg(XReg, RegState::Undef)
         .addReg(XReg, RegState::Undef)
         .addReg(Reg, RegState::ImplicitDefine);

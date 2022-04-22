@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-vector-multi-reduction-lowering-patterns | FileCheck %s
 
-func @vector_multi_reduction(%arg0: vector<2x4xf32>) -> vector<2xf32> {
+func.func @vector_multi_reduction(%arg0: vector<2x4xf32>) -> vector<2xf32> {
     %0 = vector.multi_reduction <mul>, %arg0 [1] : vector<2x4xf32> to vector<2xf32>
     return %0 : vector<2xf32>
 }
@@ -17,7 +17,7 @@ func @vector_multi_reduction(%arg0: vector<2x4xf32>) -> vector<2xf32> {
 //       CHECK:       %[[RESULT_VEC:.+]] = vector.insertelement %[[RV1:.+]], %[[RESULT_VEC_1]][%[[C1]] : index] : vector<2xf32>
 //       CHECK:       return %[[RESULT_VEC]]
 
-func @vector_multi_reduction_to_scalar(%arg0: vector<2x4xf32>) -> f32 {
+func.func @vector_multi_reduction_to_scalar(%arg0: vector<2x4xf32>) -> f32 {
     %0 = vector.multi_reduction <mul>, %arg0 [0, 1] : vector<2x4xf32> to f32
     return %0 : f32
 }
@@ -29,7 +29,7 @@ func @vector_multi_reduction_to_scalar(%arg0: vector<2x4xf32>) -> f32 {
 //       CHECK:   %[[RES:.*]] = vector.extract %[[INSERTED]][0] : vector<1xf32>
 //       CHECK:   return %[[RES]]
 
-func @vector_reduction_inner(%arg0: vector<2x3x4x5xi32>) -> vector<2x3xi32> {
+func.func @vector_reduction_inner(%arg0: vector<2x3x4x5xi32>) -> vector<2x3xi32> {
     %0 = vector.multi_reduction <add>, %arg0 [2, 3] : vector<2x3x4x5xi32> to vector<2x3xi32>
     return %0 : vector<2x3xi32>
 }
@@ -65,7 +65,7 @@ func @vector_reduction_inner(%arg0: vector<2x3x4x5xi32>) -> vector<2x3xi32> {
 //       CHECK:       return %[[RESULT]]
 
 
-func @vector_multi_reduction_transposed(%arg0: vector<2x3x4x5xf32>) -> vector<2x5xf32> {
+func.func @vector_multi_reduction_transposed(%arg0: vector<2x3x4x5xf32>) -> vector<2x5xf32> {
     %0 = vector.multi_reduction <add>, %arg0 [1, 2] : vector<2x3x4x5xf32> to vector<2x5xf32>
     return %0 : vector<2x5xf32>
 }
@@ -77,7 +77,7 @@ func @vector_multi_reduction_transposed(%arg0: vector<2x3x4x5xf32>) -> vector<2x
 //       CHECK:     %[[RESULT:.+]] = vector.shape_cast %{{.*}} : vector<10xf32> to vector<2x5xf32>
 //       CHECK:       return %[[RESULT]]
 
-func @vector_multi_reduction_ordering(%arg0: vector<3x2x4xf32>) -> vector<2x4xf32> {
+func.func @vector_multi_reduction_ordering(%arg0: vector<3x2x4xf32>) -> vector<2x4xf32> {
     %0 = vector.multi_reduction <mul>, %arg0 [0] : vector<3x2x4xf32> to vector<2x4xf32>
     return %0 : vector<2x4xf32>
 }

@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -affine-super-vectorizer-test -vector-shape-ratio 2 -vector-shape-ratio 5 -vector-shape-ratio 2 2>&1 | FileCheck %s -check-prefix=TEST-3x4x5x8
 // RUN: mlir-opt %s -affine-super-vectorizer-test -vectorize-affine-loop-nest 2>&1 | FileCheck %s -check-prefix=VECNEST
 
-func @vector_add_2d(%arg0: index, %arg1: index) -> f32 {
+func.func @vector_add_2d(%arg0: index, %arg1: index) -> f32 {
   // Nothing should be matched in this first block.
   // CHECK-NOT:matched: {{.*}} = memref.alloc{{.*}}
   // CHECK-NOT:matched: {{.*}} = arith.constant 0{{.*}}
@@ -38,7 +38,7 @@ func @vector_add_2d(%arg0: index, %arg1: index) -> f32 {
 }
 
 // VECNEST-LABEL: func @double_loop_nest
-func @double_loop_nest(%a: memref<20x30xf32>, %b: memref<20xf32>) {
+func.func @double_loop_nest(%a: memref<20x30xf32>, %b: memref<20xf32>) {
 
   affine.for %i = 0 to 20 {
     %b_ld = affine.load %b[%i] : memref<20xf32>

@@ -18,7 +18,7 @@ module attributes {
     }
   }
 
-  func @main() {
+  func.func @main() {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32, 11>)
     %cst = arith.constant 1 : index

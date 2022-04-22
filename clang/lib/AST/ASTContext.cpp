@@ -4859,11 +4859,10 @@ ASTContext::getTemplateSpecializationType(TemplateName Template,
          "No dependent template names here!");
   // Look through qualified template names.
   if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-    Template = TemplateName(QTN->getTemplateDecl());
+    Template = QTN->getUnderlyingTemplate();
 
   bool IsTypeAlias =
-    Template.getAsTemplateDecl() &&
-    isa<TypeAliasTemplateDecl>(Template.getAsTemplateDecl());
+      isa_and_nonnull<TypeAliasTemplateDecl>(Template.getAsTemplateDecl());
   QualType CanonType;
   if (!Underlying.isNull())
     CanonType = getCanonicalType(Underlying);
@@ -4915,7 +4914,7 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
 
   // Look through qualified template names.
   if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-    Template = TemplateName(QTN->getTemplateDecl());
+    Template = TemplateName(QTN->getUnderlyingTemplate());
 
   // Build the canonical template specialization type.
   TemplateName CanonTemplate = getCanonicalTemplateName(Template);
@@ -8978,10 +8977,9 @@ TemplateName ASTContext::getAssumedTemplateName(DeclarationName Name) const {
 
 /// Retrieve the template name that represents a qualified
 /// template name such as \c std::vector.
-TemplateName
-ASTContext::getQualifiedTemplateName(NestedNameSpecifier *NNS,
-                                     bool TemplateKeyword,
-                                     TemplateDecl *Template) const {
+TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier *NNS,
+                                                  bool TemplateKeyword,
+                                                  TemplateName Template) const {
   assert(NNS && "Missing nested-name-specifier in qualified template name");
 
   // FIXME: Canonicalization?

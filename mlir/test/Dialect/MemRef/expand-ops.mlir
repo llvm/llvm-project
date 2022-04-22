@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: func @atomic_rmw_to_generic
 // CHECK-SAME: ([[F:%.*]]: memref<10xf32>, [[f:%.*]]: f32, [[i:%.*]]: index)
-func @atomic_rmw_to_generic(%F: memref<10xf32>, %f: f32, %i: index) -> f32 {
+func.func @atomic_rmw_to_generic(%F: memref<10xf32>, %f: f32, %i: index) -> f32 {
   %x = memref.atomic_rmw maxf %f, %F[%i] : (f32, memref<10xf32>) -> f32
   return %x : f32
 }
@@ -17,7 +17,7 @@ func @atomic_rmw_to_generic(%F: memref<10xf32>, %f: f32, %i: index) -> f32 {
 // -----
 
 // CHECK-LABEL: func @atomic_rmw_no_conversion
-func @atomic_rmw_no_conversion(%F: memref<10xf32>, %f: f32, %i: index) -> f32 {
+func.func @atomic_rmw_no_conversion(%F: memref<10xf32>, %f: f32, %i: index) -> f32 {
   %x = memref.atomic_rmw addf %f, %F[%i] : (f32, memref<10xf32>) -> f32
   return %x : f32
 }
@@ -26,7 +26,7 @@ func @atomic_rmw_no_conversion(%F: memref<10xf32>, %f: f32, %i: index) -> f32 {
 // -----
 
 // CHECK-LABEL: func @memref_reshape(
-func @memref_reshape(%input: memref<*xf32>,
+func.func @memref_reshape(%input: memref<*xf32>,
                      %shape: memref<3xi32>) -> memref<?x?x8xf32> {
   %result = memref.reshape %input(%shape)
                : (memref<*xf32>, memref<3xi32>) -> memref<?x?x8xf32>

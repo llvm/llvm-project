@@ -36,6 +36,7 @@ target_link_libraries(omptarget.rtl.rpc
   protobuf
   absl::synchronization
   ${OPENMP_PTHREAD_LIB}
+  omp
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports")
 
 # Report to the parent scope that we are building a plugin for RPC.

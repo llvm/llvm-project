@@ -4,7 +4,7 @@
 #map0 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3, d4)>
 #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d3)>
 
-func @interchange_generic_op(%arg0 : memref<1x2x3x4x5xindex>, %arg1 : memref<1x2x4xindex>) {
+func.func @interchange_generic_op(%arg0 : memref<1x2x3x4x5xindex>, %arg1 : memref<1x2x4xindex>) {
   linalg.generic {
     indexing_maps = [#map0, #map1],
     iterator_types = ["parallel", "parallel", "reduction", "parallel", "reduction"]}

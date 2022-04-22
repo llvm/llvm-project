@@ -1,6 +1,6 @@
 // RUN: mlir-opt -verify-diagnostics -split-input-file %s
 
-func @switch_missing_case_value(%flag : i32, %caseOperand : i32) {
+func.func @switch_missing_case_value(%flag : i32, %caseOperand : i32) {
   cf.switch %flag : i32, [
     default: ^bb1(%caseOperand : i32),
     45: ^bb2(%caseOperand : i32),
@@ -18,7 +18,7 @@ func @switch_missing_case_value(%flag : i32, %caseOperand : i32) {
 
 // -----
 
-func @switch_wrong_type_case_value(%flag : i32, %caseOperand : i32) {
+func.func @switch_wrong_type_case_value(%flag : i32, %caseOperand : i32) {
   cf.switch %flag : i32, [
     default: ^bb1(%caseOperand : i32),
     // expected-error@+1 {{expected integer value}}
@@ -35,7 +35,7 @@ func @switch_wrong_type_case_value(%flag : i32, %caseOperand : i32) {
 
 // -----
 
-func @switch_missing_comma(%flag : i32, %caseOperand : i32) {
+func.func @switch_missing_comma(%flag : i32, %caseOperand : i32) {
   cf.switch %flag : i32, [
     default: ^bb1(%caseOperand : i32),
     45: ^bb2(%caseOperand : i32)
@@ -53,7 +53,7 @@ func @switch_missing_comma(%flag : i32, %caseOperand : i32) {
 
 // -----
 
-func @switch_missing_default(%flag : i32, %caseOperand : i32) {
+func.func @switch_missing_default(%flag : i32, %caseOperand : i32) {
   cf.switch %flag : i32, [
     // expected-error@+1 {{expected 'default'}}
     45: ^bb2(%caseOperand : i32)

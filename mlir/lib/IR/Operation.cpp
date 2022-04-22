@@ -523,36 +523,32 @@ InFlightDiagnostic Operation::emitOpError(const Twine &message) {
 // Operation Cloning
 //===----------------------------------------------------------------------===//
 
+Operation::CloneOptions::CloneOptions()
+    : cloneRegionsFlag(false), cloneOperandsFlag(false) {}
+
+Operation::CloneOptions::CloneOptions(bool cloneRegions, bool cloneOperands)
+    : cloneRegionsFlag(cloneRegions), cloneOperandsFlag(cloneOperands) {}
+
+Operation::CloneOptions Operation::CloneOptions::all() {
+  return CloneOptions().cloneRegions().cloneOperands();
+}
+
+Operation::CloneOptions &Operation::CloneOptions::cloneRegions(bool enable) {
+  cloneRegionsFlag = enable;
+  return *this;
+}
+
+Operation::CloneOptions &Operation::CloneOptions::cloneOperands(bool enable) {
+  cloneOperandsFlag = enable;
+  return *this;
+}
+
 /// Create a deep copy of this operation but keep the operation regions empty.
 /// Operands are remapped using `mapper` (if present), and `mapper` is updated
 /// to contain the results. The `mapResults` flag specifies whether the results
 /// of the cloned operation should be added to the map.
-Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper,
-                                          bool mapResults) {
-  SmallVector<Value, 8> operands;
-  SmallVector<Block *, 2> successors;
-
-  // Remap the operands.
-  operands.reserve(getNumOperands());
-  for (auto opValue : getOperands())
-    operands.push_back(mapper.lookupOrDefault(opValue));
-
-  // Remap the successors.
-  successors.reserve(getNumSuccessors());
-  for (Block *successor : getSuccessors())
-    successors.push_back(mapper.lookupOrDefault(successor));
-
-  // Create the new operation.
-  auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
-                       successors, getNumRegions());
-
-  // Remember the mapping of any results.
-  if (mapResults) {
-    for (unsigned i = 0, e = getNumResults(); i != e; ++i)
-      mapper.map(getResult(i), newOp->getResult(i));
-  }
-
-  return newOp;
+Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
+  return clone(mapper, CloneOptions::all().cloneRegions(false));
 }
 
 Operation *Operation::cloneWithoutRegions() {
@@ -565,22 +561,43 @@ Operation *Operation::cloneWithoutRegions() {
 /// them alone if no entry is present).  Replaces references to cloned
 /// sub-operations to the corresponding operation that is copied, and adds
 /// those mappings to the map.
-Operation *Operation::clone(BlockAndValueMapping &mapper) {
-  auto *newOp = cloneWithoutRegions(mapper, /*mapResults=*/false);
+Operation *Operation::clone(BlockAndValueMapping &mapper,
+                            CloneOptions options) {
+  SmallVector<Value, 8> operands;
+  SmallVector<Block *, 2> successors;
+
+  // Remap the operands.
+  if (options.shouldCloneOperands()) {
+    operands.reserve(getNumOperands());
+    for (auto opValue : getOperands())
+      operands.push_back(mapper.lookupOrDefault(opValue));
+  }
+
+  // Remap the successors.
+  successors.reserve(getNumSuccessors());
+  for (Block *successor : getSuccessors())
+    successors.push_back(mapper.lookupOrDefault(successor));
+
+  // Create the new operation.
+  auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
+                       successors, getNumRegions());
 
   // Clone the regions.
-  for (unsigned i = 0; i != numRegions; ++i)
-    getRegion(i).cloneInto(&newOp->getRegion(i), mapper);
+  if (options.shouldCloneRegions()) {
+    for (unsigned i = 0; i != numRegions; ++i)
+      getRegion(i).cloneInto(&newOp->getRegion(i), mapper);
+  }
 
+  // Remember the mapping of any results.
   for (unsigned i = 0, e = getNumResults(); i != e; ++i)
     mapper.map(getResult(i), newOp->getResult(i));
 
   return newOp;
 }
 
-Operation *Operation::clone() {
+Operation *Operation::clone(CloneOptions options) {
   BlockAndValueMapping mapper;
-  return clone(mapper);
+  return clone(mapper, options);
 }
 
 //===----------------------------------------------------------------------===//

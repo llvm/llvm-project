@@ -8,7 +8,7 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %data = memref.alloc() : memref<2x6xf32>
   %sum = memref.alloc() : memref<2xf32>
   %mul = memref.alloc() : memref<2xf32>
@@ -74,4 +74,4 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @print_memref_f32(memref<*xf32>)

@@ -1,6 +1,6 @@
 // RUN: mlir-opt -convert-openacc-to-llvm -split-input-file %s | FileCheck %s
 
-func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.enter_data copyin(%b : memref<10xf32>) create(%a : memref<10xf32>)
   return
 }
@@ -9,7 +9,7 @@ func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testenterdataop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
+func.func @testenterdataop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
   acc.enter_data copyin(%b : memref<10xf32>) create(%a : !llvm.ptr<f32>)
   return
 }
@@ -18,7 +18,7 @@ func @testenterdataop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testenterdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
+func.func @testenterdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
   acc.enter_data copyin(%b : memref<10xf32>) create_zero(%a : memref<10xi64>) attributes {async}
   return
 }
@@ -27,7 +27,7 @@ func @testenterdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   %ifCond = arith.constant true
   acc.enter_data if(%ifCond) copyin(%b : memref<10xf32>) create(%a : memref<10xf32>)
   return
@@ -37,7 +37,7 @@ func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.exit_data copyout(%b : memref<10xf32>) delete(%a : memref<10xf32>)
   return
 }
@@ -46,7 +46,7 @@ func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testexitdataop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
+func.func @testexitdataop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
   acc.exit_data copyout(%b : memref<10xf32>) delete(%a : !llvm.ptr<f32>)
   return
 }
@@ -55,7 +55,7 @@ func @testexitdataop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testexitdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
+func.func @testexitdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
   acc.exit_data copyout(%b : memref<10xf32>) delete(%a : memref<10xi64>) attributes {async}
   return
 }
@@ -64,7 +64,7 @@ func @testexitdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   %ifCond = arith.constant true
   acc.exit_data if(%ifCond) copyout(%b : memref<10xf32>) delete(%a : memref<10xf32>)
   return
@@ -74,7 +74,7 @@ func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.update host(%b : memref<10xf32>) device(%a : memref<10xf32>)
   return
 }
@@ -83,7 +83,7 @@ func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testupdateop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
+func.func @testupdateop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
   acc.update host(%b : memref<10xf32>) device(%a : !llvm.ptr<f32>)
   return
 }
@@ -92,7 +92,7 @@ func @testupdateop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testupdateop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
+func.func @testupdateop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
   acc.update host(%b : memref<10xf32>) device(%a : memref<10xi64>) attributes {async}
   return
 }
@@ -101,7 +101,7 @@ func @testupdateop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   %ifCond = arith.constant true
   acc.update if(%ifCond) host(%b : memref<10xf32>) device(%a : memref<10xf32>)
   return
@@ -111,7 +111,7 @@ func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.data copy(%b : memref<10xf32>) copyout(%a : memref<10xf32>) {
   }
   return
@@ -121,7 +121,7 @@ func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testdataregion(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
+func.func @testdataregion(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
   acc.data copyin(%b : memref<10xf32>) deviceptr(%c: !llvm.ptr<f32>) attach(%a : !llvm.ptr<f32>) {
   }
   return
@@ -131,7 +131,7 @@ func @testdataregion(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>)
 
 // -----
 
-func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   %ifCond = arith.constant true
   acc.data if(%ifCond) copyin_readonly(%b : memref<10xf32>) copyout_zero(%a : memref<10xf32>) {
   }
@@ -142,7 +142,7 @@ func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testdataregion(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
+func.func @testdataregion(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
   acc.data create(%b : memref<10xf32>) create_zero(%c: !llvm.ptr<f32>) no_create(%a : !llvm.ptr<f32>) {
   }
   return
@@ -152,7 +152,7 @@ func @testdataregion(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>)
 
 // -----
 
-func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.data present(%a, %b : memref<10xf32>, memref<10xf32>) {
   }
   return
@@ -162,7 +162,7 @@ func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.parallel copy(%b : memref<10xf32>) copyout(%a : memref<10xf32>) {
   }
   return
@@ -172,7 +172,7 @@ func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testparallelop(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
+func.func @testparallelop(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
   acc.parallel copyin(%b : memref<10xf32>) deviceptr(%c: !llvm.ptr<f32>) attach(%a : !llvm.ptr<f32>) {
   }
   return
@@ -182,7 +182,7 @@ func @testparallelop(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>)
 
 // -----
 
-func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   %ifCond = arith.constant true
   acc.parallel if(%ifCond) copyin_readonly(%b : memref<10xf32>) copyout_zero(%a : memref<10xf32>) {
   }
@@ -193,7 +193,7 @@ func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testparallelop(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
+func.func @testparallelop(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
   acc.parallel create(%b : memref<10xf32>) create_zero(%c: !llvm.ptr<f32>) no_create(%a : !llvm.ptr<f32>) {
   }
   return
@@ -203,7 +203,7 @@ func @testparallelop(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>)
 
 // -----
 
-func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.parallel present(%a: memref<10xf32>, %b: memref<10xf32>) {
   }
   return
@@ -213,7 +213,7 @@ func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func @testparallelop(%i: i64, %a: memref<10xf32>, %b: memref<10xf32>) -> () {
+func.func @testparallelop(%i: i64, %a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.parallel num_gangs(%i: i64) present(%a: memref<10xf32>, %b: memref<10xf32>) {
   } attributes {async}
   return

@@ -421,4 +421,33 @@ define void @no_atomic_vector_store(<2 x float> %p, i8* %p2) {
   ret void
 }
 
+@c = constant i32 42
+
+define i32 @atomic_load_from_constant_global() {
+; CHECK-LABEL: @atomic_load_from_constant_global(
+; CHECK-NEXT:    [[V:%.*]] = load atomic i32, i32* @c seq_cst, align 4
+; CHECK-NEXT:    ret i32 42
+;
+  %v = load atomic i32, i32* @c seq_cst, align 4
+  ret i32 %v
+}
+
+define i8 @atomic_load_from_constant_global_bitcast() {
+; CHECK-LABEL: @atomic_load_from_constant_global_bitcast(
+; CHECK-NEXT:    [[V:%.*]] = load atomic i8, i8* bitcast (i32* @c to i8*) seq_cst, align 1
+; CHECK-NEXT:    ret i8 42
+;
+  %v = load atomic i8, i8* bitcast (i32* @c to i8*) seq_cst, align 1
+  ret i8 %v
+}
+
+define void @volatile_load_from_constant_global() {
+; CHECK-LABEL: @volatile_load_from_constant_global(
+; CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @c, align 4
+; CHECK-NEXT:    ret void
+;
+  load volatile i32, i32* @c, align 4
+  ret void
+}
+
 attributes #0 = { null_pointer_is_valid }

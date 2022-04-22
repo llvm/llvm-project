@@ -78,6 +78,7 @@ static bool supportsAArch64(uint64_t Type) {
   switch (Type) {
   case ELF::R_AARCH64_ABS32:
   case ELF::R_AARCH64_ABS64:
+  case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
   case ELF::R_AARCH64_PREL64:
     return true;
@@ -93,6 +94,8 @@ static uint64_t resolveAArch64(uint64_t Type, uint64_t Offset, uint64_t S,
     return (S + Addend) & 0xFFFFFFFF;
   case ELF::R_AARCH64_ABS64:
     return S + Addend;
+  case ELF::R_AARCH64_PREL16:
+    return (S + Addend - Offset) & 0xFFFF;
   case ELF::R_AARCH64_PREL32:
     return (S + Addend - Offset) & 0xFFFFFFFF;
   case ELF::R_AARCH64_PREL64:
