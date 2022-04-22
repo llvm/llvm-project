@@ -304,10 +304,25 @@ public:
             ->getType();
 
     // Create the new control point, which is of the form:
-    // bool new_control_point(YkMT*, YkLocation*, CtrlPointVars*)
-    FunctionType *FType = FunctionType::get(
-        Type::getInt1Ty(Context),
-        {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo()}, false);
+    //   bool new_control_point(YkMT*, YkLocation*, CtrlPointVars*,
+    //   ReturnValue*)
+    // If the return type of the control point's caller is void (i.e. if a
+    // function f calls yk_control_point and f's return type is void), create
+    // an Int1 pointer as a dummy. We have to pass something as the yk_stopgap
+    // signature expects a pointer, even if its never used.
+    Type *ReturnTy = Caller->getReturnType();
+    Type *ReturnPtrTy;
+    if (ReturnTy->isVoidTy()) {
+      // Create dummy pointer which we pass in but which is never written to.
+      ReturnPtrTy = Type::getInt1Ty(Context);
+    } else {
+      ReturnPtrTy = ReturnTy;
+    }
+    FunctionType *FType =
+        FunctionType::get(Type::getInt1Ty(Context),
+                          {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo(),
+                           ReturnPtrTy->getPointerTo()},
+                          false);
     Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                     YK_NEW_CONTROL_POINT, M);
 
@@ -316,6 +331,10 @@ public:
     // struct by pointer.
     IRBuilder<> Builder(Caller->getEntryBlock().getFirstNonPHI());
     Value *InputStruct = Builder.CreateAlloca(CtrlPointVarsTy, 0, "");
+
+    // Also at the top, generate storage for the interpreted return of the
+    // control points caller.
+    Value *ReturnPtr = Builder.CreateAlloca(ReturnPtrTy, 0, "");
 
     Builder.SetInsertPoint(OldCtrlPointCall);
     unsigned LvIdx = 0;
@@ -332,7 +351,7 @@ public:
     Instruction *NewCtrlPointCallInst = Builder.CreateCall(
         NF, {OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
              OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
-             InputStruct});
+             InputStruct, ReturnPtr});
 
     // Once the control point returns we need to extract the (potentially
     // mutated) values from the returned YkCtrlPointStruct and reassign them to
@@ -363,11 +382,11 @@ public:
     Builder.SetInsertPoint(ExitBB);
     // YKFIXME: We need to return the value of interpreted return and the return
     // type must be that of the control point's caller.
-    Type *RetTy = Caller->getReturnType();
-    if (RetTy->isVoidTy()) {
+    if (ReturnTy->isVoidTy()) {
       Builder.CreateRetVoid();
     } else {
-      Builder.CreateRet(ConstantInt::get(Type::getInt32Ty(Context), 0));
+      Value *ReturnValue = Builder.CreateLoad(ReturnTy, ReturnPtr);
+      Builder.CreateRet(ReturnValue);
     }
 
     // To do so we need to first split up the current block and then
