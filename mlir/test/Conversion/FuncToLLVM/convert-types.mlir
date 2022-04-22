@@ -4,6 +4,11 @@
 // CHECK: !llvm.ptr<i42>
 func.func private @ptr() -> !llvm.ptr<!test.smpla>
 
+// CHECK-LABEL: @opaque_ptr
+// CHECK: !llvm.ptr
+// CHECK-NOT: <
+func.func private @opaque_ptr() -> !llvm.ptr
+
 // CHECK-LABEL: @ptr_ptr()
 // CHECK: !llvm.ptr<ptr<i42>> 
 func.func private @ptr_ptr() -> !llvm.ptr<!llvm.ptr<!test.smpla>>
