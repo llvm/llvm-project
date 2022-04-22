@@ -37,7 +37,8 @@ public:
                                            const FileSpecList *));
   Status ResolveRemoteExecutable(
       const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
-      const FileSpecList *module_search_paths_ptr) /*override*/ {
+      const FileSpecList *module_search_paths_ptr) /*override*/
+  { // NOLINT(modernize-use-override)
     auto pair = ResolveRemoteExecutable(module_spec, module_search_paths_ptr);
     exe_module_sp = pair.second;
     return pair.first;
