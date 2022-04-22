@@ -635,6 +635,39 @@ func.func @dont_fold_expand_collapse(%arg0: vector<1x1x64xf32>) -> vector<8x8xf3
 
 // -----
 
+// CHECK-LABEL: func @fold_broadcast_shapecast
+//  CHECK-SAME: (%[[V:.+]]: vector<4xf32>)
+//       CHECK:   return %[[V]]
+func @fold_broadcast_shapecast(%arg0: vector<4xf32>) -> vector<4xf32> {
+    %0 = vector.broadcast %arg0 : vector<4xf32> to vector<1x1x4xf32>
+    %1 = vector.shape_cast %0 : vector<1x1x4xf32> to vector<4xf32>
+    return %1 : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @dont_fold_broadcast_shapecast_scalar
+//       CHECK:   vector.broadcast
+//       CHECK:   vector.shape_cast
+func @dont_fold_broadcast_shapecast_scalar(%arg0: f32) -> vector<1xf32> {
+    %0 = vector.broadcast %arg0 : f32 to vector<1x1x1xf32>
+    %1 = vector.shape_cast %0 : vector<1x1x1xf32> to vector<1xf32>
+    return %1 : vector<1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @dont_fold_broadcast_shapecast_diff_shape
+//       CHECK:   vector.broadcast
+//       CHECK:   vector.shape_cast
+func @dont_fold_broadcast_shapecast_diff_shape(%arg0: vector<4xf32>) -> vector<8xf32> {
+    %0 = vector.broadcast %arg0 : vector<4xf32> to vector<1x2x4xf32>
+    %1 = vector.shape_cast %0 : vector<1x2x4xf32> to vector<8xf32>
+    return %1 : vector<8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: fold_vector_transfers
 func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9xf32>) {
   %c0 = arith.constant 0 : index

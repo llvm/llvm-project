@@ -3004,6 +3004,53 @@ bool AMDGPULegalizerInfo::legalizePreloadedArgIntrin(
   return true;
 }
 
+static bool replaceWithConstant(MachineIRBuilder &B, MachineInstr &MI,
+                                int64_t C) {
+  B.buildConstant(MI.getOperand(0).getReg(), C);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeWorkitemIDIntrinsic(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
+    unsigned Dim, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
+  unsigned MaxID = ST.getMaxWorkitemID(B.getMF().getFunction(), Dim);
+  if (MaxID == 0)
+    return replaceWithConstant(B, MI, 0);
+
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  const ArgDescriptor *Arg;
+  const TargetRegisterClass *ArgRC;
+  LLT ArgTy;
+  std::tie(Arg, ArgRC, ArgTy) = MFI->getPreloadedValue(ArgType);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  if (!Arg) {
+    // It's undefined behavior if a function marked with the amdgpu-no-*
+    // attributes uses the corresponding intrinsic.
+    B.buildUndef(DstReg);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (Arg->isMasked()) {
+    // Don't bother inserting AssertZext for packed IDs since we're emitting the
+    // masking operations anyway.
+    //
+    // TODO: We could assert the top bit is 0 for the source copy.
+    if (!loadInputValue(DstReg, B, ArgType))
+      return false;
+  } else {
+    Register TmpReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    if (!loadInputValue(TmpReg, B, ArgType))
+      return false;
+    B.buildAssertZExt(DstReg, TmpReg, 32 - countLeadingZeros(MaxID));
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 Register AMDGPULegalizerInfo::getKernargParameterPtr(MachineIRBuilder &B,
                                                      int64_t Offset) const {
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
@@ -5072,12 +5119,6 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   return true;
 }
 
-static bool replaceWithConstant(MachineIRBuilder &B, MachineInstr &MI, int64_t C) {
-  B.buildConstant(MI.getOperand(0).getReg(), C);
-  MI.eraseFromParent();
-  return true;
-}
-
 bool AMDGPULegalizerInfo::legalizeFPTruncRound(MachineInstr &MI,
                                                MachineIRBuilder &B) const {
   unsigned Opc;
@@ -5202,22 +5243,14 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_implicitarg_ptr:
     return legalizeImplicitArgPtr(MI, MRI, B);
   case Intrinsic::amdgcn_workitem_id_x:
-    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 0) == 0)
-      return replaceWithConstant(B, MI, 0);
-    return legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::WORKITEM_ID_X);
+    return legalizeWorkitemIDIntrinsic(MI, MRI, B, 0,
+                                       AMDGPUFunctionArgInfo::WORKITEM_ID_X);
   case Intrinsic::amdgcn_workitem_id_y:
-    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 1) == 0)
-      return replaceWithConstant(B, MI, 0);
-
-    return legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
+    return legalizeWorkitemIDIntrinsic(MI, MRI, B, 1,
+                                       AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
   case Intrinsic::amdgcn_workitem_id_z:
-    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 2) == 0)
-      return replaceWithConstant(B, MI, 0);
-
-    return legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
+    return legalizeWorkitemIDIntrinsic(MI, MRI, B, 2,
+                                       AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
   case Intrinsic::amdgcn_workgroup_id_x:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_X);

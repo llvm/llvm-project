@@ -42,8 +42,10 @@ Breaking changes
 COFF Improvements
 -----------------
 
-* Added autodetection of MSVC toolchain, a la clang-cl.  Also added /winsysroot
-  support for explicit specification of MSVC toolchain location.
+* Added autodetection of MSVC toolchain, a la clang-cl.  Also added
+  ``/winsysroot:`` support for explicit specification of MSVC toolchain
+  location, similar to clang-cl's ``/winsysroot``. For now,
+  ``/winsysroot:`` requires also passing in an explicit ``/machine:`` flag.
   (`D118070 <https://reviews.llvm.org/D118070>`_)
 * ...
 
