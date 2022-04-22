@@ -410,7 +410,7 @@ mlir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::FuncOp Fn,
     if (isa<CXXDestructorDecl>(FD))
       llvm_unreachable("NYI");
     else if (isa<CXXConstructorDecl>(FD))
-      llvm_unreachable("NYI");
+      buildConstructorBody(Args);
     else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
              FD->hasAttr<CUDAGlobalAttr>())
       llvm_unreachable("NYI");
