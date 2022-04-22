@@ -906,7 +906,8 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl GD,
   // call the inherited constructor).
   bool PassedParams = true;
   if (const auto *CD = dyn_cast<CXXConstructorDecl>(FD))
-    llvm_unreachable("NYI");
+    if (auto Inherited = CD->getInheritedConstructor())
+      llvm_unreachable("NYI");
 
   if (PassedParams) {
     for (auto *Param : FD->parameters()) {
