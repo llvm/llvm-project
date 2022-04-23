@@ -739,6 +739,16 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
                                 Required);
 }
 
+bool CIRGenTypes::inheritingCtorHasParams(const InheritedConstructor &Inherited,
+                                          CXXCtorType Type) {
+
+  // Parameters are unnecessary if we're constructing a base class subobject and
+  // the inherited constructor lives in a virtual base.
+  return Type == Ctor_Complete ||
+         !Inherited.getShadowDecl()->constructsVirtualBase() ||
+         !Target.getCXXABI().hasConstructorVariants();
+}
+
 bool CIRGenModule::MayDropFunctionReturn(const ASTContext &Context,
                                          QualType ReturnType) {
   // We can't just disard the return value for a record type with a complex
