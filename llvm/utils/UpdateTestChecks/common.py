@@ -616,11 +616,15 @@ nameless_values = [
     NamelessValue(r'GLOB' , '@' , None           , r'@'            , r'[a-zA-Z0-9_$"\\.-]+' , None         , r'.+'                , True)  ,
     NamelessValue(r'DBG'  , '!' , r'!dbg '       , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'PROF' , '!' , r'!prof '      , None            , None                   , r'![0-9]+'   , None                 , False) ,
-    NamelessValue(r'TBAA' , '!' , r'!tbaa '      , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'RNG'  , '!' , r'!range '     , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'LOOP' , '!' , r'!llvm.loop ' , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'META' , '!' , r'metadata '   , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'META' , '!' , None           , r''             , r'![0-9]+'             , None         , r'(?:distinct |)!.*' , False) ,
+    NamelessValue(r'TBAA' , '!' , r'!tbaa '      , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'TBAAST' , '!' , r'!tbaa.struct ', None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'ANNT'   , '!' , r'!annotation ' , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'SRCLOC' , '!' , r'!srcloc '     , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'NOSAN'  , '!' , r'!nosanitize ' , None            , None                   , r'![0-9]+'   , None                 , False) ,
 ]
 
 def createOrRegexp(old, new):
