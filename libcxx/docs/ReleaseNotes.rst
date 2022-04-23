@@ -67,10 +67,15 @@ API Changes
   ``<filesystem>`` header. The associated macro
   ``_LIBCPP_DEPRECATED_EXPERIMENTAL_FILESYSTEM`` has also been removed.
 
-- Some libc++ headers no longer transitively include all of ``<algorithm>``, ``<chrono>`` and ``<utility>``.
-  If, after updating libc++, you see compiler errors related to missing declarations in
-  namespace ``std``, it might be because one of your source files now needs to
-  ``#include <algorithm>``, ``#include <chrono>`` and/or ``#include <utility>``.
+- Some libc++ headers no longer transitively include all of:
+    - ``<algorithm>``
+    - ``<chrono>``
+    - ``<functional>``
+    - ``<utility>``
+
+  If, after updating libc++, you see compiler errors related to missing declarations
+  in namespace ``std``, it might be because one of your source files now needs to
+  include one or more of the headers listed above.
 
 - The integer distributions ``binomial_distribution``, ``discrete_distribution``,
   ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``,

@@ -469,7 +469,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__node_handle>
 #include <__utility/forward.h>
 #include <compare>
-#include <functional> // TODO: Remove this include
 #include <iterator> // __libcpp_erase_if_container
 #include <version>
 
