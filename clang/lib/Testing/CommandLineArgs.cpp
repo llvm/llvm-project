@@ -72,6 +72,9 @@ std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang) {
   case Lang_CXX20:
     Args = {"-std=c++20"};
     break;
+  case Lang_OBJC:
+    Args = {"-xobjective-c"};
+    break;
   case Lang_OBJCXX:
     Args = {"-xobjective-c++"};
     break;
