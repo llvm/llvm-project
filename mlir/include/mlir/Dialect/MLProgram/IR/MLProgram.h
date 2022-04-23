@@ -8,6 +8,7 @@
 #ifndef MLIR_DIALECT_MLPROGRAM_IR_MLPROGRAM_H_
 #define MLIR_DIALECT_MLPROGRAM_IR_MLPROGRAM_H_
 
+#include "mlir/Dialect/MLProgram/IR/MLProgramAttributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
