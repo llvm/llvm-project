@@ -11,9 +11,13 @@ add_llvm_library(clangTesting
   Support
   )
 
+clang_target_link_libraries(clangTesting
+  PRIVATE
+  clangBasic
+  clangFrontend
+  )
+
 target_link_libraries(clangTesting
   PRIVATE
   llvm_gtest
-  clangBasic
-  clangFrontend
   )
