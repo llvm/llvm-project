@@ -1,4 +1,4 @@
-//===-- CIRGenValue.h - CIRGen something TODO this desc* --------*- C++ -*-===//
+//===-- CIRGenValue.h - CIRGen wrappers for mlir::Value ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// IDK yet
-// TODO:
+// These classes implement wrappers around mlir::Value in order to fully
+// represent the range of values for C L- and R- values.
 //
 //===----------------------------------------------------------------------===//
 
