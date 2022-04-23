@@ -3,6 +3,9 @@
 // RUN: %clang -### -std=c++20 -fmodule-header=user foo.hh  2>&1 | \
 // RUN:   FileCheck -check-prefix=CHECK-USER %s
 
+// RUN: %clang -### -std=c++20 -fmodule-header=user foo.h  2>&1 | \
+// RUN:   FileCheck -check-prefix=CHECK-USER1 %s
+
 // RUN: %clang -### -std=c++20 -fmodule-header=system foo.hh 2>&1 | \
 // RUN:   FileCheck -check-prefix=CHECK-SYS1 %s
 
@@ -18,6 +21,10 @@
 // CHECK-USER: "-emit-header-unit"
 // CHECK-USER-SAME: "-o" "foo.pcm"
 // CHECK-USER-SAME: "-x" "c++-user-header" "foo.hh"
+
+// CHECK-USER1: "-emit-header-unit"
+// CHECK-USER1-SAME: "-o" "foo.pcm"
+// CHECK-USER1-SAME: "-x" "c++-user-header" "foo.h"
 
 // CHECK-SYS1: "-emit-header-unit"
 // CHECK-SYS1-SAME: "-o" "foo.pcm"

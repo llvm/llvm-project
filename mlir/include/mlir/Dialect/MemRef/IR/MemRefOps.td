@@ -9,11 +9,10 @@
 #ifndef MEMREF_OPS
 #define MEMREF_OPS
 
-include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Dialect/Arithmetic/IR/ArithmeticBase.td"
-include "mlir/IR/OpBase.td"
+include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
