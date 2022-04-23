@@ -945,7 +945,8 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl GD,
   bool PassedParams = true;
   if (const auto *CD = dyn_cast<CXXConstructorDecl>(FD))
     if (auto Inherited = CD->getInheritedConstructor())
-      llvm_unreachable("NYI");
+      PassedParams =
+          getTypes().inheritingCtorHasParams(Inherited, GD.getCtorType());
 
   if (PassedParams) {
     for (auto *Param : FD->parameters()) {

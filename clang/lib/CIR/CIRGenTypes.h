@@ -145,6 +145,11 @@ public:
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);
 
+  /// Determine if a C++ inheriting constructor should have parameters matching
+  /// those of its inherited constructor.
+  bool inheritingCtorHasParams(const clang::InheritedConstructor &Inherited,
+                               clang::CXXCtorType Type);
+
   /// convertTypeForMem - Convert type T into an mlir::Type. This differs from
   /// convertType in that it is used to convert to the memory representation for
   /// a type. For example, the scalar representation for _Bool is i1, but the
