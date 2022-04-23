@@ -123,6 +123,11 @@ Bug Fixes
   a lambda expression that shares the name of a variable in a containing
   if/while/for/switch init statement as a redeclaration.
   This fixes `Issue 54913 <https://github.com/llvm/llvm-project/issues/54913>`_.
+- Overload resolution for constrained function templates could use the partial
+  order of constraints to select an overload, even if the parameter types of
+  the functions were different. It now diagnoses this case correctly as an
+  ambiguous call and an error. Fixes
+  `Issue 53640 <https://github.com/llvm/llvm-project/issues/53640>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
