@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MacroToEnumCheck.h"
+#include "IntegralLiteralExpressionMatcher.h"
+
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
@@ -71,25 +73,6 @@ static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
   }
 
   return true;
-}
-
-// Validate that this literal token is a valid integer literal.  A literal token
-// could be a floating-point token, which isn't acceptable as a value for an
-// enumeration.  A floating-point token must either have a decimal point or an
-// exponent ('E' or 'P').
-static bool isIntegralConstant(const Token &Token) {
-  const char *Begin = Token.getLiteralData();
-  const char *End = Begin + Token.getLength();
-
-  // not a hexadecimal floating-point literal
-  if (Token.getLength() > 2 && Begin[0] == '0' && std::toupper(Begin[1]) == 'X')
-    return std::none_of(Begin + 2, End, [](char C) {
-      return C == '.' || std::toupper(C) == 'P';
-    });
-
-  // not a decimal floating-point literal
-  return std::none_of(
-      Begin, End, [](char C) { return C == '.' || std::toupper(C) == 'E'; });
 }
 
 static StringRef getTokenName(const Token &Tok) {
@@ -232,6 +215,7 @@ private:
   void issueDiagnostics();
   void warnMacroEnum(const EnumMacro &Macro) const;
   void fixEnumMacro(const MacroList &MacroList) const;
+  bool isInitializer(ArrayRef<Token> MacroTokens);
 
   MacroToEnumCheck *Check;
   const LangOptions &LangOpts;
@@ -335,6 +319,13 @@ void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
   CurrentFile = &Files.back();
 }
 
+bool MacroToEnumCallbacks::isInitializer(ArrayRef<Token> MacroTokens)
+{
+  IntegralLiteralExpressionMatcher Matcher(MacroTokens);
+  return Matcher.match();
+}
+
+
 // Any defined but rejected macro is scanned for identifiers that
 // are to be excluded as enums.
 void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
@@ -360,55 +351,8 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
     return;
   }
 
-  // Return Lit when +Lit, -Lit or ~Lit; otherwise return Unknown.
-  Token Unknown;
-  Unknown.setKind(tok::TokenKind::unknown);
-  auto GetUnopArg = [Unknown](Token First, Token Second) {
-    return First.isOneOf(tok::TokenKind::minus, tok::TokenKind::plus,
-                         tok::TokenKind::tilde)
-               ? Second
-               : Unknown;
-  };
-
-  // It could just be a single token.
-  Token Tok = MacroTokens.front();
-
-  // It can be any arbitrary nesting of matched parentheses around
-  // +Lit, -Lit, ~Lit or Lit.
-  if (MacroTokens.size() > 2) {
-    // Strip off matching '(', ..., ')' token pairs.
-    size_t Begin = 0;
-    size_t End = MacroTokens.size() - 1;
-    assert(End >= 2U);
-    for (; Begin < MacroTokens.size() / 2; ++Begin, --End) {
-      if (!MacroTokens[Begin].is(tok::TokenKind::l_paren) ||
-          !MacroTokens[End].is(tok::TokenKind::r_paren))
-        break;
-    }
-    size_t Size = End >= Begin ? (End - Begin + 1U) : 0U;
-
-    // It was a single token inside matching parens.
-    if (Size == 1)
-      Tok = MacroTokens[Begin];
-    else if (Size == 2)
-      // It can be +Lit, -Lit or ~Lit.
-      Tok = GetUnopArg(MacroTokens[Begin], MacroTokens[End]);
-    else {
-      // Zero or too many tokens after we stripped matching parens.
-      rememberExpressionTokens(MacroTokens);
-      return;
-    }
-  } else if (MacroTokens.size() == 2) {
-    // It can be +Lit, -Lit, or ~Lit.
-    Tok = GetUnopArg(MacroTokens.front(), MacroTokens.back());
-  }
-
-  if (!Tok.isLiteral() || isStringLiteral(Tok.getKind()) ||
-      !isIntegralConstant(Tok)) {
-    if (Tok.isAnyIdentifier())
-      rememberExpressionName(Tok);
+  if (!isInitializer(MacroTokens))
     return;
-  }
 
   if (!isConsecutiveMacro(MD))
     newEnum();
