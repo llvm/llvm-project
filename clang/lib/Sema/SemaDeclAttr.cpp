@@ -6904,7 +6904,11 @@ static void handleHLSLShaderAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   HLSLShaderAttr::ShaderType ShaderType;
-  if (!HLSLShaderAttr::ConvertStrToShaderType(Str, ShaderType)) {
+  if (!HLSLShaderAttr::ConvertStrToShaderType(Str, ShaderType) ||
+      // Library is added to help convert HLSLShaderAttr::ShaderType to
+      // llvm::Triple::EnviromentType. It is not a legal
+      // HLSLShaderAttr::ShaderType.
+      ShaderType == HLSLShaderAttr::Library) {
     S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
         << AL << Str << ArgLoc;
     return;
