@@ -71,6 +71,13 @@ public:
     }
   };
 
+  /// Build the signature of the given constructor or destructor vairant by
+  /// adding any required parameters. For convenience, ArgTys has been
+  /// initialized with the type of 'this'.
+  virtual AddedStructorArgCounts
+  buildStructorSignature(clang::GlobalDecl GD,
+                         llvm::SmallVectorImpl<clang::CanQualType> &ArgTys) = 0;
+
   AddedStructorArgCounts
   addImplicitConstructorArgs(CIRGenFunction &CGF,
                              const clang::CXXConstructorDecl *D,

@@ -59,6 +59,10 @@ public:
 
   bool classifyReturnType(CIRGenFunctionInfo &FI) const override;
 
+  AddedStructorArgCounts
+  buildStructorSignature(GlobalDecl GD,
+                         llvm::SmallVectorImpl<CanQualType> &ArgTys) override;
+
   bool isThisCompleteObject(GlobalDecl GD) const override {
     // The Itanium ABI has separate complete-object vs. base-object variants of
     // both constructors and destructors.
@@ -144,6 +148,25 @@ bool CIRGenItaniumCXXABI::classifyReturnType(CIRGenFunctionInfo &FI) const {
   auto *RD = FI.getReturnType()->getAsCXXRecordDecl();
   assert(!RD && "RecordDecl return types NYI");
   return false;
+}
+
+CIRGenCXXABI::AddedStructorArgCounts
+CIRGenItaniumCXXABI::buildStructorSignature(
+    GlobalDecl GD, llvm::SmallVectorImpl<CanQualType> &ArgTys) {
+  auto &Context = getContext();
+
+  // All parameters are already in place except VTT, which goes after 'this'.
+  // These are clang types, so we don't need to worry about sret yet.
+
+  // Check if we need to add a VTT parameter (which has type void **).
+  if ((isa<CXXConstructorDecl>(GD.getDecl()) ? GD.getCtorType() == Ctor_Base
+                                             : GD.getDtorType() == Dtor_Base) &&
+      cast<CXXMethodDecl>(GD.getDecl())->getParent()->getNumVBases() != 0) {
+    llvm_unreachable("NYI");
+    (void)Context;
+  }
+
+  return AddedStructorArgCounts{};
 }
 
 // Find out how to cirgen the complete destructor and constructor
