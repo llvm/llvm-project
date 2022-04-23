@@ -7095,7 +7095,7 @@ Example:
     !0 = !{!"auto-init"}
 
 '``explicit_size``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``explicit_size`` metadata may be attached to a global variable definition
 with a size different from the object's total size. This can be useful when an
