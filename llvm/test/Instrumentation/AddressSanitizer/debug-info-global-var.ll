@@ -2,7 +2,7 @@
 source_filename = "version.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
-; CHECK: @version = constant { [5 x i8], [27 x i8] } {{.*}}, !dbg ![[GV:.*]]
+; CHECK: @version = constant { [5 x i8], [27 x i8] } {{.*}}, !dbg ![[GV:.*]],
 
 @version = constant [5 x i8] c"4.00\00", align 1, !dbg !0
 
