@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-unswitch -instcombine -indvars -enable-new-pm=0 < %s | FileCheck %s
+; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),instcombine,indvars' -S %s | FileCheck %s
 
 ; This used to crash in SCEVExpander when there were congruent phis with and
 ; undef incoming value from the loop header. The -loop-unswitch -instcombine is
