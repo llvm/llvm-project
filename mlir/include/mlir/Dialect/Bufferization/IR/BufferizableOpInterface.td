@@ -13,8 +13,8 @@ include "mlir/IR/OpBase.td"
 
 def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
   let description = [{
-    An op interface for Comprehensive Bufferization. Ops that implement this
-    interface can be bufferized using Comprehensive Bufferization.
+    An op interface for One-Shot Bufferize. Ops that implement this interface
+    interface can be analyzed and bufferized using One-Shot Bufferize.
   }];
   let cppNamespace = "::mlir::bufferization";
   let methods = [
@@ -26,9 +26,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
           Note: It is always safe to consider an OpOperand as a memory read,
           even if it does actually not read; however, this can introduce
-          unnecessary out-of-place bufferization decisions. The analysis of
-          Comprehensive Bufferize considers OpOperands of unknown ops (that do
-          not implement this interface) as reading OpOperands.
+          unnecessary out-of-place bufferization decisions. One-Shot Analysis
+          considers OpOperands of unknown ops (that do not implement this
+          interface) as reading OpOperands.
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToMemoryRead",
@@ -55,9 +55,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
           Note: It is always safe to consider an OpOperand as a memory write,
           even if it does actually not write; however, this can introduce
-          unnecessary out-of-place bufferization decisions. The analysis of
-          Comprehensive Bufferize considers OpOperands of unknown ops (that do
-          not implement this interface) as writing OpOperands.
+          unnecessary out-of-place bufferization decisions. One-Shot Analysis
+          considers OpOperands of unknown ops (that do not implement this
+          interface) as writing OpOperands.
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToMemoryWrite",
