@@ -726,7 +726,7 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
       TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
   EXPECT_THAT(
       *TU.build().getDiagnostics(),
-      UnorderedElementsAre(
+      ifTidyChecks(UnorderedElementsAre(
           AllOf(Diag(Main.range("A"), "'A' should be initialized in a member "
                                       "initializer of the constructor"),
                 withFix(equalToFix(ExpectedAFix))),
@@ -736,7 +736,7 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
           AllOf(Diag(Main.range("C"), "variable 'C' is not initialized"),
                 withFix(equalToFix(ExpectedCFix))),
           AllOf(Diag(Main.range("D"), "variable 'D' is not initialized"),
-                withFix(equalToFix(ExpectedDFix)))));
+                withFix(equalToFix(ExpectedDFix))))));
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
