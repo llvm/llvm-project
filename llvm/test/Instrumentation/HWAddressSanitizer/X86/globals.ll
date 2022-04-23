@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -hwasan -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: opt < %s -S -passes=hwasan -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 ; CHECK: @__start_hwasan_globals = external hidden constant [0 x i8]
 ; CHECK: @__stop_hwasan_globals = external hidden constant [0 x i8]
