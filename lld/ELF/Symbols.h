@@ -479,6 +479,10 @@ struct ElfSym {
 // A buffer class that is large enough to hold any Symbol-derived
 // object. We allocate memory using this class and instantiate a symbol
 // using the placement new.
+
+// It is important to keep the size of SymbolUnion small for performance and
+// memory usage reasons. 64 bytes is a soft limit based on the size of Defined
+// on a 64-bit system. This is enforced by a static_assert in Symbols.cpp.
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(CommonSymbol) char b[sizeof(CommonSymbol)];
@@ -486,27 +490,6 @@ union SymbolUnion {
   alignas(SharedSymbol) char d[sizeof(SharedSymbol)];
   alignas(LazyObject) char e[sizeof(LazyObject)];
 };
-
-// It is important to keep the size of SymbolUnion small for performance and
-// memory usage reasons. 64 bytes is a soft limit based on the size of Defined
-// on a 64-bit system.
-static_assert(sizeof(SymbolUnion) <= 64, "SymbolUnion too large");
-
-template <typename T> struct AssertSymbol {
-  static_assert(std::is_trivially_destructible<T>(),
-                "Symbol types must be trivially destructible");
-  static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
-  static_assert(alignof(T) <= alignof(SymbolUnion),
-                "SymbolUnion not aligned enough");
-};
-
-static inline void assertSymbols() {
-  AssertSymbol<Defined>();
-  AssertSymbol<CommonSymbol>();
-  AssertSymbol<Undefined>();
-  AssertSymbol<SharedSymbol>();
-  AssertSymbol<LazyObject>();
-}
 
 void printTraceSymbol(const Symbol &sym, StringRef name);
 
