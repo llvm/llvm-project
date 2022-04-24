@@ -46,6 +46,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dominance.h"
@@ -863,6 +864,11 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
   const auto &options =
       static_cast<const OneShotBufferizationOptions &>(state.getOptions());
+
+  // Catch incorrect API usage.
+  assert((state.hasDialectState(func::FuncDialect::getDialectNamespace()) ||
+          !options.bufferizeFunctionBoundaries) &&
+         "must use ModuleBufferize to bufferize function boundaries");
 
   if (failed(checkAliasInfoConsistency(op, domInfo, state, aliasInfo)))
     return failure();

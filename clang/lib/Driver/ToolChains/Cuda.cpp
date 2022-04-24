@@ -447,7 +447,10 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("--gpu-name");
   CmdArgs.push_back(Args.MakeArgString(CudaArchToString(gpu_arch)));
   CmdArgs.push_back("--output-file");
-  CmdArgs.push_back(Args.MakeArgString(TC.getInputFilename(Output)));
+  const char *OutputFileName = Args.MakeArgString(TC.getInputFilename(Output));
+  if (std::string(OutputFileName) != std::string(Output.getFilename()))
+    C.addTempFile(OutputFileName);
+  CmdArgs.push_back(OutputFileName);
   for (const auto& II : Inputs)
     CmdArgs.push_back(Args.MakeArgString(II.getFilename()));
 
@@ -606,8 +609,8 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!II.isFilename())
       continue;
 
-    const char *CubinF = C.addTempFile(
-        C.getArgs().MakeArgString(getToolChain().getInputFilename(II)));
+    const char *CubinF =
+        C.getArgs().MakeArgString(getToolChain().getInputFilename(II));
 
     CmdArgs.push_back(CubinF);
   }

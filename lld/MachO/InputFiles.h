@@ -151,8 +151,6 @@ public:
   std::vector<CallGraphEntry> callGraph;
 
 private:
-  Section *compactUnwindSection = nullptr;
-
   template <class LP> void parseLazy();
   template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>
@@ -165,7 +163,7 @@ private:
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
   void parseDebugInfo();
-  void registerCompactUnwind();
+  void registerCompactUnwind(Section &compactUnwindSection);
 };
 
 // command-line -sectcreate file
@@ -186,10 +184,10 @@ public:
   // to the root. On the other hand, if a dylib is being directly loaded
   // (through an -lfoo flag), then `umbrella` should be a nullptr.
   explicit DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
-                     bool isBundleLoader = false);
+                     bool isBundleLoader, bool explicitlyLinked);
   explicit DylibFile(const llvm::MachO::InterfaceFile &interface,
-                     DylibFile *umbrella = nullptr,
-                     bool isBundleLoader = false);
+                     DylibFile *umbrella, bool isBundleLoader,
+                     bool explicitlyLinked);
 
   void parseLoadCommands(MemoryBufferRef mb);
   void parseReexports(const llvm::MachO::InterfaceFile &interface);

@@ -56,6 +56,16 @@ enum LTOKind {
   LTOK_Unknown
 };
 
+/// Whether headers used to construct C++20 module units should be looked
+/// up by the path supplied on the command line, or in the user or system
+/// search paths.
+enum ModuleHeaderMode {
+  HeaderMode_None,
+  HeaderMode_Default,
+  HeaderMode_User,
+  HeaderMode_System
+};
+
 /// Driver - Encapsulate logic for constructing compilation processes
 /// from a set of gcc-driver-like command line arguments.
 class Driver {
@@ -83,6 +93,13 @@ class Driver {
     EmbedMarker,
     EmbedBitcode
   } BitcodeEmbed;
+
+  /// Header unit mode set by -fmodule-header={user,system}.
+  ModuleHeaderMode CXX20HeaderType;
+
+  /// Set if we should process inputs and jobs with C++20 module
+  /// interpretation.
+  bool ModulesModeCXX20;
 
   /// LTO mode selected via -f(no-)?lto(=.*)? options.
   LTOKind LTOMode;
@@ -573,6 +590,12 @@ public:
 
   /// ShouldEmitStaticLibrary - Should the linker emit a static library.
   bool ShouldEmitStaticLibrary(const llvm::opt::ArgList &Args) const;
+
+  /// Returns true if the user has indicated a C++20 header unit mode.
+  bool hasHeaderMode() const { return CXX20HeaderType != HeaderMode_None; }
+
+  /// Get the mode for handling headers as set by fmodule-header{=}.
+  ModuleHeaderMode getModuleHeaderMode() const { return CXX20HeaderType; }
 
   /// Returns true if we are performing any kind of LTO.
   bool isUsingLTO(bool IsOffload = false) const {

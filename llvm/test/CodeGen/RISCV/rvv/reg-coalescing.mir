@@ -10,12 +10,12 @@ body:             |
     ; CHECK-LABEL: name: test_earlyclobber
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: undef %0.sub_vrm2_0:vrn2m2 = PseudoVLE32_V_M2 $x10, 1, 5
-    ; CHECK-NEXT: %0.sub_vrm2_1:vrn2m2 = PseudoVLE32_V_M2 $x10, 1, 5
-    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 $x10, 1, 5
-    ; CHECK-NEXT: undef early-clobber %2.sub_vrm2_0:vrn2m2 = PseudoVRGATHER_VI_M2 %0.sub_vrm2_0, 0, 1, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: undef %0.sub_vrm2_0:vrn2m2 = PseudoVLE32_V_M2 $x10, 1, 5 /* e32 */
+    ; CHECK-NEXT: %0.sub_vrm2_1:vrn2m2 = PseudoVLE32_V_M2 $x10, 1, 5 /* e32 */
+    ; CHECK-NEXT: [[PseudoVLE32_V_M2_:%[0-9]+]]:vrm2 = PseudoVLE32_V_M2 $x10, 1, 5 /* e32 */
+    ; CHECK-NEXT: undef early-clobber %2.sub_vrm2_0:vrn2m2 = PseudoVRGATHER_VI_M2 %0.sub_vrm2_0, 0, 1, 5 /* e32 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: %2.sub_vrm2_1:vrn2m2 = COPY %0.sub_vrm2_1
-    ; CHECK-NEXT: PseudoVSUXSEG2EI32_V_M2_M2 %2, $x10, [[PseudoVLE32_V_M2_]], 1, 5, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoVSUXSEG2EI32_V_M2_M2 %2, $x10, [[PseudoVLE32_V_M2_]], 1, 5 /* e32 */, implicit $vl, implicit $vtype
     undef %0.sub_vrm2_0:vrn2m2 = PseudoVLE32_V_M2 $x10, 1, 5
     %0.sub_vrm2_1:vrn2m2 = PseudoVLE32_V_M2 $x10, 1, 5
     %1:vrm2 = PseudoVLE32_V_M2 $x10, 1, 5

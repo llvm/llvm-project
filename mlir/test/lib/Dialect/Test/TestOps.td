@@ -732,6 +732,19 @@ def StringAttrPrettyNameOp
   let hasCustomAssemblyFormat = 1;
 }
 
+
+// This is used to test encoding of a string attribute into an SSA name of a
+// pretty printed value name.
+def CustomResultsNameOp
+ : TEST_Op<"custom_result_name",
+           [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
+  let arguments = (ins 
+    Variadic<AnyInteger>:$optional,
+    StrArrayAttr:$names
+  );
+  let results = (outs Variadic<AnyInteger>:$r);
+}
+
 // This is used to test the OpAsmOpInterface::getDefaultDialect() feature:
 // operations nested in a region under this op will drop the "test." dialect
 // prefix.

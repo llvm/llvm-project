@@ -11,6 +11,8 @@
 
 #include "mlir/IR/OpDefinition.h"
 
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+
 namespace mlir {
 namespace transform {
 
@@ -374,6 +376,35 @@ public:
     return detail::mapPossibleTopLevelTransformOpBlockArguments(
         state, this->getOperation());
   }
+};
+
+/// Side effect resource corresponding to the mapping between Transform IR
+/// values and Payload IR operations. An Allocate effect from this resource
+/// means creating a new mapping entry, it is always accompanied by a Write
+/// effet. A Read effect from this resource means accessing the mapping. A Free
+/// effect on this resource indicates the removal of the mapping entry,
+/// typically after a transformation that modifies the Payload IR operations
+/// associated with one of the Transform IR operation's operands. It is always
+/// accompanied by a Read effect. Read-after-Free and double-Free are not
+/// allowed (they would be problematic with "regular" memory effects too) as
+/// they indicate an attempt to access Payload IR operations that have been
+/// modified, potentially erased, by the previous tranfsormations.
+// TODO: consider custom effects if these are not enabling generic passes such
+// as CSE/DCE to work.
+struct TransformMappingResource
+    : public SideEffects::Resource::Base<TransformMappingResource> {
+  StringRef getName() override { return "transform.mapping"; }
+};
+
+/// Side effect resource corresponding to the Payload IR itself. Only Read and
+/// Write effects are expected on this resource, with Write always accompanied
+/// by a Read (short of fully replacing the top-level Payload IR operation, one
+/// cannot modify the Payload IR without reading it first). This is intended
+/// to disallow reordering of Transform IR operations that mutate the Payload IR
+/// while still allowing the reordering of those that only access it.
+struct PayloadIRResource
+    : public SideEffects::Resource::Base<PayloadIRResource> {
+  StringRef getName() override { return "transform.payload_ir"; }
 };
 
 } // namespace transform

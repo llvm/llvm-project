@@ -565,3 +565,55 @@ external di_variable_get_file : Llvm.llmetadata -> Llvm.llmetadata option
 
 external get_metadata_kind : Llvm.llmetadata -> MetadataKind.t
   = "llvm_get_metadata_kind"
+
+external dibuild_create_auto_variable :
+  lldibuilder ->
+  scope:Llvm.llmetadata ->
+  name:string ->
+  file:Llvm.llmetadata ->
+  line:int ->
+  ty:Llvm.llmetadata ->
+  always_preserve:bool ->
+  lldiflags ->
+  align_in_bits:int ->
+  Llvm.llmetadata
+  = "llvm_dibuild_create_auto_variable_bytecode" "llvm_dibuild_create_auto_variable_native"
+
+external dibuild_create_parameter_variable :
+  lldibuilder ->
+  scope:Llvm.llmetadata ->
+  name:string ->
+  argno:int ->
+  file:Llvm.llmetadata ->
+  line:int ->
+  ty:Llvm.llmetadata ->
+  always_preserve:bool ->
+  lldiflags ->
+  Llvm.llmetadata
+  = "llvm_dibuild_create_parameter_variable_bytecode" "llvm_dibuild_create_parameter_variable_native"
+
+external dibuild_insert_declare_before :
+  lldibuilder ->
+  storage:Llvm.llvalue ->
+  var_info:Llvm.llmetadata ->
+  expr:Llvm.llmetadata ->
+  location:Llvm.llmetadata ->
+  instr:Llvm.llvalue ->
+  Llvm.llvalue
+  = "llvm_dibuild_insert_declare_before_bytecode" "llvm_dibuild_insert_declare_before_native"
+
+external dibuild_insert_declare_at_end :
+  lldibuilder ->
+  storage:Llvm.llvalue ->
+  var_info:Llvm.llmetadata ->
+  expr:Llvm.llmetadata ->
+  location:Llvm.llmetadata ->
+  block:Llvm.llbasicblock ->
+  Llvm.llvalue
+  = "llvm_dibuild_insert_declare_at_end_bytecode" "llvm_dibuild_insert_declare_at_end_native"
+
+external dibuild_expression :
+  lldibuilder ->
+  Int64.t array ->
+  Llvm.llmetadata
+  = "llvm_dibuild_expression"
