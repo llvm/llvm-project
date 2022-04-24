@@ -192,7 +192,13 @@ private:
 
 // Define host runtime libraries that can be used for folding and
 // fill their description if they are available.
-enum class LibraryVersion { Libm, PgmathFast, PgmathRelaxed, PgmathPrecise };
+enum class LibraryVersion {
+  Libm,
+  LibmExtensions,
+  PgmathFast,
+  PgmathRelaxed,
+  PgmathPrecise
+};
 template <typename HostT, LibraryVersion> struct HostRuntimeLibrary {
   // When specialized, this class holds a static constexpr table containing
   // all the HostRuntimeLibrary for functions of library LibraryVersion
@@ -277,6 +283,64 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
+// Note regarding cmath:
+//  - cmath does not have modulo and erfc_scaled equivalent
+//  - C++17 defined standard Bessel math functions std::cyl_bessel_j
+//    and std::cyl_neumann that can be used for Fortran j and y
+//    bessel functions. However, they are not yet implemented in
+//    clang libc++ (ok in GNU libstdc++). Instead, the Posix libm
+//    extensions are used when available below.
+
+#if _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
+/// Define libm extensions
+/// Bessel functions are defined in POSIX.1-2001.
+
+template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<float, float>;
+  using FN = FuncPointer<float, int, float>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0f}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1f}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnf}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0f}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1f}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynf}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+
+template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<double, double>;
+  using FN = FuncPointer<double, int, double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jn}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::yn}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+
+template <>
+struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<long double, long double>;
+  using FN = FuncPointer<long double, int, long double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0l}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1l}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnl}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0l}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1l}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynl}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif
 
 /// Define pgmath description
 #if LINK_WITH_LIBPGMATH
@@ -409,6 +473,8 @@ static const HostRuntimeMap *GetHostRuntimeMap(
   switch (version) {
   case LibraryVersion::Libm:
     return GetHostRuntimeMapVersion<LibraryVersion::Libm>(resultType);
+  case LibraryVersion::LibmExtensions:
+    return GetHostRuntimeMapVersion<LibraryVersion::LibmExtensions>(resultType);
   case LibraryVersion::PgmathPrecise:
     return GetHostRuntimeMapVersion<LibraryVersion::PgmathPrecise>(resultType);
   case LibraryVersion::PgmathRelaxed:
@@ -449,6 +515,13 @@ static const HostRuntimeFunction *SearchHostRuntime(const std::string &name,
   // Default to libm if functions or types are not available in pgmath.
 #endif
   if (const auto *map{GetHostRuntimeMap(LibraryVersion::Libm, resultType)}) {
+    if (const auto *hostFunction{
+            SearchInHostRuntimeMap(*map, name, resultType, argTypes)}) {
+      return hostFunction;
+    }
+  }
+  if (const auto *map{
+          GetHostRuntimeMap(LibraryVersion::LibmExtensions, resultType)}) {
     if (const auto *hostFunction{
             SearchInHostRuntimeMap(*map, name, resultType, argTypes)}) {
       return hostFunction;
