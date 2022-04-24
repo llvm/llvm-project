@@ -104,8 +104,22 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   if (failed(transform.apply(results, *this)))
     return failure();
 
-  for (Value target : transform->getOperands())
-    removePayloadOps(target);
+  // Remove the mapping for the operand if it is consumed by the operation. This
+  // allows us to catch use-after-free with assertions later on.
+  auto memEffectInterface =
+      cast<MemoryEffectOpInterface>(transform.getOperation());
+  SmallVector<MemoryEffects::EffectInstance, 2> effects;
+  for (Value target : transform->getOperands()) {
+    effects.clear();
+    memEffectInterface.getEffectsOnValue(target, effects);
+    if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
+          return isa<transform::TransformMappingResource>(
+                     effect.getResource()) &&
+                 isa<MemoryEffects::Free>(effect.getEffect());
+        })) {
+      removePayloadOps(target);
+    }
+  }
 
   for (auto &en : llvm::enumerate(transform->getResults())) {
     assert(en.value().getDefiningOp() == transform.getOperation() &&
