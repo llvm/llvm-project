@@ -2945,30 +2945,24 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
 }
 
 /// FunctionParamTypesAreEqual - This routine checks two function proto types
-/// for equality of their parameter types. Caller has already checked that
-/// they have same number of parameters.  If the parameters are different,
+/// for equality of their argument types. Caller has already checked that
+/// they have same number of arguments.  If the parameters are different,
 /// ArgPos will have the parameter index of the first different parameter.
-/// If `Reversed` is true, the parameters of `NewType` will be compared in
-/// reverse order. That's useful if one of the functions is being used as a C++20
-/// synthesized operator overload with a reversed parameter order.
 bool Sema::FunctionParamTypesAreEqual(const FunctionProtoType *OldType,
                                       const FunctionProtoType *NewType,
-                                      unsigned *ArgPos, bool Reversed) {
-  assert(OldType->getNumParams() == NewType->getNumParams() &&
-         "Can't compare parameters of functions with different number of "
-         "parameters!");
-  for (size_t I = 0; I < OldType->getNumParams(); I++) {
-    // Reverse iterate over the parameters of `OldType` if `Reversed` is true.
-    size_t J = Reversed ? (OldType->getNumParams() - I - 1) : I;
-
+                                      unsigned *ArgPos) {
+  for (FunctionProtoType::param_type_iterator O = OldType->param_type_begin(),
+                                              N = NewType->param_type_begin(),
+                                              E = OldType->param_type_end();
+       O && (O != E); ++O, ++N) {
     // Ignore address spaces in pointee type. This is to disallow overloading
     // on __ptr32/__ptr64 address spaces.
-    QualType Old = Context.removePtrSizeAddrSpace(OldType->getParamType(I).getUnqualifiedType());
-    QualType New = Context.removePtrSizeAddrSpace(NewType->getParamType(J).getUnqualifiedType());
+    QualType Old = Context.removePtrSizeAddrSpace(O->getUnqualifiedType());
+    QualType New = Context.removePtrSizeAddrSpace(N->getUnqualifiedType());
 
     if (!Context.hasSameType(Old, New)) {
       if (ArgPos)
-        *ArgPos = I;
+        *ArgPos = O - OldType->param_type_begin();
       return false;
     }
   }
@@ -9590,32 +9584,6 @@ static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
   return true;
 }
 
-/// We're allowed to use constraints partial ordering only if the candidates
-/// have the same parameter types:
-/// [temp.func.order]p6.2.2 [...] or if the function parameters that
-/// positionally correspond between the two templates are not of the same type,
-/// neither template is more specialized than the other.
-/// [over.match.best]p2.6
-/// F1 and F2 are non-template functions with the same parameter-type-lists,
-/// and F1 is more constrained than F2 [...]
-static bool canCompareFunctionConstraints(Sema &S,
-                                          const OverloadCandidate &Cand1,
-                                          const OverloadCandidate &Cand2) {
-  // FIXME: Per P2113R0 we also need to compare the template parameter lists
-  // when comparing template functions. 
-  if (Cand1.Function && Cand2.Function && Cand1.Function->hasPrototype() &&
-      Cand2.Function->hasPrototype()) {
-    auto *PT1 = cast<FunctionProtoType>(Cand1.Function->getFunctionType());
-    auto *PT2 = cast<FunctionProtoType>(Cand2.Function->getFunctionType());
-    if (PT1->getNumParams() == PT2->getNumParams() &&
-        PT1->isVariadic() == PT2->isVariadic() &&
-        S.FunctionParamTypesAreEqual(PT1, PT2, nullptr,
-                                     Cand1.isReversed() ^ Cand2.isReversed()))
-      return true;
-  }
-  return false;
-}
-
 /// isBetterOverloadCandidate - Determines whether the first overload
 /// candidate is a better candidate than the second (C++ 13.3.3p1).
 bool clang::isBetterOverloadCandidate(
@@ -9847,28 +9815,34 @@ bool clang::isBetterOverloadCandidate(
             isa<CXXConversionDecl>(Cand1.Function) ? TPOC_Conversion
                                                    : TPOC_Call,
             Cand1.ExplicitCallArguments, Cand2.ExplicitCallArguments,
-            Cand1.isReversed() ^ Cand2.isReversed(),
-            canCompareFunctionConstraints(S, Cand1, Cand2)))
+            Cand1.isReversed() ^ Cand2.isReversed()))
       return BetterTemplate == Cand1.Function->getPrimaryTemplate();
   }
 
   //   -— F1 and F2 are non-template functions with the same
   //      parameter-type-lists, and F1 is more constrained than F2 [...],
-  if (!Cand1IsSpecialization && !Cand2IsSpecialization &&
-      canCompareFunctionConstraints(S, Cand1, Cand2)) {
-    Expr *RC1 = Cand1.Function->getTrailingRequiresClause();
-    Expr *RC2 = Cand2.Function->getTrailingRequiresClause();
-    if (RC1 && RC2) {
-      bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-      if (S.IsAtLeastAsConstrained(Cand1.Function, {RC1}, Cand2.Function, {RC2},
-                                   AtLeastAsConstrained1) ||
-          S.IsAtLeastAsConstrained(Cand2.Function, {RC2}, Cand1.Function, {RC1},
-                                   AtLeastAsConstrained2))
-        return false;
-      if (AtLeastAsConstrained1 != AtLeastAsConstrained2)
-        return AtLeastAsConstrained1;
-    } else if (RC1 || RC2) {
-      return RC1 != nullptr;
+  if (Cand1.Function && Cand2.Function && !Cand1IsSpecialization &&
+      !Cand2IsSpecialization && Cand1.Function->hasPrototype() &&
+      Cand2.Function->hasPrototype()) {
+    auto *PT1 = cast<FunctionProtoType>(Cand1.Function->getFunctionType());
+    auto *PT2 = cast<FunctionProtoType>(Cand2.Function->getFunctionType());
+    if (PT1->getNumParams() == PT2->getNumParams() &&
+        PT1->isVariadic() == PT2->isVariadic() &&
+        S.FunctionParamTypesAreEqual(PT1, PT2)) {
+      Expr *RC1 = Cand1.Function->getTrailingRequiresClause();
+      Expr *RC2 = Cand2.Function->getTrailingRequiresClause();
+      if (RC1 && RC2) {
+        bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+        if (S.IsAtLeastAsConstrained(Cand1.Function, {RC1}, Cand2.Function,
+                                     {RC2}, AtLeastAsConstrained1) ||
+            S.IsAtLeastAsConstrained(Cand2.Function, {RC2}, Cand1.Function,
+                                     {RC1}, AtLeastAsConstrained2))
+          return false;
+        if (AtLeastAsConstrained1 != AtLeastAsConstrained2)
+          return AtLeastAsConstrained1;
+      } else if (RC1 || RC2) {
+        return RC1 != nullptr;
+      }
     }
   }
 
