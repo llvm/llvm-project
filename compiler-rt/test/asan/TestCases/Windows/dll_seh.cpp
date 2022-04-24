@@ -2,10 +2,10 @@
 //
 // Check both -GS and -GS- builds:
 // RUN: %clang_cl_asan -GS  -LD -Od %s -Fe%t.dll
-// RUN: %run %t %t.dll
+// RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t %t.dll
 //
 // RUN: %clang_cl_asan -GS- -LD -Od %s -Fe%t.dll
-// RUN: %run %t %t.dll
+// RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t %t.dll
 
 #include <windows.h>
 #include <assert.h>
