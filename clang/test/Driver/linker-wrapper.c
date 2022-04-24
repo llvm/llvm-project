@@ -38,5 +38,5 @@
 // RUN: clang-linker-wrapper --host-triple x86_64-unknown-linux-gnu --dry-run -linker-path \
 // RUN:   /usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=LTO
 
-// LTO: ptxas{{.*}}-m64 -o {{.*}}.cubin -O2 --gpu-name sm_70 -c {{.*}}.s
-// LTO: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_70 {{.*}}.cubin
+// LTO: ptxas{{.*}}-m64 -o {{.*}}.cubin -O2 --gpu-name sm_70 {{.*}}.s
+// LTO-NOT: nvlink

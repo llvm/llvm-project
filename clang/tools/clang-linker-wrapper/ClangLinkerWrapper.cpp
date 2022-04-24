@@ -595,7 +595,7 @@ extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
 // TODO: Move these to a separate file.
 namespace nvptx {
 Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
-                               StringRef Arch) {
+                               StringRef Arch, bool RDC = true) {
   // NVPTX uses the ptxas binary to create device object files.
   Expected<std::string> PtxasPath = findProgram("ptxas", {CudaBinaryPath});
   if (!PtxasPath)
@@ -626,7 +626,8 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
   CmdArgs.push_back(Opt);
   CmdArgs.push_back("--gpu-name");
   CmdArgs.push_back(Arch);
-  CmdArgs.push_back("-c");
+  if (RDC)
+    CmdArgs.push_back("-c");
 
   CmdArgs.push_back(InputFile);
 
@@ -933,7 +934,8 @@ bool isValidCIdentifier(StringRef S) {
 }
 
 Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
-                       const Triple &TheTriple, StringRef Arch) {
+                       const Triple &TheTriple, StringRef Arch,
+                       bool &WholeProgram) {
   SmallVector<std::unique_ptr<MemoryBuffer>, 4> SavedBuffers;
   SmallVector<std::unique_ptr<lto::InputFile>, 4> BitcodeFiles;
   SmallVector<std::string, 4> NewInputFiles;
@@ -1009,7 +1011,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   };
 
   // We assume visibility of the whole program if every input file was bitcode.
-  bool WholeProgram = BitcodeFiles.size() == InputFiles.size();
+  WholeProgram = BitcodeFiles.size() == InputFiles.size();
   auto LTOBackend =
       (EmbedBitcode) ? createLTO(TheTriple, Arch, WholeProgram, OutputBitcode)
                      : createLTO(TheTriple, Arch, WholeProgram);
@@ -1089,7 +1091,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   // Is we are compiling for NVPTX we need to run the assembler first.
   if (TheTriple.isNVPTX() && !EmbedBitcode) {
     for (auto &File : Files) {
-      auto FileOrErr = nvptx::assemble(File, TheTriple, Arch);
+      auto FileOrErr = nvptx::assemble(File, TheTriple, Arch, !WholeProgram);
       if (!FileOrErr)
         return FileOrErr.takeError();
       File = *FileOrErr;
@@ -1117,15 +1119,24 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
   for (auto &LinkerInput : LinkerInputMap) {
     DeviceFile &File = LinkerInput.getFirst();
     Triple TheTriple = Triple(File.TheTriple);
+    bool WholeProgram = false;
 
     // Run LTO on any bitcode files and replace the input with the result.
-    if (Error Err =
-            linkBitcodeFiles(LinkerInput.getSecond(), TheTriple, File.Arch))
+    if (Error Err = linkBitcodeFiles(LinkerInput.getSecond(), TheTriple,
+                                     File.Arch, WholeProgram))
       return Err;
 
     // If we are embedding bitcode for JIT, skip the final device linking.
     if (EmbedBitcode) {
       assert(!LinkerInput.getSecond().empty() && "No bitcode image to embed");
+      LinkedImages.push_back(LinkerInput.getSecond().front());
+      continue;
+    }
+
+    // If we performed LTO on NVPTX and had whole program visibility, we can use
+    // CUDA in non-RDC mode.
+    if (WholeProgram && TheTriple.isNVPTX()) {
+      assert(!LinkerInput.getSecond().empty() && "No non-RDC image to embed");
       LinkedImages.push_back(LinkerInput.getSecond().front());
       continue;
     }
