@@ -76,6 +76,10 @@ struct BubbleUpExtractSliceOpPattern
     if (!sliceOp.hasUnitStride())
       return rewriter.notifyMatchFailure(sliceOp, "expected unit stride");
 
+    if (sliceOp.getType().getRank() != sliceOp.getSourceType().getRank()) {
+      return rewriter.notifyMatchFailure(sliceOp, "expected no rank reduction");
+    }
+
     OpOperand *outOperand = linalgOp.getOutputOperand(0);
     AffineMap indexingMap = linalgOp.getTiedIndexingMap(outOperand);
     if (!indexingMap.isProjectedPermutation()) {

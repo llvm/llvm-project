@@ -963,7 +963,7 @@ void MSVCToolChain::addClangTargetOptions(
     Action::OffloadKind DeviceOffloadKind) const {
   // MSVC STL kindly allows removing all usages of typeid by defining
   // _HAS_STATIC_RTTI to 0. Do so, when compiling with -fno-rtti
-  if (DriverArgs.hasArg(options::OPT_fno_rtti, options::OPT_frtti,
-                        /*Default=*/false))
+  if (DriverArgs.hasFlag(options::OPT_fno_rtti, options::OPT_frtti,
+                         /*Default=*/false))
     CC1Args.push_back("-D_HAS_STATIC_RTTI=0");
 }

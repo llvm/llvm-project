@@ -58,15 +58,12 @@ static inline char32_t GetDecimalPoint(const DataEdit &edit) {
 // Returns true if there's a '-' sign.
 static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
     std::optional<char32_t> &next, std::optional<int> &remaining) {
-  bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
-  next = io.PrepareInput(edit, remaining, !bzMode);
+  next = io.PrepareInput(edit, remaining);
   bool negative{false};
   if (next) {
     negative = *next == '-';
     if (negative || *next == '+') {
-      if (!bzMode) {
-        io.SkipSpaces(remaining);
-      }
+      io.SkipSpaces(remaining);
       next = io.NextInField(remaining, edit);
     }
   }
@@ -179,9 +176,19 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
     }
     if (next && *next == '(') { // NaN(...)
-      while (next && *next != ')') {
+      Put('(');
+      int depth{1};
+      do {
         next = io.NextInField(remaining, edit);
-      }
+        if (!next) {
+          break;
+        } else if (*next == '(') {
+          ++depth;
+        } else if (*next == ')') {
+          --depth;
+        }
+        Put(*next);
+      } while (depth > 0);
     }
     exponent = 0;
   } else if (first == decimal || (first >= '0' && first <= '9') ||
@@ -189,7 +196,6 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       first == 'D' || first == 'Q') {
     Put('.'); // input field is normalized to a fraction
     auto start{got};
-    bool anyDigit{false};
     for (; next; next = io.NextInField(remaining, edit)) {
       char32_t ch{*next};
       if (ch == ' ' || ch == '\t') {
@@ -200,10 +206,8 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
         }
       }
       if (ch == '0' && got == start && !decimalPoint) {
-        anyDigit = true;
         // omit leading zeroes before the decimal
       } else if (ch >= '0' && ch <= '9') {
-        anyDigit = true;
         Put(ch);
       } else if (ch == decimal && !decimalPoint) {
         // the decimal point is *not* copied to the buffer
@@ -213,11 +217,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
     }
     if (got == start) {
-      if (anyDigit) {
-        Put('0'); // emit at least one digit
-      } else {
-        return 0; // no digits, invalid input
-      }
+      // Nothing but zeroes and maybe a decimal point.  F'2018 requires
+      // at least one digit, but F'77 did not, and a bare "." shows up in
+      // the FCVS suite.
+      Put('0'); // emit at least one digit
     }
     if (next &&
         (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
@@ -232,7 +235,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     exponent = -edit.modes.scale;
     if (next &&
         (*next == '-' || *next == '+' || (*next >= '0' && *next <= '9') ||
-            (bzMode && (*next == ' ' || *next == '\t')))) {
+            *next == ' ' || *next == '\t')) {
       bool negExpo{*next == '-'};
       if (negExpo || *next == '+') {
         next = io.NextInField(remaining, edit);
@@ -240,8 +243,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       for (exponent = 0; next; next = io.NextInField(remaining, edit)) {
         if (*next >= '0' && *next <= '9') {
           exponent = 10 * exponent + *next - '0';
-        } else if (bzMode && (*next == ' ' || *next == '\t')) {
-          exponent = 10 * exponent;
+        } else if (*next == ' ' || *next == '\t') {
+          if (bzMode) {
+            exponent = 10 * exponent;
+          }
         } else {
           break;
         }
@@ -335,11 +340,19 @@ static bool TryFastPathRealInput(
   if (converted.flags & decimal::Invalid) {
     return false;
   }
-  if (edit.digits.value_or(0) != 0 &&
-      std::memchr(str, '.', p - str) == nullptr) {
-    // No explicit decimal point, and edit descriptor is Fw.d (or other)
-    // with d != 0, which implies scaling.
-    return false;
+  if (edit.digits.value_or(0) != 0) {
+    // Edit descriptor is Fw.d (or other) with d != 0, which
+    // implies scaling
+    const char *q{str};
+    for (; q < limit; ++q) {
+      if (*q == '.' || *q == 'n' || *q == 'N') {
+        break;
+      }
+    }
+    if (q == limit) {
+      // No explicit decimal point, and not NaN/Inf.
+      return false;
+    }
   }
   for (; p < limit && (*p == ' ' || *p == '\t'); ++p) {
   }
@@ -428,6 +441,10 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   if (hadExtra) {
     converted.flags = static_cast<enum decimal::ConversionResultFlags>(
         converted.flags | decimal::Inexact);
+  }
+  if (*p) { // unprocessed junk after value
+    io.GetIoErrorHandler().SignalError(IostatBadRealInput);
+    return false;
   }
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<binaryPrecision> *>(n) =
       converted.binary;

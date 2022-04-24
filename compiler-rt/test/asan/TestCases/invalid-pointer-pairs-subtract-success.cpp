@@ -1,7 +1,7 @@
 // RUN: %clangxx_asan -O0 %s -o %t -mllvm -asan-detect-invalid-pointer-pair
 
 // RUN: %env_asan_opts=detect_invalid_pointer_pairs=2 %run %t
-// RUN: %env_asan_opts=detect_invalid_pointer_pairs=2,detect_stack_use_after_return=1 %run %t
+// RUN: %env_asan_opts=detect_invalid_pointer_pairs=2,detect_stack_use_after_return=0 %run %t
 
 #include <assert.h>
 #include <stdlib.h>

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize=test-analysis-only -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only bufferize-function-boundaries" -split-input-file | FileCheck %s
 
 /// All combinations of matmul(fill(extract(init_tensor)), fill(extract(%init_tensor)), %arg2)
 /// These should all be inplaceable except the first op.

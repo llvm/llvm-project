@@ -30,3 +30,22 @@ transform.sequence {
   ^bb1(%arg1: !pdl.operation):
   }
 }
+
+// Using the same value multiple times without consuming it is fine.
+// CHECK: transform.sequence
+// CHECK: %[[V:.+]] = sequence
+// CHECK: sequence %[[V]]
+// CHECK: sequence %[[V]]
+transform.sequence {
+^bb0(%arg0: !pdl.operation):
+  %0 = transform.sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    yield %arg1 : !pdl.operation
+  } : !pdl.operation
+  transform.sequence %0 {
+  ^bb2(%arg2: !pdl.operation):
+  }
+  transform.sequence %0 {
+  ^bb3(%arg3: !pdl.operation):
+  }
+}

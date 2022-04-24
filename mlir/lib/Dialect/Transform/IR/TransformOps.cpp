@@ -164,7 +164,58 @@ LogicalResult transform::SequenceOp::apply(transform::TransformResults &results,
   return success();
 }
 
+/// Returns `true` if the given op operand may be consuming the handle value in
+/// the Transform IR. That is, if it may have a Free effect on it.
+static bool isValueUsePotentialConsumer(OpOperand &use) {
+  // Conservatively assume the effect being present in absence of the interface.
+  auto memEffectInterface = dyn_cast<MemoryEffectOpInterface>(use.getOwner());
+  if (!memEffectInterface)
+    return true;
+
+  SmallVector<MemoryEffects::EffectInstance, 2> effects;
+  memEffectInterface.getEffectsOnValue(use.get(), effects);
+  return llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
+    return isa<transform::TransformMappingResource>(effect.getResource()) &&
+           isa<MemoryEffects::Free>(effect.getEffect());
+  });
+}
+
+LogicalResult
+checkDoubleConsume(Value value,
+                   function_ref<InFlightDiagnostic()> reportError) {
+  OpOperand *potentialConsumer = nullptr;
+  for (OpOperand &use : value.getUses()) {
+    if (!isValueUsePotentialConsumer(use))
+      continue;
+
+    if (!potentialConsumer) {
+      potentialConsumer = &use;
+      continue;
+    }
+
+    InFlightDiagnostic diag = reportError()
+                              << " has more than one potential consumer";
+    diag.attachNote(potentialConsumer->getOwner()->getLoc())
+        << "used here as operand #" << potentialConsumer->getOperandNumber();
+    diag.attachNote(use.getOwner()->getLoc())
+        << "used here as operand #" << use.getOperandNumber();
+    return diag;
+  }
+
+  return success();
+}
+
 LogicalResult transform::SequenceOp::verify() {
+  // Check if the block argument has more than one consuming use.
+  for (BlockArgument argument : getBodyBlock()->getArguments()) {
+    auto report = [&]() {
+      return (emitOpError() << "block argument #" << argument.getArgNumber());
+    };
+    if (failed(checkDoubleConsume(argument, report)))
+      return failure();
+  }
+
+  // Check properties of the nested operations they cannot check themselves.
   for (Operation &child : *getBodyBlock()) {
     if (!isa<TransformOpInterface>(child) &&
         &child != &getBodyBlock()->back()) {
@@ -176,16 +227,11 @@ LogicalResult transform::SequenceOp::verify() {
     }
 
     for (OpResult result : child.getResults()) {
-      if (llvm::hasNItemsOrLess(result.getUses(), 1))
-        continue;
-      InFlightDiagnostic diag = child.emitError()
-                                << "result #" << result.getResultNumber()
-                                << " has more than one use";
-      for (OpOperand &use : result.getUses()) {
-        diag.attachNote(use.getOwner()->getLoc())
-            << "used here as operand #" << use.getOperandNumber();
-      }
-      return diag;
+      auto report = [&]() {
+        return (child.emitError() << "result #" << result.getResultNumber());
+      };
+      if (failed(checkDoubleConsume(result, report)))
+        return failure();
     }
   }
 
@@ -198,6 +244,49 @@ LogicalResult transform::SequenceOp::verify() {
     return diag;
   }
   return success();
+}
+
+void transform::SequenceOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  auto *mappingResource = TransformMappingResource::get();
+  effects.emplace_back(MemoryEffects::Read::get(), getRoot(), mappingResource);
+
+  for (Value result : getResults()) {
+    effects.emplace_back(MemoryEffects::Allocate::get(), result,
+                         mappingResource);
+    effects.emplace_back(MemoryEffects::Write::get(), result, mappingResource);
+  }
+
+  if (!getRoot()) {
+    for (Operation &op : *getBodyBlock()) {
+      auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
+      if (!iface) {
+        // TODO: fill all possible effects; or require ops to actually implement
+        // the memory effect interface always
+        assert(false);
+      }
+
+      SmallVector<MemoryEffects::EffectInstance, 2> nestedEffects;
+      iface.getEffects(effects);
+    }
+    return;
+  }
+
+  // Carry over all effects on the argument of the entry block as those on the
+  // operand, this is the same value just remapped.
+  for (Operation &op : *getBodyBlock()) {
+    auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
+    if (!iface) {
+      // TODO: fill all possible effects; or require ops to actually implement
+      // the memory effect interface always
+      assert(false);
+    }
+
+    SmallVector<MemoryEffects::EffectInstance, 2> nestedEffects;
+    iface.getEffectsOnValue(getBodyBlock()->getArgument(0), nestedEffects);
+    for (const auto &effect : nestedEffects)
+      effects.emplace_back(effect.getEffect(), getRoot(), effect.getResource());
+  }
 }
 
 //===----------------------------------------------------------------------===//

@@ -1328,6 +1328,53 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
   return It;
 }
 
+// MIR printer helper function to annotate Operands with a comment.
+std::string RISCVInstrInfo::createMIROperandComment(
+    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
+    const TargetRegisterInfo *TRI) const {
+  // Print a generic comment for this operand if there is one.
+  std::string GenericComment =
+      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx, TRI);
+  if (!GenericComment.empty())
+    return GenericComment;
+
+  // If not, we must have an immediate operand.
+  if (Op.getType() != MachineOperand::MO_Immediate)
+    return std::string();
+
+  std::string Comment;
+  raw_string_ostream OS(Comment);
+
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+
+  // Print the full VType operand of vsetvli/vsetivli instructions, and the SEW
+  // operand of vector codegen pseudos.
+  if ((MI.getOpcode() == RISCV::VSETVLI || MI.getOpcode() == RISCV::VSETIVLI ||
+       MI.getOpcode() == RISCV::PseudoVSETVLI ||
+       MI.getOpcode() == RISCV::PseudoVSETIVLI ||
+       MI.getOpcode() == RISCV::PseudoVSETVLIX0) &&
+      OpIdx == 2) {
+    unsigned Imm = MI.getOperand(OpIdx).getImm();
+    RISCVVType::printVType(Imm, OS);
+  } else if (RISCVII::hasSEWOp(TSFlags)) {
+    unsigned NumOperands = MI.getNumExplicitOperands();
+    bool HasPolicy = RISCVII::hasVecPolicyOp(TSFlags);
+
+    // The SEW operand is before any policy operand.
+    if (OpIdx != NumOperands - HasPolicy - 1)
+      return std::string();
+
+    unsigned Log2SEW = MI.getOperand(OpIdx).getImm();
+    unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
+    assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
+
+    OS << "e" << SEW;
+  }
+
+  OS.flush();
+  return Comment;
+}
+
 // clang-format off
 #define CASE_VFMA_OPCODE_COMMON(OP, TYPE, LMUL)                                \
   RISCV::PseudoV##OP##_##TYPE##_##LMUL

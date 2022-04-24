@@ -47,6 +47,6 @@ int main(int argc, char **argv) {
     case 'O': __sanitizer_unaligned_store64(x + 14, 0); break;
 //  CHECK-O: main{{.*}}unaligned_loads_and_stores.cpp:[[@LINE-1]]
   }
-  delete x;
+  delete[] x;
   return res;
 }

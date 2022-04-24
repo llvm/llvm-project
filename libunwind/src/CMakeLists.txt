@@ -93,8 +93,8 @@ if (LIBUNWIND_ENABLE_THREADS)
 endif()
 
 # Setup flags.
-add_link_flags_if(LIBUNWIND_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none)
-if (LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG)
+add_link_flags_if(CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG --unwindlib=none)
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   add_link_flags_if_supported(-nostdlib++)
 else()
   add_link_flags_if_supported(-nodefaultlibs)
@@ -104,8 +104,8 @@ endif()
 add_library_flags_if(MINGW "${MINGW_LIBRARIES}")
 
 if (LIBUNWIND_ENABLE_SHARED AND
-    NOT (LIBUNWIND_SUPPORTS_FNO_EXCEPTIONS_FLAG AND
-         LIBUNWIND_SUPPORTS_FUNWIND_TABLES_FLAG))
+    NOT (CXX_SUPPORTS_FNO_EXCEPTIONS_FLAG AND
+         CXX_SUPPORTS_FUNWIND_TABLES_FLAG))
   message(FATAL_ERROR
           "Compiler doesn't support generation of unwind tables if exception "
           "support is disabled.  Building libunwind DSO with runtime dependency "

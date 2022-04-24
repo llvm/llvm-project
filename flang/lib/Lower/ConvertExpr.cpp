@@ -744,7 +744,7 @@ public:
     mlir::Location loc = getLoc();
     ExtValue var = gen(sym);
     if (const fir::UnboxedValue *s = var.getUnboxed())
-      if (fir::isReferenceLike(s->getType())) {
+      if (fir::isa_ref_type(s->getType())) {
         // A function with multiple entry points returning different types
         // tags all result variables with one of the largest types to allow
         // them to share the same storage.  A reference to a result variable

@@ -30,8 +30,9 @@
 # LAZY-DEF-DAG: [[#]] lazy
 # LAZY-DEF-DAG: UND __wrap_lazy
 
-# LAZY-REF-DAG: UND lazy
+# LAZY-REF-NOT: UND lazy
 # LAZY-REF-DAG: UND __wrap_lazy
+# LAZY-REF-NOT: UND lazy
 
 #--- dummy.s
 .globl dummy

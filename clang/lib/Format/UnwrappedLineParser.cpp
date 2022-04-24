@@ -2470,8 +2470,9 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
         Kind = IfStmtKind::IfElseIf;
       addUnwrappedLine();
     } else if (FormatTok->is(tok::kw_if)) {
-      FormatToken *Previous = Tokens->getPreviousToken();
-      const bool IsPrecededByComment = Previous && Previous->is(tok::comment);
+      const FormatToken *Previous = Tokens->getPreviousToken();
+      assert(Previous);
+      const bool IsPrecededByComment = Previous->is(tok::comment);
       if (IsPrecededByComment) {
         addUnwrappedLine();
         ++Line->Level;

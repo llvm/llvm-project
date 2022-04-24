@@ -1824,12 +1824,27 @@ computeCollapsedLayoutMap(MemRefType srcType,
   if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
     return failure();
 
-  // The result strides are exactly the strides of the last entry of each
-  // reassociation.
+  // The result stride of a reassociation group is the stride of the last entry
+  // of the reassociation. (TODO: Should be the minimum stride in the
+  // reassociation because strides are not necessarily sorted. E.g., when using
+  // memref.transpose.) Dimensions of size 1 should be skipped, because their
+  // strides are meaningless and could have any arbitrary value.
   SmallVector<int64_t> resultStrides;
   resultStrides.reserve(reassociation.size());
-  for (ReassociationIndices reassoc : reassociation)
-    resultStrides.push_back(srcStrides[reassoc.back()]);
+  for (const ReassociationIndices &reassoc : reassociation) {
+    ArrayRef<int64_t> ref = llvm::makeArrayRef(reassoc);
+    while (srcShape[ref.back()] == 1 && ref.size() > 1)
+      ref = ref.drop_back();
+    if (!ShapedType::isDynamic(srcShape[ref.back()]) || ref.size() == 1) {
+      resultStrides.push_back(srcStrides[ref.back()]);
+    } else {
+      // Dynamically-sized dims may turn out to be dims of size 1 at runtime, so
+      // the corresponding stride may have to be skipped. (See above comment.)
+      // Therefore, the result stride cannot be statically determined and must
+      // be dynamic.
+      resultStrides.push_back(ShapedType::kDynamicStrideOrOffset);
+    }
+  }
 
   // Validate that each reassociation group is contiguous.
   unsigned resultStrideIndex = resultStrides.size() - 1;
