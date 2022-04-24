@@ -6762,6 +6762,32 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   return Loads[0];
 }
 
+SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
+                                          unsigned Dim,
+                                          const ArgDescriptor &Arg) const {
+  SDLoc SL(Op);
+  MachineFunction &MF = DAG.getMachineFunction();
+  unsigned MaxID = Subtarget->getMaxWorkitemID(MF.getFunction(), Dim);
+  if (MaxID == 0)
+    return DAG.getConstant(0, SL, MVT::i32);
+
+  SDValue Val = loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
+                               SDLoc(DAG.getEntryNode()), Arg);
+
+  // Don't bother inserting AssertZext for packed IDs since we're emitting the
+  // masking operations anyway.
+  //
+  // TODO: We could assert the top bit is 0 for the source copy.
+  if (Arg.isMasked())
+    return Val;
+
+  // Preserve the known bits after expansion to a copy.
+  EVT SmallVT =
+      EVT::getIntegerVT(*DAG.getContext(), 32 - countLeadingZeros(MaxID));
+  return DAG.getNode(ISD::AssertZext, SL, MVT::i32, Val,
+                     DAG.getValueType(SmallVT));
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -6908,26 +6934,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_workitem_id_x:
-    if (Subtarget->getMaxWorkitemID(MF.getFunction(), 0) == 0)
-      return DAG.getConstant(0, DL, MVT::i32);
-
-    return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
-                          SDLoc(DAG.getEntryNode()),
-                          MFI->getArgInfo().WorkItemIDX);
+    return lowerWorkitemID(DAG, Op, 0, MFI->getArgInfo().WorkItemIDX);
   case Intrinsic::amdgcn_workitem_id_y:
-    if (Subtarget->getMaxWorkitemID(MF.getFunction(), 1) == 0)
-      return DAG.getConstant(0, DL, MVT::i32);
-
-    return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
-                          SDLoc(DAG.getEntryNode()),
-                          MFI->getArgInfo().WorkItemIDY);
+    return lowerWorkitemID(DAG, Op, 1, MFI->getArgInfo().WorkItemIDY);
   case Intrinsic::amdgcn_workitem_id_z:
-    if (Subtarget->getMaxWorkitemID(MF.getFunction(), 2) == 0)
-      return DAG.getConstant(0, DL, MVT::i32);
-
-    return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
-                          SDLoc(DAG.getEntryNode()),
-                          MFI->getArgInfo().WorkItemIDZ);
+    return lowerWorkitemID(DAG, Op, 2, MFI->getArgInfo().WorkItemIDZ);
   case Intrinsic::amdgcn_wavefrontsize:
     return DAG.getConstant(MF.getSubtarget<GCNSubtarget>().getWavefrontSize(),
                            SDLoc(Op), MVT::i32);
