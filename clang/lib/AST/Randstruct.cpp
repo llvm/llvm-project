@@ -150,14 +150,14 @@ void randomizeStructureLayoutImpl(const ASTContext &Context,
   if (CurrentBitfieldRun)
     Buckets.push_back(std::move(CurrentBitfieldRun));
 
-  llvm::shuffle(std::begin(Buckets), std::end(Buckets), RNG);
+  std::shuffle(std::begin(Buckets), std::end(Buckets), RNG);
 
   // Produce the new ordering of the elements from the Buckets.
   SmallVector<FieldDecl *, 16> FinalOrder;
   for (const std::unique_ptr<Bucket> &B : Buckets) {
     llvm::SmallVectorImpl<FieldDecl *> &RandFields = B->fields();
     if (!B->isBitfieldRun())
-      llvm::shuffle(std::begin(RandFields), std::end(RandFields), RNG);
+      std::shuffle(std::begin(RandFields), std::end(RandFields), RNG);
 
     FinalOrder.insert(FinalOrder.end(), RandFields.begin(), RandFields.end());
   }
