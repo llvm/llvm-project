@@ -36,20 +36,20 @@ static bool isArc4RandomAvailable(const ASTContext &Ctx) {
 
 namespace {
 struct ChecksFilter {
-  DefaultBool check_bcmp;
-  DefaultBool check_bcopy;
-  DefaultBool check_bzero;
-  DefaultBool check_gets;
-  DefaultBool check_getpw;
-  DefaultBool check_mktemp;
-  DefaultBool check_mkstemp;
-  DefaultBool check_strcpy;
-  DefaultBool check_DeprecatedOrUnsafeBufferHandling;
-  DefaultBool check_rand;
-  DefaultBool check_vfork;
-  DefaultBool check_FloatLoopCounter;
-  DefaultBool check_UncheckedReturn;
-  DefaultBool check_decodeValueOfObjCType;
+  bool check_bcmp = false;
+  bool check_bcopy = false;
+  bool check_bzero = false;
+  bool check_gets = false;
+  bool check_getpw = false;
+  bool check_mktemp = false;
+  bool check_mkstemp = false;
+  bool check_strcpy = false;
+  bool check_DeprecatedOrUnsafeBufferHandling = false;
+  bool check_rand = false;
+  bool check_vfork = false;
+  bool check_FloatLoopCounter = false;
+  bool check_UncheckedReturn = false;
+  bool check_decodeValueOfObjCType = false;
 
   CheckerNameRef checkName_bcmp;
   CheckerNameRef checkName_bcopy;

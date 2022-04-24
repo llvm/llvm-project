@@ -88,11 +88,11 @@ public:
   /// The filter is used to filter out the diagnostics which are not enabled by
   /// the user.
   struct CStringChecksFilter {
-    DefaultBool CheckCStringNullArg;
-    DefaultBool CheckCStringOutOfBounds;
-    DefaultBool CheckCStringBufferOverlap;
-    DefaultBool CheckCStringNotNullTerm;
-    DefaultBool CheckCStringUninitializedRead;
+    bool CheckCStringNullArg = false;
+    bool CheckCStringOutOfBounds = false;
+    bool CheckCStringBufferOverlap = false;
+    bool CheckCStringNotNullTerm = false;
+    bool CheckCStringUninitializedRead = false;
 
     CheckerNameRef CheckNameCStringNullArg;
     CheckerNameRef CheckNameCStringOutOfBounds;

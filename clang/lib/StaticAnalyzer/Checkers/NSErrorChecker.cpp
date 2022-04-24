@@ -166,7 +166,7 @@ class NSOrCFErrorDerefChecker
   mutable std::unique_ptr<NSErrorDerefBug> NSBT;
   mutable std::unique_ptr<CFErrorDerefBug> CFBT;
 public:
-  DefaultBool ShouldCheckNSError, ShouldCheckCFError;
+  bool ShouldCheckNSError = false, ShouldCheckCFError = false;
   CheckerNameRef NSErrorName, CFErrorName;
   NSOrCFErrorDerefChecker() : NSErrorII(nullptr), CFErrorII(nullptr) {}
 
