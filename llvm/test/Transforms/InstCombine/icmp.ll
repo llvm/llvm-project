@@ -2256,6 +2256,183 @@ define <2 x i1> @or_icmp_ne_A_0_icmp_ne_B_0_undef(<2 x i64> %a, <2 x i64> %b) {
   ret <2 x i1> %3
 }
 
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 0
+  %2 = icmp uge i64 %a, %b
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_commuted1(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_commuted1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[B]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp uge i64 %a, %b
+  %2 = icmp ne i64 %b, 0
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_commuted2(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_commuted2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[B]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 0
+  %2 = icmp ule i64 %b, %a
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_extra_use1(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_extra_use1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
+; CHECK-NEXT:    call void @use_i1(i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 0
+  call void @use_i1(i1 %1)
+  %2 = icmp uge i64 %a, %b
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_extra_use2(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_extra_use2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    call void @use_i1(i1 [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 0
+  %2 = icmp uge i64 %a, %b
+  call void @use_i1(i1 %2)
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_extra_use3(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_extra_use3(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
+; CHECK-NEXT:    call void @use_i1(i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    call void @use_i1(i1 [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 0
+  call void @use_i1(i1 %1)
+  %2 = icmp uge i64 %a, %b
+  call void @use_i1(i1 %2)
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_wrong_pred1(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_wrong_pred1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp sgt i64 %b, 0
+  %2 = icmp uge i64 %a, %b
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_wrong_pred2(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_wrong_pred2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 0
+  %2 = icmp ugt i64 %a, %b
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_wrong_op1(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_wrong_op1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 1
+  %2 = icmp uge i64 %a, %b
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_wrong_op2(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_wrong_op2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[C:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 0
+  %2 = icmp uge i64 %c, %b
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_logical(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 0
+  %2 = icmp uge i64 %a, %b
+  %3 = select i1 %1, i1 %2, i1 false
+  ret i1 %3
+}
+
+define <2 x i1> @and_icmp_ne_B_0_icmp_uge_A_B_uniform(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_uniform(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <2 x i64> [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i1> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+;
+  %1 = icmp ne <2 x i64> %b, zeroinitializer
+  %2 = icmp uge <2 x i64> %a, %b
+  %3 = and <2 x i1> %1, %2
+  ret <2 x i1> %3
+}
+
+define <2 x i1> @and_icmp_ne_B_0_icmp_uge_A_B_undef(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[B:%.*]], <i64 0, i64 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <2 x i64> [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i1> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+;
+  %1 = icmp ne <2 x i64> %b, <i64 0, i64 undef>
+  %2 = icmp uge <2 x i64> %a, %b
+  %3 = and <2 x i1> %1, %2
+  ret <2 x i1> %3
+}
+
 define i1 @icmp_add_ult_2(i32 %X) {
 ; CHECK-LABEL: @icmp_add_ult_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
@@ -3807,6 +3984,7 @@ define <4 x i1> @signbit_bitcast_fpext_vec_wrong_bitcast(<2 x half> %x) {
   ret <4 x i1> %r
 }
 
+declare void @use_i1(i1)
 declare void @use_i64(i64)
 
 define i1 @signbit_bitcast_fpext_extra_use(float %x, i64* %p) {
