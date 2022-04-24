@@ -256,6 +256,8 @@ SampleContextFrameVector
 ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
                                    bool &WasLeafInlined) {
   SampleContextFrameVector ContextVec;
+  if (Stack.empty())
+    return ContextVec;
   // Process from frame root to leaf
   for (auto Address : Stack) {
     uint64_t Offset = virtualAddrToOffset(Address);

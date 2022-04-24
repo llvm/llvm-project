@@ -765,12 +765,16 @@ void CSProfileGenerator::generateLineNumBasedProfile() {
   for (const auto &CI : *SampleCounters) {
     const auto *CtxKey = cast<StringBasedCtxKey>(CI.first.getPtr());
 
-    // Get or create function profile for the range
-    FunctionSamples &FunctionProfile =
-        getFunctionProfileForContext(CtxKey->Context, CtxKey->WasLeafInlined);
-
-    // Fill in function body samples
-    populateBodySamplesForFunction(FunctionProfile, CI.second.RangeCounter);
+    FunctionSamples *FunctionProfile = nullptr;
+    // Sample context will be empty if the jump is an external-to-internal call
+    // pattern, the head samples should be added for the internal function.
+    if (!CtxKey->Context.empty()) {
+      // Get or create function profile for the range
+      FunctionProfile = &getFunctionProfileForContext(CtxKey->Context,
+                                                      CtxKey->WasLeafInlined);
+      // Fill in function body samples
+      populateBodySamplesForFunction(*FunctionProfile, CI.second.RangeCounter);
+    }
     // Fill in boundary sample counts as well as call site samples for calls
     populateBoundarySamplesForFunction(CtxKey->Context, FunctionProfile,
                                        CI.second.BranchCounter);
@@ -819,7 +823,7 @@ void CSProfileGenerator::populateBodySamplesForFunction(
 }
 
 void CSProfileGenerator::populateBoundarySamplesForFunction(
-    SampleContextFrames ContextId, FunctionSamples &FunctionProfile,
+    SampleContextFrames ContextId, FunctionSamples *CallerProfile,
     const BranchSample &BranchCounters) {
 
   for (const auto &Entry : BranchCounters) {
@@ -832,20 +836,25 @@ void CSProfileGenerator::populateBoundarySamplesForFunction(
     if (CalleeName.size() == 0)
       continue;
 
-    // Record called target sample and its count
-    auto LeafLoc = Binary->getInlineLeafFrameLoc(SourceOffset);
-    if (!LeafLoc.hasValue())
-      continue;
-    FunctionProfile.addCalledTargetSamples(
-        LeafLoc->Location.LineOffset,
-        getBaseDiscriminator(LeafLoc->Location.Discriminator), CalleeName,
-        Count);
+    SampleContextFrameVector CalleeCtx;
+    if (CallerProfile) {
+      assert(!ContextId.empty() &&
+             "CallerProfile is null only if ContextId is empty");
+      // Record called target sample and its count
+      auto LeafLoc = Binary->getInlineLeafFrameLoc(SourceOffset);
+      if (LeafLoc.hasValue()) {
+        CallerProfile->addCalledTargetSamples(
+            LeafLoc->Location.LineOffset,
+            getBaseDiscriminator(LeafLoc->Location.Discriminator), CalleeName,
+            Count);
 
-    // Record head sample for called target(callee)
-    SampleContextFrameVector CalleeCtx(ContextId.begin(), ContextId.end());
-    assert(CalleeCtx.back().FuncName == LeafLoc->FuncName &&
-           "Leaf function name doesn't match");
-    CalleeCtx.back() = *LeafLoc;
+        // Record head sample for called target(callee)
+        CalleeCtx.append(ContextId.begin(), ContextId.end());
+        assert(CalleeCtx.back().FuncName == LeafLoc->FuncName &&
+               "Leaf function name doesn't match");
+        CalleeCtx.back() = *LeafLoc;
+      }
+    }
     CalleeCtx.emplace_back(CalleeName, LineLocation(0, 0));
     FunctionSamples &CalleeProfile = getFunctionProfileForContext(CalleeCtx);
     CalleeProfile.addHeadSamples(Count);
