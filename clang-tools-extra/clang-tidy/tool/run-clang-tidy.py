@@ -73,13 +73,14 @@ def strtobool(val):
 
 def find_compilation_database(path):
   """Adjusts the directory until a compilation database is found."""
-  result = './'
+  result = os.path.realpath('./')
   while not os.path.isfile(os.path.join(result, path)):
-    if os.path.realpath(result) == '/':
+    parent = os.path.dirname(result)
+    if result == parent:
       print('Error: could not find compilation database.')
       sys.exit(1)
-    result += '../'
-  return os.path.realpath(result)
+    result = parent
+  return result
 
 
 def make_absolute(f, directory):
