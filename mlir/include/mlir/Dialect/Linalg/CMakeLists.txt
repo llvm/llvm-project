@@ -1,4 +1,3 @@
-add_subdirectory(ComprehensiveBufferize)
 add_subdirectory(IR)
 
 set(LLVM_TARGET_DEFINITIONS Passes.td)

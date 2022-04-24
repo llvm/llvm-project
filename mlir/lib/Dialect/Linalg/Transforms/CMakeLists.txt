@@ -40,6 +40,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRArithmetic
   MLIRArithmeticTransforms
   MLIRBufferization
+  MLIRBufferizationTransforms
   MLIRComplex
   MLIRFunc
   MLIRFuncToLLVM
@@ -50,7 +51,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalg
   MLIRLinalgAnalysis
   MLIRLinalgUtils
-  MLIRModuleBufferization
   MLIRSCF
   MLIRSCFTransforms
   MLIRSCFUtils

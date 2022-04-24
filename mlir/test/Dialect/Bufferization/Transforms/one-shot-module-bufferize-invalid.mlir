@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="bufferize-function-boundaries=1" -split-input-file -verify-diagnostics
 
 func.func private @foo() -> tensor<?xf32>
 
@@ -37,7 +37,7 @@ func.func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>
 // -----
 
 func.func @scf_if_not_equivalent(
-    %cond: i1, %t1: tensor<?xf32> {linalg.inplaceable = true},
+    %cond: i1, %t1: tensor<?xf32> {bufferization.writable = true},
     %idx: index) -> tensor<?xf32> {
   %r = scf.if %cond -> (tensor<?xf32>) {
     scf.yield %t1 : tensor<?xf32>
@@ -54,7 +54,7 @@ func.func @scf_if_not_equivalent(
 // -----
 
 func.func @scf_if_not_aliasing(
-    %cond: i1, %t1: tensor<?xf32> {linalg.inplaceable = true},
+    %cond: i1, %t1: tensor<?xf32> {bufferization.writable = true},
     %idx: index) -> f32 {
   %r = scf.if %cond -> (tensor<?xf32>) {
     scf.yield %t1 : tensor<?xf32>
@@ -85,7 +85,7 @@ func.func @bar() {
 // -----
 
 func.func @scf_for(%A : tensor<?xf32>,
-              %B : tensor<?xf32> {linalg.inplaceable = true},
+              %B : tensor<?xf32> {bufferization.writable = true},
               %C : tensor<4xf32>,
               %lb : index, %ub : index, %step : index)
   -> (f32, f32)
@@ -110,14 +110,14 @@ func.func @scf_for(%A : tensor<?xf32>,
 
 // -----
 
-func.func private @fun_with_side_effects(%A: tensor<?xf32> {linalg.inplaceable = true})
+func.func private @fun_with_side_effects(%A: tensor<?xf32> {bufferization.writable = true})
 
-func.func @foo(%A: tensor<?xf32> {linalg.inplaceable = true}) -> (tensor<?xf32>) {
+func.func @foo(%A: tensor<?xf32> {bufferization.writable = true}) -> (tensor<?xf32>) {
   call @fun_with_side_effects(%A) : (tensor<?xf32>) -> ()
   return %A: tensor<?xf32>
 }
 
-func.func @scf_yield_needs_copy(%A : tensor<?xf32> {linalg.inplaceable = true}, %iters : index) {
+func.func @scf_yield_needs_copy(%A : tensor<?xf32> {bufferization.writable = true}, %iters : index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %res = scf.for %arg0 = %c0 to %iters step %c1 iter_args(%bbarg = %A) -> (tensor<?xf32>) {
@@ -131,7 +131,7 @@ func.func @scf_yield_needs_copy(%A : tensor<?xf32> {linalg.inplaceable = true}, 
 
 // -----
 
-func.func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
+func.func @extract_slice_fun(%A : tensor<?xf32> {bufferization.writable = true})
   ->  tensor<4xf32>
 {
   // This bufferizes to a pattern that the cross-function boundary pass needs to
@@ -184,6 +184,7 @@ func.func @mini_test_case1() -> tensor<10x20xf32> {
 func.func @main() -> tensor<4xi32> {
   %r = scf.execute_region -> tensor<4xi32> {
     %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
     scf.yield %A: tensor<4xi32>
   }
 
@@ -194,7 +195,7 @@ func.func @main() -> tensor<4xi32> {
 // -----
 
 func.func @to_memref_op_is_writing(
-    %t1: tensor<?xf32> {linalg.inplaceable = true}, %idx1: index,
+    %t1: tensor<?xf32> {bufferization.writable = true}, %idx1: index,
     %idx2: index, %idx3: index, %v1: vector<5xf32>) -> (vector<5xf32>, vector<5xf32>) {
   // This is a RaW conflict because to_memref is an inplace write and %t1 is
   // read further down. This will likely have to change with partial

@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Operation.h"
@@ -178,8 +179,10 @@ struct OneShotBufferizePass
       BufferizationOptions::OpFilterEntry::FilterFn filterFn =
           [&](Operation *op) {
             // Disallow non-func dialect ops. I.e., no ops related to function
-            // calls.
-            if (isa<func::FuncDialect>(op->getDialect()))
+            // calls. (Unless explicitly activated.)
+            bool isFuncBoundaryOp =
+                isa_and_nonnull<func::FuncDialect>(op->getDialect());
+            if (!this->bufferizeFunctionBoundaries && isFuncBoundaryOp)
               return false;
             // Filter may be specified via options.
             if (this->dialectFilter.hasValue())
@@ -195,9 +198,16 @@ struct OneShotBufferizePass
     }
 
     ModuleOp moduleOp = getOperation();
-    if (failed(runOneShotBufferize(moduleOp, opt))) {
-      signalPassFailure();
-      return;
+    if (bufferizeFunctionBoundaries) {
+      if (failed(runOneShotModuleBufferize(moduleOp, opt))) {
+        signalPassFailure();
+        return;
+      }
+    } else {
+      if (failed(runOneShotBufferize(moduleOp, opt))) {
+        signalPassFailure();
+        return;
+      }
     }
 
     if (opt.testAnalysisOnly)

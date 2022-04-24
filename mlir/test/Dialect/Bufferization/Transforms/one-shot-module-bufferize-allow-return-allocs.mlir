@@ -1,12 +1,12 @@
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize=allow-return-allocs -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-allocs fully-dynamic-layout-maps=0" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs fully-dynamic-layout-maps=0" -split-input-file -o /dev/null
 
 // Make sure that the returned buffer is not deallocated.
 // TODO: Such buffers currently leak. We need buffer hoisting / ref counting for

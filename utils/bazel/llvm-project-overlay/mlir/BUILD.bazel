@@ -7259,7 +7259,6 @@ cc_library(
         ":LinalgStructuredOpsIncGen",
         ":MathDialect",
         ":MemRefDialect",
-        ":ModuleBufferization",
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
@@ -7277,25 +7276,6 @@ cc_library(
         ":VectorTransforms",
         ":VectorUtils",
         ":X86VectorTransforms",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "ModuleBufferization",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BufferizationDialect",
-        ":BufferizationTransforms",
-        ":FuncDialect",
-        ":IR",
-        ":MemRefDialect",
         "//llvm:Support",
     ],
 )
