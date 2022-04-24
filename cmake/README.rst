@@ -29,7 +29,7 @@ For tools, please do:
 .. code-block:: cmake
 
   if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
-    set(LLVM_COMMON_CMAKE_UTILS ${LLVM_COMMON_CMAKE_UTILS}/../cmake)
+    set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
   endif()
 
   # Add path for custom modules.
@@ -51,7 +51,7 @@ For runtime libs, we skip the ``if(NOT DEFINED`` part:
 
 .. code-block:: cmake
 
-  set(LLVM_COMMON_CMAKE_UTILS ${LLVM_COMMON_CMAKE_UTILS}/../cmake)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
   ... # same as before
 
