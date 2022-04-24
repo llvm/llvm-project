@@ -8,7 +8,7 @@
 // Do the same run, but now with SIMDization as well. This should not change the outcome.
 //
 // RUN: mlir-opt %s \
-// RUN:   --sparse-compiler="vectorization-strategy=any-storage-inner-loop vl=4 enable-simd-index32" | \
+// RUN:   --sparse-compiler="vectorization-strategy=2 vl=4 enable-simd-index32" | \
 // RUN: TENSOR0="%mlir_integration_test_dir/data/test.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
