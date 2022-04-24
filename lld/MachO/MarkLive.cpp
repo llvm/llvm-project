@@ -228,11 +228,10 @@ void markLive() {
       // -exported_symbol(s_list)
       if (!config->exportedSymbols.empty() &&
           config->exportedSymbols.match(defined->getName())) {
-        // FIXME: Instead of doing this here, maybe the Driver code doing
-        // the matching should add them to explicitUndefineds? Then the
-        // explicitUndefineds code below would handle this automatically.
-        assert(!defined->privateExtern &&
-               "should have been rejected by driver");
+        // NOTE: Even though exporting private externs is an ill-defined
+        // operation, we are purposely not checking for privateExtern in
+        // order to follow ld64's behavior of treating all exported private
+        // extern symbols as live, irrespective of whether they are autohide.
         marker->addSym(defined);
         continue;
       }

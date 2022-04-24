@@ -123,6 +123,11 @@ Bug Fixes
   a lambda expression that shares the name of a variable in a containing
   if/while/for/switch init statement as a redeclaration.
   This fixes `Issue 54913 <https://github.com/llvm/llvm-project/issues/54913>`_.
+- Overload resolution for constrained function templates could use the partial
+  order of constraints to select an overload, even if the parameter types of
+  the functions were different. It now diagnoses this case correctly as an
+  ambiguous call and an error. Fixes
+  `Issue 53640 <https://github.com/llvm/llvm-project/issues/53640>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -173,6 +178,9 @@ Non-comprehensive list of changes in this release
   - Improve the dump format, dump both bitwidth(if its a bitfield) and field value.
   - Remove anonymous tag locations.
   - Beautify dump format, add indent for nested struct and struct members.
+- Previously disabled sanitizer options now enabled by default:
+  - ASAN_OPTIONS=detect_stack_use_after_return=1 (except Windows).
+  - MSAN_OPTIONS=poison_in_dtor=1.
 
 New Compiler Flags
 ------------------

@@ -8,9 +8,8 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-RV32,RV32-LMULMAX8
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-RV64,RV64-LMULMAX8
 ; Test with ELEN limited
-; RUN: llc -mtriple=riscv32 -mattr=+f,+zve32f -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=RV32-ELEN,RV32-ELEN32
-; RUN: llc -mtriple=riscv64 -mattr=+f,+zve32f -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=RV64-ELEN,RV64-ELEN32
-
+; RUN: llc -mtriple=riscv32 -mattr=+f,+zve32f -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVE32F
+; RUN: llc -mtriple=riscv64 -mattr=+f,+zve32f -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVE32F
 define <1 x i1> @buildvec_mask_nonconst_v1i1(i1 %x) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v1i1:
 ; CHECK:       # %bb.0:
@@ -20,53 +19,13 @@ define <1 x i1> @buildvec_mask_nonconst_v1i1(i1 %x) {
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_nonconst_v1i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    andi a0, a0, 1
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.v.x v8, a0
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_nonconst_v1i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    andi a0, a0, 1
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.v.x v8, a0
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_nonconst_v1i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    andi a0, a0, 1
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.v.x v8, a0
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_nonconst_v1i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    andi a0, a0, 1
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.v.x v8, a0
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_nonconst_v1i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    andi a0, a0, 1
-; RV32-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.v.x v8, a0
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_nonconst_v1i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    andi a0, a0, 1
-; RV64-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.v.x v8, a0
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_nonconst_v1i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    andi a0, a0, 1
+; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.v.x v8, a0
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    ret
   %1 = insertelement <1 x i1> poison, i1 %x, i32 0
   ret <1 x i1> %1
 }
@@ -80,53 +39,13 @@ define <1 x i1> @buildvec_mask_optsize_nonconst_v1i1(i1 %x) optsize {
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v1i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    andi a0, a0, 1
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.v.x v8, a0
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v1i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    andi a0, a0, 1
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.v.x v8, a0
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v1i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    andi a0, a0, 1
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.v.x v8, a0
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v1i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    andi a0, a0, 1
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.v.x v8, a0
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v1i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    andi a0, a0, 1
-; RV32-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.v.x v8, a0
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v1i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    andi a0, a0, 1
-; RV64-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.v.x v8, a0
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v1i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    andi a0, a0, 1
+; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.v.x v8, a0
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    ret
   %1 = insertelement <1 x i1> poison, i1 %x, i32 0
   ret <1 x i1> %1
 }
@@ -143,71 +62,16 @@ define <2 x i1> @buildvec_mask_nonconst_v2i1(i1 %x, i1 %y) {
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_nonconst_v2i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.v.x v8, a1
-; RV32-ELEN32-NEXT:    vsetvli zero, zero, e8, mf4, tu, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN32-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_nonconst_v2i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.v.x v8, a1
-; RV64-ELEN32-NEXT:    vsetvli zero, zero, e8, mf4, tu, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN32-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_nonconst_v2i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.v.x v8, a1
-; RV32-ELEN16-NEXT:    vsetvli zero, zero, e8, mf2, tu, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN16-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_nonconst_v2i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.v.x v8, a1
-; RV64-ELEN16-NEXT:    vsetvli zero, zero, e8, mf2, tu, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN16-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_nonconst_v2i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.v.x v8, a1
-; RV32-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_nonconst_v2i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.v.x v8, a1
-; RV64-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_nonconst_v2i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.v.x v8, a1
+; ZVE32F-NEXT:    vsetvli zero, zero, e8, mf4, tu, mu
+; ZVE32F-NEXT:    vmv.s.x v8, a0
+; ZVE32F-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vand.vi v8, v8, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    ret
   %1 = insertelement <2 x i1> poison, i1 %x, i32 0
   %2 = insertelement <2 x i1> %1,  i1 %y, i32 1
   ret <2 x i1> %2
@@ -229,89 +93,19 @@ define <2 x i1> @buildvec_mask_optsize_nonconst_v2i1(i1 %x, i1 %y) optsize {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v2i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    addi sp, sp, -16
-; RV32-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN32-NEXT:    sb a1, 15(sp)
-; RV32-ELEN32-NEXT:    sb a0, 14(sp)
-; RV32-ELEN32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    addi a0, sp, 14
-; RV32-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    addi sp, sp, 16
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v2i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    addi sp, sp, -16
-; RV64-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN32-NEXT:    sb a1, 15(sp)
-; RV64-ELEN32-NEXT:    sb a0, 14(sp)
-; RV64-ELEN32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    addi a0, sp, 14
-; RV64-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    addi sp, sp, 16
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v2i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    addi sp, sp, -16
-; RV32-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN16-NEXT:    sb a1, 15(sp)
-; RV32-ELEN16-NEXT:    sb a0, 14(sp)
-; RV32-ELEN16-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    addi a0, sp, 14
-; RV32-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    addi sp, sp, 16
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v2i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    addi sp, sp, -16
-; RV64-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN16-NEXT:    sb a1, 15(sp)
-; RV64-ELEN16-NEXT:    sb a0, 14(sp)
-; RV64-ELEN16-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    addi a0, sp, 14
-; RV64-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    addi sp, sp, 16
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v2i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    addi sp, sp, -16
-; RV32-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN8-NEXT:    sb a1, 15(sp)
-; RV32-ELEN8-NEXT:    sb a0, 14(sp)
-; RV32-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    addi a0, sp, 14
-; RV32-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    addi sp, sp, 16
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v2i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    addi sp, sp, -16
-; RV64-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN8-NEXT:    sb a1, 15(sp)
-; RV64-ELEN8-NEXT:    sb a0, 14(sp)
-; RV64-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    addi a0, sp, 14
-; RV64-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    addi sp, sp, 16
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v2i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    addi sp, sp, -16
+; ZVE32F-NEXT:    .cfi_def_cfa_offset 16
+; ZVE32F-NEXT:    sb a1, 15(sp)
+; ZVE32F-NEXT:    sb a0, 14(sp)
+; ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; ZVE32F-NEXT:    addi a0, sp, 14
+; ZVE32F-NEXT:    vle8.v v8, (a0)
+; ZVE32F-NEXT:    vand.vi v8, v8, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    addi sp, sp, 16
+; ZVE32F-NEXT:    ret
   %1 = insertelement <2 x i1> poison, i1 %x, i32 0
   %2 = insertelement <2 x i1> %1,  i1 %y, i32 1
   ret <2 x i1> %2
@@ -325,47 +119,12 @@ define <3 x i1> @buildvec_mask_v1i1() {
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_v1i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    li a0, 2
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_v1i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    li a0, 2
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_v1i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a0, 2
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_v1i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a0, 2
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_v1i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 2
-; RV32-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_v1i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 2
-; RV64-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_v1i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    li a0, 2
+; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.s.x v0, a0
+; ZVE32F-NEXT:    ret
   ret <3 x i1> <i1 0, i1 1, i1 0>
 }
 
@@ -377,47 +136,12 @@ define <3 x i1> @buildvec_mask_optsize_v1i1() optsize {
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_optsize_v1i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    li a0, 2
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_optsize_v1i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    li a0, 2
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_optsize_v1i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a0, 2
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_optsize_v1i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a0, 2
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_optsize_v1i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 2
-; RV32-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_optsize_v1i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 2
-; RV64-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_optsize_v1i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    li a0, 2
+; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.s.x v0, a0
+; ZVE32F-NEXT:    ret
   ret <3 x i1> <i1 0, i1 1, i1 0>
 }
 
@@ -429,47 +153,12 @@ define <4 x i1> @buildvec_mask_v4i1() {
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_v4i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    li a0, 6
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_v4i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    li a0, 6
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_v4i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a0, 6
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_v4i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a0, 6
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_v4i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 6
-; RV32-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_v4i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 6
-; RV64-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_v4i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    li a0, 6
+; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.s.x v0, a0
+; ZVE32F-NEXT:    ret
   ret <4 x i1> <i1 0, i1 1, i1 1, i1 0>
 }
 
@@ -486,77 +175,17 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_nonconst_v4i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    li a2, 3
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a2
-; RV32-ELEN32-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.v.x v8, a1
-; RV32-ELEN32-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV32-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_nonconst_v4i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    li a2, 3
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a2
-; RV64-ELEN32-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.v.x v8, a1
-; RV64-ELEN32-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV64-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_nonconst_v4i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a2, 3
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a2
-; RV32-ELEN16-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.v.x v8, a1
-; RV32-ELEN16-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV32-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_nonconst_v4i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a2, 3
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a2
-; RV64-ELEN16-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.v.x v8, a1
-; RV64-ELEN16-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV64-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_nonconst_v4i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a2, 3
-; RV32-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a2
-; RV32-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.v.x v8, a1
-; RV32-ELEN8-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV32-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_nonconst_v4i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a2, 3
-; RV64-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a2
-; RV64-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.v.x v8, a1
-; RV64-ELEN8-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_nonconst_v4i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    li a2, 3
+; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.s.x v0, a2
+; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.v.x v8, a1
+; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
+; ZVE32F-NEXT:    vand.vi v8, v8, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    ret
   %1 = insertelement <4 x i1> poison, i1 %x, i32 0
   %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <4 x i1> %2,  i1 %y, i32 2
@@ -582,101 +211,21 @@ define <4 x i1> @buildvec_mask_optsize_nonconst_v4i1(i1 %x, i1 %y) optsize {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v4i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    addi sp, sp, -16
-; RV32-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN32-NEXT:    sb a1, 15(sp)
-; RV32-ELEN32-NEXT:    sb a1, 14(sp)
-; RV32-ELEN32-NEXT:    sb a0, 13(sp)
-; RV32-ELEN32-NEXT:    sb a0, 12(sp)
-; RV32-ELEN32-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    addi a0, sp, 12
-; RV32-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    addi sp, sp, 16
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v4i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    addi sp, sp, -16
-; RV64-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN32-NEXT:    sb a1, 15(sp)
-; RV64-ELEN32-NEXT:    sb a1, 14(sp)
-; RV64-ELEN32-NEXT:    sb a0, 13(sp)
-; RV64-ELEN32-NEXT:    sb a0, 12(sp)
-; RV64-ELEN32-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    addi a0, sp, 12
-; RV64-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    addi sp, sp, 16
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v4i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    addi sp, sp, -16
-; RV32-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN16-NEXT:    sb a1, 15(sp)
-; RV32-ELEN16-NEXT:    sb a1, 14(sp)
-; RV32-ELEN16-NEXT:    sb a0, 13(sp)
-; RV32-ELEN16-NEXT:    sb a0, 12(sp)
-; RV32-ELEN16-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    addi a0, sp, 12
-; RV32-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    addi sp, sp, 16
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v4i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    addi sp, sp, -16
-; RV64-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN16-NEXT:    sb a1, 15(sp)
-; RV64-ELEN16-NEXT:    sb a1, 14(sp)
-; RV64-ELEN16-NEXT:    sb a0, 13(sp)
-; RV64-ELEN16-NEXT:    sb a0, 12(sp)
-; RV64-ELEN16-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    addi a0, sp, 12
-; RV64-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    addi sp, sp, 16
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v4i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    addi sp, sp, -16
-; RV32-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN8-NEXT:    sb a1, 15(sp)
-; RV32-ELEN8-NEXT:    sb a1, 14(sp)
-; RV32-ELEN8-NEXT:    sb a0, 13(sp)
-; RV32-ELEN8-NEXT:    sb a0, 12(sp)
-; RV32-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    addi a0, sp, 12
-; RV32-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    addi sp, sp, 16
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v4i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    addi sp, sp, -16
-; RV64-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN8-NEXT:    sb a1, 15(sp)
-; RV64-ELEN8-NEXT:    sb a1, 14(sp)
-; RV64-ELEN8-NEXT:    sb a0, 13(sp)
-; RV64-ELEN8-NEXT:    sb a0, 12(sp)
-; RV64-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    addi a0, sp, 12
-; RV64-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    addi sp, sp, 16
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v4i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    addi sp, sp, -16
+; ZVE32F-NEXT:    .cfi_def_cfa_offset 16
+; ZVE32F-NEXT:    sb a1, 15(sp)
+; ZVE32F-NEXT:    sb a1, 14(sp)
+; ZVE32F-NEXT:    sb a0, 13(sp)
+; ZVE32F-NEXT:    sb a0, 12(sp)
+; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; ZVE32F-NEXT:    addi a0, sp, 12
+; ZVE32F-NEXT:    vle8.v v8, (a0)
+; ZVE32F-NEXT:    vand.vi v8, v8, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    addi sp, sp, 16
+; ZVE32F-NEXT:    ret
   %1 = insertelement <4 x i1> poison, i1 %x, i32 0
   %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <4 x i1> %2,  i1 %y, i32 2
@@ -702,107 +251,22 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1_2(i1 %x, i1 %y) {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_nonconst_v4i1_2:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    addi sp, sp, -16
-; RV32-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN32-NEXT:    sb a1, 15(sp)
-; RV32-ELEN32-NEXT:    li a1, 1
-; RV32-ELEN32-NEXT:    sb a1, 14(sp)
-; RV32-ELEN32-NEXT:    sb a0, 13(sp)
-; RV32-ELEN32-NEXT:    sb zero, 12(sp)
-; RV32-ELEN32-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    addi a0, sp, 12
-; RV32-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    addi sp, sp, 16
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_nonconst_v4i1_2:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    addi sp, sp, -16
-; RV64-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN32-NEXT:    sb a1, 15(sp)
-; RV64-ELEN32-NEXT:    li a1, 1
-; RV64-ELEN32-NEXT:    sb a1, 14(sp)
-; RV64-ELEN32-NEXT:    sb a0, 13(sp)
-; RV64-ELEN32-NEXT:    sb zero, 12(sp)
-; RV64-ELEN32-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    addi a0, sp, 12
-; RV64-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    addi sp, sp, 16
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_nonconst_v4i1_2:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    addi sp, sp, -16
-; RV32-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN16-NEXT:    sb a1, 15(sp)
-; RV32-ELEN16-NEXT:    li a1, 1
-; RV32-ELEN16-NEXT:    sb a1, 14(sp)
-; RV32-ELEN16-NEXT:    sb a0, 13(sp)
-; RV32-ELEN16-NEXT:    sb zero, 12(sp)
-; RV32-ELEN16-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    addi a0, sp, 12
-; RV32-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    addi sp, sp, 16
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_nonconst_v4i1_2:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    addi sp, sp, -16
-; RV64-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN16-NEXT:    sb a1, 15(sp)
-; RV64-ELEN16-NEXT:    li a1, 1
-; RV64-ELEN16-NEXT:    sb a1, 14(sp)
-; RV64-ELEN16-NEXT:    sb a0, 13(sp)
-; RV64-ELEN16-NEXT:    sb zero, 12(sp)
-; RV64-ELEN16-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    addi a0, sp, 12
-; RV64-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    addi sp, sp, 16
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_nonconst_v4i1_2:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    addi sp, sp, -16
-; RV32-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN8-NEXT:    sb a1, 15(sp)
-; RV32-ELEN8-NEXT:    li a1, 1
-; RV32-ELEN8-NEXT:    sb a1, 14(sp)
-; RV32-ELEN8-NEXT:    sb a0, 13(sp)
-; RV32-ELEN8-NEXT:    sb zero, 12(sp)
-; RV32-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    addi a0, sp, 12
-; RV32-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    addi sp, sp, 16
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_nonconst_v4i1_2:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    addi sp, sp, -16
-; RV64-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN8-NEXT:    sb a1, 15(sp)
-; RV64-ELEN8-NEXT:    li a1, 1
-; RV64-ELEN8-NEXT:    sb a1, 14(sp)
-; RV64-ELEN8-NEXT:    sb a0, 13(sp)
-; RV64-ELEN8-NEXT:    sb zero, 12(sp)
-; RV64-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    addi a0, sp, 12
-; RV64-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    addi sp, sp, 16
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_nonconst_v4i1_2:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    addi sp, sp, -16
+; ZVE32F-NEXT:    .cfi_def_cfa_offset 16
+; ZVE32F-NEXT:    sb a1, 15(sp)
+; ZVE32F-NEXT:    li a1, 1
+; ZVE32F-NEXT:    sb a1, 14(sp)
+; ZVE32F-NEXT:    sb a0, 13(sp)
+; ZVE32F-NEXT:    sb zero, 12(sp)
+; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; ZVE32F-NEXT:    addi a0, sp, 12
+; ZVE32F-NEXT:    vle8.v v8, (a0)
+; ZVE32F-NEXT:    vand.vi v8, v8, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    addi sp, sp, 16
+; ZVE32F-NEXT:    ret
   %1 = insertelement <4 x i1> poison, i1 0, i32 0
   %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <4 x i1> %2,  i1  1, i32 2
@@ -818,47 +282,12 @@ define <8 x i1> @buildvec_mask_v8i1() {
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_v8i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    li a0, 182
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_v8i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    li a0, 182
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_v8i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a0, 182
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_v8i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a0, 182
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_v8i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 182
-; RV32-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_v8i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 182
-; RV64-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_v8i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    li a0, 182
+; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.s.x v0, a0
+; ZVE32F-NEXT:    ret
   ret <8 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>
 }
 
@@ -875,77 +304,17 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_nonconst_v8i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    li a2, 19
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a2
-; RV32-ELEN32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-ELEN32-NEXT:    vmv.v.x v8, a1
-; RV32-ELEN32-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV32-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_nonconst_v8i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    li a2, 19
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a2
-; RV64-ELEN32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV64-ELEN32-NEXT:    vmv.v.x v8, a1
-; RV64-ELEN32-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV64-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_nonconst_v8i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a2, 19
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a2
-; RV32-ELEN16-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    vmv.v.x v8, a1
-; RV32-ELEN16-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV32-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_nonconst_v8i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a2, 19
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a2
-; RV64-ELEN16-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    vmv.v.x v8, a1
-; RV64-ELEN16-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV64-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_nonconst_v8i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a2, 19
-; RV32-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a2
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.v.x v8, a1
-; RV32-ELEN8-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV32-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_nonconst_v8i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a2, 19
-; RV64-ELEN8-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a2
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.v.x v8, a1
-; RV64-ELEN8-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_nonconst_v8i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    li a2, 19
+; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; ZVE32F-NEXT:    vmv.s.x v0, a2
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; ZVE32F-NEXT:    vmv.v.x v8, a1
+; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
+; ZVE32F-NEXT:    vand.vi v8, v8, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    ret
   %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <8 x i1> %2,  i1 %y, i32 2
@@ -979,131 +348,26 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_nonconst_v8i1_2:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    addi sp, sp, -16
-; RV32-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN32-NEXT:    sb a2, 15(sp)
-; RV32-ELEN32-NEXT:    sb zero, 14(sp)
-; RV32-ELEN32-NEXT:    sb a3, 13(sp)
-; RV32-ELEN32-NEXT:    sb a0, 12(sp)
-; RV32-ELEN32-NEXT:    sb a1, 11(sp)
-; RV32-ELEN32-NEXT:    li a1, 1
-; RV32-ELEN32-NEXT:    sb a1, 10(sp)
-; RV32-ELEN32-NEXT:    sb a0, 9(sp)
-; RV32-ELEN32-NEXT:    sb a0, 8(sp)
-; RV32-ELEN32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-ELEN32-NEXT:    addi a0, sp, 8
-; RV32-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    addi sp, sp, 16
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_nonconst_v8i1_2:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    addi sp, sp, -16
-; RV64-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN32-NEXT:    sb a2, 15(sp)
-; RV64-ELEN32-NEXT:    sb zero, 14(sp)
-; RV64-ELEN32-NEXT:    sb a3, 13(sp)
-; RV64-ELEN32-NEXT:    sb a0, 12(sp)
-; RV64-ELEN32-NEXT:    sb a1, 11(sp)
-; RV64-ELEN32-NEXT:    li a1, 1
-; RV64-ELEN32-NEXT:    sb a1, 10(sp)
-; RV64-ELEN32-NEXT:    sb a0, 9(sp)
-; RV64-ELEN32-NEXT:    sb a0, 8(sp)
-; RV64-ELEN32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV64-ELEN32-NEXT:    addi a0, sp, 8
-; RV64-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    addi sp, sp, 16
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_nonconst_v8i1_2:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    addi sp, sp, -16
-; RV32-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN16-NEXT:    sb a2, 15(sp)
-; RV32-ELEN16-NEXT:    sb zero, 14(sp)
-; RV32-ELEN16-NEXT:    sb a3, 13(sp)
-; RV32-ELEN16-NEXT:    sb a0, 12(sp)
-; RV32-ELEN16-NEXT:    sb a1, 11(sp)
-; RV32-ELEN16-NEXT:    li a1, 1
-; RV32-ELEN16-NEXT:    sb a1, 10(sp)
-; RV32-ELEN16-NEXT:    sb a0, 9(sp)
-; RV32-ELEN16-NEXT:    sb a0, 8(sp)
-; RV32-ELEN16-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    addi a0, sp, 8
-; RV32-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    addi sp, sp, 16
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_nonconst_v8i1_2:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    addi sp, sp, -16
-; RV64-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN16-NEXT:    sb a2, 15(sp)
-; RV64-ELEN16-NEXT:    sb zero, 14(sp)
-; RV64-ELEN16-NEXT:    sb a3, 13(sp)
-; RV64-ELEN16-NEXT:    sb a0, 12(sp)
-; RV64-ELEN16-NEXT:    sb a1, 11(sp)
-; RV64-ELEN16-NEXT:    li a1, 1
-; RV64-ELEN16-NEXT:    sb a1, 10(sp)
-; RV64-ELEN16-NEXT:    sb a0, 9(sp)
-; RV64-ELEN16-NEXT:    sb a0, 8(sp)
-; RV64-ELEN16-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    addi a0, sp, 8
-; RV64-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    addi sp, sp, 16
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_nonconst_v8i1_2:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    addi sp, sp, -16
-; RV32-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN8-NEXT:    sb a2, 15(sp)
-; RV32-ELEN8-NEXT:    sb zero, 14(sp)
-; RV32-ELEN8-NEXT:    sb a3, 13(sp)
-; RV32-ELEN8-NEXT:    sb a0, 12(sp)
-; RV32-ELEN8-NEXT:    sb a1, 11(sp)
-; RV32-ELEN8-NEXT:    li a1, 1
-; RV32-ELEN8-NEXT:    sb a1, 10(sp)
-; RV32-ELEN8-NEXT:    sb a0, 9(sp)
-; RV32-ELEN8-NEXT:    sb a0, 8(sp)
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    addi a0, sp, 8
-; RV32-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    addi sp, sp, 16
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_nonconst_v8i1_2:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    addi sp, sp, -16
-; RV64-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN8-NEXT:    sb a2, 15(sp)
-; RV64-ELEN8-NEXT:    sb zero, 14(sp)
-; RV64-ELEN8-NEXT:    sb a3, 13(sp)
-; RV64-ELEN8-NEXT:    sb a0, 12(sp)
-; RV64-ELEN8-NEXT:    sb a1, 11(sp)
-; RV64-ELEN8-NEXT:    li a1, 1
-; RV64-ELEN8-NEXT:    sb a1, 10(sp)
-; RV64-ELEN8-NEXT:    sb a0, 9(sp)
-; RV64-ELEN8-NEXT:    sb a0, 8(sp)
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    addi a0, sp, 8
-; RV64-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    addi sp, sp, 16
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_nonconst_v8i1_2:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    addi sp, sp, -16
+; ZVE32F-NEXT:    .cfi_def_cfa_offset 16
+; ZVE32F-NEXT:    sb a2, 15(sp)
+; ZVE32F-NEXT:    sb zero, 14(sp)
+; ZVE32F-NEXT:    sb a3, 13(sp)
+; ZVE32F-NEXT:    sb a0, 12(sp)
+; ZVE32F-NEXT:    sb a1, 11(sp)
+; ZVE32F-NEXT:    li a1, 1
+; ZVE32F-NEXT:    sb a1, 10(sp)
+; ZVE32F-NEXT:    sb a0, 9(sp)
+; ZVE32F-NEXT:    sb a0, 8(sp)
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; ZVE32F-NEXT:    addi a0, sp, 8
+; ZVE32F-NEXT:    vle8.v v8, (a0)
+; ZVE32F-NEXT:    vand.vi v8, v8, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    addi sp, sp, 16
+; ZVE32F-NEXT:    ret
   %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <8 x i1> %2,  i1  1, i32 2
@@ -1137,131 +401,26 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    addi sp, sp, -16
-; RV32-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN32-NEXT:    sb a2, 15(sp)
-; RV32-ELEN32-NEXT:    sb zero, 14(sp)
-; RV32-ELEN32-NEXT:    sb a3, 13(sp)
-; RV32-ELEN32-NEXT:    sb a0, 12(sp)
-; RV32-ELEN32-NEXT:    sb a1, 11(sp)
-; RV32-ELEN32-NEXT:    li a1, 1
-; RV32-ELEN32-NEXT:    sb a1, 10(sp)
-; RV32-ELEN32-NEXT:    sb a0, 9(sp)
-; RV32-ELEN32-NEXT:    sb a0, 8(sp)
-; RV32-ELEN32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-ELEN32-NEXT:    addi a0, sp, 8
-; RV32-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    addi sp, sp, 16
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    addi sp, sp, -16
-; RV64-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN32-NEXT:    sb a2, 15(sp)
-; RV64-ELEN32-NEXT:    sb zero, 14(sp)
-; RV64-ELEN32-NEXT:    sb a3, 13(sp)
-; RV64-ELEN32-NEXT:    sb a0, 12(sp)
-; RV64-ELEN32-NEXT:    sb a1, 11(sp)
-; RV64-ELEN32-NEXT:    li a1, 1
-; RV64-ELEN32-NEXT:    sb a1, 10(sp)
-; RV64-ELEN32-NEXT:    sb a0, 9(sp)
-; RV64-ELEN32-NEXT:    sb a0, 8(sp)
-; RV64-ELEN32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV64-ELEN32-NEXT:    addi a0, sp, 8
-; RV64-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    addi sp, sp, 16
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    addi sp, sp, -16
-; RV32-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN16-NEXT:    sb a2, 15(sp)
-; RV32-ELEN16-NEXT:    sb zero, 14(sp)
-; RV32-ELEN16-NEXT:    sb a3, 13(sp)
-; RV32-ELEN16-NEXT:    sb a0, 12(sp)
-; RV32-ELEN16-NEXT:    sb a1, 11(sp)
-; RV32-ELEN16-NEXT:    li a1, 1
-; RV32-ELEN16-NEXT:    sb a1, 10(sp)
-; RV32-ELEN16-NEXT:    sb a0, 9(sp)
-; RV32-ELEN16-NEXT:    sb a0, 8(sp)
-; RV32-ELEN16-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    addi a0, sp, 8
-; RV32-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    addi sp, sp, 16
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    addi sp, sp, -16
-; RV64-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN16-NEXT:    sb a2, 15(sp)
-; RV64-ELEN16-NEXT:    sb zero, 14(sp)
-; RV64-ELEN16-NEXT:    sb a3, 13(sp)
-; RV64-ELEN16-NEXT:    sb a0, 12(sp)
-; RV64-ELEN16-NEXT:    sb a1, 11(sp)
-; RV64-ELEN16-NEXT:    li a1, 1
-; RV64-ELEN16-NEXT:    sb a1, 10(sp)
-; RV64-ELEN16-NEXT:    sb a0, 9(sp)
-; RV64-ELEN16-NEXT:    sb a0, 8(sp)
-; RV64-ELEN16-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    addi a0, sp, 8
-; RV64-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    addi sp, sp, 16
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    addi sp, sp, -16
-; RV32-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN8-NEXT:    sb a2, 15(sp)
-; RV32-ELEN8-NEXT:    sb zero, 14(sp)
-; RV32-ELEN8-NEXT:    sb a3, 13(sp)
-; RV32-ELEN8-NEXT:    sb a0, 12(sp)
-; RV32-ELEN8-NEXT:    sb a1, 11(sp)
-; RV32-ELEN8-NEXT:    li a1, 1
-; RV32-ELEN8-NEXT:    sb a1, 10(sp)
-; RV32-ELEN8-NEXT:    sb a0, 9(sp)
-; RV32-ELEN8-NEXT:    sb a0, 8(sp)
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    addi a0, sp, 8
-; RV32-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    addi sp, sp, 16
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    addi sp, sp, -16
-; RV64-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN8-NEXT:    sb a2, 15(sp)
-; RV64-ELEN8-NEXT:    sb zero, 14(sp)
-; RV64-ELEN8-NEXT:    sb a3, 13(sp)
-; RV64-ELEN8-NEXT:    sb a0, 12(sp)
-; RV64-ELEN8-NEXT:    sb a1, 11(sp)
-; RV64-ELEN8-NEXT:    li a1, 1
-; RV64-ELEN8-NEXT:    sb a1, 10(sp)
-; RV64-ELEN8-NEXT:    sb a0, 9(sp)
-; RV64-ELEN8-NEXT:    sb a0, 8(sp)
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    addi a0, sp, 8
-; RV64-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    addi sp, sp, 16
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    addi sp, sp, -16
+; ZVE32F-NEXT:    .cfi_def_cfa_offset 16
+; ZVE32F-NEXT:    sb a2, 15(sp)
+; ZVE32F-NEXT:    sb zero, 14(sp)
+; ZVE32F-NEXT:    sb a3, 13(sp)
+; ZVE32F-NEXT:    sb a0, 12(sp)
+; ZVE32F-NEXT:    sb a1, 11(sp)
+; ZVE32F-NEXT:    li a1, 1
+; ZVE32F-NEXT:    sb a1, 10(sp)
+; ZVE32F-NEXT:    sb a0, 9(sp)
+; ZVE32F-NEXT:    sb a0, 8(sp)
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; ZVE32F-NEXT:    addi a0, sp, 8
+; ZVE32F-NEXT:    vle8.v v8, (a0)
+; ZVE32F-NEXT:    vand.vi v8, v8, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    addi sp, sp, 16
+; ZVE32F-NEXT:    ret
   %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <8 x i1> %2,  i1  1, i32 2
@@ -1294,125 +453,25 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v8i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    addi sp, sp, -16
-; RV32-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN32-NEXT:    sb a1, 15(sp)
-; RV32-ELEN32-NEXT:    sb a1, 14(sp)
-; RV32-ELEN32-NEXT:    sb a1, 13(sp)
-; RV32-ELEN32-NEXT:    sb a0, 12(sp)
-; RV32-ELEN32-NEXT:    sb a1, 11(sp)
-; RV32-ELEN32-NEXT:    sb a1, 10(sp)
-; RV32-ELEN32-NEXT:    sb a0, 9(sp)
-; RV32-ELEN32-NEXT:    sb a0, 8(sp)
-; RV32-ELEN32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-ELEN32-NEXT:    addi a0, sp, 8
-; RV32-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN32-NEXT:    addi sp, sp, 16
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_optsize_nonconst_v8i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    addi sp, sp, -16
-; RV64-ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN32-NEXT:    sb a1, 15(sp)
-; RV64-ELEN32-NEXT:    sb a1, 14(sp)
-; RV64-ELEN32-NEXT:    sb a1, 13(sp)
-; RV64-ELEN32-NEXT:    sb a0, 12(sp)
-; RV64-ELEN32-NEXT:    sb a1, 11(sp)
-; RV64-ELEN32-NEXT:    sb a1, 10(sp)
-; RV64-ELEN32-NEXT:    sb a0, 9(sp)
-; RV64-ELEN32-NEXT:    sb a0, 8(sp)
-; RV64-ELEN32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV64-ELEN32-NEXT:    addi a0, sp, 8
-; RV64-ELEN32-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN32-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN32-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN32-NEXT:    addi sp, sp, 16
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v8i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    addi sp, sp, -16
-; RV32-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN16-NEXT:    sb a1, 15(sp)
-; RV32-ELEN16-NEXT:    sb a1, 14(sp)
-; RV32-ELEN16-NEXT:    sb a1, 13(sp)
-; RV32-ELEN16-NEXT:    sb a0, 12(sp)
-; RV32-ELEN16-NEXT:    sb a1, 11(sp)
-; RV32-ELEN16-NEXT:    sb a1, 10(sp)
-; RV32-ELEN16-NEXT:    sb a0, 9(sp)
-; RV32-ELEN16-NEXT:    sb a0, 8(sp)
-; RV32-ELEN16-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-ELEN16-NEXT:    addi a0, sp, 8
-; RV32-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN16-NEXT:    addi sp, sp, 16
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_optsize_nonconst_v8i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    addi sp, sp, -16
-; RV64-ELEN16-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN16-NEXT:    sb a1, 15(sp)
-; RV64-ELEN16-NEXT:    sb a1, 14(sp)
-; RV64-ELEN16-NEXT:    sb a1, 13(sp)
-; RV64-ELEN16-NEXT:    sb a0, 12(sp)
-; RV64-ELEN16-NEXT:    sb a1, 11(sp)
-; RV64-ELEN16-NEXT:    sb a1, 10(sp)
-; RV64-ELEN16-NEXT:    sb a0, 9(sp)
-; RV64-ELEN16-NEXT:    sb a0, 8(sp)
-; RV64-ELEN16-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV64-ELEN16-NEXT:    addi a0, sp, 8
-; RV64-ELEN16-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN16-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN16-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN16-NEXT:    addi sp, sp, 16
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v8i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    addi sp, sp, -16
-; RV32-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ELEN8-NEXT:    sb a1, 15(sp)
-; RV32-ELEN8-NEXT:    sb a1, 14(sp)
-; RV32-ELEN8-NEXT:    sb a1, 13(sp)
-; RV32-ELEN8-NEXT:    sb a0, 12(sp)
-; RV32-ELEN8-NEXT:    sb a1, 11(sp)
-; RV32-ELEN8-NEXT:    sb a1, 10(sp)
-; RV32-ELEN8-NEXT:    sb a0, 9(sp)
-; RV32-ELEN8-NEXT:    sb a0, 8(sp)
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    addi a0, sp, 8
-; RV32-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV32-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV32-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV32-ELEN8-NEXT:    addi sp, sp, 16
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_optsize_nonconst_v8i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    addi sp, sp, -16
-; RV64-ELEN8-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ELEN8-NEXT:    sb a1, 15(sp)
-; RV64-ELEN8-NEXT:    sb a1, 14(sp)
-; RV64-ELEN8-NEXT:    sb a1, 13(sp)
-; RV64-ELEN8-NEXT:    sb a0, 12(sp)
-; RV64-ELEN8-NEXT:    sb a1, 11(sp)
-; RV64-ELEN8-NEXT:    sb a1, 10(sp)
-; RV64-ELEN8-NEXT:    sb a0, 9(sp)
-; RV64-ELEN8-NEXT:    sb a0, 8(sp)
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    addi a0, sp, 8
-; RV64-ELEN8-NEXT:    vle8.v v8, (a0)
-; RV64-ELEN8-NEXT:    vand.vi v8, v8, 1
-; RV64-ELEN8-NEXT:    vmsne.vi v0, v8, 0
-; RV64-ELEN8-NEXT:    addi sp, sp, 16
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v8i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    addi sp, sp, -16
+; ZVE32F-NEXT:    .cfi_def_cfa_offset 16
+; ZVE32F-NEXT:    sb a1, 15(sp)
+; ZVE32F-NEXT:    sb a1, 14(sp)
+; ZVE32F-NEXT:    sb a1, 13(sp)
+; ZVE32F-NEXT:    sb a0, 12(sp)
+; ZVE32F-NEXT:    sb a1, 11(sp)
+; ZVE32F-NEXT:    sb a1, 10(sp)
+; ZVE32F-NEXT:    sb a0, 9(sp)
+; ZVE32F-NEXT:    sb a0, 8(sp)
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; ZVE32F-NEXT:    addi a0, sp, 8
+; ZVE32F-NEXT:    vle8.v v8, (a0)
+; ZVE32F-NEXT:    vand.vi v8, v8, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    addi sp, sp, 16
+; ZVE32F-NEXT:    ret
   %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
   %3 = insertelement <8 x i1> %2,  i1 %y, i32 2
@@ -1432,55 +491,12 @@ define <10 x i1> @buildvec_mask_v10i1() {
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_v10i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    li a0, 949
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_v10i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    li a0, 949
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_v10i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a0, 949
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_v10i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a0, 949
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_v10i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 3
-; RV32-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    li a0, 181
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_v10i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 3
-; RV64-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    li a0, 181
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_v10i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    li a0, 949
+; ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
+; ZVE32F-NEXT:    vmv.s.x v0, a0
+; ZVE32F-NEXT:    ret
   ret <10 x i1> <i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1>
 }
 
@@ -1500,58 +516,6 @@ define <16 x i1> @buildvec_mask_v16i1() {
 ; CHECK-RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; CHECK-RV64-NEXT:    vmv.s.x v0, a0
 ; CHECK-RV64-NEXT:    ret
-;
-; RV32-ELEN32-LABEL: buildvec_mask_v16i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    lui a0, 11
-; RV32-ELEN32-NEXT:    addi a0, a0, 1718
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_v16i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    lui a0, 11
-; RV64-ELEN32-NEXT:    addiw a0, a0, 1718
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_v16i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    lui a0, 11
-; RV32-ELEN16-NEXT:    addi a0, a0, 1718
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_v16i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    lui a0, 11
-; RV64-ELEN16-NEXT:    addiw a0, a0, 1718
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_v16i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 182
-; RV32-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vmv.v.v v0, v8
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_v16i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 182
-; RV64-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vmv.v.v v0, v8
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN8-NEXT:    ret
   ret <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>
 }
 
@@ -1563,55 +527,12 @@ define <16 x i1> @buildvec_mask_v16i1_undefs() {
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    ret
 ;
-; RV32-ELEN32-LABEL: buildvec_mask_v16i1_undefs:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    li a0, 1722
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_v16i1_undefs:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    li a0, 1722
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_v16i1_undefs:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a0, 1722
-; RV32-ELEN16-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_v16i1_undefs:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a0, 1722
-; RV64-ELEN16-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_v16i1_undefs:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 6
-; RV32-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    li a0, 186
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_v16i1_undefs:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 6
-; RV64-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    li a0, 186
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN8-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_v16i1_undefs:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    li a0, 1722
+; ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
+; ZVE32F-NEXT:    vmv.s.x v0, a0
+; ZVE32F-NEXT:    ret
   ret <16 x i1> <i1 undef, i1 1, i1 undef, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 undef, i1 undef, i1 undef, i1 undef, i1 undef>
 }
 
@@ -1683,82 +604,6 @@ define <32 x i1> @buildvec_mask_v32i1() {
 ; RV64-LMULMAX8-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
 ; RV64-LMULMAX8-NEXT:    vmv.s.x v0, a0
 ; RV64-LMULMAX8-NEXT:    ret
-;
-; RV32-ELEN32-LABEL: buildvec_mask_v32i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    lui a0, 748384
-; RV32-ELEN32-NEXT:    addi a0, a0, 1776
-; RV32-ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_v32i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    lui a0, 748384
-; RV64-ELEN32-NEXT:    addiw a0, a0, 1776
-; RV64-ELEN32-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_v32i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a0, 1776
-; RV32-ELEN16-NEXT:    vsetivli zero, 2, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN16-NEXT:    lui a0, 11
-; RV32-ELEN16-NEXT:    addi a0, a0, 1718
-; RV32-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN16-NEXT:    vsetvli zero, zero, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_v32i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a0, 1776
-; RV64-ELEN16-NEXT:    vsetivli zero, 2, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN16-NEXT:    lui a0, 11
-; RV64-ELEN16-NEXT:    addiw a0, a0, 1718
-; RV64-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN16-NEXT:    vsetvli zero, zero, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_v32i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 6
-; RV32-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    li a0, 240
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN8-NEXT:    li a0, 182
-; RV32-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 3, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 2
-; RV32-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 3
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_v32i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 6
-; RV64-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    li a0, 240
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN8-NEXT:    li a0, 182
-; RV64-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 3, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 2
-; RV64-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 3
-; RV64-ELEN8-NEXT:    ret
   ret <32 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>
 }
 
@@ -1854,136 +699,6 @@ define <64 x i1> @buildvec_mask_v64i1() {
 ; RV64-LMULMAX8-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV64-LMULMAX8-NEXT:    vmv.s.x v0, a0
 ; RV64-LMULMAX8-NEXT:    ret
-;
-; RV32-ELEN32-LABEL: buildvec_mask_v64i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    lui a0, 748388
-; RV32-ELEN32-NEXT:    addi a0, a0, -1793
-; RV32-ELEN32-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN32-NEXT:    lui a0, 748384
-; RV32-ELEN32-NEXT:    addi a0, a0, 1776
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
-; RV32-ELEN32-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_v64i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    lui a0, 748388
-; RV64-ELEN32-NEXT:    addiw a0, a0, -1793
-; RV64-ELEN32-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN32-NEXT:    lui a0, 748384
-; RV64-ELEN32-NEXT:    addiw a0, a0, 1776
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
-; RV64-ELEN32-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_v64i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a0, 1776
-; RV32-ELEN16-NEXT:    vsetivli zero, 4, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN16-NEXT:    lui a0, 11
-; RV32-ELEN16-NEXT:    addi a0, a0, 1718
-; RV32-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN16-NEXT:    vsetivli zero, 2, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN16-NEXT:    lui a0, 4
-; RV32-ELEN16-NEXT:    addi a0, a0, -1793
-; RV32-ELEN16-NEXT:    vsetivli zero, 4, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v9, a0
-; RV32-ELEN16-NEXT:    vsetivli zero, 3, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v9, 2
-; RV32-ELEN16-NEXT:    vsetivli zero, 4, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v8, 3
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_v64i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a0, 1776
-; RV64-ELEN16-NEXT:    vsetivli zero, 4, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN16-NEXT:    lui a0, 11
-; RV64-ELEN16-NEXT:    addiw a0, a0, 1718
-; RV64-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN16-NEXT:    vsetivli zero, 2, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN16-NEXT:    lui a0, 4
-; RV64-ELEN16-NEXT:    addiw a0, a0, -1793
-; RV64-ELEN16-NEXT:    vsetivli zero, 4, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v9, a0
-; RV64-ELEN16-NEXT:    vsetivli zero, 3, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v9, 2
-; RV64-ELEN16-NEXT:    vsetivli zero, 4, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v8, 3
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_v64i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 6
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    li a0, 240
-; RV32-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN8-NEXT:    li a0, 182
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 3, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 2
-; RV32-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 3
-; RV32-ELEN8-NEXT:    li a0, 255
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v9, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 5, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v9, 4
-; RV32-ELEN8-NEXT:    li a0, 56
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v9, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 6, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v9, 5
-; RV32-ELEN8-NEXT:    vsetivli zero, 7, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 6
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 7
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_v64i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 6
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    li a0, 240
-; RV64-ELEN8-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN8-NEXT:    li a0, 182
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 3, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 2
-; RV64-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 3
-; RV64-ELEN8-NEXT:    li a0, 255
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v9, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 5, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v9, 4
-; RV64-ELEN8-NEXT:    li a0, 56
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v9, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 6, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v9, 5
-; RV64-ELEN8-NEXT:    vsetivli zero, 7, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 6
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 7
-; RV64-ELEN8-NEXT:    ret
   ret <64 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>
 }
 
@@ -2136,246 +851,6 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ; RV64-LMULMAX8-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; RV64-LMULMAX8-NEXT:    vslideup.vi v0, v8, 1
 ; RV64-LMULMAX8-NEXT:    ret
-;
-; RV32-ELEN32-LABEL: buildvec_mask_v128i1:
-; RV32-ELEN32:       # %bb.0:
-; RV32-ELEN32-NEXT:    lui a0, 748388
-; RV32-ELEN32-NEXT:    addi a0, a0, -1793
-; RV32-ELEN32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN32-NEXT:    lui a0, 748384
-; RV32-ELEN32-NEXT:    addi a0, a0, 1776
-; RV32-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV32-ELEN32-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
-; RV32-ELEN32-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN32-NEXT:    lui a0, 551776
-; RV32-ELEN32-NEXT:    addi a0, a0, 1776
-; RV32-ELEN32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN32-NEXT:    vsetivli zero, 3, e32, m1, tu, mu
-; RV32-ELEN32-NEXT:    vslideup.vi v0, v8, 2
-; RV32-ELEN32-NEXT:    lui a0, 945060
-; RV32-ELEN32-NEXT:    addi a0, a0, -1793
-; RV32-ELEN32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; RV32-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN32-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
-; RV32-ELEN32-NEXT:    vslideup.vi v0, v8, 3
-; RV32-ELEN32-NEXT:    ret
-;
-; RV64-ELEN32-LABEL: buildvec_mask_v128i1:
-; RV64-ELEN32:       # %bb.0:
-; RV64-ELEN32-NEXT:    lui a0, 748388
-; RV64-ELEN32-NEXT:    addiw a0, a0, -1793
-; RV64-ELEN32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN32-NEXT:    lui a0, 748384
-; RV64-ELEN32-NEXT:    addiw a0, a0, 1776
-; RV64-ELEN32-NEXT:    vmv.s.x v0, a0
-; RV64-ELEN32-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
-; RV64-ELEN32-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN32-NEXT:    lui a0, 551776
-; RV64-ELEN32-NEXT:    addiw a0, a0, 1776
-; RV64-ELEN32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN32-NEXT:    vsetivli zero, 3, e32, m1, tu, mu
-; RV64-ELEN32-NEXT:    vslideup.vi v0, v8, 2
-; RV64-ELEN32-NEXT:    lui a0, 945060
-; RV64-ELEN32-NEXT:    addiw a0, a0, -1793
-; RV64-ELEN32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; RV64-ELEN32-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN32-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
-; RV64-ELEN32-NEXT:    vslideup.vi v0, v8, 3
-; RV64-ELEN32-NEXT:    ret
-;
-; RV32-ELEN16-LABEL: buildvec_mask_v128i1:
-; RV32-ELEN16:       # %bb.0:
-; RV32-ELEN16-NEXT:    li a0, 1776
-; RV32-ELEN16-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN16-NEXT:    lui a0, 11
-; RV32-ELEN16-NEXT:    addi a0, a0, 1718
-; RV32-ELEN16-NEXT:    vmv.s.x v9, a0
-; RV32-ELEN16-NEXT:    vsetivli zero, 2, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vmv1r.v v0, v8
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v9, 1
-; RV32-ELEN16-NEXT:    lui a0, 4
-; RV32-ELEN16-NEXT:    addi a0, a0, -1793
-; RV32-ELEN16-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v10, a0
-; RV32-ELEN16-NEXT:    vsetivli zero, 3, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v10, 2
-; RV32-ELEN16-NEXT:    vsetivli zero, 4, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v9, 3
-; RV32-ELEN16-NEXT:    vsetivli zero, 5, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v8, 4
-; RV32-ELEN16-NEXT:    lui a0, 8
-; RV32-ELEN16-NEXT:    addi a0, a0, 1718
-; RV32-ELEN16-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN16-NEXT:    vsetivli zero, 6, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v8, 5
-; RV32-ELEN16-NEXT:    vsetivli zero, 7, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v10, 6
-; RV32-ELEN16-NEXT:    lui a0, 14
-; RV32-ELEN16-NEXT:    addi a0, a0, 1722
-; RV32-ELEN16-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV32-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN16-NEXT:    vsetvli zero, zero, e16, m1, tu, mu
-; RV32-ELEN16-NEXT:    vslideup.vi v0, v8, 7
-; RV32-ELEN16-NEXT:    ret
-;
-; RV64-ELEN16-LABEL: buildvec_mask_v128i1:
-; RV64-ELEN16:       # %bb.0:
-; RV64-ELEN16-NEXT:    li a0, 1776
-; RV64-ELEN16-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN16-NEXT:    lui a0, 11
-; RV64-ELEN16-NEXT:    addiw a0, a0, 1718
-; RV64-ELEN16-NEXT:    vmv.s.x v9, a0
-; RV64-ELEN16-NEXT:    vsetivli zero, 2, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vmv1r.v v0, v8
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v9, 1
-; RV64-ELEN16-NEXT:    lui a0, 4
-; RV64-ELEN16-NEXT:    addiw a0, a0, -1793
-; RV64-ELEN16-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v10, a0
-; RV64-ELEN16-NEXT:    vsetivli zero, 3, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v10, 2
-; RV64-ELEN16-NEXT:    vsetivli zero, 4, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v9, 3
-; RV64-ELEN16-NEXT:    vsetivli zero, 5, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v8, 4
-; RV64-ELEN16-NEXT:    lui a0, 8
-; RV64-ELEN16-NEXT:    addiw a0, a0, 1718
-; RV64-ELEN16-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN16-NEXT:    vsetivli zero, 6, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v8, 5
-; RV64-ELEN16-NEXT:    vsetivli zero, 7, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v10, 6
-; RV64-ELEN16-NEXT:    lui a0, 14
-; RV64-ELEN16-NEXT:    addiw a0, a0, 1722
-; RV64-ELEN16-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64-ELEN16-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN16-NEXT:    vsetvli zero, zero, e16, m1, tu, mu
-; RV64-ELEN16-NEXT:    vslideup.vi v0, v8, 7
-; RV64-ELEN16-NEXT:    ret
-;
-; RV32-ELEN8-LABEL: buildvec_mask_v128i1:
-; RV32-ELEN8:       # %bb.0:
-; RV32-ELEN8-NEXT:    li a0, 6
-; RV32-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    li a0, 240
-; RV32-ELEN8-NEXT:    vmv.s.x v9, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vmv1r.v v0, v9
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV32-ELEN8-NEXT:    li a0, 182
-; RV32-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v10, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 3, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v10, 2
-; RV32-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v10, 3
-; RV32-ELEN8-NEXT:    li a0, 255
-; RV32-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v11, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 5, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v11, 4
-; RV32-ELEN8-NEXT:    li a0, 56
-; RV32-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v12, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 6, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v12, 5
-; RV32-ELEN8-NEXT:    vsetivli zero, 7, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v10, 6
-; RV32-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v10, 7
-; RV32-ELEN8-NEXT:    vsetivli zero, 9, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v9, 8
-; RV32-ELEN8-NEXT:    vsetivli zero, 10, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 9
-; RV32-ELEN8-NEXT:    vsetivli zero, 11, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v10, 10
-; RV32-ELEN8-NEXT:    li a0, 134
-; RV32-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 12, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 11
-; RV32-ELEN8-NEXT:    vsetivli zero, 13, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v11, 12
-; RV32-ELEN8-NEXT:    vsetivli zero, 14, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v12, 13
-; RV32-ELEN8-NEXT:    li a0, 186
-; RV32-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    vsetivli zero, 15, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 14
-; RV32-ELEN8-NEXT:    li a0, 230
-; RV32-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV32-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV32-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV32-ELEN8-NEXT:    vslideup.vi v0, v8, 15
-; RV32-ELEN8-NEXT:    ret
-;
-; RV64-ELEN8-LABEL: buildvec_mask_v128i1:
-; RV64-ELEN8:       # %bb.0:
-; RV64-ELEN8-NEXT:    li a0, 6
-; RV64-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    li a0, 240
-; RV64-ELEN8-NEXT:    vmv.s.x v9, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 2, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vmv1r.v v0, v9
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 1
-; RV64-ELEN8-NEXT:    li a0, 182
-; RV64-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v10, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 3, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v10, 2
-; RV64-ELEN8-NEXT:    vsetivli zero, 4, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v10, 3
-; RV64-ELEN8-NEXT:    li a0, 255
-; RV64-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v11, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 5, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v11, 4
-; RV64-ELEN8-NEXT:    li a0, 56
-; RV64-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v12, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 6, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v12, 5
-; RV64-ELEN8-NEXT:    vsetivli zero, 7, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v10, 6
-; RV64-ELEN8-NEXT:    vsetivli zero, 8, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v10, 7
-; RV64-ELEN8-NEXT:    vsetivli zero, 9, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v9, 8
-; RV64-ELEN8-NEXT:    vsetivli zero, 10, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 9
-; RV64-ELEN8-NEXT:    vsetivli zero, 11, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v10, 10
-; RV64-ELEN8-NEXT:    li a0, 134
-; RV64-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 12, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 11
-; RV64-ELEN8-NEXT:    vsetivli zero, 13, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v11, 12
-; RV64-ELEN8-NEXT:    vsetivli zero, 14, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v12, 13
-; RV64-ELEN8-NEXT:    li a0, 186
-; RV64-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    vsetivli zero, 15, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 14
-; RV64-ELEN8-NEXT:    li a0, 230
-; RV64-ELEN8-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; RV64-ELEN8-NEXT:    vmv.s.x v8, a0
-; RV64-ELEN8-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
-; RV64-ELEN8-NEXT:    vslideup.vi v0, v8, 15
-; RV64-ELEN8-NEXT:    ret
   ret <128 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>
 }
 
@@ -2499,22 +974,13 @@ define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; RV64-LMULMAX8-NEXT:    vlm.v v0, (a0)
 ; RV64-LMULMAX8-NEXT:    ret
 ;
-; RV32-ELEN-LABEL: buildvec_mask_optsize_v128i1:
-; RV32-ELEN:       # %bb.0:
-; RV32-ELEN-NEXT:    lui a0, %hi(.LCPI21_0)
-; RV32-ELEN-NEXT:    addi a0, a0, %lo(.LCPI21_0)
-; RV32-ELEN-NEXT:    li a1, 128
-; RV32-ELEN-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
-; RV32-ELEN-NEXT:    vlm.v v0, (a0)
-; RV32-ELEN-NEXT:    ret
-;
-; RV64-ELEN-LABEL: buildvec_mask_optsize_v128i1:
-; RV64-ELEN:       # %bb.0:
-; RV64-ELEN-NEXT:    lui a0, %hi(.LCPI21_0)
-; RV64-ELEN-NEXT:    addi a0, a0, %lo(.LCPI21_0)
-; RV64-ELEN-NEXT:    li a1, 128
-; RV64-ELEN-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
-; RV64-ELEN-NEXT:    vlm.v v0, (a0)
-; RV64-ELEN-NEXT:    ret
+; ZVE32F-LABEL: buildvec_mask_optsize_v128i1:
+; ZVE32F:       # %bb.0:
+; ZVE32F-NEXT:    lui a0, %hi(.LCPI21_0)
+; ZVE32F-NEXT:    addi a0, a0, %lo(.LCPI21_0)
+; ZVE32F-NEXT:    li a1, 128
+; ZVE32F-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
+; ZVE32F-NEXT:    vlm.v v0, (a0)
+; ZVE32F-NEXT:    ret
   ret <128 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>
 }
