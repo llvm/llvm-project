@@ -16,26 +16,31 @@ architecture for use in BOLT tests")
 
 set(BOLT_INCLUDE_TESTS OFF)
 if (LLVM_INCLUDE_TESTS)
+  set(BOLT_CLANG_PRESENT OFF)
+  set(BOLT_LLD_PRESENT OFF)
+
+  if ("clang" IN_LIST LLVM_ENABLE_PROJECTS AND BOLT_CLANG_EXE)
+    message(WARNING "BOLT_CLANG_EXE is set and clang project is enabled. \
+          BOLT_CLANG_EXE will be used for BOLT tests.")
+  endif()
   if ("clang" IN_LIST LLVM_ENABLE_PROJECTS OR BOLT_CLANG_EXE)
-    if ("clang" IN_LIST LLVM_ENABLE_PROJECTS AND BOLT_CLANG_EXE)
-      message(WARNING "BOLT_CLANG_EXE is set and clang project is enabled. \
-            BOLT_CLANG_EXE will be used for BOLT tests.")
-    endif()
-    if ("lld" IN_LIST LLVM_ENABLE_PROJECTS OR BOLT_LLD_EXE)
-      if ("lld" IN_LIST LLVM_ENABLE_PROJECTS AND BOLT_LLD_EXE)
-        message(WARNING "BOLT_LLD_EXE is set and lld project is enabled. \
-              BOLT_LLD_EXE will be used for BOLT tests.")
-      endif()
-      set(BOLT_INCLUDE_TESTS ON)
-    else()
-      message(WARNING "Not including BOLT tests since lld is disabled. \
-            Enable lld in LLVM_ENABLE_PROJECTS or provide a path to lld binary \
-            in BOLT_LLD_EXE.")
-    endif()
+    set(BOLT_CLANG_PRESENT ON)
+  endif()
+
+  if ("lld" IN_LIST LLVM_ENABLE_PROJECTS AND BOLT_LLD_EXE)
+    message(WARNING "BOLT_LLD_EXE is set and lld project is enabled. \
+          BOLT_LLD_EXE will be used for BOLT tests.")
+  endif()
+  if ("lld" IN_LIST LLVM_ENABLE_PROJECTS OR BOLT_LLD_EXE)
+    set(BOLT_LLD_PRESENT ON)
+  endif()
+
+  if (BOLT_CLANG_PRESENT AND BOLT_LLD_PRESENT)
+    set(BOLT_INCLUDE_TESTS ON)
   else()
-    message(WARNING "Not including BOLT tests since clang is disabled. \
-          Enable clang in LLVM_ENABLE_PROJECTS or provide a path to clang \
-          binary in BOLT_CLANG_EXE.")
+    message(WARNING "Not including BOLT tests since clang or lld is disabled. \
+          Add clang and lld to LLVM_ENABLE_PROJECTS or provide paths to clang \
+          and lld binaries in BOLT_CLANG_EXE and BOLT_LLD_EXE.")
   endif()
 endif()
 
