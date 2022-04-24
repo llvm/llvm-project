@@ -439,13 +439,6 @@ public:
   /// Return the underlying template name.
   TemplateName getUnderlyingTemplate() const { return UnderlyingTemplate; }
 
-  /// The template declaration to which this qualified name
-  /// refers.
-  /// FIXME: remove this and use getUnderlyingTemplate() instead.
-  TemplateDecl *getTemplateDecl() const {
-    return UnderlyingTemplate.getAsTemplateDecl();
-  }
-
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getQualifier(), hasTemplateKeyword(), UnderlyingTemplate);
   }
