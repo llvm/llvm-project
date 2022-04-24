@@ -186,7 +186,6 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       first == 'D' || first == 'Q') {
     Put('.'); // input field is normalized to a fraction
     auto start{got};
-    bool anyDigit{false};
     for (; next; next = io.NextInField(remaining, edit)) {
       char32_t ch{*next};
       if (ch == ' ' || ch == '\t') {
@@ -197,10 +196,8 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
         }
       }
       if (ch == '0' && got == start && !decimalPoint) {
-        anyDigit = true;
         // omit leading zeroes before the decimal
       } else if (ch >= '0' && ch <= '9') {
-        anyDigit = true;
         Put(ch);
       } else if (ch == decimal && !decimalPoint) {
         // the decimal point is *not* copied to the buffer
@@ -210,11 +207,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
     }
     if (got == start) {
-      if (anyDigit) {
-        Put('0'); // emit at least one digit
-      } else {
-        return 0; // no digits, invalid input
-      }
+      // Nothing but zeroes and maybe a decimal point.  F'2018 requires
+      // at least one digit, but F'77 did not, and a bare "." shows up in
+      // the FCVS suite.
+      Put('0'); // emit at least one digit
     }
     if (next &&
         (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
