@@ -3467,13 +3467,13 @@ _mm_cvtsi32_si128(int __a)
   return __extension__ (__m128i)(__v4si){ __a, 0, 0, 0 };
 }
 
+#ifdef __x86_64__
 /// Returns a vector of [2 x i64] where the lower element is the input
 ///    operand and the upper element is zero.
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction
-/// in 64-bit mode.
+/// This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit signed integer operand containing the value to be converted.
@@ -3483,6 +3483,7 @@ _mm_cvtsi64_si128(long long __a)
 {
   return __extension__ (__m128i)(__v2di){ __a, 0 };
 }
+#endif
 
 /// Moves the least significant 32 bits of a vector of [4 x i32] to a
 ///    32-bit signed integer value.
@@ -3502,6 +3503,7 @@ _mm_cvtsi128_si32(__m128i __a)
   return __b[0];
 }
 
+#ifdef __x86_64__
 /// Moves the least significant 64 bits of a vector of [2 x i64] to a
 ///    64-bit signed integer value.
 ///
@@ -3518,6 +3520,7 @@ _mm_cvtsi128_si64(__m128i __a)
 {
   return __a[0];
 }
+#endif
 
 /// Moves packed integer values from an aligned 128-bit memory location
 ///    to elements in a 128-bit integer vector.
