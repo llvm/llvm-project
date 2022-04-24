@@ -2196,16 +2196,19 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     real->scriptDefined = true;
     sym->scriptDefined = true;
 
-    // Tell LTO not to eliminate these symbols.
-    sym->isUsedInRegularObj = true;
-    // If sym is referenced in any object file, bitcode file or shared object,
-    // retain wrap which is the redirection target of sym. If the object file
-    // defining sym has sym references, we cannot easily distinguish the case
-    // from cases where sym is not referenced. Retain wrap because we choose to
-    // wrap sym references regardless of whether sym is defined
+    // If a symbol is referenced in any object file, bitcode file or shared
+    // object, mark its redirection target (foo for __real_foo and __wrap_foo
+    // for foo) as referenced after redirection, which will be used to tell LTO
+    // to not eliminate the redirection target. If the object file defining the
+    // symbol also references it, we cannot easily distinguish the case from
+    // cases where the symbol is not referenced. Retain the redirection target
+    // in this case because we choose to wrap symbol references regardless of
+    // whether the symbol is defined
     // (https://sourceware.org/bugzilla/show_bug.cgi?id=26358).
+    if (real->referenced || real->isDefined())
+      sym->referencedAfterWrap = true;
     if (sym->referenced || sym->isDefined())
-      wrap->isUsedInRegularObj = true;
+      wrap->referencedAfterWrap = true;
   }
   return v;
 }

@@ -131,9 +131,12 @@ public:
   // Used to track if there has been at least one undefined reference to the
   // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
   // if the first undefined reference from a non-shared object is weak.
-  //
-  // This is also used to retain __wrap_foo when foo is referenced.
   uint8_t referenced : 1;
+
+  // Used to track if this symbol will be referenced after wrapping is performed
+  // (i.e. this will be true for foo if __real_foo is referenced, and will be
+  // true for __wrap_foo if foo is referenced).
+  uint8_t referencedAfterWrap : 1;
 
   // True if this symbol is specified by --trace-symbol option.
   uint8_t traced : 1;
@@ -244,12 +247,13 @@ protected:
         binding(binding), stOther(stOther), symbolKind(k),
         visibility(stOther & 3), isPreemptible(false),
         isUsedInRegularObj(false), used(false), exportDynamic(false),
-        inDynamicList(false), referenced(false), traced(false),
-        hasVersionSuffix(false), isInIplt(false), gotInIgot(false),
-        folded(false), needsTocRestore(false), scriptDefined(false),
-        needsCopy(false), needsGot(false), needsPlt(false), needsTlsDesc(false),
-        needsTlsGd(false), needsTlsGdToIe(false), needsGotDtprel(false),
-        needsTlsIe(false), hasDirectReloc(false) {}
+        inDynamicList(false), referenced(false), referencedAfterWrap(false),
+        traced(false), hasVersionSuffix(false), isInIplt(false),
+        gotInIgot(false), folded(false), needsTocRestore(false),
+        scriptDefined(false), needsCopy(false), needsGot(false),
+        needsPlt(false), needsTlsDesc(false), needsTlsGd(false),
+        needsTlsGdToIe(false), needsGotDtprel(false), needsTlsIe(false),
+        hasDirectReloc(false) {}
 
 public:
   // True if this symbol is in the Iplt sub-section of the Plt and the Igot
