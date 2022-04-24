@@ -99,6 +99,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
     opt.printConflicts = printConflicts;
     opt.testAnalysisOnly = testAnalysisOnly;
     opt.alwaysAliasingWithDest = alwaysAliasingWithDest;
+    opt.bufferizeFunctionBoundaries = true;
     if (initTensorElimination) {
       opt.addPostAnalysisStep(insertSliceAnchoredInitTensorEliminationStep);
     }
