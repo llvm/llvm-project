@@ -69,6 +69,7 @@ public:
   enum LoongArchMatchResultTy {
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
     Match_RequiresMsbNotLessThanLsb,
+    Match_RequiresOpnd2NotR0R1,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "LoongArchGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -151,7 +152,9 @@ public:
   bool isUImm3() const { return isUImm<3>(); }
   bool isUImm5() const { return isUImm<5>(); }
   bool isUImm6() const { return isUImm<6>(); }
+  bool isUImm8() const { return isUImm<8>(); }
   bool isUImm12() const { return isUImm<12>(); }
+  bool isUImm14() const { return isUImm<14>(); }
   bool isUImm15() const { return isUImm<15>(); }
   bool isSImm12() const { return isSImm<12>(); }
   bool isSImm14lsl2() const { return isSImm<14, 2>(); }
@@ -376,6 +379,12 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   switch (Inst.getOpcode()) {
   default:
     break;
+  case LoongArch::CSRXCHG: {
+    unsigned Rj = Inst.getOperand(2).getReg();
+    if (Rj == LoongArch::R0 || Rj == LoongArch::R1)
+      return Match_RequiresOpnd2NotR0R1;
+    return Match_Success;
+  }
   case LoongArch::BSTRINS_W:
   case LoongArch::BSTRINS_D:
   case LoongArch::BSTRPICK_W:
@@ -489,6 +498,8 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(ErrorStart, "msb is less than lsb",
                  SMRange(ErrorStart, Operands[4]->getEndLoc()));
   }
+  case Match_RequiresOpnd2NotR0R1:
+    return Error(Operands[2]->getStartLoc(), "must not be $r0 or $r1");
   case Match_InvalidUImm2:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 2) - 1);

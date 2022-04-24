@@ -60,8 +60,16 @@ def uimm6 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<6>;
 }
 
+def uimm8 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<8>;
+}
+
 def uimm12 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<12>;
+}
+
+def uimm14 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<14>;
 }
 
 def uimm15 : Operand<GRLenVT> {
@@ -204,6 +212,12 @@ let mayStore = 1, Constraints = "$rd = $dst" in
 class SCBase<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14),
                opstr, "$rd, $rj, $imm14">;
+
+class IOCSRRD<bits<22> op, string opstr>
+    : Fmt2R<op, (outs GPR:$rd), (ins GPR:$rj), opstr, "$rd, $rj">;
+
+class IOCSRWR<bits<22> op, string opstr>
+    : Fmt2R<op, (outs), (ins GPR:$rd, GPR:$rj), opstr, "$rd, $rj">;
 
 //===----------------------------------------------------------------------===//
 // Basic Integer Instructions
@@ -536,3 +550,55 @@ def : InstAlias<"move $dst, $src", (OR GPR:$dst, GPR:$src, R0)>;
 
 include "LoongArchFloat32InstrInfo.td"
 include "LoongArchFloat64InstrInfo.td"
+
+//===----------------------------------------------------------------------===//
+// Privilege Instructions
+//===----------------------------------------------------------------------===//
+
+// CSR Access Instructions
+def CSRRD : FmtCSR<0b0000010000000, (outs GPR:$rd), (ins uimm14:$csr_num),
+                   "csrrd", "$rd, $csr_num">;
+let Constraints = "$rd = $dst" in {
+def CSRWR : FmtCSR<0b0000010000001, (outs GPR:$dst),
+                   (ins GPR:$rd, uimm14:$csr_num), "csrwr", "$rd, $csr_num">;
+def CSRXCHG : FmtCSRXCHG<0b00000100, (outs GPR:$dst),
+                         (ins GPR:$rd, GPR:$rj, uimm14:$csr_num),
+                         "csrxchg", "$rd, $rj, $csr_num">;
+} // Constraints = "$rd = $dst"
+
+// IOCSR Access Instructions
+def IOCSRRD_B : IOCSRRD<0b0000011001001000000000, "iocsrrd.b">;
+def IOCSRRD_H : IOCSRRD<0b0000011001001000000001, "iocsrrd.h">;
+def IOCSRRD_W : IOCSRRD<0b0000011001001000000010, "iocsrrd.w">;
+def IOCSRWR_B : IOCSRWR<0b0000011001001000000100, "iocsrwr.b">;
+def IOCSRWR_H : IOCSRWR<0b0000011001001000000101, "iocsrwr.h">;
+def IOCSRWR_W : IOCSRWR<0b0000011001001000000110, "iocsrwr.w">;
+let Predicates = [IsLA64] in {
+def IOCSRRD_D : IOCSRRD<0b0000011001001000000011, "iocsrrd.d">;
+def IOCSRWR_D : IOCSRWR<0b0000011001001000000111, "iocsrwr.d">;
+} // Predicates = [IsLA64]
+
+// Cache Maintenance Instructions
+def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12), "cacop",
+                     "$op, $rj, $imm12">;
+
+// TLB Maintenance Instructions
+def TLBSRCH  : FmtI32<0b00000110010010000010100000000000, "tlbsrch">;
+def TLBRD    : FmtI32<0b00000110010010000010110000000000, "tlbrd">;
+def TLBWR    : FmtI32<0b00000110010010000011000000000000, "tlbwr">;
+def TLBFILL  : FmtI32<0b00000110010010000011010000000000, "tlbfill">;
+def TLBCLR   : FmtI32<0b00000110010010000010000000000000, "tlbclr">;
+def TLBFLUSH : FmtI32<0b00000110010010000010010000000000, "tlbflush">;
+def INVTLB : FmtINVTLB<(outs), (ins GPR:$rk, GPR:$rj, uimm5:$op), "invtlb",
+                       "$op, $rj, $rk">;
+
+// Software Page Walking Instructions
+def LDDIR : Fmt2RI8<0b00000110010000, (outs GPR:$rd),
+                    (ins GPR:$rj, uimm8:$imm8), "lddir", "$rd, $rj, $imm8">;
+def LDPTE : FmtLDPTE<(outs), (ins GPR:$rj, uimm8:$seq), "ldpte", "$rj, $seq">;
+
+
+// Other Miscellaneous Instructions
+def ERTN : FmtI32<0b00000110010010000011100000000000, "ertn">;
+def DBCL : MISC_I15<0b00000000001010101, "dbcl">;
+def IDLE : MISC_I15<0b00000110010010001, "idle">;
