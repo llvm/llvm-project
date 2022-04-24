@@ -66,7 +66,20 @@ Check for null pointers passed as arguments to a function whose arguments are re
 
 core.NullDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""
-Check for dereferences of null pointers.
+Check for dereferences of null pointers. 
+
+This checker specifically does
+not report null pointer dereferences for x86 and x86-64 targets when the
+address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
+segment). See `X86/X86-64 Language Extensions
+<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
+for reference.
+
+The ``SuppressAddressSpaces`` option suppresses 
+warnings for null dereferences of all pointers with address spaces. You can
+disable this behavior with the option
+``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
+*Defaults to true*.
 
 .. code-block:: objc
 
