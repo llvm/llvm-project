@@ -444,23 +444,22 @@ OpFoldResult arith::FloorDivSIOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::RemUIOp::fold(ArrayRef<Attribute> operands) {
-  auto rhs = operands.back().dyn_cast_or_null<IntegerAttr>();
-  if (!rhs)
-    return {};
-  auto rhsValue = rhs.getValue();
+  // remui (x, 1) -> 0.
+  if (matchPattern(getRhs(), m_One()))
+    return Builder(getContext()).getZeroAttr(getType());
 
-  // x % 1 = 0
-  if (rhsValue.isOneValue())
-    return IntegerAttr::get(rhs.getType(), APInt(rhsValue.getBitWidth(), 0));
+  // Don't fold if it would require a division by zero.
+  bool div0 = false;
+  auto result =
+      constFoldBinaryOp<IntegerAttr>(operands, [&](APInt a, const APInt &b) {
+        if (div0 || b.isNullValue()) {
+          div0 = true;
+          return a;
+        }
+        return a.urem(b);
+      });
 
-  // Don't fold if it requires division by zero.
-  if (rhsValue.isNullValue())
-    return {};
-
-  auto lhs = operands.front().dyn_cast_or_null<IntegerAttr>();
-  if (!lhs)
-    return {};
-  return IntegerAttr::get(lhs.getType(), lhs.getValue().urem(rhsValue));
+  return div0 ? Attribute() : result;
 }
 
 //===----------------------------------------------------------------------===//
@@ -468,23 +467,22 @@ OpFoldResult arith::RemUIOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::RemSIOp::fold(ArrayRef<Attribute> operands) {
-  auto rhs = operands.back().dyn_cast_or_null<IntegerAttr>();
-  if (!rhs)
-    return {};
-  auto rhsValue = rhs.getValue();
+  // remsi (x, 1) -> 0.
+  if (matchPattern(getRhs(), m_One()))
+    return Builder(getContext()).getZeroAttr(getType());
 
-  // x % 1 = 0
-  if (rhsValue.isOneValue())
-    return IntegerAttr::get(rhs.getType(), APInt(rhsValue.getBitWidth(), 0));
+  // Don't fold if it would require a division by zero.
+  bool div0 = false;
+  auto result =
+      constFoldBinaryOp<IntegerAttr>(operands, [&](APInt a, const APInt &b) {
+        if (div0 || b.isNullValue()) {
+          div0 = true;
+          return a;
+        }
+        return a.srem(b);
+      });
 
-  // Don't fold if it requires division by zero.
-  if (rhsValue.isNullValue())
-    return {};
-
-  auto lhs = operands.front().dyn_cast_or_null<IntegerAttr>();
-  if (!lhs)
-    return {};
-  return IntegerAttr::get(lhs.getType(), lhs.getValue().srem(rhsValue));
+  return div0 ? Attribute() : result;
 }
 
 //===----------------------------------------------------------------------===//
