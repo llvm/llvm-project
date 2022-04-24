@@ -342,6 +342,32 @@ entry:
   ret i8 addrspace(1)* %res
 }
 
+; Show that ISEL of gc.relocate used in other BB does generate extra COPY instruction.
+define i1 @test_cross_bb_reloc(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
+; CHECK-VREG_LABEL: test_cross_bb_reloc:
+; CHECK-VREG:    bb.0.entry:
+; CHECK-VREG:      [[VREG:%[^ ]+]]:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, %2(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
+; CHECK-VREG:      [[EXTRA:%[^ ]+]]:gr64 = COPY [[VREG]]
+; CHECK-VREG:    bb.1.left:
+; CHECK-VREG:      $rdi = COPY [[EXTRA]]
+; CHECK-VREG:      CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+; CHECK-VREG:      $al = COPY %1
+; CHECK-VREG:      RET 0, $al
+
+entry:
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
+  %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
+  %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+  br i1 %external_cond, label %left, label %right
+
+left:
+  call void @consume(i32 addrspace(1)* %call1)
+  ret i1 %call2
+
+right:
+  ret i1 true
+}
+
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 declare dso_local i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
