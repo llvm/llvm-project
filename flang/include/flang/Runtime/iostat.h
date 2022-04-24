@@ -69,6 +69,7 @@ enum Iostat {
   IostatUTF8Decoding,
   IostatUnitOverflow,
   IostatBadRealInput,
+  IostatBadScaleFactor,
 };
 
 const char *IostatErrorString(int);

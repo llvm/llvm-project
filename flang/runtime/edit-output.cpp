@@ -196,9 +196,21 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   int scale{isEN || isES ? 1 : edit.modes.scale}; // 'kP' value
   int zeroesAfterPoint{0};
   if (scale < 0) {
+    if (scale <= -editDigits) {
+      io_.GetIoErrorHandler().SignalError(IostatBadScaleFactor,
+          "Scale factor (kP) %d cannot be less than -d (%d)", scale,
+          -editDigits);
+      return false;
+    }
     zeroesAfterPoint = -scale;
     significantDigits = std::max(0, significantDigits - zeroesAfterPoint);
   } else if (scale > 0) {
+    if (scale >= editDigits + 2) {
+      io_.GetIoErrorHandler().SignalError(IostatBadScaleFactor,
+          "Scale factor (kP) %d cannot be greater than d+2 (%d)", scale,
+          editDigits + 2);
+      return false;
+    }
     ++significantDigits;
     scale = std::min(scale, significantDigits + 1);
   }
