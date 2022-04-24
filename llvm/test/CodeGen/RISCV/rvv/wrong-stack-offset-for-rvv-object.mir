@@ -162,8 +162,8 @@ body:             |
   ; CHECK-NEXT:   $x10 = PseudoReadVLENB
   ; CHECK-NEXT:   $x10 = ADD $x2, killed $x10
   ; CHECK-NEXT:   SD killed renamable $x16, killed $x10, 48 :: (store (s64) into %fixed-stack.1, align 16)
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_MF8 0, 2, 3, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_MF8 0, 2, 3 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   $x10 = ADDI $x2, 24
   ; CHECK-NEXT:   PseudoVSPILL_M1 killed renamable $v8, killed $x10 :: (store unknown-size into %stack.1, align 8)
   ; CHECK-NEXT: {{  $}}
@@ -178,10 +178,10 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $x8, $x9
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   $x10 = ADDI $x2, 24
   ; CHECK-NEXT:   renamable $v8 = PseudoVRELOAD_M1 killed $x10 :: (load unknown-size from %stack.1, align 8)
-  ; CHECK-NEXT:   PseudoVSE8_V_MF8 killed renamable $v8, renamable $x8, 2, 3, implicit $vl, implicit $vtype :: (store (s16) into %ir.0, align 1)
+  ; CHECK-NEXT:   PseudoVSE8_V_MF8 killed renamable $v8, renamable $x8, 2, 3 /* e8 */, implicit $vl, implicit $vtype :: (store (s16) into %ir.0, align 1)
   ; CHECK-NEXT:   $x10 = COPY renamable $x9
   ; CHECK-NEXT:   PseudoCALL target-flags(riscv-plt) @fprintf, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2, implicit-def dead $x10
   ; CHECK-NEXT:   PseudoBR %bb.1
