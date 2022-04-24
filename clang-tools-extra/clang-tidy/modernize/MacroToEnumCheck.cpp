@@ -121,6 +121,8 @@ struct FileState {
   SourceLocation LastMacroLocation;
 };
 
+} // namespace
+
 class MacroToEnumCallbacks : public PPCallbacks {
 public:
   MacroToEnumCallbacks(MacroToEnumCheck *Check, const LangOptions &LangOptions,
@@ -197,6 +199,8 @@ public:
   // After we've seen everything, issue warnings and fix-its.
   void EndOfMainFile() override;
 
+  void invalidateRange(SourceRange Range);
+
 private:
   void newEnum() {
     if (Enums.empty() || !Enums.back().empty())
@@ -224,6 +228,7 @@ private:
   void checkName(const Token &MacroNameTok);
   void rememberExpressionName(const Token &MacroNameTok);
   void invalidateExpressionNames();
+  void issueDiagnostics();
   void warnMacroEnum(const EnumMacro &Macro) const;
   void fixEnumMacro(const MacroList &MacroList) const;
 
@@ -472,8 +477,20 @@ void MacroToEnumCallbacks::invalidateExpressionNames() {
 }
 
 void MacroToEnumCallbacks::EndOfMainFile() {
-  invalidateExpressionNames();
+    invalidateExpressionNames();
+    issueDiagnostics();
+}
 
+void MacroToEnumCallbacks::invalidateRange(SourceRange Range) {
+  llvm::erase_if(Enums, [Range](const MacroList &MacroList) {
+    return llvm::any_of(MacroList, [Range](const EnumMacro &Macro) {
+      return Macro.Directive->getLocation() >= Range.getBegin() &&
+             Macro.Directive->getLocation() <= Range.getEnd();
+    });
+  });
+}
+
+void MacroToEnumCallbacks::issueDiagnostics() {
   for (const MacroList &MacroList : Enums) {
     if (MacroList.empty())
       continue;
@@ -530,13 +547,43 @@ void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {
   Diagnostic << FixItHint::CreateInsertion(End, "};\n");
 }
 
-} // namespace
-
 void MacroToEnumCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(
-      std::make_unique<MacroToEnumCallbacks>(this, getLangOpts(), SM));
+  auto Callback = std::make_unique<MacroToEnumCallbacks>(this, getLangOpts(), SM);
+  PPCallback = Callback.get();
+  PP->addPPCallbacks(std::move(Callback));
+}
+
+void MacroToEnumCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
+  using namespace ast_matchers;
+  auto TopLevelDecl = hasParent(translationUnitDecl());
+  Finder->addMatcher(decl(TopLevelDecl).bind("top"), this);
+}
+
+static bool isValid(SourceRange Range) {
+  return Range.getBegin().isValid() && Range.getEnd().isValid();
+}
+
+static bool empty(SourceRange Range) {
+  return Range.getBegin() == Range.getEnd();
+}
+
+void MacroToEnumCheck::check(
+    const ast_matchers::MatchFinder::MatchResult &Result) {
+  auto *TLDecl = Result.Nodes.getNodeAs<Decl>("top");
+  if (TLDecl == nullptr)
+      return;
+
+  SourceRange Range = TLDecl->getSourceRange();
+  if (auto *TemplateFn = Result.Nodes.getNodeAs<FunctionTemplateDecl>("top")) {
+    if (TemplateFn->isThisDeclarationADefinition() && TemplateFn->hasBody())
+      Range = SourceRange{TemplateFn->getBeginLoc(),
+                          TemplateFn->getUnderlyingDecl()->getBodyRBrace()};
+  }
+
+  if (isValid(Range) && !empty(Range))
+    PPCallback->invalidateRange(Range);
 }
 
 } // namespace modernize
