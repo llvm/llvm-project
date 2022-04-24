@@ -562,3 +562,149 @@ bb2:                                              ; preds = %bb2, %bb
 bb7:                                              ; preds = %bb2
   ret void
 }
+
+; simple test for forward-searching. (and 1234) only uses lower word of input
+define signext i32 @test11(i64 %arg1, i64 %arg2, i64 %arg3)  {
+; CHECK-LABEL: test11:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    li a3, 256
+; CHECK-NEXT:  .LBB10_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    andi a0, a0, 1234
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    addw a0, a0, a1
+; CHECK-NEXT:    bltu a2, a3, .LBB10_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test11:
+; NOREMOVAL:       # %bb.0: # %entry
+; NOREMOVAL-NEXT:    addi a2, a2, -1
+; NOREMOVAL-NEXT:    li a3, 256
+; NOREMOVAL-NEXT:  .LBB10_1: # %bb2
+; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    andi a0, a0, 1234
+; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    add a0, a0, a1
+; NOREMOVAL-NEXT:    bltu a2, a3, .LBB10_1
+; NOREMOVAL-NEXT:  # %bb.2: # %bb7
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+entry:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %entry
+  %i1 = phi i64 [ %arg1, %entry ], [ %i5, %bb2 ]
+  %i2 = phi i64 [ %arg3, %entry ], [ %i3, %bb2 ]
+  %i3 = add i64 %i2, 1
+  %i4 = and i64 %i1, 1234
+  %i5 = add i64 %i4, %arg2
+  %i6 = icmp ugt i64 %i2, 255
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  %i7 = trunc i64 %i5 to i32
+  ret i32 %i7
+}
+
+; circular use-dependency and multiple transformations.
+define signext i32 @test12(i64 %arg1, i64 %arg2, i64 %arg3)  {
+; CHECK-LABEL: test12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a3, a2, -1
+; CHECK-NEXT:    li a4, 256
+; CHECK-NEXT:  .LBB11_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    mulw a2, a0, a1
+; CHECK-NEXT:    addw a0, a0, a2
+; CHECK-NEXT:    and a2, a2, a0
+; CHECK-NEXT:    addi a3, a3, 1
+; CHECK-NEXT:    add a0, a2, a1
+; CHECK-NEXT:    bltu a3, a4, .LBB11_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test12:
+; NOREMOVAL:       # %bb.0: # %entry
+; NOREMOVAL-NEXT:    addi a2, a2, -1
+; NOREMOVAL-NEXT:    li a3, 256
+; NOREMOVAL-NEXT:  .LBB11_1: # %bb2
+; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    xor a0, a0, a1
+; NOREMOVAL-NEXT:    mul a4, a0, a1
+; NOREMOVAL-NEXT:    add a0, a0, a4
+; NOREMOVAL-NEXT:    and a4, a4, a0
+; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    add a0, a4, a1
+; NOREMOVAL-NEXT:    bltu a2, a3, .LBB11_1
+; NOREMOVAL-NEXT:  # %bb.2: # %bb7
+; NOREMOVAL-NEXT:    sext.w a0, a4
+; NOREMOVAL-NEXT:    ret
+entry:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %entry
+  %i1 = phi i64 [ %arg1, %entry ], [ %i6, %bb2 ]
+  %i2 = phi i64 [ %arg3, %entry ], [ %i3, %bb2 ]
+  %i3 = add i64 %i2, 1
+  %i4 = xor i64 %i1, %arg2
+  %i5 = mul i64 %i4, %arg2
+  %i9 = add i64 %i4, %i5
+  %i8 = and i64 %i5, %i9
+  %i6 = add i64 %i8, %arg2
+  %i7 = icmp ugt i64 %i2, 255
+  br i1 %i7, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  %r = trunc i64 %i8 to i32
+  ret i32 %r
+}
+
+; Not optimized. sdiv doesn't only use lower word
+define signext i32 @test13(i64 %arg1, i64 %arg2, i64 %arg3)  {
+; CHECK-LABEL: test13:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    li a3, 256
+; CHECK-NEXT:  .LBB12_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    div a0, a0, a1
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    bltu a2, a3, .LBB12_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test13:
+; NOREMOVAL:       # %bb.0: # %entry
+; NOREMOVAL-NEXT:    addi a2, a2, -1
+; NOREMOVAL-NEXT:    li a3, 256
+; NOREMOVAL-NEXT:  .LBB12_1: # %bb2
+; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    div a0, a0, a1
+; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    add a0, a0, a1
+; NOREMOVAL-NEXT:    bltu a2, a3, .LBB12_1
+; NOREMOVAL-NEXT:  # %bb.2: # %bb7
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+entry:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %entry
+  %i1 = phi i64 [ %arg1, %entry ], [ %i5, %bb2 ]
+  %i2 = phi i64 [ %arg3, %entry ], [ %i3, %bb2 ]
+  %i3 = add i64 %i2, 1
+  %i4 = sdiv i64 %i1, %arg2
+  %i5 = add i64 %i4, %arg2
+  %i6 = icmp ugt i64 %i2, 255
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  %i8 = trunc i64 %i5 to i32
+  ret i32 %i8
+}

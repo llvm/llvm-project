@@ -812,9 +812,8 @@ define signext i32 @fshri_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: fshri_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 5
-; RV64I-NEXT:    slli a0, a0, 27
+; RV64I-NEXT:    slliw a0, a0, 27
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: fshri_i32:
@@ -865,9 +864,8 @@ define signext i32 @fshli_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: fshli_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srliw a1, a1, 27
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: fshli_i32:
