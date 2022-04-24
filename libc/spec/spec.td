@@ -110,7 +110,6 @@ def FILERestrictedPtr : RestrictedPtrType<FILE>;
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;
 
-
 class Macro<string name> {
   string Name = name;
 }
