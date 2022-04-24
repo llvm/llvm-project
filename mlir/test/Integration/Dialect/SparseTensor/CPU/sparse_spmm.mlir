@@ -7,7 +7,7 @@
 //
 // Do the same run, but now with SIMDization as well. This should not change the outcome.
 //
-// RUN: mlir-opt %s --sparse-compiler="vectorization-strategy=2 vl=2" | \
+// RUN: mlir-opt %s --sparse-compiler="vectorization-strategy=any-storage-inner-loop vl=2" | \
 // RUN: TENSOR0="%mlir_integration_test_dir/data/wide.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \

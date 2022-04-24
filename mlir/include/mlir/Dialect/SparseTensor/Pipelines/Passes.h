@@ -30,12 +30,14 @@ namespace sparse_tensor {
 struct SparseCompilerOptions
     : public PassPipelineOptions<SparseCompilerOptions> {
   // These options must be kept in sync with `SparsificationBase`.
-  PassOptions::Option<int32_t> parallelization{
+
+  PassOptions::Option<enum SparseParallelizationStrategy> parallelization{
       *this, "parallelization-strategy",
-      desc("Set the parallelization strategy"), init(0)};
-  PassOptions::Option<int32_t> vectorization{
+      desc("Set the parallelization strategy"),
+      init(SparseParallelizationStrategy::kNone)};
+  PassOptions::Option<enum SparseVectorizationStrategy> vectorization{
       *this, "vectorization-strategy", desc("Set the vectorization strategy"),
-      init(0)};
+      init(SparseVectorizationStrategy::kNone)};
   PassOptions::Option<int32_t> vectorLength{
       *this, "vl", desc("Set the vector length"), init(1)};
   PassOptions::Option<bool> enableSIMDIndex32{
@@ -47,10 +49,8 @@ struct SparseCompilerOptions
 
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(sparseParallelizationStrategy(parallelization),
-                                 sparseVectorizationStrategy(vectorization),
-                                 vectorLength, enableSIMDIndex32,
-                                 enableVLAVectorization);
+    return SparsificationOptions(parallelization, vectorization, vectorLength,
+                                 enableSIMDIndex32, enableVLAVectorization);
   }
 
   // These options must be kept in sync with `SparseTensorConversionBase`.
