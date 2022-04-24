@@ -2179,11 +2179,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *sym = symtab->find(name);
-    // Avoid wrapping symbols that are lazy and unreferenced at this point, to
-    // not create undefined references. The isUsedInRegularObj check handles the
-    // case of a weak reference, which we still want to wrap even though it
-    // doesn't cause lazy symbols to be extracted.
-    if (!sym || (sym->isLazy() && !sym->isUsedInRegularObj))
+    if (!sym)
       continue;
 
     Symbol *real = addUnusedUndefined(saver().save("__real_" + name));

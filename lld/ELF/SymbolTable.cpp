@@ -44,7 +44,10 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
     wrap->isUsedInRegularObj = true;
   if (real->isUsedInRegularObj)
     sym->isUsedInRegularObj = true;
-  else if (sym->isUndefined())
+  else if (!sym->isDefined())
+    // Now that all references to sym have been redirected to wrap, if there are
+    // no references to real (which has been redirected to sym), we only need to
+    // keep sym if it was defined, otherwise it's unused and can be dropped.
     sym->isUsedInRegularObj = false;
 
   // Now renaming is complete, and no one refers to real. We drop real from
