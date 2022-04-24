@@ -831,6 +831,15 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
       return error(Error, YamlMFI.StackProtector.SourceRange);
     MFI.setStackProtectorIndex(FI);
   }
+
+  if (!YamlMFI.FunctionContext.Value.empty()) {
+    SMDiagnostic Error;
+    int FI;
+    if (parseStackObjectReference(PFS, FI, YamlMFI.FunctionContext.Value, Error))
+      return error(Error, YamlMFI.FunctionContext.SourceRange);
+    MFI.setFunctionContextIndex(FI);
+  }
+
   return false;
 }
 

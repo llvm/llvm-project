@@ -481,6 +481,12 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
         .printStackObjectReference(MFI.getStackProtectorIndex());
   }
 
+  if (MFI.hasFunctionContextIndex()) {
+    raw_string_ostream StrOS(YMF.FrameInfo.FunctionContext.Value);
+    MIPrinter(StrOS, MST, RegisterMaskIds, StackObjectOperandMapping)
+        .printStackObjectReference(MFI.getFunctionContextIndex());
+  }
+
   // Print the debug variable information.
   for (const MachineFunction::VariableDbgInfo &DebugVar :
        MF.getVariableDbgInfo()) {
