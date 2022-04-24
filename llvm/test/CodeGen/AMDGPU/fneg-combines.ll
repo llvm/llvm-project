@@ -563,7 +563,9 @@ define amdgpu_ps float @v_fneg_negk_minnum_f32_no_ieee(float %a) #0 {
 
 ; GCN-LABEL: {{^}}v_fneg_0_minnum_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
-; GCN: v_min_f32_e32 [[RESULT:v[0-9]+]], 0, [[A]]
+; GCN-NOT [[A]]
+; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], 0, [[A]]
+; GCN: v_xor_b32_e32 [[RESULT:v[0-9]+]], 0x80000000, [[MIN]]
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @v_fneg_0_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -571,7 +573,7 @@ define amdgpu_kernel void @v_fneg_0_minnum_f32(float addrspace(1)* %out, float a
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
-  %min = call float @llvm.minnum.f32(float 0.0, float %a)
+  %min = call nnan float @llvm.minnum.f32(float 0.0, float %a)
   %fneg = fneg float %min
   store float %fneg, float addrspace(1)* %out.gep
   ret void
@@ -970,7 +972,9 @@ define amdgpu_ps float @v_fneg_negk_maxnum_f32_no_ieee(float %a) #0 {
 
 ; GCN-LABEL: {{^}}v_fneg_0_maxnum_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
-; GCN: v_max_f32_e32 [[RESULT:v[0-9]+]], 0, [[A]]
+; GCN-NOT: [[A]]
+; GCN: v_max_f32_e32 [[MAX:v[0-9]+]], 0, [[A]]
+; GCN: v_xor_b32_e32 [[RESULT:v[0-9]+]], 0x80000000, [[MAX]]
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @v_fneg_0_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -978,7 +982,7 @@ define amdgpu_kernel void @v_fneg_0_maxnum_f32(float addrspace(1)* %out, float a
   %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
-  %max = call float @llvm.maxnum.f32(float 0.0, float %a)
+  %max = call nnan float @llvm.maxnum.f32(float 0.0, float %a)
   %fneg = fneg float %max
   store float %fneg, float addrspace(1)* %out.gep
   ret void
