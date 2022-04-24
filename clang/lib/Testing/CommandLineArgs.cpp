@@ -36,6 +36,9 @@ std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang) {
   case Lang_CXX20:
     Args = {"-std=c++20", "-frtti"};
     break;
+  case Lang_OBJC:
+    Args = {"-x", "objective-c", "-frtti", "-fobjc-nonfragile-abi"};
+    break;
   case Lang_OBJCXX:
     Args = {"-x", "objective-c++", "-frtti"};
     break;
@@ -93,6 +96,9 @@ StringRef getFilenameForTesting(TestLanguage Lang) {
 
   case Lang_OpenCL:
     return "input.cl";
+
+  case Lang_OBJC:
+    return "input.m";
 
   case Lang_OBJCXX:
     return "input.mm";
