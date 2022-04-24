@@ -623,3 +623,60 @@ val instr_set_debug_loc : Llvm.llvalue -> Llvm.llmetadata option -> unit
 
 val get_metadata_kind : Llvm.llmetadata -> MetadataKind.t
 (** [get_metadata_kind] Obtain the enumerated type of a Metadata instance. *)
+
+val dibuild_create_auto_variable :
+  lldibuilder ->
+  scope:Llvm.llmetadata ->
+  name:string ->
+  file:Llvm.llmetadata ->
+  line:int ->
+  ty:Llvm.llmetadata ->
+  always_preserve:bool ->
+  lldiflags ->
+  align_in_bits:int ->
+  Llvm.llmetadata
+(** [dibuild_create_auto_variable] Create a new descriptor for a
+    local auto variable. *)
+
+val dibuild_create_parameter_variable :
+  lldibuilder ->
+  scope:Llvm.llmetadata ->
+  name:string ->
+  argno:int ->
+  file:Llvm.llmetadata ->
+  line:int ->
+  ty:Llvm.llmetadata ->
+  always_preserve:bool ->
+  lldiflags ->
+  Llvm.llmetadata
+(** [dibuild_create_parameter_variable] Create a new descriptor for a
+    function parameter variable. *)
+
+val dibuild_insert_declare_before :
+  lldibuilder ->
+  storage:Llvm.llvalue ->
+  var_info:Llvm.llmetadata ->
+  expr:Llvm.llmetadata ->
+  location:Llvm.llmetadata ->
+  instr:Llvm.llvalue ->
+  Llvm.llvalue
+(** [dibuild_insert_declare_before]  Insert a new llvm.dbg.declare
+    intrinsic call before the given instruction [instr]. *)
+
+val dibuild_insert_declare_at_end :
+  lldibuilder ->
+  storage:Llvm.llvalue ->
+  var_info:Llvm.llmetadata ->
+  expr:Llvm.llmetadata ->
+  location:Llvm.llmetadata ->
+  block:Llvm.llbasicblock ->
+  Llvm.llvalue
+(** [dibuild_insert_declare_at_end] Insert a new llvm.dbg.declare
+    intrinsic call at the end of basic block [block]. If [block]
+    has a terminator instruction, the intrinsic is inserted
+    before that terminator instruction. *)
+
+val dibuild_expression : lldibuilder -> Int64.t array -> Llvm.llmetadata
+(** [dibuild_expression] Create a new descriptor for the specified variable
+    which has a complex address expression for its address.
+    See LLVMDIBuilderCreateExpression. *)

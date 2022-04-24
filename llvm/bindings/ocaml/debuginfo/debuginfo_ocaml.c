@@ -911,3 +911,98 @@ value llvm_di_variable_get_file(LLVMMetadataRef Variable) {
 value llvm_get_metadata_kind(LLVMMetadataRef Metadata) {
   return Val_int(LLVMGetMetadataKind(Metadata));
 }
+
+LLVMMetadataRef llvm_dibuild_create_auto_variable_native(
+    value Builder, LLVMMetadataRef Scope, value Name, LLVMMetadataRef File,
+    value Line, LLVMMetadataRef Ty, value AlwaysPreserve, value Flags,
+    value AlignInBits) {
+  return LLVMDIBuilderCreateAutoVariable(
+      DIBuilder_val(Builder), Scope, String_val(Name), caml_string_length(Name),
+      File, Int_val(Line), Ty, Bool_val(AlwaysPreserve), DIFlags_val(Flags),
+      Int_val(AlignInBits));
+}
+
+LLVMMetadataRef llvm_dibuild_create_auto_variable_bytecode(value *argv,
+                                                           int arg) {
+
+  return llvm_dibuild_create_auto_variable_native(
+      argv[0],                  // Builder
+      (LLVMMetadataRef)argv[1], // Scope
+      argv[2],                  // Name
+      (LLVMMetadataRef)argv[3], // File
+      argv[4],                  // Line
+      (LLVMMetadataRef)argv[5], // Ty
+      argv[6],                  // AlwaysPreserve
+      argv[7],                  // Flags
+      argv[8]                   // AlignInBits
+  );
+}
+
+LLVMMetadataRef llvm_dibuild_create_parameter_variable_native(
+    value Builder, LLVMMetadataRef Scope, value Name, unsigned ArgNo,
+    LLVMMetadataRef File, value Line, LLVMMetadataRef Ty, value AlwaysPreserve,
+    value Flags) {
+  return LLVMDIBuilderCreateParameterVariable(
+      DIBuilder_val(Builder), Scope, String_val(Name), caml_string_length(Name),
+      ArgNo, File, Int_val(Line), Ty, Bool_val(AlwaysPreserve),
+      DIFlags_val(Flags));
+}
+
+LLVMMetadataRef llvm_dibuild_create_parameter_variable_bytecode(value *argv,
+                                                                int arg) {
+
+  return llvm_dibuild_create_parameter_variable_native(
+      argv[0],                  // Builder
+      (LLVMMetadataRef)argv[1], // Scope
+      argv[2],                  // Name
+      argv[3],                  // ArgNo
+      (LLVMMetadataRef)argv[4], // File
+      argv[5],                  // Line
+      (LLVMMetadataRef)argv[6], // Ty
+      argv[7],                  // AlwaysPreserve
+      argv[8]                   // Flags
+  );
+}
+
+LLVMValueRef llvm_dibuild_insert_declare_before_native(
+    value Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
+  return LLVMDIBuilderInsertDeclareBefore(DIBuilder_val(Builder), Storage,
+                                          VarInfo, Expr, DebugLoc, Instr);
+}
+
+LLVMValueRef llvm_dibuild_insert_declare_before_bytecode(value *argv, int arg) {
+
+  return llvm_dibuild_insert_declare_before_native(
+      argv[0],                  // Builder
+      (LLVMValueRef)argv[1],    // Storage
+      (LLVMMetadataRef)argv[2], // VarInfo
+      (LLVMMetadataRef)argv[3], // Expr
+      (LLVMMetadataRef)argv[4], // DebugLoc
+      (LLVMValueRef)argv[5]     // Instr
+  );
+}
+
+LLVMValueRef llvm_dibuild_insert_declare_at_end_native(
+    value Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
+    LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
+  return LLVMDIBuilderInsertDeclareAtEnd(DIBuilder_val(Builder), Storage,
+                                         VarInfo, Expr, DebugLoc, Block);
+}
+
+LLVMValueRef llvm_dibuild_insert_declare_at_end_bytecode(value *argv, int arg) {
+
+  return llvm_dibuild_insert_declare_at_end_native(
+      argv[0],                   // Builder
+      (LLVMValueRef)argv[1],     // Storage
+      (LLVMMetadataRef)argv[2],  // VarInfo
+      (LLVMMetadataRef)argv[3],  // Expr
+      (LLVMMetadataRef)argv[4],  // DebugLoc
+      (LLVMBasicBlockRef)argv[5] // Block
+  );
+}
+
+LLVMMetadataRef llvm_dibuild_expression(value Builder, value Addr) {
+  return LLVMDIBuilderCreateExpression(
+      DIBuilder_val(Builder), (uint64_t *)Op_val(Addr), Wosize_val(Addr));
+}
