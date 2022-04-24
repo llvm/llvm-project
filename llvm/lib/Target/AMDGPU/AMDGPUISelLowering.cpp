@@ -4578,6 +4578,19 @@ SDValue AMDGPUTargetLowering::getRecipEstimate(SDValue Operand,
   return SDValue();
 }
 
+static unsigned workitemIntrinsicDim(unsigned ID) {
+  switch (ID) {
+  case Intrinsic::amdgcn_workitem_id_x:
+    return 0;
+  case Intrinsic::amdgcn_workitem_id_y:
+    return 1;
+  case Intrinsic::amdgcn_workitem_id_z:
+    return 2;
+  default:
+    llvm_unreachable("not a workitem intrinsic");
+  }
+}
+
 void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     const SDValue Op, KnownBits &Known,
     const APInt &DemandedElts, const SelectionDAG &DAG, unsigned Depth) const {
@@ -4712,6 +4725,14 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       // These return at most the wavefront size - 1.
       unsigned Size = Op.getValueType().getSizeInBits();
       Known.Zero.setHighBits(Size - ST.getWavefrontSizeLog2());
+      break;
+    }
+    case Intrinsic::amdgcn_workitem_id_x:
+    case Intrinsic::amdgcn_workitem_id_y:
+    case Intrinsic::amdgcn_workitem_id_z: {
+      unsigned MaxValue = Subtarget->getMaxWorkitemID(
+          DAG.getMachineFunction().getFunction(), workitemIntrinsicDim(IID));
+      Known.Zero.setHighBits(countLeadingZeros(MaxValue));
       break;
     }
     default:

@@ -49,7 +49,9 @@ static void cloneFrameInfo(
   DstMFI.setHasVAStart(SrcMFI.hasVAStart());
   DstMFI.setHasMustTailInVarArgFunc(SrcMFI.hasMustTailInVarArgFunc());
   DstMFI.setHasTailCall(SrcMFI.hasTailCall());
-  DstMFI.setMaxCallFrameSize(SrcMFI.getMaxCallFrameSize());
+
+  if (SrcMFI.isMaxCallFrameSizeComputed())
+    DstMFI.setMaxCallFrameSize(SrcMFI.getMaxCallFrameSize());
 
   DstMFI.setCVBytesOfCalleeSavedRegisters(
       SrcMFI.getCVBytesOfCalleeSavedRegisters());

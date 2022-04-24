@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 
 using namespace mlir;
@@ -14,7 +16,9 @@ using namespace mlir;
 #include "mlir/Dialect/Transform/IR/TransformDialect.cpp.inc"
 
 void transform::TransformDialect::initialize() {
-  addOperations<
+  // Using the checked version to enable the same assertions as for the ops from
+  // extensions.
+  addOperationsChecked<
 #define GET_OP_LIST
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();

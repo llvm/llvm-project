@@ -25,6 +25,8 @@ void test_setbuf() {
   print_something();
 
   print_one_byte(buf);
+
+  setbuf(stdout, NULL);
 }
 
 void test_setbuffer() {
@@ -41,6 +43,8 @@ void test_setbuffer() {
   print_something();
 
   print_one_byte(buf);
+
+  setbuffer(stdout, NULL, 0);
 }
 
 void test_setlinebuf() {
@@ -67,6 +71,8 @@ void test_setvbuf() {
   print_something();
 
   print_one_byte(buf);
+
+  setvbuf(stdout, NULL, _IONBF, 0);
 }
 
 int main(void) {

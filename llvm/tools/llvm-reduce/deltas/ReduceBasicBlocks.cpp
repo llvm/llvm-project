@@ -29,13 +29,13 @@ using namespace llvm;
 static void replaceBranchTerminator(BasicBlock &BB,
                                     const DenseSet<BasicBlock *> &BBsToKeep) {
   auto *Term = BB.getTerminator();
-  std::vector<BasicBlock *> ChunkSucessors;
+  std::vector<BasicBlock *> ChunkSuccessors;
   for (auto *Succ : successors(&BB))
     if (BBsToKeep.count(Succ))
-      ChunkSucessors.push_back(Succ);
+      ChunkSuccessors.push_back(Succ);
 
   // BB only references Chunk BBs
-  if (ChunkSucessors.size() == Term->getNumSuccessors())
+  if (ChunkSuccessors.size() == Term->getNumSuccessors())
     return;
 
   bool IsBranch = isa<BranchInst>(Term) || isa<InvokeInst>(Term);
@@ -46,7 +46,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
   Term->replaceAllUsesWith(UndefValue::get(Term->getType()));
   Term->eraseFromParent();
 
-  if (ChunkSucessors.empty()) {
+  if (ChunkSuccessors.empty()) {
     auto *FnRetTy = BB.getParent()->getReturnType();
     ReturnInst::Create(BB.getContext(),
                        FnRetTy->isVoidTy() ? nullptr : UndefValue::get(FnRetTy),
@@ -55,12 +55,12 @@ static void replaceBranchTerminator(BasicBlock &BB,
   }
 
   if (IsBranch)
-    BranchInst::Create(ChunkSucessors[0], &BB);
+    BranchInst::Create(ChunkSuccessors[0], &BB);
 
   if (Address) {
     auto *NewIndBI =
-        IndirectBrInst::Create(Address, ChunkSucessors.size(), &BB);
-    for (auto *Dest : ChunkSucessors)
+        IndirectBrInst::Create(Address, ChunkSuccessors.size(), &BB);
+    for (auto *Dest : ChunkSuccessors)
       NewIndBI->addDestination(Dest);
   }
 }

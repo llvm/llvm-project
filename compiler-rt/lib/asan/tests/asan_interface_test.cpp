@@ -413,6 +413,9 @@ TEST(AddressSanitizerInterface, HandleNoReturnTest) {
   __asan_poison_memory_region(array, sizeof(array));
   BAD_ACCESS(array, 20);
   __asan_handle_no_return();
+  // Fake stack does not need to be unpoisoned.
+  if (__asan_get_current_fake_stack())
+    return;
   // It unpoisons the whole thread stack.
   GOOD_ACCESS(array, 20);
 }

@@ -152,8 +152,17 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return ra.addend == rb.addend;
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
-    return isecA->getOffset(valueA + ra.addend) ==
-           isecB->getOffset(valueB + rb.addend);
+    if (ra.referent.is<Symbol *>())
+      // For symbol relocs, we compare the contents at the symbol address. We
+      // don't do `getOffset(value + addend)` because value + addend may not be
+      // a valid offset in the literal section.
+      return isecA->getOffset(valueA) == isecB->getOffset(valueB) &&
+             ra.addend == rb.addend;
+    else {
+      assert(valueA == 0 && valueB == 0);
+      // For section relocs, we compare the content at the section offset.
+      return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
+    }
   };
   return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
                     f);

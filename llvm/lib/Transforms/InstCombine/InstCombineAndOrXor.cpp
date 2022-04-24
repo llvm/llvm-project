@@ -2381,6 +2381,34 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
   return nullptr;
 }
 
+// (icmp eq X, 0) | (icmp ult Other, X) -> (icmp ule Other, X-1)
+Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
+                                    IRBuilderBase &Builder) {
+  if (IsAnd)
+    return nullptr;
+
+  ICmpInst::Predicate LPred = LHS->getPredicate();
+  ICmpInst::Predicate RPred = RHS->getPredicate();
+  Value *LHS0 = LHS->getOperand(0);
+  if (LPred != ICmpInst::ICMP_EQ || !match(LHS->getOperand(1), m_Zero()) ||
+      !LHS0->getType()->isIntOrIntVectorTy() ||
+      !(LHS->hasOneUse() || RHS->hasOneUse()))
+    return nullptr;
+
+  Value *Other;
+  if (RPred == ICmpInst::ICMP_ULT && RHS->getOperand(1) == LHS0)
+    Other = RHS->getOperand(0);
+  else if (RPred == ICmpInst::ICMP_UGT && RHS->getOperand(0) == LHS0)
+    Other = RHS->getOperand(1);
+  else
+    return nullptr;
+
+  return Builder.CreateICmp(
+      ICmpInst::ICMP_UGE,
+      Builder.CreateAdd(LHS0, Constant::getAllOnesValue(LHS0->getType())),
+      Other);
+}
+
 /// Fold (icmp)&(icmp) or (icmp)|(icmp) if possible.
 Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                           BinaryOperator &BO, bool IsAnd) {
@@ -2472,31 +2500,10 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, Builder))
     return V;
 
-  if (!IsAnd && (LHS->hasOneUse() || RHS->hasOneUse())) {
-    // (icmp eq B, 0) | (icmp ult A, B) -> (icmp ule A, B-1)
-    // (icmp eq B, 0) | (icmp ugt B, A) -> (icmp ule A, B-1)
-    Value *A = nullptr, *B = nullptr;
-    if (PredL == ICmpInst::ICMP_EQ && match(LHS1, m_Zero())) {
-      B = LHS0;
-      if (PredR == ICmpInst::ICMP_ULT && LHS0 == RHS1)
-        A = RHS0;
-      else if (PredR == ICmpInst::ICMP_UGT && LHS0 == RHS0)
-        A = RHS1;
-    }
-    // (icmp ult A, B) | (icmp eq B, 0) -> (icmp ule A, B-1)
-    // (icmp ugt B, A) | (icmp eq B, 0) -> (icmp ule A, B-1)
-    else if (PredR == ICmpInst::ICMP_EQ && match(RHS1, m_Zero())) {
-      B = RHS0;
-      if (PredL == ICmpInst::ICMP_ULT && RHS0 == LHS1)
-        A = LHS0;
-      else if (PredL == ICmpInst::ICMP_UGT && RHS0 == LHS0)
-        A = LHS1;
-    }
-    if (A && B && B->getType()->isIntOrIntVectorTy())
-      return Builder.CreateICmp(
-          ICmpInst::ICMP_UGE,
-          Builder.CreateAdd(B, Constant::getAllOnesValue(B->getType())), A);
-  }
+  if (Value *V = foldAndOrOfICmpEqZeroAndICmp(LHS, RHS, IsAnd, Builder))
+    return V;
+  if (Value *V = foldAndOrOfICmpEqZeroAndICmp(RHS, LHS, IsAnd, Builder))
+    return V;
 
   if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, BO, Builder, Q))
     return V;

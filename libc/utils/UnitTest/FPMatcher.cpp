@@ -10,26 +10,14 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 
+#include "utils/UnitTest/StringUtils.h"
+
 #include <sstream>
 #include <string>
 
 namespace __llvm_libc {
 namespace fputil {
 namespace testing {
-
-// Return the first N hex digits of an integer as a string in upper case.
-template <typename T>
-cpp::EnableIfType<cpp::IsIntegral<T>::Value, std::string>
-uintToHex(T X, size_t Length = sizeof(T) * 2) {
-  std::string s(Length, '0');
-
-  for (auto it = s.rbegin(), end = s.rend(); it != end; ++it, X >>= 4) {
-    unsigned char Mod = static_cast<unsigned char>(X) & 15;
-    *it = (Mod < 10 ? '0' + Mod : 'a' + Mod - 10);
-  }
-
-  return s;
-}
 
 template <typename ValType, typename StreamType>
 cpp::EnableIfType<cpp::IsFloatingPointType<ValType>::Value, void>
@@ -53,13 +41,13 @@ describeValue(const char *label, ValType value, StreamType &stream) {
         sizeof(typename fputil::FPBits<ValType>::UIntType) * 2;
 
     stream << "0x"
-           << uintToHex<typename fputil::FPBits<ValType>::UIntType>(
+           << int_to_hex<typename fputil::FPBits<ValType>::UIntType>(
                   bits.uintval(), bitsWidthInHex)
            << ", (S | E | M) = (" << (bits.get_sign() ? '1' : '0') << " | 0x"
-           << uintToHex<uint16_t>(bits.get_unbiased_exponent(),
-                                  exponentWidthInHex)
+           << int_to_hex<uint16_t>(bits.get_unbiased_exponent(),
+                                   exponentWidthInHex)
            << " | 0x"
-           << uintToHex<typename fputil::FPBits<ValType>::UIntType>(
+           << int_to_hex<typename fputil::FPBits<ValType>::UIntType>(
                   bits.get_mantissa(), mantissaWidthInHex)
            << ")";
   }

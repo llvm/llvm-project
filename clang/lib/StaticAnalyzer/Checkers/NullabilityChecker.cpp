@@ -90,7 +90,7 @@ public:
   // find warnings about nullability annotations that they have explicitly
   // added themselves higher priority to fix than warnings on calls to system
   // libraries.
-  DefaultBool NoDiagnoseCallsToSystemHeaders;
+  bool NoDiagnoseCallsToSystemHeaders = false;
 
   void checkBind(SVal L, SVal V, const Stmt *S, CheckerContext &C) const;
   void checkPostStmt(const ExplicitCastExpr *CE, CheckerContext &C) const;
@@ -115,7 +115,7 @@ public:
     CK_NumCheckKinds
   };
 
-  DefaultBool ChecksEnabled[CK_NumCheckKinds];
+  bool ChecksEnabled[CK_NumCheckKinds] = {false};
   CheckerNameRef CheckNames[CK_NumCheckKinds];
   mutable std::unique_ptr<BugType> BTs[CK_NumCheckKinds];
 
@@ -130,7 +130,7 @@ public:
   // NullabilityMap. It is possible to catch errors like passing a null pointer
   // to a callee that expects nonnull argument without the information that is
   // stroed in the NullabilityMap. This is an optimization.
-  DefaultBool NeedTracking;
+  bool NeedTracking = false;
 
 private:
   class NullabilityBugVisitor : public BugReporterVisitor {

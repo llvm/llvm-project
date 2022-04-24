@@ -4,9 +4,7 @@
 ; PR21929
 define i32 @modulo2(i32 %x) {
 ; CHECK-LABEL: @modulo2(
-; CHECK-NEXT:    [[REM_I:%.*]] = srem i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[REM_I]], 2
-; CHECK-NEXT:    [[RET_I:%.*]] = add nsw i32 [[TMP1]], [[REM_I]]
+; CHECK-NEXT:    [[RET_I:%.*]] = and i32 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i32 [[RET_I]]
 ;
   %rem.i = srem i32 %x, 2
@@ -18,9 +16,7 @@ define i32 @modulo2(i32 %x) {
 
 define <2 x i32> @modulo2_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @modulo2_vec(
-; CHECK-NEXT:    [[REM_I:%.*]] = srem <2 x i32> [[X:%.*]], <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[REM_I]], <i32 2, i32 2>
-; CHECK-NEXT:    [[RET_I:%.*]] = add nsw <2 x i32> [[TMP1]], [[REM_I]]
+; CHECK-NEXT:    [[RET_I:%.*]] = and <2 x i32> [[X:%.*]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[RET_I]]
 ;
   %rem.i = srem <2 x i32> %x, <i32 2, i32 2>
@@ -62,9 +58,7 @@ define <2 x i32> @modulo3_vec(<2 x i32> %x) {
 
 define i32 @modulo4(i32 %x) {
 ; CHECK-LABEL: @modulo4(
-; CHECK-NEXT:    [[REM_I:%.*]] = srem i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[REM_I]], 4
-; CHECK-NEXT:    [[RET_I:%.*]] = add nsw i32 [[TMP1]], [[REM_I]]
+; CHECK-NEXT:    [[RET_I:%.*]] = and i32 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i32 [[RET_I]]
 ;
   %rem.i = srem i32 %x, 4
@@ -76,9 +70,7 @@ define i32 @modulo4(i32 %x) {
 
 define <2 x i32> @modulo4_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @modulo4_vec(
-; CHECK-NEXT:    [[REM_I:%.*]] = srem <2 x i32> [[X:%.*]], <i32 4, i32 4>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[REM_I]], <i32 4, i32 4>
-; CHECK-NEXT:    [[RET_I:%.*]] = add nsw <2 x i32> [[TMP1]], [[REM_I]]
+; CHECK-NEXT:    [[RET_I:%.*]] = and <2 x i32> [[X:%.*]], <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i32> [[RET_I]]
 ;
   %rem.i = srem <2 x i32> %x, <i32 4, i32 4>
@@ -120,9 +112,7 @@ define <2 x i32> @modulo7_vec(<2 x i32> %x) {
 
 define i32 @modulo32(i32 %x) {
 ; CHECK-LABEL: @modulo32(
-; CHECK-NEXT:    [[REM_I:%.*]] = srem i32 [[X:%.*]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[REM_I]], 32
-; CHECK-NEXT:    [[RET_I:%.*]] = add nsw i32 [[TMP1]], [[REM_I]]
+; CHECK-NEXT:    [[RET_I:%.*]] = and i32 [[X:%.*]], 31
 ; CHECK-NEXT:    ret i32 [[RET_I]]
 ;
   %rem.i = srem i32 %x, 32
@@ -134,9 +124,7 @@ define i32 @modulo32(i32 %x) {
 
 define <2 x i32> @modulo32_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @modulo32_vec(
-; CHECK-NEXT:    [[REM_I:%.*]] = srem <2 x i32> [[X:%.*]], <i32 32, i32 32>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[REM_I]], <i32 32, i32 32>
-; CHECK-NEXT:    [[RET_I:%.*]] = add nsw <2 x i32> [[TMP1]], [[REM_I]]
+; CHECK-NEXT:    [[RET_I:%.*]] = and <2 x i32> [[X:%.*]], <i32 31, i32 31>
 ; CHECK-NEXT:    ret <2 x i32> [[RET_I]]
 ;
   %rem.i = srem <2 x i32> %x, <i32 32, i32 32>

@@ -21,6 +21,10 @@ class AffineForOp;
 class AffineMap;
 class PatternRewriter;
 
+namespace tensor {
+class ExtractSliceOp;
+} // namespace tensor
+
 namespace linalg {
 class LinalgDependenceGraph;
 
