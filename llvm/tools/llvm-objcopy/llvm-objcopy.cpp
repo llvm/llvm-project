@@ -41,6 +41,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Memory.h"
@@ -131,66 +132,16 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   llvm_unreachable("unsupported output format");
 }
 
-static Error restoreStatOnFile(StringRef Filename,
-                               const sys::fs::file_status &Stat,
-                               const ConfigManager &ConfigMgr) {
-  int FD;
-  const CommonConfig &Config = ConfigMgr.getCommonConfig();
-
-  // Writing to stdout should not be treated as an error here, just
-  // do not set access/modification times or permissions.
-  if (Filename == "-")
-    return Error::success();
-
-  if (auto EC =
-          sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting))
-    return createFileError(Filename, EC);
-
-  if (Config.PreserveDates)
-    if (auto EC = sys::fs::setLastAccessAndModificationTime(
-            FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
-      return createFileError(Filename, EC);
-
-  sys::fs::file_status OStat;
-  if (std::error_code EC = sys::fs::status(FD, OStat))
-    return createFileError(Filename, EC);
-  if (OStat.type() == sys::fs::file_type::regular_file) {
-#ifndef _WIN32
-    // Keep ownership if llvm-objcopy is called under root.
-    if (Config.InputFilename == Config.OutputFilename && OStat.getUser() == 0)
-      sys::fs::changeFileOwnership(FD, Stat.getUser(), Stat.getGroup());
-#endif
-
-    sys::fs::perms Perm = Stat.permissions();
-    if (Config.InputFilename != Config.OutputFilename)
-      Perm = static_cast<sys::fs::perms>(Perm & ~sys::fs::getUmask() & ~06000);
-#ifdef _WIN32
-    if (auto EC = sys::fs::setPermissions(Filename, Perm))
-#else
-    if (auto EC = sys::fs::setPermissions(FD, Perm))
-#endif
-      return createFileError(Filename, EC);
-  }
-
-  if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
-    return createFileError(Filename, EC);
-
-  return Error::success();
-}
-
 /// The function executeObjcopy does the higher level dispatch based on the type
 /// of input (raw binary, archive or single object file) and takes care of the
 /// format-agnostic modifications, i.e. preserving dates.
 static Error executeObjcopy(ConfigManager &ConfigMgr) {
   CommonConfig &Config = ConfigMgr.Common;
 
-  sys::fs::file_status Stat;
-  if (Config.InputFilename != "-") {
-    if (auto EC = sys::fs::status(Config.InputFilename, Stat))
-      return createFileError(Config.InputFilename, EC);
-  } else {
-    Stat.permissions(static_cast<sys::fs::perms>(0777));
-  }
+  Expected<FilePermissionsApplier> PermsCarrier =
+      FilePermissionsApplier::create(Config.InputFilename);
+  if (!PermsCarrier)
+    return PermsCarrier.takeError();
 
   std::function<Error(raw_ostream & OutFile)> ObjcopyFunc;
 
@@ -259,14 +210,14 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     }
   }
 
-  if (Error E = restoreStatOnFile(Config.OutputFilename, Stat, ConfigMgr))
+  if (Error E =
+          PermsCarrier->apply(Config.OutputFilename, Config.PreserveDates))
     return E;
 
-  if (!Config.SplitDWO.empty()) {
-    Stat.permissions(static_cast<sys::fs::perms>(0666));
-    if (Error E = restoreStatOnFile(Config.SplitDWO, Stat, ConfigMgr))
+  if (!Config.SplitDWO.empty())
+    if (Error E = PermsCarrier->apply(Config.SplitDWO, Config.PreserveDates,
+                                      static_cast<sys::fs::perms>(0666)))
       return E;
-  }
 
   return Error::success();
 }
