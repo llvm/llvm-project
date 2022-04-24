@@ -31,3 +31,13 @@ subroutine ichar_test(c)
   ! CHECK-NEXT: fir.call @{{.*}}EndIoStatement
   print *, iachar('X')
 end subroutine
+
+! Check that 'arith.extui' op is not generated if type are matching.
+ ! CHECK-LABEL: no_extui
+subroutine no_extui(ch)
+  integer, parameter :: kind = selected_char_kind('ISO_10646')
+  character(*, kind), intent(in) :: ch(:)
+  integer :: i, j 
+  ! CHECK-NOT: arith.extui
+  j = ichar(ch(i)(i:i))
+end subroutine
