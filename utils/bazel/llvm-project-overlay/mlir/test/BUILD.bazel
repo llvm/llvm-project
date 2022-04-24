@@ -519,6 +519,7 @@ cc_library(
     ],
     deps = [
         "//llvm:Support",
+        "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:InferTypeOpInterface",
         "//mlir:Pass",
