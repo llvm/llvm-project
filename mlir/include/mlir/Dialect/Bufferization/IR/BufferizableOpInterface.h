@@ -64,17 +64,22 @@ struct BufferizationOptions {
 
   BufferizationOptions();
 
+  /// Return `true` if the filter has at least one ALLOW rule.
+  bool filterHasAllowRule() const {
+    for (const OpFilterEntry &e : opFilter)
+      if (e.type == OpFilterEntry::FilterType::ALLOW)
+        return true;
+    return false;
+  }
+
   /// Return whether the op should be bufferized or not.
   ///
-  /// If no filter is specified (`hasFilter` = false), every op will be
-  /// bufferized. Otherwise, an op is bufferized if:
-  ///
-  /// - At least one ALLOW filter says `true`.
-  /// - And, no DENY filter says `true`.
+  /// If the filter does not have an ALLOW rule, ops are bufferized by default,
+  /// unless they are explicitly marked as DENY. If the filter has at least one
+  /// ALLOW rule, ops are ignored by default and only bufferized if they match
+  /// an ALLOW rule and no DENY rule.
   bool isOpAllowed(Operation *op) const {
-    if (!hasFilter)
-      return true;
-    bool isAllowed = false;
+    bool isAllowed = !filterHasAllowRule();
     for (const OpFilterEntry &entry : opFilter) {
       bool filterResult = entry.fn(op);
       switch (entry.type) {
@@ -91,7 +96,7 @@ struct BufferizationOptions {
     return isAllowed;
   }
 
-  /// Allow the given dialects and activate the filter (`hasFilter`).
+  /// Allow the given dialects in the filter.
   ///
   /// This function adds one or multiple ALLOW filters.
   template <typename... DialectTs>
@@ -104,11 +109,10 @@ struct BufferizationOptions {
         0, (allowDialectInFilterImpl<DialectTs>(), 0)...};
   }
 
-  /// Allow the given dialect and activate the filter (`hasFilter`).
+  /// Allow the given dialect in the filter.
   ///
   /// This function adds an ALLOW filter.
   void allowDialectInFilter(StringRef dialectNamespace) {
-    hasFilter = true;
     OpFilterEntry::FilterFn filterFn = [=](Operation *op) {
       return op->getDialect()->getNamespace() == dialectNamespace;
     };
@@ -116,7 +120,7 @@ struct BufferizationOptions {
         OpFilterEntry{filterFn, OpFilterEntry::FilterType::ALLOW});
   }
 
-  /// Allow the given ops and activate the filter (`hasFilter`).
+  /// Allow the given ops in the filter.
   ///
   /// This function adds one or multiple ALLOW filters.
   template <typename... OpTys>
@@ -126,41 +130,37 @@ struct BufferizationOptions {
         0, (allowOperationInFilterImpl<OpTys>(), 0)...};
   }
 
-  /// Allow the given op and activate the filter (`hasFilter`).
+  /// Allow the given op in the filter.
   ///
   /// This function adds an ALLOW filter.
   void allowOperationInFilter(StringRef opName) {
-    hasFilter = true;
     OpFilterEntry::FilterFn filterFn = [=](Operation *op) {
       return op->getName().getStringRef() == opName;
     };
     allowOperationInFilter(filterFn);
   }
 
-  /// Deny the given op and activate the filter (`hasFilter`).
+  /// Deny the given op in the filter.
   ///
   /// This function adds a DENY filter.
   void denyOperationInFilter(StringRef opName) {
-    hasFilter = true;
     OpFilterEntry::FilterFn filterFn = [=](Operation *op) {
       return op->getName().getStringRef() == opName;
     };
     denyOperationInFilter(filterFn);
   }
 
-  /// Allow ops that are matched by `fn` and activate the filter (`hasFilter`).
+  /// Allow ops that are matched by `fn` in the filter.
   ///
   /// This function adds an ALLOW filter.
   void allowOperationInFilter(OpFilterEntry::FilterFn fn) {
-    hasFilter = true;
     opFilter.push_back(OpFilterEntry{fn, OpFilterEntry::FilterType::ALLOW});
   }
 
-  /// Deny ops that are matched by `fn` and activate the filter (`hasFilter`).
+  /// Deny ops that are matched by `fn` in the filter.
   ///
   /// This function adds a DENY filter.
   void denyOperationInFilter(OpFilterEntry::FilterFn fn) {
-    hasFilter = true;
     opFilter.push_back(OpFilterEntry{fn, OpFilterEntry::FilterType::DENY});
   }
 
@@ -227,13 +227,10 @@ struct BufferizationOptions {
   /// Buffer alignment for new memory allocations.
   unsigned int bufferAlignment = 128;
 
-  /// If set to `false`, all ops are bufferized (as long as they implement
-  /// BufferizableOpInterface). Otherwise, only filtered ops are bufferized.
-  bool hasFilter = false;
-
   /// A list of op filters that determine whether an op should be processed or
-  /// ignored by the bufferization. If `hasFilter`, only ops that are not
-  /// DENY-filtered and have at least one matching ALLOW filter are processed.
+  /// ignored by the bufferization. If the filter has an ALLOW rule, only ops
+  /// that are allowed and not denied are bufferized. If the filter does not
+  /// have an ALLOW rule, only ops that are not denied are bufferized.
   SmallVector<OpFilterEntry> opFilter;
 
   /// Initializer functions for analysis state. These can be used to
