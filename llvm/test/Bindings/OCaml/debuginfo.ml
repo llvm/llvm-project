@@ -260,6 +260,52 @@ let test_global_variable_expression dibuilder f_di m_di =
    *)
   ()
 
+let test_variables f dibuilder file_di fun_di =
+  let entry_term = Option.get @@ (Llvm.block_terminator (Llvm.entry_block f)) in
+  group "Local and parameter variable tests";
+  let ty = int_ty_di 64 dibuilder in
+  stdout_metadata ty;
+  (* CHECK: [[INT64TY_PTR:<0x[0-9a-f]*>]] = !DIBasicType(name: "int", size: 64, encoding: DW_ATE_signed)
+  *)
+  let auto_var =
+    Llvm_debuginfo.dibuild_create_auto_variable dibuilder ~scope:fun_di
+      ~name:"my_local" ~file:file_di ~line:10 ~ty
+      ~always_preserve:false flags_zero ~align_in_bits:0
+  in
+  stdout_metadata auto_var;
+  (* CHECK: [[LOCAL_VAR_PTR:<0x[0-9a-f]*>]] = !DILocalVariable(name: "my_local", scope: <{{0x[0-9a-f]*}}>, file: <{{0x[0-9a-f]*}}>, line: 10, type: [[INT64TY_PTR]])
+  *)
+  let builder = Llvm.builder_before context entry_term in
+  let all = Llvm.build_alloca (Llvm.i64_type context)  "my_alloca" builder in
+  let scope =
+    Llvm_debuginfo.dibuild_create_lexical_block dibuilder ~scope:fun_di
+      ~file:file_di ~line:9 ~column:4
+  in
+  let location =
+    Llvm_debuginfo.dibuild_create_debug_location
+    context ~line:10 ~column:12 ~scope
+  in
+  let vdi = Llvm_debuginfo.dibuild_insert_declare_before dibuilder ~storage:all
+    ~var_info:auto_var ~expr:(Llvm_debuginfo.dibuild_expression dibuilder [||])
+    ~location ~instr:entry_term
+  in
+  let () = Printf.printf "%s\n" (Llvm.string_of_llvalue vdi) in
+  (* CHECK: call void @llvm.dbg.declare(metadata i64* %my_alloca, metadata {{![0-9]+}}, metadata !DIExpression()), !dbg {{\![0-9]+}}
+  *)
+  let arg0 = (Llvm.params f).(0) in
+  let arg_var = Llvm_debuginfo.dibuild_create_parameter_variable dibuilder ~scope:fun_di
+    ~name:"my_arg" ~argno:0 ~file:file_di ~line:10 ~ty
+    ~always_preserve:false flags_zero
+  in
+  let argdi = Llvm_debuginfo.dibuild_insert_declare_before dibuilder ~storage:arg0
+    ~var_info:arg_var ~expr:(Llvm_debuginfo.dibuild_expression dibuilder [||])
+    ~location ~instr:entry_term
+  in
+  let () = Printf.printf "%s\n" (Llvm.string_of_llvalue argdi) in
+  (* CHECK: call void @llvm.dbg.declare(metadata i32 %0, metadata {{![0-9]+}}, metadata !DIExpression()), !dbg {{\![0-9]+}}
+  *)
+  ()
+
 let test_types dibuilder file_di m_di =
   group "type tests";
   let namespace_di =
@@ -403,6 +449,7 @@ let () =
   let f, fun_di = test_get_function m dibuilder file_di m_di in
   let () = test_bbinstr f fun_di file_di dibuilder in
   let () = test_global_variable_expression dibuilder file_di m_di in
+  let () = test_variables f dibuilder file_di fun_di in
   let () = test_types dibuilder file_di m_di in
   Llvm_debuginfo.dibuild_finalize dibuilder;
   ( match Llvm_analysis.verify_module m with
