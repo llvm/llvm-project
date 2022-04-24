@@ -2147,8 +2147,13 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
       return UnknownVal();
 
     // Additionally allow introspection of a block's internal layout.
-    if (!hasPartialLazyBinding && !isa<BlockDataRegion>(R->getBaseRegion()))
+    // Try to get direct binding if all other attempts failed thus far.
+    // Else, return UndefinedVal()
+    if (!hasPartialLazyBinding && !isa<BlockDataRegion>(R->getBaseRegion())) {
+      if (const Optional<SVal> &V = B.getDefaultBinding(R))
+        return *V;
       return UndefinedVal();
+    }
   }
 
   // All other values are symbolic.
