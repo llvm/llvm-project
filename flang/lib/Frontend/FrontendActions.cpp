@@ -648,3 +648,17 @@ void DebugDumpPFTAction::ExecuteAction() {
       clang::DiagnosticsEngine::Error, "Pre FIR Tree is NULL.");
   ci.diagnostics().Report(DiagID);
 }
+
+Fortran::parser::Parsing &PluginParseTreeAction::getParsing() {
+  return instance().parsing();
+}
+
+std::unique_ptr<llvm::raw_pwrite_stream>
+PluginParseTreeAction::createOutputFile(llvm::StringRef extension = "") {
+
+  std::unique_ptr<llvm::raw_pwrite_stream> OS{
+      instance().CreateDefaultOutputFile(
+          /*Binary=*/false, /*InFile=*/GetCurrentFileOrBufferName(),
+          extension)};
+  return OS;
+}

@@ -10,9 +10,11 @@
 #define LLVM_FLANG_FRONTEND_FRONTENDACTIONS_H
 
 #include "flang/Frontend/FrontendAction.h"
+#include "flang/Parser/parsing.h"
 #include "flang/Semantics/semantics.h"
 
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include <memory>
 
@@ -131,6 +133,17 @@ class ParseSyntaxOnlyAction : public PrescanAndSemaAction {
 
 class PluginParseTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override = 0;
+
+public:
+  Fortran::parser::Parsing &getParsing();
+  /// Creates an output file. This is just a wrapper for calling
+  /// CreateDefaultOutputFile from CompilerInstance. Use it to make sure that
+  /// your plugin respects driver's `-o` flag.
+  /// \param extension  The extension to use for the output file (ignored when
+  ///                   the user decides to print to stdout via `-o -`)
+  /// \return           Null on error, ostream for the output file otherwise
+  std::unique_ptr<llvm::raw_pwrite_stream> createOutputFile(
+      llvm::StringRef extension);
 };
 
 //===----------------------------------------------------------------------===//

@@ -1,6 +1,6 @@
 """YAML Summariser
 
-The flang plugin ``flang-omp-report`` takes one fortran
+The flang plugin ``flang-omp-report`` takes one Fortran
 file in and returns a YAML report file of the input file.
 This becomes an issue when you want to analyse an entire project
 into one final report.
