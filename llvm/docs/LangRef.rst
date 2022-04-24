@@ -7094,16 +7094,6 @@ Example:
     %a.addr = alloca float*, align 8, !annotation !0
     !0 = !{!"auto-init"}
 
-'``explicit_size``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``explicit_size`` metadata may be attached to a global variable definition
-with a size different from the object's total size. This can be useful when an
-instrumentation enlarges the object while the symbol size should reflect the
-accessible or meaningful part of the object. This is currently only meaningful
-on ELF where an objects ``st_size`` can be controlled with a ``.size``
-directive. This metadata is ignored in contexts where it cannot be honored.
-
 Module Flags Metadata
 =====================
 
