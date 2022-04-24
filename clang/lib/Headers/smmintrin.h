@@ -1054,7 +1054,6 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu32(__m128i __V1,
 #define _mm_extract_epi32(X, N)                                                \
   ((int)__builtin_ia32_vec_ext_v4si((__v4si)(__m128i)(X), (int)(N)))
 
-#ifdef __x86_64__
 /// Extracts a 64-bit element from the 128-bit integer vector of
 ///    [2 x i64], using the immediate value parameter \a N as a selector.
 ///
@@ -1064,7 +1063,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu32(__m128i __V1,
 /// long long _mm_extract_epi64(__m128i X, const int N);
 /// \endcode
 ///
-/// This intrinsic corresponds to the <c> VPEXTRQ / PEXTRQ </c> instruction.
+/// This intrinsic corresponds to the <c> VPEXTRQ / PEXTRQ </c> instruction
+/// in 64-bit mode.
 ///
 /// \param X
 ///    A 128-bit integer vector.
@@ -1076,7 +1076,6 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu32(__m128i __V1,
 /// \returns  A 64-bit integer.
 #define _mm_extract_epi64(X, N)                                                \
   ((long long)__builtin_ia32_vec_ext_v2di((__v2di)(__m128i)(X), (int)(N)))
-#endif /* __x86_64 */
 
 /* SSE4 128-bit Packed Integer Comparisons.  */
 /// Tests whether the specified bits in a 128-bit integer vector are all

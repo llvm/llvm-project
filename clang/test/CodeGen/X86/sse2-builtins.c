@@ -510,13 +510,11 @@ int test_mm_cvtsi128_si32(__m128i A) {
   return _mm_cvtsi128_si32(A);
 }
 
-#ifdef __x86_64__
 long long test_mm_cvtsi128_si64(__m128i A) {
-  // X64-LABEL: test_mm_cvtsi128_si64
-  // X64: extractelement <2 x i64> %{{.*}}, i32 0
+  // CHECK-LABEL: test_mm_cvtsi128_si64
+  // CHECK: extractelement <2 x i64> %{{.*}}, i32 0
   return _mm_cvtsi128_si64(A);
 }
-#endif
 
 __m128d test_mm_cvtsi32_sd(__m128d A, int B) {
   // CHECK-LABEL: test_mm_cvtsi32_sd
@@ -541,14 +539,14 @@ __m128d test_mm_cvtsi64_sd(__m128d A, long long B) {
   // X64: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_cvtsi64_sd(A, B);
 }
+#endif
 
 __m128i test_mm_cvtsi64_si128(long long A) {
-  // X64-LABEL: test_mm_cvtsi64_si128
-  // X64: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
-  // X64: insertelement <2 x i64> %{{.*}}, i64 0, i32 1
+  // CHECK-LABEL: test_mm_cvtsi64_si128
+  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> %{{.*}}, i64 0, i32 1
   return _mm_cvtsi64_si128(A);
 }
-#endif
 
 __m128d test_mm_cvtss_sd(__m128d A, __m128 B) {
   // CHECK-LABEL: test_mm_cvtss_sd
