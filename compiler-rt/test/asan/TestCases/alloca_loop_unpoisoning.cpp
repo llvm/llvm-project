@@ -1,5 +1,5 @@
 // RUN: %clangxx_asan -O0 -mllvm -asan-instrument-dynamic-allocas %s -o %t
-// RUN: %run %t 2>&1
+// RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t 2>&1
 //
 // REQUIRES: stable-runtime
 
