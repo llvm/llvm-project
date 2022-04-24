@@ -344,7 +344,8 @@ define <vscale x 2 x i64> @and_i64_zero(<vscale x 2 x i1> %pg, <vscale x 2 x i64
 define <vscale x 16 x i8> @bic_i8_zero(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: bic_i8_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movprfx z0.b, p0/z, z0.b
+; CHECK-NEXT:    mov z2.b, #0 // =0x0
+; CHECK-NEXT:    sel z0.b, p0, z0.b, z2.b
 ; CHECK-NEXT:    bic z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %a_z = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> zeroinitializer
@@ -357,7 +358,8 @@ define <vscale x 16 x i8> @bic_i8_zero(<vscale x 16 x i1> %pg, <vscale x 16 x i8
 define <vscale x 8 x i16> @bic_i16_zero(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: bic_i16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movprfx z0.h, p0/z, z0.h
+; CHECK-NEXT:    mov z2.h, #0 // =0x0
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
 ; CHECK-NEXT:    bic z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %a_z = select <vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> zeroinitializer
@@ -370,7 +372,8 @@ define <vscale x 8 x i16> @bic_i16_zero(<vscale x 8 x i1> %pg, <vscale x 8 x i16
 define <vscale x 4 x i32> @bic_i32_zero(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: bic_i32_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movprfx z0.s, p0/z, z0.s
+; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
 ; CHECK-NEXT:    bic z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %a_z = select <vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> zeroinitializer
@@ -383,7 +386,8 @@ define <vscale x 4 x i32> @bic_i32_zero(<vscale x 4 x i1> %pg, <vscale x 4 x i32
 define <vscale x 2 x i64> @bic_i64_zero(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: bic_i64_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movprfx z0.d, p0/z, z0.d
+; CHECK-NEXT:    mov z2.d, #0 // =0x0
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
 ; CHECK-NEXT:    bic z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %a_z = select <vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> zeroinitializer
