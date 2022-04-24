@@ -7,6 +7,10 @@
 # CHECK:      _main:
 # CHECK-NEXT: callq   _foo2_ref
 # CHECK-NEXT: callq   _foo2_ref
+# CHECK-NEXT: callq   _foo2_neg_offset_ref
+# CHECK-NEXT: callq   _foo2_neg_offset_ref
+# CHECK-NEXT: callq   _foo2_pos_offset_ref
+# CHECK-NEXT: callq   _foo2_pos_offset_ref
 # CHECK-NEXT: callq   _bar2_ref
 # CHECK-NEXT: callq   _bar2_ref
 # CHECK-NEXT: callq   _baz2_ref
@@ -28,6 +32,10 @@
 # CHECK-NEXT: [[#%.16x,QUX:]]     l     O __TEXT,__literals _qux2
 # CHECK-NEXT: [[#%.16x,FOO_REF:]] l     F __TEXT,__text _foo1_ref
 # CHECK-NEXT: [[#%.16x,FOO_REF:]] l     F __TEXT,__text _foo2_ref
+# CHECK-NEXT: [[#%.16x,FOO_NEG:]] l     F __TEXT,__text _foo1_neg_offset_ref
+# CHECK-NEXT: [[#%.16x,FOO_NEG]]  l     F __TEXT,__text _foo2_neg_offset_ref
+# CHECK-NEXT: [[#%.16x,FOO_POS:]] l     F __TEXT,__text _foo1_pos_offset_ref
+# CHECK-NEXT: [[#%.16x,FOO_POS]]  l     F __TEXT,__text _foo2_pos_offset_ref
 # CHECK-NEXT: [[#%.16x,BAR_REF:]] l     F __TEXT,__text _bar1_ref
 # CHECK-NEXT: [[#%.16x,BAR_REF:]] l     F __TEXT,__text _bar2_ref
 # CHECK-NEXT: [[#%.16x,BAZ_REF:]] l     F __TEXT,__text _baz1_ref
@@ -63,6 +71,18 @@ _foo1_ref:
   leaq _foo1(%rip), %rax
 _foo2_ref:
   leaq _foo2(%rip), %rax
+_foo1_neg_offset_ref:
+## Check that we can correctly handle `_foo1-32` even though it points outside
+## the __cstring section.
+  leaq _foo1-32(%rip), %rax
+_foo2_neg_offset_ref:
+  leaq _foo2-32(%rip), %rax
+_foo1_pos_offset_ref:
+  leaq _foo1+4(%rip), %rax
+_foo2_pos_offset_ref:
+## Although `_foo2+4` points at _bar1 in the input object file, we shouldn't
+## dedup references to _foo2+4 with references to _bar1.
+  leaq _foo2+4(%rip), %rax
 _bar1_ref:
   leaq _bar1(%rip), %rax
 _bar2_ref:
@@ -101,6 +121,10 @@ _sub_lit_b_a:
 _main:
   callq _foo1_ref
   callq _foo2_ref
+  callq _foo1_neg_offset_ref
+  callq _foo2_neg_offset_ref
+  callq _foo1_pos_offset_ref
+  callq _foo2_pos_offset_ref
   callq _bar1_ref
   callq _bar2_ref
   callq _baz1_ref
