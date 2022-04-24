@@ -1345,7 +1345,8 @@ inline bool HexagonDAGToDAGISel::SelectAnyInt(SDValue &N, SDValue &R) {
   EVT T = N.getValueType();
   if (!T.isInteger() || T.getSizeInBits() != 32 || !isa<ConstantSDNode>(N))
     return false;
-  R = N;
+  int32_t V = cast<const ConstantSDNode>(N)->getZExtValue();
+  R = CurDAG->getTargetConstant(V, SDLoc(N), N.getValueType());
   return true;
 }
 
