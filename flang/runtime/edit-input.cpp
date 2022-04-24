@@ -58,15 +58,12 @@ static inline char32_t GetDecimalPoint(const DataEdit &edit) {
 // Returns true if there's a '-' sign.
 static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
     std::optional<char32_t> &next, std::optional<int> &remaining) {
-  bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
-  next = io.PrepareInput(edit, remaining, !bzMode);
+  next = io.PrepareInput(edit, remaining);
   bool negative{false};
   if (next) {
     negative = *next == '-';
     if (negative || *next == '+') {
-      if (!bzMode) {
-        io.SkipSpaces(remaining);
-      }
+      io.SkipSpaces(remaining);
       next = io.NextInField(remaining, edit);
     }
   }
