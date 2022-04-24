@@ -1030,8 +1030,8 @@ multiclass FlatSignedAtomicPat <string inst, string node, ValueType vt,
     (!cast<FLAT_Pseudo>(inst) VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
 }
 
-multiclass FlatSignedIntrPat <string inst, string node, ValueType vt,
-                              ValueType data_vt = vt> {
+multiclass FlatSignedAtomicIntrPat <string inst, string node, ValueType vt,
+                                    ValueType data_vt = vt> {
   defm : FlatSignedAtomicPat<inst, node, vt, data_vt, /* isIntr */ 1>;
 }
 
@@ -1462,17 +1462,17 @@ defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_MAX_F64", "int_amdgcn_global_ato
 defm : FlatSignedAtomicPat <"FLAT_ATOMIC_ADD_F64", "atomic_load_fadd_flat", f64>;
 defm : FlatSignedAtomicPat <"FLAT_ATOMIC_MIN_F64", "atomic_load_fmin_flat", f64>;
 defm : FlatSignedAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_flat", f64>;
-defm : FlatSignedIntrPat <"FLAT_ATOMIC_ADD_F64", "int_amdgcn_flat_atomic_fadd", f64>;
-defm : FlatSignedIntrPat <"FLAT_ATOMIC_MIN_F64", "int_amdgcn_flat_atomic_fmin", f64>;
-defm : FlatSignedIntrPat <"FLAT_ATOMIC_MAX_F64", "int_amdgcn_flat_atomic_fmax", f64>;
+defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_ADD_F64", "int_amdgcn_flat_atomic_fadd", f64>;
+defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_MIN_F64", "int_amdgcn_flat_atomic_fmin", f64>;
+defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_MAX_F64", "int_amdgcn_flat_atomic_fmax", f64>;
 }
 
 let OtherPredicates = [isGFX940Plus] in {
 defm : FlatSignedAtomicPat <"FLAT_ATOMIC_ADD_F32",    "atomic_load_fadd_flat",       f32>;
 defm : FlatSignedAtomicPat <"FLAT_ATOMIC_PK_ADD_F16", "atomic_load_fadd_v2f16_flat", v2f16>;
-defm : FlatSignedIntrPat <"FLAT_ATOMIC_ADD_F32",     "int_amdgcn_flat_atomic_fadd",        f32>;
-defm : FlatSignedIntrPat <"FLAT_ATOMIC_PK_ADD_F16",  "int_amdgcn_flat_atomic_fadd",        v2f16>;
-defm : FlatSignedIntrPat <"FLAT_ATOMIC_PK_ADD_BF16", "int_amdgcn_flat_atomic_fadd_v2bf16", v2i16>;
+defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_ADD_F32",     "int_amdgcn_flat_atomic_fadd",        f32>;
+defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_PK_ADD_F16",  "int_amdgcn_flat_atomic_fadd",        v2f16>;
+defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_PK_ADD_BF16", "int_amdgcn_flat_atomic_fadd_v2bf16", v2i16>;
 defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "int_amdgcn_global_atomic_fadd_v2bf16", v2i16>;
 }
 
