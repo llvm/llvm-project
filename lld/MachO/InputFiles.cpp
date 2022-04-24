@@ -344,8 +344,6 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       section.subsections.push_back({0, isec});
     } else if (auto recordSize = getRecordSize(segname, name)) {
       splitRecords(*recordSize);
-      if (name == section_names::compactUnwind)
-        compactUnwindSection = &section;
     } else if (segname == segment_names::llvm) {
       if (config->callGraphProfileSort && name == section_names::cgProfile)
         checkError(parseCallGraph(data, callGraph));
@@ -917,8 +915,19 @@ template <class LP> void ObjFile::parse() {
       parseRelocations(sectionHeaders, sectionHeaders[i], *sections[i]);
 
   parseDebugInfo();
+
+  Section *ehFrameSection = nullptr;
+  Section *compactUnwindSection = nullptr;
+  for (Section *sec : sections) {
+    Section **s = StringSwitch<Section **>(sec->name)
+                      .Case(section_names::compactUnwind, &compactUnwindSection)
+                      .Case(section_names::ehFrame, &ehFrameSection)
+                      .Default(nullptr);
+    if (s)
+      *s = sec;
+  }
   if (compactUnwindSection)
-    registerCompactUnwind();
+    registerCompactUnwind(*compactUnwindSection);
 }
 
 template <class LP> void ObjFile::parseLazy() {
@@ -981,8 +990,8 @@ ArrayRef<data_in_code_entry> ObjFile::getDataInCode() const {
 }
 
 // Create pointers from symbols to their associated compact unwind entries.
-void ObjFile::registerCompactUnwind() {
-  for (const Subsection &subsection : compactUnwindSection->subsections) {
+void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
+  for (const Subsection &subsection : compactUnwindSection.subsections) {
     ConcatInputSection *isec = cast<ConcatInputSection>(subsection.isec);
     // Hack!! Since each CUE contains a different function address, if ICF
     // operated naively and compared the entire contents of each CUE, entries
