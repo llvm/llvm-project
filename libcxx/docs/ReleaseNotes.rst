@@ -86,6 +86,9 @@ API Changes
   supported anymore. Please migrate to using the new support for
   :ref:`assertions <assertions-mode>` instead.
 
+- ``vector<bool>::const_reference``, ``vector<bool>::const_iterator::reference``
+  and ``bitset::const_reference`` are now aliases for `bool` in the unstable ABI.
+
 ABI Changes
 -----------
 

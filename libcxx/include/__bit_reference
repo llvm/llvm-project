@@ -1109,7 +1109,11 @@ public:
     typedef typename _Cp::difference_type                                                          difference_type;
     typedef bool                                                                                  value_type;
     typedef __bit_iterator                                                                        pointer;
+#ifndef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
     typedef typename conditional<_IsConst, __bit_const_reference<_Cp>, __bit_reference<_Cp> >::type reference;
+#else
+    using reference = typename conditional<_IsConst, bool, __bit_reference<_Cp>>::type;
+#endif
     typedef random_access_iterator_tag                                                            iterator_category;
 
 private:
@@ -1149,8 +1153,10 @@ public:
         return *this;
     }
 
-    _LIBCPP_INLINE_VISIBILITY reference operator*() const _NOEXCEPT
-        {return reference(__seg_, __storage_type(1) << __ctz_);}
+    _LIBCPP_INLINE_VISIBILITY reference operator*() const _NOEXCEPT {
+        return typename conditional<_IsConst, __bit_const_reference<_Cp>, __bit_reference<_Cp> >
+                ::type(__seg_, __storage_type(1) << __ctz_);
+    }
 
     _LIBCPP_INLINE_VISIBILITY __bit_iterator& operator++()
     {
