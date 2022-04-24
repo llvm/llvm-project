@@ -16,7 +16,7 @@ def setup_passes(mlir_module):
     """Setup pass pipeline parameters for benchmark functions.
     """
     opt = (
-        "parallelization-strategy=0"
+        "parallelization-strategy=none"
         " vectorization-strategy=0 vl=1 enable-simd-index32=False"
     )
     pipeline = f"sparse-compiler{{{opt}}}"

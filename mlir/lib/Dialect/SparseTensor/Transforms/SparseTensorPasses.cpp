@@ -39,8 +39,8 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
   SparsificationPass() = default;
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
-    parallelization = static_cast<int32_t>(options.parallelizationStrategy);
-    vectorization = static_cast<int32_t>(options.vectorizationStrategy);
+    parallelization = options.parallelizationStrategy;
+    vectorization = options.vectorizationStrategy;
     vectorLength = options.vectorLength;
     enableSIMDIndex32 = options.enableSIMDIndex32;
     enableVLAVectorization = options.enableVLAVectorization;
@@ -50,10 +50,8 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     // Translate strategy flags to strategy options.
-    SparsificationOptions options(
-        sparseParallelizationStrategy(parallelization),
-        sparseVectorizationStrategy(vectorization), vectorLength,
-        enableSIMDIndex32, enableVLAVectorization);
+    SparsificationOptions options(parallelization, vectorization, vectorLength,
+                                  enableSIMDIndex32, enableVLAVectorization);
     // Apply rewriting.
     populateSparsificationPatterns(patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
@@ -132,33 +130,6 @@ struct SparseTensorConversionPass
 };
 
 } // namespace
-
-SparseParallelizationStrategy
-mlir::sparseParallelizationStrategy(int32_t flag) {
-  switch (flag) {
-  default:
-    return SparseParallelizationStrategy::kNone;
-  case 1:
-    return SparseParallelizationStrategy::kDenseOuterLoop;
-  case 2:
-    return SparseParallelizationStrategy::kAnyStorageOuterLoop;
-  case 3:
-    return SparseParallelizationStrategy::kDenseAnyLoop;
-  case 4:
-    return SparseParallelizationStrategy::kAnyStorageAnyLoop;
-  }
-}
-
-SparseVectorizationStrategy mlir::sparseVectorizationStrategy(int32_t flag) {
-  switch (flag) {
-  default:
-    return SparseVectorizationStrategy::kNone;
-  case 1:
-    return SparseVectorizationStrategy::kDenseInnerLoop;
-  case 2:
-    return SparseVectorizationStrategy::kAnyStorageInnerLoop;
-  }
-}
 
 SparseToSparseConversionStrategy
 mlir::sparseToSparseConversionStrategy(int32_t flag) {
