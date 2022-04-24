@@ -12,36 +12,8 @@
 
 #include <stdarg.h>
 
+#include "utils/UnitTest/PrintfMatcher.h"
 #include "utils/UnitTest/Test.h"
-
-class LlvmLibcPrintfParserTest : public __llvm_libc::testing::Test {
-public:
-  void assert_eq_fs(__llvm_libc::printf_core::FormatSection expected,
-                    __llvm_libc::printf_core::FormatSection actual) {
-    ASSERT_EQ(expected.has_conv, actual.has_conv);
-    ASSERT_EQ(expected.raw_len, actual.raw_len);
-
-    for (size_t i = 0; i < expected.raw_len; ++i) {
-      EXPECT_EQ(expected.raw_string[i], actual.raw_string[i]);
-    }
-
-    if (expected.has_conv) {
-      ASSERT_EQ(static_cast<uint8_t>(expected.flags),
-                static_cast<uint8_t>(actual.flags));
-      ASSERT_EQ(expected.min_width, actual.min_width);
-      ASSERT_EQ(expected.precision, actual.precision);
-      ASSERT_TRUE(expected.length_modifier == actual.length_modifier);
-      ASSERT_EQ(expected.conv_name, actual.conv_name);
-
-      if (expected.conv_name == 'p' || expected.conv_name == 'n' ||
-          expected.conv_name == 's') {
-        ASSERT_EQ(expected.conv_val_ptr, actual.conv_val_ptr);
-      } else if (expected.conv_name != '%') {
-        ASSERT_EQ(expected.conv_val_raw, actual.conv_val_raw);
-      }
-    }
-  }
-};
 
 void init(const char *__restrict str, ...) {
   va_list vlist;
@@ -68,9 +40,9 @@ void evaluate(__llvm_libc::printf_core::FormatSection *format_arr,
   }
 }
 
-TEST_F(LlvmLibcPrintfParserTest, Constructor) { init("test", 1, 2); }
+TEST(LlvmLibcPrintfParserTest, Constructor) { init("test", 1, 2); }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalRaw) {
+TEST(LlvmLibcPrintfParserTest, EvalRaw) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "test";
   evaluate(format_arr, str);
@@ -80,10 +52,10 @@ TEST_F(LlvmLibcPrintfParserTest, EvalRaw) {
   expected.raw_len = 4;
   expected.raw_string = str;
 
-  assert_eq_fs(expected, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalSimple) {
+TEST(LlvmLibcPrintfParserTest, EvalSimple) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "test %% test";
   evaluate(format_arr, str);
@@ -93,23 +65,23 @@ TEST_F(LlvmLibcPrintfParserTest, EvalSimple) {
   expected0.raw_len = 5;
   expected0.raw_string = str;
 
-  assert_eq_fs(expected0, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
   expected1.raw_len = 2;
   expected1.raw_string = str + 5;
   expected1.conv_name = '%';
 
-  assert_eq_fs(expected1, format_arr[1]);
+  ASSERT_FORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = false;
   expected2.raw_len = 5;
   expected2.raw_string = str + 7;
 
-  assert_eq_fs(expected2, format_arr[2]);
+  ASSERT_FORMAT_EQ(expected2, format_arr[2]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalOneArg) {
+TEST(LlvmLibcPrintfParserTest, EvalOneArg) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%d";
   int arg1 = 12345;
@@ -122,10 +94,10 @@ TEST_F(LlvmLibcPrintfParserTest, EvalOneArg) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  assert_eq_fs(expected, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%+-0 #d";
   int arg1 = 12345;
@@ -144,10 +116,10 @@ TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  assert_eq_fs(expected, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithWidth) {
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%12d";
   int arg1 = 12345;
@@ -161,10 +133,10 @@ TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithWidth) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  assert_eq_fs(expected, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision) {
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%.34d";
   int arg1 = 12345;
@@ -178,10 +150,10 @@ TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  assert_eq_fs(expected, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision) {
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%.d";
   int arg1 = 12345;
@@ -195,10 +167,10 @@ TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  assert_eq_fs(expected, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%hd";
   int arg1 = 12345;
@@ -212,10 +184,10 @@ TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  assert_eq_fs(expected, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%lld";
   int arg1 = 12345;
@@ -229,10 +201,10 @@ TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  assert_eq_fs(expected, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
+TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "% -056.78jd";
   int arg1 = 12345;
@@ -252,10 +224,10 @@ TEST_F(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
   expected.conv_val_raw = arg1;
   expected.conv_name = 'd';
 
-  assert_eq_fs(expected, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST_F(LlvmLibcPrintfParserTest, EvalThreeArgs) {
+TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%d%f%s";
   int arg1 = 12345;
@@ -270,7 +242,7 @@ TEST_F(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected0.conv_val_raw = arg1;
   expected0.conv_name = 'd';
 
-  assert_eq_fs(expected0, format_arr[0]);
+  ASSERT_FORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
   expected1.raw_len = 2;
@@ -278,7 +250,7 @@ TEST_F(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected1.conv_val_raw = __llvm_libc::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
-  assert_eq_fs(expected1, format_arr[1]);
+  ASSERT_FORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = true;
   expected2.raw_len = 2;
@@ -286,5 +258,5 @@ TEST_F(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected2.conv_val_ptr = const_cast<char *>(arg3);
   expected2.conv_name = 's';
 
-  assert_eq_fs(expected2, format_arr[2]);
+  ASSERT_FORMAT_EQ(expected2, format_arr[2]);
 }

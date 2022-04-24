@@ -17,6 +17,14 @@ target_include_directories(LibcUnitTestMain PUBLIC ${LIBC_SOURCE_DIR})
 add_dependencies(LibcUnitTestMain LibcUnitTest)
 target_link_libraries(LibcUnitTestMain PUBLIC LibcUnitTest libc_test_utils)
 
+add_header_library(
+  string_utils
+  HDRS
+    StringUtils.h
+  DEPENDS
+  libc.src.__support.CPP.type_traits
+)
+
 add_library(
   LibcFPTestHelpers
     FPExceptMatcher.cpp
@@ -29,6 +37,7 @@ target_link_libraries(LibcFPTestHelpers LibcUnitTest)
 add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest
+  libc.utils.UnitTest.string_utils
   libc.src.__support.FPUtil.fputil
 )
 
@@ -43,4 +52,18 @@ add_dependencies(
   LibcMemoryHelpers
   LibcUnitTest
   libc.src.__support.CPP.array_ref
+)
+
+add_library(
+  LibcPrintfHelpers
+    PrintfMatcher.h
+    PrintfMatcher.cpp
+)
+target_include_directories(LibcPrintfHelpers PUBLIC ${LIBC_SOURCE_DIR})
+target_link_libraries(LibcPrintfHelpers LibcUnitTest)
+add_dependencies(
+  LibcPrintfHelpers
+  LibcUnitTest
+  libc.utils.UnitTest.string_utils
+  libc.src.stdio.printf_core.core_structs
 )
