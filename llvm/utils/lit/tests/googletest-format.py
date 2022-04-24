@@ -13,19 +13,15 @@
 # CHECK: *** TEST 'googletest-format :: [[PATH]][[FILE]]/0{{.*}} FAILED ***
 # CHECK-NEXT: Script(shard):
 # CHECK-NEXT: --
-# CHECK-NEXT: GTEST_COLOR=no
-# CHECK-NEXT: GTEST_SHUFFLE=1
-# CHECK-NEXT: GTEST_TOTAL_SHARDS=6
-# CHECK-NEXT: GTEST_SHARD_INDEX=0
-# CHECK-NEXT: GTEST_OUTPUT=json:{{.*\.json}}
-# CHECK-NEXT: GTEST_RANDOM_SEED=123
-# CHECK-NEXT: [[FILE]]
+# CHECK-NEXT: GTEST_OUTPUT=json:{{[^[:space:]]*}} GTEST_SHUFFLE=1 GTEST_TOTAL_SHARDS=6 GTEST_SHARD_INDEX=0 GTEST_RANDOM_SEED=123 {{.*}}[[FILE]]
 # CHECK-NEXT: --
 # CHECK-EMPTY:
 # CHECK-NEXT: Script:
 # CHECK-NEXT: --
 # CHECK-NEXT: [[FILE]] --gtest_filter=FirstTest.subTestB
 # CHECK-NEXT: --
+# CHECK-NEXT: I am subTest B output
+# CHECK-EMPTY:
 # CHECK-NEXT: I am subTest B, I FAIL
 # CHECK-NEXT: And I have two lines of output
 # CHECK-EMPTY:
