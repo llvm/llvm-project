@@ -605,9 +605,16 @@ public:
     const NamedDecl *Parent = dyn_cast<NamedDecl>(DC);
     IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
                                          D->getLexicalDeclContext());
-    for (const auto *I : D->shadows())
+    for (const auto *I : D->shadows()) {
+      // Skip unresolved using decls - we already have a decl for the using
+      // itself, so there's not much point adding another decl or reference to
+      // refer to the same location.
+      if (isa<UnresolvedUsingIfExistsDecl>(I->getUnderlyingDecl()))
+        continue;
+
       IndexCtx.handleReference(I->getUnderlyingDecl(), D->getLocation(), Parent,
                                D->getLexicalDeclContext(), SymbolRoleSet());
+    }
     return true;
   }
 
