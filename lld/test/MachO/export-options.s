@@ -133,7 +133,7 @@
 # RUN: llvm-nm -g %t/exp-autohide.dylib | FileCheck %s --check-prefix=EXP-AUTOHIDE
 
 # RUN: not %lld -dylib -exported_symbol "_foo" %t/autohide-private-extern.o \
-# RUN: -o /dev/null  2>&1 | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
+# RUN:   -o /dev/null  2>&1 | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
 
 # RUN: not %lld -dylib -exported_symbol "_foo" %t/autohide.o \
 # RUN:   %t/glob-private-extern.o -o /dev/null 2>&1 | \
@@ -143,8 +143,24 @@
 # RUN:   %t/weak-private-extern.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
 
+## Test that exported hidden symbols are still treated as a liveness root.
+## This previously used to crash when enabling -dead_strip since it's unconventional
+## to add treat private extern symbols as a liveness root.
+# RUN: %no-fatal-warnings-lld -dylib -exported_symbol "_foo" %t/autohide-private-extern.o \
+# RUN:   -dead_strip -o %t/exported-hidden
+# RUN: llvm-nm -m %t/exported-hidden | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE-DEAD-STRIP
+
+# RUN: %no-fatal-warnings-lld -dylib -exported_symbol "_foo" %t/autohide.o \
+# RUN:   -dead_strip %t/glob-private-extern.o -o %t/exported-hidden
+# RUN: llvm-nm -m %t/exported-hidden | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE-DEAD-STRIP
+
+# RUN: %no-fatal-warnings-lld -dylib -exported_symbol "_foo" %t/autohide.o \
+# RUN:   -dead_strip %t/weak-private-extern.o -o %t/exported-hidden
+# RUN: llvm-nm -m %t/exported-hidden | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE-DEAD-STRIP
+
 # EXP-AUTOHIDE: T _foo
 # AUTOHIDE-PRIVATE: error: cannot export hidden symbol _foo
+# AUTOHIDE-PRIVATE-DEAD-STRIP: (__TEXT,__text) non-external (was a private external) _foo
 
 #--- default.s
 
