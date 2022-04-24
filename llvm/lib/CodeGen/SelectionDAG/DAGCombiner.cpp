@@ -13681,6 +13681,14 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, /*PoisonOnly*/ false))
     return N0;
 
+  // Fold freeze(bitcast(x)) -> bitcast(freeze(x)).
+  // TODO: Replace with pushFreezeToPreventPoisonFromPropagating fold.
+  if (N0.getOpcode() == ISD::BITCAST)
+    return DAG.getBitcast(N->getValueType(0),
+                          DAG.getNode(ISD::FREEZE, SDLoc(N0),
+                                      N0.getOperand(0).getValueType(),
+                                      N0.getOperand(0)));
+
   return SDValue();
 }
 
