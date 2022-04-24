@@ -592,6 +592,39 @@ define i1 @is_signbit_set(double %x) {
   ret i1 %r
 }
 
+define i1 @is_signbit_set_1(double %x) {
+; CHECK-LABEL: @is_signbit_set_1(
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp ult double [[S]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = call double @llvm.copysign.f64(double 1.0, double %x)
+  %r = fcmp ult double %s, 0.0
+  ret i1 %r
+}
+
+define i1 @is_signbit_set_2(double %x) {
+; CHECK-LABEL: @is_signbit_set_2(
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp ole double [[S]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = call double @llvm.copysign.f64(double 1.0, double %x)
+  %r = fcmp ole double %s, 0.0
+  ret i1 %r
+}
+
+define i1 @is_signbit_set_3(double %x) {
+; CHECK-LABEL: @is_signbit_set_3(
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp ule double [[S]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = call double @llvm.copysign.f64(double 1.0, double %x)
+  %r = fcmp ule double %s, 0.0
+  ret i1 %r
+}
+
 ; Vectors are ok; the sign of zero in the compare doesn't matter; the copysign constant can be any non-zero number.
 
 define <2 x i1> @is_signbit_set_anyzero(<2 x double> %x) {
@@ -615,6 +648,39 @@ define i1 @is_signbit_clear(double %x) {
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
   %r = fcmp ogt double %s, 0.0
+  ret i1 %r
+}
+
+define i1 @is_signbit_clear_1(double %x) {
+; CHECK-LABEL: @is_signbit_clear_1(
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double -4.200000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp ugt double [[S]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = call double @llvm.copysign.f64(double -42.0, double %x)
+  %r = fcmp ugt double %s, 0.0
+  ret i1 %r
+}
+
+define i1 @is_signbit_clear_2(double %x) {
+; CHECK-LABEL: @is_signbit_clear_2(
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double -4.200000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oge double [[S]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = call double @llvm.copysign.f64(double -42.0, double %x)
+  %r = fcmp oge double %s, 0.0
+  ret i1 %r
+}
+
+define i1 @is_signbit_clear_3(double %x) {
+; CHECK-LABEL: @is_signbit_clear_3(
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double -4.200000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp uge double [[S]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = call double @llvm.copysign.f64(double -42.0, double %x)
+  %r = fcmp uge double %s, 0.0
   ret i1 %r
 }
 
