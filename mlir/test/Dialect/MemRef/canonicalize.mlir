@@ -331,14 +331,14 @@ func.func @compose_collapse_of_collapse(%arg0 : memref<?x?x?x?x?xf32>)
 
 func.func @do_not_compose_collapse_of_expand_non_identity_layout(
     %arg0: memref<?x?xf32, offset : 0, strides : [?, 1]>)
-    -> memref<?xf32> {
+    -> memref<?xf32, offset : 0, strides : [?]> {
   %1 = memref.expand_shape %arg0 [[0, 1], [2]] :
     memref<?x?xf32, offset : 0, strides : [?, 1]> into
     memref<?x4x?xf32, offset : 0, strides : [?, ?, 1]>
   %2 = memref.collapse_shape %1 [[0, 1, 2]] :
     memref<?x4x?xf32, offset : 0, strides : [?, ?, 1]> into
-    memref<?xf32>
-  return %2 : memref<?xf32>
+    memref<?xf32, offset : 0, strides : [?]>
+  return %2 : memref<?xf32, offset : 0, strides : [?]>
 }
 // CHECK-LABEL: func @do_not_compose_collapse_of_expand_non_identity_layout
 // CHECK: expand
