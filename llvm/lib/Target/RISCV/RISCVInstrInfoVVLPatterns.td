@@ -683,44 +683,45 @@ multiclass VPatReductionVL<SDNode vop, string instruction_name, bit is_float> {
 }
 
 multiclass VPatBinarySDNodeExt_V_WV_WX<SDNode op, PatFrags extop, string instruction_name> {
-  foreach vti = AllWidenableIntVectors in {
+  foreach vtiToWti = AllWidenableIntVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
     def : Pat<
-      (vti.Vti.Vector
+      (vti.Vector
         (riscv_trunc_vector_vl
-          (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
-              (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
+          (op (wti.Vector wti.RegClass:$rs2),
+              (wti.Vector (extop (vti.Vector vti.RegClass:$rs1)))),
           (riscv_vmset_vl VLOpFrag),
           VLOpFrag)),
-      (!cast<Instruction>(instruction_name#"_WV_"#vti.Vti.LMul.MX)
-        vti.Wti.RegClass:$rs2, vti.Vti.RegClass:$rs1,
-        vti.Vti.AVL, vti.Vti.Log2SEW)>;
+      (!cast<Instruction>(instruction_name#"_WV_"#vti.LMul.MX)
+        wti.RegClass:$rs2, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
     def : Pat<
-      (vti.Vti.Vector
+      (vti.Vector
         (riscv_trunc_vector_vl
-          (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
-              (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1))))),
+          (op (wti.Vector wti.RegClass:$rs2),
+              (wti.Vector (extop (vti.Vector (SplatPat GPR:$rs1))))),
           (riscv_vmset_vl VLOpFrag),
           VLOpFrag)),
-      (!cast<Instruction>(instruction_name#"_WX_"#vti.Vti.LMul.MX)
-        vti.Wti.RegClass:$rs2, GPR:$rs1,
-        vti.Vti.AVL, vti.Vti.Log2SEW)>;
+      (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)
+        wti.RegClass:$rs2, GPR:$rs1, vti.AVL, vti.Log2SEW)>;
   }
 }
 
 multiclass VPatBinarySDNode_V_WV_WX_WI<SDNode op, string instruction_name> {
   defm : VPatBinarySDNodeExt_V_WV_WX<op, sext_oneuse, instruction_name>;
   defm : VPatBinarySDNodeExt_V_WV_WX<op, zext_oneuse, instruction_name>;
-  foreach vti = AllWidenableIntVectors in {
+  foreach vtiToWti = AllWidenableIntVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
     def : Pat<
-      (vti.Vti.Vector
+      (vti.Vector
         (riscv_trunc_vector_vl
-          (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
-              (vti.Wti.Vector (SplatPat_uimm5 uimm5:$rs1))),
+          (op (wti.Vector wti.RegClass:$rs2),
+              (wti.Vector (SplatPat_uimm5 uimm5:$rs1))),
           (riscv_vmset_vl VLOpFrag),
           VLOpFrag)),
-      (!cast<Instruction>(instruction_name#"_WI_"#vti.Vti.LMul.MX)
-        vti.Wti.RegClass:$rs2, uimm5:$rs1,
-        vti.Vti.AVL, vti.Vti.Log2SEW)>;
+      (!cast<Instruction>(instruction_name#"_WI_"#vti.LMul.MX)
+        wti.RegClass:$rs2, uimm5:$rs1, vti.AVL, vti.Log2SEW)>;
   }
 }
 
@@ -814,18 +815,19 @@ multiclass VPatWidenBinaryFPVL_VV_VF_WV_WF<SDNode op, string instruction_name> {
 }
 
 multiclass VPatNarrowShiftSplatExt_WX<SDNode op, PatFrags extop, string instruction_name> {
-  foreach vti = AllWidenableIntVectors in {
+  foreach vtiToWti = AllWidenableIntVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
     def : Pat<
-      (vti.Vti.Vector
+      (vti.Vector
         (riscv_trunc_vector_vl
-          (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
-              (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1)),
-                                     (vti.Vti.Mask true_mask), VLOpFrag)),
-          (vti.Wti.Mask true_mask), VLOpFrag),
-        (vti.Vti.Mask true_mask), VLOpFrag)),
-      (!cast<Instruction>(instruction_name#"_WX_"#vti.Vti.LMul.MX)
-        vti.Wti.RegClass:$rs2, GPR:$rs1,
-        vti.Vti.AVL, vti.Vti.Log2SEW)>;
+          (op (wti.Vector wti.RegClass:$rs2),
+              (wti.Vector (extop (vti.Vector (SplatPat GPR:$rs1)),
+                                 (vti.Mask true_mask), VLOpFrag)),
+          (wti.Mask true_mask), VLOpFrag),
+        (vti.Mask true_mask), VLOpFrag)),
+      (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)
+        wti.RegClass:$rs2, GPR:$rs1, vti.AVL, vti.Log2SEW)>;
   }
 }
 
