@@ -182,11 +182,13 @@ def main():
   # CHECK-LABEL: TEST: test_stress
   print("\nTEST: test_stress")
   with ir.Context() as ctx, ir.Location.unknown():
+    par = 0
+    vec = 0
     vl = 1
     e = False
     sparsification_options = (
-        f'parallelization-strategy=none '
-        f'vectorization-strategy=none '
+        f'parallelization-strategy={par} '
+        f'vectorization-strategy={vec} '
         f'vl={vl} '
         f'enable-simd-index32={e}')
     compiler = sparse_compiler.SparseCompiler(

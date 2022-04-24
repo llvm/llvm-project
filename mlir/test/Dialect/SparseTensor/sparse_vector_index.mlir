@@ -5,7 +5,7 @@
 // about what constitutes a good test! The CHECK should be
 // minimized and named to reflect the test intent.
 
-// RUN: mlir-opt %s -sparsification="vectorization-strategy=any-storage-inner-loop vl=8" -canonicalize | \
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=8" -canonicalize | \
 // RUN:   FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
