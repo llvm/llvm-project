@@ -593,7 +593,7 @@ function(cxx_add_basic_build_flags target)
     target_compile_definitions(${target} PRIVATE -D_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
   endif()
 
-  if (LIBCXX_HAS_COMMENT_LIB_PRAGMA)
+  if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
     if (LIBCXX_HAS_PTHREAD_LIB)
       target_compile_definitions(${target} PRIVATE -D_LIBCPP_LINK_PTHREAD_LIB)
     endif()
@@ -774,7 +774,7 @@ function(cxx_link_system_libraries target)
 # Unfortunately this cannot be used universally because for example g++ supports
 # only -nodefaultlibs in which case all libraries will be removed and
 # all libraries but c++ have to be added in manually.
-  if (LIBCXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
     target_add_link_flags_if_supported(${target} PRIVATE "-nostdlib++")
   else()
     target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
@@ -782,7 +782,7 @@ function(cxx_link_system_libraries target)
     target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
   endif()
 
-  if (LIBCXX_SUPPORTS_UNWINDLIB_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
+  if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
     # If we're linking directly against the libunwind that we're building
     # in the same invocation, don't try to link in the toolchain's
     # default libunwind (which may be missing still).
