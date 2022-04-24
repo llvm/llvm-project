@@ -17,6 +17,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -1190,13 +1191,13 @@ void FunctionLibraryOp::build(OpBuilder &builder, OperationState &result,
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 }
 
-func::FuncOp FunctionLibraryOp::getShapeFunction(Operation *op) {
+FuncOp FunctionLibraryOp::getShapeFunction(Operation *op) {
   auto attr = getMapping()
                   .get(op->getName().getIdentifier())
                   .dyn_cast_or_null<FlatSymbolRefAttr>();
   if (!attr)
     return nullptr;
-  return lookupSymbol<func::FuncOp>(attr);
+  return lookupSymbol<FuncOp>(attr);
 }
 
 ParseResult FunctionLibraryOp::parse(OpAsmParser &parser,
@@ -1235,6 +1236,24 @@ void FunctionLibraryOp::print(OpAsmPrinter &p) {
                 /*printBlockTerminators=*/false);
   p << " mapping ";
   p.printAttributeWithoutType(getMappingAttr());
+}
+
+//===----------------------------------------------------------------------===//
+// FuncOp
+//===----------------------------------------------------------------------===//
+
+ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
+  auto buildFuncType =
+      [](Builder &builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
+         function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(argTypes, results); };
+
+  return function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false, buildFuncType);
+}
+
+void FuncOp::print(OpAsmPrinter &p) {
+  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
 }
 
 //===----------------------------------------------------------------------===//
