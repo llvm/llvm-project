@@ -408,19 +408,37 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(
   } else {
     // Could not parse a decimal floating-point number.  p has been
     // advanced over any leading spaces.
-    if (toupper(p[0]) == 'N' && toupper(p[1]) == 'A' && toupper(p[2]) == 'N') {
+    if ((!limit || limit >= p + 3) && toupper(p[0]) == 'N' &&
+        toupper(p[1]) == 'A' && toupper(p[2]) == 'N') {
       // NaN
       p += 3;
+      if ((!limit || p < limit) && *p == '(') {
+        int depth{1};
+        do {
+          ++p;
+          if (limit && p >= limit) {
+            // Invalid input
+            return {Real{NaN()}, Invalid};
+          } else if (*p == '(') {
+            ++depth;
+          } else if (*p == ')') {
+            --depth;
+          }
+        } while (depth > 0);
+        ++p;
+      }
       return {Real{NaN()}};
     } else {
       // Try to parse Inf, maybe with a sign
       const char *q{p};
-      isNegative_ = *q == '-';
-      if (*q == '-' || *q == '+') {
-        ++q;
+      if (!limit || q < limit) {
+        isNegative_ = *q == '-';
+        if (isNegative_ || *q == '+') {
+          ++q;
+        }
       }
-      if (toupper(q[0]) == 'I' && toupper(q[1]) == 'N' &&
-          toupper(q[2]) == 'F') {
+      if ((!limit || limit >= q + 3) && toupper(q[0]) == 'I' &&
+          toupper(q[1]) == 'N' && toupper(q[2]) == 'F') {
         p = q + 3;
         return {Real{Infinity()}};
       } else {
