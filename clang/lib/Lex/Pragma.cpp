@@ -1944,8 +1944,6 @@ struct PragmaRegionHandler : public PragmaHandler {
 static IdentifierInfo *HandleMacroAnnotationPragma(Preprocessor &PP, Token &Tok,
                                                    const char *Pragma,
                                                    std::string &MessageString) {
-  std::string Macro;
-
   PP.Lex(Tok);
   if (Tok.isNot(tok::l_paren)) {
     PP.Diag(Tok, diag::err_expected) << "(";
@@ -2034,8 +2032,6 @@ struct PragmaFinalHandler : public PragmaHandler {
 
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &Tok) override {
-    std::string Macro;
-
     PP.Lex(Tok);
     if (Tok.isNot(tok::l_paren)) {
       PP.Diag(Tok, diag::err_expected) << "(";
