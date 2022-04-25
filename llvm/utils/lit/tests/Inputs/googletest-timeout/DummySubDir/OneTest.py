@@ -54,6 +54,8 @@ if os.environ['GTEST_SHARD_INDEX'] == '0':
             f.write(output)
         exit_code = 0
     elif test_name == 'InfiniteLoopSubTest':
+        print('[ RUN      ] T.InfiniteLoopSubTest', flush=True)
+        print('some in progess output', file=sys.stderr, flush=True)
         while True:
             pass
     else:
