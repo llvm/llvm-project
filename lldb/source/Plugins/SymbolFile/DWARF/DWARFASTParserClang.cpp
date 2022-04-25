@@ -1040,10 +1040,8 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         // struct and see if this is actually a C++ method
         Type *class_type = dwarf->ResolveType(decl_ctx_die);
         if (class_type) {
-          bool alternate_defn = false;
           if (class_type->GetID() != decl_ctx_die.GetID() ||
               IsClangModuleFwdDecl(decl_ctx_die)) {
-            alternate_defn = true;
 
             // We uniqued the parent class of this function to another
             // class so we now need to associate all dies under
@@ -1112,7 +1110,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
             CompilerType class_opaque_type =
                 class_type->GetForwardCompilerType();
             if (TypeSystemClang::IsCXXClassType(class_opaque_type)) {
-              if (class_opaque_type.IsBeingDefined() || alternate_defn) {
+              if (class_opaque_type.IsBeingDefined()) {
                 if (!is_static && !die.HasChildren()) {
                   // We have a C++ member function with no children (this
                   // pointer!) and clang will get mad if we try and make
@@ -1120,84 +1118,50 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                   // we will just skip it...
                   type_handled = true;
                 } else {
-                  bool add_method = true;
-                  if (alternate_defn) {
-                    // If an alternate definition for the class exists,
-                    // then add the method only if an equivalent is not
-                    // already present.
-                    clang::CXXRecordDecl *record_decl =
-                        m_ast.GetAsCXXRecordDecl(
-                            class_opaque_type.GetOpaqueQualType());
-                    if (record_decl) {
-                      for (auto method_iter = record_decl->method_begin();
-                           method_iter != record_decl->method_end();
-                           method_iter++) {
-                        clang::CXXMethodDecl *method_decl = *method_iter;
-                        if (method_decl->getNameInfo().getAsString() ==
-                            attrs.name.GetStringRef()) {
-                          if (method_decl->getType() ==
-                              ClangUtil::GetQualType(clang_type)) {
-                            add_method = false;
-                            LinkDeclContextToDIE(method_decl, die);
-                            type_handled = true;
+                  llvm::PrettyStackTraceFormat stack_trace(
+                      "SymbolFileDWARF::ParseType() is adding a method "
+                      "%s to class %s in DIE 0x%8.8" PRIx64 " from %s",
+                      attrs.name.GetCString(),
+                      class_type->GetName().GetCString(), die.GetID(),
+                      dwarf->GetObjectFile()->GetFileSpec().GetPath().c_str());
 
-                            break;
-                          }
-                        }
-                      }
+                  const bool is_attr_used = false;
+                  // Neither GCC 4.2 nor clang++ currently set a valid
+                  // accessibility in the DWARF for C++ methods...
+                  // Default to public for now...
+                  if (attrs.accessibility == eAccessNone)
+                    attrs.accessibility = eAccessPublic;
+
+                  clang::CXXMethodDecl *cxx_method_decl =
+                      m_ast.AddMethodToCXXRecordType(
+                          class_opaque_type.GetOpaqueQualType(),
+                          attrs.name.GetCString(), attrs.mangled_name,
+                          clang_type, attrs.accessibility, attrs.is_virtual,
+                          is_static, attrs.is_inline, attrs.is_explicit,
+                          is_attr_used, attrs.is_artificial);
+
+                  type_handled = cxx_method_decl != nullptr;
+                  // Artificial methods are always handled even when we
+                  // don't create a new declaration for them.
+                  type_handled |= attrs.is_artificial;
+
+                  if (cxx_method_decl) {
+                    LinkDeclContextToDIE(cxx_method_decl, die);
+
+                    ClangASTMetadata metadata;
+                    metadata.SetUserID(die.GetID());
+
+                    if (!object_pointer_name.empty()) {
+                      metadata.SetObjectPtrName(object_pointer_name.c_str());
+                      LLDB_LOGF(log,
+                                "Setting object pointer name: %s on method "
+                                "object %p.\n",
+                                object_pointer_name.c_str(),
+                                static_cast<void *>(cxx_method_decl));
                     }
-                  }
-
-                  if (add_method) {
-                    llvm::PrettyStackTraceFormat stack_trace(
-                        "SymbolFileDWARF::ParseType() is adding a method "
-                        "%s to class %s in DIE 0x%8.8" PRIx64 " from %s",
-                        attrs.name.GetCString(),
-                        class_type->GetName().GetCString(), die.GetID(),
-                        dwarf->GetObjectFile()
-                            ->GetFileSpec()
-                            .GetPath()
-                            .c_str());
-
-                    const bool is_attr_used = false;
-                    // Neither GCC 4.2 nor clang++ currently set a valid
-                    // accessibility in the DWARF for C++ methods...
-                    // Default to public for now...
-                    if (attrs.accessibility == eAccessNone)
-                      attrs.accessibility = eAccessPublic;
-
-                    clang::CXXMethodDecl *cxx_method_decl =
-                        m_ast.AddMethodToCXXRecordType(
-                            class_opaque_type.GetOpaqueQualType(),
-                            attrs.name.GetCString(), attrs.mangled_name,
-                            clang_type, attrs.accessibility, attrs.is_virtual,
-                            is_static, attrs.is_inline, attrs.is_explicit,
-                            is_attr_used, attrs.is_artificial);
-
-                    type_handled = cxx_method_decl != nullptr;
-                    // Artificial methods are always handled even when we
-                    // don't create a new declaration for them.
-                    type_handled |= attrs.is_artificial;
-
-                    if (cxx_method_decl) {
-                      LinkDeclContextToDIE(cxx_method_decl, die);
-
-                      ClangASTMetadata metadata;
-                      metadata.SetUserID(die.GetID());
-
-                      if (!object_pointer_name.empty()) {
-                        metadata.SetObjectPtrName(
-                            object_pointer_name.c_str());
-                        LLDB_LOGF(log,
-                                  "Setting object pointer name: %s on method "
-                                  "object %p.\n",
-                                  object_pointer_name.c_str(),
-                                  static_cast<void *>(cxx_method_decl));
-                      }
-                      m_ast.SetMetadata(cxx_method_decl, metadata);
-                    } else {
-                      ignore_containing_context = true;
-                    }
+                    m_ast.SetMetadata(cxx_method_decl, metadata);
+                  } else {
+                    ignore_containing_context = true;
                   }
                 }
               } else {
@@ -3570,10 +3534,10 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   auto link = [&](DWARFDIE src, DWARFDIE dst) {
     SymbolFileDWARF::DIEToTypePtr &die_to_type =
         dst_class_die.GetDWARF()->GetDIEToType();
-    clang::DeclContext *src_decl_ctx =
-        src_dwarf_ast_parser->m_die_to_decl_ctx[src.GetDIE()];
-    if (src_decl_ctx)
-      dst_dwarf_ast_parser->LinkDeclContextToDIE(src_decl_ctx, dst);
+    clang::DeclContext *dst_decl_ctx =
+        dst_dwarf_ast_parser->m_die_to_decl_ctx[dst.GetDIE()];
+    if (dst_decl_ctx)
+      src_dwarf_ast_parser->LinkDeclContextToDIE(dst_decl_ctx, src);
 
     if (Type *src_child_type = die_to_type[src.GetDIE()])
       die_to_type[dst.GetDIE()] = src_child_type;
