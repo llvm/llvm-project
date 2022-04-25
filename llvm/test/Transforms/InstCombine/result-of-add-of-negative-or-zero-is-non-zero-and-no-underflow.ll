@@ -254,7 +254,7 @@ define i1 @t7(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t7(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[ADJUSTED]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i8 [[TMP1]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
@@ -270,7 +270,7 @@ define i1 @t7_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t7_logical(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[ADJUSTED]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i8 [[TMP1]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;

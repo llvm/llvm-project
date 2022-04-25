@@ -3971,6 +3971,24 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return new ICmpInst(Pred, X, Builder.CreateNot(Op0));
 
   {
+    // (Op1 + X) + C u</u>= Op1 --> ~C - X u</u>= Op1
+    Constant *C;
+    if (match(Op0, m_OneUse(m_Add(m_c_Add(m_Specific(Op1), m_Value(X)),
+                                  m_ImmConstant(C)))) &&
+        (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE)) {
+      Constant *C2 = ConstantExpr::getNot(C);
+      return new ICmpInst(Pred, Builder.CreateSub(C2, X), Op1);
+    }
+    // Op0 u>/u<= (Op0 + X) + C --> Op0 u>/u<= ~C - X
+    if (match(Op1, m_OneUse(m_Add(m_c_Add(m_Specific(Op0), m_Value(X)),
+                                  m_ImmConstant(C)))) &&
+        (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE)) {
+      Constant *C2 = ConstantExpr::getNot(C);
+      return new ICmpInst(Pred, Op0, Builder.CreateSub(C2, X));
+    }
+  }
+
+  {
     // Similar to above: an unsigned overflow comparison may use offset + mask:
     // ((Op1 + C) & C) u<  Op1 --> Op1 != 0
     // ((Op1 + C) & C) u>= Op1 --> Op1 == 0
