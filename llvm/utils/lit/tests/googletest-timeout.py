@@ -19,16 +19,18 @@
 # RUN: FileCheck --check-prefix=CHECK-INF < %t.cfgset.out %s
 
 # CHECK-INF: -- Testing:
-# CHECK-INF: TIMEOUT: googletest-timeout :: [[PATH:[Dd]ummy[Ss]ub[Dd]ir/]][[FILE:OneTest\.py]]/0/2
+# CHECK-INF: TIMEOUT: googletest-timeout :: [[PATH:[Dd]ummy[Ss]ub[Dd]ir/]][[FILE:OneTest.py]]/0/2
 # CHECK-INF-NEXT: ******************** TEST 'googletest-timeout :: [[PATH]][[FILE]]/0/2' FAILED ********************
 # CHECK-INF-NEXT: Script(shard):
 # CHECK-INF-NEXT: --
-# CHECK-INF-NEXT: GTEST_COLOR=no
-# CHECK-INF-NEXT: GTEST_SHUFFLE=0
-# CHECK-INF-NEXT: GTEST_TOTAL_SHARDS=2
-# CHECK-INF-NEXT: GTEST_SHARD_INDEX=0
-# CHECK-INF-NEXT: GTEST_OUTPUT=json:{{.*\.json}}
-# CHECK-INF-NEXT: [[FILE]]
+# CHECK-INF-NEXT: GTEST_OUTPUT=json:{{[^[:space:]]*}} GTEST_SHUFFLE=0 GTEST_TOTAL_SHARDS=2 GTEST_SHARD_INDEX=0 {{.*}}[[FILE]]
+# CHECK-INF-NEXT: --
+# CHECK-INF-EMPTY:
+# CHECK-INF-NEXT: [ RUN ] T.InfiniteLoopSubTest
+# CHECK-INF-NEXT: some in progess output
+# CHECK-INF-EMPTY:
+# CHECK-INF-NEXT: --
+# CHECK-INF-NEXT: exit:
 # CHECK-INF-NEXT: --
 # CHECK-INF-NEXT: Reached timeout of 1 seconds
 # CHECK-INF: Timed Out: 1
