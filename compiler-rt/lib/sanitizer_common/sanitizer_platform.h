@@ -298,6 +298,18 @@
 #  define SANITIZER_SIGN_EXTENDED_ADDRESSES 0
 #endif
 
+// The AArch64 and RISC-V linux ports use the canonical syscall set as
+// mandated by the upstream linux community for all new ports. Other ports
+// may still use legacy syscalls.
+#ifndef SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
+#  if (defined(__aarch64__) || defined(__riscv) || defined(__hexagon__)) && \
+      SANITIZER_LINUX
+#    define SANITIZER_USES_CANONICAL_LINUX_SYSCALLS 1
+#  else
+#    define SANITIZER_USES_CANONICAL_LINUX_SYSCALLS 0
+#  endif
+#endif
+
 // udi16 syscalls can only be used when the following conditions are
 // met:
 // * target is one of arm32, x86-32, sparc32, sh or m68k

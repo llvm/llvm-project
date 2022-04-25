@@ -233,7 +233,7 @@ uptr internal_close(fd_t fd) {
 }
 
 uptr internal_open(const char *filename, int flags) {
-#    if SANITIZER_LINUX
+#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(openat), AT_FDCWD, (uptr)filename, flags);
 #else
   return internal_syscall(SYSCALL(open), (uptr)filename, flags);
@@ -241,7 +241,7 @@ uptr internal_open(const char *filename, int flags) {
 }
 
 uptr internal_open(const char *filename, int flags, u32 mode) {
-#    if SANITIZER_LINUX
+#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(openat), AT_FDCWD, (uptr)filename, flags,
                           mode);
 #else
@@ -342,46 +342,50 @@ static void kernel_stat_to_stat(struct kernel_stat *in, struct stat *out) {
 uptr internal_stat(const char *path, void *buf) {
 #if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf, 0);
-#    elif SANITIZER_LINUX
-#      if SANITIZER_WORDSIZE == 64
+#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           0);
-#      else
-  struct stat64 buf64;
-  int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
-                             (uptr)&buf64, 0);
-  stat64_to_stat(&buf64, (struct stat *)buf);
+#elif SANITIZER_LINUX_USES_64BIT_SYSCALLS
+# if defined(__mips64)
+  // For mips64, stat syscall fills buffer in the format of kernel_stat
+  struct kernel_stat kbuf;
+  int res = internal_syscall(SYSCALL(stat), path, &kbuf);
+  kernel_stat_to_stat(&kbuf, (struct stat *)buf);
   return res;
-#      endif
-#    else
+# else
+  return internal_syscall(SYSCALL(stat), (uptr)path, (uptr)buf);
+# endif
+#else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(stat64), path, &buf64);
   stat64_to_stat(&buf64, (struct stat *)buf);
   return res;
-#    endif
+#endif
 }
 
 uptr internal_lstat(const char *path, void *buf) {
 #if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
-#    elif SANITIZER_LINUX
-#      if defined(_LP64)
+#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
-#      else
-  struct stat64 buf64;
-  int res = internal_syscall(SYSCALL(fstatat64), AT_FDCWD, (uptr)path,
-                             (uptr)&buf64, AT_SYMLINK_NOFOLLOW);
-  stat64_to_stat(&buf64, (struct stat *)buf);
+#elif SANITIZER_LINUX_USES_64BIT_SYSCALLS
+# if SANITIZER_MIPS64
+  // For mips64, lstat syscall fills buffer in the format of kernel_stat
+  struct kernel_stat kbuf;
+  int res = internal_syscall(SYSCALL(lstat), path, &kbuf);
+  kernel_stat_to_stat(&kbuf, (struct stat *)buf);
   return res;
-#      endif
-#    else
+# else
+  return internal_syscall(SYSCALL(lstat), (uptr)path, (uptr)buf);
+# endif
+#else
   struct stat64 buf64;
   int res = internal_syscall(SYSCALL(lstat64), path, &buf64);
   stat64_to_stat(&buf64, (struct stat *)buf);
   return res;
-#    endif
+#endif
 }
 
 uptr internal_fstat(fd_t fd, void *buf) {
@@ -415,7 +419,7 @@ uptr internal_dup(int oldfd) {
 }
 
 uptr internal_dup2(int oldfd, int newfd) {
-#    if SANITIZER_LINUX
+#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(dup3), oldfd, newfd, 0);
 #else
   return internal_syscall(SYSCALL(dup2), oldfd, newfd);
@@ -423,7 +427,7 @@ uptr internal_dup2(int oldfd, int newfd) {
 }
 
 uptr internal_readlink(const char *path, char *buf, uptr bufsize) {
-#    if SANITIZER_LINUX
+#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(readlinkat), AT_FDCWD, (uptr)path, (uptr)buf,
                           bufsize);
 #else
@@ -432,7 +436,7 @@ uptr internal_readlink(const char *path, char *buf, uptr bufsize) {
 }
 
 uptr internal_unlink(const char *path) {
-#    if SANITIZER_LINUX
+#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(unlinkat), AT_FDCWD, (uptr)path, 0);
 #else
   return internal_syscall(SYSCALL(unlink), (uptr)path);
@@ -443,12 +447,12 @@ uptr internal_rename(const char *oldpath, const char *newpath) {
 #if defined(__riscv) && defined(__linux__)
   return internal_syscall(SYSCALL(renameat2), AT_FDCWD, (uptr)oldpath, AT_FDCWD,
                           (uptr)newpath, 0);
-#    elif SANITIZER_LINUX
+#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(renameat), AT_FDCWD, (uptr)oldpath, AT_FDCWD,
                           (uptr)newpath);
-#    else
+#else
   return internal_syscall(SYSCALL(rename), (uptr)oldpath, (uptr)newpath);
-#    endif
+#endif
 }
 
 uptr internal_sched_yield() {
@@ -485,7 +489,11 @@ bool FileExists(const char *filename) {
   if (ShouldMockFailureToOpen(filename))
     return false;
   struct stat st;
+#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
+  if (internal_syscall(SYSCALL(newfstatat), AT_FDCWD, filename, &st, 0))
+#else
   if (internal_stat(filename, &st))
+#endif
     return false;
   // Sanity check: filename is a regular file.
   return S_ISREG(st.st_mode);
@@ -493,7 +501,11 @@ bool FileExists(const char *filename) {
 
 bool DirExists(const char *path) {
   struct stat st;
+#  if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
+  if (internal_syscall(SYSCALL(newfstatat), AT_FDCWD, path, &st, 0))
+#  else
   if (internal_stat(path, &st))
+#  endif
     return false;
   return S_ISDIR(st.st_mode);
 }
@@ -697,17 +709,17 @@ void FutexWake(atomic_uint32_t *p, u32 count) {
 // Not used
 #else
 struct linux_dirent {
-#    if SANITIZER_X32 || SANITIZER_LINUX
+#if SANITIZER_X32 || defined(__aarch64__) || SANITIZER_RISCV64
   u64 d_ino;
   u64 d_off;
-#    else
+#else
   unsigned long      d_ino;
   unsigned long      d_off;
-#    endif
+#endif
   unsigned short     d_reclen;
-#    if SANITIZER_LINUX
+#if defined(__aarch64__) || SANITIZER_RISCV64
   unsigned char      d_type;
-#    endif
+#endif
   char               d_name[256];
 };
 #endif
@@ -743,11 +755,11 @@ int internal_dlinfo(void *handle, int request, void *p) {
 uptr internal_getdents(fd_t fd, struct linux_dirent *dirp, unsigned int count) {
 #if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(getdirentries), fd, (uptr)dirp, count, NULL);
-#    elif SANITIZER_LINUX
+#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(getdents64), fd, (uptr)dirp, count);
-#    else
+#else
   return internal_syscall(SYSCALL(getdents), fd, (uptr)dirp, count);
-#    endif
+#endif
 }
 
 uptr internal_lseek(fd_t fd, OFF_T offset, int whence) {
@@ -765,7 +777,7 @@ uptr internal_sigaltstack(const void *ss, void *oss) {
 }
 
 int internal_fork() {
-#    if SANITIZER_LINUX
+#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(clone), SIGCHLD, 0);
 #else
   return internal_syscall(SYSCALL(fork));
