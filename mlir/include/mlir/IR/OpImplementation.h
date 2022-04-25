@@ -464,6 +464,12 @@ public:
   /// Parse a '*' token if present.
   virtual ParseResult parseOptionalStar() = 0;
 
+  /// Parse a '|' token.
+  virtual ParseResult parseVerticalBar() = 0;
+
+  /// Parse a '|' token if present.
+  virtual ParseResult parseOptionalVerticalBar() = 0;
+
   /// Parse a quoted string token.
   ParseResult parseString(std::string *string) {
     auto loc = getCurrentLocation();

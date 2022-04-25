@@ -70,6 +70,7 @@ TOK_PUNCTUATION(r_brace, "}")
 TOK_PUNCTUATION(r_paren, ")")
 TOK_PUNCTUATION(r_square, "]")
 TOK_PUNCTUATION(star, "*")
+TOK_PUNCTUATION(vertical_bar, "|")
 
 // Keywords.  These turn "foo" into Token::kw_foo enums.
 

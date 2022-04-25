@@ -53,7 +53,7 @@ class BitEnumAttrCaseBase<I intType, string sym, int val, string str = sym> :
 
 // A bit enum case stored with a 32-bit IntegerAttr. `val` here is *not* the
 // ordinal number of a bit that is set. It is a 32-bit integer value with bits
-// set to match the case. 
+// set to match the case.
 class I32BitEnumAttrCase<string sym, int val, string str = sym>
     : BitEnumAttrCaseBase<I32, sym, val, str>;
 
@@ -182,6 +182,14 @@ class EnumAttrInfo<
     cppNamespace # "::" # specializedAttrClassName # "::get($_builder.getContext(), $0)",
     baseAttrClass.constBuilderCall);
   let valueType = baseAttrClass.valueType;
+
+  // C++ type wrapped by attribute
+  string cppType = cppNamespace # "::" # className;
+
+  // Parser and printer code used by the EnumParameter class, to be provided by
+  // derived classes
+  string parameterParser = ?;
+  string parameterPrinter = ?;
 }
 
 // An enum attribute backed by IntegerAttr.
@@ -202,7 +210,25 @@ class IntEnumAttr<I intType, string name, string summary,
     IntEnumAttrBase<intType, cases,
       !if(!empty(summary), "allowed " # intType.summary # " cases: " #
           !interleave(!foreach(case, cases, case.value), ", "),
-          summary)>>;
+          summary)>> {
+  // Parse a keyword and pass it to `stringToSymbol`. Emit an error if a the
+  // symbol is not valid.
+  let parameterParser = [{[&]() -> ::mlir::FailureOr<}] # cppType # [{> {
+    auto loc = $_parser.getCurrentLocation();
+    ::llvm::StringRef enumKeyword;
+    if (::mlir::failed($_parser.parseKeyword(&enumKeyword)))
+      return ::mlir::failure();
+    auto maybeEnum = }] # cppNamespace # "::" #
+                          stringToSymbolFnName # [{(enumKeyword);
+    if (maybeEnum)
+      return *maybeEnum;
+    return {(::mlir::LogicalResult)$_parser.emitError(loc, "expected }] #
+    cppType # [{ to be one of: }] #
+    !interleave(!foreach(enum, enumerants, enum.str), ", ") # [{")};
+  }()}];
+  // Print the enum by calling `symbolToString`.
+  let parameterPrinter = "$_printer << " # symbolToStringFnName # "($_self)";
+}
 
 class I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases> :
     IntEnumAttr<I32, name, summary, cases> {
@@ -244,6 +270,35 @@ class BitEnumAttr<I intType, string name, string summary,
   // The delimiter used to separate bit enum cases in strings.
   string separator = "|";
 
+  // Parsing function that corresponds to the enum separator. Only
+  // "," and "|" are supported by this definition.
+  string parseSeparatorFn = !if(!eq(separator,"|"),"parseOptionalVerticalBar",
+                                                   "parseOptionalComma");
+
+  // Parse a keyword and pass it to `stringToSymbol`. Emit an error if a the
+  // symbol is not valid.
+  let parameterParser = [{[&]() -> ::mlir::FailureOr<}] # cppType # [{> {
+    }] # cppType # [{ flags = {};
+    auto loc = $_parser.getCurrentLocation();
+    ::llvm::StringRef enumKeyword;
+    do {
+      if (::mlir::failed($_parser.parseKeyword(&enumKeyword)))
+        return ::mlir::failure();
+      auto maybeEnum = }] # cppNamespace # "::" #
+                            stringToSymbolFnName # [{(enumKeyword);
+      if (!maybeEnum) {
+          return {(::mlir::LogicalResult)$_parser.emitError(loc, "expected }] #
+                  cppType # [{ to be one of: }] #
+                 !interleave(!foreach(enum, enumerants, enum.str),
+                             ", ") # [{")};
+      }
+      flags = flags | *maybeEnum;
+    } while(::mlir::succeeded($_parser.}] # parseSeparatorFn # [{()));
+    return flags;
+  }()}];
+  // Print the enum by calling `symbolToString`.
+  let parameterPrinter = "$_printer << " # symbolToStringFnName # "($_self)";
+
   // Print the "primary group" only for bits that are members of case groups
   // that have all bits present. When the value is 0, printing will display both
   // both individual bit case names AND the names for all groups that the bit is
@@ -272,23 +327,8 @@ class I64BitEnumAttr<string name, string summary,
 class EnumParameter<EnumAttrInfo enumInfo>
     : AttrParameter<enumInfo.cppNamespace # "::" # enumInfo.className,
                     "an enum of type " # enumInfo.className> {
-  // Parse a keyword and pass it to `stringToSymbol`. Emit an error if a the
-  // symbol is not valid.
-  let parser = [{[&]() -> ::mlir::FailureOr<}] # cppType # [{> {
-    auto loc = $_parser.getCurrentLocation();
-    ::llvm::StringRef enumKeyword;
-    if (::mlir::failed($_parser.parseKeyword(&enumKeyword)))
-      return ::mlir::failure();
-    auto maybeEnum = }] # enumInfo.cppNamespace # "::" #
-                          enumInfo.stringToSymbolFnName # [{(enumKeyword);
-    if (maybeEnum)
-      return *maybeEnum;
-    return {(::mlir::LogicalResult)$_parser.emitError(loc, "expected }] #
-    cppType # [{ to be one of: }] #
-    !interleave(!foreach(enum, enumInfo.enumerants, enum.str), ", ") # [{")};
-  }()}];
-  // Print the enum by calling `symbolToString`.
-  let printer = "$_printer << " # enumInfo.symbolToStringFnName # "($_self)";
+  let parser = enumInfo.parameterParser;
+  let printer = enumInfo.parameterPrinter;
 }
 
 // An attribute backed by a C++ enum. The attribute contains a single
