@@ -374,6 +374,15 @@ public:
     return StringRef(Memory->Data.data(), Memory->Data.size());
   }
 
+  // Shrink in-memory buffers to fit.
+  // This incurs a copy, but preambles tend to be long-lived.
+  // Only safe to call once nothing can alias the buffer.
+  void shrink() {
+    if (!Memory)
+      return;
+    Memory->Data = decltype(Memory->Data)(Memory->Data);
+  }
+
 private:
   PCHStorage() = default;
   PCHStorage(const PCHStorage &) = delete;
@@ -520,7 +529,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   if (!Act->hasEmittedPreamblePCH())
     return BuildPreambleError::CouldntEmitPCH;
-  Act.reset(); // Frees the PCH buffer frees, unless Storage keeps it in memory.
+  Act.reset(); // Frees the PCH buffer, unless Storage keeps it in memory.
 
   // Keep track of all of the files that the source manager knows about,
   // so we can verify whether they have changed or not.
@@ -545,6 +554,11 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
     }
   }
 
+  // Shrinking the storage requires extra temporary memory.
+  // Destroying clang first reduces peak memory usage.
+  CICleanup.unregister();
+  Clang.reset();
+  Storage->shrink();
   return PrecompiledPreamble(
       std::move(Storage), std::move(PreambleBytes), PreambleEndsAtStartOfLine,
       std::move(FilesInPreamble), std::move(MissingFiles));
