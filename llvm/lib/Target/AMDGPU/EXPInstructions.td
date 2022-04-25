@@ -10,7 +10,7 @@
 // EXP classes
 //===----------------------------------------------------------------------===//
 
-class EXPCommon<bit done, string asm = ""> : InstSI<
+class EXPCommon<bit row, bit done, string asm = ""> : InstSI<
   (outs),
   (ins exp_tgt:$tgt,
        ExpSrc0:$src0, ExpSrc1:$src1, ExpSrc2:$src2, ExpSrc3:$src3,
@@ -21,21 +21,30 @@ class EXPCommon<bit done, string asm = ""> : InstSI<
   let mayLoad = done;
   let mayStore = 1;
   let UseNamedOperandTable = 1;
-  let Uses = [EXEC];
+  let Uses = !if(row, [EXEC, M0], [EXEC]);
   let SchedRW = [WriteExport];
   let DisableWQM = 1;
 }
 
-class EXP_Pseudo<bit done> : EXPCommon<done>,
-                             SIMCInstr <NAME, SIEncodingFamily.NONE> {
+class EXP_Pseudo<bit row, bit done>
+  : EXPCommon<row, done>, SIMCInstr<NAME, SIEncodingFamily.NONE> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 }
 
-class EXP_Real<bit done, string pseudo, int subtarget>
-  : EXPCommon<done, "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "")
-                    #"$compr$vm">,
-    SIMCInstr <pseudo, subtarget> {
+// Real instruction with optional asm operands "compr" and "vm".
+class EXP_Real_ComprVM<bit done, string pseudo, int subtarget>
+  : EXPCommon<0, done, "exp$tgt $src0, $src1, $src2, $src3"
+                       #!if(done, " done", "")#"$compr$vm">,
+    SIMCInstr<pseudo, subtarget> {
+  let AsmMatchConverter = "cvtExp";
+}
+
+// Real instruction with optional asm operand "row_en".
+class EXP_Real_Row<bit row, bit done, string pseudo, int subtarget>
+  : EXPCommon<row, done, "exp$tgt $src0, $src1, $src2, $src3"
+                         #!if(done, " done", "")#!if(row, " row_en", "")>,
+    SIMCInstr<pseudo, subtarget> {
   let AsmMatchConverter = "cvtExp";
 }
 
@@ -43,11 +52,13 @@ class EXP_Real<bit done, string pseudo, int subtarget>
 // EXP Instructions
 //===----------------------------------------------------------------------===//
 
-// Split EXP instruction into EXP and EXP_DONE so we can set
-// mayLoad for done=1.
+// DONE variants have mayLoad = 1.
+// ROW variants have an implicit use of M0.
 let SubtargetPredicate = isNotGFX90APlus in {
-def EXP : EXP_Pseudo<0>;
-def EXP_DONE : EXP_Pseudo<1>;
+def EXP          : EXP_Pseudo<0, 0>;
+def EXP_DONE     : EXP_Pseudo<0, 1>;
+def EXP_ROW      : EXP_Pseudo<1, 0>;
+def EXP_ROW_DONE : EXP_Pseudo<1, 1>;
 } // let SubtargetPredicate = isNotGFX90APlus
 
 //===----------------------------------------------------------------------===//
@@ -55,7 +66,7 @@ def EXP_DONE : EXP_Pseudo<1>;
 //===----------------------------------------------------------------------===//
 
 class EXP_Real_si<bit _done, string pseudo>
-  : EXP_Real<_done, pseudo, SIEncodingFamily.SI>, EXPe {
+  : EXP_Real_ComprVM<_done, pseudo, SIEncodingFamily.SI>, EXPe_ComprVM {
   let AssemblerPredicate = isGFX6GFX7;
   let DecoderNamespace = "GFX6GFX7";
   let done = _done;
@@ -69,7 +80,7 @@ def EXP_DONE_si : EXP_Real_si<1, "EXP_DONE">;
 //===----------------------------------------------------------------------===//
 
 class EXP_Real_vi<bit _done, string pseudo>
-  : EXP_Real<_done, pseudo, SIEncodingFamily.VI>, EXPe_vi {
+  : EXP_Real_ComprVM<_done, pseudo, SIEncodingFamily.VI>, EXPe_vi {
   let AssemblerPredicate = isGFX8GFX9;
   let SubtargetPredicate = isNotGFX90APlus;
   let DecoderNamespace = "GFX8";
@@ -80,18 +91,35 @@ def EXP_vi      : EXP_Real_vi<0, "EXP">;
 def EXP_DONE_vi : EXP_Real_vi<1, "EXP_DONE">;
 
 //===----------------------------------------------------------------------===//
-// GFX10+
+// GFX10
 //===----------------------------------------------------------------------===//
 
 class EXP_Real_gfx10<bit _done, string pseudo>
-  : EXP_Real<_done, pseudo, SIEncodingFamily.GFX10>, EXPe {
-  let AssemblerPredicate = isGFX10Plus;
+  : EXP_Real_ComprVM<_done, pseudo, SIEncodingFamily.GFX10>, EXPe_ComprVM {
+  let AssemblerPredicate = isGFX10Only;
   let DecoderNamespace = "GFX10";
   let done = _done;
 }
 
 def EXP_gfx10      : EXP_Real_gfx10<0, "EXP">;
 def EXP_DONE_gfx10 : EXP_Real_gfx10<1, "EXP_DONE">;
+
+//===----------------------------------------------------------------------===//
+// GFX11+
+//===----------------------------------------------------------------------===//
+
+class EXP_Real_gfx11<bit _row, bit _done, string pseudo>
+  : EXP_Real_Row<_row, _done, pseudo, SIEncodingFamily.GFX11>, EXPe_Row {
+  let AssemblerPredicate = isGFX11Plus;
+  let DecoderNamespace = "GFX11";
+  let row = _row;
+  let done = _done;
+}
+
+def EXP_gfx11          : EXP_Real_gfx11<0, 0, "EXP">;
+def EXP_DONE_gfx11     : EXP_Real_gfx11<0, 1, "EXP_DONE">;
+def EXP_ROW_gfx11      : EXP_Real_gfx11<1, 0, "EXP_ROW">;
+def EXP_ROW_DONE_gfx11 : EXP_Real_gfx11<1, 1, "EXP_ROW_DONE">;
 
 //===----------------------------------------------------------------------===//
 // EXP Patterns
