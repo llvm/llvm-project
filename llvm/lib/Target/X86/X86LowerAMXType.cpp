@@ -74,7 +74,7 @@ static bool isAMXCast(Instruction *II) {
          match(II, m_Intrinsic<Intrinsic::x86_cast_tile_to_vector>(m_Value()));
 }
 
-static bool isAMXInstrinsic(User *I) {
+static bool isAMXIntrinsic(User *I) {
   auto *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
     return false;
@@ -195,7 +195,7 @@ static std::pair<Value *, Value *> getShape(PHINode *Phi) {
       Use &U = *(V->use_begin());
       OpNo = U.getOperandNo();
       V = U.getUser();
-    } else if (isAMXInstrinsic(V)) {
+    } else if (isAMXIntrinsic(V)) {
       return getShape(cast<IntrinsicInst>(V), OpNo);
     } else if (isa<PHINode>(V)) {
       if (V->use_empty())

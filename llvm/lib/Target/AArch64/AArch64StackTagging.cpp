@@ -593,7 +593,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime
-  // instrinsics have to go.
+  // intrinsics have to go.
   for (auto &I : SInfo.UnrecognizedLifetimes)
     I->eraseFromParent();
 

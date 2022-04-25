@@ -1974,7 +1974,7 @@ multiclass ATOM3P_impl<string AsmStr,  Intrinsic Intr,
                     (Intr Int64Regs:$src, (ImmTy Imm:$b), (ImmTy Imm:$c))>;
 }
 
-// Constructs instrinsic name and instruction asm strings.
+// Constructs intrinsic name and instruction asm strings.
 multiclass ATOM2N_impl<string OpStr, string IntTypeStr, string TypeStr,
                        string ScopeStr, string SpaceStr,
                        NVPTXRegClass regclass, Operand ImmType, SDNode Imm,
