@@ -441,8 +441,17 @@ static void createFullPartialVectorTransferWrite(RewriterBase &b,
 
 // TODO: Parallelism and threadlocal considerations with a ParallelScope trait.
 static Operation *getAutomaticAllocationScope(Operation *op) {
-  Operation *scope =
-      op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+  // Find the closest surrounding allocation scope that is not a known looping
+  // construct (putting alloca's in loops doesn't always lower to deallocation
+  // until the end of the loop).
+  Operation *scope = nullptr;
+  for (Operation *parent = op->getParentOp(); parent != nullptr;
+       parent = parent->getParentOp()) {
+    if (parent->hasTrait<OpTrait::AutomaticAllocationScope>())
+      scope = parent;
+    if (!isa<scf::ForOp, AffineForOp>(parent))
+      break;
+  }
   assert(scope && "Expected op to be inside automatic allocation scope");
   return scope;
 }
