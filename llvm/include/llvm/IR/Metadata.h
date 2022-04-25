@@ -169,7 +169,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Metadata &MD) {
 /// Metadata wrapper in the Value hierarchy.
 ///
 /// A member of the \a Value hierarchy to represent a reference to metadata.
-/// This allows, e.g., instrinsics to have metadata as operands.
+/// This allows, e.g., intrinsics to have metadata as operands.
 ///
 /// Notably, this is the only thing in either hierarchy that is allowed to
 /// reference \a LocalAsMetadata.

@@ -1,5 +1,5 @@
 # This script generates all variants of wmma builtins, verifies that clang calls
-# correct LLVM instrinsics, and checks that availability of specific builtins is
+# correct LLVM intrinsics, and checks that availability of specific builtins is
 # constrained by the correct PTX version and the target GPU variant.
 
 # Dummy test run to avoid lit warnings.

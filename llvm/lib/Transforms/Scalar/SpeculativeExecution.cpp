@@ -275,7 +275,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
       });
     }
 
-    // Usially debug label instrinsic corresponds to label in LLVM IR. In these
+    // Usially debug label intrinsic corresponds to label in LLVM IR. In these
     // cases we should not move it here.
     // TODO: Possible special processing needed to detect it is related to a
     // hoisted instruction.
@@ -301,7 +301,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
       if (TotalSpeculationCost > SpecExecMaxSpeculationCost)
         return false;  // too much to hoist
     } else {
-      // Debug info instrinsics should not be counted for threshold.
+      // Debug info intrinsics should not be counted for threshold.
       if (!isa<DbgInfoIntrinsic>(I))
         NotHoistedInstCount++;
       if (NotHoistedInstCount > SpecExecMaxNotHoisted)

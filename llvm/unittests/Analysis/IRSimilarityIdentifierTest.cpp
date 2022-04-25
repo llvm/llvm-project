@@ -2621,7 +2621,7 @@ TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
 
 // This test makes sure that intrinsic functions that are marked commutative
 // are still treated as non-commutative since they are function calls.
-TEST(IRSimilarityIdentifier, InstrinsicCommutative) {
+TEST(IRSimilarityIdentifier, IntrinsicCommutative) {
   // If treated as commutative, we will fail to find a valid mapping, causing
   // an assertion error.
   StringRef ModuleString = R"(

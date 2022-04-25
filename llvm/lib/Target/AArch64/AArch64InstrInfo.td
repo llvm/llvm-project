@@ -6464,7 +6464,7 @@ def : Pat<(v1f64 (int_aarch64_neon_vcvtfxu2fp (v1i64 FPR64:$Rn),
 def : Pat<(int_aarch64_neon_vcvtfxs2fp FPR32:$Rn, vecshiftR32:$imm),
           (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
 
-// Patterns for FP16 Instrinsics - requires reg copy to/from as i16s not supported.
+// Patterns for FP16 Intrinsics - requires reg copy to/from as i16s not supported.
 
 def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i32 (sext_inreg FPR32:$Rn, i16)), vecshiftR16:$imm)),
           (SCVTFh (EXTRACT_SUBREG FPR32:$Rn, hsub), vecshiftR16:$imm)>;

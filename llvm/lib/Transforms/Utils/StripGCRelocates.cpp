@@ -9,7 +9,7 @@
 // This is a little utility pass that removes the gc.relocates inserted by
 // RewriteStatepointsForGC. Note that the generated IR is incorrect,
 // but this is useful as a single pass in itself, for analysis of IR, without
-// the GC.relocates. The statepoint and gc.result instrinsics would still be
+// the GC.relocates. The statepoint and gc.result intrinsics would still be
 // present.
 //===----------------------------------------------------------------------===//
 

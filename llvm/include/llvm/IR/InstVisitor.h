@@ -199,7 +199,7 @@ public:
   RetTy visitCatchPadInst(CatchPadInst &I)     { DELEGATE(FuncletPadInst); }
   RetTy visitFreezeInst(FreezeInst &I)         { DELEGATE(Instruction); }
 
-  // Handle the special instrinsic instruction classes.
+  // Handle the special intrinsic instruction classes.
   RetTy visitDbgDeclareInst(DbgDeclareInst &I)    { DELEGATE(DbgVariableIntrinsic);}
   RetTy visitDbgValueInst(DbgValueInst &I)        { DELEGATE(DbgVariableIntrinsic);}
   RetTy visitDbgVariableIntrinsic(DbgVariableIntrinsic &I)
