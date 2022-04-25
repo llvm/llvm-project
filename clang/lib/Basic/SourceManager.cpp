@@ -629,23 +629,21 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
   return LastFileIDLookup = FID;
 }
 
-SourceLocation
-SourceManager::createMacroArgExpansionLoc(SourceLocation SpellingLoc,
-                                          SourceLocation ExpansionLoc,
-                                          unsigned TokLength) {
+SourceLocation SourceManager::createMacroArgExpansionLoc(
+    SourceLocation SpellingLoc, SourceLocation ExpansionLoc, unsigned Length) {
   ExpansionInfo Info = ExpansionInfo::createForMacroArg(SpellingLoc,
                                                         ExpansionLoc);
-  return createExpansionLocImpl(Info, TokLength);
+  return createExpansionLocImpl(Info, Length);
 }
 
 SourceLocation SourceManager::createExpansionLoc(
     SourceLocation SpellingLoc, SourceLocation ExpansionLocStart,
-    SourceLocation ExpansionLocEnd, unsigned TokLength,
+    SourceLocation ExpansionLocEnd, unsigned Length,
     bool ExpansionIsTokenRange, int LoadedID,
     SourceLocation::UIntTy LoadedOffset) {
   ExpansionInfo Info = ExpansionInfo::create(
       SpellingLoc, ExpansionLocStart, ExpansionLocEnd, ExpansionIsTokenRange);
-  return createExpansionLocImpl(Info, TokLength, LoadedID, LoadedOffset);
+  return createExpansionLocImpl(Info, Length, LoadedID, LoadedOffset);
 }
 
 SourceLocation SourceManager::createTokenSplitLoc(SourceLocation Spelling,
@@ -660,7 +658,7 @@ SourceLocation SourceManager::createTokenSplitLoc(SourceLocation Spelling,
 
 SourceLocation
 SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
-                                      unsigned TokLength, int LoadedID,
+                                      unsigned Length, int LoadedID,
                                       SourceLocation::UIntTy LoadedOffset) {
   if (LoadedID < 0) {
     assert(LoadedID != -1 && "Loading sentinel FileID");
@@ -672,12 +670,12 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
-  assert(NextLocalOffset + TokLength + 1 > NextLocalOffset &&
-         NextLocalOffset + TokLength + 1 <= CurrentLoadedOffset &&
+  assert(NextLocalOffset + Length + 1 > NextLocalOffset &&
+         NextLocalOffset + Length + 1 <= CurrentLoadedOffset &&
          "Ran out of source locations!");
   // See createFileID for that +1.
-  NextLocalOffset += TokLength + 1;
-  return SourceLocation::getMacroLoc(NextLocalOffset - (TokLength + 1));
+  NextLocalOffset += Length + 1;
+  return SourceLocation::getMacroLoc(NextLocalOffset - (Length + 1));
 }
 
 llvm::Optional<llvm::MemoryBufferRef>
