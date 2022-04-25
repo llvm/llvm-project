@@ -168,7 +168,7 @@ static int InitLibrary(DeviceTy &Device) {
               (uintptr_t)CurrHostEntry->addr +
                   CurrHostEntry->size /*HstPtrEnd*/,
               (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
-              false /*UseHoldRefCount*/, nullptr /*Name*/,
+              false /*UseHoldRefCount*/, CurrHostEntry->name,
               true /*IsRefCountINF*/));
         }
       }
