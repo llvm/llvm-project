@@ -878,6 +878,7 @@ module std [system] {
       }
       module view_interface         { private header "__ranges/view_interface.h" }
       module views                  { private header "__ranges/views.h" }
+      module zip_view               { private header "__ranges/zip_view.h" }
     }
   }
   module ratio {
