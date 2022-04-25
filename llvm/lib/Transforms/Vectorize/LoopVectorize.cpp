@@ -2555,7 +2555,6 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
       } else {
         EntryPart = Builder.CreateAdd(
             ScalarIV, Builder.CreateMul(StartIdx, Step), "induction");
-        EntryPart->dump();
       }
       State.set(Def, EntryPart, Part);
       if (Trunc) {
