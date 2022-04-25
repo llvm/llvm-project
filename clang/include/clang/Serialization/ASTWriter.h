@@ -477,7 +477,6 @@ private:
                                      bool isModule);
 
   unsigned TypeExtQualAbbrev = 0;
-  unsigned TypeFunctionProtoAbbrev = 0;
   void WriteTypeAbbrevs();
   void WriteType(QualType T);
 
@@ -680,10 +679,6 @@ public:
 
   unsigned getTypeExtQualAbbrev() const {
     return TypeExtQualAbbrev;
-  }
-
-  unsigned getTypeFunctionProtoAbbrev() const {
-    return TypeFunctionProtoAbbrev;
   }
 
   unsigned getDeclParmVarAbbrev() const { return DeclParmVarAbbrev; }
