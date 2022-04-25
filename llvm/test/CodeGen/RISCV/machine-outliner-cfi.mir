@@ -7,11 +7,11 @@
 # is no need to unwind. CFIs will be stripped when we build outlined functions.
 
 --- |
-  define void @func1(i32 %a, i32 %b) { ret void }
+  define void @func1(i32 %a, i32 %b) nounwind { ret void }
 
-  define void @func2(i32 %a, i32 %b) { ret void }
+  define void @func2(i32 %a, i32 %b) nounwind { ret void }
 
-  define void @func3(i32 %a, i32 %b) { ret void }
+  define void @func3(i32 %a, i32 %b) nounwind { ret void }
 ...
 ---
 name:            func1

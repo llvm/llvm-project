@@ -1,5 +1,5 @@
-# For arch14 only.
-# RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=arch14 < %s 2> %t
+# For z16 only.
+# RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=z16 < %s 2> %t
 # RUN: FileCheck < %t %s
 
 #CHECK: error: invalid operand

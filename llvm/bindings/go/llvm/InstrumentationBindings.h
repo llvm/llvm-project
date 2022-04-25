@@ -23,10 +23,7 @@ extern "C" {
 // a (somewhat) less stable collection of C APIs for use in creating bindings of
 // LLVM in other languages.
 
-void LLVMAddAddressSanitizerFunctionPass(LLVMPassManagerRef PM);
-void LLVMAddAddressSanitizerModulePass(LLVMPassManagerRef PM);
 void LLVMAddThreadSanitizerPass(LLVMPassManagerRef PM);
-void LLVMAddMemorySanitizerLegacyPassPass(LLVMPassManagerRef PM);
 void LLVMAddDataFlowSanitizerPass(LLVMPassManagerRef PM, int ABIListFilesNum,
                                   const char **ABIListFiles);
 

@@ -38,4 +38,12 @@ def TestConsumeOperandIfMatchesParamOrFail
   let cppNamespace = "::mlir::test";
 }
 
+def TestPrintRemarkAtOperandOp
+  : Op<Transform_Dialect, "test_print_remark_at_operand",
+       [DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins PDL_Operation:$operand, StrAttr:$message);
+  let assemblyFormat = "$operand `,` $message attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

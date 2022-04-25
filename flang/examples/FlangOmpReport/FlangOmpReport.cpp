@@ -5,19 +5,17 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This plugin parses a Fortran source file and generates a YAML
-// report with all the OpenMP constructs and clauses and which
-// line they're located on.
+// This plugin parses a Fortran source file and generates a YAML report with
+// all the OpenMP constructs and clauses and which line they're located on.
 //
 // The plugin may be invoked as:
-// ./bin/flang-new -fc1 -load lib/flangOmpReport.so -plugin
-// flang-omp-report -fopenmp -o - <source_file.f90>
+// ./bin/flang-new -fc1 -load lib/flangOmpReport.so -plugin flang-omp-report
+// -fopenmp
 //
 //===----------------------------------------------------------------------===//
 
 #include "FlangOmpReportVisitor.h"
 
-#include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
 #include "flang/Parser/dump-parse-tree.h"
@@ -53,20 +51,18 @@ template <> struct MappingTraits<LogRecord> {
 class FlangOmpReport : public PluginParseTreeAction {
   void ExecuteAction() override {
     // Prepare the parse tree and the visitor
-    CompilerInstance &ci = this->instance();
-    Parsing &parsing = ci.parsing();
-    const Program &parseTree = *parsing.parseTree();
+    Parsing &parsing = getParsing();
     OpenMPCounterVisitor visitor;
     visitor.parsing = &parsing;
 
     // Walk the parse tree
-    Walk(parseTree, visitor);
+    Walk(parsing.parseTree(), visitor);
 
     // Dump the output
-    std::unique_ptr<llvm::raw_pwrite_stream> OS{ci.CreateDefaultOutputFile(
-        /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName(),
-        /*Extension=*/".yaml")};
+    std::unique_ptr<llvm::raw_pwrite_stream> OS{
+        createOutputFile(/*extension=*/"yaml")};
     llvm::yaml::Output yout(*OS);
+
     yout << visitor.constructClauses;
   }
 };

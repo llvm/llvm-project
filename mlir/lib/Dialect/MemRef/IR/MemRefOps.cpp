@@ -1866,7 +1866,7 @@ computeCollapsedLayoutMap(MemRefType srcType,
                                     srcType.getContext());
 }
 
-bool ExpandShapeOp::isGuaranteedCollapsible(
+bool CollapseShapeOp::isGuaranteedCollapsible(
     MemRefType srcType, ArrayRef<ReassociationIndices> reassociation) {
   // MemRefs with standard layout are always collapsible.
   if (srcType.getLayout().isIdentity())

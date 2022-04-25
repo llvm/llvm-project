@@ -70,6 +70,20 @@ define i32 @add_mask_ashr28_i32(i32 %x) {
   ret i32 %r
 }
 
+; negative case - mask isn't pow2
+define i32 @add_mask_ashr28_non_pow2_i32(i32 %x) {
+; CHECK-LABEL: @add_mask_ashr28_non_pow2_i32(
+; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X:%.*]], 28
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[A]], 9
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[M]], [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = ashr i32 %x, 28
+  %m = and i32 %a, 9
+  %r = add i32 %m, %a
+  ret i32 %r
+}
+
 ; negative case - insufficient sign bits
 define i32 @add_mask_ashr27_i32(i32 %x) {
 ; CHECK-LABEL: @add_mask_ashr27_i32(

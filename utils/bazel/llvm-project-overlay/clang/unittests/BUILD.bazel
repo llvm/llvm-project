@@ -383,6 +383,7 @@ cc_test(
         "//clang:frontend",
         "//clang:lex",
         "//clang:rewrite",
+        "//clang:testing",
         "//clang:tooling",
         "//clang:tooling_core",
         "//clang:tooling_dependency_scanning",

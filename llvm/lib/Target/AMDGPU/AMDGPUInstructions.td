@@ -540,6 +540,31 @@ defm atomic_store_#as : binary_atomic_op<atomic_store>;
 // TODO: Add GISelPredicateCode for the ret and noret PatFrags once
 // GlobalISelEmitter allows pattern matches where src and dst def count
 // mismatch.
+
+multiclass ret_noret_op {
+  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return true; }] in {
+    def "_ret" : PatFrag<(ops node:$ptr, node:$data),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
+  }
+
+  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return false; }] in {
+    def "_noret" : PatFrag<(ops node:$ptr, node:$data),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
+  }
+}
+
+defm int_amdgcn_flat_atomic_fadd : ret_noret_op;
+defm int_amdgcn_flat_atomic_fadd_v2bf16 : ret_noret_op;
+defm int_amdgcn_flat_atomic_fmin : ret_noret_op;
+defm int_amdgcn_flat_atomic_fmax : ret_noret_op;
+defm int_amdgcn_global_atomic_fadd : ret_noret_op;
+defm int_amdgcn_global_atomic_fadd_v2bf16 : ret_noret_op;
+defm int_amdgcn_global_atomic_fmin : ret_noret_op;
+defm int_amdgcn_global_atomic_fmax : ret_noret_op;
+defm int_amdgcn_ds_fadd_v2bf16 : ret_noret_op;
+
 multiclass ret_noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
   let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
       GISelPredicateCode = [{ return false; }] in {

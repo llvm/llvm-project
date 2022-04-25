@@ -15,6 +15,7 @@ add_mlir_library(MLIRTestIR
   TestSideEffects.cpp
   TestSlicing.cpp
   TestSymbolUses.cpp
+  TestRegions.cpp
   TestTypes.cpp
   TestVisitors.cpp
   TestVisitorsGeneric.cpp
