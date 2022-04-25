@@ -991,22 +991,13 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
     };
 
     // Given  ZeroCmpOp = (A + B)
-    //   ZeroCmpOp <= A && ZeroCmpOp != 0  -->  (0-B) <  A
-    //   ZeroCmpOp >  A || ZeroCmpOp == 0  -->  (0-B) >= A
-    //
     //   ZeroCmpOp <  A && ZeroCmpOp != 0  -->  (0-X) <  Y  iff
     //   ZeroCmpOp >= A || ZeroCmpOp == 0  -->  (0-X) >= Y  iff
     //     with X being the value (A/B) that is known to be non-zero,
     //     and Y being remaining value.
-    if (UnsignedPred == ICmpInst::ICMP_ULE && EqPred == ICmpInst::ICMP_NE &&
-        IsAnd)
-      return Builder.CreateICmpULT(Builder.CreateNeg(B), A);
     if (UnsignedPred == ICmpInst::ICMP_ULT && EqPred == ICmpInst::ICMP_NE &&
         IsAnd && GetKnownNonZeroAndOther(B, A))
       return Builder.CreateICmpULT(Builder.CreateNeg(B), A);
-    if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
-        !IsAnd)
-      return Builder.CreateICmpUGE(Builder.CreateNeg(B), A);
     if (UnsignedPred == ICmpInst::ICMP_UGE && EqPred == ICmpInst::ICMP_EQ &&
         !IsAnd && GetKnownNonZeroAndOther(B, A))
       return Builder.CreateICmpUGE(Builder.CreateNeg(B), A);
