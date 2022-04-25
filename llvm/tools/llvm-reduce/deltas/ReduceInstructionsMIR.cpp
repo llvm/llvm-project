@@ -45,6 +45,21 @@ static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
   return 0;
 }
 
+static bool shouldNotRemoveInstruction(const TargetInstrInfo &TII,
+                                       const MachineInstr &MI) {
+  if (MI.isTerminator())
+    return true;
+
+  // The MIR is almost certainly going to be invalid if frame instructions are
+  // deleted individually since they need to come in balanced pairs, so don't
+  // try to delete them.
+  if (MI.getOpcode() == TII.getCallFrameSetupOpcode() ||
+      MI.getOpcode() == TII.getCallFrameDestroyOpcode())
+    return true;
+
+  return false;
+}
+
 static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
   MachineDominatorTree MDT;
   MDT.runOnMachineFunction(MF);
@@ -52,12 +67,14 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
   auto MRI = &MF.getRegInfo();
   SetVector<MachineInstr *> ToDelete;
 
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
   MachineInstr *TopMI = nullptr;
 
   // Mark MIs for deletion according to some criteria.
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      if (MI.isTerminator())
+      if (shouldNotRemoveInstruction(*TII, MI))
         continue;
       if (MBB.isEntryBlock() && !TopMI) {
         TopMI = &MI;
