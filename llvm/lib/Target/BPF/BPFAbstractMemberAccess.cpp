@@ -143,9 +143,9 @@ private:
   Module *M = nullptr;
 
   static std::map<std::string, GlobalVariable *> GEPGlobals;
-  // A map to link preserve_*_access_index instrinsic calls.
+  // A map to link preserve_*_access_index intrinsic calls.
   std::map<CallInst *, std::pair<CallInst *, CallInfo>> AIChain;
-  // A map to hold all the base preserve_*_access_index instrinsic calls.
+  // A map to hold all the base preserve_*_access_index intrinsic calls.
   // The base call is not an input of any other preserve_*
   // intrinsics.
   std::map<CallInst *, CallInfo> BaseAICalls;

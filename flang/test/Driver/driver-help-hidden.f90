@@ -38,6 +38,8 @@
 ! CHECK-NEXT: -finput-charset=<value> Specify the default character set for source files
 ! CHECK-NEXT: -fintrinsic-modules-path <dir>
 ! CHECK-NEXT:                        Specify where to find the compiled intrinsic modules
+! CHECK-NEXT: -flang-experimental-exec
+! CHECK-NEXT:                        Enable support for generating executables (experimental)
 ! CHECK-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! CHECK-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! CHECK-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE

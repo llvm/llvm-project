@@ -56,6 +56,14 @@ void Visitor() {
 }
 } // namespace NodeMatcher
 
+// Verify Operator table is ordered
+TEST(ItaniumDemangle, OperatorOrdering) {
+  struct TestParser : AbstractManglingParser<TestParser, TestAllocator> {};
+  for (const auto *Op = &TestParser::Ops[0];
+       Op != &TestParser::Ops[TestParser::NumOps - 1]; Op++)
+    ASSERT_LT(Op[0], Op[1]);
+}
+
 TEST(ItaniumDemangle, MethodOverride) {
   struct TestParser : AbstractManglingParser<TestParser, TestAllocator> {
     std::vector<char> Types;

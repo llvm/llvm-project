@@ -1494,7 +1494,7 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
       return false;
     if (!I1NonDbg->isTerminator())
       return false;
-    // Now we know that we only need to hoist debug instrinsics and the
+    // Now we know that we only need to hoist debug intrinsics and the
     // terminator. Let the loop below handle those 2 cases.
   }
 
