@@ -836,6 +836,14 @@ TEST_F(InterpolateTest, Case) {
   EXPECT_EQ(getProxy("foo/bar/baz/shout.C"), "FOO/BAR/BAZ/SHOUT.cc");
 }
 
+TEST_F(InterpolateTest, LanguagePreference) {
+  add("foo/bar/baz/exact.C");
+  add("foo/bar/baz/exact.c");
+  add("other/random/path.cpp");
+  // Proxies for ".H" files are ".C" files, and not ".c files".
+  EXPECT_EQ(getProxy("foo/bar/baz/exact.H"), "foo/bar/baz/exact.C");
+}
+
 TEST_F(InterpolateTest, Aliasing) {
   add("foo.cpp", "-faligned-new");
 
