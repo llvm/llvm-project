@@ -827,7 +827,7 @@ def UnnamedAddr : LLVM_EnumAttr<
 
 def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof", [NoSideEffect]> {
   let arguments = (ins FlatSymbolRefAttr:$global_name);
-  let results = (outs LLVM_Type:$res);
+  let results = (outs LLVM_AnyPointer:$res);
 
   let summary = "Creates a pointer pointing to a global or a function";
 
