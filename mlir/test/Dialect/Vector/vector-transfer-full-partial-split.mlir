@@ -412,3 +412,23 @@ func.func @transfer_read_within_async_execute(%A : memref<?x?xf32>) -> !async.to
   }
   return %token : !async.token
 }
+
+// -----
+
+func.func private @fake_side_effecting_fun(%0: vector<2x2xf32>) -> ()
+
+// Ensure that `alloca`s are inserted outside of loops even though loops are
+// consdered allocation scopes.
+// CHECK-LABEL: transfer_read_within_scf_for
+func.func @transfer_read_within_scf_for(%A : memref<?x?xf32>, %lb : index, %ub : index, %step : index) {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+  // CHECK: alloca
+  // CHECK: scf.for
+  // CHECK-NOT: alloca
+  scf.for %i = %lb to %ub step %step {
+    %0 = vector.transfer_read %A[%c0, %c0], %f0 : memref<?x?xf32>, vector<2x2xf32>
+    func.call @fake_side_effecting_fun(%0) : (vector<2x2xf32>) -> ()
+  }
+  return
+}
