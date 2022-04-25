@@ -65,48 +65,28 @@ void half_size() {
 }
 
 bool test() {
+
 #if _LIBCPP_ABI_VERSION == 1
-#ifdef __APPLE__
 
-#  ifdef __aarch64__
-  half_size();
-#  elif defined(__x86_64__)
+# if defined(__x86_64__)
   full_size();
-#  else
-#    error "Your target system seems to be unsupported."
-#  endif
-
-#elif defined(__linux__)
-
-#  ifdef  __x86_64__
-  full_size();
-#  elif defined(__arm__) || defined(__aarch64__)
-#    ifdef __BIG_ENDIAN__
+# elif defined(__APPLE__) && defined(__aarch64__)
   half_size();
-#    else
-  full_size();
-#    endif
-
-#  else
-#    error "Your target system seems to be unsupported."
-#  endif
-
-#elif defined(__powerpc__)
+# elif defined(__arm__) || defined(__aarch64__)
+#   ifdef __BIG_ENDIAN__
   half_size();
-#elif defined(__powepc64__)
-  half_size();
-
-#elif defined(_WIN64)
-
-#  ifdef __x86_64__
+#   else
   full_size();
-#  else
-#    error "Your target system seems to be unsupported."
-#  endif
+#   endif
+# elif defined(__powerpc__) || defined(__powerpc64__)
+  half_size();
+# else
+#   error "Your target system seems to be unsupported."
+# endif
 
 #else
-#  error "Your target system seems to be unsupported."
-#endif
+
+  half_size();
 
 #endif
 
