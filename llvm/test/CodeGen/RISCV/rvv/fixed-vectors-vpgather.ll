@@ -311,7 +311,7 @@ define <32 x i8> @vpgather_baseidx_v32i8(i8* %base, <32 x i8> %idxs, <32 x i1> %
 ; RV64-NEXT:    vmv1r.v v0, v10
 ; RV64-NEXT:    vluxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    li a0, 32
-; RV64-NEXT:    vsetvli zero, a0, e8, m2, tu, mu
+; RV64-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; RV64-NEXT:    vslideup.vi v8, v12, 16
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i8, i8* %base, <32 x i8> %idxs

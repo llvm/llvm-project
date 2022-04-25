@@ -46,7 +46,7 @@ define void @fcmp_une_vv_v4f32(<4 x float>* %x, <4 x float>* %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -71,7 +71,7 @@ define void @fcmp_une_vv_v4f32_nonans(<4 x float>* %x, <4 x float>* %y, <4 x i1>
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -96,7 +96,7 @@ define void @fcmp_ogt_vv_v2f64(<2 x double>* %x, <2 x double>* %y, <2 x i1>* %z)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -121,7 +121,7 @@ define void @fcmp_ogt_vv_v2f64_nonans(<2 x double>* %x, <2 x double>* %y, <2 x i
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -210,7 +210,7 @@ define void @fcmp_ole_vv_v4f64(<4 x double>* %x, <4 x double>* %y, <4 x i1>* %z)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -235,7 +235,7 @@ define void @fcmp_ole_vv_v4f64_nonans(<4 x double>* %x, <4 x double>* %y, <4 x i
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -468,7 +468,7 @@ define void @fcmp_ord_vv_v4f16(<4 x half>* %x, <4 x half>* %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -495,7 +495,7 @@ define void @fcmp_uno_vv_v4f16(<2 x half>* %x, <2 x half>* %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -551,7 +551,7 @@ define void @fcmp_une_vf_v4f32(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -576,7 +576,7 @@ define void @fcmp_une_vf_v4f32_nonans(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -601,7 +601,7 @@ define void @fcmp_ogt_vf_v2f64(<2 x double>* %x, double %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -626,7 +626,7 @@ define void @fcmp_ogt_vf_v2f64_nonans(<2 x double>* %x, double %y, <2 x i1>* %z)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -715,7 +715,7 @@ define void @fcmp_ole_vf_v4f64(<4 x double>* %x, double %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -740,7 +740,7 @@ define void @fcmp_ole_vf_v4f64_nonans(<4 x double>* %x, double %y, <4 x i1>* %z)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -974,7 +974,7 @@ define void @fcmp_ord_vf_v4f16(<4 x half>* %x, half %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -1002,7 +1002,7 @@ define void @fcmp_uno_vf_v4f16(<2 x half>* %x, half %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -1059,7 +1059,7 @@ define void @fcmp_une_fv_v4f32(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -1084,7 +1084,7 @@ define void @fcmp_une_fv_v4f32_nonans(<4 x float>* %x, float %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -1109,7 +1109,7 @@ define void @fcmp_ogt_fv_v2f64(<2 x double>* %x, double %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -1134,7 +1134,7 @@ define void @fcmp_ogt_fv_v2f64_nonans(<2 x double>* %x, double %y, <2 x i1>* %z)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -1223,7 +1223,7 @@ define void @fcmp_ole_fv_v4f64(<4 x double>* %x, double %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -1248,7 +1248,7 @@ define void @fcmp_ole_fv_v4f64_nonans(<4 x double>* %x, double %y, <4 x i1>* %z)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -1482,7 +1482,7 @@ define void @fcmp_ord_fv_v4f16(<4 x half>* %x, half %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -1510,7 +1510,7 @@ define void @fcmp_uno_fv_v4f16(<2 x half>* %x, half %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
