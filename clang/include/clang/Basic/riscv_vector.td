@@ -443,7 +443,8 @@ class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
   let HasMaskedOffOperand = false;
 }
 
-let HasMaskedOffOperand = false in {
+let UnMaskedPolicy = HasPolicyOperand,
+    HasMaskedOffOperand = false in {
   multiclass RVVSlideBuiltinSet {
     defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
                                [["vx","v", "vvvz"]]>;

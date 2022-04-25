@@ -1146,20 +1146,19 @@ declare <vscale x 1 x i8> @llvm.riscv.vslideup.mask.nxv1i8(
   <vscale x 1 x i1>,
   iXLen, iXLen);
 
-define <vscale x 1 x i8> @intrinsic_vslideup_mask_vx_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, iXLen %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
+define <vscale x 1 x i8> @intrinsic_vslideup_mask_vx_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslideup_mask_vx_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vslideup.vx v9, v8, a0, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslideup.vx v8, v9, a0, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vslideup.mask.nxv1i8(
-    <vscale x 1 x i8> undef,
     <vscale x 1 x i8> %0,
-    iXLen %1,
-    <vscale x 1 x i1> %2,
-    iXLen %3, iXLen 3)
+    <vscale x 1 x i8> %1,
+    iXLen %2,
+    <vscale x 1 x i1> %3,
+    iXLen %4, iXLen 3)
 
   ret <vscale x 1 x i8> %a
 }
