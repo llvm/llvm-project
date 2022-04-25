@@ -140,7 +140,7 @@ body:             |
     %64:gr32 = PHI %24, %bb.0, %44, %bb.1, debug-location !18
 
     DBG_INSTR_REF 1, 0, !14, !DIExpression(), debug-location !12
-    ; CHECK:      DBG_PHI %stack.1, 1, 32
+    ; CHECK:      DBG_PHI %stack.1, 1
     ; CHECK:      renamable $eax = MOV32rm %stack.1,
     ; CHECK:      DBG_INSTR_REF 1, 0
     $eax = COPY killed %0, debug-location !19
