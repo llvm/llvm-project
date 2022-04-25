@@ -227,6 +227,17 @@ namespace std::ranges {
   namespace views {
     inline constexpr unspecified lazy_split = unspecified;
   }
+
+  // [range.zip], zip view
+  template<input_range... Views>
+    requires (view<Views> && ...) && (sizeof...(Views) > 0)
+  class zip_view;        // C++2b
+
+  template<class... Views>
+    inline constexpr bool enable_borrowed_range<zip_view<Views...>> =    // C++2b
+      (enable_borrowed_range<Views> && ...);
+
+  namespace views { inline constexpr unspecified zip = unspecified; }    // C++2b
 }
 
 namespace std {
@@ -290,6 +301,7 @@ namespace std {
 #include <__ranges/transform_view.h>
 #include <__ranges/view_interface.h>
 #include <__ranges/views.h>
+#include <__ranges/zip_view.h>
 #include <__tuple> // TODO: <ranges> has to export std::tuple_size. Replace this, once <tuple> is granularized.
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
