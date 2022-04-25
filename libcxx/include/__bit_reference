@@ -1112,7 +1112,7 @@ public:
 #ifndef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
     typedef typename conditional<_IsConst, __bit_const_reference<_Cp>, __bit_reference<_Cp> >::type reference;
 #else
-    using reference = typename conditional<_IsConst, bool, __bit_reference<_Cp>>::type;
+    using reference = typename conditional<_IsConst, bool, __bit_reference<_Cp> >::type;
 #endif
     typedef random_access_iterator_tag                                                            iterator_category;
 
