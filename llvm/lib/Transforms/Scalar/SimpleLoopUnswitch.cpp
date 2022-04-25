@@ -112,7 +112,7 @@ static cl::opt<unsigned>
                            "partial unswitching analysis"),
                   cl::init(100), cl::Hidden);
 static cl::opt<bool> FreezeLoopUnswitchCond(
-    "freeze-loop-unswitch-cond", cl::init(false), cl::Hidden,
+    "freeze-loop-unswitch-cond", cl::init(true), cl::Hidden,
     cl::desc("If enabled, the freeze instruction will be added to condition "
              "of loop unswitch to prevent miscompilation."));
 

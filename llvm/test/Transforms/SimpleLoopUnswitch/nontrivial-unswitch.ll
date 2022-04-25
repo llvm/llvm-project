@@ -813,7 +813,8 @@ inner_loop_begin:
 ; CHECK-NEXT:    %[[A_INNER_PHI:.*]] = phi i32 [ %[[A]], %loop_begin ], [ %[[A2:.*]], %inner_inner_loop_exit ]
 ; CHECK-NEXT:    %[[COND:.*]] = load i1, i1* %cond.ptr
 ; CHECK-NEXT:    %[[B:.*]] = load i32, i32* %b.ptr
-; CHECK-NEXT:    br i1 %[[COND]], label %inner_loop_begin.split.us, label %inner_loop_begin.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %[[COND]]
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %inner_loop_begin.split.us, label %inner_loop_begin.split
 
 inner_inner_loop_begin:
   %v1 = load i1, i1* %ptr
@@ -966,7 +967,8 @@ inner_loop_begin:
 ; CHECK-NEXT:    %[[A_INNER_PHI:.*]] = phi i32 [ %[[A]], %loop_begin ], [ %[[A2:.*]], %inner_inner_loop_exit ]
 ; CHECK-NEXT:    %[[COND:.*]] = load i1, i1* %cond.ptr
 ; CHECK-NEXT:    %[[B:.*]] = load i32, i32* %b.ptr
-; CHECK-NEXT:    br i1 %[[COND]], label %inner_loop_begin.split.us, label %inner_loop_begin.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %[[COND]]
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %inner_loop_begin.split.us, label %inner_loop_begin.split
 
 inner_inner_loop_begin:
   %v1 = load i1, i1* %ptr
@@ -1119,7 +1121,8 @@ inner_loop_begin:
 ; CHECK-NEXT:    %[[A_INNER_PHI:.*]] = phi i32 [ %[[A]], %loop_begin ], [ %[[A2:.*]], %inner_inner_loop_exit ]
 ; CHECK-NEXT:    %[[COND:.*]] = load i1, i1* %cond.ptr
 ; CHECK-NEXT:    %[[B:.*]] = load i32, i32* %b.ptr
-; CHECK-NEXT:    br i1 %[[COND]], label %inner_loop_begin.split.us, label %inner_loop_begin.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %[[COND]]
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %inner_loop_begin.split.us, label %inner_loop_begin.split
 
 inner_inner_loop_begin:
   %v1 = load i1, i1* %ptr
@@ -1239,7 +1242,8 @@ inner_loop_begin:
 ; CHECK-NEXT:    %[[A_INNER_PHI:.*]] = phi i32 [ %[[A]], %loop_begin ], [ %[[A2:.*]], %inner_inner_loop_exit ]
 ; CHECK-NEXT:    %[[COND:.*]] = load i1, i1* %cond.ptr
 ; CHECK-NEXT:    %[[B:.*]] = load i32, i32* %b.ptr
-; CHECK-NEXT:    br i1 %[[COND]], label %inner_loop_begin.split.us, label %inner_loop_begin.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %[[COND]]
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %inner_loop_begin.split.us, label %inner_loop_begin.split
 
 inner_inner_loop_begin:
   %v1 = load i1, i1* %ptr
@@ -1481,7 +1485,8 @@ define i32 @test10a(i1* %ptr, i1 %cond, i32* %a.ptr) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %entry.split.us, label %entry.split
 
 loop_begin:
   %a = load i32, i32* %a.ptr
@@ -1561,7 +1566,8 @@ define i32 @test10b(i1* %ptr, i1 %cond, i32* %a.ptr) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %entry.split.us, label %entry.split
 
 loop_begin:
   %a = load i32, i32* %a.ptr
@@ -1660,7 +1666,8 @@ inner_loop_ph:
   br label %inner_loop_begin
 ; CHECK:       inner_loop_ph:
 ; CHECK-NEXT:    %[[COND:.*]] = load i1, i1* %cond.ptr
-; CHECK-NEXT:    br i1 %[[COND]], label %inner_loop_ph.split.us, label %inner_loop_ph.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %[[COND]]
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %inner_loop_ph.split.us, label %inner_loop_ph.split
 
 inner_loop_begin:
   call void @sink1(i32 %b)
@@ -1754,7 +1761,8 @@ inner_loop_ph:
   br label %inner_loop_begin
 ; CHECK:       inner_loop_ph:
 ; CHECK-NEXT:    %[[COND:.*]] = load i1, i1* %cond.ptr
-; CHECK-NEXT:    br i1 %[[COND]], label %inner_loop_ph.split.us, label %inner_loop_ph.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %[[COND]]
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %inner_loop_ph.split.us, label %inner_loop_ph.split
 
 inner_loop_begin:
   call void @sink1(i32 %b)
@@ -1852,7 +1860,8 @@ inner_inner_loop_ph:
   br label %inner_inner_loop_begin
 ; CHECK:       inner_inner_loop_ph:
 ; CHECK-NEXT:    %[[COND:.*]] = load i1, i1* %cond.ptr
-; CHECK-NEXT:    br i1 %[[COND]], label %inner_inner_loop_ph.split.us, label %inner_inner_loop_ph.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %[[COND]]
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %inner_inner_loop_ph.split.us, label %inner_inner_loop_ph.split
 
 inner_inner_loop_begin:
   call void @sink1(i32 %b)
@@ -1960,7 +1969,8 @@ inner_inner_loop_ph:
   br label %inner_inner_loop_begin
 ; CHECK:       inner_inner_loop_ph:
 ; CHECK-NEXT:    %[[COND:.*]] = load i1, i1* %cond.ptr
-; CHECK-NEXT:    br i1 %[[COND]], label %inner_inner_loop_ph.split.us, label %inner_inner_loop_ph.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %[[COND]]
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %inner_inner_loop_ph.split.us, label %inner_inner_loop_ph.split
 
 inner_inner_loop_begin:
   call void @sink1(i32 %b)
@@ -2047,7 +2057,8 @@ define i32 @test13a(i1* %ptr, i1 %cond, i32* %a.ptr, i32* %b.ptr) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %entry.split.us, label %entry.split
 
 loop_begin:
   %a = load i32, i32* %a.ptr
@@ -2171,7 +2182,8 @@ define i32 @test13b(i1* %ptr, i1 %cond, i32* %a.ptr, i32* %b.ptr) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %entry.split.us, label %entry.split
 
 loop_begin:
   %a = load i32, i32* %a.ptr
@@ -2425,7 +2437,8 @@ bb:
   br label %bb3
 ; CHECK-NOT:     br i1 %a
 ;
-; CHECK:         br i1 %a, label %[[BB_SPLIT_US:.*]], label %[[BB_SPLIT:.*]]
+; CHECK:         %[[FROZEN:.+]] = freeze i1 %a
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %[[BB_SPLIT_US:.*]], label %[[BB_SPLIT:.*]]
 ;
 ; CHECK-NOT:     br i1 %a
 ; CHECK-NOT:     br i1 %b
@@ -2552,7 +2565,8 @@ define void @test23(i1 %arg, i1* %ptr) {
 entry:
   br label %outer.header
 ; CHECK:       entry:
-; CHECK-NEXT:    br i1 %arg,
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %arg
+; CHECK-NEXT:    br i1 %[[FROZEN]],
 ;
 ; Just verify that we unswitched the correct bits. We should call `@f` twice in
 ; one unswitch and `@f` and then `@g` in the other.
@@ -3049,7 +3063,8 @@ define i32 @test29(i32 %arg) {
 entry:
   br label %header
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 %arg, label %[[ENTRY_SPLIT_C:.*]] [
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i32 %arg
+; CHECK-NEXT:    switch i32 %[[FROZEN]], label %[[ENTRY_SPLIT_C:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[ENTRY_SPLIT_A:.*]]
 ; CHECK-NEXT:      i32 1, label %[[ENTRY_SPLIT_A]]
 ; CHECK-NEXT:      i32 2, label %[[ENTRY_SPLIT_B:.*]]
@@ -3232,7 +3247,8 @@ define i32 @test30(i32 %arg) {
 entry:
   br label %header
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 %arg, label %[[ENTRY_SPLIT_EXIT:.*]] [
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i32 %arg
+; CHECK-NEXT:    switch i32 %[[FROZEN]], label %[[ENTRY_SPLIT_EXIT:.*]] [
 ; CHECK-NEXT:      i32 -1, label %[[ENTRY_SPLIT_EXIT]]
 ; CHECK-NEXT:      i32 0, label %[[ENTRY_SPLIT_A:.*]]
 ; CHECK-NEXT:      i32 1, label %[[ENTRY_SPLIT_B:.*]]
@@ -3411,7 +3427,8 @@ b.header:
   br label %c.header
 ; CHECK:       b.header:
 ; CHECK-NEXT:    %v1 = call i1 @cond()
-; CHECK-NEXT:    br i1 %v1, label %[[B_HEADER_SPLIT_US:.*]], label %[[B_HEADER_SPLIT:.*]]
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %v1
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %[[B_HEADER_SPLIT_US:.*]], label %[[B_HEADER_SPLIT:.*]]
 ;
 ; CHECK:       [[B_HEADER_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[C_HEADER_US:.*]]
@@ -3486,7 +3503,8 @@ b.header:
 ; CHECK:       b.header:
 ; CHECK-NEXT:    %x.b = load i32, i32* %ptr
 ; CHECK-NEXT:    %v1 = call i1 @cond()
-; CHECK-NEXT:    br i1 %v1, label %[[B_HEADER_SPLIT_US:.*]], label %[[B_HEADER_SPLIT:.*]]
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %v1
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %[[B_HEADER_SPLIT_US:.*]], label %[[B_HEADER_SPLIT:.*]]
 ;
 ; CHECK:       [[B_HEADER_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[C_HEADER_US:.*]]
@@ -3574,7 +3592,8 @@ b.header:
 ; CHECK:       b.header:
 ; CHECK-NEXT:    %x.b = load i32, i32* %ptr
 ; CHECK-NEXT:    %v1 = call i1 @cond()
-; CHECK-NEXT:    br i1 %v1, label %[[B_HEADER_SPLIT_US:.*]], label %[[B_HEADER_SPLIT:.*]]
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %v1
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %[[B_HEADER_SPLIT_US:.*]], label %[[B_HEADER_SPLIT:.*]]
 ;
 ; CHECK:       [[B_HEADER_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[C_HEADER_US:.*]]
@@ -3654,7 +3673,8 @@ b.header:
 ; CHECK:       b.header:
 ; CHECK-NEXT:    %x.b = load i32, i32* %ptr
 ; CHECK-NEXT:    %v1 = call i1 @cond()
-; CHECK-NEXT:    br i1 %v1, label %[[B_HEADER_SPLIT_US:.*]], label %[[B_HEADER_SPLIT:.*]]
+; CHECK-NEXT:    %[[FROZEN:.+]] = freeze i1 %v1
+; CHECK-NEXT:    br i1 %[[FROZEN]], label %[[B_HEADER_SPLIT_US:.*]], label %[[B_HEADER_SPLIT:.*]]
 ;
 ; CHECK:       [[B_HEADER_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[C_HEADER_US:.*]]
@@ -3752,7 +3772,8 @@ c.header:
   br label %d.header
 ; CHECK:       c.header:
 ; CHECK-NEXT:    %v1 = call i1 @cond()
-; CHECK-NEXT:    br i1 %v1, label %[[C_HEADER_SPLIT_US:.*]], label %[[C_HEADER_SPLIT:.*]]
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %v1
+; CHECK-NEXT:    br i1 [[FROZEN]], label %[[C_HEADER_SPLIT_US:.*]], label %[[C_HEADER_SPLIT:.*]]
 ;
 ; CHECK:       [[C_HEADER_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[D_HEADER_US:.*]]
@@ -3865,7 +3886,8 @@ c.header:
 ; CHECK:       c.header:
 ; CHECK-NEXT:    %x.c = load i32, i32* %ptr
 ; CHECK-NEXT:    %v1 = call i1 @cond()
-; CHECK-NEXT:    br i1 %v1, label %[[C_HEADER_SPLIT_US:.*]], label %[[C_HEADER_SPLIT:.*]]
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %v1
+; CHECK-NEXT:    br i1 [[FROZEN]], label %[[C_HEADER_SPLIT_US:.*]], label %[[C_HEADER_SPLIT:.*]]
 ;
 ; CHECK:       [[C_HEADER_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[D_HEADER_US:.*]]
@@ -3947,7 +3969,8 @@ b.header:
 ; CHECK:       b.header:
 ; CHECK-NEXT:    %x.b = load i32, i32* %ptr
 ; CHECK-NEXT:    %v1 = call i32 @cond.i32()
-; CHECK-NEXT:    switch i32 %v1, label %[[B_HEADER_SPLIT:.*]] [
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i32 %v1
+; CHECK-NEXT:    switch i32 [[FROZEN]], label %[[B_HEADER_SPLIT:.*]] [
 ; CHECK-NEXT:      i32 1, label %[[B_HEADER_SPLIT_US:.*]]
 ; CHECK-NEXT:      i32 2, label %[[B_HEADER_SPLIT_US]]
 ; CHECK-NEXT:      i32 3, label %[[B_HEADER_SPLIT_US]]
