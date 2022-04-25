@@ -1833,6 +1833,18 @@ static bool hasTiedDef(MachineRegisterInfo *MRI, unsigned reg) {
   return false;
 }
 
+/// Return true if the existing assignment of \p Intf overlaps, but is not the
+/// same, as \p PhysReg.
+static bool assignedRegPartiallyOverlaps(const TargetRegisterInfo &TRI,
+                                         const VirtRegMap &VRM,
+                                         MCRegister PhysReg,
+                                         const LiveInterval &Intf) {
+  MCRegister AssignedReg = VRM.getPhys(Intf.reg());
+  if (PhysReg == AssignedReg)
+    return false;
+  return TRI.regsOverlap(PhysReg, AssignedReg);
+}
+
 /// mayRecolorAllInterferences - Check if the virtual registers that
 /// interfere with \p VirtReg on \p PhysReg (or one of its aliases) may be
 /// recolored to free \p PhysReg.
@@ -1858,12 +1870,20 @@ bool RAGreedy::mayRecolorAllInterferences(
       return false;
     }
     for (const LiveInterval *Intf : reverse(Q.interferingVRegs())) {
-      // If Intf is done and sit on the same register class as VirtReg,
-      // it would not be recolorable as it is in the same state as VirtReg.
-      // However, if VirtReg has tied defs and Intf doesn't, then
+      // If Intf is done and sits on the same register class as VirtReg, it
+      // would not be recolorable as it is in the same state as
+      // VirtReg. However there are at least two exceptions.
+      //
+      // If VirtReg has tied defs and Intf doesn't, then
       // there is still a point in examining if it can be recolorable.
+      //
+      // Additionally, if the register class has overlapping tuple members, it
+      // may still be recolorable using a different tuple. This is more likely
+      // if the existing assignment aliases with the candidate.
+      //
       if (((ExtraInfo->getStage(*Intf) == RS_Done &&
-            MRI->getRegClass(Intf->reg()) == CurRC) &&
+            MRI->getRegClass(Intf->reg()) == CurRC &&
+            !assignedRegPartiallyOverlaps(*TRI, *VRM, PhysReg, *Intf)) &&
            !(hasTiedDef(MRI, VirtReg.reg()) &&
              !hasTiedDef(MRI, Intf->reg()))) ||
           FixedRegisters.count(Intf->reg())) {
