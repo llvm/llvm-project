@@ -243,6 +243,15 @@ class BitEnumAttr<I intType, string name, string summary,
 
   // The delimiter used to separate bit enum cases in strings.
   string separator = "|";
+
+  // Print the "primary group" only for bits that are members of case groups
+  // that have all bits present. When the value is 0, printing will display both
+  // both individual bit case names AND the names for all groups that the bit is
+  // contained in. When the value is 1, for each bit that is set AND is a member
+  // of a group with all bits set, only the "primary group" (i.e. the first
+  // group with all bits set in reverse declaration order) will be printed (for
+  // conciseness).
+  bit printBitEnumPrimaryGroups = 0;
 }
 
 class I32BitEnumAttr<string name, string summary,
