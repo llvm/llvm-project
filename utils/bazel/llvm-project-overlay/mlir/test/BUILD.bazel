@@ -263,6 +263,7 @@ cc_library(
         "//mlir:LLVMDialect",
         "//mlir:LinalgInterfaces",
         "//mlir:LinalgOps",
+        "//mlir:LoopLikeInterface",
         "//mlir:Pass",
         "//mlir:Reducer",
         "//mlir:SideEffects",
@@ -271,6 +272,7 @@ cc_library(
         "//mlir:TensorDialect",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir:ViewLikeInterface",
     ],
 )
 
