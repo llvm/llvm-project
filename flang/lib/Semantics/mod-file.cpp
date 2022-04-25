@@ -970,13 +970,14 @@ Scope *ModFileReader::Read(const SourceName &name,
   }
   llvm::raw_null_ostream NullStream;
   parsing.Parse(NullStream);
-  auto &parseTree{parsing.parseTree()};
+  std::optional<parser::Program> &parsedProgram{parsing.parseTree()};
   if (!parsing.messages().empty() || !parsing.consumedWholeFile() ||
-      !parseTree) {
+      !parsedProgram) {
     Say(name, ancestorName, "Module file is corrupt: %s"_err_en_US,
         sourceFile->path());
     return nullptr;
   }
+  parser::Program &parseTree{context_.SaveParseTree(std::move(*parsedProgram))};
   Scope *parentScope; // the scope this module/submodule goes into
   if (!isIntrinsic.has_value()) {
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
@@ -991,7 +992,7 @@ Scope *ModFileReader::Read(const SourceName &name,
                                               : context_.globalScope()};
   if (!ancestor) {
     parentScope = &topScope;
-  } else if (std::optional<SourceName> parent{GetSubmoduleParent(*parseTree)}) {
+  } else if (std::optional<SourceName> parent{GetSubmoduleParent(parseTree)}) {
     parentScope = Read(*parent, false /*not intrinsic*/, ancestor, silent);
   } else {
     parentScope = ancestor;
@@ -1002,7 +1003,7 @@ Scope *ModFileReader::Read(const SourceName &name,
   }
   Symbol &modSymbol{*pair.first->second};
   modSymbol.set(Symbol::Flag::ModFile);
-  ResolveNames(context_, *parseTree, topScope);
+  ResolveNames(context_, parseTree, topScope);
   CHECK(modSymbol.has<ModuleDetails>());
   CHECK(modSymbol.test(Symbol::Flag::ModFile));
   if (isIntrinsic.value_or(false)) {
