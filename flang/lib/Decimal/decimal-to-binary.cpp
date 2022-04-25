@@ -439,7 +439,13 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(
       }
       if ((!limit || limit >= q + 3) && toupper(q[0]) == 'I' &&
           toupper(q[1]) == 'N' && toupper(q[2]) == 'F') {
-        p = q + 3;
+        if ((!limit || limit >= q + 8) && toupper(q[3]) == 'I' &&
+            toupper(q[4]) == 'N' && toupper(q[5]) == 'I' &&
+            toupper(q[6]) == 'T' && toupper(q[7]) == 'Y') {
+          p = q + 8;
+        } else {
+          p = q + 3;
+        }
         return {Real{Infinity()}};
       } else {
         // Invalid input
