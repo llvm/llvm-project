@@ -3363,7 +3363,7 @@ static mlir::Value computeLBOUND(fir::FirOpBuilder &builder, mlir::Location loc,
 fir::ExtendedValue
 IntrinsicLibrary::genLbound(mlir::Type resultType,
                             llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() > 0);
+  assert(args.size() == 2 || args.size() == 3);
   const fir::ExtendedValue &array = args[0];
   if (const auto *boxValue = array.getBoxOf<fir::BoxValue>())
     if (boxValue->hasAssumedRank())
@@ -3372,7 +3372,10 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
   //===----------------------------------------------------------------------===//
   mlir::Type indexType = builder.getIndexType();
 
-  if (isStaticallyAbsent(args, 1)) {
+  // Semantics builds signatures for LBOUND calls as either
+  // LBOUND(array, dim, [kind]) or LBOUND(array, [kind]).
+  if (args.size() == 2 || isStaticallyAbsent(args, 1)) {
+    // DIM is absent.
     mlir::Type lbType = fir::unwrapSequenceType(resultType);
     unsigned rank = array.rank();
     mlir::Type lbArrayType = fir::SequenceType::get(

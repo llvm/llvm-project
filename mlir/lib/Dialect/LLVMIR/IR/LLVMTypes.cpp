@@ -340,7 +340,7 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
              << " to be a dense integer elements attribute with 3 or 4 "
                 "elements";
     }
-    if (!key.getElementType().isInteger(8)) {
+    if (key.getElementType() && !key.getElementType().isInteger(8)) {
       return emitError(loc) << "unexpected layout attribute for pointer to "
                             << key.getElementType();
     }
