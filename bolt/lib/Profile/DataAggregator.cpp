@@ -1295,8 +1295,8 @@ std::error_code DataAggregator::printLBRHeatMap() {
              opts::HeatmapMaxAddress);
   uint64_t NumTotalSamples = 0;
 
-  while (hasData()) {
-    if (opts::BasicAggregation) {
+  if (opts::BasicAggregation) {
+    while (hasData()) {
       ErrorOr<PerfBasicSample> SampleRes = parseBasicSample();
       if (std::error_code EC = SampleRes.getError()) {
         if (EC == errc::no_such_process)
@@ -1306,7 +1306,10 @@ std::error_code DataAggregator::printLBRHeatMap() {
       PerfBasicSample &Sample = SampleRes.get();
       HM.registerAddress(Sample.PC);
       NumTotalSamples++;
-    } else {
+    }
+    outs() << "HEATMAP: read " << NumTotalSamples << " basic samples\n";
+  } else {
+    while (hasData()) {
       ErrorOr<PerfBranchSample> SampleRes = parseBranchSample();
       if (std::error_code EC = SampleRes.getError()) {
         if (EC == errc::no_such_process)
@@ -1334,22 +1337,21 @@ std::error_code DataAggregator::printLBRHeatMap() {
       }
       NumTotalSamples += Sample.LBR.size();
     }
+    outs() << "HEATMAP: read " << NumTotalSamples << " LBR samples\n";
+    outs() << "HEATMAP: " << FallthroughLBRs.size() << " unique traces\n";
   }
 
   if (!NumTotalSamples) {
-    if (!opts::BasicAggregation) {
+    if (opts::BasicAggregation) {
+      errs() << "HEATMAP-ERROR: no basic event samples detected in profile. "
+                "Cannot build heatmap.";
+    } else {
       errs() << "HEATMAP-ERROR: no LBR traces detected in profile. "
                 "Cannot build heatmap. Use -nl for building heatmap from "
                 "basic events.\n";
-    } else {
-      errs() << "HEATMAP-ERROR: no samples detected in profile. "
-                "Cannot build heatmap.";
     }
     exit(1);
   }
-
-  outs() << "HEATMAP: read " << NumTotalSamples << " LBR samples\n";
-  outs() << "HEATMAP: " << FallthroughLBRs.size() << " unique traces\n";
 
   outs() << "HEATMAP: building heat map...\n";
 
