@@ -50,11 +50,6 @@ private:
   HWAddressSanitizerOptions Options;
 };
 
-FunctionPass *
-createHWAddressSanitizerLegacyPassPass(bool CompileKernel = false,
-                                       bool Recover = false,
-                                       bool DisableOptimization = false);
-
 namespace HWASanAccessInfo {
 
 // Bit field positions for the accessinfo parameter to
