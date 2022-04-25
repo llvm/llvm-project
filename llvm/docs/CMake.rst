@@ -187,15 +187,37 @@ or execute ``cmake --help-variable VARIABLE_NAME``.  See `Frequently
 Used LLVM-related Variables`_ below for information about commonly
 used variables that control features of LLVM and enabled subprojects.
 
+.. _cmake_build_type:
+
 **CMAKE_BUILD_TYPE**:STRING
-  Sets the build type for ``make``-based generators. Possible values are
-  Release, Debug, RelWithDebInfo and MinSizeRel. If you are using an IDE such as
-  Visual Studio, you should use the IDE settings to set the build type.
-  Be aware that Release and RelWithDebInfo use different optimization levels on
-  most platforms. Be aware that Release and
-  RelWithDebInfo use different optimization levels on most
-  platforms, and that the default value of ``LLVM_ENABLE_ASSERTIONS``
-  is affected.
+  This configures the optimization level for ``make`` or ``ninja`` builds.
+  The default ``CMAKE_BUILD_TYPE`` is set to ``Debug`` but you should
+  carefully read the list below to figure out what configuration matches
+  your use case the best.
+
+  Possible values:
+
+  =========================== ============= ========== ========== ==========================
+  Build Type                  Optimizations Debug Info Assertions Best suited for
+  =========================== ============= ========== ========== ==========================
+  **Release**                 For Speed     No         No         Users of LLVM and Clang
+  **Debug**                   None          Yes        Yes        Developers of LLVM
+  **RelWithDebInfo**          For Speed     Yes        No         Users that also need Debug
+  **MinSizeRel**              For Size      No         No         When disk space matters
+  =========================== ============= ========== ========== ==========================
+
+  * Optimizations make LLVM/Clang run faster, but can be an impediment for
+    step-by-step debugging.
+  * Builds with debug information can use a lot of RAM and disk space and is
+    usually slower to run. You can improve RAM usage by using ``lld``, see
+    the :ref:`LLVM_USE_LINKER <llvm_use_linker>` option.
+  * Assertions are internal checks to help you find bugs. They typically slow
+    down LLVM and Clang when enabled, but can be useful during development.
+    You can manually set :ref:`LLVM_ENABLE_ASSERTIONS <llvm_enable_assertions>`
+    to override the default from `CMAKE_BUILD_TYPE`.
+
+  If you are using an IDE such as Visual Studio or Xcode, you should use
+  the IDE settings to set the build type.
 
 **CMAKE_INSTALL_PREFIX**:PATH
   Path where LLVM will be installed when the "install" target is built.
@@ -240,6 +262,8 @@ description is in `LLVM-related variables`_ below.
 **LLVM_TARGETS_TO_BUILD**:STRING
   Control which targets are enabled. For example you may only need to enable
   your native target with, for example, ``-DLLVM_TARGETS_TO_BUILD=X86``.
+
+.. _llvm_use_linker:
 
 **LLVM_USE_LINKER**:STRING
   Override the system's default linker. For instance use ``lld`` with
@@ -434,6 +458,8 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_DOXYGEN_SVG**:BOOL
   Uses .svg files instead of .png files for graphs in the Doxygen output.
   Defaults to OFF.
+
+.. _llvm_enable_assertions:
 
 **LLVM_ENABLE_ASSERTIONS**:BOOL
   Enables code assertions. Defaults to ON if and only if ``CMAKE_BUILD_TYPE``
