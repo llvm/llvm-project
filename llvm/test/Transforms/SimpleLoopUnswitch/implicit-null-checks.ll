@@ -13,8 +13,8 @@ define i32 @test_should_drop_make_implicit(i32* %p1, i32* %p2) {
 ; CHECK-LABEL: @test_should_drop_make_implicit(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i32* [[P2:%.*]], null
-; CHECK-NOT:     !make.implicit
-; CHECK-NEXT:    br i1 [[NULL_CHECK]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK-NEXT:    [[NULL_CHECK_FR:%.*]] = freeze i1 [[NULL_CHECK]]
+; CHECK-NEXT:    br i1 [[NULL_CHECK_FR]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_US:%.*]]
 ; CHECK:       loop.us:
@@ -210,8 +210,8 @@ define i32 @test_should_drop_make_implicit_exiting_call(i32* %p1, i32* %p2) {
 ; CHECK-LABEL: @test_should_drop_make_implicit_exiting_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i32* [[P2:%.*]], null
-; CHECK-NOT:     !make.implicit
-; CHECK-NEXT:    br i1 [[NULL_CHECK]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK-NEXT:    [[NULL_CHECK_FR:%.*]] = freeze i1 [[NULL_CHECK]]
+; CHECK-NEXT:    br i1 [[NULL_CHECK_FR]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_US:%.*]]
 ; CHECK:       loop.us:
