@@ -281,22 +281,22 @@ TEST_F(TUSchedulerTests, Cancellation) {
   //    R2B
   //   U3(WantDiags=Yes)
   //    R3               <-- cancelled
-  std::vector<std::string> DiagsSeen, ReadsSeen, ReadsCanceled;
+  std::vector<StringRef> DiagsSeen, ReadsSeen, ReadsCanceled;
   {
     Notification Proceed; // Ensure we schedule everything.
     TUScheduler S(CDB, optsForTest(), captureDiags());
     auto Path = testPath("foo.cpp");
     // Helper to schedule a named update and return a function to cancel it.
-    auto Update = [&](std::string ID) -> Canceler {
+    auto Update = [&](StringRef ID) -> Canceler {
       auto T = cancelableTask();
       WithContext C(std::move(T.first));
       updateWithDiags(
-          S, Path, "//" + ID, WantDiagnostics::Yes,
+          S, Path, ("//" + ID).str(), WantDiagnostics::Yes,
           [&, ID](std::vector<Diag> Diags) { DiagsSeen.push_back(ID); });
       return std::move(T.second);
     };
     // Helper to schedule a named read and return a function to cancel it.
-    auto Read = [&](std::string ID) -> Canceler {
+    auto Read = [&](StringRef ID) -> Canceler {
       auto T = cancelableTask();
       WithContext C(std::move(T.first));
       S.runWithAST(ID, Path, [&, ID](llvm::Expected<InputsAndAST> E) {
