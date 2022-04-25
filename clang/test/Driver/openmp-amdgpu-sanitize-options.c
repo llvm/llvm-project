@@ -32,8 +32,8 @@
 // RUN:   %clang -### -fopenmp --offload-arch=gfx908:xnack- -fsanitize=address -fno-gpu-sanitize  --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOGPUSAN,XNACKNEG %s
 
-// XNACK-DAG: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx908:xnack-'. Use it with an offload arch containing 'xnack+' instead
-// XNACKNONE-DAG: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx908'. Use it with an offload arch containing 'xnack+' instead
+// XNACK-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx908:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
+// XNACKNONE-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx908' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 
 // GPUSAN: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fopenmp"{{.*}}"-fsanitize=address"{{.*}}"-fopenmp-targets=amdgcn-amd-amdhsa"{{.*}}"-x" "c"{{.*}}
 // GPUSAN: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fopenmp"{{.*}}"-fsanitize=address"{{.*}}"-fopenmp-targets=amdgcn-amd-amdhsa"{{.*}}"-x" "ir"{{.*}}
