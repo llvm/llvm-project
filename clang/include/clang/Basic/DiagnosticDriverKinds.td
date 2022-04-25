@@ -107,8 +107,8 @@ def err_drv_bad_offload_arch_combo : Error<
   "a feature should either exist in all offload archs, or not exist in any "
   "offload archs)">;
 def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
-  "ignoring '%0' option as it is not currently supported for "
-  "offload arch '%1'. Use it with an offload arch containing '%2' instead">,
+  "ignoring '%0' option for offload arch '%1' as it is not currently supported "
+  "there. Use it with an offload arch containing '%2' instead">,
   InGroup<OptionIgnored>;
 def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
