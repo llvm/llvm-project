@@ -61,13 +61,15 @@ void testReadback(float x, int flags) {
     if (!(x == x)) {
       if (y == y || *p != '\0' || (rflags & Invalid)) {
         u.x = y;
-        failed(x) << " (NaN) " << flags << ": -> '" << result.str << "' -> 0x";
-        failed(x).write_hex(u.u) << " '" << p << "' " << rflags << '\n';
+        (failed(x) << " (NaN) " << flags << ": -> '" << result.str << "' -> 0x")
+                .write_hex(u.u)
+            << " '" << p << "' " << rflags << '\n';
       }
     } else if (x != y || *p != '\0' || (rflags & Invalid)) {
-      u.x = y;
-      failed(x) << ' ' << flags << ": -> '" << result.str << "' -> 0x";
-      failed(x).write_hex(u.u) << " '" << p << "' " << rflags << '\n';
+      u.x = x;
+      (failed(x) << ' ' << flags << ": -> '" << result.str << "' -> 0x")
+              .write_hex(u.u)
+          << " '" << p << "' " << rflags << '\n';
     }
   }
 }

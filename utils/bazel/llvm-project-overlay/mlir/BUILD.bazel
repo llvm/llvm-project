@@ -1946,6 +1946,7 @@ cc_library(
         ":ArithmeticDialect",
         ":IR",
         ":LinalgOps",
+        ":MathDialect",
         "//llvm:Support",
     ],
 )
@@ -2531,10 +2532,12 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LoopLikeInterface",
+        ":MemRefDialect",
         ":Pass",
         ":SCFIncGen",
         ":SCFPassIncGen",
         ":Support",
+        ":TensorDialect",
         "//llvm:Support",
     ],
 )
@@ -2653,8 +2656,10 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":CallInterfacesTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -2957,6 +2962,7 @@ cc_library(
         ":FuncDialect",
         ":FuncTransformsPassIncGen",
         ":IR",
+        ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
         ":Support",
@@ -2982,6 +2988,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
+        ":InferTypeOpInterface",
         ":MemRefDialect",
         ":SideEffectInterfaces",
         ":Support",
@@ -5383,6 +5390,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Analysis",
+        ":ArithmeticDialect",
         ":ConversionPassIncGen",
         ":DataLayoutInterfaces",
         ":FuncDialect",
@@ -7163,6 +7171,7 @@ cc_library(
         ":ArithmeticDialect",
         ":ArithmeticUtils",
         ":BufferizationDialect",
+        ":ControlFlowInterfaces",
         ":CopyOpInterface",
         ":DialectUtils",
         ":FuncDialect",
@@ -7680,6 +7689,7 @@ td_library(
     deps = [
         ":OpBaseTdFiles",
         ":PDLDialectTdFiles",
+        ":SideEffectInterfacesTdFiles",
     ],
 )
 
@@ -7754,6 +7764,7 @@ cc_library(
         ":PDLDialect",
         ":PDLInterpDialect",
         ":Rewrite",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformDialectIncGen",
         ":TransformDialectInterfacesIncGen",
@@ -8511,9 +8522,11 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AllocationOpInterface",
+        ":ArithmeticDialect",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationBaseIncGen",
         ":BufferizationOpsIncGen",
+        ":CopyOpInterface",
         ":FuncDialect",
         ":IR",
         ":MemRefDialect",

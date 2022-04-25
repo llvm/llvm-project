@@ -64,6 +64,22 @@ TEST(TypePrinter, TemplateId) {
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
 }
 
+TEST(TypePrinter, TemplateId2) {
+  std::string Code = R"cpp(
+      template <template <typename ...> class TemplatedType>
+      void func(TemplatedType<int> Param);
+    )cpp";
+  auto Matcher = parmVarDecl(hasType(qualType().bind("id")));
+
+  // Regression test ensuring we do not segfault getting the QualType as a
+  // string.
+  ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher, "<int>",
+                                 [](PrintingPolicy &Policy) {
+                                   Policy.FullyQualifiedName = true;
+                                   Policy.PrintCanonicalTypes = true;
+                                 }));
+}
+
 TEST(TypePrinter, ParamsUglified) {
   llvm::StringLiteral Code = R"cpp(
     template <typename _Tp, template <typename> class __f>

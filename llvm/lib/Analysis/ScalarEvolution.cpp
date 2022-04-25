@@ -7331,9 +7331,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
             Flags = (SCEV::NoWrapFlags)(Flags | SCEV::FlagNUW);
         }
 
-        Constant *X = ConstantInt::get(
+        ConstantInt *X = ConstantInt::get(
             getContext(), APInt::getOneBitSet(BitWidth, SA->getZExtValue()));
-        return getMulExpr(getSCEV(BO->LHS), getSCEV(X), Flags);
+        return getMulExpr(getSCEV(BO->LHS), getConstant(X), Flags);
       }
       break;
 

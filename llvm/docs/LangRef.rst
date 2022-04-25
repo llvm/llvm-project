@@ -1870,26 +1870,27 @@ example:
     On a function, this attribute indicates that the function computes its
     result (or decides to unwind an exception) based strictly on its arguments,
     without dereferencing any pointer arguments or otherwise accessing
-    any mutable state (e.g. memory, control registers, etc) visible to
-    caller functions. It does not write through any pointer arguments
-    (including ``byval`` arguments) and never changes any state visible
-    to callers. This means while it cannot unwind exceptions by calling
-    the ``C++`` exception throwing methods (since they write to memory), there may
-    be non-``C++`` mechanisms that throw exceptions without writing to LLVM
-    visible memory.
+    any mutable state (e.g. memory, control registers, etc) visible outside the
+    ``readnone`` function. It does not write through any pointer arguments
+    (including ``byval`` arguments) and never changes any state visible to
+    callers. This means while it cannot unwind exceptions by calling the ``C++``
+    exception throwing methods (since they write to memory), there may be
+    non-``C++`` mechanisms that throw exceptions without writing to LLVM visible
+    memory.
 
     On an argument, this attribute indicates that the function does not
     dereference that pointer argument, even though it may read or write the
     memory that the pointer points to if accessed through other pointers.
 
-    If a readnone function reads or writes memory visible to the program, or
-    has other side-effects, the behavior is undefined. If a function reads from
-    or writes to a readnone pointer argument, the behavior is undefined.
+    If a readnone function reads or writes memory visible outside the function,
+    or has other side-effects, the behavior is undefined. If a
+    function reads from or writes to a readnone pointer argument, the behavior
+    is undefined.
 ``readonly``
     On a function, this attribute indicates that the function does not write
     through any pointer arguments (including ``byval`` arguments) or otherwise
-    modify any state (e.g. memory, control registers, etc) visible to
-    caller functions. It may dereference pointer arguments and read
+    modify any state (e.g. memory, control registers, etc) visible outside the
+    ``readonly`` function. It may dereference pointer arguments and read
     state that may be set in the caller. A readonly function always
     returns the same value (or unwinds an exception identically) when
     called with the same set of arguments and global state.  This means while it
@@ -1901,9 +1902,9 @@ example:
     through this pointer argument, even though it may write to the memory that
     the pointer points to.
 
-    If a readonly function writes memory visible to the program, or
-    has other side-effects, the behavior is undefined. If a function writes to
-    a readonly pointer argument, the behavior is undefined.
+    If a readonly function writes memory visible outside the function, or has
+    other side-effects, the behavior is undefined. If a function writes to a
+    readonly pointer argument, the behavior is undefined.
 ``"stack-probe-size"``
     This attribute controls the behavior of stack probes: either
     the ``"probe-stack"`` attribute, or ABI-required stack probes, if any.
@@ -1923,14 +1924,14 @@ example:
     This attribute disables ABI-required stack probes, if any.
 ``writeonly``
     On a function, this attribute indicates that the function may write to but
-    does not read from memory.
+    does not read from memory visible outside the ``writeonly`` function.
 
     On an argument, this attribute indicates that the function may write to but
     does not read through this pointer argument (even though it may read from
     the memory that the pointer points to).
 
-    If a writeonly function reads memory visible to the program, or
-    has other side-effects, the behavior is undefined. If a function reads
+    If a writeonly function reads memory visible outside the function or has
+    other side-effects, the behavior is undefined. If a function reads
     from a writeonly pointer argument, the behavior is undefined.
 ``argmemonly``
     This attribute indicates that the only memory accesses inside function are

@@ -111,7 +111,7 @@ public:
   }
 
 private:
-  lldb::OptionValueSP Clone() const {
+  lldb::OptionValueSP Clone() const override {
     return std::make_shared<TestProperties>(*this);
   }
 

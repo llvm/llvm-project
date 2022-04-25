@@ -100,8 +100,8 @@ if (NOT LLVM_RUNTIMES_LINKING_WORKS)
   # --unwindlib=none is supported, and use that if possible.
   # Don't add this if not necessary to fix linking, as it can break using
   # e.g. ASAN/TSAN.
-  llvm_check_compiler_linker_flag(C "--unwindlib=none" LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
-  if (LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
+  llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+  if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
   endif()
 endif()
@@ -110,12 +110,12 @@ endif()
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(C "-nostdlib++" LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
-if (LLVM_RUNTIMES_SUPPORT_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(C "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
-check_cxx_compiler_flag(-nostdinc++ LLVM_RUNTIMES_SUPPORT_NOSTDINCXX_FLAG)
-if (LLVM_RUNTIMES_SUPPORT_NOSTDINCXX_FLAG)
+check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
+if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
 endif()
 

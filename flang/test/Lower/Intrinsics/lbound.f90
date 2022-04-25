@@ -52,3 +52,43 @@ subroutine lbound_test_3(a, dim, res)
 ! CHECK:         fir.store %[[VAL_8]] to %arg2 : !fir.ref<i64>
   res = lbound(a, dim, 8)
 end subroutine
+
+! CHECK-LABEL: func @_QPlbound_test_4(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"},
+! CHECK-SAME:  %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "dim"},
+! CHECK-SAME:  %[[VAL_2:.*]]: !fir.ref<i64> {fir.bindc_name = "l1"},
+! CHECK-SAME:  %[[VAL_3:.*]]: !fir.ref<i64> {fir.bindc_name = "u1"},
+! CHECK-SAME:  %[[VAL_4:.*]]: !fir.ref<i64> {fir.bindc_name = "l2"},
+! CHECK-SAME:  %[[VAL_5:.*]]: !fir.ref<i64> {fir.bindc_name = "u2"}) {
+subroutine lbound_test_4(a, dim, l1, u1, l2, u2)
+  integer(8):: dim, l1, u1, l2, u2
+! CHECK:  %[[VAL_6:.*]] = fir.alloca !fir.array<2xi32>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_2]] : !fir.ref<i64>
+! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
+! CHECK:  %[[VAL_17:.*]] = fir.load %[[VAL_4]] : !fir.ref<i64>
+! CHECK:  %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i64) -> index
+  real, dimension(l1:u1, l2:u2) :: a
+! BeginExternalListOutput
+! CHECK:  %[[VAL_32:.*]] = arith.constant 1 : i32
+! CHECK:  %[[VAL_33:.*]] = arith.constant 0 : index
+! CHECK:  %[[VAL_34:.*]] = arith.cmpi eq, %[[VAL_16:.*]], %[[VAL_33]] : index
+! CHECK:  %[[VAL_35:.*]] = fir.convert %[[VAL_32]] : (i32) -> index
+! CHECK:  %[[VAL_36:.*]] = arith.select %[[VAL_34]], %[[VAL_35]], %[[VAL_8]] : index
+! CHECK:  %[[VAL_37:.*]] = fir.convert %[[VAL_36]] : (index) -> i32
+! CHECK:  %[[VAL_38:.*]] = arith.constant 0 : index
+! CHECK:  %[[VAL_39:.*]] = fir.coordinate_of %[[VAL_6]], %[[VAL_38]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
+! CHECK:  fir.store %[[VAL_37]] to %[[VAL_39]] : !fir.ref<i32>
+! CHECK:  %[[VAL_40:.*]] = arith.cmpi eq, %[[VAL_26:.*]], %[[VAL_33]] : index
+! CHECK:  %[[VAL_41:.*]] = fir.convert %[[VAL_32]] : (i32) -> index
+! CHECK:  %[[VAL_42:.*]] = arith.select %[[VAL_40]], %[[VAL_41]], %[[VAL_18]] : index
+! CHECK:  %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (index) -> i32
+! CHECK:  %[[VAL_44:.*]] = arith.constant 1 : index
+! CHECK:  %[[VAL_45:.*]] = fir.coordinate_of %[[VAL_6]], %[[VAL_44]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
+! CHECK:  fir.store %[[VAL_43]] to %[[VAL_45]] : !fir.ref<i32>
+! CHECK:  %[[VAL_46:.*]] = arith.constant 2 : index
+! CHECK:  %[[VAL_47:.*]] = fir.shape %[[VAL_46]] : (index) -> !fir.shape<1>
+! CHECK:  %[[VAL_48:.*]] = fir.embox %[[VAL_6]](%[[VAL_47]]) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xi32>>
+! CHECK:  %[[VAL_49:.*]] = fir.convert %[[VAL_48]] : (!fir.box<!fir.array<2xi32>>) -> !fir.box<none>
+! CHECK: fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[VAL_49]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  print *, lbound(a, kind=4)
+end subroutine

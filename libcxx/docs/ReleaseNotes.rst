@@ -86,6 +86,9 @@ API Changes
   supported anymore. Please migrate to using the new support for
   :ref:`assertions <assertions-mode>` instead.
 
+- ``vector<bool>::const_reference``, ``vector<bool>::const_iterator::reference``
+  and ``bitset::const_reference`` are now aliases for `bool` in the unstable ABI.
+
 ABI Changes
 -----------
 
@@ -93,6 +96,11 @@ ABI Changes
   emulation for ``std::nullptr_t`` in C++03 mode has been removed. After this change,
   ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` will not be honoured anymore and there
   will be no way to opt back into the C++03 emulation of ``std::nullptr_t``.
+
+- On FreeBSD, NetBSD and DragonFlyBSD, ``std::random_device`` is now implemented on top of
+  ``arc4random()`` instead of reading from ``/dev/urandom``. Any implementation-defined
+  token used when constructing a ``std::random_device`` will now be ignored instead of
+  interpreted as a file to read entropy from.
 
 Build System Changes
 --------------------

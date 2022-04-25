@@ -11,8 +11,7 @@
 
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Interfaces/CopyOpInterface.h"
 
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect

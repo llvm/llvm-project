@@ -417,6 +417,8 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
 
 LogicalResult mlir::bufferization::runOneShotModuleBufferize(
     ModuleOp moduleOp, OneShotBufferizationOptions options) {
+  assert(options.bufferizeFunctionBoundaries &&
+         "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
   OneShotAnalysisState analysisState(moduleOp, options);
   BufferizationState bufferizationState(analysisState);

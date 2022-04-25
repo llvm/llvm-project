@@ -2499,6 +2499,68 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
   }
 }
 
+// Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
+// fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work.
+static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
+                                             InstCombinerImpl &IC) {
+  Value *CondVal = SI.getCondition();
+
+  for (bool Swap : {false, true}) {
+    Value *TrueVal = SI.getTrueValue();
+    Value *X = SI.getFalseValue();
+    CmpInst::Predicate Pred;
+
+    if (Swap)
+      std::swap(TrueVal, X);
+
+    if (!match(CondVal, m_FCmp(Pred, m_Specific(X), m_AnyZeroFP())))
+      continue;
+
+    // fold (X <= +/-0.0) ? (0.0 - X) : X to fabs(X), when 'Swap' is false
+    // fold (X >  +/-0.0) ? X : (0.0 - X) to fabs(X), when 'Swap' is true
+    if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X)))) {
+      if (!Swap && (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
+        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        return IC.replaceInstUsesWith(SI, Fabs);
+      }
+      if (Swap && (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
+        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        return IC.replaceInstUsesWith(SI, Fabs);
+      }
+    }
+
+    // With nsz, when 'Swap' is false:
+    // fold (X < +/-0.0) ? -X : X or (X <= +/-0.0) ? -X : X to fabs(X)
+    // fold (X > +/-0.0) ? -X : X or (X >= +/-0.0) ? -X : X to -fabs(x)
+    // when 'Swap' is true:
+    // fold (X > +/-0.0) ? X : -X or (X >= +/-0.0) ? X : -X to fabs(X)
+    // fold (X < +/-0.0) ? X : -X or (X <= +/-0.0) ? X : -X to -fabs(X)
+    if (!match(TrueVal, m_FNeg(m_Specific(X))) || !SI.hasNoSignedZeros())
+      return nullptr;
+
+    if (Swap)
+      Pred = FCmpInst::getSwappedPredicate(Pred);
+
+    bool IsLTOrLE = Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE ||
+                    Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE;
+    bool IsGTOrGE = Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE ||
+                    Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE;
+
+    if (IsLTOrLE) {
+      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      return IC.replaceInstUsesWith(SI, Fabs);
+    }
+    if (IsGTOrGE) {
+      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      Instruction *NewFNeg = UnaryOperator::CreateFNeg(Fabs);
+      NewFNeg->setFastMathFlags(SI.getFastMathFlags());
+      return NewFNeg;
+    }
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -2530,8 +2592,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
-
-  CmpInst::Predicate Pred;
 
   // Avoid potential infinite loops by checking for non-constant condition.
   // TODO: Can we assert instead by improving canonicalizeSelectToShuffle()?
@@ -2773,42 +2833,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
-  // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
-  // fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work.
-  // (X <= +/-0.0) ? (0.0 - X) : X --> fabs(X)
-  if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
-      match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(FalseVal))) &&
-      (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, &SI);
-    return replaceInstUsesWith(SI, Fabs);
-  }
-  // (X >  +/-0.0) ? X : (0.0 - X) --> fabs(X)
-  if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
-      match(FalseVal, m_FSub(m_PosZeroFP(), m_Specific(TrueVal))) &&
-      (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, &SI);
-    return replaceInstUsesWith(SI, Fabs);
-  }
-  // With nnan and nsz:
-  // (X <  +/-0.0) ? -X : X --> fabs(X)
-  // (X <= +/-0.0) ? -X : X --> fabs(X)
-  if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
-      match(TrueVal, m_FNeg(m_Specific(FalseVal))) && SI.hasNoSignedZeros() &&
-      (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE ||
-       Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, &SI);
-    return replaceInstUsesWith(SI, Fabs);
-  }
-  // With nnan and nsz:
-  // (X >  +/-0.0) ? X : -X --> fabs(X)
-  // (X >= +/-0.0) ? X : -X --> fabs(X)
-  if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
-      match(FalseVal, m_FNeg(m_Specific(TrueVal))) && SI.hasNoSignedZeros() &&
-      (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE ||
-       Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, &SI);
-    return replaceInstUsesWith(SI, Fabs);
-  }
+  // Fold selecting to fabs.
+  if (Instruction *Fabs = foldSelectWithFCmpToFabs(SI, *this))
+    return Fabs;
 
   // See if we are selecting two values based on a comparison of the two values.
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(CondVal))

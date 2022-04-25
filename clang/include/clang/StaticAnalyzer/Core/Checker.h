@@ -563,18 +563,6 @@ struct ImplicitNullDerefEvent {
   static int Tag;
 };
 
-/// A helper class which wraps a boolean value set to false by default.
-///
-/// This class should behave exactly like 'bool' except that it doesn't need to
-/// be explicitly initialized.
-struct DefaultBool {
-  bool val;
-  DefaultBool() : val(false) {}
-  /*implicit*/ operator bool&() { return val; }
-  /*implicit*/ operator const bool&() const { return val; }
-  DefaultBool &operator=(bool b) { val = b; return *this; }
-};
-
 } // end ento namespace
 
 } // end clang namespace

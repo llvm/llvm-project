@@ -33,6 +33,11 @@ module {
     // CHECK: preferred = 8
     // CHECK: size = 8
     "test.data_layout_query"() : () -> !llvm.ptr<i8, 5>
+    // CHECK: alignment = 8
+	// CHECK: bitsize = 64
+    // CHECK: preferred = 8
+    // CHECK: size = 8
+    "test.data_layout_query"() : () -> !llvm.ptr<5>
     return
   }
 }
@@ -41,7 +46,8 @@ module {
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.ptr<i8>, dense<[32, 32, 64]> : vector<3xi32>>,
-  #dlti.dl_entry<!llvm.ptr<i8, 5>, dense<[64, 64, 64]> : vector<3xi32>>
+  #dlti.dl_entry<!llvm.ptr<i8, 5>, dense<[64, 64, 64]> : vector<3xi32>>,
+  #dlti.dl_entry<!llvm.ptr<4>, dense<[32, 64, 64]> : vector<3xi32>>
 >} {
   // CHECK: @spec
   func.func @spec() {
@@ -75,6 +81,16 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK: preferred = 8
     // CHECK: size = 8
     "test.data_layout_query"() : () -> !llvm.ptr<i8, 5>
+    // CHECK: alignment = 4
+	// CHECK: bitsize = 32
+    // CHECK: preferred = 8
+    // CHECK: size = 4
+    "test.data_layout_query"() : () -> !llvm.ptr<3>
+    // CHECK: alignment = 8
+	// CHECK: bitsize = 32
+    // CHECK: preferred = 8
+    // CHECK: size = 4
+	"test.data_layout_query"() : () -> !llvm.ptr<4>
     return
   }
 }
