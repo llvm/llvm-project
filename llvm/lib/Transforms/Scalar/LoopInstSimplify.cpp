@@ -104,6 +104,10 @@ static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
           auto *UserI = cast<Instruction>(U.getUser());
           U.set(V);
 
+          // Do not bother dealing with unreachable code.
+          if (!DT.isReachableFromEntry(UserI->getParent()))
+            continue;
+
           // If the instruction is used by a PHI node we have already processed
           // we'll need to iterate on the loop body to converge, so add it to
           // the next set.
