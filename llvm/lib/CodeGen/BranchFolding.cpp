@@ -119,6 +119,8 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  assert(!MF.getProperties().hasProperty(MachineFunctionProperties::Property::IsSSA));
+
   TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
   // TailMerge can create jump into if branches that make CFG irreducible for
   // HW that requires structurized CFG.
