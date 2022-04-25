@@ -192,8 +192,6 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; MINTREESIZE-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[Q4]], i32 0
 ; MINTREESIZE-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[Q5]], i32 1
 ; MINTREESIZE-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
-; MINTREESIZE-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> poison, float [[Q6]], i32 0
-; MINTREESIZE-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> [[TMP11]], float [[Q5]], i32 1
 ; MINTREESIZE-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
 ; MINTREESIZE-NEXT:    call void @llvm.assume(i1 [[QI]])
 ; MINTREESIZE-NEXT:    ret <4 x float> undef
