@@ -19,3 +19,21 @@ add_object_library(
     libc.src.__support.CPP.bit
 
 )
+
+add_header_library(
+  string_writer
+  HDRS
+    string_writer.h
+  DEPENDS
+    libc.src.string.memory_utils.memcpy_implementation
+)
+
+add_object_library(
+  writer
+  SRCS
+    writer.cpp
+  HDRS
+    writer.h
+  DEPENDS
+    libc.src.string.memory_utils.memset_implementation
+)

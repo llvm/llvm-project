@@ -10,3 +10,14 @@ add_libc_unittest(
 )
 
 target_link_libraries(libc.test.src.stdio.printf_core.parser_test PRIVATE LibcPrintfHelpers)
+
+add_libc_unittest(
+  string_writer_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    string_writer_test.cpp
+  DEPENDS
+    libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.string_writer
+)
