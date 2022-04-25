@@ -1503,10 +1503,8 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   unsigned SrcBitSize = SrcTy->getScalarSizeInBits();
   unsigned DestBitSize = DestTy->getScalarSizeInBits();
 
-  // If we know that the value being extended is positive, we can use a zext
-  // instead.
-  KnownBits Known = computeKnownBits(Src, 0, &CI);
-  if (Known.isNonNegative())
+  // If the value being extended is zero or positive, use a zext instead.
+  if (isKnownNonNegative(Src, DL, 0, &AC, &CI, &DT))
     return CastInst::Create(Instruction::ZExt, Src, DestTy);
 
   // Try to extend the entire expression tree to the wide destination type.
