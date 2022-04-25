@@ -1225,9 +1225,6 @@ bool SymbolFileNativePDB::ParseDebugMacros(CompileUnit &comp_unit) {
 llvm::Expected<uint32_t>
 SymbolFileNativePDB::GetFileIndex(const CompilandIndexItem &cii,
                                   uint32_t file_id) {
-  auto index_iter = m_file_indexes.find(file_id);
-  if (index_iter != m_file_indexes.end())
-    return index_iter->getSecond();
   const auto &checksums = cii.m_strings.checksums().getArray();
   const auto &strings = cii.m_strings.strings();
   // Indices in this structure are actually offsets of records in the
@@ -1244,9 +1241,9 @@ SymbolFileNativePDB::GetFileIndex(const CompilandIndexItem &cii,
 
   // LLDB wants the index of the file in the list of support files.
   auto fn_iter = llvm::find(cii.m_file_list, *efn);
-  lldbassert(fn_iter != cii.m_file_list.end());
-  m_file_indexes[file_id] = std::distance(cii.m_file_list.begin(), fn_iter);
-  return m_file_indexes[file_id];
+  if (fn_iter != cii.m_file_list.end())
+    return std::distance(cii.m_file_list.begin(), fn_iter);
+  return llvm::make_error<RawError>(raw_error_code::no_entry);
 }
 
 bool SymbolFileNativePDB::ParseSupportFiles(CompileUnit &comp_unit,

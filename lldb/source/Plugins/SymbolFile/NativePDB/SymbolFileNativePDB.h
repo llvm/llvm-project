@@ -272,8 +272,6 @@ private:
   llvm::DenseMap<lldb::user_id_t, lldb::CompUnitSP> m_compilands;
   llvm::DenseMap<lldb::user_id_t, lldb::TypeSP> m_types;
   llvm::DenseMap<lldb::user_id_t, std::shared_ptr<InlineSite>> m_inline_sites;
-  // A map from file id in records to file index in support files.
-  llvm::DenseMap<uint32_t, uint32_t> m_file_indexes;
 };
 
 } // namespace npdb
