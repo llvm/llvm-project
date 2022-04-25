@@ -1024,3 +1024,171 @@ define i32 @decrement_min(i32 %x) {
   %s = select i1 %c, i32 %a, i32 0
   ret i32 %s
 }
+
+define i1 @icmp_add_sub_1(i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD2]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add1 = add i32 %a, %b
+  %add2 = add i32 %add1, -1
+  %cmp = icmp ult i32 %add2, %a
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_pred(i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_pred(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[ADD2]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add1 = add i32 %a, %b
+  %add2 = add i32 %add1, -1
+  %cmp = icmp uge i32 %add2, %a
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_wrong_pred(i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_wrong_pred(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[ADD2]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add1 = add i32 %a, %b
+  %add2 = add i32 %add1, -1
+  %cmp = icmp ule i32 %add2, %a
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_wrong_const(i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_wrong_const(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD2]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add1 = add i32 %a, %b
+  %add2 = add i32 %add1, 1
+  %cmp = icmp ult i32 %add2, %a
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_wrong_operand(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @icmp_add_sub_1_wrong_operand(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD2]], [[C:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add1 = add i32 %a, %b
+  %add2 = add i32 %add1, -1
+  %cmp = icmp ult i32 %add2, %c
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_comm1(i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_comm1(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD2]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add1 = add i32 %b, %a
+  %add2 = add i32 %add1, -1
+  %cmp = icmp ult i32 %add2, %a
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_comm2(i32 %X, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_comm2(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A]], [[ADD2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = udiv i32 42, %X ; thwart complexity-based canonicalization
+  %add1 = add i32 %a, %b
+  %add2 = add i32 %add1, -1
+  %cmp = icmp ugt i32 %a, %add2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_comm2_pred(i32 %X, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_comm2_pred(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[A]], [[ADD2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = udiv i32 42, %X ; thwart complexity-based canonicalization
+  %add1 = add i32 %a, %b
+  %add2 = add i32 %add1, -1
+  %cmp = icmp ule i32 %a, %add2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_comm2_wrong_pred(i32 %X, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_comm2_wrong_pred(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], [[ADD2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = udiv i32 42, %X ; thwart complexity-based canonicalization
+  %add1 = add i32 %a, %b
+  %add2 = add i32 %add1, -1
+  %cmp = icmp ult i32 %a, %add2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_comm3(i32 %X, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_comm3(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A]], [[ADD2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = udiv i32 42, %X ; thwart complexity-based canonicalization
+  %add1 = add i32 %b, %a
+  %add2 = add i32 %add1, -1
+  %cmp = icmp ugt i32 %a, %add2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_extra_use1(i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_extra_use1(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    call void @use(i32 [[ADD2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD2]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add1 = add i32 %a, %b
+  %add2 = add i32 %add1, -1
+  call void @use(i32 %add2)
+  %cmp = icmp ult i32 %add2, %a
+  ret i1 %cmp
+}
+
+define i1 @icmp_add_sub_1_extra_use2(i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_add_sub_1_extra_use2(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[ADD1]])
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD2]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add1 = add i32 %a, %b
+  call void @use(i32 %add1)
+  %add2 = add i32 %add1, -1
+  %cmp = icmp ult i32 %add2, %a
+  ret i1 %cmp
+}
