@@ -45,6 +45,7 @@ add_llvm_unittest_with_input_files(AnalysisTests
   VectorFunctionABITest.cpp
   SparsePropagation.cpp
   TargetLibraryInfoTest.cpp
+  TensorSpecTest.cpp
   TBAATest.cpp
   UnrollAnalyzerTest.cpp
   ValueLatticeTest.cpp
