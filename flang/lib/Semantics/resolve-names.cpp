@@ -818,8 +818,9 @@ public:
   bool Pre(const parser::Suffix &);
   bool Pre(const parser::PrefixSpec &);
 
-  bool BeginSubprogram(
-      const parser::Name &, Symbol::Flag, bool hasModulePrefix = false);
+  bool BeginSubprogram(const parser::Name &, Symbol::Flag,
+      bool hasModulePrefix = false,
+      const parser::LanguageBindingSpec * = nullptr);
   bool BeginMpSubprogram(const parser::Name &);
   void PushBlockDataScope(const parser::Name &);
   void EndSubprogram();
@@ -834,7 +835,8 @@ private:
   bool HandlePreviousCalls(const parser::Name &, Symbol &, Symbol::Flag);
   void CheckExtantProc(const parser::Name &, Symbol::Flag);
   // Create a subprogram symbol in the current scope and push a new scope.
-  Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag);
+  Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag,
+      const parser::LanguageBindingSpec * = nullptr);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
   SubprogramDetails &PostSubprogramStmt(const parser::Name &);
 };
@@ -2176,8 +2178,9 @@ void ScopeHandler::PushScope(Scope &scope) {
     if (auto *symbol{scope.symbol()}) {
       // Create a dummy symbol so we can't create another one with the same
       // name. It might already be there if we previously pushed the scope.
-      if (!FindInScope(scope, symbol->name())) {
-        auto &newSymbol{MakeSymbol(symbol->name())};
+      SourceName name{symbol->name()};
+      if (!FindInScope(scope, name)) {
+        auto &newSymbol{MakeSymbol(name)};
         if (kind == Scope::Kind::Subprogram) {
           // Allow for recursive references.  If this symbol is a function
           // without an explicit RESULT(), this new symbol will be discarded
@@ -2197,7 +2200,9 @@ void ScopeHandler::PopScope() {
   for (auto &pair : currScope()) {
     ConvertToObjectEntity(*pair.second);
   }
-  SetScope(currScope_->parent());
+  // If popping back into a global scope, pop back to the main global scope.
+  SetScope(currScope_->parent().IsGlobal() ? context().globalScope()
+                                           : currScope_->parent());
 }
 void ScopeHandler::SetScope(Scope &scope) {
   currScope_ = &scope;
@@ -3295,8 +3300,11 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
 SubprogramDetails &SubprogramVisitor::PostSubprogramStmt(
     const parser::Name &name) {
   Symbol &symbol{*currScope().symbol()};
-  CHECK(name.source == symbol.name());
+  auto &subp{symbol.get<SubprogramDetails>()};
   SetBindNameOn(symbol);
+  CHECK(name.source == symbol.name() ||
+      (subp.bindName() && symbol.owner().IsGlobal() &&
+          context().IsTempName(symbol.name().ToString())));
   symbol.attrs() |= EndAttrs();
   if (symbol.attrs().test(Attr::MODULE)) {
     symbol.attrs().set(Attr::EXTERNAL, false);
@@ -3487,8 +3495,9 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
 }
 
 // A subprogram or interface declared with SUBROUTINE or FUNCTION
-bool SubprogramVisitor::BeginSubprogram(
-    const parser::Name &name, Symbol::Flag subpFlag, bool hasModulePrefix) {
+bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
+    Symbol::Flag subpFlag, bool hasModulePrefix,
+    const parser::LanguageBindingSpec *bindingSpec) {
   if (hasModulePrefix && currScope().IsGlobal()) { // C1547
     Say(name,
         "'%s' is a MODULE procedure which must be declared within a "
@@ -3514,7 +3523,7 @@ bool SubprogramVisitor::BeginSubprogram(
       }
     }
   }
-  Symbol &newSymbol{PushSubprogramScope(name, subpFlag)};
+  Symbol &newSymbol{PushSubprogramScope(name, subpFlag, bindingSpec)};
   if (moduleInterface) {
     newSymbol.get<SubprogramDetails>().set_moduleInterface(*moduleInterface);
     if (moduleInterface->attrs().test(Attr::PRIVATE)) {
@@ -3580,15 +3589,23 @@ void SubprogramVisitor::CheckExtantProc(
   }
 }
 
-Symbol &SubprogramVisitor::PushSubprogramScope(
-    const parser::Name &name, Symbol::Flag subpFlag) {
-  auto *symbol{GetSpecificFromGeneric(name)};
+Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
+    Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec) {
+  Symbol *symbol{GetSpecificFromGeneric(name)};
   if (!symbol) {
+    if (bindingSpec && currScope().IsGlobal() && bindingSpec->v) {
+      // Create this new top-level subprogram with a binding label
+      // in a new global scope, so that its symbol's name won't clash
+      // with another symbol that has a distinct binding label.
+      PushScope(Scope::Kind::Global,
+          &MakeSymbol(context().GetTempName(currScope()), Attrs{},
+              MiscDetails{MiscDetails::Kind::ScopeName}));
+    }
     CheckExtantProc(name, subpFlag);
     symbol = &MakeSymbol(name, SubprogramDetails{});
   }
-  symbol->set(subpFlag);
   symbol->ReplaceName(name.source);
+  symbol->set(subpFlag);
   PushScope(Scope::Kind::Subprogram, symbol);
   auto &details{symbol->get<SubprogramDetails>()};
   if (inInterfaceBlock()) {
@@ -7326,8 +7343,8 @@ bool ResolveNamesVisitor::BeginScopeForNode(const ProgramTree &node) {
     return true;
   case ProgramTree::Kind::Function:
   case ProgramTree::Kind::Subroutine:
-    return BeginSubprogram(
-        node.name(), node.GetSubpFlag(), node.HasModulePrefix());
+    return BeginSubprogram(node.name(), node.GetSubpFlag(),
+        node.HasModulePrefix(), node.bindingSpec());
   case ProgramTree::Kind::MpSubprogram:
     return BeginMpSubprogram(node.name());
   case ProgramTree::Kind::Module:
