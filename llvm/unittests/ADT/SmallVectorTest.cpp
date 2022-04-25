@@ -123,13 +123,29 @@ public:
     return numCopyAssignmentCalls;
   }
 
-  friend bool operator==(const Constructable & c0, const Constructable & c1) {
+  friend bool operator==(const Constructable &c0, const Constructable &c1) {
     return c0.getValue() == c1.getValue();
   }
 
-  friend bool LLVM_ATTRIBUTE_UNUSED
-  operator!=(const Constructable & c0, const Constructable & c1) {
+  friend bool LLVM_ATTRIBUTE_UNUSED operator!=(const Constructable &c0,
+                                               const Constructable &c1) {
     return c0.getValue() != c1.getValue();
+  }
+
+  friend bool operator<(const Constructable &c0, const Constructable &c1) {
+    return c0.getValue() < c1.getValue();
+  }
+  friend bool LLVM_ATTRIBUTE_UNUSED operator<=(const Constructable &c0,
+                                               const Constructable &c1) {
+    return c0.getValue() <= c1.getValue();
+  }
+  friend bool LLVM_ATTRIBUTE_UNUSED operator>(const Constructable &c0,
+                                              const Constructable &c1) {
+    return c0.getValue() > c1.getValue();
+  }
+  friend bool LLVM_ATTRIBUTE_UNUSED operator>=(const Constructable &c0,
+                                               const Constructable &c1) {
+    return c0.getValue() >= c1.getValue();
   }
 };
 
@@ -766,8 +782,8 @@ TYPED_TEST(SmallVectorTest, InsertEmptyRangeTest) {
 }
 
 // Comparison tests.
-TYPED_TEST(SmallVectorTest, ComparisonTest) {
-  SCOPED_TRACE("ComparisonTest");
+TYPED_TEST(SmallVectorTest, ComparisonEqualityTest) {
+  SCOPED_TRACE("ComparisonEqualityTest");
 
   this->makeSequence(this->theVector, 1, 3);
   this->makeSequence(this->otherVector, 1, 3);
@@ -780,6 +796,36 @@ TYPED_TEST(SmallVectorTest, ComparisonTest) {
 
   EXPECT_FALSE(this->theVector == this->otherVector);
   EXPECT_TRUE(this->theVector != this->otherVector);
+}
+
+// Comparison tests.
+TYPED_TEST(SmallVectorTest, ComparisonLessThanTest) {
+  SCOPED_TRACE("ComparisonLessThanTest");
+
+  this->theVector = {1, 2, 4};
+  this->otherVector = {1, 4};
+
+  EXPECT_TRUE(this->theVector < this->otherVector);
+  EXPECT_TRUE(this->theVector <= this->otherVector);
+  EXPECT_FALSE(this->theVector > this->otherVector);
+  EXPECT_FALSE(this->theVector >= this->otherVector);
+
+  EXPECT_FALSE(this->otherVector < this->theVector);
+  EXPECT_FALSE(this->otherVector <= this->theVector);
+  EXPECT_TRUE(this->otherVector > this->theVector);
+  EXPECT_TRUE(this->otherVector >= this->theVector);
+
+  this->otherVector = {1, 2, 4};
+
+  EXPECT_FALSE(this->theVector < this->otherVector);
+  EXPECT_TRUE(this->theVector <= this->otherVector);
+  EXPECT_FALSE(this->theVector > this->otherVector);
+  EXPECT_TRUE(this->theVector >= this->otherVector);
+
+  EXPECT_FALSE(this->otherVector < this->theVector);
+  EXPECT_TRUE(this->otherVector <= this->theVector);
+  EXPECT_FALSE(this->otherVector > this->theVector);
+  EXPECT_TRUE(this->otherVector >= this->theVector);
 }
 
 // Constant vector tests.

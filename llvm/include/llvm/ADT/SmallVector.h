@@ -949,6 +949,9 @@ public:
     return std::lexicographical_compare(this->begin(), this->end(),
                                         RHS.begin(), RHS.end());
   }
+  bool operator>(const SmallVectorImpl &RHS) const { return RHS < *this; }
+  bool operator<=(const SmallVectorImpl &RHS) const { return !(*this > RHS); }
+  bool operator>=(const SmallVectorImpl &RHS) const { return !(*this < RHS); }
 };
 
 template <typename T>
