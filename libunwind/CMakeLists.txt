@@ -180,15 +180,6 @@ include(HandleLibunwindFlags)
 # Setup Compiler Flags
 #===============================================================================
 
-# Compiler tests may be failing if the compiler implicitly links in libunwind,
-# which doesn't exist yet. This gets waived by --unwindlib=none
-# later in config-ix below, but the tests for --target etc before that may
-# be failing due to it. Only test compilation, not linking, for these
-# tests here now.
-set(CMAKE_TRY_COMPILE_TARGET_TYPE_ORIG ${CMAKE_TRY_COMPILE_TARGET_TYPE})
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-set(CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE_ORIG})
-
 # Configure compiler.
 include(config-ix)
 
