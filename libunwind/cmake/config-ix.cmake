@@ -10,9 +10,6 @@ include(CheckCSourceCompiles)
 # might not work if libunwind doesn't exist yet. Try to check if
 # --unwindlib=none is supported, and use that if possible.
 llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
-if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
-endif()
 
 check_library_exists(c fopen "" LIBUNWIND_HAS_C_LIB)
 
