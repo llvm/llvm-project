@@ -100,8 +100,8 @@ if (NOT LLVM_RUNTIMES_LINKING_WORKS)
   # --unwindlib=none is supported, and use that if possible.
   # Don't add this if not necessary to fix linking, as it can break using
   # e.g. ASAN/TSAN.
-  llvm_check_compiler_linker_flag(C "--unwindlib=none" LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
-  if (LLVM_RUNTIMES_SUPPORT_UNWINDLIB_NONE_FLAG)
+  llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+  if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
   endif()
 endif()
