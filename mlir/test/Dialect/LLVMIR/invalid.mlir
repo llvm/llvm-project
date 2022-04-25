@@ -508,7 +508,7 @@ func.func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32
 // -----
 
 func.func @null_non_llvm_type() {
-  // expected-error@+1 {{must be LLVM pointer type, but got 'i32'}}
+  // expected-error@+1 {{custom op 'llvm.mlir.null' invalid kind of type specified}}
   llvm.mlir.null : i32
 }
 
