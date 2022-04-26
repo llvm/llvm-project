@@ -237,8 +237,9 @@ private:
   /// function by checking for an existing function with name FuncName + f
   bool hasFloatVersion(StringRef FuncName);
 
-  /// Shared code to optimize strlen+wcslen.
-  Value *optimizeStringLength(CallInst *CI, IRBuilderBase &B, unsigned CharSize);
+  /// Shared code to optimize strlen+wcslen and strnlen+wcsnlen.
+  Value *optimizeStringLength(CallInst *CI, IRBuilderBase &B, unsigned CharSize,
+                              Value *Bound = nullptr);
 };
 } // End llvm namespace
 

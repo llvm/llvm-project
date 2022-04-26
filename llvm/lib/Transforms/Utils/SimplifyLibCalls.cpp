@@ -629,8 +629,28 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
-                                               unsigned CharSize) {
+                                               unsigned CharSize,
+                                               Value *Bound) {
   Value *Src = CI->getArgOperand(0);
+
+  if (Bound) {
+    if (ConstantInt *BoundCst = dyn_cast<ConstantInt>(Bound)) {
+      if (BoundCst->isZero())
+        // Fold strnlen(s, 0) -> 0 for any s, constant or otherwise.
+        return ConstantInt::get(CI->getType(), 0);
+
+      if (BoundCst->isOne()) {
+        // Fold strnlen(s, 1) -> *s ? 1 : 0 for any s.
+        Type *CharTy = B.getIntNTy(CharSize);
+        Value *CharVal = B.CreateLoad(CharTy, Src, "strnlen.char0");
+        Value *ZeroChar = ConstantInt::get(CharTy, 0);
+        Value *Cmp = B.CreateICmpNE(CharVal, ZeroChar, "strnlen.char0cmp");
+        return B.CreateZExt(Cmp, CI->getType());
+      }
+    }
+    // Otherwise punt for strnlen for now.
+    return nullptr;
+  }
 
   // Constant folding: strlen("xyz") -> 3
   if (uint64_t Len = GetStringLength(Src, CharSize))
@@ -719,6 +739,9 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
   Value *Bound = CI->getArgOperand(1);
+  if (Value *V = optimizeStringLength(CI, B, 8, Bound))
+    return V;
+
   if (isKnownNonZero(Bound, DL))
     annotateNonNullNoUndefBasedOnAccess(CI, 0);
   return nullptr;
