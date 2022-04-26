@@ -166,6 +166,15 @@ public:
 
   uint32_t GetMaximumNumberOfChildrenToDisplay() const;
 
+  /// Get the max depth value, augmented with a bool to indicate whether the
+  /// depth is the default.
+  ///
+  /// When the user has customized the max depth, the bool will be false.
+  ///
+  /// \returns the max depth, and true if the max depth is the system default,
+  /// otherwise false.
+  std::pair<uint32_t, bool> GetMaximumDepthOfChildrenToDisplay() const;
+
   uint32_t GetMaximumSizeOfStringSummary() const;
 
   uint32_t GetMaximumMemReadSize() const;

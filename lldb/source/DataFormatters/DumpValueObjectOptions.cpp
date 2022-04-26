@@ -38,8 +38,9 @@ DumpValueObjectOptions::SetMaximumPointerDepth(PointerDepth depth) {
 }
 
 DumpValueObjectOptions &
-DumpValueObjectOptions::SetMaximumDepth(uint32_t depth) {
+DumpValueObjectOptions::SetMaximumDepth(uint32_t depth, bool is_default) {
   m_max_depth = depth;
+  m_max_depth_is_default = is_default;
   return *this;
 }
 

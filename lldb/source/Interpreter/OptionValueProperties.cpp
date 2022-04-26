@@ -412,6 +412,17 @@ OptionValueSInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueSInt64(
   return nullptr;
 }
 
+OptionValueUInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueUInt64(
+    const ExecutionContext *exe_ctx, uint32_t idx) const {
+  const Property *property = GetPropertyAtIndex(exe_ctx, false, idx);
+  if (property) {
+    OptionValue *value = property->GetValue().get();
+    if (value)
+      return value->GetAsUInt64();
+  }
+  return nullptr;
+}
+
 int64_t OptionValueProperties::GetPropertyAtIndexAsSInt64(
     const ExecutionContext *exe_ctx, uint32_t idx, int64_t fail_value) const {
   const Property *property = GetPropertyAtIndex(exe_ctx, false, idx);

@@ -4236,6 +4236,15 @@ uint32_t TargetProperties::GetMaximumNumberOfChildrenToDisplay() const {
       nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
+std::pair<uint32_t, bool>
+TargetProperties::GetMaximumDepthOfChildrenToDisplay() const {
+  const uint32_t idx = ePropertyMaxChildrenDepth;
+  auto *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(nullptr, idx);
+  bool is_default = !option_value->OptionWasSet();
+  return {option_value->GetCurrentValue(), is_default};
+}
+
 uint32_t TargetProperties::GetMaximumSizeOfStringSummary() const {
   const uint32_t idx = ePropertyMaxSummaryLength;
   return m_collection_sp->GetPropertyAtIndexAsSInt64(
