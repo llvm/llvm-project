@@ -23244,6 +23244,83 @@ return any value and uses platform-independent representation of IEEE rounding
 modes.
 
 
+Floating-Point Test Intrinsics
+------------------------------
+
+These functions get properties of floating-point values.
+
+
+'``llvm.is.fpclass``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.is.fpclass(<fptype> <op>, i32 <test>)
+      declare <N x i1> @llvm.is.fpclass(<vector-fptype> <op>, i32 <test>)
+
+Overview:
+"""""""""
+
+The '``llvm.is.fpclass``' intrinsic returns a boolean value or vector of boolean
+values depending on whether the first argument satisfies the test specified by
+the second argument.
+
+If the first argument is a floating-point scalar, then the result type is a
+boolean (:ref:`i1 <t_integer>`).
+
+If the first argument is a floating-point vector, then the result type is a
+vector of boolean with the same number of elements as the first argument.
+
+Arguments:
+""""""""""
+
+The first argument to the '``llvm.is.fpclass``' intrinsic must be
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
+of floating-point values.
+
+The second argument specifies, which tests to perform. It is an integer value,
+each bit in which specifies floating-point class:
+
++-------+----------------------+
+| Bit # | floating-point class |
++=======+======================+
+| 0     | Signaling NaN        |
++-------+----------------------+
+| 1     | Quiet NaN            |
++-------+----------------------+
+| 2     | Negative infinity    |
++-------+----------------------+
+| 3     | Negative normal      |
++-------+----------------------+
+| 4     | Negative subnormal   |
++-------+----------------------+
+| 5     | Negative zero        |
++-------+----------------------+
+| 6     | Positive zero        |
++-------+----------------------+
+| 7     | Positive subnormal   |
++-------+----------------------+
+| 8     | Positive normal      |
++-------+----------------------+
+| 9     | Positive infinity    |
++-------+----------------------+
+
+Semantics:
+""""""""""
+
+The function checks if ``op`` belongs to any of the floating-point classes
+specified by ``test``. If ``op`` is a vector, then the check is made element by
+element. Each check yields an :ref:`i1 <t_integer>` result, which is ``true``,
+if the element value satisfies the specified test. The argument ``test`` is a
+bit mask where each bit specifies floating-point class to test. For example, the
+value 0x108 makes test for normal value, - bits 3 and 8 in it are set, which
+means that the function returns ``true`` if ``op`` is a positive or negative
+normal value. The function never raises floating-point exceptions.
+
+
 General Intrinsics
 ------------------
 
