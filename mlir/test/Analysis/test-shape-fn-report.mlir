@@ -5,9 +5,9 @@ module attributes {shape.lib = [@shape_lib]} {
 // expected-remark@+1 {{associated shape function: same_result_shape}}
 func.func @tanh(%arg: tensor<10x20xf32>) -> tensor<10x20xf32>
     attributes {shape.function = @shape_lib::@same_result_shape} {
-  // expected-remark@+1 {{no associated way}}
+  // expected-remark@+1 {{implements InferType op interface}}
   %0 = math.tanh %arg : tensor<10x20xf32>
-  // expected-remark@+1 {{associated shape function: same_result_shape}}
+  // expected-remark@+1 {{implements InferType op interface}}
   %1 = "test.same_operand_result_type"(%0) : (tensor<10x20xf32>) -> tensor<10x20xf32>
   return %1 : tensor<10x20xf32>
 }

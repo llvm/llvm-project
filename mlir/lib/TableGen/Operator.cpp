@@ -333,8 +333,25 @@ void Operator::populateTypeInferenceInfo(
 
   // Skip cases currently being custom generated.
   // TODO: Remove special cases.
-  if (getTrait("::mlir::OpTrait::SameOperandsAndResultType"))
+  if (getTrait("::mlir::OpTrait::SameOperandsAndResultType")) {
+    // Check for a non-variable length operand to use as the type anchor.
+    auto *operandI = llvm::find_if(arguments, [](const Argument &arg) {
+      NamedTypeConstraint *operand = arg.dyn_cast<NamedTypeConstraint *>();
+      return operand && !operand->isVariableLength();
+    });
+    if (operandI == arguments.end())
+      return;
+
+    // Map each of the result types to the anchor operation.
+    int operandIdx = operandI - arguments.begin();
+    resultTypeMapping.resize(getNumResults());
+    for (int i = 0; i < getNumResults(); ++i)
+      resultTypeMapping[i].emplace_back(operandIdx);
+
+    allResultsHaveKnownTypes = true;
+    traits.push_back(Trait::create(inferTrait->getDefInit()));
     return;
+  }
 
   // We create equivalence classes of argument/result types where arguments
   // and results are mapped into the same index space and indices corresponding

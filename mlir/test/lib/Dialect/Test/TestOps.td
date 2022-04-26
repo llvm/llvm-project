@@ -2608,15 +2608,9 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
    }];
 }
 
-// Single variadic arg with SameOperandsAndResultType and InferTypeOpInterface.
-// Tests suppression of ambiguous build methods for operations with
-// SameOperandsAndResultType and InferTypeOpInterface.
-def TableGenBuildOp5 : TableGenBuildInferReturnTypeBaseOp<
-    "tblgen_build_5", [SameOperandsAndResultType]>;
-
 // Op with InferTypeOpInterface and regions.
-def TableGenBuildOp6 : TableGenBuildInferReturnTypeBaseOp<
-    "tblgen_build_6", [InferTypeOpInterface]> {
+def TableGenBuildOp5 : TableGenBuildInferReturnTypeBaseOp<
+    "tblgen_build_5", [InferTypeOpInterface]> {
   let regions = (region AnyRegion:$body);
 }
 
