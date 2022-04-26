@@ -1,0 +1,23 @@
+# Test shows that symbolic function breakpoint works with LLDB on demand symbol loading.
+
+# RUN: mkdir -p %t
+# RUN: cd %t
+# RUN: %build %p/Inputs/basic.cpp -o basic.out
+# RUN: %lldb -b -O "settings set symbols.load-on-demand true" -s %s basic.out | FileCheck %s
+
+breakpoint list
+# CHECK: No breakpoints currently set
+
+b bar
+# CHECK: where = {{.*}}`bar(int, int) + {{.*}} at basic.cpp:1
+
+breakpoint list
+# CHECK: where = {{.*}}`bar(int, int) + {{.*}} at basic.cpp:1
+
+run
+# CHECK: stop reason = breakpoint
+
+bt
+# CHECK: {{.*}}`bar(x=33, y=78) at basic.cpp:1
+# CHECK: {{.*}}`foo(x=33, y=78) at basic.cpp:3
+# CHECK: {{.*}}`main(argc=1, argv={{.*}}) at basic.cpp:5

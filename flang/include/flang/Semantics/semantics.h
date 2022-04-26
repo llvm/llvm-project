@@ -195,6 +195,10 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
+  // Saves a module file's parse tree so that it remains available
+  // during semantics.
+  parser::Program &SaveParseTree(parser::Program &&);
+
 private:
   void CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
@@ -226,6 +230,7 @@ private:
   UnorderedSymbolSet errorSymbols_;
   std::set<std::string> tempNames_;
   const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
+  std::list<parser::Program> modFileParseTrees_;
 };
 
 class Semantics {

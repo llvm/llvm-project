@@ -17,7 +17,7 @@ Additional Code of Conduct Response Teams
 In-person events will have an additional response team to immediately respond
 to an incident. For example:
 
-* Each LLVM Developers’ Meeting has a Code of Conduct response team.
+* Each LLVM Developers' Meeting has a Code of Conduct response team.
 * For LLVM meetups, the local organizers will be the first point of contact.
 * Any other event funded by the LLVM Foundation or listed on the LLVM website,
   will have a code of conduct response team or point of contact for CoC 
@@ -265,7 +265,7 @@ enforcement decision has been made.
 
 In the event of a temporary suspension or ban, the appropriate people must be
 notified of the ban in order to restrict access to infrastructure or events.
-These individuals will only be notified of the person’s name and the
+These individuals will only be notified of the person's name and the
 restrictions imposed. They will be under a confidentiality clause and not
 allowed to respond to questions regarding the ban and should direct all
 questions to the CoC committee. 
@@ -279,7 +279,7 @@ Lack of transparency in the outcomes of our Code of Conduct incidents leaves
 our community without an understanding of how or if the organizers worked to
 resolve incidents. The CoC committee should aim to publish transparency
 reports, if reports are received, after major events (such as the LLVM
-Developers’ meetings) and on the following dates: Jan 15, April 15, July 15,
+Developers' meetings) and on the following dates: Jan 15, April 15, July 15,
 Oct 15. 
 
 A transparency report consists of 2 parts:

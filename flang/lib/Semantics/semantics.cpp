@@ -355,6 +355,10 @@ void SemanticsContext::UseFortranBuiltinsModule() {
   }
 }
 
+parser::Program &SemanticsContext::SaveParseTree(parser::Program &&tree) {
+  return modFileParseTrees_.emplace_back(std::move(tree));
+}
+
 bool Semantics::Perform() {
   // Implicitly USE the __Fortran_builtins module so that special types
   // (e.g., __builtin_team_type) are available to semantics, esp. for
