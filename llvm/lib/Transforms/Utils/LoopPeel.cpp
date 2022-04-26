@@ -460,27 +460,26 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (L->getHeader()->getParent()->hasProfileData()) {
     if (violatesLegacyMultiExitLoopCheck(L))
       return;
-    Optional<unsigned> PeelCount = getLoopEstimatedTripCount(L);
-    if (!PeelCount)
+    Optional<unsigned> EstimatedTripCount = getLoopEstimatedTripCount(L);
+    if (!EstimatedTripCount)
       return;
 
-    LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is " << *PeelCount
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is "
+                      << *EstimatedTripCount << "\n");
 
-    if (*PeelCount) {
-      if ((*PeelCount + AlreadyPeeled <= UnrollPeelMaxCount) &&
-          (LoopSize * (*PeelCount + 1) <= Threshold)) {
-        LLVM_DEBUG(dbgs() << "Peeling first " << *PeelCount
-                          << " iterations.\n");
-        PP.PeelCount = *PeelCount;
+    if (*EstimatedTripCount) {
+      if (*EstimatedTripCount + AlreadyPeeled <= MaxPeelCount) {
+        unsigned PeelCount = *EstimatedTripCount;
+        LLVM_DEBUG(dbgs() << "Peeling first " << PeelCount << " iterations.\n");
+        PP.PeelCount = PeelCount;
         return;
       }
-      LLVM_DEBUG(dbgs() << "Requested peel count: " << *PeelCount << "\n");
       LLVM_DEBUG(dbgs() << "Already peel count: " << AlreadyPeeled << "\n");
       LLVM_DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
-      LLVM_DEBUG(dbgs() << "Peel cost: " << LoopSize * (*PeelCount + 1)
-                        << "\n");
+      LLVM_DEBUG(dbgs() << "Loop cost: " << LoopSize << "\n");
       LLVM_DEBUG(dbgs() << "Max peel cost: " << Threshold << "\n");
+      LLVM_DEBUG(dbgs() << "Max peel count by cost: "
+                        << (Threshold / LoopSize - 1) << "\n");
     }
   }
 }
