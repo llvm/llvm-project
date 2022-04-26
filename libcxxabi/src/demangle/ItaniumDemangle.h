@@ -2658,6 +2658,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     bool getFlag() const { return Flag; }
     Node::Prec getPrecedence() const { return Prec; }
   };
+  static const OperatorInfo Ops[];
+  static const size_t NumOps;
   const OperatorInfo *parseOperatorEncoding();
 
   /// Parse the <unresolved-name> production.
@@ -2955,111 +2957,97 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSourceName(NameState *) {
   return make<NameType>(Name);
 }
 
+// Operator encodings
+template <typename Derived, typename Alloc>
+const typename AbstractManglingParser<
+    Derived, Alloc>::OperatorInfo AbstractManglingParser<Derived,
+                                                         Alloc>::Ops[] = {
+    // Keep ordered by encoding
+    {"aN", OperatorInfo::Binary, false, Node::Prec::Assign, "operator&="},
+    {"aS", OperatorInfo::Binary, false, Node::Prec::Assign, "operator="},
+    {"aa", OperatorInfo::Binary, false, Node::Prec::AndIf, "operator&&"},
+    {"ad", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator&"},
+    {"an", OperatorInfo::Binary, false, Node::Prec::And, "operator&"},
+    {"at", OperatorInfo::OfIdOp, /*Type*/ true, Node::Prec::Unary, "alignof "},
+    {"aw", OperatorInfo::NameOnly, false, Node::Prec::Primary,
+     "operator co_await"},
+    {"az", OperatorInfo::OfIdOp, /*Type*/ false, Node::Prec::Unary, "alignof "},
+    {"cc", OperatorInfo::NamedCast, false, Node::Prec::Postfix, "const_cast"},
+    {"cl", OperatorInfo::Call, false, Node::Prec::Postfix, "operator()"},
+    {"cm", OperatorInfo::Binary, false, Node::Prec::Comma, "operator,"},
+    {"co", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator~"},
+    {"cv", OperatorInfo::CCast, false, Node::Prec::Cast, "operator"}, // C Cast
+    {"dV", OperatorInfo::Binary, false, Node::Prec::Assign, "operator/="},
+    {"da", OperatorInfo::Del, /*Ary*/ true, Node::Prec::Unary,
+     "operator delete[]"},
+    {"dc", OperatorInfo::NamedCast, false, Node::Prec::Postfix, "dynamic_cast"},
+    {"de", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator*"},
+    {"dl", OperatorInfo::Del, /*Ary*/ false, Node::Prec::Unary,
+     "operator delete"},
+    {"ds", OperatorInfo::Member, /*Named*/ false, Node::Prec::PtrMem,
+     "operator.*"},
+    {"dt", OperatorInfo::Member, /*Named*/ false, Node::Prec::Postfix,
+     "operator."},
+    {"dv", OperatorInfo::Binary, false, Node::Prec::Assign, "operator/"},
+    {"eO", OperatorInfo::Binary, false, Node::Prec::Assign, "operator^="},
+    {"eo", OperatorInfo::Binary, false, Node::Prec::Xor, "operator^"},
+    {"eq", OperatorInfo::Binary, false, Node::Prec::Equality, "operator=="},
+    {"ge", OperatorInfo::Binary, false, Node::Prec::Relational, "operator>="},
+    {"gt", OperatorInfo::Binary, false, Node::Prec::Relational, "operator>"},
+    {"ix", OperatorInfo::Array, false, Node::Prec::Postfix, "operator[]"},
+    {"lS", OperatorInfo::Binary, false, Node::Prec::Assign, "operator<<="},
+    {"le", OperatorInfo::Binary, false, Node::Prec::Relational, "operator<="},
+    {"ls", OperatorInfo::Binary, false, Node::Prec::Shift, "operator<<"},
+    {"lt", OperatorInfo::Binary, false, Node::Prec::Relational, "operator<"},
+    {"mI", OperatorInfo::Binary, false, Node::Prec::Assign, "operator-="},
+    {"mL", OperatorInfo::Binary, false, Node::Prec::Assign, "operator*="},
+    {"mi", OperatorInfo::Binary, false, Node::Prec::Additive, "operator-"},
+    {"ml", OperatorInfo::Binary, false, Node::Prec::Multiplicative,
+     "operator*"},
+    {"mm", OperatorInfo::Postfix, false, Node::Prec::Postfix, "operator--"},
+    {"na", OperatorInfo::New, /*Ary*/ true, Node::Prec::Unary,
+     "operator new[]"},
+    {"ne", OperatorInfo::Binary, false, Node::Prec::Equality, "operator!="},
+    {"ng", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator-"},
+    {"nt", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator!"},
+    {"nw", OperatorInfo::New, /*Ary*/ false, Node::Prec::Unary, "operator new"},
+    {"oR", OperatorInfo::Binary, false, Node::Prec::Assign, "operator|="},
+    {"oo", OperatorInfo::Binary, false, Node::Prec::OrIf, "operator||"},
+    {"or", OperatorInfo::Binary, false, Node::Prec::Ior, "operator|"},
+    {"pL", OperatorInfo::Binary, false, Node::Prec::Assign, "operator+="},
+    {"pl", OperatorInfo::Binary, false, Node::Prec::Additive, "operator+"},
+    {"pm", OperatorInfo::Member, /*Named*/ false, Node::Prec::PtrMem,
+     "operator->*"},
+    {"pp", OperatorInfo::Postfix, false, Node::Prec::Postfix, "operator++"},
+    {"ps", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator+"},
+    {"pt", OperatorInfo::Member, /*Named*/ true, Node::Prec::Postfix,
+     "operator->"},
+    {"qu", OperatorInfo::Conditional, false, Node::Prec::Conditional,
+     "operator?"},
+    {"rM", OperatorInfo::Binary, false, Node::Prec::Assign, "operator%="},
+    {"rS", OperatorInfo::Binary, false, Node::Prec::Assign, "operator>>="},
+    {"rc", OperatorInfo::NamedCast, false, Node::Prec::Postfix,
+     "reinterpret_cast"},
+    {"rm", OperatorInfo::Binary, false, Node::Prec::Multiplicative,
+     "operator%"},
+    {"rs", OperatorInfo::Binary, false, Node::Prec::Shift, "operator>>"},
+    {"sc", OperatorInfo::NamedCast, false, Node::Prec::Postfix, "static_cast"},
+    {"ss", OperatorInfo::Binary, false, Node::Prec::Spaceship, "operator<=>"},
+    {"st", OperatorInfo::OfIdOp, /*Type*/ true, Node::Prec::Unary, "sizeof "},
+    {"sz", OperatorInfo::OfIdOp, /*Type*/ false, Node::Prec::Unary, "sizeof "},
+    {"te", OperatorInfo::OfIdOp, /*Type*/ false, Node::Prec::Postfix,
+     "typeid "},
+    {"ti", OperatorInfo::OfIdOp, /*Type*/ true, Node::Prec::Postfix, "typeid "},
+};
+template <typename Derived, typename Alloc>
+const size_t AbstractManglingParser<Derived, Alloc>::NumOps = sizeof(Ops) /
+                                                              sizeof(Ops[0]);
+
 // If the next 2 chars are an operator encoding, consume them and return their
 // OperatorInfo.  Otherwise return nullptr.
 template <typename Derived, typename Alloc>
 const typename AbstractManglingParser<Derived, Alloc>::OperatorInfo *
 AbstractManglingParser<Derived, Alloc>::parseOperatorEncoding() {
-  static const OperatorInfo Ops[] = {
-      // Keep ordered by encoding
-      {"aN", OperatorInfo::Binary, false, Node::Prec::Assign, "operator&="},
-      {"aS", OperatorInfo::Binary, false, Node::Prec::Assign, "operator="},
-      {"aa", OperatorInfo::Binary, false, Node::Prec::AndIf, "operator&&"},
-      {"ad", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator&"},
-      {"an", OperatorInfo::Binary, false, Node::Prec::And, "operator&"},
-      {"at", OperatorInfo::OfIdOp, /*Type*/ true, Node::Prec::Unary,
-       "alignof "},
-      {"aw", OperatorInfo::NameOnly, false, Node::Prec::Primary,
-       "operator co_await"},
-      {"az", OperatorInfo::OfIdOp, /*Type*/ false, Node::Prec::Unary,
-       "alignof "},
-      {"cc", OperatorInfo::NamedCast, false, Node::Prec::Postfix, "const_cast"},
-      {"cl", OperatorInfo::Call, false, Node::Prec::Postfix, "operator()"},
-      {"cm", OperatorInfo::Binary, false, Node::Prec::Comma, "operator,"},
-      {"co", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator~"},
-      {"cv", OperatorInfo::CCast, false, Node::Prec::Cast,
-       "operator"}, // C Cast
-      {"dV", OperatorInfo::Binary, false, Node::Prec::Assign, "operator/="},
-      {"da", OperatorInfo::Del, /*Ary*/ true, Node::Prec::Unary,
-       "operator delete[]"},
-      {"dc", OperatorInfo::NamedCast, false, Node::Prec::Postfix,
-       "dynamic_cast"},
-      {"de", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator*"},
-      {"dl", OperatorInfo::Del, /*Ary*/ false, Node::Prec::Unary,
-       "operator delete"},
-      {"ds", OperatorInfo::Member, /*Named*/ false, Node::Prec::PtrMem,
-       "operator.*"},
-      {"dt", OperatorInfo::Member, /*Named*/ false, Node::Prec::Postfix,
-       "operator."},
-      {"dv", OperatorInfo::Binary, false, Node::Prec::Assign, "operator/"},
-      {"eO", OperatorInfo::Binary, false, Node::Prec::Assign, "operator^="},
-      {"eo", OperatorInfo::Binary, false, Node::Prec::Xor, "operator^"},
-      {"eq", OperatorInfo::Binary, false, Node::Prec::Equality, "operator=="},
-      {"ge", OperatorInfo::Binary, false, Node::Prec::Relational, "operator>="},
-      {"gt", OperatorInfo::Binary, false, Node::Prec::Relational, "operator>"},
-      {"ix", OperatorInfo::Array, false, Node::Prec::Postfix, "operator[]"},
-      {"lS", OperatorInfo::Binary, false, Node::Prec::Assign, "operator<<="},
-      {"le", OperatorInfo::Binary, false, Node::Prec::Relational, "operator<="},
-      {"ls", OperatorInfo::Binary, false, Node::Prec::Shift, "operator<<"},
-      {"lt", OperatorInfo::Binary, false, Node::Prec::Relational, "operator<"},
-      {"mI", OperatorInfo::Binary, false, Node::Prec::Assign, "operator-="},
-      {"mL", OperatorInfo::Binary, false, Node::Prec::Assign, "operator*="},
-      {"mi", OperatorInfo::Binary, false, Node::Prec::Additive, "operator-"},
-      {"ml", OperatorInfo::Binary, false, Node::Prec::Multiplicative,
-       "operator*"},
-      {"mm", OperatorInfo::Postfix, false, Node::Prec::Postfix, "operator--"},
-      {"na", OperatorInfo::New, /*Ary*/ true, Node::Prec::Unary,
-       "operator new[]"},
-      {"ne", OperatorInfo::Binary, false, Node::Prec::Equality, "operator!="},
-      {"ng", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator-"},
-      {"nt", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator!"},
-      {"nw", OperatorInfo::New, /*Ary*/ false, Node::Prec::Unary,
-       "operator new"},
-      {"oR", OperatorInfo::Binary, false, Node::Prec::Assign, "operator|="},
-      {"oo", OperatorInfo::Binary, false, Node::Prec::OrIf, "operator||"},
-      {"or", OperatorInfo::Binary, false, Node::Prec::Ior, "operator|"},
-      {"pL", OperatorInfo::Binary, false, Node::Prec::Assign, "operator+="},
-      {"pl", OperatorInfo::Binary, false, Node::Prec::Additive, "operator+"},
-      {"pm", OperatorInfo::Member, /*Named*/ false, Node::Prec::PtrMem,
-       "operator->*"},
-      {"pp", OperatorInfo::Postfix, false, Node::Prec::Postfix, "operator++"},
-      {"ps", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator+"},
-      {"pt", OperatorInfo::Member, /*Named*/ true, Node::Prec::Postfix,
-       "operator->"},
-      {"qu", OperatorInfo::Conditional, false, Node::Prec::Conditional,
-       "operator?"},
-      {"rM", OperatorInfo::Binary, false, Node::Prec::Assign, "operator%="},
-      {"rS", OperatorInfo::Binary, false, Node::Prec::Assign, "operator>>="},
-      {"rc", OperatorInfo::NamedCast, false, Node::Prec::Postfix,
-       "reinterpret_cast"},
-      {"rm", OperatorInfo::Binary, false, Node::Prec::Multiplicative,
-       "operator%"},
-      {"rs", OperatorInfo::Binary, false, Node::Prec::Shift, "operator>>"},
-      {"sc", OperatorInfo::NamedCast, false, Node::Prec::Postfix,
-       "static_cast"},
-      {"ss", OperatorInfo::Binary, false, Node::Prec::Spaceship, "operator<=>"},
-      {"st", OperatorInfo::OfIdOp, /*Type*/ true, Node::Prec::Unary, "sizeof "},
-      {"sz", OperatorInfo::OfIdOp, /*Type*/ false, Node::Prec::Unary,
-       "sizeof "},
-      {"te", OperatorInfo::OfIdOp, /*Type*/ false, Node::Prec::Postfix,
-       "typeid "},
-      {"ti", OperatorInfo::OfIdOp, /*Type*/ true, Node::Prec::Postfix,
-       "typeid "},
-  };
-  const auto NumOps = sizeof(Ops) / sizeof(Ops[0]);
-
-#ifndef NDEBUG
-  {
-    // Verify table order.
-    static bool Done;
-    if (!Done) {
-      Done = true;
-      for (const auto *Op = &Ops[0]; Op != &Ops[NumOps - 1]; Op++)
-        assert(Op[0] < Op[1] && "Operator table is not ordered");
-    }
-  }
-#endif
-
   if (numLeft() < 2)
     return nullptr;
 

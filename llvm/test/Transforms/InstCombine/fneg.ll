@@ -714,13 +714,10 @@ define float @fabs(float %a) {
   ret float %fneg1
 }
 
-; TODO: This should reduce to fneg-of-fabs.
-
 define float @fnabs(float %a) {
 ; CHECK-LABEL: @fnabs(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg fast float [[A]]
-; CHECK-NEXT:    [[FNEG1:%.*]] = select fast i1 [[CMP]], float [[A]], float [[A_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FNEG1:%.*]] = fneg fast float [[TMP1]]
 ; CHECK-NEXT:    ret float [[FNEG1]]
 ;
   %fneg = fneg float %a
@@ -732,6 +729,19 @@ define float @fnabs(float %a) {
 
 define float @fnabs_1(float %a) {
 ; CHECK-LABEL: @fnabs_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FNEG1:%.*]] = fneg fast float [[TMP1]]
+; CHECK-NEXT:    ret float [[FNEG1]]
+;
+  %fneg = fneg float %a
+  %cmp = fcmp ogt float %a, %fneg
+  %sel = select i1 %cmp, float %a, float %fneg
+  %fneg1 = fneg fast float %sel
+  ret float %fneg1
+}
+
+define float @fnabs_2(float %a) {
+; CHECK-LABEL: @fnabs_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nsz float @llvm.fabs.f32(float [[A:%.*]])
 ; CHECK-NEXT:    [[FNEG1:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    ret float [[FNEG1]]

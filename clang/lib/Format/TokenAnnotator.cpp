@@ -2146,6 +2146,42 @@ private:
     return true;
   }
 
+  /// Returns true if the token is used as a unary operator.
+  bool determineUnaryOperatorByUsage(const FormatToken &Tok) {
+    const FormatToken *PrevToken = Tok.getPreviousNonComment();
+    if (!PrevToken)
+      return true;
+
+    // These keywords are deliberately not included here because they may
+    // precede only one of unary star/amp and plus/minus but not both.  They are
+    // either included in determineStarAmpUsage or determinePlusMinusCaretUsage.
+    //
+    // @ - It may be followed by a unary `-` in Objective-C literals. We don't
+    //   know how they can be followed by a star or amp.
+    if (PrevToken->isOneOf(
+            TT_ConditionalExpr, tok::l_paren, tok::comma, tok::colon, tok::semi,
+            tok::equal, tok::question, tok::l_square, tok::l_brace,
+            tok::kw_case, tok::kw_co_await, tok::kw_co_return, tok::kw_co_yield,
+            tok::kw_delete, tok::kw_return, tok::kw_throw))
+      return true;
+
+    // We put sizeof here instead of only in determineStarAmpUsage. In the cases
+    // where the unary `+` operator is overloaded, it is reasonable to write
+    // things like `sizeof +x`. Like commit 446d6ec996c6c3.
+    if (PrevToken->is(tok::kw_sizeof))
+      return true;
+
+    // A sequence of leading unary operators.
+    if (PrevToken->isOneOf(TT_CastRParen, TT_UnaryOperator))
+      return true;
+
+    // There can't be two consecutive binary operators.
+    if (PrevToken->is(TT_BinaryOperator))
+      return true;
+
+    return false;
+  }
+
   /// Return the type of the given token assuming it is * or &.
   TokenType determineStarAmpUsage(const FormatToken &Tok, bool IsExpression,
                                   bool InTemplateArgument) {
@@ -2177,12 +2213,7 @@ private:
     if (PrevToken->is(tok::r_paren) && PrevToken->is(TT_TypeDeclarationParen))
       return TT_PointerOrReference;
 
-    if (PrevToken->isOneOf(tok::l_paren, tok::l_square, tok::l_brace,
-                           tok::comma, tok::semi, tok::kw_return, tok::colon,
-                           tok::kw_co_return, tok::kw_co_await,
-                           tok::kw_co_yield, tok::equal, tok::kw_delete,
-                           tok::kw_sizeof, tok::kw_throw, TT_BinaryOperator,
-                           TT_ConditionalExpr, TT_UnaryOperator, TT_CastRParen))
+    if (determineUnaryOperatorByUsage(Tok))
       return TT_UnaryOperator;
 
     if (NextToken->is(tok::l_square) && NextToken->isNot(TT_LambdaLSquare))
@@ -2232,23 +2263,14 @@ private:
   }
 
   TokenType determinePlusMinusCaretUsage(const FormatToken &Tok) {
+    if (determineUnaryOperatorByUsage(Tok))
+      return TT_UnaryOperator;
+
     const FormatToken *PrevToken = Tok.getPreviousNonComment();
     if (!PrevToken)
       return TT_UnaryOperator;
 
-    if (PrevToken->isOneOf(TT_CastRParen, TT_UnaryOperator))
-      // This must be a sequence of leading unary operators.
-      return TT_UnaryOperator;
-
-    // Use heuristics to recognize unary operators.
-    if (PrevToken->isOneOf(tok::equal, tok::l_paren, tok::comma, tok::l_square,
-                           tok::question, tok::colon, tok::kw_return,
-                           tok::kw_case, tok::at, tok::l_brace, tok::kw_throw,
-                           tok::kw_co_return, tok::kw_co_yield))
-      return TT_UnaryOperator;
-
-    // There can't be two consecutive binary operators.
-    if (PrevToken->is(TT_BinaryOperator))
+    if (PrevToken->is(tok::at))
       return TT_UnaryOperator;
 
     // Fall back to marking the token as binary operator.
