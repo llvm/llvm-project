@@ -10,6 +10,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 #include <queue>
@@ -113,6 +114,7 @@ private:
   /// the parent operation results.
   void visitRegionSuccessors(
       Operation *parentOp, ArrayRef<RegionSuccessor> regionSuccessors,
+      ArrayRef<AbstractLatticeElement *> operandLattices,
       function_ref<OperandRange(Optional<unsigned>)> getInputsForRegion);
 
   /// Visit the given terminator operation and compute any necessary lattice
@@ -460,7 +462,7 @@ void ForwardDataFlowSolver::visitRegionBranchOperation(
   if (successors.empty())
     return markAllPessimisticFixpoint(branch, branch->getResults());
   return visitRegionSuccessors(
-      branch, successors, [&](Optional<unsigned> index) {
+      branch, successors, operandLattices, [&](Optional<unsigned> index) {
         assert(index && "expected valid region index");
         return branch.getSuccessorEntryOperands(*index);
       });
@@ -468,6 +470,7 @@ void ForwardDataFlowSolver::visitRegionBranchOperation(
 
 void ForwardDataFlowSolver::visitRegionSuccessors(
     Operation *parentOp, ArrayRef<RegionSuccessor> regionSuccessors,
+    ArrayRef<AbstractLatticeElement *> operandLattices,
     function_ref<OperandRange(Optional<unsigned>)> getInputsForRegion) {
   for (const RegionSuccessor &it : regionSuccessors) {
     Region *region = it.getSuccessor();
@@ -514,22 +517,25 @@ void ForwardDataFlowSolver::visitRegionSuccessors(
     if (llvm::all_of(arguments, [&](Value arg) { return isAtFixpoint(arg); }))
       continue;
 
-    // Mark any arguments that do not receive inputs as having reached a
-    // pessimistic fixpoint, we won't be able to discern if they are constant.
-    // TODO: This isn't exactly ideal. There may be situations in which a
-    // region operation can provide information for certain results that
-    // aren't part of the control flow.
     if (succArgs.size() != arguments.size()) {
-      if (succArgs.empty()) {
-        markAllPessimisticFixpoint(arguments);
-        continue;
+      if (analysis.visitNonControlFlowArguments(
+              parentOp, it, operandLattices) == ChangeResult::Change) {
+        unsigned firstArgIdx =
+            succArgs.empty() ? 0
+                             : succArgs[0].cast<BlockArgument>().getArgNumber();
+        for (Value v : arguments.take_front(firstArgIdx)) {
+          assert(!analysis.getLatticeElement(v).isUninitialized() &&
+                 "Non-control flow block arg has no lattice value after "
+                 "analysis callback");
+          visitUsers(v);
+        }
+        for (Value v : arguments.drop_front(firstArgIdx + succArgs.size())) {
+          assert(!analysis.getLatticeElement(v).isUninitialized() &&
+                 "Non-control flow block arg has no lattice value after "
+                 "analysis callback");
+          visitUsers(v);
+        }
       }
-
-      unsigned firstArgIdx = succArgs[0].cast<BlockArgument>().getArgNumber();
-      markAllPessimisticFixpointAndVisitUsers(
-          arguments.take_front(firstArgIdx));
-      markAllPessimisticFixpointAndVisitUsers(
-          arguments.drop_front(firstArgIdx + succArgs.size()));
     }
 
     // Update the lattice of arguments that have inputs from the predecessor.
@@ -573,12 +579,13 @@ void ForwardDataFlowSolver::visitTerminatorOperation(
     // Try to get "region-like" successor operands if possible in order to
     // propagate the operand states to the successors.
     if (isRegionReturnLike(op)) {
-      return visitRegionSuccessors(
-          parentOp, regionSuccessors, [&](Optional<unsigned> regionIndex) {
-            // Determine the individual region successor operands for the given
-            // region index (if any).
-            return *getRegionBranchSuccessorOperands(op, regionIndex);
-          });
+      auto getOperands = [&](Optional<unsigned> regionIndex) {
+        // Determine the individual region  successor operands for the given
+        // region index (if any).
+        return *getRegionBranchSuccessorOperands(op, regionIndex);
+      };
+      return visitRegionSuccessors(parentOp, regionSuccessors, operandLattices,
+                                   getOperands);
     }
 
     // If this terminator is not "region-like", conservatively mark all of the

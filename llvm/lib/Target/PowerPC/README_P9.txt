@@ -310,7 +310,7 @@ VSX:
   . I checked existing instruction "XSCMPUDP". They are different in target
     register. "XSCMPUDP" write to CR field, xscmp*dp write to VSX register
 
-  . Use instrinsic:
+  . Use intrinsic:
     (set i128:$XT, (int_ppc_vsx_xscmpeqdp f64:$XA, f64:$XB))
     (set i128:$XT, (int_ppc_vsx_xscmpgedp f64:$XA, f64:$XB))
     (set i128:$XT, (int_ppc_vsx_xscmpgtdp f64:$XA, f64:$XB))
@@ -322,7 +322,7 @@ VSX:
                                  "xvcmpeqdp", "$XT, $XA, $XB", IIC_VecFPCompare,
                                  int_ppc_vsx_xvcmpeqdp, v2i64, v2f64>;
 
-  . So we should use "XX3Form_Rcr" to implement instrinsic
+  . So we should use "XX3Form_Rcr" to implement intrinsic
 
 - Convert DP -> QP: xscvdpqp
   . Similar to XSCVDPSP:

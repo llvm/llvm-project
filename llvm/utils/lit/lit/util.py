@@ -314,7 +314,8 @@ class ExecuteCommandTimeoutException(Exception):
 kUseCloseFDs = not (platform.system() == 'Windows')
 
 
-def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
+def executeCommand(command, cwd=None, env=None, input=None, timeout=0,
+                   redirect_stderr=False):
     """Execute command ``command`` (list of arguments or string) with.
 
     * working directory ``cwd`` (str), use None to use the current
@@ -323,6 +324,7 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
     * Input to the command ``input`` (str), use string to pass
       no input.
     * Max execution time ``timeout`` (int) seconds. Use 0 for no timeout.
+    * ``redirect_stderr`` (bool), use True if redirect stderr to stdout
 
     Returns a tuple (out, err, exitCode) where
     * ``out`` (str) is the standard output of running the command
@@ -335,10 +337,11 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
     """
     if input is not None:
         input = to_bytes(input)
+    err_out = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     p = subprocess.Popen(command, cwd=cwd,
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
+                         stderr=err_out,
                          env=env, close_fds=kUseCloseFDs)
     timerObject = None
     # FIXME: Because of the way nested function scopes work in Python 2.x we
@@ -365,7 +368,7 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
 
     # Ensure the resulting output is always of string type.
     out = to_string(out)
-    err = to_string(err)
+    err = '' if redirect_stderr else to_string(err)
 
     if hitTimeOut[0]:
         raise ExecuteCommandTimeoutException(
