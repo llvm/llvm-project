@@ -622,6 +622,16 @@ void CIRGenFunction::buildConstructorBody(FunctionArgList &Args) {
     llvm_unreachable("NYI");
 }
 
+/// Given a value of type T* that may not be to a complete object, construct
+/// an l-vlaue withi the natural pointee alignment of T.
+LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
+                                                         QualType T) {
+  LValueBaseInfo BaseInfo;
+  CharUnits Align = CGM.getNaturalTypeAlignment(T, &BaseInfo,
+                                                /* for PointeeType= */ true);
+  return makeAddrLValue(Address(Op->getResult(0), Align), T, BaseInfo);
+}
+
 void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
                                    mlir::FuncOp Fn,
                                    const CIRGenFunctionInfo &FnInfo,

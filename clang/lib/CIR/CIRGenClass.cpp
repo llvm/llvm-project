@@ -157,6 +157,59 @@ private:
   unsigned LastAddedFieldIndex;
 };
 
+static void buildLValueForAnyFieldInitialization(CIRGenFunction &CGF,
+                                                 CXXCtorInitializer *MemberInit,
+                                                 LValue &LHS) {
+  FieldDecl *Field = MemberInit->getAnyMember();
+  if (MemberInit->isIndirectMemberInitializer()) {
+    llvm_unreachable("NYI");
+  } else {
+    LHS = CGF.buildLValueForFieldInitialization(LHS, Field);
+  }
+}
+
+static void buildMemberInitializer(CIRGenFunction &CGF,
+                                   const CXXRecordDecl *ClassDecl,
+                                   CXXCtorInitializer *MemberInit,
+                                   const CXXConstructorDecl *Constructor,
+                                   FunctionArgList &Args) {
+  // TODO: ApplyDebugLocation
+  assert(MemberInit->isAnyMemberInitializer() &&
+         "Mush have member initializer!");
+  assert(MemberInit->getInit() && "Must have initializer!");
+
+  // non-static data member initializers
+  FieldDecl *Field = MemberInit->getAnyMember();
+  QualType FieldType = Field->getType();
+
+  mlir::Operation *ThisPtr = CGF.LoadCXXThis();
+  QualType RecordTy = CGF.getContext().getTypeDeclType(ClassDecl);
+  LValue LHS;
+
+  // If a base constructor is being emitted, create an LValue that has the
+  // non-virtual alignment.
+  if (CGF.CurGD.getCtorType() == Ctor_Base)
+    LHS = CGF.MakeNaturalAlignPointeeAddrLValue(ThisPtr, RecordTy);
+  else
+    llvm_unreachable("NYI");
+
+  buildLValueForAnyFieldInitialization(CGF, MemberInit, LHS);
+
+  // Special case: If we are in a copy or move constructor, and we are copying
+  // an array off PODs or classes with tirival copy constructors, ignore the AST
+  // and perform the copy we know is equivalent.
+  // FIXME: This is hacky at best... if we had a bit more explicit information
+  // in the AST, we could generalize it more easily.
+  const ConstantArrayType *Array =
+      CGF.getContext().getAsConstantArrayType(FieldType);
+  if (Array && Constructor->isDefaulted() &&
+      Constructor->isCopyOrMoveConstructor()) {
+    llvm_unreachable("NYI");
+  }
+
+  CGF.buildInitializerForField(Field, LHS, MemberInit->getInit());
+}
+
 class ConstructorMemcpyizer : public FieldMemcpyizer {
 private:
   /// Get source argument for copy constructor. Returns null if not a copy
@@ -184,14 +237,18 @@ public:
                         FunctionArgList &Args)
       : FieldMemcpyizer(CGF, CD->getParent(),
                         getTrivialCopySource(CGF, CD, Args)),
+        ConstructorDecl(CD),
         MemcpyableCtor(CD->isDefaulted() && CD->isCopyOrMoveConstructor() &&
-                       CGF.getLangOpts().getGC() == LangOptions::NonGC) {}
+                       CGF.getLangOpts().getGC() == LangOptions::NonGC),
+        Args(Args) {}
 
   void addMemberInitializer(CXXCtorInitializer *MemberInit) {
     if (isMemberInitMemcpyable(MemberInit)) {
       llvm_unreachable("NYI");
     } else {
-      llvm_unreachable("NYI");
+      buildAggregatedInits();
+      buildMemberInitializer(CGF, ConstructorDecl->getParent(), MemberInit,
+                             ConstructorDecl, Args);
     }
   }
 
@@ -222,12 +279,12 @@ public:
     }
   }
 
-  void finish() {
-    buildAggregatedInits();
-  }
+  void finish() { buildAggregatedInits(); }
 
 private:
+  const CXXConstructorDecl *ConstructorDecl;
   bool MemcpyableCtor;
+  FunctionArgList &Args;
   SmallVector<CXXCtorInitializer *, 16> AggregatedInits;
 };
 
@@ -372,6 +429,11 @@ Address CIRGenFunction::LoadCXXThisAddress() {
   // Consider how to do this if we ever have multiple returns
   auto Result = LoadCXXThis()->getOpResult(0);
   return Address(Result, CXXThisAlignment);
+}
+
+void CIRGenFunction::buildInitializerForField(FieldDecl *Field, LValue LHS,
+                                              Expr *Init) {
+  llvm_unreachable("NYI");
 }
 
 void CIRGenFunction::buildDelegateCXXConstructorCall(

@@ -751,6 +751,9 @@ public:
     Address OldCXXDefaultInitExprThis;
   };
 
+  LValue MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
+                                           clang::QualType T);
+
   /// LoadCXXThis - Load the value for 'this'. This function is only valid while
   /// generating code for an C++ member function.
   mlir::Operation *LoadCXXThis() {
@@ -784,6 +787,14 @@ public:
   }
 
   void initializeVTablePointers(const clang::CXXRecordDecl *RD);
+
+  LValue buildLValueForField(LValue Base, const clang::FieldDecl *Field);
+
+  /// buildLValueForFieldInitialization - like buildLValueForField, excpet that
+  /// if the Field is a reference, this will return the address of the reference
+  /// and not the address of the value stored in the reference.
+  LValue buildLValueForFieldInitialization(LValue Base,
+                                           const clang::FieldDecl *Field);
 
   void buildInitializerForField(clang::FieldDecl *Field, LValue LHS,
                                 clang::Expr *Init);
