@@ -1086,7 +1086,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *BaseTp,
                                            ArrayRef<int> Mask, int Index,
                                            VectorType *SubTp,
-                                           ArrayRef<const Value *> Args) {
+                                           ArrayRef<Value *> Args) {
   // 64-bit packed float vectors (v2f32) are widened to type v4f32.
   // 64-bit packed integer vectors (v2i32) are widened to type v4i32.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, BaseTp);
@@ -1551,8 +1551,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   };
 
   if (ST->hasSSE2()) {
-    bool IsLoad =
-        llvm::any_of(Args, [](const auto &V) { return isa<LoadInst>(V); });
+    bool IsLoad = !Args.empty() && llvm::all_of(Args, [](const Value *V) {
+      return isa<LoadInst>(V);
+    });
     if (ST->hasSSE3() && IsLoad)
       if (const auto *Entry =
               CostTableLookup(SSE3BroadcastLoadTbl, Kind, LT.second)) {
