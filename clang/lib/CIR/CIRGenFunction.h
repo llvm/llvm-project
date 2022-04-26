@@ -288,6 +288,13 @@ public:
   /// CurGD - The GlobalDecl for the current function being compiled.
   clang::GlobalDecl CurGD;
 
+  /// ReturnValue - The temporary alloca to hold the return value. This is
+  /// invalid iff the function has no return value.
+  Address ReturnValue = Address::invalid();
+
+  /// Counts of the number return expressions in the function.
+  unsigned NumReturnExprs = 0;
+
   clang::QualType FnRetQualTy;
   std::optional<mlir::Type> FnRetCIRTy;
   std::optional<mlir::Value> FnRetAlloca;
