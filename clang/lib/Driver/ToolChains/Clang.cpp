@@ -3167,8 +3167,8 @@ static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
       CmdArgs.push_back("-analyzer-checker=unix.cstring.NullArg");
     }
 
-    // Disable some unix checkers for PS4.
-    if (Triple.isPS4()) {
+    // Disable some unix checkers for PS4/PS5.
+    if (Triple.isPS()) {
       CmdArgs.push_back("-analyzer-disable-checker=unix.API");
       CmdArgs.push_back("-analyzer-disable-checker=unix.Vfork");
     }
@@ -3186,7 +3186,7 @@ static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
     if (types::isCXX(Input.getType()))
       CmdArgs.push_back("-analyzer-checker=cplusplus");
 
-    if (!Triple.isPS4()) {
+    if (!Triple.isPS()) {
       CmdArgs.push_back("-analyzer-checker=security.insecureAPI.UncheckedReturn");
       CmdArgs.push_back("-analyzer-checker=security.insecureAPI.getpw");
       CmdArgs.push_back("-analyzer-checker=security.insecureAPI.gets");
