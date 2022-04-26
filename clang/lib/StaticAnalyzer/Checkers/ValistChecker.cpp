@@ -178,7 +178,7 @@ const MemRegion *ValistChecker::getVAListAsRegion(SVal SV, const Expr *E,
     if (isa<ParmVarDecl>(DeclReg->getDecl()))
       Reg = C.getState()->getSVal(SV.castAs<Loc>()).getAsRegion();
   }
-  IsSymbolic = Reg && Reg->getAs<SymbolicRegion>();
+  IsSymbolic = Reg && Reg->getBaseRegion()->getAs<SymbolicRegion>();
   // Some VarRegion based VA lists reach here as ElementRegions.
   const auto *EReg = dyn_cast_or_null<ElementRegion>(Reg);
   return (EReg && VaListModelledAsArray) ? EReg->getSuperRegion() : Reg;
