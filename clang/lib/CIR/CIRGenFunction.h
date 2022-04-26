@@ -426,6 +426,12 @@ public:
                                clang::SourceLocation Loc,
                                bool NewPointerIsChecked);
 
+  RValue buildCXXMemberOrOperatorCall(
+      const clang::CXXMethodDecl *Method, const CIRGenCallee &Callee,
+      ReturnValueSlot ReturnValue, mlir::Value This, mlir::Value ImplicitParam,
+      clang::QualType ImplicitParamTy, const clang::CallExpr *E,
+      CallArgList *RtlArgs);
+
   RValue buildCXXMemberCallExpr(const clang::CXXMemberCallExpr *E,
                                 ReturnValueSlot ReturnValue);
   RValue buildCXXMemberOrOperatorMemberCallExpr(
@@ -828,6 +834,9 @@ public:
            "Invalid argument to GetAddrOfLocalVar(), no decl!");
     return it->second;
   }
+
+  /// Check if \p E is a C++ "this" pointer wrapped in value-preserving casts.
+  static bool isWrappedCXXThis(const clang::Expr *E);
 
   void buildDelegateCXXConstructorCall(const clang::CXXConstructorDecl *Ctor,
                                        clang::CXXCtorType CtorType,
