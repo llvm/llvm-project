@@ -380,8 +380,7 @@ function(add_compiler_rt_runtime name type)
       add_dependencies(${libname} ${LIB_DEPS})
     endif()
     set_target_properties(${libname} PROPERTIES
-        OUTPUT_NAME ${output_name_${libname}}
-        C_STANDARD 11)
+        OUTPUT_NAME ${output_name_${libname}})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
     if(LIB_LINK_LIBS)
       target_link_libraries(${libname} PRIVATE ${LIB_LINK_LIBS})
