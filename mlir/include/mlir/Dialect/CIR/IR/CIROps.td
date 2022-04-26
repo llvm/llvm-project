@@ -515,16 +515,16 @@ def ScopeOp : CIR_Op<"scope", [DeclareOpInterfaceMethods<RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
 // FIXME: represent Commutative, Idempotent traits for appropriate binops
-def BinOpKind_Mul : I32EnumAttrCase<"Mul", 1>;
-def BinOpKind_Div : I32EnumAttrCase<"Div", 2>;
-def BinOpKind_Rem : I32EnumAttrCase<"Rem", 3>;
-def BinOpKind_Add : I32EnumAttrCase<"Add", 4>;
-def BinOpKind_Sub : I32EnumAttrCase<"Sub", 5>;
-def BinOpKind_Shl : I32EnumAttrCase<"Shl", 6>;
-def BinOpKind_Shr : I32EnumAttrCase<"Shr", 7>;
-def BinOpKind_And : I32EnumAttrCase<"And", 8>;
-def BinOpKind_Xor : I32EnumAttrCase<"Xor", 9>;
-def BinOpKind_Or  : I32EnumAttrCase<"Or", 10>;
+def BinOpKind_Mul : I32EnumAttrCase<"Mul", 1, "mul">;
+def BinOpKind_Div : I32EnumAttrCase<"Div", 2, "div">;
+def BinOpKind_Rem : I32EnumAttrCase<"Rem", 3, "rem">;
+def BinOpKind_Add : I32EnumAttrCase<"Add", 4, "add">;
+def BinOpKind_Sub : I32EnumAttrCase<"Sub", 5, "sub">;
+def BinOpKind_Shl : I32EnumAttrCase<"Shl", 6, "shl">;
+def BinOpKind_Shr : I32EnumAttrCase<"Shr", 7, "shr">;
+def BinOpKind_And : I32EnumAttrCase<"And", 8, "and">;
+def BinOpKind_Xor : I32EnumAttrCase<"Xor", 9, "xor">;
+def BinOpKind_Or  : I32EnumAttrCase<"Or", 10, "or">;
 
 def BinOpKind : I32EnumAttr<
     "BinOpKind",
@@ -560,7 +560,7 @@ def BinOp : CIR_Op<"binop", [Pure,
                        AnyType:$lhs, AnyType:$rhs);
 
   let assemblyFormat = [{
-    `(` custom<BinOpKind>($kind) `,` $lhs `,` $rhs  `)` `:` type($lhs) attr-dict
+    `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) attr-dict
   }];
 
   // Already covered by the traits
@@ -618,11 +618,9 @@ def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
 // SwitchOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: even though printed/parsed names assume lowercase, we capitalize here
-// because "default" is a C++ reserved keyword and can't show up in a enum.
-def CaseOpKind_DT : I32EnumAttrCase<"Default", 1>;
-def CaseOpKind_EQ : I32EnumAttrCase<"Equal", 2>;
-def CaseOpKind_AO : I32EnumAttrCase<"Anyof", 3>;
+def CaseOpKind_DT : I32EnumAttrCase<"Default", 1, "default">;
+def CaseOpKind_EQ : I32EnumAttrCase<"Equal", 2, "equal">;
+def CaseOpKind_AO : I32EnumAttrCase<"Anyof", 3, "anyof">;
 
 def CaseOpKind : I32EnumAttr<
     "CaseOpKind",
