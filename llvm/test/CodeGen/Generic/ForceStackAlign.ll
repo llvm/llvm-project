@@ -8,6 +8,9 @@
 ; Stack realignment not supported.
 ; XFAIL: sparc
 
+; NVPTX cannot select dynamic_stackalloc
+; XFAIL: nvptx
+
 define i32 @f(i8* %p) nounwind {
 entry:
   %0 = load i8, i8* %p
