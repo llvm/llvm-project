@@ -779,57 +779,57 @@ buffer_atomic_fmin_x2 v[0:1], v0, s[0:3], s0 idxen offset:4095
 // Lds support
 //===----------------------------------------------------------------------===//
 
-buffer_load_sbyte v5, off, s[8:11], s3 lds
-// SICI: buffer_load_sbyte v5, off, s[8:11], s3 lds ; encoding: [0x00,0x00,0x25,0xe0,0x00,0x05,0x02,0x03]
-// VI:   buffer_load_sbyte v5, off, s[8:11], s3 lds ; encoding: [0x00,0x00,0x45,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_sbyte off, s[8:11], s3 lds
+// SICI: buffer_load_sbyte off, s[8:11], s3 lds ; encoding: [0x00,0x00,0x25,0xe0,0x00,0x00,0x02,0x03]
+// VI:   buffer_load_sbyte off, s[8:11], s3 lds ; encoding: [0x00,0x00,0x45,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_sbyte v5, off, s[8:11], s3 glc slc lds
-// SICI: buffer_load_sbyte v5, off, s[8:11], s3 glc slc lds ; encoding: [0x00,0x40,0x25,0xe0,0x00,0x05,0x42,0x03]
-// VI:   buffer_load_sbyte v5, off, s[8:11], s3 glc slc lds ; encoding: [0x00,0x40,0x47,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_sbyte off, s[8:11], s3 glc slc lds
+// SICI: buffer_load_sbyte off, s[8:11], s3 glc slc lds ; encoding: [0x00,0x40,0x25,0xe0,0x00,0x00,0x42,0x03]
+// VI:   buffer_load_sbyte off, s[8:11], s3 glc slc lds ; encoding: [0x00,0x40,0x47,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_sbyte v5, off, s[8:11], s3 offset:4095 glc slc lds
-// SICI: buffer_load_sbyte v5, off, s[8:11], s3 offset:4095 glc slc lds ; encoding: [0xff,0x4f,0x25,0xe0,0x00,0x05,0x42,0x03]
-// VI:   buffer_load_sbyte v5, off, s[8:11], s3 offset:4095 glc slc lds ; encoding: [0xff,0x4f,0x47,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_sbyte off, s[8:11], s3 offset:4095 glc slc lds
+// SICI: buffer_load_sbyte off, s[8:11], s3 offset:4095 glc slc lds ; encoding: [0xff,0x4f,0x25,0xe0,0x00,0x00,0x42,0x03]
+// VI:   buffer_load_sbyte off, s[8:11], s3 offset:4095 glc slc lds ; encoding: [0xff,0x4f,0x47,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_sbyte v5, v0, s[8:11], s3 offen offset:4095 slc lds
-// SICI: buffer_load_sbyte v5, v0, s[8:11], s3 offen offset:4095 slc lds ; encoding: [0xff,0x1f,0x25,0xe0,0x00,0x05,0x42,0x03]
-// VI:   buffer_load_sbyte v5, v0, s[8:11], s3 offen offset:4095 slc lds ; encoding: [0xff,0x1f,0x47,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_sbyte v0, s[8:11], s3 offen offset:4095 slc lds
+// SICI: buffer_load_sbyte v0, s[8:11], s3 offen offset:4095 slc lds ; encoding: [0xff,0x1f,0x25,0xe0,0x00,0x00,0x42,0x03]
+// VI:   buffer_load_sbyte v0, s[8:11], s3 offen offset:4095 slc lds ; encoding: [0xff,0x1f,0x47,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_sbyte v5, v0, s[8:11], s3 offen lds
-// SICI: buffer_load_sbyte v5, v0, s[8:11], s3 offen lds ; encoding: [0x00,0x10,0x25,0xe0,0x00,0x05,0x02,0x03]
-// VI:   buffer_load_sbyte v5, v0, s[8:11], s3 offen lds ; encoding: [0x00,0x10,0x45,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_sbyte v0, s[8:11], s3 offen lds
+// SICI: buffer_load_sbyte v0, s[8:11], s3 offen lds ; encoding: [0x00,0x10,0x25,0xe0,0x00,0x00,0x02,0x03]
+// VI:   buffer_load_sbyte v0, s[8:11], s3 offen lds ; encoding: [0x00,0x10,0x45,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_sbyte v5, v0, s[8:11], s3 idxen glc slc lds
-// SICI: buffer_load_sbyte v5, v0, s[8:11], s3 idxen glc slc lds ; encoding: [0x00,0x60,0x25,0xe0,0x00,0x05,0x42,0x03]
-// VI:   buffer_load_sbyte v5, v0, s[8:11], s3 idxen glc slc lds ; encoding: [0x00,0x60,0x47,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_sbyte v0, s[8:11], s3 idxen glc slc lds
+// SICI: buffer_load_sbyte v0, s[8:11], s3 idxen glc slc lds ; encoding: [0x00,0x60,0x25,0xe0,0x00,0x00,0x42,0x03]
+// VI:   buffer_load_sbyte v0, s[8:11], s3 idxen glc slc lds ; encoding: [0x00,0x60,0x47,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 lds
-// SICI: buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 lds ; encoding: [0xff,0x3f,0x25,0xe0,0x00,0x05,0x02,0x03]
-// VI:   buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 lds ; encoding: [0xff,0x3f,0x45,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_sbyte v[0:1], s[8:11], s3 idxen offen offset:4095 lds
+// SICI: buffer_load_sbyte v[0:1], s[8:11], s3 idxen offen offset:4095 lds ; encoding: [0xff,0x3f,0x25,0xe0,0x00,0x00,0x02,0x03]
+// VI:   buffer_load_sbyte v[0:1], s[8:11], s3 idxen offen offset:4095 lds ; encoding: [0xff,0x3f,0x45,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds
-// SICI: buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x25,0xe0,0x00,0x05,0x42,0x03]
-// VI:   buffer_load_sbyte v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x47,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_sbyte v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds
+// SICI: buffer_load_sbyte v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x25,0xe0,0x00,0x00,0x42,0x03]
+// VI:   buffer_load_sbyte v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x47,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_ubyte v5, off, s[8:11], s3 offset:4095 lds
-// SICI: buffer_load_ubyte v5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x21,0xe0,0x00,0x05,0x02,0x03]
-// VI:   buffer_load_ubyte v5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x41,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_ubyte off, s[8:11], s3 offset:4095 lds
+// SICI: buffer_load_ubyte off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x21,0xe0,0x00,0x00,0x02,0x03]
+// VI:   buffer_load_ubyte off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x41,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_sshort v5, v0, s[8:11], s3 offen offset:4095 glc slc lds
-// SICI: buffer_load_sshort v5, v0, s[8:11], s3 offen offset:4095 glc slc lds ; encoding: [0xff,0x5f,0x2d,0xe0,0x00,0x05,0x42,0x03]
-// VI:   buffer_load_sshort v5, v0, s[8:11], s3 offen offset:4095 glc slc lds ; encoding: [0xff,0x5f,0x4f,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_sshort v0, s[8:11], s3 offen offset:4095 glc slc lds
+// SICI: buffer_load_sshort v0, s[8:11], s3 offen offset:4095 glc slc lds ; encoding: [0xff,0x5f,0x2d,0xe0,0x00,0x00,0x42,0x03]
+// VI:   buffer_load_sshort v0, s[8:11], s3 offen offset:4095 glc slc lds ; encoding: [0xff,0x5f,0x4f,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_ushort v5, v0, s[8:11], s3 idxen offset:4095 glc slc lds
-// SICI: buffer_load_ushort v5, v0, s[8:11], s3 idxen offset:4095 glc slc lds ; encoding: [0xff,0x6f,0x29,0xe0,0x00,0x05,0x42,0x03]
-// VI:   buffer_load_ushort v5, v0, s[8:11], s3 idxen offset:4095 glc slc lds ; encoding: [0xff,0x6f,0x4b,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_ushort v0, s[8:11], s3 idxen offset:4095 glc slc lds
+// SICI: buffer_load_ushort v0, s[8:11], s3 idxen offset:4095 glc slc lds ; encoding: [0xff,0x6f,0x29,0xe0,0x00,0x00,0x42,0x03]
+// VI:   buffer_load_ushort v0, s[8:11], s3 idxen offset:4095 glc slc lds ; encoding: [0xff,0x6f,0x4b,0xe0,0x00,0x00,0x02,0x03]
 
-buffer_load_dword v5, v0, s[8:11], s101 offen lds
-// SICI: buffer_load_dword v5, v0, s[8:11], s101 offen lds ; encoding: [0x00,0x10,0x31,0xe0,0x00,0x05,0x02,0x65]
-// VI:   buffer_load_dword v5, v0, s[8:11], s101 offen lds ; encoding: [0x00,0x10,0x51,0xe0,0x00,0x05,0x02,0x65]
+buffer_load_dword v0, s[8:11], s101 offen lds
+// SICI: buffer_load_dword v0, s[8:11], s101 offen lds ; encoding: [0x00,0x10,0x31,0xe0,0x00,0x00,0x02,0x65]
+// VI:   buffer_load_dword v0, s[8:11], s101 offen lds ; encoding: [0x00,0x10,0x51,0xe0,0x00,0x00,0x02,0x65]
 
-buffer_load_format_x v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds
-// SICI: buffer_load_format_x v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x01,0xe0,0x00,0x05,0x42,0x03]
-// VI:   buffer_load_format_x v5, v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x03,0xe0,0x00,0x05,0x02,0x03]
+buffer_load_format_x v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds
+// SICI: buffer_load_format_x v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x01,0xe0,0x00,0x00,0x42,0x03]
+// VI:   buffer_load_format_x v[0:1], s[8:11], s3 idxen offen offset:4095 glc slc lds ; encoding: [0xff,0x7f,0x03,0xe0,0x00,0x00,0x02,0x03]
 
 buffer_store_lds_dword s[4:7], s0 lds
 // NOSICI: error: instruction not supported on this GPU
@@ -843,26 +843,26 @@ buffer_store_lds_dword s[4:7], s8 offset:4 lds glc slc
 // NOSICI: error: instruction not supported on this GPU
 // VI: buffer_store_lds_dword s[4:7], s8 offset:4 lds glc slc ; encoding: [0x04,0x40,0xf7,0xe0,0x00,0x00,0x01,0x08]
 
-buffer_load_dwordx2 v[1:2], off, s[4:7], s1 lds
+buffer_load_dwordx2 off, s[4:7], s1 lds
 // NOSICI: error: operands are not valid for this GPU or mode
-// VI:   buffer_load_dwordx2 v[1:2], off, s[4:7], s1 lds ; encoding: [0x00,0x00,0x55,0xe0,0x00,0x01,0x01,0x01]
+// VI:   buffer_load_dwordx2 off, s[4:7], s1 lds ; encoding: [0x00,0x00,0x55,0xe0,0x00,0x00,0x01,0x01]
 
-buffer_load_dwordx3 v[0:2], off, s[4:7], s0 offset:4095 lds
-// NOSICI: error: operands are not valid for this GPU or mode
-// VI:   buffer_load_dwordx3 v[0:2], off, s[4:7], s0 offset:4095 lds ; encoding: [0xff,0x0f,0x59,0xe0,0x00,0x00,0x01,0x00]
+buffer_load_dwordx3 off, s[4:7], s0 offset:4095 lds
+// NOSICI: error: not a valid operand
+// VI:   buffer_load_dwordx3 off, s[4:7], s0 offset:4095 lds ; encoding: [0xff,0x0f,0x59,0xe0,0x00,0x00,0x01,0x00]
 
-buffer_load_dwordx4 v[1:4], off, s[4:7], s1 lds
+buffer_load_dwordx4 off, s[4:7], s1 lds
 // NOSICI: error: operands are not valid for this GPU or mode
-// VI:   buffer_load_dwordx4 v[1:4], off, s[4:7], s1 lds ; encoding: [0x00,0x00,0x5d,0xe0,0x00,0x01,0x01,0x01]
+// VI:   buffer_load_dwordx4 off, s[4:7], s1 lds ; encoding: [0x00,0x00,0x5d,0xe0,0x00,0x00,0x01,0x01]
 
 //===----------------------------------------------------------------------===//
 // Errors handling
 //===----------------------------------------------------------------------===//
 
-buffer_load_sbyte v5, off, s[8:11], s3 lds tfe
+buffer_load_sbyte off, s[8:11], s3 lds tfe
 // NOSICIVI: error: invalid operand for instruction
 
-buffer_load_dword v5, off, s[8:11], s3 tfe lds
+buffer_load_dword off, s[8:11], s3 tfe lds
 // NOSICIVI: error: invalid operand for instruction
 
 buffer_store_lds_dword s[4:7], s8 offset:4 lds tfe
