@@ -847,7 +847,8 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
     StringRef className = def->getValueAsString("cppClassName");
     StringRef cppNamespace = def->getValueAsString("cppNamespace");
     std::string codeBlock =
-        llvm::formatv("llvm::isa<{0}::{1}>(self)", cppNamespace, className)
+        llvm::formatv("return ::mlir::success(llvm::isa<{0}::{1}>(self));",
+                      cppNamespace, className)
             .str();
 
     if (def->isSubClassOf("OpInterface")) {
@@ -892,8 +893,9 @@ Parser::createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
   // Format the condition template.
   tblgen::FmtContext fmtContext;
   fmtContext.withSelf("self");
-  std::string codeBlock =
-      tblgen::tgfmt(constraint.getConditionTemplate(), &fmtContext);
+  std::string codeBlock = tblgen::tgfmt(
+      "return ::mlir::success(" + constraint.getConditionTemplate() + ");",
+      &fmtContext);
 
   return createODSNativePDLLConstraintDecl<ConstraintT>(
       constraint.getUniqueDefName(), codeBlock, loc, type);

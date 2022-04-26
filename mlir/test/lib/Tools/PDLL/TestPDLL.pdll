@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestOps.td"
+#include "mlir/Interfaces/CastInterfaces.td"
 
 /// A simple pattern that matches and replaces an operation.
 Pattern TestSimplePattern => replace op<test.simple> with op<test.success>;
+
+// Test the import of interfaces.
+Pattern TestInterface => replace _: CastOpInterface with op<test.success>;
