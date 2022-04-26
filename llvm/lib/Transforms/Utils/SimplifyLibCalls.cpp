@@ -632,6 +632,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
                                                unsigned CharSize,
                                                Value *Bound) {
   Value *Src = CI->getArgOperand(0);
+  Type *CharTy = B.getIntNTy(CharSize);
 
   if (Bound) {
     if (ConstantInt *BoundCst = dyn_cast<ConstantInt>(Bound)) {
@@ -641,20 +642,26 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
 
       if (BoundCst->isOne()) {
         // Fold strnlen(s, 1) -> *s ? 1 : 0 for any s.
-        Type *CharTy = B.getIntNTy(CharSize);
         Value *CharVal = B.CreateLoad(CharTy, Src, "strnlen.char0");
         Value *ZeroChar = ConstantInt::get(CharTy, 0);
         Value *Cmp = B.CreateICmpNE(CharVal, ZeroChar, "strnlen.char0cmp");
         return B.CreateZExt(Cmp, CI->getType());
       }
     }
-    // Otherwise punt for strnlen for now.
-    return nullptr;
   }
 
-  // Constant folding: strlen("xyz") -> 3
-  if (uint64_t Len = GetStringLength(Src, CharSize))
-    return ConstantInt::get(CI->getType(), Len - 1);
+  if (uint64_t Len = GetStringLength(Src, CharSize)) {
+    Value *LenC = ConstantInt::get(CI->getType(), Len - 1);
+    // Fold strlen("xyz") -> 3 and strnlen("xyz", 2) -> 2
+    // and strnlen("xyz", Bound) -> min(3, Bound) for nonconstant Bound.
+    if (Bound)
+      return B.CreateBinaryIntrinsic(Intrinsic::umin, LenC, Bound);
+    return LenC;
+  }
+
+  if (Bound)
+    // Punt for strnlen for now.
+    return nullptr;
 
   // If s is a constant pointer pointing to a string literal, we can fold
   // strlen(s + x) to strlen(s) - x, when x is known to be in the range
