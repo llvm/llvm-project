@@ -3565,6 +3565,38 @@ TEST(CompletionTest, CommentParamName) {
               IsEmpty());
 }
 
+TEST(CompletionTest, Concepts) {
+  Annotations Code(R"cpp(
+    template<class T>
+    concept A = sizeof(T) <= 8;
+
+    template<$tparam^A U>
+    int foo();
+
+    template<class T>
+    concept b = $other^A<T> && $other^sizeof(T) % 2 == 0 || $other^A<T> && sizeof(T) == 1;
+
+    $other^A<T> auto i = 19;
+  )cpp");
+  TestTU TU;
+  TU.Code = Code.code().str();
+  TU.ExtraArgs = {"-std=c++20"};
+
+  std::vector<Symbol> Syms = {conceptSym("same_as")};
+  for (auto P : Code.points("tparam")) {
+    ASSERT_THAT(completions(TU, P, Syms).Completions,
+                AllOf(Contains(named("A")), Contains(named("same_as")),
+                      Contains(named("class")), Contains(named("typename"))))
+        << "Completing template parameter at position " << P;
+  }
+
+  for (auto P : Code.points("other")) {
+    EXPECT_THAT(completions(TU, P, Syms).Completions,
+                AllOf(Contains(named("A")), Contains(named("same_as"))))
+        << "Completing 'requires' expression at position " << P;
+  }
+}
+
 TEST(SignatureHelp, DocFormat) {
   Annotations Code(R"cpp(
     // Comment `with` markup.

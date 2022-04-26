@@ -77,6 +77,10 @@ Symbol ns(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Namespace, "@N@\\0");
 }
 
+Symbol conceptSym(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::Concept, "@CT@\\0");
+}
+
 SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames) {
   SymbolSlab::Builder Slab;
   for (llvm::StringRef QName : QualifiedNames)
