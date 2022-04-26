@@ -612,6 +612,11 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     OS << '>';
     return;
   }
+  case Type::DXILPointerTyID:
+    // DXIL pointer types are only handled by the DirectX backend. To avoid
+    // extra dependencies we just print the pointer's address here.
+    OS << "dxil-ptr (" << Ty << ")";
+    return;
   }
   llvm_unreachable("Invalid TypeID");
 }

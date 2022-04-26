@@ -274,7 +274,7 @@ TypeList &SymbolFileDWARF::GetTypeList() {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
     return debug_map_symfile->GetTypeList();
-  return SymbolFile::GetTypeList();
+  return SymbolFileCommon::GetTypeList();
 }
 void SymbolFileDWARF::GetTypes(const DWARFDIE &die, dw_offset_t min_die_offset,
                                dw_offset_t max_die_offset, uint32_t type_mask,
@@ -407,7 +407,7 @@ SymbolFileDWARF::GetParentSymbolContextDIE(const DWARFDIE &child_die) {
 
 SymbolFileDWARF::SymbolFileDWARF(ObjectFileSP objfile_sp,
                                  SectionList *dwo_section_list)
-    : SymbolFile(std::move(objfile_sp)),
+    : SymbolFileCommon(std::move(objfile_sp)),
       UserID(0x7fffffff00000000), // Used by SymbolFileDWARFDebugMap to
                                   // when this class parses .o files to
                                   // contain the .o file index/ID
@@ -3968,7 +3968,7 @@ SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
 }
 
 void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
-  SymbolFile::Dump(s);
+  SymbolFileCommon::Dump(s);
   m_index->Dump(s);
 }
 
