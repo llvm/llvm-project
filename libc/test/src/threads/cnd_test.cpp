@@ -41,7 +41,7 @@ static mtx_t broadcast_mtx, threads_ready_mtx;
 
 int broadcast_thread_func(void *) {
   __llvm_libc::mtx_lock(&broadcast_mtx);
-  int oldval = broadcast_count.fetch_add(1);
+  unsigned oldval = broadcast_count.fetch_add(1);
   if (oldval == THRD_COUNT - 1) {
     __llvm_libc::mtx_lock(&threads_ready_mtx);
     __llvm_libc::cnd_signal(&threads_ready_cnd);

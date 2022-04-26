@@ -24,7 +24,7 @@ struct ProcessStatus {
   int platform_defined;
   const char *failure = nullptr;
 
-  static constexpr uintptr_t TIMEOUT = -1L;
+  static constexpr unsigned TIMEOUT = ~0U;
 
   static ProcessStatus error(const char *error) { return {0, error}; }
   static ProcessStatus timed_out_ps() {
@@ -41,7 +41,7 @@ struct ProcessStatus {
 };
 
 ProcessStatus invoke_in_subprocess(FunctionCaller *func,
-                                   unsigned timeout_ms = -1);
+                                   unsigned timeout_ms = TIMEOUT);
 
 const char *signal_as_string(int signum);
 
