@@ -159,7 +159,6 @@ StringRef getCapabilityName(Capability e) {
     CASE(Capability, FragmentDensityEXT)
     CASE(Capability, PhysicalStorageBufferAddressesEXT)
     CASE(Capability, CooperativeMatrixNV)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -173,7 +172,6 @@ StringRef getSourceLanguageName(SourceLanguage e) {
     CASE(SourceLanguage, OpenCL_C)
     CASE(SourceLanguage, OpenCL_CPP)
     CASE(SourceLanguage, HLSL)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -196,7 +194,6 @@ StringRef getExecutionModelName(ExecutionModel e) {
     CASE(ExecutionModel, ClosestHitNV)
     CASE(ExecutionModel, MissNV)
     CASE(ExecutionModel, CallableNV)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -208,7 +205,6 @@ StringRef getAddressingModelName(AddressingModel e) {
     CASE(AddressingModel, Physical32)
     CASE(AddressingModel, Physical64)
     CASE(AddressingModel, PhysicalStorageBuffer64EXT)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -220,7 +216,6 @@ StringRef getMemoryModelName(MemoryModel e) {
     CASE(MemoryModel, GLSL450)
     CASE(MemoryModel, OpenCL)
     CASE(MemoryModel, VulkanKHR)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -247,6 +242,7 @@ StringRef getExecutionModeName(ExecutionMode e) {
     CASE(ExecutionMode, LocalSize)
     CASE(ExecutionMode, LocalSizeHint)
     CASE(ExecutionMode, InputPoints)
+    CASE(ExecutionMode, InputLines)
     CASE(ExecutionMode, InputLinesAdjacency)
     CASE(ExecutionMode, Triangles)
     CASE(ExecutionMode, InputTrianglesAdjacency)
@@ -276,7 +272,6 @@ StringRef getExecutionModeName(ExecutionMode e) {
     CASE(ExecutionMode, DerivativeGroupQuadsNV)
     CASE(ExecutionMode, DerivativeGroupLinearNV)
     CASE(ExecutionMode, OutputTrianglesNV)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -304,7 +299,6 @@ StringRef getStorageClassName(StorageClass e) {
     CASE(StorageClass, IncomingRayPayloadNV)
     CASE(StorageClass, ShaderRecordBufferNV)
     CASE(StorageClass, PhysicalStorageBufferEXT)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -319,7 +313,6 @@ StringRef getDimName(Dim dim) {
     CASE_SUF(Dim, DIM, Rect)
     CASE_SUF(Dim, DIM, Buffer)
     CASE_SUF(Dim, DIM, SubpassData)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -332,7 +325,6 @@ StringRef getSamplerAddressingModeName(SamplerAddressingMode e) {
     CASE(SamplerAddressingMode, Clamp)
     CASE(SamplerAddressingMode, Repeat)
     CASE(SamplerAddressingMode, RepeatMirrored)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -342,7 +334,6 @@ StringRef getSamplerFilterModeName(SamplerFilterMode e) {
   switch (e) {
     CASE(SamplerFilterMode, Nearest)
     CASE(SamplerFilterMode, Linear)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -390,7 +381,6 @@ StringRef getImageFormatName(ImageFormat e) {
     CASE(ImageFormat, Rg8ui)
     CASE(ImageFormat, R16ui)
     CASE(ImageFormat, R8ui)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -418,7 +408,6 @@ StringRef getImageChannelOrderName(ImageChannelOrder e) {
     CASE(ImageChannelOrder, sRGBA)
     CASE(ImageChannelOrder, sBGRA)
     CASE(ImageChannelOrder, ABGR)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -443,7 +432,6 @@ StringRef getImageChannelDataTypeName(ImageChannelDataType e) {
     CASE(ImageChannelDataType, Float)
     CASE(ImageChannelDataType, UnormInt24)
     CASE(ImageChannelDataType, UnormInt101010_2)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -585,7 +573,6 @@ StringRef getFPRoundingModeName(FPRoundingMode e) {
     CASE(FPRoundingMode, RTZ)
     CASE(FPRoundingMode, RTP)
     CASE(FPRoundingMode, RTN)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -595,7 +582,6 @@ StringRef getLinkageTypeName(LinkageType e) {
   switch (e) {
     CASE(LinkageType, Export)
     CASE(LinkageType, Import)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -606,7 +592,6 @@ StringRef getAccessQualifierName(AccessQualifier e) {
     CASE(AccessQualifier, ReadOnly)
     CASE(AccessQualifier, WriteOnly)
     CASE(AccessQualifier, ReadWrite)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -622,7 +607,6 @@ StringRef getFunctionParameterAttributeName(FunctionParameterAttribute e) {
     CASE(FunctionParameterAttribute, NoCapture)
     CASE(FunctionParameterAttribute, NoWrite)
     CASE(FunctionParameterAttribute, NoReadWrite)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -692,7 +676,6 @@ StringRef getDecorationName(Decoration e) {
     CASE(Decoration, UserSemantic)
     CASE(Decoration, RestrictPointerEXT)
     CASE(Decoration, AliasedPointerEXT)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -791,7 +774,6 @@ StringRef getBuiltInName(BuiltIn e) {
     CASE(BuiltIn, HitTNV)
     CASE(BuiltIn, HitKindNV)
     CASE(BuiltIn, IncomingRayFlagsNV)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -1049,7 +1031,6 @@ StringRef getScopeName(Scope e) {
     CASE(Scope, Subgroup)
     CASE(Scope, Invocation)
     CASE(Scope, QueueFamilyKHR)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -1064,7 +1045,6 @@ StringRef getGroupOperationName(GroupOperation e) {
     CASE(GroupOperation, PartitionedReduceNV)
     CASE(GroupOperation, PartitionedInclusiveScanNV)
     CASE(GroupOperation, PartitionedExclusiveScanNV)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -1075,7 +1055,6 @@ StringRef getKernelEnqueueFlagsName(KernelEnqueueFlags e) {
     CASE(KernelEnqueueFlags, NoWait)
     CASE(KernelEnqueueFlags, WaitKernel)
     CASE(KernelEnqueueFlags, WaitWorkGroup)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
@@ -1085,7 +1064,6 @@ StringRef getKernelProfilingInfoName(KernelProfilingInfo e) {
   switch (e) {
     CASE(KernelProfilingInfo, None)
     CASE(KernelProfilingInfo, CmdExecTime)
-  default:
     break;
   }
   llvm_unreachable("Unexpected operand");
