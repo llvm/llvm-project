@@ -217,17 +217,19 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     if (next && *next == '(') { // NaN(...)
       Put('(');
       int depth{1};
-      do {
+      while (true) {
         next = io.NextInField(remaining, edit);
-        if (!next) {
+        if (depth == 0) {
           break;
+        } else if (!next) {
+          return 0; // error
         } else if (*next == '(') {
           ++depth;
         } else if (*next == ')') {
           --depth;
         }
         Put(*next);
-      } while (depth > 0);
+      }
     }
     exponent = 0;
   } else if (first == decimal || (first >= '0' && first <= '9') ||
