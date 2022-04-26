@@ -8,9 +8,11 @@ class TestWithLimitDebugInfo(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(debug_info=no_match(["dwarf"]))
+    @add_test_categories(["dwarf", "dwo"])
     def test_limit_debug_info(self):
         self.build()
+
+        self._check_info_is_limited()
 
         src_file = os.path.join(self.getSourceDir(), "main.cpp")
         src_file_spec = lldb.SBFileSpec(src_file)
@@ -52,6 +54,12 @@ class TestWithLimitDebugInfo(TestBase):
         self.assertTrue(
             v2.IsValid(),
             "'expr this' results in a valid SBValue object")
-        self.assertTrue(
-            v2.GetError().Success(),
+        self.assertSuccess(
+            v2.GetError(),
             "'expr this' succeeds without an error.")
+
+    def _check_info_is_limited(self):
+        target = self.dbg.CreateTarget(self.getBuildArtifact("main.o"))
+        self.assertTrue(target.IsValid())
+        Foo = target.FindFirstType("Foo")
+        self.assertFalse(Foo.IsValid())
