@@ -25,7 +25,7 @@ func.func @non_signless_constant() {
 // -----
 
 func.func @complex_constant_wrong_attribute_type() {
-  // expected-error @+1 {{'arith.constant' op failed to verify that result and attribute have the same type}}
+  // expected-error @+1 {{'arith.constant' op failed to verify that all of {value, result} have same type}}
   %0 = "arith.constant" () {value = 1.0 : f32} : () -> complex<f32>
   return
 }
@@ -50,7 +50,7 @@ func.func @bitcast_different_bit_widths(%arg : f16) -> f32 {
 
 func.func @constant() {
 ^bb:
-  %x = "arith.constant"(){value = "xyz"} : () -> i32 // expected-error {{'arith.constant' op failed to verify that result and attribute have the same type}}
+  %x = "arith.constant"(){value = "xyz"} : () -> i32 // expected-error {{'arith.constant' op failed to verify that all of {value, result} have same type}}
   return
 }
 
@@ -58,7 +58,7 @@ func.func @constant() {
 
 func.func @constant_out_of_range() {
 ^bb:
-  %x = "arith.constant"(){value = 100} : () -> i1 // expected-error {{'arith.constant' op failed to verify that result and attribute have the same type}}
+  %x = "arith.constant"(){value = 100} : () -> i1 // expected-error {{'arith.constant' op failed to verify that all of {value, result} have same type}}
   return
 }
 
@@ -66,7 +66,7 @@ func.func @constant_out_of_range() {
 
 func.func @constant_wrong_type() {
 ^bb:
-  %x = "arith.constant"(){value = 10.} : () -> f32 // expected-error {{'arith.constant' op failed to verify that result and attribute have the same type}}
+  %x = "arith.constant"(){value = 10.} : () -> f32 // expected-error {{'arith.constant' op failed to verify that all of {value, result} have same type}}
   return
 }
 

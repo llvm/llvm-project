@@ -41,11 +41,11 @@ class ConstantOp:
                loc=None,
                ip=None):
     if isinstance(value, int):
-      super().__init__(result, IntegerAttr.get(result, value), loc=loc, ip=ip)
+      super().__init__(IntegerAttr.get(result, value), loc=loc, ip=ip)
     elif isinstance(value, float):
-      super().__init__(result, FloatAttr.get(result, value), loc=loc, ip=ip)
+      super().__init__(FloatAttr.get(result, value), loc=loc, ip=ip)
     else:
-      super().__init__(result, value, loc=loc, ip=ip)
+      super().__init__(value, loc=loc, ip=ip)
 
   @classmethod
   def create_index(cls, value: int, *, loc=None, ip=None):

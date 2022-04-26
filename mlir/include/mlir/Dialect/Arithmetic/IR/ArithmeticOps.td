@@ -124,9 +124,7 @@ class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
 def Arith_ConstantOp : Op<Arithmetic_Dialect, "constant",
     [ConstantLike, NoSideEffect,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-     TypesMatchWith<
-    "result and attribute have the same type",
-    "value", "result", "$_self">]> {
+     AllTypesMatch<["value", "result"]>]> {
   let summary = "integer or floating point constant";
   let description = [{
     The `constant` operation produces an SSA value equal to some integer or
@@ -154,8 +152,6 @@ def Arith_ConstantOp : Op<Arithmetic_Dialect, "constant",
   let results = (outs /*SignlessIntegerOrFloatLike*/AnyType:$result);
 
   let builders = [
-    OpBuilder<(ins "Attribute":$value),
-    [{ build($_builder, $_state, value.getType(), value); }]>,
     OpBuilder<(ins "Attribute":$value, "Type":$type),
     [{ build($_builder, $_state, type, value); }]>,
   ];
