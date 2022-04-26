@@ -198,6 +198,36 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
   if (llvm::any_of(op.op().getUses(), canInferTypeFromUse))
     return success();
 
+  // Handle the case where the operation has no explicit result types.
+  if (resultTypes.empty()) {
+    // If we don't know the concrete operation, don't attempt any verification.
+    // We can't make assumptions if we don't know the concrete operation.
+    Optional<StringRef> rawOpName = op.name();
+    if (!rawOpName)
+      return success();
+    Optional<RegisteredOperationName> opName =
+        RegisteredOperationName::lookup(*rawOpName, op.getContext());
+    if (!opName)
+      return success();
+
+    // If no explicit result types were provided, check to see if the operation
+    // expected at least one result. This doesn't cover all cases, but this
+    // should cover many cases in which the user intended to infer the results
+    // of an operation, but it isn't actually possible.
+    bool expectedAtLeastOneResult =
+        !opName->hasTrait<OpTrait::ZeroResult>() &&
+        !opName->hasTrait<OpTrait::VariadicResults>();
+    if (expectedAtLeastOneResult) {
+      return op
+          .emitOpError("must have inferable or constrained result types when "
+                       "nested within `pdl.rewrite`")
+          .attachNote()
+          .append("operation is created in a non-inferrable context, but '",
+                  *opName, "' does not implement InferTypeOpInterface");
+    }
+    return success();
+  }
+
   // Otherwise, make sure each of the types can be inferred.
   for (const auto &it : llvm::enumerate(resultTypes)) {
     Operation *resultTypeOp = it.value().getDefiningOp();
@@ -248,7 +278,7 @@ LogicalResult OperationOp::verify() {
 
   // If the operation is within a rewrite body and doesn't have type inference,
   // ensure that the result types can be resolved.
-  if (isWithinRewrite && !hasTypeInference()) {
+  if (isWithinRewrite && !mightHaveTypeInference()) {
     if (failed(verifyResultTypesAreInferrable(*this, types())))
       return failure();
   }
@@ -257,12 +287,18 @@ LogicalResult OperationOp::verify() {
 }
 
 bool OperationOp::hasTypeInference() {
-  Optional<StringRef> opName = name();
-  if (!opName)
-    return false;
+  if (Optional<StringRef> rawOpName = name()) {
+    OperationName opName(*rawOpName, getContext());
+    return opName.hasInterface<InferTypeOpInterface>();
+  }
+  return false;
+}
 
-  if (auto rInfo = RegisteredOperationName::lookup(*opName, getContext()))
-    return rInfo->hasInterface<InferTypeOpInterface>();
+bool OperationOp::mightHaveTypeInference() {
+  if (Optional<StringRef> rawOpName = name()) {
+    OperationName opName(*rawOpName, getContext());
+    return opName.mightHaveInterface<InferTypeOpInterface>();
+  }
   return false;
 }
 

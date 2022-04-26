@@ -369,6 +369,12 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
     /// Returns true if the operation type referenced supports result type
     /// inference.
     bool hasTypeInference();
+    
+    /// Returns true if the operation type referenced might support result type
+    /// inference, i.e. it supports type reference or is currently not
+    /// registered in the context. Returns false if the root operation name
+    /// has not been set.
+    bool mightHaveTypeInference();
   }];
   let hasVerifier = 1;
 }
