@@ -32,3 +32,10 @@ mlir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   // TODO: SetLLVMFunctionAttributesForDefinition
   return Fn;
 }
+
+RValue CIRGenFunction::buildCXXMemberOrOperatorCall(
+    const CXXMethodDecl *MD, const CIRGenCallee &Callee,
+    ReturnValueSlot ReturnValue, mlir::Value This, mlir::Value ImplicitParam,
+    QualType ImplicitParamTy, const CallExpr *CE, CallArgList *RtlArgs) {
+  llvm_unreachable("NYI");
+}
