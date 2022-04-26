@@ -201,11 +201,50 @@ mlir::Type CIRGenFunction::getCIRType(const QualType &type) {
   return CGM.getCIRType(type);
 }
 
+/// Determine whether the function F ends with a return stmt.
+static bool endsWithReturn(const Decl *F) {
+  const Stmt *Body = nullptr;
+  if (auto *FD = dyn_cast_or_null<FunctionDecl>(F))
+    Body = FD->getBody();
+  else if (auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(F))
+    llvm_unreachable("NYI");
+
+  if (auto *CS = dyn_cast_or_null<CompoundStmt>(Body)) {
+    auto LastStmt = CS->body_rbegin();
+    if (LastStmt != CS->body_rend())
+      return isa<ReturnStmt>(*LastStmt);
+  }
+  return false;
+}
+
 void CIRGenFunction::buildAndUpdateRetAlloca(QualType ty, mlir::Location loc,
                                              CharUnits alignment) {
-  auto addr =
-      buildAlloca("__retval", InitStyle::uninitialized, ty, loc, alignment);
-  FnRetAlloca = addr;
+
+  if (ty->isVoidType()) {
+    // Void type; nothing to return.
+    ReturnValue = Address::invalid();
+
+    // Count the implicit return.
+    if (!endsWithReturn(CurFuncDecl))
+      ++NumReturnExprs;
+  } else if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect) {
+    // TODO(CIR): Consider this implementation in CIRtoLLVM
+    llvm_unreachable("NYI");
+    // TODO(CIR): Consider this implementation in CIRtoLLVM
+  } else if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::InAlloca) {
+    llvm_unreachable("NYI");
+  } else {
+    auto addr =
+        buildAlloca("__retval", InitStyle::uninitialized, ty, loc, alignment);
+    FnRetAlloca = addr;
+    ReturnValue = Address(addr, alignment);
+
+    // Tell the epilog emitter to autorelease the result. We do this now so
+    // that various specialized functions can suppress it during their IR -
+    // generation
+    if (getLangOpts().ObjCAutoRefCount)
+      llvm_unreachable("NYI");
+  }
 }
 
 mlir::LogicalResult CIRGenFunction::declare(const Decl *var, QualType ty,
