@@ -105,7 +105,7 @@
 
 // Explicit -ffp-contract=on -- fusing by front-end.
 // In IR,
-//    mult/add in the same statement - llvm.fmuladd instrinsic emitted
+//    mult/add in the same statement - llvm.fmuladd intrinsic emitted
 //    mult/add in different statement -  fmul/fadd instructions without
 //                                       contract flag are emitted.
 // In backend

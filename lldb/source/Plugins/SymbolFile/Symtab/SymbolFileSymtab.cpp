@@ -51,8 +51,8 @@ void SymbolFileSymtab::GetTypes(SymbolContextScope *sc_scope,
                                 lldb_private::TypeList &type_list) {}
 
 SymbolFileSymtab::SymbolFileSymtab(ObjectFileSP objfile_sp)
-    : SymbolFile(std::move(objfile_sp)), m_source_indexes(), m_func_indexes(),
-      m_code_indexes(), m_objc_class_name_to_index() {}
+    : SymbolFileCommon(std::move(objfile_sp)), m_source_indexes(),
+      m_func_indexes(), m_code_indexes(), m_objc_class_name_to_index() {}
 
 uint32_t SymbolFileSymtab::CalculateAbilities() {
   uint32_t abilities = 0;

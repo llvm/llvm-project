@@ -722,20 +722,6 @@ MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
     StackSlotIdxes.insert({{Size, Offs}, Idx});
   }
 
-  // There may also be strange register class sizes (think x86 fp80s).
-  for (const TargetRegisterClass *RC : TRI.regclasses()) {
-    unsigned Size = TRI.getRegSizeInBits(*RC);
-
-    // We might see special reserved values as sizes, and classes for other
-    // stuff the machine tries to model. If it's more than 512 bits, then it
-    // is very unlikely to be a register than can be spilt.
-    if (Size > 512)
-      continue;
-
-    unsigned Idx = StackSlotIdxes.size();
-    StackSlotIdxes.insert({{Size, 0}, Idx});
-  }
-
   for (auto &Idx : StackSlotIdxes)
     StackIdxesToPos[Idx.second] = Idx.first;
 
@@ -1307,16 +1293,41 @@ bool InstrRefBasedLDV::transferDebugPHI(MachineInstr &MI) {
     if (!SpillNo)
       return EmitBadPHI();
 
-    // Any stack location DBG_PHI should have an associate bit-size.
-    assert(MI.getNumOperands() == 3 && "Stack DBG_PHI with no size?");
-    unsigned slotBitSize = MI.getOperand(2).getImm();
+    // Problem: what value should we extract from the stack? LLVM does not
+    // record what size the last store to the slot was, and it would become
+    // sketchy after stack slot colouring anyway. Take a look at what values
+    // are stored on the stack, and pick the largest one that wasn't def'd
+    // by a spill (i.e., the value most likely to have been def'd in a register
+    // and then spilt.
+    std::array<unsigned, 4> CandidateSizes = {64, 32, 16, 8};
+    Optional<ValueIDNum> Result = None;
+    Optional<LocIdx> SpillLoc = None;
+    for (unsigned CS : CandidateSizes) {
+      unsigned SpillID = MTracker->getLocID(*SpillNo, {CS, 0});
+      SpillLoc = MTracker->getSpillMLoc(SpillID);
+      ValueIDNum Val = MTracker->readMLoc(*SpillLoc);
+      // If this value was defined in it's own position, then it was probably
+      // an aliasing index of a small value that was spilt.
+      if (Val.getLoc() != SpillLoc->asU64()) {
+        Result = Val;
+        break;
+      }
+    }
 
-    unsigned SpillID = MTracker->getLocID(*SpillNo, {slotBitSize, 0});
-    LocIdx SpillLoc = MTracker->getSpillMLoc(SpillID);
-    ValueIDNum Result = MTracker->readMLoc(SpillLoc);
+    // If we didn't find anything, we're probably looking at a PHI, or a memory
+    // store folded into an instruction. FIXME: Take a guess that's it's 64
+    // bits. This isn't ideal, but tracking the size that the spill is
+    // "supposed" to be is more complex, and benefits a small number of
+    // locations.
+    if (!Result) {
+      unsigned SpillID = MTracker->getLocID(*SpillNo, {64, 0});
+      SpillLoc = MTracker->getSpillMLoc(SpillID);
+      Result = MTracker->readMLoc(*SpillLoc);
+    }
 
     // Record this DBG_PHI for later analysis.
-    auto DbgPHI = DebugPHIRecord({InstrNum, MI.getParent(), Result, SpillLoc});
+    auto DbgPHI =
+        DebugPHIRecord({InstrNum, MI.getParent(), *Result, *SpillLoc});
     DebugPHINumToValue.push_back(DbgPHI);
   } else {
     // Else: if the operand is neither a legal register or a stack slot, then

@@ -1850,33 +1850,16 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
       const TargetRegisterClass *TRC = MRI.getRegClass(Reg);
       unsigned SpillSize, SpillOffset;
 
-      unsigned regSizeInBits = TRI->getRegSizeInBits(*TRC);
-      if (SubReg)
-        regSizeInBits = TRI->getSubRegIdxSize(SubReg);
-
-      // Test whether this location is legal with the given subreg. If the
-      // subregister has a nonzero offset, drop this location, it's too complex
-      // to describe. (TODO: future work).
+      // Test whether this location is legal with the given subreg.
       bool Success =
           TII->getStackSlotRange(TRC, SubReg, SpillSize, SpillOffset, *MF);
 
-      if (Success && SpillOffset == 0) {
+      if (Success) {
         auto Builder = BuildMI(*OrigMBB, OrigMBB->begin(), DebugLoc(),
                                TII->get(TargetOpcode::DBG_PHI));
         Builder.addFrameIndex(VRM->getStackSlot(Reg));
         Builder.addImm(InstNum);
-        // Record how large the original value is. The stack slot might be
-        // merged and altered during optimisation, but we will want to know how
-        // large the value is, at this DBG_PHI.
-        Builder.addImm(regSizeInBits);
       }
-
-      LLVM_DEBUG(
-      if (SpillOffset != 0) {
-        dbgs() << "DBG_PHI for Vreg " << Reg << " subreg " << SubReg <<
-                  " has nonzero offset\n";
-      }
-      );
     }
     // If there was no mapping for a value ID, it's optimized out. Create no
     // DBG_PHI, and any variables using this value will become optimized out.

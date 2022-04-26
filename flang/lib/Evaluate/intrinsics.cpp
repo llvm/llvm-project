@@ -671,13 +671,15 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"reduce",
         {{"array", SameType, Rank::array},
             {"operation", SameType, Rank::reduceOperation}, RequiredDIM,
-            OptionalMASK, {"identity", SameType, Rank::scalar},
+            OptionalMASK,
+            {"identity", SameType, Rank::scalar, Optionality::optional},
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::dimReduced, IntrinsicClass::transformationalFunction},
     {"reduce",
         {{"array", SameType, Rank::array},
             {"operation", SameType, Rank::reduceOperation}, MissingDIM,
-            OptionalMASK, {"identity", SameType, Rank::scalar},
+            OptionalMASK,
+            {"identity", SameType, Rank::scalar, Optionality::optional},
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"repeat", {{"string", SameChar, Rank::scalar}, {"ncopies", AnyInt}},
@@ -1600,10 +1602,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         argOk = rank == 0 || rank + 1 == arrayArg->Rank();
         break;
       case Rank::reduceOperation:
-        // TODO: validate the reduction operation -- it must be a pure
-        // function of two arguments with special constraints.
-        CHECK(arrayArg);
-        argOk = rank == 0;
+        // The reduction function is validated in ApplySpecificChecks().
+        argOk = true;
         break;
       case Rank::locReduced:
       case Rank::rankPlus1:
@@ -2356,6 +2356,90 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
       context.messages().Say(
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of PRESENT() must be the name of an OPTIONAL dummy argument"_err_en_US);
+    }
+  } else if (name == "reduce") { // 16.9.161
+    std::optional<DynamicType> arrayType;
+    if (const auto &array{call.arguments[0]}) {
+      arrayType = array->GetType();
+    }
+    std::optional<characteristics::Procedure> procChars;
+    parser::CharBlock at{context.messages().at()};
+    if (const auto &operation{call.arguments[1]}) {
+      if (const auto *expr{operation->UnwrapExpr()}) {
+        if (const auto *designator{
+                std::get_if<ProcedureDesignator>(&expr->u)}) {
+          procChars =
+              characteristics::Procedure::Characterize(*designator, context);
+        } else if (const auto *ref{std::get_if<ProcedureRef>(&expr->u)}) {
+          procChars = characteristics::Procedure::Characterize(*ref, context);
+        }
+      }
+      if (auto operationAt{operation->sourceLocation()}) {
+        at = *operationAt;
+      }
+    }
+    if (!arrayType || !procChars) {
+      ok = false; // error recovery
+    } else {
+      const auto *result{procChars->functionResult->GetTypeAndShape()};
+      if (!procChars->IsPure() || procChars->dummyArguments.size() != 2 ||
+          !procChars->functionResult) {
+        ok = false;
+        context.messages().Say(at,
+            "OPERATION= argument of REDUCE() must be a pure function of two data arguments"_err_en_US);
+      } else if (!result || result->Rank() != 0) {
+        ok = false;
+        context.messages().Say(at,
+            "OPERATION= argument of REDUCE() must be a scalar function"_err_en_US);
+      } else if (result->type().IsPolymorphic() ||
+          result->type() != *arrayType) {
+        ok = false;
+        context.messages().Say(at,
+            "OPERATION= argument of REDUCE() must have the same type as ARRAY="_err_en_US);
+      } else {
+        const characteristics::DummyDataObject *data[2]{};
+        for (int j{0}; j < 2; ++j) {
+          const auto &dummy{procChars->dummyArguments.at(j)};
+          data[j] = std::get_if<characteristics::DummyDataObject>(&dummy.u);
+          ok = ok && data[j];
+        }
+        if (!ok) {
+          context.messages().Say(at,
+              "OPERATION= argument of REDUCE() may not have dummy procedure arguments"_err_en_US);
+        } else {
+          for (int j{0}; j < 2; ++j) {
+            ok = ok &&
+                !data[j]->attrs.test(
+                    characteristics::DummyDataObject::Attr::Optional) &&
+                !data[j]->attrs.test(
+                    characteristics::DummyDataObject::Attr::Allocatable) &&
+                !data[j]->attrs.test(
+                    characteristics::DummyDataObject::Attr::Pointer) &&
+                data[j]->type.Rank() == 0 &&
+                !data[j]->type.type().IsPolymorphic() &&
+                data[j]->type.type() == *arrayType;
+          }
+          if (!ok) {
+            context.messages().Say(at,
+                "Arguments of OPERATION= procedure of REDUCE() must be both scalar of the same type as ARRAY=, and neither allocatable, pointer, polymorphic, or optional"_err_en_US);
+          } else if (data[0]->attrs.test(characteristics::DummyDataObject::
+                             Attr::Asynchronous) !=
+                  data[1]->attrs.test(
+                      characteristics::DummyDataObject::Attr::Asynchronous) ||
+              data[0]->attrs.test(
+                  characteristics::DummyDataObject::Attr::Volatile) !=
+                  data[1]->attrs.test(
+                      characteristics::DummyDataObject::Attr::Volatile) ||
+              data[0]->attrs.test(
+                  characteristics::DummyDataObject::Attr::Target) !=
+                  data[1]->attrs.test(
+                      characteristics::DummyDataObject::Attr::Target)) {
+            ok = false;
+            context.messages().Say(at,
+                "If either argument of the OPERATION= procedure of REDUCE() has the ASYNCHRONOUS, VOLATILE, or TARGET attribute, both must have that attribute"_err_en_US);
+          }
+        }
+      }
     }
   }
   return ok;

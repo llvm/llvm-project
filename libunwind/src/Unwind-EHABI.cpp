@@ -436,6 +436,8 @@ _Unwind_VRS_Interpret(_Unwind_Context *context, const uint32_t *data,
                       _UVRSD_UINT32, &pac);
       __asm__ __volatile__("autg %0, %1, %2" : : "r"(pac), "r"(lr), "r"(sp) :);
     }
+#else
+    (void)hasReturnAddrAuthCode;
 #endif
     _Unwind_VRS_Set(context, _UVRSC_CORE, UNW_ARM_IP, _UVRSD_UINT32, &lr);
   }
@@ -1193,6 +1195,7 @@ _Unwind_DeleteException(_Unwind_Exception *exception_object) {
 extern "C" _LIBUNWIND_EXPORT _Unwind_Reason_Code
 __gnu_unwind_frame(_Unwind_Exception *exception_object,
                    struct _Unwind_Context *context) {
+  (void)exception_object;
   unw_cursor_t *cursor = (unw_cursor_t *)context;
   switch (__unw_step(cursor)) {
   case UNW_STEP_SUCCESS:

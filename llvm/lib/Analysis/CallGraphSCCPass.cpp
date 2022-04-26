@@ -270,7 +270,7 @@ bool CGPassManager::RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
           Calls.count(Call) ||
 
           // If the call edge is not from a call or invoke, or it is a
-          // instrinsic call, then the function pass RAUW'd a call with
+          // intrinsic call, then the function pass RAUW'd a call with
           // another value. This can happen when constant folding happens
           // of well known functions etc.
           (Call->getCalledFunction() &&

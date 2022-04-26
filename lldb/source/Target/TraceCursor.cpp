@@ -33,3 +33,21 @@ void TraceCursor::SetIgnoreErrors(bool ignore_errors) {
 void TraceCursor::SetForwards(bool forwards) { m_forwards = forwards; }
 
 bool TraceCursor::IsForwards() const { return m_forwards; }
+
+const char *trace_event_utils::EventToDisplayString(lldb::TraceEvents event) {
+  switch (event) {
+  case lldb::eTraceEventPaused:
+    return "paused";
+  }
+  return nullptr;
+}
+
+void trace_event_utils::ForEachEvent(
+    lldb::TraceEvents events,
+    std::function<void(lldb::TraceEvents event)> callback) {
+  while (events) {
+    TraceEvents event = static_cast<TraceEvents>(events & ~(events - 1));
+    callback(event);
+    events &= ~event;
+  }
+}
