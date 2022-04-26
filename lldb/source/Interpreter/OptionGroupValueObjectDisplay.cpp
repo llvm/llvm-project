@@ -104,6 +104,8 @@ Status OptionGroupValueObjectDisplay::SetOptionValue(
       max_depth = UINT32_MAX;
       error.SetErrorStringWithFormat("invalid max depth '%s'",
                                      option_arg.str().c_str());
+    } else {
+      max_depth_is_default = false;
     }
     break;
 
@@ -163,6 +165,7 @@ void OptionGroupValueObjectDisplay::OptionParsingStarting(
   flat_output = false;
   use_objc = false;
   max_depth = UINT32_MAX;
+  max_depth_is_default = true;
   ptr_depth = 0;
   elem_count = 0;
   use_synth = true;
@@ -172,9 +175,12 @@ void OptionGroupValueObjectDisplay::OptionParsingStarting(
 
   TargetSP target_sp =
       execution_context ? execution_context->GetTargetSP() : TargetSP();
-  if (target_sp)
+  if (target_sp) {
     use_dynamic = target_sp->GetPreferDynamicValue();
-  else {
+    auto max_depth_config = target_sp->GetMaximumDepthOfChildrenToDisplay();
+    max_depth = std::get<uint32_t>(max_depth_config);
+    max_depth_is_default = std::get<bool>(max_depth_config);
+  } else {
     // If we don't have any targets, then dynamic values won't do us much good.
     use_dynamic = lldb::eNoDynamicValues;
   }
@@ -190,7 +196,7 @@ DumpValueObjectOptions OptionGroupValueObjectDisplay::GetAsDumpOptions(
     options.SetShowSummary(false);
   else
     options.SetOmitSummaryDepth(no_summary_depth);
-  options.SetMaximumDepth(max_depth)
+  options.SetMaximumDepth(max_depth, max_depth_is_default)
       .SetShowTypes(show_types)
       .SetShowLocation(show_location)
       .SetUseObjectiveC(use_objc)
