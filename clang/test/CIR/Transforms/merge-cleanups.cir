@@ -58,10 +58,30 @@ module  {
     cir.return
   }
 
-  func.func @l7() {
+  func.func @l0() {
     cir.scope {
       cir.loop while(cond :  {
         %0 = cir.cst(true) : !cir.bool
+        cir.brcond %0 ^bb1, ^bb2
+        ^bb1:
+          cir.yield continue
+        ^bb2:
+          cir.yield
+      }, step :  {
+        cir.yield
+      })  {
+        cir.br ^bb1
+      ^bb1:
+        cir.return
+      }
+    }
+    cir.return
+  }
+
+  func.func @l1() {
+    cir.scope {
+      cir.loop while(cond :  {
+        %0 = cir.cst(false) : !cir.bool
         cir.brcond %0 ^bb1, ^bb2
         ^bb1:
           cir.yield continue
@@ -116,15 +136,23 @@ module  {
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
-// CHECK: func @l7
+// CHECK: func @l0
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
-// CHECK-NEXT:      %0 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:      cir.brcond %0 ^bb1, ^bb2
-// CHECK-NEXT:      ^bb1:
-// CHECK-NEXT:        cir.yield continue
-// CHECK-NEXT:      ^bb2:
-// CHECK-NEXT:        cir.yield
+// CHECK-NEXT:      cir.yield continue
+// CHECK-NEXT:    }, step :  {
+// CHECK-NEXT:      cir.yield
+// CHECK-NEXT:    })  {
+// CHECK-NEXT:      cir.return
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// CHECK-NEXT:  cir.return
+// CHECK-NEXT: }
+
+// CHECK: func @l1
+// CHECK-NEXT:  cir.scope {
+// CHECK-NEXT:    cir.loop while(cond :  {
+// CHECK-NEXT:      cir.yield
 // CHECK-NEXT:    }, step :  {
 // CHECK-NEXT:      cir.yield
 // CHECK-NEXT:    })  {

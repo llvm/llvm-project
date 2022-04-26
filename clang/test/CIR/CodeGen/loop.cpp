@@ -8,12 +8,7 @@ void l0() {
 
 // CHECK: func @_Z2l0v
 // CHECK: cir.loop for(cond :  {
-// CHECK-NEXT:   %0 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:   cir.brcond %0 ^bb1, ^bb2
-// CHECK-NEXT:   ^bb1:
-// CHECK-NEXT:     cir.yield continue
-// CHECK-NEXT:   ^bb2:
-// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   cir.yield continue
 // CHECK-NEXT: }, step :  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: })  {
@@ -85,12 +80,7 @@ void l2(bool cond) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
-// CHECK-NEXT:       %3 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:       cir.brcond %3 ^bb1, ^bb2
-// CHECK-NEXT:       ^bb1:
-// CHECK-NEXT:         cir.yield continue
-// CHECK-NEXT:       ^bb2:
-// CHECK-NEXT:         cir.yield
+// CHECK-NEXT:       cir.yield continue
 // CHECK-NEXT:     }, step :  {
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     })  {
@@ -155,12 +145,7 @@ void l3(bool cond) {
 // CHECK-NEXT: }
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT:   cir.loop dowhile(cond :  {
-// CHECK-NEXT:   %3 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:   cir.brcond %3 ^bb1, ^bb2
-// CHECK-NEXT:   ^bb1:
 // CHECK-NEXT:     cir.yield continue
-// CHECK-NEXT:   ^bb2:
-// CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT:   })  {
@@ -203,12 +188,7 @@ void l4() {
 
 // CHECK: func @_Z2l4v
 // CHECK: cir.loop while(cond :  {
-// CHECK-NEXT:   %4 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:   cir.brcond %4 ^bb1, ^bb2
-// CHECK-NEXT:   ^bb1:
-// CHECK-NEXT:     cir.yield continue
-// CHECK-NEXT:   ^bb2:
-// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   cir.yield continue
 // CHECK-NEXT: }, step :  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: })  {
@@ -258,12 +238,7 @@ void l6() {
 // CHECK: func @_Z2l6v() {
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
-// CHECK-NEXT:       %0 = cir.cst(true) : !cir.bool
-// CHECK-NEXT:       cir.brcond %0 ^bb1, ^bb2
-// CHECK-NEXT:       ^bb1:
-// CHECK-NEXT:         cir.yield continue
-// CHECK-NEXT:       ^bb2:
-// CHECK-NEXT:         cir.yield
+// CHECK-NEXT:       cir.yield continue
 // CHECK-NEXT:     }, step :  {
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     })  {

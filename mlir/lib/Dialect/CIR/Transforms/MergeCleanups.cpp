@@ -84,6 +84,53 @@ struct SimplifyRetYieldBlocks : public mlir::OpRewritePattern<ScopeLikeOpTy> {
   }
 
   mlir::LogicalResult
+  checkAndRewriteLoopCond(mlir::Region &condRegion,
+                          mlir::PatternRewriter &rewriter) const {
+    SmallVector<Operation *> opsToSimplify;
+    condRegion.walk([&](Operation *op) {
+      if (isa<cir::BrCondOp>(op))
+        opsToSimplify.push_back(op);
+    });
+
+    // Blocks should only contain one "yield" operation.
+    auto trivialYield = [&](Block *b) {
+      if (&b->front() != &b->back())
+        return false;
+      return isa<YieldOp>(b->getTerminator());
+    };
+
+    if (opsToSimplify.size() != 1)
+      return failure();
+    BrCondOp brCondOp = cast<cir::BrCondOp>(opsToSimplify[0]);
+
+    // TODO: leverage SCCP to get improved results.
+    auto cstOp = dyn_cast<cir::ConstantOp>(brCondOp.getCond().getDefiningOp());
+    if (!cstOp || !cstOp.getValue().isa<BoolAttr>() ||
+        !trivialYield(brCondOp.getDestTrue()) ||
+        !trivialYield(brCondOp.getDestFalse()))
+      return failure();
+
+    // If the condition is constant, no need to use brcond, just yield
+    // properly, "yield" for false and "yield continue" for true.
+    auto boolAttr = cstOp.getValue().cast<BoolAttr>();
+    auto *falseBlock = brCondOp.getDestFalse();
+    auto *trueBlock = brCondOp.getDestTrue();
+    auto *currBlock = brCondOp.getOperation()->getBlock();
+    if (boolAttr.getValue()) {
+      rewriter.eraseOp(opsToSimplify[0]);
+      rewriter.mergeBlocks(trueBlock, currBlock);
+      falseBlock->erase();
+    } else {
+      rewriter.eraseOp(opsToSimplify[0]);
+      rewriter.mergeBlocks(falseBlock, currBlock);
+      trueBlock->erase();
+    }
+    if (cstOp.use_empty())
+      rewriter.eraseOp(cstOp);
+    return success();
+  }
+
+  mlir::LogicalResult
   matchAndRewrite(ScopeLikeOpTy op,
                   mlir::PatternRewriter &rewriter) const override {
     return replaceScopeLikeOp(rewriter, op);
@@ -138,7 +185,12 @@ mlir::LogicalResult SimplifyRetYieldBlocks<cir::SwitchOp>::replaceScopeLikeOp(
 template <>
 mlir::LogicalResult SimplifyRetYieldBlocks<cir::LoopOp>::replaceScopeLikeOp(
     PatternRewriter &rewriter, cir::LoopOp loopOp) const {
-  return checkAndRewriteRegion(loopOp.getBody(), rewriter);
+  bool regionChanged = false;
+  if (checkAndRewriteRegion(loopOp.getBody(), rewriter).succeeded())
+    regionChanged = true;
+  if (checkAndRewriteLoopCond(loopOp.getCond(), rewriter).succeeded())
+    regionChanged = true;
+  return regionChanged ? success() : failure();
 }
 
 void getMergeCleanupsPatterns(RewritePatternSet &results,
