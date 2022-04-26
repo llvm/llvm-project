@@ -18,7 +18,7 @@ Taken from https://llvm.org/docs/GettingStarted.html.
 ```
 mkdir build; cd build
 cmake -G Ninja \
-    -DLLVM_ENABLE_PROJECTS="clang;lld" \
+    -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
     -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
     -DCMAKE_INSTALL_PREFIX="${HOME}/llvm-riscv" \
     -DLLVM_DEFAULT_TARGET_TRIPLE="riscv32-unknown-elf" \
