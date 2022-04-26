@@ -434,20 +434,20 @@ define void @test_sched(float %0, i32 %1, i8 addrspace(1)* %2) gc "statepoint-ex
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    nopl 8(%rax,%rax)
 ; CHECK-NEXT:  .Ltmp14:
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]*}}(%rsp)
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss %xmm0, (%rsp)
 ; CHECK-NEXT:    nopl 8(%rax,%rax)
 ; CHECK-NEXT:  .Ltmp15:
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss %xmm0, (%rsp)
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd %xmm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    nopl 8(%rax,%rax)
 ; CHECK-NEXT:  .Ltmp16:
 ; CHECK-NEXT:    xorl %eax, %eax

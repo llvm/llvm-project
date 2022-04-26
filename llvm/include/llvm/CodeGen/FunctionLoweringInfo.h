@@ -101,6 +101,10 @@ public:
       // Value was lowered to tied def and gc.relocate should be replaced with
       // copy from vreg.
       VReg,
+      // Value was lowered to tied def and gc.relocate should be replaced with
+      // SDValue kept in StatepointLoweringInfo structure. This valid for local
+      // relocates only.
+      SDValueNode,
     } type = NoRelocate;
     // Payload contains either frame index of the stack slot in which the value
     // was spilled, or virtual register which contains the re-definition.
