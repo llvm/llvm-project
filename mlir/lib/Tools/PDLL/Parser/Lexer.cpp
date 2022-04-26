@@ -355,19 +355,28 @@ Token Lexer::lexString(const char *tokStart, bool isStringBlock) {
       case '"':
         // If this is a string block, we only end the string when we encounter a
         // `}]`.
-        if (!isStringBlock) return formToken(Token::string, tokStart);
+        if (!isStringBlock)
+          return formToken(Token::string, tokStart);
         continue;
       case '}':
         // If this is a string block, we only end the string when we encounter a
         // `}]`.
-        if (!isStringBlock || *curPtr != ']') continue;
+        if (!isStringBlock || *curPtr != ']')
+          continue;
         ++curPtr;
         return formToken(Token::string_block, tokStart);
-      case 0:
+      case 0: {
         // If this is a random nul character in the middle of a string, just
-        // include it.  If it is the end of file, then it is an error.
-        if (curPtr - 1 != curBuffer.end()) continue;
-        LLVM_FALLTHROUGH;
+        // include it. If it is the end of file, then it is an error.
+        if (curPtr - 1 != curBuffer.end())
+          continue;
+        --curPtr;
+
+        StringRef expectedEndStr = isStringBlock ? "}]" : "\"";
+        return emitError(curPtr - 1,
+                         "expected '" + expectedEndStr + "' in string literal");
+      }
+
       case '\n':
       case '\v':
       case '\f':
