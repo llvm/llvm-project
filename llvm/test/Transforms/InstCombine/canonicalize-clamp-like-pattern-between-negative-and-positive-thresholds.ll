@@ -186,13 +186,13 @@ define i32 @n9_ult_slt_neg17(i32 %x, i32 %replacement_low, i32 %replacement_high
   ret i32 %r
 }
 
-; FIXME: This is incorrect, see PR53252.
+; Regression test for PR53252.
 define i32 @n10_ugt_slt(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @n10_ugt_slt(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 128
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
+; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[T1:%.*]] = select i1 [[T0]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp ugt i32 [[X]], 128
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T2]], i32 [[X]], i32 [[T1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp slt i32 %x, 0

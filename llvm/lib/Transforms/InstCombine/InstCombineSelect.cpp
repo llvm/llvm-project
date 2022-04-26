@@ -1312,6 +1312,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
                    ICmpInst::Predicate::ICMP_NE,
                    APInt::getAllOnes(C0->getType()->getScalarSizeInBits()))))
       return nullptr; // Can't do, have all-ones element[s].
+    Pred0 = ICmpInst::getFlippedStrictnessPredicate(Pred0);
     C0 = InstCombiner::AddOne(C0);
     break;
   default:
@@ -1377,15 +1378,22 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   case ICmpInst::Predicate::ICMP_SGE:
     // Also non-canonical, but here we don't need to change C2,
     // so we don't have any restrictions on C2, so we can just handle it.
+    Pred1 = ICmpInst::Predicate::ICMP_SLT;
     std::swap(ReplacementLow, ReplacementHigh);
     break;
   default:
     return nullptr; // Unknown predicate.
   }
+  assert(Pred1 == ICmpInst::Predicate::ICMP_SLT &&
+         "Unexpected predicate type.");
 
   // The thresholds of this clamp-like pattern.
   auto *ThresholdLowIncl = ConstantExpr::getNeg(C1);
   auto *ThresholdHighExcl = ConstantExpr::getSub(C0, C1);
+
+  assert((Pred0 == ICmpInst::Predicate::ICMP_ULT ||
+          Pred0 == ICmpInst::Predicate::ICMP_UGE) &&
+         "Unexpected predicate type.");
   if (Pred0 == ICmpInst::Predicate::ICMP_UGE)
     std::swap(ThresholdLowIncl, ThresholdHighExcl);
 
