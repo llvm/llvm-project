@@ -534,6 +534,8 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMTokenTypeKind;
   case Type::ScalableVectorTyID:
     return LLVMScalableVectorTypeKind;
+  case Type::DXILPointerTyID:
+    llvm_unreachable("DXIL pointers are unsupported via the C API");
   }
   llvm_unreachable("Unhandled TypeID.");
 }
