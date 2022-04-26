@@ -38,6 +38,7 @@ class SharedLibTestCase(TestBase):
         ctx = self.platformContext
         self.shared_lib_name = ctx.shlib_prefix + "foo." + ctx.shlib_extension
 
+    @skipIfWindows
     def test_source_line_breakpoint(self):
         self.build()
         self.common_setup()
@@ -75,6 +76,7 @@ class SharedLibTestCase(TestBase):
         )
         self.assertEqual(7, parent_frame.GetLineEntry().GetLine())
 
+    @skipIfWindows
     def test_symbolic_breakpoint(self):
         self.build()
         self.common_setup()
@@ -112,6 +114,7 @@ class SharedLibTestCase(TestBase):
         )
         self.assertEqual(7, parent_frame.GetLineEntry().GetLine())
 
+    @skipIfWindows
     def test_global_variable_hydration(self):
         self.build()
         self.common_setup()

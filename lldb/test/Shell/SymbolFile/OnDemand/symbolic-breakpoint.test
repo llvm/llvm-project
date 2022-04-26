@@ -1,5 +1,6 @@
 # Test shows that symbolic function breakpoint works with LLDB on demand symbol loading.
 
+# UNSUPPORTED: system-windows
 # RUN: mkdir -p %t
 # RUN: cd %t
 # RUN: %build %p/Inputs/basic.cpp -o basic.out

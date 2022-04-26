@@ -15,8 +15,7 @@ declare i8* @memrchr(i8*, i32, i64)
 
 define i8* @fold_memrchr_ax_c_0(i32 %C) {
 ; CHECK-LABEL: @fold_memrchr_ax_c_0(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i32 [[TMP0:%.*]], i64 0)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* null
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
@@ -29,8 +28,7 @@ define i8* @fold_memrchr_ax_c_0(i32 %C) {
 
 define i8* @fold_memrchr_a12345_3_0() {
 ; CHECK-LABEL: @fold_memrchr_a12345_3_0(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 3, i64 0)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* null
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -43,8 +41,7 @@ define i8* @fold_memrchr_a12345_3_0() {
 
 define i8* @fold_memrchr_a12345_1_1() {
 ; CHECK-LABEL: @fold_memrchr_a12345_1_1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 1, i64 1)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0)
 ;
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
   %ret = call i8* @memrchr(i8* %ptr, i32 1, i64 1)
@@ -56,8 +53,7 @@ define i8* @fold_memrchr_a12345_1_1() {
 
 define i8* @fold_memrchr_a12345_5_1() {
 ; CHECK-LABEL: @fold_memrchr_a12345_5_1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 5, i64 1)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* null
 ;
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
   %ret = call i8* @memrchr(i8* %ptr, i32 5, i64 1)
@@ -69,8 +65,7 @@ define i8* @fold_memrchr_a12345_5_1() {
 
 define i8* @fold_memrchr_a123123_1_1() {
 ; CHECK-LABEL: @fold_memrchr_a123123_1_1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 1, i64 1)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0)
 ;
   %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
   %ret = call i8* @memrchr(i8* %ptr, i32 1, i64 1)
@@ -82,8 +77,7 @@ define i8* @fold_memrchr_a123123_1_1() {
 
 define i8* @fold_memrchr_a123123_3_1() {
 ; CHECK-LABEL: @fold_memrchr_a123123_3_1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 3, i64 1)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* null
 ;
   %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
   %ret = call i8* @memrchr(i8* %ptr, i32 3, i64 1)
@@ -95,8 +89,11 @@ define i8* @fold_memrchr_a123123_3_1() {
 
 define i8* @fold_memrchr_ax_c_1(i32 %C) {
 ; CHECK-LABEL: @fold_memrchr_ax_c_1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i32 [[TMP0:%.*]], i64 1)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[MEMRCHR_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[MEMRCHR_CHAR0CMP:%.*]] = icmp eq i8 [[MEMRCHR_CHAR0]], [[TMP1]]
+; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CHAR0CMP]], i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i8* null
+; CHECK-NEXT:    ret i8* [[MEMRCHR_SEL]]
 ;
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
   %ret = call i8* @memrchr(i8* %ptr, i32 %C, i64 1)
@@ -108,8 +105,7 @@ define i8* @fold_memrchr_ax_c_1(i32 %C) {
 
 define i8* @fold_memrchr_a12345_5_5() {
 ; CHECK-LABEL: @fold_memrchr_a12345_5_5(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 5, i64 5)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 4)
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -122,8 +118,7 @@ define i8* @fold_memrchr_a12345_5_5() {
 
 define i8* @fold_memrchr_a12345_5_4() {
 ; CHECK-LABEL: @fold_memrchr_a12345_5_4(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 5, i64 4)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* null
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -136,8 +131,7 @@ define i8* @fold_memrchr_a12345_5_4() {
 
 define i8* @fold_memrchr_a12345_4_5() {
 ; CHECK-LABEL: @fold_memrchr_a12345_4_5(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 4, i64 5)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 3)
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -150,12 +144,24 @@ define i8* @fold_memrchr_a12345_4_5() {
 
 define i8* @fold_memrchr_a12345p1_1_4() {
 ; CHECK-LABEL: @fold_memrchr_a12345p1_1_4(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 1), i32 5, i64 4)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* null
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 1
-  %ret = call i8* @memrchr(i8* %ptr, i32 5, i64 4)
+  %ret = call i8* @memrchr(i8* %ptr, i32 1, i64 4)
+  ret i8* %ret
+}
+
+
+; Fold memrchr(a12345 + 1, 2, 4) to a12345 + 1.
+
+define i8* @fold_memrchr_a12345p1_2_4() {
+; CHECK-LABEL: @fold_memrchr_a12345p1_2_4(
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 1)
+;
+
+  %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 1
+  %ret = call i8* @memrchr(i8* %ptr, i32 2, i64 4)
   ret i8* %ret
 }
 
@@ -164,8 +170,7 @@ define i8* @fold_memrchr_a12345p1_1_4() {
 
 define i8* @fold_memrchr_a12345_2_5() {
 ; CHECK-LABEL: @fold_memrchr_a12345_2_5(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 2, i64 5)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 1)
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -178,8 +183,7 @@ define i8* @fold_memrchr_a12345_2_5() {
 
 define i8* @fold_memrchr_a12345_0_n(i64 %N) {
 ; CHECK-LABEL: @fold_memrchr_a12345_0_n(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 0, i64 [[TMP0:%.*]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* null
 ;
 
   %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
@@ -188,12 +192,39 @@ define i8* @fold_memrchr_a12345_0_n(i64 %N) {
 }
 
 
+; Fold memrchr(a12345, 3, n) to n < 3 ? null : s + 2.
+
+define i8* @fold_memrchr_a12345_3_n(i64 %n) {
+; CHECK-LABEL: @fold_memrchr_a12345_3_n(
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 3, i64 [[N:%.*]])
+; CHECK-NEXT:    ret i8* [[RET]]
+;
+
+  %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
+  %ret = call i8* @memrchr(i8* %ptr, i32 3, i64 %n)
+  ret i8* %ret
+}
+
+
+; Fold memrchr(a12345, 5, n) to n < 5 ? null : s + 4.
+
+define i8* @fold_memrchr_a12345_5_n(i64 %n) {
+; CHECK-LABEL: @fold_memrchr_a12345_5_n(
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 5, i64 [[N:%.*]])
+; CHECK-NEXT:    ret i8* [[RET]]
+;
+
+  %ptr = getelementptr [5 x i8], [5 x i8]* @a12345, i32 0, i32 0
+  %ret = call i8* @memrchr(i8* %ptr, i32 5, i64 %n)
+  ret i8* %ret
+}
+
+
 ; Fold memrchr(a123123, 3, 5) to a123123 + 2.
 
 define i8* @fold_memrchr_a123123_3_5() {
 ; CHECK-LABEL: @fold_memrchr_a123123_3_5(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 3, i64 5)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 2)
 ;
 
   %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
@@ -206,8 +237,7 @@ define i8* @fold_memrchr_a123123_3_5() {
 
 define i8* @fold_memrchr_a123123_3_6() {
 ; CHECK-LABEL: @fold_memrchr_a123123_3_6(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 3, i64 6)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 5)
 ;
 
   %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
@@ -219,8 +249,7 @@ define i8* @fold_memrchr_a123123_3_6() {
 
 define i8* @fold_memrchr_a123123_2_6() {
 ; CHECK-LABEL: @fold_memrchr_a123123_2_6(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 2, i64 6)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 4)
 ;
 
   %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
@@ -232,8 +261,7 @@ define i8* @fold_memrchr_a123123_2_6() {
 
 define i8* @fold_memrchr_a123123_1_6() {
 ; CHECK-LABEL: @fold_memrchr_a123123_1_6(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 1, i64 6)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 3)
 ;
 
   %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
@@ -246,11 +274,53 @@ define i8* @fold_memrchr_a123123_1_6() {
 
 define i8* @fold_memrchr_a123123_0_6() {
 ; CHECK-LABEL: @fold_memrchr_a123123_0_6(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 0, i64 6)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    ret i8* null
 ;
 
   %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
   %ret = call i8* @memrchr(i8* %ptr, i32 0, i64 6)
+  ret i8* %ret
+}
+
+
+; Fold memrchr(a123123, 0, n) to null
+
+define i8* @fold_memrchr_a123123_0_n(i64 %n) {
+; CHECK-LABEL: @fold_memrchr_a123123_0_n(
+; CHECK-NEXT:    ret i8* null
+;
+
+  %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
+  %ret = call i8* @memrchr(i8* %ptr, i32 0, i64 %n)
+  ret i8* %ret
+}
+
+
+; Don't fold memrchr(a123123, 3, n) (although it's possible to fold the call
+; for a small number of occurrences of the character greater than one, it's
+; less and less profitable as the number grows).
+
+define i8* @call_memrchr_a123123_3_n(i64 %n) {
+; CHECK-LABEL: @call_memrchr_a123123_3_n(
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 3, i64 [[N:%.*]])
+; CHECK-NEXT:    ret i8* [[RET]]
+;
+
+  %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
+  %ret = call i8* @memrchr(i8* %ptr, i32 3, i64 %n)
+  ret i8* %ret
+}
+
+
+; Same as above but for 2.
+
+define i8* @call_memrchr_a123123_2_n(i64 %n) {
+; CHECK-LABEL: @call_memrchr_a123123_2_n(
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 2, i64 [[N:%.*]])
+; CHECK-NEXT:    ret i8* [[RET]]
+;
+
+  %ptr = getelementptr [6 x i8], [6 x i8]* @a123123, i32 0, i32 0
+  %ret = call i8* @memrchr(i8* %ptr, i32 2, i64 %n)
   ret i8* %ret
 }

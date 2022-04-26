@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 class TestSourceTextRegexBreakpoint(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfWindows
     def test_with_run_command(self):
         self.build()
 
