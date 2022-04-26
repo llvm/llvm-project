@@ -933,6 +933,31 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
       return nullptr;
   }
 
+  if (ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal)) {
+    // Fold memrchr(S, C, N) for a constant C.
+    size_t Pos = Str.rfind(CharC->getZExtValue(), EndOff);
+    if (Pos == StringRef::npos)
+      // When the character is not in the source array fold the result
+      // to null regardless of Size.
+      return NullPtr;
+
+    if (LenC)
+      // Fold memrchr(s, c, N) --> s + Pos for constant N > Pos.
+      return B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos));
+
+    if (Str.find(CharC->getZExtValue(), Pos) == StringRef::npos) {
+      // When there is just a single occurrence of C in S, fold
+      //   memrchr(s, c, N) --> N <= Pos ? null : s + Pos
+      // for nonconstant N.
+      Value *Cmp = B.CreateICmpULE(Size, ConstantInt::get(Size->getType(),
+							  Pos),
+				   "memrchr.cmp");
+      Value *SrcPlus = B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos),
+				   "memrchr.ptr_plus");
+      return B.CreateSelect(Cmp, NullPtr, SrcPlus, "memrchr.sel");
+    }
+  }
+
   return nullptr;
 }
 

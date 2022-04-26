@@ -16,7 +16,7 @@ declare i8* @memrchr(i8*, i32, i64)
 
 define i8* @call_memrchr_a12345_c_ui32max_p1(i32 %C) {
 ; CHECK-LABEL: @call_memrchr_a12345_c_ui32max_p1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(4294967296) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 [[TMP0:%.*]], i64 4294967296)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(4294967296) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 [[C:%.*]], i64 4294967296)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
@@ -30,7 +30,7 @@ define i8* @call_memrchr_a12345_c_ui32max_p1(i32 %C) {
 
 define i8* @call_memrchr_ax1_c_ui32max_p2(i32 %C) {
 ; CHECK-LABEL: @call_memrchr_ax1_c_ui32max_p2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(4294967297) getelementptr inbounds ([1 x i8], [1 x i8]* @ax1, i64 0, i64 0), i32 [[TMP0:%.*]], i64 4294967297)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(4294967297) getelementptr inbounds ([1 x i8], [1 x i8]* @ax1, i64 0, i64 0), i32 [[C:%.*]], i64 4294967297)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
@@ -44,7 +44,7 @@ define i8* @call_memrchr_ax1_c_ui32max_p2(i32 %C) {
 
 define i8* @call_memrchr_ax_c_ui32max_p2(i32 %C) {
 ; CHECK-LABEL: @call_memrchr_ax_c_ui32max_p2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(4294967297) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i32 [[TMP0:%.*]], i64 4294967297)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(4294967297) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i32 [[C:%.*]], i64 4294967297)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
@@ -58,7 +58,7 @@ define i8* @call_memrchr_ax_c_ui32max_p2(i32 %C) {
 
 define i8* @call_memrchr_a12345_c_6(i32 %C) {
 ; CHECK-LABEL: @call_memrchr_a12345_c_6(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(6) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 [[TMP0:%.*]], i64 6)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(6) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 [[C:%.*]], i64 6)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
@@ -72,7 +72,7 @@ define i8* @call_memrchr_a12345_c_6(i32 %C) {
 
 define i8* @call_memrchr_a12345_c_szmax(i32 %C) {
 ; CHECK-LABEL: @call_memrchr_a12345_c_szmax(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(18446744073709551615) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 [[TMP0:%.*]], i64 -1)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(18446744073709551615) getelementptr inbounds ([5 x i8], [5 x i8]* @a12345, i64 0, i64 0), i32 [[C:%.*]], i64 -1)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
