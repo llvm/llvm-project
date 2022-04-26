@@ -4,6 +4,7 @@
 struct Struk {
   int a;
   Struk() {}
+  void test() {}
 };
 
 void baz() {
