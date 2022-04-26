@@ -3619,6 +3619,35 @@ X86InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
   return AM;
 }
 
+bool X86InstrInfo::verifyInstruction(const MachineInstr &MI,
+                                     StringRef &ErrInfo) const {
+  Optional<ExtAddrMode> AMOrNone = getAddrModeFromMemoryOp(MI, nullptr);
+  if (!AMOrNone)
+    return true;
+
+  ExtAddrMode AM = *AMOrNone;
+
+  if (AM.ScaledReg != X86::NoRegister) {
+    switch (AM.Scale) {
+    case 1:
+    case 2:
+    case 4:
+    case 8:
+      break;
+    default:
+      ErrInfo = "Scale factor in address must be 1, 2, 4 or 8";
+      return false;
+    }
+  }
+  if (!isInt<32>(AM.Displacement)) {
+    ErrInfo = "Displacement in address must fit into 32-bit signed "
+              "integer";
+    return false;
+  }
+
+  return true;
+}
+
 bool X86InstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
                                            const Register Reg,
                                            int64_t &ImmVal) const {
