@@ -1563,7 +1563,8 @@ mlir::ParseResult fir::IterWhileOp::parse(mlir::OpAsmParser &parser,
                                           mlir::OperationState &result) {
   auto &builder = parser.getBuilder();
   mlir::OpAsmParser::UnresolvedOperand inductionVariable, lb, ub, step;
-  if (parser.parseLParen() || parser.parseRegionArgument(inductionVariable) ||
+  if (parser.parseLParen() ||
+      parser.parseOperand(inductionVariable, /*allowResultNumber=*/false) ||
       parser.parseEqual())
     return mlir::failure();
 
@@ -1581,8 +1582,9 @@ mlir::ParseResult fir::IterWhileOp::parse(mlir::OpAsmParser &parser,
 
   mlir::OpAsmParser::UnresolvedOperand iterateVar, iterateInput;
   if (parser.parseKeyword("and") || parser.parseLParen() ||
-      parser.parseRegionArgument(iterateVar) || parser.parseEqual() ||
-      parser.parseOperand(iterateInput) || parser.parseRParen() ||
+      parser.parseOperand(iterateVar, /*allowResultNumber=*/false) ||
+      parser.parseEqual() || parser.parseOperand(iterateInput) ||
+      parser.parseRParen() ||
       parser.resolveOperand(iterateInput, i1Type, result.operands))
     return mlir::failure();
 
@@ -1876,7 +1878,8 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
   auto &builder = parser.getBuilder();
   mlir::OpAsmParser::UnresolvedOperand inductionVariable, lb, ub, step;
   // Parse the induction variable followed by '='.
-  if (parser.parseRegionArgument(inductionVariable) || parser.parseEqual())
+  if (parser.parseOperand(inductionVariable, /*allowResultNumber=*/false) ||
+      parser.parseEqual())
     return mlir::failure();
 
   // Parse loop bounds.

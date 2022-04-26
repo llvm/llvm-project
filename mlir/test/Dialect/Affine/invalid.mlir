@@ -380,3 +380,13 @@ func.func @affine_for_iter_args_mismatch(%buffer: memref<1024xf32>) -> f32 {
   }
   return %res : f32
 }
+
+
+// -----
+
+func.func @result_number() {
+  // expected-error@+1 {{result number not allowed}}
+  affine.for %n0#0 = 0 to 7 {
+  }
+  return
+}

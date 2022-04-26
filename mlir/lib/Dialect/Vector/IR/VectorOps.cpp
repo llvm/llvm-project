@@ -4698,7 +4698,8 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
   OpAsmParser::UnresolvedOperand laneId;
 
   // Parse predicate operand.
-  if (parser.parseLParen() || parser.parseRegionArgument(laneId) ||
+  if (parser.parseLParen() ||
+      parser.parseOperand(laneId, /*allowResultNumber=*/false) ||
       parser.parseRParen())
     return failure();
 

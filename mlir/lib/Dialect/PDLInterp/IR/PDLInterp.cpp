@@ -103,7 +103,7 @@ ParseResult ForEachOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the loop variable followed by type.
   OpAsmParser::UnresolvedOperand loopVariable;
   Type loopVariableType;
-  if (parser.parseRegionArgument(loopVariable) ||
+  if (parser.parseOperand(loopVariable, /*allowResultNumber=*/false) ||
       parser.parseColonType(loopVariableType))
     return failure();
 

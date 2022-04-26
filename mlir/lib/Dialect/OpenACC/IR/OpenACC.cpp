@@ -70,7 +70,8 @@ parseOperandList(OpAsmParser &parser, StringRef keyword,
     OpAsmParser::UnresolvedOperand arg;
     Type type;
 
-    if (parser.parseRegionArgument(arg) || parser.parseColonType(type))
+    if (parser.parseOperand(arg, /*allowResultNumber=*/false) ||
+        parser.parseColonType(type))
       return failure();
 
     args.push_back(arg);

@@ -932,7 +932,8 @@ void PrettyPrintedRegionOp::print(OpAsmPrinter &p) {
 ParseResult PolyForOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 4> ivsInfo;
   // Parse list of region arguments without a delimiter.
-  if (parser.parseRegionArgumentList(ivsInfo))
+  if (parser.parseOperandList(ivsInfo, OpAsmParser::Delimiter::None,
+                              /*allowResultNumber=*/false))
     return failure();
 
   // Parse the body region.

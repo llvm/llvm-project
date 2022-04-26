@@ -489,7 +489,8 @@ static ParseResult parseSwitchOpCases(
       parser.parseSuccessor(defaultDestination))
     return failure();
   if (succeeded(parser.parseOptionalLParen())) {
-    if (parser.parseRegionArgumentList(defaultOperands) ||
+    if (parser.parseOperandList(defaultOperands, OpAsmParser::Delimiter::None,
+                                /*allowResultNumber=*/false) ||
         parser.parseColonTypeList(defaultOperandTypes) || parser.parseRParen())
       return failure();
   }
@@ -509,7 +510,8 @@ static ParseResult parseSwitchOpCases(
         failed(parser.parseSuccessor(destination)))
       return failure();
     if (succeeded(parser.parseOptionalLParen())) {
-      if (failed(parser.parseRegionArgumentList(operands)) ||
+      if (failed(parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
+                                         /*allowResultNumber=*/false)) ||
           failed(parser.parseColonTypeList(operandTypes)) ||
           failed(parser.parseRParen()))
         return failure();

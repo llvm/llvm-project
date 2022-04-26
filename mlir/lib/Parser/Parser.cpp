@@ -268,8 +268,10 @@ public:
   ParseResult
   parseOptionalSSAUseList(SmallVectorImpl<UnresolvedOperand> &results);
 
-  /// Parse a single SSA use into 'result'.
-  ParseResult parseSSAUse(UnresolvedOperand &result);
+  /// Parse a single SSA use into 'result'.  If 'allowResultNumber' is true then
+  /// we allow #42 syntax.
+  ParseResult parseSSAUse(UnresolvedOperand &result,
+                          bool allowResultNumber = true);
 
   /// Given a reference to an SSA value and its type, return a reference. This
   /// returns null on failure.
@@ -699,7 +701,8 @@ ParseResult OperationParser::parseOptionalSSAUseList(
 ///
 ///   ssa-use ::= ssa-id
 ///
-ParseResult OperationParser::parseSSAUse(UnresolvedOperand &result) {
+ParseResult OperationParser::parseSSAUse(UnresolvedOperand &result,
+                                         bool allowResultNumber) {
   result.name = getTokenSpelling();
   result.number = 0;
   result.location = getToken().getLoc();
@@ -708,6 +711,9 @@ ParseResult OperationParser::parseSSAUse(UnresolvedOperand &result) {
 
   // If we have an attribute ID, it is a result number.
   if (getToken().is(Token::hash_identifier)) {
+    if (!allowResultNumber)
+      return emitError("result number not allowed in argument list");
+
     if (auto value = getToken().getHashIdentifierNumber())
       result.number = value.getValue();
     else
@@ -1267,9 +1273,10 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Parse a single operand.
-  ParseResult parseOperand(UnresolvedOperand &result) override {
+  ParseResult parseOperand(UnresolvedOperand &result,
+                           bool allowResultNumber = true) override {
     OperationParser::UnresolvedOperand useInfo;
-    if (parser.parseSSAUse(useInfo))
+    if (parser.parseSSAUse(useInfo, allowResultNumber))
       return failure();
 
     result = {useInfo.location, useInfo.name, useInfo.number, {}};
@@ -1279,9 +1286,11 @@ public:
   }
 
   /// Parse a single operand if present.
-  OptionalParseResult parseOptionalOperand(UnresolvedOperand &result) override {
+  OptionalParseResult
+  parseOptionalOperand(UnresolvedOperand &result,
+                       bool allowResultNumber = true) override {
     if (parser.getToken().is(Token::percent_identifier))
-      return parseOperand(result);
+      return parseOperand(result, allowResultNumber);
     return llvm::None;
   }
 
@@ -1289,17 +1298,8 @@ public:
   /// surrounding delimiter, and an optional required operand count.
   ParseResult parseOperandList(SmallVectorImpl<UnresolvedOperand> &result,
                                int requiredOperandCount = -1,
-                               Delimiter delimiter = Delimiter::None) override {
-    return parseOperandOrRegionArgList(result, /*isOperandList=*/true,
-                                       requiredOperandCount, delimiter);
-  }
-
-  /// Parse zero or more SSA comma-separated operand or region arguments with
-  ///  optional surrounding delimiter and required operand count.
-  ParseResult
-  parseOperandOrRegionArgList(SmallVectorImpl<UnresolvedOperand> &result,
-                              bool isOperandList, int requiredOperandCount = -1,
-                              Delimiter delimiter = Delimiter::None) {
+                               Delimiter delimiter = Delimiter::None,
+                               bool allowResultNumber = true) override {
     auto startLoc = parser.getToken().getLoc();
 
     // The no-delimiter case has some special handling for better diagnostics.
@@ -1322,8 +1322,7 @@ public:
 
     auto parseOneOperand = [&]() -> ParseResult {
       UnresolvedOperand operandOrArg;
-      if (isOperandList ? parseOperand(operandOrArg)
-                        : parseRegionArgument(operandOrArg))
+      if (parseOperand(operandOrArg, allowResultNumber))
         return failure();
       result.push_back(operandOrArg);
       return success();
@@ -1472,28 +1471,6 @@ public:
     return success();
   }
 
-  /// Parse a region argument. The type of the argument will be resolved later
-  /// by a call to `parseRegion`.
-  ParseResult parseRegionArgument(UnresolvedOperand &argument) override {
-    return parseOperand(argument);
-  }
-
-  /// Parse a region argument if present.
-  ParseResult
-  parseOptionalRegionArgument(UnresolvedOperand &argument) override {
-    if (parser.getToken().isNot(Token::percent_identifier))
-      return success();
-    return parseRegionArgument(argument);
-  }
-
-  ParseResult
-  parseRegionArgumentList(SmallVectorImpl<UnresolvedOperand> &result,
-                          int requiredOperandCount = -1,
-                          Delimiter delimiter = Delimiter::None) override {
-    return parseOperandOrRegionArgList(result, /*isOperandList=*/false,
-                                       requiredOperandCount, delimiter);
-  }
-
   //===--------------------------------------------------------------------===//
   // Successor Parsing
   //===--------------------------------------------------------------------===//
@@ -1539,8 +1516,8 @@ public:
 
     auto parseElt = [&]() -> ParseResult {
       UnresolvedOperand regionArg, operand;
-      if (parseRegionArgument(regionArg) || parseEqual() ||
-          parseOperand(operand))
+      if (parseOperand(regionArg, /*allowResultNumber=*/false) ||
+          parseEqual() || parseOperand(operand))
         return failure();
       lhs.push_back(regionArg);
       rhs.push_back(operand);
@@ -1561,8 +1538,9 @@ public:
     auto parseElt = [&]() -> ParseResult {
       UnresolvedOperand regionArg, operand;
       Type type;
-      if (parseRegionArgument(regionArg) || parseEqual() ||
-          parseOperand(operand) || parseColon() || parseType(type))
+      if (parseOperand(regionArg, /*allowResultNumber=*/false) ||
+          parseEqual() || parseOperand(operand) || parseColon() ||
+          parseType(type))
         return failure();
       lhs.push_back(regionArg);
       rhs.push_back(operand);
