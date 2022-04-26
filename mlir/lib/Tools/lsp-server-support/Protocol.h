@@ -279,7 +279,7 @@ struct Position {
   /// source manager.
   SMLoc getAsSMLoc(llvm::SourceMgr &mgr) const {
     return mgr.FindLocForLineAndColumn(mgr.getMainFileID(), line + 1,
-                                       character);
+                                       character + 1);
   }
 };
 

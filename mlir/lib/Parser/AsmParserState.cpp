@@ -9,6 +9,7 @@
 #include "mlir/Parser/AsmParserState.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace mlir;
 
@@ -121,18 +122,52 @@ auto AsmParserState::getOpDef(Operation *op) const
                                           : &*impl->operations[it->second];
 }
 
+/// Lex a string token whose contents start at the given `curPtr`. Returns the
+/// position at the end of the string, after a terminal or invalid character
+/// (e.g. `"` or `\0`).
+static const char *lexLocStringTok(const char *curPtr) {
+  while (char c = *curPtr++) {
+    // Check for various terminal characters.
+    if (StringRef("\"\n\v\f").contains(c))
+      return curPtr;
+
+    // Check for escape sequences.
+    if (c == '\\') {
+      // Check a few known escapes and \xx hex digits.
+      if (*curPtr == '"' || *curPtr == '\\' || *curPtr == 'n' || *curPtr == 't')
+        ++curPtr;
+      else if (llvm::isHexDigit(*curPtr) && llvm::isHexDigit(curPtr[1]))
+        curPtr += 2;
+      else
+        return curPtr;
+    }
+  }
+
+  // If we hit this point, we've reached the end of the buffer. Update the end
+  // pointer to not point past the buffer.
+  return curPtr - 1;
+}
+
 SMRange AsmParserState::convertIdLocToRange(SMLoc loc) {
   if (!loc.isValid())
     return SMRange();
-
-  // Return if the given character is a valid identifier character.
-  auto isIdentifierChar = [](char c) {
-    return isalnum(c) || c == '$' || c == '.' || c == '_' || c == '-';
-  };
-
   const char *curPtr = loc.getPointer();
-  while (*curPtr && isIdentifierChar(*(++curPtr)))
-    continue;
+
+  // Check if this is a string token.
+  if (*curPtr == '"') {
+    curPtr = lexLocStringTok(curPtr + 1);
+
+    // Otherwise, default to handling an identifier.
+  } else {
+    // Return if the given character is a valid identifier character.
+    auto isIdentifierChar = [](char c) {
+      return isalnum(c) || c == '$' || c == '.' || c == '_' || c == '-';
+    };
+
+    while (*curPtr && isIdentifierChar(*(++curPtr)))
+      continue;
+  }
+
   return SMRange(loc, SMLoc::getFromPointer(curPtr));
 }
 

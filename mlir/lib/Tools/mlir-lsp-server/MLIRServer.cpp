@@ -30,7 +30,7 @@ static Optional<lsp::Location> getLocationFromLoc(FileLineColLoc loc) {
 
   lsp::Position position;
   position.line = loc.getLine() - 1;
-  position.character = loc.getColumn();
+  position.character = loc.getColumn() ? loc.getColumn() - 1 : 0;
   return lsp::Location{*sourceURI, lsp::Range(position)};
 }
 
