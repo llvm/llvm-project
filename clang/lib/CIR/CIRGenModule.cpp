@@ -239,6 +239,16 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
     if (!FD->doesThisDeclarationHaveABody()) {
       if (!FD->doesDeclarationForceExternallyVisibleDefinition())
         return;
+
+      llvm::StringRef MangledName = getMangledName(GD);
+
+      // Compute the function info and CIR type.
+      const auto &FI = getTypes().arrangeGlobalDeclaration(GD);
+      mlir::Type Ty = getTypes().GetFunctionType(FI);
+
+      GetOrCreateCIRFunction(MangledName, Ty, GD, /*ForVTable=*/false,
+                             /*DontDefer=*/false);
+      return;
     }
   } else {
     llvm_unreachable("NYI");
