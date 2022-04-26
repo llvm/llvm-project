@@ -27,7 +27,7 @@ NORETURN void RTNAME(FailImageStatement)(NO_ARGUMENTS);
 NORETURN void RTNAME(ProgramEndStatement)(NO_ARGUMENTS);
 
 // Extensions
-NORETURN void RTNAME(Exit)(int status = EXIT_SUCCESS);
+NORETURN void RTNAME(Exit)(int status DEFAULT_VALUE(EXIT_SUCCESS));
 NORETURN void RTNAME(Abort)(NO_ARGUMENTS);
 
 // Crash with an error message when the program dynamically violates a Fortran

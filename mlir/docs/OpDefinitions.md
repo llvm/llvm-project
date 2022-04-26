@@ -388,7 +388,7 @@ The following builders are generated:
 ```c++
 // All result-types/operands/attributes have one aggregate parameter.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
-                  ArrayRef<Type> resultTypes,
+                  TypeRange resultTypes,
                   ValueRange operands,
                   ArrayRef<NamedAttribute> attributes);
 
@@ -410,7 +410,7 @@ static void build(OpBuilder &odsBuilder, OperationState &odsState,
 
 // Each operand/attribute has a separate parameter but result type is aggregate.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
-                  ArrayRef<Type> resultTypes,
+                  TypeRange resultTypes,
                   Value i32_operand, Value f32_operand, ...,
                   IntegerAttr i32_attr, FloatAttr f32_attr, ...);
 
