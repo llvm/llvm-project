@@ -95,7 +95,7 @@ let Command = "breakpoint modify" in {
   def breakpoint_modify_command : Option<"command", "C">, Group<4>,
     Arg<"Command">,
     Desc<"A command to run when the breakpoint is hit, can be provided more "
-    "than once, the commands will get run in order left to right.">;
+    "than once, the commands will be run in left-to-right order.">;
 }
 
 let Command = "breakpoint dummy" in {
@@ -132,8 +132,8 @@ let Command = "breakpoint set" in {
     "no matter where the binary eventually loads.  Alternately, if you also "
     "specify the module - with the -s option - then the address will be "
     "treated as a file address in that module, and resolved accordingly.  "
-    "Again, this will allow lldb to track that offset on subsequent reloads. "
-    " The module need not have been loaded at the time you specify this "
+    "Again, this will allow lldb to track that offset on subsequent reloads.  "
+    "The module need not have been loaded at the time you specify this "
     "breakpoint, and will get resolved when the module is loaded.">;
   def breakpoint_set_name : Option<"name", "n">, Group<3>, Arg<"FunctionName">,
     Completion<"Symbol">, Required,
@@ -152,8 +152,8 @@ let Command = "breakpoint set" in {
     " to make one breakpoint for multiple names.">;
   def breakpoint_set_selector : Option<"selector", "S">, Group<5>,
     Arg<"Selector">, Required,
-    Desc<"Set the breakpoint by ObjC selector name. Can be repeated multiple "
-    "times to make one breakpoint for multiple Selectors.">;
+    Desc<"Set the breakpoint by Objective-C selector name.  Can be repeated "
+    "multiple times to make one breakpoint for multiple Selectors.">;
   def breakpoint_set_method : Option<"method", "M">, Group<6>, Arg<"Method">,
     Required, Desc<"Set the breakpoint by C++ method names.  Can be repeated "
     "multiple times to make one breakpoint for multiple methods.">;
