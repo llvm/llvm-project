@@ -36,7 +36,7 @@ pdl.pattern : benefit(1) {
   %type = type
 
   // expected-error@below {{expected only one of [`type`, `value`] to be set}}
-  %attr = attribute : %type 10
+  %attr = attribute : %type = 10
 
   %op = operation "foo.op" {"attr" = %attr} -> (%type : !pdl.type)
   rewrite %op with "rewriter"

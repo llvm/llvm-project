@@ -42,7 +42,7 @@ module @operation_attributes {
     %attr = attribute
     %root = operation "foo.op" {"attr" = %attr}
     rewrite %root {
-      %attr1 = attribute true
+      %attr1 = attribute = true
       %newOp = operation "foo.op" {"attr" = %attr, "attr1" = %attr1}
       erase %root
     }

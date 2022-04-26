@@ -1,6 +1,5 @@
 // RUN: mlir-opt -split-input-file %s | mlir-opt
-// Verify the generic form can be parsed.
-// RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt
+// RUN: mlir-opt -split-input-file -mlir-print-op-generic -mlir-print-local-scope %s | FileCheck %s --check-prefix=CHECK-GENERIC
 
 // -----
 
@@ -138,7 +137,21 @@ pdl.pattern @apply_rewrite_with_no_results : benefit(1) {
 pdl.pattern @attribute_with_dict : benefit(1) {
   %root = operation
   rewrite %root {
-    %attr = attribute {some_unit_attr} attributes {pdl.special_attribute}
+    %attr = attribute = {some_unit_attr} attributes {pdl.special_attribute}
     apply_native_rewrite "NativeRewrite"(%attr : !pdl.attribute)
   }
+}
+
+// -----
+
+// Check that we don't treat the trailing location of a pdl.attribute as the
+// attribute value.
+
+pdl.pattern @attribute_with_loc : benefit(1) {
+  // CHECK-GENERIC: "pdl.attribute"
+  // CHECK-GENERIC-NOT: value = loc
+  %attr = attribute loc("bar")
+  
+  %root = operation {"attribute" = %attr}
+  rewrite %root with "rewriter"
 }

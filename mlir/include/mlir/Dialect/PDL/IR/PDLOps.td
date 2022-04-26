@@ -118,14 +118,14 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
     %attr = pdl.attribute : %type
 
     // Define an attribute with a constant value:
-    %attr = pdl.attribute "hello"
+    %attr = pdl.attribute = "hello"
     ```
   }];
 
   let arguments = (ins Optional<PDL_Type>:$type,
                        OptionalAttr<AnyAttr>:$value);
   let results = (outs PDL_Attribute:$attr);
-  let assemblyFormat = "(`:` $type^)? ($value^)? attr-dict-with-keyword";
+  let assemblyFormat = "(`:` $type^)? (`=` $value^)? attr-dict-with-keyword";
 
   let builders = [
     OpBuilder<(ins CArg<"Value", "Value()">:$type), [{
