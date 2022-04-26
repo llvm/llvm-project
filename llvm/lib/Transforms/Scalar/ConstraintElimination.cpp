@@ -143,13 +143,15 @@ static SmallVector<std::pair<int64_t, Value *>, 4>
 decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
           bool IsSigned) {
 
+  auto CanUseSExt = [](ConstantInt *CI) {
+    const APInt &Val = CI->getValue();
+    return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
+  };
   // Decompose \p V used with a signed predicate.
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
-      const APInt &Val = CI->getValue();
-      if (Val.sle(MinSignedConstraintValue) || Val.sge(MaxConstraintValue))
-        return {};
-      return {{CI->getSExtValue(), nullptr}};
+      if (CanUseSExt(CI))
+        return {{CI->getSExtValue(), nullptr}};
     }
 
     return {{0, nullptr}, {1, V}};
@@ -168,11 +170,13 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     // If the index is zero-extended, it is guaranteed to be positive.
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
               m_ZExt(m_Value(Op0)))) {
-      if (match(Op0, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))))
+      if (match(Op0, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) &&
+          CanUseSExt(CI))
         return {{0, nullptr},
                 {1, GEP->getPointerOperand()},
                 {std::pow(int64_t(2), CI->getSExtValue()), Op1}};
-      if (match(Op0, m_NSWAdd(m_Value(Op1), m_ConstantInt(CI))))
+      if (match(Op0, m_NSWAdd(m_Value(Op1), m_ConstantInt(CI))) &&
+          CanUseSExt(CI))
         return {{CI->getSExtValue(), nullptr},
                 {1, GEP->getPointerOperand()},
                 {1, Op1}};
@@ -180,17 +184,19 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     }
 
     if (match(GEP->getOperand(GEP->getNumOperands() - 1), m_ConstantInt(CI)) &&
-        !CI->isNegative())
+        !CI->isNegative() && CanUseSExt(CI))
       return {{CI->getSExtValue(), nullptr}, {1, GEP->getPointerOperand()}};
 
     SmallVector<std::pair<int64_t, Value *>, 4> Result;
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
-              m_NUWShl(m_Value(Op0), m_ConstantInt(CI))))
+              m_NUWShl(m_Value(Op0), m_ConstantInt(CI))) &&
+        CanUseSExt(CI))
       Result = {{0, nullptr},
                 {1, GEP->getPointerOperand()},
                 {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
     else if (match(GEP->getOperand(GEP->getNumOperands() - 1),
-                   m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))))
+                   m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
+             CanUseSExt(CI))
       Result = {{CI->getSExtValue(), nullptr},
                 {1, GEP->getPointerOperand()},
                 {1, Op0}};
@@ -214,7 +220,8 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
       !CI->uge(MaxConstraintValue))
     return {{CI->getZExtValue(), nullptr}, {1, Op0}};
-  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative()) {
+  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
+      CanUseSExt(CI)) {
     Preconditions.emplace_back(
         CmpInst::ICMP_UGE, Op0,
         ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
@@ -223,7 +230,7 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1))))
     return {{0, nullptr}, {1, Op0}, {1, Op1}};
 
-  if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))))
+  if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))) && CanUseSExt(CI))
     return {{-1 * CI->getSExtValue(), nullptr}, {1, Op0}};
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1))))
     return {{0, nullptr}, {1, Op0}, {-1, Op1}};
