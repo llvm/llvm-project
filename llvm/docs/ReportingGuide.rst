@@ -5,7 +5,7 @@ LLVM CoC Incident Reporting Guide
 First of all, please do not feel like you may be a burden to us by reporting
 incidents. We consider reports an opportunity for us to act: by knowing about
 an incident, we can act on it if appropriate, and reduce continuation of
-problematic behavior.  If we don’t know, we can't learn or take any appropriate
+problematic behavior.  If we don't know, we can't learn or take any appropriate
 actions.
 
 If you are not sure the situation being reported was a :doc:`Code of
@@ -23,12 +23,12 @@ Reporting and Contact Information
   irc/discord/slack, etc) we ask that you make any reports by emailing 
   conduct@llvm.org. This is received by all members of the CoC Committee.
 
-* For LLVM Developers’ Meetings, please file a report with the on-site Code 
+* For LLVM Developers' Meetings, please file a report with the on-site Code 
   of Conduct team. Their names and contact details are listed on the event 
   webpage. You can also approach any other staff member, who can be 
   identified by special badges and often found at the registration desk, 
   to help you locate a member of the Code of Conduct team. All incidents 
-  reported in-person at a LLVM Developers’ Meeting will be emailed to the 
+  reported in-person at a LLVM Developers' Meeting will be emailed to the 
   Code of Conduct Committee. 
 
 * For meetups, please report the incident to the local meetup organizers first
