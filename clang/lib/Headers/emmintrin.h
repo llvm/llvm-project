@@ -4126,21 +4126,25 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi16(__m128i __a,
 ///
 /// \headerfile <x86intrin.h>
 ///
+/// \code
+/// __m128i _mm_extract_epi16(__m256i a, const int imm);
+/// \endcode
+///
 /// This intrinsic corresponds to the <c> VPEXTRW / PEXTRW </c> instruction.
 ///
-/// \param __a
+/// \param a
 ///    A 128-bit integer vector.
-/// \param __imm
-///    An immediate value. Bits [2:0] selects values from \a __a to be assigned
+/// \param imm
+///    An immediate value. Bits [2:0] selects values from \a a to be assigned
 ///    to bits[15:0] of the result. \n
-///    000: assign values from bits [15:0] of \a __a. \n
-///    001: assign values from bits [31:16] of \a __a. \n
-///    010: assign values from bits [47:32] of \a __a. \n
-///    011: assign values from bits [63:48] of \a __a. \n
-///    100: assign values from bits [79:64] of \a __a. \n
-///    101: assign values from bits [95:80] of \a __a. \n
-///    110: assign values from bits [111:96] of \a __a. \n
-///    111: assign values from bits [127:112] of \a __a.
+///    000: assign values from bits [15:0] of \a a. \n
+///    001: assign values from bits [31:16] of \a a. \n
+///    010: assign values from bits [47:32] of \a a. \n
+///    011: assign values from bits [63:48] of \a a. \n
+///    100: assign values from bits [79:64] of \a a. \n
+///    101: assign values from bits [95:80] of \a a. \n
+///    110: assign values from bits [111:96] of \a a. \n
+///    111: assign values from bits [127:112] of \a a.
 /// \returns An integer, whose lower 16 bits are selected from the 128-bit
 ///    integer vector parameter and the remaining bits are assigned zeros.
 #define _mm_extract_epi16(a, imm)                                              \
@@ -4154,18 +4158,22 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi16(__m128i __a,
 ///
 /// \headerfile <x86intrin.h>
 ///
+/// \code
+/// __m128i _mm_insert_epi16(__m256i a, int b, const int imm);
+/// \endcode
+///
 /// This intrinsic corresponds to the <c> VPINSRW / PINSRW </c> instruction.
 ///
-/// \param __a
+/// \param a
 ///    A 128-bit integer vector of [8 x i16]. This vector is copied to the
 ///    result and then one of the eight elements in the result is replaced by
-///    the lower 16 bits of \a __b.
-/// \param __b
+///    the lower 16 bits of \a b.
+/// \param b
 ///    An integer. The lower 16 bits of this parameter are written to the
-///    result beginning at an offset specified by \a __imm.
-/// \param __imm
+///    result beginning at an offset specified by \a imm.
+/// \param imm
 ///    An immediate value specifying the bit offset in the result at which the
-///    lower 16 bits of \a __b are written.
+///    lower 16 bits of \a b are written.
 /// \returns A 128-bit integer vector containing the constructed values.
 #define _mm_insert_epi16(a, b, imm)                                            \
   ((__m128i)__builtin_ia32_vec_set_v8hi((__v8hi)(__m128i)(a), (int)(b),        \
@@ -4213,7 +4221,10 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_epi8(__m128i __a) {
 ///    00: assign values from bits [31:0] of \a a. \n
 ///    01: assign values from bits [63:32] of \a a. \n
 ///    10: assign values from bits [95:64] of \a a. \n
-///    11: assign values from bits [127:96] of \a a.
+///    11: assign values from bits [127:96] of \a a. \n
+///    Note: To generate a mask, you can use the \c _MM_SHUFFLE macro.
+///    <c>_MM_SHUFFLE(b6, b4, b2, b0)</c> can create an 8-bit mask of the form
+///    <c>[b6, b4, b2, b0]</c>.
 /// \returns A 128-bit integer vector containing the shuffled values.
 #define _mm_shuffle_epi32(a, imm)                                              \
   ((__m128i)__builtin_ia32_pshufd((__v4si)(__m128i)(a), (int)(imm)))
@@ -4244,6 +4255,9 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_epi8(__m128i __a) {
 ///    01: assign values from bits [31:16] of \a a. \n
 ///    10: assign values from bits [47:32] of \a a. \n
 ///    11: assign values from bits [63:48] of \a a. \n
+///    Note: To generate a mask, you can use the \c _MM_SHUFFLE macro.
+///    <c>_MM_SHUFFLE(b6, b4, b2, b0)</c> can create an 8-bit mask of the form
+///    <c>[b6, b4, b2, b0]</c>.
 /// \returns A 128-bit integer vector containing the shuffled values.
 #define _mm_shufflelo_epi16(a, imm)                                            \
   ((__m128i)__builtin_ia32_pshuflw((__v8hi)(__m128i)(a), (int)(imm)))
@@ -4274,6 +4288,9 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_epi8(__m128i __a) {
 ///    01: assign values from bits [95:80] of \a a. \n
 ///    10: assign values from bits [111:96] of \a a. \n
 ///    11: assign values from bits [127:112] of \a a. \n
+///    Note: To generate a mask, you can use the \c _MM_SHUFFLE macro.
+///    <c>_MM_SHUFFLE(b6, b4, b2, b0)</c> can create an 8-bit mask of the form
+///    <c>[b6, b4, b2, b0]</c>.
 /// \returns A 128-bit integer vector containing the shuffled values.
 #define _mm_shufflehi_epi16(a, imm)                                            \
   ((__m128i)__builtin_ia32_pshufhw((__v8hi)(__m128i)(a), (int)(imm)))
@@ -4617,6 +4634,9 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_pd(__m128d __a) {
 ///    Bit[0] = 1: upper element of \a a copied to lower element of result. \n
 ///    Bit[1] = 0: lower element of \a b copied to upper element of result. \n
 ///    Bit[1] = 1: upper element of \a b copied to upper element of result. \n
+///    Note: To generate a mask, you can use the \c _MM_SHUFFLE2 macro.
+///    <c>_MM_SHUFFLE2(b1, b0)</c> can create a 2-bit mask of the form
+///    <c>[b1, b0]</c>.
 /// \returns A 128-bit vector of [2 x double] containing the shuffled values.
 #define _mm_shuffle_pd(a, b, i)                                                \
   ((__m128d)__builtin_ia32_shufpd((__v2df)(__m128d)(a), (__v2df)(__m128d)(b),  \
