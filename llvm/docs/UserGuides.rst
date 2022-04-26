@@ -53,6 +53,7 @@ intermediate LLVM representation.
    Phabricator
    Passes
    ReportingGuide
+   ResponseGuide
    Remarks
    SourceLevelDebugging
    StackSafetyAnalysis

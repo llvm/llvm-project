@@ -2,11 +2,6 @@
 LLVM Community Code of Conduct
 ==============================
 
-.. note::
-
-   This document is currently a **DRAFT** document while it is being discussed
-   by the community.
-
 The LLVM community has always worked to be a welcoming and respectful
 community, and we want to ensure that doesn't change as we grow and evolve. To
 that end, we have a few ground rules that we ask people to adhere to:
@@ -33,7 +28,7 @@ cases, affect a person's ability to participate within them, when the conduct
 amounts to an egregious violation of this code.
 
 If you believe someone is violating the code of conduct, we ask that you report
-it by emailing conduct@llvm.org. For more details please see our
+it by emailing conduct@llvm.org. For more details please see the 
 :doc:`Reporting Guide <ReportingGuide>`.
 
 .. _be friendly and patient:
@@ -97,11 +92,66 @@ it by emailing conduct@llvm.org. For more details please see our
   err and blaming each other doesn't get us anywhere. Instead, focus on helping
   to resolve issues and learning from mistakes.
 
+Reporting
+=========
+
+If you believe someone is violating the code of conduct you can always report
+it to the LLVM Foundation Code of Conduct Committee by emailing
+conduct@llvm.org. All reports will be kept confidential. This isn't a public
+list and only members of the advisory committee will receive the report. For
+details on what to include in the report, please see the :doc:`Reporting Guide
+<ReportingGuide>`.
+
+If you believe anyone is in physical danger, please notify appropriate law
+enforcement first. If you are unsure what law enforcement agency is
+appropriate, please include this in your report and we will attempt to notify
+them.
+
+If the violation occurs at an event such as a Developer Meeting and requires
+immediate attention, you can also reach out to any of the event organizers or
+staff. Event organizers and staff will be prepared to handle the incident and
+able to help. If you cannot find one of the organizers, the venue staff can
+locate one for you. We will also post detailed contact information for specific
+events as part of each events’ information. In person reports will still be
+kept confidential exactly as above, but also feel free to (anonymously if
+needed) email conduct@llvm.org.
+
+Code of Conduct Committee
+=========================
+
+The committee will consist of a mininum of 5 members and members are asked to
+serve at least a 1 year term. New committee members will be selected by the
+current committee and the LLVM Foundation Board of Directors.
+
+When responding to a Code of Conduct report, the committee follows the
+following 
+:doc:`Response Guide<ResponseGuide>`.
+
+The current committee members are:
+
+* Kit Barton (kbarton\@llvm.org)
+* Kristof Beyls (kristof.beyls\@llvm.org)
+* Mike Edwards (medwards\@llvm.org)
+* Hal Finkel (hfinkel\@llvm.org)
+* Cyndy Ishida (cishida\@llvm.org)
+* Anton Korobeynikov (anton.korobeynikov\@llvm.org)
+* Tanya Lattner (tanyalattner\@llvm.org)
+* Chris Lattner (clattner\@llvm.org)
+* Tom Stellard (tstellar\@llvm.org)
+
+
+Transparency Reports
+====================
+
+There are currently no transparency reports.
+
+For details about what a Transparency Report is and what it contains, please see the :doc:`Response Guide<ResponseGuide>`.
+
 Questions?
 ==========
 
 If you have questions, please feel free to contact the LLVM Foundation Code of
-Conduct Advisory Committee by emailing conduct@llvm.org.
+Conduct Committee by emailing conduct@llvm.org.
 
 
 (This text is based on the `Django Project`_ Code of Conduct, which is in turn
