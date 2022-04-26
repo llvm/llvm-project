@@ -408,6 +408,42 @@ func.func @disallowed_case7_fail() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// Test BitEnumAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @allowed_cases_pass
+func @allowed_cases_pass() {
+  // CHECK: test.op_with_bit_enum <read,write>
+  "test.op_with_bit_enum"() {value = #test.bit_enum<read, write>} : () -> ()
+  // CHECK: test.op_with_bit_enum <read,execute>
+  test.op_with_bit_enum <read,execute>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @allowed_cases_pass
+func @allowed_cases_pass() {
+  // CHECK: test.op_with_bit_enum_vbar <user|group>
+  "test.op_with_bit_enum_vbar"() {
+    value = #test.bit_enum_vbar<user|group>
+  } : () -> ()
+  // CHECK: test.op_with_bit_enum_vbar <user|group|other>
+  test.op_with_bit_enum_vbar <user | group | other>
+  return
+}
+
+// -----
+
+func @disallowed_case_sticky_fail() {
+  // expected-error@+2 {{expected test::TestBitEnum to be one of: read, write, execute}}
+  // expected-error@+1 {{failed to parse TestBitEnumAttr}}
+  "test.op_with_bit_enum"() {value = #test.bit_enum<sticky>} : () -> ()
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Test FloatElementsAttr
 //===----------------------------------------------------------------------===//
 

@@ -36,6 +36,12 @@
 
 namespace lldb_private {
 
+/// Provides public interface for all SymbolFiles. Any protected
+/// virtual members should go into SymbolFileCommon; most SymbolFile
+/// implementations should inherit from SymbolFileCommon to override
+/// the behaviors except SymbolFileOnDemand which inherits
+/// public interfaces from SymbolFile and forward to underlying concrete
+/// SymbolFile implementation.
 class SymbolFile : public PluginInterface {
   /// LLVM RTTI support.
   static char ID;
@@ -67,8 +73,7 @@ public:
   static SymbolFile *FindPlugin(lldb::ObjectFileSP objfile_sp);
 
   // Constructors and Destructors
-  SymbolFile(lldb::ObjectFileSP objfile_sp)
-      : m_objfile_sp(std::move(objfile_sp)) {}
+  SymbolFile() = default;
 
   ~SymbolFile() override = default;
 
@@ -99,15 +104,7 @@ public:
   ///     A uint32_t mask containing bits from the SymbolFile::Abilities
   ///     enumeration. Any bits that are set represent an ability that
   ///     this symbol plug-in can parse from the object file.
-  uint32_t GetAbilities() {
-    if (!m_calculated_abilities) {
-      m_abilities = CalculateAbilities();
-      m_calculated_abilities = true;
-    }
-
-    return m_abilities;
-  }
-
+  virtual uint32_t GetAbilities() = 0;
   virtual uint32_t CalculateAbilities() = 0;
 
   /// Symbols file subclasses should override this to return the Module that
@@ -125,10 +122,10 @@ public:
 
   // Compile Unit function calls
   // Approach 1 - iterator
-  uint32_t GetNumCompileUnits();
-  lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx);
+  virtual uint32_t GetNumCompileUnits() = 0;
+  virtual lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx) = 0;
 
-  Symtab *GetSymtab();
+  virtual Symtab *GetSymtab() = 0;
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
@@ -256,16 +253,16 @@ public:
   virtual void PreloadSymbols();
 
   virtual llvm::Expected<lldb_private::TypeSystem &>
-  GetTypeSystemForLanguage(lldb::LanguageType language);
+  GetTypeSystemForLanguage(lldb::LanguageType language) = 0;
 
   virtual CompilerDeclContext
   FindNamespace(ConstString name, const CompilerDeclContext &parent_decl_ctx) {
     return CompilerDeclContext();
   }
 
-  ObjectFile *GetObjectFile() { return m_objfile_sp.get(); }
-  const ObjectFile *GetObjectFile() const { return m_objfile_sp.get(); }
-  ObjectFile *GetMainObjectFile();
+  virtual ObjectFile *GetObjectFile() = 0;
+  virtual const ObjectFile *GetObjectFile() const = 0;
+  virtual ObjectFile *GetMainObjectFile() = 0;
 
   virtual std::vector<std::unique_ptr<CallEdge>>
   ParseCallEdgesInFunction(UserID func_id) {
@@ -276,7 +273,7 @@ public:
 
   /// Notify the SymbolFile that the file addresses in the Sections
   /// for this module have been changed.
-  virtual void SectionFileAddressesChanged();
+  virtual void SectionFileAddressesChanged() = 0;
 
   struct RegisterInfoResolver {
     virtual ~RegisterInfoResolver(); // anchor
@@ -297,7 +294,7 @@ public:
                                    "Operation not supported.");
   }
 
-  virtual void Dump(Stream &s);
+  virtual void Dump(Stream &s) = 0;
 
   /// Metrics gathering functions
 
@@ -311,7 +308,7 @@ public:
   /// entire file should be returned. The default implementation of this
   /// function will iterate over all sections in a module and add up their
   /// debug info only section byte sizes.
-  virtual uint64_t GetDebugInfoSize();
+  virtual uint64_t GetDebugInfoSize() = 0;
 
   /// Return the time taken to parse the debug information.
   ///
@@ -344,26 +341,90 @@ public:
   /// index is saved to the cache, debug sessions can be slower. These accessors
   /// can be accessed by the statistics and emitted to help track these costs.
   /// \{
-  bool GetDebugInfoIndexWasLoadedFromCache() const {
-    return m_index_was_loaded_from_cache;
-  }
-  void SetDebugInfoIndexWasLoadedFromCache() {
-    m_index_was_loaded_from_cache = true;
-  }
-  bool GetDebugInfoIndexWasSavedToCache() const {
-    return m_index_was_saved_to_cache;
-  }
-  void SetDebugInfoIndexWasSavedToCache() {
-    m_index_was_saved_to_cache = true;
-  }
+  virtual bool GetDebugInfoIndexWasLoadedFromCache() const = 0;
+  virtual void SetDebugInfoIndexWasLoadedFromCache() = 0;
+  virtual bool GetDebugInfoIndexWasSavedToCache() const = 0;
+  virtual void SetDebugInfoIndexWasSavedToCache() = 0;
   /// \}
 
 protected:
   void AssertModuleLock();
+
+private:
+  SymbolFile(const SymbolFile &) = delete;
+  const SymbolFile &operator=(const SymbolFile &) = delete;
+};
+
+/// Containing protected virtual methods for child classes to override.
+/// Most actual SymbolFile implementations should inherit from this class.
+class SymbolFileCommon : public SymbolFile {
+  /// LLVM RTTI support.
+  static char ID;
+
+public:
+  /// LLVM RTTI support.
+  /// \{
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || SymbolFile::isA(ClassID);
+  }
+  static bool classof(const SymbolFileCommon *obj) { return obj->isA(&ID); }
+  /// \}
+
+  // Constructors and Destructors
+  SymbolFileCommon(lldb::ObjectFileSP objfile_sp)
+      : m_objfile_sp(std::move(objfile_sp)) {}
+
+  ~SymbolFileCommon() override = default;
+
+  uint32_t GetAbilities() override {
+    if (!m_calculated_abilities) {
+      m_abilities = CalculateAbilities();
+      m_calculated_abilities = true;
+    }
+    return m_abilities;
+  }
+
+  Symtab *GetSymtab() override;
+
+  ObjectFile *GetObjectFile() override { return m_objfile_sp.get(); }
+  const ObjectFile *GetObjectFile() const override {
+    return m_objfile_sp.get();
+  }
+  ObjectFile *GetMainObjectFile() override;
+
+  /// Notify the SymbolFile that the file addresses in the Sections
+  /// for this module have been changed.
+  void SectionFileAddressesChanged() override;
+
+  // Compile Unit function calls
+  // Approach 1 - iterator
+  uint32_t GetNumCompileUnits() override;
+  lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx) override;
+
+  llvm::Expected<lldb_private::TypeSystem &>
+  GetTypeSystemForLanguage(lldb::LanguageType language) override;
+
+  void Dump(Stream &s) override;
+
+  uint64_t GetDebugInfoSize() override;
+
+  bool GetDebugInfoIndexWasLoadedFromCache() const override {
+    return m_index_was_loaded_from_cache;
+  }
+  void SetDebugInfoIndexWasLoadedFromCache() override {
+    m_index_was_loaded_from_cache = true;
+  }
+  bool GetDebugInfoIndexWasSavedToCache() const override {
+    return m_index_was_saved_to_cache;
+  }
+  void SetDebugInfoIndexWasSavedToCache() override {
+    m_index_was_saved_to_cache = true;
+  }
+
+protected:
   virtual uint32_t CalculateNumCompileUnits() = 0;
   virtual lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t idx) = 0;
   virtual TypeList &GetTypeList() { return m_type_list; }
-
   void SetCompileUnitAtIndex(uint32_t idx, const lldb::CompUnitSP &cu_sp);
 
   lldb::ObjectFileSP m_objfile_sp; // Keep a reference to the object file in
@@ -379,8 +440,8 @@ protected:
   bool m_index_was_saved_to_cache = false;
 
 private:
-  SymbolFile(const SymbolFile &) = delete;
-  const SymbolFile &operator=(const SymbolFile &) = delete;
+  SymbolFileCommon(const SymbolFileCommon &) = delete;
+  const SymbolFileCommon &operator=(const SymbolFileCommon &) = delete;
 };
 
 } // namespace lldb_private

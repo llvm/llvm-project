@@ -396,6 +396,7 @@ set(files
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h
+  __ranges/zip_view.h
   __split_buffer
   __std_stream
   __string

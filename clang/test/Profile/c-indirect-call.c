@@ -1,4 +1,4 @@
-// Check the value profiling instrinsics emitted by instrumentation.
+// Check the value profiling intrinsics emitted by instrumentation.
 
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name c-indirect-call.c %s -o - -emit-llvm -fprofile-instrument=clang -mllvm -enable-value-profiling | FileCheck --check-prefix=NOEXT %s
 // RUN: %clang_cc1 -no-opaque-pointers -triple s390x-ibm-linux -main-file-name c-indirect-call.c %s -o - -emit-llvm -fprofile-instrument=clang -mllvm -enable-value-profiling | FileCheck --check-prefix=EXT %s

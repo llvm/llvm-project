@@ -1002,6 +1002,25 @@ define <2 x half> @test_bitcast_2xi16_to_2xhalf(<2 x i16> %a) #0 {
   ret <2 x half> %r
 }
 
+; CHECK-LABEL: test_bitcast_float_to_2xhalf(
+; CHECK: ld.param.f32 	[[AF1:%f[0-9]+]], [test_bitcast_float_to_2xhalf_param_0];
+; CHECK: mov.b32 	[[R:%hh[0-9]+]], [[AF1]];
+; CHECK: st.param.b32 	[func_retval0+0], [[R]];
+; CHECK: ret;
+define <2 x half> @test_bitcast_float_to_2xhalf(float %a) #0 {
+  %r = bitcast float %a to <2 x half>
+  ret <2 x half> %r
+}
+
+; CHECK-LABEL: test_bitcast_2xhalf_to_float(
+; CHECK: ld.param.u32 	[[R:%r[0-9]+]], [test_bitcast_2xhalf_to_float_param_0];
+; CHECK: mov.b32 	[[AF1:%f[0-9]+]], [[R]];
+; CHECK: st.param.f32 	[func_retval0+0], [[AF1]];
+; CHECK: ret;
+define float @test_bitcast_2xhalf_to_float(<2 x half> %a) #0 {
+  %r = bitcast <2 x half> %a to float
+  ret float %r
+}
 
 declare <2 x half> @llvm.sqrt.f16(<2 x half> %a) #0
 declare <2 x half> @llvm.powi.f16.i32(<2 x half> %a, <2 x i32> %b) #0

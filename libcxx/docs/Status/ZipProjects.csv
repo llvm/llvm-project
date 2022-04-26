@@ -7,10 +7,10 @@ Section,Description,Dependencies,Assignee,Complete
 | `[allocator.uses.construction] <https://wg21.link/allocator.uses.construction>`_", "[pair] uses_allocator_construction_args overloads", None, Unassigned, |Not Started|
 | `[vector.bool] <https://wg21.link/vector.bool>`_, "[vector<bool>::reference] add const operator= overload", None, Nikolas Klauser, |Not Started|
 | `[iterator.concept.winc] <https://wg21.link/iterator.concept.winc>`_, "Update weakly_comparable", None, Unassigned, |Not Started|
-| `[range.zip] <https://wg21.link/ranges.syn>`_, "zip_view", "| `zip_view::iterator`
-| `zip_view::sentinel`", Unassigned, |Not Started|
-| `[range.zip.iterator] <https://wg21.link/range.zip.transform>`_, "zip_view::iterator", None, Unassigned, |Not Started|
-| `[range.zip.sentinel] <https://wg21.link/range.zip.sentinel>`_, "zip_view::sentinel", None, Unassigned, |Not Started|
+| `[range.zip] <https://wg21.link/ranges.syn>`_, "`zip_view <https://reviews.llvm.org/D122806>`_", "| `zip_view::iterator`
+| `zip_view::sentinel`", Hui Xie, |Complete|
+| `[range.zip.iterator] <https://wg21.link/range.zip.iterator>`_, "`zip_view::iterator <https://reviews.llvm.org/D122806>`_", None, Hui Xie, |Complete|
+| `[range.zip.sentinel] <https://wg21.link/range.zip.sentinel>`_, "`zip_view::sentinel <https://reviews.llvm.org/D122806>`_", None, Hui Xie, |Complete|
 | `[range.zip.transform.view] <https://wg21.link/range.zip.transform.view>`_, "zip_transform_view", "| `zip_transform_view::iterator`
 | `zip_transform_view::sentinel`", Unassigned, |Not Started|
 | `[range.zip.transform.iterator] <https://wg21.link/range.zip.transform.iterator>`_, "zip_transform_view::iterator", None, Unassigned, |Not Started|
