@@ -966,9 +966,6 @@ void Demangler::memorizeIdentifier(IdentifierNode *Identifier) {
   // Render this class template name into a string buffer so that we can
   // memorize it for the purpose of back-referencing.
   OutputBuffer OB;
-  if (!initializeOutputBuffer(nullptr, nullptr, OB, 1024))
-    // FIXME: Propagate out-of-memory as an error?
-    std::terminate();
   Identifier->output(OB, OF_Default);
   StringView Owned = copyString(OB);
   memorizeString(Owned);
@@ -1279,11 +1276,6 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
 
   EncodedStringLiteralNode *Result = Arena.alloc<EncodedStringLiteralNode>();
 
-  // Must happen before the first `goto StringLiteralError`.
-  if (!initializeOutputBuffer(nullptr, nullptr, OB, 1024))
-    // FIXME: Propagate out-of-memory as an error?
-    std::terminate();
-
   // Prefix indicating the beginning of a string literal
   if (!MangledName.consumeFront("@_"))
     goto StringLiteralError;
@@ -1442,9 +1434,6 @@ Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
 
   // Render the parent symbol's name into a buffer.
   OutputBuffer OB;
-  if (!initializeOutputBuffer(nullptr, nullptr, OB, 1024))
-    // FIXME: Propagate out-of-memory as an error?
-    std::terminate();
   OB << '`';
   Scope->output(OB, OF_Default);
   OB << '\'';
@@ -2307,8 +2296,6 @@ void Demangler::dumpBackReferences() {
 
   // Create an output stream so we can render each type.
   OutputBuffer OB;
-  if (!initializeOutputBuffer(nullptr, nullptr, OB, 1024))
-    std::terminate();
   for (size_t I = 0; I < Backrefs.FunctionParamCount; ++I) {
     OB.setCurrentPosition(0);
 
@@ -2335,7 +2322,6 @@ char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
                               char *Buf, size_t *N,
                               int *Status, MSDemangleFlags Flags) {
   Demangler D;
-  OutputBuffer OB;
 
   StringView Name{MangledName};
   SymbolNode *AST = D.parse(Name);
@@ -2360,9 +2346,8 @@ char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
   int InternalStatus = demangle_success;
   if (D.Error)
     InternalStatus = demangle_invalid_mangled_name;
-  else if (!initializeOutputBuffer(Buf, N, OB, 1024))
-    InternalStatus = demangle_memory_alloc_failure;
   else {
+    OutputBuffer OB(Buf, N);
     AST->output(OB, OF);
     OB += '\0';
     if (N != nullptr)
