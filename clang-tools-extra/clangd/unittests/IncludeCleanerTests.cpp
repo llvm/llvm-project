@@ -91,6 +91,14 @@ TEST(IncludeCleaner, ReferencedLocations) {
           X<A> x;
         )cpp"},
       {R"cpp(
+          namespace ns { template<typename T> class A {}; }
+          namespace absl {using ns::^A;}
+       )cpp",
+       R"cpp(
+          template <template <typename> class T> class X {};
+          X<absl::A> x;
+       )cpp"},
+      {R"cpp(
           namespace ns { template<typename T> struct ^A { ^A(T); }; }
           using ns::^A;
        )cpp",

@@ -172,6 +172,8 @@ UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
   if (Decl *D = Storage.dyn_cast<Decl *>())
     if (UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(D))
       return USD;
+  if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName())
+    return QTN->getUnderlyingTemplate().getAsUsingShadowDecl();
   return nullptr;
 }
 
