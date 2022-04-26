@@ -427,6 +427,7 @@ END-SCRIPT
 #include <__ranges/transform_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/transform_view.h'}}
 #include <__ranges/view_interface.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/view_interface.h'}}
 #include <__ranges/views.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/views.h'}}
+#include <__ranges/zip_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/zip_view.h'}}
 #include <__split_buffer> // expected-error@*:* {{use of private header from outside its module: '__split_buffer'}}
 #include <__std_stream> // expected-error@*:* {{use of private header from outside its module: '__std_stream'}}
 #include <__string> // expected-error@*:* {{use of private header from outside its module: '__string'}}

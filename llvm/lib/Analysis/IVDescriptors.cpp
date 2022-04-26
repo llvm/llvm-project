@@ -466,7 +466,7 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
 
   // This means we have seen one but not the other instruction of the
   // pattern or more than just a select and cmp. Zero implies that we saw a
-  // llvm.min/max instrinsic, which is always OK.
+  // llvm.min/max intrinsic, which is always OK.
   if (isMinMaxRecurrenceKind(Kind) && NumCmpSelectPatternInst != 2 &&
       NumCmpSelectPatternInst != 0)
     return false;

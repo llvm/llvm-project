@@ -2206,9 +2206,9 @@ bool DevirtModule::run() {
 
     removeRedundantTypeTests();
 
-    // We have lowered or deleted the type instrinsics, so we will no
-    // longer have enough information to reason about the liveness of virtual
-    // function pointers in GlobalDCE.
+    // We have lowered or deleted the type intrinsics, so we will no longer have
+    // enough information to reason about the liveness of virtual function
+    // pointers in GlobalDCE.
     for (GlobalVariable &GV : M.globals())
       GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
 
@@ -2341,9 +2341,9 @@ bool DevirtModule::run() {
     for (VTableBits &B : Bits)
       rebuildGlobal(B);
 
-  // We have lowered or deleted the type instrinsics, so we will no
-  // longer have enough information to reason about the liveness of virtual
-  // function pointers in GlobalDCE.
+  // We have lowered or deleted the type intrinsics, so we will no longer have
+  // enough information to reason about the liveness of virtual function
+  // pointers in GlobalDCE.
   for (GlobalVariable &GV : M.globals())
     GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
 

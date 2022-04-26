@@ -221,6 +221,16 @@ public:
     return success(parser.consumeIf(Token::plus));
   }
 
+  /// Parse a '|' token.
+  virtual ParseResult parseVerticalBar() override {
+    return parser.parseToken(Token::vertical_bar, "expected '|'");
+  }
+
+  /// Parse a '|' token if present.
+  virtual ParseResult parseOptionalVerticalBar() override {
+    return success(parser.consumeIf(Token::vertical_bar));
+  }
+
   /// Parses a quoted string token if present.
   ParseResult parseOptionalString(std::string *string) override {
     if (!parser.getToken().is(Token::string))

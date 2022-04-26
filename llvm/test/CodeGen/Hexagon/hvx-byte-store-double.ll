@@ -1,6 +1,6 @@
 ; RUN: llc -march=hexagon -mattr=+hvxv60,+hvx-length128b < %s | FileCheck %s
 
-; Test that we generate code for the vector byte enable store instrinsics.
+; Test that we generate code for the vector byte enable store intrinsics.
 
 ; CHECK-LABEL: f0:
 ; CHECK: if (q{{[0-3]}}) vmem(r{{[0-9]+}}+#0) = v{{[0-9]+}}

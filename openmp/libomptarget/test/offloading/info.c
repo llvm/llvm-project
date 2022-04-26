@@ -54,7 +54,7 @@ int main() {
 // INFO: Libomptarget device 0 info: Removing map entry with HstPtrBegin={{.*}}, TgtPtrBegin={{.*}}, Size=256, Name=A[0:64]
 // INFO: Libomptarget device 0 info: OpenMP Host-Device pointer mappings after block at info.c:[[#%u,]]:[[#%u,]]:
 // INFO: Libomptarget device 0 info: Host Ptr  Target Ptr Size (B) DynRefCount HoldRefCount Declaration
-// INFO: Libomptarget device 0 info: [[#%#x,]] [[#%#x,]]  4        INF         0            unknown at unknown:0:0
+// INFO: Libomptarget device 0 info: [[#%#x,]] [[#%#x,]]  4        INF         0            global at unknown:0:0
 #pragma omp target data map(alloc:A[0:N]) map(ompx_hold,tofrom:B[0:N]) map(to:C[0:N])
 #pragma omp target firstprivate(val)
   { val = 1; }
