@@ -68,7 +68,7 @@ struct SimplifyRetYieldBlocks : public mlir::OpRewritePattern<ScopeLikeOpTy> {
         candidateBlocks.insert(ret.getOperation()->getBlock());
     }
 
-    bool Changed = false;
+    auto changed = mlir::failure();
     for (auto *mergeSource : candidateBlocks) {
       if (!(mergeSource->hasNoSuccessors() && mergeSource->hasOneUse()))
         continue;
@@ -77,10 +77,10 @@ struct SimplifyRetYieldBlocks : public mlir::OpRewritePattern<ScopeLikeOpTy> {
         continue;
       rewriter.eraseOp(mergeDest->getTerminator());
       rewriter.mergeBlocks(mergeSource, mergeDest);
-      Changed = true;
+      changed = mlir::success();
     }
 
-    return Changed ? success() : failure();
+    return changed;
   }
 
   mlir::LogicalResult
@@ -143,54 +143,53 @@ template <>
 mlir::LogicalResult
 SimplifyRetYieldBlocks<IfOp>::replaceScopeLikeOp(PatternRewriter &rewriter,
                                                  IfOp ifOp) const {
-  bool regionChanged = false;
+  auto regionChanged = mlir::failure();
   if (checkAndRewriteRegion(ifOp.getThenRegion(), rewriter).succeeded())
-    regionChanged = true;
+    regionChanged = mlir::success();
   if (checkAndRewriteRegion(ifOp.getElseRegion(), rewriter).succeeded())
-    regionChanged = true;
-  return regionChanged ? success() : failure();
+    regionChanged = mlir::success();
+  return regionChanged;
 }
 
 template <>
 mlir::LogicalResult
 SimplifyRetYieldBlocks<ScopeOp>::replaceScopeLikeOp(PatternRewriter &rewriter,
                                                     ScopeOp scopeOp) const {
-  bool regionChanged = false;
+  auto regionChanged = mlir::failure();
   if (checkAndRewriteRegion(scopeOp.getRegion(), rewriter).succeeded())
-    regionChanged = true;
-  return regionChanged ? success() : failure();
+    regionChanged = mlir::success();
+  return regionChanged;
 }
 
 template <>
 mlir::LogicalResult SimplifyRetYieldBlocks<mlir::FuncOp>::replaceScopeLikeOp(
     PatternRewriter &rewriter, mlir::FuncOp funcOp) const {
-  bool regionChanged = false;
+  auto regionChanged = mlir::failure();
   if (checkAndRewriteRegion(funcOp.getRegion(), rewriter).succeeded())
-    regionChanged = true;
-  return regionChanged ? success() : failure();
+    regionChanged = mlir::success();
+  return regionChanged;
 }
 
 template <>
 mlir::LogicalResult SimplifyRetYieldBlocks<cir::SwitchOp>::replaceScopeLikeOp(
     PatternRewriter &rewriter, cir::SwitchOp switchOp) const {
-  bool regionChanged = false;
+  auto regionChanged = mlir::failure();
   for (auto &r : switchOp.getRegions()) {
     if (checkAndRewriteRegion(r, rewriter).succeeded())
-      regionChanged = true;
+      regionChanged = mlir::success();
   }
-
-  return regionChanged ? success() : failure();
+  return regionChanged;
 }
 
 template <>
 mlir::LogicalResult SimplifyRetYieldBlocks<cir::LoopOp>::replaceScopeLikeOp(
     PatternRewriter &rewriter, cir::LoopOp loopOp) const {
-  bool regionChanged = false;
+  auto regionChanged = mlir::failure();
   if (checkAndRewriteRegion(loopOp.getBody(), rewriter).succeeded())
-    regionChanged = true;
+    regionChanged = mlir::success();
   if (checkAndRewriteLoopCond(loopOp.getCond(), rewriter).succeeded())
-    regionChanged = true;
-  return regionChanged ? success() : failure();
+    regionChanged = mlir::success();
+  return regionChanged;
 }
 
 void getMergeCleanupsPatterns(RewritePatternSet &results,
