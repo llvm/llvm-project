@@ -426,6 +426,14 @@ public:
                                clang::SourceLocation Loc,
                                bool NewPointerIsChecked);
 
+  RValue buildCXXMemberCallExpr(const clang::CXXMemberCallExpr *E,
+                                ReturnValueSlot ReturnValue);
+  RValue buildCXXMemberOrOperatorMemberCallExpr(
+      const clang::CallExpr *CE, const clang::CXXMethodDecl *MD,
+      ReturnValueSlot ReturnValue, bool HasQualifier,
+      clang::NestedNameSpecifier *Qualifier, bool IsArrow,
+      const clang::Expr *Base);
+
   mlir::Operation *createLoad(const clang::VarDecl *VD, const char *Name);
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or

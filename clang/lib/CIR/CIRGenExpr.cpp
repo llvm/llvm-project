@@ -386,7 +386,10 @@ RValue CIRGenFunction::buildAnyExpr(const Expr *E, AggValueSlot aggSlot,
 RValue CIRGenFunction::buildCallExpr(const clang::CallExpr *E,
                                      ReturnValueSlot ReturnValue) {
   assert(!E->getCallee()->getType()->isBlockPointerType() && "ObjC Blocks NYI");
-  assert(!dyn_cast<CXXMemberCallExpr>(E) && "NYI");
+
+  if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
+    return buildCXXMemberCallExpr(CE, ReturnValue);
+
   assert(!dyn_cast<CUDAKernelCallExpr>(E) && "CUDA NYI");
   assert(!dyn_cast<CXXOperatorCallExpr>(E) && "NYI");
 
@@ -834,4 +837,37 @@ void CIRGenFunction::buildCXXConstructExpr(const clang::CXXConstructExpr *E,
   }
 
   buildCXXConstructorCall(CD, Type, ForVirtualBase, Delegating, Dest, E);
+}
+
+// Note: this function also emit constructor calls to support a MSVC extensions
+// allowing explicit constructor function call.
+RValue CIRGenFunction::buildCXXMemberCallExpr(const CXXMemberCallExpr *CE,
+                                              ReturnValueSlot ReturnValue) {
+
+  const Expr *callee = CE->getCallee()->IgnoreParens();
+
+  if (isa<BinaryOperator>(callee))
+    llvm_unreachable("NYI");
+
+  const auto *ME = cast<MemberExpr>(callee);
+  const auto *MD = cast<CXXMethodDecl>(ME->getMemberDecl());
+
+  if (MD->isStatic()) {
+    llvm_unreachable("NYI");
+  }
+
+  bool HasQualifier = ME->hasQualifier();
+  NestedNameSpecifier *Qualifier = HasQualifier ? ME->getQualifier() : nullptr;
+  bool IsArrow = ME->isArrow();
+  const Expr *Base = ME->getBase();
+
+  return buildCXXMemberOrOperatorMemberCallExpr(
+      CE, MD, ReturnValue, HasQualifier, Qualifier, IsArrow, Base);
+}
+
+RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
+    const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
+    bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,
+    const Expr *Base) {
+  llvm_unreachable("NYI");
 }
