@@ -1209,8 +1209,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelForwardAsPointers) {
 
   Type *Arg2Type = OutlinedFn->getArg(2)->getType();
   EXPECT_TRUE(Arg2Type->isPointerTy());
-  EXPECT_TRUE(cast<PointerType>(Arg2Type)
-                  ->isOpaqueOrPointeeTypeMatches(ArgStructTy));
+  EXPECT_TRUE(
+      cast<PointerType>(Arg2Type)->isOpaqueOrPointeeTypeMatches(ArgStructTy));
 }
 
 TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
@@ -3064,12 +3064,17 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
   EXPECT_TRUE(isa<GlobalVariable>(SingleEndCI->getArgOperand(0)));
   EXPECT_EQ(SingleEndCI->getArgOperand(1), SingleEntryCI->getArgOperand(1));
 
+  CallInst *ExitBarrier = nullptr;
   for (auto &FI : *ExitBB) {
     Instruction *cur = &FI;
     if (auto CI = dyn_cast<CallInst>(cur)) {
-      EXPECT_FALSE(CI->getCalledFunction()->getName() == "__kmpc_barrier");
+      if (CI->getCalledFunction()->getName() == "__kmpc_barrier") {
+        ExitBarrier = CI;
+        break;
+      }
     }
   }
+  EXPECT_EQ(ExitBarrier, nullptr);
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicReadFlt) {

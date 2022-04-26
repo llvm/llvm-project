@@ -17,6 +17,7 @@
 #include "ConstantsContext.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Any.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -1566,6 +1567,8 @@ public:
   bool getOpaquePointers();
   bool hasOpaquePointersValue();
   void setOpaquePointers(bool OP);
+
+  llvm::Any TargetDataStorage;
 
 private:
   Optional<bool> OpaquePointers;

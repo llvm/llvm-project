@@ -18200,7 +18200,7 @@ RValue CodeGenFunction::EmitBuiltinIsAligned(const CallExpr *E) {
 
 /// Generate (x & ~(y-1)) to align down or ((x+(y-1)) & ~(y-1)) to align up.
 /// Note: For pointer types we can avoid ptrtoint/inttoptr pairs by using the
-/// llvm.ptrmask instrinsic (with a GEP before in the align_up case).
+/// llvm.ptrmask intrinsic (with a GEP before in the align_up case).
 /// TODO: actually use ptrmask once most optimization passes know about it.
 RValue CodeGenFunction::EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp) {
   BuiltinAlignArgs Args(E, *this);

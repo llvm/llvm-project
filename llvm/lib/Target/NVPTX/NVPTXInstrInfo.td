@@ -2658,6 +2658,8 @@ def BITCONVERT_64_I2F : F_BITCONVERT<"64", Int64Regs, Float64Regs>;
 def BITCONVERT_64_F2I : F_BITCONVERT<"64", Float64Regs, Int64Regs>;
 def BITCONVERT_32_I2F16x2 : F_BITCONVERT<"32", Int32Regs, Float16x2Regs>;
 def BITCONVERT_32_F16x22I : F_BITCONVERT<"32", Float16x2Regs, Int32Regs>;
+def BITCONVERT_32_F2F16x2 : F_BITCONVERT<"32", Float32Regs, Float16x2Regs>;
+def BITCONVERT_32_F16x22F : F_BITCONVERT<"32", Float16x2Regs, Float32Regs>;
 
 // NOTE: pred->fp are currently sub-optimal due to an issue in TableGen where
 // we cannot specify floating-point literals in isel patterns.  Therefore, we

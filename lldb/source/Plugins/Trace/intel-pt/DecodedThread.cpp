@@ -19,6 +19,18 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
+bool lldb_private::trace_intel_pt::IsLibiptError(int libipt_status) {
+  return libipt_status < 0;
+}
+
+bool lldb_private::trace_intel_pt::IsEndOfStream(int libipt_status) {
+  return libipt_status == -pte_eos;
+}
+
+bool lldb_private::trace_intel_pt::IsTscUnavailable(int libipt_status) {
+  return libipt_status == -pte_no_time;
+}
+
 char IntelPTError::ID;
 
 IntelPTError::IntelPTError(int libipt_error_code, lldb::addr_t address)
@@ -33,6 +45,10 @@ void IntelPTError::log(llvm::raw_ostream &OS) const {
     OS << "    ";
   }
   OS << "error: " << libipt_error_message;
+}
+
+DecodedInstruction::operator bool() const {
+  return !IsLibiptError(libipt_error);
 }
 
 size_t DecodedThread::GetInstructionsCount() const {
@@ -93,15 +109,26 @@ void DecodedThread::RecordTscForLastInstruction(uint64_t tsc) {
   }
 }
 
-void DecodedThread::AppendInstruction(const pt_insn &insn) {
-  m_instruction_ips.emplace_back(insn.ip);
-  m_instruction_sizes.emplace_back(insn.size);
-  m_instruction_classes.emplace_back(insn.iclass);
-}
+void DecodedThread::Append(const DecodedInstruction &insn) {
+  if (!insn) {
+    // End of stream shouldn't be a public error
+    if (IsEndOfStream(insn.libipt_error))
+      return;
 
-void DecodedThread::AppendInstruction(const pt_insn &insn, uint64_t tsc) {
-  AppendInstruction(insn);
-  RecordTscForLastInstruction(tsc);
+    AppendError(make_error<IntelPTError>(insn.libipt_error, insn.pt_insn.ip));
+  } else {
+    m_instruction_ips.emplace_back(insn.pt_insn.ip);
+    m_instruction_sizes.emplace_back(insn.pt_insn.size);
+    m_instruction_classes.emplace_back(insn.pt_insn.iclass);
+  }
+
+  if (insn.tsc)
+    RecordTscForLastInstruction(*insn.tsc);
+
+  if (insn.events) {
+    m_events.try_emplace(m_instruction_ips.size() - 1, insn.events);
+    m_events_stats.RecordEventsForInstruction(insn.events);
+  }
 }
 
 void DecodedThread::AppendError(llvm::Error &&error) {
@@ -111,22 +138,45 @@ void DecodedThread::AppendError(llvm::Error &&error) {
   m_instruction_classes.emplace_back(pt_insn_class::ptic_error);
 }
 
-void DecodedThread::AppendError(llvm::Error &&error, uint64_t tsc) {
+void DecodedThread::SetAsFailed(llvm::Error &&error) {
   AppendError(std::move(error));
-  RecordTscForLastInstruction(tsc);
 }
 
-void DecodedThread::LibiptErrors::RecordError(int libipt_error_code) {
-  libipt_errors[pt_errstr(pt_errcode(libipt_error_code))]++;
+lldb::TraceEvents DecodedThread::GetEvents(int insn_index) {
+  auto it = m_events.find(insn_index);
+  if (it != m_events.end())
+    return it->second;
+  return (TraceEvents)0;
+}
+
+void DecodedThread::LibiptErrorsStats::RecordError(int libipt_error_code) {
+  libipt_errors_counts[pt_errstr(pt_errcode(libipt_error_code))]++;
   total_count++;
 }
 
 void DecodedThread::RecordTscError(int libipt_error_code) {
-  m_tsc_errors.RecordError(libipt_error_code);
+  m_tsc_errors_stats.RecordError(libipt_error_code);
 }
 
-const DecodedThread::LibiptErrors &DecodedThread::GetTscErrors() const {
-  return m_tsc_errors;
+const DecodedThread::LibiptErrorsStats &
+DecodedThread::GetTscErrorsStats() const {
+  return m_tsc_errors_stats;
+}
+
+const DecodedThread::EventsStats &DecodedThread::GetEventsStats() const {
+  return m_events_stats;
+}
+
+void DecodedThread::EventsStats::RecordEventsForInstruction(
+    lldb::TraceEvents events) {
+  if (!events)
+    return;
+
+  total_instructions_with_events++;
+  trace_event_utils::ForEachEvent(events, [&](TraceEvents event) {
+    events_counts[event]++;
+    total_count++;
+  });
 }
 
 Optional<DecodedThread::TscRange> DecodedThread::CalculateTscRange(
@@ -187,7 +237,7 @@ size_t DecodedThread::CalculateApproximateMemoryUsage() const {
          sizeof(pt_insn::size) * m_instruction_sizes.size() +
          sizeof(pt_insn::iclass) * m_instruction_classes.size() +
          (sizeof(size_t) + sizeof(uint64_t)) * m_instruction_timestamps.size() +
-         m_errors.getMemorySize();
+         m_errors.getMemorySize() + m_events.getMemorySize();
 }
 
 DecodedThread::TscRange::TscRange(std::map<size_t, uint64_t>::const_iterator it,
