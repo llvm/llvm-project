@@ -22,6 +22,21 @@ static mlir::FuncOp buildFunctionDeclPointer(CIRGenModule &CGM, GlobalDecl GD) {
   return V;
 }
 
+LValue CIRGenFunction::buildLValueForField(LValue base,
+                                           const FieldDecl *field) {
+  llvm_unreachable("NYI");
+}
+
+LValue CIRGenFunction::buildLValueForFieldInitialization(
+    LValue Base, const clang::FieldDecl *Field) {
+  QualType FieldType = Field->getType();
+
+  if (!FieldType->isReferenceType())
+    return buildLValueForField(Base, Field);
+
+  llvm_unreachable("NYI");
+}
+
 static CIRGenCallee buildDirectCallee(CIRGenModule &CGM, GlobalDecl GD) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
 
