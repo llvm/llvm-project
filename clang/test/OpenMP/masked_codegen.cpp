@@ -33,6 +33,8 @@ int main() {
 // ALL-NEXT:  			br i1 [[IS_MASKED]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
 // ALL:       			[[THEN]]
 // ALL-NEXT:  			store i8 2, i8* [[A_ADDR]]
+// IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
+// IRBUILDER:			[[AFTER]]
 // ALL-NEXT:  			call {{.*}}void @__kmpc_end_masked([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
 // ALL-NEXT:  			br label {{%?}}[[EXIT]]
 // ALL:       			[[EXIT]]

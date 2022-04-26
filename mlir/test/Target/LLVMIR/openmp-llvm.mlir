@@ -1147,11 +1147,10 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
 
   omp.wsloop ordered(0)
   for (%arg7) : i32 = (%arg0) to (%arg1) step (%arg2) {
-    // CHECK: [[OMP_THREAD:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
-    // CHECK-NEXT:  call void @__kmpc_ordered(%struct.ident_t* @[[GLOB1]], i32 [[OMP_THREAD]])
+    // CHECK:  call void @__kmpc_ordered(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_THREAD2:%.*]])
     omp.ordered_region  {
       omp.terminator
-    // CHECK: call void @__kmpc_end_ordered(%struct.ident_t* @[[GLOB1]], i32 [[OMP_THREAD]])
+    // CHECK: call void @__kmpc_end_ordered(%struct.ident_t* @[[GLOB3]], i32 [[OMP_THREAD2]])
     }
     omp.yield
   }
@@ -1963,6 +1962,26 @@ llvm.func @omp_sections_trivial() -> () {
   // CHECK-NEXT:     i32 1, label %[[SECTION2:.*]]
   // CHECK-NEXT: ]
 
+  omp.sections {
+    omp.section {
+      // CHECK: [[SECTION1]]:
+      // CHECK-NEXT: br label %[[SECTION1_REGION1:[^ ,]*]]
+      // CHECK-EMPTY:
+      // CHECK-NEXT: [[SECTION1_REGION1]]:
+      // CHECK-NEXT: br label %[[SECTION1_REGION2:[^ ,]*]]
+      // CHECK-EMPTY:
+      // CHECK-NEXT: [[SECTION1_REGION2]]:
+      // CHECK-NEXT: br label %[[INC]]
+      omp.terminator
+    }
+    omp.section {
+      // CHECK: [[SECTION2]]:
+      // CHECK: br label %[[INC]]
+      omp.terminator
+    }
+    omp.terminator
+  }
+
   // CHECK: [[INC]]:
   // CHECK:   %{{.*}} = add {{.*}}, 1
   // CHECK:   br label %[[HEADER]]
@@ -1973,27 +1992,7 @@ llvm.func @omp_sections_trivial() -> () {
   // CHECK:   br label %[[AFTER:.*]]
 
   // CHECK: [[AFTER]]:
-  // CHECK:   br label %[[END:.*]]
-
-  // CHECK: [[END]]:
   // CHECK:   ret void
-  omp.sections {
-    omp.section {
-      // CHECK: [[SECTION1]]:
-      // CHECK-NEXT: br label %[[REGION1:[^ ,]*]]
-      // CHECK: [[REGION1]]:
-      // CHECK-NEXT: br label %[[EXIT]]
-      omp.terminator
-    }
-    omp.section {
-      // CHECK: [[SECTION2]]:
-      // CHECK-NEXT: br label %[[REGION2:[^ ,]*]]
-      // CHECK: [[REGION2]]:
-      // CHECK-NEXT: br label %[[EXIT]]
-      omp.terminator
-    }
-    omp.terminator
-  }
   llvm.return
 }
 
