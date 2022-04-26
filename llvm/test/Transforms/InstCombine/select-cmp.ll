@@ -3,8 +3,7 @@
 
 define i1 @f(i1 %cond, i32 %x, i32 %x2) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:    [[Y:%.*]] = select i1 [[COND:%.*]], i32 poison, i32 [[X:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[Y]], [[X2:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], [[X2:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %y = select i1 %cond, i32 poison, i32 %x
