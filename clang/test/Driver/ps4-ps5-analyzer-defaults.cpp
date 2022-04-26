@@ -17,13 +17,13 @@
 // Negative check for unexpected checkers
 // RUN: %clang -target x86_64-scei-ps4 --analyze %s -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NEG-CHECKERS
-// RUN: %clang -target x86_64-scei-ps4 --analyze %s -### 2>&1 \
+// RUN: %clang -target x86_64-sie-ps5 --analyze %s -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NEG-CHECKERS
 //
 // Check for all unix checkers except API and Vfork
 // RUN: %clang -target x86_64-scei-ps4 --analyze %s -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-UNIX-CHECKERS
-// RUN: %clang -target x86_64-scei-ps4 --analyze %s -### 2>&1 \
+// RUN: %clang -target x86_64-sie-ps5 --analyze %s -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-UNIX-CHECKERS
 
 // CHECK-POS-CHECKERS-DAG: analyzer-checker=core

@@ -1,11 +1,16 @@
 # RUN: llc %s -o - -mtriple=x86_64-unknown-unknown \
 # RUN:    -experimental-debug-variable-locations \
-# RUN:    -run-pass=phi-node-elimination,livedebugvars,greedy,virtregrewriter \
+# RUN:    -start-before=phi-node-elimination -stop-after=virtregrewriter \
 # RUN:    | FileCheck %s
 #
 # Like phi-through-regalloc.mir, pass a PHI node into register allocation, and
-# test that it correctly comes out, in a stack slot. Fifteen spurious PHIs have
-# been added to force the register allocator to spill one.
+# test that it correctly comes out, in a stack slot. In this test the desired
+# value is a 16 bit copy of an argument, and the PHI register class is 16 bits.
+# It's subsequently coalesced into a larger vreg, which is then spilt as a 32
+# bit value.
+# Test that the coalescing happens (32 bits stored and loaded), but that we
+# record in the relevant DBG_PHI that the original value was 16 bits in size.
+# This avoids later ambiguity about how large the value on the stack is.
 
 --- |
   ; ModuleID = 'promoted.ll'
@@ -54,7 +59,7 @@ name:            foo
 alignment:       16
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: gr32 }
+  - { id: 0, class: gr16 }
   - { id: 1, class: gr32 }
   - { id: 2, class: gr32 }
   - { id: 3, class: gr32 }
@@ -68,8 +73,7 @@ frameInfo:
 machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: bb.0:
-  ; CHECK:       renamable $ebp = COPY $edi
-  ; CHECK:       MOV32mr %stack.1, 1, $noreg, 0, $noreg, killed renamable $ebp
+  ; CHECK:       MOV32mr %stack.0, 1, $noreg, 0, $noreg, $edi
   bb.0:
     successors: %bb.2(0x50000000), %bb.1(0x30000000)
     liveins: $edi, $esi
@@ -78,6 +82,8 @@ body:             |
     DBG_VALUE $esi, $noreg, !13, !DIExpression(), debug-location !12
     %2:gr32 = COPY killed $esi
     %1:gr32 = COPY killed $edi
+    %5:gr16 = COPY %1.sub_16bit
+    %6:gr16 = COPY %1.sub_16bit
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     %3:gr32 = MOV32r0 implicit-def dead $eflags
     $edi = COPY killed %3, debug-location !15
@@ -122,7 +128,7 @@ body:             |
 
     ; CHECK-LABEL: bb.2:
   bb.2:
-    %0:gr32 = PHI %1, %bb.0, %2, %bb.1, debug-instr-number 1, debug-location !18
+    %0:gr16 = PHI %5, %bb.0, %6, %bb.1, debug-instr-number 1, debug-location !18
     %50:gr32 = PHI %10, %bb.0, %30, %bb.1, debug-location !18
     %51:gr32 = PHI %11, %bb.0, %31, %bb.1, debug-location !18
     %52:gr32 = PHI %12, %bb.0, %32, %bb.1, debug-location !18
@@ -139,10 +145,11 @@ body:             |
     %63:gr32 = PHI %23, %bb.0, %43, %bb.1, debug-location !18
     %64:gr32 = PHI %24, %bb.0, %44, %bb.1, debug-location !18
 
+    INLINEASM &"", 1, 12, %50, 12, %51, 12, %52, 12, %53, 12, %54, 12, %55, 12, %56, 12, %57, 12, %58, 12, %59, 12, %60, 12, %61, 12, %62, 12, %63, 12, %64
     DBG_INSTR_REF 1, 0, !14, !DIExpression(), debug-location !12
-    ; CHECK:      DBG_PHI %stack.1, 1, 32
-    ; CHECK:      renamable $eax = MOV32rm %stack.1,
+    ; CHECK:      DBG_PHI %stack.0, 1, 16
     ; CHECK:      DBG_INSTR_REF 1, 0
+    ; CHECK:      renamable $eax = MOV32rm %stack.0,
     $eax = COPY killed %0, debug-location !19
     RET 0, killed $eax, debug-location !19
 
