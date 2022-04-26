@@ -4127,7 +4127,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi16(__m128i __a,
 /// \headerfile <x86intrin.h>
 ///
 /// \code
-/// __m128i _mm_extract_epi16(__m256i a, const int imm);
+/// __m128i _mm_extract_epi16(__m128i a, const int imm);
 /// \endcode
 ///
 /// This intrinsic corresponds to the <c> VPEXTRW / PEXTRW </c> instruction.
@@ -4159,7 +4159,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi16(__m128i __a,
 /// \headerfile <x86intrin.h>
 ///
 /// \code
-/// __m128i _mm_insert_epi16(__m256i a, int b, const int imm);
+/// __m128i _mm_insert_epi16(__m128i a, int b, const int imm);
 /// \endcode
 ///
 /// This intrinsic corresponds to the <c> VPINSRW / PINSRW </c> instruction.
