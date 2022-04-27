@@ -622,6 +622,10 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op) {
                      newUbExprs, opBuilder.getContext());
   canonicalizeMapAndOperands(&newUbMap, &ubOperands);
 
+  SmallVector<Value, 4> lbOperands(lb.getOperands().begin(),
+                                   lb.getOperands().begin() +
+                                       lb.getMap().getNumDims());
+
   // Normalize the loop.
   op.setUpperBound(ubOperands, newUbMap);
   op.setLowerBound({}, opBuilder.getConstantAffineMap(0));
@@ -630,9 +634,6 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op) {
   // Calculate the Value of new loopIV. Create affine.apply for the value of
   // the loopIV in normalized loop.
   opBuilder.setInsertionPointToStart(op.getBody());
-  SmallVector<Value, 4> lbOperands(lb.getOperands().begin(),
-                                   lb.getOperands().begin() +
-                                       lb.getMap().getNumDims());
   // Add an extra dim operand for loopIV.
   lbOperands.push_back(op.getInductionVar());
   // Add symbol operands from lower bound.
