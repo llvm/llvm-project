@@ -21,6 +21,7 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
@@ -103,6 +104,15 @@ static Value *mergeDistinctValues(QualType Type, Value *Val1,
       Expr2 = &MergedEnv.makeAnd(*Expr2, *Constraint);
     }
     return &MergedEnv.makeOr(*Expr1, *Expr2);
+  }
+
+  // FIXME: add unit tests that cover this statement.
+  if (auto *IndVal1 = dyn_cast<IndirectionValue>(Val1)) {
+    auto *IndVal2 = cast<IndirectionValue>(Val2);
+    assert(IndVal1->getKind() == IndVal2->getKind());
+    if (&IndVal1->getPointeeLoc() == &IndVal2->getPointeeLoc()) {
+      return Val1;
+    }
   }
 
   // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
