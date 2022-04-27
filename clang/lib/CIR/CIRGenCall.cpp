@@ -802,3 +802,14 @@ void CIRGenFunction::buildDelegateCallArg(CallArgList &args,
     llvm_unreachable("NYI");
   }
 }
+
+/// Arrange a call to a C++ method, passing the given arguments.
+///
+/// numPrefixArgs is the number of the ABI-specific prefix arguments we have. It
+/// does not count `this`.
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
+    const CallArgList &args, const FunctionProtoType *proto,
+    RequiredArgs required, unsigned numPrefixArgs) {
+  llvm_unreachable("NYI");
+}
+

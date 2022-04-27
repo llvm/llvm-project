@@ -18,6 +18,7 @@ add_clang_library(clangCIR
   CIRGenDecl.cpp
   CIRGenExpr.cpp
   CIRGenExprAgg.cpp
+  CIRGenExprCXX.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenItaniumCXXABI.cpp
