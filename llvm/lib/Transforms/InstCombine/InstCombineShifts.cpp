@@ -373,11 +373,12 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   assert(Op0->getType() == Op1->getType());
+  Type *Ty = I.getType();
 
   // If the shift amount is a one-use `sext`, we can demote it to `zext`.
   Value *Y;
   if (match(Op1, m_OneUse(m_SExt(m_Value(Y))))) {
-    Value *NewExt = Builder.CreateZExt(Y, I.getType(), Op1->getName());
+    Value *NewExt = Builder.CreateZExt(Y, Ty, Op1->getName());
     return BinaryOperator::Create(I.getOpcode(), Op0, NewExt);
   }
 
@@ -409,6 +410,47 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
     return BinaryOperator::Create(I.getOpcode(), NewC, A);
   }
 
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+
+  const APInt *AC, *AddC;
+  // Try to pre-shift a constant shifted by a variable amount added with a
+  // negative number:
+  // C << (X - AddC) --> (C >> AddC) << X
+  // and
+  // C >> (X - AddC) --> (C << AddC) >> X
+  if (match(Op0, m_APInt(AC)) && match(Op1, m_Add(m_Value(A), m_APInt(AddC))) &&
+      AddC->isNegative() && (-*AddC).ult(BitWidth)) {
+    assert(!AC->isZero() && "Expected simplify of shifted zero");
+    unsigned PosOffset = (-*AddC).getZExtValue();
+
+    auto isSuitableForPreShift = [PosOffset, &I, AC]() {
+      switch (I.getOpcode()) {
+      default:
+        return false;
+      case Instruction::Shl:
+        return (I.hasNoSignedWrap() || I.hasNoUnsignedWrap()) &&
+               AC->eq(AC->lshr(PosOffset).shl(PosOffset));
+      case Instruction::LShr:
+        return I.isExact() && AC->eq(AC->shl(PosOffset).lshr(PosOffset));
+      case Instruction::AShr:
+        return I.isExact() && AC->eq(AC->shl(PosOffset).ashr(PosOffset));
+      }
+    };
+    if (isSuitableForPreShift()) {
+      Constant *NewC = ConstantInt::get(Ty, I.getOpcode() == Instruction::Shl
+                                                ? AC->lshr(PosOffset)
+                                                : AC->shl(PosOffset));
+      BinaryOperator *NewShiftOp =
+          BinaryOperator::Create(I.getOpcode(), NewC, A);
+      if (I.getOpcode() == Instruction::Shl) {
+        NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+      } else {
+        NewShiftOp->setIsExact();
+      }
+      return NewShiftOp;
+    }
+  }
+
   // X shift (A srem C) -> X shift (A and (C - 1)) iff C is a power of 2.
   // Because shifts by negative values (which could occur if A were negative)
   // are undefined.
@@ -416,7 +458,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
       match(C, m_Power2())) {
     // FIXME: Should this get moved into SimplifyDemandedBits by saying we don't
     // demand the sign bit (and many others) here??
-    Constant *Mask = ConstantExpr::getSub(C, ConstantInt::get(I.getType(), 1));
+    Constant *Mask = ConstantExpr::getSub(C, ConstantInt::get(Ty, 1));
     Value *Rem = Builder.CreateAnd(A, Mask, Op1->getName());
     return replaceOperand(I, 1, Rem);
   }
@@ -987,23 +1029,6 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       match(Op1, m_Sub(m_SpecificInt(BitWidth - 1), m_Value(X))))
     return BinaryOperator::CreateLShr(
         ConstantInt::get(Ty, APInt::getSignMask(BitWidth)), X);
-
-  // Try to pre-shift a constant shifted by a variable amount:
-  // C << (X + AddC) --> (C >> -AddC) << X
-  // This requires a no-wrap flag and negative offset constant.
-  const APInt *AddC;
-  if ((I.hasNoSignedWrap() || I.hasNoUnsignedWrap()) &&
-      match(Op0, m_APInt(C)) && match(Op1, m_Add(m_Value(X), m_APInt(AddC))) &&
-      AddC->isNegative() && (-*AddC).ult(BitWidth)) {
-    assert(!C->isZero() && "Expected simplify of shifted zero");
-    unsigned PosOffset = (-*AddC).getZExtValue();
-    if (C->eq(C->lshr(PosOffset).shl(PosOffset))) {
-      Constant *NewC = ConstantInt::get(Ty, C->lshr(PosOffset));
-      Instruction *NewShl = BinaryOperator::CreateShl(NewC, X);
-      NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-      return NewShl;
-    }
-  }
 
   return nullptr;
 }
