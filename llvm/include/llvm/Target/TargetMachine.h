@@ -397,6 +397,12 @@ public:
   virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
 
   static std::pair<int, int> parseBinutilsVersion(StringRef Version);
+
+  /// getAddressSpaceForPseudoSourceKind - Given the kind of memory
+  /// (e.g. stack) the target returns the corresponding address space.
+  virtual unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
+    return 0;
+  }
 };
 
 /// This class describes a target machine that is implemented with the LLVM

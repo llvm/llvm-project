@@ -808,6 +808,23 @@ AMDGPUTargetMachine::getPredicatedAddrSpace(const Value *V) const {
   return std::make_pair(nullptr, -1);
 }
 
+unsigned
+AMDGPUTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
+  switch (Kind) {
+  case PseudoSourceValue::Stack:
+  case PseudoSourceValue::FixedStack:
+    return AMDGPUAS::PRIVATE_ADDRESS;
+  case PseudoSourceValue::ConstantPool:
+  case PseudoSourceValue::GOT:
+  case PseudoSourceValue::JumpTable:
+  case PseudoSourceValue::GlobalValueCallEntry:
+  case PseudoSourceValue::ExternalSymbolCallEntry:
+  case PseudoSourceValue::TargetCustom:
+    return AMDGPUAS::CONSTANT_ADDRESS;
+  }
+  return AMDGPUAS::FLAT_ADDRESS;
+}
+
 //===----------------------------------------------------------------------===//
 // GCN Target Machine (SI+)
 //===----------------------------------------------------------------------===//

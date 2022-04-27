@@ -31,6 +31,7 @@ class MDNode;
 class raw_ostream;
 class MachineFunction;
 class ModuleSlotTracker;
+class TargetInstrInfo;
 
 /// This class contains a discriminated union of information about pointers in
 /// memory operands, relating them back to LLVM IR or to virtual locations (such
