@@ -178,7 +178,7 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
 }
 
 void X86_64ABIInfo::computeInfo(CIRGenFunctionInfo &FI) const {
-  // Top leevl CIR has unlimited arguments and return types. Lowering for ABI
+  // Top level CIR has unlimited arguments and return types. Lowering for ABI
   // specific concerns should happen during a lowering phase. Assume everything
   // is direct for now.
   for (CIRGenFunctionInfo::arg_iterator it = FI.arg_begin(), ie = FI.arg_end();
