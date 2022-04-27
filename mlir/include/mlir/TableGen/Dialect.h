@@ -82,6 +82,10 @@ public:
   /// type printing/parsing.
   bool useDefaultTypePrinterParser() const;
 
+  /// Returns true if this dialect can be extended at runtime with new
+  /// operations or types.
+  bool isExtensible() const;
+
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.
   bool operator==(const Dialect &other) const;
