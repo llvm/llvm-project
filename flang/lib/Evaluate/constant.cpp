@@ -32,6 +32,20 @@ void ConstantBounds::set_lbounds(ConstantSubscripts &&lb) {
   }
 }
 
+ConstantSubscripts ConstantBounds::ComputeUbounds(
+    std::optional<int> dim) const {
+  if (dim) {
+    CHECK(*dim < Rank());
+    return {lbounds_[*dim] + shape_[*dim] - 1};
+  } else {
+    ConstantSubscripts ubounds(Rank());
+    for (int i{0}; i < Rank(); ++i) {
+      ubounds[i] = lbounds_[i] + shape_[i] - 1;
+    }
+    return ubounds;
+  }
+}
+
 void ConstantBounds::SetLowerBoundsToOne() {
   for (auto &n : lbounds_) {
     n = 1;

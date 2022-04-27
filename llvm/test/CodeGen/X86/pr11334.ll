@@ -94,9 +94,7 @@ define void @test_vector_creation() nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX-NEXT:    vmovaps %ymm0, (%rax)
-; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    vmovaps %xmm0, (%rax)
 ; AVX-NEXT:    retq
   %1 = insertelement <4 x double> undef, double 0.000000e+00, i32 2
   %2 = load double, double addrspace(1)* null

@@ -18,7 +18,7 @@
 /*  Constant                                      Value
     __cpp_lib_allocator_traits_is_always_equal    201411L [C++17]
     __cpp_lib_char8_t                             201811L [C++20]
-    __cpp_lib_constexpr_string                    201811L [C++20]
+    __cpp_lib_constexpr_string                    201907L [C++20]
     __cpp_lib_erase_if                            202002L [C++20]
     __cpp_lib_nonmember_container_access          201411L [C++17]
     __cpp_lib_ranges_to_container                 202202L [C++2b]
@@ -211,8 +211,8 @@
 # ifndef __cpp_lib_constexpr_string
 #   error "__cpp_lib_constexpr_string should be defined in c++20"
 # endif
-# if __cpp_lib_constexpr_string != 201811L
-#   error "__cpp_lib_constexpr_string should have the value 201811L in c++20"
+# if __cpp_lib_constexpr_string != 201907L
+#   error "__cpp_lib_constexpr_string should have the value 201907L in c++20"
 # endif
 
 # ifndef __cpp_lib_erase_if
@@ -287,8 +287,8 @@
 # ifndef __cpp_lib_constexpr_string
 #   error "__cpp_lib_constexpr_string should be defined in c++2b"
 # endif
-# if __cpp_lib_constexpr_string != 201811L
-#   error "__cpp_lib_constexpr_string should have the value 201811L in c++2b"
+# if __cpp_lib_constexpr_string != 201907L
+#   error "__cpp_lib_constexpr_string should have the value 201907L in c++2b"
 # endif
 
 # ifndef __cpp_lib_erase_if

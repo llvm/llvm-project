@@ -8,7 +8,7 @@
 
 // <string>
 
-// explicit basic_string(const Allocator& a = Allocator());
+// explicit basic_string(const Allocator& a = Allocator()); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -85,7 +85,7 @@ test2()
 
 #endif
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   test<std::basic_string<char, std::char_traits<char>, test_allocator<char> > >();
 #if TEST_STD_VER >= 11
   test2<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
@@ -99,7 +99,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // template<class InputIterator>
-//   basic_string& assign(InputIterator first, InputIterator last);
+//   basic_string& assign(InputIterator first, InputIterator last); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -52,7 +54,7 @@ test_exceptions(S s, It first, It last)
 }
 #endif
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -230,7 +232,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
     return 0;

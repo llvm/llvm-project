@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // we get this comparison "for free" because the string implicitly converts to the string_view
@@ -23,7 +25,7 @@ test(const S& lhs, SV rhs, bool x)
     assert((lhs != rhs) == x);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     typedef std::string SV;
@@ -74,7 +76,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;
