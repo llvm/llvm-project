@@ -12688,15 +12688,6 @@ bool ScalarEvolution::containsUndefs(const SCEV *S) const {
   });
 }
 
-// Return true when S contains a value that is a nullptr.
-bool ScalarEvolution::containsErasedValue(const SCEV *S) const {
-  return SCEVExprContains(S, [](const SCEV *S) {
-    if (const auto *SU = dyn_cast<SCEVUnknown>(S))
-      return SU->getValue() == nullptr;
-    return false;
-  });
-}
-
 /// Return the size of an element read or written by Inst.
 const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
   Type *Ty;
