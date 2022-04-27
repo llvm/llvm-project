@@ -320,7 +320,7 @@ class MUBUF_Pseudo <string opName, dag outs, dag ins,
   bits<1> idxen       = 0;
   bits<1> addr64      = 0;
   bits<1> lds         = 0;
-  bits<1> has_vdata   = 1;
+  bits<1> has_vdata   = !not(lds);
   bits<1> has_vaddr   = 1;
   bits<1> has_glc     = 1;
   bits<1> has_dlc     = 1;
@@ -360,6 +360,8 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let mayStore             = ps.mayStore;
   let IsAtomicRet          = ps.IsAtomicRet;
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
+  let VALU                 = ps.VALU;
+  let LGKM_CNT             = ps.LGKM_CNT;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -371,7 +373,7 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 
   // GFX90A+ only: instruction uses AccVGPR for data
   // Bit supersedes tfe.
-  bits<1> acc = !if(ps.has_vdata, vdata{9}, 0);
+  bits<1> acc = !if(ps.has_vdata, vdata{9}, !if(ps.lds, ?, 0));
 }
 
 
@@ -493,10 +495,10 @@ class MUBUF_Load_Pseudo <string opName,
                          RegisterClass vdata_rc = getVregSrcForVT<vdata_vt>.ret,
                          RegisterOperand vdata_op = getLdStRegisterOperand<vdata_rc>.ret>
   : MUBUF_Pseudo<opName,
-                 !if(isLdsOpc, (outs), (outs vdata_op:$vdata)),
+                 !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
                  !con(getMUBUFIns<addrKindCopy, [], isLds>.ret,
                       !if(HasTiedDest, (ins vdata_op:$vdata_in), (ins))),
-                 !if(isLdsOpc, " ", " $vdata, ") # getMUBUFAsmOps<addrKindCopy>.ret # "$cpol" #
+                 !if(!or(isLds, isLdsOpc), " ", " $vdata, ") # getMUBUFAsmOps<addrKindCopy>.ret # "$cpol" #
                    !if(isLds, " lds", "$tfe") # "$swz",
                  pattern>,
     MUBUF_SetupAddr<addrKindCopy> {
@@ -505,14 +507,16 @@ class MUBUF_Load_Pseudo <string opName,
   let AsmMatchConverter = !if(isLds, "cvtMubufLds", "cvtMubuf");
 
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
+  let LGKM_CNT = isLds;
   let has_vdata = !not(isLdsOpc);
   let mayLoad = 1;
-  let mayStore = 0;
+  let mayStore = isLds;
   let maybeAtomic = 1;
   let Uses = !if(!or(isLds, isLdsOpc) , [EXEC, M0], [EXEC]);
   let has_tfe = !not(isLds);
   let lds = isLds;
   let elements = getMUBUFElements<vdata_vt>.ret;
+  let VALU = isLds;
 }
 
 class MUBUF_Offset_Load_Pat <Instruction inst, ValueType load_vt = i32, SDPatternOperator ld = null_frag> : Pat <
@@ -631,7 +635,8 @@ class MUBUF_Pseudo_Store_Lds<string opName>
                  (outs),
                  (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, CPol:$cpol, SWZ:$swz),
                  " $srsrc, $soffset$offset lds$cpol$swz"> {
-  let mayLoad = 0;
+  let LGKM_CNT = 1;
+  let mayLoad = 1;
   let mayStore = 1;
   let maybeAtomic = 1;
 
@@ -639,6 +644,7 @@ class MUBUF_Pseudo_Store_Lds<string opName>
   let has_vaddr = 0;
   let has_tfe = 0;
   let lds = 1;
+  let VALU = 1;
 
   let Uses = [EXEC, M0];
   let AsmMatchConverter = "cvtMubufLds";

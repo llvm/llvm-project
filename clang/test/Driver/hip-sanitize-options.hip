@@ -65,8 +65,8 @@
 // FAIL: AMDGPU address sanitizer runtime library (asanrtl) is not found. Please install ROCm device library which supports address sanitizer
 
 // XNACK-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
-// XNACK-DAG: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx900:xnack-'. Use it with an offload arch containing 'xnack+' instead
-// XNACK-DAG: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx906'. Use it with an offload arch containing 'xnack+' instead
+// XNACK-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx900:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
+// XNACK-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx906' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // XNACK-DAG: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
 // XNACK-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack"}}
 // XNACK-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906"}}
@@ -85,8 +85,8 @@
 // NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906"}}
 // NOGPU-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,leak"}}
 // NOGPUNEG-NOT: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
-// NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx900:xnack-'. Use it with an offload arch containing 'xnack+' instead
-// NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option as it is not currently supported for offload arch 'gfx906'. Use it with an offload arch containing 'xnack+' instead
+// NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option for offload arch 'gfx900:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
+// NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option for offload arch 'gfx906' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address,leak"}}
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack".* "-fsanitize=address,leak"}}

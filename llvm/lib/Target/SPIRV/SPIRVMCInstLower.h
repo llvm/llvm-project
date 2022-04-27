@@ -15,7 +15,7 @@ namespace llvm {
 class MCInst;
 class MachineInstr;
 namespace SPIRV {
-class ModuleAnalysisInfo;
+struct ModuleAnalysisInfo;
 } // namespace SPIRV
 
 // This class is used to lower a MachineInstr into an MCInst.

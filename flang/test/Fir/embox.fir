@@ -1,4 +1,4 @@
-// RUN: fir-opt %s | tco | FileCheck %s
+// RUN: tco %s | FileCheck %s
 
 
 // CHECK-LABEL: define void @_QPtest_callee({ i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %0)

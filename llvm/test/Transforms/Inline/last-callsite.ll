@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=0 -S | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=0 -inline-enable-priority-order=true -S | FileCheck %s
 
 ; The 'test1_' prefixed functions test the basic 'last callsite' inline
 ; threshold adjustment where we specifically inline the last call site of an

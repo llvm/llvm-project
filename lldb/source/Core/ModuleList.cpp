@@ -180,6 +180,12 @@ PathMappingList ModuleListProperties::GetSymlinkMappings() const {
   return m_symlink_paths;
 }
 
+bool ModuleListProperties::GetLoadSymbolOnDemand() {
+  const uint32_t idx = ePropertyLoadSymbolOnDemand;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
 ModuleList::ModuleList() : m_modules(), m_modules_mutex() {}
 
 ModuleList::ModuleList(const ModuleList &rhs) : m_modules(), m_modules_mutex() {

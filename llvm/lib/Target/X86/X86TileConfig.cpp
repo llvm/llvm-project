@@ -98,6 +98,9 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
     if (SS != INT_MAX)
       break;
   }
+  // Didn't find LDTILECFG, just return false;
+  if (SS == INT_MAX)
+    return false;
 
   // Try to find a point to insert MIs for constant shapes.
   // Here we are leveraging the palette id inserted in PreRA pass.
