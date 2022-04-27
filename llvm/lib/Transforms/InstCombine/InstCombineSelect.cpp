@@ -2583,7 +2583,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
 // then this pattern can be transformed into:
 //   %x.offset = add i8 %x, %lowbitmask
 //   %x.roundedup = and i8 %x.offset, %highbitmask
-static Instruction *
+static Value *
 foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
                                     InstCombiner::BuilderTy &Builder) {
   Value *Cond = SI.getCondition();
@@ -2598,11 +2598,6 @@ foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
 
   if (Pred == ICmpInst::Predicate::ICMP_NE)
     std::swap(X, XBiasedHighBits);
-
-  // FIXME: if BiasCst is equal to LowBitMaskCst,
-  //        we could just return XBiasedHighBits.
-  if (!XBiasedHighBits->hasOneUse())
-    return nullptr;
 
   // FIXME: we could support non non-splats here.
 
@@ -2628,12 +2623,19 @@ foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
   if (*BiasCst != AlignmentCst && *BiasCst != *LowBitMaskCst)
     return nullptr;
 
+  if (!XBiasedHighBits->hasOneUse()) {
+    if (*BiasCst == *LowBitMaskCst)
+      return XBiasedHighBits;
+    return nullptr;
+  }
+
   // FIXME: could we preserve undef's here?
   Type *Ty = X->getType();
   Value *XOffset = Builder.CreateAdd(X, ConstantInt::get(Ty, *LowBitMaskCst),
-                                     X->getName() + ".offset");
-  return BinaryOperator::CreateAnd(XOffset,
-                                   ConstantInt::get(Ty, *HighBitMaskCst));
+                                     X->getName() + ".biased");
+  Value *R = Builder.CreateAnd(XOffset, ConstantInt::get(Ty, *HighBitMaskCst));
+  R->takeName(&SI);
+  return R;
 }
 
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
@@ -3181,8 +3183,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Value *Fr = foldSelectWithFrozenICmp(SI, Builder))
     return replaceInstUsesWith(SI, Fr);
 
-  if (Instruction *I = foldRoundUpIntegerWithPow2Alignment(SI, Builder))
-    return I;
+  if (Value *V = foldRoundUpIntegerWithPow2Alignment(SI, Builder))
+    return replaceInstUsesWith(SI, V);
 
   // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)
   // Load inst is intentionally not checked for hasOneUse()
