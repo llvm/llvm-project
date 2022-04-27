@@ -254,7 +254,7 @@ SymbolFile *SymbolFileNativePDB::CreateInstance(ObjectFileSP objfile_sp) {
 }
 
 SymbolFileNativePDB::SymbolFileNativePDB(ObjectFileSP objfile_sp)
-    : SymbolFile(std::move(objfile_sp)) {}
+    : SymbolFileCommon(std::move(objfile_sp)) {}
 
 SymbolFileNativePDB::~SymbolFileNativePDB() = default;
 
@@ -1940,4 +1940,3 @@ uint64_t SymbolFileNativePDB::GetDebugInfoSize() {
   // PDB files are a separate file that contains all debug info.
   return m_index->pdb().getFileSize();
 }
-
