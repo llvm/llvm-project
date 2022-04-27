@@ -7,35 +7,29 @@ define void @switch_phi_const(i32 %x) {
 ; CHECK-LABEL: switch_phi_const:
 ; CHECK:       # %bb.0: # %bb0
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    decl %edi
-; CHECK-NEXT:    cmpl $54, %edi
+; CHECK-NEXT:    leal -1(%rdi), %ecx
+; CHECK-NEXT:    cmpl $54, %ecx
 ; CHECK-NEXT:    ja .LBB0_8
 ; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    movl $13, %edx
-; CHECK-NEXT:    movl $5, %esi
-; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    jmpq *.LJTI0_0(,%rdi,8)
+; CHECK-NEXT:    jmpq *.LJTI0_0(,%rcx,8)
 ; CHECK-NEXT:  .LBB0_2: # %case_7
 ; CHECK-NEXT:    movq g@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movl (%rax), %ecx
+; CHECK-NEXT:    movl (%rax), %edi
 ; CHECK-NEXT:    movq effect@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl $7, (%rax)
 ; CHECK-NEXT:  .LBB0_3: # %case_1_loop
 ; CHECK-NEXT:    movq effect@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl $1, (%rax)
-; CHECK-NEXT:    movl %ecx, %esi
 ; CHECK-NEXT:  .LBB0_4: # %case_5
 ; CHECK-NEXT:    movq effect@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl $5, (%rax)
-; CHECK-NEXT:    movl %esi, %edx
 ; CHECK-NEXT:  .LBB0_5: # %case_13
 ; CHECK-NEXT:    movq effect@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl $13, (%rax)
-; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:  .LBB0_6: # %case_42
-; CHECK-NEXT:    movq effect@GOTPCREL(%rip), %rcx
-; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    movq effect@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl %edi, (%rax)
 ; CHECK-NEXT:    movl $55, %eax
 ; CHECK-NEXT:  .LBB0_7: # %case_55
 ; CHECK-NEXT:    movq effect@GOTPCREL(%rip), %rcx
