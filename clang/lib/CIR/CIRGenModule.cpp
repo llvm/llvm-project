@@ -216,10 +216,27 @@ bool CIRGenModule::MustBeEmitted(const ValueDecl *Global) {
 
 bool CIRGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
   assert(!langOpts.OpenMP && "NYI");
-  auto const *FD = dyn_cast<FunctionDecl>(Global);
-  assert(FD && "Only FunctionDecl should hit this path so far.");
-  assert(!FD->isTemplated() && "Templates NYI");
 
+  const auto *FD = dyn_cast<FunctionDecl>(Global);
+  if (FD) {
+    // Implicit template instantiations may change linkage if they are later
+    // explicitly instantiated, so they should not be emitted eagerly.
+    // TODO(cir): do we care?
+    assert(FD->getTemplateSpecializationKind() != TSK_ImplicitInstantiation &&
+           "not implemented");
+    assert(!FD->isTemplated() && "Templates NYI");
+  }
+  const auto *VD = dyn_cast<VarDecl>(Global);
+  if (VD)
+    // A definition of an inline constexpr static data member may change
+    // linkage later if it's redeclared outside the class.
+    // TODO(cir): do we care?
+    assert(astCtx.getInlineVariableDefinitionKind(VD) !=
+               ASTContext::InlineVariableDefinitionKind::WeakUnknown &&
+           "not implemented");
+
+  assert((FD || VD) &&
+         "Only FunctionDecl and VarDecl should hit this path so far.");
   return true;
 }
 
@@ -251,7 +268,19 @@ void CIRGenModule::buildGlobal(GlobalDecl GD) {
       return;
     }
   } else {
-    llvm_unreachable("NYI");
+    const auto *VD = cast<VarDecl>(Global);
+    assert(VD->isFileVarDecl() && "Cannot emit local var decl as global.");
+    if (VD->isThisDeclarationADefinition() != VarDecl::Definition &&
+        !astCtx.isMSStaticDataMemberInlineDefinition(VD)) {
+      assert(!getLangOpts().OpenMP && "not implemented");
+      // If this declaration may have caused an inline variable definition
+      // to change linkage, make sure that it's emitted.
+      // TODO(cir): probably use GetAddrOfGlobalVar(VD) below?
+      assert((astCtx.getInlineVariableDefinitionKind(VD) !=
+              ASTContext::InlineVariableDefinitionKind::Strong) &&
+             "not implemented");
+      return;
+    }
   }
 
   // Defer code generation to first use when possible, e.g. if this is an inline
@@ -361,7 +390,7 @@ void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
   llvm_unreachable("Invalid argument to buildGlobalDefinition()");
 }
 
-// buildTopLevelDecl - Emit code for a single top level declaration.
+// Emit code for a single top level declaration.
 void CIRGenModule::buildTopLevelDecl(Decl *decl) {
   // Ignore dependent declarations
   if (decl->isTemplated())
@@ -374,7 +403,21 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
 
   switch (decl->getKind()) {
   default:
+    llvm::errs() << "buildTopLevelDecl codegen for decl kind '"
+                 << decl->getDeclKindName() << "' not implemented\n";
     assert(false && "Not yet implemented");
+
+  case Decl::Var:
+  case Decl::Decomposition:
+  case Decl::VarTemplateSpecialization:
+    buildGlobal(cast<VarDecl>(decl));
+    assert(!isa<DecompositionDecl>(decl) && "not implemented");
+    // if (auto *DD = dyn_cast<DecompositionDecl>(decl))
+    //   for (auto *B : DD->bindings())
+    //     if (auto *HD = B->getHoldingVar())
+    //       EmitGlobal(HD);
+    break;
+
   case Decl::CXXMethod:
   case Decl::Function:
     buildGlobal(cast<FunctionDecl>(decl));
