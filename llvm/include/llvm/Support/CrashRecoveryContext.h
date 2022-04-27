@@ -101,6 +101,9 @@ public:
   /// return failure from RunSafely(). This function does not return.
   [[noreturn]] void HandleExit(int RetCode);
 
+  /// Return true if RetCode indicates that a signal or an exception occurred.
+  static bool isCrash(int RetCode);
+
   /// Throw again a signal or an exception, after it was catched once by a
   /// CrashRecoveryContext.
   static bool throwIfCrash(int RetCode);
