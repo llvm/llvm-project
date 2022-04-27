@@ -13,6 +13,85 @@
 
 namespace Fortran::runtime::io {
 
+// B/O/Z output of arbitrarily sized data emits a binary/octal/hexadecimal
+// representation of what is interpreted to be a single unsigned integer value.
+// When used with character data, endianness is exposed.
+template <int LOG2_BASE>
+static bool EditBOZOutput(IoStatementState &io, const DataEdit &edit,
+    const unsigned char *data0, std::size_t bytes) {
+  int digits{static_cast<int>((bytes * 8) / LOG2_BASE)};
+  int get{static_cast<int>(bytes * 8) - digits * LOG2_BASE};
+  get = get ? get : LOG2_BASE;
+  int shift{7};
+  int increment{isHostLittleEndian ? -1 : 1};
+  const unsigned char *data{data0 + (isHostLittleEndian ? bytes - 1 : 0)};
+  int skippedZeroes{0};
+  int digit{0};
+  // The same algorithm is used to generate digits for real (below)
+  // as well as for generating them only to skip leading zeroes (here).
+  // Bits are copied one at a time from the source data.
+  // TODO: Multiple bit copies for hexadecimal, where misalignment
+  // is not possible; or for octal when all 3 bits come from the
+  // same byte.
+  while (bytes > 0) {
+    if (get == 0) {
+      if (digit != 0) {
+        break; // first nonzero leading digit
+      }
+      ++skippedZeroes;
+      get = LOG2_BASE;
+    } else if (shift < 0) {
+      data += increment;
+      --bytes;
+      shift = 7;
+    } else {
+      digit = 2 * digit + ((*data >> shift--) & 1);
+      --get;
+    }
+  }
+  // Emit leading spaces and zeroes; detect field overflow
+  int leadingZeroes{0};
+  int editWidth{edit.width.value_or(0)};
+  int significant{digits - skippedZeroes};
+  if (edit.digits && significant <= *edit.digits) { // Bw.m, Ow.m, Zw.m
+    if (*edit.digits == 0 && bytes == 0) {
+      editWidth = std::max(1, editWidth);
+    } else {
+      leadingZeroes = *edit.digits - significant;
+    }
+  } else if (bytes == 0) {
+    leadingZeroes = 1;
+  }
+  int subTotal{leadingZeroes + significant};
+  int leadingSpaces{std::max(0, editWidth - subTotal)};
+  if (editWidth > 0 && leadingSpaces + subTotal > editWidth) {
+    return io.EmitRepeated('*', editWidth);
+  }
+  if (!(io.EmitRepeated(' ', leadingSpaces) &&
+          io.EmitRepeated('0', leadingZeroes))) {
+    return false;
+  }
+  // Emit remaining digits
+  while (bytes > 0) {
+    if (get == 0) {
+      char ch{static_cast<char>(digit >= 10 ? 'A' + digit - 10 : '0' + digit)};
+      if (!io.Emit(&ch, 1)) {
+        return false;
+      }
+      get = LOG2_BASE;
+      digit = 0;
+    } else if (shift < 0) {
+      data += increment;
+      --bytes;
+      shift = 7;
+    } else {
+      digit = 2 * digit + ((*data >> shift--) & 1);
+      --get;
+    }
+  }
+  return true;
+}
+
 template <int KIND>
 bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     common::HostSignedIntType<8 * KIND> n) {
@@ -38,21 +117,14 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     }
     break;
   case 'B':
-    for (; un > 0; un >>= 1) {
-      *--p = '0' + (static_cast<int>(un) & 1);
-    }
-    break;
+    return EditBOZOutput<1>(
+        io, edit, reinterpret_cast<const unsigned char *>(&n), KIND);
   case 'O':
-    for (; un > 0; un >>= 3) {
-      *--p = '0' + (static_cast<int>(un) & 7);
-    }
-    break;
+    return EditBOZOutput<3>(
+        io, edit, reinterpret_cast<const unsigned char *>(&n), KIND);
   case 'Z':
-    for (; un > 0; un >>= 4) {
-      int digit = static_cast<int>(un) & 0xf;
-      *--p = digit >= 10 ? 'A' + (digit - 10) : '0' + digit;
-    }
-    break;
+    return EditBOZOutput<4>(
+        io, edit, reinterpret_cast<const unsigned char *>(&n), KIND);
   case 'A': // legacy extension
     return EditCharacterOutput(
         io, edit, reinterpret_cast<char *>(&n), sizeof n);
@@ -442,11 +514,17 @@ template <int KIND> bool RealOutputEditing<KIND>::Edit(const DataEdit &edit) {
   case 'F':
     return EditFOutput(edit);
   case 'B':
+    return EditBOZOutput<1>(io_, edit,
+        reinterpret_cast<const unsigned char *>(&x_),
+        common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
   case 'O':
+    return EditBOZOutput<3>(io_, edit,
+        reinterpret_cast<const unsigned char *>(&x_),
+        common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
   case 'Z':
-    return EditIntegerOutput<KIND>(io_, edit,
-        static_cast<common::HostSignedIntType<8 * KIND>>(
-            decimal::BinaryFloatingPointNumber<binaryPrecision>{x_}.raw()));
+    return EditBOZOutput<4>(io_, edit,
+        reinterpret_cast<const unsigned char *>(&x_),
+        common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
   case 'G':
     return Edit(EditForGOutput(edit));
   case 'A': // legacy extension
@@ -475,6 +553,15 @@ bool EditLogicalOutput(IoStatementState &io, const DataEdit &edit, bool truth) {
   case 'G':
     return io.EmitRepeated(' ', std::max(0, edit.width.value_or(1) - 1)) &&
         io.Emit(truth ? "T" : "F", 1);
+  case 'B':
+    return EditBOZOutput<1>(io, edit,
+        reinterpret_cast<const unsigned char *>(&truth), sizeof truth);
+  case 'O':
+    return EditBOZOutput<3>(io, edit,
+        reinterpret_cast<const unsigned char *>(&truth), sizeof truth);
+  case 'Z':
+    return EditBOZOutput<4>(io, edit,
+        reinterpret_cast<const unsigned char *>(&truth), sizeof truth);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a LOGICAL data item",
@@ -544,6 +631,15 @@ bool EditCharacterOutput(IoStatementState &io, const DataEdit &edit,
   case 'A':
   case 'G':
     break;
+  case 'B':
+    return EditBOZOutput<1>(io, edit,
+        reinterpret_cast<const unsigned char *>(x), sizeof(CHAR) * length);
+  case 'O':
+    return EditBOZOutput<3>(io, edit,
+        reinterpret_cast<const unsigned char *>(x), sizeof(CHAR) * length);
+  case 'Z':
+    return EditBOZOutput<4>(io, edit,
+        reinterpret_cast<const unsigned char *>(x), sizeof(CHAR) * length);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a CHARACTER data item",
