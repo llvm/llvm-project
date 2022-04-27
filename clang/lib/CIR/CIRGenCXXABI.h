@@ -95,6 +95,15 @@ public:
   /// Emit the ABI-specific prolog for the function
   virtual void buildInstanceFunctionProlog(CIRGenFunction &CGF) = 0;
 
+  /// Get the type of the implicit "this" parameter used by a method. May return
+  /// zero if no specific type is applicable, e.g. if the ABI expects the "this"
+  /// parameter to point to some artificial offset in a complete object due to
+  /// vbases being reordered.
+  virtual const clang::CXXRecordDecl *
+  getThisArgumentTypeForMethod(const clang::CXXMethodDecl *MD) {
+    return MD->getParent();
+  }
+
   /// Return whether the given global decl needs a VTT parameter.
   virtual bool NeedsVTTParameter(clang::GlobalDecl GD);
 

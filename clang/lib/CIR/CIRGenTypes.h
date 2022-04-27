@@ -197,6 +197,11 @@ public:
       clang::CXXCtorType CtorKind, unsigned ExtraPrefixArgs,
       unsigned ExtraSuffixArgs, bool PassProtoArgs = true);
 
+  const CIRGenFunctionInfo &
+  arrangeCXXMethodCall(const CallArgList &args,
+                       const clang::FunctionProtoType *type,
+                       RequiredArgs required, unsigned numPrefixArgs);
+
   const CIRGenFunctionInfo &arrangeCXXStructorDeclaration(clang::GlobalDecl GD);
 
   const CIRGenFunctionInfo &

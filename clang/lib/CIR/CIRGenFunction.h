@@ -44,7 +44,10 @@ namespace cir {
 enum TypeEvaluationKind { TEK_Scalar, TEK_Complex, TEK_Aggregate };
 
 class CIRGenFunction {
+public:
   CIRGenModule &CGM;
+
+private:
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
