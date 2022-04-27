@@ -1,5 +1,8 @@
 ; RUN: llc < %s -stop-after=virtregrewriter -o - | FileCheck %s
 ;
+; NVPTX produces a different order of the BBs
+; XFAIL: nvptx
+
 ; Generated with "clang++ -g -O1 -S -emit-llvm"
 ;
 ; inline bool bar(char c) {

@@ -360,6 +360,8 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let mayStore             = ps.mayStore;
   let IsAtomicRet          = ps.IsAtomicRet;
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
+  let VALU                 = ps.VALU;
+  let LGKM_CNT             = ps.LGKM_CNT;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -505,6 +507,7 @@ class MUBUF_Load_Pseudo <string opName,
   let AsmMatchConverter = !if(isLds, "cvtMubufLds", "cvtMubuf");
 
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
+  let LGKM_CNT = isLds;
   let has_vdata = !not(isLdsOpc);
   let mayLoad = 1;
   let mayStore = 0;
@@ -513,6 +516,7 @@ class MUBUF_Load_Pseudo <string opName,
   let has_tfe = !not(isLds);
   let lds = isLds;
   let elements = getMUBUFElements<vdata_vt>.ret;
+  let VALU = isLds;
 }
 
 class MUBUF_Offset_Load_Pat <Instruction inst, ValueType load_vt = i32, SDPatternOperator ld = null_frag> : Pat <
@@ -631,6 +635,7 @@ class MUBUF_Pseudo_Store_Lds<string opName>
                  (outs),
                  (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, CPol:$cpol, SWZ:$swz),
                  " $srsrc, $soffset$offset lds$cpol$swz"> {
+  let LGKM_CNT = 1;
   let mayLoad = 0;
   let mayStore = 1;
   let maybeAtomic = 1;
@@ -639,6 +644,7 @@ class MUBUF_Pseudo_Store_Lds<string opName>
   let has_vaddr = 0;
   let has_tfe = 0;
   let lds = 1;
+  let VALU = 1;
 
   let Uses = [EXEC, M0];
   let AsmMatchConverter = "cvtMubufLds";

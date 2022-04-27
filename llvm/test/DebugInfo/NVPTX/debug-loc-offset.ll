@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=nvptx64-nvidia-cuda -dwarf-directory=0 < %s | FileCheck %s
+; RUN: llc -mtriple=nvptx64-nvidia-cuda < %s | FileCheck %s
 
 ; CHECK: .target sm_{{[0-9]+}}, debug
 

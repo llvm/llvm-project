@@ -10,7 +10,7 @@
 #define LLVM_DEBUGINFO_GSYM_LOOKUPRESULT_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/GSYM/Range.h"
+#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include <inttypes.h>
 #include <vector>
 

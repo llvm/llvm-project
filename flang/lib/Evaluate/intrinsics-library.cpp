@@ -325,6 +325,8 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 
+#if !defined(__PPC__) || defined(__LONG_DOUBLE_IEEE128__)
+// TODO: use HostTypeExists instead?
 template <>
 struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<long double, long double>;
@@ -340,6 +342,7 @@ struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
+#endif // !defined(__PPC__) || defined(__LONG_DOUBLE_IEEE128__)
 #endif
 
 /// Define pgmath description
