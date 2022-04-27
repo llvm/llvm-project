@@ -10,6 +10,7 @@
 #ifndef LLVM_ANALYSIS_MODELUNDERTRAININGRUNNER_H
 #define LLVM_ANALYSIS_MODELUNDERTRAININGRUNNER_H
 
+#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Config/llvm-config.h"
 
 #ifdef LLVM_HAVE_TF_API
@@ -48,6 +49,11 @@ public:
                        StringRef DecisionName,
                        const std::vector<TensorSpec> &InputSpecs,
                        StringRef OutputSpecsPathOverride = "");
+  static std::unique_ptr<ModelUnderTrainingRunner>
+  createAndEnsureValid(LLVMContext &Ctx, const std::string &ModelPath,
+                       StringRef DecisionName,
+                       const std::vector<TensorSpec> &InputSpecs,
+                       const std::vector<LoggedFeatureSpec> &OutputSpecs);
 
 private:
   ModelUnderTrainingRunner(LLVMContext &Ctx, const std::string &ModelPath,
@@ -58,7 +64,6 @@ private:
   const std::vector<LoggedFeatureSpec> OutputSpecs;
   Optional<TFModelEvaluator::EvaluationResult> LastEvaluationResult;
   void *evaluateUntyped() override;
-  void *getTensorUntyped(size_t Index) override;
   bool isValid() const { return !!Evaluator; }
 };
 

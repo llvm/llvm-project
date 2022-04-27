@@ -10,6 +10,8 @@
 #include "google/protobuf/struct.pb.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
+#include "llvm/Analysis/ModelUnderTrainingRunner.h"
+#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -100,6 +102,36 @@ TEST(TFUtilsTest, EvalError) {
   auto ER = Evaluator.evaluate();
   EXPECT_FALSE(ER.hasValue());
   EXPECT_FALSE(Evaluator.isValid());
+}
+
+TEST(TFUtilsTest, UnsupportedFeature) {
+  const static int64_t KnownSize = 214;
+  std::vector<TensorSpec> InputSpecs{
+      TensorSpec::createSpec<int32_t>("serving_default_input_1",
+                                      {1, KnownSize}),
+      TensorSpec::createSpec<float>("this_feature_does_not_exist", {2, 5})};
+
+  LLVMContext Ctx;
+  auto Evaluator = ModelUnderTrainingRunner::createAndEnsureValid(
+      Ctx, getModelPath(), "StatefulPartitionedCall", InputSpecs,
+      {LoggedFeatureSpec{
+          TensorSpec::createSpec<float>("StatefulPartitionedCall", {1}),
+          None}});
+  int32_t *V = Evaluator->getTensor<int32_t>(0);
+  // Fill it up with 1s, we know the output.
+  for (auto I = 0; I < KnownSize; ++I)
+    V[I] = 1;
+
+  float *F = Evaluator->getTensor<float>(1);
+  for (auto I = 0; I < 2 * 5; ++I)
+    F[I] = 3.14 + I;
+  float Ret = Evaluator->evaluate<float>();
+  EXPECT_EQ(static_cast<int64_t>(Ret), 80);
+  // The input vector should be unchanged
+  for (auto I = 0; I < KnownSize; ++I)
+    EXPECT_EQ(V[I], 1);
+  for (auto I = 0; I < 2 * 5; ++I)
+    EXPECT_FLOAT_EQ(F[I], 3.14 + I);
 }
 
 #define PROTO_CHECKER(FNAME, TYPE, INDEX, EXP)                                 \
