@@ -11,6 +11,10 @@
 
 #include <sys/ptrace.h>
 
+#include "llvm/Support/Error.h"
+
+#include <vector>
+
 #ifdef __ANDROID__
 #if defined(__arm64__) || defined(__aarch64__)
 typedef unsigned long elf_greg_t;
@@ -28,3 +32,24 @@ typedef struct user_fpsimd_state elf_fpregset_t;
 #else // __ANDROID__
 #include <sys/procfs.h>
 #endif // __ANDROID__
+
+namespace lldb_private {
+namespace process_linux {
+
+/// \return
+///     The content of /proc/cpuinfo and cache it if errors didn't happen.
+llvm::Expected<llvm::ArrayRef<uint8_t>> GetProcfsCpuInfo();
+
+/// \return
+///     A list of available logical core ids given the contents of
+///     /proc/cpuinfo.
+llvm::Expected<std::vector<int>>
+GetAvailableLogicalCoreIDs(llvm::StringRef cpuinfo);
+
+/// \return
+///     A list with all the logical cores available in the system and cache it
+///     if errors didn't happen.
+llvm::Expected<llvm::ArrayRef<int>> GetAvailableLogicalCoreIDs();
+
+} // namespace process_linux
+} // namespace lldb_private

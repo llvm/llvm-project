@@ -9,6 +9,7 @@
 #include "IntelPTCollector.h"
 
 #include "Perf.h"
+#include "Procfs.h"
 
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/linux/Support.h"
@@ -56,21 +57,6 @@ enum IntelPTConfigFileType {
   // store a given configuration.
   BitOffset
 };
-
-/// Get the content of /proc/cpuinfo that can be later used to decode traces.
-static Expected<ArrayRef<uint8_t>> GetCPUInfo() {
-  static llvm::Optional<std::vector<uint8_t>> cpu_info;
-  if (!cpu_info) {
-    auto buffer_or_error = errorOrToExpected(getProcFile("cpuinfo"));
-    if (!buffer_or_error)
-      return buffer_or_error.takeError();
-    MemoryBuffer &buffer = **buffer_or_error;
-    cpu_info = std::vector<uint8_t>(
-        reinterpret_cast<const uint8_t *>(buffer.getBufferStart()),
-        reinterpret_cast<const uint8_t *>(buffer.getBufferEnd()));
-  }
-  return *cpu_info;
-}
 
 static Expected<uint32_t> ReadIntelPTConfigFile(const char *file,
                                                 IntelPTConfigFileType type) {
@@ -430,7 +416,7 @@ void IntelPTThreadTrace::ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
 
 TraceThreadState IntelPTThreadTrace::GetState() const {
   return {static_cast<int64_t>(m_tid),
-          {TraceBinaryData{"threadTraceBuffer",
+          {TraceBinaryData{IntelPTDataKinds::kThreadTraceBuffer,
                            static_cast<int64_t>(GetTraceBufferSize())}}};
 }
 
@@ -592,13 +578,13 @@ Error IntelPTCollector::OnThreadDestroyed(lldb::tid_t tid) {
 }
 
 Expected<json::Value> IntelPTCollector::GetState() const {
-  Expected<ArrayRef<uint8_t>> cpu_info = GetCPUInfo();
+  Expected<ArrayRef<uint8_t>> cpu_info = GetProcfsCpuInfo();
   if (!cpu_info)
     return cpu_info.takeError();
 
   TraceGetStateResponse state;
-  state.processBinaryData.push_back(
-      {"cpuInfo", static_cast<int64_t>(cpu_info->size())});
+  state.processBinaryData.push_back({IntelPTDataKinds::kProcFsCpuInfo,
+                                     static_cast<int64_t>(cpu_info->size())});
 
   std::vector<TraceThreadState> thread_states =
       m_thread_traces.GetThreadStates();
@@ -622,14 +608,14 @@ IntelPTCollector::GetTracedThread(lldb::tid_t tid) const {
 
 Expected<std::vector<uint8_t>>
 IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) const {
-  if (request.kind == "threadTraceBuffer") {
+  if (request.kind == IntelPTDataKinds::kThreadTraceBuffer) {
     if (Expected<const IntelPTThreadTrace &> trace =
             GetTracedThread(*request.tid))
       return trace->GetIntelPTBuffer(request.offset, request.size);
     else
       return trace.takeError();
-  } else if (request.kind == "cpuInfo") {
-    return GetCPUInfo();
+  } else if (request.kind == IntelPTDataKinds::kProcFsCpuInfo) {
+    return GetProcfsCpuInfo();
   }
   return createStringError(inconvertibleErrorCode(),
                            "Unsuported trace binary data kind: %s",

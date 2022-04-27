@@ -467,7 +467,7 @@ read packet: OK/E<error code>;AAAAAAAAA
 //
 //  Binary data kinds:
 //    - threadTraceBuffer: trace buffer for a thread.
-//    - cpuInfo: contents of the /proc/cpuinfo file.
+//    - procfsCpuInfo: contents of the /proc/cpuinfo file.
 //
 //  Counter info kinds:
 //    tsc-perf-zero-conversion:
@@ -522,7 +522,7 @@ read packet: {...object}/E<error code>;AAAAAAAAA
 //
 //  Binary data kinds:
 //    - threadTraceBuffer: trace buffer for a thread.
-//    - cpuInfo: contents of the /proc/cpuinfo file.
+//    - procfsCpuInfo: contents of the /proc/cpuinfo file.
 //----------------------------------------------------------------------
 
 send packet: jLLDBTraceGetBinaryData:{"type":<type>,"kind":<query>,"tid":<tid>,"offset":<offset>,"size":<size>}]
