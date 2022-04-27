@@ -2265,33 +2265,52 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
   const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
 
+  bool IsTA = true;
   if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
-    // The last operand of the pseudo is the policy op, but we're expecting a
-    // Glue operand last. We may also have a chain.
+    // The last operand of the pseudo is the policy op, but we might have a
+    // Glue operand last. We might also have a chain.
     TailPolicyOpIdx = N->getNumOperands() - 1;
     if (N->getOperand(*TailPolicyOpIdx).getValueType() == MVT::Glue)
       (*TailPolicyOpIdx)--;
     if (N->getOperand(*TailPolicyOpIdx).getValueType() == MVT::Other)
       (*TailPolicyOpIdx)--;
 
-    // If the policy isn't TAIL_AGNOSTIC we can't perform this optimization.
-    if (N->getConstantOperandVal(*TailPolicyOpIdx) != RISCVII::TAIL_AGNOSTIC)
-      return false;
+    if (!(N->getConstantOperandVal(*TailPolicyOpIdx) &
+          RISCVII::TAIL_AGNOSTIC)) {
+      // Keep the true-masked instruction when there is no unmasked TU
+      // instruction
+      if (I->UnmaskedTUPseudo == I->MaskedPseudo && !N->getOperand(0).isUndef())
+        return false;
+      // We can't use TA if the tie-operand is not IMPLICIT_DEF
+      if (!N->getOperand(0).isUndef())
+        IsTA = false;
+    }
   }
 
-  const MCInstrDesc &UnmaskedMCID = TII->get(I->UnmaskedPseudo);
+  if (IsTA) {
+    uint64_t TSFlags = TII->get(I->UnmaskedPseudo).TSFlags;
 
-  // Check that we're dropping the merge operand, the mask operand, and any
-  // policy operand when we transform to this unmasked pseudo.
-  assert(!RISCVII::hasMergeOp(UnmaskedMCID.TSFlags) &&
-         RISCVII::hasDummyMaskOp(UnmaskedMCID.TSFlags) &&
-         !RISCVII::hasVecPolicyOp(UnmaskedMCID.TSFlags) &&
-         "Unexpected pseudo to transform to");
-  (void)UnmaskedMCID;
+    // Check that we're dropping the merge operand, the mask operand, and any
+    // policy operand when we transform to this unmasked pseudo.
+    assert(!RISCVII::hasMergeOp(TSFlags) && RISCVII::hasDummyMaskOp(TSFlags) &&
+           !RISCVII::hasVecPolicyOp(TSFlags) &&
+           "Unexpected pseudo to transform to");
+    (void)TSFlags;
+  } else {
+    uint64_t TSFlags = TII->get(I->UnmaskedTUPseudo).TSFlags;
 
+    // Check that we're dropping the mask operand, and any policy operand
+    // when we transform to this unmasked tu pseudo.
+    assert(RISCVII::hasMergeOp(TSFlags) && RISCVII::hasDummyMaskOp(TSFlags) &&
+           !RISCVII::hasVecPolicyOp(TSFlags) &&
+           "Unexpected pseudo to transform to");
+    (void)TSFlags;
+  }
+
+  unsigned Opc = IsTA ? I->UnmaskedPseudo : I->UnmaskedTUPseudo;
   SmallVector<SDValue, 8> Ops;
-  // Skip the merge operand at index 0.
-  for (unsigned I = 1, E = N->getNumOperands(); I != E; I++) {
+  // Skip the merge operand at index 0 if IsTA
+  for (unsigned I = IsTA, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, the policy, and the Glue.
     SDValue Op = N->getOperand(I);
     if (I == MaskOpIdx || I == TailPolicyOpIdx ||
@@ -2304,8 +2323,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   if (auto *TGlued = Glued->getGluedNode())
     Ops.push_back(SDValue(TGlued, TGlued->getNumValues() - 1));
 
-  SDNode *Result =
-      CurDAG->getMachineNode(I->UnmaskedPseudo, SDLoc(N), N->getVTList(), Ops);
+  SDNode *Result = CurDAG->getMachineNode(Opc, SDLoc(N), N->getVTList(), Ops);
   ReplaceUses(N, Result);
 
   return true;

@@ -3050,9 +3050,15 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
   StartHandlingCommand();
 
-  OverrideExecutionContext(m_debugger.GetSelectedExecutionContext());
-  auto finalize = llvm::make_scope_exit([this]() {
-    RestoreExecutionContext();
+  ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
+  bool pushed_exe_ctx = false;
+  if (exe_ctx.HasTargetScope()) {
+    OverrideExecutionContext(exe_ctx);
+    pushed_exe_ctx = true;
+  }
+  auto finalize = llvm::make_scope_exit([this, pushed_exe_ctx]() {
+    if (pushed_exe_ctx)
+      RestoreExecutionContext();
   });
 
   lldb_private::CommandReturnObject result(m_debugger.GetUseColor());
