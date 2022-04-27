@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// void swap(basic_string& s);
+// void swap(basic_string& s); // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -31,7 +33,7 @@ test(S s1, S s2)
     assert(s2 == s1_);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S(""), S(""));
@@ -80,7 +82,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

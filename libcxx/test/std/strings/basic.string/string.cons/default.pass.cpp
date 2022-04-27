@@ -8,7 +8,7 @@
 
 // <string>
 
-// basic_string() noexcept(is_nothrow_default_constructible<allocator_type>::value);
+// basic_string() noexcept(is_nothrow_default_constructible<allocator_type>::value); // constexpr since C++20
 
 #include <cassert>
 #include <string>
@@ -25,7 +25,7 @@ LIBCPP_STATIC_ASSERT(!std::is_nothrow_default_constructible<
                      std::basic_string<char, std::char_traits<char>, limited_allocator<char, 10>>>::value, "");
 #endif
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   std::string str;
   assert(str.empty());
 
@@ -36,7 +36,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

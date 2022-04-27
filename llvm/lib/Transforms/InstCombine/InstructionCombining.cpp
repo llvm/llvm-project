@@ -1955,13 +1955,11 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   // Combine Indices - If the source pointer to this getelementptr instruction
   // is a getelementptr instruction with matching element type, combine the
   // indices of the two getelementptr instructions into a single instruction.
-  if (Src->getResultElementType() != GEP.getSourceElementType())
-    return nullptr;
-
   if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
     return nullptr;
 
-  if (Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
+  if (Src->getResultElementType() == GEP.getSourceElementType() &&
+      Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
       Src->hasOneUse()) {
     Value *GO1 = GEP.getOperand(1);
     Value *SO1 = Src->getOperand(1);
@@ -2023,6 +2021,68 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   if (auto *SrcGEP = dyn_cast<GEPOperator>(Src->getOperand(0)))
     if (SrcGEP->getNumOperands() == 2 && shouldMergeGEPs(*Src, *SrcGEP))
       return nullptr;   // Wait until our source is folded to completion.
+
+  // For constant GEPs, use a more general offset-based folding approach.
+  // Only do this for opaque pointers, as the result element type may change.
+  Type *PtrTy = Src->getType()->getScalarType();
+  if (PtrTy->isOpaquePointerTy() && GEP.hasAllConstantIndices() &&
+      (Src->hasOneUse() || Src->hasAllConstantIndices())) {
+    // Split Src into a variable part and a constant suffix.
+    gep_type_iterator GTI = gep_type_begin(*Src);
+    Type *BaseType = GTI.getIndexedType();
+    bool IsFirstType = true;
+    unsigned NumVarIndices = 0;
+    for (auto Pair : enumerate(Src->indices())) {
+      if (!isa<ConstantInt>(Pair.value())) {
+        BaseType = GTI.getIndexedType();
+        IsFirstType = false;
+        NumVarIndices = Pair.index() + 1;
+      }
+      ++GTI;
+    }
+
+    // Determine the offset for the constant suffix of Src.
+    APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);
+    if (NumVarIndices != Src->getNumIndices()) {
+      // FIXME: getIndexedOffsetInType() does not handled scalable vectors.
+      if (isa<ScalableVectorType>(BaseType))
+        return nullptr;
+
+      SmallVector<Value *> ConstantIndices;
+      if (!IsFirstType)
+        ConstantIndices.push_back(
+            Constant::getNullValue(Type::getInt32Ty(GEP.getContext())));
+      append_range(ConstantIndices, drop_begin(Src->indices(), NumVarIndices));
+      Offset += DL.getIndexedOffsetInType(BaseType, ConstantIndices);
+    }
+
+    // Add the offset for GEP (which is fully constant).
+    if (!GEP.accumulateConstantOffset(DL, Offset))
+      return nullptr;
+
+    // Convert the total offset back into indices.
+    SmallVector<APInt> ConstIndices =
+        DL.getGEPIndicesForOffset(BaseType, Offset);
+    if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero()))
+      return nullptr;
+
+    SmallVector<Value *> Indices;
+    append_range(Indices, drop_end(Src->indices(),
+                                   Src->getNumIndices() - NumVarIndices));
+    for (const APInt &Idx : drop_begin(ConstIndices, !IsFirstType))
+      Indices.push_back(ConstantInt::get(GEP.getContext(), Idx));
+
+    return isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))
+               ? GetElementPtrInst::CreateInBounds(Src->getSourceElementType(),
+                                                   Src->getOperand(0), Indices,
+                                                   GEP.getName())
+               : GetElementPtrInst::Create(Src->getSourceElementType(),
+                                           Src->getOperand(0), Indices,
+                                           GEP.getName());
+  }
+
+  if (Src->getResultElementType() != GEP.getSourceElementType())
+    return nullptr;
 
   SmallVector<Value*, 8> Indices;
 
