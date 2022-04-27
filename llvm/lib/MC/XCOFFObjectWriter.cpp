@@ -66,6 +66,10 @@ struct Symbol {
   const MCSymbolXCOFF *const MCSym;
   uint32_t SymbolTableIndex;
 
+  XCOFF::VisibilityType getVisibilityType() const {
+    return MCSym->getVisibilityType();
+  }
+
   XCOFF::StorageClass getStorageClass() const {
     return MCSym->getStorageClass();
   }
@@ -84,6 +88,9 @@ struct XCOFFSection {
   SmallVector<Symbol, 1> Syms;
   SmallVector<XCOFFRelocation, 1> Relocations;
   StringRef getSymbolTableName() const { return MCSec->getSymbolTableName(); }
+  XCOFF::VisibilityType getVisibilityType() const {
+    return MCSec->getVisibilityType();
+  }
   XCOFFSection(const MCSectionXCOFF *MCSec)
       : MCSec(MCSec), SymbolTableIndex(-1), Address(-1), Size(0) {}
 };
@@ -670,7 +677,8 @@ void XCOFFObjectWriter::writeSymbolEntry(StringRef SymbolName, uint32_t Value,
   // table entries for a detailed description. Since we don't yet support
   // visibility, and all other bits are either optionally set or reserved, this
   // is always zero.
-  // TODO FIXME How to assert a symbol's visibilty is default?
+  if (SymbolType != 0)
+    report_fatal_error("Emitting non-zero visibilities is not supported yet.");
   // TODO Set the function indicator (bit 10, 0x0020) for functions
   // when debugging is enabled.
   W.write<uint16_t>(SymbolType);
@@ -706,7 +714,7 @@ void XCOFFObjectWriter::writeSymbolEntryForCsectMemberLabel(
 
   writeSymbolEntry(SymbolRef.getSymbolTableName(),
                    CSectionRef.Address + SymbolOffset, SectionIndex,
-                   /*SymbolType=*/0, SymbolRef.getStorageClass());
+                   SymbolRef.getVisibilityType(), SymbolRef.getStorageClass());
 
   writeSymbolAuxCsectEntry(CSectionRef.SymbolTableIndex, XCOFF::XTY_LD,
                            CSectionRef.MCSec->getMappingClass());
@@ -726,7 +734,7 @@ void XCOFFObjectWriter::writeSymbolEntryForControlSection(
     const XCOFFSection &CSectionRef, int16_t SectionIndex,
     XCOFF::StorageClass StorageClass) {
   writeSymbolEntry(CSectionRef.getSymbolTableName(), CSectionRef.Address,
-                   SectionIndex, /*SymbolType=*/0, StorageClass);
+                   SectionIndex, CSectionRef.getVisibilityType(), StorageClass);
 
   writeSymbolAuxCsectEntry(CSectionRef.Size, getEncodedType(CSectionRef.MCSec),
                            CSectionRef.MCSec->getMappingClass());

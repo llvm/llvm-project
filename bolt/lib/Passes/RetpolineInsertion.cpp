@@ -168,7 +168,7 @@ BinaryFunction *createNewRetpoline(BinaryContext &BC,
   MCInst Return;
   MIB.createReturn(Return);
   BB2.addInstruction(Return);
-  NewRetpoline->insertBasicBlocks(nullptr, move(NewBlocks),
+  NewRetpoline->insertBasicBlocks(nullptr, std::move(NewBlocks),
                                   /* UpdateLayout */ true,
                                   /* UpdateCFIState */ false);
 

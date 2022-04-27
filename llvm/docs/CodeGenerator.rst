@@ -510,7 +510,7 @@ The ``MachineFunction`` class
 The ``MachineFunction`` class contains a list of machine basic blocks
 (:raw-html:`<tt>` `MachineBasicBlock`_ :raw-html:`</tt>` instances).  It
 corresponds one-to-one with the LLVM function input to the instruction selector.
-In addition to a list of basic blocks, the ``MachineFunction`` contains a a
+In addition to a list of basic blocks, the ``MachineFunction`` contains a
 ``MachineConstantPool``, a ``MachineFrameInfo``, a ``MachineFunctionInfo``, and
 a ``MachineRegisterInfo``.  See ``include/llvm/CodeGen/MachineFunction.h`` for
 more information.
@@ -2283,7 +2283,7 @@ taken when considering them.
 Instruction naming
 ^^^^^^^^^^^^^^^^^^
 
-An instruction name consists of the base name, a default operand size, and a a
+An instruction name consists of the base name, a default operand size, and a
 character per operand with an optional special size. For example:
 
 ::
