@@ -122,7 +122,7 @@ enum RegisterMapping {
   AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
   NUM_EXTRA_VGPRS = 1,    // A reserved slot for DS.
-  EXTRA_VGPR_LDS = 0,     // This is a placeholder the Shader algorithm uses.
+  EXTRA_VGPR_LDS = 0,     // An artificial register to track LDS writes.
   NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
 };
 
@@ -496,6 +496,14 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
   }
 }
 
+// MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS written
+// can be accessed. A load from LDS to VMEM does not need a wait.
+static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
+  return SIInstrInfo::isVALU(MI) &&
+         (SIInstrInfo::isMUBUF(MI) || SIInstrInfo::isFLAT(MI)) &&
+         MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
+}
+
 void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                     const SIRegisterInfo *TRI,
                                     const MachineRegisterInfo *MRI,
@@ -644,7 +652,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         setRegScore(RegNo, T, CurrScore);
       }
     }
-    if (TII->isDS(Inst) && Inst.mayStore()) {
+    if (Inst.mayStore() && (TII->isDS(Inst) || mayWriteLDSThroughDMA(Inst))) {
       setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
     }
   }
@@ -1089,7 +1097,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
             SLoadAddresses.erase(Ptr);
         }
         unsigned AS = Memop->getAddrSpace();
-        if (AS != AMDGPUAS::LOCAL_ADDRESS)
+        if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
           continue;
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
         // VM_CNT is only relevant to vgpr or LDS.
