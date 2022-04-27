@@ -15,6 +15,7 @@
 #include "support/Logger.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
@@ -1318,7 +1319,7 @@ bool fromJSON(const llvm::json::Value &Params, InlayHintsParams &R,
   return O && O.map("textDocument", R.textDocument) && O.map("range", R.range);
 }
 
-llvm::json::Value toJSON(InlayHintKind K) {
+static llvm::StringLiteral toString(InlayHintKind K) {
   switch (K) {
   case InlayHintKind::ParameterHint:
     return "parameter";
@@ -1329,6 +1330,8 @@ llvm::json::Value toJSON(InlayHintKind K) {
   }
   llvm_unreachable("Unknown clang.clangd.InlayHintKind");
 }
+
+llvm::json::Value toJSON(InlayHintKind K) { return toString(K); }
 
 llvm::json::Value toJSON(const InlayHint &H) {
   return llvm::json::Object{{"position", H.position},
@@ -1343,6 +1346,10 @@ bool operator==(const InlayHint &A, const InlayHint &B) {
 bool operator<(const InlayHint &A, const InlayHint &B) {
   return std::tie(A.position, A.range, A.kind, A.label) <
          std::tie(B.position, B.range, B.kind, B.label);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
+  return OS << toString(Kind);
 }
 
 static const char *toString(OffsetEncoding OE) {
