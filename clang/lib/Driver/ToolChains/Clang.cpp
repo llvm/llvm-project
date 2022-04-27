@@ -4675,7 +4675,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (IsUsingLTO) {
       // Only AMDGPU supports device-side LTO.
       if (IsDeviceOffloadAction &&
-          Args.hasArg(options::OPT_fno_openmp_new_driver) &&
+          !Args.hasFlag(options::OPT_fopenmp_new_driver,
+                        options::OPT_fno_openmp_new_driver, true) &&
           !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Args.getLastArg(options::OPT_foffload_lto,

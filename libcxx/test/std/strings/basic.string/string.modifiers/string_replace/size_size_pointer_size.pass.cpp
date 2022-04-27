@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   replace(size_type pos, size_type n1, const charT* s, size_type n2);
+//   replace(size_type pos, size_type n1, const charT* s, size_type n2); // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -37,7 +39,7 @@ test(S s, typename S::size_type pos, typename S::size_type n1,
         assert(s.size() == old_size - xlen + rlen);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -1337,18 +1339,18 @@ void test() {
   test11<S>();
 
 #if TEST_STD_VER > 17
-  // static_assert(test0<S>());
-  // static_assert(test1<S>());
-  // static_assert(test2<S>());
-  // static_assert(test3<S>());
-  // static_assert(test4<S>());
-  // static_assert(test5<S>());
-  // static_assert(test6<S>());
-  // static_assert(test7<S>());
-  // static_assert(test8<S>());
-  // static_assert(test9<S>());
-  // static_assert(test10<S>());
-  // static_assert(test11<S>());
+  static_assert(test0<S>());
+  static_assert(test1<S>());
+  static_assert(test2<S>());
+  static_assert(test3<S>());
+  static_assert(test4<S>());
+  static_assert(test5<S>());
+  static_assert(test6<S>());
+  static_assert(test7<S>());
+  static_assert(test8<S>());
+  static_assert(test9<S>());
+  static_assert(test10<S>());
+  static_assert(test11<S>());
 #endif
 }
 

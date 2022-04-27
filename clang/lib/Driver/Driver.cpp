@@ -3984,7 +3984,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   bool UseNewOffloadingDriver =
       C.isOffloadingHostKind(Action::OFK_OpenMP) &&
-      !Args.hasArg(options::OPT_fno_openmp_new_driver);
+      Args.hasFlag(options::OPT_fopenmp_new_driver,
+                   options::OPT_fno_openmp_new_driver, true);
 
   for (auto &I : Inputs) {
     types::ID InputType = I.first;

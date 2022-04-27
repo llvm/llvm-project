@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// iterator insert(const_iterator p, size_type n, charT c);
+// iterator insert(const_iterator p, size_type n, charT c); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -28,7 +30,7 @@ test(S s, typename S::difference_type pos, typename S::size_type n,
     assert(s == expected);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S(""), 0, 0, '1', S(""));
@@ -173,7 +175,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

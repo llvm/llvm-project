@@ -10,7 +10,7 @@
 
 // <string>
 
-// basic_string& operator=(initializer_list<charT> il);
+// basic_string& operator=(initializer_list<charT> il); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     std::string s;
     s = {'a', 'b', 'c'};
@@ -38,7 +38,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

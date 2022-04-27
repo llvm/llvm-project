@@ -20,7 +20,7 @@ define <16 x i8> @sel.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 }
 
 ; COST-LABEL: sel.v4i16
-; COST:       Found an estimated cost of 18 for instruction: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; COST:       Found an estimated cost of 2 for instruction: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CODE-LABEL: sel.v4i16
 ; CODE:       rev32 v0.4h, v0.4h
 ; CODE:       trn2 v0.4h, v0.4h, v1.4h

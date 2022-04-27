@@ -28,9 +28,8 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/raw_ostream.h"
 #include <system_error>
 #include <vector>
 
@@ -85,10 +84,6 @@ static cl::opt<InputLanguages>
                              clEnumValN(InputLanguages::MIR, "mir", "")),
                   cl::cat(LLVMReduceOptions));
 
-static cl::opt<std::string> TargetTriple("mtriple",
-                                         cl::desc("Set the target triple"),
-                                         cl::cat(LLVMReduceOptions));
-
 static cl::opt<int>
     MaxPassIterations("max-pass-iterations",
                       cl::desc("Maximum number of times to run the full set "
@@ -96,6 +91,13 @@ static cl::opt<int>
                       cl::init(1), cl::cat(LLVMReduceOptions));
 
 static codegen::RegisterCodeGenFlags CGF;
+
+static void initializeTargetInfo() {
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+}
 
 void writeOutput(ReducerWorkItem &M, StringRef Message) {
   if (ReplaceInput) // In-place
@@ -110,26 +112,6 @@ void writeOutput(ReducerWorkItem &M, StringRef Message) {
   }
   M.print(Out, /*AnnotationWriter=*/nullptr);
   errs() << Message << OutputFilename << "\n";
-}
-
-static std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
-
-  if (TargetTriple == "")
-    TargetTriple = sys::getDefaultTargetTriple();
-  auto TT(Triple::normalize(TargetTriple));
-  std::string CPU(codegen::getCPUStr());
-  std::string FS(codegen::getFeaturesStr());
-
-  std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
-
-  return std::unique_ptr<LLVMTargetMachine>(
-      static_cast<LLVMTargetMachine *>(TheTarget->createTargetMachine(
-          TT, CPU, FS, TargetOptions(), None, None, CodeGenOpt::Default)));
 }
 
 int main(int Argc, char **Argv) {
@@ -151,15 +133,15 @@ int main(int Argc, char **Argv) {
     return 0;
   }
 
+  if (ReduceModeMIR)
+    initializeTargetInfo();
+
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<MachineModuleInfo> MMI;
-  std::unique_ptr<ReducerWorkItem> OriginalProgram;
-  if (ReduceModeMIR) {
-    TM = createTargetMachine();
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
-  }
-  OriginalProgram = parseReducerWorkItem(InputFilename, Context, MMI.get());
+
+  std::unique_ptr<ReducerWorkItem> OriginalProgram = parseReducerWorkItem(
+      Argv[0], InputFilename, Context, TM, MMI, ReduceModeMIR);
   if (!OriginalProgram) {
     return 1;
   }
