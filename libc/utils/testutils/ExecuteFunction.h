@@ -41,7 +41,7 @@ struct ProcessStatus {
 };
 
 ProcessStatus invoke_in_subprocess(FunctionCaller *func,
-                                   unsigned timeout_ms = TIMEOUT);
+                                   unsigned timeout_ms = ProcessStatus::TIMEOUT);
 
 const char *signal_as_string(int signum);
 
