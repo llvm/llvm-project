@@ -19,10 +19,6 @@ package llvm
 import "C"
 import "unsafe"
 
-func (pm PassManager) AddThreadSanitizerPass() {
-	C.LLVMAddThreadSanitizerPass(pm.C)
-}
-
 func (pm PassManager) AddDataFlowSanitizerPass(abilist []string) {
 	abiliststrs := make([]*C.char, len(abilist))
 	for i, arg := range abilist {
