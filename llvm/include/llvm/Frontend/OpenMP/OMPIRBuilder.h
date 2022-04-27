@@ -95,6 +95,8 @@ public:
   /// Type used throughout for insertion points.
   using InsertPointTy = IRBuilder<>::InsertPoint;
 
+  struct OMPRegionInfo;
+
   /// Callback type for variable finalization (think destructors).
   ///
   /// \param CodeGenIP is the insertion point at which the finalization code
@@ -103,21 +105,60 @@ public:
   /// A finalize callback knows about all objects that need finalization, e.g.
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
-  using FinalizeCallbackTy = std::function<void(InsertPointTy CodeGenIP)>;
+  using LeaveRegionCallbackTy = std::function<void(
+      InsertPointTy ExitingIP, 
+      omp::Directive LeaveReason,
+      OMPRegionInfo &Region)>; 
 
-  struct FinalizationInfo {
-    /// The finalization callback provided by the last in-flight invocation of
-    /// createXXXX for the directive of kind DK.
-    FinalizeCallbackTy FiniCB;
 
-    /// The directive kind of the innermost directive that has an associated
-    /// region which might require finalization when it is left.
-    omp::Directive DK;
+     enum class RegionKind {
+         Toplevel,
+         CanonicalLoop,
+         Directive
+    };
 
-    /// Flag to indicate if the directive is cancellable.
-    bool IsCancellable;
+  struct OMPRegionInfo {
+      RegionKind Kind;
+      omp::Directive DK;
+      bool IsCancellable;
+      LeaveRegionCallbackTy FiniCB;
+
+    OMPRegionInfo(
+        RegionKind Kind,
+        omp::Directive DK,
+        bool IsCancellable,
+        LeaveRegionCallbackTy FiniCB) : Kind(Kind), DK(DK), IsCancellable(IsCancellable), FiniCB(std::move(FiniCB)) {
+        assertOK();
+    }
+
+    void exitingEdge(InsertPointTy ExitingIP, omp::Directive LeaveReason)  {
+        assert(LeaveReason == omp::OMPD_unknown || LeaveReason == omp:: OMPD_cancellation_point);
+
+        if (!FiniCB) return;
+        FiniCB(ExitingIP,  LeaveReason, *this);
+    }
+
+    /// Consistency self-check.
+    void assertOK() const {
+        if (Kind == RegionKind::Directive) {
+            switch (DK) {
+            case omp::OMPD_parallel:
+                break;
+            default:
+                llvm_unreachable("Not a valid OpenMP region");
+            }
+        }
+    }
   };
 
+
+private:
+  /// The finalization stack made up of finalize callbacks currently in-flight,
+  /// wrapped into FinalizationInfo objects that reference also the finalization
+  /// target block and the kind of cancellable directive.
+  SmallVector<OMPRegionInfo,8> RegionStack;
+
+#if 0
   /// Push a finalization callback on the finalization stack.
   ///
   /// NOTE: Temporary solution until Clang CG is gone.
@@ -125,11 +166,30 @@ public:
     FinalizationStack.push_back(FI);
   }
 
+  void pushFinalizationCB(FinalizeCallbackTy FiniCB) {
+    FinalizationInfo FI{{}, omp::Directive::OMPD_unknown, false};
+    FinalizationStack.push_back(FI);
+  }
+#endif
+
+
+#if 0
+  void pushCancellationCB(CancellationCallbackTy CancelCB) {
+      FinalizationInfo FI{ {}, None, false, CancelCB, nullptr };
+      FinalizationStack.push_back(FI);
+  }
+
+
   /// Pop the last finalization callback from the finalization stack.
   ///
   /// NOTE: Temporary solution until Clang CG is gone.
-  void popFinalizationCB() { FinalizationStack.pop_back(); }
+  void popFinalizationCB() {
+    assert(FinalizationStack.back().UserManaged);
+    FinalizationStack.pop_back();
+  }
+#endif
 
+public:
   /// Callback type for body (=inner region) code generation
   ///
   /// The callback takes code locations as arguments, each describing a
@@ -239,22 +299,26 @@ public:
   /// Generator for '#omp parallel'
   ///
   /// \param Loc The insert and source location description.
-  /// \param AllocaIP The insertion points to be used for alloca instructions.
+  /// \param OuterAllocaIP The insertion points to be used for alloca instructions.
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param PrivCB Callback to copy a given variable (think copy constructor).
   /// \param FiniCB Callback to finalize variable copies.
   /// \param IfCondition The evaluated 'if' clause expression, if any.
   /// \param NumThreads The evaluated 'num_threads' clause expression, if any.
   /// \param ProcBind The value of the 'proc_bind' clause (see ProcBindKind).
+  /// 
   /// \param IsCancellable Flag to indicate a cancellable parallel region.
+  /// MK: Remove? Any non-cancellable? Makes it a difference to the runtime?
   ///
   /// \returns The insertion position *after* the parallel.
-  IRBuilder<>::InsertPoint
-  createParallel(const LocationDescription &Loc, InsertPointTy AllocaIP,
-                 BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
-                 FinalizeCallbackTy FiniCB, Value *IfCondition,
-                 Value *NumThreads, omp::ProcBindKind ProcBind,
-                 bool IsCancellable);
+  IRBuilder<>::InsertPoint createParallel(const LocationDescription &Loc,
+                                          InsertPointTy OuterAllocaIP,
+                                          BodyGenCallbackTy BodyGenCB,
+                                          PrivatizeCallbackTy PrivCB,
+                                          LeaveRegionCallbackTy    FiniCB,
+                                          Value *IfCondition, 
+                                          Value *NumThreads,
+                                          omp::ProcBindKind ProcBind, bool IsCancellable);
 
   /// Generator for the control flow structure of an OpenMP canonical loop.
   ///
@@ -333,7 +397,8 @@ public:
                                          Value *Start, Value *Stop, Value *Step,
                                          bool IsSigned, bool InclusiveStop,
                                          InsertPointTy ComputeIP = {},
-                                         const Twine &Name = "loop");
+                                         const Twine &Name = "loop",
+                                         omp::Directive DK = omp::OMPD_unknown);
 
   /// Collapse a loop nest into a single loop.
   ///
@@ -784,9 +849,9 @@ public:
   /// \param CancelFlag Flag indicating if the cancellation is performed.
   /// \param CanceledDirective The kind of directive that is cancled.
   /// \param ExitCB Extra code to be generated in the exit block.
-  void emitCancelationCheckImpl(Value *CancelFlag,
+  void emitCancelationCheckImpl(LocationDescription Loc, Value *CancelFlag,
                                 omp::Directive CanceledDirective,
-                                FinalizeCallbackTy ExitCB = {});
+                                omp::Directive CanceledBy);
 
   /// Generate a barrier runtime call.
   ///
@@ -806,19 +871,47 @@ public:
   /// \param Loc The location at which the request originated and is fulfilled.
   void emitFlush(const LocationDescription &Loc);
 
-  /// The finalization stack made up of finalize callbacks currently in-flight,
-  /// wrapped into FinalizationInfo objects that reference also the finalization
-  /// target block and the kind of cancellable directive.
-  SmallVector<FinalizationInfo, 8> FinalizationStack;
+
+public:
+#if 0
+  llvm::Optional<omp::Directive> getTopmostDirective() const {
+    if (FinalizationStack.empty())
+      return None;
+    return FinalizationStack.back().DK;
+  }
+
+  bool isTopmostUserManaged() const {
+    if (FinalizationStack.empty())
+      return false;
+    return FinalizationStack.back().UserManaged;
+  }
+
+  bool isTopmostBuilderManaged() const {
+    if (FinalizationStack.empty())
+      return false;
+    return !FinalizationStack.back().UserManaged;
+  }
+#endif
+
+
+  private:
+      OMPRegionInfo *getInnermostDirectionRegion(omp::Directive DK) {
+          for (auto& R : reverse(RegionStack)) {
+              if (R.Kind == RegionKind::Toplevel)
+                  return &R; 
+              if (R.Kind == RegionKind::Directive && R.DK == DK)
+              return &R;
+          }
+          llvm_unreachable("expected toplevel region");
+      }
 
   /// Return true if the last entry in the finalization stack is of kind \p DK
   /// and cancellable.
   bool isLastFinalizationInfoCancellable(omp::Directive DK) {
-    return !FinalizationStack.empty() &&
-           FinalizationStack.back().IsCancellable &&
-           FinalizationStack.back().DK == DK;
+   return getInnermostDirectionRegion(DK)->IsCancellable;
   }
 
+  public:
   /// Generate a taskwait runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
@@ -940,7 +1033,7 @@ public:
   /// \returns The insertion position *after* the single call.
   InsertPointTy createSingle(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-                             FinalizeCallbackTy FiniCB, bool IsNowait,
+      LeaveRegionCallbackTy FiniCB, bool IsNowait,
                              llvm::Value *DidIt);
 
   /// Generator for '#omp master'
@@ -952,7 +1045,7 @@ public:
   /// \returns The insertion position *after* the master.
   InsertPointTy createMaster(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-                             FinalizeCallbackTy FiniCB);
+      LeaveRegionCallbackTy FiniCB);
 
   /// Generator for '#omp masked'
   ///
@@ -963,7 +1056,7 @@ public:
   /// \returns The insertion position *after* the masked.
   InsertPointTy createMasked(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-                             FinalizeCallbackTy FiniCB, Value *Filter);
+      LeaveRegionCallbackTy FiniCB, Value *Filter);
 
   /// Generator for '#omp critical'
   ///
@@ -976,7 +1069,7 @@ public:
   /// \returns The insertion position *after* the critical.
   InsertPointTy createCritical(const LocationDescription &Loc,
                                BodyGenCallbackTy BodyGenCB,
-                               FinalizeCallbackTy FiniCB,
+      LeaveRegionCallbackTy FiniCB,
                                StringRef CriticalName, Value *HintInst);
 
   /// Generator for '#omp ordered depend (source | sink)'
@@ -1005,7 +1098,7 @@ public:
   /// \returns The insertion position *after* the ordered.
   InsertPointTy createOrderedThreadsSimd(const LocationDescription &Loc,
                                          BodyGenCallbackTy BodyGenCB,
-                                         FinalizeCallbackTy FiniCB,
+      LeaveRegionCallbackTy FiniCB,
                                          bool IsThreads);
 
   /// Generator for '#omp sections'
@@ -1023,7 +1116,7 @@ public:
                                InsertPointTy AllocaIP,
                                ArrayRef<StorableBodyGenCallbackTy> SectionCBs,
                                PrivatizeCallbackTy PrivCB,
-                               FinalizeCallbackTy FiniCB, bool IsCancellable,
+      LeaveRegionCallbackTy FiniCB, bool IsCancellable,
                                bool IsNowait);
 
   /// Generator for '#omp section'
@@ -1034,7 +1127,7 @@ public:
   /// \returns The insertion position *after* the section.
   InsertPointTy createSection(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
-                              FinalizeCallbackTy FiniCB);
+      LeaveRegionCallbackTy FiniCB);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
@@ -1238,7 +1331,7 @@ private:
   InsertPointTy
   EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
                        Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
-                       FinalizeCallbackTy FiniCB, bool Conditional = false,
+      LeaveRegionCallbackTy FiniCB, bool Conditional = false,
                        bool HasFinalize = true, bool IsCancellable = false);
 
   /// Get the platform-specific name separator.
@@ -1481,6 +1574,7 @@ public:
   /// \returns The CanonicalLoopInfo that represents the emitted loop.
   CanonicalLoopInfo *createLoopSkeleton(DebugLoc DL, Value *TripCount,
                                         Function *F,
+                                        // bool Finalize,
                                         BasicBlock *PreInsertBefore,
                                         BasicBlock *PostInsertBefore,
                                         const Twine &Name = {});

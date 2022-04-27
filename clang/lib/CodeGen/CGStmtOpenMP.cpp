@@ -1734,7 +1734,9 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 
     // The cleanup callback that finalizes all variabels at the given location,
     // thus calls destructors etc.
-    auto FiniCB = [this](InsertPointTy IP) {
+    auto FiniCB = [this](  InsertPointTy IP, 
+     llvm::   omp::Directive LeaveReason,
+      llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4004,7 +4006,9 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
     using BodyGenCallbackTy = llvm::OpenMPIRBuilder::StorableBodyGenCallbackTy;
 
-    auto FiniCB = [this](InsertPointTy IP) {
+    auto FiniCB = [this]( InsertPointTy IP, 
+        llvm::   omp::Directive LeaveReason,
+        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4073,7 +4077,9 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
     const Stmt *SectionRegionBodyStmt = S.getAssociatedStmt();
-    auto FiniCB = [this](InsertPointTy IP) {
+    auto FiniCB = [this]( InsertPointTy IP, 
+        llvm::   omp::Directive LeaveReason,
+        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4154,7 +4160,9 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
 
     const Stmt *MasterRegionBodyStmt = S.getAssociatedStmt();
 
-    auto FiniCB = [this](InsertPointTy IP) {
+    auto FiniCB = [this]( InsertPointTy IP, 
+        llvm::   omp::Directive LeaveReason,
+        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4200,7 +4208,9 @@ void CodeGenFunction::EmitOMPMaskedDirective(const OMPMaskedDirective &S) {
                                  ? EmitScalarExpr(Filter, CGM.Int32Ty)
                                  : llvm::ConstantInt::get(CGM.Int32Ty, /*V=*/0);
 
-    auto FiniCB = [this](InsertPointTy IP) {
+    auto FiniCB = [this]( InsertPointTy IP, 
+        llvm::   omp::Directive LeaveReason,
+        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4240,7 +4250,9 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
       HintInst =
           Builder.CreateIntCast(EmitScalarExpr(Hint), CGM.Int32Ty, false);
 
-    auto FiniCB = [this](InsertPointTy IP) {
+    auto FiniCB = [this]( InsertPointTy IP, 
+        llvm::   omp::Directive LeaveReason,
+        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -5578,7 +5590,9 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
       // Without clause, it behaves as if the threads clause is specified.
       const auto *C = S.getSingleClause<OMPSIMDClause>();
 
-      auto FiniCB = [this](InsertPointTy IP) {
+      auto FiniCB = [this]( InsertPointTy IP, 
+          llvm::   omp::Directive LeaveReason,
+          llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
         OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
       };
 

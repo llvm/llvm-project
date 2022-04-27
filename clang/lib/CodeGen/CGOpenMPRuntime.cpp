@@ -1194,6 +1194,7 @@ struct PushAndPopStackRAII {
     if (!OMPBuilder)
       return;
 
+#if 0
     // The following callback is the crucial part of clangs cleanup process.
     //
     // NOTE:
@@ -1206,7 +1207,9 @@ struct PushAndPopStackRAII {
     // to push & pop an FinalizationInfo object.
     // The FiniCB will still be needed but at the point where the
     // OpenMPIRBuilder is asked to construct a parallel (or similar) construct.
-    auto FiniCB = [&CGF](llvm::OpenMPIRBuilder::InsertPointTy IP) {
+    auto FiniCB = [&CGF](llvm::OpenMPIRBuilder::InsertPointTy IP , 
+        omp::Directive LeaveReason,
+        OMPRegionInfo &Region) {
       assert(IP.getBlock()->end() == IP.getPoint() &&
              "Clang CG should cause non-terminated block!");
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
@@ -1220,10 +1223,13 @@ struct PushAndPopStackRAII {
     //       OpenMPIRBuilder as it can do this setup internally.
     llvm::OpenMPIRBuilder::FinalizationInfo FI({FiniCB, Kind, HasCancel});
     OMPBuilder->pushFinalizationCB(std::move(FI));
+#endif
   }
   ~PushAndPopStackRAII() {
+#if 0
     if (OMPBuilder)
       OMPBuilder->popFinalizationCB();
+#endif
   }
   llvm::OpenMPIRBuilder *OMPBuilder;
 };
