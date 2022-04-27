@@ -520,6 +520,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
 /// the return type. Codegen doesn't care about them, and it makes ABI code a
 /// little easier to be able to assume that all parameter and return types are
 /// top-level unqualified.
+/// FIXME(CIR): This should be a common helper extracted from CodeGen
 static CanQualType GetReturnType(QualType RetTy) {
   return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
 }

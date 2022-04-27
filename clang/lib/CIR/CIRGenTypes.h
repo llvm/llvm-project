@@ -1,4 +1,4 @@
-//===--- CIRGenTypes.h - Type translation for LLVM CodeGen -----*- C++ -*-===//
+//===--- CIRGenTypes.h - Type translation for CIR CodeGen -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -165,7 +165,7 @@ public:
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue
   //     of a function declaration or definition,
-  //   - those meant for the computation fo the CIR type for an abstract
+  //   - those meant for the computation of the CIR type for an abstract
   //     appearance of a function, and
   //   - those meant for performing the CIR-generation of a call.
   // They differ mainly in how they deal with optional (i.e. variadic)
@@ -206,7 +206,7 @@ public:
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(clang::CanQual<clang::FunctionProtoType> Ty);
 
-  /// "Arrange" the LLVM information for a call or type with the given
+  /// "Arrange" the CIR information for a call or type with the given
   /// signature. This is largely an internal method; other clients should use
   /// one of the above routines, which ultimatley defer to this.
   ///

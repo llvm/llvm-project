@@ -656,8 +656,8 @@ mlir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   }
 
   // This function doesn't have a complete type (for example, the return type is
-  // an incompmlete struct). Use a fake type instead, and make sure not to try
-  // to set attributes.
+  // an incomplete struct). Use a fake type instead, and make sure not to try to
+  // set attributes.
   bool IsIncompleteFunction = false;
 
   mlir::FunctionType FTy;
