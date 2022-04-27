@@ -2430,14 +2430,11 @@ define void @D107009(<64 x i32>* %input, <64 x i32>* %output) {
 ; AVX1-NEXT:    vpermilps {{.*#+}} ymm4 = ymm1[3,3,3,3,7,7,7,7]
 ; AVX1-NEXT:    vpermilpd {{.*#+}} ymm5 = ymm1[0,0,3,2]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm6 = xmm0[1,1,1,1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm0, %ymm6
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm7 = xmm0[3,3,3,3]
-; AVX1-NEXT:    vinsertf128 $1, %xmm7, %ymm0, %ymm7
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX1-NEXT:    vmovdqa %xmm7, 112(%rsi)
+; AVX1-NEXT:    vmovdqa %xmm6, 48(%rsi)
 ; AVX1-NEXT:    vmovups %ymm1, 128(%rsi)
-; AVX1-NEXT:    vmovups %ymm7, 96(%rsi)
-; AVX1-NEXT:    vmovups %ymm6, 32(%rsi)
 ; AVX1-NEXT:    vmovupd %ymm5, 192(%rsi)
 ; AVX1-NEXT:    vmovups %ymm4, 224(%rsi)
 ; AVX1-NEXT:    vmovups %ymm3, 160(%rsi)
@@ -2461,11 +2458,9 @@ define void @D107009(<64 x i32>* %input, <64 x i32>* %output) {
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,1,1]
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm4
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm5 = ymm0[3,3,3,3,7,7,7,7]
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm6 = ymm0[2,3,2,3,6,7,6,7]
@@ -2475,9 +2470,9 @@ define void @D107009(<64 x i32>* %input, <64 x i32>* %output) {
 ; AVX2-NEXT:    vmovdqu %ymm6, 192(%rsi)
 ; AVX2-NEXT:    vmovdqu %ymm5, 224(%rsi)
 ; AVX2-NEXT:    vmovdqu %ymm4, (%rsi)
-; AVX2-NEXT:    vmovdqu %ymm3, 64(%rsi)
-; AVX2-NEXT:    vmovdqu %ymm2, 32(%rsi)
-; AVX2-NEXT:    vmovdqu %ymm1, 96(%rsi)
+; AVX2-NEXT:    vmovdqa %xmm3, 48(%rsi)
+; AVX2-NEXT:    vmovdqa %xmm2, 112(%rsi)
+; AVX2-NEXT:    vmovdqu %ymm1, 64(%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2507,14 +2502,11 @@ define void @D107009(<64 x i32>* %input, <64 x i32>* %output) {
 ; XOP-NEXT:    vpermilps {{.*#+}} ymm4 = ymm1[3,3,3,3,7,7,7,7]
 ; XOP-NEXT:    vpermilpd {{.*#+}} ymm5 = ymm1[0,0,3,2]
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm6 = xmm0[1,1,1,1]
-; XOP-NEXT:    vinsertf128 $1, %xmm6, %ymm0, %ymm6
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm7 = xmm0[3,3,3,3]
-; XOP-NEXT:    vinsertf128 $1, %xmm7, %ymm0, %ymm7
-; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; XOP-NEXT:    vmovups %ymm0, (%rsi)
+; XOP-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; XOP-NEXT:    vmovdqa %xmm7, 112(%rsi)
+; XOP-NEXT:    vmovdqa %xmm6, 48(%rsi)
 ; XOP-NEXT:    vmovups %ymm1, 128(%rsi)
-; XOP-NEXT:    vmovups %ymm7, 96(%rsi)
-; XOP-NEXT:    vmovups %ymm6, 32(%rsi)
 ; XOP-NEXT:    vmovupd %ymm5, 192(%rsi)
 ; XOP-NEXT:    vmovups %ymm4, 224(%rsi)
 ; XOP-NEXT:    vmovups %ymm3, 160(%rsi)
