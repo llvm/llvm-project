@@ -1213,8 +1213,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi64(__m128i __V1,
 /// This intrinsic corresponds to the <c> VPMOVSXBW / PMOVSXBW </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [16 x i8]. The lower eight 8-bit elements are sign-
-///    extended to 16-bit values.
+///    A 128-bit vector of [16 x i8]. The lower eight 8-bit elements are
+///    sign-extended to 16-bit values.
 /// \returns A 128-bit vector of [8 x i16] containing the sign-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtepi8_epi16(__m128i __V) {
   /* This function always performs a signed extension, but __v16qi is a char

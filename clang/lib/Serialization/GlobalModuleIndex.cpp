@@ -277,7 +277,7 @@ GlobalModuleIndex::readIndex(StringRef Path) {
       return std::make_pair(nullptr, Res.takeError());
   }
 
-  return std::make_pair(new GlobalModuleIndex(std::move(Buffer), Cursor),
+  return std::make_pair(new GlobalModuleIndex(std::move(Buffer), std::move(Cursor)),
                         llvm::Error::success());
 }
 

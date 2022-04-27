@@ -89,16 +89,17 @@
 // RUN: %clang_cl -### -c -Z7 -target x86_64-windows-msvc -- %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_NOTUNING %s
 
-// On the PS4, -g defaults to -gno-column-info, and we always generate the
+// On the PS4/PS5, -g defaults to -gno-column-info, and we always generate the
 // arange section.
 // RUN: %clang -### -c %s -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefix=NOG_PS4 %s
+// RUN:             | FileCheck -check-prefix=NOG_PS %s
+// RUN: %clang -### -c %s -target x86_64-sie-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefix=NOG_PS %s
+/// PS4 will stay on v4 even if the generic default version changes.
 // RUN: %clang -### -c %s -g -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_PS4 %s
-// RUN: %clang -### -c %s -g -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_SCE %s
-// RUN: %clang -### -c %s -g -target x86_64-scei-ps4 2>&1 \
-// RUN:             | FileCheck -check-prefix=NOCI %s
+// RUN:             | FileCheck -check-prefixes=G_DWARF4,GARANGE,G_SCE,NOCI,FWD_TMPL_PARAMS %s
+// RUN: %clang -### -c %s -g -target x86_64-sie-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefixes=G_DWARF5,GARANGE,G_SCE,NOCI,FWD_TMPL_PARAMS %s
 // RUN: %clang -### -c %s -g -gcolumn-info -target x86_64-scei-ps4 2>&1 \
 // RUN:             | FileCheck -check-prefix=CI %s
 // RUN: %clang -### -c %s -gsce -target x86_64-unknown-linux 2>&1 \
@@ -280,15 +281,10 @@
 // RUN: %clang -### -target %itanium_abi_triple -gmodules -gline-directives-only %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=GLIO_ONLY %s
 //
-// NOG_PS4: "-cc1"
-// NOG_PS4-NOT: "-dwarf-version=
-// NOG_PS4: "-generate-arange-section"
-// NOG_PS4-NOT: "-dwarf-version=
-//
-// G_PS4: "-cc1"
-/// PS4 will stay on v4 even if the generic default version changes.
-// G_PS4: "-dwarf-version=4"
-// G_PS4: "-generate-arange-section"
+// NOG_PS: "-cc1"
+// NOG_PS-NOT: "-dwarf-version=
+// NOG_PS: "-generate-arange-section"
+// NOG_PS-NOT: "-dwarf-version=
 //
 // G_ERR: error: unknown argument:
 //
@@ -327,11 +323,12 @@
 // G_LIMITED: "-cc1"
 // G_LIMITED: "-debug-info-kind=constructor"
 // G_DWARF2: "-dwarf-version=2"
-// G_DWARF4: "-dwarf-version=4"
+// G_DWARF4-DAG: "-dwarf-version=4"
+// G_DWARF5-DAG: "-dwarf-version=5"
 //
 // G_GDB:  "-debugger-tuning=gdb"
 // G_LLDB: "-debugger-tuning=lldb"
-// G_SCE:  "-debugger-tuning=sce"
+// G_SCE-DAG:  "-debugger-tuning=sce"
 // G_DBX:  "-debugger-tuning=dbx"
 //
 // STRICT:  "-gstrict-dwarf"
@@ -370,7 +367,7 @@
 // RNGBSE: -fdebug-ranges-base-address
 // NORNGBSE-NOT: -fdebug-ranges-base-address
 //
-// GARANGE: -generate-arange-section
+// GARANGE-DAG: -generate-arange-section
 //
 // FDTS: "-mllvm" "-generate-type-units"
 // FDTSE: error: unsupported option '-fdebug-types-section' for target 'x86_64-apple-darwin'
@@ -380,7 +377,7 @@
 //
 // CI-NOT: "-gno-column-info"
 //
-// NOCI: "-gno-column-info"
+// NOCI-DAG: "-gno-column-info"
 //
 // GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj"
 // GEXTREFS: "-debug-info-kind={{standalone|constructor}}"
@@ -444,9 +441,9 @@
 // DIRECTORY-NOT: "-fno-dwarf-directory-asm"
 // NODIRECTORY: "-fno-dwarf-directory-asm"
 
-// RUN: %clang -### -target x86_64 -c -g -gsimple-template-names %s 2>&1 | FileCheck --check-prefix=SIMPLE_TEMP_NAMES %s
-// SIMPLE_TEMP_NAMES: -gsimple-template-names=simple
-// SIMPLE_TEMP_NAMES: -debug-forward-template-params
+// RUN: %clang -### -target x86_64 -c -g -gsimple-template-names %s 2>&1 | FileCheck --check-prefixes=SIMPLE_TMPL_NAMES,FWD_TMPL_PARAMS %s
+// SIMPLE_TMPL_NAMES: -gsimple-template-names=simple
+// FWD_TMPL_PARAMS-DAG: -debug-forward-template-params
 // RUN: not %clang -### -target x86_64 -c -g -gsimple-template-names=mangled %s 2>&1 | FileCheck --check-prefix=MANGLED_TEMP_NAMES %s
 // MANGLED_TEMP_NAMES: error: unknown argument: '-gsimple-template-names=mangled'
 // RUN: %clang -### -target x86_64 -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s

@@ -301,6 +301,8 @@ SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
   case index::SymbolKind::TemplateTemplateParm:
   case index::SymbolKind::TemplateTypeParm:
     return SymbolKind::TypeParameter;
+  case index::SymbolKind::Concept:
+    return SymbolKind::Interface;
   }
   llvm_unreachable("invalid symbol kind");
 }

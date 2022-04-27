@@ -1740,6 +1740,41 @@ std::string CodeGenFunction::OMPBuilderCBHelpers::getNameWithSeparators(
   }
   return OS.str().str();
 }
+
+void CodeGenFunction::OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+    CodeGenFunction &CGF, const Stmt *RegionBodyStmt, InsertPointTy AllocaIP,
+    InsertPointTy CodeGenIP, Twine RegionName) {
+  CGBuilderTy &Builder = CGF.Builder;
+  Builder.restoreIP(CodeGenIP);
+  llvm::BasicBlock *FiniBB = splitBBWithSuffix(Builder, /*CreateBranch=*/false,
+                                               "." + RegionName + ".after");
+
+  {
+    OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(CGF, AllocaIP, *FiniBB);
+    CGF.EmitStmt(RegionBodyStmt);
+  }
+
+  if (Builder.saveIP().isSet())
+    Builder.CreateBr(FiniBB);
+}
+
+void CodeGenFunction::OMPBuilderCBHelpers::EmitOMPOutlinedRegionBody(
+    CodeGenFunction &CGF, const Stmt *RegionBodyStmt, InsertPointTy AllocaIP,
+    InsertPointTy CodeGenIP, Twine RegionName) {
+  CGBuilderTy &Builder = CGF.Builder;
+  Builder.restoreIP(CodeGenIP);
+  llvm::BasicBlock *FiniBB = splitBBWithSuffix(Builder, /*CreateBranch=*/false,
+                                               "." + RegionName + ".after");
+
+  {
+    OMPBuilderCBHelpers::OutlinedRegionBodyRAII IRB(CGF, AllocaIP, *FiniBB);
+    CGF.EmitStmt(RegionBodyStmt);
+  }
+
+  if (Builder.saveIP().isSet())
+    Builder.CreateBr(FiniBB);
+}
+
 void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
   if (CGM.getLangOpts().OpenMPIRBuilder) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
@@ -1782,13 +1817,10 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     const CapturedStmt *CS = S.getCapturedStmt(OMPD_parallel);
     const Stmt *ParallelRegionBodyStmt = CS->getCapturedStmt();
 
-    auto BodyGenCB = [ParallelRegionBodyStmt,
-                      this](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                            llvm::BasicBlock &ContinuationBB) {
-      OMPBuilderCBHelpers::OutlinedRegionBodyRAII ORB(*this, AllocaIP,
-                                                      ContinuationBB);
-      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, ParallelRegionBodyStmt,
-                                             CodeGenIP, ContinuationBB);
+    auto BodyGenCB = [&, this](InsertPointTy AllocaIP,
+                               InsertPointTy CodeGenIP) {
+      OMPBuilderCBHelpers::EmitOMPOutlinedRegionBody(
+          *this, ParallelRegionBodyStmt, AllocaIP, CodeGenIP, "parallel");
     };
 
     CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
@@ -4046,22 +4078,17 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
     if (CS) {
       for (const Stmt *SubStmt : CS->children()) {
         auto SectionCB = [this, SubStmt](InsertPointTy AllocaIP,
-                                         InsertPointTy CodeGenIP,
-                                         llvm::BasicBlock &FiniBB) {
-          OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP,
-                                                         FiniBB);
-          OMPBuilderCBHelpers::EmitOMPRegionBody(*this, SubStmt, CodeGenIP,
-                                                 FiniBB);
+                                         InsertPointTy CodeGenIP) {
+          OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+              *this, SubStmt, AllocaIP, CodeGenIP, "section");
         };
         SectionCBVector.push_back(SectionCB);
       }
     } else {
       auto SectionCB = [this, CapturedStmt](InsertPointTy AllocaIP,
-                                            InsertPointTy CodeGenIP,
-                                            llvm::BasicBlock &FiniBB) {
-        OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
-        OMPBuilderCBHelpers::EmitOMPRegionBody(*this, CapturedStmt, CodeGenIP,
-                                               FiniBB);
+                                            InsertPointTy CodeGenIP) {
+        OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+            *this, CapturedStmt, AllocaIP, CodeGenIP, "section");
       };
       SectionCBVector.push_back(SectionCB);
     }
@@ -4114,11 +4141,9 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
     };
 
     auto BodyGenCB = [SectionRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                   InsertPointTy CodeGenIP,
-                                                   llvm::BasicBlock &FiniBB) {
-      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
-      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, SectionRegionBodyStmt,
-                                             CodeGenIP, FiniBB);
+                                                   InsertPointTy CodeGenIP) {
+      OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+          *this, SectionRegionBodyStmt, AllocaIP, CodeGenIP, "section");
     };
 
     LexicalScope Scope(*this, S.getSourceRange());
@@ -4197,11 +4222,9 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
     };
 
     auto BodyGenCB = [MasterRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                  InsertPointTy CodeGenIP,
-                                                  llvm::BasicBlock &FiniBB) {
-      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
-      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, MasterRegionBodyStmt,
-                                             CodeGenIP, FiniBB);
+                                                  InsertPointTy CodeGenIP) {
+      OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+          *this, MasterRegionBodyStmt, AllocaIP, CodeGenIP, "master");
     };
 
     LexicalScope Scope(*this, S.getSourceRange());
@@ -4245,11 +4268,9 @@ void CodeGenFunction::EmitOMPMaskedDirective(const OMPMaskedDirective &S) {
     };
 
     auto BodyGenCB = [MaskedRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                  InsertPointTy CodeGenIP,
-                                                  llvm::BasicBlock &FiniBB) {
-      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
-      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, MaskedRegionBodyStmt,
-                                             CodeGenIP, FiniBB);
+                                                  InsertPointTy CodeGenIP) {
+      OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+          *this, MaskedRegionBodyStmt, AllocaIP, CodeGenIP, "masked");
     };
 
     LexicalScope Scope(*this, S.getSourceRange());
@@ -4287,11 +4308,9 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
     };
 
     auto BodyGenCB = [CriticalRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                    InsertPointTy CodeGenIP,
-                                                    llvm::BasicBlock &FiniBB) {
-      OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, FiniBB);
-      OMPBuilderCBHelpers::EmitOMPRegionBody(*this, CriticalRegionBodyStmt,
-                                             CodeGenIP, FiniBB);
+                                                    InsertPointTy CodeGenIP) {
+      OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+          *this, CriticalRegionBodyStmt, AllocaIP, CodeGenIP, "critical");
     };
 
     LexicalScope Scope(*this, S.getSourceRange());
@@ -5628,10 +5647,13 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
       };
 
       auto BodyGenCB = [&S, C, this](InsertPointTy AllocaIP,
-                                     InsertPointTy CodeGenIP,
-                                     llvm::BasicBlock &FiniBB) {
+                                     InsertPointTy CodeGenIP) {
+        Builder.restoreIP(CodeGenIP);
+
         const CapturedStmt *CS = S.getInnermostCapturedStmt();
         if (C) {
+          llvm::BasicBlock *FiniBB = splitBBWithSuffix(
+              Builder, /*CreateBranch=*/false, ".ordered.after");
           llvm::SmallVector<llvm::Value *, 16> CapturedVars;
           GenerateOpenMPCapturedVars(*CS, CapturedVars);
           llvm::Function *OutlinedFn =
@@ -5639,13 +5661,11 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
           assert(S.getBeginLoc().isValid() &&
                  "Outlined function call location must be valid.");
           ApplyDebugLocation::CreateDefaultArtificial(*this, S.getBeginLoc());
-          OMPBuilderCBHelpers::EmitCaptureStmt(*this, CodeGenIP, FiniBB,
+          OMPBuilderCBHelpers::EmitCaptureStmt(*this, CodeGenIP, *FiniBB,
                                                OutlinedFn, CapturedVars);
         } else {
-          OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP,
-                                                         FiniBB);
-          OMPBuilderCBHelpers::EmitOMPRegionBody(*this, CS->getCapturedStmt(),
-                                                 CodeGenIP, FiniBB);
+          OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+              *this, CS->getCapturedStmt(), AllocaIP, CodeGenIP, "ordered");
         }
       };
 

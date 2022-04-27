@@ -8818,6 +8818,17 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(Ops[2].getValueType() == Ops[3].getValueType() &&
            "LHS/RHS of comparison should match types!");
     break;
+  case ISD::VP_ADD:
+  case ISD::VP_SUB:
+    // If it is VP_ADD/VP_SUB mask operation then turn it to VP_XOR
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+      Opcode = ISD::VP_XOR;
+    break;
+  case ISD::VP_MUL:
+    // If it is VP_MUL mask operation then turn it to VP_AND
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+      Opcode = ISD::VP_AND;
+    break;
   }
 
   // Memoize nodes.

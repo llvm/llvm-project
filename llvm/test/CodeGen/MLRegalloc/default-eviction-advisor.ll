@@ -7,6 +7,9 @@
 ; RUN: not llc -O2 -regalloc-enable-advisor=release < %s 2>&1 | FileCheck %s
 ; RUN: llc -O2 -regalloc-enable-advisor=default < %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
+; regalloc-enable-advisor is not enabled for NVPTX
+; UNSUPPORTED: nvptx
+
 define void @f2(i64 %lhs, i64 %rhs, i64* %addr) {
   %sum = add i64 %lhs, %rhs
   store i64 %sum, i64* %addr
