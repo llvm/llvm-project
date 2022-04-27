@@ -759,6 +759,14 @@
 // CHECK-UBSAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-UBSAN-PS4: -lSceDbgUBSanitizer_stub_weak
 
+// RUN: %clang -fsanitize=undefined %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:   | FileCheck --check-prefix=CHECK-UBSAN-PS5 %s
+// CHECK-UBSAN-PS5: --dependent-lib=libSceUBSanitizer_nosubmission_stub_weak.a
+// CHECK-UBSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
+// CHECK-UBSAN-PS5: -lSceUBSanitizer_nosubmission_stub_weak
+
 // RUN: %clang -fsanitize=address %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-scei-ps4 -fuse-ld=ld \
 // RUN:     -shared \
@@ -766,6 +774,14 @@
 // CHECK-ASAN-PS4: --dependent-lib=libSceDbgAddressSanitizer_stub_weak.a
 // CHECK-ASAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-ASAN-PS4: -lSceDbgAddressSanitizer_stub_weak
+
+// RUN: %clang -fsanitize=address %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-PS5 %s
+// CHECK-ASAN-PS5: --dependent-lib=libSceAddressSanitizer_nosubmission_stub_weak.a
+// CHECK-ASAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
+// CHECK-ASAN-PS5: -lSceAddressSanitizer_nosubmission_stub_weak
 
 // RUN: %clang -fsanitize=address,undefined %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-scei-ps4 -fuse-ld=ld \
@@ -778,11 +794,28 @@
 // CHECK-AUBSAN-PS4: -lSceDbgAddressSanitizer_stub_weak
 
 // RUN: %clang -fsanitize=address,undefined %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:   | FileCheck --check-prefix=CHECK-AUBSAN-PS5 %s
+// CHECK-AUBSAN-PS5-NOT: --dependent-lib=libSceUBSanitizer_nosubmission_stub_weak.a
+// CHECK-AUBSAN-PS5: --dependent-lib=libSceAddressSanitizer_nosubmission_stub_weak.a
+// CHECK-AUBSAN-PS5-NOT: --dependent-lib=libSceUBSanitizer_nosubmission_stub_weak.a
+// CHECK-AUBSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
+// CHECK-AUBSAN-PS5: -lSceAddressSanitizer_nosubmission_stub_weak
+
+// RUN: %clang -fsanitize=address,undefined %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-scei-ps4 -fuse-ld=ld \
 // RUN:     -shared \
 // RUN:     -nostdlib \
 // RUN:   | FileCheck --check-prefix=CHECK-NOLIB-PS4 %s
 // CHECK-NOLIB-PS4-NOT: SceDbgAddressSanitizer_stub_weak
+
+// RUN: %clang -fsanitize=address,undefined %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:     -nostdlib \
+// RUN:   | FileCheck --check-prefix=CHECK-NOLIB-PS5 %s
+// CHECK-NOLIB-PS5-NOT: SceAddressSanitizer_nosubmission_stub_weak
 
 // RUN: %clang -fsanitize=scudo %s -### -o %t.o 2>&1 \
 // RUN:     -target i386-unknown-linux -fuse-ld=ld \
