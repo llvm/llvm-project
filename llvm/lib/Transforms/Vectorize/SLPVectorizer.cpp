@@ -3293,7 +3293,7 @@ BoUpSLP::~BoUpSLP() {
 
   // Cleanup any dead scalar code feeding the vectorized instructions
   RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI);
-  
+
 #ifdef EXPENSIVE_CHECKS
   // If we could guarantee that this call is not extremely slow, we could
   // remove the ifdef limitation (see PR47712).
@@ -10898,7 +10898,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
         DomTreeNodeBase<llvm::BasicBlock> *NodeI2 =
             DT->getNode(I2->getParent());
         assert(NodeI1 && "Should only process reachable instructions");
-        assert(NodeI1 && "Should only process reachable instructions");
+        assert(NodeI2 && "Should only process reachable instructions");
         assert((NodeI1 == NodeI2) ==
                    (NodeI1->getDFSNumIn() == NodeI2->getDFSNumIn()) &&
                "Different nodes should have different DFS numbers");
