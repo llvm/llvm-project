@@ -605,10 +605,6 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
   switch (Kind) {
   case Attribute::Alignment:
     return bitc::ATTR_KIND_ALIGNMENT;
-  case Attribute::AllocAlign:
-    return bitc::ATTR_KIND_ALLOC_ALIGN;
-  case Attribute::AllocSize:
-    return bitc::ATTR_KIND_ALLOC_SIZE;
   case Attribute::AlwaysInline:
     return bitc::ATTR_KIND_ALWAYS_INLINE;
   case Attribute::ArgMemOnly:
@@ -623,16 +619,6 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_IN_ALLOCA;
   case Attribute::Cold:
     return bitc::ATTR_KIND_COLD;
-  case Attribute::DisableSanitizerInstrumentation:
-    return bitc::ATTR_KIND_DISABLE_SANITIZER_INSTRUMENTATION;
-  case Attribute::Hot:
-    return bitc::ATTR_KIND_HOT;
-  case Attribute::ElementType:
-    return bitc::ATTR_KIND_ELEMENTTYPE;
-  case Attribute::InaccessibleMemOnly:
-    return bitc::ATTR_KIND_INACCESSIBLEMEM_ONLY;
-  case Attribute::InaccessibleMemOrArgMemOnly:
-    return bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ARGMEMONLY;
   case Attribute::InlineHint:
     return bitc::ATTR_KIND_INLINE_HINT;
   case Attribute::InReg:
@@ -649,22 +635,14 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_ALIAS;
   case Attribute::NoBuiltin:
     return bitc::ATTR_KIND_NO_BUILTIN;
-  case Attribute::NoCallback:
-    return bitc::ATTR_KIND_NO_CALLBACK;
   case Attribute::NoCapture:
     return bitc::ATTR_KIND_NO_CAPTURE;
   case Attribute::NoDuplicate:
     return bitc::ATTR_KIND_NO_DUPLICATE;
-  case Attribute::NoFree:
-    return bitc::ATTR_KIND_NOFREE;
   case Attribute::NoImplicitFloat:
     return bitc::ATTR_KIND_NO_IMPLICIT_FLOAT;
   case Attribute::NoInline:
     return bitc::ATTR_KIND_NO_INLINE;
-  case Attribute::NoRecurse:
-    return bitc::ATTR_KIND_NO_RECURSE;
-  case Attribute::NoMerge:
-    return bitc::ATTR_KIND_NO_MERGE;
   case Attribute::NonLazyBind:
     return bitc::ATTR_KIND_NON_LAZY_BIND;
   case Attribute::NonNull:
@@ -677,22 +655,8 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_RED_ZONE;
   case Attribute::NoReturn:
     return bitc::ATTR_KIND_NO_RETURN;
-  case Attribute::NoSync:
-    return bitc::ATTR_KIND_NOSYNC;
-  case Attribute::NoCfCheck:
-    return bitc::ATTR_KIND_NOCF_CHECK;
-  case Attribute::NoProfile:
-    return bitc::ATTR_KIND_NO_PROFILE;
   case Attribute::NoUnwind:
     return bitc::ATTR_KIND_NO_UNWIND;
-  case Attribute::NoSanitizeBounds:
-    return bitc::ATTR_KIND_NO_SANITIZE_BOUNDS;
-  case Attribute::NoSanitizeCoverage:
-    return bitc::ATTR_KIND_NO_SANITIZE_COVERAGE;
-  case Attribute::NullPointerIsValid:
-    return bitc::ATTR_KIND_NULL_POINTER_IS_VALID;
-  case Attribute::OptForFuzzing:
-    return bitc::ATTR_KIND_OPT_FOR_FUZZING;
   case Attribute::OptimizeForSize:
     return bitc::ATTR_KIND_OPTIMIZE_FOR_SIZE;
   case Attribute::OptimizeNone:
@@ -707,8 +671,6 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_RETURNS_TWICE;
   case Attribute::SExt:
     return bitc::ATTR_KIND_S_EXT;
-  case Attribute::Speculatable:
-    return bitc::ATTR_KIND_SPECULATABLE;
   case Attribute::StackAlignment:
     return bitc::ATTR_KIND_STACK_ALIGNMENT;
   case Attribute::StackProtect:
@@ -719,50 +681,18 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_STACK_PROTECT_STRONG;
   case Attribute::SafeStack:
     return bitc::ATTR_KIND_SAFESTACK;
-  case Attribute::ShadowCallStack:
-    return bitc::ATTR_KIND_SHADOWCALLSTACK;
-  case Attribute::StrictFP:
-    return bitc::ATTR_KIND_STRICT_FP;
   case Attribute::StructRet:
     return bitc::ATTR_KIND_STRUCT_RET;
   case Attribute::SanitizeAddress:
     return bitc::ATTR_KIND_SANITIZE_ADDRESS;
-  case Attribute::SanitizeHWAddress:
-    return bitc::ATTR_KIND_SANITIZE_HWADDRESS;
   case Attribute::SanitizeThread:
     return bitc::ATTR_KIND_SANITIZE_THREAD;
   case Attribute::SanitizeMemory:
     return bitc::ATTR_KIND_SANITIZE_MEMORY;
-  case Attribute::SpeculativeLoadHardening:
-    return bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING;
-  case Attribute::SwiftError:
-    return bitc::ATTR_KIND_SWIFT_ERROR;
-  case Attribute::SwiftSelf:
-    return bitc::ATTR_KIND_SWIFT_SELF;
-  case Attribute::SwiftAsync:
-    return bitc::ATTR_KIND_SWIFT_ASYNC;
   case Attribute::UWTable:
     return bitc::ATTR_KIND_UW_TABLE;
-  case Attribute::VScaleRange:
-    return bitc::ATTR_KIND_VSCALE_RANGE;
-  case Attribute::WillReturn:
-    return bitc::ATTR_KIND_WILLRETURN;
-  case Attribute::WriteOnly:
-    return bitc::ATTR_KIND_WRITEONLY;
   case Attribute::ZExt:
     return bitc::ATTR_KIND_Z_EXT;
-  case Attribute::ImmArg:
-    return bitc::ATTR_KIND_IMMARG;
-  case Attribute::SanitizeMemTag:
-    return bitc::ATTR_KIND_SANITIZE_MEMTAG;
-  case Attribute::Preallocated:
-    return bitc::ATTR_KIND_PREALLOCATED;
-  case Attribute::NoUndef:
-    return bitc::ATTR_KIND_NOUNDEF;
-  case Attribute::ByRef:
-    return bitc::ATTR_KIND_BYREF;
-  case Attribute::MustProgress:
-    return bitc::ATTR_KIND_MUSTPROGRESS;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -770,6 +700,9 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
   case Attribute::EmptyKey:
   case Attribute::TombstoneKey:
     llvm_unreachable("Trying to encode EmptyKey/TombstoneKey");
+  default:
+    llvm_unreachable("Trying to encode attribute not supported by DXIL. These "
+                     "should be stripped in DXILPrepare");
   }
 
   llvm_unreachable("Trying to encode unknown attribute");
