@@ -8,7 +8,7 @@
 
 // <string>
 
-// size_type capacity() const;
+// size_type capacity() const; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -18,11 +18,9 @@
 
 #include "test_macros.h"
 
-test_allocator_statistics alloc_stats;
-
 template <class S>
 TEST_CONSTEXPR_CXX20 void
-test(S s)
+test(S s, test_allocator_statistics& alloc_stats)
 {
     alloc_stats.throw_after = 0;
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -42,17 +40,18 @@ test(S s)
     alloc_stats.throw_after = INT_MAX;
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
+    test_allocator_statistics alloc_stats;
     typedef std::basic_string<char, std::char_traits<char>, test_allocator<char> > S;
     S s((test_allocator<char>(&alloc_stats)));
-    test(s);
+    test(s, alloc_stats);
     s.assign(10, 'a');
     s.erase(5);
-    test(s);
+    test(s, alloc_stats);
     s.assign(100, 'a');
     s.erase(50);
-    test(s);
+    test(s, alloc_stats);
   }
 #if TEST_STD_VER >= 11
   {
@@ -69,7 +68,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

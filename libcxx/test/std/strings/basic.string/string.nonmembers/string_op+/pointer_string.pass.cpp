@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // template<class charT, class traits, class Allocator>
 //   basic_string<charT,traits,Allocator>
-//   operator+(const charT* lhs, const basic_string<charT,traits,Allocator>& rhs);
+//   operator+(const charT* lhs, const basic_string<charT,traits,Allocator>& rhs); // constexpr since C++20
 
 // template<class charT, class traits, class Allocator>
 //   basic_string<charT,traits,Allocator>&&
-//   operator+(const charT* lhs, basic_string<charT,traits,Allocator>&& rhs);
+//   operator+(const charT* lhs, basic_string<charT,traits,Allocator>&& rhs); // constexpr since C++20
 
 #include <string>
 #include <utility>
@@ -35,7 +37,7 @@ TEST_CONSTEXPR_CXX20 void test1(const typename S::value_type* lhs, S&& rhs, cons
 }
 #endif
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test0("", S(""), S(""));
@@ -134,7 +136,7 @@ bool test() {
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

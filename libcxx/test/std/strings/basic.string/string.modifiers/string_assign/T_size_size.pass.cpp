@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // template <class T>
-//    basic_string& assign(const T& t, size_type pos, size_type n=npos); // C++17
+//    basic_string& assign(const T& t, size_type pos, size_type n=npos); // C++17, constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -70,7 +72,7 @@ test_npos(S s, SV sv, typename S::size_type pos, S expected)
 #endif
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     typedef std::string_view SV;
@@ -198,7 +200,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

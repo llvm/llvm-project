@@ -6,27 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // template<class charT, class traits, class Allocator>
 //   basic_string<charT,traits,Allocator>
 //   operator+(const basic_string<charT,traits,Allocator>& lhs,
-//             const basic_string<charT,traits,Allocator>& rhs);
+//             const basic_string<charT,traits,Allocator>& rhs); // constexpr since C++20
 
 // template<class charT, class traits, class Allocator>
 //   basic_string<charT,traits,Allocator>&&
 //   operator+(const basic_string<charT,traits,Allocator>&& lhs,
-//             const basic_string<charT,traits,Allocator>& rhs);
+//             const basic_string<charT,traits,Allocator>& rhs); // constexpr since C++20
 
 // template<class charT, class traits, class Allocator>
 //   basic_string<charT,traits,Allocator>&&
 //   operator+(const basic_string<charT,traits,Allocator>& lhs,
-//             const basic_string<charT,traits,Allocator>&& rhs);
+//             const basic_string<charT,traits,Allocator>&& rhs); // constexpr since C++20
 
 // template<class charT, class traits, class Allocator>
 //   basic_string<charT,traits,Allocator>&&
 //   operator+(const basic_string<charT,traits,Allocator>&& lhs,
-//             const basic_string<charT,traits,Allocator>&& rhs);
+//             const basic_string<charT,traits,Allocator>&& rhs); // constexpr since C++20
 
 #include <string>
 #include <utility>
@@ -57,7 +59,7 @@ TEST_CONSTEXPR_CXX20 void test3(S&& lhs, S&& rhs, const S& x) {
 }
 #endif
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test0(S(""), S(""), S(""));
@@ -251,7 +253,7 @@ bool test() {
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

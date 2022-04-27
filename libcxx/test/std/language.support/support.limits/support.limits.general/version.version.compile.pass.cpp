@@ -59,7 +59,7 @@
     __cpp_lib_constexpr_iterator                   201811L [C++20]
     __cpp_lib_constexpr_memory                     201811L [C++20]
     __cpp_lib_constexpr_numeric                    201911L [C++20]
-    __cpp_lib_constexpr_string                     201811L [C++20]
+    __cpp_lib_constexpr_string                     201907L [C++20]
     __cpp_lib_constexpr_string_view                201811L [C++20]
     __cpp_lib_constexpr_tuple                      201811L [C++20]
     __cpp_lib_constexpr_typeinfo                   202106L [C++2b]
@@ -2725,8 +2725,8 @@
 # ifndef __cpp_lib_constexpr_string
 #   error "__cpp_lib_constexpr_string should be defined in c++20"
 # endif
-# if __cpp_lib_constexpr_string != 201811L
-#   error "__cpp_lib_constexpr_string should have the value 201811L in c++20"
+# if __cpp_lib_constexpr_string != 201907L
+#   error "__cpp_lib_constexpr_string should have the value 201907L in c++20"
 # endif
 
 # ifndef __cpp_lib_constexpr_string_view
@@ -3963,8 +3963,8 @@
 # ifndef __cpp_lib_constexpr_string
 #   error "__cpp_lib_constexpr_string should be defined in c++2b"
 # endif
-# if __cpp_lib_constexpr_string != 201811L
-#   error "__cpp_lib_constexpr_string should have the value 201811L in c++2b"
+# if __cpp_lib_constexpr_string != 201907L
+#   error "__cpp_lib_constexpr_string should have the value 201907L in c++2b"
 # endif
 
 # ifndef __cpp_lib_constexpr_string_view

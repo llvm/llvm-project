@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // int compare(size_type pos1, size_type n1, const basic_string& str,
-//             size_type pos2, size_type n2=npos) const;
+//             size_type pos2, size_type n2=npos) const; // constexpr since C++20
 //  the "=npos" was added in C++14
 
 #include <string>
@@ -37,7 +39,7 @@ test(const S& s,   typename S::size_type pos1, typename S::size_type n1,
     if (pos1 <= s.size() && pos2 <= str.size())
         assert(sign(s.compare(pos1, n1, str, pos2, n2)) == sign(x));
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -53,14 +55,14 @@ test(const S& s,   typename S::size_type pos1, typename S::size_type n1,
 }
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test_npos(const S& s,   typename S::size_type pos1, typename S::size_type n1,
           const S& str, typename S::size_type pos2, int x)
 {
     if (pos1 <= s.size() && pos2 <= str.size())
         assert(sign(s.compare(pos1, n1, str, pos2)) == sign(x));
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -6007,62 +6009,64 @@ void test() {
   test54<S>();
   test55<S>();
 
-  // static_assert(test0<S>());
-  // static_assert(test1<S>());
-  // static_assert(test2<S>());
-  // static_assert(test3<S>());
-  // static_assert(test4<S>());
-  // static_assert(test5<S>());
-  // static_assert(test6<S>());
-  // static_assert(test7<S>());
-  // static_assert(test8<S>());
-  // static_assert(test9<S>());
-  // static_assert(test10<S>());
-  // static_assert(test11<S>());
-  // static_assert(test12<S>());
-  // static_assert(test13<S>());
-  // static_assert(test14<S>());
-  // static_assert(test15<S>());
-  // static_assert(test16<S>());
-  // static_assert(test17<S>());
-  // static_assert(test18<S>());
-  // static_assert(test19<S>());
-  // static_assert(test20<S>());
-  // static_assert(test21<S>());
-  // static_assert(test22<S>());
-  // static_assert(test23<S>());
-  // static_assert(test24<S>());
-  // static_assert(test25<S>());
-  // static_assert(test26<S>());
-  // static_assert(test27<S>());
-  // static_assert(test28<S>());
-  // static_assert(test29<S>());
-  // static_assert(test30<S>());
-  // static_assert(test31<S>());
-  // static_assert(test32<S>());
-  // static_assert(test33<S>());
-  // static_assert(test34<S>());
-  // static_assert(test35<S>());
-  // static_assert(test36<S>());
-  // static_assert(test37<S>());
-  // static_assert(test38<S>());
-  // static_assert(test39<S>());
-  // static_assert(test40<S>());
-  // static_assert(test41<S>());
-  // static_assert(test42<S>());
-  // static_assert(test43<S>());
-  // static_assert(test44<S>());
-  // static_assert(test45<S>());
-  // static_assert(test46<S>());
-  // static_assert(test47<S>());
-  // static_assert(test48<S>());
-  // static_assert(test49<S>());
-  // static_assert(test50<S>());
-  // static_assert(test51<S>());
-  // static_assert(test52<S>());
-  // static_assert(test53<S>());
-  // static_assert(test54<S>());
-  // static_assert(test55<S>());
+#if TEST_STD_VER > 17
+  static_assert(test0<S>());
+  static_assert(test1<S>());
+  static_assert(test2<S>());
+  static_assert(test3<S>());
+  static_assert(test4<S>());
+  static_assert(test5<S>());
+  static_assert(test6<S>());
+  static_assert(test7<S>());
+  static_assert(test8<S>());
+  static_assert(test9<S>());
+  static_assert(test10<S>());
+  static_assert(test11<S>());
+  static_assert(test12<S>());
+  static_assert(test13<S>());
+  static_assert(test14<S>());
+  static_assert(test15<S>());
+  static_assert(test16<S>());
+  static_assert(test17<S>());
+  static_assert(test18<S>());
+  static_assert(test19<S>());
+  static_assert(test20<S>());
+  static_assert(test21<S>());
+  static_assert(test22<S>());
+  static_assert(test23<S>());
+  static_assert(test24<S>());
+  static_assert(test25<S>());
+  static_assert(test26<S>());
+  static_assert(test27<S>());
+  static_assert(test28<S>());
+  static_assert(test29<S>());
+  static_assert(test30<S>());
+  static_assert(test31<S>());
+  static_assert(test32<S>());
+  static_assert(test33<S>());
+  static_assert(test34<S>());
+  static_assert(test35<S>());
+  static_assert(test36<S>());
+  static_assert(test37<S>());
+  static_assert(test38<S>());
+  static_assert(test39<S>());
+  static_assert(test40<S>());
+  static_assert(test41<S>());
+  static_assert(test42<S>());
+  static_assert(test43<S>());
+  static_assert(test44<S>());
+  static_assert(test45<S>());
+  static_assert(test46<S>());
+  static_assert(test47<S>());
+  static_assert(test48<S>());
+  static_assert(test49<S>());
+  static_assert(test50<S>());
+  static_assert(test51<S>());
+  static_assert(test52<S>());
+  static_assert(test53<S>());
+  static_assert(test54<S>());
+  static_assert(test55<S>());
+#endif
 }
 
 int main(int, char**)

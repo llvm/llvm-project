@@ -23,7 +23,7 @@ struct Charlike {
     TEST_CONSTEXPR operator char() const { return ch_; }
 };
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   std::string s;
   Charlike<Holder<Incomplete> > a[] = {'m', 'a', 'h', 'i'};
   s.append(a, a+4);
@@ -39,7 +39,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

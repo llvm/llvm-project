@@ -9,14 +9,14 @@
 
 // <string>
 
-//   bool ends_with(charT x) const noexcept;
+// constexpr bool ends_with(charT x) const noexcept;
 
 #include <string>
 #include <cassert>
 
 #include "test_macros.h"
 
-bool test() {
+constexpr bool test() {
   {
     typedef std::string S;
     S  s1 {};
@@ -36,9 +36,7 @@ bool test() {
 int main(int, char**)
 {
   test();
-#if TEST_STD_VER > 17
-  // static_assert(test());
-#endif
+  static_assert(test());
 
   return 0;
 }

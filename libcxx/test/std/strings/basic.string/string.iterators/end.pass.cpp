@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-//       iterator end();
-// const_iterator end() const;
+//       iterator end(); // constexpr since C++20
+// const_iterator end() const; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -34,7 +36,7 @@ test(S s)
     assert(static_cast<std::size_t>(ce - cs.begin()) == cs.size());
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S());
@@ -55,7 +57,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

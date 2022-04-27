@@ -16,7 +16,7 @@
 
 // <string>
 
-// size_type max_size() const;
+// size_type max_size() const; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -59,9 +59,6 @@ bool test() {
 int main(int, char**)
 {
   test();
-#if TEST_STD_VER > 17
-  // static_assert(test());
-#endif
 
   return 0;
 }

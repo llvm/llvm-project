@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// size_type find(const charT* s, size_type pos, size_type n) const;
+// size_type find(const charT* s, size_type pos, size_type n) const; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -17,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const S& s, const typename S::value_type* str, typename S::size_type pos,
      typename S::size_type n, typename S::size_type x)
 {
@@ -367,7 +369,7 @@ TEST_CONSTEXPR_CXX20 void test3()
     test(S("abcdeabcdeabcdeabcde"), "abcdeabcdeabcdeabcde", 21, 20, S::npos);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test0<S>();
@@ -392,7 +394,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

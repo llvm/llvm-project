@@ -9,12 +9,14 @@
 // <string>
 // UNSUPPORTED: c++03, c++11, c++14
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // template<class InputIterator,
 //      class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
 //  basic_string(InputIterator, InputIterator, Allocator = Allocator())
 //    -> basic_string<typename iterator_traits<InputIterator>::value_type,
 //                 char_traits<typename iterator_traits<InputIterator>::value_type>,
-//                 Allocator>;
+//                 Allocator>; // constexpr since C++20
 //
 //  The deduction guide shall not participate in overload resolution if InputIterator
 //  is a type that does not qualify as an input iterator, or if Allocator is a type
@@ -49,7 +51,7 @@ static_assert(!CanDeduce<NotAnIterator, std::allocator<char>>::value);
 static_assert(!CanDeduce<NotAnInputIterator, std::allocator<char16_t>>::value);
 static_assert(!CanDeduce<wchar_t const*, NotAnAllocator<wchar_t>>::value);
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     const char* s = "12345678901234";
     std::basic_string s1(s, s+10);  // Can't use {} here
@@ -108,7 +110,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

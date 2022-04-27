@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // basic_string(const basic_string<charT,traits,Allocator>& str,
 //              size_type pos, size_type n,
-//              const Allocator& a = Allocator());
+//              const Allocator& a = Allocator()); // constexpr since C++20
 //
 // basic_string(const basic_string<charT,traits,Allocator>& str,
 //              size_type pos,
-//              const Allocator& a = Allocator());
+//              const Allocator& a = Allocator()); // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -138,7 +140,7 @@ void test_lwg2583()
 #endif
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef test_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
@@ -225,7 +227,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
   test_lwg2583();
 

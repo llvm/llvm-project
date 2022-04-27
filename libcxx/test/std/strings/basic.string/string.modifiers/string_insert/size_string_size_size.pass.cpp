@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
 //   insert(size_type pos1, const basic_string<charT,traits,Allocator>& str,
-//          size_type pos2, size_type n=npos);
+//          size_type pos2, size_type n=npos); // constexpr since C++20
 // the "=npos" was added in C++14
 
 #include <string>
@@ -34,7 +36,7 @@ test(S s, typename S::size_type pos1, S str, typename S::size_type pos2,
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -63,7 +65,7 @@ test_npos(S s, typename S::size_type pos1, S str, typename S::size_type pos2, S 
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -1824,37 +1826,37 @@ void test() {
   test30<S>();
 
 #if TEST_STD_VER > 17
-  // static_assert(test0<S>());
-  // static_assert(test1<S>());
-  // static_assert(test2<S>());
-  // static_assert(test3<S>());
-  // static_assert(test4<S>());
-  // static_assert(test5<S>());
-  // static_assert(test6<S>());
-  // static_assert(test7<S>());
-  // static_assert(test8<S>());
-  // static_assert(test9<S>());
-  // static_assert(test10<S>());
-  // static_assert(test11<S>());
-  // static_assert(test12<S>());
-  // static_assert(test13<S>());
-  // static_assert(test14<S>());
-  // static_assert(test15<S>());
-  // static_assert(test16<S>());
-  // static_assert(test17<S>());
-  // static_assert(test18<S>());
-  // static_assert(test19<S>());
-  // static_assert(test20<S>());
-  // static_assert(test21<S>());
-  // static_assert(test22<S>());
-  // static_assert(test23<S>());
-  // static_assert(test24<S>());
-  // static_assert(test25<S>());
-  // static_assert(test26<S>());
-  // static_assert(test27<S>());
-  // static_assert(test28<S>());
-  // static_assert(test29<S>());
-  // static_assert(test30<S>());
+  static_assert(test0<S>());
+  static_assert(test1<S>());
+  static_assert(test2<S>());
+  static_assert(test3<S>());
+  static_assert(test4<S>());
+  static_assert(test5<S>());
+  static_assert(test6<S>());
+  static_assert(test7<S>());
+  static_assert(test8<S>());
+  static_assert(test9<S>());
+  static_assert(test10<S>());
+  static_assert(test11<S>());
+  static_assert(test12<S>());
+  static_assert(test13<S>());
+  static_assert(test14<S>());
+  static_assert(test15<S>());
+  static_assert(test16<S>());
+  static_assert(test17<S>());
+  static_assert(test18<S>());
+  static_assert(test19<S>());
+  static_assert(test20<S>());
+  static_assert(test21<S>());
+  static_assert(test22<S>());
+  static_assert(test23<S>());
+  static_assert(test24<S>());
+  static_assert(test25<S>());
+  static_assert(test26<S>());
+  static_assert(test27<S>());
+  static_assert(test28<S>());
+  static_assert(test29<S>());
+  static_assert(test30<S>());
 #endif
 }
 

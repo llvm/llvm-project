@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // template<class InputIterator>
 //   basic_string(InputIterator begin, InputIterator end,
-//   const Allocator& a = Allocator());
+//   const Allocator& a = Allocator()); // constexpr since C++20
 
 
 #include <string>
@@ -62,7 +64,7 @@ test(It first, It last, const A& a)
     assert(s2.capacity() >= s2.size());
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef test_allocator<char> A;
     const char* s = "12345678901234567890123456789012345678901234567890";
@@ -138,7 +140,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

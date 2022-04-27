@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// const charT& front() const;
-//       charT& front();
+// const charT& front() const; // constexpr since C++20
+//       charT& front(); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -32,7 +34,7 @@ test(S s)
     assert(s.front() == typename S::value_type('z'));
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S("1"));
@@ -53,7 +55,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

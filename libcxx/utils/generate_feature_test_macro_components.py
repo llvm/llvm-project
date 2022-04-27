@@ -247,7 +247,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["numeric"],
   }, {
     "name": "__cpp_lib_constexpr_string",
-    "values": { "c++20": 201811 },  # because P1032R1 is implemented; but should become 201907 after P0980R1
+    "values": { "c++20": 201907 },
     "headers": ["string"],
   }, {
     "name": "__cpp_lib_constexpr_string_view",

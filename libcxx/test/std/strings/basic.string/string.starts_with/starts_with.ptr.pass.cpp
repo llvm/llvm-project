@@ -9,14 +9,14 @@
 
 // <string>
 
-//   bool starts_with(const CharT *x) const;
+// constexpr bool starts_with(const CharT *x) const;
 
 #include <string>
 #include <cassert>
 
 #include "test_macros.h"
 
-bool test() {
+constexpr bool test() {
   {
     typedef std::string S;
     const char *s = "abcde";
@@ -64,9 +64,7 @@ bool test() {
 int main(int, char**)
 {
   test();
-#if TEST_STD_VER > 17
-  // static_assert(test());
-#endif
+  static_assert(test());
 
   return 0;
 }
