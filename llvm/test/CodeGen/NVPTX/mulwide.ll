@@ -1,5 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 -O3 | FileCheck %s --check-prefix=OPT
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 -O0 | FileCheck %s --check-prefix=NOOPT
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 -O3 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 -O0 | %ptxas-verify %}
 
 ; OPT-LABEL: @mulwide16
 ; NOOPT-LABEL: @mulwide16

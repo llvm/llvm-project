@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_75 -mattr=+ptx70 | FileCheck %s
+; RUN: %if ptxas-11.0 %{ llc < %s -march=nvptx64 -mcpu=sm_75 -mattr=+ptx70 | %ptxas-verify -arch=sm_75 %}
 
 declare half @llvm.nvvm.ex2.approx.f16(half)
 declare <2 x half> @llvm.nvvm.ex2.approx.f16x2(<2 x half>)

@@ -1,5 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_80 | FileCheck %s -check-prefix=CHECK_PTX32
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_80 | FileCheck %s -check-prefix=CHECK_PTX64
+; RUN: %if ptxas-11.0 %{ llc < %s -march=nvptx -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-11.0 %{ llc < %s -march=nvptx64 -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
 
 declare void @llvm.nvvm.mbarrier.init(i64* %a, i32 %b)
 declare void @llvm.nvvm.mbarrier.init.shared(i64 addrspace(3)* %a, i32 %b)

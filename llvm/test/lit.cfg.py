@@ -192,6 +192,53 @@ tools.extend([
     ToolSubst('OrcV2CBindingsVeryLazy', unresolved='ignore'),
     ToolSubst('dxil-dis', unresolved='ignore')])
 
+# Find (major, minor) version of ptxas
+def ptxas_version(ptxas):
+    ptxas_cmd = subprocess.Popen([ptxas, '--version'], stdout=subprocess.PIPE)
+    ptxas_out = ptxas_cmd.stdout.read().decode('ascii')
+    ptxas_cmd.wait()
+    match = re.search('release (\d+)\.(\d+)', ptxas_out)
+    if match:
+        return (int(match.group(1)), int(match.group(2)))
+    print('couldn\'t determine ptxas version')
+    return None
+
+def enable_ptxas(ptxas_executable):
+    version = ptxas_version(ptxas_executable)
+    if version:
+        # ptxas is supposed to be backward compatible with previous
+        # versions, so add a feature for every known version prior to
+        # the current one.
+        ptxas_known_versions = [
+            (9, 0), (9, 1), (9, 2),
+            (10, 0), (10, 1), (10, 2),
+            (11, 0), (11, 1), (11, 2), (11, 3), (11, 4), (11, 5), (11, 6),
+        ]
+
+        # ignore ptxas if its version is below the minimum supported
+        # version
+        min_version = ptxas_known_versions[0]
+        if version[0] < min_version[0] or version[1] < min_version[1]:
+            print(
+                'Warning: ptxas version {}.{} is not supported'.format(
+                    version[0], version[1]))
+            return
+
+        for known_major, known_minor in ptxas_known_versions:
+            if known_major <= version[0] and known_minor <= version[1]:
+                config.available_features.add(
+                    'ptxas-{}.{}'.format(known_major, known_minor))
+
+    config.available_features.add('ptxas')
+    tools.extend([ToolSubst('%ptxas', ptxas_executable),
+                  ToolSubst('%ptxas-verify', '{} -c -o /dev/null -'.format(
+                      ptxas_executable))])
+
+ptxas_executable = \
+    os.environ.get('LLVM_PTXAS_EXECUTABLE', None) or config.ptxas_executable
+if ptxas_executable:
+    enable_ptxas(ptxas_executable)
+
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
 # Targets

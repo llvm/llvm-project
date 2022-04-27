@@ -1,6 +1,9 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s --check-prefixes=ALL,G32,LS32
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefixes=ALL,G64,LS64
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | FileCheck %s --check-prefixes=G64,LS32
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | %ptxas-verify %}
 
 
 ;; i8

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | %ptxas-verify %if !ptxas-11.0 %{-arch=sm_30%} %}
 
 declare i1 @llvm.nvvm.vote.all(i1)
 ; CHECK-LABEL: .func{{.*}}vote_all

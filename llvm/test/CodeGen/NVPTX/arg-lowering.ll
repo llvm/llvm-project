@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK: .visible .func  (.param .align 16 .b8 func_retval0[16]) foo0(
 ; CHECK:          .param .align 4 .b8 foo0_param_0[8]

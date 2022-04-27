@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
 
 ; Even though general vector types are not supported in PTX, we can still
 ; optimize loads/stores with pseudo-vector instructions of the form:

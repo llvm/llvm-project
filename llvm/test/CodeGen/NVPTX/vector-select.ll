@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20
+; RUN: llc < %s -march=nvptx -mcpu=sm_20 %if ptxas %{ | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 %if ptxas %{ | %ptxas-verify %}
 
 ; This test makes sure that vector selects are scalarized by the type legalizer.
 ; If not, type legalization will fail.

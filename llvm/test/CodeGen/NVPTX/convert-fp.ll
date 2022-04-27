@@ -1,5 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 define i16 @cvt_u16_f32(float %x) {
 ; CHECK: cvt.rzi.u16.f32 %rs{{[0-9]+}}, %f{{[0-9]+}};
