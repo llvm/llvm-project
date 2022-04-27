@@ -122,6 +122,10 @@ void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool) {
 
   // Signal the workers to exit the state machine and exit the kernel.
   state::ParallelRegionFn = nullptr;
+
+  // make sure workers cannot continue before the initial thread
+  // has reset the Fn pointer for termination
+  synchronize::threads();
 }
 
 int8_t __kmpc_is_spmd_exec_mode() {

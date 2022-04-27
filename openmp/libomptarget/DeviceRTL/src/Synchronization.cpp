@@ -61,6 +61,8 @@ uint32_t atomicCAS(uint32_t *Address, uint32_t Compare, uint32_t Val,
 uint64_t atomicAdd(uint64_t *Address, uint64_t Val, int Ordering) {
   return __atomic_fetch_add(Address, Val, Ordering);
 }
+
+float unsafeAtomicAdd(float *addr, float value);
 ///}
 
 constexpr uint32_t UNSET = 0;
@@ -222,6 +224,28 @@ void setLock(omp_lock_t *Lock) {
   // test_lock will now return true for any thread in the warp
 }
 
+#if defined(__gfx90a__) && __has_builtin(__builtin_amdgcn_is_shared) &&        \
+    __has_builtin(__builtin_amdgcn_is_private) &&                              \
+    __has_builtin(__builtin_amdgcn_ds_atomic_fadd_f32) &&                      \
+    __has_builtin(__builtin_amdgcn_global_atomic_fadd_f32)
+// This function is called for gfx90a only and single precision
+// floating point type
+float unsafeAtomicAdd(float *addr, float value) {
+  if (__builtin_amdgcn_is_shared(
+          (const __attribute__((address_space(0))) void *)addr))
+    return __builtin_amdgcn_ds_atomic_fadd_f32(
+        (const __attribute__((address_space(3))) float *)addr, value);
+  else if (__builtin_amdgcn_is_private(
+               (const __attribute__((address_space(0))) void *)addr)) {
+    float temp = *addr;
+    *addr = temp + value;
+    return temp;
+  }
+  return __builtin_amdgcn_global_atomic_fadd_f32(
+      (const __attribute__((address_space(1))) float *)addr, value);
+}
+#endif // if defined(gfx90a) &&
+
 #pragma omp end declare variant
 ///}
 
@@ -285,6 +309,8 @@ void setLock(omp_lock_t *Lock) {
     }
   } // wait for 0 to be the read value
 }
+
+float unsafeAtomicAdd(float *addr, float value) { return 0.0; }
 
 #pragma omp end declare variant
 ///}
@@ -415,6 +441,10 @@ void omp_set_lock(omp_lock_t *Lock) { impl::setLock(Lock); }
 void omp_unset_lock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
 
 int omp_test_lock(omp_lock_t *Lock) { return impl::testLock(Lock); }
+
+float __kmpc_unsafeAtomicAdd(float *addr, float value) {
+  return impl::unsafeAtomicAdd(addr, value);
+}
 } // extern "C"
 
 #pragma omp end declare target

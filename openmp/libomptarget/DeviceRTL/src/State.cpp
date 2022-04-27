@@ -54,15 +54,18 @@ __attribute__((leaf)) void free(void *Ptr);
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
+// global_allocate uses ockl_dm_alloc to manage a global memory heap
+extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
+extern "C" void __ockl_dm_dealloc(uint64_t ptr);
+
 extern "C" {
 void *malloc(uint64_t Size) {
-  // TODO: Use some preallocated space for dynamic malloc.
-  return nullptr;
+  uint64_t ptr = __ockl_dm_alloc(Size);
+  return (void *)ptr;
 }
 
-void free(void *Ptr) {}
+void free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
 }
-
 #pragma omp end declare variant
 ///}
 
@@ -573,6 +576,18 @@ void __kmpc_end_sharing_variables() {
 void __kmpc_get_shared_variables(void ***GlobalArgs) {
   FunctionTracingRAII();
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
+}
+}
+
+extern "C" {
+__attribute__((leaf)) void *__kmpc_impl_malloc(uint64_t t) { return malloc(t); }
+__attribute__((leaf)) void __kmpc_impl_free(void *ptr) { free(ptr); }
+__attribute__((leaf)) char *global_allocate(uint32_t bufsz) {
+  return (char *)malloc(bufsz);
+}
+__attribute__((leaf)) int global_free(void *ptr) {
+  free(ptr);
+  return 0;
 }
 }
 #pragma omp end declare target
