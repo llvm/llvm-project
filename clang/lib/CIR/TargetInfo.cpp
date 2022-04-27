@@ -159,15 +159,6 @@ public:
 };
 } // namespace
 
-static bool classifyReturnType(const CIRGenCXXABI &CXXABI,
-                               CIRGenFunctionInfo &FI, const ABIInfo &Info) {
-  QualType Ty = FI.getReturnType();
-
-  assert(!Ty->getAs<RecordType>() && "RecordType returns NYI");
-
-  return CXXABI.classifyReturnType(FI);
-}
-
 CIRGenCXXABI &ABIInfo::getCXXABI() const { return CGT.getCXXABI(); }
 
 clang::ASTContext &ABIInfo::getContext() const { return CGT.getContext(); }
@@ -193,51 +184,6 @@ void X86_64ABIInfo::computeInfo(CIRGenFunctionInfo &FI) const {
     FI.getReturnInfo() = ABIArgInfo::getIgnore();
   else
     FI.getReturnInfo() = ABIArgInfo::getDirect(CGT.ConvertType(RetTy));
-
-  return;
-
-  // TODO:
-  llvm_unreachable("Everything below here is from codegen. We shouldn't be "
-                   "computing ABI info until lowering");
-  const unsigned CallingConv = FI.getCallingConvention();
-
-  assert(CallingConv == cir::CallingConv::C && "C is the only supported CC");
-
-  unsigned FreeIntRegs = 6;
-  unsigned FreeSSERegs = 8;
-  unsigned NeededInt, NeededSSE;
-
-  assert(!::classifyReturnType(getCXXABI(), FI, *this) && "NYI");
-  FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
-
-  assert(!FI.getReturnInfo().isIndirect() && "Indirect return NYI");
-
-  assert(!FI.isChainCall() && "Chain call NYI");
-
-  unsigned NumRequiredArgs = FI.getNumRequiredArgs();
-  // AMD64-ABI 3.2.3p3: Once arguments are classified, the registers get
-  // assigned (in left-to-right order) for passing as follows...
-  unsigned ArgNo = 0;
-  for (CIRGenFunctionInfo::arg_iterator it = FI.arg_begin(), ie = FI.arg_end();
-       it != ie; ++it, ++ArgNo) {
-    bool IsNamedArg = ArgNo < NumRequiredArgs;
-
-    assert(!it->type->isStructureOrClassType() && "NYI");
-
-    it->info = classifyArgumentType(it->type, FreeIntRegs, NeededInt, NeededSSE,
-                                    IsNamedArg);
-
-    // AMD64-ABI 3.2.3p3: If there are no registers available for any eightbyte
-    // of an argument, the whole argument is passed on the stack. If registers
-    // have already been assigned for some eightbytes of such an argument, the
-    // assignments get reverted.
-    if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
-      FreeIntRegs -= NeededInt;
-      FreeSSERegs -= NeededSSE;
-    } else {
-      it->info = getIndirectResult(it->type, FreeIntRegs);
-    }
-  }
 }
 
 /// Pass transparent unions as if they were the type of the first element. Sema
