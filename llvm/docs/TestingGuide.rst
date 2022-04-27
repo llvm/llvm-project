@@ -612,6 +612,13 @@ RUN lines:
 
    Example: ``Windows %errc_ENOENT: no such file or directory``
 
+``%if feature %{<if branch>%} %else %{<else branch>%}``
+
+ Conditional substitution: if ``feature`` is available it expands to
+ ``<if branch>``, otherwise it expands to ``<else branch>``.
+ ``%else %{<else branch>%}`` is optional and treated like ``%else %{%}``
+ if not present.
+
 **LLVM-specific substitutions:**
 
 ``%shlibext``
