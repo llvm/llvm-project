@@ -1736,7 +1736,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     // thus calls destructors etc.
     auto FiniCB = [this](  InsertPointTy IP, 
      llvm::   omp::Directive LeaveReason,
-      llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
+      llvm::OpenMPIRBuilder::  OMPRegionInfo *Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4008,7 +4008,7 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
 
     auto FiniCB = [this]( InsertPointTy IP, 
         llvm::   omp::Directive LeaveReason,
-        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
+        llvm::OpenMPIRBuilder::  OMPRegionInfo *Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4079,7 +4079,7 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
     const Stmt *SectionRegionBodyStmt = S.getAssociatedStmt();
     auto FiniCB = [this]( InsertPointTy IP, 
         llvm::   omp::Directive LeaveReason,
-        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
+        llvm::OpenMPIRBuilder::  OMPRegionInfo*Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4162,7 +4162,7 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
 
     auto FiniCB = [this]( InsertPointTy IP, 
         llvm::   omp::Directive LeaveReason,
-        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
+        llvm::OpenMPIRBuilder::  OMPRegionInfo *Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4210,7 +4210,7 @@ void CodeGenFunction::EmitOMPMaskedDirective(const OMPMaskedDirective &S) {
 
     auto FiniCB = [this]( InsertPointTy IP, 
         llvm::   omp::Directive LeaveReason,
-        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
+        llvm::OpenMPIRBuilder::  OMPRegionInfo *Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -4252,7 +4252,7 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
 
     auto FiniCB = [this]( InsertPointTy IP, 
         llvm::   omp::Directive LeaveReason,
-        llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
+        llvm::OpenMPIRBuilder::  OMPRegionInfo *Region) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
@@ -5592,7 +5592,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
 
       auto FiniCB = [this]( InsertPointTy IP, 
           llvm::   omp::Directive LeaveReason,
-          llvm::OpenMPIRBuilder::  OMPRegionInfo &Region) {
+          llvm::OpenMPIRBuilder::  OMPRegionInfo *Region) {
         OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
       };
 

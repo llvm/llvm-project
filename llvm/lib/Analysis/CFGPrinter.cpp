@@ -260,7 +260,7 @@ PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
 /// program, displaying the CFG of the current function.  This depends on there
 /// being a 'dot' and 'gv' program in your path.
 ///
-void Function::viewCFG() const { viewCFG(false, nullptr, nullptr); }
+ LLVM_DUMP_METHOD void Function::viewCFG() const { viewCFG(false, nullptr, nullptr); }
 
 void Function::viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
                        const BranchProbabilityInfo *BPI) const {
@@ -275,7 +275,7 @@ void Function::viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
 /// into the nodes, just the label.  If you are only interested in the CFG
 /// this can make the graph smaller.
 ///
-void Function::viewCFGOnly() const { viewCFGOnly(nullptr, nullptr); }
+LLVM_DUMP_METHOD void Function::viewCFGOnly() const { viewCFGOnly(nullptr, nullptr); }
 
 void Function::viewCFGOnly(const BlockFrequencyInfo *BFI,
                            const BranchProbabilityInfo *BPI) const {
