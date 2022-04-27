@@ -959,7 +959,14 @@ public:
           break;
         }
       }
-    };
+    }
+
+    // Sort the completion results to make sure the output is deterministic in
+    // the face of different iteration schemes for different platforms.
+    llvm::sort(completionList.items, [](const lsp::CompletionItem &lhs,
+                                        const lsp::CompletionItem &rhs) {
+      return lhs.label < rhs.label;
+    });
   }
 
 private:

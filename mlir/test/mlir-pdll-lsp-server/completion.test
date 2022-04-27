@@ -211,11 +211,11 @@
 // CHECK-NEXT:    "items": [
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "kind": 17,
-// CHECK-NEXT:        "label": "included.td"
+// CHECK-NEXT:        "label": "included.pdll"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "kind": 17,
-// CHECK-NEXT:        "label": "included.pdll"
+// CHECK-NEXT:        "label": "included.td"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:  }
