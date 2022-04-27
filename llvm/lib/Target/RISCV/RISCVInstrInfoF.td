@@ -159,7 +159,7 @@ class FPStore_r<bits<3> funct3, string opcodestr, RegisterClass rty,
       Sched<[sw, ReadStoreData, ReadFMemBase]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
-    UseNamedOperandTable = 1, hasPostISelHook = 1 in
+    UseNamedOperandTable = 1, hasPostISelHook = 1, isCommutable = 1 in
 class FPFMA_rrr_frm<RISCVOpcode opcode, bits<2> funct2, string opcodestr,
                     DAGOperand rty>
     : RVInstR4Frm<funct2, opcode, (outs rty:$rd),
