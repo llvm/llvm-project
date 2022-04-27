@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// basic_string(size_type n, charT c, const Allocator& a = Allocator());
+// basic_string(size_type n, charT c, const Allocator& a = Allocator()); // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -50,7 +52,7 @@ test(unsigned n, charT c, const A& a)
 }
 
 template <class Tp>
-void
+TEST_CONSTEXPR_CXX20 void
 test(Tp n, Tp c)
 {
     typedef char charT;
@@ -80,7 +82,7 @@ test(Tp n, Tp c, const A& a)
     assert(s2.capacity() >= s2.size());
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef test_allocator<char> A;
 
@@ -127,7 +129,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

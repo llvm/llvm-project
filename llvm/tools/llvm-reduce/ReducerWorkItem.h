@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -25,9 +26,10 @@ public:
   operator MachineFunction &() const { return *MF; }
 };
 
-std::unique_ptr<ReducerWorkItem> parseReducerWorkItem(StringRef Filename,
-                                                      LLVMContext &Ctxt,
-                                                      MachineModuleInfo *MMI);
+std::unique_ptr<ReducerWorkItem>
+parseReducerWorkItem(const char *ToolName, StringRef Filename,
+                     LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
+                     std::unique_ptr<MachineModuleInfo> &MMI, bool IsMIR);
 
 std::unique_ptr<ReducerWorkItem>
 cloneReducerWorkItem(const ReducerWorkItem &MMM);

@@ -82,6 +82,7 @@ TEST(TemplateName, QualifiedUsingTemplate) {
   const auto *USD = QTN->getUnderlyingTemplate().getAsUsingShadowDecl();
   EXPECT_TRUE(USD);
   EXPECT_EQ(USD->getTargetDecl(), TN.getAsTemplateDecl());
+  EXPECT_EQ(TN.getAsUsingShadowDecl(), USD);
 }
 
 TEST(TemplateName, UsingTemplate) {

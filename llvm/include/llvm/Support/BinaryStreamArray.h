@@ -111,6 +111,8 @@ public:
 
   bool valid() const { return Stream.valid(); }
 
+  bool isOffsetValid(uint32_t Offset) const { return at(Offset) != end(); }
+
   uint32_t skew() const { return Skew; }
   Iterator end() const { return Iterator(E); }
 

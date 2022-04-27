@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 // UNSUPPORTED: c++03, c++11, c++14
 
@@ -47,7 +49,7 @@ struct NotAnAllocator { };
 static_assert( CanDeduce<std::string_view, std::size_t, std::allocator<char>>::value);
 static_assert(!CanDeduce<std::string_view, std::size_t, NotAnAllocator>::value);
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     std::string_view sv = "12345678901234";
     std::basic_string s1{sv, 0, 4};
@@ -81,7 +83,7 @@ bool test() {
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
   }
 #endif
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
   {
     std::u8string_view sv = u8"12345678901234";
     std::basic_string s1{sv, 0, 4, min_allocator<char8_t>{}};
@@ -121,7 +123,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;
