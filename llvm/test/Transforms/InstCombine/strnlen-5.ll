@@ -43,9 +43,9 @@ define i1 @fold_strnlen_ax_0_gtz() {
 
 define i1 @fold_strnlen_ax_1_eqz() {
 ; CHECK-LABEL: @fold_strnlen_ax_1_eqz(
-; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
-; CHECK-NEXT:    [[STRNLEN_CHAR0CMP_NOT:%.*]] = icmp eq i8 [[STRNLEN_CHAR0]], 0
-; CHECK-NEXT:    ret i1 [[STRNLEN_CHAR0CMP_NOT]]
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i8 [[CHAR0]], 0
+; CHECK-NEXT:    ret i1 [[EQZ]]
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i64 0, i64 0
@@ -55,13 +55,29 @@ define i1 @fold_strnlen_ax_1_eqz() {
 }
 
 
+; Likewise, fold strnlen(ax, 1) < 1 to *ax == 0.
+
+define i1 @fold_strnlen_ax_1_lt1() {
+; CHECK-LABEL: @fold_strnlen_ax_1_lt1(
+; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[STRNLEN_CHAR0CMP_NOT:%.*]] = icmp eq i8 [[STRNLEN_CHAR0]], 0
+; CHECK-NEXT:    ret i1 [[STRNLEN_CHAR0CMP_NOT]]
+;
+
+  %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i64 0, i64 0
+  %len = tail call i64 @strnlen(i8* %ptr, i64 1)
+  %nez = icmp ult i64 %len, 1
+  ret i1 %nez
+}
+
+
 ; Fold strnlen(ax, 1) != 0 to *ax != 0.
 
 define i1 @fold_strnlen_ax_1_neqz() {
 ; CHECK-LABEL: @fold_strnlen_ax_1_neqz(
-; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
-; CHECK-NEXT:    [[STRNLEN_CHAR0CMP:%.*]] = icmp ne i8 [[STRNLEN_CHAR0]], 0
-; CHECK-NEXT:    ret i1 [[STRNLEN_CHAR0CMP]]
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[NEZ:%.*]] = icmp ne i8 [[CHAR0]], 0
+; CHECK-NEXT:    ret i1 [[NEZ]]
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i64 0, i64 0
@@ -71,12 +87,28 @@ define i1 @fold_strnlen_ax_1_neqz() {
 }
 
 
+; Likewise, fold strnlen(ax, 1) > 0 to *ax != 0.
+
+define i1 @fold_strnlen_ax_1_gtz() {
+; CHECK-LABEL: @fold_strnlen_ax_1_gtz(
+; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[STRNLEN_CHAR0CMP:%.*]] = icmp ne i8 [[STRNLEN_CHAR0]], 0
+; CHECK-NEXT:    ret i1 [[STRNLEN_CHAR0CMP]]
+;
+
+  %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i64 0, i64 0
+  %len = tail call i64 @strnlen(i8* %ptr, i64 1)
+  %nez = icmp ugt i64 %len, 0
+  ret i1 %nez
+}
+
+
 ; Fold strnlen(ax, 9) == 0 to *ax == 0.
 
 define i1 @fold_strnlen_ax_9_eqz() {
 ; CHECK-LABEL: @fold_strnlen_ax_9_eqz(
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i64 9)
-; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i8 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[EQZ]]
 ;
 
@@ -107,9 +139,8 @@ define i1 @call_strnlen_ax_n_eqz(i64 %n) {
 
 define i1 @fold_strnlen_ax_nz_eqz(i64 %n) {
 ; CHECK-LABEL: @fold_strnlen_ax_nz_eqz(
-; CHECK-NEXT:    [[MAX:%.*]] = or i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i64 [[MAX]])
-; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i8 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[EQZ]]
 ;
 
@@ -125,9 +156,8 @@ define i1 @fold_strnlen_ax_nz_eqz(i64 %n) {
 
 define i1 @fold_strnlen_ax_nz_gtz(i64 %n) {
 ; CHECK-LABEL: @fold_strnlen_ax_nz_gtz(
-; CHECK-NEXT:    [[MAX:%.*]] = or i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i64 [[MAX]])
-; CHECK-NEXT:    [[GTZ:%.*]] = icmp ne i64 [[LEN]], 0
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[GTZ:%.*]] = icmp ne i8 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[GTZ]]
 ;
 
@@ -144,10 +174,9 @@ define i1 @fold_strnlen_ax_nz_gtz(i64 %n) {
 
 define i1 @fold_strnlen_a5_pi_nz_eqz(i64 %i, i64 %n) {
 ; CHECK-LABEL: @fold_strnlen_a5_pi_nz_eqz(
-; CHECK-NEXT:    [[NZ:%.*]] = or i64 [[N:%.*]], 1
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [5 x i8], [5 x i8]* @a5, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* noundef nonnull [[PTR]], i64 [[NZ]])
-; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i8, i8* [[PTR]], align 1
+; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i8 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[EQZ]]
 ;
 
@@ -165,10 +194,7 @@ define i1 @fold_strnlen_a5_pi_nz_eqz(i64 %i, i64 %n) {
 
 define i1 @fold_strnlen_s5_pi_nz_eqz(i64 %i, i64 %n) {
 ; CHECK-LABEL: @fold_strnlen_s5_pi_nz_eqz(
-; CHECK-NEXT:    [[NZ:%.*]] = or i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [6 x i8], [6 x i8]* @s5, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* noundef nonnull [[PTR]], i64 [[NZ]])
-; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i64 [[I:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[EQZ]]
 ;
 
