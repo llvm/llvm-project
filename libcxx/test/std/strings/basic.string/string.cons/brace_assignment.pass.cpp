@@ -11,14 +11,14 @@
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   operator=(basic_string<charT,traits,Allocator>&& str);
+//   operator=(basic_string<charT,traits,Allocator>&& str); // constexpr since C++20
 
 #include <string>
 #include <cassert>
 
 #include "test_macros.h"
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   // Test that assignment from {} and {ptr, len} are allowed and are not
   // ambiguous.
   {
@@ -39,7 +39,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // template <typename T>
 //    int compare(size_type pos1, size_type n1, const T& t,
-//                size_type pos2, size_type n2=npos) const;
+//                size_type pos2, size_type n2=npos) const; // constexpr since C++20
 //
 //  Mostly we're testing string_view here
 
@@ -22,7 +24,7 @@
 
 #include "test_macros.h"
 
-int sign(int x)
+TEST_CONSTEXPR_CXX20 int sign(int x)
 {
     if (x == 0)
         return 0;
@@ -32,7 +34,7 @@ int sign(int x)
 }
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const S& s, typename S::size_type pos1, typename S::size_type n1,
      SV sv,      typename S::size_type pos2, typename S::size_type n2, int x)
 {
@@ -40,7 +42,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
     if (pos1 <= s.size() && pos2 <= sv.size())
         assert(sign(s.compare(pos1, n1, sv, pos2, n2)) == sign(x));
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -56,7 +58,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
 }
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 test_npos(const S& s, typename S::size_type pos1, typename S::size_type n1,
           SV sv,      typename S::size_type pos2, int x)
 {
@@ -64,7 +66,7 @@ test_npos(const S& s, typename S::size_type pos1, typename S::size_type n1,
     if (pos1 <= s.size() && pos2 <= sv.size())
         assert(sign(s.compare(pos1, n1, sv, pos2)) == sign(x));
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -5952,155 +5954,161 @@ TEST_CONSTEXPR_CXX20 bool test55()
     return true;
 }
 
-int main(int, char**)
-{
-    {
-    typedef std::string S;
-    typedef std::string_view SV;
-    test0<S, SV>();
-    test1<S, SV>();
-    test2<S, SV>();
-    test3<S, SV>();
-    test4<S, SV>();
-    test5<S, SV>();
-    test6<S, SV>();
-    test7<S, SV>();
-    test8<S, SV>();
-    test9<S, SV>();
-    test10<S, SV>();
-    test11<S, SV>();
-    test12<S, SV>();
-    test13<S, SV>();
-    test14<S, SV>();
-    test15<S, SV>();
-    test16<S, SV>();
-    test17<S, SV>();
-    test18<S, SV>();
-    test19<S, SV>();
-    test20<S, SV>();
-    test21<S, SV>();
-    test22<S, SV>();
-    test23<S, SV>();
-    test24<S, SV>();
-    test25<S, SV>();
-    test26<S, SV>();
-    test27<S, SV>();
-    test28<S, SV>();
-    test29<S, SV>();
-    test30<S, SV>();
-    test31<S, SV>();
-    test32<S, SV>();
-    test33<S, SV>();
-    test34<S, SV>();
-    test35<S, SV>();
-    test36<S, SV>();
-    test37<S, SV>();
-    test38<S, SV>();
-    test39<S, SV>();
-    test40<S, SV>();
-    test41<S, SV>();
-    test42<S, SV>();
-    test43<S, SV>();
-    test44<S, SV>();
-    test45<S, SV>();
-    test46<S, SV>();
-    test47<S, SV>();
-    test48<S, SV>();
-    test49<S, SV>();
-    test50<S, SV>();
-    test51<S, SV>();
-    test52<S, SV>();
-    test53<S, SV>();
-    test54<S, SV>();
-    test55<S, SV>();
-    }
-#if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    typedef std::basic_string_view<char, std::char_traits<char>> SV;
-    test0<S, SV>();
-    test1<S, SV>();
-    test2<S, SV>();
-    test3<S, SV>();
-    test4<S, SV>();
-    test5<S, SV>();
-    test6<S, SV>();
-    test7<S, SV>();
-    test8<S, SV>();
-    test9<S, SV>();
-    test10<S, SV>();
-    test11<S, SV>();
-    test12<S, SV>();
-    test13<S, SV>();
-    test14<S, SV>();
-    test15<S, SV>();
-    test16<S, SV>();
-    test17<S, SV>();
-    test18<S, SV>();
-    test19<S, SV>();
-    test20<S, SV>();
-    test21<S, SV>();
-    test22<S, SV>();
-    test23<S, SV>();
-    test24<S, SV>();
-    test25<S, SV>();
-    test26<S, SV>();
-    test27<S, SV>();
-    test28<S, SV>();
-    test29<S, SV>();
-    test30<S, SV>();
-    test31<S, SV>();
-    test32<S, SV>();
-    test33<S, SV>();
-    test34<S, SV>();
-    test35<S, SV>();
-    test36<S, SV>();
-    test37<S, SV>();
-    test38<S, SV>();
-    test39<S, SV>();
-    test40<S, SV>();
-    test41<S, SV>();
-    test42<S, SV>();
-    test43<S, SV>();
-    test44<S, SV>();
-    test45<S, SV>();
-    test46<S, SV>();
-    test47<S, SV>();
-    test48<S, SV>();
-    test49<S, SV>();
-    test50<S, SV>();
-    test51<S, SV>();
-    test52<S, SV>();
-    test53<S, SV>();
-    test54<S, SV>();
-    test55<S, SV>();
-    }
-#endif
-    {
-    typedef std::string S;
-    typedef std::string_view SV;
-    S s = "MNOP";
-    SV sv = "CDEF";
-    char arr[] = "MNOP";
+template <class S, class SV>
+TEST_CONSTEXPR_CXX20 bool test56() {
+  S s = "MNOP";
+  SV sv = "CDEF";
+  char arr[] = "MNOP";
 
 //  calls compare(pos, n1, const char *, 0)
-    assert(s.compare(0, 4, "QRST", 0) > 0);
+  assert(s.compare(0, 4, "QRST", 0) > 0);
 
 //  calls compare(pos, n1, string("QRST"), 0, npos)
-    assert(s.compare(0, 4, "QRST", 0, std::string::npos) < 0);
+  assert(s.compare(0, 4, "QRST", 0, std::string::npos) < 0);
 
 //  calls compare(pos, n1, T, 0, npos)
-    assert(s.compare(0, 4, sv, 0) > 0);
+  assert(s.compare(0, 4, sv, 0) > 0);
 
 //  calls compare(pos, n1, T, 0, npos)
-    assert(s.compare(0, 4, sv, 0, std::string::npos) > 0);
+  assert(s.compare(0, 4, sv, 0, std::string::npos) > 0);
 
 // calls compare(pos, n1, const char *, 0)
-    assert(s.compare(0, 4, arr, 0) > 0);
+  assert(s.compare(0, 4, arr, 0) > 0);
 
 //  calls compare(size, size, string(arr), 0, npos)
-    assert(s.compare(0, 4, arr, 0, std::string::npos) == 0);
-    }
+  assert(s.compare(0, 4, arr, 0, std::string::npos) == 0);
+
+  return true;
+}
+
+template <class S, class SV>
+void test() {
+  test0<S, SV>();
+  test1<S, SV>();
+  test2<S, SV>();
+  test3<S, SV>();
+  test4<S, SV>();
+  test5<S, SV>();
+  test6<S, SV>();
+  test7<S, SV>();
+  test8<S, SV>();
+  test9<S, SV>();
+  test10<S, SV>();
+  test11<S, SV>();
+  test12<S, SV>();
+  test13<S, SV>();
+  test14<S, SV>();
+  test15<S, SV>();
+  test16<S, SV>();
+  test17<S, SV>();
+  test18<S, SV>();
+  test19<S, SV>();
+  test20<S, SV>();
+  test21<S, SV>();
+  test22<S, SV>();
+  test23<S, SV>();
+  test24<S, SV>();
+  test25<S, SV>();
+  test26<S, SV>();
+  test27<S, SV>();
+  test28<S, SV>();
+  test29<S, SV>();
+  test30<S, SV>();
+  test31<S, SV>();
+  test32<S, SV>();
+  test33<S, SV>();
+  test34<S, SV>();
+  test35<S, SV>();
+  test36<S, SV>();
+  test37<S, SV>();
+  test38<S, SV>();
+  test39<S, SV>();
+  test40<S, SV>();
+  test41<S, SV>();
+  test42<S, SV>();
+  test43<S, SV>();
+  test44<S, SV>();
+  test45<S, SV>();
+  test46<S, SV>();
+  test47<S, SV>();
+  test48<S, SV>();
+  test49<S, SV>();
+  test50<S, SV>();
+  test51<S, SV>();
+  test52<S, SV>();
+  test53<S, SV>();
+  test54<S, SV>();
+  test55<S, SV>();
+  test56<S, SV>();
+
+#if TEST_STD_VER > 17
+  static_assert(test0<S, SV>());
+  static_assert(test1<S, SV>());
+  static_assert(test2<S, SV>());
+  static_assert(test3<S, SV>());
+  static_assert(test4<S, SV>());
+  static_assert(test5<S, SV>());
+  static_assert(test6<S, SV>());
+  static_assert(test7<S, SV>());
+  static_assert(test8<S, SV>());
+  static_assert(test9<S, SV>());
+  static_assert(test10<S, SV>());
+  static_assert(test11<S, SV>());
+  static_assert(test12<S, SV>());
+  static_assert(test13<S, SV>());
+  static_assert(test14<S, SV>());
+  static_assert(test15<S, SV>());
+  static_assert(test16<S, SV>());
+  static_assert(test17<S, SV>());
+  static_assert(test18<S, SV>());
+  static_assert(test19<S, SV>());
+  static_assert(test20<S, SV>());
+  static_assert(test21<S, SV>());
+  static_assert(test22<S, SV>());
+  static_assert(test23<S, SV>());
+  static_assert(test24<S, SV>());
+  static_assert(test25<S, SV>());
+  static_assert(test26<S, SV>());
+  static_assert(test27<S, SV>());
+  static_assert(test28<S, SV>());
+  static_assert(test29<S, SV>());
+  static_assert(test30<S, SV>());
+  static_assert(test31<S, SV>());
+  static_assert(test32<S, SV>());
+  static_assert(test33<S, SV>());
+  static_assert(test34<S, SV>());
+  static_assert(test35<S, SV>());
+  static_assert(test36<S, SV>());
+  static_assert(test37<S, SV>());
+  static_assert(test38<S, SV>());
+  static_assert(test39<S, SV>());
+  static_assert(test40<S, SV>());
+  static_assert(test41<S, SV>());
+  static_assert(test42<S, SV>());
+  static_assert(test43<S, SV>());
+  static_assert(test44<S, SV>());
+  static_assert(test45<S, SV>());
+  static_assert(test46<S, SV>());
+  static_assert(test47<S, SV>());
+  static_assert(test48<S, SV>());
+  static_assert(test49<S, SV>());
+  static_assert(test50<S, SV>());
+  static_assert(test51<S, SV>());
+  static_assert(test52<S, SV>());
+  static_assert(test53<S, SV>());
+  static_assert(test54<S, SV>());
+  static_assert(test55<S, SV>());
+  static_assert(test56<S, SV>());
+#endif
+}
+
+int main(int, char**)
+{
+  test<std::string, std::string_view>();
+#if TEST_STD_VER >= 11
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>,
+       std::basic_string_view<char, std::char_traits<char>>>();
+#endif
 
   return 0;
 }

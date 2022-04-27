@@ -11593,23 +11593,8 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
 
   if (VT.getVectorNumElements() == 4 &&
       (VT.is128BitVector() || VT.is64BitVector())) {
-    unsigned PFIndexes[4];
-    for (unsigned i = 0; i != 4; ++i) {
-      if (M[i] < 0)
-        PFIndexes[i] = 8;
-      else
-        PFIndexes[i] = M[i];
-    }
-
-    // Compute the index in the perfect shuffle table.
-    unsigned PFTableIndex = PFIndexes[0] * 9 * 9 * 9 + PFIndexes[1] * 9 * 9 +
-                            PFIndexes[2] * 9 + PFIndexes[3];
-    unsigned PFEntry = PerfectShuffleTable[PFTableIndex];
-    unsigned Cost = (PFEntry >> 30);
-
-    // The cost tables encode cost 0 or cost 1 shuffles using the value 0 in
-    // the top 2 bits.
-    if (Cost == 0)
+    unsigned Cost = getPerfectShuffleCost(M);
+    if (Cost <= 1)
       return true;
   }
 

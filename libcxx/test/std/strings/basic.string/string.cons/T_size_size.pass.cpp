@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // template<class _Tp>
 //   basic_string(const _Tp& __t, size_type __pos, size_type __n,
-//                const allocator_type& __a = allocator_type());
+//                const allocator_type& __a = allocator_type()); // constexpr since C++20
 //
 //  Mostly we're testing string_view here
 
@@ -91,7 +93,7 @@ test(SV sv, std::size_t pos, std::size_t n, const typename S::allocator_type& a)
 #endif
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef test_allocator<char> A;
     typedef std::basic_string_view<char, std::char_traits<char> > SV;
@@ -189,7 +191,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

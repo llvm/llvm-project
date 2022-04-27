@@ -169,6 +169,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUReplaceLDSUseWithPointer.cpp",
     "AMDGPUResourceUsageAnalysis.cpp",
     "AMDGPURewriteOutArguments.cpp",
+    "AMDGPUSetWavePriority.cpp",
     "AMDGPUSubtarget.cpp",
     "AMDGPUTargetMachine.cpp",
     "AMDGPUTargetObjectFile.cpp",

@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   replace(const_iterator i1, const_iterator i2, const charT* s, size_type n);
+//   replace(const_iterator i1, const_iterator i2, const charT* s, size_type n); // constexpr since C++20
 
 #include <string>
 #include <algorithm>
@@ -962,7 +964,7 @@ TEST_CONSTEXPR_CXX20 bool test8()
 }
 
 template <class S>
-bool test9() {
+TEST_CONSTEXPR_CXX20 bool test9() {
   S s_short = "123/";
   S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
 
@@ -993,16 +995,16 @@ void test() {
   test9<S>();
 
 #if TEST_STD_VER > 17
-  // static_assert(test0<S>());
-  // static_assert(test1<S>());
-  // static_assert(test2<S>());
-  // static_assert(test3<S>());
-  // static_assert(test4<S>());
-  // static_assert(test5<S>());
-  // static_assert(test6<S>());
-  // static_assert(test7<S>());
-  // static_assert(test8<S>());
-  // static_assert(test9<S>());
+  static_assert(test0<S>());
+  static_assert(test1<S>());
+  static_assert(test2<S>());
+  static_assert(test3<S>());
+  static_assert(test4<S>());
+  static_assert(test5<S>());
+  static_assert(test6<S>());
+  static_assert(test7<S>());
+  static_assert(test8<S>());
+  static_assert(test9<S>());
 #endif
 }
 

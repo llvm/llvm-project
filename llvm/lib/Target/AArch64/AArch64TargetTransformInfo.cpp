@@ -8,6 +8,7 @@
 
 #include "AArch64TargetTransformInfo.h"
 #include "AArch64ExpandImm.h"
+#include "AArch64PerfectShuffle.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -15,8 +16,8 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
@@ -2595,20 +2596,94 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                ArrayRef<int> Mask, int Index,
                                                VectorType *SubTp,
                                                ArrayRef<const Value *> Args) {
-  Kind = improveShuffleKindFromMask(Kind, Mask);
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+  // If we have a Mask, and the LT is being legalized somehow, split the Mask
+  // into smaller vectors and sum the cost of each shuffle.
+  if (!Mask.empty() && isa<FixedVectorType>(Tp) && LT.second.isVector() &&
+      Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
+      cast<FixedVectorType>(Tp)->getNumElements() >
+          LT.second.getVectorNumElements() &&
+      !Index && !SubTp) {
+    unsigned TpNumElts = cast<FixedVectorType>(Tp)->getNumElements();
+    assert(Mask.size() == TpNumElts && "Expected Mask and Tp size to match!");
+    unsigned LTNumElts = LT.second.getVectorNumElements();
+    unsigned NumVecs = (TpNumElts + LTNumElts - 1) / LTNumElts;
+    VectorType *NTp =
+        VectorType::get(Tp->getScalarType(), LT.second.getVectorElementCount());
+    InstructionCost Cost;
+    for (unsigned N = 0; N < NumVecs; N++) {
+      SmallVector<int> NMask;
+      // Split the existing mask into chunks of size LTNumElts. Track the source
+      // sub-vectors to ensure the result has at most 2 inputs.
+      unsigned Source1, Source2;
+      unsigned NumSources = 0;
+      for (unsigned E = 0; E < LTNumElts; E++) {
+        int MaskElt = (N * LTNumElts + E < TpNumElts) ? Mask[N * LTNumElts + E]
+                                                      : UndefMaskElem;
+        if (MaskElt < 0) {
+          NMask.push_back(UndefMaskElem);
+          continue;
+        }
+
+        // Calculate which source from the input this comes from and whether it
+        // is new to us.
+        unsigned Source = MaskElt / LTNumElts;
+        if (NumSources == 0) {
+          Source1 = Source;
+          NumSources = 1;
+        } else if (NumSources == 1 && Source != Source1) {
+          Source2 = Source;
+          NumSources = 2;
+        } else if (NumSources >= 2 && Source != Source1 && Source != Source2) {
+          NumSources++;
+        }
+
+        // Add to the new mask. For the NumSources>2 case these are not correct,
+        // but are only used for the modular lane number.
+        if (Source == Source1)
+          NMask.push_back(MaskElt % LTNumElts);
+        else if (Source == Source2)
+          NMask.push_back(MaskElt % LTNumElts + LTNumElts);
+        else
+          NMask.push_back(MaskElt % LTNumElts);
+      }
+      // If the sub-mask has at most 2 input sub-vectors then re-cost it using
+      // getShuffleCost. If not then cost it using the worst case.
+      if (NumSources <= 2)
+        Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
+                                               : TTI::SK_PermuteTwoSrc,
+                               NTp, NMask, 0, nullptr, Args);
+      else if (any_of(enumerate(NMask), [&](const auto &ME) {
+                 return ME.value() % LTNumElts == ME.index();
+               }))
+        Cost += LTNumElts - 1;
+      else
+        Cost += LTNumElts;
+    }
+    return Cost;
+  }
+
+  Kind = improveShuffleKindFromMask(Kind, Mask);
+
+  // Check for broadcast loads.
+  if (Kind == TTI::SK_Broadcast) {
+    bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
+    if (IsLoad && LT.second.isVector() &&
+        isLegalBroadcastLoad(Tp->getElementType(),
+                             LT.second.getVectorElementCount()))
+      return 0; // broadcast is handled by ld1r
+  }
+
+  // If we have 4 elements for the shuffle and a Mask, get the cost straight
+  // from the perfect shuffle tables.
+  if (Mask.size() == 4 && Tp->getElementCount() == ElementCount::getFixed(4) &&
+      (Tp->getScalarSizeInBits() == 16 || Tp->getScalarSizeInBits() == 32) &&
+      all_of(Mask, [](int E) { return E < 8; }))
+    return getPerfectShuffleCost(Mask);
+
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
       Kind == TTI::SK_Reverse) {
-
-    // Check for broadcast loads.
-    if (Kind == TTI::SK_Broadcast) {
-      bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
-      if (IsLoad && LT.second.isVector() &&
-          isLegalBroadcastLoad(Tp->getElementType(),
-                               LT.second.getVectorElementCount()))
-        return 0; // broadcast is handled by ld1r
-    }
 
     static const CostTblEntry ShuffleTbl[] = {
       // Broadcast shuffle kinds can be performed with 'dup'.
