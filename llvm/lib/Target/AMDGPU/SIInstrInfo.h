@@ -674,6 +674,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::LDSDIR;
   }
 
+  static bool isVINTERP(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::VINTERP;
+  }
+
+  bool isVINTERP(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::VINTERP;
+  }
+
   static bool isScalarUnit(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
   }
