@@ -434,7 +434,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // TODO: cleanup argument memory at the end
 
   // Extract the return value.
-  RValue Ret = [&] {
+  RValue ret = [&] {
     switch (RetAI.getKind()) {
     case ABIArgInfo::Direct: {
       mlir::Type RetCIRTy = convertType(RetTy);
@@ -475,7 +475,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   assert(RetTy.isDestructedType() != QualType::DK_nontrivial_c_struct && "NYI");
 
-  return Ret;
+  return ret;
 }
 
 RValue CIRGenFunction::GetUndefRValue(QualType Ty) {
