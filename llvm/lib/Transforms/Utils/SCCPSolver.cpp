@@ -539,7 +539,7 @@ void SCCPInstVisitor::markArgInFuncSpecialization(
     LLVM_DEBUG(dbgs() << "SCCP: Marking argument "
                       << NewArg->getNameOrAsOperand() << "\n");
 
-    if (OldArg == Iter->Formal) {
+    if (Iter != Args.end() && OldArg == Iter->Formal) {
       // Mark the argument constants in the new function.
       markConstant(NewArg, Iter->Actual);
       ++Iter;

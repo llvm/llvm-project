@@ -212,6 +212,13 @@ private:
 MachineBasicBlock::iterator
 findSplitPointForStackProtector(MachineBasicBlock *BB,
                                 const TargetInstrInfo &TII);
+/// Evaluates if the specified FP class test is an inversion of a simpler test.
+/// An example is the test "inf|normal|subnormal|zero", which is an inversion
+/// of "nan".
+/// \param Test The test as specified in 'is_fpclass' intrinsic invocation.
+/// \returns The inverted test, or zero, if inversion does not produce simpler
+/// test.
+unsigned getInvertedFPClassTest(unsigned Test);
 
 } // namespace llvm
 

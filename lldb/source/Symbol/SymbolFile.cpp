@@ -12,6 +12,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFileOnDemand.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
@@ -77,6 +78,24 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
       }
     }
     if (best_symfile_up) {
+      // If symbol on-demand is enabled the winning symbol file parser is
+      // wrapped with SymbolFileOnDemand so that hydration of the debug info
+      // can be controlled to improve performance.
+      //
+      // Currently the supported on-demand symbol files include:
+      //  executables, shared libraries and debug info files.
+      //
+      // To reduce unnecessary wrapping files with zero debug abilities are
+      // skipped.
+      ObjectFile::Type obj_file_type = objfile_sp->CalculateType();
+      if (ModuleList::GetGlobalModuleListProperties().GetLoadSymbolOnDemand() &&
+          best_symfile_abilities > 0 &&
+          (obj_file_type == ObjectFile::eTypeExecutable ||
+           obj_file_type == ObjectFile::eTypeSharedLibrary ||
+           obj_file_type == ObjectFile::eTypeDebugInfo)) {
+        best_symfile_up =
+            std::make_unique<SymbolFileOnDemand>(std::move(best_symfile_up));
+      }
       // Let the winning symbol file parser initialize itself more completely
       // now that it has been chosen
       best_symfile_up->InitializeObject();

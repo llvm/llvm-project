@@ -451,8 +451,11 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
 
   // strncmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2) {
-    StringRef SubStr1 = Str1.substr(0, Length);
-    StringRef SubStr2 = Str2.substr(0, Length);
+    // Avoid truncating the 64-bit Length to 32 bits in ILP32.
+    StringRef::size_type MinLen1 = std::min((uint64_t)Str1.size(), Length);
+    StringRef::size_type MinLen2 = std::min((uint64_t)Str2.size(), Length);
+    StringRef SubStr1 = Str1.substr(0, MinLen1);
+    StringRef SubStr2 = Str2.substr(0, MinLen2);
     return ConstantInt::get(CI->getType(), SubStr1.compare(SubStr2));
   }
 
@@ -629,12 +632,39 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
-                                               unsigned CharSize) {
+                                               unsigned CharSize,
+                                               Value *Bound) {
   Value *Src = CI->getArgOperand(0);
+  Type *CharTy = B.getIntNTy(CharSize);
 
-  // Constant folding: strlen("xyz") -> 3
-  if (uint64_t Len = GetStringLength(Src, CharSize))
-    return ConstantInt::get(CI->getType(), Len - 1);
+  if (Bound) {
+    if (ConstantInt *BoundCst = dyn_cast<ConstantInt>(Bound)) {
+      if (BoundCst->isZero())
+        // Fold strnlen(s, 0) -> 0 for any s, constant or otherwise.
+        return ConstantInt::get(CI->getType(), 0);
+
+      if (BoundCst->isOne()) {
+        // Fold strnlen(s, 1) -> *s ? 1 : 0 for any s.
+        Value *CharVal = B.CreateLoad(CharTy, Src, "strnlen.char0");
+        Value *ZeroChar = ConstantInt::get(CharTy, 0);
+        Value *Cmp = B.CreateICmpNE(CharVal, ZeroChar, "strnlen.char0cmp");
+        return B.CreateZExt(Cmp, CI->getType());
+      }
+    }
+  }
+
+  if (uint64_t Len = GetStringLength(Src, CharSize)) {
+    Value *LenC = ConstantInt::get(CI->getType(), Len - 1);
+    // Fold strlen("xyz") -> 3 and strnlen("xyz", 2) -> 2
+    // and strnlen("xyz", Bound) -> min(3, Bound) for nonconstant Bound.
+    if (Bound)
+      return B.CreateBinaryIntrinsic(Intrinsic::umin, LenC, Bound);
+    return LenC;
+  }
+
+  if (Bound)
+    // Punt for strnlen for now.
+    return nullptr;
 
   // If s is a constant pointer pointing to a string literal, we can fold
   // strlen(s + x) to strlen(s) - x, when x is known to be in the range
@@ -714,6 +744,16 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilderBase &B) {
   if (Value *V = optimizeStringLength(CI, B, 8))
     return V;
   annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  return nullptr;
+}
+
+Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
+  Value *Bound = CI->getArgOperand(1);
+  if (Value *V = optimizeStringLength(CI, B, 8, Bound))
+    return V;
+
+  if (isKnownNonZero(Bound, DL))
+    annotateNonNullNoUndefBasedOnAccess(CI, 0);
   return nullptr;
 }
 
@@ -868,8 +908,66 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
-  if (isKnownNonZero(CI->getOperand(2), DL))
-    annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  Value *SrcStr = CI->getArgOperand(0);
+  Value *Size = CI->getArgOperand(2);
+  annotateNonNullAndDereferenceable(CI, 0, Size, DL);
+  Value *CharVal = CI->getArgOperand(1);
+  ConstantInt *LenC = dyn_cast<ConstantInt>(Size);
+  Value *NullPtr = Constant::getNullValue(CI->getType());
+
+  if (LenC) {
+    if (LenC->isZero())
+      // Fold memrchr(x, y, 0) --> null.
+      return NullPtr;
+
+    if (LenC->isOne()) {
+      // Fold memrchr(x, y, 1) --> *x == y ? x : null for any x and y,
+      // constant or otherwise.
+      Value *Val = B.CreateLoad(B.getInt8Ty(), SrcStr, "memrchr.char0");
+      // Slice off the character's high end bits.
+      CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
+      Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memrchr.char0cmp");
+      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
+    }
+  }
+
+  StringRef Str;
+  if (!getConstantStringInfo(SrcStr, Str, 0, /*TrimAtNul=*/false))
+    return nullptr;
+
+  uint64_t EndOff = UINT64_MAX;
+  if (LenC) {
+    EndOff = LenC->getZExtValue();
+    if (Str.size() < EndOff)
+      // Punt out-of-bounds accesses to sanitizers and/or libc.
+      return nullptr;
+  }
+
+  if (ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal)) {
+    // Fold memrchr(S, C, N) for a constant C.
+    size_t Pos = Str.rfind(CharC->getZExtValue(), EndOff);
+    if (Pos == StringRef::npos)
+      // When the character is not in the source array fold the result
+      // to null regardless of Size.
+      return NullPtr;
+
+    if (LenC)
+      // Fold memrchr(s, c, N) --> s + Pos for constant N > Pos.
+      return B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos));
+
+    if (Str.find(CharC->getZExtValue(), Pos) == StringRef::npos) {
+      // When there is just a single occurrence of C in S, fold
+      //   memrchr(s, c, N) --> N <= Pos ? null : s + Pos
+      // for nonconstant N.
+      Value *Cmp = B.CreateICmpULE(Size, ConstantInt::get(Size->getType(),
+							  Pos),
+				   "memrchr.cmp");
+      Value *SrcPlus = B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos),
+				   "memrchr.ptr_plus");
+      return B.CreateSelect(Cmp, NullPtr, SrcPlus, "memrchr.sel");
+    }
+  }
+
   return nullptr;
 }
 
@@ -926,8 +1024,10 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     // From now on we need a constant length and constant array.
     return nullptr;
 
-  // Truncate the string to LenC.
-  Str = Str.substr(0, LenC->getZExtValue());
+  // Truncate the string to LenC without slicing when targeting LP64
+  // on an ILP32 host.
+  uint64_t EndOff = std::min(LenC->getZExtValue(), (uint64_t)StringRef::npos);
+  Str = Str.substr(0, EndOff);
 
   // If the char is variable but the input str and length are not we can turn
   // this memchr call into a simple bit field test. Of course this only works
@@ -2879,6 +2979,8 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeStrNCpy(CI, Builder);
     case LibFunc_strlen:
       return optimizeStrLen(CI, Builder);
+    case LibFunc_strnlen:
+      return optimizeStrNLen(CI, Builder);
     case LibFunc_strpbrk:
       return optimizeStrPBrk(CI, Builder);
     case LibFunc_strndup:

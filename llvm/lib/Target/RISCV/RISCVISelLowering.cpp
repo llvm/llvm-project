@@ -170,8 +170,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setStackPointerRegisterToSaveRestore(RISCV::X2);
 
-  for (auto N : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD})
-    setLoadExtAction(N, XLenVT, MVT::i1, Promote);
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, XLenVT,
+                   MVT::i1, Promote);
 
   // TODO: add all necessary setOperationAction calls.
   setOperationAction(ISD::DYNAMIC_STACKALLOC, XLenVT, Expand);
@@ -181,100 +181,70 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
   setOperationAction(ISD::SELECT_CC, XLenVT, Expand);
 
-  setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
-  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
+  setOperationAction({ISD::STACKSAVE, ISD::STACKRESTORE}, MVT::Other, Expand);
 
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
-  setOperationAction(ISD::VAARG, MVT::Other, Expand);
-  setOperationAction(ISD::VACOPY, MVT::Other, Expand);
-  setOperationAction(ISD::VAEND, MVT::Other, Expand);
+  setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
-  if (!Subtarget.hasStdExtZbb()) {
-    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
-    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
-  }
+  if (!Subtarget.hasStdExtZbb())
+    setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
   if (Subtarget.is64Bit()) {
-    setOperationAction(ISD::ADD, MVT::i32, Custom);
-    setOperationAction(ISD::SUB, MVT::i32, Custom);
-    setOperationAction(ISD::SHL, MVT::i32, Custom);
-    setOperationAction(ISD::SRA, MVT::i32, Custom);
-    setOperationAction(ISD::SRL, MVT::i32, Custom);
+    setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
+                       MVT::i32, Custom);
 
-    setOperationAction(ISD::UADDO, MVT::i32, Custom);
-    setOperationAction(ISD::USUBO, MVT::i32, Custom);
-    setOperationAction(ISD::UADDSAT, MVT::i32, Custom);
-    setOperationAction(ISD::USUBSAT, MVT::i32, Custom);
+    setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
+                       MVT::i32, Custom);
   } else {
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-    setLibcallName(RTLIB::MUL_I128, nullptr);
+    setLibcallName(
+        {RTLIB::SHL_I128, RTLIB::SRL_I128, RTLIB::SRA_I128, RTLIB::MUL_I128},
+        nullptr);
     setLibcallName(RTLIB::MULO_I64, nullptr);
   }
 
   if (!Subtarget.hasStdExtM()) {
-    setOperationAction(ISD::MUL, XLenVT, Expand);
-    setOperationAction(ISD::MULHS, XLenVT, Expand);
-    setOperationAction(ISD::MULHU, XLenVT, Expand);
-    setOperationAction(ISD::SDIV, XLenVT, Expand);
-    setOperationAction(ISD::UDIV, XLenVT, Expand);
-    setOperationAction(ISD::SREM, XLenVT, Expand);
-    setOperationAction(ISD::UREM, XLenVT, Expand);
+    setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU, ISD::SDIV, ISD::UDIV,
+                        ISD::SREM, ISD::UREM},
+                       XLenVT, Expand);
   } else {
     if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::MUL, MVT::i32, Custom);
-      setOperationAction(ISD::MUL, MVT::i128, Custom);
+      setOperationAction(ISD::MUL, {MVT::i32, MVT::i128}, Custom);
 
-      setOperationAction(ISD::SDIV, MVT::i8, Custom);
-      setOperationAction(ISD::UDIV, MVT::i8, Custom);
-      setOperationAction(ISD::UREM, MVT::i8, Custom);
-      setOperationAction(ISD::SDIV, MVT::i16, Custom);
-      setOperationAction(ISD::UDIV, MVT::i16, Custom);
-      setOperationAction(ISD::UREM, MVT::i16, Custom);
-      setOperationAction(ISD::SDIV, MVT::i32, Custom);
-      setOperationAction(ISD::UDIV, MVT::i32, Custom);
-      setOperationAction(ISD::UREM, MVT::i32, Custom);
+      setOperationAction({ISD::SDIV, ISD::UDIV, ISD::UREM},
+                         {MVT::i8, MVT::i16, MVT::i32}, Custom);
     } else {
       setOperationAction(ISD::MUL, MVT::i64, Custom);
     }
   }
 
-  setOperationAction(ISD::SDIVREM, XLenVT, Expand);
-  setOperationAction(ISD::UDIVREM, XLenVT, Expand);
-  setOperationAction(ISD::SMUL_LOHI, XLenVT, Expand);
-  setOperationAction(ISD::UMUL_LOHI, XLenVT, Expand);
+  setOperationAction(
+      {ISD::SDIVREM, ISD::UDIVREM, ISD::SMUL_LOHI, ISD::UMUL_LOHI}, XLenVT,
+      Expand);
 
-  setOperationAction(ISD::SHL_PARTS, XLenVT, Custom);
-  setOperationAction(ISD::SRL_PARTS, XLenVT, Custom);
-  setOperationAction(ISD::SRA_PARTS, XLenVT, Custom);
+  setOperationAction({ISD::SHL_PARTS, ISD::SRL_PARTS, ISD::SRA_PARTS}, XLenVT,
+                     Custom);
 
   if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbp() ||
       Subtarget.hasStdExtZbkb()) {
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::ROTL, MVT::i32, Custom);
-      setOperationAction(ISD::ROTR, MVT::i32, Custom);
-    }
+    if (Subtarget.is64Bit())
+      setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
   } else {
-    setOperationAction(ISD::ROTL, XLenVT, Expand);
-    setOperationAction(ISD::ROTR, XLenVT, Expand);
+    setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
 
   if (Subtarget.hasStdExtZbp()) {
     // Custom lower bswap/bitreverse so we can convert them to GREVI to enable
     // more combining.
-    setOperationAction(ISD::BITREVERSE, XLenVT,   Custom);
-    setOperationAction(ISD::BSWAP,      XLenVT,   Custom);
-    setOperationAction(ISD::BITREVERSE, MVT::i8,  Custom);
-    // BSWAP i8 doesn't exist.
-    setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
-    setOperationAction(ISD::BSWAP,      MVT::i16, Custom);
+    setOperationAction({ISD::BITREVERSE, ISD::BSWAP}, XLenVT, Custom);
 
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
-      setOperationAction(ISD::BSWAP,      MVT::i32, Custom);
-    }
+    // BSWAP i8 doesn't exist.
+    setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
+
+    setOperationAction({ISD::BITREVERSE, ISD::BSWAP}, MVT::i16, Custom);
+
+    if (Subtarget.is64Bit())
+      setOperationAction({ISD::BITREVERSE, ISD::BSWAP}, MVT::i32, Custom);
   } else {
     // With Zbb we have an XLen rev8 instruction, but not GREVI. So we'll
     // pattern match it directly in isel.
@@ -288,35 +258,26 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZbb()) {
-    setOperationAction(ISD::SMIN, XLenVT, Legal);
-    setOperationAction(ISD::SMAX, XLenVT, Legal);
-    setOperationAction(ISD::UMIN, XLenVT, Legal);
-    setOperationAction(ISD::UMAX, XLenVT, Legal);
+    setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, XLenVT,
+                       Legal);
 
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::CTTZ, MVT::i32, Custom);
-      setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Custom);
-      setOperationAction(ISD::CTLZ, MVT::i32, Custom);
-      setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
-    }
+    if (Subtarget.is64Bit())
+      setOperationAction(
+          {ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF},
+          MVT::i32, Custom);
   } else {
-    setOperationAction(ISD::CTTZ, XLenVT, Expand);
-    setOperationAction(ISD::CTLZ, XLenVT, Expand);
-    setOperationAction(ISD::CTPOP, XLenVT, Expand);
+    setOperationAction({ISD::CTTZ, ISD::CTLZ, ISD::CTPOP}, XLenVT, Expand);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
   if (Subtarget.hasStdExtZbt()) {
-    setOperationAction(ISD::FSHL, XLenVT, Custom);
-    setOperationAction(ISD::FSHR, XLenVT, Custom);
+    setOperationAction({ISD::FSHL, ISD::FSHR}, XLenVT, Custom);
     setOperationAction(ISD::SELECT, XLenVT, Legal);
 
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FSHL, MVT::i32, Custom);
-      setOperationAction(ISD::FSHR, MVT::i32, Custom);
-    }
+    if (Subtarget.is64Bit())
+      setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::SELECT, XLenVT, Custom);
   }
@@ -352,24 +313,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::f16, Custom);
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
 
-    setOperationAction(ISD::FREM,       MVT::f16, Promote);
-    setOperationAction(ISD::FCEIL,      MVT::f16, Promote);
-    setOperationAction(ISD::FFLOOR,     MVT::f16, Promote);
-    setOperationAction(ISD::FNEARBYINT, MVT::f16, Promote);
-    setOperationAction(ISD::FRINT,      MVT::f16, Promote);
-    setOperationAction(ISD::FROUND,     MVT::f16, Promote);
-    setOperationAction(ISD::FROUNDEVEN, MVT::f16, Promote);
-    setOperationAction(ISD::FTRUNC,     MVT::f16, Promote);
-    setOperationAction(ISD::FPOW,       MVT::f16, Promote);
-    setOperationAction(ISD::FPOWI,      MVT::f16, Promote);
-    setOperationAction(ISD::FCOS,       MVT::f16, Promote);
-    setOperationAction(ISD::FSIN,       MVT::f16, Promote);
-    setOperationAction(ISD::FSINCOS,    MVT::f16, Promote);
-    setOperationAction(ISD::FEXP,       MVT::f16, Promote);
-    setOperationAction(ISD::FEXP2,      MVT::f16, Promote);
-    setOperationAction(ISD::FLOG,       MVT::f16, Promote);
-    setOperationAction(ISD::FLOG2,      MVT::f16, Promote);
-    setOperationAction(ISD::FLOG10,     MVT::f16, Promote);
+    setOperationAction({ISD::FREM, ISD::FCEIL, ISD::FFLOOR, ISD::FNEARBYINT,
+                        ISD::FRINT, ISD::FROUND, ISD::FROUNDEVEN, ISD::FTRUNC,
+                        ISD::FPOW, ISD::FPOWI, ISD::FCOS, ISD::FSIN,
+                        ISD::FSINCOS, ISD::FEXP, ISD::FEXP2, ISD::FLOG,
+                        ISD::FLOG2, ISD::FLOG10},
+                       MVT::f16, Promote);
 
     // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
     // complete support for all operations in LegalizeDAG.
@@ -414,30 +363,26 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   }
 
-  if (Subtarget.is64Bit()) {
-    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
-  }
+  if (Subtarget.is64Bit())
+    setOperationAction({ISD::FP_TO_UINT, ISD::FP_TO_SINT,
+                        ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
+                       MVT::i32, Custom);
 
   if (Subtarget.hasStdExtF()) {
-    setOperationAction(ISD::FP_TO_UINT_SAT, XLenVT, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, XLenVT, Custom);
+    setOperationAction({ISD::FP_TO_UINT_SAT, ISD::FP_TO_SINT_SAT}, XLenVT,
+                       Custom);
 
-    setOperationAction(ISD::STRICT_FP_TO_UINT, XLenVT, Legal);
-    setOperationAction(ISD::STRICT_FP_TO_SINT, XLenVT, Legal);
-    setOperationAction(ISD::STRICT_UINT_TO_FP, XLenVT, Legal);
-    setOperationAction(ISD::STRICT_SINT_TO_FP, XLenVT, Legal);
+    setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT,
+                        ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP},
+                       XLenVT, Legal);
 
     setOperationAction(ISD::FLT_ROUNDS_, XLenVT, Custom);
     setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   }
 
-  setOperationAction(ISD::GlobalAddress, XLenVT, Custom);
-  setOperationAction(ISD::BlockAddress, XLenVT, Custom);
-  setOperationAction(ISD::ConstantPool, XLenVT, Custom);
-  setOperationAction(ISD::JumpTable, XLenVT, Custom);
+  setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
+                      ISD::JumpTable},
+                     XLenVT, Custom);
 
   setOperationAction(ISD::GlobalTLSAddress, XLenVT, Custom);
 
@@ -446,8 +391,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64,
                      Subtarget.is64Bit() ? Legal : Custom);
 
-  setOperationAction(ISD::TRAP, MVT::Other, Legal);
-  setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
+  setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   if (Subtarget.is64Bit())
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
@@ -468,19 +412,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // RVV intrinsics may have illegal operands.
     // We also need to custom legalize vmv.x.s.
-    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
-    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
-    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
-    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i16, Custom);
-    if (Subtarget.is64Bit()) {
+    setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::INTRINSIC_W_CHAIN},
+                       {MVT::i8, MVT::i16}, Custom);
+    if (Subtarget.is64Bit())
       setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i32, Custom);
-    } else {
-      setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
-      setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
-    }
+    else
+      setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::INTRINSIC_W_CHAIN},
+                         MVT::i64, Custom);
 
-    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
-    setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
+    setOperationAction({ISD::INTRINSIC_W_CHAIN, ISD::INTRINSIC_VOID},
+                       MVT::Other, Custom);
 
     static const unsigned IntegerVPOps[] = {
         ISD::VP_ADD,         ISD::VP_SUB,         ISD::VP_MUL,
@@ -507,79 +448,66 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (!Subtarget.is64Bit()) {
       // We must custom-lower certain vXi64 operations on RV32 due to the vector
       // element type being illegal.
-      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::i64, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::i64, Custom);
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
+                         MVT::i64, Custom);
 
-      setOperationAction(ISD::VECREDUCE_ADD, MVT::i64, Custom);
-      setOperationAction(ISD::VECREDUCE_AND, MVT::i64, Custom);
-      setOperationAction(ISD::VECREDUCE_OR, MVT::i64, Custom);
-      setOperationAction(ISD::VECREDUCE_XOR, MVT::i64, Custom);
-      setOperationAction(ISD::VECREDUCE_SMAX, MVT::i64, Custom);
-      setOperationAction(ISD::VECREDUCE_SMIN, MVT::i64, Custom);
-      setOperationAction(ISD::VECREDUCE_UMAX, MVT::i64, Custom);
-      setOperationAction(ISD::VECREDUCE_UMIN, MVT::i64, Custom);
+      setOperationAction({ISD::VECREDUCE_ADD, ISD::VECREDUCE_AND,
+                          ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR,
+                          ISD::VECREDUCE_SMAX, ISD::VECREDUCE_SMIN,
+                          ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN},
+                         MVT::i64, Custom);
 
-      setOperationAction(ISD::VP_REDUCE_ADD, MVT::i64, Custom);
-      setOperationAction(ISD::VP_REDUCE_AND, MVT::i64, Custom);
-      setOperationAction(ISD::VP_REDUCE_OR, MVT::i64, Custom);
-      setOperationAction(ISD::VP_REDUCE_XOR, MVT::i64, Custom);
-      setOperationAction(ISD::VP_REDUCE_SMAX, MVT::i64, Custom);
-      setOperationAction(ISD::VP_REDUCE_SMIN, MVT::i64, Custom);
-      setOperationAction(ISD::VP_REDUCE_UMAX, MVT::i64, Custom);
-      setOperationAction(ISD::VP_REDUCE_UMIN, MVT::i64, Custom);
+      setOperationAction({ISD::VP_REDUCE_ADD, ISD::VP_REDUCE_AND,
+                          ISD::VP_REDUCE_OR, ISD::VP_REDUCE_XOR,
+                          ISD::VP_REDUCE_SMAX, ISD::VP_REDUCE_SMIN,
+                          ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN},
+                         MVT::i64, Custom);
     }
 
     for (MVT VT : BoolVecVTs) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
 
       // Mask VTs are custom-expanded into a series of standard nodes
-      setOperationAction(ISD::TRUNCATE, VT, Custom);
-      setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
-      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
-      setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+      setOperationAction({ISD::TRUNCATE, ISD::CONCAT_VECTORS,
+                          ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
+                         VT, Custom);
 
-      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT}, VT,
+                         Custom);
 
       setOperationAction(ISD::SELECT, VT, Custom);
-      setOperationAction(ISD::SELECT_CC, VT, Expand);
-      setOperationAction(ISD::VSELECT, VT, Expand);
-      setOperationAction(ISD::VP_MERGE, VT, Expand);
-      setOperationAction(ISD::VP_SELECT, VT, Expand);
+      setOperationAction(
+          {ISD::SELECT_CC, ISD::VSELECT, ISD::VP_MERGE, ISD::VP_SELECT}, VT,
+          Expand);
 
-      setOperationAction(ISD::VP_AND, VT, Custom);
-      setOperationAction(ISD::VP_OR, VT, Custom);
-      setOperationAction(ISD::VP_XOR, VT, Custom);
+      setOperationAction({ISD::VP_AND, ISD::VP_OR, ISD::VP_XOR}, VT, Custom);
 
-      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
+      setOperationAction(
+          {ISD::VECREDUCE_AND, ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR}, VT,
+          Custom);
 
-      setOperationAction(ISD::VP_REDUCE_AND, VT, Custom);
-      setOperationAction(ISD::VP_REDUCE_OR, VT, Custom);
-      setOperationAction(ISD::VP_REDUCE_XOR, VT, Custom);
+      setOperationAction(
+          {ISD::VP_REDUCE_AND, ISD::VP_REDUCE_OR, ISD::VP_REDUCE_XOR}, VT,
+          Custom);
 
       // RVV has native int->float & float->int conversions where the
       // element type sizes are within one power-of-two of each other. Any
       // wider distances between type sizes have to be lowered as sequences
       // which progressively narrow the gap in stages.
-      setOperationAction(ISD::SINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::UINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT, VT, Custom);
-      setOperationAction(ISD::FP_TO_UINT, VT, Custom);
+      setOperationAction(
+          {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
+          VT, Custom);
 
       // Expand all extending loads to types larger than this, and truncating
       // stores from types larger than this.
       for (MVT OtherVT : MVT::integer_scalable_vector_valuetypes()) {
         setTruncStoreAction(OtherVT, VT, Expand);
-        setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
-        setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
-        setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, OtherVT,
+                         VT, Expand);
       }
 
-      setOperationAction(ISD::VP_FPTOSI, VT, Custom);
-      setOperationAction(ISD::VP_FPTOUI, VT, Custom);
-      setOperationAction(ISD::VP_TRUNC, VT, Custom);
+      setOperationAction({ISD::VP_FPTOSI, ISD::VP_FPTOUI, ISD::VP_TRUNC}, VT,
+                         Custom);
     }
 
     for (MVT VT : IntVecVTs) {
@@ -591,98 +519,78 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SPLAT_VECTOR_PARTS, VT, Custom);
 
       // Vectors implement MULHS/MULHU.
-      setOperationAction(ISD::SMUL_LOHI, VT, Expand);
-      setOperationAction(ISD::UMUL_LOHI, VT, Expand);
+      setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, VT, Expand);
 
       // nxvXi64 MULHS/MULHU requires the V extension instead of Zve64*.
-      if (VT.getVectorElementType() == MVT::i64 && !Subtarget.hasStdExtV()) {
-        setOperationAction(ISD::MULHU, VT, Expand);
-        setOperationAction(ISD::MULHS, VT, Expand);
-      }
+      if (VT.getVectorElementType() == MVT::i64 && !Subtarget.hasStdExtV())
+        setOperationAction({ISD::MULHU, ISD::MULHS}, VT, Expand);
 
-      setOperationAction(ISD::SMIN, VT, Legal);
-      setOperationAction(ISD::SMAX, VT, Legal);
-      setOperationAction(ISD::UMIN, VT, Legal);
-      setOperationAction(ISD::UMAX, VT, Legal);
+      setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, VT,
+                         Legal);
 
-      setOperationAction(ISD::ROTL, VT, Expand);
-      setOperationAction(ISD::ROTR, VT, Expand);
+      setOperationAction({ISD::ROTL, ISD::ROTR}, VT, Expand);
 
-      setOperationAction(ISD::CTTZ, VT, Expand);
-      setOperationAction(ISD::CTLZ, VT, Expand);
-      setOperationAction(ISD::CTPOP, VT, Expand);
+      setOperationAction({ISD::CTTZ, ISD::CTLZ, ISD::CTPOP, ISD::BSWAP}, VT,
+                         Expand);
 
       setOperationAction(ISD::BSWAP, VT, Expand);
 
       // Custom-lower extensions and truncations from/to mask types.
-      setOperationAction(ISD::ANY_EXTEND, VT, Custom);
-      setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
-      setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
+      setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
+                         VT, Custom);
 
       // RVV has native int->float & float->int conversions where the
       // element type sizes are within one power-of-two of each other. Any
       // wider distances between type sizes have to be lowered as sequences
       // which progressively narrow the gap in stages.
-      setOperationAction(ISD::SINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::UINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT, VT, Custom);
-      setOperationAction(ISD::FP_TO_UINT, VT, Custom);
+      setOperationAction(
+          {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
+          VT, Custom);
 
-      setOperationAction(ISD::SADDSAT, VT, Legal);
-      setOperationAction(ISD::UADDSAT, VT, Legal);
-      setOperationAction(ISD::SSUBSAT, VT, Legal);
-      setOperationAction(ISD::USUBSAT, VT, Legal);
+      setOperationAction(
+          {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT, Legal);
 
       // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
       // nodes which truncate by one power of two at a time.
       setOperationAction(ISD::TRUNCATE, VT, Custom);
 
       // Custom-lower insert/extract operations to simplify patterns.
-      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT}, VT,
+                         Custom);
 
       // Custom-lower reduction operations to set up the corresponding custom
       // nodes' operands.
-      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
+      setOperationAction({ISD::VECREDUCE_ADD, ISD::VECREDUCE_AND,
+                          ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR,
+                          ISD::VECREDUCE_SMAX, ISD::VECREDUCE_SMIN,
+                          ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN},
+                         VT, Custom);
 
       for (unsigned VPOpc : IntegerVPOps)
         setOperationAction(VPOpc, VT, Custom);
 
-      setOperationAction(ISD::LOAD, VT, Custom);
-      setOperationAction(ISD::STORE, VT, Custom);
+      setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
-      setOperationAction(ISD::MLOAD, VT, Custom);
-      setOperationAction(ISD::MSTORE, VT, Custom);
-      setOperationAction(ISD::MGATHER, VT, Custom);
-      setOperationAction(ISD::MSCATTER, VT, Custom);
+      setOperationAction({ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER},
+                         VT, Custom);
 
-      setOperationAction(ISD::VP_LOAD, VT, Custom);
-      setOperationAction(ISD::VP_STORE, VT, Custom);
-      setOperationAction(ISD::VP_GATHER, VT, Custom);
-      setOperationAction(ISD::VP_SCATTER, VT, Custom);
+      setOperationAction(
+          {ISD::VP_LOAD, ISD::VP_STORE, ISD::VP_GATHER, ISD::VP_SCATTER}, VT,
+          Custom);
 
-      setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
-      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
-      setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+      setOperationAction(
+          {ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
+          VT, Custom);
 
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
 
-      setOperationAction(ISD::STEP_VECTOR, VT, Custom);
-      setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
+      setOperationAction({ISD::STEP_VECTOR, ISD::VECTOR_REVERSE}, VT, Custom);
 
       for (MVT OtherVT : MVT::integer_scalable_vector_valuetypes()) {
         setTruncStoreAction(VT, OtherVT, Expand);
-        setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
-        setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
-        setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, OtherVT,
+                         VT, Expand);
       }
 
       // Splice
@@ -695,8 +603,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             VT.getVectorElementType() == MVT::i32 ? MVT::f64 : MVT::f32;
         EVT FloatVT = MVT::getVectorVT(FloatEltVT, VT.getVectorElementCount());
         if (isTypeLegal(FloatVT)) {
-          setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
-          setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Custom);
+          setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+                             Custom);
         }
       }
     }
@@ -721,52 +629,42 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // sizes are within one power-of-two of each other. Therefore conversions
       // between vXf16 and vXf64 must be lowered as sequences which convert via
       // vXf32.
-      setOperationAction(ISD::FP_ROUND, VT, Custom);
-      setOperationAction(ISD::FP_EXTEND, VT, Custom);
+      setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
       // Custom-lower insert/extract operations to simplify patterns.
-      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT}, VT,
+                         Custom);
       // Expand various condition codes (explained above).
       for (auto CC : VFPCCToExpand)
         setCondCodeAction(CC, VT, Expand);
 
-      setOperationAction(ISD::FMINNUM, VT, Legal);
-      setOperationAction(ISD::FMAXNUM, VT, Legal);
+      setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, VT, Legal);
 
-      setOperationAction(ISD::FTRUNC, VT, Custom);
-      setOperationAction(ISD::FCEIL, VT, Custom);
-      setOperationAction(ISD::FFLOOR, VT, Custom);
-      setOperationAction(ISD::FROUND, VT, Custom);
+      setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND},
+                         VT, Custom);
 
-      setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
+      setOperationAction({ISD::VECREDUCE_FADD, ISD::VECREDUCE_SEQ_FADD,
+                          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAX},
+                         VT, Custom);
 
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
 
-      setOperationAction(ISD::LOAD, VT, Custom);
-      setOperationAction(ISD::STORE, VT, Custom);
+      setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
-      setOperationAction(ISD::MLOAD, VT, Custom);
-      setOperationAction(ISD::MSTORE, VT, Custom);
-      setOperationAction(ISD::MGATHER, VT, Custom);
-      setOperationAction(ISD::MSCATTER, VT, Custom);
+      setOperationAction({ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER},
+                         VT, Custom);
 
-      setOperationAction(ISD::VP_LOAD, VT, Custom);
-      setOperationAction(ISD::VP_STORE, VT, Custom);
-      setOperationAction(ISD::VP_GATHER, VT, Custom);
-      setOperationAction(ISD::VP_SCATTER, VT, Custom);
+      setOperationAction(
+          {ISD::VP_LOAD, ISD::VP_STORE, ISD::VP_GATHER, ISD::VP_SCATTER}, VT,
+          Custom);
 
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
 
-      setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
-      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
-      setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+      setOperationAction(
+          {ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR},
+          VT, Custom);
 
-      setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
-      setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
+      setOperationAction({ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE}, VT, Custom);
 
       for (unsigned VPOpc : FloatingPointVPOps)
         setOperationAction(VPOpc, VT, Custom);
@@ -809,23 +707,21 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction(Op, VT, Expand);
         for (MVT OtherVT : MVT::integer_fixedlen_vector_valuetypes()) {
           setTruncStoreAction(VT, OtherVT, Expand);
-          setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
-          setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
-          setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
+          setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD},
+                           OtherVT, VT, Expand);
         }
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
-        setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
-        setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+        setOperationAction({ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR}, VT,
+                           Custom);
 
-        setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
-        setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+        setOperationAction({ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS}, VT,
+                           Custom);
 
-        setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-        setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+        setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
+                           VT, Custom);
 
-        setOperationAction(ISD::LOAD, VT, Custom);
-        setOperationAction(ISD::STORE, VT, Custom);
+        setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
         setOperationAction(ISD::SETCC, VT, Custom);
 
@@ -835,32 +731,27 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::BITCAST, VT, Custom);
 
-        setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
+        setOperationAction(
+            {ISD::VECREDUCE_AND, ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR}, VT,
+            Custom);
 
-        setOperationAction(ISD::VP_REDUCE_AND, VT, Custom);
-        setOperationAction(ISD::VP_REDUCE_OR, VT, Custom);
-        setOperationAction(ISD::VP_REDUCE_XOR, VT, Custom);
+        setOperationAction(
+            {ISD::VP_REDUCE_AND, ISD::VP_REDUCE_OR, ISD::VP_REDUCE_XOR}, VT,
+            Custom);
 
-        setOperationAction(ISD::SINT_TO_FP, VT, Custom);
-        setOperationAction(ISD::UINT_TO_FP, VT, Custom);
-        setOperationAction(ISD::FP_TO_SINT, VT, Custom);
-        setOperationAction(ISD::FP_TO_UINT, VT, Custom);
+        setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT,
+                            ISD::FP_TO_UINT},
+                           VT, Custom);
 
         // Operations below are different for between masks and other vectors.
         if (VT.getVectorElementType() == MVT::i1) {
-          setOperationAction(ISD::VP_AND, VT, Custom);
-          setOperationAction(ISD::VP_OR, VT, Custom);
-          setOperationAction(ISD::VP_XOR, VT, Custom);
-          setOperationAction(ISD::AND, VT, Custom);
-          setOperationAction(ISD::OR, VT, Custom);
-          setOperationAction(ISD::XOR, VT, Custom);
+          setOperationAction({ISD::VP_AND, ISD::VP_OR, ISD::VP_XOR, ISD::AND,
+                              ISD::OR, ISD::XOR},
+                             VT, Custom);
 
-          setOperationAction(ISD::VP_FPTOSI, VT, Custom);
-          setOperationAction(ISD::VP_FPTOUI, VT, Custom);
-          setOperationAction(ISD::VP_SETCC, VT, Custom);
-          setOperationAction(ISD::VP_TRUNC, VT, Custom);
+          setOperationAction(
+              {ISD::VP_FPTOSI, ISD::VP_FPTOUI, ISD::VP_SETCC, ISD::VP_TRUNC},
+              VT, Custom);
           continue;
         }
 
@@ -877,61 +768,41 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
         setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
 
-        setOperationAction(ISD::MLOAD, VT, Custom);
-        setOperationAction(ISD::MSTORE, VT, Custom);
-        setOperationAction(ISD::MGATHER, VT, Custom);
-        setOperationAction(ISD::MSCATTER, VT, Custom);
+        setOperationAction(
+            {ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER}, VT, Custom);
 
-        setOperationAction(ISD::VP_LOAD, VT, Custom);
-        setOperationAction(ISD::VP_STORE, VT, Custom);
-        setOperationAction(ISD::VP_GATHER, VT, Custom);
-        setOperationAction(ISD::VP_SCATTER, VT, Custom);
+        setOperationAction(
+            {ISD::VP_LOAD, ISD::VP_STORE, ISD::VP_GATHER, ISD::VP_SCATTER}, VT,
+            Custom);
 
-        setOperationAction(ISD::ADD, VT, Custom);
-        setOperationAction(ISD::MUL, VT, Custom);
-        setOperationAction(ISD::SUB, VT, Custom);
-        setOperationAction(ISD::AND, VT, Custom);
-        setOperationAction(ISD::OR, VT, Custom);
-        setOperationAction(ISD::XOR, VT, Custom);
-        setOperationAction(ISD::SDIV, VT, Custom);
-        setOperationAction(ISD::SREM, VT, Custom);
-        setOperationAction(ISD::UDIV, VT, Custom);
-        setOperationAction(ISD::UREM, VT, Custom);
-        setOperationAction(ISD::SHL, VT, Custom);
-        setOperationAction(ISD::SRA, VT, Custom);
-        setOperationAction(ISD::SRL, VT, Custom);
+        setOperationAction({ISD::ADD, ISD::MUL, ISD::SUB, ISD::AND, ISD::OR,
+                            ISD::XOR, ISD::SDIV, ISD::SREM, ISD::UDIV,
+                            ISD::UREM, ISD::SHL, ISD::SRA, ISD::SRL},
+                           VT, Custom);
 
-        setOperationAction(ISD::SMIN, VT, Custom);
-        setOperationAction(ISD::SMAX, VT, Custom);
-        setOperationAction(ISD::UMIN, VT, Custom);
-        setOperationAction(ISD::UMAX, VT, Custom);
-        setOperationAction(ISD::ABS,  VT, Custom);
+        setOperationAction(
+            {ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX, ISD::ABS}, VT, Custom);
 
         // vXi64 MULHS/MULHU requires the V extension instead of Zve64*.
-        if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV()) {
-          setOperationAction(ISD::MULHS, VT, Custom);
-          setOperationAction(ISD::MULHU, VT, Custom);
-        }
+        if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV())
+          setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
 
-        setOperationAction(ISD::SADDSAT, VT, Custom);
-        setOperationAction(ISD::UADDSAT, VT, Custom);
-        setOperationAction(ISD::SSUBSAT, VT, Custom);
-        setOperationAction(ISD::USUBSAT, VT, Custom);
+        setOperationAction(
+            {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT,
+            Custom);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
 
-        setOperationAction(ISD::ANY_EXTEND, VT, Custom);
-        setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
-        setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
+        setOperationAction(
+            {ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND}, VT, Custom);
 
         // Custom-lower reduction operations to set up the corresponding custom
         // nodes' operands.
-        setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
+        setOperationAction({ISD::VECREDUCE_ADD, ISD::VECREDUCE_SMAX,
+                            ISD::VECREDUCE_SMIN, ISD::VECREDUCE_UMAX,
+                            ISD::VECREDUCE_UMIN},
+                           VT, Custom);
 
         for (unsigned VPOpc : IntegerVPOps)
           setOperationAction(VPOpc, VT, Custom);
@@ -943,10 +814,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
               VT.getVectorElementType() == MVT::i32 ? MVT::f64 : MVT::f32;
           EVT FloatVT =
               MVT::getVectorVT(FloatEltVT, VT.getVectorElementCount());
-          if (isTypeLegal(FloatVT)) {
-            setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
-            setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Custom);
-          }
+          if (isTypeLegal(FloatVT))
+            setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+                               Custom);
         }
       }
 
@@ -963,70 +833,51 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
-        setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
-        setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+        setOperationAction({ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR}, VT,
+                           Custom);
 
-        setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
-        setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
-        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
-        setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-        setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+        setOperationAction({ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
+                            ISD::VECTOR_SHUFFLE, ISD::INSERT_VECTOR_ELT,
+                            ISD::EXTRACT_VECTOR_ELT},
+                           VT, Custom);
 
-        setOperationAction(ISD::LOAD, VT, Custom);
-        setOperationAction(ISD::STORE, VT, Custom);
-        setOperationAction(ISD::MLOAD, VT, Custom);
-        setOperationAction(ISD::MSTORE, VT, Custom);
-        setOperationAction(ISD::MGATHER, VT, Custom);
-        setOperationAction(ISD::MSCATTER, VT, Custom);
+        setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
+                            ISD::MGATHER, ISD::MSCATTER},
+                           VT, Custom);
 
-        setOperationAction(ISD::VP_LOAD, VT, Custom);
-        setOperationAction(ISD::VP_STORE, VT, Custom);
-        setOperationAction(ISD::VP_GATHER, VT, Custom);
-        setOperationAction(ISD::VP_SCATTER, VT, Custom);
+        setOperationAction(
+            {ISD::VP_LOAD, ISD::VP_STORE, ISD::VP_GATHER, ISD::VP_SCATTER}, VT,
+            Custom);
 
-        setOperationAction(ISD::FADD, VT, Custom);
-        setOperationAction(ISD::FSUB, VT, Custom);
-        setOperationAction(ISD::FMUL, VT, Custom);
-        setOperationAction(ISD::FDIV, VT, Custom);
-        setOperationAction(ISD::FNEG, VT, Custom);
-        setOperationAction(ISD::FABS, VT, Custom);
-        setOperationAction(ISD::FCOPYSIGN, VT, Custom);
-        setOperationAction(ISD::FSQRT, VT, Custom);
-        setOperationAction(ISD::FMA, VT, Custom);
-        setOperationAction(ISD::FMINNUM, VT, Custom);
-        setOperationAction(ISD::FMAXNUM, VT, Custom);
+        setOperationAction({ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                            ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::FSQRT,
+                            ISD::FMA, ISD::FMINNUM, ISD::FMAXNUM},
+                           VT, Custom);
 
-        setOperationAction(ISD::FP_ROUND, VT, Custom);
-        setOperationAction(ISD::FP_EXTEND, VT, Custom);
+        setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
 
-        setOperationAction(ISD::FTRUNC, VT, Custom);
-        setOperationAction(ISD::FCEIL, VT, Custom);
-        setOperationAction(ISD::FFLOOR, VT, Custom);
-        setOperationAction(ISD::FROUND, VT, Custom);
+        setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND},
+                           VT, Custom);
 
         for (auto CC : VFPCCToExpand)
           setCondCodeAction(CC, VT, Expand);
 
-        setOperationAction(ISD::VSELECT, VT, Custom);
-        setOperationAction(ISD::SELECT, VT, Custom);
+        setOperationAction({ISD::VSELECT, ISD::SELECT}, VT, Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
 
         setOperationAction(ISD::BITCAST, VT, Custom);
 
-        setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
+        setOperationAction({ISD::VECREDUCE_FADD, ISD::VECREDUCE_SEQ_FADD,
+                            ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAX},
+                           VT, Custom);
 
         for (unsigned VPOpc : FloatingPointVPOps)
           setOperationAction(VPOpc, VT, Custom);
       }
 
       // Custom-legalize bitcasts from fixed-length vectors to scalar types.
-      setOperationAction(ISD::BITCAST, MVT::i8, Custom);
-      setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-      setOperationAction(ISD::BITCAST, MVT::i32, Custom);
-      setOperationAction(ISD::BITCAST, MVT::i64, Custom);
+      setOperationAction(ISD::BITCAST, {MVT::i8, MVT::i16, MVT::i32, MVT::i64},
+                         Custom);
       if (Subtarget.hasStdExtZfh())
         setOperationAction(ISD::BITCAST, MVT::f16, Custom);
       if (Subtarget.hasStdExtF())

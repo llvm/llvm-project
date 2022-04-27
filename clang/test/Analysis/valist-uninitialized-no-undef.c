@@ -16,11 +16,20 @@ void call_inlined_uses_arg(int fst, ...) {
 
 void f6(va_list *fst, ...) {
   va_start(*fst, fst);
-  // FIXME: There should be no warning for this.
-  (void)va_arg(*fst, int); // expected-warning{{va_arg() is called on an uninitialized va_list}}
-  // expected-note@-1{{va_arg() is called on an uninitialized va_list}}
+  (void)va_arg(*fst, int);
   va_end(*fst);
-} 
+}
+
+int va_list_get_int(va_list *va) {
+  return va_arg(*va, int); // no-warning
+}
+
+struct MyVaList {
+  va_list l;
+};
+int va_list_get_int2(struct MyVaList *va) {
+  return va_arg(va->l, int); // no-warning
+}
 
 void call_vprintf_bad(int isstring, ...) {
   va_list va;

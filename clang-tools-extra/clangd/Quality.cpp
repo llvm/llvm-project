@@ -122,6 +122,7 @@ categorize(const index::SymbolInfo &D) {
   case index::SymbolKind::TypeAlias:
   case index::SymbolKind::TemplateTypeParm:
   case index::SymbolKind::TemplateTemplateParm:
+  case index::SymbolKind::Concept:
     return SymbolQualitySignals::Type;
   case index::SymbolKind::Function:
   case index::SymbolKind::ClassMethod:

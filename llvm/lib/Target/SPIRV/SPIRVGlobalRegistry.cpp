@@ -311,7 +311,6 @@ SPIRVType *SPIRVGlobalRegistry::getSPIRVTypeForVReg(Register VReg) const {
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Type, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier AccessQual, bool EmitIR) {
-  Register Reg;
   SPIRVType *SpirvType = createSPIRVType(Type, MIRBuilder, AccessQual, EmitIR);
   VRegToTypeMap[&MIRBuilder.getMF()][getSPIRVTypeID(SpirvType)] = SpirvType;
   SPIRVToLLVMType[SpirvType] = Type;

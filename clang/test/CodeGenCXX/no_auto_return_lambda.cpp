@@ -21,5 +21,5 @@ __attribute__((used)) int g() {
 // operator() of the local lambda should have the same return type as g()
 //
 // CHECK: distinct !DISubprogram(name: "operator()",{{.*}}, type: ![[FUN_TYPE_LAMBDA:[0-9]+]],{{.*}}
-// CHECK: ![[FUN_TYPE_LAMBDA]] = !DISubroutineType(types: ![[TYPE_NODE_LAMBDA:[0-9]+]])
-// CHECK: ![[TYPE_NODE_LAMBDA]] = !{![[INT_TYPE:[0-9]+]], {{.*}}
+// CHECK: ![[FUN_TYPE_LAMBDA]] = !DISubroutineType({{.*}}types: ![[TYPE_NODE_LAMBDA:[0-9]+]])
+// CHECK: ![[TYPE_NODE_LAMBDA]] = !{![[INT_TYPE]], {{.*}}
