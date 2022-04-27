@@ -293,7 +293,7 @@ public:
   DependencyScanningWorkerFilesystem(
       DependencyScanningFilesystemSharedCache &SharedCache,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-      ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings)
+      ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings)
       : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache),
         PPSkipMappings(PPSkipMappings) {}
 
@@ -398,10 +398,10 @@ private:
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   DependencyScanningFilesystemLocalCache LocalCache;
-  /// The optional mapping structure which records information about the
+  /// The mapping structure which records information about the
   /// excluded conditional directive skip mappings that are used by the
   /// currently active preprocessor.
-  ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
+  ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings;
   /// The set of files that should not be minimized.
   llvm::DenseSet<llvm::sys::fs::UniqueID> NotToBeMinimized;
 };
