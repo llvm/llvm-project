@@ -59,6 +59,7 @@ MATCHER_P(hasName, Name, "") { return arg.Name == Name; }
 MATCHER_P(templateArgs, TemplArgs, "") {
   return arg.TemplateSpecializationArgs == TemplArgs;
 }
+MATCHER_P(hasKind, Kind, "") { return arg.SymInfo.Kind == Kind; }
 MATCHER_P(declURI, P, "") {
   return StringRef(arg.CanonicalDeclaration.FileURI) == P;
 }
@@ -1960,6 +1961,17 @@ TEST_F(SymbolCollectorTest, Reserved) {
   CollectorOpts.CollectReserved = false;
   runSymbolCollector("", Header); //
   EXPECT_THAT(Symbols, IsEmpty());
+}
+
+TEST_F(SymbolCollectorTest, Concepts) {
+  const char *Header = R"cpp(
+    template <class T>
+    concept A = sizeof(T) <= 8;
+  )cpp";
+  runSymbolCollector("", Header, {"-std=c++20"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(
+                  qName("A"), hasKind(clang::index::SymbolKind::Concept))));
 }
 
 } // namespace

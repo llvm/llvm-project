@@ -689,6 +689,8 @@ void DefGenerator::emitTypeDefList(ArrayRef<AttrOrTypeDef> defs) {
 
 /// The code block for default attribute parser/printer dispatch boilerplate.
 /// {0}: the dialect fully qualified class name.
+/// {1}: the optional code for the dynamic attribute parser dispatch.
+/// {2}: the optional code for the dynamic attribute printer dispatch.
 static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
 /// Parse an attribute registered to this dialect.
 ::mlir::Attribute {0}::parseAttribute(::mlir::DialectAsmParser &parser,
@@ -703,6 +705,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
     if (parseResult.hasValue())
       return attr;
   }
+  {1}
   parser.emitError(typeLoc) << "unknown attribute `"
       << attrTag << "` in dialect `" << getNamespace() << "`";
   return {{};
@@ -712,11 +715,33 @@ void {0}::printAttribute(::mlir::Attribute attr,
                          ::mlir::DialectAsmPrinter &printer) const {{
   if (::mlir::succeeded(generatedAttributePrinter(attr, printer)))
     return;
+  {2}
 }
+)";
+
+/// The code block for dynamic attribute parser dispatch boilerplate.
+static const char *const dialectDynamicAttrParserDispatch = R"(
+  {
+    ::mlir::Attribute genAttr;
+    auto parseResult = parseOptionalDynamicAttr(attrTag, parser, genAttr);
+    if (parseResult.hasValue()) {
+      if (::mlir::succeeded(parseResult.getValue()))
+        return genAttr;
+      return Attribute();
+    }
+  }
+)";
+
+/// The code block for dynamic type printer dispatch boilerplate.
+static const char *const dialectDynamicAttrPrinterDispatch = R"(
+  if (::mlir::succeeded(printIfDynamicAttr(attr, printer)))
+    return;
 )";
 
 /// The code block for default type parser/printer dispatch boilerplate.
 /// {0}: the dialect fully qualified class name.
+/// {1}: the optional code for the dynamic type parser dispatch.
+/// {2}: the optional code for the dynamic type printer dispatch.
 static const char *const dialectDefaultTypePrinterParserDispatch = R"(
 /// Parse a type registered to this dialect.
 ::mlir::Type {0}::parseType(::mlir::DialectAsmParser &parser) const {{
@@ -728,6 +753,7 @@ static const char *const dialectDefaultTypePrinterParserDispatch = R"(
   auto parseResult = generatedTypeParser(parser, mnemonic, genType);
   if (parseResult.hasValue())
     return genType;
+  {1}
   parser.emitError(typeLoc) << "unknown  type `"
       << mnemonic << "` in dialect `" << getNamespace() << "`";
   return {{};
@@ -737,7 +763,26 @@ void {0}::printType(::mlir::Type type,
                     ::mlir::DialectAsmPrinter &printer) const {{
   if (::mlir::succeeded(generatedTypePrinter(type, printer)))
     return;
+  {2}
 }
+)";
+
+/// The code block for dynamic type parser dispatch boilerplate.
+static const char *const dialectDynamicTypeParserDispatch = R"(
+  {
+    auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);
+    if (parseResult.hasValue()) {
+      if (::mlir::succeeded(parseResult.getValue()))
+        return genType;
+      return Type();
+    }
+  }
+)";
+
+/// The code block for dynamic type printer dispatch boilerplate.
+static const char *const dialectDynamicTypePrinterDispatch = R"(
+  if (::mlir::succeeded(printIfDynamicType(type, printer)))
+    return;
 )";
 
 /// Emit the dialect printer/parser dispatcher. User's code should call these
@@ -839,16 +884,30 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
   if (valueType == "Attribute" && needsDialectParserPrinter &&
       firstDialect.useDefaultAttributePrinterParser()) {
     NamespaceEmitter nsEmitter(os, firstDialect);
-    os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
-                        firstDialect.getCppClassName());
+    if (firstDialect.isExtensible()) {
+      os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
+                          firstDialect.getCppClassName(),
+                          dialectDynamicAttrParserDispatch,
+                          dialectDynamicAttrPrinterDispatch);
+    } else {
+      os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
+                          firstDialect.getCppClassName(), "", "");
+    }
   }
 
   // Emit the default parser/printer for Types if the dialect asked for it.
   if (valueType == "Type" && needsDialectParserPrinter &&
       firstDialect.useDefaultTypePrinterParser()) {
     NamespaceEmitter nsEmitter(os, firstDialect);
-    os << llvm::formatv(dialectDefaultTypePrinterParserDispatch,
-                        firstDialect.getCppClassName());
+    if (firstDialect.isExtensible()) {
+      os << llvm::formatv(dialectDefaultTypePrinterParserDispatch,
+                          firstDialect.getCppClassName(),
+                          dialectDynamicTypeParserDispatch,
+                          dialectDynamicTypePrinterDispatch);
+    } else {
+      os << llvm::formatv(dialectDefaultTypePrinterParserDispatch,
+                          firstDialect.getCppClassName(), "", "");
+    }
   }
 
   return false;

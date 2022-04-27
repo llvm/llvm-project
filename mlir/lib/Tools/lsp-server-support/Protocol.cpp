@@ -796,3 +796,24 @@ llvm::json::Value mlir::lsp::toJSON(const SignatureHelp &value) {
       {"signatures", llvm::json::Array(value.signatures)},
   };
 }
+
+//===----------------------------------------------------------------------===//
+// DocumentLinkParams
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         DocumentLinkParams &result, llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("textDocument", result.textDocument);
+}
+
+//===----------------------------------------------------------------------===//
+// DocumentLink
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value mlir::lsp::toJSON(const DocumentLink &value) {
+  return llvm::json::Object{
+      {"range", value.range},
+      {"target", value.target},
+  };
+}

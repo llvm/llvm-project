@@ -3,6 +3,18 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec -data-sections=false < %s |\
 ; RUN:   FileCheck %s
 
+; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff \
+; RUN:     -filetype=obj -o %t.o < %s 2>&1 | \
+; RUN:   FileCheck --check-prefix=XCOFF32 %s
+; XCOFF32: LLVM ERROR: Emitting non-zero visibilities is not supported yet.
+
+; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
+; RUN:     -filetype=obj -o %t.o 2>&1 < %s 2>&1 | \
+; RUN:   FileCheck --check-prefix=XCOFF64 %s
+; FIXME: This should check for the visibility error, but we actually fail before
+; that due to unimplemented relocations.
+; XCOFF64: LLVM ERROR: Unimplemented fixup kind.
+
 @b =  global i32 0, align 4
 @b_h = hidden global i32 0, align 4
 

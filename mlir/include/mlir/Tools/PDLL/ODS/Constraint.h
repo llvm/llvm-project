@@ -31,8 +31,14 @@ namespace ods {
 /// This class represents a generic ODS constraint.
 class Constraint {
 public:
-  /// Return the name of this constraint.
+  /// Return the unique name of this constraint.
   StringRef getName() const { return name; }
+
+  /// Return the demangled name of this constraint. This tries to strip out bits
+  /// of the name that are purely for uniquing, and show the underlying name. As
+  /// such, this name does guarantee uniqueness and should only be used for
+  /// logging or other lossy friendly "pretty" output.
+  StringRef getDemangledName() const;
 
   /// Return the summary of this constraint.
   StringRef getSummary() const { return summary; }

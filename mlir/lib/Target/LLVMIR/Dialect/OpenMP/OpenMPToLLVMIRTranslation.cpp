@@ -95,6 +95,8 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
   // also be used for alloca insertion which would result in insertion order
   // confusion. Create a new BasicBlock for the Builder and use the entry block
   // for the allocs.
+  // TODO: Create a dedicated alloca BasicBlock at function creation such that
+  // we do not need to move the current InertPoint here.
   if (builder.GetInsertBlock() ==
       &builder.GetInsertBlock()->getParent()->getEntryBlock()) {
     assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end() &&
@@ -117,11 +119,14 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
 /// region, and a branch from any block with an successor-less OpenMP terminator
 /// to `continuationBlock`. Populates `continuationBlockPHIs` with the PHI nodes
 /// of the continuation block if provided.
-static void convertOmpOpRegions(
-    Region &region, StringRef blockName, llvm::BasicBlock &sourceBlock,
-    llvm::BasicBlock &continuationBlock, llvm::IRBuilderBase &builder,
+static llvm::BasicBlock *convertOmpOpRegions(
+    Region &region, StringRef blockName, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation &moduleTranslation, LogicalResult &bodyGenStatus,
     SmallVectorImpl<llvm::PHINode *> *continuationBlockPHIs = nullptr) {
+  llvm::BasicBlock *continuationBlock =
+      splitBB(builder, true, "omp.region.cont");
+  llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
+
   llvm::LLVMContext &llvmContext = builder.getContext();
   for (Block &bb : region) {
     llvm::BasicBlock *llvmBB = llvm::BasicBlock::Create(
@@ -130,7 +135,7 @@ static void convertOmpOpRegions(
     moduleTranslation.mapBlock(&bb, llvmBB);
   }
 
-  llvm::Instruction *sourceTerminator = sourceBlock.getTerminator();
+  llvm::Instruction *sourceTerminator = sourceBlock->getTerminator();
 
   // Terminators (namely YieldOp) may be forwarding values to the region that
   // need to be available in the continuation block. Collect the types of these
@@ -170,7 +175,7 @@ static void convertOmpOpRegions(
   if (continuationBlockPHIs) {
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     continuationBlockPHIs->reserve(continuationBlockPHITypes.size());
-    builder.SetInsertPoint(&continuationBlock, continuationBlock.begin());
+    builder.SetInsertPoint(continuationBlock, continuationBlock->begin());
     for (llvm::Type *ty : continuationBlockPHITypes)
       continuationBlockPHIs->push_back(builder.CreatePHI(ty, numYields));
   }
@@ -186,7 +191,7 @@ static void convertOmpOpRegions(
     if (bb->isEntryBlock()) {
       assert(sourceTerminator->getNumSuccessors() == 1 &&
              "provided entry block has multiple successors");
-      assert(sourceTerminator->getSuccessor(0) == &continuationBlock &&
+      assert(sourceTerminator->getSuccessor(0) == continuationBlock &&
              "ContinuationBlock is not the successor of the entry block");
       sourceTerminator->setSuccessor(0, llvmBB);
     }
@@ -195,7 +200,7 @@ static void convertOmpOpRegions(
     if (failed(
             moduleTranslation.convertBlock(*bb, bb->isEntryBlock(), builder))) {
       bodyGenStatus = failure();
-      return;
+      return continuationBlock;
     }
 
     // Special handling for `omp.yield` and `omp.terminator` (we may have more
@@ -207,7 +212,7 @@ static void convertOmpOpRegions(
     // in the same code that handles the region-owning operation.
     Operation *terminator = bb->getTerminator();
     if (isa<omp::TerminatorOp, omp::YieldOp>(terminator)) {
-      builder.CreateBr(&continuationBlock);
+      builder.CreateBr(continuationBlock);
 
       for (unsigned i = 0, e = terminator->getNumOperands(); i < e; ++i)
         (*continuationBlockPHIs)[i]->addIncoming(
@@ -223,6 +228,8 @@ static void convertOmpOpRegions(
   // be converted several times, that is cloned, without clashes, and slightly
   // speeds up the lookups.
   moduleTranslation.forgetMapping(region);
+
+  return continuationBlock;
 }
 
 /// Convert ProcBindKind from MLIR-generated enum to LLVM enum.
@@ -249,16 +256,15 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   // relying on captured variables.
   LogicalResult bodyGenStatus = success();
 
-  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                       llvm::BasicBlock &continuationBlock) {
+  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // Save the alloca insertion point on ModuleTranslation stack for use in
     // nested regions.
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
         moduleTranslation, allocaIP);
 
     // ParallelOp has only one region associated with it.
-    convertOmpOpRegions(opInst.getRegion(), "omp.par.region",
-                        *codeGenIP.getBlock(), continuationBlock, builder,
+    builder.restoreIP(codeGenIP);
+    convertOmpOpRegions(opInst.getRegion(), "omp.par.region", builder,
                         moduleTranslation, bodyGenStatus);
   };
 
@@ -308,12 +314,11 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
   // relying on captured variables.
   LogicalResult bodyGenStatus = success();
 
-  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                       llvm::BasicBlock &continuationBlock) {
+  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // MasterOp has only one region associated with it.
     auto &region = cast<omp::MasterOp>(opInst).getRegion();
-    convertOmpOpRegions(region, "omp.master.region", *codeGenIP.getBlock(),
-                        continuationBlock, builder, moduleTranslation,
+    builder.restoreIP(codeGenIP);
+    convertOmpOpRegions(region, "omp.master.region", builder, moduleTranslation,
                         bodyGenStatus);
   };
 
@@ -337,13 +342,12 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
   // relying on captured variables.
   LogicalResult bodyGenStatus = success();
 
-  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                       llvm::BasicBlock &continuationBlock) {
+  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // CriticalOp has only one region associated with it.
     auto &region = cast<omp::CriticalOp>(opInst).getRegion();
-    convertOmpOpRegions(region, "omp.critical.region", *codeGenIP.getBlock(),
-                        continuationBlock, builder, moduleTranslation,
-                        bodyGenStatus);
+    builder.restoreIP(codeGenIP);
+    convertOmpOpRegions(region, "omp.critical.region", builder,
+                        moduleTranslation, bodyGenStatus);
   };
 
   // TODO: Perform finalization actions for variables. This has to be
@@ -438,19 +442,10 @@ static LogicalResult inlineConvertOmpRegions(
     return success();
   }
 
-  // Create the continuation block manually instead of calling splitBlock
-  // because the current insertion block may not have a terminator.
-  llvm::BasicBlock *continuationBlock =
-      llvm::BasicBlock::Create(builder.getContext(), blockName + ".cont",
-                               builder.GetInsertBlock()->getParent(),
-                               builder.GetInsertBlock()->getNextNode());
-  builder.CreateBr(continuationBlock);
-
   LogicalResult bodyGenStatus = success();
   SmallVector<llvm::PHINode *> phis;
-  convertOmpOpRegions(region, blockName, *builder.GetInsertBlock(),
-                      *continuationBlock, builder, moduleTranslation,
-                      bodyGenStatus, &phis);
+  llvm::BasicBlock *continuationBlock = convertOmpOpRegions(
+      region, blockName, builder, moduleTranslation, bodyGenStatus, &phis);
   if (failed(bodyGenStatus))
     return failure();
   if (continuationBlockArgs)
@@ -578,13 +573,12 @@ convertOmpOrderedRegion(Operation &opInst, llvm::IRBuilderBase &builder,
   // relying on captured variables.
   LogicalResult bodyGenStatus = success();
 
-  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                       llvm::BasicBlock &continuationBlock) {
+  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // OrderedOp has only one region associated with it.
     auto &region = cast<omp::OrderedRegionOp>(opInst).getRegion();
-    convertOmpOpRegions(region, "omp.ordered.region", *codeGenIP.getBlock(),
-                        continuationBlock, builder, moduleTranslation,
-                        bodyGenStatus);
+    builder.restoreIP(codeGenIP);
+    convertOmpOpRegions(region, "omp.ordered.region", builder,
+                        moduleTranslation, bodyGenStatus);
   };
 
   // TODO: Perform finalization actions for variables. This has to be
@@ -626,12 +620,10 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
 
     Region &region = sectionOp.region();
     auto sectionCB = [&region, &builder, &moduleTranslation, &bodyGenStatus](
-                         InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                         llvm::BasicBlock &finiBB) {
+                         InsertPointTy allocaIP, InsertPointTy codeGenIP) {
       builder.restoreIP(codeGenIP);
-      builder.CreateBr(&finiBB);
-      convertOmpOpRegions(region, "omp.section.region", *codeGenIP.getBlock(),
-                          finiBB, builder, moduleTranslation, bodyGenStatus);
+      convertOmpOpRegions(region, "omp.section.region", builder,
+                          moduleTranslation, bodyGenStatus);
     };
     sectionCBs.push_back(sectionCB);
   }
@@ -674,10 +666,9 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   LogicalResult bodyGenStatus = success();
-  auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP,
-                    llvm::BasicBlock &continuationBB) {
-    convertOmpOpRegions(singleOp.region(), "omp.single.region",
-                        *codegenIP.getBlock(), continuationBB, builder,
+  auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
+    builder.restoreIP(codegenIP);
+    convertOmpOpRegions(singleOp.region(), "omp.single.region", builder,
                         moduleTranslation, bodyGenStatus);
   };
   auto finiCB = [&](InsertPointTy codeGenIP) {};
@@ -783,11 +774,9 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
       return;
 
     // Convert the body of the loop.
-    llvm::BasicBlock *entryBlock = ip.getBlock();
-    llvm::BasicBlock *exitBlock =
-        entryBlock->splitBasicBlock(ip.getPoint(), "omp.wsloop.exit");
-    convertOmpOpRegions(loop.region(), "omp.wsloop.region", *entryBlock,
-                        *exitBlock, builder, moduleTranslation, bodyGenStatus);
+    builder.restoreIP(ip);
+    convertOmpOpRegions(loop.region(), "omp.wsloop.region", builder,
+                        moduleTranslation, bodyGenStatus);
   };
 
   // Delegate actual loop construction to the OpenMP IRBuilder.
@@ -922,11 +911,9 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
       return;
 
     // Convert the body of the loop.
-    llvm::BasicBlock *entryBlock = ip.getBlock();
-    llvm::BasicBlock *exitBlock =
-        entryBlock->splitBasicBlock(ip.getPoint(), "omp.simdloop.exit");
-    convertOmpOpRegions(loop.region(), "omp.simdloop.region", *entryBlock,
-                        *exitBlock, builder, moduleTranslation, bodyGenStatus);
+    builder.restoreIP(ip);
+    convertOmpOpRegions(loop.region(), "omp.simdloop.region", builder,
+                        moduleTranslation, bodyGenStatus);
   };
 
   // Delegate actual loop construction to the OpenMP IRBuilder.

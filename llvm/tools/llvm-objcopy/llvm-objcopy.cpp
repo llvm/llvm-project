@@ -138,10 +138,10 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
 static Error executeObjcopy(ConfigManager &ConfigMgr) {
   CommonConfig &Config = ConfigMgr.Common;
 
-  Expected<FilePermissionsApplier> PermsCarrier =
+  Expected<FilePermissionsApplier> PermsApplierOrErr =
       FilePermissionsApplier::create(Config.InputFilename);
-  if (!PermsCarrier)
-    return PermsCarrier.takeError();
+  if (!PermsApplierOrErr)
+    return PermsApplierOrErr.takeError();
 
   std::function<Error(raw_ostream & OutFile)> ObjcopyFunc;
 
@@ -211,12 +211,13 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
   }
 
   if (Error E =
-          PermsCarrier->apply(Config.OutputFilename, Config.PreserveDates))
+          PermsApplierOrErr->apply(Config.OutputFilename, Config.PreserveDates))
     return E;
 
   if (!Config.SplitDWO.empty())
-    if (Error E = PermsCarrier->apply(Config.SplitDWO, Config.PreserveDates,
-                                      static_cast<sys::fs::perms>(0666)))
+    if (Error E =
+            PermsApplierOrErr->apply(Config.SplitDWO, Config.PreserveDates,
+                                     static_cast<sys::fs::perms>(0666)))
       return E;
 
   return Error::success();

@@ -43,6 +43,7 @@ static_library("Support") {
     "ARMBuildAttrs.cpp",
     "ARMTargetParser.cpp",
     "ARMWinEH.cpp",
+    "AddressRanges.cpp",
     "Allocator.cpp",
     "AutoConvert.cpp",
     "BinaryStreamError.cpp",
