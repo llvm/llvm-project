@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   replace(size_type pos1, size_type n1, const basic_string<charT,traits,Allocator>& str);
+//   replace(size_type pos1, size_type n1, const basic_string<charT,traits,Allocator>& str); // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -35,7 +37,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, S str, S expecte
         assert(s.size() == old_size - xlen + rlen);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -52,7 +54,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, S str, S expecte
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test0()
+TEST_CONSTEXPR_CXX20 bool test0()
 {
     test(S(""), 0, 0, S(""), S(""));
     test(S(""), 0, 0, S("12345"), S("12345"));
@@ -154,10 +156,12 @@ TEST_CONSTEXPR_CXX20 void test0()
     test(S("abcde"), 5, 1, S("12345"), S("abcde12345"));
     test(S("abcde"), 5, 1, S("1234567890"), S("abcde1234567890"));
     test(S("abcde"), 5, 1, S("12345678901234567890"), S("abcde12345678901234567890"));
+
+    return true;
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test1()
+TEST_CONSTEXPR_CXX20 bool test1()
 {
     test(S("abcde"), 6, 0, S(""), S("can't happen"));
     test(S("abcde"), 6, 0, S("12345"), S("can't happen"));
@@ -259,10 +263,12 @@ TEST_CONSTEXPR_CXX20 void test1()
     test(S("abcdefghij"), 11, 0, S("12345"), S("can't happen"));
     test(S("abcdefghij"), 11, 0, S("1234567890"), S("can't happen"));
     test(S("abcdefghij"), 11, 0, S("12345678901234567890"), S("can't happen"));
+
+    return true;
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test2()
+TEST_CONSTEXPR_CXX20 bool test2()
 {
     test(S("abcdefghijklmnopqrst"), 0, 0, S(""), S("abcdefghijklmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 0, 0, S("12345"), S("12345abcdefghijklmnopqrst"));
@@ -360,23 +366,22 @@ TEST_CONSTEXPR_CXX20 void test2()
     test(S("abcdefghijklmnopqrst"), 21, 0, S("12345"), S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, 0, S("1234567890"), S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, 0, S("12345678901234567890"), S("can't happen"));
+
+    return true;
 }
 
-bool test() {
+template <class S>
+void test() {
   {
-    typedef std::string S;
     test0<S>();
     test1<S>();
     test2<S>();
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-  }
+#if TEST_STD_VER > 17
+    static_assert(test0<S>());
+    static_assert(test1<S>());
+    static_assert(test2<S>());
 #endif
+  }
 
 #if TEST_STD_VER > 3
   { // LWG 2946
@@ -386,16 +391,13 @@ bool test() {
     assert(s == "a");
   }
 #endif
-
-  return true;
 }
 
 int main(int, char**)
 {
-  test();
-#if TEST_STD_VER > 17
-  // static_assert(test());
+  test<std::string>();
+#if TEST_STD_VER >= 11
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
-
   return 0;
 }

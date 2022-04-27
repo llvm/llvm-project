@@ -10,12 +10,12 @@
 
 // <string>
 
-// iterator       begin();
-// iterator       end();
-// const_iterator begin()  const;
-// const_iterator end()    const;
-// const_iterator cbegin() const;
-// const_iterator cend()   const;
+// iterator       begin(); // constexpr since C++20
+// iterator       end(); // constexpr since C++20
+// const_iterator begin()  const; // constexpr since C++20
+// const_iterator end()    const; // constexpr since C++20
+// const_iterator cbegin() const; // constexpr since C++20
+// const_iterator cend()   const; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -65,7 +65,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test<std::wstring>();
 #endif
 
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     test<std::u8string>();
 #endif
 
@@ -78,7 +78,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 int main(int, char**)
 {
     test();
-#if defined(__cpp_lib_constexpr_string) && __cpp_lib_constexpr_string >= 201907L
+#if TEST_STD_VER > 17
     static_assert(test());
 #endif
     return 0;

@@ -744,6 +744,11 @@ private:
             assert(construct && "missing EXIT construct");
             markBranchTarget(eval, *construct->constructExit);
           },
+          [&](const parser::FailImageStmt &) {
+            eval.isUnstructured = true;
+            if (eval.lexicalSuccessor->lexicalSuccessor)
+              markSuccessorAsNewBlock(eval);
+          },
           [&](const parser::GotoStmt &s) { markBranchTarget(eval, s.v); },
           [&](const parser::IfStmt &) {
             eval.lexicalSuccessor->isNewBlock = true;

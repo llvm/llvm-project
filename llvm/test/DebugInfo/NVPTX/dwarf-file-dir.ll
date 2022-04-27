@@ -1,10 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck --check-prefix=CHECK-NODIR %s
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -dwarf-directory=1 | FileCheck --check-prefix=CHECK-DIR %s
 
-; compilation on Windows results in: /tmp/dbginfo/a\\a.cpp
-; UNSUPPORTED: windows
-
-; CHECK-NODIR: .file   {{[0-9]+}} "/tmp/dbginfo/a/a.cpp"
+; CHECK-NODIR: .file   {{[0-9]+}} "/tmp/dbginfo/a{{/|\\\\}}a.cpp"
 ;
 ; ptxas does not support .file directory syntax, but it can still be
 ; forced by -dwarf-directory=1

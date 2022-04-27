@@ -8,9 +8,11 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// basic_string(basic_string<charT,traits,Allocator>&& str);
+// basic_string(basic_string<charT,traits,Allocator>&& str); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -32,7 +34,7 @@ test(S s0)
     assert(s2.get_allocator() == s1.get_allocator());
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef test_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
@@ -55,7 +57,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;
