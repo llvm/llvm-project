@@ -544,8 +544,9 @@ TEST(ExternalIOTests, TestNonAvancingInput) {
         fmt.data(), fmt.length(), unit, __FILE__, __LINE__);
     IONAME(EnableHandlers)(io, true, false, false, false, false);
     ASSERT_TRUE(IONAME(SetAdvance)(io, "NO", 2)) << "SetAdvance(NO)" << j;
-    ASSERT_TRUE(
-        IONAME(InputAscii)(io, inputItem.item.data(), inputItem.item.length()))
+    bool result{
+        IONAME(InputAscii)(io, inputItem.item.data(), inputItem.item.length())};
+    ASSERT_EQ(result, inputItem.expectedIoStat == IostatOk)
         << "InputAscii() " << j;
     ASSERT_EQ(IONAME(EndIoStatement)(io), inputItem.expectedIoStat)
         << "EndIoStatement() for Read " << j;
