@@ -43,6 +43,7 @@ if.end:                                           ; preds = %if.then, %entry
 declare dso_local void @clobberingFunc() local_unnamed_addr #0
 
 ; CHECK:      --- !Missed
+; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            gvn
 ; CHECK-NEXT: Name:            LoadClobbered
 ; CHECK-NEXT: DebugLoc:        { File: '/tmp/s.c', Line: 3, Column: 3 }
@@ -58,6 +59,7 @@ declare dso_local void @clobberingFunc() local_unnamed_addr #0
 ; CHECK-NEXT:   - ClobberedBy:     call
 ; CHECK-NEXT:     DebugLoc: { File: '/tmp/s.c', Line: 2, Column: 2 }
 ; CHECK-NEXT: ...
+; CHECK:      --- !Missed
 ; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            gvn
 ; CHECK-NEXT: Name:            LoadClobbered
@@ -136,6 +138,7 @@ if.end5:                                          ; preds = %if.end5.sink.split,
   ret void
 }
 
+; CHECK:      --- !Missed
 ; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            gvn
 ; CHECK-NEXT: Name:            LoadClobbered

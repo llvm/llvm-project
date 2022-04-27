@@ -6,6 +6,7 @@
 int foo(int *x, int *y) {
   int a = *x;
   *y = 2;
-  // expected-remark@+1 {{load of type i32 not eliminated}}
+  // expected-remark@+2 {{load of type i32 not eliminated}}
+  // expected-remark@+1 {{load of type i8 not eliminated}}
   return a + *x;
 }

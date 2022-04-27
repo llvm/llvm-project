@@ -17,6 +17,7 @@
 ; CHECK-NEXT:     DebugLoc: { File: '/tmp/s.c', Line: 1, Column: 1 }
 ; CHECK-NEXT: ...
 ; CHECK:      --- !Missed
+; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            gvn
 ; CHECK-NEXT: Name:            LoadClobbered
 ; CHECK-NEXT: DebugLoc: { File: '/tmp/s.c', Line: 4, Column: 4 }
@@ -32,6 +33,7 @@
 ; CHECK-NEXT:   - ClobberedBy:     call
 ; CHECK-NEXT:     DebugLoc: { File: '/tmp/s.c', Line: 3, Column: 3 }
 ; CHECK-NEXT: ...
+; CHECK:      --- !Missed
 
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 source_filename = "gvn-test.c"
@@ -68,6 +70,7 @@ entry:
 ; CHECK-NEXT:   - ClobberedBy:     call
 ; CHECK-NEXT:     DebugLoc: { File: '/tmp/s.c', Line: 1, Column: 1 }
 ; CHECK-NEXT: ...
+; CHECK:      --- !Missed
 ; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            gvn
 ; CHECK-NEXT: Name:            LoadClobbered
