@@ -27,9 +27,9 @@ func.func @int32_scalar(%lhs: i32, %rhs: i32) {
   return
 }
 
-// CHECK-LABEL: @scalar_srem
+// CHECK-LABEL: @int32_scalar_srem
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
-func.func @scalar_srem(%lhs: i32, %rhs: i32) {
+func.func @int32_scalar_srem(%lhs: i32, %rhs: i32) {
   // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : i32
   // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
@@ -37,6 +37,36 @@ func.func @scalar_srem(%lhs: i32, %rhs: i32) {
   // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : i32
   // CHECK:      %{{.+}} = spv.Select %[[POS]], %[[ABS]], %[[NEG]] : i1, i32
   %0 = arith.remsi %lhs, %rhs: i32
+  return
+}
+
+// CHECK-LABEL: @index_scalar
+func.func @index_scalar(%lhs: index, %rhs: index) {
+  // CHECK: spv.IAdd %{{.*}}, %{{.*}}: i32
+  %0 = arith.addi %lhs, %rhs: index
+  // CHECK: spv.ISub %{{.*}}, %{{.*}}: i32
+  %1 = arith.subi %lhs, %rhs: index
+  // CHECK: spv.IMul %{{.*}}, %{{.*}}: i32
+  %2 = arith.muli %lhs, %rhs: index
+  // CHECK: spv.SDiv %{{.*}}, %{{.*}}: i32
+  %3 = arith.divsi %lhs, %rhs: index
+  // CHECK: spv.UDiv %{{.*}}, %{{.*}}: i32
+  %4 = arith.divui %lhs, %rhs: index
+  // CHECK: spv.UMod %{{.*}}, %{{.*}}: i32
+  %5 = arith.remui %lhs, %rhs: index
+  return
+}
+
+// CHECK-LABEL: @index_scalar_srem
+// CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
+func.func @index_scalar_srem(%lhs: index, %rhs: index) {
+  // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : i32
+  // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : i32
+  // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
+  // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : i32
+  // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : i32
+  // CHECK:      %{{.+}} = spv.Select %[[POS]], %[[ABS]], %[[NEG]] : i1, i32
+  %0 = arith.remsi %lhs, %rhs: index
   return
 }
 
