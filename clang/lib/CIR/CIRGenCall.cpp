@@ -196,7 +196,8 @@ mlir::FunctionType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
   const ABIArgInfo &retAI = FI.getReturnInfo();
   switch (retAI.getKind()) {
   case ABIArgInfo::Ignore:
-    // TODO: where to get VoidTy?
+    // TODO(CIR): This should probably be the None type from the builtin
+    // dialect.
     resultType = nullptr;
     break;
 

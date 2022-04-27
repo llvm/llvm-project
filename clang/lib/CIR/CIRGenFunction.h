@@ -257,7 +257,7 @@ public:
   enum class EvaluationOrder {
     ///! No langauge constraints on evaluation order.
     Default,
-    ///! Language semantics requrie left-to-right evaluation
+    ///! Language semantics require left-to-right evaluation
     ForceLeftToRight,
     ///! Language semantics require right-to-left evaluation.
     ForceRightToLeft

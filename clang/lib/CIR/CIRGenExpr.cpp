@@ -68,16 +68,16 @@ bool CIRGenFunction::hasBooleanRepresentation(QualType Ty) {
 CIRGenCallee CIRGenFunction::buildCallee(const clang::Expr *E) {
   E = E->IgnoreParens();
 
-  if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
     assert(ICE && "Only ICE supported so far!");
     assert(ICE->getCastKind() == CK_FunctionToPointerDecay &&
            "No other casts supported yet");
 
     return buildCallee(ICE->getSubExpr());
-  } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
-    auto FD = dyn_cast<FunctionDecl>(DRE->getDecl());
+  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    const auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl());
     assert(FD &&
-           "DeclRef referring to FunctionDecl onlything supported so far");
+           "DeclRef referring to FunctionDecl only thing supported so far");
     return buildDirectCallee(CGM, FD);
   }
 
