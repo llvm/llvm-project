@@ -99,7 +99,7 @@ define i32 @t4(i32 %a) {
   ret i32 %add
 }
 
-define i8 @t5(i32 %a) #0 {
+define i8 @t5(i32 %a) {
 ; X86-LABEL: t5:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -117,7 +117,7 @@ define i8 @t5(i32 %a) #0 {
   ret i8 %.not
 }
 
-define zeroext i1 @t6(i32 %a) #0 {
+define zeroext i1 @t6(i32 %a) {
 ; X86-LABEL: t6:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -318,5 +318,3 @@ define i32 @PR55138(i32 %x) {
   %and = and i32 %shr, 1
   ret i32 %and
 }
-
-attributes #0 = { "target-cpu"="skylake-avx512" }
