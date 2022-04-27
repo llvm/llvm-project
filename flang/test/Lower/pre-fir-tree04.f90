@@ -61,10 +61,10 @@ Subroutine test_coarray
   end if
   ! CHECK: <<End IfConstruct>>
 
-  ! CHECK: <<IfConstruct>>
+  ! CHECK: <<IfConstruct!>>
   if (y<0.) then
     ! CHECK: FailImageStmt
    fail image
   end if
-  ! CHECK: <<End IfConstruct>>
+  ! CHECK: <<End IfConstruct!>>
 end
