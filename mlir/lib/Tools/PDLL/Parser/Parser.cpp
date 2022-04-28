@@ -1245,6 +1245,8 @@ FailureOr<T *> Parser::parseUserNativeConstraintOrRewriteDecl(
   } else if (isInline) {
     return emitError(name.getLoc(),
                      "external declarations must be declared in global scope");
+  } else if (curToken.is(Token::error)) {
+    return failure();
   }
   if (failed(parseToken(Token::semicolon,
                         "expected `;` after native declaration")))
