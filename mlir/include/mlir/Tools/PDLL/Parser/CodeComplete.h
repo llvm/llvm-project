@@ -66,6 +66,9 @@ public:
   /// Signal code completion for Pattern metadata.
   virtual void codeCompletePatternMetadata() {}
 
+  /// Signal code completion for an include filename.
+  virtual void codeCompleteIncludeFilename(StringRef curPath) {}
+
   //===--------------------------------------------------------------------===//
   // Signature Hooks
   //===--------------------------------------------------------------------===//

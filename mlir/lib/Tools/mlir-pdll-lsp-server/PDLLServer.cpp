@@ -22,7 +22,9 @@
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
 using namespace mlir;
@@ -665,9 +667,10 @@ namespace {
 class LSPCodeCompleteContext : public CodeCompleteContext {
 public:
   LSPCodeCompleteContext(SMLoc completeLoc, lsp::CompletionList &completionList,
-                         ods::Context &odsContext)
+                         ods::Context &odsContext,
+                         ArrayRef<std::string> includeDirs)
       : CodeCompleteContext(completeLoc), completionList(completionList),
-        odsContext(odsContext) {}
+        odsContext(odsContext), includeDirs(includeDirs) {}
 
   void codeCompleteTupleMemberAccess(ast::TupleType tupleType) final {
     ArrayRef<ast::Type> elementTypes = tupleType.getElementTypes();
@@ -901,9 +904,68 @@ public:
                         "The pattern properly handles recursive application.");
   }
 
+  void codeCompleteIncludeFilename(StringRef curPath) final {
+    // Normalize the path to allow for interacting with the file system
+    // utilities.
+    SmallString<128> nativeRelDir(llvm::sys::path::convert_to_slash(curPath));
+    llvm::sys::path::native(nativeRelDir);
+
+    // Set of already included completion paths.
+    StringSet<> seenResults;
+
+    // Functor used to add a single include completion item.
+    auto addIncludeCompletion = [&](StringRef path, bool isDirectory) {
+      lsp::CompletionItem item;
+      item.label = (path + (isDirectory ? "/" : "")).str();
+      item.kind = isDirectory ? lsp::CompletionItemKind::Folder
+                              : lsp::CompletionItemKind::File;
+      if (seenResults.insert(item.label).second)
+        completionList.items.emplace_back(item);
+    };
+
+    // Process the include directories for this file, adding any potential
+    // nested include files or directories.
+    for (StringRef includeDir : includeDirs) {
+      llvm::SmallString<128> dir = includeDir;
+      if (!nativeRelDir.empty())
+        llvm::sys::path::append(dir, nativeRelDir);
+
+      std::error_code errorCode;
+      for (auto it = llvm::sys::fs::directory_iterator(dir, errorCode),
+                e = llvm::sys::fs::directory_iterator();
+           !errorCode && it != e; it.increment(errorCode)) {
+        StringRef filename = llvm::sys::path::filename(it->path());
+
+        // To know whether a symlink should be treated as file or a directory,
+        // we have to stat it. This should be cheap enough as there shouldn't be
+        // many symlinks.
+        llvm::sys::fs::file_type fileType = it->type();
+        if (fileType == llvm::sys::fs::file_type::symlink_file) {
+          if (auto fileStatus = it->status())
+            fileType = fileStatus->type();
+        }
+
+        switch (fileType) {
+        case llvm::sys::fs::file_type::directory_file:
+          addIncludeCompletion(filename, /*isDirectory=*/true);
+          break;
+        case llvm::sys::fs::file_type::regular_file: {
+          // Only consider concrete files that can actually be included by PDLL.
+          if (filename.endswith(".pdll") || filename.endswith(".td"))
+            addIncludeCompletion(filename, /*isDirectory=*/false);
+          break;
+        }
+        default:
+          break;
+        }
+      }
+    };
+  }
+
 private:
   lsp::CompletionList &completionList;
   ods::Context &odsContext;
+  ArrayRef<std::string> includeDirs;
 };
 } // namespace
 
@@ -921,8 +983,8 @@ PDLDocument::getCodeCompletion(const lsp::URIForFile &uri,
   // code completion context provided.
   ods::Context tmpODSContext;
   lsp::CompletionList completionList;
-  LSPCodeCompleteContext lspCompleteContext(posLoc, completionList,
-                                            tmpODSContext);
+  LSPCodeCompleteContext lspCompleteContext(
+      posLoc, completionList, tmpODSContext, sourceMgr.getIncludeDirs());
 
   ast::Context tmpContext(tmpODSContext);
   (void)parsePDLAST(tmpContext, sourceMgr, &lspCompleteContext);

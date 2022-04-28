@@ -22,11 +22,15 @@ using namespace mlir::pdll;
 //===----------------------------------------------------------------------===//
 
 std::string Token::getStringValue() const {
-  assert(getKind() == string || getKind() == string_block);
+  assert(getKind() == string || getKind() == string_block ||
+         getKind() == code_complete_string);
 
   // Start by dropping the quotes.
-  StringRef bytes = getSpelling().drop_front().drop_back();
-  if (is(string_block)) bytes = bytes.drop_front().drop_back();
+  StringRef bytes = getSpelling();
+  if (is(string))
+    bytes = bytes.drop_front().drop_back();
+  else if (is(string_block))
+    bytes = bytes.drop_front(2).drop_back(2);
 
   std::string result;
   result.reserve(bytes.size());
@@ -337,6 +341,16 @@ Token Lexer::lexNumber(const char *tokStart) {
 
 Token Lexer::lexString(const char *tokStart, bool isStringBlock) {
   while (true) {
+    // Check to see if there is a code completion location within the string. In
+    // these cases we generate a completion location and place the currently
+    // lexed string within the token (without the quotes). This allows for the
+    // parser to use the partially lexed string when computing the completion
+    // results.
+    if (curPtr == codeCompletionLocation) {
+      return formToken(Token::code_complete_string,
+                       tokStart + (isStringBlock ? 2 : 1));
+    }
+
     switch (*curPtr++) {
       case '"':
         // If this is a string block, we only end the string when we encounter a
