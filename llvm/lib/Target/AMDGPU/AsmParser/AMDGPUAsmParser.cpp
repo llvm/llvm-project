@@ -7358,8 +7358,6 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
                                    const OperandVector &Operands,
                                    bool IsAtomic,
                                    bool IsLds) {
-  bool IsLdsOpcode = IsLds;
-  bool HasLdsModifier = false;
   OptionalImmIndexMap OptionalIdx;
   unsigned FirstOperandIdx = 1;
   bool IsAtomicReturn = false;
@@ -7403,8 +7401,6 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
       continue;
     }
 
-    HasLdsModifier |= Op.isLDS();
-
     // Handle tokens like 'offen' which are sometimes hard-coded into the
     // asm string.  There are no MCInst operands for these.
     if (Op.isToken()) {
@@ -7419,7 +7415,7 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol, 0);
 
-  if (!IsLdsOpcode) { // tfe is not legal with lds opcodes
+  if (!IsLds) { // tfe is not legal with lds opcodes
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   }
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySWZ);
