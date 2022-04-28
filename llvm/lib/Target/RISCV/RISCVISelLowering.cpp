@@ -6822,6 +6822,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     if (N->getOperand(1).getOpcode() != ISD::Constant) {
+      // If we can use a BSET instruction, allow default promotion to apply.
+      if (N->getOpcode() == ISD::SHL && Subtarget.hasStdExtZbs() &&
+          isOneConstant(N->getOperand(0)))
+        break;
       Results.push_back(customLegalizeToWOp(N, DAG));
       break;
     }
