@@ -141,12 +141,7 @@ public:
     }
 #endif
 
-    void exitingEdge(InsertPointTy ExitingIP, omp::Directive LeaveReason)  {
-        assert(LeaveReason == omp::OMPD_unknown || LeaveReason == omp:: OMPD_cancellation_point);
 
-        if (!FiniCB) return;
-        FiniCB(ExitingIP,  LeaveReason, this);
-    }
 
     /// Consistency self-check.
     void assertOK() const;
@@ -159,72 +154,28 @@ private:
   /// target block and the kind of cancellable directive.
   SmallVector<std::unique_ptr<OMPRegionInfo>,8> RegionStack;
 
+
+  OMPRegionInfo *getInnermostDirectionRegion(omp::Directive DK) ;
+
   OMPRegionInfo* pushRegion(      omp::Directive DK,
       bool IsCancellable,
-      LeaveRegionCallbackTy FiniCB = {}) {
-    RegionStack.emplace_back(new OMPRegionInfo(RegionKind::Directive, DK, IsCancellable,std::move( FiniCB)));
-    return RegionStack.back().get();
-  }
+      LeaveRegionCallbackTy FiniCB = {});
 
-  void emitRegionExit(        InsertPointTy ExitingIP,   OMPRegionInfo* RegionToLeave,    omp::Directive LeaveReason) {
-#ifndef NDEBUG
-      switch(LeaveReason) {
-      case omp::OMPD_unknown:
-          // Regular region exit
-          break;
-      case omp::OMPD_cancellation_point:
-      case omp::OMPD_barrier:
-          // Cancellation // TODO: Also need need to know whether #pragma omp cancel for/#pragma omp cancel parallel/??
-          break;
-      default:
-          llvm_unreachable("unrecognized reason to leave region");
-      }
-#endif
+  void emitRegionExit(        InsertPointTy ExitingIP,   OMPRegionInfo* RegionToLeave,    omp::Directive LeaveReason =omp:: OMPD_unknown);
 
-      for (auto &R : reverse(RegionStack) ) {
-        if (  R->FiniCB)
-          R->FiniCB(ExitingIP, LeaveReason,R.get());
-
-          if (R.get() == RegionToLeave) return;
-      }
-      llvm_unreachable("region to exit not on stack?");
-  }
-
-  void popRegion(omp::Directive DK) {      
-      assert(  RegionStack.back()->DK == DK && "unbalanced region push/pop" );
-      RegionStack.pop_back();
-  }
-
-#if 0
-  /// Push a finalization callback on the finalization stack.
-  ///
-  /// NOTE: Temporary solution until Clang CG is gone.
-  void pushFinalizationCB(const FinalizationInfo &FI) {
-    FinalizationStack.push_back(FI);
-  }
-
-  void pushFinalizationCB(FinalizeCallbackTy FiniCB) {
-    FinalizationInfo FI{{}, omp::Directive::OMPD_unknown, false};
-    FinalizationStack.push_back(FI);
-  }
-#endif
+  void popRegion(omp::Directive DK);
 
 
-#if 0
-  void pushCancellationCB(CancellationCallbackTy CancelCB) {
-      FinalizationInfo FI{ {}, None, false, CancelCB, nullptr };
-      FinalizationStack.push_back(FI);
+
+
+  /// Return true if the last entry in the finalization stack is of kind \p DK
+  /// and cancellable.
+  bool isLastFinalizationInfoCancellable(omp::Directive DK) {
+      // FIXME: Don't all the regions in-between also need to be cancellable?
+   return getInnermostDirectionRegion(DK)->IsCancellable;
   }
 
 
-  /// Pop the last finalization callback from the finalization stack.
-  ///
-  /// NOTE: Temporary solution until Clang CG is gone.
-  void popFinalizationCB() {
-    assert(FinalizationStack.back().UserManaged);
-    FinalizationStack.pop_back();
-  }
-#endif
 
 public:
   /// Callback type for body (=inner region) code generation
@@ -888,7 +839,7 @@ public:
   /// \param ExitCB Extra code to be generated in the exit block.
   void emitCancelationCheckImpl(LocationDescription Loc, Value *CancelFlag,
                                 omp::Directive CanceledDirective,
-                                omp::Directive CanceledBy);
+                                omp::Directive CancelledBy);
 
   /// Generate a barrier runtime call.
   ///
@@ -908,48 +859,6 @@ public:
   /// \param Loc The location at which the request originated and is fulfilled.
   void emitFlush(const LocationDescription &Loc);
 
-
-public:
-#if 0
-  llvm::Optional<omp::Directive> getTopmostDirective() const {
-    if (FinalizationStack.empty())
-      return None;
-    return FinalizationStack.back().DK;
-  }
-
-  bool isTopmostUserManaged() const {
-    if (FinalizationStack.empty())
-      return false;
-    return FinalizationStack.back().UserManaged;
-  }
-
-  bool isTopmostBuilderManaged() const {
-    if (FinalizationStack.empty())
-      return false;
-    return !FinalizationStack.back().UserManaged;
-  }
-#endif
-
-
-  private:
-      OMPRegionInfo *getInnermostDirectionRegion(omp::Directive DK) {
-          for (auto& R : reverse(RegionStack)) {
-              if (R->Kind == RegionKind::Toplevel)
-                  return R.get(); 
-              if (R->Kind == RegionKind::Directive && R->DK == DK)
-              return R.get();
-          }
-          llvm_unreachable("expected toplevel region");
-      }
-
-  /// Return true if the last entry in the finalization stack is of kind \p DK
-  /// and cancellable.
-  bool isLastFinalizationInfoCancellable(omp::Directive DK) {
-      // FIXME: Don't all the regions in-between also need to be cancellable?
-   return getInnermostDirectionRegion(DK)->IsCancellable;
-  }
-
-  public:
   /// Generate a taskwait runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.

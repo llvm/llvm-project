@@ -27,13 +27,14 @@ struct DefaultAnalysisGraphTraits {
   static GraphT getGraph(AnalysisT *A) { return A; }
 };
 
+
 template <
     typename AnalysisT, bool IsSimple, typename GraphT = AnalysisT *,
     typename AnalysisGraphTraitsT = DefaultAnalysisGraphTraits<AnalysisT, GraphT> >
 class DOTGraphTraitsViewer : public FunctionPass {
 public:
-  DOTGraphTraitsViewer(StringRef GraphName, char &ID)
-      : FunctionPass(ID), Name(GraphName) {}
+  DOTGraphTraitsViewer(StringRef GraphName,  char &ID)
+      : FunctionPass(ID), Name(GraphName)   {}
 
   /// Return true if this function should be processed.
   ///
@@ -68,6 +69,7 @@ public:
 private:
   std::string Name;
 };
+
 
 template <
     typename AnalysisT, bool IsSimple, typename GraphT = AnalysisT *,

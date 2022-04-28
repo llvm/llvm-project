@@ -34,6 +34,7 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1774,18 +1775,19 @@ public:
     /// Emit the Finalization for an OMP region
     /// \param CGF	The Codegen function this belongs to
     /// \param IP	Insertion point for generating the finalization code.
-    static void FinalizeOMPRegion(CodeGenFunction &CGF, InsertPointTy IP) {
-      CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-      assert(IP.getBlock()->end() != IP.getPoint() &&
-             "OpenMP IR Builder should cause terminated block!");
+    static void FinalizeOMPRegion(CodeGenFunction &CGF, InsertPointTy IP) { // TODO: move to .cpp file
+      CGBuilderTy::InsertPointGuard IPG(CGF.Builder);  // MK: needed?
+    
+      CGF.Builder.restoreIP(IP);
+      auto DestBB = llvm:: splitBB( CGF.Builder, false, ".ompfinalize");
 
-      llvm::BasicBlock *IPBB = IP.getBlock();
-      llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
-      assert(DestBB && "Finalization block should have one successor!");
+    //  llvm::BasicBlock *IPBB = IP.getBlock();
+     // llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
+     // assert(DestBB && "Finalization block should have one successor!");
 
       // erase and replace with cleanup branch.
-      IPBB->getTerminator()->eraseFromParent();
-      CGF.Builder.SetInsertPoint(IPBB);
+   //   IPBB->getTerminator()->eraseFromParent(); // Don't do this!
+    //  CGF.Builder.SetInsertPoint(IPBB);
       CodeGenFunction::JumpDest Dest = CGF.getJumpDestInCurrentScope(DestBB);
       CGF.EmitBranchThroughCleanup(Dest);
     }
