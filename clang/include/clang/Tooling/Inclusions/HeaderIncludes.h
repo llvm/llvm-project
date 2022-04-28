@@ -129,23 +129,6 @@ private:
   llvm::Regex IncludeRegex;
 };
 
-/// \returns a regex that can match various styles of C++ includes.
-/// For example:
-/// \code
-/// #include <foo.h>
-/// @import bar;
-/// #include "bar.h"
-/// \endcode
-llvm::Regex getCppIncludeRegex();
-
-/// \returns the last match in the list of matches that is not empty.
-llvm::StringRef getIncludeNameFromMatches(
-    const llvm::SmallVectorImpl<llvm::StringRef> &Matches);
-
-/// \returns the given include name and removes the following symbols from the
-/// beginning and ending of the include name: " > < ;
-llvm::StringRef trimInclude(llvm::StringRef IncludeName);
-
 } // namespace tooling
 } // namespace clang
 

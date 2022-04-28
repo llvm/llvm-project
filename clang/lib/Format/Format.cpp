@@ -44,7 +44,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
-#include <limits>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -2725,6 +2724,13 @@ static void sortCppIncludes(const FormatStyle &Style,
   }
 }
 
+namespace {
+
+const char CppIncludeRegexPattern[] =
+    R"(^[\t\ ]*#[\t\ ]*(import|include)[^"<]*(["<][^">]*[">]))";
+
+} // anonymous namespace
+
 tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
                                       ArrayRef<tooling::Range> Ranges,
                                       StringRef FileName,
@@ -2734,7 +2740,7 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
                       .StartsWith("\xEF\xBB\xBF", 3) // UTF-8 BOM
                       .Default(0);
   unsigned SearchFrom = 0;
-  llvm::Regex IncludeRegex(tooling::getCppIncludeRegex());
+  llvm::Regex IncludeRegex(CppIncludeRegexPattern);
   SmallVector<StringRef, 4> Matches;
   SmallVector<IncludeDirective, 16> IncludesInBlock;
 
@@ -2790,14 +2796,7 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
     bool MergeWithNextLine = Trimmed.endswith("\\");
     if (!FormattingOff && !MergeWithNextLine) {
       if (IncludeRegex.match(Line, &Matches)) {
-        StringRef IncludeName = tooling::getIncludeNameFromMatches(Matches);
-        // This addresses https://github.com/llvm/llvm-project/issues/38995
-        bool WithSemicolon = false;
-        if (!IncludeName.startswith("\"") && !IncludeName.startswith("<") &&
-            IncludeName.endswith(";")) {
-          WithSemicolon = true;
-        }
-
+        StringRef IncludeName = Matches[2];
         if (Line.contains("/*") && !Line.contains("*/")) {
           // #include with a start of a block comment, but without the end.
           // Need to keep all the lines until the end of the comment together.
@@ -2810,10 +2809,8 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
         int Category = Categories.getIncludePriority(
             IncludeName,
             /*CheckMainHeader=*/!MainIncludeFound && FirstIncludeBlock);
-        int Priority = WithSemicolon ? std::numeric_limits<int>::max()
-                                     : Categories.getSortIncludePriority(
-                                           IncludeName, !MainIncludeFound &&
-                                                            FirstIncludeBlock);
+        int Priority = Categories.getSortIncludePriority(
+            IncludeName, !MainIncludeFound && FirstIncludeBlock);
         if (Category == 0)
           MainIncludeFound = true;
         IncludesInBlock.push_back(
@@ -3073,7 +3070,8 @@ namespace {
 
 inline bool isHeaderInsertion(const tooling::Replacement &Replace) {
   return Replace.getOffset() == UINT_MAX && Replace.getLength() == 0 &&
-         tooling::getCppIncludeRegex().match(Replace.getReplacementText());
+         llvm::Regex(CppIncludeRegexPattern)
+             .match(Replace.getReplacementText());
 }
 
 inline bool isHeaderDeletion(const tooling::Replacement &Replace) {
@@ -3081,7 +3079,7 @@ inline bool isHeaderDeletion(const tooling::Replacement &Replace) {
 }
 
 // FIXME: insert empty lines between newly created blocks.
-static tooling::Replacements
+tooling::Replacements
 fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
                         const FormatStyle &Style) {
   if (!Style.isCpp())
@@ -3113,7 +3111,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
 
   for (const auto &Header : HeadersToDelete) {
     tooling::Replacements Replaces =
-        Includes.remove(tooling::trimInclude(Header), Header.startswith("<"));
+        Includes.remove(Header.trim("\"<>"), Header.startswith("<"));
     for (const auto &R : Replaces) {
       auto Err = Result.add(R);
       if (Err) {
@@ -3125,7 +3123,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     }
   }
 
-  llvm::Regex IncludeRegex = tooling::getCppIncludeRegex();
+  llvm::Regex IncludeRegex = llvm::Regex(CppIncludeRegexPattern);
   llvm::SmallVector<StringRef, 4> Matches;
   for (const auto &R : HeaderInsertions) {
     auto IncludeDirective = R.getReplacementText();
@@ -3133,9 +3131,9 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     assert(Matched && "Header insertion replacement must have replacement text "
                       "'#include ...'");
     (void)Matched;
-    StringRef IncludeName = tooling::getIncludeNameFromMatches(Matches);
-    auto Replace = Includes.insert(tooling::trimInclude(IncludeName),
-                                   IncludeName.startswith("<"));
+    auto IncludeName = Matches[2];
+    auto Replace =
+        Includes.insert(IncludeName.trim("\"<>"), IncludeName.startswith("<"));
     if (Replace) {
       auto Err = Result.add(*Replace);
       if (Err) {
