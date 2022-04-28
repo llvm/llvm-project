@@ -637,6 +637,18 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
   Value *Src = CI->getArgOperand(0);
   Type *CharTy = B.getIntNTy(CharSize);
 
+  if (isOnlyUsedInZeroEqualityComparison(CI) &&
+      (!Bound || isKnownNonZero(Bound, DL))) {
+    // Fold strlen:
+    //   strlen(x) != 0 --> *x != 0
+    //   strlen(x) == 0 --> *x == 0
+    // and likewise strnlen with constant N > 0:
+    //   strnlen(x, N) != 0 --> *x != 0
+    //   strnlen(x, N) == 0 --> *x == 0
+    return B.CreateZExt(B.CreateLoad(CharTy, Src, "char0"),
+                        CI->getType());
+  }
+
   if (Bound) {
     if (ConstantInt *BoundCst = dyn_cast<ConstantInt>(Bound)) {
       if (BoundCst->isZero())
@@ -730,12 +742,6 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
                             ConstantInt::get(CI->getType(), LenFalse - 1));
     }
   }
-
-  // strlen(x) != 0 --> *x != 0
-  // strlen(x) == 0 --> *x == 0
-  if (isOnlyUsedInZeroEqualityComparison(CI))
-    return B.CreateZExt(B.CreateLoad(B.getIntNTy(CharSize), Src, "strlenfirst"),
-                        CI->getType());
 
   return nullptr;
 }
