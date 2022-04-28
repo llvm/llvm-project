@@ -16,7 +16,7 @@ define i32 @reducebase_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_onein_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -27,7 +27,7 @@ define i32 @reduceshuffle_onein_v4i32(<4 x i32> %a) {
 
 define i32 @reduceshuffle_onein_const_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_const_v4i32(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[X:%.*]] = xor <4 x i32> [[S]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -77,7 +77,7 @@ define i32 @reduceshuffle_twoin_OK_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_concat_v4i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_concat_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -99,7 +99,7 @@ define i32 @reduceshuffle_twoin_lowelts_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_notlowelts_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_notlowelts_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 6, i32 1, i32 4>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 4, i32 6>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -121,7 +121,7 @@ define i32 @reduceshuffle_twoin_repeat_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_uneven_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_uneven_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 1, i32 4>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -143,7 +143,7 @@ define i32 @reduceshuffle_twoin_undef_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_undef2_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_undef2_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 4, i32 undef, i32 1, i32 0>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 4, i32 undef>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -154,7 +154,7 @@ define i32 @reduceshuffle_twoin_undef2_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_multiundef_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_multiundef_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 undef, i32 undef, i32 1>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -222,7 +222,7 @@ define i32 @reducebase_v16i32(<16 x i32> %a, <16 x i32> %b) {
 
 define i32 @reduceshuffle_onein_v16i32(<16 x i32> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_v16i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -233,7 +233,7 @@ define i32 @reduceshuffle_onein_v16i32(<16 x i32> %a) {
 
 define i32 @reduceshuffle_onein_ext_v16i32(<16 x i32> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_ext_v16i32(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[X:%.*]] = xor <16 x i32> [[S]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -246,7 +246,7 @@ define i32 @reduceshuffle_onein_ext_v16i32(<16 x i32> %a) {
 
 define i32 @reduceshuffle_twoin_concat_v16i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_concat_v16i32(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[X:%.*]] = xor <16 x i32> [[S]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -259,7 +259,7 @@ define i32 @reduceshuffle_twoin_concat_v16i32(<8 x i32> %a, <8 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_lowelt_v16i32(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_lowelt_v16i32(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 1, i32 3, i32 5, i32 7, i32 17, i32 19, i32 21, i32 23>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[X:%.*]] = xor <16 x i32> [[S]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -285,7 +285,7 @@ define i32 @reduceshuffle_twoin_notlowelt_v16i32(<16 x i32> %a, <16 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_uneven_v16i32(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_uneven_v16i32(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 1, i32 3, i32 5, i32 7, i32 17, i32 19, i32 21, i32 8>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22>
 ; CHECK-NEXT:    [[X:%.*]] = xor <16 x i32> [[S]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -298,7 +298,7 @@ define i32 @reduceshuffle_twoin_uneven_v16i32(<16 x i32> %a, <16 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_shr1_v16i32(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_shr1_v16i32(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 16, i32 17, i32 5, i32 18, i32 19, i32 6, i32 20, i32 21, i32 7, i32 22, i32 23>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[A1:%.*]] = lshr <16 x i32> [[S]], <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
 ; CHECK-NEXT:    [[A2:%.*]] = and <16 x i32> [[A1]], <i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537>
 ; CHECK-NEXT:    [[A3:%.*]] = mul nuw <16 x i32> [[A2]], <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
@@ -319,7 +319,7 @@ define i32 @reduceshuffle_twoin_shr1_v16i32(<16 x i32> %a, <16 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_shr2_v16i32(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_shr2_v16i32(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 16, i32 17, i32 5, i32 18, i32 19, i32 6, i32 20, i32 21, i32 7, i32 22, i32 23>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[A1:%.*]] = lshr <16 x i32> <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>, [[S]]
 ; CHECK-NEXT:    [[A2:%.*]] = and <16 x i32> [[A1]], <i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537>
 ; CHECK-NEXT:    [[A3:%.*]] = mul nuw <16 x i32> [[A2]], <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
@@ -353,7 +353,7 @@ define i16 @reducebase_v16i16(<16 x i16> %a, <16 x i16> %b) {
 
 define i16 @reduceshuffle_onein_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_v16i16(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[X]])
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
@@ -364,7 +364,7 @@ define i16 @reduceshuffle_onein_v16i16(<16 x i16> %a) {
 
 define i16 @reduceshuffle_onein_ext_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_ext_v16i16(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[X:%.*]] = xor <16 x i16> [[S]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 ; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[X]])
 ; CHECK-NEXT:    ret i16 [[R]]
@@ -377,7 +377,7 @@ define i16 @reduceshuffle_onein_ext_v16i16(<16 x i16> %a) {
 
 define i16 @reduceshuffle_twoin_concat_v16i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_concat_v16i16(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[X:%.*]] = xor <16 x i16> [[S]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 ; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[X]])
 ; CHECK-NEXT:    ret i16 [[R]]
@@ -390,7 +390,7 @@ define i16 @reduceshuffle_twoin_concat_v16i16(<8 x i16> %a, <8 x i16> %b) {
 
 define i16 @reduceshuffle_twoin_lowelt_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_lowelt_v16i16(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 1, i32 3, i32 5, i32 7, i32 17, i32 19, i32 21, i32 23>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[X:%.*]] = xor <16 x i16> [[S]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 ; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[X]])
 ; CHECK-NEXT:    ret i16 [[R]]
@@ -429,7 +429,7 @@ define i16 @reduceshuffle_twoin_uneven_v16i16(<16 x i16> %a, <16 x i16> %b) {
 
 define i16 @reduceshuffle_twoin_ext_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_ext_v16i16(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 16, i32 17, i32 5, i32 18, i32 19, i32 6, i32 20, i32 21, i32 7, i32 22, i32 23>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[A1:%.*]] = lshr <16 x i16> [[S]], <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
 ; CHECK-NEXT:    [[A2:%.*]] = and <16 x i16> [[A1]], <i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257>
 ; CHECK-NEXT:    [[A3:%.*]] = mul nuw <16 x i16> [[A2]], <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
