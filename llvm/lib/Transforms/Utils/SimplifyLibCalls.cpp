@@ -451,8 +451,11 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
 
   // strncmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2) {
-    StringRef SubStr1 = Str1.substr(0, Length);
-    StringRef SubStr2 = Str2.substr(0, Length);
+    // Avoid truncating the 64-bit Length to 32 bits in ILP32.
+    StringRef::size_type MinLen1 = std::min((uint64_t)Str1.size(), Length);
+    StringRef::size_type MinLen2 = std::min((uint64_t)Str2.size(), Length);
+    StringRef SubStr1 = Str1.substr(0, MinLen1);
+    StringRef SubStr2 = Str2.substr(0, MinLen2);
     return ConstantInt::get(CI->getType(), SubStr1.compare(SubStr2));
   }
 
@@ -1021,8 +1024,10 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     // From now on we need a constant length and constant array.
     return nullptr;
 
-  // Truncate the string to LenC.
-  Str = Str.substr(0, LenC->getZExtValue());
+  // Truncate the string to LenC without slicing when targeting LP64
+  // on an ILP32 host.
+  uint64_t EndOff = std::min(LenC->getZExtValue(), (uint64_t)StringRef::npos);
+  Str = Str.substr(0, EndOff);
 
   // If the char is variable but the input str and length are not we can turn
   // this memchr call into a simple bit field test. Of course this only works
