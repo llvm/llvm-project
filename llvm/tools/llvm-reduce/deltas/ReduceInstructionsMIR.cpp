@@ -101,10 +101,17 @@ static void extractInstrFromModule(Oracle &O, MachineFunction &MF) {
 
       // If no dominating definition was found then add an implicit one to the
       // first instruction in the entry block.
+
+      // FIXME: This should really insert IMPLICIT_DEF or G_IMPLICIT_DEF. We
+      // need to refine the reduction quality metric from number of serialized
+      // bytes to continue progressing if we're going to introduce new
+      // instructions.
       if (!NewReg && TopMI) {
         NewReg = MRI->cloneVirtualRegister(Reg);
         TopMI->addOperand(MachineOperand::CreateReg(
-            NewReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
+            NewReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/,
+            MO.isDead(), MO.isUndef(), MO.isEarlyClobber(), MO.getSubReg(),
+            /*IsDebug*/ false, MO.isInternalRead()));
       }
 
       // Update all uses.
