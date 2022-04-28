@@ -509,7 +509,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
     // We limit promotion to only promoting up to a fixed number of elements of
     // the aggregate.
-    if (MaxElements > 0 && ArgParts.size() >= MaxElements) {
+    if (MaxElements > 0 && ArgParts.size() > MaxElements) {
       LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                         << "more than " << MaxElements << " parts\n");
       return false;
