@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_35 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
 
 ; Check load from constant global variables.  These loads should be
 ; ld.global.nc (aka ldg).

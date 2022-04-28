@@ -10,6 +10,8 @@
 ; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda \
 ; RUN:    -passes=nvvm-intr-range -nvvm-intr-range-sm=30 \
 ; RUN:   | FileCheck -allow-deprecated-dag-overlap --check-prefix=RANGE --check-prefix=RANGE_30 %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 define ptx_device i32 @test_tid_x() {
 ; CHECK: mov.u32 %r{{[0-9]+}}, %tid.x;

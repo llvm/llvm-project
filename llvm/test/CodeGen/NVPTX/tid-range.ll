@@ -1,4 +1,6 @@
 ; RUN: llc < %s -march=nvptx64 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 | %ptxas-verify %}
+
 declare i32 @get_register()
 
 define i1 @test1() {
