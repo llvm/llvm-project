@@ -26,7 +26,7 @@ define void @splat_load_2xdouble(<2 x double> *%ptr) {
 ;
 ; SSE3-LABEL: 'splat_load_2xdouble'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x double>, <2 x double>* %ptr, align 16
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %splat_load = shufflevector <2 x double> %load, <2 x double> poison, <2 x i32> zeroinitializer
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %splat_load = shufflevector <2 x double> %load, <2 x double> poison, <2 x i32> zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %load = load <2 x double>, <2 x double> *%ptr
