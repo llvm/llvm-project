@@ -89,6 +89,8 @@ STATISTIC(NumArgumentsPromoted, "Number of pointer arguments promoted");
 STATISTIC(NumByValArgsPromoted, "Number of byval arguments promoted");
 STATISTIC(NumArgumentsDead, "Number of dead pointer args eliminated");
 
+namespace {
+
 struct ArgPart {
   Type *Ty;
   Align Alignment;
@@ -96,7 +98,10 @@ struct ArgPart {
   /// metadata transfer.
   LoadInst *MustExecLoad;
 };
+
 using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
+
+} // end anonymous namespace
 
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
