@@ -10,6 +10,7 @@
 #include "AST.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -708,6 +709,15 @@ public:
   // We only want to traverse the *syntactic form* to understand the selection.
   bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
     return traverseNode(E, [&] { return TraverseStmt(E->getSyntacticForm()); });
+  }
+  bool TraverseTypeConstraint(const TypeConstraint *C) {
+    if (auto *E = C->getImmediatelyDeclaredConstraint()) {
+      // Technically this expression is 'implicit' and not traversed by the RAV.
+      // However, the range is correct, so we visit expression to avoid adding
+      // an extra kind to 'DynTypeNode' that hold 'TypeConstraint'.
+      return TraverseStmt(E);
+    }
+    return Base::TraverseTypeConstraint(C);
   }
 
 private:
