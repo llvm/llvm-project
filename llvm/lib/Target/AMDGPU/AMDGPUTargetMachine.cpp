@@ -277,6 +277,10 @@ EnableDCEInRA("amdgpu-dce-in-ra",
     cl::init(true), cl::Hidden,
     cl::desc("Enable machine DCE inside regalloc"));
 
+static cl::opt<bool> EnableSetWavePriority("amdgpu-set-wave-priority",
+                                           cl::desc("Adjust wave priority"),
+                                           cl::init(false), cl::Hidden);
+
 static cl::opt<bool> EnableScalarIRPasses(
   "amdgpu-scalar-ir-passes",
   cl::desc("Enable scalar IR passes"),
@@ -1360,6 +1364,8 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(&SIInsertHardClausesID);
 
   addPass(&SILateBranchLoweringPassID);
+  if (isPassEnabled(EnableSetWavePriority, CodeGenOpt::Less))
+    addPass(createAMDGPUSetWavePriorityPass());
   if (getOptLevel() > CodeGenOpt::None)
     addPass(&SIPreEmitPeepholeID);
   // The hazard recognizer that runs as part of the post-ra scheduler does not
