@@ -1256,7 +1256,7 @@ the configuration (without a prefix: ``Auto``).
          "bbbb"                                    "cccc";
          "cccc";
 
-**AlwaysBreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 7`
+**AlwaysBreakTemplateDeclarations** (``BreakTemplateDeclarationsStyle``) :versionbadge:`clang-format 3.4`
   The template declaration breaking style to use.
 
   Possible values:
@@ -2623,7 +2623,7 @@ the configuration (without a prefix: ``Auto``).
   For example: `KJ_IF_MAYBE
   <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes>`_
 
-**IncludeBlocks** (``IncludeBlocksStyle``) :versionbadge:`clang-format 7`
+**IncludeBlocks** (``IncludeBlocksStyle``) :versionbadge:`clang-format 6`
   Dependent on the value, multiple ``#include`` blocks can be sorted
   as one and divided based on category.
 
@@ -2663,7 +2663,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**IncludeCategories** (``List of IncludeCategories``) :versionbadge:`clang-format 7`
+**IncludeCategories** (``List of IncludeCategories``) :versionbadge:`clang-format 3.8`
   Regular expressions denoting the different ``#include`` categories
   used for ordering ``#includes``.
 
@@ -2711,7 +2711,7 @@ the configuration (without a prefix: ``Auto``).
         Priority:        1
         SortPriority:    0
 
-**IncludeIsMainRegex** (``String``) :versionbadge:`clang-format 7`
+**IncludeIsMainRegex** (``String``) :versionbadge:`clang-format 3.9`
   Specify a regular expression of suffixes that are allowed in the
   file-to-main-include mapping.
 
@@ -2724,7 +2724,7 @@ the configuration (without a prefix: ``Auto``).
   For example, if configured to "(_test)?$", then a header a.h would be seen
   as the "main" include in both a.cc and a_test.cc.
 
-**IncludeIsMainSourceRegex** (``String``) :versionbadge:`clang-format 7`
+**IncludeIsMainSourceRegex** (``String``) :versionbadge:`clang-format 10`
   Specify a regular expression for files being formatted
   that are allowed to be considered "main" in the
   file-to-main-include mapping.

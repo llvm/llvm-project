@@ -50,7 +50,7 @@ struct IncludeStyle {
 
   /// Dependent on the value, multiple ``#include`` blocks can be sorted
   /// as one and divided based on category.
-  /// \version 7
+  /// \version 6
   IncludeBlocksStyle IncludeBlocks;
 
   /// See documentation of ``IncludeCategories``.
@@ -114,7 +114,7 @@ struct IncludeStyle {
   ///       Priority:        1
   ///       SortPriority:    0
   /// \endcode
-  /// \version 7
+  /// \version 3.8
   std::vector<IncludeCategory> IncludeCategories;
 
   /// Specify a regular expression of suffixes that are allowed in the
@@ -128,7 +128,7 @@ struct IncludeStyle {
   ///
   /// For example, if configured to "(_test)?$", then a header a.h would be seen
   /// as the "main" include in both a.cc and a_test.cc.
-  /// \version 7
+  /// \version 3.9
   std::string IncludeIsMainRegex;
 
   /// Specify a regular expression for files being formatted
@@ -149,7 +149,7 @@ struct IncludeStyle {
   /// also being respected in later phase). Without this option set,
   /// ``ClassImpl.hpp`` would not have the main include file put on top
   /// before any other include.
-  /// \version 7
+  /// \version 10
   std::string IncludeIsMainSourceRegex;
 };
 
