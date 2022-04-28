@@ -2638,10 +2638,10 @@ static void sortCppIncludes(const FormatStyle &Style,
                             StringRef Code, tooling::Replacements &Replaces,
                             unsigned *Cursor) {
   tooling::IncludeCategoryManager Categories(Style.IncludeStyle, FileName);
-  unsigned IncludesBeginOffset = Includes.front().Offset;
-  unsigned IncludesEndOffset =
+  const unsigned IncludesBeginOffset = Includes.front().Offset;
+  const unsigned IncludesEndOffset =
       Includes.back().Offset + Includes.back().Text.size();
-  unsigned IncludesBlockSize = IncludesEndOffset - IncludesBeginOffset;
+  const unsigned IncludesBlockSize = IncludesEndOffset - IncludesBeginOffset;
   if (!affectsRange(Ranges, IncludesBeginOffset, IncludesEndOffset))
     return;
   SmallVector<unsigned, 16> Indices =
@@ -2685,7 +2685,7 @@ static void sortCppIncludes(const FormatStyle &Style,
   // the entire block. Otherwise, no replacement is generated.
   // In case Style.IncldueStyle.IncludeBlocks != IBS_Preserve, this check is not
   // enough as additional newlines might be added or removed across #include
-  // blocks. This we handle below by generating the updated #imclude blocks and
+  // blocks. This we handle below by generating the updated #include blocks and
   // comparing it to the original.
   if (Indices.size() == Includes.size() && llvm::is_sorted(Indices) &&
       Style.IncludeStyle.IncludeBlocks == tooling::IncludeStyle::IBS_Preserve)
@@ -2705,6 +2705,9 @@ static void sortCppIncludes(const FormatStyle &Style,
       *Cursor = IncludesBeginOffset + result.size() - CursorToEOLOffset;
     CurrentCategory = Includes[Index].Category;
   }
+
+  if (Cursor && *Cursor >= IncludesEndOffset)
+    *Cursor += result.size() - IncludesBlockSize;
 
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire range of blocks. Otherwise, no replacement is generated.
