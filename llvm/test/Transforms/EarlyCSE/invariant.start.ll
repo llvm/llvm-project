@@ -53,6 +53,81 @@ define i8 @test_bypass2(i8 *%P) {
   ret i8 %V1
 }
 
+define i8 @test_bypass_store_load(i8 *%P, i8 *%P2) {
+; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load
+; NO_ASSUME-SAME: (i8* [[P:%.*]], i8* [[P2:%.*]])
+; NO_ASSUME-NEXT:    store i8 42, i8* [[P]], align 1
+; NO_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
+; NO_ASSUME-NEXT:    store i8 0, i8* [[P2]], align 1
+; NO_ASSUME-NEXT:    ret i8 42
+;
+; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load
+; USE_ASSUME-SAME: (i8* [[P:%.*]], i8* [[P2:%.*]])
+; USE_ASSUME-NEXT:    store i8 42, i8* [[P]], align 1
+; USE_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
+; USE_ASSUME-NEXT:    store i8 0, i8* [[P2]], align 1
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[P]], i64 1), "nonnull"(i8* [[P]]) ]
+; USE_ASSUME-NEXT:    ret i8 42
+;
+
+  store i8 42, i8* %P
+  %i = call {}* @llvm.invariant.start.p0i8(i64 1, i8* %P)
+  store i8 0, i8* %P2
+  %V1 = load i8, i8* %P
+  ret i8 %V1
+}
+
+define i8 @test_bypass_store_load_aatags_1(i8 *%P, i8 *%P2) {
+; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load_aatags_1
+; NO_ASSUME-SAME: (i8* [[P:%.*]], i8* [[P2:%.*]])
+; NO_ASSUME-NEXT:    store i8 42, i8* [[P]], align 1, !tbaa !0
+; NO_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
+; NO_ASSUME-NEXT:    store i8 0, i8* [[P2]], align 1
+; NO_ASSUME-NEXT:    ret i8 42
+;
+; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load_aatags_1
+; USE_ASSUME-SAME: (i8* [[P:%.*]], i8* [[P2:%.*]])
+; USE_ASSUME-NEXT:    store i8 42, i8* [[P]], align 1, !tbaa !0
+; USE_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
+; USE_ASSUME-NEXT:    store i8 0, i8* [[P2]], align 1
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[P]], i64 1), "nonnull"(i8* [[P]]) ]
+; USE_ASSUME-NEXT:    ret i8 42
+;
+
+  store i8 42, i8* %P, !tbaa !0
+  %i = call {}* @llvm.invariant.start.p0i8(i64 1, i8* %P)
+  store i8 0, i8* %P2
+  %V1 = load i8, i8* %P
+  ret i8 %V1
+}
+
+; The test demonstrates a missed optimization opportunity in case when the load
+; has AA tags that are different from the store tags.
+define i8 @test_bypass_store_load_aatags_2(i8 *%P, i8 *%P2) {
+; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load_aatags_2
+; NO_ASSUME-SAME: (i8* [[P:%.*]], i8* [[P2:%.*]])
+; NO_ASSUME-NEXT:    store i8 42, i8* [[P]], align 1
+; NO_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
+; NO_ASSUME-NEXT:    store i8 0, i8* [[P2]], align 1
+; NO_ASSUME-NEXT:    %V1 = load i8, i8* %P, align 1, !tbaa !0
+; NO_ASSUME-NEXT:    ret i8 %V1
+;
+; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load_aatags_2
+; USE_ASSUME-SAME: (i8* [[P:%.*]], i8* [[P2:%.*]])
+; USE_ASSUME-NEXT:    store i8 42, i8* [[P]], align 1
+; USE_ASSUME-NEXT:    [[I:%.*]] = call {}* @llvm.invariant.start.p0i8(i64 1, i8* [[P]])
+; USE_ASSUME-NEXT:    store i8 0, i8* [[P2]], align 1
+; USE_ASSUME-NEXT:    %V1 = load i8, i8* %P, align 1, !tbaa !0
+; USE_ASSUME-NEXT:    ret i8 %V1
+;
+
+  store i8 42, i8* %P
+  %i = call {}* @llvm.invariant.start.p0i8(i64 1, i8* %P)
+  store i8 0, i8* %P2
+  %V1 = load i8, i8* %P, !tbaa !0
+  ret i8 %V1
+}
+
 ; We can DSE over invariant.start calls, since the first store to
 ; %P is valid, and the second store is actually unreachable based on semantics
 ; of invariant.start.
@@ -508,13 +583,13 @@ define i32 @test_false_negative_scope(i32* %p) {
 define i32 @test_invariant_load_scope(i32* %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_invariant_load_scope
 ; NO_ASSUME-SAME: (i32* [[P:%.*]])
-; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4, !invariant.load !0
+; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4, !invariant.load !4
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_invariant_load_scope
 ; USE_ASSUME-SAME: (i32* [[P:%.*]])
-; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4, !invariant.load !0
+; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, i32* [[P]], align 4, !invariant.load !4
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 4), "nonnull"(i32* [[P]]), "align"(i32* [[P]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
@@ -527,3 +602,8 @@ define i32 @test_invariant_load_scope(i32* %p) {
 }
 
 ; USE_ASSUME: declare void @llvm.assume(i1 noundef)
+
+!0 = !{!1, !1, i64 0}
+!1 = !{!"float", !2, i64 0}
+!2 = !{!"omnipotent char", !3, i64 0}
+!3 = !{!"Simple C/C++ TBAA"}
