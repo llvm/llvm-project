@@ -204,7 +204,7 @@ TEST_F(OpBuildGenTest,
   verifyOp(op, {i32Ty, f32Ty}, {*cstI32}, attrs);
 }
 
-// The next 2 tests test supression of ambiguous build methods for ops that
+// The next test checks supression of ambiguous build methods for ops that
 // have a single variadic input, and single non-variadic result, and which
 // support the SameOperandsAndResultType trait and and optionally the
 // InferOpTypeInterface interface. For such ops, the ODS framework generates
@@ -213,14 +213,8 @@ TEST_F(OpBuildGenTest, BuildMethodsSameOperandsAndResultTypeSuppression) {
   testSingleVariadicInputInferredType<test::TableGenBuildOp4>();
 }
 
-TEST_F(
-    OpBuildGenTest,
-    BuildMethodsSameOperandsAndResultTypeAndInferOpTypeInterfaceSuppression) {
-  testSingleVariadicInputInferredType<test::TableGenBuildOp5>();
-}
-
 TEST_F(OpBuildGenTest, BuildMethodsRegionsAndInferredType) {
-  auto op = builder.create<test::TableGenBuildOp6>(
+  auto op = builder.create<test::TableGenBuildOp5>(
       loc, ValueRange{*cstI32, *cstF32}, /*attributes=*/noAttrs);
   ASSERT_EQ(op->getNumRegions(), 1u);
   verifyOp(op, {i32Ty}, {*cstI32, *cstF32}, noAttrs);

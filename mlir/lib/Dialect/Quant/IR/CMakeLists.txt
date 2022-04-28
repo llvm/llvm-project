@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRQuant
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRInferTypeOpInterface
   MLIRSideEffectInterfaces
   MLIRSupport
   )
