@@ -25,3 +25,15 @@ int orc_b_32(int a) {
 int clz_32(int a) {
   return __builtin_riscv_clz_32(a);
 }
+
+// RV32ZBB-LABEL: @ctz_32(
+// RV32ZBB-NEXT:  entry:
+// RV32ZBB-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// RV32ZBB-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
+// RV32ZBB-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_ADDR]], align 4
+// RV32ZBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false)
+// RV32ZBB-NEXT:    ret i32 [[TMP1]]
+//
+int ctz_32(int a) {
+  return __builtin_riscv_ctz_32(a);
+}
