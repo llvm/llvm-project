@@ -45,7 +45,7 @@ static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
   return 0;
 }
 
-static void extractInstrFromModule(Oracle &O, MachineFunction &MF) {
+static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
   MachineDominatorTree MDT;
   MDT.runOnMachineFunction(MF);
 
@@ -127,6 +127,13 @@ static void extractInstrFromModule(Oracle &O, MachineFunction &MF) {
   // Finally delete the MIs.
   for (auto *MI : ToDelete)
     MI->eraseFromParent();
+}
+
+static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  for (const Function &F : WorkItem.getModule()) {
+    if (MachineFunction *MF = WorkItem.MMI->getMachineFunction(F))
+      extractInstrFromFunction(O, *MF);
+  }
 }
 
 void llvm::reduceInstructionsMIRDeltaPass(TestRunner &Test) {
