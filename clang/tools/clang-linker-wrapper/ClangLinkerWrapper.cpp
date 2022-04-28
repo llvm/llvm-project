@@ -684,7 +684,8 @@ namespace amdgcn {
 Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
                            StringRef Arch) {
   // AMDGPU uses lld to link device object files.
-  Expected<std::string> LLDPath = findProgram("lld", {CudaBinaryPath});
+  Expected<std::string> LLDPath =
+      findProgram("lld", {getMainExecutable("lld")});
   if (!LLDPath)
     return LLDPath.takeError();
 
