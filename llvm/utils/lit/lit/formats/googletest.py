@@ -224,7 +224,7 @@ class GoogleTest(TestFormat):
                 discovered_tests.append(test)
                 continue
 
-            start_time = test.result.start
+            start_time = test.result.start or 0.0
 
             # Load json file to retrieve results.
             with open(test.gtest_json_file, encoding='utf-8') as f:
@@ -260,7 +260,7 @@ class GoogleTest(TestFormat):
 
                         elapsed_time = float(testinfo['time'][:-1])
                         res = lit.Test.Result(returnCode, output, elapsed_time)
-                        res.pid = test.result.pid
+                        res.pid = test.result.pid or 0
                         res.start = start_time
                         start_time = start_time + elapsed_time
                         subtest.setResult(res)
