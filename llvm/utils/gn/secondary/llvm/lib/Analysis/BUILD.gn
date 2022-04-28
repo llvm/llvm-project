@@ -120,6 +120,7 @@ static_library("Analysis") {
     "TFUtils.cpp",
     "TargetLibraryInfo.cpp",
     "TargetTransformInfo.cpp",
+    "TensorSpec.cpp",
     "Trace.cpp",
     "TypeBasedAliasAnalysis.cpp",
     "TypeMetadataUtils.cpp",

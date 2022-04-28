@@ -40,6 +40,7 @@ unittest("AnalysisTests") {
     "SparsePropagation.cpp",
     "TBAATest.cpp",
     "TargetLibraryInfoTest.cpp",
+    "TensorSpecTest.cpp",
     "UnrollAnalyzerTest.cpp",
     "ValueLatticeTest.cpp",
     "ValueTrackingTest.cpp",
