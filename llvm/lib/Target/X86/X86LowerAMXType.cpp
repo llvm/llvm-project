@@ -74,7 +74,7 @@ static bool isAMXCast(Instruction *II) {
          match(II, m_Intrinsic<Intrinsic::x86_cast_tile_to_vector>(m_Value()));
 }
 
-static bool isAMXIntrinsic(User *I) {
+static bool isAMXIntrinsic(Value *I) {
   auto *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
     return false;
@@ -908,6 +908,99 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
   return true;
 }
 
+// %43 = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %42)
+// store <256 x i32> %43, <256 x i32>* %p, align 64
+// -->
+// call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col, i8* %p,
+//                                           i64 64, x86_amx %42)
+static void combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
+  Value *Tile = Cast->getOperand(0);
+  // TODO: If it is cast intrinsic or phi node, we can propagate the
+  // shape information through def-use chain.
+  if (!isAMXIntrinsic(Tile))
+    return;
+  auto *II = cast<IntrinsicInst>(Tile);
+  // Tile is output from AMX intrinsic. The first operand of the
+  // intrinsic is row, the second operand of the intrinsic is column.
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
+  IRBuilder<> Builder(ST);
+  // Use the maximum column as stride. It must be the same with load
+  // stride.
+  Value *Stride = Builder.getInt64(64);
+  Value *I8Ptr =
+      Builder.CreateBitCast(ST->getOperand(1), Builder.getInt8PtrTy());
+  std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
+  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, None, Args);
+}
+
+// %65 = load <256 x i32>, <256 x i32>* %p, align 64
+// %66 = call x86_amx @llvm.x86.cast.vector.to.tile(<256 x i32> %65)
+// -->
+// %66 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col,
+//                                                   i8* %p, i64 64)
+static void combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
+  Value *Row = nullptr, *Col = nullptr;
+  Use &U = *(Cast->use_begin());
+  unsigned OpNo = U.getOperandNo();
+  auto *II = cast<IntrinsicInst>(U.getUser());
+  // TODO: If it is cast intrinsic or phi node, we can propagate the
+  // shape information through def-use chain.
+  if (!isAMXIntrinsic(II))
+    return;
+  std::tie(Row, Col) = getShape(II, OpNo);
+  IRBuilder<> Builder(LD);
+  // Use the maximun column as stride.
+  Value *Stride = Builder.getInt64(64);
+  Value *I8Ptr =
+      Builder.CreateBitCast(LD->getOperand(0), Builder.getInt8PtrTy());
+  std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
+
+  Value *NewInst =
+      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, None, Args);
+  Cast->replaceAllUsesWith(NewInst);
+}
+
+static bool combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
+  bool Change = false;
+  for (auto *Cast : Casts) {
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(Cast);
+    // %43 = call <256 x i32> @llvm.x86.cast.tile.to.vector(x86_amx %42)
+    // store <256 x i32> %43, <256 x i32>* %p, align 64
+    // -->
+    // call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col, i8* %p,
+    //                                           i64 64, x86_amx %42)
+    if (II->getIntrinsicID() == Intrinsic::x86_cast_tile_to_vector) {
+      SmallVector<Instruction *, 2> DeadStores;
+      for (User *U : Cast->users()) {
+        StoreInst *Store = dyn_cast<StoreInst>(U);
+        if (!Store)
+          continue;
+        combineCastStore(cast<IntrinsicInst>(Cast), Store);
+        DeadStores.push_back(Store);
+        Change = true;
+      }
+      for (auto *Store : DeadStores)
+        Store->eraseFromParent();
+    } else { // x86_cast_vector_to_tile
+      SmallVector<Instruction *, 2> DeadLoads;
+      LoadInst *Load = dyn_cast<LoadInst>(Cast->getOperand(0));
+      if (!Load || !Load->hasOneUse())
+        continue;
+      // %65 = load <256 x i32>, <256 x i32>* %p, align 64
+      // %66 = call x86_amx @llvm.x86.cast.vector.to.tile(<256 x i32> %65)
+      // -->
+      // %66 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col,
+      //                                                   i8* %p, i64 64)
+      combineLoadCast(cast<IntrinsicInst>(Cast), Load);
+      // Set the operand is null so that load instruction can be erased.
+      Cast->setOperand(0, nullptr);
+      Load->eraseFromParent();
+    }
+  }
+  return Change;
+}
+
 bool X86LowerAMXCast::combineAMXcast(TargetLibraryInfo *TLI) {
   bool Change = false;
   // Collect tile cast instruction.
@@ -949,17 +1042,22 @@ bool X86LowerAMXCast::combineAMXcast(TargetLibraryInfo *TLI) {
   Convert(Vec2TileInsts, Intrinsic::x86_cast_tile_to_vector);
   Convert(Tile2VecInsts, Intrinsic::x86_cast_vector_to_tile);
 
+  SmallVector<Instruction *, 8> LiveCasts;
   auto EraseInst = [&](SmallVectorImpl<Instruction *> &Insts) {
     for (auto *Inst : Insts) {
       if (Inst->use_empty()) {
         Inst->eraseFromParent();
         Change = true;
+      } else {
+        LiveCasts.push_back(Inst);
       }
     }
   };
 
   EraseInst(Vec2TileInsts);
   EraseInst(Tile2VecInsts);
+  Change |= combineLdSt(LiveCasts);
+  EraseInst(LiveCasts);
 
   // Handle the A->B->A cast, and there is an intervening PHI node.
   for (BasicBlock &BB : Func) {
