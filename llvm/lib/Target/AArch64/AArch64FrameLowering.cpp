@@ -1953,7 +1953,10 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Deallocate the SVE area.
   if (SVEStackSize) {
-    if (AFI->isStackRealigned()) {
+    // If we have stack realignment or variable sized objects on the stack,
+    // restore the stack pointer from the frame pointer prior to SVE CSR
+    // restoration.
+    if (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) {
       if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
         // Set SP to start of SVE callee-save area from which they can
         // be reloaded. The code below will deallocate the stack space

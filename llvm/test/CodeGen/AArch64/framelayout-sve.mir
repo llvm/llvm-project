@@ -629,7 +629,6 @@ body:             |
 # CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
 # CHECK-NEXT: $x19 = ADDXri $sp, 0, 0
 # CHECK-NEXT: STRXui $xzr, $x19, 0
-# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1
 # CHECK-NEXT: $sp = frame-destroy ADDXri $fp, 0, 0
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 32
 # CHECK-NEXT: $x19 = frame-destroy LDRXui $sp, 2
