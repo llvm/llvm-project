@@ -108,3 +108,13 @@
 // CHECK-SPARC32-SHARED-SAME: "-lc"
 // CHECK-SPARC32-SHARED-NOT: "-lgcc"
 // CHECK-SPARC32-SHARED-NOT: "-lm"
+
+// -r suppresses default -l and crt*.o, values-*.o like -nostdlib.
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o \
+// RUN:     --target=sparc-sun-solaris2.11 -r 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-RELOCATABLE
+// CHECK-RELOCATABLE:     "-L
+// CHECK-RELOCATABLE:     "-r"
+// CHECK-RELOCATABLE-NOT: "-l
+// CHECK-RELOCATABLE-NOT: {{.*}}crt{{[^.]+}}.o
+// CHECK-RELOCATABLE-NOT: {{.*}}values-{{[^.]+}}.o
