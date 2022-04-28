@@ -88,24 +88,17 @@ XCoreTargetLowering::XCoreTargetLowering(const TargetMachine &TM,
   setBooleanVectorContents(ZeroOrOneBooleanContent); // FIXME: Is this correct?
 
   // XCore does not have the NodeTypes below.
-  setOperationAction(ISD::BR_CC,     MVT::i32,   Expand);
-  setOperationAction(ISD::SELECT_CC, MVT::i32,   Expand);
+  setOperationAction({ISD::BR_CC, ISD::SELECT_CC}, MVT::i32, Expand);
 
   // 64bit
-  setOperationAction(ISD::ADD, MVT::i64, Custom);
-  setOperationAction(ISD::SUB, MVT::i64, Custom);
-  setOperationAction(ISD::SMUL_LOHI, MVT::i32, Custom);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i32, Custom);
-  setOperationAction(ISD::MULHS, MVT::i32, Expand);
-  setOperationAction(ISD::MULHU, MVT::i32, Expand);
-  setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
-  setOperationAction(ISD::SRA_PARTS, MVT::i32, Expand);
-  setOperationAction(ISD::SRL_PARTS, MVT::i32, Expand);
+  setOperationAction({ISD::ADD, ISD::SUB}, MVT::i64, Custom);
+  setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
+  setOperationAction(
+      {ISD::MULHS, ISD::MULHU, ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS},
+      MVT::i32, Expand);
 
   // Bit Manipulation
-  setOperationAction(ISD::CTPOP, MVT::i32, Expand);
-  setOperationAction(ISD::ROTL , MVT::i32, Expand);
-  setOperationAction(ISD::ROTR , MVT::i32, Expand);
+  setOperationAction({ISD::CTPOP, ISD::ROTL, ISD::ROTR}, MVT::i32, Expand);
   setOperationAction(ISD::BITREVERSE , MVT::i32, Legal);
 
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
@@ -113,35 +106,29 @@ XCoreTargetLowering::XCoreTargetLowering(const TargetMachine &TM,
   // Jump tables.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
 
-  setOperationAction(ISD::GlobalAddress, MVT::i32,   Custom);
-  setOperationAction(ISD::BlockAddress, MVT::i32 , Custom);
+  setOperationAction({ISD::GlobalAddress, ISD::BlockAddress}, MVT::i32, Custom);
 
   // Conversion of i64 -> double produces constantpool nodes
-  setOperationAction(ISD::ConstantPool, MVT::i32,   Custom);
+  setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
 
   // Loads
   for (MVT VT : MVT::integer_valuetypes()) {
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, VT, MVT::i1,
+                     Promote);
 
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Expand);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i16, Expand);
   }
 
   // Custom expand misaligned loads / stores.
-  setOperationAction(ISD::LOAD, MVT::i32, Custom);
-  setOperationAction(ISD::STORE, MVT::i32, Custom);
+  setOperationAction({ISD::LOAD, ISD::STORE}, MVT::i32, Custom);
 
   // Varargs
-  setOperationAction(ISD::VAEND, MVT::Other, Expand);
-  setOperationAction(ISD::VACOPY, MVT::Other, Expand);
-  setOperationAction(ISD::VAARG, MVT::Other, Custom);
-  setOperationAction(ISD::VASTART, MVT::Other, Custom);
+  setOperationAction({ISD::VAEND, ISD::VACOPY}, MVT::Other, Expand);
+  setOperationAction({ISD::VAARG, ISD::VASTART}, MVT::Other, Custom);
 
   // Dynamic stack
-  setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
-  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
+  setOperationAction({ISD::STACKSAVE, ISD::STACKRESTORE}, MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Expand);
 
   // Exception handling
@@ -152,12 +139,11 @@ XCoreTargetLowering::XCoreTargetLowering(const TargetMachine &TM,
   // We request a fence for ATOMIC_* instructions, to reduce them to Monotonic.
   // As we are always Sequential Consistent, an ATOMIC_FENCE becomes a no OP.
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_STORE, MVT::i32, Custom);
+  setOperationAction({ISD::ATOMIC_LOAD, ISD::ATOMIC_STORE}, MVT::i32, Custom);
 
   // TRAMPOLINE is custom lowered.
-  setOperationAction(ISD::INIT_TRAMPOLINE, MVT::Other, Custom);
-  setOperationAction(ISD::ADJUST_TRAMPOLINE, MVT::Other, Custom);
+  setOperationAction({ISD::INIT_TRAMPOLINE, ISD::ADJUST_TRAMPOLINE}, MVT::Other,
+                     Custom);
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
