@@ -487,10 +487,18 @@ Value Importer::processConstant(llvm::Constant *c) {
       return nullptr;
     assert(instMap.count(i));
 
+    // If we don't remove entry of `i` here, it's totally possible that the
+    // next time llvm::ConstantExpr::getAsInstruction is called again, which
+    // always allocates a new Instruction, memory address of the newly
+    // created Instruction might be the same as `i`. Making processInstruction
+    // falsely believe that the new Instruction has been processed before
+    // and raised an assertion error.
+    Value value = instMap[i];
+    instMap.erase(i);
     // Remove this zombie LLVM instruction now, leaving us only with the MLIR
     // op.
     i->deleteValue();
-    return instMap[c] = instMap[i];
+    return instMap[c] = value;
   }
   if (auto *ue = dyn_cast<llvm::UndefValue>(c)) {
     Type type = processType(ue->getType());
