@@ -639,7 +639,7 @@ static char *toLower(char *token) {
 
 /// Read the MME header of a general sparse matrix of type real.
 static void readMMEHeader(FILE *file, char *filename, char *line,
-                          uint64_t *idata, bool *isSymmetric) {
+                          uint64_t *idata, bool *isPattern, bool *isSymmetric) {
   char header[64];
   char object[64];
   char format[64];
@@ -651,15 +651,16 @@ static void readMMEHeader(FILE *file, char *filename, char *line,
     fprintf(stderr, "Corrupt header in %s\n", filename);
     exit(1);
   }
+  // Set properties
+  *isPattern = (strcmp(toLower(field), "pattern") == 0);
   *isSymmetric = (strcmp(toLower(symmetry), "symmetric") == 0);
   // Make sure this is a general sparse matrix.
   if (strcmp(toLower(header), "%%matrixmarket") ||
       strcmp(toLower(object), "matrix") ||
-      strcmp(toLower(format), "coordinate") || strcmp(toLower(field), "real") ||
+      strcmp(toLower(format), "coordinate") ||
+      (strcmp(toLower(field), "real") && !(*isPattern)) ||
       (strcmp(toLower(symmetry), "general") && !(*isSymmetric))) {
-    fprintf(stderr,
-            "Cannot find a general sparse matrix with type real in %s\n",
-            filename);
+    fprintf(stderr, "Cannot find a general sparse matrix in %s\n", filename);
     exit(1);
   }
   // Skip comments.
@@ -726,9 +727,10 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   // Perform some file format dependent set up.
   char line[kColWidth];
   uint64_t idata[512];
+  bool isPattern = false;
   bool isSymmetric = false;
   if (strstr(filename, ".mtx")) {
-    readMMEHeader(file, filename, line, idata, &isSymmetric);
+    readMMEHeader(file, filename, line, idata, &isPattern, &isSymmetric);
   } else if (strstr(filename, ".tns")) {
     readExtFROSTTHeader(file, filename, line, idata);
   } else {
@@ -759,7 +761,8 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
     }
     // The external formats always store the numerical values with the type
     // double, but we cast these values to the sparse tensor object type.
-    double value = strtod(linePtr, &linePtr);
+    // For a pattern tensor, we arbitrarily pick the value 1 for all entries.
+    double value = isPattern ? 1.0 : strtod(linePtr, &linePtr);
     tensor->add(indices, value);
     // We currently chose to deal with symmetric matrices by fully constructing
     // them. In the future, we may want to make symmetry implicit for storage
