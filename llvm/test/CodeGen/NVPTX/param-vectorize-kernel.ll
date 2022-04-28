@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx-unknown-unknown | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx-unknown-unknown | %ptxas-verify %}
 ;
 ; Check that parameters of a __global__ (kernel) function do not get increased
 ; alignment, and no additional vectorization is performed on loads/stores with

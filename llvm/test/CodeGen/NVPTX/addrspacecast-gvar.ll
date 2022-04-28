@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK: .visible .global .align 4 .u32 g = 42;
 ; CHECK: .visible .global .align 4 .u32 g2 = generic(g);
