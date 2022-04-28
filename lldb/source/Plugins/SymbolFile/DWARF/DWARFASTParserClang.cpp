@@ -3500,7 +3500,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   class_type->GetFullCompilerType();
 
   auto gather = [](DWARFDIE die, UniqueCStringMap<DWARFDIE> &map,
-                   UniqueCStringMap<DWARFDIE> map_artificial) {
+                   UniqueCStringMap<DWARFDIE> &map_artificial) {
     if (die.Tag() != DW_TAG_subprogram)
       return;
     // Make sure this is a declaration and not a concrete instance by looking
