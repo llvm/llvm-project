@@ -106,19 +106,150 @@ define <8 x float> @elts_test_vpermps(<8 x float> %a0, <8 x i32> %a1) {
   ret <8 x float> %3
 }
 
-define <4 x i32> @elts_test_vpsrlvd(<4 x i32> %a0, <4 x i32> %a1) {
-; CHECK-LABEL: @elts_test_vpsrlvd(
+define <2 x i64> @elts_test_vpsllvq(<2 x i64> %a0, <2 x i64> %a1) {
+; CHECK-LABEL: @elts_test_vpsllvq(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[A1:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> [[A0:%.*]], <2 x i64> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
+;
+  %1 = insertelement <2 x i64> %a1, i64 0, i64 1
+  %2 = tail call <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> %a0, <2 x i64> %1)
+  %3 = shufflevector <2 x i64> %2, <2 x i64> poison, <2 x i32> zeroinitializer
+  ret <2 x i64> %3
+}
+
+define <2 x i64> @elts_test_vpsrlvq(<2 x i64> %a0, <2 x i64> %a1) {
+; CHECK-LABEL: @elts_test_vpsrlvq(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[A1:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> [[A0:%.*]], <2 x i64> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
+;
+  %1 = insertelement <2 x i64> %a1, i64 0, i64 1
+  %2 = tail call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> %a0, <2 x i64> %1)
+  %3 = shufflevector <2 x i64> %2, <2 x i64> poison, <2 x i32> zeroinitializer
+  ret <2 x i64> %3
+}
+
+define <4 x i64> @elts_test_vpsllvq_256(<4 x i64> %a0, <4 x i64> %a1) {
+; CHECK-LABEL: @elts_test_vpsllvq_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[A1:%.*]], i64 0, i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64> [[A0:%.*]], <4 x i64> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i64> [[TMP3]]
+;
+  %1 = insertelement <4 x i64> %a1, i64 0, i64 2
+  %2 = tail call <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64> %a0, <4 x i64> %1)
+  %3 = shufflevector <4 x i64> %2, <4 x i64> poison, <4 x i32> zeroinitializer
+  ret <4 x i64> %3
+}
+
+define <4 x i64> @elts_test_vpsrlvq_256(<4 x i64> %a0, <4 x i64> %a1) {
+; CHECK-LABEL: @elts_test_vpsrlvq_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[A1:%.*]], i64 0, i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> [[A0:%.*]], <4 x i64> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i64> [[TMP3]]
+;
+  %1 = insertelement <4 x i64> %a1, i64 0, i64 3
+  %2 = tail call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> %a0, <4 x i64> %1)
+  %3 = shufflevector <4 x i64> %2, <4 x i64> poison, <4 x i32> zeroinitializer
+  ret <4 x i64> %3
+}
+
+define <4 x i32> @elts_test_vpsllvd(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @elts_test_vpsllvd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[A1:%.*]], i32 0, i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32> [[A0:%.*]], <4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psllv.d(<4 x i32> [[A0:%.*]], <4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;
   %1 = insertelement <4 x i32> %a1, i32 0, i64 3
+  %2 = tail call <4 x i32> @llvm.x86.avx2.psllv.d(<4 x i32> %a0, <4 x i32> %1)
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @elts_test_vpsravd(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @elts_test_vpsravd(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[A1:%.*]], i32 0, i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> [[A0:%.*]], <4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+;
+  %1 = insertelement <4 x i32> %a1, i32 0, i64 1
+  %2 = tail call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> %a0, <4 x i32> %1)
+  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @elts_test_vpsrlvd(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @elts_test_vpsrlvd(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[A1:%.*]], i32 0, i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32> [[A0:%.*]], <4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+;
+  %1 = insertelement <4 x i32> %a1, i32 0, i64 2
   %2 = tail call <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32> %a0, <4 x i32> %1)
   %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
   ret <4 x i32> %3
 }
 
+define <8 x i32> @elts_test_vpsllvd_256(<8 x i32> %a0, <8 x i32> %a1) {
+; CHECK-LABEL: @elts_test_vpsllvd_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[A1:%.*]], i32 0, i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psllv.d.256(<8 x i32> [[A0:%.*]], <8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
+;
+  %1 = insertelement <8 x i32> %a1, i32 0, i64 3
+  %2 = tail call <8 x i32> @llvm.x86.avx2.psllv.d.256(<8 x i32> %a0, <8 x i32> %1)
+  %3 = shufflevector <8 x i32> %2, <8 x i32> poison, <8 x i32> zeroinitializer
+  ret <8 x i32> %3
+}
+
+define <8 x i32> @elts_test_vpsravd_256(<8 x i32> %a0, <8 x i32> %a1) {
+; CHECK-LABEL: @elts_test_vpsravd_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[A1:%.*]], i32 0, i64 4
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> [[A0:%.*]], <8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
+;
+  %1 = insertelement <8 x i32> %a1, i32 0, i64 4
+  %2 = tail call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> %a0, <8 x i32> %1)
+  %3 = shufflevector <8 x i32> %2, <8 x i32> poison, <8 x i32> zeroinitializer
+  ret <8 x i32> %3
+}
+
+define <8 x i32> @elts_test_vpsrlvd_256(<8 x i32> %a0, <8 x i32> %a1) {
+; CHECK-LABEL: @elts_test_vpsrlvd_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[A1:%.*]], i32 0, i64 5
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psrlv.d.256(<8 x i32> [[A0:%.*]], <8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
+;
+  %1 = insertelement <8 x i32> %a1, i32 0, i64 5
+  %2 = tail call <8 x i32> @llvm.x86.avx2.psrlv.d.256(<8 x i32> %a0, <8 x i32> %1)
+  %3 = shufflevector <8 x i32> %2, <8 x i32> poison, <8 x i32> zeroinitializer
+  ret <8 x i32> %3
+}
+
 declare <8 x i32> @llvm.x86.avx2.permd(<8 x i32>, <8 x i32>)
 declare <8 x float> @llvm.x86.avx2.permps(<8 x float>, <8 x i32>)
+
+declare <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64>, <2 x i64>)
+declare <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64>, <2 x i64>)
+
+declare <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64>, <4 x i64>)
+declare <4 x i64> @llvm.x86.avx2.psrav.q.256(<4 x i64>, <4 x i64>)
+declare <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64>, <4 x i64>)
+
+declare <4 x i32> @llvm.x86.avx2.psllv.d(<4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32>, <4 x i32>)
 declare <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32>, <4 x i32>)
+
+declare <8 x i32> @llvm.x86.avx2.psllv.d.256(<8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx2.psrlv.d.256(<8 x i32>, <8 x i32>)
