@@ -73,7 +73,7 @@ void FunctionPropertiesInfo::print(raw_ostream &OS) const {
 
 AnalysisKey FunctionPropertiesAnalysis::Key;
 
-const FunctionPropertiesInfo
+FunctionPropertiesInfo
 FunctionPropertiesAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
   return FunctionPropertiesInfo::getFunctionPropertiesInfo(
       F, FAM.getResult<LoopAnalysis>(F));

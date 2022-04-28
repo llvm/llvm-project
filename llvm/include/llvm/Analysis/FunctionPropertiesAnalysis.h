@@ -68,7 +68,7 @@ public:
 
   using Result = const FunctionPropertiesInfo;
 
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  FunctionPropertiesInfo run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Printer pass for the FunctionPropertiesAnalysis results.
