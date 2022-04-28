@@ -498,6 +498,42 @@ Value Importer::processConstant(llvm::Constant *c) {
       return nullptr;
     return instMap[c] = bEntry.create<UndefOp>(UnknownLoc::get(context), type);
   }
+
+  if (isa<llvm::ConstantAggregate>(c) || isa<llvm::ConstantAggregateZero>(c)) {
+    unsigned numElements = c->getNumOperands();
+    std::function<llvm::Constant *(unsigned)> getElement =
+        [&](unsigned index) -> llvm::Constant * {
+      return c->getAggregateElement(index);
+    };
+    // llvm::ConstantAggregateZero doesn't take any operand
+    // so its getNumOperands is always zero.
+    if (auto *caz = dyn_cast<llvm::ConstantAggregateZero>(c)) {
+      numElements = caz->getElementCount().getFixedValue();
+      // We want to capture the pointer rather than reference
+      // to the pointer since the latter will become dangling upon
+      // exiting the scope.
+      getElement = [=](unsigned index) -> llvm::Constant * {
+        return caz->getElementValue(index);
+      };
+    }
+
+    // Generate a llvm.undef as the root value first.
+    Type rootType = processType(c->getType());
+    if (!rootType)
+      return nullptr;
+    Value root = bEntry.create<UndefOp>(unknownLoc, rootType);
+    for (unsigned i = 0; i < numElements; ++i) {
+      llvm::Constant *element = getElement(i);
+      Value elementValue = processConstant(element);
+      if (!elementValue)
+        return nullptr;
+      ArrayAttr indexAttr = bEntry.getI32ArrayAttr({static_cast<int32_t>(i)});
+      root = bEntry.create<InsertValueOp>(UnknownLoc::get(context), rootType,
+                                          root, elementValue, indexAttr);
+    }
+    return root;
+  }
+
   emitError(unknownLoc) << "unhandled constant: " << diag(*c);
   return nullptr;
 }
