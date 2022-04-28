@@ -774,7 +774,7 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
   ods::Context &odsContext = ctx.getODSContext();
   auto addTypeConstraint = [&](const tblgen::NamedTypeConstraint &cst)
       -> const ods::TypeConstraint & {
-    return odsContext.insertTypeConstraint(cst.constraint.getDefName(),
+    return odsContext.insertTypeConstraint(cst.constraint.getUniqueDefName(),
                                            cst.constraint.getSummary(),
                                            cst.constraint.getCPPClassName());
   };
@@ -800,7 +800,7 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
     for (const tblgen::NamedAttribute &attr : op.getAttributes()) {
       odsOp->appendAttribute(
           attr.name, attr.attr.isOptional(),
-          odsContext.insertAttributeConstraint(attr.attr.getAttrDefName(),
+          odsContext.insertAttributeConstraint(attr.attr.getUniqueDefName(),
                                                attr.attr.getSummary(),
                                                attr.attr.getStorageType()));
     }
@@ -891,8 +891,8 @@ Parser::createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
   std::string codeBlock =
       tblgen::tgfmt(constraint.getConditionTemplate(), &fmtContext);
 
-  return createODSNativePDLLConstraintDecl<ConstraintT>(constraint.getDefName(),
-                                                        codeBlock, loc, type);
+  return createODSNativePDLLConstraintDecl<ConstraintT>(
+      constraint.getUniqueDefName(), codeBlock, loc, type);
 }
 
 //===----------------------------------------------------------------------===//

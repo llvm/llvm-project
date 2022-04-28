@@ -58,25 +58,48 @@ StringRef Constraint::getSummary() const {
 }
 
 StringRef Constraint::getDefName() const {
+  if (Optional<StringRef> baseDefName = getBaseDefName())
+    return *baseDefName;
+  return def->getName();
+}
+
+std::string Constraint::getUniqueDefName() const {
+  std::string defName = def->getName().str();
+
+  // Non-anonymous classes already have a unique name from the def.
+  if (!def->isAnonymous())
+    return defName;
+
+  // Otherwise, this is an anonymous class. In these cases we still use the def
+  // name, but we also try attach the name of the base def when present to make
+  // the name more obvious.
+  if (Optional<StringRef> baseDefName = getBaseDefName())
+    return (*baseDefName + "(" + defName + ")").str();
+  return defName;
+}
+
+Optional<StringRef> Constraint::getBaseDefName() const {
   // Functor used to check a base def in the case where the current def is
   // anonymous.
-  auto checkBaseDefFn = [&](StringRef baseName) {
-    if (const auto *init = dyn_cast<llvm::DefInit>(def->getValueInit(baseName)))
-      return Constraint(init->getDef(), kind).getDefName();
-    return def->getName();
+  auto checkBaseDefFn = [&](StringRef baseName) -> Optional<StringRef> {
+    if (const auto *defValue = def->getValue(baseName)) {
+      if (const auto *defInit = dyn_cast<llvm::DefInit>(defValue->getValue()))
+        return Constraint(defInit->getDef(), kind).getDefName();
+    }
+    return llvm::None;
   };
 
   switch (kind) {
   case CK_Attr:
     if (def->isAnonymous())
       return checkBaseDefFn("baseAttr");
-    return def->getName();
+    return llvm::None;
   case CK_Type:
     if (def->isAnonymous())
       return checkBaseDefFn("baseType");
-    return def->getName();
+    return llvm::None;
   default:
-    return def->getName();
+    return llvm::None;
   }
 }
 
