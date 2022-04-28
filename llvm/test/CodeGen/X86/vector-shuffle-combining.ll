@@ -3333,17 +3333,11 @@ define void @PR45604(<32 x i16>* %dst, <8 x i16>* %src) {
   ret void
 }
 
-; getFauxShuffle AND/ANDN decoding wrongly assumed an undef src always gives an undef dst.
+; FIXME: getFauxShuffle AND/ANDN decoding wrongly assumes an undef src always gives an undef dst.
 define <2 x i64> @PR55157(<16 x i8>* %0) {
-; SSE-LABEL: PR55157:
-; SSE:       # %bb.0:
-; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: PR55157:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; CHECK-LABEL: PR55157:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
   %2 = load <16 x i8>, <16 x i8>* %0, align 16
   %3 = icmp eq <16 x i8> %2, zeroinitializer
   %4 = tail call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer)
