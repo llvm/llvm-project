@@ -1,143 +1,109 @@
-===============
-Reporting Guide
-===============
+=================================
+LLVM CoC Incident Reporting Guide
+=================================
 
-.. note::
+First of all, please do not feel like you may be a burden to us by reporting
+incidents. We consider reports an opportunity for us to act: by knowing about
+an incident, we can act on it if appropriate, and reduce continuation of
+problematic behavior.  If we don’t know, we can't learn or take any appropriate
+actions.
 
-   This document is currently a **DRAFT** document while it is being discussed
-   by the community.
+If you are not sure the situation being reported was a :doc:`Code of
+Conduct<CodeOfConduct>` violation, we encourage you to still report it. We
+would much rather have reports where we decide to take no action, rather than
+miss a report of an actual violation. There is no harm in reporting an incident
+which is later determined not to be a violation, and knowing about incidents
+that are not violations can also help us to improve the Code of Conduct or the
+processes surrounding it.
 
-If you believe someone is violating the :doc:`code of conduct <CodeOfConduct>`
-you can always report it to the LLVM Foundation Code of Conduct Advisory
-Committee by emailing conduct@llvm.org. **All reports will be kept
-confidential.** This isn't a public list and only `members`_ of the advisory
-committee will receive the report.
+Reporting and Contact Information
+=================================
 
-If you believe anyone is in **physical danger**, please notify appropriate law
+* For any incident involving an online platform (e.g., mailing lists, forums, 
+  irc/discord/slack, etc) we ask that you make any reports by emailing 
+  conduct@llvm.org. This is received by all members of the CoC Committee.
+
+* For LLVM Developers’ Meetings, please file a report with the on-site Code 
+  of Conduct team. Their names and contact details are listed on the event 
+  webpage. You can also approach any other staff member, who can be 
+  identified by special badges and often found at the registration desk, 
+  to help you locate a member of the Code of Conduct team. All incidents 
+  reported in-person at a LLVM Developers’ Meeting will be emailed to the 
+  Code of Conduct Committee. 
+
+* For meetups, please report the incident to the local meetup organizers first
+  and then email conduct@llvm.org with your report. Each meetup will have a 
+  contact listed on the associated meetup page. If you feel the incident was 
+  not well handled by the local organizers, please include this information in
+  your email to conduct@llvm.org. All meetup organizers who receive an 
+  in-person report are also asked to email conduct@llvm.org with the
+  incident information.
+
+
+If you believe anyone is in physical danger, please notify appropriate law
 enforcement first. If you are unsure what law enforcement agency is
 appropriate, please include this in your report and we will attempt to notify
 them.
 
-If the violation occurs at an event such as a Developer Meeting and requires
-immediate attention, you can also reach out to any of the event organizers or
-staff. Event organizers and staff will be prepared to handle the incident and
-able to help. If you cannot find one of the organizers, the venue staff can
-locate one for you. We will also post detailed contact information for specific
-events as part of each events' information. In person reports will still be
-kept confidential exactly as above, but also feel free to (anonymously if
-needed) email conduct@llvm.org.
+Guidelines for Reporting Incidents
+==================================
 
-.. note::
-   The LLVM community has long handled inappropriate behavior on its own, using
-   both private communication and public responses. Nothing in this document is
-   intended to discourage this self enforcement of community norms. Instead,
-   the mechanisms described here are intended to supplement any self
-   enforcement within the community. They provide avenues for handling severe
-   cases or cases where the reporting party does not wish to respond directly
-   for any reason.
+Please email conduct@llvm.org with the following details (if possible):
 
-Filing a report
-===============
-
-Reports can be as formal or informal as needed for the situation at hand. If
-possible, please include as much information as you can. If you feel
-comfortable, please consider including:
-
-* Your contact info (so we can get in touch with you if we need to follow up).
-* Names (real, nicknames, or pseudonyms) of any individuals involved. If there
-  were other witnesses besides you, please try to include them as well.
+* Your contact info (so we can get in touch with you). Include email and
+  optionally a phone number.
+* Names or descriptions of anyone who was involved or who witnessed the
+  incident.
 * When and where the incident occurred. Please be as specific as possible.
-* Your account of what occurred. If there is a publicly available record (e.g.
-  a mailing list archive or a public IRC logger) please include a link.
+* Your account of what occurred. If there is a written record (e.g. emails,
+  forum links, tweets, Slack, or Discord messages) please include screenshots,
+  as well as any available link.
 * Any extra context you believe existed for the incident.
 * If you believe this incident is ongoing.
+* If you have concerns about retaliation or your personal safety, please note
+  those concerns in your report.
 * Any other information you believe we should have.
 
-What happens after you file a report?
-=====================================
+If you are unable to provide all of this information, please still make the
+report and include as much information as you have.
 
-You will receive an email from the advisory committee acknowledging receipt
-within 24 hours (and we will aim to respond much quicker than that).
+When handling a report, we follow our :doc:`Response Guide <ResponseGuide>`.
 
-The advisory committee will immediately meet to review the incident and try to
-determine:
+Confidentiality
+===============
 
-* What happened and who was involved.
-* Whether this event constitutes a code of conduct violation.
-* Whether this is an ongoing situation, or if there is a threat to anyone's
-  physical safety.
+All reports will be kept confidential with details shared only with the Code of
+Conduct committee members. In the case that a CoC committee member is involved
+in a report, the member will be asked to recuse themselves from ongoing
+conversations, and they will not have access to any reports at any time.
+Resolution action may also include removal of that member from the CoC
+committee.
 
-If this is determined to be an ongoing incident or a threat to physical safety,
-the working groups' immediate priority will be to protect everyone involved.
-This means we may delay an "official" response until we believe that the
-situation has ended and that everyone is physically safe.
+Some incidents happen in one-on-one interactions, and though details are
+anonymized, the reported person may be able to guess who made the report. If
+you have concerns about retaliation or your personal safety, please note those
+concerns in your report. You are still encouraged to report the incident so
+that we can support you while keeping our community members safe. In some
+cases, we can compile several anonymized reports into a pattern of behavior,
+and take action on that pattern. 
 
-The working group will try to contact other parties involved or witnessing the
-event to gain clarity on what happened and understand any different
-perspectives.
+Transparency reports will be published but will retain confidentiality. See the
+:doc:`Response Guide <ResponseGuide>`. for details on this.
 
-Once the advisory committee has a complete account of the events they will make
-a decision as to how to respond. Responses may include:
+Following Up With Reporter(s)
+=============================
 
-* Nothing, if we determine no violation occurred or it has already been
-  appropriately resolved.
-* Providing either moderation or mediation to ongoing interactions (where
-  appropriate, safe, and desired by both parties).
-* A private reprimand from the working group to the individuals involved.
-* An imposed vacation (i.e. asking someone to "take a week off" from a mailing
-  list or IRC).
-* A public reprimand.
-* A permanent or temporary ban from some or all LLVM spaces (mailing lists,
-  IRC, etc.)
-* Involvement of relevant law enforcement if appropriate.
-
-If the situation is not resolved within one week, we'll respond within one week
-to the original reporter with an update and explanation.
-
-Once we've determined our response, we will separately contact the original
-reporter and other individuals to let them know what actions (if any) we'll be
-taking. We will take into account feedback from the individuals involved on the
-appropriateness of our response, but we don't guarantee we'll act on it.
-
-After any incident, the advisory committee will make a report on the situation
-to the LLVM Foundation board. The board may choose to make a public statement
-about the incident. If that's the case, the identities of anyone involved will
-remain confidential unless instructed by those individuals otherwise.
-
-Appealing
-=========
-
-Only permanent resolutions (such as bans) or requests for public actions may be
-appealed. To appeal a decision of the working group, contact the LLVM
-Foundation board at board@llvm.org with your appeal and the board will review
-the case.
-
-In general, it is **not** appropriate to appeal a particular decision on
-a public mailing list. Doing so would involve disclosure of information which
-would be confidential. Disclosing this kind of information publicly may be
-considered a separate and (potentially) more serious violation of the Code of
-Conduct. This is not meant to limit discussion of the Code of Conduct, the
-advisory board itself, or the appropriateness of responses in general, but
-**please** refrain from mentioning specific facts about cases without the
-explicit permission of all parties involved.
-
-.. _members:
-
-Members of the Code of Conduct Advisory Committee
-=================================================
-
-The members serving on the advisory committee are listed here with contact
-information in case you are more comfortable talking directly to a specific
-member of the committee.
-
-.. note::
-
-   FIXME: When we form the initial advisory committee, the members names and private contact info need to be added here.
+Once a report is filed, the Code of Conduct committee will handle the review
+and follow up according to the procedures in the :doc:`Response Guide
+<ResponseGuide>`. 
 
 
-
-(This text is based on the `Django Project`_ Code of Conduct, which is in turn
-based on wording from the `Speak Up! project`_.)
+Thanks!
+=======
+This guide was created and inspired by the following: the `Django Project`_,
+`Carpentries Response Guide`_, and the `Write The Docs Response Guide`_.
 
 .. _Django Project: https://www.djangoproject.com/conduct/
-.. _Speak Up! project: http://speakup.io/coc.html
+.. _Carpentries Response Guide: https://docs.carpentries.org/topic_folders/policies/enforcement-guidelines.html
+.. _Write The Docs Response Guide: https://www.writethedocs.org/code-of-conduct/#guidelines-for-reporting-incidents
+
