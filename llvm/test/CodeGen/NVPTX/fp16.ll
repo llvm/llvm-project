@@ -1,4 +1,5 @@
 ; RUN: llc -march=nvptx -verify-machineinstrs < %s | FileCheck %s
+; RUN: %if ptxas %{ llc -march=nvptx -verify-machineinstrs < %s | %ptxas-verify %}
 
 declare float @llvm.convert.from.fp16.f32(i16) nounwind readnone
 declare double @llvm.convert.from.fp16.f64(i16) nounwind readnone
