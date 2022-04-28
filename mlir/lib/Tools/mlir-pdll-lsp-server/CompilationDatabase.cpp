@@ -8,6 +8,7 @@
 
 #include "CompilationDatabase.h"
 #include "../lsp-server-support/Logging.h"
+#include "../lsp-server-support/Protocol.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -26,7 +27,14 @@ namespace yaml {
 template <>
 struct MappingTraits<CompilationDatabase::FileInfo> {
   static void mapping(IO &io, CompilationDatabase::FileInfo &info) {
+    // Parse the filename and normalize it to the form we will expect from
+    // incoming URIs.
     io.mapRequired("filepath", info.filename);
+
+    // Normalize the filename to avoid incompatability with incoming URIs.
+    if (Expected<lsp::URIForFile> uri =
+            lsp::URIForFile::fromFile(info.filename))
+      info.filename = uri->file().str();
 
     // Parse the includes from the yaml stream. These are in the form of a
     // semi-colon delimited list.
