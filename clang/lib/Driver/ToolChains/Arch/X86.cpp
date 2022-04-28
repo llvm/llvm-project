@@ -88,9 +88,11 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
     return Is64Bit ? "core2" : "yonah";
   }
 
-  // Set up default CPU name for PS4 compilers.
+  // Set up default CPU name for PS4/PS5 compilers.
   if (Triple.isPS4())
     return "btver2";
+  if (Triple.isPS5())
+    return "znver2";
 
   // On Android use targets compatible with gcc
   if (Triple.isAndroid())
