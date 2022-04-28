@@ -60,16 +60,9 @@ using llvm::Expected;
 LLDB_PLUGIN_DEFINE(ScriptInterpreterPython)
 
 // Defined in the SWIG source file
-#if PY_MAJOR_VERSION >= 3
 extern "C" PyObject *PyInit__lldb(void);
 
 #define LLDBSwigPyInit PyInit__lldb
-
-#else
-extern "C" void init_lldb(void);
-
-#define LLDBSwigPyInit init_lldb
-#endif
 
 #if defined(_WIN32)
 // Don't mess with the signal handlers on Windows.
@@ -145,11 +138,7 @@ public:
 private:
   void InitializePythonHome() {
 #if LLDB_EMBED_PYTHON_HOME
-#if PY_MAJOR_VERSION >= 3
-    typedef wchar_t* str_type;
-#else
-    typedef char* str_type;
-#endif
+    typedef wchar_t *str_type;
     static str_type g_python_home = []() -> str_type {
       const char *lldb_python_home = LLDB_PYTHON_HOME;
       const char *absolute_python_home = nullptr;
@@ -164,27 +153,12 @@ private:
         llvm::sys::path::append(path, lldb_python_home);
         absolute_python_home = path.c_str();
       }
-#if PY_MAJOR_VERSION >= 3
       size_t size = 0;
       return Py_DecodeLocale(absolute_python_home, &size);
-#else
-      return strdup(absolute_python_home);
-#endif
     }();
     if (g_python_home != nullptr) {
       Py_SetPythonHome(g_python_home);
     }
-#else
-#if defined(__APPLE__) && PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION == 7
-    // For Darwin, the only Python version supported is the one shipped in the
-    // OS OS and linked with lldb. Other installation of Python may have higher
-    // priorities in the path, overriding PYTHONHOME and causing
-    // problems/incompatibilities. In order to avoid confusion, always hardcode
-    // the PythonHome to be right, as it's not going to change.
-    static char path[] =
-        "/System/Library/Frameworks/Python.framework/Versions/2.7";
-    Py_SetPythonHome(path);
-#endif
 #endif
   }
 

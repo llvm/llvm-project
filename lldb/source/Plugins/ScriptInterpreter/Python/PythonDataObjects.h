@@ -181,13 +181,7 @@ inline llvm::Error keyError() {
                                  "key not in dict");
 }
 
-#if PY_MAJOR_VERSION < 3
-// The python 2 API declares some arguments as char* that should
-// be const char *, but it doesn't actually modify them.
-inline char *py2_const_cast(const char *s) { return const_cast<char *>(s); }
-#else
 inline const char *py2_const_cast(const char *s) { return s; }
-#endif
 
 enum class PyInitialValue { Invalid, Empty };
 
@@ -391,14 +385,9 @@ llvm::Expected<std::string> As<std::string>(llvm::Expected<PythonObject> &&obj);
 
 template <class T> class TypedPythonObject : public PythonObject {
 public:
-  // override to perform implicit type conversions on Reset
-  // This can be eliminated once we drop python 2 support.
-  static void Convert(PyRefType &type, PyObject *&py_obj) {}
-
   TypedPythonObject(PyRefType type, PyObject *py_obj) {
     if (!py_obj)
       return;
-    T::Convert(type, py_obj);
     if (T::Check(py_obj))
       PythonObject::operator=(PythonObject(type, py_obj));
     else if (type == PyRefType::Owned)
@@ -453,7 +442,6 @@ public:
   explicit PythonString(llvm::StringRef string); // safe, null on error
 
   static bool Check(PyObject *py_obj);
-  static void Convert(PyRefType &type, PyObject *&py_obj);
 
   llvm::StringRef GetString() const; // safe, empty string on error
 
@@ -475,7 +463,6 @@ public:
   explicit PythonInteger(int64_t value);
 
   static bool Check(PyObject *py_obj);
-  static void Convert(PyRefType &type, PyObject *&py_obj);
 
   void SetInteger(int64_t value);
 
