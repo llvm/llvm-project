@@ -720,7 +720,9 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   if (CGF.getTarget().getTriple().isAMDGCN())
     // addrspace resolution in InstructionSimplify does not work
     // correctly when using normal GEP during the simplification of icmp
-    DestEnd = CGF.Builder.CreateInBoundsGEP(DestBegin->getType()->getScalarType()->getPointerElementType(), DestBegin, NumElements);
+    DestEnd = CGF.Builder.CreateInBoundsGEP(
+        DestBegin->getType(),
+        DestBegin, NumElements);
   else
     DestEnd =
       CGF.Builder.CreateGEP(DestAddr.getElementType(), DestBegin, NumElements);

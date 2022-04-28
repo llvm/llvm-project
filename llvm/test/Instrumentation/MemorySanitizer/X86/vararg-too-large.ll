@@ -29,6 +29,6 @@ entry:
 
 ; If the size of __msan_va_arg_tls changes the second argument of `add` must also be changed.
 ; CHECK-LABEL: @many_args
-; CHECK: i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 792)
-; CHECK-NOT: i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 800)
+; CHECK: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 792)
+; CHECK-NOT: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 800)
 declare i64 @sum(i64 %n, ...)
