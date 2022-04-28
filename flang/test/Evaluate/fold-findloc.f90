@@ -66,4 +66,19 @@ module m1
   logical, parameter :: test_char2 = all(minloc(a).eq.[1])
   logical, parameter :: test_char3 = all(maxloc(a, back=.true.).eq.[4])
   logical, parameter :: test_char4 = all(minloc(a, back=.true.).eq.[3])
+
+  ! Check with scalar MASK=
+  logical, parameter:: test_mia1_mt  = all(minloc(ia1, mask=.true.) == 1)
+  logical, parameter:: test_mia1_mtd = all(minloc(ia1, mask=.true., dim=1) == [1])
+  logical, parameter:: test_xia1_mt  = all(maxloc(ia1, mask=.true.) == 3)
+  logical, parameter:: test_xia1_mtd = all(maxloc(ia1, mask=.true., dim=1) == [3])
+  logical, parameter:: test_fia1_mt  = all(findloc(ia1, 1, mask=.true.) == 1)
+  logical, parameter:: test_fia1_mtd = all(findloc(ia1, 1, mask=.true., dim=1) == [1])
+
+  logical, parameter:: test_mia1_mf  = all(minloc(ia1, mask=.false.) == 0)
+  logical, parameter:: test_mia1_mfd = all(minloc(ia1, mask=.false., dim=1) == [0])
+  logical, parameter:: test_xia1_mf  = all(maxloc(ia1, mask=.false.) == 0)
+  logical, parameter:: test_xia1_mfd = all(maxloc(ia1, mask=.false., dim=1) == [0])
+  logical, parameter:: test_fia1_mf  = all(findloc(ia1, 1, mask=.false.) == 0)
+  logical, parameter:: test_fia1_mfd = all(findloc(ia1, 1, mask=.false., dim=1) == [0])
 end module
