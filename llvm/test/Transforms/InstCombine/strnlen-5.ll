@@ -15,9 +15,7 @@ declare i64 @strnlen(i8*, i64)
 
 define i1 @fold_strnlen_ax_0_eqz() {
 ; CHECK-LABEL: @fold_strnlen_ax_0_eqz(
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i64 0)
-; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i64 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[EQZ]]
+; CHECK-NEXT:    ret i1 true
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i64 0, i64 0
@@ -31,9 +29,7 @@ define i1 @fold_strnlen_ax_0_eqz() {
 
 define i1 @fold_strnlen_ax_0_gtz() {
 ; CHECK-LABEL: @fold_strnlen_ax_0_gtz(
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i64 0)
-; CHECK-NEXT:    [[GTZ:%.*]] = icmp ne i64 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[GTZ]]
+; CHECK-NEXT:    ret i1 false
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i64 0, i64 0
@@ -47,9 +43,9 @@ define i1 @fold_strnlen_ax_0_gtz() {
 
 define i1 @fold_strnlen_ax_1_eqz() {
 ; CHECK-LABEL: @fold_strnlen_ax_1_eqz(
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i64 1)
-; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i64 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[EQZ]]
+; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[STRNLEN_CHAR0CMP_NOT:%.*]] = icmp eq i8 [[STRNLEN_CHAR0]], 0
+; CHECK-NEXT:    ret i1 [[STRNLEN_CHAR0CMP_NOT]]
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i64 0, i64 0
@@ -63,9 +59,9 @@ define i1 @fold_strnlen_ax_1_eqz() {
 
 define i1 @fold_strnlen_ax_1_neqz() {
 ; CHECK-LABEL: @fold_strnlen_ax_1_neqz(
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), i64 1)
-; CHECK-NEXT:    [[NEZ:%.*]] = icmp ne i64 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[NEZ]]
+; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[STRNLEN_CHAR0CMP:%.*]] = icmp ne i8 [[STRNLEN_CHAR0]], 0
+; CHECK-NEXT:    ret i1 [[STRNLEN_CHAR0CMP]]
 ;
 
   %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i64 0, i64 0

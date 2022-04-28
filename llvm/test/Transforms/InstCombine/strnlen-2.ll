@@ -17,9 +17,7 @@ declare i64 @strnlen(i8*, i64)
 
 define i64 @fold_strnlen_s3_s5_0(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_0(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 0)
-; CHECK-NEXT:    ret i64 [[LEN]]
+; CHECK-NEXT:    ret i64 0
 ;
   %ptr = select i1 %C, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 
@@ -32,9 +30,7 @@ define i64 @fold_strnlen_s3_s5_0(i1 %C) {
 
 define i64 @fold_strnlen_s3_s5_1(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_1(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* noundef nonnull dereferenceable(1) [[PTR]], i64 1)
-; CHECK-NEXT:    ret i64 [[LEN]]
+; CHECK-NEXT:    ret i64 1
 ;
   %ptr = select i1 %C, i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0), i8* getelementptr ([7 x i8], [7 x i8]* @s6, i64 0, i64 0)
 
