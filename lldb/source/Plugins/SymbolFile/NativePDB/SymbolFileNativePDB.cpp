@@ -1314,8 +1314,8 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   int32_t line_offset = 0;
   llvm::Optional<uint32_t> code_offset_base;
   llvm::Optional<uint32_t> code_offset_end;
-  llvm::Optional<uint32_t> cur_line_offset;
-  llvm::Optional<uint32_t> next_line_offset;
+  llvm::Optional<int32_t> cur_line_offset;
+  llvm::Optional<int32_t> next_line_offset;
   llvm::Optional<uint32_t> next_file_offset;
 
   bool is_terminal_entry = false;
@@ -1387,9 +1387,12 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
       // Set base, end, file offset and line offset for next range.
       if (next_file_offset)
         file_offset = *next_file_offset;
-      cur_line_offset = next_line_offset ? next_line_offset : llvm::None;
+      if (next_line_offset) {
+        cur_line_offset = next_line_offset;
+        next_line_offset = llvm::None;
+      }
       code_offset_base = is_terminal_entry ? llvm::None : code_offset_end;
-      code_offset_end = next_line_offset = next_file_offset = llvm::None;
+      code_offset_end = next_file_offset = llvm::None;
     }
     if (code_offset_base && cur_line_offset) {
       if (is_terminal_entry) {
@@ -1413,7 +1416,6 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   }
 
   inline_site_sp->ranges.Sort();
-  inline_site_sp->ranges.CombineConsecutiveEntriesWithEqualData();
 
   // Get the inlined function callsite info.
   std::unique_ptr<Declaration> callsite_up;
