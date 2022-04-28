@@ -5914,7 +5914,9 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
 namespace {
 struct SCEVDbgValueBuilder {
   SCEVDbgValueBuilder() = default;
-  SCEVDbgValueBuilder(const SCEVDbgValueBuilder &Base) {
+  SCEVDbgValueBuilder(const SCEVDbgValueBuilder &Base) { clone(Base); }
+
+  void clone(const SCEVDbgValueBuilder &Base) {
     Values = Base.Values;
     Expr = Base.Expr;
   }
@@ -5922,7 +5924,7 @@ struct SCEVDbgValueBuilder {
   /// The DIExpression as we translate the SCEV.
   SmallVector<uint64_t, 6> Expr;
   /// The location ops of the DIExpression.
-  SmallVector<llvm::ValueAsMetadata *, 2> Values;
+  SmallVector<Value *, 2> Values;
 
   void pushOperator(uint64_t Op) { Expr.push_back(Op); }
   void pushUInt(uint64_t Operand) { Expr.push_back(Operand); }
@@ -5931,14 +5933,13 @@ struct SCEVDbgValueBuilder {
   /// in the set of values referenced by the expression.
   void pushValue(llvm::Value *V) {
     Expr.push_back(llvm::dwarf::DW_OP_LLVM_arg);
-    auto *It =
-        std::find(Values.begin(), Values.end(), llvm::ValueAsMetadata::get(V));
+    auto *It = std::find(Values.begin(), Values.end(), V);
     unsigned ArgIndex = 0;
     if (It != Values.end()) {
       ArgIndex = std::distance(Values.begin(), It);
     } else {
       ArgIndex = Values.size();
-      Values.push_back(llvm::ValueAsMetadata::get(V));
+      Values.push_back(V);
     }
     Expr.push_back(ArgIndex);
   }
@@ -6028,52 +6029,6 @@ struct SCEVDbgValueBuilder {
     return Success;
   }
 
-  void setFinalExpression(llvm::DbgValueInst &DI, const DIExpression *OldExpr) {
-    // Re-state assumption that this dbg.value is not variadic. Any remaining
-    // opcodes in its expression operate on a single value already on the
-    // expression stack. Prepend our operations, which will re-compute and
-    // place that value on the expression stack.
-    assert(!DI.hasArgList());
-    auto *NewExpr =
-        DIExpression::prependOpcodes(OldExpr, Expr, /*StackValue*/ true);
-    DI.setExpression(NewExpr);
-
-    auto ValArrayRef = llvm::ArrayRef<llvm::ValueAsMetadata *>(Values);
-    DI.setRawLocation(llvm::DIArgList::get(DI.getContext(), ValArrayRef));
-  }
-
-  /// If a DVI can be emitted without a DIArgList, omit DW_OP_llvm_arg and the
-  /// location op index 0.
-  void setShortFinalExpression(llvm::DbgValueInst &DI,
-                               const DIExpression *OldExpr) {
-    assert((Expr[0] == llvm::dwarf::DW_OP_LLVM_arg && Expr[1] == 0) &&
-           "Expected DW_OP_llvm_arg and 0.");
-    DI.replaceVariableLocationOp(
-        0u, llvm::MetadataAsValue::get(DI.getContext(), Values[0]));
-
-    // See setFinalExpression: prepend our opcodes on the start of any old
-    // expression opcodes.
-    assert(!DI.hasArgList());
-    llvm::SmallVector<uint64_t, 6> FinalExpr(llvm::drop_begin(Expr, 2));
-    auto *NewExpr =
-        DIExpression::prependOpcodes(OldExpr, FinalExpr, /*StackValue*/ true);
-    DI.setExpression(NewExpr);
-  }
-
-  /// Once the IV and variable SCEV translation is complete, write it to the
-  /// source DVI.
-  void applyExprToDbgValue(llvm::DbgValueInst &DI,
-                           const DIExpression *OldExpr) {
-    assert(!Expr.empty() && "Unexpected empty expression.");
-    // Emit a simpler form if only a single location is referenced.
-    if (Values.size() == 1 && Expr[0] == llvm::dwarf::DW_OP_LLVM_arg &&
-        Expr[1] == 0) {
-      setShortFinalExpression(DI, OldExpr);
-    } else {
-      setFinalExpression(DI, OldExpr);
-    }
-  }
-
   /// Return true if the combination of arithmetic operator and underlying
   /// SCEV constant value is an identity function.
   bool isIdentityFunction(uint64_t Op, const SCEV *S) {
@@ -6122,6 +6077,44 @@ struct SCEVDbgValueBuilder {
     return true;
   }
 
+  /// Create an expression that is an offset from a value (usually the IV).
+  void createOffsetExpr(int64_t Offset, Value *OffsetValue) {
+    pushValue(OffsetValue);
+    DIExpression::appendOffset(Expr, Offset);
+    LLVM_DEBUG(
+        dbgs() << "scev-salvage: Generated IV offset expression. Offset: "
+               << std::to_string(Offset) << "\n");
+  }
+
+  /// Combine a translation of the SCEV and the IV to create an expression that
+  /// recovers a location's value.
+  void createIterCountExpr(const SCEV *S,
+                           const SCEVDbgValueBuilder &IterationCount,
+                           ScalarEvolution &SE) {
+    // SCEVs for SSA values are most frquently of the form
+    // {start,+,stride}, but sometimes they are ({start,+,stride} + %a + ..).
+    // This is because %a is a PHI node that is not the IV. However, these
+    // SCEVs have not been observed to result in debuginfo-lossy optimisations,
+    // so its not expected this point will be reached.
+    if (!isa<SCEVAddRecExpr>(S))
+      return;
+
+    LLVM_DEBUG(dbgs() << "scev-salvage: Value to salvage SCEV: " << *S << '\n');
+
+    const auto *Rec = cast<SCEVAddRecExpr>(S);
+    if (!Rec->isAffine())
+      return;
+
+    if (S->getExpressionSize() > MaxSCEVSalvageExpressionSize)
+      return;
+
+    // Initialise a new builder with the iteration count expression. In
+    // combination with the value's SCEV this enables recovery.
+    clone(IterationCount);
+    if (!SCEVToValueExpr(*Rec, SE))
+      return;
+  }
+
   /// Convert a SCEV of a value to a DIExpression that is pushed onto the
   /// builder's expression stack. The stack should already contain an
   /// expression for the iteration count, so that it can be multiplied by
@@ -6153,6 +6146,8 @@ struct SCEVDbgValueBuilder {
   }
 };
 
+/// Holds all the required data to salvage a dbg.value using the pre-LSR SCEVs
+/// and DIExpression.
 struct DVIRecoveryRec {
   DbgValueInst *DVI;
   DIExpression *Expr;
@@ -6161,60 +6156,80 @@ struct DVIRecoveryRec {
 };
 } // namespace
 
-static void RewriteDVIUsingIterCount(DVIRecoveryRec CachedDVI,
-                                     const SCEVDbgValueBuilder &IterationCount,
-                                     ScalarEvolution &SE) {
-  // LSR may add locations to previously single location-op DVIs which
-  // are currently not supported.
-  if (CachedDVI.DVI->getNumVariableLocationOps() != 1)
-    return;
+/// Write the new expression and new location ops for the dbg.value. Emit as
+/// short a expression as possible based on checks of the expression length and
+/// number of location ops.
+static void UpdateDbgValueInst(DVIRecoveryRec &DVIRec,
+                               SmallVectorImpl<Value *> &NewLocationOps,
+                               SmallVectorImpl<uint64_t> &NewExpr) {
 
-  // SCEVs for SSA values are most frquently of the form
-  // {start,+,stride}, but sometimes they are ({start,+,stride} + %a + ..).
-  // This is because %a is a PHI node that is not the IV. However, these
-  // SCEVs have not been observed to result in debuginfo-lossy optimisations,
-  // so its not expected this point will be reached.
-  if (!isa<SCEVAddRecExpr>(CachedDVI.SCEV))
-    return;
-
-  LLVM_DEBUG(dbgs() << "scev-salvage: Value to salvage SCEV: "
-                    << *CachedDVI.SCEV << '\n');
-
-  const auto *Rec = cast<SCEVAddRecExpr>(CachedDVI.SCEV);
-  if (!Rec->isAffine())
-    return;
-
-  if (CachedDVI.SCEV->getExpressionSize() > MaxSCEVSalvageExpressionSize)
-    return;
-
-  // Initialise a new builder with the iteration count expression. In
-  // combination with the value's SCEV this enables recovery.
-  SCEVDbgValueBuilder RecoverValue(IterationCount);
-  if (!RecoverValue.SCEVToValueExpr(*Rec, SE))
-    return;
-
-  LLVM_DEBUG(dbgs() << "scev-salvage: Updating: " << *CachedDVI.DVI << '\n');
-  RecoverValue.applyExprToDbgValue(*CachedDVI.DVI, CachedDVI.Expr);
-  LLVM_DEBUG(dbgs() << "scev-salvage: to: " << *CachedDVI.DVI << '\n');
+  // If there is only a single location op, the {DW_OP_LLVM_arg, 0} sequence
+  // can be omitted from the expression. Also, DIArglist() can be ommitted from
+  // the first argument of the dbg.value.
+  if (NewLocationOps.size() == 1 && NewExpr[0] == dwarf::DW_OP_LLVM_arg &&
+      NewExpr[1] == 0) {
+    DVIRec.DVI->replaceVariableLocationOp(0u, NewLocationOps[0]);
+    llvm::SmallVector<uint64_t, 6> ShortExpr(llvm::drop_begin(NewExpr, 2));
+    auto *FinalExpr = DIExpression::prependOpcodes(DVIRec.Expr, ShortExpr,
+                                                   /*StackValue*/ true);
+    DVIRec.DVI->setExpression(FinalExpr);
+  } else {
+    SmallVector<ValueAsMetadata *, 3> MetadataLocs;
+    for (Value *V : NewLocationOps)
+      MetadataLocs.push_back(ValueAsMetadata::get(V));
+    auto ValArrayRef = llvm::ArrayRef<llvm::ValueAsMetadata *>(MetadataLocs);
+    DVIRec.DVI->setRawLocation(
+        llvm::DIArgList::get(DVIRec.DVI->getContext(), ValArrayRef));
+    auto *FinalExpr =
+        DIExpression::prependOpcodes(DVIRec.Expr, NewExpr, /*StackValue*/ true);
+    DVIRec.DVI->setExpression(FinalExpr);
+  }
 }
 
-static void RewriteDVIUsingOffset(DVIRecoveryRec &DVIRec, llvm::PHINode &IV,
-                                  int64_t Offset) {
-  assert(!DVIRec.DVI->hasArgList() && "Expected single location-op dbg.value.");
-  DbgValueInst *DVI = DVIRec.DVI;
-  SmallVector<uint64_t, 8> Ops;
-  DIExpression::appendOffset(Ops, Offset);
-  DIExpression *Expr = DIExpression::prependOpcodes(DVIRec.Expr, Ops, true);
-  LLVM_DEBUG(dbgs() << "scev-salvage: Updating: " << *DVIRec.DVI << '\n');
-  DVI->setExpression(Expr);
-  llvm::Value *ValIV = dyn_cast<llvm::Value>(&IV);
-  DVI->replaceVariableLocationOp(
-      0u, llvm::MetadataAsValue::get(DVI->getContext(),
-                                     llvm::ValueAsMetadata::get(ValIV)));
-  LLVM_DEBUG(dbgs() << "scev-salvage: updated with offset to IV: "
-                    << *DVIRec.DVI << '\n');
+static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
+                       llvm::PHINode *LSRInductionVar, DVIRecoveryRec &DVIRec,
+                       const SCEV *SCEVInductionVar,
+                       SCEVDbgValueBuilder IterCountExpr) {
+  if (!DVIRec.DVI->isUndef())
+    return false;
+
+  // Some DVIs that were single location-op when cached are now multi-op,
+  // due to LSR optimisations. However, multi-op salvaging is not yet
+  // supported by SCEV salvaging. The expression applies to a single
+  // location op, so the DIAarglist must be replaced by the original location,
+  // which is now undef.
+  if (DVIRec.DVI->hasArgList()) {
+    if (DVIRec.DVI->getNumVariableLocationOps() == 0 ||
+        !DVIRec.DVI->getVariableLocationOp(0))
+      return false;
+    llvm::Type *Ty = DVIRec.DVI->getVariableLocationOp(0)->getType();
+    DVIRec.DVI->setRawLocation(llvm::ValueAsMetadata::get(UndefValue::get(Ty)));
+    DVIRec.DVI->setExpression(DVIRec.Expr);
+  }
+
+  LLVM_DEBUG(dbgs() << "scev-salvage: attempt to salvage: " << *DVIRec.DVI
+                    << '\n');
+
+  SCEVDbgValueBuilder SalvageExpr;
+
+  // Create an offset-based salvage expression if possible, as it requires
+  // less DWARF ops than an iteration count-based expression.
+  if (Optional<APInt> Offset =
+          SE.computeConstantDifference(DVIRec.SCEV, SCEVInductionVar)) {
+    if (Offset.getValue().getMinSignedBits() <= 64)
+      SalvageExpr.createOffsetExpr(Offset.getValue().getSExtValue(),
+                                   LSRInductionVar);
+  } else
+    SalvageExpr.createIterCountExpr(DVIRec.SCEV, IterCountExpr, SE);
+
+  UpdateDbgValueInst(DVIRec, SalvageExpr.Values, SalvageExpr.Expr);
+
+  LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: " << *DVIRec.DVI << "\n");
+  return true;
 }
 
+/// Obtain an expression for the iteration count, then attempt to salvage the
+/// dbg.value intrinsics.
 static void
 DbgRewriteSalvageableDVIs(llvm::Loop *L, ScalarEvolution &SE,
                           llvm::PHINode *LSRInductionVar,
@@ -6231,6 +6246,7 @@ DbgRewriteSalvageableDVIs(llvm::Loop *L, ScalarEvolution &SE,
     if (!IVAddRec->isAffine())
       return;
 
+    // Prevent translation using excessive resources.
     if (IVAddRec->getExpressionSize() > MaxSCEVSalvageExpressionSize)
       return;
 
@@ -6243,37 +6259,9 @@ DbgRewriteSalvageableDVIs(llvm::Loop *L, ScalarEvolution &SE,
     LLVM_DEBUG(dbgs() << "scev-salvage: IV SCEV: " << *SCEVInductionVar
                       << '\n');
 
-    // Needn't salvage if the location op hasn't been undef'd by LSR.
     for (auto &DVIRec : DVIToUpdate) {
-      if (!DVIRec.DVI->isUndef())
-        continue;
-
-      // Some DVIs that were single location-op when cached are now multi-op,
-      // due to LSR optimisations. However, multi-op salvaging is not yet
-      // supported by SCEV salvaging. But, we can attempt a salvage by restoring
-      // the pre-LSR single-op expression.
-      if (DVIRec.DVI->hasArgList()) {
-        if (!DVIRec.DVI->getVariableLocationOp(0))
-          continue;
-        llvm::Type *Ty = DVIRec.DVI->getVariableLocationOp(0)->getType();
-        DVIRec.DVI->setRawLocation(
-            llvm::ValueAsMetadata::get(UndefValue::get(Ty)));
-        DVIRec.DVI->setExpression(DVIRec.Expr);
-      }
-
-      LLVM_DEBUG(dbgs() << "scev-salvage: value to recover SCEV: "
-                        << *DVIRec.SCEV << '\n');
-
-      // Create a simple expression if the IV and value to salvage SCEVs
-      // start values differ by only a constant value.
-      if (Optional<APInt> Offset =
-              SE.computeConstantDifference(DVIRec.SCEV, SCEVInductionVar)) {
-        if (Offset.getValue().getMinSignedBits() <= 64)
-          RewriteDVIUsingOffset(DVIRec, *LSRInductionVar,
-                                Offset.getValue().getSExtValue());
-      } else {
-        RewriteDVIUsingIterCount(DVIRec, IterCountExpr, SE);
-      }
+      SalvageDVI(L, SE, LSRInductionVar, DVIRec, SCEVInductionVar,
+                 IterCountExpr);
     }
   }
 }
