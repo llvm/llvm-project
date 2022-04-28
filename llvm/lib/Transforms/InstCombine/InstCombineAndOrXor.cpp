@@ -1172,7 +1172,7 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
 static Value *foldAndOrOfICmpsUsingRanges(
     ICmpInst::Predicate Pred1, Value *V1, const APInt &C1,
     ICmpInst::Predicate Pred2, Value *V2, const APInt &C2,
-    IRBuilderBase &Builder, bool IsAnd) {
+    IRBuilderBase &Builder, bool IsAnd, bool BothHaveOneUse) {
   // Look through add of a constant offset on V1, V2, or both operands. This
   // allows us to interpret the V + C' < C'' range idiom into a proper range.
   const APInt *Offset1 = nullptr, *Offset2 = nullptr;
@@ -1195,17 +1195,35 @@ static Value *foldAndOrOfICmpsUsingRanges(
   if (Offset2)
     CR2 = CR2.subtract(*Offset2);
 
+  Type *Ty = V1->getType();
+  Value *NewV = V1;
   Optional<ConstantRange> CR =
       IsAnd ? CR1.exactIntersectWith(CR2) : CR1.exactUnionWith(CR2);
-  if (!CR)
-    return nullptr;
+  if (!CR) {
+    // TODO: Support and.
+    if (IsAnd)
+      return nullptr;
+
+    if (!BothHaveOneUse || CR1.isWrappedSet() || CR2.isWrappedSet())
+      return nullptr;
+
+    // Check whether we have equal-size ranges that only differ by one bit.
+    // In that case we can apply a mask to map one range onto the other.
+    APInt LowerDiff = CR1.getLower() ^ CR2.getLower();
+    APInt UpperDiff = (CR1.getUpper() - 1) ^ (CR2.getUpper() - 1);
+    APInt CR1Size = CR1.getUpper() - CR1.getLower();
+    if (!LowerDiff.isPowerOf2() || LowerDiff != UpperDiff ||
+        CR1Size != CR2.getUpper() - CR2.getLower())
+      return nullptr;
+
+    CR = CR1.getLower().ult(CR2.getLower()) ? CR1 : CR2;
+    NewV = Builder.CreateAnd(NewV, ConstantInt::get(Ty, ~LowerDiff));
+  }
 
   CmpInst::Predicate NewPred;
   APInt NewC, Offset;
   CR->getEquivalentICmp(NewPred, NewC, Offset);
 
-  Type *Ty = V1->getType();
-  Value *NewV = V1;
   if (Offset != 0)
     NewV = Builder.CreateAdd(NewV, ConstantInt::get(Ty, Offset));
   return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
@@ -2418,58 +2436,6 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   match(LHS1, m_APInt(LHSC));
   match(RHS1, m_APInt(RHSC));
 
-  // Fold (icmp ult/ule (A + C1), C3) | (icmp ult/ule (A + C2), C3)
-  //                   -->  (icmp ult/ule ((A & ~(C1 ^ C2)) + max(C1, C2)), C3)
-  // The original condition actually refers to the following two ranges:
-  // [MAX_UINT-C1+1, MAX_UINT-C1+1+C3] and [MAX_UINT-C2+1, MAX_UINT-C2+1+C3]
-  // We can fold these two ranges if:
-  // 1) C1 and C2 is unsigned greater than C3.
-  // 2) The two ranges are separated.
-  // 3) C1 ^ C2 is one-bit mask.
-  // 4) LowRange1 ^ LowRange2 and HighRange1 ^ HighRange2 are one-bit mask.
-  // This implies all values in the two ranges differ by exactly one bit.
-  if (!IsAnd && (PredL == ICmpInst::ICMP_ULT || PredL == ICmpInst::ICMP_ULE) &&
-      PredL == PredR && LHSC && RHSC && LHS->hasOneUse() && RHS->hasOneUse() &&
-      LHSC->getBitWidth() == RHSC->getBitWidth() && *LHSC == *RHSC) {
-
-    Value *AddOpnd;
-    const APInt *LAddC, *RAddC;
-    if (match(LHS0, m_Add(m_Value(AddOpnd), m_APInt(LAddC))) &&
-        match(RHS0, m_Add(m_Specific(AddOpnd), m_APInt(RAddC))) &&
-        LAddC->ugt(*LHSC) && RAddC->ugt(*LHSC)) {
-
-      APInt DiffC = *LAddC ^ *RAddC;
-      if (DiffC.isPowerOf2()) {
-        const APInt *MaxAddC = nullptr;
-        if (LAddC->ult(*RAddC))
-          MaxAddC = RAddC;
-        else
-          MaxAddC = LAddC;
-
-        APInt RRangeLow = -*RAddC;
-        APInt RRangeHigh = RRangeLow + *LHSC;
-        APInt LRangeLow = -*LAddC;
-        APInt LRangeHigh = LRangeLow + *LHSC;
-        APInt LowRangeDiff = RRangeLow ^ LRangeLow;
-        APInt HighRangeDiff = RRangeHigh ^ LRangeHigh;
-        APInt RangeDiff = LRangeLow.sgt(RRangeLow) ? LRangeLow - RRangeLow
-                                                   : RRangeLow - LRangeLow;
-
-        if (LowRangeDiff.isPowerOf2() && LowRangeDiff == HighRangeDiff &&
-            RangeDiff.ugt(*LHSC)) {
-          Type *Ty = AddOpnd->getType();
-          Value *MaskC = ConstantInt::get(Ty, ~DiffC);
-
-          Value *NewAnd = Builder.CreateAnd(AddOpnd, MaskC);
-          Value *NewAdd = Builder.CreateAdd(NewAnd,
-                                            ConstantInt::get(Ty, *MaxAddC));
-          return Builder.CreateICmp(LHS->getPredicate(), NewAdd,
-                                    ConstantInt::get(Ty, *LHSC));
-        }
-      }
-    }
-  }
-
   // (icmp1 A, B) | (icmp2 A, B) --> (icmp3 A, B)
   // (icmp1 A, B) & (icmp2 A, B) --> (icmp3 A, B)
   if (predicatesFoldable(PredL, PredR)) {
@@ -2586,7 +2552,8 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   }
 
   return foldAndOrOfICmpsUsingRanges(PredL, LHS0, *LHSC, PredR, RHS0, *RHSC,
-                                     Builder, IsAnd);
+                                     Builder, IsAnd,
+                                     LHS->hasOneUse() && RHS->hasOneUse());
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
