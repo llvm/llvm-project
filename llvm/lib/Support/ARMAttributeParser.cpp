@@ -87,7 +87,7 @@ Error ARMAttributeParser::CPU_arch(AttrType tag) {
     "ARM v6KZ", "ARM v6T2", "ARM v6K", "ARM v7", "ARM v6-M", "ARM v6S-M",
     "ARM v7E-M", "ARM v8", nullptr,
     "ARM v8-M Baseline", "ARM v8-M Mainline", nullptr, nullptr, nullptr,
-    "ARM v8.1-M Mainline"
+    "ARM v8.1-M Mainline", "ARM v9-A"
   };
   return parseStringAttribute("CPU_arch", tag, makeArrayRef(strings));
 }
