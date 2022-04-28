@@ -2606,6 +2606,8 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   if (_addressSpace.get32(pc) == 0xd2801168 &&
       _addressSpace.get32(pc + 4) == 0xd4000001) {
     _info = {};
+    _info.start_ip = pc;
+    _info.end_ip = pc + 4;
     _isSigReturn = true;
     return true;
   }
