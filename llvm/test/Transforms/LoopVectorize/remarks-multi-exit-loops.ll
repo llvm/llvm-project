@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -loop-vectorize -pass-remarks-analysis='.*' -force-vector-width=2 2>&1 %s | FileCheck %s
+; RUN: opt -disable-output -passes=loop-vectorize -pass-remarks-analysis='.*' -force-vector-width=2 2>&1 %s | FileCheck %s
 
 ; Make sure LV does not crash when generating remarks for loops with non-unique
 ; exit blocks.

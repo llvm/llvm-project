@@ -676,6 +676,15 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
+void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
+                                 ArgStringList &CmdArgs) const {
+  CmdArgs.append(
+      {Args.MakeArgString(StringRef("-L") + RocmInstallation.getLibPath()),
+       "-rpath", Args.MakeArgString(RocmInstallation.getLibPath())});
+
+  CmdArgs.push_back("-lamdhip64");
+}
+
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
                                 ArgStringList &CC1Args) const {
   if (GCCInstallation.isValid()) {

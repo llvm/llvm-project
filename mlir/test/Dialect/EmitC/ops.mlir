@@ -12,6 +12,11 @@ func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   return
 }
 
+func.func @cast(%arg0: i32) {
+  %1 = emitc.cast %arg0: i32 to f32
+  return
+}
+
 func.func @c() {
   %1 = "emitc.constant"(){value = 42 : i32} : () -> i32
   return

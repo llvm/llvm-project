@@ -86,7 +86,7 @@ define signext i1 @vreduce_and_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -129,7 +129,7 @@ define signext i1 @vreduce_and_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -172,7 +172,7 @@ define signext i1 @vreduce_and_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -215,7 +215,7 @@ define signext i1 @vreduce_and_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -288,7 +288,7 @@ define signext i1 @vreduce_and_v32i1(<32 x i1> %v) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
-; LMULMAX8-NEXT:    vmnand.mm v8, v0, v0
+; LMULMAX8-NEXT:    vmnot.m v8, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    neg a0, a0
@@ -367,7 +367,7 @@ define signext i1 @vreduce_and_v64i1(<64 x i1> %v) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
-; LMULMAX8-NEXT:    vmnand.mm v8, v0, v0
+; LMULMAX8-NEXT:    vmnot.m v8, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    neg a0, a0
