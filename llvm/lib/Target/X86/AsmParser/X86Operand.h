@@ -72,6 +72,11 @@ struct X86Operand final : public MCParsedAsmOperand {
     /// If the memory operand is unsized and there are multiple instruction
     /// matches, prefer the one with this size.
     unsigned FrontendSize;
+
+    /// If false, then this operand must be a memory operand for an indirect
+    /// branch instruction. Otherwise, this operand may belong to either a
+    /// direct or indirect branch instruction.
+    bool MaybeDirectBranchDest;
   };
 
   union {
@@ -208,6 +213,10 @@ struct X86Operand final : public MCParsedAsmOperand {
   unsigned getMemFrontendSize() const {
     assert(Kind == Memory && "Invalid access!");
     return Mem.FrontendSize;
+  }
+  bool isMaybeDirectBranchDest() const {
+    assert(Kind == Memory && "Invalid access!");
+    return Mem.MaybeDirectBranchDest;
   }
 
   bool isToken() const override {return Kind == Token; }
@@ -374,8 +383,9 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool isAbsMem() const {
     return Kind == Memory && !getMemSegReg() && !getMemBaseReg() &&
-      !getMemIndexReg() && getMemScale() == 1;
+           !getMemIndexReg() && getMemScale() == 1 && isMaybeDirectBranchDest();
   }
+
   bool isAVX512RC() const{
       return isImm();
   }
@@ -672,7 +682,7 @@ struct X86Operand final : public MCParsedAsmOperand {
   CreateMem(unsigned ModeSize, const MCExpr *Disp, SMLoc StartLoc, SMLoc EndLoc,
             unsigned Size = 0, StringRef SymName = StringRef(),
             void *OpDecl = nullptr, unsigned FrontendSize = 0,
-            bool UseUpRegs = false) {
+            bool UseUpRegs = false, bool MaybeDirectBranchDest = true) {
     auto Res = std::make_unique<X86Operand>(Memory, StartLoc, EndLoc);
     Res->Mem.SegReg   = 0;
     Res->Mem.Disp     = Disp;
@@ -683,6 +693,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     Res->Mem.Size     = Size;
     Res->Mem.ModeSize = ModeSize;
     Res->Mem.FrontendSize = FrontendSize;
+    Res->Mem.MaybeDirectBranchDest = MaybeDirectBranchDest;
     Res->UseUpRegs = UseUpRegs;
     Res->SymName      = SymName;
     Res->OpDecl       = OpDecl;
@@ -697,7 +708,8 @@ struct X86Operand final : public MCParsedAsmOperand {
             SMLoc EndLoc, unsigned Size = 0,
             unsigned DefaultBaseReg = X86::NoRegister,
             StringRef SymName = StringRef(), void *OpDecl = nullptr,
-            unsigned FrontendSize = 0, bool UseUpRegs = false) {
+            unsigned FrontendSize = 0, bool UseUpRegs = false,
+            bool MaybeDirectBranchDest = true) {
     // We should never just have a displacement, that should be parsed as an
     // absolute memory operand.
     assert((SegReg || BaseReg || IndexReg || DefaultBaseReg) &&
@@ -716,6 +728,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     Res->Mem.Size     = Size;
     Res->Mem.ModeSize = ModeSize;
     Res->Mem.FrontendSize = FrontendSize;
+    Res->Mem.MaybeDirectBranchDest = MaybeDirectBranchDest;
     Res->UseUpRegs = UseUpRegs;
     Res->SymName      = SymName;
     Res->OpDecl       = OpDecl;
