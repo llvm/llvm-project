@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
 
 ; Make sure the unsafe user specified vectorization factor is clamped.
 

@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s
 
 ;  1     extern int map[];
 ;  2     extern int out[];

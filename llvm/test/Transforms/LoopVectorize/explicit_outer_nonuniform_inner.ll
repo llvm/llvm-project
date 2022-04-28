@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -enable-vplan-native-path -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -enable-vplan-native-path -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Verify that LV bails out on explicit vectorization outer loops that contain

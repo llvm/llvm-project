@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -S < %s 2>&1 | FileCheck %s
 
 ; Produced from test-case:
 ;
