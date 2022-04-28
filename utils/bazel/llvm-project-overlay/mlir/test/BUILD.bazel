@@ -626,3 +626,38 @@ cc_library(
         "//mlir:Transforms",
     ],
 )
+
+gentbl_cc_library(
+    name = "TestPDLLPatternsIncGen",
+    includes = ["lib/Dialect/Test"],
+    strip_include_prefix = "lib",
+    tbl_outs = [
+        (
+            ["-x=cpp"],
+            "lib/Tools/PDLL/TestPDLLPatterns.h.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-pdll",
+    td_file = "lib/Tools/PDLL/TestPDLL.pdll",
+    deps = [
+        ":TestDialect",
+        ":TestOpTdFiles",
+    ],
+)
+
+cc_library(
+    name = "TestPDLL",
+    srcs = ["lib/Tools/PDLL/TestPDLL.cpp"],
+    includes = ["lib/Tools/PDLL"],
+    deps = [
+        ":TestDialect",
+        ":TestPDLLPatternsIncGen",
+        "//mlir:IR",
+        "//mlir:PDLDialect",
+        "//mlir:PDLInterpDialect",
+        "//mlir:Parser",
+        "//mlir:Pass",
+        "//mlir:Support",
+        "//mlir:TransformUtils",
+    ],
+)
