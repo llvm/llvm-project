@@ -131,6 +131,7 @@ define i32 @t6_ugt_sgt_128(i32 %x, i32 %replacement_low, i32 %replacement_high) 
   %r = select i1 %t3, i32 %t1, i32 %x
   ret i32 %r
 }
+
 define i32 @t7_ugt_sgt_neg1(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @t7_ugt_sgt_neg1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], -16
@@ -167,6 +168,7 @@ define i32 @n8_ult_slt_129(i32 %x, i32 %replacement_low, i32 %replacement_high) 
   %r = select i1 %t3, i32 %x, i32 %t1
   ret i32 %r
 }
+
 define i32 @n9_ult_slt_neg17(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @n9_ult_slt_neg17(
 ; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[X:%.*]], -17
@@ -181,6 +183,52 @@ define i32 @n9_ult_slt_neg17(i32 %x, i32 %replacement_low, i32 %replacement_high
   %t2 = add i32 %x, 16
   %t3 = icmp ult i32 %t2, 144
   %r = select i1 %t3, i32 %x, i32 %t1
+  ret i32 %r
+}
+
+; FIXME: This is incorrect, see PR53252.
+define i32 @n10_ugt_slt(i32 %x, i32 %replacement_low, i32 %replacement_high) {
+; CHECK-LABEL: @n10_ugt_slt(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 128
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %t0 = icmp slt i32 %x, 0
+  %t1 = select i1 %t0, i32 %replacement_low, i32 %replacement_high
+  %t2 = icmp ugt i32 %x, 128
+  %r = select i1 %t2, i32 %x, i32 %t1
+  ret i32 %r
+}
+
+define i32 @n11_uge_slt(i32 %x, i32 %replacement_low, i32 %replacement_high) {
+; CHECK-LABEL: @n11_uge_slt(
+; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[T1:%.*]] = select i1 [[T0]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp ult i32 [[X]], 129
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T2]], i32 [[T1]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %t0 = icmp slt i32 %x, 0
+  %t1 = select i1 %t0, i32 %replacement_low, i32 %replacement_high
+  %t2 = icmp ult i32 %x, 129
+  %r = select i1 %t2, i32 %t1, i32 %x
+  ret i32 %r
+}
+
+define i32 @n12_ule_slt(i32 %x, i32 %replacement_low, i32 %replacement_high) {
+; CHECK-LABEL: @n12_ule_slt(
+; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[T1:%.*]] = select i1 [[T0]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp ugt i32 [[X]], 127
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T2]], i32 [[T1]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %t0 = icmp slt i32 %x, -1
+  %t1 = select i1 %t0, i32 %replacement_low, i32 %replacement_high
+  %t2 = icmp ugt i32 %x, 127
+  %r = select i1 %t2, i32 %t1, i32 %x
   ret i32 %r
 }
 
