@@ -212,8 +212,8 @@ TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately1) {
                                                 "// hi there!\n"));
 
   DependencyScanningFilesystemSharedCache SharedCache;
-  auto Mappings = std::make_unique<ExcludedPreprocessorDirectiveSkipMapping>();
-  DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings.get());
+  ExcludedPreprocessorDirectiveSkipMapping Mappings;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings);
 
   DepFS.enableMinimizationOfAllFiles(); // Let's be explicit for clarity.
   auto StatusMinimized0 = DepFS.status("/mod.h");
@@ -235,8 +235,8 @@ TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately2) {
                                                 "// hi there!\n"));
 
   DependencyScanningFilesystemSharedCache SharedCache;
-  auto Mappings = std::make_unique<ExcludedPreprocessorDirectiveSkipMapping>();
-  DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings.get());
+  ExcludedPreprocessorDirectiveSkipMapping Mappings;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings);
 
   DepFS.disableMinimization("/mod.h");
   auto StatusFull0 = DepFS.status("/mod.h");

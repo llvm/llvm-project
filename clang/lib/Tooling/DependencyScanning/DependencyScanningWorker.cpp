@@ -137,7 +137,7 @@ public:
   DependencyScanningAction(
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings,
+      ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings,
       ScanningOutputFormat Format, bool OptimizeArgs,
       llvm::Optional<StringRef> ModuleName = None)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
@@ -204,9 +204,8 @@ public:
 
       // Pass the skip mappings which should speed up excluded conditional block
       // skipping in the preprocessor.
-      if (PPSkipMappings)
-        ScanInstance.getPreprocessorOpts()
-            .ExcludedConditionalDirectiveSkipMappings = PPSkipMappings;
+      ScanInstance.getPreprocessorOpts()
+          .ExcludedConditionalDirectiveSkipMappings = &PPSkipMappings;
     }
 
     // Create the dependency collector that will collect the produced
@@ -263,7 +262,7 @@ private:
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
+  ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings;
   ScanningOutputFormat Format;
   bool OptimizeArgs;
   llvm::Optional<StringRef> ModuleName;
@@ -288,12 +287,9 @@ DependencyScanningWorker::DependencyScanningWorker(
   OverlayFS->pushOverlay(InMemoryFS);
   RealFS = OverlayFS;
 
-  if (Service.canSkipExcludedPPRanges())
-    PPSkipMappings =
-        std::make_unique<ExcludedPreprocessorDirectiveSkipMapping>();
   if (Service.getMode() == ScanningMode::MinimizedSourcePreprocessing)
-    DepFS = new DependencyScanningWorkerFilesystem(
-        Service.getSharedCache(), RealFS, PPSkipMappings.get());
+    DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
+                                                   RealFS, PPSkipMappings);
   if (Service.canReuseFileManager())
     Files = new FileManager(FileSystemOptions(), RealFS);
 }
@@ -344,9 +340,8 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   return runWithDiags(CreateAndPopulateDiagOpts(FinalCCommandLine).release(),
                       [&](DiagnosticConsumer &DC, DiagnosticOptions &DiagOpts) {
                         DependencyScanningAction Action(
-                            WorkingDirectory, Consumer, DepFS,
-                            PPSkipMappings.get(), Format, OptimizeArgs,
-                            ModuleName);
+                            WorkingDirectory, Consumer, DepFS, PPSkipMappings,
+                            Format, OptimizeArgs, ModuleName);
                         // Create an invocation that uses the underlying file
                         // system to ensure that any file system requests that
                         // are made by the driver do not go through the
