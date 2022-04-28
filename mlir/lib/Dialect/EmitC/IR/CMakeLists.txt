@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIREmitC
   MLIREmitCAttributesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRCastInterfaces
   MLIRIR
   MLIRSideEffectInterfaces
   )
