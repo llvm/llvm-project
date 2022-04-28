@@ -55,3 +55,16 @@ struct degen_test {
 } __attribute__((randomize_layout));
 
 struct degen_test t11 = { foo }; // Okay
+
+struct static_assert_test {
+  int f;
+  _Static_assert(sizeof(int) == 4, "oh no!");
+} __attribute__((randomize_layout));
+
+struct static_assert_test t12 = { 42 }; // Okay
+
+struct enum_decl_test {
+  enum e { BORK = 42, FORK = 9 } f;
+} __attribute__((randomize_layout));
+
+struct enum_decl_test t13 = { BORK }; // Okay
