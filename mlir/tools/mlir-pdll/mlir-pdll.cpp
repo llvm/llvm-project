@@ -19,6 +19,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <set>
 
 using namespace mlir;
 using namespace mlir::pdll;
@@ -37,7 +38,7 @@ enum class OutputType {
 static LogicalResult
 processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
               OutputType outputType, std::vector<std::string> &includeDirs,
-              bool dumpODS) {
+              bool dumpODS, std::set<std::string> *includedFiles) {
   llvm::SourceMgr sourceMgr;
   sourceMgr.setIncludeDirs(includeDirs);
   sourceMgr.AddNewSourceBuffer(std::move(chunkBuffer), SMLoc());
@@ -47,6 +48,14 @@ processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
   FailureOr<ast::Module *> module = parsePDLAST(astContext, sourceMgr);
   if (failed(module))
     return failure();
+
+  // Add the files that were included to the set.
+  if (includedFiles) {
+    for (unsigned i = 1, e = sourceMgr.getNumBuffers(); i < e; ++i) {
+      includedFiles->insert(
+          sourceMgr.getMemoryBuffer(i + 1)->getBufferIdentifier().str());
+    }
+  }
 
   // Print out the ODS information if requested.
   if (dumpODS)
@@ -68,8 +77,35 @@ processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
     pdlModule->print(os, OpPrintingFlags().enableDebugInfo());
     return success();
   }
-
   codegenPDLLToCPP(**module, *pdlModule, os);
+  return success();
+}
+
+/// Create a dependency file for `-d` option.
+///
+/// This functionality is generally only for the benefit of the build system,
+/// and is modeled after the same option in TableGen.
+static LogicalResult
+createDependencyFile(StringRef outputFilename, StringRef dependencyFile,
+                     std::set<std::string> &includedFiles) {
+  if (outputFilename == "-") {
+    llvm::errs() << "error: the option -d must be used together with -o\n";
+    return failure();
+  }
+
+  std::string errorMessage;
+  std::unique_ptr<llvm::ToolOutputFile> outputFile =
+      openOutputFile(dependencyFile, &errorMessage);
+  if (!outputFile) {
+    llvm::errs() << errorMessage << "\n";
+    return failure();
+  }
+
+  outputFile->os() << outputFilename << ":";
+  for (const auto &includeFile : includedFiles)
+    outputFile->os() << ' ' << includeFile;
+  outputFile->os() << "\n";
+  outputFile->keep();
   return success();
 }
 
@@ -110,6 +146,12 @@ int main(int argc, char **argv) {
                        clEnumValN(OutputType::CPP, "cpp",
                                   "generate a C++ source file containing the "
                                   "patterns for the input file")));
+  llvm::cl::opt<std::string> dependencyFilename(
+      "d", llvm::cl::desc("Dependency filename"),
+      llvm::cl::value_desc("filename"), llvm::cl::init(""));
+  llvm::cl::opt<bool> writeIfChanged(
+      "write-if-changed",
+      llvm::cl::desc("Only write to the output file if it changed"));
 
   llvm::InitLLVM y(argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv, "PDLL Frontend");
@@ -123,28 +165,61 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Set up the output file.
-  std::unique_ptr<llvm::ToolOutputFile> outputFile =
-      openOutputFile(outputFilename, &errorMessage);
-  if (!outputFile) {
-    llvm::errs() << errorMessage << "\n";
-    return 1;
-  }
+  // If we are creating a dependency file, we'll also need to track what files
+  // get included during processing.
+  std::set<std::string> includedFilesStorage;
+  std::set<std::string> *includedFiles = nullptr;
+  if (!dependencyFilename.empty())
+    includedFiles = &includedFilesStorage;
 
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
+  std::string outputStr;
+  llvm::raw_string_ostream outputStrOS(outputStr);
   auto processFn = [&](std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
                        raw_ostream &os) {
     return processBuffer(os, std::move(chunkBuffer), outputType, includeDirs,
-                         dumpODS);
+                         dumpODS, includedFiles);
   };
   if (splitInputFile) {
     if (failed(splitAndProcessBuffer(std::move(inputFile), processFn,
-                                     outputFile->os())))
+                                     outputStrOS)))
       return 1;
-  } else if (failed(processFn(std::move(inputFile), outputFile->os()))) {
+  } else if (failed(processFn(std::move(inputFile), outputStrOS))) {
     return 1;
   }
-  outputFile->keep();
+
+  // Write the output.
+  bool shouldWriteOutput = true;
+  if (writeIfChanged) {
+    // Only update the real output file if there are any differences. This
+    // prevents recompilation of all the files depending on it if there aren't
+    // any.
+    if (auto existingOrErr =
+            llvm::MemoryBuffer::getFile(outputFilename, /*IsText=*/true))
+      if (std::move(existingOrErr.get())->getBuffer() == outputStrOS.str())
+        shouldWriteOutput = false;
+  }
+
+  // Populate the output file if necessary.
+  if (shouldWriteOutput) {
+    std::unique_ptr<llvm::ToolOutputFile> outputFile =
+        openOutputFile(outputFilename, &errorMessage);
+    if (!outputFile) {
+      llvm::errs() << errorMessage << "\n";
+      return 1;
+    }
+    outputFile->os() << outputStrOS.str();
+    outputFile->keep();
+  }
+
+  // Always write the depfile, even if the main output hasn't changed. If it's
+  // missing, Ninja considers the output dirty.
+  if (!dependencyFilename.empty()) {
+    if (failed(createDependencyFile(outputFilename, dependencyFilename,
+                                    includedFilesStorage)))
+      return 1;
+  }
+
   return 0;
 }

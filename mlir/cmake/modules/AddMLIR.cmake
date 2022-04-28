@@ -7,6 +7,17 @@ function(mlir_tablegen ofn)
       PARENT_SCOPE)
 endfunction()
 
+# Declare a PDLL library in the current directory.
+function(add_mlir_pdll_library target inputFile ofn)
+  set(LLVM_TARGET_DEFINITIONS ${inputFile})
+
+  tablegen(MLIR_PDLL ${ofn} -x=cpp ${ARGN})
+  set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
+      PARENT_SCOPE)
+
+  add_public_tablegen_target(${target})
+endfunction()
+
 # Declare a dialect in the include directory
 function(add_mlir_dialect dialect dialect_namespace)
   set(LLVM_TARGET_DEFINITIONS ${dialect}.td)
