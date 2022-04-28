@@ -292,4 +292,31 @@ define i16 @shift_and(i16 %a) {
   ret i16 %conv
 }
 
+define i32 @PR55138(i32 %x) {
+; X86-LABEL: PR55138:
+; X86:       ## %bb.0:
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    andb $15, %al
+; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    movl $27030, %edx ## imm = 0x6996
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR55138:
+; X64:       ## %bb.0:
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    movl $27030, %edx ## imm = 0x6996
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    btl %ecx, %edx
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
+  %urem = and i32 %x, 15
+  %shr = lshr i32 27030, %urem
+  %and = and i32 %shr, 1
+  ret i32 %and
+}
+
 attributes #0 = { "target-cpu"="skylake-avx512" }
