@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=aarch64 -mattr=+fp-armv8 -disassemble < %s | FileCheck %s
-# RUN: llvm-mc -triple=arm64 -mattr=+fp-armv8 -disassemble < %s | FileCheck %s
-# RUN: llvm-mc -triple=arm64 -mattr=+fp-armv8,+fullfp16 -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8a,+fp-armv8 -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8 -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8,+fullfp16 -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
 # RUN: llvm-mc -triple=arm64 -mattr=+v8.2a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V82
 # RUN: llvm-mc -triple=arm64 -mattr=+v8.3a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
 
@@ -1257,21 +1257,27 @@
 0xe1 0xff 0x1f 0xd4
 
 # CHECK: hvc      #{{1|0x1}}
+# CHECK: smc      #{{12000|0x2ee0}}
 # CHECK: brk      #{{12|0xc}}
 # CHECK: hlt      #{{123|0x7b}}
 0x22 0x0 0x0 0xd4
+0x3 0xdc 0x5 0xd4
 0x80 0x1 0x20 0xd4
 0x60 0xf 0x40 0xd4
 
 # CHECK: dcps1    #{{42|0x2a}}
 # CHECK: dcps2    #{{9|0x9}}
+# CHECK: dcps3    #{{1000|0x3e8}}
 0x41 0x5 0xa0 0xd4
 0x22 0x1 0xa0 0xd4
+0x3 0x7d 0xa0 0xd4
 
 # CHECK: dcps1
 # CHECK: dcps2
+# CHECK: dcps3
 0x1 0x0 0xa0 0xd4
 0x2 0x0 0xa0 0xd4
+0x3 0x0 0xa0 0xd4
 
 #------------------------------------------------------------------------------
 # Extract (immediate)
@@ -3252,11 +3258,13 @@
 # CHECK: msr      {{hacr_el2|HACR_EL2}}, x12
 # CHECK: msr      {{mdcr_el3|MDCR_EL3}}, x12
 # CHECK: msr      {{ttbr0_el1|TTBR0_EL1}}, x12
+# CHECK: msr      {{ttbr0_el2|TTBR0_EL2}}, x12
 # CHECK: msr      {{ttbr0_el3|TTBR0_EL3}}, x12
 # CHECK: msr      {{ttbr1_el1|TTBR1_EL1}}, x12
 # CHECK: msr      {{tcr_el1|TCR_EL1}}, x12
 # CHECK: msr      {{tcr_el2|TCR_EL2}}, x12
 # CHECK: msr      {{tcr_el3|TCR_EL3}}, x12
+# CHECK: msr      {{vttbr_el2|VTTBR_EL2}}, x12
 # CHECK: msr      {{vtcr_el2|VTCR_EL2}}, x12
 # CHECK: msr      {{dacr32_el2|DACR32_EL2}}, x12
 # CHECK: msr      {{spsr_el1|SPSR_EL1}}, x12
@@ -3545,11 +3553,13 @@
 # CHECK: mrs      x9, {{hacr_el2|HACR_EL2}}
 # CHECK: mrs      x9, {{mdcr_el3|MDCR_EL3}}
 # CHECK: mrs      x9, {{ttbr0_el1|TTBR0_EL1}}
+# CHECK: mrs      x9, {{ttbr0_el2|TTBR0_EL2}}
 # CHECK: mrs      x9, {{ttbr0_el3|TTBR0_EL3}}
 # CHECK: mrs      x9, {{ttbr1_el1|TTBR1_EL1}}
 # CHECK: mrs      x9, {{tcr_el1|TCR_EL1}}
 # CHECK: mrs      x9, {{tcr_el2|TCR_EL2}}
 # CHECK: mrs      x9, {{tcr_el3|TCR_EL3}}
+# CHECK: mrs      x9, {{vttbr_el2|VTTBR_EL2}}
 # CHECK: mrs      x9, {{vtcr_el2|VTCR_EL2}}
 # CHECK: mrs      x9, {{dacr32_el2|DACR32_EL2}}
 # CHECK: mrs      x9, {{spsr_el1|SPSR_EL1}}

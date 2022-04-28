@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+fp-armv8 %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8a,+fp-armv8 %s | FileCheck %s
   .globl _func
 
 // Check that the assembler can handle the documented syntax from the ARM ARM.
@@ -1694,21 +1694,27 @@ _func:
 // CHECK: svc      #{{65535|0xffff}}          // encoding: [0xe1,0xff,0x1f,0xd4]
 
         hvc #1
+	smc #12000
         brk #12
         hlt #123
 // CHECK: hvc      #{{1|0x1}}                 // encoding: [0x22,0x00,0x00,0xd4]
+// CHECK: smc      #{{12000|0x2ee0}}          // encoding: [0x03,0xdc,0x05,0xd4]
 // CHECK: brk      #{{12|0xc}}                // encoding: [0x80,0x01,0x20,0xd4]
 // CHECK: hlt      #{{123|0x7b}}              // encoding: [0x60,0x0f,0x40,0xd4]
 
         dcps1 #42
         dcps2 #9
+	dcps3 #1000
 // CHECK: dcps1    #{{42|0x2a}}               // encoding: [0x41,0x05,0xa0,0xd4]
 // CHECK: dcps2    #{{9|0x9}}                 // encoding: [0x22,0x01,0xa0,0xd4]
+// CHECK: dcps3    #{{1000|0x3e8}}            // encoding: [0x03,0x7d,0xa0,0xd4]
 
         dcps1
         dcps2
+	dcps3
 // CHECK: dcps1                               // encoding: [0x01,0x00,0xa0,0xd4]
 // CHECK: dcps2                               // encoding: [0x02,0x00,0xa0,0xd4]
+// CHECK: dcps3                               // encoding: [0x03,0x00,0xa0,0xd4]
 
 //------------------------------------------------------------------------------
 // Extract (immediate)
@@ -3779,11 +3785,13 @@ _func:
 	msr HACR_EL2, x12
 	msr MDCR_EL3, x12
 	msr TTBR0_EL1, x12
+	msr TTBR0_EL2, x12
 	msr TTBR0_EL3, x12
 	msr TTBR1_EL1, x12
 	msr TCR_EL1, x12
 	msr TCR_EL2, x12
 	msr TCR_EL3, x12
+	msr VTTBR_EL2, x12
 	msr VTCR_EL2, x12
 	msr DACR32_EL2, x12
 	msr SPSR_EL1, x12
@@ -4030,11 +4038,13 @@ _func:
 // CHECK: msr      {{hacr_el2|HACR_EL2}}, x12              // encoding: [0xec,0x11,0x1c,0xd5]
 // CHECK: msr      {{mdcr_el3|MDCR_EL3}}, x12              // encoding: [0x2c,0x13,0x1e,0xd5]
 // CHECK: msr      {{ttbr0_el1|TTBR0_EL1}}, x12             // encoding: [0x0c,0x20,0x18,0xd5]
+// CHECK: msr      {{ttbr0_el2|TTBR0_EL2}}, x12             // encoding: [0x0c,0x20,0x1c,0xd5]
 // CHECK: msr      {{ttbr0_el3|TTBR0_EL3}}, x12             // encoding: [0x0c,0x20,0x1e,0xd5]
 // CHECK: msr      {{ttbr1_el1|TTBR1_EL1}}, x12             // encoding: [0x2c,0x20,0x18,0xd5]
 // CHECK: msr      {{tcr_el1|TCR_EL1}}, x12               // encoding: [0x4c,0x20,0x18,0xd5]
 // CHECK: msr      {{tcr_el2|TCR_EL2}}, x12               // encoding: [0x4c,0x20,0x1c,0xd5]
 // CHECK: msr      {{tcr_el3|TCR_EL3}}, x12               // encoding: [0x4c,0x20,0x1e,0xd5]
+// CHECK: msr      {{vttbr_el2|VTTBR_EL2}}, x12            // encoding: [0x0c,0x21,0x1c,0xd5]
 // CHECK: msr      {{vtcr_el2|VTCR_EL2}}, x12              // encoding: [0x4c,0x21,0x1c,0xd5]
 // CHECK: msr      {{dacr32_el2|DACR32_EL2}}, x12            // encoding: [0x0c,0x30,0x1c,0xd5]
 // CHECK: msr      {{spsr_el1|SPSR_EL1}}, x12              // encoding: [0x0c,0x40,0x18,0xd5]
@@ -4322,11 +4332,13 @@ _func:
 	mrs x9, HACR_EL2
 	mrs x9, MDCR_EL3
 	mrs x9, TTBR0_EL1
+	mrs x9, TTBR0_EL2
 	mrs x9, TTBR0_EL3
 	mrs x9, TTBR1_EL1
 	mrs x9, TCR_EL1
 	mrs x9, TCR_EL2
 	mrs x9, TCR_EL3
+	mrs x9, VTTBR_EL2
 	mrs x9, VTCR_EL2
 	mrs x9, DACR32_EL2
 	mrs x9, SPSR_EL1
@@ -4623,11 +4635,13 @@ _func:
 // CHECK: mrs      x9, {{hacr_el2|HACR_EL2}}               // encoding: [0xe9,0x11,0x3c,0xd5]
 // CHECK: mrs      x9, {{mdcr_el3|MDCR_EL3}}               // encoding: [0x29,0x13,0x3e,0xd5]
 // CHECK: mrs      x9, {{ttbr0_el1|TTBR0_EL1}}              // encoding: [0x09,0x20,0x38,0xd5]
+// CHECK: mrs      x9, {{ttbr0_el2|TTBR0_EL2}}              // encoding: [0x09,0x20,0x3c,0xd5]
 // CHECK: mrs      x9, {{ttbr0_el3|TTBR0_EL3}}              // encoding: [0x09,0x20,0x3e,0xd5]
 // CHECK: mrs      x9, {{ttbr1_el1|TTBR1_EL1}}              // encoding: [0x29,0x20,0x38,0xd5]
 // CHECK: mrs      x9, {{tcr_el1|TCR_EL1}}                // encoding: [0x49,0x20,0x38,0xd5]
 // CHECK: mrs      x9, {{tcr_el2|TCR_EL2}}                // encoding: [0x49,0x20,0x3c,0xd5]
 // CHECK: mrs      x9, {{tcr_el3|TCR_EL3}}                // encoding: [0x49,0x20,0x3e,0xd5]
+// CHECK: mrs      x9, {{vttbr_el2|VTTBR_EL2}}              // encoding: [0x09,0x21,0x3c,0xd5]
 // CHECK: mrs      x9, {{vtcr_el2|VTCR_EL2}}               // encoding: [0x49,0x21,0x3c,0xd5]
 // CHECK: mrs      x9, {{dacr32_el2|DACR32_EL2}}             // encoding: [0x09,0x30,0x3c,0xd5]
 // CHECK: mrs      x9, {{spsr_el1|SPSR_EL1}}               // encoding: [0x09,0x40,0x38,0xd5]
