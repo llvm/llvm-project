@@ -90,13 +90,17 @@
 // WARN-OMIT-LEAF-7S-NOT: warning: optimization flag '-momit-leaf-frame-pointer' is not supported for target 'armv7s'
 // WARN-OMIT-LEAF-7S: "-mframe-pointer=non-leaf"
 
-// On AArch64, PS4, and VE, default to omitting the frame pointer on leaf
+// On AArch64, PS4, PS5, and VE, default to omitting the frame pointer on leaf
 // functions
 // RUN: %clang -### -target aarch64 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 // RUN: %clang -### -target x86_64-scei-ps4 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 // RUN: %clang -### -target x86_64-scei-ps4 -S -O2 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### -target x86_64-sie-ps5 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### -target x86_64-sie-ps5 -S -O2 %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 // RUN: %clang -### -target aarch64-apple-darwin -arch arm64_32 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
