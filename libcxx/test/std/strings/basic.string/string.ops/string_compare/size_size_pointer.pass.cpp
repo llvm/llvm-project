@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// int compare(size_type pos, size_type n1, const charT *s) const;
+// int compare(size_type pos, size_type n1, const charT *s) const; // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -35,7 +37,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
     if (pos1 <= s.size())
         assert(sign(s.compare(pos1, n1, str)) == sign(x));
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -51,7 +53,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
 }
 
 template <class S>
-void test0()
+TEST_CONSTEXPR_CXX20 void test0()
 {
     test(S(""), 0, 0, "", 0);
     test(S(""), 0, 0, "abcde", -5);
@@ -156,7 +158,7 @@ void test0()
 }
 
 template <class S>
-void test1()
+TEST_CONSTEXPR_CXX20 void test1()
 {
     test(S("abcde"), 6, 0, "", 0);
     test(S("abcde"), 6, 0, "abcde", 0);
@@ -261,7 +263,7 @@ void test1()
 }
 
 template <class S>
-void test2()
+TEST_CONSTEXPR_CXX20 void test2()
 {
     test(S("abcdefghijklmnopqrst"), 0, 0, "", 0);
     test(S("abcdefghijklmnopqrst"), 0, 0, "abcde", -5);
@@ -361,7 +363,7 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 21, 0, "abcdefghijklmnopqrst", 0);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test0<S>();
@@ -384,7 +386,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

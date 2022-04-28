@@ -90,18 +90,14 @@ int main(int, char**) {
   test<char16_t>();
   test<char32_t>();
 
-#if defined(__cpp_lib_constexpr_string) && __cpp_lib_constexpr_string >= 201907L
   static_assert(test<char>());
   static_assert(test<char8_t>());
   static_assert(test<char16_t>());
   static_assert(test<char32_t>());
-#endif
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
-#if defined(__cpp_lib_constexpr_string) && __cpp_lib_constexpr_string >= 201907L
   static_assert(test<wchar_t>());
-#endif
 #endif
   return 0;
 }

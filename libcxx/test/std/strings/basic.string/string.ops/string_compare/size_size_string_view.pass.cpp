@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// int compare(size_type pos1, size_type n1, basic_string_view sv) const;
+// int compare(size_type pos1, size_type n1, basic_string_view sv) const; // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -35,7 +37,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
     if (pos1 <= s.size())
         assert(sign(s.compare(pos1, n1, sv)) == sign(x));
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -361,7 +363,7 @@ TEST_CONSTEXPR_CXX20 void test2()
     test(S("abcdefghijklmnopqrst"), 21, 0, SV("abcdefghijklmnopqrst"), 0);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     typedef std::string_view SV;
@@ -386,7 +388,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;
