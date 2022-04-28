@@ -1,4 +1,4 @@
-// RUN: fir-opt %s | tco | FileCheck %s
+// RUN: tco %s | FileCheck %s
 
 // Test applying slice on fir.box
 //   subroutine foo(x)
