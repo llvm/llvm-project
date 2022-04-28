@@ -29,7 +29,6 @@
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FormatVariadic.h"
 
-
 namespace llvm {
 
 template <class GraphType> struct GraphTraits;
@@ -196,7 +195,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
       };
     }
 
-    //enum { MaxColumns = 80 };
+    // enum { MaxColumns = 80 };
     std::string Str;
     raw_string_ostream OS(Str);
 
@@ -354,17 +353,16 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   void computeDeoptOrUnreachablePaths(const Function *F);
 };
 
-
-void viewCFG(const Function *F) ;
-void viewCFG(const Function &F) ;
-void viewCFG(const BasicBlock *BB) ;
-void viewCFG(const BasicBlock &BB) ;
-void viewCFG(const Instruction *I) ;
-void viewCFG(const Instruction &I) ;
+void viewCFG(const Function *F);
+void viewCFG(const Function &F);
+void viewCFG(const BasicBlock *BB);
+void viewCFG(const BasicBlock &BB);
+void viewCFG(const Instruction *I);
+void viewCFG(const Instruction &I);
 
 // RegionPrinter.cpp
-void viewRegion(const Function *F) ;
-void viewRegion(const Function &F) ;
+void viewRegion(const Function *F);
+void viewRegion(const Function &F);
 } // End llvm namespace
 
 namespace llvm {

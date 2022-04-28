@@ -22,7 +22,8 @@ namespace llvm {
   class Instruction;
 
   FunctionPass *createRegionViewerPass();
-  FunctionPass *createRegionViewerPass(const BasicBlock *BB, const Instruction *Inst);
+  FunctionPass *createRegionViewerPass(const BasicBlock *BB,
+                                       const Instruction *Inst);
   FunctionPass *createRegionOnlyViewerPass();
   FunctionPass *createRegionPrinterPass();
   FunctionPass *createRegionOnlyPrinterPass();

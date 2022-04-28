@@ -282,7 +282,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
 
-
   llvm::Value *ifCond = nullptr;
   if (auto ifExprVar = opInst.if_expr_var())
     ifCond = moduleTranslation.lookupValue(ifExprVar);
@@ -325,7 +324,6 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
 
-
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createMaster(
       ompLoc, bodyGenCB, {}));
@@ -352,7 +350,6 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
-
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
@@ -584,7 +581,6 @@ convertOmpOrderedRegion(Operation &opInst, llvm::IRBuilderBase &builder,
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
 
-
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   builder.restoreIP(
       moduleTranslation.getOpenMPBuilder()->createOrderedThreadsSimd(
@@ -649,13 +645,11 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
 
-
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createSections(
-      ompLoc, allocaIP, sectionCBs, privCB, {}, false,
-      sectionsOp.nowait()));
+      ompLoc, allocaIP, sectionCBs, privCB, {}, false, sectionsOp.nowait()));
   return bodyGenStatus;
 }
 

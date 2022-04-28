@@ -105,77 +105,66 @@ public:
   /// A finalize callback knows about all objects that need finalization, e.g.
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
-  using LeaveRegionCallbackTy = std::function<void(
-      InsertPointTy ExitingIP, bool Rejoining,
-      omp::Directive LeaveReason,
-      OMPRegionInfo *Region)>; 
+  using LeaveRegionCallbackTy =
+      std::function<void(InsertPointTy ExitingIP, bool Rejoining,
+                         omp::Directive LeaveReason, OMPRegionInfo *Region)>;
 
+  enum class RegionKind {
+    /// Sentinel object so we don't always have to check whether the stack is
+    /// empty.
+    Toplevel,
 
-     enum class RegionKind {
-         /// Sentinel object so we don't always have to check whether the stack is empty.
-         Toplevel,
+    /// Actions on loop-associated directives are deferred until all applyXYZ
+    /// actions have been applied to them.
+    CanonicalLoop,
 
-         /// Actions on loop-associated directives are deferred until all applyXYZ actions have been applied to them.
-         CanonicalLoop,
-
-         /// Non-loop OpenMP regions.
-         Directive
-    };
+    /// Non-loop OpenMP regions.
+    Directive
+  };
 
   struct OMPRegionInfo {
-      RegionKind Kind;
-      omp::Directive DK;
-      bool IsCancellable; // TODO: remove; determine ourselves whether there was a cancelling construct inside
-      LeaveRegionCallbackTy FiniCB;
+    RegionKind Kind;
+    omp::Directive DK;
+    bool IsCancellable; // TODO: remove; determine ourselves whether there was a
+                        // cancelling construct inside
+    LeaveRegionCallbackTy FiniCB;
 
-    OMPRegionInfo(
-        RegionKind Kind,
-        omp::Directive DK,
-        bool IsCancellable,
-        LeaveRegionCallbackTy FiniCB) : Kind(Kind), DK(DK), IsCancellable(IsCancellable), FiniCB(std::move(FiniCB)) {
-        assertOK();
+    OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable,
+                  LeaveRegionCallbackTy FiniCB)
+        : Kind(Kind), DK(DK), IsCancellable(IsCancellable),
+          FiniCB(std::move(FiniCB)) {
+      assertOK();
     }
 #ifndef NDEBUG
-    ~OMPRegionInfo() {
-     assertOK();
-    }
+    ~OMPRegionInfo() { assertOK(); }
 #endif
-
-
 
     /// Consistency self-check.
     void assertOK() const;
   };
 
-
 private:
   /// The finalization stack made up of finalize callbacks currently in-flight,
   /// wrapped into FinalizationInfo objects that reference also the finalization
   /// target block and the kind of cancellable directive.
-  SmallVector<std::unique_ptr<OMPRegionInfo>,8> RegionStack;
+  SmallVector<std::unique_ptr<OMPRegionInfo>, 8> RegionStack;
 
+  OMPRegionInfo *getInnermostDirectionRegion(omp::Directive DK);
 
-  OMPRegionInfo *getInnermostDirectionRegion(omp::Directive DK) ;
+  OMPRegionInfo *pushRegion(omp::Directive DK, bool IsCancellable,
+                            LeaveRegionCallbackTy FiniCB = {});
 
-  OMPRegionInfo* pushRegion(      omp::Directive DK,
-      bool IsCancellable,
-      LeaveRegionCallbackTy FiniCB = {});
-
-  void emitRegionExit(        InsertPointTy ExitingIP,   OMPRegionInfo* RegionToLeave,    omp::Directive LeaveReason =omp:: OMPD_unknown);
+  void emitRegionExit(InsertPointTy ExitingIP, OMPRegionInfo *RegionToLeave,
+                      omp::Directive LeaveReason = omp::OMPD_unknown);
 
   void popRegion(omp::Directive DK);
-
-
-
 
   /// Return true if the last entry in the finalization stack is of kind \p DK
   /// and cancellable.
   bool isLastFinalizationInfoCancellable(omp::Directive DK) {
-      // FIXME: Don't all the regions in-between also need to be cancellable?
-   return getInnermostDirectionRegion(DK)->IsCancellable;
+    // FIXME: Don't all the regions in-between also need to be cancellable?
+    return getInnermostDirectionRegion(DK)->IsCancellable;
   }
-
-
 
 public:
   /// Callback type for body (=inner region) code generation
@@ -287,26 +276,24 @@ public:
   /// Generator for '#omp parallel'
   ///
   /// \param Loc The insert and source location description.
-  /// \param OuterAllocaIP The insertion points to be used for alloca instructions.
-  /// \param BodyGenCB Callback that will generate the region code.
-  /// \param PrivCB Callback to copy a given variable (think copy constructor).
-  /// \param FiniCB Callback to finalize variable copies.
-  /// \param IfCondition The evaluated 'if' clause expression, if any.
-  /// \param NumThreads The evaluated 'num_threads' clause expression, if any.
-  /// \param ProcBind The value of the 'proc_bind' clause (see ProcBindKind).
-  /// 
+  /// \param OuterAllocaIP The insertion points to be used for alloca
+  /// instructions. \param BodyGenCB Callback that will generate the region
+  /// code. \param PrivCB Callback to copy a given variable (think copy
+  /// constructor). \param FiniCB Callback to finalize variable copies. \param
+  /// IfCondition The evaluated 'if' clause expression, if any. \param
+  /// NumThreads The evaluated 'num_threads' clause expression, if any. \param
+  /// ProcBind The value of the 'proc_bind' clause (see ProcBindKind).
+  ///
   /// \param IsCancellable Flag to indicate a cancellable parallel region.
   /// MK: Remove? Any non-cancellable? Makes it a difference to the runtime?
   ///
   /// \returns The insertion position *after* the parallel.
-  IRBuilder<>::InsertPoint createParallel(const LocationDescription &Loc,
-                                          InsertPointTy OuterAllocaIP,
-                                          BodyGenCallbackTy BodyGenCB,
-                                          PrivatizeCallbackTy PrivCB,
-                                          LeaveRegionCallbackTy    FiniCB,
-                                          Value *IfCondition, 
-                                          Value *NumThreads,
-                                          omp::ProcBindKind ProcBind, bool IsCancellable);
+  IRBuilder<>::InsertPoint
+  createParallel(const LocationDescription &Loc, InsertPointTy OuterAllocaIP,
+                 BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
+                 LeaveRegionCallbackTy FiniCB, Value *IfCondition,
+                 Value *NumThreads, omp::ProcBindKind ProcBind,
+                 bool IsCancellable);
 
   /// Generator for the control flow structure of an OpenMP canonical loop.
   ///
@@ -980,7 +967,7 @@ public:
   /// \returns The insertion position *after* the single call.
   InsertPointTy createSingle(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-      LeaveRegionCallbackTy FiniCB, bool IsNowait,
+                             LeaveRegionCallbackTy FiniCB, bool IsNowait,
                              llvm::Value *DidIt);
 
   /// Generator for '#omp master'
@@ -992,7 +979,7 @@ public:
   /// \returns The insertion position *after* the master.
   InsertPointTy createMaster(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-      LeaveRegionCallbackTy FiniCB);
+                             LeaveRegionCallbackTy FiniCB);
 
   /// Generator for '#omp masked'
   ///
@@ -1003,7 +990,7 @@ public:
   /// \returns The insertion position *after* the masked.
   InsertPointTy createMasked(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-      LeaveRegionCallbackTy FiniCB, Value *Filter);
+                             LeaveRegionCallbackTy FiniCB, Value *Filter);
 
   /// Generator for '#omp critical'
   ///
@@ -1016,7 +1003,7 @@ public:
   /// \returns The insertion position *after* the critical.
   InsertPointTy createCritical(const LocationDescription &Loc,
                                BodyGenCallbackTy BodyGenCB,
-      LeaveRegionCallbackTy FiniCB,
+                               LeaveRegionCallbackTy FiniCB,
                                StringRef CriticalName, Value *HintInst);
 
   /// Generator for '#omp ordered depend (source | sink)'
@@ -1045,7 +1032,7 @@ public:
   /// \returns The insertion position *after* the ordered.
   InsertPointTy createOrderedThreadsSimd(const LocationDescription &Loc,
                                          BodyGenCallbackTy BodyGenCB,
-      LeaveRegionCallbackTy FiniCB,
+                                         LeaveRegionCallbackTy FiniCB,
                                          bool IsThreads);
 
   /// Generator for '#omp sections'
@@ -1063,7 +1050,7 @@ public:
                                InsertPointTy AllocaIP,
                                ArrayRef<StorableBodyGenCallbackTy> SectionCBs,
                                PrivatizeCallbackTy PrivCB,
-      LeaveRegionCallbackTy FiniCB, bool IsCancellable,
+                               LeaveRegionCallbackTy FiniCB, bool IsCancellable,
                                bool IsNowait);
 
   /// Generator for '#omp section'
@@ -1074,7 +1061,7 @@ public:
   /// \returns The insertion position *after* the section.
   InsertPointTy createSection(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
-      LeaveRegionCallbackTy FiniCB);
+                              LeaveRegionCallbackTy FiniCB);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
@@ -1278,7 +1265,7 @@ private:
   InsertPointTy
   EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
                        Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
-      LeaveRegionCallbackTy FiniCB, bool Conditional = false,
+                       LeaveRegionCallbackTy FiniCB, bool Conditional = false,
                        bool HasFinalize = true, bool IsCancellable = false);
 
   /// Get the platform-specific name separator.

@@ -112,7 +112,6 @@ protected:
   bool HasCancel;
 };
 
-
 class OpenMPIRBuilderRegionInfo final : public CGOpenMPRegionInfo {
 public:
   OpenMPIRBuilderRegionInfo(const CapturedStmt &CS, OpenMPDirectiveKind Kind)
@@ -1241,16 +1240,16 @@ struct PushAndPopStackRAII {
           CGF.getOMPCancelDestination(OMPD_parallel);
       CGF.EmitBranchThroughCleanup(Dest);
     };
-    
+
     llvm_unreachable("TODO: set UserManaged=true");
     // TODO: Remove this once we emit parallel regions through the
     //       OpenMPIRBuilder as it can do this setup internally.
-   // llvm::OpenMPIRBuilder::FinalizationInfo FI{{}, Kind, HasCancel, /*UserManaged*/ true};
-   // OMPBuilder->pushFinalizationCB(std::move(FI));
+    // llvm::OpenMPIRBuilder::FinalizationInfo FI{{}, Kind, HasCancel,
+    // /*UserManaged*/ true}; OMPBuilder->pushFinalizationCB(std::move(FI));
   }
   ~PushAndPopStackRAII() {
-   // if (OMPBuilder)
-   //   OMPBuilder->popFinalizationCB();
+    // if (OMPBuilder)
+    //   OMPBuilder->popFinalizationCB();
   }
   llvm::OpenMPIRBuilder *OMPBuilder;
 };
@@ -2187,7 +2186,7 @@ void CGOpenMPRuntime::emitIRBuilderParallel(
     llvm::OpenMPIRBuilder::LeaveRegionCallbackTy FiniCB,
     // llvm:: OpenMPIRBuilder::  CancellationCallbackTy CancelCB,
     llvm::Value *IfCond, llvm::Value *NumThreads,
-    llvm::omp::ProcBindKind ProcBind,bool IsCancellable) {
+    llvm::omp::ProcBindKind ProcBind, bool IsCancellable) {
   auto &Builder = CGF.Builder;
   auto AllocaInsertPt = CGF.AllocaInsertPt;
 
@@ -2211,10 +2210,10 @@ void CGOpenMPRuntime::emitIRBuilderParallel(
 
   llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
                                                 AllocaInsertPt->getIterator());
-  Builder.restoreIP(OMPBuilder.createParallel(Builder, AllocaIP,
-                                              BodyGenCBWrapper, PrivCB, FiniCB,
-                                           //    CancelCB,
-                                              IfCond, NumThreads, ProcBind,  IsCancellable));
+  Builder.restoreIP(OMPBuilder.createParallel(
+      Builder, AllocaIP, BodyGenCBWrapper, PrivCB, FiniCB,
+      //    CancelCB,
+      IfCond, NumThreads, ProcBind, IsCancellable));
 }
 
 // If we're inside an (outlined) parallel region, use the region info's
@@ -2655,7 +2654,8 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
   // level which happen to be the same OpenMPDirectiveKind.
   // CGOpenMPRegionInfo* OMPRegionInfo  =
   // dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
-  if (auto *IRBuilderRegion = dyn_cast_or_null<OpenMPIRBuilderRegionInfo>(CGF.CapturedStmtInfo)) {
+  if (auto *IRBuilderRegion =
+          dyn_cast_or_null<OpenMPIRBuilderRegionInfo>(CGF.CapturedStmtInfo)) {
     // if (OMPBuilder.isLastFinalizationInfoCancellable(Kind)) {
     CGF.Builder.restoreIP(OMPBuilder.createBarrier(
         CGF.Builder, Kind, ForceSimpleCall, EmitChecks));

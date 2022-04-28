@@ -951,8 +951,6 @@ private:
       return CodeGenIP;
     };
 
-
-
     /// Create a sequential execution region within a merged parallel region,
     /// encapsulated in a master construct with a barrier for synchronization.
     auto CreateSequentialRegion = [&](Function *OuterFn,
@@ -983,7 +981,6 @@ private:
         assert(SeqEndBB != nullptr && "SeqEndBB should not be null");
         SeqEndBB->getTerminator()->setSuccessor(0, CGEndBB);
       };
-     
 
       // Find outputs from the sequential region to outside users and
       // broadcast their values to them.
