@@ -232,7 +232,13 @@ static void memrefMultiply(::StridedMemRefType<float, 2> *memref,
     elt *= coefficient;
 }
 
-TEST(NativeMemRefJit, JITCallback) {
+// MSAN does not work with JIT.
+#if __has_feature(memory_sanitizer)
+#define MAYBE_JITCallback DISABLED_JITCallback
+#else
+#define MAYBE_JITCallback JITCallback
+#endif
+TEST(NativeMemRefJit, MAYBE_JITCallback) {
   constexpr int k = 2;
   constexpr int m = 2;
   int64_t shape[] = {k, m};
