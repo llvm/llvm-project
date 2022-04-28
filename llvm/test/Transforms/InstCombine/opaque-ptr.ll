@@ -179,14 +179,113 @@ define ptr @geps_combinable(ptr %a) {
   ret ptr %a3
 }
 
-define ptr @geps_not_combinable(ptr %a) {
-; CHECK-LABEL: @geps_not_combinable(
+define ptr @geps_combinable_different_elem_type1(ptr %a) {
+; CHECK-LABEL: @geps_combinable_different_elem_type1(
 ; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
 ; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, i32 }, ptr [[A2]], i64 0, i32 1
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
   %a3 = getelementptr { i32, i32 }, ptr %a2, i32 0, i32 1
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_different_elem_type2(ptr %a) {
+; CHECK-LABEL: @geps_combinable_different_elem_type2(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
+  %a3 = getelementptr i8, ptr %a2, i64 4
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_different_elem_type3(ptr %a) {
+; CHECK-LABEL: @geps_combinable_different_elem_type3(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 8
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
+  %a3 = getelementptr i8, ptr %a2, i64 8
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_different_elem_type4(ptr %a) {
+; CHECK-LABEL: @geps_combinable_different_elem_type4(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 10
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
+  %a3 = getelementptr i8, ptr %a2, i64 10
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_different_elem_type5(ptr %a) {
+; CHECK-LABEL: @geps_combinable_different_elem_type5(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 -4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
+  %a3 = getelementptr i8, ptr %a2, i64 -4
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_different_elem_type6(ptr %a, i64 %idx) {
+; CHECK-LABEL: @geps_combinable_different_elem_type6(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i64 %idx
+  %a3 = getelementptr i8, ptr %a2, i64 4
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_different_elem_type7(ptr %a, i64 %idx) {
+; CHECK-LABEL: @geps_combinable_different_elem_type7(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i64 %idx, i32 1
+  %a3 = getelementptr i8, ptr %a2, i64 4
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_different_elem_type8(ptr %a, i64 %idx) {
+; CHECK-LABEL: @geps_combinable_different_elem_type8(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds { { i32, i32 } }, ptr [[A:%.*]], i64 [[IDX:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr inbounds { { i32, i32 } }, ptr %a, i64 %idx, i32 0, i32 1
+  %a3 = getelementptr inbounds i8, ptr %a2, i32 4
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_different_elem_type9(ptr %a, i64 %idx) {
+; CHECK-LABEL: @geps_combinable_different_elem_type9(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds { { i32, i32 } }, ptr [[A:%.*]], i64 [[IDX:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds i8, ptr [[A2]], i64 -4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr inbounds { { i32, i32 } }, ptr %a, i64 %idx, i32 0, i32 1
+  %a3 = getelementptr inbounds i8, ptr %a2, i32 -4
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_scalable(ptr %a, i64 %idx) {
+; CHECK-LABEL: @geps_combinable_scalable(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds <vscale x 2 x i32>, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr inbounds <vscale x 2 x i32>, ptr %a, i64 1
+  %a3 = getelementptr inbounds i8, ptr %a2, i32 4
   ret ptr %a3
 }
 
