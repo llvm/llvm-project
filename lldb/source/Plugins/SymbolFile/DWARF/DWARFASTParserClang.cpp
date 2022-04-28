@@ -3499,49 +3499,37 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   // in "dst_cu" and "dst_class_die"
   class_type->GetFullCompilerType();
 
-  DWARFDIE src_die;
-  DWARFDIE dst_die;
+  auto gather = [](DWARFDIE die, UniqueCStringMap<DWARFDIE> &map,
+                   UniqueCStringMap<DWARFDIE> map_artificial) {
+    if (die.Tag() != DW_TAG_subprogram)
+      return;
+    // Make sure this is a declaration and not a concrete instance by looking
+    // for DW_AT_declaration set to 1. Sometimes concrete function instances are
+    // placed inside the class definitions and shouldn't be included in the list
+    // of things are are tracking here.
+    if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) != 1)
+      return;
+
+    if (const char *name = die.GetMangledName()) {
+      ConstString const_name(name);
+      if (die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
+        map_artificial.Append(const_name, die);
+      else
+        map.Append(const_name, die);
+    }
+  };
+
   UniqueCStringMap<DWARFDIE> src_name_to_die;
   UniqueCStringMap<DWARFDIE> dst_name_to_die;
   UniqueCStringMap<DWARFDIE> src_name_to_die_artificial;
   UniqueCStringMap<DWARFDIE> dst_name_to_die_artificial;
-  for (src_die = src_class_die.GetFirstChild(); src_die.IsValid();
+  for (DWARFDIE src_die = src_class_die.GetFirstChild(); src_die.IsValid();
        src_die = src_die.GetSibling()) {
-    if (src_die.Tag() == DW_TAG_subprogram) {
-      // Make sure this is a declaration and not a concrete instance by looking
-      // for DW_AT_declaration set to 1. Sometimes concrete function instances
-      // are placed inside the class definitions and shouldn't be included in
-      // the list of things are are tracking here.
-      if (src_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
-        const char *src_name = src_die.GetMangledName();
-        if (src_name) {
-          ConstString src_const_name(src_name);
-          if (src_die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
-            src_name_to_die_artificial.Append(src_const_name, src_die);
-          else
-            src_name_to_die.Append(src_const_name, src_die);
-        }
-      }
-    }
+    gather(src_die, src_name_to_die, src_name_to_die_artificial);
   }
-  for (dst_die = dst_class_die.GetFirstChild(); dst_die.IsValid();
+  for (DWARFDIE dst_die = dst_class_die.GetFirstChild(); dst_die.IsValid();
        dst_die = dst_die.GetSibling()) {
-    if (dst_die.Tag() == DW_TAG_subprogram) {
-      // Make sure this is a declaration and not a concrete instance by looking
-      // for DW_AT_declaration set to 1. Sometimes concrete function instances
-      // are placed inside the class definitions and shouldn't be included in
-      // the list of things are are tracking here.
-      if (dst_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
-        const char *dst_name = dst_die.GetMangledName();
-        if (dst_name) {
-          ConstString dst_const_name(dst_name);
-          if (dst_die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
-            dst_name_to_die_artificial.Append(dst_const_name, dst_die);
-          else
-            dst_name_to_die.Append(dst_const_name, dst_die);
-        }
-      }
-    }
+    gather(dst_die, dst_name_to_die, dst_name_to_die_artificial);
   }
   const uint32_t src_size = src_name_to_die.GetSize();
   const uint32_t dst_size = dst_name_to_die.GetSize();
@@ -3556,8 +3544,8 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
 
   if (fast_path) {
     for (idx = 0; idx < src_size; ++idx) {
-      src_die = src_name_to_die.GetValueAtIndexUnchecked(idx);
-      dst_die = dst_name_to_die.GetValueAtIndexUnchecked(idx);
+      DWARFDIE src_die = src_name_to_die.GetValueAtIndexUnchecked(idx);
+      DWARFDIE dst_die = dst_name_to_die.GetValueAtIndexUnchecked(idx);
 
       if (src_die.Tag() != dst_die.Tag())
         fast_path = false;
@@ -3575,28 +3563,29 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
 
   DWARFASTParserClang *src_dwarf_ast_parser =
       static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*src_die.GetCU()));
+          SymbolFileDWARF::GetDWARFParser(*src_class_die.GetCU()));
   DWARFASTParserClang *dst_dwarf_ast_parser =
       static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*dst_die.GetCU()));
+          SymbolFileDWARF::GetDWARFParser(*dst_class_die.GetCU()));
+  auto link = [&](DWARFDIE src, DWARFDIE dst) {
+    SymbolFileDWARF::DIEToTypePtr &die_to_type =
+        dst_class_die.GetDWARF()->GetDIEToType();
+    clang::DeclContext *src_decl_ctx =
+        src_dwarf_ast_parser->m_die_to_decl_ctx[src.GetDIE()];
+    if (src_decl_ctx)
+      dst_dwarf_ast_parser->LinkDeclContextToDIE(src_decl_ctx, dst);
+
+    if (Type *src_child_type = die_to_type[src.GetDIE()])
+      die_to_type[dst.GetDIE()] = src_child_type;
+  };
 
   // Now do the work of linking the DeclContexts and Types.
   if (fast_path) {
     // We can do this quickly.  Just run across the tables index-for-index
     // since we know each node has matching names and tags.
     for (idx = 0; idx < src_size; ++idx) {
-      src_die = src_name_to_die.GetValueAtIndexUnchecked(idx);
-      dst_die = dst_name_to_die.GetValueAtIndexUnchecked(idx);
-
-      clang::DeclContext *src_decl_ctx =
-          src_dwarf_ast_parser->m_die_to_decl_ctx[src_die.GetDIE()];
-      if (src_decl_ctx)
-        dst_dwarf_ast_parser->LinkDeclContextToDIE(src_decl_ctx, dst_die);
-
-      Type *src_child_type =
-          dst_die.GetDWARF()->GetDIEToType()[src_die.GetDIE()];
-      if (src_child_type)
-        dst_die.GetDWARF()->GetDIEToType()[dst_die.GetDIE()] = src_child_type;
+      link(src_name_to_die.GetValueAtIndexUnchecked(idx),
+           dst_name_to_die.GetValueAtIndexUnchecked(idx));
     }
   } else {
     // We must do this slowly.  For each member of the destination, look up a
@@ -3608,24 +3597,13 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
 
       for (idx = 0; idx < dst_size; ++idx) {
         ConstString dst_name = dst_name_to_die.GetCStringAtIndex(idx);
-        dst_die = dst_name_to_die.GetValueAtIndexUnchecked(idx);
-        src_die = src_name_to_die.Find(dst_name, DWARFDIE());
+        DWARFDIE dst_die = dst_name_to_die.GetValueAtIndexUnchecked(idx);
+        DWARFDIE src_die = src_name_to_die.Find(dst_name, DWARFDIE());
 
-        if (src_die && (src_die.Tag() == dst_die.Tag())) {
-          clang::DeclContext *src_decl_ctx =
-              src_dwarf_ast_parser->m_die_to_decl_ctx[src_die.GetDIE()];
-          if (src_decl_ctx)
-            dst_dwarf_ast_parser->LinkDeclContextToDIE(src_decl_ctx, dst_die);
-
-          Type *src_child_type =
-              dst_die.GetDWARF()->GetDIEToType()[src_die.GetDIE()];
-          if (src_child_type) {
-            dst_die.GetDWARF()->GetDIEToType()[dst_die.GetDIE()] =
-                src_child_type;
-          }
-        } else {
+        if (src_die && (src_die.Tag() == dst_die.Tag()))
+          link(src_die, dst_die);
+        else
           failures.push_back(dst_die);
-        }
       }
     }
   }
@@ -3639,29 +3617,21 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     for (idx = 0; idx < src_size_artificial; ++idx) {
       ConstString src_name_artificial =
           src_name_to_die_artificial.GetCStringAtIndex(idx);
-      src_die = src_name_to_die_artificial.GetValueAtIndexUnchecked(idx);
-      dst_die =
+      DWARFDIE src_die =
+          src_name_to_die_artificial.GetValueAtIndexUnchecked(idx);
+      DWARFDIE dst_die =
           dst_name_to_die_artificial.Find(src_name_artificial, DWARFDIE());
 
-      if (dst_die) {
-        // Both classes have the artificial types, link them
-        clang::DeclContext *src_decl_ctx =
-            src_dwarf_ast_parser->m_die_to_decl_ctx[src_die.GetDIE()];
-        if (src_decl_ctx)
-          dst_dwarf_ast_parser->LinkDeclContextToDIE(src_decl_ctx, dst_die);
-
-        Type *src_child_type =
-            dst_die.GetDWARF()->GetDIEToType()[src_die.GetDIE()];
-        if (src_child_type)
-          dst_die.GetDWARF()->GetDIEToType()[dst_die.GetDIE()] = src_child_type;
-      }
+      // Both classes have the artificial types, link them
+      if (dst_die)
+        link(src_die, dst_die);
     }
   }
 
   if (dst_size_artificial) {
     for (idx = 0; idx < dst_size_artificial; ++idx) {
-      dst_die = dst_name_to_die_artificial.GetValueAtIndexUnchecked(idx);
-      failures.push_back(dst_die);
+      failures.push_back(
+          dst_name_to_die_artificial.GetValueAtIndexUnchecked(idx));
     }
   }
 
