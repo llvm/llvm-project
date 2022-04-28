@@ -466,6 +466,10 @@ protected:
   /// the .loc/.file directives. Defaults to true.
   bool UsesDwarfFileAndLocDirectives = true;
 
+  /// True if DWARF `.file directory' directive syntax is used by
+  /// default.
+  bool EnableDwarfFileDirectoryDefault = true;
+
   /// True if the target needs the DWARF section length in the header (if any)
   /// of the DWARF section in the assembly file. Defaults to true.
   bool DwarfSectionSizeRequired = true;
@@ -806,6 +810,10 @@ public:
 
   bool needsDwarfSectionSizeInHeader() const {
     return DwarfSectionSizeRequired;
+  }
+
+  bool enableDwarfFileDirectoryDefault() const {
+    return EnableDwarfFileDirectoryDefault;
   }
 
   void addInitialFrameState(const MCCFIInstruction &Inst);
