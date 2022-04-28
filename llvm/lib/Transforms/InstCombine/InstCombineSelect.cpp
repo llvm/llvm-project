@@ -2569,6 +2569,73 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
   return nullptr;
 }
 
+// Match the following IR pattern:
+//   %x.lowbits = and i8 %x, %lowbitmask
+//   %x.lowbits.are.zero = icmp eq i8 %x.lowbits, 0
+//   %x.biased = add i8 %x, %bias
+//   %x.biased.highbits = and i8 %x.biased, %highbitmask
+//   %x.roundedup = select i1 %x.lowbits.are.zero, i8 %x, i8 %x.biased.highbits
+// Define:
+//   %alignment = add i8 %lowbitmask, 1
+// Iff 1. an %alignment is a power-of-two (aka, %lowbitmask is a low bit mask)
+// and 2. %bias is equal to either %lowbitmask or %alignment,
+// and 3. %highbitmask is equal to ~%lowbitmask (aka, to -%alignment)
+// then this pattern can be transformed into:
+//   %x.offset = add i8 %x, %lowbitmask
+//   %x.roundedup = and i8 %x.offset, %highbitmask
+static Instruction *
+foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *Cond = SI.getCondition();
+  Value *X = SI.getTrueValue();
+  Value *XBiasedHighBits = SI.getFalseValue();
+
+  ICmpInst::Predicate Pred;
+  Value *XLowBits;
+  if (!match(Cond, m_ICmp(Pred, m_Value(XLowBits), m_ZeroInt())) ||
+      !ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  if (Pred == ICmpInst::Predicate::ICMP_NE)
+    std::swap(X, XBiasedHighBits);
+
+  // FIXME: if BiasCst is equal to LowBitMaskCst,
+  //        we could just return XBiasedHighBits.
+  if (!XBiasedHighBits->hasOneUse())
+    return nullptr;
+
+  // FIXME: we could support non non-splats here.
+
+  const APInt *LowBitMaskCst;
+  if (!match(XLowBits, m_And(m_Specific(X), m_APIntAllowUndef(LowBitMaskCst))))
+    return nullptr;
+
+  const APInt *BiasCst, *HighBitMaskCst;
+  if (!match(XBiasedHighBits,
+             m_And(m_Add(m_Specific(X), m_APIntAllowUndef(BiasCst)),
+                   m_APIntAllowUndef(HighBitMaskCst))))
+    return nullptr;
+
+  if (!LowBitMaskCst->isMask())
+    return nullptr;
+
+  APInt InvertedLowBitMaskCst = ~*LowBitMaskCst;
+  if (InvertedLowBitMaskCst != *HighBitMaskCst)
+    return nullptr;
+
+  APInt AlignmentCst = *LowBitMaskCst + 1;
+
+  if (*BiasCst != AlignmentCst && *BiasCst != *LowBitMaskCst)
+    return nullptr;
+
+  // FIXME: could we preserve undef's here?
+  Type *Ty = X->getType();
+  Value *XOffset = Builder.CreateAdd(X, ConstantInt::get(Ty, *LowBitMaskCst),
+                                     X->getName() + ".offset");
+  return BinaryOperator::CreateAnd(XOffset,
+                                   ConstantInt::get(Ty, *HighBitMaskCst));
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -3113,6 +3180,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Value *Fr = foldSelectWithFrozenICmp(SI, Builder))
     return replaceInstUsesWith(SI, Fr);
+
+  if (Instruction *I = foldRoundUpIntegerWithPow2Alignment(SI, Builder))
+    return I;
 
   // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)
   // Load inst is intentionally not checked for hasOneUse()
