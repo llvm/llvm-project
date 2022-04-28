@@ -77,7 +77,8 @@ define dso_local <256 x i32> @test_amx_bitcast_store(<256 x i32>* %out, i16 %m, 
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i16 [[M]] to i64
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[M]], i8* [[TMP1]], i64 [[TMP2]], x86_amx [[T1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <256 x i32>, <256 x i32>* [[TMP0]], align 1024
-; CHECK-NEXT:    store <256 x i32> [[TMP3]], <256 x i32>* [[OUT:%.*]], align 1024
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <256 x i32>* [[OUT:%.*]] to i8*
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[M]], i8* [[TMP4]], i64 64, x86_amx [[T1]])
 ; CHECK-NEXT:    ret <256 x i32> [[TMP3]]
 ;
 entry:
@@ -127,20 +128,16 @@ entry:
 
 define dso_local void @__tile_loadd(%struct.__tile_str* nocapture %0, i8* %1, i64 %2) local_unnamed_addr {
 ; CHECK-LABEL: @__tile_loadd(
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR:%.*]], %struct.__tile_str* [[TMP0:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = load i16, i16* [[TMP5]], align 64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP0]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, i16* [[TMP7]], align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP2:%.*]], 32
-; CHECK-NEXT:    [[TMP10:%.*]] = ashr exact i64 [[TMP9]], 32
-; CHECK-NEXT:    [[TMP11:%.*]] = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP6]], i16 [[TMP8]], i8* [[TMP1:%.*]], i64 [[TMP10]])
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <256 x i32>* [[TMP4]] to i8*
-; CHECK-NEXT:    [[TMP13:%.*]] = sext i16 [[TMP8]] to i64
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[TMP6]], i16 [[TMP8]], i8* [[TMP12]], i64 [[TMP13]], x86_amx [[TMP11]])
-; CHECK-NEXT:    [[TMP14:%.*]] = load <256 x i32>, <256 x i32>* [[TMP4]], align 1024
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP0]], i64 0, i32 2
-; CHECK-NEXT:    store <256 x i32> [[TMP14]], <256 x i32>* [[TMP15]], align 64
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR:%.*]], %struct.__tile_str* [[TMP0:%.*]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, i16* [[TMP4]], align 64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP0]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load i16, i16* [[TMP6]], align 2
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP2:%.*]], 32
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr exact i64 [[TMP8]], 32
+; CHECK-NEXT:    [[TMP10:%.*]] = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP5]], i16 [[TMP7]], i8* [[TMP1:%.*]], i64 [[TMP9]])
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP0]], i64 0, i32 2
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <256 x i32>* [[TMP11]] to i8*
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[TMP5]], i16 [[TMP7]], i8* [[TMP12]], i64 64, x86_amx [[TMP10]])
 ; CHECK-NEXT:    ret void
 ;
   %4 = getelementptr inbounds %struct.__tile_str, %struct.__tile_str* %0, i64 0, i32 0
@@ -158,41 +155,25 @@ define dso_local void @__tile_loadd(%struct.__tile_str* nocapture %0, i8* %1, i6
 
 define dso_local void @__tile_dpbssd(%struct.__tile_str* nocapture %0, %struct.__tile_str* nocapture readonly byval(%struct.__tile_str) align 64 %1, %struct.__tile_str* nocapture readonly byval(%struct.__tile_str) align 64 %2) local_unnamed_addr {
 ; CHECK-LABEL: @__tile_dpbssd(
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP5:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP6:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP7:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR:%.*]], %struct.__tile_str* [[TMP1:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = load i16, i16* [[TMP8]], align 64
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP2:%.*]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = load i16, i16* [[TMP10]], align 2
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP1]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = load i16, i16* [[TMP12]], align 2
-; CHECK-NEXT:    [[TMP14:%.*]] = udiv i16 [[TMP13]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP0:%.*]], i64 0, i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = load <256 x i32>, <256 x i32>* [[TMP15]], align 64
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <256 x i32>* [[TMP7]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[TMP16]], <256 x i32>* [[TMP7]], align 1024
-; CHECK-NEXT:    [[TMP18:%.*]] = sext i16 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP19:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP9]], i16 [[TMP11]], i8* [[TMP17]], i64 [[TMP18]])
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP1]], i64 0, i32 2
-; CHECK-NEXT:    [[TMP21:%.*]] = load <256 x i32>, <256 x i32>* [[TMP20]], align 64
-; CHECK-NEXT:    [[TMP22:%.*]] = bitcast <256 x i32>* [[TMP6]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[TMP21]], <256 x i32>* [[TMP6]], align 1024
-; CHECK-NEXT:    [[TMP23:%.*]] = sext i16 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP24:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP9]], i16 [[TMP13]], i8* [[TMP22]], i64 [[TMP23]])
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP2]], i64 0, i32 2
-; CHECK-NEXT:    [[TMP26:%.*]] = load <256 x i32>, <256 x i32>* [[TMP25]], align 64
-; CHECK-NEXT:    [[TMP27:%.*]] = bitcast <256 x i32>* [[TMP5]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[TMP26]], <256 x i32>* [[TMP5]], align 1024
-; CHECK-NEXT:    [[TMP28:%.*]] = sext i16 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP29:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP14]], i16 [[TMP11]], i8* [[TMP27]], i64 [[TMP28]])
-; CHECK-NEXT:    [[TMP30:%.*]] = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 [[TMP9]], i16 [[TMP11]], i16 [[TMP13]], x86_amx [[TMP19]], x86_amx [[TMP24]], x86_amx [[TMP29]])
-; CHECK-NEXT:    [[TMP31:%.*]] = bitcast <256 x i32>* [[TMP4]] to i8*
-; CHECK-NEXT:    [[TMP32:%.*]] = sext i16 [[TMP11]] to i64
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[TMP9]], i16 [[TMP11]], i8* [[TMP31]], i64 [[TMP32]], x86_amx [[TMP30]])
-; CHECK-NEXT:    [[TMP33:%.*]] = load <256 x i32>, <256 x i32>* [[TMP4]], align 1024
-; CHECK-NEXT:    store <256 x i32> [[TMP33]], <256 x i32>* [[TMP15]], align 64
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR:%.*]], %struct.__tile_str* [[TMP1:%.*]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, i16* [[TMP4]], align 64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP2:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load i16, i16* [[TMP6]], align 2
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP1]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = load i16, i16* [[TMP8]], align 2
+; CHECK-NEXT:    [[TMP10:%.*]] = udiv i16 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP0:%.*]], i64 0, i32 2
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <256 x i32>* [[TMP11]] to i8*
+; CHECK-NEXT:    [[TMP13:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP5]], i16 [[TMP7]], i8* [[TMP12]], i64 64)
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP1]], i64 0, i32 2
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <256 x i32>* [[TMP14]] to i8*
+; CHECK-NEXT:    [[TMP16:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP5]], i16 [[TMP9]], i8* [[TMP15]], i64 64)
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP2]], i64 0, i32 2
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <256 x i32>* [[TMP17]] to i8*
+; CHECK-NEXT:    [[TMP19:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP10]], i16 [[TMP7]], i8* [[TMP18]], i64 64)
+; CHECK-NEXT:    [[TMP20:%.*]] = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 [[TMP5]], i16 [[TMP7]], i16 [[TMP9]], x86_amx [[TMP13]], x86_amx [[TMP16]], x86_amx [[TMP19]])
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <256 x i32>* [[TMP11]] to i8*
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[TMP5]], i16 [[TMP7]], i8* [[TMP21]], i64 64, x86_amx [[TMP20]])
 ; CHECK-NEXT:    ret void
 ;
   %4 = getelementptr inbounds %struct.__tile_str, %struct.__tile_str* %1, i64 0, i32 0
@@ -218,32 +199,16 @@ define dso_local void @__tile_dpbssd(%struct.__tile_str* nocapture %0, %struct._
 
 define dso_local void @__tile_dpbsud(i16 %m, i16 %n, i16 %k, <256 x i32>* %pc, <256 x i32>* %pa, <256 x i32>* %pb) {
 ; CHECK-LABEL: @__tile_dpbsud(
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP3:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP5:%.*]] = udiv i16 [[K:%.*]], 4
-; CHECK-NEXT:    [[T0:%.*]] = load <256 x i32>, <256 x i32>* [[PA:%.*]], align 64
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <256 x i32>* [[TMP4]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T0]], <256 x i32>* [[TMP4]], align 1024
-; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[K]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M:%.*]], i16 [[K]], i8* [[TMP6]], i64 [[TMP7]])
-; CHECK-NEXT:    [[T2:%.*]] = load <256 x i32>, <256 x i32>* [[PB:%.*]], align 64
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <256 x i32>* [[TMP3]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T2]], <256 x i32>* [[TMP3]], align 1024
-; CHECK-NEXT:    [[TMP10:%.*]] = sext i16 [[N:%.*]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP5]], i16 [[N]], i8* [[TMP9]], i64 [[TMP10]])
-; CHECK-NEXT:    [[T4:%.*]] = load <256 x i32>, <256 x i32>* [[PC:%.*]], align 64
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <256 x i32>* [[TMP2]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T4]], <256 x i32>* [[TMP2]], align 1024
-; CHECK-NEXT:    [[TMP13:%.*]] = sext i16 [[N]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M]], i16 [[N]], i8* [[TMP12]], i64 [[TMP13]])
-; CHECK-NEXT:    [[T6:%.*]] = tail call x86_amx @llvm.x86.tdpbsud.internal(i16 [[M]], i16 [[N]], i16 [[K]], x86_amx [[TMP14]], x86_amx [[TMP8]], x86_amx [[TMP11]])
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <256 x i32>* [[TMP1]] to i8*
-; CHECK-NEXT:    [[TMP16:%.*]] = sext i16 [[N]] to i64
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[N]], i8* [[TMP15]], i64 [[TMP16]], x86_amx [[T6]])
-; CHECK-NEXT:    [[TMP17:%.*]] = load <256 x i32>, <256 x i32>* [[TMP1]], align 1024
-; CHECK-NEXT:    store <256 x i32> [[TMP17]], <256 x i32>* [[PC]], align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i16 [[K:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i32>* [[PA:%.*]] to i8*
+; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M:%.*]], i16 [[K]], i8* [[TMP2]], i64 64)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <256 x i32>* [[PB:%.*]] to i8*
+; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP1]], i16 [[N:%.*]], i8* [[TMP4]], i64 64)
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <256 x i32>* [[PC:%.*]] to i8*
+; CHECK-NEXT:    [[TMP7:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M]], i16 [[N]], i8* [[TMP6]], i64 64)
+; CHECK-NEXT:    [[T6:%.*]] = tail call x86_amx @llvm.x86.tdpbsud.internal(i16 [[M]], i16 [[N]], i16 [[K]], x86_amx [[TMP7]], x86_amx [[TMP3]], x86_amx [[TMP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <256 x i32>* [[PC]] to i8*
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[N]], i8* [[TMP8]], i64 64, x86_amx [[T6]])
 ; CHECK-NEXT:    ret void
 ;
   %t0 = load <256 x i32>, <256 x i32>* %pa, align 64
@@ -260,32 +225,16 @@ define dso_local void @__tile_dpbsud(i16 %m, i16 %n, i16 %k, <256 x i32>* %pc, <
 
 define dso_local void @__tile_dpbusd(i16 %m, i16 %n, i16 %k, <256 x i32>* %pc, <256 x i32>* %pa, <256 x i32>* %pb) {
 ; CHECK-LABEL: @__tile_dpbusd(
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP3:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP5:%.*]] = udiv i16 [[K:%.*]], 4
-; CHECK-NEXT:    [[T0:%.*]] = load <256 x i32>, <256 x i32>* [[PA:%.*]], align 64
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <256 x i32>* [[TMP4]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T0]], <256 x i32>* [[TMP4]], align 1024
-; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[K]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M:%.*]], i16 [[K]], i8* [[TMP6]], i64 [[TMP7]])
-; CHECK-NEXT:    [[T2:%.*]] = load <256 x i32>, <256 x i32>* [[PB:%.*]], align 64
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <256 x i32>* [[TMP3]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T2]], <256 x i32>* [[TMP3]], align 1024
-; CHECK-NEXT:    [[TMP10:%.*]] = sext i16 [[N:%.*]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP5]], i16 [[N]], i8* [[TMP9]], i64 [[TMP10]])
-; CHECK-NEXT:    [[T4:%.*]] = load <256 x i32>, <256 x i32>* [[PC:%.*]], align 64
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <256 x i32>* [[TMP2]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T4]], <256 x i32>* [[TMP2]], align 1024
-; CHECK-NEXT:    [[TMP13:%.*]] = sext i16 [[N]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M]], i16 [[N]], i8* [[TMP12]], i64 [[TMP13]])
-; CHECK-NEXT:    [[T6:%.*]] = tail call x86_amx @llvm.x86.tdpbusd.internal(i16 [[M]], i16 [[N]], i16 [[K]], x86_amx [[TMP14]], x86_amx [[TMP8]], x86_amx [[TMP11]])
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <256 x i32>* [[TMP1]] to i8*
-; CHECK-NEXT:    [[TMP16:%.*]] = sext i16 [[N]] to i64
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[N]], i8* [[TMP15]], i64 [[TMP16]], x86_amx [[T6]])
-; CHECK-NEXT:    [[TMP17:%.*]] = load <256 x i32>, <256 x i32>* [[TMP1]], align 1024
-; CHECK-NEXT:    store <256 x i32> [[TMP17]], <256 x i32>* [[PC]], align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i16 [[K:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i32>* [[PA:%.*]] to i8*
+; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M:%.*]], i16 [[K]], i8* [[TMP2]], i64 64)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <256 x i32>* [[PB:%.*]] to i8*
+; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP1]], i16 [[N:%.*]], i8* [[TMP4]], i64 64)
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <256 x i32>* [[PC:%.*]] to i8*
+; CHECK-NEXT:    [[TMP7:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M]], i16 [[N]], i8* [[TMP6]], i64 64)
+; CHECK-NEXT:    [[T6:%.*]] = tail call x86_amx @llvm.x86.tdpbusd.internal(i16 [[M]], i16 [[N]], i16 [[K]], x86_amx [[TMP7]], x86_amx [[TMP3]], x86_amx [[TMP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <256 x i32>* [[PC]] to i8*
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[N]], i8* [[TMP8]], i64 64, x86_amx [[T6]])
 ; CHECK-NEXT:    ret void
 ;
   %t0 = load <256 x i32>, <256 x i32>* %pa, align 64
@@ -302,32 +251,16 @@ define dso_local void @__tile_dpbusd(i16 %m, i16 %n, i16 %k, <256 x i32>* %pc, <
 
 define dso_local void @__tile_dpbuud(i16 %m, i16 %n, i16 %k, <256 x i32>* %pc, <256 x i32>* %pa, <256 x i32>* %pb) {
 ; CHECK-LABEL: @__tile_dpbuud(
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP3:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP5:%.*]] = udiv i16 [[K:%.*]], 4
-; CHECK-NEXT:    [[T0:%.*]] = load <256 x i32>, <256 x i32>* [[PA:%.*]], align 64
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <256 x i32>* [[TMP4]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T0]], <256 x i32>* [[TMP4]], align 1024
-; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[K]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M:%.*]], i16 [[K]], i8* [[TMP6]], i64 [[TMP7]])
-; CHECK-NEXT:    [[T2:%.*]] = load <256 x i32>, <256 x i32>* [[PB:%.*]], align 64
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <256 x i32>* [[TMP3]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T2]], <256 x i32>* [[TMP3]], align 1024
-; CHECK-NEXT:    [[TMP10:%.*]] = sext i16 [[N:%.*]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP5]], i16 [[N]], i8* [[TMP9]], i64 [[TMP10]])
-; CHECK-NEXT:    [[T4:%.*]] = load <256 x i32>, <256 x i32>* [[PC:%.*]], align 64
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <256 x i32>* [[TMP2]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T4]], <256 x i32>* [[TMP2]], align 1024
-; CHECK-NEXT:    [[TMP13:%.*]] = sext i16 [[N]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M]], i16 [[N]], i8* [[TMP12]], i64 [[TMP13]])
-; CHECK-NEXT:    [[T6:%.*]] = tail call x86_amx @llvm.x86.tdpbuud.internal(i16 [[M]], i16 [[N]], i16 [[K]], x86_amx [[TMP14]], x86_amx [[TMP8]], x86_amx [[TMP11]])
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <256 x i32>* [[TMP1]] to i8*
-; CHECK-NEXT:    [[TMP16:%.*]] = sext i16 [[N]] to i64
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[N]], i8* [[TMP15]], i64 [[TMP16]], x86_amx [[T6]])
-; CHECK-NEXT:    [[TMP17:%.*]] = load <256 x i32>, <256 x i32>* [[TMP1]], align 1024
-; CHECK-NEXT:    store <256 x i32> [[TMP17]], <256 x i32>* [[PC]], align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i16 [[K:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i32>* [[PA:%.*]] to i8*
+; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M:%.*]], i16 [[K]], i8* [[TMP2]], i64 64)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <256 x i32>* [[PB:%.*]] to i8*
+; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP1]], i16 [[N:%.*]], i8* [[TMP4]], i64 64)
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <256 x i32>* [[PC:%.*]] to i8*
+; CHECK-NEXT:    [[TMP7:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M]], i16 [[N]], i8* [[TMP6]], i64 64)
+; CHECK-NEXT:    [[T6:%.*]] = tail call x86_amx @llvm.x86.tdpbuud.internal(i16 [[M]], i16 [[N]], i16 [[K]], x86_amx [[TMP7]], x86_amx [[TMP3]], x86_amx [[TMP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <256 x i32>* [[PC]] to i8*
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[N]], i8* [[TMP8]], i64 64, x86_amx [[T6]])
 ; CHECK-NEXT:    ret void
 ;
   %t0 = load <256 x i32>, <256 x i32>* %pa, align 64
@@ -344,32 +277,16 @@ define dso_local void @__tile_dpbuud(i16 %m, i16 %n, i16 %k, <256 x i32>* %pc, <
 
 define dso_local void @__tile_dpbf16ps(i16 %m, i16 %n, i16 %k, <256 x i32>* %pc, <256 x i32>* %pa, <256 x i32>* %pb) {
 ; CHECK-LABEL: @__tile_dpbf16ps(
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP3:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP5:%.*]] = udiv i16 [[K:%.*]], 4
-; CHECK-NEXT:    [[T0:%.*]] = load <256 x i32>, <256 x i32>* [[PA:%.*]], align 64
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <256 x i32>* [[TMP4]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T0]], <256 x i32>* [[TMP4]], align 1024
-; CHECK-NEXT:    [[TMP7:%.*]] = sext i16 [[K]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M:%.*]], i16 [[K]], i8* [[TMP6]], i64 [[TMP7]])
-; CHECK-NEXT:    [[T2:%.*]] = load <256 x i32>, <256 x i32>* [[PB:%.*]], align 64
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <256 x i32>* [[TMP3]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T2]], <256 x i32>* [[TMP3]], align 1024
-; CHECK-NEXT:    [[TMP10:%.*]] = sext i16 [[N:%.*]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP5]], i16 [[N]], i8* [[TMP9]], i64 [[TMP10]])
-; CHECK-NEXT:    [[T4:%.*]] = load <256 x i32>, <256 x i32>* [[PC:%.*]], align 64
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <256 x i32>* [[TMP2]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T4]], <256 x i32>* [[TMP2]], align 1024
-; CHECK-NEXT:    [[TMP13:%.*]] = sext i16 [[N]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M]], i16 [[N]], i8* [[TMP12]], i64 [[TMP13]])
-; CHECK-NEXT:    [[T6:%.*]] = tail call x86_amx @llvm.x86.tdpbf16ps.internal(i16 [[M]], i16 [[N]], i16 [[K]], x86_amx [[TMP14]], x86_amx [[TMP8]], x86_amx [[TMP11]])
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <256 x i32>* [[TMP1]] to i8*
-; CHECK-NEXT:    [[TMP16:%.*]] = sext i16 [[N]] to i64
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[N]], i8* [[TMP15]], i64 [[TMP16]], x86_amx [[T6]])
-; CHECK-NEXT:    [[TMP17:%.*]] = load <256 x i32>, <256 x i32>* [[TMP1]], align 1024
-; CHECK-NEXT:    store <256 x i32> [[TMP17]], <256 x i32>* [[PC]], align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i16 [[K:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i32>* [[PA:%.*]] to i8*
+; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M:%.*]], i16 [[K]], i8* [[TMP2]], i64 64)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <256 x i32>* [[PB:%.*]] to i8*
+; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP1]], i16 [[N:%.*]], i8* [[TMP4]], i64 64)
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <256 x i32>* [[PC:%.*]] to i8*
+; CHECK-NEXT:    [[TMP7:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[M]], i16 [[N]], i8* [[TMP6]], i64 64)
+; CHECK-NEXT:    [[T6:%.*]] = tail call x86_amx @llvm.x86.tdpbf16ps.internal(i16 [[M]], i16 [[N]], i16 [[K]], x86_amx [[TMP7]], x86_amx [[TMP3]], x86_amx [[TMP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <256 x i32>* [[PC]] to i8*
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[M]], i16 [[N]], i8* [[TMP8]], i64 64, x86_amx [[T6]])
 ; CHECK-NEXT:    ret void
 ;
   %t0 = load <256 x i32>, <256 x i32>* %pa, align 64
@@ -386,20 +303,16 @@ define dso_local void @__tile_dpbf16ps(i16 %m, i16 %n, i16 %k, <256 x i32>* %pc,
 
 define dso_local void @__tile_stored(i8* %0, i64 %1, %struct.__tile_str* nocapture readonly byval(%struct.__tile_str) align 64 %2) local_unnamed_addr {
 ; CHECK-LABEL: @__tile_stored(
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca <256 x i32>, align 64
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR:%.*]], %struct.__tile_str* [[TMP2:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = load i16, i16* [[TMP5]], align 64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP2]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, i16* [[TMP7]], align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP2]], i64 0, i32 2
-; CHECK-NEXT:    [[TMP10:%.*]] = load <256 x i32>, <256 x i32>* [[TMP9]], align 64
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <256 x i32>* [[TMP4]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[TMP10]], <256 x i32>* [[TMP4]], align 1024
-; CHECK-NEXT:    [[TMP12:%.*]] = sext i16 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP13:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP6]], i16 [[TMP8]], i8* [[TMP11]], i64 [[TMP12]])
-; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[TMP1:%.*]], 32
-; CHECK-NEXT:    [[TMP15:%.*]] = ashr exact i64 [[TMP14]], 32
-; CHECK-NEXT:    tail call void @llvm.x86.tilestored64.internal(i16 [[TMP6]], i16 [[TMP8]], i8* [[TMP0:%.*]], i64 [[TMP15]], x86_amx [[TMP13]])
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR:%.*]], %struct.__tile_str* [[TMP2:%.*]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, i16* [[TMP4]], align 64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP2]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load i16, i16* [[TMP6]], align 2
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TILE_STR]], %struct.__tile_str* [[TMP2]], i64 0, i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <256 x i32>* [[TMP8]] to i8*
+; CHECK-NEXT:    [[TMP10:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP5]], i16 [[TMP7]], i8* [[TMP9]], i64 64)
+; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP1:%.*]], 32
+; CHECK-NEXT:    [[TMP12:%.*]] = ashr exact i64 [[TMP11]], 32
+; CHECK-NEXT:    tail call void @llvm.x86.tilestored64.internal(i16 [[TMP5]], i16 [[TMP7]], i8* [[TMP0:%.*]], i64 [[TMP12]], x86_amx [[TMP10]])
 ; CHECK-NEXT:    ret void
 ;
   %4 = getelementptr inbounds %struct.__tile_str, %struct.__tile_str* %2, i64 0, i32 0
