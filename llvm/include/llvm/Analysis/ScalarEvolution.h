@@ -545,6 +545,10 @@ public:
   /// Return true if the SCEV expression contains an undef value.
   bool containsUndefs(const SCEV *S) const;
 
+  /// Return true if the SCEV expression contains a Value that has been
+  /// optimised out and is now a nullptr.
+  bool containsErasedValue(const SCEV *S) const;
+
   /// Return a SCEV expression for the full generality of the specified
   /// expression.
   const SCEV *getSCEV(Value *V);
