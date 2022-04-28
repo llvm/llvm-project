@@ -2423,6 +2423,8 @@ bool ScopeHandler::ConvertToObjectEntity(Symbol &symbol) {
     symbol.set_details(ObjectEntityDetails{std::move(*details)});
   } else if (auto *useDetails{symbol.detailsIf<UseDetails>()}) {
     return useDetails->symbol().has<ObjectEntityDetails>();
+  } else if (auto *hostDetails{symbol.detailsIf<HostAssocDetails>()}) {
+    return hostDetails->symbol().has<ObjectEntityDetails>();
   } else {
     return false;
   }
@@ -2441,6 +2443,10 @@ bool ScopeHandler::ConvertToProcEntity(Symbol &symbol) {
       CHECK(!symbol.test(Symbol::Flag::Subroutine));
       symbol.set(Symbol::Flag::Function);
     }
+  } else if (auto *useDetails{symbol.detailsIf<UseDetails>()}) {
+    return useDetails->symbol().has<ProcEntityDetails>();
+  } else if (auto *hostDetails{symbol.detailsIf<HostAssocDetails>()}) {
+    return hostDetails->symbol().has<ProcEntityDetails>();
   } else {
     return false;
   }
