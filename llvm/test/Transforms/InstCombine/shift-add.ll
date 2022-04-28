@@ -3,6 +3,8 @@
 ;
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
+declare void @use(i8)
+
 define i32 @shl_C1_add_A_C2_i32(i16 %A) {
 ; CHECK-LABEL: @shl_C1_add_A_C2_i32(
 ; CHECK-NEXT:    [[B:%.*]] = zext i16 [[A:%.*]] to i32
@@ -168,6 +170,189 @@ define i32 @shl_add_nsw(i32 %x) {
   %a = add nsw i32 %x, 5
   %r = shl i32 6, %a
   ret i32 %r
+}
+
+; offset precondition check (must be negative constant) for lshr_exact_add_negative_shift_positive
+
+define i32 @lshr_exact_add_positive_shift_positive(i32 %x) {
+; CHECK-LABEL: @lshr_exact_add_positive_shift_positive(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, 1
+  %r = lshr exact i32 2, %a
+  ret i32 %r
+}
+
+define i32 @lshr_exact_add_big_negative_offset(i32 %x) {
+; CHECK-LABEL: @lshr_exact_add_big_negative_offset(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -33
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -33
+  %r = lshr exact i32 2, %a
+  ret i32 %r
+}
+
+; leading zeros for shifted constant precondition check for lshr_exact_add_negative_shift_positive
+
+define i32 @lshr_exact_add_negative_shift_negative(i32 %x) {
+; CHECK-LABEL: @lshr_exact_add_negative_shift_negative(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 -2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -1
+  %r = lshr exact i32 -2, %a
+  ret i32 %r
+}
+
+; exact precondition check for lshr_exact_add_negative_shift_positive
+
+define i32 @lshr_add_negative_shift_no_exact(i32 %x) {
+; CHECK-LABEL: @lshr_add_negative_shift_no_exact(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -1
+  %r = lshr i32 2, %a
+  ret i32 %r
+}
+
+define i32 @lshr_exact_add_negative_shift_positive(i32 %x) {
+; CHECK-LABEL: @lshr_exact_add_negative_shift_positive(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -1
+  %r = lshr exact i32 2, %a
+  ret i32 %r
+}
+
+define i8 @lshr_exact_add_negative_shift_positive_extra_use(i8 %x) {
+; CHECK-LABEL: @lshr_exact_add_negative_shift_positive_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 64, [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, -1
+  call void @use(i8 %a)
+  %r = lshr exact i8 64, %a
+  ret i8 %r
+}
+
+define <2 x i9> @lshr_exact_add_negative_shift_positive_vec(<2 x i9> %x) {
+; CHECK-LABEL: @lshr_exact_add_negative_shift_positive_vec(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i9> [[X:%.*]], <i9 -7, i9 -7>
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> <i9 2, i9 2>, [[A]]
+; CHECK-NEXT:    ret <2 x i9> [[R]]
+;
+  %a = add <2 x i9> %x, <i9 -7, i9 -7>
+  %r = lshr exact <2 x i9> <i9 2, i9 2>, %a
+  ret <2 x i9> %r
+}
+
+; not enough leading zeros in shift constant
+
+define <2 x i9> @lshr_exact_add_negative_shift_lzcnt(<2 x i9> %x) {
+; CHECK-LABEL: @lshr_exact_add_negative_shift_lzcnt(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i9> [[X:%.*]], <i9 -7, i9 -7>
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> <i9 4, i9 4>, [[A]]
+; CHECK-NEXT:    ret <2 x i9> [[R]]
+;
+  %a = add <2 x i9> %x, <i9 -7, i9 -7>
+  %r = lshr exact <2 x i9> <i9 4, i9 4>, %a
+  ret <2 x i9> %r
+}
+
+; leading ones precondition check for ashr_exact_add_negative_shift_[positive,negative]
+
+define i8 @ashr_exact_add_negative_shift_no_trailing_zeros(i8 %x) {
+; CHECK-LABEL: @ashr_exact_add_negative_shift_no_trailing_zeros(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 -112, [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, -4
+  %r = ashr exact i8 -112, %a ; 0b1001_0000
+  ret i8 %r
+}
+
+define i32 @ashr_exact_add_big_negative_offset(i32 %x) {
+; CHECK-LABEL: @ashr_exact_add_big_negative_offset(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -33
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 -2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -33
+  %r = ashr exact i32 -2, %a
+  ret i32 %r
+}
+
+; exact precondition check for ashr_exact_add_negative_shift_[positive,negative]
+
+define i32 @ashr_add_negative_shift_no_exact(i32 %x) {
+; CHECK-LABEL: @ashr_add_negative_shift_no_exact(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 -2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -1
+  %r = ashr i32 -2, %a
+  ret i32 %r
+}
+
+define i32 @ashr_exact_add_negative_shift_negative(i32 %x) {
+; CHECK-LABEL: @ashr_exact_add_negative_shift_negative(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 -2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -1
+  %r = ashr exact i32 -2, %a
+  ret i32 %r
+}
+
+define i8 @ashr_exact_add_negative_shift_negative_extra_use(i8 %x) {
+; CHECK-LABEL: @ashr_exact_add_negative_shift_negative_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -2
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 -32, [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = add i8 %x, -2
+  call void @use(i8 %a)
+  %r = ashr exact i8 -32, %a
+  ret i8 %r
+}
+
+define <2 x i7> @ashr_exact_add_negative_shift_negative_vec(<2 x i7> %x) {
+; CHECK-LABEL: @ashr_exact_add_negative_shift_negative_vec(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i7> [[X:%.*]], <i7 -5, i7 -5>
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> <i7 -2, i7 -2>, [[A]]
+; CHECK-NEXT:    ret <2 x i7> [[R]]
+;
+  %a = add <2 x i7> %x, <i7 -5, i7 -5>
+  %r = ashr exact <2 x i7> <i7 -2, i7 -2>, %a
+  ret <2 x i7> %r
+}
+
+; not enough leading ones in shift constant
+
+define <2 x i7> @ashr_exact_add_negative_leading_ones_vec(<2 x i7> %x) {
+; CHECK-LABEL: @ashr_exact_add_negative_leading_ones_vec(
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i7> [[X:%.*]], <i7 -5, i7 -5>
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> <i7 -4, i7 -4>, [[A]]
+; CHECK-NEXT:    ret <2 x i7> [[R]]
+;
+  %a = add <2 x i7> %x, <i7 -5, i7 -5>
+  %r = ashr exact <2 x i7> <i7 -4, i7 -4>, %a
+  ret <2 x i7> %r
 }
 
 ; PR54890
