@@ -212,18 +212,18 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
       arch_spec.GetCore() != ArchSpec::eCore_x86_64_x86_64h)
     command.Printf("arch -arch %s ", arch_spec.GetArchitectureName());
 
-  command.Printf("'%s' --unix-socket=%s", launcher_path, unix_socket_name);
+  command.Printf(R"(\"%s\" --unix-socket=%s)", launcher_path, unix_socket_name);
 
   if (arch_spec.IsValid())
     command.Printf(" --arch=%s", arch_spec.GetArchitectureName());
 
   FileSpec working_dir{launch_info.GetWorkingDirectory()};
   if (working_dir)
-    command.Printf(" --working-dir '%s'", working_dir.GetCString());
+    command.Printf(R"( --working-dir \"%s\")", working_dir.GetCString());
   else {
     char cwd[PATH_MAX];
     if (getcwd(cwd, PATH_MAX))
-      command.Printf(" --working-dir '%s'", cwd);
+      command.Printf(R"( --working-dir \"%s\")", cwd);
   }
 
   if (launch_info.GetFlags().Test(eLaunchFlagDisableASLR))
@@ -239,7 +239,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   for (const auto &KV : launch_info.GetEnvironment()) {
     auto host_entry = host_env.find(KV.first());
     if (host_entry == host_env.end() || host_entry->second != KV.second)
-      command.Format(" --env='{0}'", Environment::compose(KV));
+      command.Format(R"( --env=\"{0}\")", Environment::compose(KV));
   }
 
   command.PutCString(" -- ");
@@ -248,12 +248,12 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   if (argv) {
     for (size_t i = 0; argv[i] != NULL; ++i) {
       if (i == 0)
-        command.Printf(" '%s'", exe_path);
+        command.Printf(R"( \"%s\")", exe_path);
       else
-        command.Printf(" '%s'", argv[i]);
+        command.Printf(R"( \"%s\")", argv[i]);
     }
   } else {
-    command.Printf(" '%s'", exe_path);
+    command.Printf(R"( \"%s\")", exe_path);
   }
   command.PutCString(" ; echo Process exited with status $?");
   if (launch_info.GetFlags().Test(lldb::eLaunchFlagCloseTTYOnExit))
@@ -263,6 +263,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
 
   applescript_source.Printf(applscript_in_new_tty,
                             command.GetString().str().c_str());
+
   NSAppleScript *applescript = [[NSAppleScript alloc]
       initWithSource:[NSString stringWithCString:applescript_source.GetString()
                                                      .str()
