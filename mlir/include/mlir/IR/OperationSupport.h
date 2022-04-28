@@ -167,6 +167,17 @@ public:
     return impl->interfaceMap.contains(interfaceID);
   }
 
+  /// Returns true if the operation *might* have the provided interface. This
+  /// means that either the operation is unregistered, or it was registered with
+  /// the provide interface.
+  template <typename T>
+  bool mightHaveInterface() const {
+    return mightHaveInterface(TypeID::get<T>());
+  }
+  bool mightHaveInterface(TypeID interfaceID) const {
+    return !isRegistered() || hasInterface(interfaceID);
+  }
+
   /// Return the dialect this operation is registered to if the dialect is
   /// loaded in the context, or nullptr if the dialect isn't loaded.
   Dialect *getDialect() const {
