@@ -164,18 +164,6 @@ TEST_F(PythonDataObjectsTest, TestDictionaryResolutionWithDot) {
 TEST_F(PythonDataObjectsTest, TestPythonInteger) {
   // Test that integers behave correctly when wrapped by a PythonInteger.
 
-#if PY_MAJOR_VERSION < 3
-  // Verify that `PythonInt` works correctly when given a PyInt object.
-  // Note that PyInt doesn't exist in Python 3.x, so this is only for 2.x
-  PyObject *py_int = PyInt_FromLong(12);
-  EXPECT_TRUE(PythonInteger::Check(py_int));
-  PythonInteger python_int(PyRefType::Owned, py_int);
-
-  EXPECT_EQ(PyObjectType::Integer, python_int.GetObjectType());
-  auto python_int_value = As<long long>(python_int);
-  EXPECT_THAT_EXPECTED(python_int_value, llvm::HasValue(12));
-#endif
-
   // Verify that `PythonInteger` works correctly when given a PyLong object.
   PyObject *py_long = PyLong_FromLong(12);
   EXPECT_TRUE(PythonInteger::Check(py_long));
@@ -225,13 +213,8 @@ TEST_F(PythonDataObjectsTest, TestPythonBytes) {
   EXPECT_TRUE(PythonBytes::Check(py_bytes));
   PythonBytes python_bytes(PyRefType::Owned, py_bytes);
 
-#if PY_MAJOR_VERSION < 3
-  EXPECT_TRUE(PythonString::Check(py_bytes));
-  EXPECT_EQ(PyObjectType::String, python_bytes.GetObjectType());
-#else
   EXPECT_FALSE(PythonString::Check(py_bytes));
   EXPECT_EQ(PyObjectType::Bytes, python_bytes.GetObjectType());
-#endif
 
   llvm::ArrayRef<uint8_t> bytes = python_bytes.GetBytes();
   EXPECT_EQ(bytes.size(), strlen(test_bytes));
@@ -258,23 +241,12 @@ TEST_F(PythonDataObjectsTest, TestPythonString) {
   static const char *test_string = "PythonDataObjectsTest::TestPythonString1";
   static const char *test_string2 = "PythonDataObjectsTest::TestPythonString2";
 
-#if PY_MAJOR_VERSION < 3
-  // Verify that `PythonString` works correctly when given a PyString object.
-  // Note that PyString doesn't exist in Python 3.x, so this is only for 2.x
-  PyObject *py_string = PyString_FromString(test_string);
-  EXPECT_TRUE(PythonString::Check(py_string));
-  PythonString python_string(PyRefType::Owned, py_string);
-
-  EXPECT_EQ(PyObjectType::String, python_string.GetObjectType());
-  EXPECT_STREQ(test_string, python_string.GetString().data());
-#else
   // Verify that `PythonString` works correctly when given a PyUnicode object.
   PyObject *py_unicode = PyUnicode_FromString(test_string);
   EXPECT_TRUE(PythonString::Check(py_unicode));
   PythonString python_unicode(PyRefType::Owned, py_unicode);
   EXPECT_EQ(PyObjectType::String, python_unicode.GetObjectType());
   EXPECT_STREQ(test_string, python_unicode.GetString().data());
-#endif
 
   // Test that creating a `PythonString` object works correctly with the
   // string constructor

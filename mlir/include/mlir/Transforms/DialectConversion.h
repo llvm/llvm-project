@@ -689,9 +689,12 @@ public:
   }
 
   /// Register the given operations as legal.
+  void addLegalOp(OperationName op) {
+    setOpAction(op, LegalizationAction::Legal);
+  }
   template <typename OpT>
   void addLegalOp() {
-    setOpAction<OpT>(LegalizationAction::Legal);
+    addLegalOp(OperationName(OpT::getOperationName(), &ctx));
   }
   template <typename OpT, typename OpT2, typename... OpTs>
   void addLegalOp() {
@@ -701,11 +704,15 @@ public:
 
   /// Register the given operation as dynamically legal and set the dynamic
   /// legalization callback to the one provided.
+  void addDynamicallyLegalOp(OperationName op,
+                             const DynamicLegalityCallbackFn &callback) {
+    setOpAction(op, LegalizationAction::Dynamic);
+    setLegalityCallback(op, callback);
+  }
   template <typename OpT>
   void addDynamicallyLegalOp(const DynamicLegalityCallbackFn &callback) {
-    OperationName opName(OpT::getOperationName(), &ctx);
-    setOpAction(opName, LegalizationAction::Dynamic);
-    setLegalityCallback(opName, callback);
+    addDynamicallyLegalOp(OperationName(OpT::getOperationName(), &ctx),
+                          callback);
   }
   template <typename OpT, typename OpT2, typename... OpTs>
   void addDynamicallyLegalOp(const DynamicLegalityCallbackFn &callback) {
@@ -722,9 +729,12 @@ public:
 
   /// Register the given operation as illegal, i.e. this operation is known to
   /// not be supported by this target.
+  void addIllegalOp(OperationName op) {
+    setOpAction(op, LegalizationAction::Illegal);
+  }
   template <typename OpT>
   void addIllegalOp() {
-    setOpAction<OpT>(LegalizationAction::Illegal);
+    addIllegalOp(OperationName(OpT::getOperationName(), &ctx));
   }
   template <typename OpT, typename OpT2, typename... OpTs>
   void addIllegalOp() {
@@ -737,6 +747,8 @@ public:
   /// addition to the operation itself, all of the operations nested within are
   /// also considered legal. An optional dynamic legality callback may be
   /// provided to mark subsets of legal instances as recursively legal.
+  void markOpRecursivelyLegal(OperationName name,
+                              const DynamicLegalityCallbackFn &callback);
   template <typename OpT>
   void markOpRecursivelyLegal(const DynamicLegalityCallbackFn &callback = {}) {
     OperationName opName(OpT::getOperationName(), &ctx);
@@ -839,11 +851,6 @@ private:
 
   /// Set the dynamic legality callback for the unknown ops.
   void setLegalityCallback(const DynamicLegalityCallbackFn &callback);
-
-  /// Set the recursive legality callback for the given operation and mark the
-  /// operation as recursively legal.
-  void markOpRecursivelyLegal(OperationName name,
-                              const DynamicLegalityCallbackFn &callback);
 
   /// The set of information that configures the legalization of an operation.
   struct LegalizationInfo {

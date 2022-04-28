@@ -74,16 +74,6 @@ class LLDBTest(TestFormat):
             timeoutInfo = 'Reached timeout of {} seconds'.format(
                 litConfig.maxIndividualTestTime)
 
-        if sys.version_info.major == 2:
-            # In Python 2, string objects can contain Unicode characters. Use
-            # the non-strict 'replace' decoding mode. We cannot use the strict
-            # mode right now because lldb's StringPrinter facility and the
-            # Python utf8 decoder have different interpretations of which
-            # characters are "printable". This leads to Python utf8 decoding
-            # exceptions even though lldb is behaving as expected.
-            out = out.decode('utf-8', 'replace')
-            err = err.decode('utf-8', 'replace')
-
         output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (
             ' '.join(cmd), exitCode)
         if timeoutInfo is not None:

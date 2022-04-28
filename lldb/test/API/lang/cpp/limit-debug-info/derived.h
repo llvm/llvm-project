@@ -3,11 +3,17 @@
 class Foo : public FooNS
 {
 public:
-    Foo() {
-        a = 12345;
+    Foo();
+
+    // Deliberately defined by hand.
+    Foo &operator=(const Foo &rhs) {
+      a = rhs.a;
+      return *this;
     }
 
     char baz() override;
     int a;
 };
 
+extern Foo foo1;
+extern Foo foo2;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReducerWorkItem.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -17,9 +18,17 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+
+extern cl::OptionCategory LLVMReduceOptions;
+static cl::opt<std::string> TargetTriple("mtriple",
+                                         cl::desc("Set the target triple"),
+                                         cl::cat(LLVMReduceOptions));
 
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
@@ -118,10 +127,11 @@ static void cloneFrameInfo(
   }
 }
 
-static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
+static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
+                                                MachineModuleInfo &DestMMI) {
   auto DstMF = std::make_unique<MachineFunction>(
       SrcMF->getFunction(), SrcMF->getTarget(), SrcMF->getSubtarget(),
-      SrcMF->getFunctionNumber(), SrcMF->getMMI());
+      SrcMF->getFunctionNumber(), DestMMI);
   DenseMap<MachineBasicBlock *, MachineBasicBlock *> Src2DstMBB;
 
   auto *SrcMRI = &SrcMF->getRegInfo();
@@ -226,6 +236,9 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
       const auto &MCID = TII->get(SrcMI.getOpcode());
       auto *DstMI = DstMF->CreateMachineInstr(MCID, SrcMI.getDebugLoc(),
                                               /*NoImplicit=*/true);
+      DstMI->setFlags(SrcMI.getFlags());
+      DstMI->setAsmPrinterFlag(SrcMI.getAsmPrinterFlags());
+
       DstMBB->push_back(DstMI);
       for (auto &SrcMO : SrcMI.operands()) {
         MachineOperand DstMO(SrcMO);
@@ -277,64 +290,97 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
   return DstMF;
 }
 
-std::unique_ptr<ReducerWorkItem> parseReducerWorkItem(StringRef Filename,
-                                                      LLVMContext &Ctxt,
-                                                      MachineModuleInfo *MMI) {
+std::unique_ptr<ReducerWorkItem>
+parseReducerWorkItem(const char *ToolName, StringRef Filename,
+                     LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
+                     bool IsMIR) {
+  Triple TheTriple;
+
   auto MMM = std::make_unique<ReducerWorkItem>();
-  if (MMI) {
+
+  if (IsMIR) {
     auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
+    if (std::error_code EC = FileOrErr.getError()) {
+      WithColor::error(errs(), ToolName) << EC.message() << '\n';
+      return nullptr;
+    }
+
     std::unique_ptr<MIRParser> MParser =
         createMIRParser(std::move(FileOrErr.get()), Ctxt);
 
     auto SetDataLayout =
         [&](StringRef DataLayoutTargetTriple) -> Optional<std::string> {
-      return MMI->getTarget().createDataLayout().getStringRepresentation();
+      // If we are supposed to override the target triple, do so now.
+      std::string IRTargetTriple = DataLayoutTargetTriple.str();
+      if (!TargetTriple.empty())
+        IRTargetTriple = Triple::normalize(TargetTriple);
+      TheTriple = Triple(IRTargetTriple);
+      if (TheTriple.getTriple().empty())
+        TheTriple.setTriple(sys::getDefaultTargetTriple());
+
+      std::string Error;
+      const Target *TheTarget =
+          TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+      if (!TheTarget) {
+        WithColor::error(errs(), ToolName) << Error;
+        exit(1);
+      }
+
+      // Hopefully the MIR parsing doesn't depend on any options.
+      TargetOptions Options;
+      Optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
+      std::string CPUStr = codegen::getCPUStr();
+      std::string FeaturesStr = codegen::getFeaturesStr();
+      TM = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
+          TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
+          codegen::getExplicitCodeModel(), CodeGenOpt::Default));
+      assert(TM && "Could not allocate target machine!");
+
+      return TM->createDataLayout().getStringRepresentation();
     };
 
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
-    MParser->parseMachineFunctions(*M, *MMI);
-    MachineFunction *MF = nullptr;
-    for (auto &F : *M) {
-      if (auto *MF4F = MMI->getMachineFunction(F)) {
-        // XXX: Maybe it would not be a lot of effort to handle multiple MFs by
-        // simply storing them in a ReducerWorkItem::SmallVector or similar. The
-        // single MF use-case seems a lot more common though so that will do for
-        // now.
-        assert(!MF && "Only single MF supported!");
-        MF = MF4F;
-      }
-    }
-    assert(MF && "No MF found!");
+    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
 
+    MMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    MParser->parseMachineFunctions(*M, *MMM->MMI);
     MMM->M = std::move(M);
-    MMM->MF = cloneMF(MF);
   } else {
     SMDiagnostic Err;
     std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
     if (!Result) {
-      Err.print("llvm-reduce", errs());
+      Err.print(ToolName, errs());
       return std::unique_ptr<ReducerWorkItem>();
     }
     MMM->M = std::move(Result);
   }
   if (verifyReducerWorkItem(*MMM, &errs())) {
-    errs() << "Error: " << Filename << " - input module is broken!\n";
+    WithColor::error(errs(), ToolName)
+        << Filename << " - input module is broken!\n";
     return std::unique_ptr<ReducerWorkItem>();
   }
   return MMM;
 }
 
 std::unique_ptr<ReducerWorkItem>
-cloneReducerWorkItem(const ReducerWorkItem &MMM) {
+cloneReducerWorkItem(const ReducerWorkItem &MMM, const TargetMachine *TM) {
   auto CloneMMM = std::make_unique<ReducerWorkItem>();
-  if (MMM.MF) {
-    // Note that we cannot clone the Module as then we would need a way to
-    // updated the cloned MachineFunction's IR references.
-    // XXX: Actually have a look at
-    // std::unique_ptr<Module> CloneModule(const Module &M, ValueToValueMapTy
-    // &VMap);
+  if (TM) {
+    // We're assuming the Module IR contents are always unchanged by MIR
+    // reductions, and can share it as a constant.
     CloneMMM->M = MMM.M;
-    CloneMMM->MF = cloneMF(MMM.MF.get());
+
+    // MachineModuleInfo contains a lot of other state used during codegen which
+    // we won't be using here, but we should be able to ignore it (although this
+    // is pretty ugly).
+    const LLVMTargetMachine *LLVMTM =
+        static_cast<const LLVMTargetMachine *>(TM);
+    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+
+    for (const Function &F : MMM.getModule()) {
+      if (auto *MF = MMM.MMI->getMachineFunction(F))
+        CloneMMM->MMI->insertFunction(F, cloneMF(MF, *CloneMMM->MMI));
+    }
   } else {
     CloneMMM->M = CloneModule(*MMM.M);
   }
@@ -344,15 +390,27 @@ cloneReducerWorkItem(const ReducerWorkItem &MMM) {
 bool verifyReducerWorkItem(const ReducerWorkItem &MMM, raw_fd_ostream *OS) {
   if (verifyModule(*MMM.M, OS))
     return true;
-  if (MMM.MF && !MMM.MF->verify(nullptr, "", /*AbortOnError=*/false))
-    return true;
+
+  if (!MMM.MMI)
+    return false;
+
+  for (const Function &F : MMM.getModule()) {
+    if (const MachineFunction *MF = MMM.MMI->getMachineFunction(F)) {
+      if (!MF->verify(nullptr, "", /*AbortOnError=*/false))
+        return true;
+    }
+  }
+
   return false;
 }
 
 void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
-  if (MF) {
+  if (MMI) {
     printMIR(ROS, *M);
-    printMIR(ROS, *MF);
+    for (Function &F : *M) {
+      if (auto *MF = MMI->getMachineFunction(F))
+        printMIR(ROS, *MF);
+    }
   } else {
     M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,
              /*ShouldPreserveUseListOrder=*/true);

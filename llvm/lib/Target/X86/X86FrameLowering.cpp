@@ -500,24 +500,8 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
                                             MachineBasicBlock &MBB) const {
   const MachineFunction &MF = *MBB.getParent();
 
-  // Don't clear registers that will just be reset before exiting.
-  for (const CalleeSavedInfo &CSI : MF.getFrameInfo().getCalleeSavedInfo())
-    for (MCRegister Reg : TRI->sub_and_superregs_inclusive(CSI.getReg()))
-      RegsToZero.reset(Reg);
-
   // Insertion point.
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
-
-  // We don't need to zero out registers that are clobbered by "pop"
-  // instructions.
-  for (MachineBasicBlock::iterator I = MBBI, E = MBB.end(); I != E; ++I)
-    for (const MachineOperand &MO : I->operands()) {
-      if (!MO.isReg())
-        continue;
-
-      for (const MCPhysReg &Reg : TRI->sub_and_superregs_inclusive(MO.getReg()))
-        RegsToZero.reset(Reg);
-    }
 
   // Fake a debug loc.
   DebugLoc DL;

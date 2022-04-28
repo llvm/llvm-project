@@ -161,6 +161,14 @@ Changes to LLDB
 Changes to Sanitizers
 ---------------------
 
+
+Other Changes
+-------------
+* The code for the `LLVM Visual Studio integration
+  <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`_
+  has been removed. This had been obsolete and abandoned since Visual Studio
+  started including an integration by default in 2019.
+
 External Open Source Projects Using LLVM 15
 ===========================================
 

@@ -2523,7 +2523,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
         /*NumOfUsedRegs=*/1,
         [&Output, &DAG = DAG, NewVT]() { Output = DAG.getUNDEF(NewVT); },
         [&Output, &DAG = DAG, NewVT, &DL, &Inputs,
-         &BuildVector](ArrayRef<int> Mask, unsigned Idx) {
+         &BuildVector](ArrayRef<int> Mask, unsigned Idx, unsigned /*Unused*/) {
           if (Inputs[Idx]->getOpcode() == ISD::BUILD_VECTOR)
             Output = BuildVector(Inputs[Idx], Inputs[Idx], Mask);
           else
