@@ -1,6 +1,9 @@
 ; RUN: llc < %s
 ; PR4975
 
+; NVPTX does not support zero sized type arg
+; UNSUPPORTED: nvptx
+
 %0 = type <{ [0 x i32] }>
 %union.T0 = type { }
 
