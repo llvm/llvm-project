@@ -313,6 +313,15 @@ public:
     array->SetLowerBoundsToOne();
     ConstantSubscripts at{array->lbounds()}, maskAt, resultIndices, resultShape;
     if (mask) {
+      if (auto scalarMask{mask->GetScalarValue()}) {
+        // Convert into array in case of scalar MASK= (for
+        // MAXLOC/MINLOC/FINDLOC mask should be be conformable)
+        ConstantSubscript n{GetSize(array->shape())};
+        std::vector<Scalar<LogicalResult>> mask_elements(
+            n, Scalar<LogicalResult>{scalarMask.value()});
+        *mask = Constant<LogicalResult>{
+            std::move(mask_elements), ConstantSubscripts{n}};
+      }
       mask->SetLowerBoundsToOne();
       maskAt = mask->lbounds();
     }
