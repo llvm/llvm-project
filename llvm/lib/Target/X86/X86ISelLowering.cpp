@@ -8041,11 +8041,11 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     uint64_t ZeroMask = IsAndN ? 255 : 0;
     if (!getTargetConstantBitsFromNode(IsAndN ? N0 : N1, 8, UndefElts, EltBits))
       return false;
+    // We can't assume an undef src element gives an undef dst - the other src
+    // might be zero.
+    if (!UndefElts.isZero())
+      return false;
     for (int i = 0, e = (int)EltBits.size(); i != e; ++i) {
-      if (UndefElts[i]) {
-        Mask.push_back(SM_SentinelUndef);
-        continue;
-      }
       const APInt &ByteBits = EltBits[i];
       if (ByteBits != 0 && ByteBits != 255)
         return false;
