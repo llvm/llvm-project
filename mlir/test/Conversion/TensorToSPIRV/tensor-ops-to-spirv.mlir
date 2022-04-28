@@ -9,7 +9,7 @@
 func.func @tensor_extract_constant(%a : index, %b: index, %c: index) -> i32 {
   // CHECK: %[[CST:.+]] = spv.Constant dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]>
   %cst = arith.constant dense<[[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]]> : tensor<2x2x3xi32>
-  // CHECK: %[[VAR:.+]] = spv.Variable init(%[[CST]]) : !spv.ptr<!spv.array<12 x i32, stride=4>, Function>
+  // CHECK: %[[VAR:.+]] = spv.Variable init(%[[CST]]) : !spv.ptr<!spv.array<12 x i32>, Function>
   // CHECK: %[[C0:.+]] = spv.Constant 0 : i32
   // CHECK: %[[C6:.+]] = spv.Constant 6 : i32
   // CHECK: %[[MUL0:.+]] = spv.IMul %[[C6]], %[[A]] : i32

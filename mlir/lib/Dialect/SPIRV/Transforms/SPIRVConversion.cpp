@@ -370,7 +370,7 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
-  return spirv::ArrayType::get(arrayElemType, arrayElemCount, *arrayElemSize);
+  return spirv::ArrayType::get(arrayElemType, arrayElemCount);
 }
 
 static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
@@ -407,15 +407,15 @@ static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
   }
 
   if (!type.hasStaticShape()) {
-    auto arrayType =
-        spirv::RuntimeArrayType::get(arrayElemType, *arrayElemSize);
+    int64_t stride = needsExplicitLayout(*storageClass) ? *arrayElemSize : 0;
+    auto arrayType = spirv::RuntimeArrayType::get(arrayElemType, stride);
     return wrapInStructAndGetPointer(arrayType, *storageClass);
   }
 
   int64_t memrefSize = (type.getNumElements() * numBoolBits + 7) / 8;
   auto arrayElemCount = (memrefSize + *arrayElemSize - 1) / *arrayElemSize;
-  auto arrayType =
-      spirv::ArrayType::get(arrayElemType, arrayElemCount, *arrayElemSize);
+  int64_t stride = needsExplicitLayout(*storageClass) ? *arrayElemSize : 0;
+  auto arrayType = spirv::ArrayType::get(arrayElemType, arrayElemCount, stride);
 
   return wrapInStructAndGetPointer(arrayType, *storageClass);
 }
@@ -470,8 +470,8 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
   }
 
   if (!type.hasStaticShape()) {
-    auto arrayType =
-        spirv::RuntimeArrayType::get(arrayElemType, *arrayElemSize);
+    int64_t stride = needsExplicitLayout(*storageClass) ? *arrayElemSize : 0;
+    auto arrayType = spirv::RuntimeArrayType::get(arrayElemType, stride);
     return wrapInStructAndGetPointer(arrayType, *storageClass);
   }
 
@@ -483,10 +483,8 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
   }
 
   auto arrayElemCount = *memrefSize / *elementSize;
-
-
-  auto arrayType =
-      spirv::ArrayType::get(arrayElemType, arrayElemCount, *arrayElemSize);
+  int64_t stride = needsExplicitLayout(*storageClass) ? *arrayElemSize : 0;
+  auto arrayType = spirv::ArrayType::get(arrayElemType, arrayElemCount, stride);
 
   return wrapInStructAndGetPointer(arrayType, *storageClass);
 }

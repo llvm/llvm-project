@@ -13,7 +13,7 @@ module attributes {
     return
   }
 }
-//     CHECK: spv.GlobalVariable @[[VAR:.+]] : !spv.ptr<!spv.struct<(!spv.array<20 x f32, stride=4>)>, Workgroup>
+//     CHECK: spv.GlobalVariable @[[VAR:.+]] : !spv.ptr<!spv.struct<(!spv.array<20 x f32>)>, Workgroup>
 //     CHECK: func @alloc_dealloc_workgroup_mem
 // CHECK-NOT:   memref.alloc
 //     CHECK:   %[[PTR:.+]] = spv.mlir.addressof @[[VAR]]
@@ -40,7 +40,7 @@ module attributes {
 }
 
 //       CHECK: spv.GlobalVariable @__workgroup_mem__{{[0-9]+}}
-//  CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<20 x i32, stride=4>)>, Workgroup>
+//  CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<20 x i32>)>, Workgroup>
 // CHECK_LABEL: spv.func @alloc_dealloc_workgroup_mem
 //       CHECK:   %[[VAR:.+]] = spv.mlir.addressof @__workgroup_mem__0
 //       CHECK:   %[[LOC:.+]] = spv.SDiv
@@ -67,9 +67,9 @@ module attributes {
 }
 
 //  CHECK-DAG: spv.GlobalVariable @__workgroup_mem__{{[0-9]+}}
-// CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<6 x i32, stride=4>)>, Workgroup>
+// CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<6 x i32>)>, Workgroup>
 //  CHECK-DAG: spv.GlobalVariable @__workgroup_mem__{{[0-9]+}}
-// CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<20 x f32, stride=4>)>, Workgroup>
+// CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<20 x f32>)>, Workgroup>
 //      CHECK: func @two_allocs()
 
 // -----
@@ -87,9 +87,9 @@ module attributes {
 }
 
 //  CHECK-DAG: spv.GlobalVariable @__workgroup_mem__{{[0-9]+}}
-// CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<2 x vector<2xi32>, stride=8>)>, Workgroup>
+// CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<2 x vector<2xi32>>)>, Workgroup>
 //  CHECK-DAG: spv.GlobalVariable @__workgroup_mem__{{[0-9]+}}
-// CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<4 x vector<4xf32>, stride=16>)>, Workgroup>
+// CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<4 x vector<4xf32>>)>, Workgroup>
 //      CHECK: func @two_allocs_vector()
 
 
