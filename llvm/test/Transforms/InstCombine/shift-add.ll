@@ -224,8 +224,7 @@ define i32 @lshr_add_negative_shift_no_exact(i32 %x) {
 
 define i32 @lshr_exact_add_negative_shift_positive(i32 %x) {
 ; CHECK-LABEL: @lshr_exact_add_negative_shift_positive(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 2, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 4, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, -1
@@ -237,7 +236,7 @@ define i8 @lshr_exact_add_negative_shift_positive_extra_use(i8 %x) {
 ; CHECK-LABEL: @lshr_exact_add_negative_shift_positive_extra_use(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 64, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 -128, [[X]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add i8 %x, -1
@@ -248,8 +247,7 @@ define i8 @lshr_exact_add_negative_shift_positive_extra_use(i8 %x) {
 
 define <2 x i9> @lshr_exact_add_negative_shift_positive_vec(<2 x i9> %x) {
 ; CHECK-LABEL: @lshr_exact_add_negative_shift_positive_vec(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i9> [[X:%.*]], <i9 -7, i9 -7>
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> <i9 2, i9 2>, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> <i9 -256, i9 -256>, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i9> [[R]]
 ;
   %a = add <2 x i9> %x, <i9 -7, i9 -7>
@@ -309,8 +307,7 @@ define i32 @ashr_add_negative_shift_no_exact(i32 %x) {
 
 define i32 @ashr_exact_add_negative_shift_negative(i32 %x) {
 ; CHECK-LABEL: @ashr_exact_add_negative_shift_negative(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 -2, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 -4, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, -1
@@ -322,7 +319,7 @@ define i8 @ashr_exact_add_negative_shift_negative_extra_use(i8 %x) {
 ; CHECK-LABEL: @ashr_exact_add_negative_shift_negative_extra_use(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -2
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 -32, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i8 -128, [[X]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add i8 %x, -2
@@ -333,8 +330,7 @@ define i8 @ashr_exact_add_negative_shift_negative_extra_use(i8 %x) {
 
 define <2 x i7> @ashr_exact_add_negative_shift_negative_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @ashr_exact_add_negative_shift_negative_vec(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i7> [[X:%.*]], <i7 -5, i7 -5>
-; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> <i7 -2, i7 -2>, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> <i7 -64, i7 -64>, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
   %a = add <2 x i7> %x, <i7 -5, i7 -5>
