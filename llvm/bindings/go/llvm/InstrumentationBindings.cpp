@@ -16,14 +16,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Instrumentation.h"
-#include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
-#include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 
 using namespace llvm;
-
-void LLVMAddThreadSanitizerPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createThreadSanitizerLegacyPassPass());
-}
 
 void LLVMAddDataFlowSanitizerPass(LLVMPassManagerRef PM,
                                   int ABIListFilesNum,
