@@ -724,7 +724,7 @@ void OpenMPIRBuilder::emitRegionExit(InsertPointTy ExitingIP,
 
 void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB, LeaveRegionCallbackTy &LeaveCb) {
     auto DK = R->DK;
-    assert(RegionStack.back().get() == R && "balannced region push/pop required");
+    assert(RegionStack.back().get() == R && "balanced region push/pop required");
     R->assertOK();
 
     // Trickly down no yet handled breaks.
@@ -737,10 +737,11 @@ void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB, LeaveR
         Builder.SetInsertPoint(B.BB);
 
         if (B.Target == DK) {
+                // Join common finialization block
             Builder.SetInsertPoint(B.BB);
           BranchInst * TI =  Builder.CreateBr(ContinueBB);
-          if (LeaveCb)
-              LeaveCb( InsertPointTy(TI->getParent(), TI->getIterator()), B.Reason, Innermost);
+        //  if (LeaveCb)
+        //      LeaveCb( InsertPointTy(TI->getParent(), TI->getIterator()), B.Reason, Innermost);
             B.BB = nullptr;
         } else if (LeaveCb) {
             B.BB = splitBB(Builder, true, ".fini");
@@ -1294,7 +1295,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
       }), ParallelRegion->Breaks.end() );
   //emitRegionExit(PreFiniIP, ParallelRegion);
 #endif 
-  popRegion(ParallelRegion, PRegExitBB, FiniCB);
+  popRegion(ParallelRegion, PRegPreFiniBB, FiniCB);
 
   OI.OuterAllocaBB = OuterAllocaBlock;
   OI.EntryBB = PRegEntryBB;
@@ -1583,8 +1584,11 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
 
   Builder.restoreIP(AfterIP);
   auto Finish = splitBB(Builder, true, "section_finish");
-  if (FiniCB) 
-      FiniCB(Builder.saveAndClearIP(), OMPD_unknown, SectionsRegion );
+  if (FiniCB) {
+      Builder.SetInsertPoint(Finish);
+      Finish = splitBB(Builder, true, "section_fini");
+      FiniCB(Builder.saveAndClearIP(), OMPD_unknown, SectionsRegion);
+  }
   
   //emitRegionExit(Builder.saveIP(), SectionsRegion);
   popRegion(SectionsRegion, Finish, FiniCB);
