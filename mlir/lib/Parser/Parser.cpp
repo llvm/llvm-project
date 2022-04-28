@@ -1297,9 +1297,9 @@ public:
   /// Parse zero or more SSA comma-separated operand references with a specified
   /// surrounding delimiter, and an optional required operand count.
   ParseResult parseOperandList(SmallVectorImpl<UnresolvedOperand> &result,
-                               int requiredOperandCount = -1,
                                Delimiter delimiter = Delimiter::None,
-                               bool allowResultNumber = true) override {
+                               bool allowResultNumber = true,
+                               int requiredOperandCount = -1) override {
     auto startLoc = parser.getToken().getLoc();
 
     // The no-delimiter case has some special handling for better diagnostics.
@@ -1335,23 +1335,6 @@ public:
     if (requiredOperandCount != -1 &&
         result.size() != static_cast<size_t>(requiredOperandCount))
       return emitError(startLoc, "expected ")
-             << requiredOperandCount << " operands";
-    return success();
-  }
-
-  /// Parse zero or more trailing SSA comma-separated trailing operand
-  /// references with a specified surrounding delimiter, and an optional
-  /// required operand count. A leading comma is expected before the operands.
-  ParseResult
-  parseTrailingOperandList(SmallVectorImpl<UnresolvedOperand> &result,
-                           int requiredOperandCount,
-                           Delimiter delimiter) override {
-    if (parser.getToken().is(Token::comma)) {
-      parseComma();
-      return parseOperandList(result, requiredOperandCount, delimiter);
-    }
-    if (requiredOperandCount != -1)
-      return emitError(parser.getToken().getLoc(), "expected ")
              << requiredOperandCount << " operands";
     return success();
   }

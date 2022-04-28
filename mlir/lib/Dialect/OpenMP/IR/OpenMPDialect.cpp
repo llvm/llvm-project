@@ -530,22 +530,18 @@ parseWsLoopControl(OpAsmParser &parser, Region &region,
 
   size_t numIVs = ivs.size();
   Type loopVarType;
-  if (parser.parseColonType(loopVarType))
-    return failure();
-
-  // Parse loop bounds.
-  if (parser.parseEqual() ||
+  if (parser.parseColonType(loopVarType) ||
+      // Parse loop bounds.
+      parser.parseEqual() ||
       parser.parseOperandList(lowerBound, numIVs,
-                              OpAsmParser::Delimiter::Paren))
-    return failure();
-  if (parser.parseKeyword("to") ||
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.parseKeyword("to") ||
       parser.parseOperandList(upperBound, numIVs,
                               OpAsmParser::Delimiter::Paren))
     return failure();
 
-  if (succeeded(parser.parseOptionalKeyword("inclusive"))) {
+  if (succeeded(parser.parseOptionalKeyword("inclusive")))
     inclusive = UnitAttr::get(parser.getBuilder().getContext());
-  }
 
   // Parse step values.
   if (parser.parseKeyword("step") ||

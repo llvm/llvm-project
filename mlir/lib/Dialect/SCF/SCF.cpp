@@ -2006,8 +2006,7 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse init values.
   SmallVector<OpAsmParser::UnresolvedOperand, 4> initVals;
   if (succeeded(parser.parseOptionalKeyword("init"))) {
-    if (parser.parseOperandList(initVals, /*requiredOperandCount=*/-1,
-                                OpAsmParser::Delimiter::Paren))
+    if (parser.parseOperandList(initVals, OpAsmParser::Delimiter::Paren))
       return failure();
   }
 
