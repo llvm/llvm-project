@@ -13,7 +13,7 @@
 // -----
 {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{
   "textDocument":{"uri":"test:///foo.pdll"},
-  "position":{"line":3,"character":12}
+  "position":{"line":3,"character":11}
 }}
 //      CHECK:  "id": 1
 // CHECK-NEXT:  "jsonrpc": "2.0",
