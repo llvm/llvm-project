@@ -88,6 +88,7 @@ bool shouldCollectIncludePath(index::SymbolKind Kind) {
   case SK::Function:
   case SK::Variable:
   case SK::EnumConstant:
+  case SK::Concept:
     return true;
   default:
     return false;

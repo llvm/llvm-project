@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "IndexingContext.h"
+#include "clang/AST/ASTConcept.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TypeLoc.h"
 #include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
@@ -74,6 +77,13 @@ public:
                                       Parent, ParentDC, SymbolRoleSet(),
                                       Relations));
     }
+    return true;
+  }
+
+  bool VisitAutoTypeLoc(AutoTypeLoc TL) {
+    if (auto *C = TL.getNamedConcept())
+      return IndexCtx.handleReference(C, TL.getConceptNameLoc(), Parent,
+                                      ParentDC);
     return true;
   }
 
