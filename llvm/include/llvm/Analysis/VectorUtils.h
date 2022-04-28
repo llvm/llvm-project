@@ -413,7 +413,7 @@ bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 void processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
-    function_ref<void(ArrayRef<int>, unsigned)> SingleInputAction,
+    function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction);
 
 /// Compute a map of integer instructions to their minimum legal type
