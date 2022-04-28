@@ -2685,10 +2685,6 @@ buffer_load_format_x a5, off, s[8:11], s3 offset:4095 glc
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_format_x a5, off, s[8:11], s3 offset:4095 slc
 
-// GFX90A: buffer_load_format_x a5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x01,0xe0,0x00,0x05,0x82,0x03]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-buffer_load_format_x a5, off, s[8:11], s3 offset:4095 lds
-
 // GFX90A: buffer_load_format_xy a[6:7], off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x04,0xe0,0x00,0x06,0x82,0x03]
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_format_xy a[6:7], off, s[8:11], s3 offset:4095
@@ -3777,10 +3773,6 @@ buffer_load_ubyte a5, off, s[8:11], s3 offset:4095 glc
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_ubyte a5, off, s[8:11], s3 offset:4095 slc
 
-// GFX90A: buffer_load_ubyte a5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x41,0xe0,0x00,0x05,0x82,0x03]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-buffer_load_ubyte a5, off, s[8:11], s3 offset:4095 lds
-
 // GFX90A: buffer_load_sbyte a5, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x44,0xe0,0x00,0x05,0x82,0x03]
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_sbyte a5, off, s[8:11], s3 offset:4095
@@ -3848,10 +3840,6 @@ buffer_load_sbyte a5, off, s[8:11], s3 offset:4095 glc
 // GFX90A: buffer_load_sbyte a5, off, s[8:11], s3 offset:4095 slc ; encoding: [0xff,0x0f,0x46,0xe0,0x00,0x05,0x82,0x03]
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_sbyte a5, off, s[8:11], s3 offset:4095 slc
-
-// GFX90A: buffer_load_sbyte a5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x45,0xe0,0x00,0x05,0x82,0x03]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-buffer_load_sbyte a5, off, s[8:11], s3 offset:4095 lds
 
 // GFX90A: buffer_load_ushort a5, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x48,0xe0,0x00,0x05,0x82,0x03]
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
@@ -3921,10 +3909,6 @@ buffer_load_ushort a5, off, s[8:11], s3 offset:4095 glc
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_ushort a5, off, s[8:11], s3 offset:4095 slc
 
-// GFX90A: buffer_load_ushort a5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x49,0xe0,0x00,0x05,0x82,0x03]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-buffer_load_ushort a5, off, s[8:11], s3 offset:4095 lds
-
 // GFX90A: buffer_load_sshort a5, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x4c,0xe0,0x00,0x05,0x82,0x03]
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_sshort a5, off, s[8:11], s3 offset:4095
@@ -3993,10 +3977,6 @@ buffer_load_sshort a5, off, s[8:11], s3 offset:4095 glc
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_sshort a5, off, s[8:11], s3 offset:4095 slc
 
-// GFX90A: buffer_load_sshort a5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x4d,0xe0,0x00,0x05,0x82,0x03]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-buffer_load_sshort a5, off, s[8:11], s3 offset:4095 lds
-
 // GFX90A: buffer_load_dword a5, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x50,0xe0,0x00,0x05,0x82,0x03]
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_dword a5, off, s[8:11], s3 offset:4095
@@ -4064,10 +4044,6 @@ buffer_load_dword a5, off, s[8:11], s3 offset:4095 glc
 // GFX90A: buffer_load_dword a5, off, s[8:11], s3 offset:4095 slc ; encoding: [0xff,0x0f,0x52,0xe0,0x00,0x05,0x82,0x03]
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
 buffer_load_dword a5, off, s[8:11], s3 offset:4095 slc
-
-// GFX90A: buffer_load_dword a5, off, s[8:11], s3 offset:4095 lds ; encoding: [0xff,0x0f,0x51,0xe0,0x00,0x05,0x82,0x03]
-// NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
-buffer_load_dword a5, off, s[8:11], s3 offset:4095 lds
 
 // GFX90A: buffer_load_dwordx2 a[6:7], off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x54,0xe0,0x00,0x06,0x82,0x03]
 // NOT-GFX90A: error: invalid register class: agpr loads and stores not supported on this GPU
