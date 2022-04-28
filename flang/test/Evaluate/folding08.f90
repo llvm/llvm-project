@@ -105,33 +105,45 @@ module m
          ubound(a3, 2) == 1 .and. &
          ubound(a3, 3) == 6
   end subroutine
-  subroutine test4_lbound_parentheses
-    ! Test lbound with (x) expressions
+  subroutine test4_bound_parentheses
+    ! Test [ul]bound with (x) expressions
     integer :: a1(1) = 0
     logical, parameter :: test_lba1 = all(lbound((a1)) == [1])
+    logical, parameter :: test_uba1 = all(ubound((a1)) == [1])
     integer :: a2(0:2) = 0
     logical, parameter :: test_lba2 = all(lbound((a2)) == [1])
+    logical, parameter :: test_uba2 = all(ubound((a2)) == [3])
     integer :: a3(-1:0) = 0
     logical, parameter :: test_lba3 = all(lbound((a3)) == [1])
+    logical, parameter :: test_uba3 = all(ubound((a3)) == [2])
     integer :: a4(-5:-1, 2:5) = 0
     logical, parameter :: test_lba4 = all(lbound((a4)) == [1, 1])
+    logical, parameter :: test_uba4 = all(ubound((a4)) == [5, 4])
 
     ! Exercise with DIM=
     logical, parameter :: test_lba4_dim = lbound((a4), 1) == 1 .and. &
          lbound((a4), 2) == 1
+    logical, parameter :: test_uba4_dim = ubound((a4), 1) == 5 .and. &
+         ubound((a4), 2) == 4
 
     ! Exercise with parameter types
     integer, parameter :: pa1(1) = 0
     logical, parameter :: test_lbpa1 = all(lbound((pa1)) == [1])
+    logical, parameter :: test_ubpa1 = all(ubound((pa1)) == [1])
     integer, parameter :: pa2(0:2) = 0
     logical, parameter :: test_lbpa2 = all(lbound((pa2)) == [1])
+    logical, parameter :: test_ubpa2 = all(ubound((pa2)) == [3])
     integer, parameter :: pa3(-1:0) = 0
     logical, parameter :: test_lbpa3 = all(lbound((pa3)) == [1])
+    logical, parameter :: test_ubpa3 = all(ubound((pa3)) == [2])
     integer, parameter :: pa4(-5:-1, 2:5) = 0
     logical, parameter :: test_lbpa4 = all(lbound((pa4)) == [1, 1])
+    logical, parameter :: test_ubpa4 = all(ubound((pa4)) == [5, 4])
 
     ! Exercise with DIM=
     logical, parameter :: test_lbpa4_dim = lbound((pa4), 1) == 1 .and. &
          lbound((pa4), 2) == 1
+    logical, parameter :: test_ubpa4_dim = ubound((pa4), 1) == 5 .and. &
+         ubound((pa4), 2) == 4
   end
 end
