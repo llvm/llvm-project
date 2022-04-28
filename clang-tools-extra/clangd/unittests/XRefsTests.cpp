@@ -2085,6 +2085,19 @@ TEST(FindReferences, ConceptsWithinAST) {
   checkFindRefs(Code);
 }
 
+TEST(FindReferences, ConceptReq) {
+  constexpr llvm::StringLiteral Code = R"cpp(
+    template <class T>
+    concept $def[[IsSmal^l]] = sizeof(T) <= 8;
+
+    template <class T>
+    concept IsSmallPtr = requires(T x) {
+      { *x } -> [[IsSmal^l]];
+    };
+  )cpp";
+  checkFindRefs(Code);
+}
+
 TEST(FindReferences, RequiresExprParameters) {
   constexpr llvm::StringLiteral Code = R"cpp(
     template <class T>
