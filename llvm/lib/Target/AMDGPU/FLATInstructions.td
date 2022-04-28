@@ -99,6 +99,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
   let VM_CNT               = ps.VM_CNT;
   let LGKM_CNT             = ps.LGKM_CNT;
+  let VALU                 = ps.VALU;
 
   // encoding fields
   bits<8> vaddr;
@@ -258,6 +259,7 @@ class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_Ps
   let mayStore = 1;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
+  let VALU = 1;
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
   let Uses = [M0, EXEC];
   let SchedRW = [WriteVMEM, WriteLDS];
@@ -418,6 +420,7 @@ class FLAT_Scratch_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0,
   let has_vaddr = EnableVaddr;
   let has_sve = EnableSVE;
   let sve = EnableVaddr;
+  let VALU = 1;
   let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
   let Uses = [M0, EXEC];
   let SchedRW = [WriteVMEM, WriteLDS];
