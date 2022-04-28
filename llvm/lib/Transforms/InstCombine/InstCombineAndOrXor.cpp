@@ -2550,10 +2550,11 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     return nullptr;
 
   // (trunc x) == C1 & (and x, CA) == C2 -> (and x, CA|CMAX) == C1|C2
+  // (trunc x) != C1 | (and x, CA) != C2 -> (and x, CA|CMAX) != C1|C2
   // where CMAX is the all ones value for the truncated type,
   // iff the lower bits of C2 and CA are zero.
-  if (IsAnd && PredL == ICmpInst::ICMP_EQ && PredL == PredR &&
-      LHS->hasOneUse() && RHS->hasOneUse()) {
+  if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+      PredL == PredR && LHS->hasOneUse() && RHS->hasOneUse()) {
     Value *V;
     const APInt *AndC, *SmallC = nullptr, *BigC = nullptr;
 
