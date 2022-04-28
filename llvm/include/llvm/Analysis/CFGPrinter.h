@@ -212,17 +212,17 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
     // Process string output to make it nicer...
     unsigned ColNum = 0;
-    unsigned LastSpace = 0;
+    //unsigned LastSpace = 0;
     for (unsigned i = 0; i != OutStr.length(); ++i) {
       if (OutStr[i] == '\n') { // Left justify
         OutStr[i] = '\\';
         OutStr.insert(OutStr.begin() + i + 1, 'l');
         ColNum = 0;
-        LastSpace = 0;
+      //  LastSpace = 0;
       } else if (OutStr[i] == ';') {             // Delete comments!
         unsigned Idx = OutStr.find('\n', i + 1); // Find end of line
-        HandleComment(OutStr, i, Idx);
-#if 0
+        HandleComment(OutStr, i, Idx); 
+#if 0 
       } else if (ColNum == MaxColumns) { // Wrap lines.
         // Wrap very long names even though we can't find a space.
         if (!LastSpace)
@@ -235,8 +235,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
       } else
         ++ColNum;
       LongCol = std::max(LongCol, ColNum);
-      if (OutStr[i] == ' ')
-        LastSpace = i;
+    //  if (OutStr[i] == ' ')
+    //    LastSpace = i;
     }
 
     if (!HandleBasicBlock && CFGInfo && CFGInfo->HighlightBB && !LongestCol) {
