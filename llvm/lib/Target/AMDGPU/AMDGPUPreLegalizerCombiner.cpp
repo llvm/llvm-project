@@ -126,7 +126,6 @@ void AMDGPUPreLegalizerCombinerHelper::applyClampI64ToI16(
          LLT::scalar(64));
   const LLT S32 = LLT::scalar(32);
 
-  B.setMBB(*MI.getParent());
   B.setInstrAndDebugLoc(MI);
 
   auto Unmerge = B.buildUnmerge(S32, Src);
