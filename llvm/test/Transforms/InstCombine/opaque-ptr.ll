@@ -278,6 +278,34 @@ define ptr @geps_combinable_different_elem_type9(ptr %a, i64 %idx) {
   ret ptr %a3
 }
 
+declare void @use(ptr)
+
+define ptr @geps_combinable_different_elem_type_extra_use1(ptr %a) {
+; CHECK-LABEL: @geps_combinable_different_elem_type_extra_use1(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    call void @use(ptr [[A2]])
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
+  call void @use(ptr %a2)
+  %a3 = getelementptr i8, ptr %a2, i64 4
+  ret ptr %a3
+}
+
+define ptr @geps_combinable_different_elem_type_extra_use2(ptr %a, i64 %idx) {
+; CHECK-LABEL: @geps_combinable_different_elem_type_extra_use2(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[A2]])
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i64 %idx
+  call void @use(ptr %a2)
+  %a3 = getelementptr i8, ptr %a2, i64 4
+  ret ptr %a3
+}
+
 define ptr @geps_combinable_scalable(ptr %a, i64 %idx) {
 ; CHECK-LABEL: @geps_combinable_scalable(
 ; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds <vscale x 2 x i32>, ptr [[A:%.*]], i64 1
