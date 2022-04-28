@@ -1713,7 +1713,7 @@ void CodeGenFunction::OMPBuilderCBHelpers::EmitOMPOutlinedRegionBody(
 }
 
 void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
-  if (CGM.getLangOpts().OpenMPIRBuilder) {
+  if (CGM.getLangOpts().OpenMPIRBuilder && !IsInsideNonOpenMPIRBuilderHandledRegion ) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     // Check if we have any if clause associated with the directive.
     llvm::Value *IfCond = nullptr;
@@ -1740,6 +1740,31 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
+
+
+    auto CancelCB = [this](InsertPointTy IP,
+                           llvm::omp::Directive CanceledDirective,
+                           llvm::omp::Directive CanceledBy) {
+            llvm_unreachable("TODO");
+#if 0
+      assert(CanceledDirective == OMPD_parallel);
+      if (CanceledBy == OMPD_unknown)
+        return;
+
+      auto &Stack = OMPCancelStack.Stack;
+
+      Builder.restoreIP(IP);
+      auto CurBB = IP.getBlock();
+      llvm::BasicBlock *ContBB = nullptr;
+      ContBB = splitBBWithSuffix(Builder, /*CreateBranch*/ false, ".cnclsplit");
+
+
+      auto &ExitDest = Stack.back().ExitBlock;
+      auto Dest = JumpDest(ContBB, ExitDest.getScopeDepth(), NextCleanupDestIndex++);
+
+      EmitBranchThroughCleanup(Dest);
+#endif
+    };
     // Privatization callback that performs appropriate action for
     // shared/private/firstprivate/lastprivate/copyin/... variables.
     //
@@ -1762,15 +1787,16 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
           *this, ParallelRegionBodyStmt, AllocaIP, CodeGenIP, "parallel");
     };
 
+   
     CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
     CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
-    llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
-        AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
-    Builder.restoreIP(
-        OMPBuilder.createParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,
-                                  IfCond, NumThreads, ProcBind, S.hasCancel()));
-    return;
+    llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
+   // Builder.restoreIP(  OMPBuilder.createParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,   IfCond, NumThreads, ProcBind, S.hasCancel()));
+       CGM.getOpenMPRuntime().emitIRBuilderParallel(*this, CS, BodyGenCB, PrivCB, FiniCB, IfCond, NumThreads, ProcBind,  S.hasCancel());
+ return;
   }
+
+  CGNonOpenMPIRBuilderRegion RegionScope(*this);
 
   // Emit parallel region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -4072,22 +4098,21 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
-  if (CGM.getLangOpts().OpenMPIRBuilder) {
+  if (CGM.getLangOpts().OpenMPIRBuilder && !IsInsideNonOpenMPIRBuilderHandledRegion) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-    if (OMPBuilder.isTopmostBuilderManaged()) {
       const Stmt *SectionRegionBodyStmt = S.getAssociatedStmt();
-      auto FiniCB = [this](InsertPointTy IP,
-                           llvm::omp::Directive LeavingConstruct,
-                           llvm::omp::Directive CancelledBy) {
-        OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      auto FiniCB = [this](   InsertPointTy ExitingIP, 
+       llvm::   omp::Directive LeaveReason,
+         llvm::OpenMPIRBuilder::  OMPRegionInfo *Region) {
+        OMPBuilderCBHelpers::FinalizeOMPRegion(*this, ExitingIP);
       };
 
       auto BodyGenCB =
           [SectionRegionBodyStmt,
            this](InsertPointTy AllocaIP,
-                 InsertPointTy CodeGenIP) { // ,    llvm::BasicBlock &FiniBB
+                 InsertPointTy CodeGenIP) { 
             Builder.restoreIP(CodeGenIP);
             auto FiniBB = splitBBWithSuffix(Builder, false, ".sectionfini");
 
@@ -4106,8 +4131,9 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
       Builder.restoreIP(OMPBuilder.createSection(Builder, BodyGenCB, FiniCB));
 
       return;
-    }
   }
+
+  CGNonOpenMPIRBuilderRegion NonOpenMPIRBuilderRegion(*this);
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(&S);
   EmitStmt(S.getAssociatedStmt());
@@ -6882,18 +6908,16 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
   }
   if (CGM.getLangOpts().OpenMPIRBuilder) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-    // TODO: This check is necessary as we only generate `omp parallel` through
-    // the OpenMPIRBuilder for now.
-    if (S.getCancelRegion() == OMPD_parallel ||
-        S.getCancelRegion() == OMPD_sections ||
-        S.getCancelRegion() == OMPD_section) {
+    llvm_unreachable("TODO");
+   // auto DK = OMPBuilder.getTopmostDirective();
+   // if (OMPBuilder.isTopmostBuilderManaged()) {
       llvm::Value *IfCondition = nullptr;
       if (IfCond)
-        IfCondition = EmitScalarExpr(IfCond,
-                                     /*IgnoreResultAssign=*/true);
-      return Builder.restoreIP(
+        IfCondition = EvaluateExprAsBool(IfCond);
+      Builder.restoreIP(
           OMPBuilder.createCancel(Builder, IfCondition, S.getCancelRegion()));
-    }
+      return;
+   // }
   }
 
   CGM.getOpenMPRuntime().emitCancelCall(*this, S.getBeginLoc(), IfCond,

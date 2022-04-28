@@ -476,6 +476,8 @@ public:
   };
   CGCapturedStmtInfo *CapturedStmtInfo = nullptr;
 
+
+
   /// RAII for correct setting/restoring of CapturedStmtInfo.
   class CGCapturedStmtRAII {
   private:
@@ -489,6 +491,28 @@ public:
     }
     ~CGCapturedStmtRAII() { CGF.CapturedStmtInfo = PrevCapturedStmtInfo; }
   };
+
+
+
+  /// Required until everything can be handled by OpenMPIRBuilder.
+  /// Isn't the ultimate solution to mixing OpenMPIRBuilder and non-OpenMPIRBuilder codegen either, but works with the current regression tests so far.
+  bool IsInsideNonOpenMPIRBuilderHandledRegion = false;
+  class CGNonOpenMPIRBuilderRegion {
+  private:
+      CodeGenFunction &CGF;
+      bool PreviousIsInsideNonOpenMPIRBuilderHandledRegion;
+  public:
+      CGNonOpenMPIRBuilderRegion(CodeGenFunction &CGF)
+          : CGF(CGF), PreviousIsInsideNonOpenMPIRBuilderHandledRegion(CGF.IsInsideNonOpenMPIRBuilderHandledRegion) {
+          CGF.IsInsideNonOpenMPIRBuilderHandledRegion = true;
+      }
+      ~CGNonOpenMPIRBuilderRegion() { 
+          CGF.IsInsideNonOpenMPIRBuilderHandledRegion = PreviousIsInsideNonOpenMPIRBuilderHandledRegion;
+      }
+  };
+
+
+
 
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
