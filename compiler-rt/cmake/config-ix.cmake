@@ -57,7 +57,6 @@ endif ()
 # CodeGen options.
 check_c_compiler_flag(-ffreestanding         COMPILER_RT_HAS_FFREESTANDING_FLAG)
 check_c_compiler_flag(-fomit-frame-pointer   COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG)
-check_c_compiler_flag(-std=c11               COMPILER_RT_HAS_STD_C11_FLAG)
 check_c_compiler_flag(-fcf-protection=full   COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
 check_cxx_compiler_flag(-fPIC                COMPILER_RT_HAS_FPIC_FLAG)
 check_cxx_compiler_flag(-fPIE                COMPILER_RT_HAS_FPIE_FLAG)
