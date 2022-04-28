@@ -1803,7 +1803,8 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
           .addAttribute(Attribute::ByVal)
           .addAttribute(Attribute::StructRet)
           .addAttribute(Attribute::ByRef)
-          .addAttribute(Attribute::ElementType);
+          .addAttribute(Attribute::ElementType)
+          .addAttribute(Attribute::AllocatedPointer);
   }
 
     // Attributes that only apply to pointers or vectors of pointers.

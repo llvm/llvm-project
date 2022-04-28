@@ -1538,6 +1538,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::AllocAlign;
   case bitc::ATTR_KIND_ALLOC_SIZE:
     return Attribute::AllocSize;
+  case bitc::ATTR_KIND_ALLOCATED_POINTER:
+    return Attribute::AllocatedPointer;
   case bitc::ATTR_KIND_NO_RED_ZONE:
     return Attribute::NoRedZone;
   case bitc::ATTR_KIND_NO_RETURN:
