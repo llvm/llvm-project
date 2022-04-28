@@ -1174,6 +1174,16 @@ bool MipsTargetLowering::isCheapToSpeculateCtlz() const {
   return Subtarget.hasMips32();
 }
 
+bool MipsTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
+  // We can use ANDI+SLTIU as a bit test. Y contains the bit position.
+  // For MIPSR2 or later, we may be able to use the `ext` instruction or its'
+  // double-word variants.
+  if (auto *C = dyn_cast<ConstantSDNode>(Y))
+    return C->getAPIntValue().ule(15);
+
+  return false;
+}
+
 bool MipsTargetLowering::shouldFoldConstantShiftPairToMask(
     const SDNode *N, CombineLevel Level) const {
   if (N->getOperand(0).getValueType().isVector())
