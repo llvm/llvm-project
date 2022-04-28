@@ -30,6 +30,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -481,9 +482,15 @@ void EmitLLVMBitcodeAction::ExecuteAction() {
   if (!llvmModule)
     GenerateLLVMIR();
 
-  // Create and configure `Target`
+  // Set the triple based on the CompilerInvocation set-up
+  const std::string &theTriple = ci.invocation().targetOpts().triple;
+  if (llvmModule->getTargetTriple() != theTriple) {
+    ci.diagnostics().Report(clang::diag::warn_fe_override_module) << theTriple;
+    llvmModule->setTargetTriple(theTriple);
+  }
+
+  // Create `Target`
   std::string error;
-  std::string theTriple = llvmModule->getTargetTriple();
   const llvm::Target *theTarget =
       llvm::TargetRegistry::lookupTarget(theTriple, error);
   assert(theTarget && "Failed to create Target");
@@ -546,13 +553,17 @@ void BackendAction::ExecuteAction() {
   if (!llvmModule)
     GenerateLLVMIR();
 
+  // Set the triple based on the CompilerInvocation set-up
+  const std::string &theTriple = ci.invocation().targetOpts().triple;
+  if (llvmModule->getTargetTriple() != theTriple) {
+    ci.diagnostics().Report(clang::diag::warn_fe_override_module) << theTriple;
+    llvmModule->setTargetTriple(theTriple);
+  }
+
   // Create `Target`
   std::string error;
-  const std::string &theTriple = llvmModule->getTargetTriple();
   const llvm::Target *theTarget =
       llvm::TargetRegistry::lookupTarget(theTriple, error);
-  // TODO: Make this a diagnostic once `flang-new` can consume LLVM IR files
-  // (in which users could use unsupported triples)
   assert(theTarget && "Failed to create Target");
 
   // Create `TargetMachine`
