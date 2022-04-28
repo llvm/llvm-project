@@ -1485,19 +1485,8 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
         Pipeline.addCallbackToPipeline(Dumper);
         CVSymbolVisitor Visitor(Pipeline);
         auto SS = ModS.getSymbolsSubstream();
-        if (opts::Filters.SymbolOffset) {
-          CVSymbolVisitor::FilterOptions Filter;
-          Filter.SymbolOffset = opts::Filters.SymbolOffset;
-          Filter.ParentRecursiveDepth = opts::Filters.ParentRecurseDepth;
-          Filter.ChildRecursiveDepth = opts::Filters.ChildrenRecurseDepth;
-          if (auto EC = Visitor.visitSymbolStreamFiltered(ModS.getSymbolArray(),
-                                                          Filter)) {
-            P.formatLine("Error while processing symbol records.  {0}",
-                         toString(std::move(EC)));
-            return EC;
-          }
-        } else if (auto EC = Visitor.visitSymbolStream(ModS.getSymbolArray(),
-                                                       SS.Offset)) {
+        if (auto EC =
+                Visitor.visitSymbolStream(ModS.getSymbolArray(), SS.Offset)) {
           P.formatLine("Error while processing symbol records.  {0}",
                        toString(std::move(EC)));
           return EC;

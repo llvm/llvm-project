@@ -579,7 +579,7 @@ bool llvm::pdb::shouldDumpSymbolGroup(uint32_t Idx, const SymbolGroup &Group,
     return false;
 
   // If the arg was not specified on the command line, always dump all modules.
-  if (!Filters.DumpModi)
+  if (Filters.NumOccurrences == 0)
     return true;
 
   // Otherwise, only dump if this is the same module specified.
