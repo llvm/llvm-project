@@ -1122,29 +1122,30 @@ public:
 
   /// Parse zero or more SSA comma-separated operand references with a specified
   /// surrounding delimiter, and an optional required operand count.
-  virtual ParseResult parseOperandList(
-      SmallVectorImpl<UnresolvedOperand> &result, int requiredOperandCount = -1,
-      Delimiter delimiter = Delimiter::None, bool allowResultNumber = true) = 0;
+  virtual ParseResult
+  parseOperandList(SmallVectorImpl<UnresolvedOperand> &result,
+                   Delimiter delimiter = Delimiter::None,
+                   bool allowResultNumber = true,
+                   int requiredOperandCount = -1) = 0;
 
+  /// Parse a specified number of comma separated operands.
   ParseResult parseOperandList(SmallVectorImpl<UnresolvedOperand> &result,
-                               Delimiter delimiter,
-                               bool allowResultNumber = true) {
-    return parseOperandList(result, /*requiredOperandCount=*/-1, delimiter,
-                            allowResultNumber);
+                               int requiredOperandCount,
+                               Delimiter delimiter = Delimiter::None) {
+    return parseOperandList(result, delimiter,
+                            /*allowResultNumber=*/true, requiredOperandCount);
   }
 
   /// Parse zero or more trailing SSA comma-separated trailing operand
   /// references with a specified surrounding delimiter, and an optional
-  /// required operand count. A leading comma is expected before the operands.
-  virtual ParseResult
-  parseTrailingOperandList(SmallVectorImpl<UnresolvedOperand> &result,
-                           int requiredOperandCount = -1,
-                           Delimiter delimiter = Delimiter::None) = 0;
+  /// required operand count. A leading comma is expected before the
+  /// operands.
   ParseResult
   parseTrailingOperandList(SmallVectorImpl<UnresolvedOperand> &result,
-                           Delimiter delimiter) {
-    return parseTrailingOperandList(result, /*requiredOperandCount=*/-1,
-                                    delimiter);
+                           Delimiter delimiter = Delimiter::None) {
+    if (failed(parseOptionalComma()))
+      return success(); // The comma is optional.
+    return parseOperandList(result, delimiter);
   }
 
   /// Resolve an operand to an SSA value, emitting an error on failure.
@@ -1297,14 +1298,6 @@ public:
   parseOptionalAssignmentListWithTypes(SmallVectorImpl<UnresolvedOperand> &lhs,
                                        SmallVectorImpl<UnresolvedOperand> &rhs,
                                        SmallVectorImpl<Type> &types) = 0;
-
-private:
-  /// Parse either an operand list or a region argument list depending on
-  /// whether isOperandList is true.
-  ParseResult
-  parseOperandOrRegionArgList(SmallVectorImpl<UnresolvedOperand> &result,
-                              bool isOperandList, int requiredOperandCount,
-                              Delimiter delimiter);
 };
 
 //===--------------------------------------------------------------------===//
