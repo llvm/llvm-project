@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_35 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
 
 ; Verify that we correctly emit code for i8 ldg/ldu. We do not expose 8-bit
 ; registers in the backend, so these loads need special handling.

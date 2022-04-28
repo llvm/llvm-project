@@ -9,10 +9,12 @@
 #include "ASTSignals.h"
 #include "AST.h"
 #include "FindTarget.h"
+#include "support/Trace.h"
 
 namespace clang {
 namespace clangd {
 ASTSignals ASTSignals::derive(const ParsedAST &AST) {
+  trace::Span Span("ASTSignals::derive");
   ASTSignals Signals;
   const SourceManager &SM = AST.getSourceManager();
   findExplicitReferences(

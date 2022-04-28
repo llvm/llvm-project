@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20
+; RUN: llc < %s -march=nvptx -mcpu=sm_20 %if ptxas %{ | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 %if ptxas %{ | %ptxas-verify %}
 
 ; This test makes sure that the result of vector compares are properly
 ; scalarized.  If codegen fails, then the type legalizer incorrectly

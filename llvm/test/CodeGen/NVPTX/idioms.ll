@@ -2,6 +2,8 @@
 
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK-LABEL: abs_i16(
 define i16 @abs_i16(i16 %a) {

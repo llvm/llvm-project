@@ -1,11 +1,13 @@
 # RUN: %python %s --target=cuda --tests=suld,sust,tex,tld4 --gen-list=%t.list > %t-cuda.ll
 # RUN: llc %t-cuda.ll -verify-machineinstrs -o - | FileCheck %t-cuda.ll
+# RUN: %if ptxas %{ llc %t-cuda.ll -verify-machineinstrs -o - | %ptxas-verify %}
 
 # We only need to run this second time for texture tests, because
 # there is a difference between unified and non-unified intrinsics.
 #
 # RUN: %python %s --target=nvcl --tests=suld,sust,tex,tld4 --gen-list-append --gen-list=%t.list > %t-nvcl.ll
 # RUN: llc %t-nvcl.ll -verify-machineinstrs -o - | FileCheck %t-nvcl.ll
+# RUN: %if ptxas %{ llc %t-nvcl.ll -verify-machineinstrs -o - | %ptxas-verify %}
 
 # Verify that all instructions and intrinsics defined in TableGen
 # files are tested. The command may fail if the files are changed

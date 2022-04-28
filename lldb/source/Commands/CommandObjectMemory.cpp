@@ -1688,7 +1688,7 @@ protected:
                // address size, etc.), the end of mappable memory will be lower
                // than that. So if we find any non-address bit set, we must be
                // at the end of the mappable range.
-               (abi && (abi->FixDataAddress(load_addr) != load_addr))) {
+               (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
       result.AppendErrorWithFormat("'%s' takes one argument:\nUsage: %s\n",
                                    m_cmd_name.c_str(), m_cmd_syntax.c_str());
       return false;

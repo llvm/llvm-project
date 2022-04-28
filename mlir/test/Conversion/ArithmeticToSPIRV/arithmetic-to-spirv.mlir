@@ -435,17 +435,17 @@ func.func @constant() {
   %3 = arith.constant dense<[2, 3]> : vector<2xi32>
   // CHECK: spv.Constant 1 : i32
   %4 = arith.constant 1 : index
-  // CHECK: spv.Constant dense<1> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<1> : tensor<6xi32> : !spv.array<6 x i32>
   %5 = arith.constant dense<1> : tensor<2x3xi32>
-  // CHECK: spv.Constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32>
   %6 = arith.constant dense<1.0> : tensor<2x3xf32>
-  // CHECK: spv.Constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32>
   %7 = arith.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %8 = arith.constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %9 =  arith.constant dense<[[1, 2], [3, 4], [5, 6]]> : tensor<3x2xi32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %10 =  arith.constant dense<[1, 2, 3, 4, 5, 6]> : tensor<6xi32>
   return
 }
@@ -458,7 +458,7 @@ func.func @constant_16bit() {
   %1 = arith.constant 5.0 : f16
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi16>
   %2 = arith.constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16, stride=2>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16>
   %3 = arith.constant dense<4.0> : tensor<5xf16>
   return
 }
@@ -471,7 +471,7 @@ func.func @constant_64bit() {
   %1 = arith.constant 5.0 : f64
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi64>
   %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64, stride=8>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64>
   %3 = arith.constant dense<4.0> : tensor<5xf64>
   return
 }
@@ -504,9 +504,9 @@ func.func @constant_16bit() {
   %1 = arith.constant 5.0 : f16
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = arith.constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32>
   %3 = arith.constant dense<4.0> : tensor<5xf16>
-  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32>
   %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
@@ -519,9 +519,9 @@ func.func @constant_64bit() {
   %1 = arith.constant 5.0 : f64
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32>
   %3 = arith.constant dense<4.0> : tensor<5xf64>
-  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32>
   %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
@@ -1360,17 +1360,17 @@ func.func @constant() {
   %3 = arith.constant dense<[2, 3]> : vector<2xi32>
   // CHECK: spv.Constant 1 : i32
   %4 = arith.constant 1 : index
-  // CHECK: spv.Constant dense<1> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<1> : tensor<6xi32> : !spv.array<6 x i32>
   %5 = arith.constant dense<1> : tensor<2x3xi32>
-  // CHECK: spv.Constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32>
   %6 = arith.constant dense<1.0> : tensor<2x3xf32>
-  // CHECK: spv.Constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32>
   %7 = arith.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %8 = arith.constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %9 = arith.constant dense<[[1, 2], [3, 4], [5, 6]]> : tensor<3x2xi32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %10 = arith.constant dense<[1, 2, 3, 4, 5, 6]> : tensor<6xi32>
   return
 }
@@ -1383,7 +1383,7 @@ func.func @constant_16bit() {
   %1 = arith.constant 5.0 : f16
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi16>
   %2 = arith.constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16, stride=2>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16>
   %3 = arith.constant dense<4.0> : tensor<5xf16>
   return
 }
@@ -1396,7 +1396,7 @@ func.func @constant_64bit() {
   %1 = arith.constant 5.0 : f64
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi64>
   %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64, stride=8>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64>
   %3 = arith.constant dense<4.0> : tensor<5xf64>
   return
 }
@@ -1418,9 +1418,9 @@ func.func @constant_16bit() {
   %1 = arith.constant 5.0 : f16
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = arith.constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32>
   %3 = arith.constant dense<4.0> : tensor<5xf16>
-  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32>
   %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
@@ -1433,9 +1433,9 @@ func.func @constant_64bit() {
   %1 = arith.constant 5.0 : f64
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32>
   %3 = arith.constant dense<4.0> : tensor<5xf64>
-  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32>
   %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
