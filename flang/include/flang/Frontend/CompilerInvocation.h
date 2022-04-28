@@ -122,7 +122,7 @@ public:
   const Fortran::parser::Options &fortranOpts() const { return parserOpts_; }
 
   TargetOptions &targetOpts() { return targetOpts_; }
-  const TargetOptions &TargetOpts() const { return targetOpts_; }
+  const TargetOptions &targetOpts() const { return targetOpts_; }
 
   Fortran::semantics::SemanticsContext &semanticsContext() {
     return *semanticsContext_;
