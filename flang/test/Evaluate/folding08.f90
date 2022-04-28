@@ -77,23 +77,33 @@ module m
       end block
     end associate
   end subroutine
-  subroutine test3_lbound_parameter
-    ! Test lbound with constant arrays
+  subroutine test3_bound_parameter
+    ! Test [ul]bound with parameter arrays
     integer, parameter :: a1(1) = 0
     integer, parameter :: lba1(*) = lbound(a1)
     logical, parameter :: test_lba1 = all(lba1 == [1])
+    integer, parameter :: uba1(*) = ubound(a1)
+    logical, parameter :: test_uba1 = all(lba1 == [1])
 
     integer, parameter :: a2(0:1) = 0
     integer, parameter :: lba2(*) = lbound(a2)
     logical, parameter :: test_lba2 = all(lba2 == [0])
+    integer, parameter :: uba2(*) = ubound(a2)
+    logical, parameter :: test_uba2 = all(uba2 == [1])
 
     integer, parameter :: a3(-10:-5,1,4:6) = 0
     integer, parameter :: lba3(*) = lbound(a3)
     logical, parameter :: test_lba3 = all(lba3 == [-10, 1, 4])
+    integer, parameter :: uba3(*) = ubound(a3)
+    logical, parameter :: test_uba3 = all(uba3 == [-5, 1, 6])
+
     ! Exercise with DIM=
     logical, parameter :: test_lba3_dim = lbound(a3, 1) == -10 .and. &
          lbound(a3, 2) == 1 .and. &
          lbound(a3, 3) == 4
+    logical, parameter :: test_uba3_dim = ubound(a3, 1) == -5 .and. &
+         ubound(a3, 2) == 1 .and. &
+         ubound(a3, 3) == 6
   end subroutine
   subroutine test4_lbound_parentheses
     ! Test lbound with (x) expressions

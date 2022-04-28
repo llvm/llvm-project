@@ -64,6 +64,7 @@ public:
   ~ConstantBounds();
   const ConstantSubscripts &shape() const { return shape_; }
   const ConstantSubscripts &lbounds() const { return lbounds_; }
+  ConstantSubscripts ComputeUbounds(std::optional<int> dim) const;
   void set_lbounds(ConstantSubscripts &&);
   void SetLowerBoundsToOne();
   int Rank() const { return GetRank(shape_); }
