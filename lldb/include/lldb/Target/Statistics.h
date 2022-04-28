@@ -116,6 +116,8 @@ struct ModuleStats {
   bool symtab_saved_to_cache = false;
   bool debug_info_index_loaded_from_cache = false;
   bool debug_info_index_saved_to_cache = false;
+  bool debug_info_enabled = true;
+  bool symtab_stripped = false;
 };
 
 struct ConstStringStats {

@@ -287,6 +287,9 @@ void CompileUnit::ResolveSymbolContext(
   if (num_file_indexes == 0)
     return;
 
+  // Found a matching source file in this compile unit load its debug info.
+  GetModule()->GetSymbolFile()->SetLoadDebugInfoEnabled();
+
   LineTable *line_table = sc.comp_unit->GetLineTable();
 
   if (line_table == nullptr) {
@@ -312,7 +315,7 @@ void CompileUnit::ResolveSymbolContext(
     line_idx = line_table->FindLineEntryIndexByFileIndex(
         0, file_indexes, src_location_spec, &line_entry);
   }
-  
+
   // If "exact == true", then "found_line" will be the same as "line". If
   // "exact == false", the "found_line" will be the closest line entry
   // with a line number greater than "line" and we will use this for our
