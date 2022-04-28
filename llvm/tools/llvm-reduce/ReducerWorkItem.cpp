@@ -226,6 +226,9 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
       const auto &MCID = TII->get(SrcMI.getOpcode());
       auto *DstMI = DstMF->CreateMachineInstr(MCID, SrcMI.getDebugLoc(),
                                               /*NoImplicit=*/true);
+      DstMI->setFlags(SrcMI.getFlags());
+      DstMI->setAsmPrinterFlag(SrcMI.getAsmPrinterFlags());
+
       DstMBB->push_back(DstMI);
       for (auto &SrcMO : SrcMI.operands()) {
         MachineOperand DstMO(SrcMO);
