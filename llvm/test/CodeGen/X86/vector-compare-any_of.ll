@@ -1358,11 +1358,9 @@ define {i32, i1} @test_v16i8_muti_uses(<16 x i8> %x, <16 x i8>%y, <16 x i8> %z) 
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpmovmskb %ymm2, %eax
-; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovmskb %xmm0, %ecx
-; AVX2-NEXT:    testl %ecx, %ecx
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    sete %dl
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
