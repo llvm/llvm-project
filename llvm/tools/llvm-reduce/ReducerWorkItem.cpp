@@ -123,7 +123,6 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
       SrcMF->getFunction(), SrcMF->getTarget(), SrcMF->getSubtarget(),
       SrcMF->getFunctionNumber(), SrcMF->getMMI());
   DenseMap<MachineBasicBlock *, MachineBasicBlock *> Src2DstMBB;
-  DenseMap<Register, Register> Src2DstReg;
 
   auto *SrcMRI = &SrcMF->getRegInfo();
   auto *DstMRI = &DstMF->getRegInfo();
@@ -176,50 +175,23 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
 
   // FIXME: Need to clone MachineFunctionInfo, which may also depend on frame
   // index and block mapping.
+  // Clone virtual registers
+  for (unsigned I = 0, E = SrcMRI->getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    Register NewReg = DstMRI->createIncompleteVirtualRegister(
+      SrcMRI->getVRegName(Reg));
+    assert(NewReg == Reg && "expected to preserve virtreg number");
 
-  // Create vregs.
-  for (auto &SrcMBB : *SrcMF) {
-    for (auto &SrcMI : SrcMBB) {
-      for (unsigned I = 0, E = SrcMI.getNumOperands(); I < E; ++I) {
-        auto &DMO = SrcMI.getOperand(I);
-        if (DMO.isRegMask()) {
-          DstMRI->addPhysRegsUsedFromRegMask(DMO.getRegMask());
-          continue;
-        }
+    DstMRI->setRegClassOrRegBank(NewReg, SrcMRI->getRegClassOrRegBank(Reg));
 
-        if (!DMO.isReg())
-          continue;
-        Register SrcReg = DMO.getReg();
-        if (Register::isPhysicalRegister(SrcReg))
-          continue;
+    LLT RegTy = SrcMRI->getType(Reg);
+    if (RegTy.isValid())
+      DstMRI->setType(NewReg, RegTy);
 
-        if (Src2DstReg.find(SrcReg) != Src2DstReg.end())
-          continue;
-
-        Register DstReg = DstMRI->createIncompleteVirtualRegister(
-            SrcMRI->getVRegName(SrcReg));
-        DstMRI->setRegClassOrRegBank(DstReg,
-                                     SrcMRI->getRegClassOrRegBank(SrcReg));
-
-        LLT RegTy = SrcMRI->getType(SrcReg);
-        if (RegTy.isValid())
-          DstMRI->setType(DstReg, RegTy);
-        Src2DstReg[SrcReg] = DstReg;
-      }
-    }
-  }
-
-  // Copy register allocation hints.
-  for (std::pair<Register, Register> RegMapEntry : Src2DstReg) {
-    const auto &Hints = SrcMRI->getRegAllocationHints(RegMapEntry.first);
-    for (Register PrefReg : Hints.second) {
-      if (PrefReg.isVirtual()) {
-        auto PrefRegEntry = Src2DstReg.find(PrefReg);
-        assert(PrefRegEntry !=Src2DstReg.end());
-        DstMRI->addRegAllocationHint(RegMapEntry.second, PrefRegEntry->second);
-      } else
-        DstMRI->addRegAllocationHint(RegMapEntry.second, PrefReg);
-    }
+    // Copy register allocation hints.
+    const auto &Hints = SrcMRI->getRegAllocationHints(Reg);
+    for (Register PrefReg : Hints.second)
+      DstMRI->addRegAllocationHint(NewReg, PrefReg);
   }
 
   const TargetSubtargetInfo &STI = DstMF->getSubtarget();
@@ -258,14 +230,12 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF) {
       for (auto &SrcMO : SrcMI.operands()) {
         MachineOperand DstMO(SrcMO);
         DstMO.clearParent();
-        // Update vreg.
-        if (DstMO.isReg() && Src2DstReg.count(DstMO.getReg())) {
-          DstMO.setReg(Src2DstReg[DstMO.getReg()]);
-        }
+
         // Update MBB.
-        if (DstMO.isMBB()) {
+        if (DstMO.isMBB())
           DstMO.setMBB(Src2DstMBB[DstMO.getMBB()]);
-        }
+        else if (DstMO.isRegMask())
+          DstMRI->addPhysRegsUsedFromRegMask(DstMO.getRegMask());
 
         DstMI->addOperand(DstMO);
       }
