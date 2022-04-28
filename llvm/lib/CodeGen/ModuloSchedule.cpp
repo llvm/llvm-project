@@ -158,7 +158,7 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
 
   SmallVector<MachineBasicBlock *, 4> EpilogBBs;
   // Generate the epilog instructions to complete the pipeline.
-  generateEpilog(MaxStageCount, KernelBB, BB, VRMap, EpilogBBs, PrologBBs);
+  generateEpilog(MaxStageCount, KernelBB, VRMap, EpilogBBs, PrologBBs);
 
   // We need this step because the register allocation doesn't handle some
   // situations well, so we insert copies to help out.
@@ -240,9 +240,11 @@ void ModuloScheduleExpander::generateProlog(unsigned LastStage,
 /// Generate the pipeline epilog code. The epilog code finishes the iterations
 /// that were started in either the prolog or the kernel.  We create a basic
 /// block for each stage that needs to complete.
-void ModuloScheduleExpander::generateEpilog(
-    unsigned LastStage, MachineBasicBlock *KernelBB, MachineBasicBlock *OrigBB,
-    ValueMapTy *VRMap, MBBVectorTy &EpilogBBs, MBBVectorTy &PrologBBs) {
+void ModuloScheduleExpander::generateEpilog(unsigned LastStage,
+                                            MachineBasicBlock *KernelBB,
+                                            ValueMapTy *VRMap,
+                                            MBBVectorTy &EpilogBBs,
+                                            MBBVectorTy &PrologBBs) {
   // We need to change the branch from the kernel to the first epilog block, so
   // this call to analyze branch uses the kernel rather than the original BB.
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
@@ -312,12 +314,7 @@ void ModuloScheduleExpander::generateEpilog(
   // Create a branch to the new epilog from the kernel.
   // Remove the original branch and add a new branch to the epilog.
   TII->removeBranch(*KernelBB);
-  assert((OrigBB == TBB || OrigBB == FBB) &&
-         "Unable to determine looping branch direction");
-  if (OrigBB != TBB)
-    TII->insertBranch(*KernelBB, EpilogStart, KernelBB, Cond, DebugLoc());
-  else
-    TII->insertBranch(*KernelBB, KernelBB, EpilogStart, Cond, DebugLoc());
+  TII->insertBranch(*KernelBB, KernelBB, EpilogStart, Cond, DebugLoc());
   // Add a branch to the loop exit.
   if (EpilogBBs.size() > 0) {
     MachineBasicBlock *LastEpilogBB = EpilogBBs.back();
