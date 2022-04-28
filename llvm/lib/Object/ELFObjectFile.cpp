@@ -574,6 +574,9 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     case ARMBuildAttrs::v8_1_M_Main:
       Triple += "v8.1m.main";
       break;
+    case ARMBuildAttrs::v9_A:
+      Triple += "v9a";
+      break;
     }
   }
   if (!isLittleEndian())
