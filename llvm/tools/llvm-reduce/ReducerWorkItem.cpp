@@ -300,6 +300,11 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
 
   if (IsMIR) {
     auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
+    if (std::error_code EC = FileOrErr.getError()) {
+      WithColor::error(errs(), ToolName) << EC.message() << '\n';
+      return nullptr;
+    }
+
     std::unique_ptr<MIRParser> MParser =
         createMIRParser(std::move(FileOrErr.get()), Ctxt);
 
