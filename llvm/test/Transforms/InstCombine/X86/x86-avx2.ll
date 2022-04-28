@@ -106,5 +106,19 @@ define <8 x float> @elts_test_vpermps(<8 x float> %a0, <8 x i32> %a1) {
   ret <8 x float> %3
 }
 
+define <4 x i32> @elts_test_vpsrlvd(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @elts_test_vpsrlvd(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[A1:%.*]], i32 0, i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32> [[A0:%.*]], <4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+;
+  %1 = insertelement <4 x i32> %a1, i32 0, i64 3
+  %2 = tail call <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32> %a0, <4 x i32> %1)
+  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %3
+}
+
 declare <8 x i32> @llvm.x86.avx2.permd(<8 x i32>, <8 x i32>)
 declare <8 x float> @llvm.x86.avx2.permps(<8 x float>, <8 x i32>)
+declare <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32>, <4 x i32>)
