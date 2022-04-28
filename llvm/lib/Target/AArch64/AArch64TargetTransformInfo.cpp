@@ -8,6 +8,7 @@
 
 #include "AArch64TargetTransformInfo.h"
 #include "AArch64ExpandImm.h"
+#include "AArch64PerfectShuffle.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -2597,18 +2598,26 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                ArrayRef<const Value *> Args) {
   Kind = improveShuffleKindFromMask(Kind, Mask);
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+
+  // Check for broadcast loads.
+  if (Kind == TTI::SK_Broadcast) {
+    bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
+    if (IsLoad && LT.second.isVector() &&
+        isLegalBroadcastLoad(Tp->getElementType(),
+                              LT.second.getVectorElementCount()))
+      return 0; // broadcast is handled by ld1r
+  }
+
+  // If we have 4 elements for the shuffle and a Mask, get the cost straight
+  // from the perfect shuffle tables.
+  if (Mask.size() == 4 && Tp->getElementCount() == ElementCount::getFixed(4) &&
+      (Tp->getScalarSizeInBits() == 16 || Tp->getScalarSizeInBits() == 32) &&
+      all_of(Mask, [](int E) { return E < 8; }))
+    return getPerfectShuffleCost(Mask);
+
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
       Kind == TTI::SK_Reverse) {
-
-    // Check for broadcast loads.
-    if (Kind == TTI::SK_Broadcast) {
-      bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
-      if (IsLoad && LT.second.isVector() &&
-          isLegalBroadcastLoad(Tp->getElementType(),
-                               LT.second.getVectorElementCount()))
-        return 0; // broadcast is handled by ld1r
-    }
 
     static const CostTblEntry ShuffleTbl[] = {
       // Broadcast shuffle kinds can be performed with 'dup'.

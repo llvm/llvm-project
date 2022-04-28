@@ -14,6 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64PERFECTSHUFFLE_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64PERFECTSHUFFLE_H
 
+#include "llvm/ADT/ArrayRef.h"
+
 // 31 entries have cost 0
 // 730 entries have cost 1
 // 3658 entries have cost 2
@@ -6583,5 +6585,37 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     27705344U,   // <u,u,u,7>: Cost 0 copy RHS
     835584U,     // <u,u,u,u>: Cost 0 copy LHS
     0};
+
+static unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
+  assert(M.size() == 4 && "Expected a 4 entry perfect shuffle");
+
+  // Special case zero-cost nop copies, from either LHS or RHS.
+  if (llvm::all_of(llvm::enumerate(M), [](auto &E) {
+        return E.value() < 0 || E.value() == (int)E.index();
+      }))
+    return 0;
+  if (llvm::all_of(llvm::enumerate(M), [](auto &E) {
+        return E.value() < 0 || E.value() == (int)E.index() + 4;
+      }))
+    return 0;
+
+  // Get the four mask elementd from the 2 inputs. Perfect shuffles encode undef
+  // elements with value 8.
+  unsigned PFIndexes[4];
+  for (unsigned i = 0; i != 4; ++i) {
+    assert(M[i] < 8 && "Expected a maximum entry of 8 for shuffle mask");
+    if (M[i] < 0)
+      PFIndexes[i] = 8;
+    else
+      PFIndexes[i] = M[i];
+  }
+
+  // Compute the index in the perfect shuffle table.
+  unsigned PFTableIndex = PFIndexes[0] * 9 * 9 * 9 + PFIndexes[1] * 9 * 9 +
+                          PFIndexes[2] * 9 + PFIndexes[3];
+  unsigned PFEntry = PerfectShuffleTable[PFTableIndex];
+  // And extract the cost from the upper bits. The cost is encoded as Cost-1.
+  return (PFEntry >> 30) + 1;
+}
 
 #endif
