@@ -375,12 +375,15 @@ char *llvm::itaniumDemangle(const char *MangledName, char *Buf,
 
   int InternalStatus = demangle_success;
   Demangler Parser(MangledName, MangledName + std::strlen(MangledName));
+  OutputBuffer OB;
+
   Node *AST = Parser.parse();
 
   if (AST == nullptr)
     InternalStatus = demangle_invalid_mangled_name;
+  else if (!initializeOutputBuffer(Buf, N, OB, 1024))
+    InternalStatus = demangle_memory_alloc_failure;
   else {
-    OutputBuffer OB(Buf, N);
     assert(Parser.ForwardTemplateRefs.empty());
     AST->print(OB);
     OB += '\0';
@@ -424,7 +427,9 @@ bool ItaniumPartialDemangler::partialDemangle(const char *MangledName) {
 }
 
 static char *printNode(const Node *RootNode, char *Buf, size_t *N) {
-  OutputBuffer OB(Buf, N);
+  OutputBuffer OB;
+  if (!initializeOutputBuffer(Buf, N, OB, 128))
+    return nullptr;
   RootNode->print(OB);
   OB += '\0';
   if (N != nullptr)
@@ -467,7 +472,9 @@ char *ItaniumPartialDemangler::getFunctionDeclContextName(char *Buf,
     return nullptr;
   const Node *Name = static_cast<const FunctionEncoding *>(RootNode)->getName();
 
-  OutputBuffer OB(Buf, N);
+  OutputBuffer OB;
+  if (!initializeOutputBuffer(Buf, N, OB, 128))
+    return nullptr;
 
  KeepGoingLocalFunction:
   while (true) {
@@ -518,7 +525,9 @@ char *ItaniumPartialDemangler::getFunctionParameters(char *Buf,
     return nullptr;
   NodeArray Params = static_cast<FunctionEncoding *>(RootNode)->getParams();
 
-  OutputBuffer OB(Buf, N);
+  OutputBuffer OB;
+  if (!initializeOutputBuffer(Buf, N, OB, 128))
+    return nullptr;
 
   OB += '(';
   Params.printWithComma(OB);
@@ -534,7 +543,9 @@ char *ItaniumPartialDemangler::getFunctionReturnType(
   if (!isFunction())
     return nullptr;
 
-  OutputBuffer OB(Buf, N);
+  OutputBuffer OB;
+  if (!initializeOutputBuffer(Buf, N, OB, 128))
+    return nullptr;
 
   if (const Node *Ret =
           static_cast<const FunctionEncoding *>(RootNode)->getReturnType())

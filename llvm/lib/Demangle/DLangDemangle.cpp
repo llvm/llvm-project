@@ -548,6 +548,9 @@ char *llvm::dlangDemangle(const char *MangledName) {
     return nullptr;
 
   OutputBuffer Demangled;
+  if (!initializeOutputBuffer(nullptr, nullptr, Demangled, 1024))
+    return nullptr;
+
   if (strcmp(MangledName, "_Dmain") == 0) {
     Demangled << "D main";
   } else {
