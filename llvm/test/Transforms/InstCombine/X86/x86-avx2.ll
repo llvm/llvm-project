@@ -108,10 +108,9 @@ define <8 x float> @elts_test_vpermps(<8 x float> %a0, <8 x i32> %a1) {
 
 define <2 x i64> @elts_test_vpsllvq(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: @elts_test_vpsllvq(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[A1:%.*]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> [[A0:%.*]], <2 x i64> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
   %1 = insertelement <2 x i64> %a1, i64 0, i64 1
   %2 = tail call <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> %a0, <2 x i64> %1)
@@ -121,10 +120,9 @@ define <2 x i64> @elts_test_vpsllvq(<2 x i64> %a0, <2 x i64> %a1) {
 
 define <2 x i64> @elts_test_vpsrlvq(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: @elts_test_vpsrlvq(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[A1:%.*]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> [[A0:%.*]], <2 x i64> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
   %1 = insertelement <2 x i64> %a1, i64 0, i64 1
   %2 = tail call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> %a0, <2 x i64> %1)
@@ -134,10 +132,9 @@ define <2 x i64> @elts_test_vpsrlvq(<2 x i64> %a0, <2 x i64> %a1) {
 
 define <4 x i64> @elts_test_vpsllvq_256(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: @elts_test_vpsllvq_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[A1:%.*]], i64 0, i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64> [[A0:%.*]], <4 x i64> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64> [[A0:%.*]], <4 x i64> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i64> [[TMP2]]
 ;
   %1 = insertelement <4 x i64> %a1, i64 0, i64 2
   %2 = tail call <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64> %a0, <4 x i64> %1)
@@ -147,10 +144,9 @@ define <4 x i64> @elts_test_vpsllvq_256(<4 x i64> %a0, <4 x i64> %a1) {
 
 define <4 x i64> @elts_test_vpsrlvq_256(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: @elts_test_vpsrlvq_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[A1:%.*]], i64 0, i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> [[A0:%.*]], <4 x i64> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> [[A0:%.*]], <4 x i64> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i64> [[TMP2]]
 ;
   %1 = insertelement <4 x i64> %a1, i64 0, i64 3
   %2 = tail call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> %a0, <4 x i64> %1)
@@ -160,10 +156,9 @@ define <4 x i64> @elts_test_vpsrlvq_256(<4 x i64> %a0, <4 x i64> %a1) {
 
 define <4 x i32> @elts_test_vpsllvd(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @elts_test_vpsllvd(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[A1:%.*]], i32 0, i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psllv.d(<4 x i32> [[A0:%.*]], <4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psllv.d(<4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = insertelement <4 x i32> %a1, i32 0, i64 3
   %2 = tail call <4 x i32> @llvm.x86.avx2.psllv.d(<4 x i32> %a0, <4 x i32> %1)
@@ -173,10 +168,9 @@ define <4 x i32> @elts_test_vpsllvd(<4 x i32> %a0, <4 x i32> %a1) {
 
 define <4 x i32> @elts_test_vpsravd(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @elts_test_vpsravd(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[A1:%.*]], i32 0, i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> [[A0:%.*]], <4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = insertelement <4 x i32> %a1, i32 0, i64 1
   %2 = tail call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> %a0, <4 x i32> %1)
@@ -186,10 +180,9 @@ define <4 x i32> @elts_test_vpsravd(<4 x i32> %a0, <4 x i32> %a1) {
 
 define <4 x i32> @elts_test_vpsrlvd(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @elts_test_vpsrlvd(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[A1:%.*]], i32 0, i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32> [[A0:%.*]], <4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = insertelement <4 x i32> %a1, i32 0, i64 2
   %2 = tail call <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32> %a0, <4 x i32> %1)
@@ -199,10 +192,9 @@ define <4 x i32> @elts_test_vpsrlvd(<4 x i32> %a0, <4 x i32> %a1) {
 
 define <8 x i32> @elts_test_vpsllvd_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: @elts_test_vpsllvd_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[A1:%.*]], i32 0, i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psllv.d.256(<8 x i32> [[A0:%.*]], <8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> undef, <8 x i32> zeroinitializer
-; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psllv.d.256(<8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
   %1 = insertelement <8 x i32> %a1, i32 0, i64 3
   %2 = tail call <8 x i32> @llvm.x86.avx2.psllv.d.256(<8 x i32> %a0, <8 x i32> %1)
@@ -212,10 +204,9 @@ define <8 x i32> @elts_test_vpsllvd_256(<8 x i32> %a0, <8 x i32> %a1) {
 
 define <8 x i32> @elts_test_vpsravd_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: @elts_test_vpsravd_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[A1:%.*]], i32 0, i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> [[A0:%.*]], <8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> undef, <8 x i32> zeroinitializer
-; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
   %1 = insertelement <8 x i32> %a1, i32 0, i64 4
   %2 = tail call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> %a0, <8 x i32> %1)
@@ -225,10 +216,9 @@ define <8 x i32> @elts_test_vpsravd_256(<8 x i32> %a0, <8 x i32> %a1) {
 
 define <8 x i32> @elts_test_vpsrlvd_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: @elts_test_vpsrlvd_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[A1:%.*]], i32 0, i64 5
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psrlv.d.256(<8 x i32> [[A0:%.*]], <8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> undef, <8 x i32> zeroinitializer
-; CHECK-NEXT:    ret <8 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psrlv.d.256(<8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
   %1 = insertelement <8 x i32> %a1, i32 0, i64 5
   %2 = tail call <8 x i32> @llvm.x86.avx2.psrlv.d.256(<8 x i32> %a0, <8 x i32> %1)
