@@ -717,6 +717,13 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilderBase &B) {
   return nullptr;
 }
 
+Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
+  Value *Bound = CI->getArgOperand(1);
+  if (isKnownNonZero(Bound, DL))
+    annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  return nullptr;
+}
+
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilderBase &B) {
   Module &M = *CI->getModule();
   unsigned WCharSize = TLI->getWCharSize(M) * 8;
@@ -2879,6 +2886,8 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeStrNCpy(CI, Builder);
     case LibFunc_strlen:
       return optimizeStrLen(CI, Builder);
+    case LibFunc_strnlen:
+      return optimizeStrNLen(CI, Builder);
     case LibFunc_strpbrk:
       return optimizeStrPBrk(CI, Builder);
     case LibFunc_strndup:

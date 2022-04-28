@@ -163,6 +163,7 @@ private:
   Value *optimizeStpCpy(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrNCpy(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrLen(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrNLen(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrPBrk(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrTo(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrSpn(CallInst *CI, IRBuilderBase &B);
