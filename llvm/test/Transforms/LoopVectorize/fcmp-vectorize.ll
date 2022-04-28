@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S %s | FileCheck %s
 
 ; Avoid crashing while trying to vectorize fcmp that can be folded to vector of
 ; i1 true.

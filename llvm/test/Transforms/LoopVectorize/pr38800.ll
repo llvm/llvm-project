@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 -pass-remarks-missed='loop-vectorize' -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -pass-remarks-missed='loop-vectorize' -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: remark: <unknown>:0:0: loop not vectorized: integer loop induction variable could not be identified
 
