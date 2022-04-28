@@ -301,7 +301,7 @@ private:
   void populateBodySamplesForFunction(FunctionSamples &FunctionProfile,
                                       const RangeSample &RangeCounters);
   void populateBoundarySamplesForFunction(SampleContextFrames ContextId,
-                                          FunctionSamples &FunctionProfile,
+                                          FunctionSamples *CallerProfile,
                                           const BranchSample &BranchCounters);
   void populateInferredFunctionSamples();
 
