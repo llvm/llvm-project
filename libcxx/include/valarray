@@ -357,7 +357,6 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <__utility/swap.h>
 #include <cmath>
 #include <cstddef>
-#include <functional> // TODO: Remove this include
 #include <initializer_list>
 #include <new>
 #include <version>

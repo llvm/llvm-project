@@ -172,7 +172,6 @@ template<class T>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <compare>
-#include <functional> // TODO: Remove this include
 #include <initializer_list>
 #include <new>
 #include <stdexcept>

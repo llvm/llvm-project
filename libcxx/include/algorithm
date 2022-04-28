@@ -881,7 +881,6 @@ template <class BidirectionalIterator, class Compare>
 #include <__debug>
 #include <cstddef>
 #include <cstring>
-#include <functional> // TODO: Remove this include
 #include <initializer_list>
 #include <iterator>
 #include <memory>

@@ -227,7 +227,6 @@ template <class T, class Container, class Compare>
 #include <__utility/forward.h>
 #include <compare>
 #include <deque>
-#include <functional> // TODO: Remove this include
 #include <type_traits>
 #include <vector>
 #include <version>
