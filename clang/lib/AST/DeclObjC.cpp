@@ -1643,6 +1643,11 @@ ObjCIvarDecl *ObjCInterfaceDecl::all_declared_ivar_begin() {
 
   ObjCIvarDecl *curIvar = nullptr;
   if (!data().IvarList) {
+    // Force ivar deserialization upfront, before building IvarList.
+    (void)ivar_empty();
+    for (const auto *Ext : known_extensions()) {
+      (void)Ext->ivar_empty();
+    }
     if (!ivar_empty()) {
       ObjCInterfaceDecl::ivar_iterator I = ivar_begin(), E = ivar_end();
       data().IvarList = *I; ++I;
@@ -1834,8 +1839,8 @@ ObjCIvarDecl *ObjCIvarDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
                                   ObjCIvarDecl::None, nullptr, false);
 }
 
-const ObjCInterfaceDecl *ObjCIvarDecl::getContainingInterface() const {
-  const auto *DC = cast<ObjCContainerDecl>(getDeclContext());
+ObjCInterfaceDecl *ObjCIvarDecl::getContainingInterface() {
+  auto *DC = cast<ObjCContainerDecl>(getDeclContext());
 
   switch (DC->getKind()) {
   default:
@@ -1845,7 +1850,7 @@ const ObjCInterfaceDecl *ObjCIvarDecl::getContainingInterface() const {
 
     // Ivars can only appear in class extension categories.
   case ObjCCategory: {
-    const auto *CD = cast<ObjCCategoryDecl>(DC);
+    auto *CD = cast<ObjCCategoryDecl>(DC);
     assert(CD->IsClassExtension() && "invalid container for ivar!");
     return CD->getClassInterface();
   }
