@@ -100,10 +100,12 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func.func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : index) {
-    // expected-error @+1 {{unhandled allocation type}}
+  // CHECK-LABEL: func @alloc_dynamic_size
+  func.func @alloc_dynamic_size(%arg0 : index) -> f32 {
+    // CHECK: memref.alloc
     %0 = memref.alloc(%arg0) : memref<4x?xf32, 3>
-    return
+    %1 = memref.load %0[%arg0, %arg0] : memref<4x?xf32, 3>
+    return %1: f32
   }
 }
 
@@ -114,10 +116,12 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func.func @alloc_dealloc_mem() {
-    // expected-error @+1 {{unhandled allocation type}}
+  // CHECK-LABEL: func @alloc_unsupported_memory_space
+  func.func @alloc_unsupported_memory_space(%arg0: index) -> f32 {
+    // CHECK: memref.alloc
     %0 = memref.alloc() : memref<4x5xf32>
-    return
+    %1 = memref.load %0[%arg0, %arg0] : memref<4x5xf32>
+    return %1: f32
   }
 }
 
@@ -129,8 +133,9 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func.func @alloc_dealloc_dynamic_workgroup_mem(%arg0 : memref<4x?xf32, 3>) {
-    // expected-error @+1 {{unhandled deallocation type}}
+  // CHECK-LABEL: func @dealloc_dynamic_size
+  func.func @dealloc_dynamic_size(%arg0 : memref<4x?xf32, 3>) {
+    // CHECK: memref.dealloc
     memref.dealloc %arg0 : memref<4x?xf32, 3>
     return
   }
@@ -143,8 +148,9 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
   }
 {
-  func.func @alloc_dealloc_mem(%arg0 : memref<4x5xf32>) {
-    // expected-error @+1 {{unhandled deallocation type}}
+  // CHECK-LABEL: func @dealloc_unsupported_memory_space
+  func.func @dealloc_unsupported_memory_space(%arg0 : memref<4x5xf32>) {
+    // CHECK: memref.dealloc
     memref.dealloc %arg0 : memref<4x5xf32>
     return
   }
