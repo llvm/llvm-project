@@ -3333,6 +3333,21 @@ define void @PR45604(<32 x i16>* %dst, <8 x i16>* %src) {
   ret void
 }
 
+; FIXME: getFauxShuffle AND/ANDN decoding wrongly assumes an undef src always gives an undef dst.
+define <2 x i64> @PR55157(<16 x i8>* %0) {
+; CHECK-LABEL: PR55157:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %2 = load <16 x i8>, <16 x i8>* %0, align 16
+  %3 = icmp eq <16 x i8> %2, zeroinitializer
+  %4 = tail call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer)
+  %5 = select <16 x i1> %3, <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> %4
+  %6 = shufflevector <16 x i8> %5, <16 x i8> poison, <16 x i32> <i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15>
+  %7 = bitcast <16 x i8> %6 to <2 x i64>
+  ret <2 x i64> %7
+}
+declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8>, <16 x i8>)
+
 ; Test case reported on D105827
 define void @SpinningCube() {
 ; SSE2-LABEL: SpinningCube:
