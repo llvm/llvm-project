@@ -346,6 +346,15 @@ const char *CodeCompletionString::getTypedText() const {
   return nullptr;
 }
 
+std::string CodeCompletionString::getAllTypedText() const {
+  std::string Res;
+  for (const Chunk &C : *this)
+    if (C.Kind == CK_TypedText)
+      Res += C.Text;
+
+  return Res;
+}
+
 const char *CodeCompletionAllocator::CopyString(const Twine &String) {
   SmallString<128> Data;
   StringRef Ref = String.toStringRef(Data);

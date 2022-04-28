@@ -155,6 +155,10 @@ struct CodeCompleteOptions {
 struct CodeCompletion {
   // The unqualified name of the symbol or other completion item.
   std::string Name;
+  // The name of the symbol for filtering and sorting purposes. Typically the
+  // same as `Name`, but may be different e.g. for ObjC methods, `Name` is the
+  // first selector fragment but the `FilterText` is the entire selector.
+  std::string FilterText;
   // The scope qualifier for the symbol name. e.g. "ns1::ns2::"
   // Empty for non-symbol completions. Not inserted, but may be displayed.
   std::string Scope;

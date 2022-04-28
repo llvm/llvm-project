@@ -606,8 +606,11 @@ public:
     return begin()[I];
   }
 
-  /// Returns the text in the TypedText chunk.
+  /// Returns the text in the first TypedText chunk.
   const char *getTypedText() const;
+
+  /// Returns the combined text from all TypedText chunks.
+  std::string getAllTypedText() const;
 
   /// Retrieve the priority of this code completion result.
   unsigned getPriority() const { return Priority; }
