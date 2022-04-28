@@ -7,9 +7,11 @@
 ; GCN-LABEL: {{^}}tbuffer_store_d16_x:
 ; GCN-DAG: s_load_{{dwordx4|b128}}
 ; GCN-DAG: s_load_{{dword|b32}} s[[S_LO:[0-9]+]]
-; GCN-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[S_LO]]
+; PREGFX10: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[S_LO]]
 ; PREGFX10: tbuffer_store_format_d16_x v[[V_LO]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED]
+; GFX10: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[S_LO]]
 ; GFX10: tbuffer_store_format_d16_x v[[V_LO]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_11_11_SSCALED]
+; GFX11: v_mov_b16_e32 v[[V_LO:[0-9]+]].l, s[[S_LO]]
 ; GFX11: tbuffer_store_d16_format_x v[[V_LO]], off, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_10_10_10_2_SNORM]
 define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data) {
 main_body:

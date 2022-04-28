@@ -160,6 +160,10 @@ def main():
                       'command line.')
   parser.add_argument('-quiet', action='store_true', default=False,
                       help='Run clang-tidy in quiet mode')
+  parser.add_argument('-load', dest='plugins',
+                      action='append', default=[],
+                      help='Load the specified plugin in clang-tidy.')
+
   clang_tidy_args = []
   argv = sys.argv[1:]
   if '--' in argv:
@@ -233,6 +237,8 @@ def main():
     common_clang_tidy_args.append('-extra-arg=%s' % arg)
   for arg in args.extra_arg_before:
     common_clang_tidy_args.append('-extra-arg-before=%s' % arg)
+  for plugin in args.plugins:
+    common_clang_tidy_args.append('-load=%s' % plugin)
 
   for name in lines_by_file:
     line_filter_json = json.dumps(

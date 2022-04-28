@@ -1,5 +1,6 @@
 ; RUN: opt < %s -S -nvptx-lower-args | FileCheck %s --check-prefix IR
 ; RUN: llc < %s -mcpu=sm_20 | FileCheck %s --check-prefix PTX
+; RUN: %if ptxas %{ llc < %s -mcpu=sm_20 | %ptxas-verify %}
 
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"

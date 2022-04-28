@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_35 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
 
 ; 64-bit divides and rems should be split into a fast and slow path where
 ; the fast path uses a 32-bit operation.
