@@ -1,4 +1,4 @@
 # REQUIRES: amdgpu-registered-target
 # RUN: not llvm-reduce -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg %s --test-arg --input-file does-not-exist.mir 2>&1 | FileCheck -check-prefix=ERR %s
 
-# ERR: {{.*}}llvm-reduce{{.*}}: No such file or directory
+# ERR: {{.*}}llvm-reduce{{.*}}: {{[Nn]}}o such file or directory
