@@ -48,9 +48,11 @@ add_libc_unittest(
     libc.src.stdio.fwrite
 )
 
-target_link_libraries(
-  libc.test.src.stdio.fopencookie_test PRIVATE LibcMemoryHelpers
-)
+if(TARGET libc.test.src.stdio.fopencookie_test)
+  target_link_libraries(
+    libc.test.src.stdio.fopencookie_test PRIVATE LibcMemoryHelpers
+  )
+endif()
 
 add_subdirectory(printf_core)
 
