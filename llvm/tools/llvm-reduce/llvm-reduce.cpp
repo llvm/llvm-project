@@ -138,16 +138,16 @@ int main(int Argc, char **Argv) {
 
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
-  std::unique_ptr<MachineModuleInfo> MMI;
 
-  std::unique_ptr<ReducerWorkItem> OriginalProgram = parseReducerWorkItem(
-      Argv[0], InputFilename, Context, TM, MMI, ReduceModeMIR);
+  std::unique_ptr<ReducerWorkItem> OriginalProgram =
+      parseReducerWorkItem(Argv[0], InputFilename, Context, TM, ReduceModeMIR);
   if (!OriginalProgram) {
     return 1;
   }
 
   // Initialize test environment
-  TestRunner Tester(TestFilename, TestArguments, std::move(OriginalProgram));
+  TestRunner Tester(TestFilename, TestArguments, std::move(OriginalProgram),
+                    std::move(TM));
 
   // Try to reduce code
   runDeltaPasses(Tester, MaxPassIterations);
