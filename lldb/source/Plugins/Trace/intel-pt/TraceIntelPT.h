@@ -84,27 +84,31 @@ public:
 
   /// Start tracing a live process.
   ///
-  /// \param[in] thread_buffer_size
+  /// More information on the parameters below can be found in the
+  /// jLLDBTraceStart section in lldb/docs/lldb-gdb-remote.txt.
+  ///
+  /// \param[in] trace_buffer_size
   ///     Trace size per thread in bytes.
   ///
   /// \param[in] total_buffer_size_limit
   ///     Maximum total trace size per process in bytes.
-  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
   ///
   /// \param[in] enable_tsc
   ///     Whether to use enable TSC timestamps or not.
-  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
   ///
   /// \param[in] psb_period
-  ///
   ///     This value defines the period in which PSB packets will be generated.
-  ///     More information in TraceIntelPT::GetStartConfigurationHelp();
+  ///
+  /// \param[in] per_core_tracing
+  ///     This value defines whether to have a trace buffer per thread or per
+  ///     cpu core.
   ///
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error Start(size_t thread_buffer_size, size_t total_buffer_size_limit,
-                    bool enable_tsc, llvm::Optional<size_t> psb_period);
+  llvm::Error Start(size_t trace_buffer_size, size_t total_buffer_size_limit,
+                    bool enable_tsc, llvm::Optional<size_t> psb_period,
+                    bool m_per_core_tracing);
 
   /// \copydoc Trace::Start
   llvm::Error Start(StructuredData::ObjectSP configuration =
@@ -112,25 +116,25 @@ public:
 
   /// Start tracing live threads.
   ///
+  /// More information on the parameters below can be found in the
+  /// jLLDBTraceStart section in lldb/docs/lldb-gdb-remote.txt.
+  ///
   /// \param[in] tids
   ///     Threads to trace.
   ///
-  /// \param[in] thread_buffer_size
-  ///     Trace size per thread in bytes.
+  /// \param[in] trace_buffer_size
+  ///     Trace size per thread or per core in bytes.
   ///
   /// \param[in] enable_tsc
   ///     Whether to use enable TSC timestamps or not.
-  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
   ///
   /// \param[in] psb_period
-  ///
   ///     This value defines the period in which PSB packets will be generated.
-  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
   ///
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids, size_t thread_buffer_size,
+  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids, size_t trace_buffer_size,
                     bool enable_tsc, llvm::Optional<size_t> psb_period);
 
   /// \copydoc Trace::Start

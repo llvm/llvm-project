@@ -152,3 +152,17 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         self.expect("c", substrs=['Thread', "can't be traced"])
 
         self.traceStopProcess()
+
+    @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
+    @testSBAPIAndCommands
+    def testStartPerCoreSession(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.dbg.CreateTarget(exe)
+
+        self.expect("b main")
+        self.expect("r")
+
+        self.traceStartProcess(
+            error=True, perCoreTracing=True,
+            substrs=["Per-core tracing is not supported"])

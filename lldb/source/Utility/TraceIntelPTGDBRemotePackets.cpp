@@ -20,29 +20,27 @@ bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
               Path path) {
   ObjectMapper o(value, path);
   if (!o || !fromJSON(value, (TraceStartRequest &)packet, path) ||
-      !o.map("enableTsc", packet.enableTsc) ||
-      !o.map("psbPeriod", packet.psbPeriod) ||
-      !o.map("threadBufferSize", packet.threadBufferSize) ||
-      !o.map("processBufferSizeLimit", packet.processBufferSizeLimit))
+      !o.map("enableTsc", packet.enable_tsc) ||
+      !o.map("psbPeriod", packet.psb_period) ||
+      !o.map("traceBufferSize", packet.trace_buffer_size))
     return false;
-  if (packet.tids && packet.processBufferSizeLimit) {
-    path.report("processBufferSizeLimit must be provided");
-    return false;
-  }
-  if (!packet.tids && !packet.processBufferSizeLimit) {
-    path.report("processBufferSizeLimit must not be provided");
-    return false;
+
+  if (packet.IsProcessTracing()) {
+    if (!o.map("processBufferSizeLimit", packet.process_buffer_size_limit) ||
+        !o.map("perCoreTracing", packet.per_core_tracing))
+      return false;
   }
   return true;
 }
 
 json::Value toJSON(const TraceIntelPTStartRequest &packet) {
   json::Value base = toJSON((const TraceStartRequest &)packet);
-  base.getAsObject()->try_emplace("threadBufferSize", packet.threadBufferSize);
-  base.getAsObject()->try_emplace("processBufferSizeLimit",
-                                  packet.processBufferSizeLimit);
-  base.getAsObject()->try_emplace("psbPeriod", packet.psbPeriod);
-  base.getAsObject()->try_emplace("enableTsc", packet.enableTsc);
+  json::Object &obj = *base.getAsObject();
+  obj.try_emplace("traceBufferSize", packet.trace_buffer_size);
+  obj.try_emplace("processBufferSizeLimit", packet.process_buffer_size_limit);
+  obj.try_emplace("psbPeriod", packet.psb_period);
+  obj.try_emplace("enableTsc", packet.enable_tsc);
+  obj.try_emplace("perCoreTracing", packet.per_core_tracing);
   return base;
 }
 

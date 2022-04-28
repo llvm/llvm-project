@@ -28,20 +28,23 @@ struct IntelPTDataKinds {
 /// \{
 struct TraceIntelPTStartRequest : TraceStartRequest {
   /// Size in bytes to use for each thread's trace buffer.
-  int64_t threadBufferSize;
+  int64_t trace_buffer_size;
 
   /// Whether to enable TSC
-  bool enableTsc;
+  bool enable_tsc;
 
   /// PSB packet period
-  llvm::Optional<int64_t> psbPeriod;
+  llvm::Optional<int64_t> psb_period;
 
   /// Required when doing "process tracing".
   ///
   /// Limit in bytes on all the thread traces started by this "process trace"
   /// instance. When a thread is about to be traced and the limit would be hit,
   /// then a "tracing" stop event is triggered.
-  llvm::Optional<int64_t> processBufferSizeLimit;
+  llvm::Optional<int64_t> process_buffer_size_limit;
+
+  /// Whether to have a trace buffer per thread or per cpu core.
+  llvm::Optional<bool> per_core_tracing;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceIntelPTStartRequest &packet,

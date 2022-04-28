@@ -35,12 +35,24 @@ let Command = "thread trace start intel pt" in {
 }
 
 let Command = "process trace start intel pt" in {
-  def process_trace_start_intel_pt_thread_size: Option<"thread-size", "s">,
+  def process_trace_start_intel_pt_buffer_size: Option<"buffer-size", "s">,
     Group<1>,
     Arg<"Value">,
-    Desc<"Trace size in bytes per thread. It must be a power of 2 greater "
-         "than or equal to 4096 (2^12). The trace is circular keeping "
-         "the most recent data. Defaults to 4096 bytes.">;
+    Desc<"Size in bytes used by each individual per-thread or per-core trace "
+         "buffer. It must be a power of 2 greater than or equal to 4096 (2^12) "
+         "bytes.">;
+  def process_trace_start_intel_pt_per_core_tracing:
+    Option<"per-core-tracing", "c">,
+    Group<1>,
+    Desc<"Instead of having an individual trace buffer per thread, which uses "
+         "a number trace buffers proportional to the number of running "
+         "threads, this option triggers the collection on a per cpu core "
+         "basis. This effectively traces the entire activity on all cores "
+         "using a limited amount of trace buffers regardless of the number of "
+         "threads. This might cause data loss for less frequent threads. This "
+         "option forces the capture of TSC timestamps (see --tsc). Also, this "
+         "option can't be used simulatenously with any other trace sessions "
+         "because of its system-wide nature.">;
   def process_trace_start_intel_pt_process_size_limit: Option<"total-size-limit", "l">,
     Group<1>,
     Arg<"Value">,

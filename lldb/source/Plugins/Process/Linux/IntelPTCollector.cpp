@@ -443,8 +443,8 @@ Error IntelPTThreadTraceCollection::TraceStart(
                              "Thread %" PRIu64 " already traced", tid);
 
   Expected<IntelPTThreadTraceUP> trace_up = IntelPTThreadTrace::Create(
-      m_pid, tid, request.threadBufferSize, request.enableTsc,
-      request.psbPeriod.map([](int64_t period) { return (size_t)period; }));
+      m_pid, tid, request.trace_buffer_size, request.enable_tsc,
+      request.psb_period.map([](int64_t period) { return (size_t)period; }));
   if (!trace_up)
     return trace_up.takeError();
 
@@ -490,8 +490,9 @@ Error IntelPTProcessTrace::TraceStop(lldb::tid_t tid) {
 }
 
 Error IntelPTProcessTrace::TraceStart(lldb::tid_t tid) {
-  if (m_thread_traces.GetTotalBufferSize() + m_tracing_params.threadBufferSize >
-      static_cast<size_t>(*m_tracing_params.processBufferSizeLimit))
+  if (m_thread_traces.GetTotalBufferSize() +
+          m_tracing_params.trace_buffer_size >
+      static_cast<size_t>(*m_tracing_params.process_buffer_size_limit))
     return createStringError(
         inconvertibleErrorCode(),
         "Thread %" PRIu64 " can't be traced as the process trace size limit "
@@ -547,6 +548,10 @@ Error IntelPTCollector::TraceStart(
       return createStringError(
           inconvertibleErrorCode(),
           "Process currently traced. Stop process tracing first");
+    }
+    if (request.per_core_tracing.getValueOr(false)) {
+      return createStringError(inconvertibleErrorCode(),
+                               "Per-core tracing is not supported.");
     }
     m_process_trace = IntelPTProcessTrace(m_pid, request);
 
