@@ -27,8 +27,8 @@ bb:
   ret void, !dbg !11
 }
 
-; CHECK-DAG: .file [[FOO]] "/source/dir/foo.h"
-; CHECK-DAG: .file [[BAR]] "/source/dir/bar.cu"
+; CHECK-DAG: .file [[FOO]] "/source/dir{{[/\\]}}foo.h"
+; CHECK-DAG: .file [[BAR]] "/source/dir{{[/\\]}}bar.cu"
 ; CHECK: .section .debug_abbrev
 ; CHECK-NEXT: {
 ; CHECK-NEXT: .b8 1                                // Abbreviation Code
