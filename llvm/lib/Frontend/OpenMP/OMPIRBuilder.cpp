@@ -252,16 +252,8 @@ static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
   NewBr->setDebugLoc(DL);
 }
 
-/// Move the instruction after an InsertPoint to the beginning of another
-/// BasicBlock.
-///
-/// The instructions after \p IP are moved to the beginning of \p New which must
-/// not have any PHINodes. If \p CreateBranch is true, a branch instruction to
-/// \p New will be added such that there is no semantic change. Otherwise, the
-/// \p IP insert block remains degenerate and it is up to the caller to insert a
-/// terminator.
-static void spliceBB(OpenMPIRBuilder::InsertPointTy IP, BasicBlock *New,
-                     bool CreateBranch) {
+void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
+                    bool CreateBranch) {
   assert(New->getFirstInsertionPt() == New->begin() &&
          "Target BB must not have PHI nodes");
 
@@ -274,11 +266,7 @@ static void spliceBB(OpenMPIRBuilder::InsertPointTy IP, BasicBlock *New,
     BranchInst::Create(New, Old);
 }
 
-/// Splice a BasicBlock at an IRBuilder's current insertion point. Its new
-/// insert location will stick to after the instruction before the insertion
-/// point (instead of moving with the instruction the InsertPoint stores
-/// internally).
-static void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
+void llvm::spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
   BasicBlock *Old = Builder.GetInsertBlock();
 
@@ -293,17 +281,8 @@ static void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
   Builder.SetCurrentDebugLocation(DebugLoc);
 }
 
-/// Split a BasicBlock at an InsertPoint, even if the block is degenerate
-/// (missing the terminator).
-///
-/// llvm::SplitBasicBlock and BasicBlock::splitBasicBlock require a well-formed
-/// BasicBlock. \p Name is used for the new successor block. If \p CreateBranch
-/// is true, a branch to the new successor will new created such that
-/// semantically there is no change; otherwise the block of the insertion point
-/// remains degenerate and it is the caller's responsibility to insert a
-/// terminator. Returns the new successor block.
-static BasicBlock *splitBB(OpenMPIRBuilder::InsertPointTy IP, bool CreateBranch,
-                           llvm::Twine Name = {}) {
+BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
+                          llvm::Twine Name) {
   BasicBlock *Old = IP.getBlock();
   BasicBlock *New = BasicBlock::Create(
       Old->getContext(), Name.isTriviallyEmpty() ? Old->getName() : Name,
@@ -313,12 +292,8 @@ static BasicBlock *splitBB(OpenMPIRBuilder::InsertPointTy IP, bool CreateBranch,
   return New;
 }
 
-/// Split a BasicBlock at \p Builder's insertion point, even if the block is
-/// degenerate (missing the terminator).  Its new insert location will stick to
-/// after the instruction before the insertion point (instead of moving with the
-/// instruction the InsertPoint stores internally).
-static BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch,
-                           llvm::Twine Name = {}) {
+BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
+                          llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
   BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, Name);
   if (CreateBranch)
@@ -329,6 +304,26 @@ static BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch,
   // keep the one the Builder was configured to use.
   Builder.SetCurrentDebugLocation(DebugLoc);
   return New;
+}
+
+BasicBlock *llvm::splitBB(IRBuilder<> &Builder, bool CreateBranch,
+                          llvm::Twine Name) {
+  DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
+  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, Name);
+  if (CreateBranch)
+    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+  else
+    Builder.SetInsertPoint(Builder.GetInsertBlock());
+  // SetInsertPoint also updates the Builder's debug location, but we want to
+  // keep the one the Builder was configured to use.
+  Builder.SetCurrentDebugLocation(DebugLoc);
+  return New;
+}
+
+BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
+                                    llvm::Twine Suffix) {
+  BasicBlock *Old = Builder.GetInsertBlock();
+  return splitBB(Builder, CreateBranch, Old->getName() + Suffix);
 }
 
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
@@ -928,7 +923,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   // Let the caller create the body.
   assert(BodyGenCB && "Expected body generation callback!");
   InsertPointTy CodeGenIP(PRegBodyBB, PRegBodyBB->begin());
-  BodyGenCB(InnerAllocaIP, CodeGenIP, *PRegPreFiniBB);
+  BodyGenCB(InnerAllocaIP, CodeGenIP);
 
   LLVM_DEBUG(dbgs() << "After  body codegen: " << *OuterFn << "\n");
 
@@ -1268,26 +1263,25 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
   // section_loop.after:
   // <FiniCB>;
   auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, Value *IndVar) {
-    auto *CurFn = CodeGenIP.getBlock()->getParent();
-    auto *ForIncBB = CodeGenIP.getBlock()->getSingleSuccessor();
-    auto *ForExitBB = CodeGenIP.getBlock()
-                          ->getSinglePredecessor()
-                          ->getTerminator()
-                          ->getSuccessor(1);
-    SwitchInst *SwitchStmt = Builder.CreateSwitch(IndVar, ForIncBB);
     Builder.restoreIP(CodeGenIP);
+    BasicBlock *Continue =
+        splitBBWithSuffix(Builder, /*CreateBranch=*/false, ".sections.after");
+    Function *CurFn = Continue->getParent();
+    SwitchInst *SwitchStmt = Builder.CreateSwitch(IndVar, Continue);
+
     unsigned CaseNumber = 0;
     for (auto SectionCB : SectionCBs) {
-      auto *CaseBB = BasicBlock::Create(M.getContext(),
-                                        "omp_section_loop.body.case", CurFn);
+      BasicBlock *CaseBB = BasicBlock::Create(
+          M.getContext(), "omp_section_loop.body.case", CurFn, Continue);
       SwitchStmt->addCase(Builder.getInt32(CaseNumber), CaseBB);
       Builder.SetInsertPoint(CaseBB);
-      SectionCB(InsertPointTy(), Builder.saveIP(), *ForExitBB);
+      BranchInst *CaseEndBr = Builder.CreateBr(Continue);
+      SectionCB(InsertPointTy(),
+                {CaseEndBr->getParent(), CaseEndBr->getIterator()});
       CaseNumber++;
     }
     // remove the existing terminator from body BB since there can be no
     // terminators after switch/case
-    CodeGenIP.getBlock()->getTerminator()->eraseFromParent();
   };
   // Loop body ends here
   // LowerBound, UpperBound, and STride for createCanonicalLoop
@@ -1297,29 +1291,22 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
   Value *ST = ConstantInt::get(I32Ty, 1);
   llvm::CanonicalLoopInfo *LoopInfo = createCanonicalLoop(
       Loc, LoopBodyGenCB, LB, UB, ST, true, false, AllocaIP, "section_loop");
-  Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
-  AllocaIP = Builder.saveIP();
   InsertPointTy AfterIP =
       applyStaticWorkshareLoop(Loc.DL, LoopInfo, AllocaIP, !IsNowait);
-  BasicBlock *LoopAfterBB = AfterIP.getBlock();
-  Instruction *SplitPos = LoopAfterBB->getTerminator();
-  if (!isa_and_nonnull<BranchInst>(SplitPos))
-    SplitPos = new UnreachableInst(Builder.getContext(), LoopAfterBB);
-  // ExitBB after LoopAfterBB because LoopAfterBB is used for FinalizationCB,
-  // which requires a BB with branch
-  BasicBlock *ExitBB =
-      LoopAfterBB->splitBasicBlock(SplitPos, "omp_sections.end");
-  SplitPos->eraseFromParent();
 
   // Apply the finalization callback in LoopAfterBB
   auto FiniInfo = FinalizationStack.pop_back_val();
   assert(FiniInfo.DK == OMPD_sections &&
          "Unexpected finalization stack state!");
-  Builder.SetInsertPoint(LoopAfterBB->getTerminator());
-  FiniInfo.FiniCB(Builder.saveIP());
-  Builder.SetInsertPoint(ExitBB);
+  if (FinalizeCallbackTy &CB = FiniInfo.FiniCB) {
+    Builder.restoreIP(AfterIP);
+    BasicBlock *FiniBB =
+        splitBBWithSuffix(Builder, /*CreateBranch=*/true, "sections.fini");
+    CB(Builder.saveIP());
+    AfterIP = {FiniBB, FiniBB->begin()};
+  }
 
-  return Builder.saveIP();
+  return AfterIP;
 }
 
 OpenMPIRBuilder::InsertPointTy
@@ -3117,48 +3104,28 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
 
   // generate body
   BodyGenCB(/* AllocaIP */ InsertPointTy(),
-            /* CodeGenIP */ Builder.saveIP(), *FiniBB);
+            /* CodeGenIP */ Builder.saveIP());
 
-  // If we didn't emit a branch to FiniBB during body generation, it means
-  // FiniBB is unreachable (e.g. while(1);). stop generating all the
-  // unreachable blocks, and remove anything we are not going to use.
-  auto SkipEmittingRegion = FiniBB->hasNPredecessors(0);
-  if (SkipEmittingRegion) {
-    FiniBB->eraseFromParent();
-    ExitCall->eraseFromParent();
-    // Discard finalization if we have it.
-    if (HasFinalize) {
-      assert(!FinalizationStack.empty() &&
-             "Unexpected finalization stack state!");
-      FinalizationStack.pop_back();
-    }
-  } else {
-    // emit exit call and do any needed finalization.
-    auto FinIP = InsertPointTy(FiniBB, FiniBB->getFirstInsertionPt());
-    assert(FiniBB->getTerminator()->getNumSuccessors() == 1 &&
-           FiniBB->getTerminator()->getSuccessor(0) == ExitBB &&
-           "Unexpected control flow graph state!!");
-    emitCommonDirectiveExit(OMPD, FinIP, ExitCall, HasFinalize);
-    assert(FiniBB->getUniquePredecessor()->getUniqueSuccessor() == FiniBB &&
-           "Unexpected Control Flow State!");
-    MergeBlockIntoPredecessor(FiniBB);
-  }
+  // emit exit call and do any needed finalization.
+  auto FinIP = InsertPointTy(FiniBB, FiniBB->getFirstInsertionPt());
+  assert(FiniBB->getTerminator()->getNumSuccessors() == 1 &&
+         FiniBB->getTerminator()->getSuccessor(0) == ExitBB &&
+         "Unexpected control flow graph state!!");
+  emitCommonDirectiveExit(OMPD, FinIP, ExitCall, HasFinalize);
+  assert(FiniBB->getUniquePredecessor()->getUniqueSuccessor() == FiniBB &&
+         "Unexpected Control Flow State!");
+  MergeBlockIntoPredecessor(FiniBB);
 
   // If we are skipping the region of a non conditional, remove the exit
   // block, and clear the builder's insertion point.
   assert(SplitPos->getParent() == ExitBB &&
          "Unexpected Insertion point location!");
-  if (!Conditional && SkipEmittingRegion) {
-    ExitBB->eraseFromParent();
-    Builder.ClearInsertionPoint();
-  } else {
-    auto merged = MergeBlockIntoPredecessor(ExitBB);
-    BasicBlock *ExitPredBB = SplitPos->getParent();
-    auto InsertBB = merged ? ExitPredBB : ExitBB;
-    if (!isa_and_nonnull<BranchInst>(SplitPos))
-      SplitPos->eraseFromParent();
-    Builder.SetInsertPoint(InsertBB);
-  }
+  auto merged = MergeBlockIntoPredecessor(ExitBB);
+  BasicBlock *ExitPredBB = SplitPos->getParent();
+  auto InsertBB = merged ? ExitPredBB : ExitBB;
+  if (!isa_and_nonnull<BranchInst>(SplitPos))
+    SplitPos->eraseFromParent();
+  Builder.SetInsertPoint(InsertBB);
 
   return Builder.saveIP();
 }
