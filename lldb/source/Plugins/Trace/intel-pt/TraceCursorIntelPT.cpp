@@ -108,6 +108,10 @@ TraceCursorIntelPT::GetCounter(lldb::TraceCounter counter_type) {
   }
 }
 
+lldb::TraceEvents TraceCursorIntelPT::GetEvents() {
+  return m_decoded_thread_sp->GetEvents(m_pos);
+}
+
 TraceInstructionControlFlowType
 TraceCursorIntelPT::GetInstructionControlFlowType() {
   return m_decoded_thread_sp->GetInstructionControlFlowType(m_pos);

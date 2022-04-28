@@ -23,6 +23,15 @@
 namespace lldb_private {
 namespace trace_intel_pt {
 
+/// libipt status utils
+/// \{
+bool IsLibiptError(int libipt_status);
+
+bool IsEndOfStream(int libipt_status);
+
+bool IsTscUnavailable(int libipt_status);
+/// \}
+
 /// Class for representing a libipt decoding error.
 class IntelPTError : public llvm::ErrorInfo<IntelPTError> {
 public:
@@ -49,6 +58,27 @@ public:
 private:
   int m_libipt_error_code;
   lldb::addr_t m_address;
+};
+
+/// Helper struct for building an instruction or error from the decoder.
+/// It holds associated events and timing information.
+struct DecodedInstruction {
+  DecodedInstruction() {
+    pt_insn.ip = LLDB_INVALID_ADDRESS;
+    libipt_error = pte_ok;
+  }
+
+  DecodedInstruction(int libipt_error_code) : DecodedInstruction() {
+    libipt_error = libipt_error_code;
+  }
+
+  /// \return \b true if and only if this struct holds a libipt error.
+  explicit operator bool() const;
+
+  int libipt_error;
+  lldb::TraceEvents events = (lldb::TraceEvents)0;
+  llvm::Optional<uint64_t> tsc = llvm::None;
+  pt_insn pt_insn;
 };
 
 /// \class DecodedThread
@@ -101,12 +131,23 @@ public:
   };
 
   // Struct holding counts for libipts errors;
-  struct LibiptErrors {
+  struct LibiptErrorsStats {
     // libipt error -> count
-    llvm::DenseMap<const char *, int> libipt_errors;
-    int total_count = 0;
+    llvm::DenseMap<const char *, int> libipt_errors_counts;
+    size_t total_count = 0;
 
     void RecordError(int libipt_error_code);
+  };
+
+  // Struct holding counts for events;
+  struct EventsStats {
+    /// A count for each individual event kind. We use an unordered map instead
+    /// of a DenseMap because DenseMap can't understand enums.
+    std::unordered_map<lldb::TraceEvents, size_t> events_counts;
+    size_t total_count = 0;
+    size_t total_instructions_with_events = 0;
+
+    void RecordEventsForInstruction(lldb::TraceEvents events);
   };
 
   DecodedThread(lldb::ThreadSP thread_sp);
@@ -114,17 +155,16 @@ public:
   /// Utility constructor that initializes the trace with a provided error.
   DecodedThread(lldb::ThreadSP thread_sp, llvm::Error &&err);
 
-  /// Append a successfully decoded instruction.
-  void AppendInstruction(const pt_insn &instruction);
+  /// Append an instruction or a libipt error.
+  void Append(const DecodedInstruction &insn);
 
-  /// Append a sucessfully decoded instruction with an associated TSC timestamp.
-  void AppendInstruction(const pt_insn &instruction, uint64_t tsc);
+  /// Append an error signaling that decoding completely failed.
+  void SetAsFailed(llvm::Error &&error);
 
-  /// Append a decoding error (i.e. an instruction that failed to be decoded).
-  void AppendError(llvm::Error &&error);
-
-  /// Append a decoding error with a corresponding TSC.
-  void AppendError(llvm::Error &&error, uint64_t tsc);
+  /// Get a bitmask with the events that happened chronologically right before
+  /// the instruction pointed by the given instruction index, but after the
+  /// previous instruction.
+  lldb::TraceEvents GetEvents(int insn_index);
 
   /// Get the total number of instruction pointers from the decoded trace.
   /// This will include instructions that indicate errors (or gaps) in the
@@ -175,13 +215,19 @@ public:
   /// Get a new cursor for the decoded thread.
   lldb::TraceCursorUP GetCursor();
 
-  /// Return the number of TSC decoding errors that happened. A TSC error
-  /// is not a fatal error and doesn't create gaps in the trace. Instead
-  /// we only keep track of them as a statistic.
+  /// Return an object with statistics of the TSC decoding errors that happened.
+  /// A TSC error is not a fatal error and doesn't create gaps in the trace.
+  /// Instead we only keep track of them as statistics.
   ///
   /// \return
-  ///   The number of TSC decoding errors.
-  const LibiptErrors &GetTscErrors() const;
+  ///   An object with the statistics of TSC decoding errors.
+  const LibiptErrorsStats &GetTscErrorsStats() const;
+
+  /// Return an object with statistics of the trace events that happened.
+  ///
+  /// \return
+  ///   The stats object of all the events.
+  const EventsStats &GetEventsStats() const;
 
   /// Record an error decoding a TSC timestamp.
   ///
@@ -198,6 +244,9 @@ public:
   lldb::ThreadSP GetThread();
 
 private:
+  /// Append a decoding error given an llvm::Error.
+  void AppendError(llvm::Error &&error);
+
   /// Notify this class that the last added instruction or error has
   /// an associated TSC.
   void RecordTscForLastInstruction(uint64_t tsc);
@@ -219,17 +268,20 @@ private:
   /// are sporadic and we can think of them as ranges. If TSCs are present in
   /// the trace, all instructions will have an associated TSC, including the
   /// first one. Otherwise, this map will be empty.
-  std::map<size_t, uint64_t> m_instruction_timestamps;
+  std::map<uint64_t, uint64_t> m_instruction_timestamps;
   /// This is the chronologically last TSC that has been added.
   llvm::Optional<uint64_t> m_last_tsc = llvm::None;
   // This variables stores the messages of all the error instructions in the
   // trace. It maps `instruction index -> error message`.
   llvm::DenseMap<uint64_t, std::string> m_errors;
-  /// The size in bytes of the raw buffer before decoding. It might be None if
-  /// the decoding failed.
-  llvm::Optional<size_t> m_raw_trace_size;
-  /// All occurrences of libipt errors when decoding TSCs.
-  LibiptErrors m_tsc_errors;
+  /// This variable stores the bitmask of events that happened right before
+  /// the instruction given as a key. It maps `instruction index -> events`.
+  llvm::DenseMap<uint64_t, lldb::TraceEvents> m_events;
+
+  /// Statistics of all tracing events.
+  EventsStats m_events_stats;
+  /// Statistics of libipt errors when decoding TSCs.
+  LibiptErrorsStats m_tsc_errors_stats;
   /// Total amount of time spent decoding.
   std::chrono::milliseconds m_total_decoding_time{0};
 };
