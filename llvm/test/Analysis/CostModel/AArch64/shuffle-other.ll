@@ -15,6 +15,7 @@ define void @shuffle() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v15 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> <i32 1, i32 3, i32 2, i32 0>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v17 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 1, i32 3, i32 2, i32 0>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v18 = shufflevector <2 x fp128> undef, <2 x fp128> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v7 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> <i32 1, i32 0>
@@ -32,6 +33,8 @@ define void @shuffle() {
 
   %v16 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 1, i32 0>
   %v17 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 1, i32 3, i32 2, i32 0>
+
+  %v18 = shufflevector <2 x fp128> undef, <2 x fp128> undef, <2 x i32> <i32 1, i32 0>
 
   ret void
 }
