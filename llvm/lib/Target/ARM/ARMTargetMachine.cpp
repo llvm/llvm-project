@@ -509,6 +509,9 @@ bool ARMPassConfig::addGlobalInstructionSelect() {
 
 void ARMPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOpt::None) {
+    if (getOptLevel() == CodeGenOpt::Aggressive)
+      addPass(&MachinePipelinerID);
+
     addPass(createMVETPAndVPTOptimisationsPass());
 
     addPass(createMLxExpansionPass());
