@@ -633,3 +633,35 @@ void Fortran::lower::genOpenMPConstruct(
       },
       ompConstruct.u);
 }
+
+void Fortran::lower::genOpenMPDeclarativeConstruct(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval,
+    const Fortran::parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
+
+  std::visit(
+      common::visitors{
+          [&](const Fortran::parser::OpenMPDeclarativeAllocate
+                  &declarativeAllocate) {
+            TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
+          },
+          [&](const Fortran::parser::OpenMPDeclareReductionConstruct
+                  &declareReductionConstruct) {
+            TODO(converter.getCurrentLocation(),
+                 "OpenMPDeclareReductionConstruct");
+          },
+          [&](const Fortran::parser::OpenMPDeclareSimdConstruct
+                  &declareSimdConstruct) {
+            TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
+          },
+          [&](const Fortran::parser::OpenMPDeclareTargetConstruct
+                  &declareTargetConstruct) {
+            TODO(converter.getCurrentLocation(),
+                 "OpenMPDeclareTargetConstruct");
+          },
+          [&](const Fortran::parser::OpenMPThreadprivate &threadprivate) {
+            TODO(converter.getCurrentLocation(), "OpenMPThreadprivate");
+          },
+      },
+      ompDeclConstruct.u);
+}
