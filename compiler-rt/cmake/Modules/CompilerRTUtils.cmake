@@ -5,11 +5,19 @@ include(CheckSymbolExists)
 # define a handy helper function for it. The compile flags setting in CMake
 # has serious issues that make its syntax challenging at best.
 function(set_target_compile_flags target)
-  set_property(TARGET ${target} PROPERTY COMPILE_OPTIONS ${ARGN})
+  set(argstring "")
+  foreach(arg ${ARGN})
+    set(argstring "${argstring} ${arg}")
+  endforeach()
+  set_property(TARGET ${target} PROPERTY COMPILE_FLAGS "${argstring}")
 endfunction()
 
 function(set_target_link_flags target)
-  set_property(TARGET ${target} PROPERTY LINK_OPTIONS ${ARGN})
+  set(argstring "")
+  foreach(arg ${ARGN})
+    set(argstring "${argstring} ${arg}")
+  endforeach()
+  set_property(TARGET ${target} PROPERTY LINK_FLAGS "${argstring}")
 endfunction()
 
 # Set the variable var_PYBOOL to True if var holds a true-ish string,
