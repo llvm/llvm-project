@@ -1949,8 +1949,9 @@ public:
     // edges, and it does not write to a memref which escapes the
     // function.
     if (mdg->getOutEdgeCount(sibNode->id) == 0) {
+      Operation *op = sibNode->op;
       mdg->removeNode(sibNode->id);
-      sibNode->op->erase();
+      op->erase();
     }
   }
 

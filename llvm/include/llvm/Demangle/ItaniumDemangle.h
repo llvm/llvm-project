@@ -4340,7 +4340,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
     return nullptr;
   }
   case 'D':
-    if (consumeIf("DnE"))
+    if (consumeIf("Dn") && (consumeIf('0'), consumeIf('E')))
       return make<NameType>("nullptr");
     return nullptr;
   case 'T':
