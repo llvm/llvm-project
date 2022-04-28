@@ -191,8 +191,8 @@ private:
   void generateProlog(unsigned LastStage, MachineBasicBlock *KernelBB,
                       ValueMapTy *VRMap, MBBVectorTy &PrologBBs);
   void generateEpilog(unsigned LastStage, MachineBasicBlock *KernelBB,
-                      MachineBasicBlock *OrigBB, ValueMapTy *VRMap,
-                      MBBVectorTy &EpilogBBs, MBBVectorTy &PrologBBs);
+                      ValueMapTy *VRMap, MBBVectorTy &EpilogBBs,
+                      MBBVectorTy &PrologBBs);
   void generateExistingPhis(MachineBasicBlock *NewBB, MachineBasicBlock *BB1,
                             MachineBasicBlock *BB2, MachineBasicBlock *KernelBB,
                             ValueMapTy *VRMap, InstrMapTy &InstrMap,

@@ -494,10 +494,6 @@ def FeatureNoNegativeImmediates
 def FeatureUseMISched: SubtargetFeature<"use-misched", "UseMISched", "true",
                                         "Use the MachineScheduler">;
 
-// Use the MachinePipeliner for instruction scheduling for the subtarget.
-def FeatureUseMIPipeliner: SubtargetFeature<"use-mipipeliner", "UseMIPipeliner", "true",
-                                            "Use the MachinePipeliner">;
-
 // False if scheduling should happen again after register allocation.
 def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
     "DisablePostRAScheduler", "true",
@@ -1399,7 +1395,6 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
 def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
                                                          ProcM7,
                                                          FeatureFPARMv8_D16,
-                                                         FeatureUseMIPipeliner,
                                                          FeatureUseMISched]>;
 
 def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
