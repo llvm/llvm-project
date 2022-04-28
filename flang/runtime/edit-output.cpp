@@ -627,9 +627,15 @@ bool ListDirectedCharacterOutput(IoStatementState &io,
 template <typename CHAR>
 bool EditCharacterOutput(IoStatementState &io, const DataEdit &edit,
     const CHAR *x, std::size_t length) {
+  int len{static_cast<int>(length)};
+  int width{edit.width.value_or(len)};
   switch (edit.descriptor) {
   case 'A':
+    break;
   case 'G':
+    if (width == 0) {
+      width = len;
+    }
     break;
   case 'B':
     return EditBOZOutput<1>(io, edit,
@@ -646,8 +652,6 @@ bool EditCharacterOutput(IoStatementState &io, const DataEdit &edit,
         edit.descriptor);
     return false;
   }
-  int len{static_cast<int>(length)};
-  int width{edit.width.value_or(len)};
   return io.EmitRepeated(' ', std::max(0, width - len)) &&
       io.EmitEncoded(x, std::min(width, len));
 }
