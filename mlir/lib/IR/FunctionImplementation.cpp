@@ -30,8 +30,12 @@ ParseResult mlir::function_interface_impl::parseFunctionArgumentList(
     // Parse argument name if present.
     OpAsmParser::UnresolvedOperand argument;
     Type argumentType;
-    if (succeeded(parser.parseOptionalRegionArgument(argument)) &&
-        !argument.name.empty()) {
+    auto hadSSAValue = parser.parseOptionalOperand(argument,
+                                                   /*allowResultNumber=*/false);
+    if (hadSSAValue.hasValue()) {
+      if (failed(hadSSAValue.getValue()))
+        return failure(); // Argument was present but malformed.
+
       // Reject this if the preceding argument was missing a name.
       if (argNames.empty() && !argTypes.empty())
         return parser.emitError(loc, "expected type instead of SSA identifier");

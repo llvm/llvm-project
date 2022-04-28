@@ -584,7 +584,7 @@ public:
   }
 
   /// These are the supported delimiters around operand lists and region
-  /// argument lists, used by parseOperandList and parseRegionArgumentList.
+  /// argument lists, used by parseOperandList.
   enum class Delimiter {
     /// Zero or more operands with no delimiters.
     None,
@@ -1110,22 +1110,27 @@ public:
       Optional<ArrayRef<NamedAttribute>> parsedAttributes = llvm::None,
       Optional<FunctionType> parsedFnType = llvm::None) = 0;
 
-  /// Parse a single operand.
-  virtual ParseResult parseOperand(UnresolvedOperand &result) = 0;
+  /// Parse a single SSA value operand name along with a result number if
+  /// `allowResultNumber` is true.
+  virtual ParseResult parseOperand(UnresolvedOperand &result,
+                                   bool allowResultNumber = true) = 0;
 
   /// Parse a single operand if present.
   virtual OptionalParseResult
-  parseOptionalOperand(UnresolvedOperand &result) = 0;
+  parseOptionalOperand(UnresolvedOperand &result,
+                       bool allowResultNumber = true) = 0;
 
   /// Parse zero or more SSA comma-separated operand references with a specified
   /// surrounding delimiter, and an optional required operand count.
-  virtual ParseResult
-  parseOperandList(SmallVectorImpl<UnresolvedOperand> &result,
-                   int requiredOperandCount = -1,
-                   Delimiter delimiter = Delimiter::None) = 0;
+  virtual ParseResult parseOperandList(
+      SmallVectorImpl<UnresolvedOperand> &result, int requiredOperandCount = -1,
+      Delimiter delimiter = Delimiter::None, bool allowResultNumber = true) = 0;
+
   ParseResult parseOperandList(SmallVectorImpl<UnresolvedOperand> &result,
-                               Delimiter delimiter) {
-    return parseOperandList(result, /*requiredOperandCount=*/-1, delimiter);
+                               Delimiter delimiter,
+                               bool allowResultNumber = true) {
+    return parseOperandList(result, /*requiredOperandCount=*/-1, delimiter,
+                            allowResultNumber);
   }
 
   /// Parse zero or more trailing SSA comma-separated trailing operand
@@ -1242,29 +1247,6 @@ public:
                       ArrayRef<UnresolvedOperand> arguments = {},
                       ArrayRef<Type> argTypes = {},
                       bool enableNameShadowing = false) = 0;
-
-  /// Parse a region argument, this argument is resolved when calling
-  /// 'parseRegion'.
-  virtual ParseResult parseRegionArgument(UnresolvedOperand &argument) = 0;
-
-  /// Parse zero or more region arguments with a specified surrounding
-  /// delimiter, and an optional required argument count. Region arguments
-  /// define new values; so this also checks if values with the same names have
-  /// not been defined yet.
-  virtual ParseResult
-  parseRegionArgumentList(SmallVectorImpl<UnresolvedOperand> &result,
-                          int requiredOperandCount = -1,
-                          Delimiter delimiter = Delimiter::None) = 0;
-  virtual ParseResult
-  parseRegionArgumentList(SmallVectorImpl<UnresolvedOperand> &result,
-                          Delimiter delimiter) {
-    return parseRegionArgumentList(result, /*requiredOperandCount=*/-1,
-                                   delimiter);
-  }
-
-  /// Parse a region argument if present.
-  virtual ParseResult
-  parseOptionalRegionArgument(UnresolvedOperand &argument) = 0;
 
   //===--------------------------------------------------------------------===//
   // Successor Parsing
