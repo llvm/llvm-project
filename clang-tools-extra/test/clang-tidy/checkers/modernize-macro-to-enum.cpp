@@ -281,27 +281,14 @@ inline void used_ifndef() {}
 #define EPS2 1e5
 #define EPS3 1.
 
-#define DO_RED draw(RED)
-#define DO_GREEN draw(GREEN)
-#define DO_BLUE draw(BLUE)
-
-#define FN_RED(x) draw(RED | x)
-#define FN_GREEN(x) draw(GREEN | x)
-#define FN_BLUE(x) draw(BLUE | x)
-
 extern void draw(unsigned int Color);
 
 void f()
 {
+  // Usage of macros converted to enums should still compile.
   draw(RED);
-  draw(GREEN);
-  draw(BLUE);
-  DO_RED;
-  DO_GREEN;
-  DO_BLUE;
-  FN_RED(0);
-  FN_GREEN(0);
-  FN_BLUE(0);
+  draw(GREEN | RED);
+  draw(BLUE + RED);
 }
 
 // Ignore macros defined inside a top-level function definition.
@@ -389,3 +376,17 @@ using Data2 =
 constexpr int
 #define INSIDE17 17
 value = INSIDE17;
+
+// Ignore macros used in the expansion of other macros
+#define INSIDE18 18
+#define INSIDE19 19
+
+#define CONCAT(n_, s_) n_##s_
+#define FN_NAME(n_, s_) CONCAT(n_, s_)
+
+extern void FN_NAME(g, INSIDE18)();
+
+void gg()
+{
+    g18();
+}

@@ -226,7 +226,8 @@ private:
   void conditionStart(const SourceLocation &Loc);
   void checkCondition(SourceRange ConditionRange);
   void checkName(const Token &MacroNameTok);
-  void rememberExpressionName(const Token &MacroNameTok);
+  void rememberExpressionName(const Token &Tok);
+  void rememberExpressionTokens(ArrayRef<Token> MacroTokens);
   void invalidateExpressionNames();
   void issueDiagnostics();
   void warnMacroEnum(const EnumMacro &Macro) const;
@@ -302,11 +303,19 @@ void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
   });
 }
 
-void MacroToEnumCallbacks::rememberExpressionName(const Token &MacroNameTok) {
-  std::string Id = getTokenName(MacroNameTok).str();
+void MacroToEnumCallbacks::rememberExpressionName(const Token &Tok) {
+  std::string Id = getTokenName(Tok).str();
   auto Pos = llvm::lower_bound(ExpressionNames, Id);
   if (Pos == ExpressionNames.end() || *Pos != Id) {
     ExpressionNames.insert(Pos, Id);
+  }
+}
+
+void MacroToEnumCallbacks::rememberExpressionTokens(
+    ArrayRef<Token> MacroTokens) {
+  for (Token Tok : MacroTokens) {
+    if (Tok.isAnyIdentifier())
+      rememberExpressionName(Tok);
   }
 }
 
@@ -326,6 +335,8 @@ void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
   CurrentFile = &Files.back();
 }
 
+// Any defined but rejected macro is scanned for identifiers that
+// are to be excluded as enums.
 void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
                                         const MacroDirective *MD) {
   // Include guards are never candidates for becoming an enum.
@@ -342,8 +353,12 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
 
   const MacroInfo *Info = MD->getMacroInfo();
   ArrayRef<Token> MacroTokens = Info->tokens();
-  if (Info->isFunctionLike() || Info->isBuiltinMacro() || MacroTokens.empty())
+  if (Info->isBuiltinMacro() || MacroTokens.empty())
     return;
+  if (Info->isFunctionLike()) {
+    rememberExpressionTokens(MacroTokens);
+    return;
+  }
 
   // Return Lit when +Lit, -Lit or ~Lit; otherwise return Unknown.
   Token Unknown;
@@ -378,17 +393,22 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
     else if (Size == 2)
       // It can be +Lit, -Lit or ~Lit.
       Tok = GetUnopArg(MacroTokens[Begin], MacroTokens[End]);
-    else
+    else {
       // Zero or too many tokens after we stripped matching parens.
+      rememberExpressionTokens(MacroTokens);
       return;
+    }
   } else if (MacroTokens.size() == 2) {
     // It can be +Lit, -Lit, or ~Lit.
     Tok = GetUnopArg(MacroTokens.front(), MacroTokens.back());
   }
 
   if (!Tok.isLiteral() || isStringLiteral(Tok.getKind()) ||
-      !isIntegralConstant(Tok))
+      !isIntegralConstant(Tok)) {
+    if (Tok.isAnyIdentifier())
+      rememberExpressionName(Tok);
     return;
+  }
 
   if (!isConsecutiveMacro(MD))
     newEnum();
