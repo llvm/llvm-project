@@ -1932,6 +1932,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":InferTypeOpInterface",
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorOpsIncGen",
         "//llvm:Support",
@@ -6876,6 +6877,7 @@ cc_library(
         ":ArithmeticDialect",
         ":FuncDialect",
         ":IR",
+        ":InferTypeOpInterface",
         ":Pass",
         ":QuantOpsIncGen",
         ":QuantPassIncGen",
@@ -8150,6 +8152,7 @@ cc_library(
         ":ArithmeticDialect",
         ":CommonFolders",
         ":IR",
+        ":InferTypeOpInterface",
         ":MathBaseIncGen",
         ":MathOpsIncGen",
         ":SideEffectInterfaces",
