@@ -754,7 +754,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   LLVMContext Context;
   sampleprof::ProfileSymbolList WriterList;
   Optional<bool> ProfileIsProbeBased;
-  Optional<bool> ProfileIsCSFlat;
+  Optional<bool> ProfileIsCS;
   for (const auto &Input : Inputs) {
     auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context,
                                                    FSDiscriminatorPassOption);
@@ -781,10 +781,9 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
       exitWithError(
           "cannot merge probe-based profile with non-probe-based profile");
     ProfileIsProbeBased = FunctionSamples::ProfileIsProbeBased;
-    if (ProfileIsCSFlat.hasValue() &&
-        ProfileIsCSFlat != FunctionSamples::ProfileIsCSFlat)
+    if (ProfileIsCS.hasValue() && ProfileIsCS != FunctionSamples::ProfileIsCS)
       exitWithError("cannot merge CS profile with non-CS profile");
-    ProfileIsCSFlat = FunctionSamples::ProfileIsCSFlat;
+    ProfileIsCS = FunctionSamples::ProfileIsCS;
     for (SampleProfileMap::iterator I = Profiles.begin(), E = Profiles.end();
          I != E; ++I) {
       sampleprof_error Result = sampleprof_error::success;
@@ -807,7 +806,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
       WriterList.merge(*ReaderList);
   }
 
-  if (ProfileIsCSFlat && (SampleMergeColdContext || SampleTrimColdContext)) {
+  if (ProfileIsCS && (SampleMergeColdContext || SampleTrimColdContext)) {
     // Use threshold calculated from profile summary unless specified.
     SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
     auto Summary = Builder.computeSummaryForProfiles(ProfileMap);
@@ -822,10 +821,10 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
             SampleMergeColdContext, SampleColdContextFrameDepth, false);
   }
 
-  if (ProfileIsCSFlat && GenCSNestedProfile) {
+  if (ProfileIsCS && GenCSNestedProfile) {
     CSProfileConverter CSConverter(ProfileMap);
     CSConverter.convertProfiles();
-    ProfileIsCSFlat = FunctionSamples::ProfileIsCSFlat = false;
+    ProfileIsCS = FunctionSamples::ProfileIsCS = false;
   }
 
   auto WriterOrErr =
@@ -1985,7 +1984,7 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   if (BaseReader->profileIsProbeBased() != TestReader->profileIsProbeBased())
     exitWithError(
         "cannot compare probe-based profile with non-probe-based profile");
-  if (BaseReader->profileIsCSFlat() != TestReader->profileIsCSFlat())
+  if (BaseReader->profileIsCS() != TestReader->profileIsCS())
     exitWithError("cannot compare CS profile with non-CS profile");
 
   // Load BaseHotThreshold and TestHotThreshold as 99-percentile threshold in

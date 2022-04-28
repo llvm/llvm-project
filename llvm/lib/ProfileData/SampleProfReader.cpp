@@ -348,7 +348,7 @@ std::error_code SampleProfileReaderText::readImpl() {
         }
         FProfile.getContext().setAllAttributes(Attributes);
         if (Attributes & (uint32_t)ContextShouldBeInlined)
-          ProfileIsCSNested = true;
+          ProfileIsPreInlined = true;
         DepthMetadata = Depth;
         break;
       }
@@ -358,14 +358,14 @@ std::error_code SampleProfileReaderText::readImpl() {
 
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  ProfileIsCSFlat = (CSProfileCount > 0);
+  ProfileIsCS = (CSProfileCount > 0);
   assert((TopLevelProbeProfileCount == 0 ||
           TopLevelProbeProfileCount == Profiles.size()) &&
          "Cannot have both probe-based profiles and regular profiles");
   ProfileIsProbeBased = (TopLevelProbeProfileCount > 0);
   FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
-  FunctionSamples::ProfileIsCSFlat = ProfileIsCSFlat;
-  FunctionSamples::ProfileIsCSNested = ProfileIsCSNested;
+  FunctionSamples::ProfileIsCS = ProfileIsCS;
+  FunctionSamples::ProfileIsPreInlined = ProfileIsPreInlined;
 
   if (Result == sampleprof_error::success)
     computeSummary();
@@ -630,7 +630,7 @@ SampleProfileReaderExtBinaryBase::readContextFromTable() {
 
 ErrorOr<SampleContext>
 SampleProfileReaderExtBinaryBase::readSampleContextFromTable() {
-  if (ProfileIsCSFlat) {
+  if (ProfileIsCS) {
     auto FContext(readContextFromTable());
     if (std::error_code EC = FContext.getError())
       return EC;
@@ -654,9 +654,9 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
       Summary->setPartialProfile(true);
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
-      FunctionSamples::ProfileIsCSFlat = ProfileIsCSFlat = true;
-    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsCSNested))
-      FunctionSamples::ProfileIsCSNested = ProfileIsCSNested = true;
+      FunctionSamples::ProfileIsCS = ProfileIsCS = true;
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsPreInlined))
+      FunctionSamples::ProfileIsPreInlined = ProfileIsPreInlined = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
     break;
@@ -777,7 +777,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
       }
     }
 
-    if (ProfileIsCSFlat) {
+    if (ProfileIsCS) {
       DenseSet<uint64_t> FuncGuidsToUse;
       if (useMD5()) {
         for (auto Name : FuncsToUse)
@@ -847,7 +847,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   }
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  assert((!CSProfileCount || ProfileIsCSFlat) &&
+  assert((!CSProfileCount || ProfileIsCS) &&
          "Section flag should be consistent with actual profile");
   return sampleprof_error::success;
 }
@@ -1105,7 +1105,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
         FProfile->getContext().setAllAttributes(*Attributes);
     }
 
-    if (!ProfileIsCSFlat) {
+    if (!ProfileIsCS) {
       // Read all the attributes for inlined function calls.
       auto NumCallsites = readNumber<uint32_t>();
       if (std::error_code EC = NumCallsites.getError())
@@ -1275,8 +1275,8 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("partial,");
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
       Flags.append("context,");
-    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsCSNested))
-      Flags.append("context-nested,");
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsPreInlined))
+      Flags.append("preInlined,");
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       Flags.append("fs-discriminator,");
     break;

@@ -156,7 +156,7 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 ; PROBE-NEXT: !CFGChecksum: 563022570642068
 
 
-; PREINLINE: ProfileSummarySection {{.*}} Flags: {context-nested}
+; PREINLINE: ProfileSummarySection {{.*}} Flags: {preInlined}
 
 
 ; SUMMARY:      Total functions: 4

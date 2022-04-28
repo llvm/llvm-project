@@ -565,14 +565,14 @@ public:
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
   }
-  bool profileIsCSFlat() { return ProfileIsCSFlat; }
+  bool profileIsCS() { return ProfileIsCS; }
 
 protected:
   ProfiledBinary *Binary = nullptr;
   StringRef PerfTraceFile;
 
   ContextSampleCounterMap SampleCounters;
-  bool ProfileIsCSFlat = false;
+  bool ProfileIsCS = false;
 
   uint64_t NumTotalSample = 0;
   uint64_t NumLeafExternalFrame = 0;

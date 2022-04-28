@@ -470,11 +470,11 @@ public:
   /// Whether input profile is based on pseudo probes.
   bool profileIsProbeBased() const { return ProfileIsProbeBased; }
 
-  /// Whether input profile is fully context-sensitive and flat.
-  bool profileIsCSFlat() const { return ProfileIsCSFlat; }
+  /// Whether input profile is fully context-sensitive.
+  bool profileIsCS() const { return ProfileIsCS; }
 
-  /// Whether input profile is fully context-sensitive and nested.
-  bool profileIsCSNested() const { return ProfileIsCSNested; }
+  /// Whether input profile contains ShouldBeInlined contexts.
+  bool profileIsPreInlined() const { return ProfileIsPreInlined; }
 
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
     return nullptr;
@@ -534,10 +534,10 @@ protected:
   bool ProfileIsProbeBased = false;
 
   /// Whether function profiles are context-sensitive flat profiles.
-  bool ProfileIsCSFlat = false;
+  bool ProfileIsCS = false;
 
-  /// Whether function profiles are context-sensitive nested profiles.
-  bool ProfileIsCSNested = false;
+  /// Whether function profile contains ShouldBeInlined contexts.
+  bool ProfileIsPreInlined = false;
 
   /// Number of context-sensitive profiles.
   uint32_t CSProfileCount = 0;

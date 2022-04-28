@@ -282,5 +282,7 @@ void CSPreInliner::run() {
   // Make sure ProfileMap's key is consistent with FunctionSamples' name.
   SampleContextTrimmer(ProfileMap).canonicalizeContextProfiles();
 
+  FunctionSamples::ProfileIsPreInlined = true;
+
   LLVM_DEBUG(printProfileNames(ProfileMap, false));
 }
