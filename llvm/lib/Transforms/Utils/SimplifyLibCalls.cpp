@@ -898,8 +898,41 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
-  if (isKnownNonZero(CI->getOperand(2), DL))
-    annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  Value *SrcStr = CI->getArgOperand(0);
+  Value *Size = CI->getArgOperand(2);
+  annotateNonNullAndDereferenceable(CI, 0, Size, DL);
+  Value *CharVal = CI->getArgOperand(1);
+  ConstantInt *LenC = dyn_cast<ConstantInt>(Size);
+  Value *NullPtr = Constant::getNullValue(CI->getType());
+
+  if (LenC) {
+    if (LenC->isZero())
+      // Fold memrchr(x, y, 0) --> null.
+      return NullPtr;
+
+    if (LenC->isOne()) {
+      // Fold memrchr(x, y, 1) --> *x == y ? x : null for any x and y,
+      // constant or otherwise.
+      Value *Val = B.CreateLoad(B.getInt8Ty(), SrcStr, "memrchr.char0");
+      // Slice off the character's high end bits.
+      CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
+      Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memrchr.char0cmp");
+      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
+    }
+  }
+
+  StringRef Str;
+  if (!getConstantStringInfo(SrcStr, Str, 0, /*TrimAtNul=*/false))
+    return nullptr;
+
+  uint64_t EndOff = UINT64_MAX;
+  if (LenC) {
+    EndOff = LenC->getZExtValue();
+    if (Str.size() < EndOff)
+      // Punt out-of-bounds accesses to sanitizers and/or libc.
+      return nullptr;
+  }
+
   return nullptr;
 }
 
