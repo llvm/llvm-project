@@ -106,7 +106,7 @@ public:
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
   using LeaveRegionCallbackTy = std::function<void(
-      InsertPointTy ExitingIP, 
+      InsertPointTy ExitingIP, bool Rejoining,
       omp::Directive LeaveReason,
       OMPRegionInfo *Region)>; 
 

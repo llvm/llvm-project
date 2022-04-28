@@ -881,43 +881,88 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
 
 void OpenMPIRBuilder::emitCancelationCheckImpl(LocationDescription Loc, Value *CancelFlag,
     omp::Directive CanceledDirective,
-    omp::Directive CanceledBy) {
+    omp::Directive CancelledBy) {
   assert(isLastFinalizationInfoCancellable(CanceledDirective) &&
          "Unexpected cancellation!");
 
   // For a cancel barrier we create two new blocks.
+  // MK: This is garbage
   BasicBlock *BB = Builder.GetInsertBlock();
+
+#if 0
   BasicBlock *NonCancellationBlock;
   if (Builder.GetInsertPoint() == BB->end()) {
-    // TODO: This branch will not be needed once we moved to the
-    // OpenMPIRBuilder codegen completely.
-    NonCancellationBlock = BasicBlock::Create(
-        BB->getContext(), BB->getName() + ".cont", BB->getParent());
+    // TODO: This branch will not be needed once we moved to the OpenMPIRBuilder codegen completely.
+    NonCancellationBlock = BasicBlock::Create(BB->getContext(), BB->getName() + ".cont", BB->getParent());
   } else {
     NonCancellationBlock = SplitBlock(BB, &*Builder.GetInsertPoint());
     BB->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(BB);
   }
-  BasicBlock *CancellationBlock = BasicBlock::Create(
-      BB->getContext(), BB->getName() + ".cncl", BB->getParent());
+#endif
+  // Avoid assertions around "fallthtrough" cleanups in clang.
+  // BasicBlock *NonCancellationCleanupBlock = splitBB(Builder, BB->getName() +
+  // ".cont.cleanup", true);
+
+  BasicBlock *NonCancellationBlock = splitBBWithSuffix(Builder, false, ".cont");
+
+#if 0
+ FinalizationInfo &FI = FinalizationStack.back();
+#endif
+
+  BasicBlock *PreCancellationBlock =
+      BasicBlock::Create(BB->getContext(), BB->getName() + ".cncl.fini",
+                         BB->getParent(), NonCancellationBlock);
+  BasicBlock *CancellationBlock =
+      BasicBlock::Create(BB->getContext(), BB->getName() + ".cncl",
+                         BB->getParent(), NonCancellationBlock);
 
   // Jump to them based on the return value.
   Value *Cmp = Builder.CreateIsNull(CancelFlag);
-  Builder.CreateCondBr(Cmp, NonCancellationBlock, CancellationBlock,
+  Builder.CreateCondBr(Cmp, NonCancellationBlock, PreCancellationBlock,
                        /* TODO weight */ nullptr, nullptr);
+  // Builder.CreateBr( NonCancellationBlock);
 
   // From the cancellation block we finalize all variables and go to the
   // post finalization block that is known to the FiniCB callback.
+  Builder.SetInsertPoint(PreCancellationBlock);
+
+  Builder.CreateBr(CancellationBlock);
+  // if (ExitCB)
+  //   ExitCB(Builder.saveIP(),CanceledDirective);
+
+  // Unless cancellation has been detected by a barrier itself, need to
+  // synchronize between threads (after finalization).
   Builder.SetInsertPoint(CancellationBlock);
+  if (CanceledDirective == OMPD_parallel && CancelledBy != OMPD_barrier)
+    emitBarrierImpl(Loc, CancelledBy, false, false);
+
+  auto CancellationIP = Builder.saveIP();
+
+  // CancellationIP.viewCFG();
+
+  // TODO: Clang's codegen emits finalization code only once and inserts a
+  // switch to jump back to the target code path (CGF.EmitBranchThroughCleanup).
+  // Currently in the OpenMPIRBuilder, we emit the finialization multiple times
+  // for each path exiting the region (non-cancellation and each cancellation
+  // check).
 #if 0
+  if (FI.FiniCB)
+    FI.FiniCB(CancellationIP, CanceledDirective, CancelledBy);
   if (ExitCB)
     ExitCB(Builder.saveIP());
   auto &FI = FinalizationStack.back();
   FI.FiniCB(Builder.saveIP());
 #endif
-  emitRegionExit({CancellationBlock, CancellationBlock->begin()}, getInnermostDirectionRegion(CanceledDirective), CanceledBy);
+  emitRegionExit({CancellationBlock, CancellationBlock->begin()}, getInnermostDirectionRegion(CanceledDirective), CancelledBy);
 
-  // The continuation block is where code generation continues.
+
+  // Builder.SetInsertPoint(CancellationBlock);
+  // Builder.CreateBr(  CancellationBlock);
+  // if (FI.CancelCB)
+  //  FI.CancelCB(CancellationIP, CanceledDirective, CancelledBy);
+
+  // The continuation block is where code generation continues.s
   Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin()); // MK: needed?
 }
 
