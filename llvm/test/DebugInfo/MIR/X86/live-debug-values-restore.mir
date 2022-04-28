@@ -414,12 +414,15 @@ body:             |
 # This third function tests that complex expressions are spilt, and restored
 # correctly within a basic block.
 
+# FIXME: the spilt location below is wrong, there should be a deref between
+# the spill-offset and the DW_OP_plus_uconst.
+
 # CHECK-LABEL: name: h
 # CHECK-LABEL: bb.0.entry:
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[RVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.1.if.then:
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[RVAR]], !DIExpression(DW_OP_plus_uconst, 1)
-# CHECK:       DBG_VALUE $rsp, $noreg, ![[RVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rsp, 0, ![[RVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[RVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.2.if.end:
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[RVAR]], !DIExpression(DW_OP_plus_uconst, 1)
@@ -524,6 +527,8 @@ body:             |
 # bb 2 and 3, neither of which modifies the stack loc. The exit block (3)
 # should still be tracking the spill, and restore it on stack load.
 
+# FIXME: this test too contains a broken spill location.
+
 # Summary: loc is in $rdi in bb0, spills to stack in bb1, remains in stack
 # in bb2, starts in stack then loaded in bb3.
 
@@ -532,11 +537,11 @@ body:             |
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.1.foo:
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
-# CHECK:       DBG_VALUE $rsp, $noreg, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.2.if.then:
-# CHECK:       DBG_VALUE $rsp, $noreg, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.3.if.end
-# CHECK:       DBG_VALUE $rsp, $noreg, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 name:            i
 alignment:       16
