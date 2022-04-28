@@ -10,6 +10,7 @@
 
 #include "../lsp-server-support/Logging.h"
 #include "../lsp-server-support/Protocol.h"
+#include "CompilationDatabase.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Types.h"
@@ -325,7 +326,7 @@ PDLDocument::PDLDocument(const lsp::URIForFile &uri, StringRef contents,
     return;
   }
 
-  // TODO: Properly provide include directories from the client.
+  // Build the set of include directories for this file.
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
   includeDirs.push_back(uriDirectory.str().str());
@@ -1225,10 +1226,15 @@ PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
 //===----------------------------------------------------------------------===//
 
 struct lsp::PDLLServer::Impl {
-  explicit Impl(const Options &options) : options(options) {}
+  explicit Impl(const Options &options)
+      : options(options), compilationDatabase(options.compilationDatabases) {}
 
   /// PDLL LSP options.
   const Options &options;
+
+  /// The compilation database containing additional information for files
+  /// passed to the server.
+  lsp::CompilationDatabase compilationDatabase;
 
   /// The files held by the server, mapped by their URI file name.
   llvm::StringMap<std::unique_ptr<PDLTextFile>> files;
@@ -1245,8 +1251,12 @@ lsp::PDLLServer::~PDLLServer() = default;
 void lsp::PDLLServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
     std::vector<Diagnostic> &diagnostics) {
+  std::vector<std::string> additionalIncludeDirs = impl->options.extraDirs;
+  if (auto *fileInfo = impl->compilationDatabase.getFileInfo(uri.file()))
+    llvm::append_range(additionalIncludeDirs, fileInfo->includeDirs);
+
   impl->files[uri.file()] = std::make_unique<PDLTextFile>(
-      uri, contents, version, impl->options.extraDirs, diagnostics);
+      uri, contents, version, additionalIncludeDirs, diagnostics);
 }
 
 Optional<int64_t> lsp::PDLLServer::removeDocument(const URIForFile &uri) {

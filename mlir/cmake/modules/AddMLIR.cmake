@@ -7,6 +7,10 @@ function(mlir_tablegen ofn)
       PARENT_SCOPE)
 endfunction()
 
+# Clear out any pre-existing compile_commands file before processing. This
+# allows for generating a clean compile_commands on each configure.
+file(REMOVE ${CMAKE_BINARY_DIR}/pdll_compile_commands.yml)
+
 # Declare a PDLL library in the current directory.
 function(add_mlir_pdll_library target inputFile ofn)
   set(LLVM_TARGET_DEFINITIONS ${inputFile})
@@ -15,6 +19,28 @@ function(add_mlir_pdll_library target inputFile ofn)
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       PARENT_SCOPE)
 
+  # Get the current set of include paths for this pdll file.
+  cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
+  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
+  list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
+  # Filter out any empty include items.
+  list(REMOVE_ITEM tblgen_includes "")
+
+  # Build the absolute path for the current input file.
+  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${inputFile})
+  else()
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}/${inputFile})
+  endif()
+
+  # Append the includes used for this file to the pdll_compilation_commands
+  # file.
+  file(APPEND ${CMAKE_BINARY_DIR}/pdll_compile_commands.yml
+      "--- !FileInfo:\n"
+      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
+      "  includes: \"${CMAKE_CURRENT_SOURCE_DIR};${tblgen_includes}\"\n"
+  )
+  
   add_public_tablegen_target(${target})
 endfunction()
 

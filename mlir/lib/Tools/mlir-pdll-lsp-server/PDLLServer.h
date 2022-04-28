@@ -10,12 +10,14 @@
 #define LIB_MLIR_TOOLS_MLIRPDLLSPSERVER_SERVER_H_
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 #include <string>
 
 namespace mlir {
 namespace lsp {
 struct Diagnostic;
+class CompilationDatabase;
 struct CompletionList;
 struct DocumentSymbol;
 struct Hover;
@@ -30,7 +32,13 @@ class URIForFile;
 class PDLLServer {
 public:
   struct Options {
-    Options(const std::vector<std::string> &extraDirs) : extraDirs(extraDirs){};
+    Options(const std::vector<std::string> &compilationDatabases,
+            const std::vector<std::string> &extraDirs)
+        : compilationDatabases(compilationDatabases), extraDirs(extraDirs) {}
+
+    /// The filenames for databases containing compilation commands for PDLL
+    /// files passed to the server.
+    const std::vector<std::string> &compilationDatabases;
 
     /// Additional list of include directories to search.
     const std::vector<std::string> &extraDirs;

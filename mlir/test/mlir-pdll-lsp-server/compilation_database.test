@@ -1,0 +1,21 @@
+// RUN: echo -e '--- !FileInfo:\n  filepath: "/foo.pdll"\n  includes: "%S;%S/../../include"' > %t.yml
+// RUN: mlir-pdll-lsp-server -pdll-compilation-database=%t.yml -lit-test < %s | FileCheck %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"pdll","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.pdll",
+  "languageId":"pdll",
+  "version":1,
+  "text":"#include \"include/included.td\"\n#include \"include/included.pdll\""
+}}}
+// Check that we can properly process the includes without errors.
+// CHECK: "method": "textDocument/publishDiagnostics",
+// CHECK-NEXT: "params": {
+// CHECK-NEXT:     "diagnostics": [],
+// CHECK-NEXT:     "uri": "test:///foo.pdll",
+// CHECK-NEXT:     "version": 1
+// CHECK-NEXT:   }
+// -----
+{"jsonrpc":"2.0","id":7,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}
