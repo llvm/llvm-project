@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -7425,6 +7426,218 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
     return SelCC;
 
   return SDValue();
+}
+
+SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
+                                         unsigned Test, SDNodeFlags Flags,
+                                         const SDLoc &DL,
+                                         SelectionDAG &DAG) const {
+  EVT OperandVT = Op.getValueType();
+  assert(OperandVT.isFloatingPoint());
+
+  // Degenerated cases.
+  if (Test == 0 || (Test & fcAllFlags) == fcAllFlags)
+    return DAG.getBoolConstant(true, DL, ResultVT, OperandVT);
+
+  // Some checks may be represented as inversion of simpler check, for example
+  // "inf|normal|subnormal|zero" => !"nan".
+  bool IsInverted = false;
+  if (unsigned InvertedCheck = getInvertedFPClassTest(Test)) {
+    IsInverted = true;
+    Test = InvertedCheck;
+  }
+
+  // Floating-point type properties.
+  EVT ScalarFloatVT = OperandVT.getScalarType();
+  const Type *FloatTy = ScalarFloatVT.getTypeForEVT(*DAG.getContext());
+  const llvm::fltSemantics &Semantics = FloatTy->getFltSemantics();
+  bool IsF80 = (ScalarFloatVT == MVT::f80);
+
+  // Some checks can be implemented using float comparisons, if floating point
+  // exceptions are ignored.
+  if (Flags.hasNoFPExcept() &&
+      isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType())) {
+    if (Test == fcZero)
+      return DAG.getSetCC(DL, ResultVT, Op,
+                          DAG.getConstantFP(0.0, DL, OperandVT),
+                          IsInverted ? ISD::SETUNE : ISD::SETOEQ);
+    if (Test == fcNan)
+      return DAG.getSetCC(DL, ResultVT, Op, Op,
+                          IsInverted ? ISD::SETO : ISD::SETUO);
+  }
+
+  // In the general case use integer operations.
+  unsigned BitSize = OperandVT.getScalarSizeInBits();
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), BitSize);
+  if (OperandVT.isVector())
+    IntVT = EVT::getVectorVT(*DAG.getContext(), IntVT,
+                             OperandVT.getVectorElementCount());
+  SDValue OpAsInt = DAG.getBitcast(IntVT, Op);
+
+  // Various masks.
+  APInt SignBit = APInt::getSignMask(BitSize);
+  APInt ValueMask = APInt::getSignedMaxValue(BitSize);     // All bits but sign.
+  APInt Inf = APFloat::getInf(Semantics).bitcastToAPInt(); // Exp and int bit.
+  const unsigned ExplicitIntBitInF80 = 63;
+  APInt ExpMask = Inf;
+  if (IsF80)
+    ExpMask.clearBit(ExplicitIntBitInF80);
+  APInt AllOneMantissa = APFloat::getLargest(Semantics).bitcastToAPInt() & ~Inf;
+  APInt QNaNBitMask =
+      APInt::getOneBitSet(BitSize, AllOneMantissa.getActiveBits() - 1);
+  APInt InvertionMask = APInt::getAllOnesValue(ResultVT.getScalarSizeInBits());
+
+  SDValue ValueMaskV = DAG.getConstant(ValueMask, DL, IntVT);
+  SDValue SignBitV = DAG.getConstant(SignBit, DL, IntVT);
+  SDValue ExpMaskV = DAG.getConstant(ExpMask, DL, IntVT);
+  SDValue ZeroV = DAG.getConstant(0, DL, IntVT);
+  SDValue InfV = DAG.getConstant(Inf, DL, IntVT);
+  SDValue ResultInvertionMask = DAG.getConstant(InvertionMask, DL, ResultVT);
+
+  SDValue Res;
+  const auto appendResult = [&](SDValue PartialRes) {
+    if (PartialRes) {
+      if (Res)
+        Res = DAG.getNode(ISD::OR, DL, ResultVT, Res, PartialRes);
+      else
+        Res = PartialRes;
+    }
+  };
+
+  SDValue IntBitIsSetV; // Explicit integer bit in f80 mantissa is set.
+  const auto getIntBitIsSet = [&]() -> SDValue {
+    if (!IntBitIsSetV) {
+      APInt IntBitMask(BitSize, 0);
+      IntBitMask.setBit(ExplicitIntBitInF80);
+      SDValue IntBitMaskV = DAG.getConstant(IntBitMask, DL, IntVT);
+      SDValue IntBitV = DAG.getNode(ISD::AND, DL, IntVT, OpAsInt, IntBitMaskV);
+      IntBitIsSetV = DAG.getSetCC(DL, ResultVT, IntBitV, ZeroV, ISD::SETNE);
+    }
+    return IntBitIsSetV;
+  };
+
+  // Split the value into sign bit and absolute value.
+  SDValue AbsV = DAG.getNode(ISD::AND, DL, IntVT, OpAsInt, ValueMaskV);
+  SDValue SignV = DAG.getSetCC(DL, ResultVT, OpAsInt,
+                               DAG.getConstant(0.0, DL, IntVT), ISD::SETLT);
+
+  // Tests that involve more than one class should be processed first.
+  SDValue PartialRes;
+
+  if (IsF80)
+    ; // Detect finite numbers of f80 by checking individual classes because
+      // they have different settings of the explicit integer bit.
+  else if ((Test & fcFinite) == fcFinite) {
+    // finite(V) ==> abs(V) < exp_mask
+    PartialRes = DAG.getSetCC(DL, ResultVT, AbsV, ExpMaskV, ISD::SETLT);
+    Test &= ~fcFinite;
+  } else if ((Test & fcFinite) == fcPosFinite) {
+    // finite(V) && V > 0 ==> V < exp_mask
+    PartialRes = DAG.getSetCC(DL, ResultVT, OpAsInt, ExpMaskV, ISD::SETULT);
+    Test &= ~fcPosFinite;
+  } else if ((Test & fcFinite) == fcNegFinite) {
+    // finite(V) && V < 0 ==> abs(V) < exp_mask && signbit == 1
+    PartialRes = DAG.getSetCC(DL, ResultVT, AbsV, ExpMaskV, ISD::SETLT);
+    PartialRes = DAG.getNode(ISD::AND, DL, ResultVT, PartialRes, SignV);
+    Test &= ~fcNegFinite;
+  }
+  appendResult(PartialRes);
+
+  // Check for individual classes.
+
+  if (unsigned PartialCheck = Test & fcZero) {
+    if (PartialCheck == fcPosZero)
+      PartialRes = DAG.getSetCC(DL, ResultVT, OpAsInt, ZeroV, ISD::SETEQ);
+    else if (PartialCheck == fcZero)
+      PartialRes = DAG.getSetCC(DL, ResultVT, AbsV, ZeroV, ISD::SETEQ);
+    else // ISD::fcNegZero
+      PartialRes = DAG.getSetCC(DL, ResultVT, OpAsInt, SignBitV, ISD::SETEQ);
+    appendResult(PartialRes);
+  }
+
+  if (unsigned PartialCheck = Test & fcInf) {
+    if (PartialCheck == fcPosInf)
+      PartialRes = DAG.getSetCC(DL, ResultVT, OpAsInt, InfV, ISD::SETEQ);
+    else if (PartialCheck == fcInf)
+      PartialRes = DAG.getSetCC(DL, ResultVT, AbsV, InfV, ISD::SETEQ);
+    else { // ISD::fcNegInf
+      APInt NegInf = APFloat::getInf(Semantics, true).bitcastToAPInt();
+      SDValue NegInfV = DAG.getConstant(NegInf, DL, IntVT);
+      PartialRes = DAG.getSetCC(DL, ResultVT, OpAsInt, NegInfV, ISD::SETEQ);
+    }
+    appendResult(PartialRes);
+  }
+
+  if (unsigned PartialCheck = Test & fcNan) {
+    APInt InfWithQnanBit = Inf | QNaNBitMask;
+    SDValue InfWithQnanBitV = DAG.getConstant(InfWithQnanBit, DL, IntVT);
+    if (PartialCheck == fcNan) {
+      // isnan(V) ==> abs(V) > int(inf)
+      PartialRes = DAG.getSetCC(DL, ResultVT, AbsV, InfV, ISD::SETGT);
+      if (IsF80) {
+        // Recognize unsupported values as NaNs for compatibility with glibc.
+        // In them (exp(V)==0) == int_bit.
+        SDValue ExpBits = DAG.getNode(ISD::AND, DL, IntVT, AbsV, ExpMaskV);
+        SDValue ExpIsZero =
+            DAG.getSetCC(DL, ResultVT, ExpBits, ZeroV, ISD::SETEQ);
+        SDValue IsPseudo =
+            DAG.getSetCC(DL, ResultVT, getIntBitIsSet(), ExpIsZero, ISD::SETEQ);
+        PartialRes = DAG.getNode(ISD::OR, DL, ResultVT, PartialRes, IsPseudo);
+      }
+    } else if (PartialCheck == fcQNan) {
+      // isquiet(V) ==> abs(V) >= (unsigned(Inf) | quiet_bit)
+      PartialRes =
+          DAG.getSetCC(DL, ResultVT, AbsV, InfWithQnanBitV, ISD::SETGE);
+    } else { // ISD::fcSNan
+      // issignaling(V) ==> abs(V) > unsigned(Inf) &&
+      //                    abs(V) < (unsigned(Inf) | quiet_bit)
+      SDValue IsNan = DAG.getSetCC(DL, ResultVT, AbsV, InfV, ISD::SETGT);
+      SDValue IsNotQnan =
+          DAG.getSetCC(DL, ResultVT, AbsV, InfWithQnanBitV, ISD::SETLT);
+      PartialRes = DAG.getNode(ISD::AND, DL, ResultVT, IsNan, IsNotQnan);
+    }
+    appendResult(PartialRes);
+  }
+
+  if (unsigned PartialCheck = Test & fcSubnormal) {
+    // issubnormal(V) ==> unsigned(abs(V) - 1) < (all mantissa bits set)
+    // issubnormal(V) && V>0 ==> unsigned(V - 1) < (all mantissa bits set)
+    SDValue V = (PartialCheck == fcPosSubnormal) ? OpAsInt : AbsV;
+    SDValue MantissaV = DAG.getConstant(AllOneMantissa, DL, IntVT);
+    SDValue VMinusOneV =
+        DAG.getNode(ISD::SUB, DL, IntVT, V, DAG.getConstant(1, DL, IntVT));
+    PartialRes = DAG.getSetCC(DL, ResultVT, VMinusOneV, MantissaV, ISD::SETULT);
+    if (PartialCheck == fcNegSubnormal)
+      PartialRes = DAG.getNode(ISD::AND, DL, ResultVT, PartialRes, SignV);
+    appendResult(PartialRes);
+  }
+
+  if (unsigned PartialCheck = Test & fcNormal) {
+    // isnormal(V) ==> (0 < exp < max_exp) ==> (unsigned(exp-1) < (max_exp-1))
+    APInt ExpLSB = ExpMask & ~(ExpMask.shl(1));
+    SDValue ExpLSBV = DAG.getConstant(ExpLSB, DL, IntVT);
+    SDValue ExpMinus1 = DAG.getNode(ISD::SUB, DL, IntVT, AbsV, ExpLSBV);
+    APInt ExpLimit = ExpMask - ExpLSB;
+    SDValue ExpLimitV = DAG.getConstant(ExpLimit, DL, IntVT);
+    PartialRes = DAG.getSetCC(DL, ResultVT, ExpMinus1, ExpLimitV, ISD::SETULT);
+    if (PartialCheck == fcNegNormal)
+      PartialRes = DAG.getNode(ISD::AND, DL, ResultVT, PartialRes, SignV);
+    else if (PartialCheck == fcPosNormal) {
+      SDValue PosSignV =
+          DAG.getNode(ISD::XOR, DL, ResultVT, SignV, ResultInvertionMask);
+      PartialRes = DAG.getNode(ISD::AND, DL, ResultVT, PartialRes, PosSignV);
+    }
+    if (IsF80)
+      PartialRes =
+          DAG.getNode(ISD::AND, DL, ResultVT, PartialRes, getIntBitIsSet());
+    appendResult(PartialRes);
+  }
+
+  if (!Res)
+    return DAG.getConstant(IsInverted, DL, ResultVT);
+  if (IsInverted)
+    Res = DAG.getNode(ISD::XOR, DL, ResultVT, Res, ResultInvertionMask);
+  return Res;
 }
 
 // Only expand vector types if we have the appropriate vector bit operations.
