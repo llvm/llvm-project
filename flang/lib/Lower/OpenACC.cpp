@@ -979,11 +979,6 @@ void Fortran::lower::genOpenACCConstruct(
                   &standaloneConstruct) {
             genACC(converter, eval, standaloneConstruct);
           },
-          [&](const Fortran::parser::OpenACCRoutineConstruct
-                  &routineConstruct) {
-            TODO(converter.getCurrentLocation(),
-                 "OpenACC Routine construct not lowered yet!");
-          },
           [&](const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
             TODO(converter.getCurrentLocation(),
                  "OpenACC Cache construct not lowered yet!");
@@ -997,4 +992,25 @@ void Fortran::lower::genOpenACCConstruct(
           },
       },
       accConstruct.u);
+}
+
+void Fortran::lower::genOpenACCDeclarativeConstruct(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval,
+    const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct) {
+
+  std::visit(
+      common::visitors{
+          [&](const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
+                  &standaloneDeclarativeConstruct) {
+            TODO(converter.getCurrentLocation(),
+                 "OpenACC Standalone Declarative construct not lowered yet!");
+          },
+          [&](const Fortran::parser::OpenACCRoutineConstruct
+                  &routineConstruct) {
+            TODO(converter.getCurrentLocation(),
+                 "OpenACC Routine construct not lowered yet!");
+          },
+      },
+      accDeclConstruct.u);
 }
