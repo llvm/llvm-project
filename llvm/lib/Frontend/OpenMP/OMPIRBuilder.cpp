@@ -722,18 +722,37 @@ void OpenMPIRBuilder::emitRegionExit(InsertPointTy ExitingIP,
 #endif
 
 
-void OpenMPIRBuilder::popRegion(omp::Directive DK) {
-    assert(RegionStack.back()->DK == DK && "unbalanced region push/pop");
-    RegionStack.back()->assertOK();
+void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB, LeaveRegionCallbackTy &LeaveCb) {
+    auto DK = R->DK;
+    assert(RegionStack.back().get() == R && "balannced region push/pop required");
+    R->assertOK();
 
     // Trickly down no yet handled breaks.
     OMPRegionInfo* Innermost = RegionStack.back().get();
     OMPRegionInfo* NewInnermost = RegionStack.rbegin()[1].get();
 
-    for (OMPRegionBreak &B : Innermost->Breaks) {
-        assert(B.Target != DK && "Should have been handled");
+
+    for (auto& B : reverse(Innermost->Breaks)) { 
         assert(!B.BB->getTerminator());
-        NewInnermost->addBreak(B.BB, B.Reason, B.Target);
+        Builder.SetInsertPoint(B.BB);
+
+        if (B.Target == DK) {
+            Builder.SetInsertPoint(B.BB);
+          BranchInst * TI =  Builder.CreateBr(ContinueBB);
+          if (LeaveCb)
+              LeaveCb( InsertPointTy(TI->getParent(), TI->getIterator()), B.Reason, Innermost);
+            B.BB = nullptr;
+        } else if (LeaveCb) {
+            B.BB = splitBB(Builder, true, ".fini");
+            LeaveCb(Builder.saveIP(), B.Reason, Innermost);
+            Builder.SetInsertPoint( B.BB);
+        }
+    }
+
+
+    for (OMPRegionBreak &B : Innermost->Breaks) {       
+        if (B.BB)      
+            NewInnermost->addBreak(B.BB, B.Reason, B.Target);
     }
     Innermost->Breaks.clear();
 
@@ -1250,11 +1269,12 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
 
-  // TODO: move to utility function
+
   if (FiniCB) {
       InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
       FiniCB(PreFiniIP, OMPD_unknown, ParallelRegion);
   }
+#if 0
   for (auto& B : reverse(ParallelRegion->Breaks)) { 
       Builder.SetInsertPoint(B.BB);
 
@@ -1273,8 +1293,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
       return !B.BB;    
       }), ParallelRegion->Breaks.end() );
   //emitRegionExit(PreFiniIP, ParallelRegion);
-
-  popRegion(omp::OMPD_parallel);
+#endif 
+  popRegion(ParallelRegion, PRegExitBB, FiniCB);
 
   OI.OuterAllocaBB = OuterAllocaBlock;
   OI.EntryBB = PRegEntryBB;
@@ -1559,10 +1579,15 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
 #endif
   // Instruction *I = Builder.CreateBr(ExitBB);
 
+
+
   Builder.restoreIP(AfterIP);
   auto Finish = splitBB(Builder, true, "section_finish");
+  if (FiniCB) 
+      FiniCB(Builder.saveAndClearIP(), OMPD_unknown, SectionsRegion );
+  
   //emitRegionExit(Builder.saveIP(), SectionsRegion);
-  popRegion(OMPD_sections);
+  popRegion(SectionsRegion, Finish, FiniCB);
 
   return {Finish, Finish->begin()};
 }

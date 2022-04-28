@@ -179,7 +179,7 @@ private:
 
  // void emitRegionExit(InsertPointTy ExitingIP, OMPRegionInfo *RegionToLeave, omp::Directive LeaveReason = omp::OMPD_unknown);
 
-  void popRegion(omp::Directive DK);
+  void popRegion(OMPRegionInfo*R,  BasicBlock *ContinueBB, LeaveRegionCallbackTy &LeaveCb);
 
   /// Return true if the last entry in the finalization stack is of kind \p DK
   /// and cancellable.
