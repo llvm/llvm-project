@@ -4705,8 +4705,8 @@ bool RecordDecl::isMsStruct(const ASTContext &C) const {
   return hasAttr<MSStructAttr>() || C.getLangOpts().MSBitfields == 1;
 }
 
-void RecordDecl::reorderFields(const SmallVectorImpl<Decl *> &Fields) {
-  std::tie(FirstDecl, LastDecl) = DeclContext::BuildDeclChain(Fields, false);
+void RecordDecl::reorderDecls(const SmallVectorImpl<Decl *> &Decls) {
+  std::tie(FirstDecl, LastDecl) = DeclContext::BuildDeclChain(Decls, false);
   LastDecl->NextInContextAndBits.setPointer(nullptr);
   setIsRandomized(true);
 }

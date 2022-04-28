@@ -132,6 +132,12 @@ makeAST(const std::string &SourceCode, bool ExpectError = false,
 namespace clang {
 namespace ast_matchers {
 
+long declCount(const RecordDecl *RD) {
+  return llvm::count_if(RD->decls(), [&](const Decl *D) {
+    return isa<FieldDecl>(D) || isa<RecordDecl>(D);
+  });
+}
+
 #define RANDSTRUCT_TEST_SUITE_TEST RecordLayoutRandomizationTestSuiteTest
 
 TEST(RANDSTRUCT_TEST_SUITE_TEST, CanDetermineIfSubsequenceExists) {
@@ -159,9 +165,11 @@ TEST(RANDSTRUCT_TEST, UnmarkedStruct) {
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
 
   EXPECT_FALSE(RD->hasAttr<RandomizeLayoutAttr>());
   EXPECT_FALSE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
 }
 
 TEST(RANDSTRUCT_TEST, MarkedNoRandomize) {
@@ -177,9 +185,11 @@ TEST(RANDSTRUCT_TEST, MarkedNoRandomize) {
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
 
   EXPECT_TRUE(RD->hasAttr<NoRandomizeLayoutAttr>());
   EXPECT_FALSE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
 }
 
 TEST(RANDSTRUCT_TEST, MarkedRandomize) {
@@ -195,9 +205,11 @@ TEST(RANDSTRUCT_TEST, MarkedRandomize) {
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
 
   EXPECT_TRUE(RD->hasAttr<RandomizeLayoutAttr>());
   EXPECT_TRUE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
 }
 
 TEST(RANDSTRUCT_TEST, MismatchedAttrsDeclVsDef) {
@@ -280,19 +292,27 @@ TEST(RANDSTRUCT_TEST, CheckAdjacentBitfieldsRemainAdjacentAfterRandomization) {
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
+
   const field_names Actual = getFieldNamesFromRecord(RD);
   const field_names Subseq = {"x", "y", "z"};
 
   EXPECT_TRUE(RD->isRandomized());
   EXPECT_TRUE(isSubsequence(Actual, Subseq));
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
 }
 
-TEST(RANDSTRUCT_TEST, CheckVariableLengthArrayMemberRemainsAtEndOfStructure) {
+TEST(RANDSTRUCT_TEST, CheckFlexibleArrayMemberRemainsAtEndOfStructure1) {
   std::unique_ptr<ASTUnit> AST = makeAST(R"c(
     struct test {
         int a;
-        double b;
-        short c;
+        int b;
+        int c;
+        int d;
+        int e;
+        int f;
+        int g;
+        int h;
         char name[];
     } __attribute__((randomize_layout));
   )c");
@@ -300,8 +320,64 @@ TEST(RANDSTRUCT_TEST, CheckVariableLengthArrayMemberRemainsAtEndOfStructure) {
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
 
+  EXPECT_TRUE(RD->hasFlexibleArrayMember());
   EXPECT_TRUE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
+  EXPECT_EQ(getFieldNamesFromRecord(RD).back(), "name");
+}
+
+TEST(RANDSTRUCT_TEST, CheckFlexibleArrayMemberRemainsAtEndOfStructure2) {
+  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+    struct test {
+        int a;
+        int b;
+        int c;
+        int d;
+        int e;
+        int f;
+        int g;
+        int h;
+        char name[0];
+    } __attribute__((randomize_layout));
+  )c");
+
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
+  const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
+
+  EXPECT_FALSE(RD->hasFlexibleArrayMember());
+  EXPECT_TRUE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
+  EXPECT_EQ(getFieldNamesFromRecord(RD).back(), "name");
+}
+
+TEST(RANDSTRUCT_TEST, CheckFlexibleArrayMemberRemainsAtEndOfStructure3) {
+  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+    struct test {
+        int a;
+        int b;
+        int c;
+        int d;
+        int e;
+        int f;
+        int g;
+        int h;
+        char name[1];
+    } __attribute__((randomize_layout));
+  )c");
+
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
+  const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
+
+  EXPECT_FALSE(RD->hasFlexibleArrayMember());
+  EXPECT_TRUE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
+  EXPECT_EQ(getFieldNamesFromRecord(RD).back(), "name");
 }
 
 TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
@@ -340,9 +416,11 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
         getRecordDeclFromAST(AST->getASTContext(), "test_struct");
     const ASTRecordLayout *Layout =
         &AST->getASTContext().getASTRecordLayout(RD);
+    long OriginalDeclCount = declCount(RD);
 
     EXPECT_TRUE(RD->isRandomized());
     EXPECT_EQ(19, Layout->getSize().getQuantity());
+    EXPECT_EQ(OriginalDeclCount, declCount(RD));
   }
 
   {
@@ -350,9 +428,11 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
         getRecordDeclFromAST(AST->getASTContext(), "another_struct");
     const ASTRecordLayout *Layout =
         &AST->getASTContext().getASTRecordLayout(RD);
+    long OriginalDeclCount = declCount(RD);
 
     EXPECT_TRUE(RD->isRandomized());
     EXPECT_EQ(10, Layout->getSize().getQuantity());
+    EXPECT_EQ(OriginalDeclCount, declCount(RD));
   }
 
   {
@@ -360,9 +440,11 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotOverrideThePackedAttr) {
         getRecordDeclFromAST(AST->getASTContext(), "last_struct");
     const ASTRecordLayout *Layout =
         &AST->getASTContext().getASTRecordLayout(RD);
+    long OriginalDeclCount = declCount(RD);
 
     EXPECT_TRUE(RD->isRandomized());
     EXPECT_EQ(9, Layout->getSize().getQuantity());
+    EXPECT_EQ(OriginalDeclCount, declCount(RD));
   }
 }
 
@@ -378,8 +460,10 @@ TEST(RANDSTRUCT_TEST, ZeroWidthBitfieldsSeparateAllocationUnits) {
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
 
   EXPECT_TRUE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
 }
 
 TEST(RANDSTRUCT_TEST, RandstructDoesNotRandomizeUnionFieldOrder) {
@@ -396,10 +480,11 @@ TEST(RANDSTRUCT_TEST, RandstructDoesNotRandomizeUnionFieldOrder) {
 
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
-  const RecordDecl *RD =
-      getRecordDeclFromAST(AST->getASTContext(), "test");
+  const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
 
   EXPECT_FALSE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
 }
 
 TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
@@ -436,8 +521,10 @@ TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
 
   const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
 
   EXPECT_TRUE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
 
   bool AnonStructTested = false;
   bool AnonUnionTested = false;
@@ -465,6 +552,35 @@ TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsRetainFieldOrder) {
 
   EXPECT_TRUE(AnonStructTested);
   EXPECT_TRUE(AnonUnionTested);
+}
+
+TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsReferenced) {
+  std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+    struct test {
+        int bacon;
+        long lettuce;
+        struct { double avocado; char blech; };
+        long long tomato;
+        union { char toast[8]; unsigned toast_thing; };
+        float mayonnaise;
+    } __attribute__((randomize_layout));
+
+    int foo(struct test *t) {
+      return t->blech;
+    }
+
+    char *bar(struct test *t) {
+      return t->toast;
+    }
+  )c");
+
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
+  const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+  long OriginalDeclCount = declCount(RD);
+
+  EXPECT_TRUE(RD->isRandomized());
+  EXPECT_EQ(OriginalDeclCount, declCount(RD));
 }
 
 } // namespace ast_matchers

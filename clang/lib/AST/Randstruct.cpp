@@ -15,6 +15,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h" // For StaticAssertDecl
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -170,16 +172,18 @@ void randomizeStructureLayoutImpl(const ASTContext &Context,
 namespace clang {
 namespace randstruct {
 
-bool randomizeStructureLayout(const ASTContext &Context, StringRef Name,
-                              ArrayRef<Decl *> Fields,
+bool randomizeStructureLayout(const ASTContext &Context, RecordDecl *RD,
                               SmallVectorImpl<Decl *> &FinalOrdering) {
   SmallVector<FieldDecl *, 64> RandomizedFields;
+  SmallVector<Decl *, 8> PostRandomizedFields;
 
   unsigned TotalNumFields = 0;
-  for (Decl *D : Fields) {
+  for (Decl *D : RD->decls()) {
     ++TotalNumFields;
     if (auto *FD = dyn_cast<FieldDecl>(D))
       RandomizedFields.push_back(FD);
+    else if (isa<StaticAssertDecl>(D) || isa<IndirectFieldDecl>(D))
+      PostRandomizedFields.push_back(D);
     else
       FinalOrdering.push_back(D);
   }
@@ -187,32 +191,35 @@ bool randomizeStructureLayout(const ASTContext &Context, StringRef Name,
   if (RandomizedFields.empty())
     return false;
 
-  // Struct might end with a variable-length array or an array of size 0 or 1,
+  // Struct might end with a flexible array or an array of size 0 or 1,
   // in which case we don't want to randomize it.
-  FieldDecl *VLA = nullptr;
-  const auto *CA =
-      dyn_cast<ConstantArrayType>(RandomizedFields.back()->getType());
-  if ((CA && (CA->getSize().sle(2) || CA->isIncompleteArrayType())) ||
-      llvm::any_of(Fields, [](Decl *D) {
-        if (const FieldDecl *FD = dyn_cast<FieldDecl>(D)) {
-          const Type *FDTy = FD->getType().getTypePtr();
-          if (const RecordType *FDTTy = FDTy->getAs<RecordType>())
-            return FDTTy->getDecl()->hasFlexibleArrayMember();
-        }
-        return false;
-      }))
-    VLA = RandomizedFields.pop_back_val();
+  FieldDecl *FlexibleArray =
+      RD->hasFlexibleArrayMember() ? RandomizedFields.pop_back_val() : nullptr;
+  if (!FlexibleArray) {
+    if (const auto *CA =
+            dyn_cast<ConstantArrayType>(RandomizedFields.back()->getType()))
+      if (CA->getSize().sle(2))
+        FlexibleArray = RandomizedFields.pop_back_val();
+  }
 
-  std::string Seed = (Context.getLangOpts().RandstructSeed + Name).str();
+  std::string Seed =
+      Context.getLangOpts().RandstructSeed + RD->getNameAsString();
   std::seed_seq SeedSeq(Seed.begin(), Seed.end());
   std::mt19937 RNG(SeedSeq);
 
   randomizeStructureLayoutImpl(Context, RandomizedFields, RNG);
-  if (VLA)
-    RandomizedFields.push_back(VLA);
 
+  // Plorp the randomized decls into the final ordering.
   FinalOrdering.insert(FinalOrdering.end(), RandomizedFields.begin(),
                        RandomizedFields.end());
+
+  // Add fields that belong towards the end of the RecordDecl.
+  FinalOrdering.insert(FinalOrdering.end(), PostRandomizedFields.begin(),
+                       PostRandomizedFields.end());
+
+  // Add back the flexible array.
+  if (FlexibleArray)
+    FinalOrdering.push_back(FlexibleArray);
 
   assert(TotalNumFields == FinalOrdering.size() &&
          "Decl count has been altered after Randstruct randomization!");
