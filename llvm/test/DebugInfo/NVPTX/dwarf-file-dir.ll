@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck --check-prefix=CHECK-NODIR %s
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -dwarf-directory=1 | FileCheck --check-prefix=CHECK-DIR %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
 ; CHECK-NODIR: .file   {{[0-9]+}} "/tmp/dbginfo/a{{/|\\\\}}a.cpp"
 ;
@@ -15,7 +16,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2, nameTableKind: None)
 !1 = !DIFile(filename: "a.cpp", directory: "/tmp/dbginfo/a")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcv", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !1, type: !6, retainedNodes: !2)

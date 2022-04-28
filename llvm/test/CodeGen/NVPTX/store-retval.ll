@@ -1,4 +1,5 @@
 ; RUN: llc < %s --mtriple=nvptx-unknown-unknown | FileCheck %s
+; RUN: %if ptxas %{ llc < %s --mtriple=nvptx-unknown-unknown | %ptxas-verify %}
 ;
 ; This is IR generated with clang using -O3 optimization level
 ; and nvptx-unknown-unknown target from the following C code.

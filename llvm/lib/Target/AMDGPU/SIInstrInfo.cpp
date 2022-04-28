@@ -868,23 +868,26 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    if (IsSGPRSrc && !ST.hasSDWAScalar()) {
-      if (!DstLow || !SrcLow) {
-        reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc,
-                          "Cannot use hi16 subreg on VI!");
+    if (ST.hasTrue16BitInsts()) {
+      if (IsSGPRSrc) {
+        assert(SrcLow);
+        SrcReg = NewSrcReg;
+      }
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B16_e32), DestReg)
+          .addReg(SrcReg);
+    } else {
+      if (IsSGPRSrc && !ST.hasSDWAScalar()) {
+        if (!DstLow || !SrcLow) {
+          reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc,
+                            "Cannot use hi16 subreg on VI!");
+        }
+
+        BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), NewDestReg)
+            .addReg(NewSrcReg, getKillRegState(KillSrc));
+        return;
       }
 
-      BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), NewDestReg)
-        .addReg(NewSrcReg, getKillRegState(KillSrc));
-      return;
-    }
-
-    MachineInstrBuilder MIB;
-    if (ST.hasTrue16BitInsts()) {
-      MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B16_e32), DestReg)
-                .addReg(SrcReg);
-    } else {
-      MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_sdwa), NewDestReg)
+      auto MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_sdwa), NewDestReg)
                 .addImm(0) // src0_modifiers
                 .addReg(NewSrcReg)
                 .addImm(0) // clamp

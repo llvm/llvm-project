@@ -1,6 +1,10 @@
 ; RUN: llc < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOF16
 ; RUN: llc < %s -mcpu=sm_80 | FileCheck %s --check-prefixes=CHECK,CHECK-F16
 ; RUN: llc < %s -mcpu=sm_80 --nvptx-no-f16-math | FileCheck %s --check-prefixes=CHECK,CHECK-NOF16
+; RUN: %if ptxas %{ llc < %s | %ptxas-verify %}
+; RUN: %if ptxas-11.0 %{ llc < %s -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-11.0 %{ llc < %s -mcpu=sm_80 --nvptx-no-f16-math | %ptxas-verify -arch=sm_80 %}
+
 target triple = "nvptx64-nvidia-cuda"
 
 ; Checks that llvm intrinsics for math functions are correctly lowered to PTX.

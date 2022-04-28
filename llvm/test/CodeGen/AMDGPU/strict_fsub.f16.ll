@@ -366,10 +366,12 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX11-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, s3
 ; GFX11-NEXT:    s_lshr_b32 s0, s2, 16
 ; GFX11-NEXT:    s_lshr_b32 s1, s3, 16
-; GFX11-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
+; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX11-NEXT:    v_mov_b16_e32 v3.l, s1
 ; GFX11-NEXT:    v_sub_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    v_sub_f16_e32 v1, v2, v3
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0

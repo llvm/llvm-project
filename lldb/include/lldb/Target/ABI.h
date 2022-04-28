@@ -126,6 +126,20 @@ public:
   virtual lldb::addr_t FixDataAddress(lldb::addr_t pc) { return pc; }
   /// @}
 
+  /// Use this method when you do not know, or do not care what kind of address
+  /// you are fixing. On platforms where there would be a difference between the
+  /// two types, it will pick the safest option.
+  ///
+  /// Its purpose is to signal that no specific choice was made and provide an
+  /// alternative to randomly picking FixCode/FixData address. Which could break
+  /// platforms where there is a difference (only Arm Thumb at this time).
+  virtual lldb::addr_t FixAnyAddress(lldb::addr_t pc) {
+    // On Arm Thumb fixing a code address zeroes the bottom bit, so FixData is
+    // the safe choice. On any other platform (so far) code and data addresses
+    // are fixed in the same way.
+    return FixDataAddress(pc);
+  }
+
   llvm::MCRegisterInfo &GetMCRegisterInfo() { return *m_mc_register_info_up; }
 
   virtual void

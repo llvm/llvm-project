@@ -1,5 +1,8 @@
 ; RUN: llc < %s | FileCheck -check-prefix=ENABLED %s
 ; RUN: llc -disable-nvptx-load-store-vectorizer < %s | FileCheck -check-prefix=DISABLED %s
+; RUN: %if ptxas %{ llc < %s | %ptxas-verify %}
+; RUN: %if ptxas %{ llc -disable-nvptx-load-store-vectorizer < %s | %ptxas-verify %}
+
 target triple = "nvptx64-nvidia-cuda"
 
 ; Check that the load-store vectorizer is enabled by default for nvptx, and
