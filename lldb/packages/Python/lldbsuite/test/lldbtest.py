@@ -49,7 +49,6 @@ from subprocess import *
 import sys
 import time
 import traceback
-import distutils.spawn
 
 # Third-party modules
 import unittest2
@@ -1568,7 +1567,7 @@ class Base(unittest2.TestCase):
 
         # Tries to find clang at the same folder as the lldb
         lldb_dir = os.path.dirname(lldbtest_config.lldbExec)
-        path = distutils.spawn.find_executable("clang", lldb_dir)
+        path = shutil.which("clang", path=lldb_dir)
         if path is not None:
             return path
 
