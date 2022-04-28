@@ -63,6 +63,9 @@ public:
     InlinedRegion,
     /// Region with outlined function for standalone 'target' directive.
     TargetRegion,
+
+    /// Handled by OpenMPIRBuilder
+    OpenMPIRBuilderRegion,
   };
 
   CGOpenMPRegionInfo(const CapturedStmt &CS,
@@ -108,6 +111,28 @@ protected:
   RegionCodeGenTy CodeGen;
   OpenMPDirectiveKind Kind;
   bool HasCancel;
+};
+
+
+class OpenMPIRBuilderRegionInfo final : public CGOpenMPRegionInfo {
+public:
+  OpenMPIRBuilderRegionInfo(const CapturedStmt &CS, OpenMPDirectiveKind Kind)
+      : CGOpenMPRegionInfo(
+            CS, OpenMPIRBuilderRegion,
+            [](CodeGenFunction &, PrePostActionTy &) {
+              llvm_unreachable("Should never be called");
+            },
+            Kind, /*HasCancel*/ true) {}
+
+  static bool classof(const CGCapturedStmtInfo *Info) {
+    return CGOpenMPRegionInfo::classof(Info) &&
+           cast<CGOpenMPRegionInfo>(Info)->getRegionKind() ==
+               OpenMPIRBuilderRegion;
+  }
+  const VarDecl *getThreadIDVariable() const override { return nullptr; }
+
+  // private:
+  //  CodeGenFunction::  JumpDest CancelDest;
 };
 
 /// API for captured statement code generation in OpenMP constructs.
@@ -1194,7 +1219,8 @@ struct PushAndPopStackRAII {
     if (!OMPBuilder)
       return;
 
-#if 0
+    // auto FiniCB = [&CGF](llvm::OpenMPIRBuilder::InsertPointTy IP) {};
+
     // The following callback is the crucial part of clangs cleanup process.
     //
     // NOTE:
@@ -1207,9 +1233,10 @@ struct PushAndPopStackRAII {
     // to push & pop an FinalizationInfo object.
     // The FiniCB will still be needed but at the point where the
     // OpenMPIRBuilder is asked to construct a parallel (or similar) construct.
-    auto FiniCB = [&CGF](llvm::OpenMPIRBuilder::InsertPointTy IP , 
-        omp::Directive LeaveReason,
-        OMPRegionInfo &Region) {
+    auto CancelCB = [&CGF, Kind](llvm::OpenMPIRBuilder::InsertPointTy IP,
+                                 llvm::omp::Directive CanceledDirective,
+                                 llvm::omp::Directive CanceledBy) {
+      assert(CanceledDirective == Kind);
       assert(IP.getBlock()->end() == IP.getPoint() &&
              "Clang CG should cause non-terminated block!");
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
@@ -1218,18 +1245,16 @@ struct PushAndPopStackRAII {
           CGF.getOMPCancelDestination(OMPD_parallel);
       CGF.EmitBranchThroughCleanup(Dest);
     };
-
+    
+    llvm_unreachable("TODO: set UserManaged=true");
     // TODO: Remove this once we emit parallel regions through the
     //       OpenMPIRBuilder as it can do this setup internally.
-    llvm::OpenMPIRBuilder::FinalizationInfo FI({FiniCB, Kind, HasCancel});
-    OMPBuilder->pushFinalizationCB(std::move(FI));
-#endif
+   // llvm::OpenMPIRBuilder::FinalizationInfo FI{{}, Kind, HasCancel, /*UserManaged*/ true};
+   // OMPBuilder->pushFinalizationCB(std::move(FI));
   }
   ~PushAndPopStackRAII() {
-#if 0
-    if (OMPBuilder)
-      OMPBuilder->popFinalizationCB();
-#endif
+   // if (OMPBuilder)
+   //   OMPBuilder->popFinalizationCB();
   }
   llvm::OpenMPIRBuilder *OMPBuilder;
 };
@@ -2588,13 +2613,31 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
                                       OpenMPDirectiveKind Kind, bool EmitChecks,
                                       bool ForceSimpleCall) {
   // Check if we should use the OMPBuilder
-  auto *OMPRegionInfo =
-      dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
-  if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
+
+  // FIXME: The OpenMPIRBuilder finalization stack does not necessarily
+  // correspond the scope structure expected by CGOpenMPRuntime because until
+  // OpenMPIRBuilder implementation is complete, some directives will still be
+  // emitted by OpenMPIRBuilder itself. Note that
+  // isLastFinalizationInfoCancellable may also be wrong and match the wrong
+  // level which happen to be the same OpenMPDirectiveKind.
+  // CGOpenMPRegionInfo* OMPRegionInfo  =
+  // dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
+  if (auto *IRBuilderRegion =
+          dyn_cast_or_null<OpenMPIRBuilderRegionInfo>(CGF.CapturedStmtInfo)) {
+    // if (OMPBuilder.isLastFinalizationInfoCancellable(Kind)) {
     CGF.Builder.restoreIP(OMPBuilder.createBarrier(
         CGF.Builder, Kind, ForceSimpleCall, EmitChecks));
     return;
+    // }
+    // FIXME: CGF.CapturedStmtInfo is unreliable when using OpenMPIRBuilder.
+    // OMPRegionInfo = nullptr;
+    //}  else {
+    //  OMPRegionInfo =
+    //  dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
   }
+
+  auto *OMPRegionInfo =
+      dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
 
   if (!CGF.HaveInsertPoint())
     return;

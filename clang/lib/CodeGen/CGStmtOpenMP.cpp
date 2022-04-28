@@ -4076,24 +4076,37 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-    const Stmt *SectionRegionBodyStmt = S.getAssociatedStmt();
-    auto FiniCB = [this]( InsertPointTy IP, 
-        llvm::   omp::Directive LeaveReason,
-        llvm::OpenMPIRBuilder::  OMPRegionInfo*Region) {
-      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
-    };
+    if (OMPBuilder.isTopmostBuilderManaged()) {
+      const Stmt *SectionRegionBodyStmt = S.getAssociatedStmt();
+      auto FiniCB = [this](InsertPointTy IP,
+                           llvm::omp::Directive LeavingConstruct,
+                           llvm::omp::Directive CancelledBy) {
+        OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      };
 
-    auto BodyGenCB = [SectionRegionBodyStmt, this](InsertPointTy AllocaIP,
-                                                   InsertPointTy CodeGenIP) {
-      OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
-          *this, SectionRegionBodyStmt, AllocaIP, CodeGenIP, "section");
-    };
+      auto BodyGenCB =
+          [SectionRegionBodyStmt,
+           this](InsertPointTy AllocaIP,
+                 InsertPointTy CodeGenIP) { // ,    llvm::BasicBlock &FiniBB
+            Builder.restoreIP(CodeGenIP);
+            auto FiniBB = splitBBWithSuffix(Builder, false, ".sectionfini");
 
-    LexicalScope Scope(*this, S.getSourceRange());
-    EmitStopPoint(&S);
-    Builder.restoreIP(OMPBuilder.createSection(Builder, BodyGenCB, FiniCB));
+            OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP,
+                                                           *FiniBB);
+            // OMPBuilderCBHelpers::EmitOMPRegionBody(*this,
+            // SectionRegionBodyStmt, CodeGenIP, FiniBB);
 
-    return;
+            EmitStmt(SectionRegionBodyStmt);
+
+            Builder.CreateBr(FiniBB);
+          };
+
+      LexicalScope Scope(*this, S.getSourceRange());
+      EmitStopPoint(&S);
+      Builder.restoreIP(OMPBuilder.createSection(Builder, BodyGenCB, FiniCB));
+
+      return;
+    }
   }
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(&S);
