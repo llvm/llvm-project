@@ -99,6 +99,9 @@ class TargetRegisterClass;
       // Floating Point Compare
       FPCmp,
 
+      // Floating point Abs
+      FAbs,
+
       // Floating point select
       FSELECT,
 
@@ -541,6 +544,10 @@ class TargetRegisterClass;
     SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFABS(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerFABS32(SDValue Op, SelectionDAG &DAG,
+                        bool HasExtractInsert) const;
+    SDValue lowerFABS64(SDValue Op, SelectionDAG &DAG,
+                        bool HasExtractInsert) const;
     SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;

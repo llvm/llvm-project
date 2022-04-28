@@ -180,6 +180,7 @@ const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case MipsISD::Ret:               return "MipsISD::Ret";
   case MipsISD::ERet:              return "MipsISD::ERet";
   case MipsISD::EH_RETURN:         return "MipsISD::EH_RETURN";
+  case MipsISD::FAbs:              return "MipsISD::FAbs";
   case MipsISD::FMS:               return "MipsISD::FMS";
   case MipsISD::FPBrcond:          return "MipsISD::FPBrcond";
   case MipsISD::FPCmp:             return "MipsISD::FPCmp";
@@ -341,14 +342,11 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::SETCC,              MVT::f32,   Custom);
   setOperationAction(ISD::SETCC,              MVT::f64,   Custom);
   setOperationAction(ISD::BRCOND,             MVT::Other, Custom);
+  setOperationAction(ISD::FABS,               MVT::f32,   Custom);
+  setOperationAction(ISD::FABS,               MVT::f64,   Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f32,   Custom);
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
-
-  if (!(TM.Options.NoNaNsFPMath || Subtarget.inAbs2008Mode())) {
-    setOperationAction(ISD::FABS, MVT::f32, Custom);
-    setOperationAction(ISD::FABS, MVT::f64, Custom);
-  }
 
   if (Subtarget.isGP64bit()) {
     setOperationAction(ISD::GlobalAddress,      MVT::i64,   Custom);
@@ -2414,10 +2412,13 @@ MipsTargetLowering::lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const {
   return lowerFCOPYSIGN32(Op, DAG, Subtarget.hasExtractInsert());
 }
 
-static SDValue lowerFABS32(SDValue Op, SelectionDAG &DAG,
-                           bool HasExtractInsert) {
+SDValue MipsTargetLowering::lowerFABS32(SDValue Op, SelectionDAG &DAG,
+                                        bool HasExtractInsert) const {
   SDLoc DL(Op);
   SDValue Res, Const1 = DAG.getConstant(1, DL, MVT::i32);
+
+  if (DAG.getTarget().Options.NoNaNsFPMath || Subtarget.inAbs2008Mode())
+    return DAG.getNode(MipsISD::FAbs, DL, Op.getValueType(), Op.getOperand(0));
 
   // If operand is of type f64, extract the upper 32-bit. Otherwise, bitcast it
   // to i32.
@@ -2451,10 +2452,13 @@ static SDValue lowerFABS32(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, LowX, Res);
 }
 
-static SDValue lowerFABS64(SDValue Op, SelectionDAG &DAG,
-                           bool HasExtractInsert) {
+SDValue MipsTargetLowering::lowerFABS64(SDValue Op, SelectionDAG &DAG,
+                                        bool HasExtractInsert) const {
   SDLoc DL(Op);
   SDValue Res, Const1 = DAG.getConstant(1, DL, MVT::i32);
+
+  if (DAG.getTarget().Options.NoNaNsFPMath || Subtarget.inAbs2008Mode())
+    return DAG.getNode(MipsISD::FAbs, DL, Op.getValueType(), Op.getOperand(0));
 
   // Bitcast to integer node.
   SDValue X = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Op.getOperand(0));
