@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -S < %s | FileCheck %s
 ;
 ; Check that the disable_nonforced loop property is honored by the
 ; loop vectorizer.

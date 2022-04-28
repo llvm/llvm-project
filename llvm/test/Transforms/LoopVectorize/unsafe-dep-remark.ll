@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s
 
 ; ModuleID = '/tmp/kk.c'
 source_filename = "/tmp/kk.c"

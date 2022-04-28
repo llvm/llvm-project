@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-interleave=2 -force-vector-width=1 -S | FileCheck --enable-var-scope %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=1 -S | FileCheck --enable-var-scope %s
 
 ; Make sure we attach memcheck metadata to scalarized memory operations even if
 ; we're only unrolling.

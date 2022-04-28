@@ -1,4 +1,4 @@
-; RUN: opt  -loop-vectorize -force-vector-width=2 -S %s | FileCheck %s
+; RUN: opt  -passes=loop-vectorize -force-vector-width=2 -S %s | FileCheck %s
 
 ; Tests with alias sets that contain points with uncomputable bounds because
 ; they include %offset.1, which is loaded in each loop iteration.

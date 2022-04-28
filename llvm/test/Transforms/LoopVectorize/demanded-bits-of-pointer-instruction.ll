@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s
 
 ; getDemandedBits() is called on the pointer-typed GEP instruction here.
 ; Only make sure we do not crash.

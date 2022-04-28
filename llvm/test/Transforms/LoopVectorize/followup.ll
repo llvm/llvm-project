@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S < %s | FileCheck %s
 ;
 ; Check that the followup loop attributes are applied.
 ;

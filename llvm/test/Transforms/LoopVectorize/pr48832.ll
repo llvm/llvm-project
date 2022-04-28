@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=4 -S -o - < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S -o - < %s | FileCheck %s
 %arrayt = type [64 x i32]
 
 @v_146 = external global %arrayt, align 1

@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize < %s
+; RUN: opt -S -passes=loop-vectorize < %s
 
 ; PR15384
 define void @test1(i32 %arg) {
