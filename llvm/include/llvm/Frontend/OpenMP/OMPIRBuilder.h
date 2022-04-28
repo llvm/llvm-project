@@ -106,8 +106,8 @@ public:
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
   using LeaveRegionCallbackTy =
-      std::function<void(InsertPointTy ExitingIP, bool Rejoining,
-                         omp::Directive LeaveReason, OMPRegionInfo *Region)>;
+      std::function<void(InsertPointTy ExitingIP, 
+                         omp::Directive LeaveReason, OMPRegionInfo *Region)>; // TODO: make simpler again
 
   enum class RegionKind {
     /// Sentinel object so we don't always have to check whether the stack is
@@ -122,22 +122,44 @@ public:
     Directive
   };
 
+  struct OMPRegionBreak {
+      BasicBlock *BB;
+      omp::Directive Reason;
+      omp::Directive Target;
+
+      OMPRegionBreak(BasicBlock *BB, omp::Directive Reason, omp::Directive Target) : BB(BB), Reason(Reason),Target(Target) {      }
+  };
+
   struct OMPRegionInfo {
     RegionKind Kind;
     omp::Directive DK;
-    bool IsCancellable; // TODO: remove; determine ourselves whether there was a
-                        // cancelling construct inside
-    LeaveRegionCallbackTy FiniCB;
+   // LeaveRegionCallbackTy FiniCB;
 
-    OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable,
-                  LeaveRegionCallbackTy FiniCB)
-        : Kind(Kind), DK(DK), IsCancellable(IsCancellable),
-          FiniCB(std::move(FiniCB)) {
+    /// Inside a parallel region, determines whether a barrier must check whether cancellation has occured.
+    // TODO: remove; determine ourselves whether there was a cancelling construct inside.
+    bool IsCancellable; 
+
+    SmallVector<OMPRegionBreak,2>Breaks;
+
+    OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable
+        //, LeaveRegionCallbackTy FiniCB
+    ) : Kind(Kind), DK(DK), IsCancellable(IsCancellable)
+        // , FiniCB(std::move(FiniCB))
+    {
       assertOK();
     }
+
 #ifndef NDEBUG
-    ~OMPRegionInfo() { assertOK(); }
+    ~OMPRegionInfo() { 
+        assertOK();
+        assert(Breaks.empty());
+    }
 #endif
+
+    void addBreak(BasicBlock *BB, omp::Directive Reason,  omp::Directive  Target) {
+        assert(!BB->getTerminator());
+        Breaks.emplace_back(BB,Reason,Target);
+    }
 
     /// Consistency self-check.
     void assertOK() const;
@@ -151,11 +173,11 @@ private:
 
   OMPRegionInfo *getInnermostDirectionRegion(omp::Directive DK);
 
-  OMPRegionInfo *pushRegion(omp::Directive DK, bool IsCancellable,
-                            LeaveRegionCallbackTy FiniCB = {});
+  OMPRegionInfo *pushRegion(omp::Directive DK, bool IsCancellable
+      //,  LeaveRegionCallbackTy FiniCB = {}
+  );
 
-  void emitRegionExit(InsertPointTy ExitingIP, OMPRegionInfo *RegionToLeave,
-                      omp::Directive LeaveReason = omp::OMPD_unknown);
+ // void emitRegionExit(InsertPointTy ExitingIP, OMPRegionInfo *RegionToLeave, omp::Directive LeaveReason = omp::OMPD_unknown);
 
   void popRegion(omp::Directive DK);
 
