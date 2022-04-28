@@ -1,6 +1,6 @@
 # RUN: not llvm-reduce --test FileCheck %s -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: {{.*}}llvm-reduce{{.*}}: error: unable to get target for 'omgwtfbbqcpu64--', see --version and --triple.
+# CHECK: error: unable to get target for 'omgwtfbbqcpu64--', see --version and --triple.
 
 --- |
   target triple = "omgwtfbbqcpu64--"
