@@ -10,7 +10,7 @@ module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>
 }
 
 // CHECK-LABEL: func @alloc_function_variable
-//       CHECK:   %[[VAR:.+]] = spv.Variable : !spv.ptr<!spv.struct<(!spv.array<20 x f32, stride=4>)>, Function>
+//       CHECK:   %[[VAR:.+]] = spv.Variable : !spv.ptr<!spv.struct<(!spv.array<20 x f32>)>, Function>
 //       CHECK:   %[[LOADPTR:.+]] = spv.AccessChain %[[VAR]]
 //       CHECK:   %[[VAL:.+]] = spv.Load "Function" %[[LOADPTR]] : f32
 //       CHECK:   %[[STOREPTR:.+]] = spv.AccessChain %[[VAR]]
@@ -28,8 +28,8 @@ module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>
 }
 
 // CHECK-LABEL: func @two_allocs
-//   CHECK-DAG: spv.Variable : !spv.ptr<!spv.struct<(!spv.array<6 x i32, stride=4>)>, Function>
-//   CHECK-DAG: spv.Variable : !spv.ptr<!spv.struct<(!spv.array<20 x f32, stride=4>)>, Function>
+//   CHECK-DAG: spv.Variable : !spv.ptr<!spv.struct<(!spv.array<6 x i32>)>, Function>
+//   CHECK-DAG: spv.Variable : !spv.ptr<!spv.struct<(!spv.array<20 x f32>)>, Function>
 
 // -----
 
@@ -42,8 +42,8 @@ module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>
 }
 
 // CHECK-LABEL: func @two_allocs_vector
-//   CHECK-DAG: spv.Variable : !spv.ptr<!spv.struct<(!spv.array<2 x vector<2xi32>, stride=8>)>, Function>
-//   CHECK-DAG: spv.Variable : !spv.ptr<!spv.struct<(!spv.array<4 x vector<4xf32>, stride=16>)>, Function>
+//   CHECK-DAG: spv.Variable : !spv.ptr<!spv.struct<(!spv.array<2 x vector<2xi32>>)>, Function>
+//   CHECK-DAG: spv.Variable : !spv.ptr<!spv.struct<(!spv.array<4 x vector<4xf32>>)>, Function>
 
 
 // -----
