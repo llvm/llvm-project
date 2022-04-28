@@ -17,6 +17,7 @@
 
 @b =  global i32 0, align 4
 @b_h = hidden global i32 0, align 4
+@b_e = dllexport global i32 0, align 4
 
 define void @foo() {
 entry:
@@ -24,6 +25,11 @@ entry:
 }
 
 define hidden void @foo_h(i32* %ip) {
+entry:
+  ret void
+}
+
+define dllexport void @foo_e(i32* %ip) {
 entry:
   ret void
 }
@@ -38,8 +44,14 @@ entry:
   ret void
 }
 
+define weak dllexport void @foo_weak_e() {
+entry:
+  ret void
+}
+
 @foo_p = global void ()* @zoo_weak_extern_h, align 4
 declare extern_weak hidden void @zoo_weak_extern_h()
+declare extern_weak dllexport void @zoo_weak_extern_e()
 
 define i32 @main() {
 entry:
@@ -51,20 +63,30 @@ entry:
 }
 
 declare hidden i32 @bar_h(i32*)
+declare dllexport i32 @bar_e(i32*)
 
 ; CHECK:        .globl  foo[DS]{{[[:space:]]*([#].*)?$}}
 ; CHECK:        .globl  .foo{{[[:space:]]*([#].*)?$}}
 ; CHECK:        .globl  foo_h[DS],hidden
 ; CHECK:        .globl  .foo_h,hidden
+; CHECK:        .globl  foo_e[DS],exported
+; CHECK:        .globl  .foo_e,exported
 ; CHECK:        .globl  foo_protected[DS],protected
 ; CHECK:        .globl  .foo_protected,protected
 ; CHECK:        .weak   foo_weak_h[DS],hidden
 ; CHECK:        .weak   .foo_weak_h,hidden
+; CHECK:        .weak   foo_weak_e[DS],exported
+; CHECK:        .weak   .foo_weak_e,exported
 
 ; CHECK:        .globl  b{{[[:space:]]*([#].*)?$}}
 ; CHECK:        .globl  b_h,hidden
+; CHECK:        .globl  b_e,exported
 
 ; CHECK:        .weak   .zoo_weak_extern_h[PR],hidden
 ; CHECK:        .weak   zoo_weak_extern_h[DS],hidden
+; CHECK:        .weak   .zoo_weak_extern_e[PR],exported
+; CHECK:        .weak   zoo_weak_extern_e[DS],exported
 ; CHECK:        .extern .bar_h[PR],hidden
 ; CHECK:        .extern bar_h[DS],hidden
+; CHECK:        .extern .bar_e[PR],exported
+; CHECK:        .extern bar_e[DS],exported
