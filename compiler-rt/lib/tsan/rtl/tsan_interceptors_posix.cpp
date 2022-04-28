@@ -1900,8 +1900,10 @@ TSAN_INTERCEPTOR(int, epoll_ctl, int epfd, int op, int fd, void *ev) {
     FdAccess(thr, pc, epfd);
   if (epfd >= 0 && fd >= 0)
     FdAccess(thr, pc, fd);
-  if (op == EPOLL_CTL_ADD && epfd >= 0)
+  if (op == EPOLL_CTL_ADD && epfd >= 0) {
+    FdPollAdd(thr, pc, epfd, fd);
     FdRelease(thr, pc, epfd);
+  }
   int res = REAL(epoll_ctl)(epfd, op, fd, ev);
   return res;
 }
