@@ -2599,7 +2599,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
   // into smaller vectors and sum the cost of each shuffle.
-  if (!Mask.empty() && isa<FixedVectorType>(Tp) &&
+  if (!Mask.empty() && isa<FixedVectorType>(Tp) && LT.second.isVector() &&
       Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       cast<FixedVectorType>(Tp)->getNumElements() >
           LT.second.getVectorNumElements() &&
