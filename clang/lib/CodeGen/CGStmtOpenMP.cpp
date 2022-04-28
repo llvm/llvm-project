@@ -3834,6 +3834,7 @@ void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
       return;
     }
 
+    CGNonOpenMPIRBuilderRegion Scope(*this);
     HasLastprivates = emitWorksharingDirective(CGF, S, S.hasCancel());
   };
   {
@@ -4475,6 +4476,8 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     const OMPExecutableDirective &S, const OpenMPDirectiveKind CapturedRegion,
     const RegionCodeGenTy &BodyGen, const TaskGenTy &TaskGen,
     OMPTaskDataTy &Data) {
+    CGNonOpenMPIRBuilderRegion NonIrBuilderScope(*this);
+
   // Emit outlined function for task construct.
   const CapturedStmt *CS = S.getCapturedStmt(CapturedRegion);
   auto I = CS->getCapturedDecl()->param_begin();
@@ -5017,6 +5020,8 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
 }
 
 void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
+    CGNonOpenMPIRBuilderRegion Scope(*this);
+
   // Emit outlined function for task construct.
   const CapturedStmt *CS = S.getCapturedStmt(OMPD_task);
   Address CapturedStruct = GenerateCapturedStmtArgument(*CS);
@@ -5034,6 +5039,7 @@ void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
   // Check if we should emit tied or untied task.
   Data.Tied = !S.getSingleClause<OMPUntiedClause>();
   auto &&BodyGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
+      CGNonOpenMPIRBuilderRegion Scope(CGF);
     CGF.EmitStmt(CS->getCapturedStmt());
   };
   auto &&TaskGen = [&S, SharedsTy, CapturedStruct,
@@ -6892,6 +6898,8 @@ void CodeGenFunction::EmitOMPCancellationPointDirective(
                                                    S.getCancelRegion());
 }
 
+
+
 void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
   const Expr *IfCond = nullptr;
   for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
@@ -6901,18 +6909,14 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
       break;
     }
   }
-  if (CGM.getLangOpts().OpenMPIRBuilder) {
+  if (CGM.getLangOpts().OpenMPIRBuilder && !IsInsideNonOpenMPIRBuilderHandledRegion) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-    llvm_unreachable("TODO");
-    // auto DK = OMPBuilder.getTopmostDirective();
-    // if (OMPBuilder.isTopmostBuilderManaged()) {
     llvm::Value *IfCondition = nullptr;
     if (IfCond)
       IfCondition = EvaluateExprAsBool(IfCond);
     Builder.restoreIP(
         OMPBuilder.createCancel(Builder, IfCondition, S.getCancelRegion()));
     return;
-    // }
   }
 
   CGM.getOpenMPRuntime().emitCancelCall(*this, S.getBeginLoc(), IfCond,
