@@ -5,7 +5,7 @@
 //===----------------------------------------------------------------------===//
 
 // CHECK: pdl.pattern @AttrExpr
-// CHECK: %[[ATTR:.*]] = attribute 10
+// CHECK: %[[ATTR:.*]] = attribute = 10
 // CHECK: operation({{.*}}) {"attr" = %[[ATTR]]}
 Pattern AttrExpr => erase op<> { attr = attr<"10"> };
 
