@@ -499,7 +499,7 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 void llvm::processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
-    function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
+    function_ref<void(ArrayRef<int>, unsigned)> SingleInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction) {
   SmallVector<SmallVector<SmallVector<int>>> Res(NumOfDestRegs);
   // Try to perform better estimation of the permutation.
@@ -543,7 +543,7 @@ void llvm::processShuffleMasks(
       auto *It =
           find_if(Dest, [](ArrayRef<int> Mask) { return !Mask.empty(); });
       unsigned SrcReg = std::distance(Dest.begin(), It);
-      SingleInputAction(*It, SrcReg, I);
+      SingleInputAction(*It, SrcReg);
       break;
     }
     default: {

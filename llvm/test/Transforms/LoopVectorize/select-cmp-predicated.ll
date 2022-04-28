@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -S < %s | FileCheck %s --check-prefix=CHECK-VF2IC1
-; RUN: opt -loop-vectorize -force-vector-interleave=2 -force-vector-width=1 -S < %s | FileCheck %s --check-prefix=CHECK-VF1IC2
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -S < %s | FileCheck %s --check-prefix=CHECK-VF2IC1
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=1 -S < %s | FileCheck %s --check-prefix=CHECK-VF1IC2
 
 define i32 @pred_select_const_i32_from_icmp(i32* noalias nocapture readonly %src1, i32* noalias nocapture readonly %src2, i64 %n) {
 ; CHECK-VF2IC1-LABEL: @pred_select_const_i32_from_icmp(

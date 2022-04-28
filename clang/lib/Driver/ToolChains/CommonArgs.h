@@ -120,6 +120,9 @@ bool addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
                       bool ForceStaticHostRuntime = false,
                       bool IsOffloadingHost = false, bool GompNeedsRT = false);
 
+void addHIPRuntimeLibArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs);
+
 const char *getAsNeededOption(const ToolChain &TC, bool as_needed);
 
 llvm::opt::Arg *getLastProfileUseArg(const llvm::opt::ArgList &Args);

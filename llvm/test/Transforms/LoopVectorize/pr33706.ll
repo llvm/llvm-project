@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck %s
 
 @global = local_unnamed_addr global i32 0, align 4
 @global.1 = local_unnamed_addr global i32 0, align 4

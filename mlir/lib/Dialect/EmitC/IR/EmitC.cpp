@@ -63,6 +63,19 @@ LogicalResult ApplyOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// CastOp
+//===----------------------------------------------------------------------===//
+
+bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  Type input = inputs.front(), output = outputs.front();
+
+  return ((input.isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
+                     emitc::PointerType>()) &&
+          (output.isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
+                      emitc::PointerType>()));
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 
@@ -218,6 +231,11 @@ Type emitc::OpaqueType::parse(AsmParser &parser) {
   SMLoc loc = parser.getCurrentLocation();
   if (parser.parseOptionalString(&value) || value.empty()) {
     parser.emitError(loc) << "expected non empty string in !emitc.opaque type";
+    return Type();
+  }
+  if (value.back() == '*') {
+    parser.emitError(loc) << "pointer not allowed as outer type with "
+                             "!emitc.opaque, use !emitc.ptr instead";
     return Type();
   }
   if (parser.parseGreater())

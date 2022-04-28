@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 -S < %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -S < %s
 ;
 ; Cleaned up version of fe_tools.all_dimensions.ll from PR36311.
 ; Forcing VF=2 to trigger vector code gen

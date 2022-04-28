@@ -2526,10 +2526,10 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     // Note 128-bit support is only partly implemented test the range
     // conditions here.
     static constexpr auto fmt = string_literal("{}");
-    std::basic_string<CharT> min = std::format(fmt.sv<CharT>(), std::numeric_limits<long long>::min());
+    std::basic_string<CharT> min = std::format(fmt.template sv<CharT>(), std::numeric_limits<long long>::min());
     check.template operator()<"{}">(std::basic_string_view<CharT>(min),
                                     static_cast<__int128_t>(std::numeric_limits<long long>::min()));
-    std::basic_string<CharT> max = std::format(fmt.sv<CharT>(), std::numeric_limits<long long>::max());
+    std::basic_string<CharT> max = std::format(fmt.template sv<CharT>(), std::numeric_limits<long long>::max());
     check.template operator()<"{}">(std::basic_string_view<CharT>(max),
                                     static_cast<__int128_t>(std::numeric_limits<long long>::max()));
     check_exception("128-bit value is outside of implemented range", SV("{}"),
@@ -2552,7 +2552,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     // Note 128-bit support is only partly implemented test the range
     // conditions here.
     static constexpr auto fmt = string_literal("{}");
-    std::basic_string<CharT> max = std::format(fmt.sv<CharT>(), std::numeric_limits<unsigned long long>::max());
+    std::basic_string<CharT> max = std::format(fmt.template sv<CharT>(), std::numeric_limits<unsigned long long>::max());
     check.template operator()<"{}">(std::basic_string_view<CharT>(max),
                                     static_cast<__uint128_t>(std::numeric_limits<unsigned long long>::max()));
     check_exception("128-bit value is outside of implemented range", SV("{}"),

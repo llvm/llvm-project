@@ -429,15 +429,8 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         IV->getStartValue(), Step, TruncI ? TruncI->getType() : nullptr);
     HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
 
-    // If there are no vector users of IV, simply update all users to use Step
-    // instead.
-    if (!IV->needsVectorIV()) {
-      IV->replaceAllUsesWith(Steps);
-      continue;
-    }
-
-    // Otherwise only update scalar users of IV to use Step instead. Use
-    // SetVector to ensure the list of users doesn't contain duplicates.
+    // Update scalar users of IV to use Step instead. Use SetVector to ensure
+    // the list of users doesn't contain duplicates.
     SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
     for (VPUser *U : Users) {
       VPRecipeBase *R = cast<VPRecipeBase>(U);

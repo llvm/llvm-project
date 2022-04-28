@@ -1,4 +1,3 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 %s -S -debug 2>&1 | FileCheck %s
 ; RUN: opt -passes='loop-vectorize' -force-vector-width=2 %s -S -debug 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts

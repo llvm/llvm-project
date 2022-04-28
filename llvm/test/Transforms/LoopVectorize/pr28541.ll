@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -pass-remarks=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -pass-remarks=loop-vectorize -S < %s 2>&1 | FileCheck %s
 
 ; FIXME: Check for -pass-remarks-missed and -pass-remarks-analysis output when
 ; addAcyclicInnerLoop emits analysis.

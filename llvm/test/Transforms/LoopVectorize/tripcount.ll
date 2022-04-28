@@ -1,7 +1,7 @@
 ; This test verifies that the loop vectorizer will not vectorizes low trip count
 ; loops that require runtime checks (Trip count is computed with profile info).
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -loop-vectorize-with-block-frequency -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -loop-vectorize-with-block-frequency -S | FileCheck %s
 
 target datalayout = "E-m:e-p:32:32-i64:32-f64:32:64-a:0:32-n32-S128"
 

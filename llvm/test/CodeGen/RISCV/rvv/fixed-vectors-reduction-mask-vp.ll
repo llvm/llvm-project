@@ -10,7 +10,7 @@ define signext i1 @vpreduce_and_v1i1(i1 signext %s, <1 x i1> %v, <1 x i1> %m, i3
 ; CHECK-LABEL: vpreduce_and_v1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
-; CHECK-NEXT:    vmnand.mm v9, v0, v0
+; CHECK-NEXT:    vmnot.m v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
@@ -62,7 +62,7 @@ define signext i1 @vpreduce_and_v2i1(i1 signext %s, <2 x i1> %v, <2 x i1> %m, i3
 ; CHECK-LABEL: vpreduce_and_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
-; CHECK-NEXT:    vmnand.mm v9, v0, v0
+; CHECK-NEXT:    vmnot.m v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
@@ -114,7 +114,7 @@ define signext i1 @vpreduce_and_v4i1(i1 signext %s, <4 x i1> %v, <4 x i1> %m, i3
 ; CHECK-LABEL: vpreduce_and_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
-; CHECK-NEXT:    vmnand.mm v9, v0, v0
+; CHECK-NEXT:    vmnot.m v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
@@ -166,7 +166,7 @@ define signext i1 @vpreduce_and_v8i1(i1 signext %s, <8 x i1> %v, <8 x i1> %m, i3
 ; CHECK-LABEL: vpreduce_and_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
-; CHECK-NEXT:    vmnand.mm v9, v0, v0
+; CHECK-NEXT:    vmnot.m v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
@@ -218,7 +218,7 @@ define signext i1 @vpreduce_and_v10i1(i1 signext %s, <10 x i1> %v, <10 x i1> %m,
 ; CHECK-LABEL: vpreduce_and_v10i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
-; CHECK-NEXT:    vmnand.mm v9, v0, v0
+; CHECK-NEXT:    vmnot.m v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
@@ -235,7 +235,7 @@ define signext i1 @vpreduce_and_v16i1(i1 signext %s, <16 x i1> %v, <16 x i1> %m,
 ; CHECK-LABEL: vpreduce_and_v16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
-; CHECK-NEXT:    vmnand.mm v9, v0, v0
+; CHECK-NEXT:    vmnot.m v9, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vcpop.m a1, v9, v0.t
 ; CHECK-NEXT:    seqz a1, a1
@@ -259,7 +259,7 @@ define signext i1 @vpreduce_and_v256i1(i1 signext %s, <256 x i1> %v, <256 x i1> 
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB14_2:
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v8, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vcpop.m a2, v8, v0.t
 ; CHECK-NEXT:    li a3, 128
@@ -269,7 +269,7 @@ define signext i1 @vpreduce_and_v256i1(i1 signext %s, <256 x i1> %v, <256 x i1> 
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:  .LBB14_4:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v11, v11
+; CHECK-NEXT:    vmnot.m v8, v11
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vcpop.m a1, v8, v0.t
 ; CHECK-NEXT:    seqz a1, a1

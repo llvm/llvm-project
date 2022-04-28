@@ -59,7 +59,7 @@ define void @not_v64i1(<64 x i1>* %x, <64 x i1>* %y) {
 ; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vlm.v v8, (a0)
-; CHECK-NEXT:    vmnand.mm v8, v8, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <64 x i1>, <64 x i1>* %x

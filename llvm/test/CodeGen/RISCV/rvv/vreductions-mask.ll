@@ -36,7 +36,7 @@ define signext i1 @vreduce_and_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -79,7 +79,7 @@ define signext i1 @vreduce_and_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -122,7 +122,7 @@ define signext i1 @vreduce_and_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -165,7 +165,7 @@ define signext i1 @vreduce_and_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -208,7 +208,7 @@ define signext i1 @vreduce_and_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -251,7 +251,7 @@ define signext i1 @vreduce_and_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -294,7 +294,7 @@ define signext i1 @vreduce_and_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
-; CHECK-NEXT:    vmnand.mm v8, v0, v0
+; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    neg a0, a0
