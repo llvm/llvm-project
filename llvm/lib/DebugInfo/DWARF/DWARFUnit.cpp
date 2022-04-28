@@ -83,7 +83,14 @@ void DWARFUnitVector::addUnitsImpl(
       if (!IndexEntry && IsDWO) {
         const DWARFUnitIndex &Index = getDWARFUnitIndex(
             Context, Header.isTypeUnit() ? DW_SECT_EXT_TYPES : DW_SECT_INFO);
-        IndexEntry = Index.getFromOffset(Header.getOffset());
+        if (Index) {
+          if (Header.isTypeUnit())
+            IndexEntry = Index.getFromHash(Header.getTypeHash());
+          else if (auto DWOId = Header.getDWOId())
+            IndexEntry = Index.getFromHash(*DWOId);
+        }
+        if (!IndexEntry)
+          IndexEntry = Index.getFromOffset(Header.getOffset());
       }
       if (IndexEntry && !Header.applyIndexEntry(IndexEntry))
         return nullptr;
