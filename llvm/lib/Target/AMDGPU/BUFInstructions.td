@@ -508,7 +508,7 @@ class MUBUF_Load_Pseudo <string opName,
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
   let LGKM_CNT = isLds;
   let mayLoad = 1;
-  let mayStore = 0;
+  let mayStore = isLds;
   let maybeAtomic = 1;
   let Uses = !if(isLds, [EXEC, M0], [EXEC]);
   let has_tfe = !not(isLds);
@@ -620,7 +620,7 @@ class MUBUF_Pseudo_Store_Lds<string opName>
                  (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, CPol:$cpol, SWZ:$swz),
                  " $srsrc, $soffset$offset lds$cpol$swz"> {
   let LGKM_CNT = 1;
-  let mayLoad = 0;
+  let mayLoad = 1;
   let mayStore = 1;
   let maybeAtomic = 1;
 
