@@ -2,10 +2,6 @@
 # rely on or check fixed character -offset, Offset: or FileOffset: locations
 # will fail when run on input files checked out with different line endings.
 
-# Most test input files should use native line endings, to ensure that we run
-# tests against both line ending types.
-* text=auto
-
 # These test input files rely on one-byte Unix (LF) line-endings, as they use
 # fixed -offset, FileOffset:, or Offset: numbers in their tests.
 clang-apply-replacements/ClangRenameClassReplacements.cpp text eol=lf

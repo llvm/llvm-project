@@ -562,6 +562,8 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
 
+  bool verifyInstruction(const MachineInstr &MI,
+                         StringRef &ErrInfo) const override;
 #define GET_INSTRINFO_HELPER_DECLS
 #include "X86GenInstrInfo.inc"
 
