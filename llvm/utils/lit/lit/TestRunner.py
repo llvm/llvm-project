@@ -48,7 +48,10 @@ kDevNull = "/dev/null"
 # This regex captures ARG.  ARG must not contain a right parenthesis, which
 # terminates %dbg.  ARG must not contain quotes, in which ARG might be enclosed
 # during expansion.
-kPdbgRegex = '%dbg\\(([^)\'"]*)\\)'
+#
+# COMMAND that follows %dbg(ARG) is also captured. COMMAND can be
+# empty as a result of conditinal substitution.
+kPdbgRegex = '%dbg\\(([^)\'"]*)\\)(.*)'
 
 class ShellEnvironment(object):
 
@@ -899,7 +902,11 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
     cmds = []
     for i, ln in enumerate(commands):
-        ln = commands[i] = re.sub(kPdbgRegex, ": '\\1'; ", ln)
+        match = re.match(kPdbgRegex, ln)
+        if match:
+            command = match.group(2)
+            ln = commands[i] = \
+                match.expand(": '\\1'; \\2" if command else ": '\\1'")
         try:
             cmds.append(ShUtil.ShParser(ln, litConfig.isWindows,
                                         test.config.pipefail).parse())
@@ -987,7 +994,12 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
     f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
-            commands[i] = re.sub(kPdbgRegex, "echo '\\1' > nul && ", ln)
+            match = re.match(kPdbgRegex, ln)
+            if match:
+                command = match.group(2)
+                commands[i] = \
+                    match.expand("echo '\\1' > nul && " if command
+                                 else "echo '\\1' > nul")
         if litConfig.echo_all_commands:
             f.write('@echo on\n')
         else:
@@ -995,7 +1007,11 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
         f.write('\n@if %ERRORLEVEL% NEQ 0 EXIT\n'.join(commands))
     else:
         for i, ln in enumerate(commands):
-            commands[i] = re.sub(kPdbgRegex, ": '\\1'; ", ln)
+            match = re.match(kPdbgRegex, ln)
+            if match:
+                command = match.group(2)
+                commands[i] = match.expand(": '\\1'; \\2" if command
+                                           else ": '\\1'")
         if test.config.pipefail:
             f.write(b'set -o pipefail;' if mode == 'wb' else 'set -o pipefail;')
         if litConfig.echo_all_commands:
@@ -1179,7 +1195,8 @@ def _memoize(f):
 def _caching_re_compile(r):
     return re.compile(r)
 
-def applySubstitutions(script, substitutions, recursion_limit=None):
+def applySubstitutions(script, substitutions, conditions={},
+                       recursion_limit=None):
     """
     Apply substitutions to the script.  Allow full regular expression syntax.
     Replace each matching occurrence of regular expression pattern a with
@@ -1193,14 +1210,103 @@ def applySubstitutions(script, substitutions, recursion_limit=None):
     """
 
     # We use #_MARKER_# to hide %% while we do the other substitutions.
-    def escape(ln):
+    def escapePercents(ln):
         return _caching_re_compile('%%').sub('#_MARKER_#', ln)
 
-    def unescape(ln):
+    def unescapePercents(ln):
         return _caching_re_compile('#_MARKER_#').sub('%', ln)
+
+    def substituteIfElse(ln):
+        # early exit to avoid wasting time on lines without
+        # conditional substitutions
+        if ln.find('%if ') == -1:
+            return ln
+
+        def tryParseIfCond(ln):
+            # space is important to not conflict with other (possible)
+            # substitutions
+            if not ln.startswith('%if '):
+                return None, ln
+            ln = ln[4:]
+
+            # stop at '%{'
+            match = _caching_re_compile('%{').search(ln)
+            if not match:
+                raise ValueError("'%{' is missing for %if substitution")
+            cond = ln[:match.start()]
+
+            # eat '%{' as well
+            ln = ln[match.end():]
+            return cond, ln
+
+        def tryParseElse(ln):
+            match = _caching_re_compile('^\s*%else\s*(%{)?').search(ln)
+            if not match:
+                return False, ln
+            if not match.group(1):
+                raise ValueError("'%{' is missing for %else substitution")
+            return True, ln[match.end():]
+
+        def tryParseEnd(ln):
+            if ln.startswith('%}'):
+                return True, ln[2:]
+            return False, ln
+
+        def parseText(ln, isNested):
+            # parse everything until %if, or %} if we're parsing a
+            # nested expression.
+            match = _caching_re_compile(
+                '(.*?)(?:%if|%})' if isNested else '(.*?)(?:%if)').search(ln)
+            if not match:
+                # there is no terminating pattern, so treat the whole
+                # line as text
+                return ln, ''
+            text_end = match.end(1)
+            return ln[:text_end], ln[text_end:]
+
+        def parseRecursive(ln, isNested):
+            result = ''
+            while len(ln):
+                if isNested:
+                    found_end, _ = tryParseEnd(ln)
+                    if found_end:
+                        break
+
+                # %if cond %{ branch_if %} %else %{ branch_else %}
+                cond, ln = tryParseIfCond(ln)
+                if cond:
+                    branch_if, ln = parseRecursive(ln, isNested=True)
+                    found_end, ln = tryParseEnd(ln)
+                    if not found_end:
+                        raise ValueError("'%}' is missing for %if substitution")
+
+                    branch_else = ''
+                    found_else, ln = tryParseElse(ln)
+                    if found_else:
+                        branch_else, ln = parseRecursive(ln, isNested=True)
+                        found_end, ln = tryParseEnd(ln)
+                        if not found_end:
+                            raise ValueError("'%}' is missing for %else substitution")
+
+                    if BooleanExpression.evaluate(cond, conditions):
+                        result += branch_if
+                    else:
+                        result += branch_else
+                    continue
+
+                # The rest is handled as plain text.
+                text, ln = parseText(ln, isNested)
+                result += text
+
+            return result, ln
+
+        result, ln = parseRecursive(ln, isNested=False)
+        assert len(ln) == 0
+        return result
 
     def processLine(ln):
         # Apply substitutions
+        ln = substituteIfElse(escapePercents(ln))
         for a,b in substitutions:
             if kIsWindows:
                 b = b.replace("\\","\\\\")
@@ -1211,7 +1317,7 @@ def applySubstitutions(script, substitutions, recursion_limit=None):
             # short-lived, since the set of substitutions is fairly small, and
             # since thrashing has such bad consequences, not bounding the cache
             # seems reasonable.
-            ln = _caching_re_compile(a).sub(str(b), escape(ln))
+            ln = _caching_re_compile(a).sub(str(b), escapePercents(ln))
 
         # Strip the trailing newline and any extra whitespace.
         return ln.strip()
@@ -1235,7 +1341,7 @@ def applySubstitutions(script, substitutions, recursion_limit=None):
 
     process = processLine if recursion_limit is None else processLineToFixedPoint
     
-    return [unescape(process(ln)) for ln in script]
+    return [unescapePercents(process(ln)) for ln in script]
 
 
 class ParserKind(object):
@@ -1610,7 +1716,8 @@ def executeShTest(test, litConfig, useExternalSh,
     substitutions = list(extra_substitutions)
     substitutions += getDefaultSubstitutions(test, tmpDir, tmpBase,
                                              normalize_slashes=useExternalSh)
-    script = applySubstitutions(script, substitutions,
+    conditions = { feature: True for feature in test.config.available_features }
+    script = applySubstitutions(script, substitutions, conditions,
                                 recursion_limit=test.config.recursiveExpansionLimit)
 
     return _runShTest(test, litConfig, useExternalSh, script, tmpBase)
