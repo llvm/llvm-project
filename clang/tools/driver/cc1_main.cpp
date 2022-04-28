@@ -260,8 +260,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
             Path.str(), /*Binary=*/false, /*RemoveFileOnSignal=*/false,
             /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);
-      // FIXME(ibiryukov): make profilerOutput flush in destructor instead.
-      profilerOutput->flush();
+      profilerOutput.reset();
       llvm::timeTraceProfilerCleanup();
       Clang->clearOutputFiles(false);
     }
