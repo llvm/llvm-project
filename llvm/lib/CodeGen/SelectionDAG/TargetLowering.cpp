@@ -9044,7 +9044,9 @@ void TargetLowering::expandUADDSUBO(
   if (IsAdd && isOneConstant(RHS)) {
     // Special case: uaddo X, 1 overflowed if X+1 is 0. This potential reduces
     // the live range of X. We assume comparing with 0 is cheap.
-    // TODO: This generalizes to (X + C) < C.
+    // The general case (X + C) < C is not necessarily beneficial. Although we
+    // reduce the live range of X, we may introduce the materialization of
+    // constant C.
     SetCC =
         DAG.getSetCC(dl, SetCCType, Result,
                      DAG.getConstant(0, dl, Node->getValueType(0)), ISD::SETEQ);
