@@ -182,6 +182,9 @@ public:
     /// Constructs an extension of the given TransformState object.
     Extension(TransformState &state) : state(state) {}
 
+    /// Provides read-only access to the parent TransformState object.
+    const TransformState &getTransformState() const { return state; }
+
   private:
     /// Back-reference to the state that is being extended.
     TransformState &state;
