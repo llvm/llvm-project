@@ -4,12 +4,12 @@
 
 # These test input files rely on one-byte Unix (LF) line-endings, as they use
 # fixed -offset, FileOffset:, or Offset: numbers in their tests.
-clang-apply-replacements/ClangRenameClassReplacements.cpp text eol=lf
-clang-apply-replacements/Inputs/basic/basic.h text eol=lf
-clang-apply-replacements/Inputs/format/no.cpp text eol=lf
-clang-apply-replacements/Inputs/format/yes.cpp text eol=lf
-clang-tidy/infrastructure/export-diagnostics.cpp text eol=lf
+clang-apply-replacements/ClangRenameClassReplacements.cpp -text
+clang-apply-replacements/Inputs/basic/basic.h -text
+clang-apply-replacements/Inputs/format/no.cpp -text
+clang-apply-replacements/Inputs/format/yes.cpp -text
+clang-tidy/infrastructure/export-diagnostics.cpp -text
 
 # These test input files rely on two-byte Windows (CRLF) line endings.
-clang-apply-replacements/Inputs/crlf/crlf.cpp text eol=crlf
-clang-apply-replacements/Inputs/crlf/crlf.cpp.expected text eol=crlf
+clang-apply-replacements/Inputs/crlf/crlf.cpp -text
+clang-apply-replacements/Inputs/crlf/crlf.cpp.expected -text
