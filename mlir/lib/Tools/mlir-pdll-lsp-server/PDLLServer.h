@@ -19,6 +19,7 @@ namespace lsp {
 struct Diagnostic;
 class CompilationDatabase;
 struct CompletionList;
+struct DocumentLink;
 struct DocumentSymbol;
 struct Hover;
 struct Location;
@@ -66,6 +67,10 @@ public:
   /// Find all references of the object pointed at by the given position.
   void findReferencesOf(const URIForFile &uri, const Position &pos,
                         std::vector<Location> &references);
+
+  /// Return the document links referenced by the given file.
+  void getDocumentLinks(const URIForFile &uri,
+                        std::vector<DocumentLink> &documentLinks);
 
   /// Find a hover description for the given hover position, or None if one
   /// couldn't be found.

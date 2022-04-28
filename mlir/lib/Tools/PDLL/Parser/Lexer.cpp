@@ -100,11 +100,12 @@ Lexer::~Lexer() {
   if (addedHandlerToDiagEngine) diagEngine.setHandlerFn(nullptr);
 }
 
-LogicalResult Lexer::pushInclude(StringRef filename) {
+LogicalResult Lexer::pushInclude(StringRef filename, SMRange includeLoc) {
   std::string includedFile;
-  int bufferID = srcMgr.AddIncludeFile(
-      filename.str(), SMLoc::getFromPointer(curPtr), includedFile);
-  if (!bufferID) return failure();
+  int bufferID =
+      srcMgr.AddIncludeFile(filename.str(), includeLoc.End, includedFile);
+  if (!bufferID)
+    return failure();
 
   curBufferID = bufferID;
   curBuffer = srcMgr.getMemoryBuffer(curBufferID)->getBuffer();

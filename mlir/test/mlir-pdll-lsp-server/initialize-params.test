@@ -13,6 +13,9 @@
 // CHECK:             ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "definitionProvider": true,
+// CHECK-NEXT:      "documentLinkProvider": {
+// CHECK-NEXT:        "resolveProvider": false
+// CHECK-NEXT:      },
 // CHECK-NEXT:      "documentSymbolProvider": true,
 // CHECK-NEXT:      "hoverProvider": true,
 // CHECK-NEXT:      "referencesProvider": true,

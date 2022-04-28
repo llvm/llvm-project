@@ -692,17 +692,16 @@ LogicalResult Parser::parseInclude(SmallVectorImpl<ast::Decl *> &decls) {
   // Check the type of include. If ending with `.pdll`, this is another pdl file
   // to be parsed along with the current module.
   if (filename.endswith(".pdll")) {
-    if (failed(lexer.pushInclude(filename)))
+    if (failed(lexer.pushInclude(filename, fileLoc)))
       return emitError(fileLoc,
                        "unable to open include file `" + filename + "`");
 
     // If we added the include successfully, parse it into the current module.
-    // Make sure to save the current token so that we can restore it when we
-    // finish parsing the nested file.
-    Token oldToken = curToken;
+    // Make sure to update to the next token after we finish parsing the nested
+    // file.
     curToken = lexer.lexToken();
     LogicalResult result = parseModuleBody(decls);
-    curToken = oldToken;
+    curToken = lexer.lexToken();
     return result;
   }
 
@@ -750,7 +749,7 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
     // After we are done processing, move all of the tablegen source buffers to
     // the main parser source mgr. This allows for directly using source
     // locations from the .td files without needing to remap them.
-    parserSrcMgr.takeSourceBuffersFrom(llvm::SrcMgr);
+    parserSrcMgr.takeSourceBuffersFrom(llvm::SrcMgr, fileLoc.End);
     return false;
   };
   if (llvm::TableGenParseFile(std::move(*includeBuffer),

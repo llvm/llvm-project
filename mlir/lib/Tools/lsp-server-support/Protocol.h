@@ -930,6 +930,56 @@ struct SignatureHelp {
 /// Add support for JSON serialization.
 llvm::json::Value toJSON(const SignatureHelp &value);
 
+//===----------------------------------------------------------------------===//
+// DocumentLinkParams
+//===----------------------------------------------------------------------===//
+
+/// Parameters for the document link request.
+struct DocumentLinkParams {
+  /// The document to provide document links for.
+  TextDocumentIdentifier textDocument;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, DocumentLinkParams &result,
+              llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
+// DocumentLink
+//===----------------------------------------------------------------------===//
+
+/// A range in a text document that links to an internal or external resource,
+/// like another text document or a web site.
+struct DocumentLink {
+  DocumentLink() = default;
+  DocumentLink(Range range, URIForFile target)
+      : range(range), target(std::move(target)) {}
+
+  /// The range this link applies to.
+  Range range;
+
+  /// The uri this link points to. If missing a resolve request is sent later.
+  URIForFile target;
+
+  // TODO: The following optional fields defined by the language server protocol
+  // are unsupported:
+  //
+  // data?: any - A data entry field that is preserved on a document link
+  //              between a DocumentLinkRequest and a
+  //              DocumentLinkResolveRequest.
+
+  friend bool operator==(const DocumentLink &lhs, const DocumentLink &rhs) {
+    return lhs.range == rhs.range && lhs.target == rhs.target;
+  }
+
+  friend bool operator!=(const DocumentLink &lhs, const DocumentLink &rhs) {
+    return !(lhs == rhs);
+  }
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const DocumentLink &value);
+
 } // namespace lsp
 } // namespace mlir
 
