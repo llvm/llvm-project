@@ -62,6 +62,43 @@ static llvm::cl::opt<bool> forceLoopToExecuteOnce(
     llvm::cl::desc("force the body of a loop to execute at least once"));
 
 namespace {
+/// Information for generating a structured or unstructured increment loop.
+struct IncrementLoopInfo {
+  template <typename T>
+  explicit IncrementLoopInfo(Fortran::semantics::Symbol &sym, const T &lower,
+                             const T &upper, const std::optional<T> &step,
+                             bool isUnordered = false)
+      : loopVariableSym{sym}, lowerExpr{Fortran::semantics::GetExpr(lower)},
+        upperExpr{Fortran::semantics::GetExpr(upper)},
+        stepExpr{Fortran::semantics::GetExpr(step)}, isUnordered{isUnordered} {}
+
+  IncrementLoopInfo(IncrementLoopInfo &&) = default;
+  IncrementLoopInfo &operator=(IncrementLoopInfo &&x) { return x; }
+
+  // TODO: change when unstructured loops are also supported
+  bool isStructured() const { return true; }
+
+  mlir::Type getLoopVariableType() const {
+    assert(loopVariable && "must be set");
+    return fir::unwrapRefType(loopVariable.getType());
+  }
+
+  // Data members common to both structured and unstructured loops.
+  const Fortran::semantics::Symbol &loopVariableSym;
+  const Fortran::lower::SomeExpr *lowerExpr;
+  const Fortran::lower::SomeExpr *upperExpr;
+  const Fortran::lower::SomeExpr *stepExpr;
+  bool isUnordered; // do concurrent, forall
+  mlir::Value loopVariable = nullptr;
+  mlir::Value stepValue = nullptr; // possible uses in multiple blocks
+
+  // Data members for structured loops.
+  fir::DoLoopOp doLoop = nullptr;
+
+  // Data members for unstructured loops.
+  // TODO:
+};
+
 /// Helper class to generate the runtime type info global data. This data
 /// is required to describe the derived type to the runtime so that it can
 /// operate over it. It must be ensured this data will be generated for every
@@ -122,6 +159,7 @@ private:
   llvm::SmallSetVector<Fortran::semantics::SymbolRef, 64> seen;
 };
 
+using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo>;
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -573,6 +611,15 @@ private:
         [&sb](auto &) { return sb.toExtendedValue(); });
   }
 
+  /// Generate the address of loop variable \p sym.
+  mlir::Value genLoopVariableAddress(mlir::Location loc,
+                                     const Fortran::semantics::Symbol &sym) {
+    assert(lookupSymbol(sym) && "loop control variable must already be in map");
+    Fortran::lower::StatementContext stmtCtx;
+    return fir::getBase(
+        genExprAddr(Fortran::evaluate::AsGenericExpr(sym).value(), stmtCtx));
+  }
+
   static bool isNumericScalarCategory(Fortran::common::TypeCategory cat) {
     return cat == Fortran::common::TypeCategory::Integer ||
            cat == Fortran::common::TypeCategory::Real ||
@@ -907,7 +954,106 @@ private:
   ///  - structured and unstructured increment loops
   ///  - structured and unstructured concurrent loops
   void genFIR(const Fortran::parser::DoConstruct &doConstruct) {
-    TODO(toLocation(), "DoConstruct lowering");
+    setCurrentPositionAt(doConstruct);
+    // Collect loop nest information.
+    // Generate begin loop code directly for infinite and while loops.
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    Fortran::lower::pft::Evaluation &doStmtEval =
+        eval.getFirstNestedEvaluation();
+    auto *doStmt = doStmtEval.getIf<Fortran::parser::NonLabelDoStmt>();
+    const auto &loopControl =
+        std::get<std::optional<Fortran::parser::LoopControl>>(doStmt->t);
+    IncrementLoopNestInfo incrementLoopNestInfo;
+    if (const auto *bounds = std::get_if<Fortran::parser::LoopControl::Bounds>(
+            &loopControl->u)) {
+      // Non-concurrent increment loop.
+      incrementLoopNestInfo.emplace_back(*bounds->name.thing.symbol,
+                                         bounds->lower, bounds->upper,
+                                         bounds->step);
+      // TODO: unstructured loop
+    } else {
+      TODO(toLocation(), "infinite/unstructured loop/concurrent loop");
+    }
+
+    // Increment loop begin code.  (TODO: Infinite/while code was already
+    // generated.)
+    genFIRIncrementLoopBegin(incrementLoopNestInfo);
+
+    // Loop body code - NonLabelDoStmt and EndDoStmt code is generated here.
+    // Their genFIR calls are nops except for block management in some cases.
+    for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations())
+      genFIR(e, /*unstructuredContext=*/false);
+
+    // Loop end code. (TODO: infinite/while loop)
+    genFIRIncrementLoopEnd(incrementLoopNestInfo);
+  }
+
+  /// Generate FIR to begin a structured or unstructured increment loop nest.
+  void genFIRIncrementLoopBegin(IncrementLoopNestInfo &incrementLoopNestInfo) {
+    assert(!incrementLoopNestInfo.empty() && "empty loop nest");
+    mlir::Location loc = toLocation();
+    auto genControlValue = [&](const Fortran::lower::SomeExpr *expr,
+                               const IncrementLoopInfo &info) {
+      mlir::Type controlType = info.isStructured() ? builder->getIndexType()
+                                                   : info.getLoopVariableType();
+      Fortran::lower::StatementContext stmtCtx;
+      if (expr)
+        return builder->createConvert(loc, controlType,
+                                      createFIRExpr(loc, expr, stmtCtx));
+      return builder->createIntegerConstant(loc, controlType, 1); // step
+    };
+    for (IncrementLoopInfo &info : incrementLoopNestInfo) {
+      info.loopVariable = genLoopVariableAddress(loc, info.loopVariableSym);
+      mlir::Value lowerValue = genControlValue(info.lowerExpr, info);
+      mlir::Value upperValue = genControlValue(info.upperExpr, info);
+      info.stepValue = genControlValue(info.stepExpr, info);
+
+      // Structured loop - generate fir.do_loop.
+      if (info.isStructured()) {
+        info.doLoop = builder->create<fir::DoLoopOp>(
+            loc, lowerValue, upperValue, info.stepValue, info.isUnordered,
+            /*finalCountValue=*/!info.isUnordered);
+        builder->setInsertionPointToStart(info.doLoop.getBody());
+        // Update the loop variable value, as it may have non-index references.
+        mlir::Value value = builder->createConvert(
+            loc, info.getLoopVariableType(), info.doLoop.getInductionVar());
+        builder->create<fir::StoreOp>(loc, value, info.loopVariable);
+        // TODO: Mask expr
+        // TODO: handle Locality Spec
+        continue;
+      }
+      // TODO: Unstructured loop handling
+    }
+  }
+
+  /// Generate FIR to end a structured or unstructured increment loop nest.
+  void genFIRIncrementLoopEnd(IncrementLoopNestInfo &incrementLoopNestInfo) {
+    assert(!incrementLoopNestInfo.empty() && "empty loop nest");
+    mlir::Location loc = toLocation();
+    for (auto it = incrementLoopNestInfo.rbegin(),
+              rend = incrementLoopNestInfo.rend();
+         it != rend; ++it) {
+      IncrementLoopInfo &info = *it;
+      if (info.isStructured()) {
+        // End fir.do_loop.
+        if (!info.isUnordered) {
+          builder->setInsertionPointToEnd(info.doLoop.getBody());
+          mlir::Value result = builder->create<mlir::arith::AddIOp>(
+              loc, info.doLoop.getInductionVar(), info.doLoop.getStep());
+          builder->create<fir::ResultOp>(loc, result);
+        }
+        builder->setInsertionPointAfter(info.doLoop);
+        if (info.isUnordered)
+          continue;
+        // The loop control variable may be used after loop execution.
+        mlir::Value lcv = builder->createConvert(
+            loc, info.getLoopVariableType(), info.doLoop.getResult(0));
+        builder->create<fir::StoreOp>(loc, lcv, info.loopVariable);
+        continue;
+      }
+
+      // TODO: Unstructured loop
+    }
   }
 
   /// Generate structured or unstructured FIR for an IF construct.
@@ -2074,10 +2220,6 @@ private:
     genFIRBranch(getEval().controlSuccessor->block);
   }
 
-  void genFIR(const Fortran::parser::EndDoStmt &) {
-    TODO(toLocation(), "EndDoStmt lowering");
-  }
-
   // Nop statements - No code, or code is generated at the construct level.
   void genFIR(const Fortran::parser::AssociateStmt &) {}       // nop
   void genFIR(const Fortran::parser::CaseStmt &) {}            // nop
@@ -2085,6 +2227,7 @@ private:
   void genFIR(const Fortran::parser::ElseIfStmt &) {}          // nop
   void genFIR(const Fortran::parser::ElseStmt &) {}            // nop
   void genFIR(const Fortran::parser::EndAssociateStmt &) {}    // nop
+  void genFIR(const Fortran::parser::EndDoStmt &) {}           // nop
   void genFIR(const Fortran::parser::EndFunctionStmt &) {}     // nop
   void genFIR(const Fortran::parser::EndIfStmt &) {}           // nop
   void genFIR(const Fortran::parser::EndMpSubprogramStmt &) {} // nop
@@ -2093,10 +2236,7 @@ private:
   void genFIR(const Fortran::parser::EntryStmt &) {}           // nop
   void genFIR(const Fortran::parser::IfStmt &) {}              // nop
   void genFIR(const Fortran::parser::IfThenStmt &) {}          // nop
-
-  void genFIR(const Fortran::parser::NonLabelDoStmt &) {
-    TODO(toLocation(), "NonLabelDoStmt lowering");
-  }
+  void genFIR(const Fortran::parser::NonLabelDoStmt &) {}      // nop
 
   void genFIR(const Fortran::parser::OmpEndLoopDirective &) {
     TODO(toLocation(), "OmpEndLoopDirective lowering");
