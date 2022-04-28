@@ -87,8 +87,9 @@ findSelectedDialect(ArrayRef<const llvm::Record *> dialectDefs) {
 ///
 /// {0}: The name of the dialect class.
 /// {1}: The dialect namespace.
+/// {2}: The dialect parent class.
 static const char *const dialectDeclBeginStr = R"(
-class {0} : public ::mlir::Dialect {
+class {0} : public ::mlir::{2} {
   explicit {0}(::mlir::MLIRContext *context);
 
   void initialize();
@@ -189,7 +190,10 @@ emitDialectDecl(Dialect &dialect,
 
     // Emit the start of the decl.
     std::string cppName = dialect.getCppClassName();
-    os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName());
+    StringRef superClassName =
+        dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
+    os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
+                        superClassName);
 
     // Check for any attributes/types registered to this dialect.  If there are,
     // add the hooks for parsing/printing.
@@ -250,9 +254,10 @@ static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
 /// {0}: The name of the dialect class.
 /// {1}: initialization code that is emitted in the ctor body before calling
 ///      initialize().
+/// {2}: The dialect parent class.
 static const char *const dialectConstructorStr = R"(
 {0}::{0}(::mlir::MLIRContext *context) 
-    : ::mlir::Dialect(getDialectNamespace(), context, ::mlir::TypeID::get<{0}>()) {{
+    : ::mlir::{2}(getDialectNamespace(), context, ::mlir::TypeID::get<{0}>()) {{
   {1}
   initialize();
 }
@@ -287,8 +292,10 @@ static void emitDialectDef(Dialect &dialect, raw_ostream &os) {
   }
 
   // Emit the constructor and destructor.
+  StringRef superClassName =
+      dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
   os << llvm::formatv(dialectConstructorStr, cppClassName,
-                      dependentDialectRegistrations);
+                      dependentDialectRegistrations, superClassName);
   if (!dialect.hasNonDefaultDestructor())
     os << llvm::formatv(dialectDestructorStr, cppClassName);
 }
