@@ -2336,23 +2336,60 @@ void OpEmitter::genTypeInterfaceMethods() {
   fctx.withBuilder("odsBuilder");
   body << "  ::mlir::Builder odsBuilder(context);\n";
 
-  auto emitType = [&](const tblgen::Operator::ArgOrType &type) -> MethodBody & {
-    if (!type.isArg())
-      return body << tgfmt(*type.getType().getBuilderCall(), &fctx);
-    auto argIndex = type.getArg();
-    assert(!op.getArg(argIndex).is<NamedAttribute *>());
-    auto arg = op.getArgToOperandOrAttribute(argIndex);
-    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand)
-      return body << "operands[" << arg.operandOrAttributeIndex()
-                  << "].getType()";
-    return body << "attributes[" << arg.operandOrAttributeIndex()
-                << "].getType()";
-  };
-
+  // Preprocess the result types and build all of the types used during
+  // inferrence. This limits the amount of duplicated work when a type is used
+  // to infer multiple others.
+  llvm::DenseMap<Constraint, int> constraintsTypes;
+  llvm::DenseMap<int, int> argumentsTypes;
+  int inferredTypeIdx = 0;
   for (int i = 0, e = op.getNumResults(); i != e; ++i) {
-    body << "  inferredReturnTypes[" << i << "] = ";
+    auto type = op.getSameTypeAsResult(i).front();
+
+    // If the type isn't an argument, it refers to a buildable type.
+    if (!type.isArg()) {
+      auto it = constraintsTypes.try_emplace(type.getType(), inferredTypeIdx);
+      if (!it.second)
+        continue;
+
+      // If we haven't seen this constraint, generate a variable for it.
+      body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = "
+           << tgfmt(*type.getType().getBuilderCall(), &fctx) << ";\n";
+      continue;
+    }
+
+    // Otherwise, this is an argument.
+    int argIndex = type.getArg();
+    auto it = argumentsTypes.try_emplace(argIndex, inferredTypeIdx);
+    if (!it.second)
+      continue;
+    body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = ";
+
+    // If this is an operand, just index into operand list to access the type.
+    auto arg = op.getArgToOperandOrAttribute(argIndex);
+    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+      body << "operands[" << arg.operandOrAttributeIndex() << "].getType()";
+
+      // If this is an attribute, index into the attribute dictionary.
+    } else {
+      auto *attr =
+          op.getArg(arg.operandOrAttributeIndex()).get<NamedAttribute *>();
+      body << "attributes.get(\"" << attr->name << "\").getType()";
+    }
+    body << ";\n";
+  }
+
+  // Perform a second pass that handles assigning the inferred types to the
+  // results.
+  for (int i = 0, e = op.getNumResults(); i != e; ++i) {
     auto types = op.getSameTypeAsResult(i);
-    emitType(types[0]) << ";\n";
+
+    // Append the inferred type.
+    auto type = types.front();
+    body << "  inferredReturnTypes[" << i << "] = odsInferredType"
+         << (type.isArg() ? argumentsTypes[type.getArg()]
+                          : constraintsTypes[type.getType()])
+         << ";\n";
+
     if (types.size() == 1)
       continue;
     // TODO: We could verify equality here, but skipping that for verification.

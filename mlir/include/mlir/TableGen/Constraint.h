@@ -94,4 +94,20 @@ struct AppliedConstraint {
 } // namespace tblgen
 } // namespace mlir
 
+namespace llvm {
+/// Unique constraints by their predicate and summary. Constraints that share
+/// the same predicate may have different descriptions; ensure that the
+/// correct error message is reported when verification fails.
+template <>
+struct DenseMapInfo<mlir::tblgen::Constraint> {
+  using RecordDenseMapInfo = llvm::DenseMapInfo<const llvm::Record *>;
+
+  static mlir::tblgen::Constraint getEmptyKey();
+  static mlir::tblgen::Constraint getTombstoneKey();
+  static unsigned getHashValue(mlir::tblgen::Constraint constraint);
+  static bool isEqual(mlir::tblgen::Constraint lhs,
+                      mlir::tblgen::Constraint rhs);
+};
+} // namespace llvm
+
 #endif // MLIR_TABLEGEN_CONSTRAINT_H_
