@@ -70,14 +70,31 @@ private:
         return x.lbounds();
       }
     } else {
-      return x.ComputeUbounds(dim_);
+      // Return the upper bound
+      if (arrayFromParenthesesExpr) {
+        // Underlying array comes from (x) expression - return shapes
+        if (dim_) {
+          return {x.shape().at(*dim_)};
+        } else {
+          return x.shape();
+        }
+      } else {
+        return x.ComputeUbounds(dim_);
+      }
     }
   }
 
   template <typename T> ConstantSubscripts Get(const Parentheses<T> &x) {
-    // LBOUND for (x) is [1, ..., 1] cause of temp variable inside
-    // parentheses (lower bound is omitted, the default value is 1).
-    return ConstantSubscripts(x.Rank(), ConstantSubscript{1});
+    // Cause of temp variable inside parentheses - return [1, ... 1] for lower
+    // bounds and shape for upper bounds
+    if (getLbound_) {
+      return ConstantSubscripts(x.Rank(), ConstantSubscript{1});
+    } else {
+      // Indicate that underlying array comes from parentheses expression.
+      // Continue to unwrap expression until we hit a constant
+      arrayFromParenthesesExpr = true;
+      return Get(x.left());
+    }
   }
 
   template <typename T> ConstantSubscripts Get(const Expr<T> &x) {
@@ -89,6 +106,7 @@ private:
 
   const std::optional<ConstantSubscript> dim_;
   const bool getLbound_;
+  bool arrayFromParenthesesExpr{false};
 };
 
 template <int KIND>
