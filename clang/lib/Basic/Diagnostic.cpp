@@ -983,13 +983,13 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       if (const char *S = tok::getPunctuatorSpelling(Kind))
         // Quoted token spelling for punctuators.
         Out << '\'' << S << '\'';
-      else if (const char *S = tok::getKeywordSpelling(Kind))
+      else if ((S = tok::getKeywordSpelling(Kind)))
         // Unquoted token spelling for keywords.
         Out << S;
-      else if (const char *S = getTokenDescForDiagnostic(Kind))
+      else if ((S = getTokenDescForDiagnostic(Kind)))
         // Unquoted translatable token name.
         Out << S;
-      else if (const char *S = tok::getTokenName(Kind))
+      else if ((S = tok::getTokenName(Kind)))
         // Debug name, shouldn't appear in user-facing diagnostics.
         Out << '<' << S << '>';
       else
