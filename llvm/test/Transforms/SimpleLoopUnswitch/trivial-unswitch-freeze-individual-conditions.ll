@@ -7,12 +7,14 @@ define i32 @need_freeze_of_individual_or_conditions1(i1 %cond1, i1 %cond2, i1 %c
 ; CHECK-LABEL: @need_freeze_of_individual_or_conditions1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND4:%.*]], [[COND1:%.*]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i1 [[TMP0]]
-; CHECK-NEXT:    br i1 [[DOTFR]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
 ; CHECK:       entry.split:
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[COND2:%.*]], [[COND3:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_SPLIT:%.*]], label [[EXIT_SPLIT1:%.*]]
+; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[COND2:%.*]], [[COND3:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 true, true
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[OR]], true
 ; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1]], i1 true, i1 false
 ; CHECK-NEXT:    br i1 [[AND2]], label [[LOOP_LATCH:%.*]], label [[EXIT:%.*]]
@@ -20,6 +22,8 @@ define i32 @need_freeze_of_individual_or_conditions1(i1 %cond1, i1 %cond2, i1 %c
 ; CHECK-NEXT:    call void @some_func()
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
+; CHECK-NEXT:    br label [[EXIT_SPLIT1]]
+; CHECK:       exit.split1:
 ; CHECK-NEXT:    br label [[EXIT_SPLIT]]
 ; CHECK:       exit.split:
 ; CHECK-NEXT:    ret i32 0
@@ -45,12 +49,14 @@ define i32 @need_freeze_of_individual_or_conditions2(i1 noundef %cond1, i1 %cond
 ; CHECK-LABEL: @need_freeze_of_individual_or_conditions2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND4:%.*]], [[COND1:%.*]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i1 [[TMP0]]
-; CHECK-NEXT:    br i1 [[DOTFR]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
 ; CHECK:       entry.split:
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[COND2:%.*]], [[COND3:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_SPLIT:%.*]], label [[EXIT_SPLIT1:%.*]]
+; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[COND2:%.*]], [[COND3:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 true, true
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[OR]], true
 ; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1]], i1 true, i1 false
 ; CHECK-NEXT:    br i1 [[AND2]], label [[LOOP_LATCH:%.*]], label [[EXIT:%.*]]
@@ -58,6 +64,8 @@ define i32 @need_freeze_of_individual_or_conditions2(i1 noundef %cond1, i1 %cond
 ; CHECK-NEXT:    call void @some_func()
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
+; CHECK-NEXT:    br label [[EXIT_SPLIT1]]
+; CHECK:       exit.split1:
 ; CHECK-NEXT:    br label [[EXIT_SPLIT]]
 ; CHECK:       exit.split:
 ; CHECK-NEXT:    ret i32 0
@@ -83,12 +91,14 @@ define i32 @need_freeze_of_individual_or_conditions3(i1 %cond1, i1 %cond2, i1 %c
 ; CHECK-LABEL: @need_freeze_of_individual_or_conditions3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND4:%.*]], [[COND1:%.*]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i1 [[TMP0]]
-; CHECK-NEXT:    br i1 [[DOTFR]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
 ; CHECK:       entry.split:
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[COND2:%.*]], [[COND3:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_SPLIT:%.*]], label [[EXIT_SPLIT1:%.*]]
+; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[COND2:%.*]], [[COND3:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 true, true
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[OR]], true
 ; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[AND1]], i1 true, i1 false
 ; CHECK-NEXT:    br i1 [[AND2]], label [[LOOP_LATCH:%.*]], label [[EXIT:%.*]]
@@ -96,6 +106,8 @@ define i32 @need_freeze_of_individual_or_conditions3(i1 %cond1, i1 %cond2, i1 %c
 ; CHECK-NEXT:    call void @some_func()
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
+; CHECK-NEXT:    br label [[EXIT_SPLIT1]]
+; CHECK:       exit.split1:
 ; CHECK-NEXT:    br label [[EXIT_SPLIT]]
 ; CHECK:       exit.split:
 ; CHECK-NEXT:    ret i32 0
@@ -121,8 +133,7 @@ define i32 @need_freeze_of_individual_and_conditions1(i1 %cond1, i1 %cond4) {
 ; CHECK-LABEL: @need_freeze_of_individual_and_conditions1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4:%.*]], [[COND1:%.*]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i1 [[TMP0]]
-; CHECK-NEXT:    br i1 [[DOTFR]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
@@ -155,8 +166,7 @@ define i32 @need_freeze_of_individual_and_conditions2(i1 noundef %cond1, i1 %con
 ; CHECK-LABEL: @need_freeze_of_individual_and_conditions2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4:%.*]], [[COND1:%.*]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i1 [[TMP0]]
-; CHECK-NEXT:    br i1 [[DOTFR]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
@@ -189,8 +199,7 @@ define i32 @need_freeze_of_individual_and_conditions3(i1 %cond1, i1 noundef %con
 ; CHECK-LABEL: @need_freeze_of_individual_and_conditions3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4:%.*]], [[COND1:%.*]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i1 [[TMP0]]
-; CHECK-NEXT:    br i1 [[DOTFR]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
