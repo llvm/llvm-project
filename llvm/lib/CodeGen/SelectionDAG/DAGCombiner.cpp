@@ -10441,14 +10441,14 @@ bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
 }
 
 // Fold sext/zext of index into index type.
-bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType,
+bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
                      SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // It's always safe to look through zero extends.
   if (Index.getOpcode() == ISD::ZERO_EXTEND) {
     SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType())) {
+    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
       IndexType = ISD::UNSIGNED_SCALED;
       Index = Op;
       return true;
@@ -10463,7 +10463,7 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType,
   if (Index.getOpcode() == ISD::SIGN_EXTEND &&
       ISD::isIndexTypeSigned(IndexType)) {
     SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType())) {
+    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
       Index = Op;
       return true;
     }
@@ -10494,7 +10494,7 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
                                 MSC->isTruncatingStore());
   }
 
-  if (refineIndexType(Index, IndexType, DAG)) {
+  if (refineIndexType(Index, IndexType, StoreVal.getValueType(), DAG)) {
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MSC->getMemoryVT(),
                                 DL, Ops, MSC->getMemOperand(), IndexType,
@@ -10590,7 +10590,7 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
         Ops, MGT->getMemOperand(), IndexType, MGT->getExtensionType());
   }
 
-  if (refineIndexType(Index, IndexType, DAG)) {
+  if (refineIndexType(Index, IndexType, N->getValueType(0), DAG)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(
         DAG.getVTList(N->getValueType(0), MVT::Other), MGT->getMemoryVT(), DL,
