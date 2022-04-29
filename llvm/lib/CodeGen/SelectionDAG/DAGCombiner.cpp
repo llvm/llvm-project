@@ -10448,9 +10448,10 @@ bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
 
 // Fold sext/zext of index into index type.
 bool refineIndexType(MaskedGatherScatterSDNode *MGS, SDValue &Index,
-                     bool Scaled, SelectionDAG &DAG) {
+                     bool Scaled, bool Signed, SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
+  // It's always safe to look through zero extends.
   if (Index.getOpcode() == ISD::ZERO_EXTEND) {
     SDValue Op = Index.getOperand(0);
     MGS->setIndexType(Scaled ? ISD::UNSIGNED_SCALED : ISD::UNSIGNED_UNSCALED);
@@ -10460,7 +10461,8 @@ bool refineIndexType(MaskedGatherScatterSDNode *MGS, SDValue &Index,
     }
   }
 
-  if (Index.getOpcode() == ISD::SIGN_EXTEND) {
+  // It's only safe to look through sign extends when Index is signed.
+  if (Index.getOpcode() == ISD::SIGN_EXTEND && Signed) {
     SDValue Op = Index.getOperand(0);
     MGS->setIndexType(Scaled ? ISD::SIGNED_SCALED : ISD::SIGNED_UNSCALED);
     if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType())) {
@@ -10493,7 +10495,8 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
         MSC->getMemOperand(), MSC->getIndexType(), MSC->isTruncatingStore());
   }
 
-  if (refineIndexType(MSC, Index, MSC->isIndexScaled(), DAG)) {
+  if (refineIndexType(MSC, Index, MSC->isIndexScaled(), MSC->isIndexSigned(),
+                      DAG)) {
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(
         DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL, Ops,
@@ -10589,7 +10592,8 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
                                MGT->getExtensionType());
   }
 
-  if (refineIndexType(MGT, Index, MGT->isIndexScaled(), DAG)) {
+  if (refineIndexType(MGT, Index, MGT->isIndexScaled(), MGT->isIndexSigned(),
+                      DAG)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
                                MGT->getMemoryVT(), DL, Ops,
