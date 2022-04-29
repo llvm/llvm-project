@@ -1504,6 +1504,9 @@ void CompilerInvocation::GenerateCodeGenArgs(
   else if (Opts.CFProtectionBranch)
     GenerateArg(Args, OPT_fcf_protection_EQ, "branch", SA);
 
+  if (Opts.IBTSeal)
+    GenerateArg(Args, OPT_mibt_seal, SA);
+
   for (const auto &F : Opts.LinkBitcodeFiles) {
     bool Builtint = F.LinkFlags == llvm::Linker::Flags::LinkOnlyNeeded &&
                     F.PropagateAttrs && F.Internalize;
