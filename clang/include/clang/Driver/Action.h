@@ -128,6 +128,9 @@ protected:
   /// The Offloading architecture associated with this action.
   const char *OffloadingArch = nullptr;
 
+  /// The Offloading toolchain associated with this device action.
+  const ToolChain *OffloadingToolChain = nullptr;
+
   Action(ActionClass Kind, types::ID Type) : Action(Kind, ActionList(), Type) {}
   Action(ActionClass Kind, Action *Input, types::ID Type)
       : Action(Kind, ActionList({Input}), Type) {}
@@ -184,7 +187,8 @@ public:
 
   /// Set the device offload info of this action and propagate it to its
   /// dependences.
-  void propagateDeviceOffloadInfo(OffloadKind OKind, const char *OArch);
+  void propagateDeviceOffloadInfo(OffloadKind OKind, const char *OArch,
+                                  const ToolChain *OToolChain);
 
   /// Append the host offload info of this action and propagate it to its
   /// dependences.
@@ -205,10 +209,13 @@ public:
 
   OffloadKind getOffloadingDeviceKind() const { return OffloadingDeviceKind; }
   const char *getOffloadingArch() const { return OffloadingArch; }
+  const ToolChain *getOffloadingToolChain() const {
+    return OffloadingToolChain;
+  }
 
   /// Check if this action have any offload kinds. Note that host offload kinds
   /// are only set if the action is a dependence to a host offload action.
-  bool isHostOffloading(OffloadKind OKind) const {
+  bool isHostOffloading(unsigned int OKind) const {
     return ActiveOffloadKindMask & OKind;
   }
   bool isDeviceOffloading(OffloadKind OKind) const {
