@@ -1695,6 +1695,13 @@ PathDiagnosticPieceRef TrackConstraintBRVisitor::VisitNode(
 
     // Construct a new PathDiagnosticPiece.
     ProgramPoint P = N->getLocation();
+
+    // If this node already have a specialized note, it's probably better
+    // than our generic note.
+    // FIXME: This only looks for note tags, not for other ways to add a note.
+    if (isa_and_nonnull<NoteTag>(P.getTag()))
+      return nullptr;
+
     PathDiagnosticLocation L =
       PathDiagnosticLocation::create(P, BRC.getSourceManager());
     if (!L.isValid())
