@@ -2975,8 +2975,10 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   return true;
 }
 
-static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
-                                        BasicBlock *To) {
+static ConstantInt *
+getKnownValueOnEdge(Value *V, BasicBlock *From, BasicBlock *To,
+                    SmallDenseMap<std::pair<BasicBlock *, BasicBlock *>,
+                                  ConstantInt *> &Visited) {
   // Don't look past the block defining the value, we might get the value from
   // a previous loop iteration.
   auto *I = dyn_cast<Instruction>(V);
@@ -2990,7 +2992,23 @@ static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
     return BI->getSuccessor(0) == To ? ConstantInt::getTrue(BI->getContext())
                                      : ConstantInt::getFalse(BI->getContext());
 
-  return nullptr;
+  // Limit the amount of blocks we inspect.
+  if (Visited.size() >= 8)
+    return nullptr;
+
+  auto Pair = Visited.try_emplace({From, To}, nullptr);
+  if (!Pair.second)
+    return Pair.first->second;
+
+  // Check whether the known value is the same for all predecessors.
+  ConstantInt *Common = nullptr;
+  for (BasicBlock *Pred : predecessors(From)) {
+    ConstantInt *C = getKnownValueOnEdge(V, Pred, From, Visited);
+    if (!C || (Common && Common != C))
+      return nullptr;
+    Common = C;
+  }
+  return Visited[{From, To}] = Common;
 }
 
 /// If we have a conditional branch on something for which we know the constant
@@ -3015,8 +3033,9 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
       if (auto *CB = dyn_cast<ConstantInt>(U))
         KnownValues.insert({PN->getIncomingBlock(U), CB});
   } else {
+    SmallDenseMap<std::pair<BasicBlock *, BasicBlock *>, ConstantInt *> Visited;
     for (BasicBlock *Pred : predecessors(BB)) {
-      if (ConstantInt *CB = getKnownValueOnEdge(Cond, Pred, BB))
+      if (ConstantInt *CB = getKnownValueOnEdge(Cond, Pred, BB, Visited))
         KnownValues.insert({Pred, CB});
     }
   }

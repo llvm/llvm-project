@@ -144,16 +144,10 @@ define void @test_same_cond_simple(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[JOIN:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
-; CHECK-NEXT:    br i1 [[C]], label [[IF2:%.*]], label [[ELSE2:%.*]]
-; CHECK:       if2:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[JOIN2:%.*]]
-; CHECK:       else2:
+; CHECK:       else:
+; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[JOIN2]]
 ; CHECK:       join2:
@@ -189,17 +183,12 @@ define void @test_same_cond_extra_use(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[JOIN:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
 ; CHECK-NEXT:    call void @use.i1(i1 [[C]])
-; CHECK-NEXT:    br i1 [[C]], label [[IF2:%.*]], label [[ELSE2:%.*]]
-; CHECK:       if2:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[JOIN2:%.*]]
-; CHECK:       else2:
+; CHECK:       else:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    call void @use.i1(i1 [[C]])
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[JOIN2]]
 ; CHECK:       join2:
@@ -236,17 +225,11 @@ define void @test_same_cond_extra_use_different_block(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[JOIN:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
-; CHECK-NEXT:    br i1 [[C]], label [[IF2:%.*]], label [[ELSE2:%.*]]
-; CHECK:       if2:
 ; CHECK-NEXT:    call void @use.i1(i1 [[C]])
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[JOIN2:%.*]]
-; CHECK:       else2:
+; CHECK:       else:
+; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @use.i1(i1 [[C]])
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[JOIN2]]
