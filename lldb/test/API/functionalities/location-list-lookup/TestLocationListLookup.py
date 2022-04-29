@@ -14,6 +14,7 @@ class LocationListLookupTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
+    @skipIf(oslist=["linux"], archs=["arm"])
     def test_loclist(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
