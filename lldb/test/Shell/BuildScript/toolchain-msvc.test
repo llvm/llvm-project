@@ -23,9 +23,9 @@ RUN:    | FileCheck --check-prefix=64BIT %s
 32BIT: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.pdb
 32BIT: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe
 32BIT: compiling foobar.c -> foo.exe-foobar.obj
-32BIT:   Command Line: {{.*}}\{{[Hh]ost[Xx](64|86)}}\{{(x86|arm)}}\cl.EXE
+32BIT:   Command Line: {{.*}}\{{[Hh]ost[Xx](64|86)}}\{{(x86|arm)}}\cl.{{EXE|exe}}
 32BIT: linking foo.exe-foobar.obj -> foo.exe
-32BIT:   Command Line: {{.*}}\{{[Hh]ost[Xx](64|86)}}\{{(x86|arm)}}\link.EXE
+32BIT:   Command Line: {{.*}}\{{[Hh]ost[Xx](64|86)}}\{{(x86|arm)}}\link.{{EXE|exe}}
 32BIT:   Env
 32BIT:     LIB = {{.*}}\ATLMFC\lib\{{(x86|arm)}}
 32BIT:           {{.*}}\lib\{{(x86|arm)}}
@@ -51,9 +51,9 @@ RUN:    | FileCheck --check-prefix=64BIT %s
 64BIT: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.pdb
 64BIT: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe
 64BIT: compiling foobar.c -> foo.exe-foobar.obj
-64BIT:   Command Line: {{.*}}\{{[Hh]ost[Xx](64|86)}}\{{(x64|arm64)}}\cl.EXE
+64BIT:   Command Line: {{.*}}\{{[Hh]ost[Xx](64|86)}}\{{(x64|arm64)}}\cl.{{EXE|exe}}
 64BIT: linking foo.exe-foobar.obj -> foo.exe
-64BIT:   Command Line: {{.*}}\{{[Hh]ost[Xx](64|86)}}\{{(x64|arm64)}}\link.EXE
+64BIT:   Command Line: {{.*}}\{{[Hh]ost[Xx](64|86)}}\{{(x64|arm64)}}\link.{{EXE|exe}}
 64BIT:   Env
 64BIT:     LIB = {{.*}}\ATLMFC\lib\{{(x64|arm64)}}
 64BIT:           {{.*}}\lib\{{(x64|arm64)}}
