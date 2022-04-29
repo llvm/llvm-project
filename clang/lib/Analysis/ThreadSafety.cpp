@@ -74,7 +74,7 @@ static void warnInvalidLock(ThreadSafetyHandler &Handler,
 
   // FIXME: add a note about the attribute location in MutexExp or D
   if (Loc.isValid())
-    Handler.handleInvalidLockExp(Kind, Loc);
+    Handler.handleInvalidLockExp(Loc);
 }
 
 namespace {
@@ -1696,7 +1696,7 @@ void BuildLockset::checkAccess(const Expr *Exp, AccessKind AK,
     return;
 
   if (D->hasAttr<GuardedVarAttr>() && FSet.isEmpty(Analyzer->FactMan)) {
-    Analyzer->Handler.handleNoMutexHeld("mutex", D, POK, AK, Loc);
+    Analyzer->Handler.handleNoMutexHeld(D, POK, AK, Loc);
   }
 
   for (const auto *I : D->specific_attrs<GuardedByAttr>())
@@ -1734,8 +1734,7 @@ void BuildLockset::checkPtAccess(const Expr *Exp, AccessKind AK,
     return;
 
   if (D->hasAttr<PtGuardedVarAttr>() && FSet.isEmpty(Analyzer->FactMan))
-    Analyzer->Handler.handleNoMutexHeld("mutex", D, PtPOK, AK,
-                                        Exp->getExprLoc());
+    Analyzer->Handler.handleNoMutexHeld(D, PtPOK, AK, Exp->getExprLoc());
 
   for (auto const *I : D->specific_attrs<PtGuardedByAttr>())
     warnIfMutexNotHeld(D, Exp, AK, I->getArg(), PtPOK, Exp->getExprLoc());

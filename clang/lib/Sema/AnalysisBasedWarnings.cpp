@@ -1844,7 +1844,7 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     }
   }
 
-  void handleInvalidLockExp(StringRef Kind, SourceLocation Loc) override {
+  void handleInvalidLockExp(SourceLocation Loc) override {
     PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_cannot_resolve_lock)
                                          << Loc);
     Warnings.emplace_back(std::move(Warning), getNotes());
@@ -1922,9 +1922,8 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes(Note));
   }
 
-  void handleNoMutexHeld(StringRef Kind, const NamedDecl *D,
-                         ProtectedOperationKind POK, AccessKind AK,
-                         SourceLocation Loc) override {
+  void handleNoMutexHeld(const NamedDecl *D, ProtectedOperationKind POK,
+                         AccessKind AK, SourceLocation Loc) override {
     assert((POK == POK_VarAccess || POK == POK_VarDereference) &&
            "Only works for variables");
     unsigned DiagID = POK == POK_VarAccess?
