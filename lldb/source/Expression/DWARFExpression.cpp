@@ -858,29 +858,28 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
   ModuleSP module_sp = m_module_wp.lock();
 
   if (IsLocationList()) {
-    addr_t pc;
+    Address pc;
     StackFrame *frame = nullptr;
-    if (reg_ctx)
-      pc = reg_ctx->GetPC();
-    else {
+    if (!reg_ctx || !reg_ctx->GetPCForSymbolication(pc)) {
       frame = exe_ctx->GetFramePtr();
       if (!frame)
         return false;
       RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
       if (!reg_ctx_sp)
         return false;
-      pc = reg_ctx_sp->GetPC();
+      reg_ctx_sp->GetPCForSymbolication(pc);
     }
 
     if (func_load_addr != LLDB_INVALID_ADDRESS) {
-      if (pc == LLDB_INVALID_ADDRESS) {
+      if (!pc.IsValid()) {
         if (error_ptr)
           error_ptr->SetErrorString("Invalid PC in frame.");
         return false;
       }
 
-      if (llvm::Optional<DataExtractor> expr =
-              GetLocationExpression(func_load_addr, pc)) {
+      Target *target = exe_ctx->GetTargetPtr();
+      if (llvm::Optional<DataExtractor> expr = GetLocationExpression(
+              func_load_addr, pc.GetLoadAddress(target))) {
         return DWARFExpression::Evaluate(
             exe_ctx, reg_ctx, module_sp, *expr, m_dwarf_cu, m_reg_kind,
             initial_value_ptr, object_address_ptr, result, error_ptr);
@@ -2862,7 +2861,7 @@ bool DWARFExpression::MatchesOperand(StackFrame &frame,
     if (load_function_start == LLDB_INVALID_ADDRESS)
       return false;
 
-    addr_t pc = frame.GetFrameCodeAddress().GetLoadAddress(
+    addr_t pc = frame.GetFrameCodeAddressForSymbolication().GetLoadAddress(
         frame.CalculateTarget().get());
 
     if (llvm::Optional<DataExtractor> expr =
