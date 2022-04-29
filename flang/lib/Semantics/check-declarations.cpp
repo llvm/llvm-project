@@ -457,6 +457,17 @@ void CheckHelper::CheckObjectEntity(
   CheckArraySpec(symbol, details.shape());
   Check(details.shape());
   Check(details.coshape());
+  if (details.shape().Rank() > common::maxRank) {
+    messages_.Say(
+        "'%s' has rank %d, which is greater than the maximum supported rank %d"_err_en_US,
+        symbol.name(), details.shape().Rank(), common::maxRank);
+  } else if (details.shape().Rank() + details.coshape().Rank() >
+      common::maxRank) {
+    messages_.Say(
+        "'%s' has rank %d and corank %d, whose sum is greater than the maximum supported rank %d"_err_en_US,
+        symbol.name(), details.shape().Rank(), details.coshape().Rank(),
+        common::maxRank);
+  }
   CheckAssumedTypeEntity(symbol, details);
   WarnMissingFinal(symbol);
   if (!details.coshape().empty()) {
