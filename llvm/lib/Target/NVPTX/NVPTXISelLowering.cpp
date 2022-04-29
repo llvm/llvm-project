@@ -487,6 +487,17 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::CTLZ, Ty, Legal);
   }
 
+  setOperationAction(ISD::ADDC, MVT::i32, Legal);
+  setOperationAction(ISD::ADDE, MVT::i32, Legal);
+  setOperationAction(ISD::SUBC, MVT::i32, Legal);
+  setOperationAction(ISD::SUBE, MVT::i32, Legal);
+  if (STI.getPTXVersion() >= 43) {
+    setOperationAction(ISD::ADDC, MVT::i64, Legal);
+    setOperationAction(ISD::ADDE, MVT::i64, Legal);
+    setOperationAction(ISD::SUBC, MVT::i64, Legal);
+    setOperationAction(ISD::SUBE, MVT::i64, Legal);
+  }
+
   setOperationAction(ISD::CTTZ, MVT::i16, Expand);
   setOperationAction(ISD::CTTZ, MVT::i32, Expand);
   setOperationAction(ISD::CTTZ, MVT::i64, Expand);
