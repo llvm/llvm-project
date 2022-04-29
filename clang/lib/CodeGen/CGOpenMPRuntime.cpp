@@ -1208,7 +1208,7 @@ namespace {
 // Temporary RAII solution to perform a push/pop stack event on the OpenMP IR
 // Builder if one is present.
 struct PushAndPopStackRAII {
-  CodeGenFunction::  CGNonOpenMPIRBuilderRegion NonOMPBuilderScope;
+  CodeGenFunction::CGNonOpenMPIRBuilderRegion NonOMPBuilderScope;
   PushAndPopStackRAII(llvm::OpenMPIRBuilder *OMPBuilder, CodeGenFunction &CGF,
                       bool HasCancel, llvm::omp::Directive Kind)
       : OMPBuilder(OMPBuilder), NonOMPBuilderScope(CGF) {
@@ -1240,11 +1240,11 @@ struct PushAndPopStackRAII {
       CGF.EmitBranchThroughCleanup(Dest);
     };
 
-    //llvm_unreachable("TODO: set UserManaged=true");
-    // TODO: Remove this once we emit parallel regions through the
-    //       OpenMPIRBuilder as it can do this setup internally.
-    // llvm::OpenMPIRBuilder::FinalizationInfo FI{{}, Kind, HasCancel,
-    // /*UserManaged*/ true}; OMPBuilder->pushFinalizationCB(std::move(FI));
+    // llvm_unreachable("TODO: set UserManaged=true");
+    //  TODO: Remove this once we emit parallel regions through the
+    //        OpenMPIRBuilder as it can do this setup internally.
+    //  llvm::OpenMPIRBuilder::FinalizationInfo FI{{}, Kind, HasCancel,
+    //  /*UserManaged*/ true}; OMPBuilder->pushFinalizationCB(std::move(FI));
   }
   ~PushAndPopStackRAII() {
     // if (OMPBuilder)

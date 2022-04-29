@@ -4476,7 +4476,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     const OMPExecutableDirective &S, const OpenMPDirectiveKind CapturedRegion,
     const RegionCodeGenTy &BodyGen, const TaskGenTy &TaskGen,
     OMPTaskDataTy &Data) {
-    CGNonOpenMPIRBuilderRegion NonIrBuilderScope(*this);
+  CGNonOpenMPIRBuilderRegion NonIrBuilderScope(*this);
 
   // Emit outlined function for task construct.
   const CapturedStmt *CS = S.getCapturedStmt(CapturedRegion);
@@ -5020,7 +5020,7 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
 }
 
 void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
-    CGNonOpenMPIRBuilderRegion Scope(*this);
+  CGNonOpenMPIRBuilderRegion Scope(*this);
 
   // Emit outlined function for task construct.
   const CapturedStmt *CS = S.getCapturedStmt(OMPD_task);
@@ -5039,7 +5039,7 @@ void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
   // Check if we should emit tied or untied task.
   Data.Tied = !S.getSingleClause<OMPUntiedClause>();
   auto &&BodyGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
-      CGNonOpenMPIRBuilderRegion Scope(CGF);
+    CGNonOpenMPIRBuilderRegion Scope(CGF);
     CGF.EmitStmt(CS->getCapturedStmt());
   };
   auto &&TaskGen = [&S, SharedsTy, CapturedStruct,
@@ -6898,8 +6898,6 @@ void CodeGenFunction::EmitOMPCancellationPointDirective(
                                                    S.getCancelRegion());
 }
 
-
-
 void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
   const Expr *IfCond = nullptr;
   for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
@@ -6909,7 +6907,8 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
       break;
     }
   }
-  if (CGM.getLangOpts().OpenMPIRBuilder && !IsInsideNonOpenMPIRBuilderHandledRegion) {
+  if (CGM.getLangOpts().OpenMPIRBuilder &&
+      !IsInsideNonOpenMPIRBuilderHandledRegion) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     llvm::Value *IfCondition = nullptr;
     if (IfCond)

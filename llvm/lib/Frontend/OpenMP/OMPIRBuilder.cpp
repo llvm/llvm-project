@@ -525,15 +525,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 }
 
 OpenMPIRBuilder::OpenMPIRBuilder(Module &M) : M(M), Builder(M.getContext()) {
-  RegionStack.emplace_back(
-      new OMPRegionInfo(
+  RegionStack.emplace_back(new OMPRegionInfo(
       RegionKind::Toplevel, omp::OMPD_unknown, /*IsCancellable*/ false
-   //  , [](InsertPointTy ExitingIP, omp::Directive LeaveReason,
-  //       OMPRegionInfo *Region) {
-   //     llvm_unreachable("top-level is not finialized");
-   //   }
-          )
-  );
+      //  , [](InsertPointTy ExitingIP, omp::Directive LeaveReason,
+      //       OMPRegionInfo *Region) {
+      //     llvm_unreachable("top-level is not finialized");
+      //   }
+      ));
   assert(RegionStack.size() == 1);
 }
 
@@ -682,11 +680,11 @@ OpenMPIRBuilder::getInnermostDirectionRegion(omp::Directive DK) {
 
 OpenMPIRBuilder::OMPRegionInfo *
 OpenMPIRBuilder::pushRegion(omp::Directive DK, bool IsCancellable
-    //, LeaveRegionCallbackTy FiniCB
+                            //, LeaveRegionCallbackTy FiniCB
 ) {
   RegionStack.emplace_back(new OMPRegionInfo(RegionKind::Directive, DK,
-                                             IsCancellable//, std::move(FiniCB)
-  ));
+                                             IsCancellable //, std::move(FiniCB)
+                                             ));
   return RegionStack.back().get();
 }
 
@@ -721,41 +719,40 @@ void OpenMPIRBuilder::emitRegionExit(InsertPointTy ExitingIP,
 }
 #endif
 
+void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB,
+                                LeaveRegionCallbackTy &LeaveCb) {
+  auto DK = R->DK;
+  assert(RegionStack.back().get() == R && "balanced region push/pop required");
+  R->assertOK();
 
-void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB, LeaveRegionCallbackTy &LeaveCb) {
-    auto DK = R->DK;
-    assert(RegionStack.back().get() == R && "balanced region push/pop required");
-    R->assertOK();
+  // Trickly down no yet handled breaks.
+  OMPRegionInfo *Innermost = RegionStack.back().get();
+  OMPRegionInfo *NewInnermost = RegionStack.rbegin()[1].get();
 
-    // Trickly down no yet handled breaks.
-    OMPRegionInfo* Innermost = RegionStack.back().get();
-    OMPRegionInfo* NewInnermost = RegionStack.rbegin()[1].get();
+  for (auto &B : reverse(Innermost->Breaks)) {
+    assert(!B.BB->getTerminator());
+    Builder.SetInsertPoint(B.BB);
 
-
-    for (auto& B : reverse(Innermost->Breaks)) { 
-        assert(!B.BB->getTerminator());
-        Builder.SetInsertPoint(B.BB);
-
-        if (B.Target == DK) {
-                // Join common finialization block
-            Builder.SetInsertPoint(B.BB);
-          BranchInst * TI =  Builder.CreateBr(ContinueBB);
-        //  if (LeaveCb)
-        //      LeaveCb( InsertPointTy(TI->getParent(), TI->getIterator()), B.Reason, Innermost);
-            B.BB = nullptr;
-        } else if (LeaveCb) {
-            B.BB = splitBB(Builder, true, ".fini");
-            LeaveCb(Builder.saveIP(), B.Reason, Innermost);
-            Builder.SetInsertPoint( B.BB);
-        }
+    if (B.Target == DK) {
+      // Join common finialization block
+      Builder.SetInsertPoint(B.BB);
+      BranchInst *TI = Builder.CreateBr(ContinueBB);
+      //  if (LeaveCb)
+      //      LeaveCb( InsertPointTy(TI->getParent(), TI->getIterator()),
+      //      B.Reason, Innermost);
+      B.BB = nullptr;
+    } else if (LeaveCb) {
+      B.BB = splitBB(Builder, true, ".fini");
+      LeaveCb(Builder.saveIP(), B.Reason, Innermost);
+      Builder.SetInsertPoint(B.BB);
     }
+  }
 
-
-    for (OMPRegionBreak &B : Innermost->Breaks) {       
-        if (B.BB)      
-            NewInnermost->addBreak(B.BB, B.Reason, B.Target);
-    }
-    Innermost->Breaks.clear();
+  for (OMPRegionBreak &B : Innermost->Breaks) {
+    if (B.BB)
+      NewInnermost->addBreak(B.BB, B.Reason, B.Target);
+  }
+  Innermost->Breaks.clear();
 
   RegionStack.pop_back();
 }
@@ -999,8 +996,10 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(LocationDescription Loc,
   auto &FI = FinalizationStack.back();
   FI.FiniCB(Builder.saveIP());
 #endif
-  RegionStack.back()->addBreak(CancellationBlock, CancelledBy, CanceledDirective);
-  //emitRegionExit({CancellationBlock, CancellationBlock->begin()},  getInnermostDirectionRegion(CanceledDirective), CancelledBy);
+  RegionStack.back()->addBreak(CancellationBlock, CancelledBy,
+                               CanceledDirective);
+  // emitRegionExit({CancellationBlock, CancellationBlock->begin()},
+  // getInnermostDirectionRegion(CanceledDirective), CancelledBy);
 
   // Builder.SetInsertPoint(CancellationBlock);
   // Builder.CreateBr(  CancellationBlock);
@@ -1124,7 +1123,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   // FinalizationStack.push_back({FiniCBWrapper, OMPD_parallel, IsCancellable});
   OMPRegionInfo *ParallelRegion = pushRegion(OMPD_parallel, IsCancellable
-      //, FiniCBWrapper
+                                             //, FiniCBWrapper
   );
 #endif
 
@@ -1267,13 +1266,11 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
          "Unexpected finalization stack state!");
 #endif
 
-
   Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
 
-
   if (FiniCB) {
-      InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
-      FiniCB(PreFiniIP, OMPD_unknown, ParallelRegion);
+    InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
+    FiniCB(PreFiniIP, OMPD_unknown, ParallelRegion);
   }
 #if 0
   for (auto& B : reverse(ParallelRegion->Breaks)) { 
@@ -1294,7 +1291,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
       return !B.BB;    
       }), ParallelRegion->Breaks.end() );
   //emitRegionExit(PreFiniIP, ParallelRegion);
-#endif 
+#endif
   popRegion(ParallelRegion, PRegPreFiniBB, FiniCB);
 
   OI.OuterAllocaBB = OuterAllocaBlock;
@@ -1580,17 +1577,15 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
 #endif
   // Instruction *I = Builder.CreateBr(ExitBB);
 
-
-
   Builder.restoreIP(AfterIP);
   auto Finish = splitBB(Builder, true, "section_finish");
   if (FiniCB) {
-      Builder.SetInsertPoint(Finish);
-      Finish = splitBB(Builder, true, "section_fini");
-      FiniCB(Builder.saveAndClearIP(), OMPD_unknown, SectionsRegion);
+    Builder.SetInsertPoint(Finish);
+    Finish = splitBB(Builder, true, "section_fini");
+    FiniCB(Builder.saveAndClearIP(), OMPD_unknown, SectionsRegion);
   }
-  
-  //emitRegionExit(Builder.saveIP(), SectionsRegion);
+
+  // emitRegionExit(Builder.saveIP(), SectionsRegion);
   popRegion(SectionsRegion, Finish, FiniCB);
 
   return {Finish, Finish->begin()};
