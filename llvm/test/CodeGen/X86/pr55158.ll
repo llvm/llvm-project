@@ -5,15 +5,8 @@
 define <2 x i64> @PR55158(ptr %0) {
 ; CHECK-LABEL: PR55158:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa 64(%rdi), %xmm0
-; CHECK-NEXT:    vmovdqa 128(%rdi), %xmm1
-; CHECK-NEXT:    vpmovsxbd (%rdi), %xmm2
-; CHECK-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vphsubw %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpsrlvq %xmm1, %xmm2, %xmm1
-; CHECK-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm1[1],xmm0[1]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vphsubw 64(%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %2 = load <16 x i8>, ptr %0, align 16
   %3 = getelementptr inbounds i32, ptr %0, i64 16
