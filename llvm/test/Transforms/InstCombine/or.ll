@@ -817,11 +817,9 @@ define <2 x i1> @test46_undef(<2 x i8> %c)  {
 ; represented with an add.
 define i1 @two_ranges_to_mask_and_range_degenerate(i16 %x) {
 ; CHECK-LABEL: @two_ranges_to_mask_and_range_degenerate(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i16 [[X:%.*]], 12
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[X]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[X:%.*]], -20
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i16 [[TMP1]], 12
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp ult i16 %x, 12
   %cmp2 = icmp uge i16 %x, 16
