@@ -13,6 +13,7 @@
 
 #include "llvm/DebugInfo/Symbolize/Markup.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 
 namespace llvm {
@@ -24,7 +25,8 @@ namespace symbolize {
 //   "\033[30m" -- "\033[37m"
 static const char SGRSyntaxStr[] = "\033\\[([0-1]|3[0-7])m";
 
-MarkupParser::MarkupParser() : SGRSyntax(SGRSyntaxStr) {}
+MarkupParser::MarkupParser(StringSet<> MultilineTags)
+    : MultilineTags(std::move(MultilineTags)), SGRSyntax(SGRSyntaxStr) {}
 
 static StringRef takeTo(StringRef Str, StringRef::iterator Pos) {
   return Str.take_front(Pos - Str.begin());
@@ -35,18 +37,73 @@ static void advanceTo(StringRef &Str, StringRef::iterator Pos) {
 
 void MarkupParser::parseLine(StringRef Line) {
   Buffer.clear();
-  while (!Line.empty()) {
-    // Find the first valid markup element, if any.
-    if (Optional<MarkupNode> Element = parseElement(Line)) {
-      parseTextOutsideMarkup(takeTo(Line, Element->Text.begin()));
-      Buffer.push_back(std::move(*Element));
-      advanceTo(Line, Element->Text.end());
-    } else {
-      // The line doesn't contain any more markup elements, so emit it as text.
-      parseTextOutsideMarkup(Line);
-      return;
-    }
+  NextIdx = 0;
+  FinishedMultiline.clear();
+  this->Line = Line;
+}
+
+Optional<MarkupNode> MarkupParser::nextNode() {
+  // Pull something out of the buffer if possible.
+  if (!Buffer.empty()) {
+    if (NextIdx < Buffer.size())
+      return std::move(Buffer[NextIdx++]);
+    NextIdx = 0;
+    Buffer.clear();
   }
+
+  // The buffer is empty, so parse the next bit of the line.
+
+  if (Line.empty())
+    return None;
+
+  if (!InProgressMultiline.empty()) {
+    if (Optional<StringRef> MultilineEnd = parseMultiLineEnd(Line)) {
+      llvm::append_range(InProgressMultiline, *MultilineEnd);
+      assert(FinishedMultiline.empty() &&
+             "At most one multi-line element can be finished at a time.");
+      FinishedMultiline.swap(InProgressMultiline);
+      // Parse the multi-line element as if it were contiguous.
+      advanceTo(Line, MultilineEnd->end());
+      return *parseElement(FinishedMultiline);
+    }
+
+    // The whole line is part of the multi-line element.
+    llvm::append_range(InProgressMultiline, Line);
+    Line = Line.drop_front(Line.size());
+    return None;
+  }
+
+  // Find the first valid markup element, if any.
+  if (Optional<MarkupNode> Element = parseElement(Line)) {
+    parseTextOutsideMarkup(takeTo(Line, Element->Text.begin()));
+    Buffer.push_back(std::move(*Element));
+    advanceTo(Line, Element->Text.end());
+    return nextNode();
+  }
+
+  // Since there were no valid elements remaining, see if the line opens a
+  // multi-line element.
+  if (Optional<StringRef> MultilineBegin = parseMultiLineBegin(Line)) {
+    // Emit any text before the element.
+    parseTextOutsideMarkup(takeTo(Line, MultilineBegin->begin()));
+
+    // Begin recording the multi-line element.
+    llvm::append_range(InProgressMultiline, *MultilineBegin);
+    Line = Line.drop_front(Line.size());
+    return nextNode();
+  }
+
+  // The line doesn't contain any more markup elements, so emit it as text.
+  parseTextOutsideMarkup(Line);
+  Line = Line.drop_front(Line.size());
+  return nextNode();
+}
+
+void MarkupParser::flush() {
+  if (InProgressMultiline.empty())
+    return;
+  FinishedMultiline.swap(InProgressMultiline);
+  parseTextOutsideMarkup(FinishedMultiline);
 }
 
 // Finds and returns the next valid markup element in the given line. Returns
@@ -105,6 +162,40 @@ void MarkupParser::parseTextOutsideMarkup(StringRef Text) {
   }
   if (!Text.empty())
     Buffer.push_back(textNode(Text));
+}
+
+// Given that a line doesn't contain any valid markup, see if it ends with the
+// start of a multi-line element. If so, returns the beginning.
+Optional<StringRef> MarkupParser::parseMultiLineBegin(StringRef Line) {
+  // A multi-line begin marker must be the last one on the line.
+  size_t BeginPos = Line.rfind("{{{");
+  if (BeginPos == StringRef::npos)
+    return None;
+  size_t BeginTagPos = BeginPos + 3;
+
+  // If there are any end markers afterwards, the begin marker cannot belong to
+  // a multi-line element.
+  size_t EndPos = Line.find("}}}", BeginTagPos);
+  if (EndPos != StringRef::npos)
+    return None;
+
+  // Check whether the tag is registered multi-line.
+  size_t EndTagPos = Line.find(':', BeginTagPos);
+  if (EndTagPos == StringRef::npos)
+    return None;
+  StringRef Tag = Line.slice(BeginTagPos, EndTagPos);
+  if (!MultilineTags.contains(Tag))
+    return None;
+  return Line.substr(BeginPos);
+}
+
+// See if the line begins with the ending of an in-progress multi-line element.
+// If so, return the ending.
+Optional<StringRef> MarkupParser::parseMultiLineEnd(StringRef Line) {
+  size_t EndPos = Line.find("}}}");
+  if (EndPos == StringRef::npos)
+    return None;
+  return Line.take_front(EndPos + 3);
 }
 
 } // end namespace symbolize
