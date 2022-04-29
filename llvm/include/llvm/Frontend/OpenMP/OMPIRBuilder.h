@@ -118,6 +118,8 @@ public:
     Directive
   };
 
+  struct OMPRegionInfo;
+
 /// An irregular exit out of a region, such as by cancellation.
   struct OMPRegionBreak {
 /// The end of this basic block is current end of the path for breaking out of the region. Must have no terminator so finializations (eg. destructors) can be appended until rejoining at the end of the target region.
@@ -127,9 +129,9 @@ public:
     omp::Directive Reason;
 
     /// The kind of region that is being exited. Control flow will rejoin after the innermost region of this kind.
-    omp::Directive Target;
+    OMPRegionInfo* Target;
 
-    OMPRegionBreak(BasicBlock *BB, omp::Directive Reason, omp::Directive Target)
+    OMPRegionBreak(BasicBlock *BB, omp::Directive Reason, OMPRegionInfo* Target)
         : BB(BB), Reason(Reason), Target(Target) {}
 
     /// Consistency self-check.
@@ -165,7 +167,7 @@ public:
 #endif
 
     void addBreak(BasicBlock *BB, omp::Directive Reason,
-                  omp::Directive Target) {
+                  OMPRegionInfo* Target) {
       assert(!BB->getTerminator());
       Breaks.emplace_back(BB, Reason, Target);
     }
@@ -183,9 +185,10 @@ private:
   OMPRegionInfo *getInnermostDirectionRegion(omp::Directive DK);
 
 private:
-  OMPRegionInfo *pushRegion(omp::Directive DK, bool IsCancellable
-                            //,  LeaveRegionCallbackTy FiniCB = {}
-  );
+  OMPRegionInfo *pushRegion(RegionKind Kind, omp::Directive DK, bool IsCancellable);
+  OMPRegionInfo *pushRegion(omp::Directive DK, bool IsCancellable) {
+   return    pushRegion(RegionKind::Directive, DK, IsCancellable);
+  }
 
   // void emitRegionExit(InsertPointTy ExitingIP, OMPRegionInfo *RegionToLeave,
   // omp::Directive LeaveReason = omp::OMPD_unknown);

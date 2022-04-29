@@ -679,10 +679,10 @@ OpenMPIRBuilder::getInnermostDirectionRegion(omp::Directive DK) {
 }
 
 OpenMPIRBuilder::OMPRegionInfo *
-OpenMPIRBuilder::pushRegion(omp::Directive DK, bool IsCancellable
+OpenMPIRBuilder::pushRegion(RegionKind Kind, omp::Directive DK, bool IsCancellable
                             //, LeaveRegionCallbackTy FiniCB
 ) {
-  RegionStack.emplace_back(new OMPRegionInfo(RegionKind::Directive, DK,
+  RegionStack.emplace_back(new OMPRegionInfo(Kind, DK,
                                              IsCancellable //, std::move(FiniCB)
                                              ));
   return RegionStack.back().get();
@@ -733,7 +733,7 @@ void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB,
     assert(!B.BB->getTerminator());
     Builder.SetInsertPoint(B.BB);
 
-    if (B.Target == DK) {
+    if (B.Target == Innermost) {
       // Join common finialization block
       Builder.SetInsertPoint(B.BB);
       BranchInst *TI = Builder.CreateBr(ContinueBB);
@@ -759,15 +759,19 @@ void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB,
 
 void OpenMPIRBuilder ::OMPRegionBreak:: assertOK() const {
 #ifndef NDEBUG
-    assert(!BB || !BB->getTerminator());
+    assert(!BB->getTerminator());
+
     switch (Reason)    {
     case OMPD_cancellation_point:
+    case OMPD_cancel:
     case OMPD_barrier:
         break;
     default:
         llvm_unreachable("unexpected region break reason");
     }    
-    switch (Target)    {
+
+    assert(Target);
+    switch (Target->DK)    {
     case OMPD_parallel:
     case OMPD_sections:
         break;
@@ -789,7 +793,11 @@ void OpenMPIRBuilder::OMPRegionInfo::assertOK() const {
   case RegionKind::Directive:
     switch (DK) {
     case OMPD_parallel:
-    case OMPD_sections:
+    case OMPD_sections:     case OMPD_single:
+    case OMPD_master:
+    case OMPD_masked:
+    case OMPD_critical:
+    case OMPD_ordered:
       break;
     default:
       llvm_unreachable("Not a recognized OpenMP region");
@@ -946,9 +954,9 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
 
 void OpenMPIRBuilder::emitCancelationCheckImpl(LocationDescription Loc,
                                                Value *CancelFlag,
-                                               omp::Directive CanceledDirective,
+                                               omp::Directive CancelledDirective,
                                                omp::Directive CancelledBy) {
-  assert(isLastFinalizationInfoCancellable(CanceledDirective) &&
+  assert(isLastFinalizationInfoCancellable(CancelledDirective) &&
          "Unexpected cancellation!");
 
   // For a cancel barrier we create two new blocks.
@@ -1000,7 +1008,7 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(LocationDescription Loc,
   // Unless cancellation has been detected by a barrier itself, need to
   // synchronize between threads (after finalization).
   Builder.SetInsertPoint(CancellationBlock);
-  if (CanceledDirective == OMPD_parallel && CancelledBy != OMPD_barrier)
+  if (CancelledDirective == OMPD_parallel && CancelledBy != OMPD_barrier)
     emitBarrierImpl(Loc, CancelledBy, false, false);
 
   auto CancellationIP = Builder.saveIP();
@@ -1020,8 +1028,7 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(LocationDescription Loc,
   auto &FI = FinalizationStack.back();
   FI.FiniCB(Builder.saveIP());
 #endif
-  RegionStack.back()->addBreak(CancellationBlock, CancelledBy,
-                               CanceledDirective);
+  RegionStack.back()->addBreak(CancellationBlock, CancelledBy, getInnermostDirectionRegion(CancelledDirective)                               );
   // emitRegionExit({CancellationBlock, CancellationBlock->begin()},
   // getInnermostDirectionRegion(CanceledDirective), CancelledBy);
 
@@ -1979,9 +1986,13 @@ OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
     Builder.CreateBr(CL->getPreheader());
   }
 
+  auto LoopRegion  = pushRegion(RegionKind::CanonicalLoop, OMPD_unknown, false);
+
   // Emit the body content. We do it after connecting the loop to the CFG to
   // avoid that the callback encounters degenerate BBs.
   BodyGenCB(CL->getBodyIP(), CL->getIndVar());
+
+  popRegion(LoopRegion, nullptr, {});
 
 #ifndef NDEBUG
   CL->assertOK();
@@ -3286,6 +3297,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
   // }
   // __kmpc_barrier
 
+
+
   EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
                        /*Conditional*/ true,
                        /*hasFinalize*/ true);
@@ -3414,6 +3427,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   if (HasFinalize)
     FinalizationStack.push_back({FiniCB, OMPD, IsCancellable});
 #endif
+ 
 
   // Create inlined region's entry and body blocks, in preparation
   // for conditional creation
@@ -3425,12 +3439,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   BasicBlock *FiniBB =
       EntryBB->splitBasicBlock(EntryBB->getTerminator(), "omp_region.finalize");
 
+  auto Region = pushRegion(OMPD, IsCancellable);
   Builder.SetInsertPoint(EntryBB->getTerminator());
   emitCommonDirectiveEntry(OMPD, EntryCall, ExitBB, Conditional);
+
+
 
   // generate body
   BodyGenCB(/* AllocaIP */ InsertPointTy(),
             /* CodeGenIP */ Builder.saveIP());
+
+
+
 
   // emit exit call and do any needed finalization.
   auto FinIP = InsertPointTy(FiniBB, FiniBB->getFirstInsertionPt());
@@ -3440,18 +3460,21 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   emitCommonDirectiveExit(OMPD, FinIP, ExitCall, HasFinalize);
   assert(FiniBB->getUniquePredecessor()->getUniqueSuccessor() == FiniBB &&
          "Unexpected Control Flow State!");
-  MergeBlockIntoPredecessor(FiniBB);
+  popRegion(Region, FiniBB, FiniCB);
+  MergeBlockIntoPredecessor(FiniBB); // stop doing that
 
   // If we are skipping the region of a non conditional, remove the exit
   // block, and clear the builder's insertion point.
   assert(SplitPos->getParent() == ExitBB &&
          "Unexpected Insertion point location!");
-  auto merged = MergeBlockIntoPredecessor(ExitBB);
+  auto merged = MergeBlockIntoPredecessor(ExitBB); // stop doing that
   BasicBlock *ExitPredBB = SplitPos->getParent();
   auto InsertBB = merged ? ExitPredBB : ExitBB;
   if (!isa_and_nonnull<BranchInst>(SplitPos))
     SplitPos->eraseFromParent();
   Builder.SetInsertPoint(InsertBB);
+
+
 
   return Builder.saveIP();
 }
@@ -3465,7 +3488,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveEntry(
   BasicBlock *EntryBB = Builder.GetInsertBlock();
   Value *CallBool = Builder.CreateIsNotNull(EntryCall);
   auto *ThenBB = BasicBlock::Create(M.getContext(), "omp_region.body");
-  auto *UI = new UnreachableInst(Builder.getContext(), ThenBB);
+  auto *UI = new UnreachableInst(Builder.getContext(), ThenBB); // stop doing that
 
   // Emit thenBB and set the Builder's insertion point there for
   // body generation next. Place the block after the current block.
@@ -3741,7 +3764,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   // else
   //   return;
 
-  auto *UI = Builder.CreateUnreachable();
+  auto *UI = Builder.CreateUnreachable(); // Don't do that
   BasicBlock *CheckBB = UI->getParent();
   BasicBlock *UserCodeEntryBB = CheckBB->splitBasicBlock(UI, "user_code.entry");
 

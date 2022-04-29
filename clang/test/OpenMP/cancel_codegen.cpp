@@ -1462,10 +1462,12 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3:       omp_section_loop.body.case26.cncl.fini:
 // CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_CNCL:%.*]]
 // CHECK3:       omp_section_loop.body.case26.cncl:
-// CHECK3-NEXT:    br label [[SECTION_FINI35]]
+// CHECK3-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
 // CHECK3:       omp_section_loop.body.case26.cont:
 // CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_SECTIONFINI:%.*]]
 // CHECK3:       omp_section_loop.body.case26.sectionfini:
+// CHECK3-NEXT:    br label [[OMP_REGION_FINALIZE]]
+// CHECK3:       omp_region.finalize:
 // CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_SECTION_AFTER:%.*]]
 // CHECK3:       omp_section_loop.body.case26.section.after:
 // CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_BODY17_SECTIONS_AFTER]]
@@ -2130,10 +2132,12 @@ for (int i = 0; i < argc; ++i) {
 // CHECK4:       omp_section_loop.body.case26.cncl.fini:
 // CHECK4-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_CNCL:%.*]]
 // CHECK4:       omp_section_loop.body.case26.cncl:
-// CHECK4-NEXT:    br label [[SECTION_FINI35]]
+// CHECK4-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
 // CHECK4:       omp_section_loop.body.case26.cont:
 // CHECK4-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_SECTIONFINI:%.*]]
 // CHECK4:       omp_section_loop.body.case26.sectionfini:
+// CHECK4-NEXT:    br label [[OMP_REGION_FINALIZE]]
+// CHECK4:       omp_region.finalize:
 // CHECK4-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_SECTION_AFTER:%.*]]
 // CHECK4:       omp_section_loop.body.case26.section.after:
 // CHECK4-NEXT:    br label [[OMP_SECTION_LOOP_BODY17_SECTIONS_AFTER]]
@@ -4038,10 +4042,12 @@ for (int i = 0; i < argc; ++i) {
 // CHECK9:       omp_section_loop.body.case26.cncl.fini:
 // CHECK9-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_CNCL:%.*]]
 // CHECK9:       omp_section_loop.body.case26.cncl:
-// CHECK9-NEXT:    br label [[SECTION_FINI35]]
+// CHECK9-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
 // CHECK9:       omp_section_loop.body.case26.cont:
 // CHECK9-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_SECTIONFINI:%.*]]
 // CHECK9:       omp_section_loop.body.case26.sectionfini:
+// CHECK9-NEXT:    br label [[OMP_REGION_FINALIZE]]
+// CHECK9:       omp_region.finalize:
 // CHECK9-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_SECTION_AFTER:%.*]]
 // CHECK9:       omp_section_loop.body.case26.section.after:
 // CHECK9-NEXT:    br label [[OMP_SECTION_LOOP_BODY17_SECTIONS_AFTER]]
@@ -4706,10 +4712,12 @@ for (int i = 0; i < argc; ++i) {
 // CHECK10:       omp_section_loop.body.case26.cncl.fini:
 // CHECK10-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_CNCL:%.*]]
 // CHECK10:       omp_section_loop.body.case26.cncl:
-// CHECK10-NEXT:    br label [[SECTION_FINI35]]
+// CHECK10-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
 // CHECK10:       omp_section_loop.body.case26.cont:
 // CHECK10-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_SECTIONFINI:%.*]]
 // CHECK10:       omp_section_loop.body.case26.sectionfini:
+// CHECK10-NEXT:    br label [[OMP_REGION_FINALIZE]]
+// CHECK10:       omp_region.finalize:
 // CHECK10-NEXT:    br label [[OMP_SECTION_LOOP_BODY_CASE26_SECTION_AFTER:%.*]]
 // CHECK10:       omp_section_loop.body.case26.section.after:
 // CHECK10-NEXT:    br label [[OMP_SECTION_LOOP_BODY17_SECTIONS_AFTER]]
