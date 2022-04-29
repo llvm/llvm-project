@@ -1831,29 +1831,26 @@ define i64 @imm_neg_2147485013() {
 ;
 ; RV64I-LABEL: imm_neg_2147485013:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a0, -1
-; RV64I-NEXT:    slli a0, a0, 31
+; RV64I-NEXT:    lui a0, 524288
 ; RV64I-NEXT:    addi a0, a0, -1365
 ; RV64I-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm_neg_2147485013:
 ; RV64IZBA:       # %bb.0:
-; RV64IZBA-NEXT:    li a0, -1
-; RV64IZBA-NEXT:    slli a0, a0, 31
+; RV64IZBA-NEXT:    lui a0, 524288
 ; RV64IZBA-NEXT:    addi a0, a0, -1365
 ; RV64IZBA-NEXT:    ret
 ;
 ; RV64IZBB-LABEL: imm_neg_2147485013:
 ; RV64IZBB:       # %bb.0:
-; RV64IZBB-NEXT:    li a0, -1
-; RV64IZBB-NEXT:    slli a0, a0, 31
+; RV64IZBB-NEXT:    lui a0, 524288
 ; RV64IZBB-NEXT:    addi a0, a0, -1365
 ; RV64IZBB-NEXT:    ret
 ;
 ; RV64IZBS-LABEL: imm_neg_2147485013:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    li a0, -1365
-; RV64IZBS-NEXT:    bclri a0, a0, 31
+; RV64IZBS-NEXT:    lui a0, 524288
+; RV64IZBS-NEXT:    addi a0, a0, -1365
 ; RV64IZBS-NEXT:    ret
   ret i64 -2147485013
 }

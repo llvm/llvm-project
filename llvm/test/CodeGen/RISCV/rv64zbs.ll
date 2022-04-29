@@ -540,8 +540,7 @@ define i64 @bclri_i64_30(i64 %a) nounwind {
 define i64 @bclri_i64_31(i64 %a) nounwind {
 ; RV64I-LABEL: bclri_i64_31:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, -1
-; RV64I-NEXT:    slli a1, a1, 31
+; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
