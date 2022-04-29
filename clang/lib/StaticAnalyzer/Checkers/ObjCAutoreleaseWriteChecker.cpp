@@ -98,11 +98,13 @@ private:
 };
 }
 
-static inline std::vector<llvm::StringRef> toRefs(std::vector<std::string> V) {
+static inline std::vector<llvm::StringRef>
+toRefs(const std::vector<std::string> &V) {
   return std::vector<llvm::StringRef>(V.begin(), V.end());
 }
 
-static decltype(auto) callsNames(std::vector<std::string> FunctionNames) {
+static decltype(auto)
+callsNames(const std::vector<std::string> &FunctionNames) {
   return callee(functionDecl(hasAnyName(toRefs(FunctionNames))));
 }
 
