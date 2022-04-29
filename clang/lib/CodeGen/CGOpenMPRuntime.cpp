@@ -2182,7 +2182,7 @@ void CGOpenMPRuntime::emitIRBuilderParallel(
     CodeGenFunction &CGF, const CapturedStmt *CS,
     llvm::OpenMPIRBuilder::BodyGenCallbackTy BodyGenCB,
     llvm::OpenMPIRBuilder::PrivatizeCallbackTy PrivCB,
-    llvm::OpenMPIRBuilder::LeaveRegionCallbackTy FiniCB,
+    llvm::OpenMPIRBuilder::FinalizeCallbackTy FiniCB,
     // llvm:: OpenMPIRBuilder::  CancellationCallbackTy CancelCB,
     llvm::Value *IfCond, llvm::Value *NumThreads,
     llvm::omp::ProcBindKind ProcBind, bool IsCancellable) {

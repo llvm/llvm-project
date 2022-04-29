@@ -1014,7 +1014,7 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(LocationDescription Loc,
 IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     const LocationDescription &Loc, InsertPointTy OuterAllocaIP,
     BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
-    LeaveRegionCallbackTy FiniCB, Value *IfCondition, Value *NumThreads,
+    FinalizeCallbackTy FiniCB, Value *IfCondition, Value *NumThreads,
     omp::ProcBindKind ProcBind, bool IsCancellable) {
   assert(!isConflictIP(Loc.IP, OuterAllocaIP) && "IPs must not be ambiguous");
 
@@ -1482,7 +1482,7 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     ArrayRef<StorableBodyGenCallbackTy> SectionCBs, PrivatizeCallbackTy PrivCB,
-    LeaveRegionCallbackTy FiniCB, bool IsCancellable, bool IsNowait) {
+    FinalizeCallbackTy FiniCB, bool IsCancellable, bool IsNowait) {
   assert(!isConflictIP(AllocaIP, Loc.IP) && "Dedicated IP allocas required");
 
   if (!updateToLocation(Loc))
@@ -1594,7 +1594,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createSection(const LocationDescription &Loc,
                                BodyGenCallbackTy BodyGenCB,
-                               LeaveRegionCallbackTy FiniCB) {
+                               FinalizeCallbackTy FiniCB) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -1822,7 +1822,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createMaster(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
-                              LeaveRegionCallbackTy FiniCB) {
+                              FinalizeCallbackTy FiniCB) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -1847,7 +1847,7 @@ OpenMPIRBuilder::createMaster(const LocationDescription &Loc,
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createMasked(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
-                              LeaveRegionCallbackTy FiniCB, Value *Filter) {
+                              FinalizeCallbackTy FiniCB, Value *Filter) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -3232,7 +3232,7 @@ OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
-    LeaveRegionCallbackTy FiniCB, bool IsNowait, llvm::Value *DidIt) {
+    FinalizeCallbackTy FiniCB, bool IsNowait, llvm::Value *DidIt) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -3274,7 +3274,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCritical(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
-    LeaveRegionCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
+    FinalizeCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -3354,7 +3354,7 @@ OpenMPIRBuilder::createOrderedDepend(const LocationDescription &Loc,
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createOrderedThreadsSimd(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
-    LeaveRegionCallbackTy FiniCB, bool IsThreads) {
+    FinalizeCallbackTy FiniCB, bool IsThreads) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -3383,7 +3383,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createOrderedThreadsSimd(
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
     Directive OMPD, Instruction *EntryCall, Instruction *ExitCall,
-    BodyGenCallbackTy BodyGenCB, LeaveRegionCallbackTy FiniCB, bool Conditional,
+    BodyGenCallbackTy BodyGenCB, FinalizeCallbackTy FiniCB, bool Conditional,
     bool HasFinalize, bool IsCancellable) {
 
 #if 0

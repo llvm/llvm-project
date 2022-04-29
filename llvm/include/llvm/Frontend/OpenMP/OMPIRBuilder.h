@@ -105,7 +105,7 @@ public:
   /// A finalize callback knows about all objects that need finalization, e.g.
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
-  using LeaveRegionCallbackTy =
+  using FinalizeCallbackTy =
       std::function<void(InsertPointTy ExitingIP)>; 
 
   enum class RegionKind {
@@ -321,7 +321,7 @@ public:
   IRBuilder<>::InsertPoint
   createParallel(const LocationDescription &Loc, InsertPointTy OuterAllocaIP,
                  BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
-                 LeaveRegionCallbackTy FiniCB, Value *IfCondition,
+                 FinalizeCallbackTy FiniCB, Value *IfCondition,
                  Value *NumThreads, omp::ProcBindKind ProcBind,
                  bool IsCancellable);
 
@@ -997,7 +997,7 @@ public:
   /// \returns The insertion position *after* the single call.
   InsertPointTy createSingle(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-                             LeaveRegionCallbackTy FiniCB, bool IsNowait,
+      FinalizeCallbackTy FiniCB, bool IsNowait,
                              llvm::Value *DidIt);
 
   /// Generator for '#omp master'
@@ -1009,7 +1009,7 @@ public:
   /// \returns The insertion position *after* the master.
   InsertPointTy createMaster(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-                             LeaveRegionCallbackTy FiniCB);
+      FinalizeCallbackTy FiniCB);
 
   /// Generator for '#omp masked'
   ///
@@ -1020,7 +1020,7 @@ public:
   /// \returns The insertion position *after* the masked.
   InsertPointTy createMasked(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-                             LeaveRegionCallbackTy FiniCB, Value *Filter);
+      FinalizeCallbackTy FiniCB, Value *Filter);
 
   /// Generator for '#omp critical'
   ///
@@ -1033,7 +1033,7 @@ public:
   /// \returns The insertion position *after* the critical.
   InsertPointTy createCritical(const LocationDescription &Loc,
                                BodyGenCallbackTy BodyGenCB,
-                               LeaveRegionCallbackTy FiniCB,
+      FinalizeCallbackTy FiniCB,
                                StringRef CriticalName, Value *HintInst);
 
   /// Generator for '#omp ordered depend (source | sink)'
@@ -1062,7 +1062,7 @@ public:
   /// \returns The insertion position *after* the ordered.
   InsertPointTy createOrderedThreadsSimd(const LocationDescription &Loc,
                                          BodyGenCallbackTy BodyGenCB,
-                                         LeaveRegionCallbackTy FiniCB,
+      FinalizeCallbackTy FiniCB,
                                          bool IsThreads);
 
   /// Generator for '#omp sections'
@@ -1080,7 +1080,7 @@ public:
                                InsertPointTy AllocaIP,
                                ArrayRef<StorableBodyGenCallbackTy> SectionCBs,
                                PrivatizeCallbackTy PrivCB,
-                               LeaveRegionCallbackTy FiniCB, bool IsCancellable,
+      FinalizeCallbackTy FiniCB, bool IsCancellable,
                                bool IsNowait);
 
   /// Generator for '#omp section'
@@ -1091,7 +1091,7 @@ public:
   /// \returns The insertion position *after* the section.
   InsertPointTy createSection(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
-                              LeaveRegionCallbackTy FiniCB);
+      FinalizeCallbackTy FiniCB);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
@@ -1295,7 +1295,7 @@ private:
   InsertPointTy
   EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
                        Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
-                       LeaveRegionCallbackTy FiniCB, bool Conditional = false,
+      FinalizeCallbackTy FiniCB, bool Conditional = false,
                        bool HasFinalize = true, bool IsCancellable = false);
 
   /// Get the platform-specific name separator.
