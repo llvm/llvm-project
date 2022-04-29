@@ -32,6 +32,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -407,6 +408,25 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   // function and it makes no sense to track them as memory.
   if (Access.Addr->isSwiftError())
     return None;
+
+  // Peel off GEPs and BitCasts.
+  auto *Addr = Access.Addr->stripInBoundsOffsets();
+
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Addr)) {
+    // Do not instrument PGO counter updates.
+    if (GV->hasSection()) {
+      StringRef SectionName = GV->getSection();
+      // Check if the global is in the PGO counters section.
+      auto OF = Triple(I->getModule()->getTargetTriple()).getObjectFormat();
+      if (SectionName.endswith(
+              getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
+        return None;
+    }
+
+    // Do not instrument accesses to LLVM internal variables.
+    if (GV->getName().startswith("__llvm"))
+      return None;
+  }
 
   const DataLayout &DL = I->getModule()->getDataLayout();
   Access.TypeSize = DL.getTypeStoreSizeInBits(Access.AccessTy);
