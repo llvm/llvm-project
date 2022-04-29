@@ -104,8 +104,8 @@ define i1 @or_eq_with_one_bit_diff_constants1_logical(i32 %x) {
 
 define i1 @and_ne_with_one_bit_diff_constants1(i32 %x) {
 ; CHECK-LABEL: @and_ne_with_one_bit_diff_constants1(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 50
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -52
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], -2
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp ne i32 %x, 51
@@ -116,8 +116,8 @@ define i1 @and_ne_with_one_bit_diff_constants1(i32 %x) {
 
 define i1 @and_ne_with_one_bit_diff_constants1_logical(i32 %x) {
 ; CHECK-LABEL: @and_ne_with_one_bit_diff_constants1_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 50
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -52
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], -2
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp ne i32 %x, 51
