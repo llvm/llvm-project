@@ -1183,12 +1183,10 @@ define i1 @and_ranges_signed_pred(i64 %x) {
 
 define i1 @and_two_ranges_to_mask_and_range(i8 %c)  {
 ; CHECK-LABEL: @and_two_ranges_to_mask_and_range(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[C:%.*]], -123
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[TMP1]], -26
-; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[C]], -91
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[TMP2]], -26
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[C:%.*]], -33
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], -91
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], -26
+; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %c.off = add i8 %c, -97
   %cmp1 = icmp ugt i8 %c.off, 25
@@ -1234,11 +1232,9 @@ define i1 @and_two_ranges_to_mask_and_range_different_sizes(i8 %c)  {
 
 define i1 @and_two_ranges_to_mask_and_range_no_add_on_one_range(i16 %x) {
 ; CHECK-LABEL: @and_two_ranges_to_mask_and_range_no_add_on_one_range(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i16 [[X:%.*]], 11
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[X]], -28
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i16 [[TMP1]], -12
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[X:%.*]], -20
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i16 [[TMP1]], 11
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %cmp1 = icmp uge i16 %x, 12
   %cmp2 = icmp ult i16 %x, 16

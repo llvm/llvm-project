@@ -1187,23 +1187,20 @@ static Value *foldAndOrOfICmpsUsingRanges(
   if (V1 != V2)
     return nullptr;
 
-  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(Pred1, C1);
+  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred1) : Pred1, C1);
   if (Offset1)
     CR1 = CR1.subtract(*Offset1);
 
-  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(Pred2, C2);
+  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred2) : Pred2, C2);
   if (Offset2)
     CR2 = CR2.subtract(*Offset2);
 
   Type *Ty = V1->getType();
   Value *NewV = V1;
-  Optional<ConstantRange> CR =
-      IsAnd ? CR1.exactIntersectWith(CR2) : CR1.exactUnionWith(CR2);
+  Optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
   if (!CR) {
-    // TODO: Support and.
-    if (IsAnd)
-      return nullptr;
-
     if (!BothHaveOneUse || CR1.isWrappedSet() || CR2.isWrappedSet())
       return nullptr;
 
@@ -1219,6 +1216,9 @@ static Value *foldAndOrOfICmpsUsingRanges(
     CR = CR1.getLower().ult(CR2.getLower()) ? CR1 : CR2;
     NewV = Builder.CreateAnd(NewV, ConstantInt::get(Ty, ~LowerDiff));
   }
+
+  if (IsAnd)
+    CR = CR->inverse();
 
   CmpInst::Predicate NewPred;
   APInt NewC, Offset;
