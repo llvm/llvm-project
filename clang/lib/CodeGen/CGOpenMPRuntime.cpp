@@ -1215,8 +1215,6 @@ struct PushAndPopStackRAII {
     if (!OMPBuilder)
       return;
 
-    // auto FiniCB = [&CGF](llvm::OpenMPIRBuilder::InsertPointTy IP) {};
-
     // The following callback is the crucial part of clangs cleanup process.
     //
     // NOTE:

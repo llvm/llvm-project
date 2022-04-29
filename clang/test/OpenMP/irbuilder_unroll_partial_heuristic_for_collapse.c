@@ -62,8 +62,8 @@ double sind(double);
 // CHECK-NEXT:    store i64 %[[TMP3]], i64* %[[DOTOMP_UB]], align 8
 // CHECK-NEXT:    store i64 1, i64* %[[DOTOMP_STRIDE]], align 8
 // CHECK-NEXT:    store i32 0, i32* %[[DOTOMP_IS_LAST]], align 4
-// CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @3)
-// CHECK-NEXT:    call void @__kmpc_for_static_init_8(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* %[[DOTOMP_IS_LAST]], i64* %[[DOTOMP_LB]], i64* %[[DOTOMP_UB]], i64* %[[DOTOMP_STRIDE]], i64 1, i64 1)
+// CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:.+]])
+// CHECK-NEXT:    call void @__kmpc_for_static_init_8(%struct.ident_t* @[[GLOB1:.+]], i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 34, i32* %[[DOTOMP_IS_LAST]], i64* %[[DOTOMP_LB]], i64* %[[DOTOMP_UB]], i64* %[[DOTOMP_STRIDE]], i64 1, i64 1)
 // CHECK-NEXT:    %[[TMP4:.+]] = load i64, i64* %[[DOTOMP_UB]], align 8
 // CHECK-NEXT:    %[[TMP5:.+]] = load i64, i64* %[[DOTCAPTURE_EXPR_2]], align 8
 // CHECK-NEXT:    %[[CMP8:.+]] = icmp sgt i64 %[[TMP4]], %[[TMP5]]
@@ -195,13 +195,13 @@ double sind(double);
 // CHECK-NEXT:    br label %[[OMP_LOOP_EXIT:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_LOOP_EXIT]]:
-// CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM49:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @5)
-// CHECK-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @1, i32 %[[OMP_GLOBAL_THREAD_NUM49]])
+// CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM49:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB5:.+]])
+// CHECK-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 %[[OMP_GLOBAL_THREAD_NUM49]])
 // CHECK-NEXT:    br label %[[OMP_PRECOND_END]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_PRECOND_END]]:
-// CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM50:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @7)
-// CHECK-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @6, i32 %[[OMP_GLOBAL_THREAD_NUM50]])
+// CHECK-NEXT:    %[[OMP_GLOBAL_THREAD_NUM50:.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3]])
+// CHECK-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB6:.+]], i32 %[[OMP_GLOBAL_THREAD_NUM50]])
 // CHECK-NEXT:    ret void
 // CHECK-NEXT:  }
 
