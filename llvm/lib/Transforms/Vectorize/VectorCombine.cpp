@@ -1200,9 +1200,7 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   // become a identity or concat mask. Undef elements are pushed to the end.
   SmallVector<int> ConcatMask;
   Shuffle->getShuffleMask(ConcatMask);
-  sort(ConcatMask, [](int X, int Y) {
-    return Y == UndefMaskElem ? true : (X == UndefMaskElem ? false : X < Y);
-  });
+  sort(ConcatMask, [](int X, int Y) { return (unsigned)X < (unsigned)Y; });
   bool UsesSecondVec =
       any_of(ConcatMask, [&](int M) { return M >= NumInputElts; });
   InstructionCost OldCost = TTI.getShuffleCost(
