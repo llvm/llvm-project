@@ -1243,3 +1243,40 @@ define i1 @and_two_ranges_to_mask_and_range_no_add_on_one_range(i16 %x) {
   %and = and i1 %cmp1, %or
   ret i1 %and
 }
+
+; This tests an "is_alpha" style check for the combination of logical or
+; and nowrap flags on the adds. In this case, the logical or will not be
+; converted into a bitwise or.
+define i1 @is_ascii_alphabetic(i32 %char) {
+; CHECK-LABEL: @is_ascii_alphabetic(
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[CHAR:%.*]], -65
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[ADD1]], 26
+; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[CHAR]], -97
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD2]], 26
+; CHECK-NEXT:    [[LOGICAL:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[LOGICAL]]
+;
+  %add1 = add nsw i32 %char, -65
+  %cmp1 = icmp ult i32 %add1, 26
+  %add2 = add nsw i32 %char, -97
+  %cmp2 = icmp ult i32 %add2, 26
+  %logical = select i1 %cmp1, i1 true, i1 %cmp2
+  ret i1 %logical
+}
+
+define i1 @is_ascii_alphabetic_inverted(i32 %char) {
+; CHECK-LABEL: @is_ascii_alphabetic_inverted(
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[CHAR:%.*]], -91
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[ADD1]], -26
+; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[CHAR]], -123
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD2]], -26
+; CHECK-NEXT:    [[LOGICAL:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[LOGICAL]]
+;
+  %add1 = add nsw i32 %char, -91
+  %cmp1 = icmp ult i32 %add1, -26
+  %add2 = add nsw i32 %char, -123
+  %cmp2 = icmp ult i32 %add2, -26
+  %logical = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %logical
+}
