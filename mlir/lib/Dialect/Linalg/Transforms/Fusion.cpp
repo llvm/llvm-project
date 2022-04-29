@@ -168,8 +168,8 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
 
   // Shift all IndexOp results by the tile offset.
   SmallVector<Value> allIvs;
-  transform(loopRanges, std::back_inserter(allIvs),
-            [](Range range) { return range.offset; });
+  llvm::transform(loopRanges, std::back_inserter(allIvs),
+                  [](Range range) { return range.offset; });
   addTileLoopIvsToIndexOpResults(b, clonedOp, allIvs);
 
   return clonedOp;

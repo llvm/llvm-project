@@ -33,6 +33,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -101,6 +102,11 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   tosa::TosaDialect,
                   x86vector::X86VectorDialect>();
   // clang-format on
+
+  // Register all dialect extensions.
+  linalg::registerTransformDialectExtension(registry);
+
+  // Register all external models.
   arith::registerBufferizableOpInterfaceExternalModels(registry);
   bufferization::func_ext::registerBufferizableOpInterfaceExternalModels(
       registry);
