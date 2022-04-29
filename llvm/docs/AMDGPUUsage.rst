@@ -444,7 +444,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     **GCN GFX11** [AMD-GCN-GFX11]_
+     **GCN GFX11**
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1100``                 ``amdgcn``   dGPU  - cumode          - Architected   - *pal-amdpal*  *TBA*
                                                     - wavefrontsize64   flat
