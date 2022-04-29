@@ -3,47 +3,28 @@
 
 ; SelectionDAG generates a setcc node with multiple uses:
 ;
-;  t23: i1 = setcc t3, Constant:i32<0>, setne:ch
-;        t17: i32,i1 = subcarry Constant:i32<1>, Constant:i32<0>, t23
-;      t25: i32 = select t23, t17, Constant:i32<0>
+;  t21: i1 = setcc t3, Constant:i32<0>, setne:ch
+;      t15: i32,i1 = subcarry Constant:i32<1>, Constant:i32<0>, t21
+;    t23: i32 = select t21, t15, Constant:i32<0>
 
-define amdgpu_cs void @main() {
-; CHECK-LABEL: main:
+define i32 @f() {
+; CHECK-LABEL: f:
 ; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    ds_read_b32 v1, v0
+; CHECK-NEXT:    ds_read_b32 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v1
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; CHECK-NEXT:    s_cmpk_lg_u32 vcc_lo, 0x0
-; CHECK-NEXT:    s_subb_u32 s0, 1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, s0, vcc_lo
-; CHECK-NEXT:  .LBB0_1: ; %bb1
-; CHECK-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-NEXT:    ; Child Loop BB0_2 Depth 2
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
-; CHECK-NEXT:  .LBB0_2: ; %bb3
-; CHECK-NEXT:    ; Parent Loop BB0_1 Depth=1
-; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    v_mov_b32_e32 v0, v1
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_2
-; CHECK-NEXT:    s_branch .LBB0_1
+; CHECK-NEXT:    s_subb_u32 s4, 1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, s4, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %i = load i32, i32 addrspace(3)* null, align 16
-  br label %bb1
-
-bb1:
-  %i2 = phi i32 [ 0, %bb ], [ %i9, %bb5 ]
-  br label %bb3
-
-bb3:
-  %i4 = icmp eq i32 %i2, 0
-  br i1 %i4, label %bb5, label %bb3
-
-bb5:
   %i6 = icmp ult i32 0, %i
   %i7 = sext i1 %i6 to i32
   %i8 = add i32 %i7, 1
   %i9 = and i32 %i8, %i7
-  br label %bb1
+  ret i32 %i9
 }
