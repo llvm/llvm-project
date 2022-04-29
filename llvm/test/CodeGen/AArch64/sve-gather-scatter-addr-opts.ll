@@ -374,11 +374,11 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with__vec_plus_imm_offsets
   ret <vscale x 2 x i64> %data
 }
 
-; TODO: The generated code is wrong because we've lost the sign extension which
-; defines bits offsets[8:31].
 define <vscale x 4 x i32> @masked_gather_nxv4i32_s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv4i32_s8_offsets:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, z0.s, sxtw #2]
 ; CHECK-NEXT:    ret
   %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
@@ -399,12 +399,13 @@ define <vscale x 4 x i32> @masked_gather_nxv4i32_u8_offsets(i32* %base, <vscale 
   ret <vscale x 4 x i32> %data
 }
 
-; TODO: The generated code is wrong because we've lost the sign extension which
-; defines bits offsets[8:31] and we're also replicating offset[31] across
+; TODO: The generated code is wrong because we're replicating offset[31] across
 ; offset[32:63] even though the IR has explicitly zero'd those bits.
 define <vscale x 4 x i32> @masked_gather_nxv4i32_u32s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv4i32_u32s8_offsets:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, z0.s, sxtw #2]
 ; CHECK-NEXT:    ret
   %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
@@ -456,11 +457,11 @@ define void @masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 
   ret void
 }
 
-; TODO: The generated code is wrong because we've lost the sign extension which
-; defines bits offsets[8:31].
 define void @masked_scatter_nxv4i32_s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv4i32_s8_offsets:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, sxtw #2]
 ; CHECK-NEXT:    ret
   %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
@@ -481,12 +482,13 @@ define void @masked_scatter_nxv4i32_u8_offsets(i32* %base, <vscale x 4 x i8> %of
   ret void
 }
 
-; TODO: The generated code is wrong because we've lost the sign extension which
-; defines bits offsets[8:31] and we're also replicating offset[31] across
+; TODO: The generated code is wrong because we're replicating offset[31] across
 ; offset[32:63] even though the IR has explicitly zero'd those bits.
 define void @masked_scatter_nxv4i32_u32s8_offsets(i32* %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv4i32_u32s8_offsets:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, sxtw #2]
 ; CHECK-NEXT:    ret
   %offsets.sext = sext <vscale x 4 x i8> %offsets to <vscale x 4 x i32>
