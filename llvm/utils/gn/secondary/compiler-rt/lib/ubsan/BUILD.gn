@@ -1,3 +1,19 @@
+import("//compiler-rt/gen_version_script.gni")
+import("//compiler-rt/target.gni")
+
+gen_version_script("version_script") {
+  extra = "ubsan.syms.extra"
+  output = "$target_gen_dir/ubsan.vers"
+  libs = [
+    ":ubsan",
+    ":ubsan_cxx",
+  ]
+  lib_names = [
+    "ubsan_standalone",
+    "ubsan_standalone_cxx",
+  ]
+}
+
 source_set("sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
@@ -46,7 +62,6 @@ source_set("dynamic_runtime_thunk") {
   sources = [ "ubsan_win_dynamic_runtime_thunk.cpp" ]
 }
 
-# Unreferenced; at the moment exists to make sync_source_lists_from_cmake happy.
 source_set("standalone_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs -= [ "//llvm/utils/gn/build:no_rtti" ]
@@ -71,4 +86,49 @@ source_set("cxx_sources") {
     "ubsan_type_hash_itanium.cpp",
     "ubsan_type_hash_win.cpp",
   ]
+}
+
+static_library("ubsan") {
+  output_dir = crt_current_out_dir
+  output_name = "clang_rt.ubsan_standalone$crt_current_target_suffix"
+  complete_static_lib = true
+  configs -= [
+    "//llvm/utils/gn/build:llvm_code",
+    "//llvm/utils/gn/build:thin_archive",
+  ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  deps = [
+    ":sources",
+    ":standalone_sources",
+  ]
+}
+
+static_library("ubsan_cxx") {
+  output_dir = crt_current_out_dir
+  output_name = "clang_rt.ubsan_standalone_cxx$crt_current_target_suffix"
+  complete_static_lib = true
+  configs -= [
+    "//llvm/utils/gn/build:llvm_code",
+    "//llvm/utils/gn/build:thin_archive",
+  ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  deps = [ ":cxx_sources" ]
+}
+
+shared_library("ubsan_shared") {
+  output_dir = crt_current_out_dir
+  output_name = "clang_rt.ubsan_standalone$crt_current_target_suffix"
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  deps = [
+    ":cxx_sources",
+    ":sources",
+    ":standalone_sources",
+  ]
+  if (current_os != "mac" && current_os != "win") {
+    deps += [ ":version_script" ]
+    inputs = [ "$target_gen_dir/ubsan.vers" ]
+    ldflags =
+        [ "-Wl,--version-script," + rebase_path(inputs[0], root_build_dir) ]
+  }
 }
