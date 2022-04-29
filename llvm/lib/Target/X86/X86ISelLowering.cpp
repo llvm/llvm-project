@@ -50665,6 +50665,11 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   SDValue N1 = N->getOperand(1);
   MVT VT = N->getSimpleValueType(0);
 
+  // ANDNP(undef, x) -> 0
+  // ANDNP(x, undef) -> 0
+  if (N0.isUndef() || N1.isUndef())
+    return DAG.getConstant(0, SDLoc(N), VT);
+
   // ANDNP(0, x) -> x
   if (ISD::isBuildVectorAllZeros(N0.getNode()))
     return N1;
