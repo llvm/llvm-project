@@ -6,8 +6,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; Check delinearization in loop cache analysis can handle fixed-size arrays.
 ; The IR is copied from llvm/test/Analysis/DependenceAnalysis/SimpleSIVNoValidityCheckFixedSize.ll
 
-; CHECK: Loop 'for.body' has cost = 4186116
-; CHECK: Loop 'for.body4' has cost = 128898
+; CHECK-DAG: Loop 'for.body' has cost = 4186116
+; CHECK-DAG: Loop 'for.body4' has cost = 128898
 
 ;; #define N 1024
 ;; #define M 2048
@@ -48,8 +48,8 @@ for.end13:                                        ; preds = %for.inc11
 }
 
 
-; CHECK: Loop 'for.body' has cost = 4186116
-; CHECK: Loop 'for.body4' has cost = 128898
+; CHECK-DAG: Loop 'for.body' has cost = 4186116
+; CHECK-DAG: Loop 'for.body4' has cost = 128898
 
 define void @t2([2048 x i32]* %a) {
 entry:
@@ -83,11 +83,11 @@ for.end13:                                        ; preds = %for.inc11
 
 declare [2048 x i32]* @func_with_returned_arg([2048 x i32]* returned %arg)
 
-; CHECK: Loop 'for.body' has cost = 4472886244958208
-; CHECK: Loop 'for.body4' has cost = 4472886244958208
-; CHECK: Loop 'for.body8' has cost = 4472886244958208
-; CHECK: Loop 'for.body12' has cost = 4472886244958208
-; CHECK: Loop 'for.body16' has cost = 137728168833024
+; CHECK-DAG: Loop 'for.body' has cost = 4472886244958208
+; CHECK-DAG: Loop 'for.body4' has cost = 4472886244958208
+; CHECK-DAG: Loop 'for.body8' has cost = 4472886244958208
+; CHECK-DAG: Loop 'for.body12' has cost = 4472886244958208
+; CHECK-DAG: Loop 'for.body16' has cost = 137728168833024
 
 
 ;; #define N 1024
