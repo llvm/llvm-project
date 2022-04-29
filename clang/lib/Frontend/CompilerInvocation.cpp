@@ -1526,7 +1526,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
   if (Opts.FPDenormalMode != llvm::DenormalMode::getIEEE())
     GenerateArg(Args, OPT_fdenormal_fp_math_EQ, Opts.FPDenormalMode.str(), SA);
 
-  if (Opts.FP32DenormalMode != llvm::DenormalMode::getIEEE())
+  if ((Opts.FPDenormalMode != Opts.FP32DenormalMode) ||
+      (Opts.FP32DenormalMode != llvm::DenormalMode::getIEEE()))
     GenerateArg(Args, OPT_fdenormal_fp_math_f32_EQ, Opts.FP32DenormalMode.str(),
                 SA);
 
@@ -1879,6 +1880,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
     StringRef Val = A->getValue();
     Opts.FPDenormalMode = llvm::parseDenormalFPAttribute(Val);
+    Opts.FP32DenormalMode = Opts.FPDenormalMode;
     if (!Opts.FPDenormalMode.isValid())
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }

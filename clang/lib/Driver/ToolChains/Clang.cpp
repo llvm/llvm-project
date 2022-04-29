@@ -2884,6 +2884,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
     case options::OPT_fdenormal_fp_math_EQ:
       DenormalFPMath = llvm::parseDenormalFPAttribute(A->getValue());
+      DenormalFP32Math = DenormalFPMath;
       if (!DenormalFPMath.isValid()) {
         D.Diag(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
