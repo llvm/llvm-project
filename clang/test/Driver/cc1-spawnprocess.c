@@ -2,6 +2,7 @@
 // an external assember would increase job counts. Most toolchains in tree
 // use integrated assembler, but we still support external assembler.
 // So -fintegrated-as is specified explicitly when applicable.
+// REQUIRES: integrated-as
 
 // RUN: %clang -fintegrated-cc1 -fintegrated-as -c -### %s 2>&1 | FileCheck %s --check-prefix=YES
 // RUN: %clang -fno-integrated-cc1 -c -### %s 2>&1 | FileCheck %s --check-prefix=NO

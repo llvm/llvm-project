@@ -1,4 +1,5 @@
 // PR21000: Test that -I is passed to both external and integrated assemblers.
+// REQUIRES: integrated-as
 
 // RUN: %clang -target x86_64-linux-gnu -c -no-integrated-as %s \
 // RUN:   -Ifoo_dir -### 2>&1 \

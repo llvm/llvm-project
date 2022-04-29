@@ -1,5 +1,6 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
+// REQUIRES: object-emission
 
 // Create PCH without codegen.
 // RUN: %clang -x c++-header %S/../Modules/Inputs/codegen-flags/foo.h -o %t/foo-cg.pch -### 2>&1 | FileCheck %s -check-prefix=CHECK-PCH-CREATE

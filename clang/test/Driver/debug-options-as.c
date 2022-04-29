@@ -1,6 +1,7 @@
 // Check to make sure clang is somewhat picky about -g options.
 // (Delived from debug-options.c)
 // rdar://10383444
+// REQUIRES: integrated-as
 // RUN: %clang -### -c -save-temps -integrated-as -g %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=SAVE %s
 //

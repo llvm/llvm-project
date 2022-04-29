@@ -1,5 +1,6 @@
 ; RUN: llc -no-integrated-as -march=mipsel < %s | \
 ; RUN:     FileCheck %s -check-prefixes=ALL,GAS
+; REQUIRES: integrated-as
 ; RUN: llc -march=mipsel < %s | FileCheck %s -check-prefixes=ALL,IAS
 
 define void @constraint_I() nounwind {
