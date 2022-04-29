@@ -583,5 +583,49 @@ TEST(RANDSTRUCT_TEST, AnonymousStructsAndUnionsReferenced) {
   EXPECT_EQ(OriginalDeclCount, declCount(RD));
 }
 
+TEST(RANDSTRUCT_TEST, AutoRandomizeStructOfFunctionPointers) {
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+    typedef void (*func_ptr)();
+
+    struct test {
+      func_ptr a;
+      func_ptr b;
+      func_ptr c;
+      func_ptr d;
+      func_ptr e;
+      func_ptr f;
+      func_ptr g;
+    };
+  )c");
+
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
+  const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+
+  EXPECT_TRUE(RD->isRandomized());
+}
+
+TEST(RANDSTRUCT_TEST, DisableAutoRandomizeStructOfFunctionPointers) {
+  const std::unique_ptr<ASTUnit> AST = makeAST(R"c(
+    typedef void (*func_ptr)();
+
+    struct test {
+      func_ptr a;
+      func_ptr b;
+      func_ptr c;
+      func_ptr d;
+      func_ptr e;
+      func_ptr f;
+      func_ptr g;
+    } __attribute__((no_randomize_layout));
+  )c");
+
+  EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+
+  const RecordDecl *RD = getRecordDeclFromAST(AST->getASTContext(), "test");
+
+  EXPECT_FALSE(RD->isRandomized());
+}
+
 } // namespace ast_matchers
 } // namespace clang
