@@ -186,6 +186,12 @@ li x12, 0xaaaaaaaa
 # CHECK-ALIAS-NEXT: slli a3, a3, 1
 li x13, 0xffffffff55555556
 
+# CHECK-S-OBJ-NOALIAS: lui t0, 524288
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t0, t0, -1365
+# CHECK-S-OBJ: lui t0, 524288
+# CHECK-S-OBJ-NEXT: addi t0, t0, -1365
+li x5, -2147485013
+
 # CHECK-INST: addi a0, zero, 1110
 # CHECK-ALIAS: li a0, 1110
 li a0, %lo(0x123456)
