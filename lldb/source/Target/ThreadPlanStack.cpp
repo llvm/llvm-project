@@ -410,6 +410,7 @@ void ThreadPlanStackMap::Update(ThreadList &current_threads,
                                 bool delete_missing,
                                 bool check_for_new) {
 
+  std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
   // Now find all the new threads and add them to the map:
   if (check_for_new) {
     for (auto thread : current_threads.Threads()) {
@@ -444,6 +445,7 @@ void ThreadPlanStackMap::DumpPlans(Stream &strm,
                                    lldb::DescriptionLevel desc_level,
                                    bool internal, bool condense_if_trivial,
                                    bool skip_unreported) {
+  std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
   for (auto &elem : m_plans_list) {
     lldb::tid_t tid = elem.first;
     uint32_t index_id = 0;
@@ -480,6 +482,7 @@ bool ThreadPlanStackMap::DumpPlansForTID(Stream &strm, lldb::tid_t tid,
                                          bool internal,
                                          bool condense_if_trivial,
                                          bool skip_unreported) {
+  std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
   uint32_t index_id = 0;
   ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(tid);
 
@@ -519,6 +522,7 @@ bool ThreadPlanStackMap::DumpPlansForTID(Stream &strm, lldb::tid_t tid,
 
 bool ThreadPlanStackMap::PrunePlansForTID(lldb::tid_t tid) {
   // We only remove the plans for unreported TID's.
+  std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
   ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(tid);
   if (thread_sp)
     return false;
