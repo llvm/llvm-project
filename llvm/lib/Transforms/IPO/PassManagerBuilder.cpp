@@ -130,11 +130,6 @@ static cl::opt<bool>
                               cl::Hidden,
                               cl::desc("Disable shrink-wrap library calls"));
 
-static cl::opt<bool> EnableSimpleLoopUnswitch(
-    "enable-simple-loop-unswitch", cl::init(false), cl::Hidden,
-    cl::desc("Enable the simple loop unswitch pass. Also enables independent "
-             "cleanup passes integrated into the loop pass manager pipeline."));
-
 cl::opt<bool>
     EnableGVNSink("enable-gvn-sink", cl::init(false), cl::ZeroOrMore,
                   cl::desc("Enable the GVN sinking pass (default = off)"));
@@ -382,13 +377,13 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createVectorCombinePass());
 
   // Begin the loop pass pipeline.
-  if (EnableSimpleLoopUnswitch) {
-    // The simple loop unswitch pass relies on separate cleanup passes. Schedule
-    // them first so when we re-process a loop they run before other loop
-    // passes.
-    MPM.add(createLoopInstSimplifyPass());
-    MPM.add(createLoopSimplifyCFGPass());
-  }
+
+  // The simple loop unswitch pass relies on separate cleanup passes. Schedule
+  // them first so when we re-process a loop they run before other loop
+  // passes.
+  MPM.add(createLoopInstSimplifyPass());
+  MPM.add(createLoopSimplifyCFGPass());
+
   // Try to remove as much code from the loop header as possible,
   // to reduce amount of IR that will have to be duplicated. However,
   // do not perform speculative hoisting the first time as LICM
@@ -402,10 +397,7 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   // TODO: Investigate promotion cap for O1.
   MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                          /*AllowSpeculation=*/true));
-  if (EnableSimpleLoopUnswitch)
-    MPM.add(createSimpleLoopUnswitchLegacyPass());
-  else
-    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  MPM.add(createSimpleLoopUnswitchLegacyPass(OptLevel == 3));
   // FIXME: We break the loop pass pipeline here in order to do full
   // simplifycfg. Eventually loop-simplifycfg should be enhanced to replace the
   // need for this.
@@ -528,7 +520,7 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
     PM.add(createInstructionCombiningPass());
     PM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                           /*AllowSpeculation=*/true));
-    PM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+    PM.add(createSimpleLoopUnswitchLegacyPass());
     PM.add(createCFGSimplificationPass(
         SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
     PM.add(createInstructionCombiningPass());

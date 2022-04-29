@@ -171,13 +171,6 @@ Pass *createLoopStrengthReducePass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopUnswitch - This pass is a simple loop unswitching pass.
-//
-Pass *createLoopUnswitchPass(bool OptimizeForSize = false,
-                             bool hasBranchDivergence = false);
-
-//===----------------------------------------------------------------------===//
-//
 // LoopInstSimplify - This pass simplifies instructions in a loop's body.
 //
 Pass *createLoopInstSimplifyPass();

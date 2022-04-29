@@ -17,6 +17,7 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Utils.h"
 
 #define DEBUG_TYPE "polly-cleanup"
@@ -79,7 +80,7 @@ public:
     FPM->add(createLoopRotatePass(-1));
     FPM->add(createGVNPass());
     FPM->add(createLICMPass());
-    FPM->add(createLoopUnswitchPass());
+    FPM->add(createSimpleLoopUnswitchLegacyPass());
     FPM->add(createCFGSimplificationPass());
     FPM->add(createInstructionCombiningPass(true));
     FPM->add(createIndVarSimplifyPass());
