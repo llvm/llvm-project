@@ -1275,7 +1275,7 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
                                            ArrayRef<const Value *> Args) {
 
   // A helper that returns a vector type from the given type. The number of
-  // elements in type Ty determine the vector width.
+  // elements in type Ty determines the vector width.
   auto toVectorTy = [&](Type *ArgTy) {
     return VectorType::get(ArgTy->getScalarType(),
                            cast<VectorType>(DstTy)->getElementCount());
