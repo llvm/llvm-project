@@ -14,7 +14,9 @@ target_include_directories(ClangIncludeCleanerTests
 
 clang_target_link_libraries(ClangIncludeCleanerTests
   PRIVATE
+  clangAST
   clangBasic
+  clangFrontend
   )
 
 target_link_libraries(ClangIncludeCleanerTests
