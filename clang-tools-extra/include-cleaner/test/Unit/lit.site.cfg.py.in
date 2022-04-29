@@ -1,0 +1,10 @@
+@LIT_SITE_CFG_IN_HEADER@
+# This is a shim to run the gtest unittests in ../unittests using lit.
+
+config.llvm_libs_dir = path("@LLVM_LIBS_DIR@")
+config.shlibdir = path("@SHLIBDIR@")
+
+config.clang_include_cleaner_binary_dir = path("@CMAKE_CURRENT_BINARY_DIR@/..")
+
+# Delegate logic to lit.cfg.py.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/Unit/lit.cfg.py")
