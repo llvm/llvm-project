@@ -5,6 +5,10 @@
 ! The modules are defined in module_definition.f90
 ! The first runs ensures the module file is generated.
 
+! CHECK: fir.global common @_QB(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+! CHECK-NEXT: fir.global common @_QBnamed1(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+! CHECK-NEXT: fir.global common @_QBnamed2(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+
 ! CHECK-LABEL: func @_QPm1use()
 real function m1use()
   use m1
@@ -37,6 +41,3 @@ end function
 
 ! CHECK-DAG: fir.global @_QMm1Ex : f32
 ! CHECK-DAG: fir.global @_QMm1Ey : !fir.array<100xi32>
-! CHECK-DAG: fir.global common @_QBnamed2(dense<0> : vector<4xi8>) : !fir.array<4xi8>
-! CHECK-DAG: fir.global common @_QB(dense<0> : vector<4xi8>) : !fir.array<4xi8>
-! CHECK-DAG: fir.global common @_QBnamed1(dense<0> : vector<4xi8>) : !fir.array<4xi8>
