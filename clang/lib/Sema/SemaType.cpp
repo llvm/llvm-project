@@ -5564,7 +5564,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   //   of the parameters is supplied.
   // See ActOnFinishFunctionBody() and MergeFunctionDecl() for handling of
   // function declarations whose behavior changes in C2x.
-  if (!LangOpts.CPlusPlus) {
+  if (!LangOpts.requiresStrictPrototypes()) {
     bool IsBlock = false;
     for (const DeclaratorChunk &DeclType : D.type_objects()) {
       switch (DeclType.Kind) {
