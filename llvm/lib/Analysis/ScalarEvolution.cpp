@@ -5997,13 +5997,13 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
   return getUnknown(I);
 }
 
-const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
-    Value *V, Value *Cond, Value *TrueVal, Value *FalseVal) {
-  // For now, only deal with i1-typed `select`s.
-  if (!V->getType()->isIntegerTy(1) || !Cond->getType()->isIntegerTy(1) ||
-      !TrueVal->getType()->isIntegerTy(1) ||
-      !FalseVal->getType()->isIntegerTy(1))
-    return getUnknown(V);
+static Optional<const SCEV *>
+createNodeForSelectViaUMinSeq(ScalarEvolution *SE, const SCEV *CondExpr,
+                              const SCEV *TrueExpr, const SCEV *FalseExpr) {
+  assert(CondExpr->getType()->isIntegerTy(1) &&
+         TrueExpr->getType() == FalseExpr->getType() &&
+         TrueExpr->getType()->isIntegerTy(1) &&
+         "Unexpected operands of a select.");
 
   // i1 cond ? i1 x : i1 C  -->  C + (i1  cond ? (i1 x - i1 C) : i1 0)
   //                        -->  C + (umin_seq  cond, x - C)
@@ -6011,22 +6011,50 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
   // i1 cond ? i1 C : i1 x  -->  C + (i1  cond ? i1 0 : (i1 x - i1 C))
   //                        -->  C + (i1 ~cond ? (i1 x - i1 C) : i1 0)
   //                        -->  C + (umin_seq ~cond, x - C)
-  if (isa<ConstantInt>(TrueVal) || isa<ConstantInt>(FalseVal)) {
-    const SCEV *CondExpr = getSCEV(Cond);
-    const SCEV *TrueExpr = getSCEV(TrueVal);
-    const SCEV *FalseExpr = getSCEV(FalseVal);
-    const SCEV *X, *C;
-    if (isa<ConstantInt>(TrueVal)) {
-      CondExpr = getNotSCEV(CondExpr);
-      X = FalseExpr;
-      C = TrueExpr;
-    } else {
-      X = TrueExpr;
-      C = FalseExpr;
-    }
-    return getAddExpr(
-        C, getUMinExpr(CondExpr, getMinusSCEV(X, C), /*Sequential=*/true));
+
+  // FIXME: while we can't legally model the case where both of the hands
+  // are fully variable, we only require that the *difference* is constant.
+  if (!isa<SCEVConstant>(TrueExpr) && !isa<SCEVConstant>(FalseExpr))
+    return None;
+
+  const SCEV *X, *C;
+  if (isa<SCEVConstant>(TrueExpr)) {
+    CondExpr = SE->getNotSCEV(CondExpr);
+    X = FalseExpr;
+    C = TrueExpr;
+  } else {
+    X = TrueExpr;
+    C = FalseExpr;
   }
+  return SE->getAddExpr(C, SE->getUMinExpr(CondExpr, SE->getMinusSCEV(X, C),
+                                           /*Sequential=*/true));
+}
+
+static Optional<const SCEV *> createNodeForSelectViaUMinSeq(ScalarEvolution *SE,
+                                                            Value *Cond,
+                                                            Value *TrueVal,
+                                                            Value *FalseVal) {
+  if (!isa<ConstantInt>(TrueVal) && !isa<ConstantInt>(FalseVal))
+    return None;
+
+  return createNodeForSelectViaUMinSeq(
+      SE, SE->getSCEV(Cond), SE->getSCEV(TrueVal), SE->getSCEV(FalseVal));
+}
+
+const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
+    Value *V, Value *Cond, Value *TrueVal, Value *FalseVal) {
+  assert(Cond->getType()->isIntegerTy(1) && "Select condition is not an i1?");
+  assert(TrueVal->getType() == FalseVal->getType() &&
+         V->getType() == TrueVal->getType() &&
+         "Types of select hands and of the result must match.");
+
+  // For now, only deal with i1-typed `select`s.
+  if (!V->getType()->isIntegerTy(1))
+    return getUnknown(V);
+
+  if (Optional<const SCEV *> S =
+          createNodeForSelectViaUMinSeq(this, Cond, TrueVal, FalseVal))
+    return *S;
 
   return getUnknown(V);
 }
