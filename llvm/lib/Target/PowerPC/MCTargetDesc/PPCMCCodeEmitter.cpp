@@ -46,11 +46,12 @@ getDirectBrEncoding(const MCInst &MI, unsigned OpNo,
 
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
+
+  const PPCInstrInfo *InstrInfo = static_cast<const PPCInstrInfo *>(&MCII);
+  unsigned Opcode = MI.getOpcode();
   // Add a fixup for the branch target.
   Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   ((MI.getOpcode() == PPC::BL8_NOTOC ||
-                                     MI.getOpcode() == PPC::BL8_NOTOC_TLS ||
-                                     MI.getOpcode() == PPC::BL8_NOTOC_RM)
+                                   (InstrInfo->isNoTOCCallInstr(Opcode)
                                         ? (MCFixupKind)PPC::fixup_ppc_br24_notoc
                                         : (MCFixupKind)PPC::fixup_ppc_br24)));
   return 0;
