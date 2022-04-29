@@ -18,12 +18,20 @@ class SymbolVisitorCallbacks;
 
 class CVSymbolVisitor {
 public:
+  struct FilterOptions {
+    llvm::Optional<uint32_t> SymbolOffset;
+    llvm::Optional<uint32_t> ParentRecursiveDepth;
+    llvm::Optional<uint32_t> ChildRecursiveDepth;
+  };
+
   CVSymbolVisitor(SymbolVisitorCallbacks &Callbacks);
 
   Error visitSymbolRecord(CVSymbol &Record);
   Error visitSymbolRecord(CVSymbol &Record, uint32_t Offset);
   Error visitSymbolStream(const CVSymbolArray &Symbols);
   Error visitSymbolStream(const CVSymbolArray &Symbols, uint32_t InitialOffset);
+  Error visitSymbolStreamFiltered(const CVSymbolArray &Symbols,
+                                  const FilterOptions &Filter);
 
 private:
   SymbolVisitorCallbacks &Callbacks;
