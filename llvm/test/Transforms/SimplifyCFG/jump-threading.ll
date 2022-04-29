@@ -183,12 +183,12 @@ define void @test_same_cond_extra_use(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @use.i1(i1 [[C]])
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[JOIN2:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @use.i1(i1 [[C]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[JOIN2]]
 ; CHECK:       join2:
