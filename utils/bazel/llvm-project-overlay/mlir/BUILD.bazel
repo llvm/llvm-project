@@ -6090,6 +6090,7 @@ cc_library(
         ":LinalgToLLVM",
         ":LinalgToSPIRV",
         ":LinalgToStandard",
+        ":LinalgTransformOps",
         ":LinalgTransforms",
         ":MLProgramDialect",
         ":MathDialect",
@@ -6905,6 +6906,18 @@ td_library(
     ],
 )
 
+td_library(
+    name = "LinalgTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":PDLDialectTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "LinalgOpsIncGen",
     strip_include_prefix = "include",
@@ -6951,6 +6964,26 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Linalg/IR/LinalgOps.td",
     deps = [":LinalgOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "LinalgTransformOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.td",
+    deps = [
+        ":LinalgTransformOpsTdFiles",
+    ],
 )
 
 genlinalg(
@@ -7196,6 +7229,28 @@ cc_library(
         ":TensorDialect",
         ":TilingInterface",
         ":ViewLikeInterface",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "LinalgTransformOps",
+    srcs = [
+        "lib/Dialect/Linalg/TransformOps/LinalgTransformOps.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LinalgOps",
+        ":LinalgTransformOpsIncGen",
+        ":LinalgTransforms",
+        ":PDLDialect",
+        ":Parser",
+        ":SideEffectInterfaces",
+        ":TransformDialect",
         "//llvm:Support",
     ],
 )
