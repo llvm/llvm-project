@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=nvptx64-nvidia-cuda -mattr=+ptx75 < %s | FileCheck %s
+; RUN: %if ptxas-11.5 %{ llc -mtriple=nvptx64-nvidia-cuda -mattr=+ptx75 < %s | %ptxas-verify %}
 
 ; DICompileUnit without 'nameTableKind: None' results in
 ; debug_pubnames and debug_pubtypes sections in DWARF. These sections

@@ -1,4 +1,5 @@
 ; RUN: llc -O2 -tail-dup-size=100 -enable-tail-merge=0 < %s | FileCheck %s
+; RUN: %if ptxas %{ llc -O2 -tail-dup-size=100 -enable-tail-merge=0 < %s | %ptxas-verify %}
 target triple = "nvptx64-nvidia-cuda"
 
 declare void @foo()

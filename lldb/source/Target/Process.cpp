@@ -5831,7 +5831,7 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
 Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     MemoryRegionInfo &range_info) {
   if (const lldb::ABISP &abi = GetABI())
-    load_addr = abi->FixDataAddress(load_addr);
+    load_addr = abi->FixAnyAddress(load_addr);
   return DoGetMemoryRegionInfo(load_addr, range_info);
 }
 
@@ -5866,7 +5866,7 @@ Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
       range_end != LLDB_INVALID_ADDRESS &&
       // If we have non-address bits and some are set then the end
       // is at or beyond the end of mappable memory.
-      !(abi && (abi->FixDataAddress(range_end) != range_end)));
+      !(abi && (abi->FixAnyAddress(range_end) != range_end)));
 
   return error;
 }

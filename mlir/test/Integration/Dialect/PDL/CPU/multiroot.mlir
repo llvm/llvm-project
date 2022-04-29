@@ -15,7 +15,7 @@ module @patterns {
     %rxact = pdl.operand : %in_type
     %weight = pdl.operand : %weight_type
 
-    %attr0 = pdl.attribute false
+    %attr0 = pdl.attribute = false
     %op0 = pdl.operation "tf.MatMul" (%rxact, %weight : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr0} -> (%out_type : !pdl.type)
 
     pdl.rewrite %op0 {
@@ -35,8 +35,8 @@ module @patterns {
     %rxdelta = pdl.operand : %out_type
     %weight = pdl.operand : %weight_type
 
-    %attr0 = pdl.attribute true
-    %attr1 = pdl.attribute false
+    %attr0 = pdl.attribute = true
+    %attr1 = pdl.attribute = false
     %op0 = pdl.operation "tf.MatMul" (%rxact, %rxdelta : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr1} -> (%weight_type : !pdl.type)
     %val0 = pdl.result 0 of %op0
     %op1 = pdl.operation "tf.Const" -> (%const_type : !pdl.type)
@@ -156,7 +156,7 @@ module @patterns {
     %weight = pdl.operand : %weight_type
     %bias = pdl.operand : %bias_type
 
-    %attr0 = pdl.attribute false
+    %attr0 = pdl.attribute = false
     %op0 = pdl.operation "tf.MatMul" (%rxact, %weight : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr0} -> (%out_type : !pdl.type)
     %val0 = pdl.result 0 of %op0
     %op1 = pdl.operation "tf.BiasAdd" (%val0, %bias : !pdl.value, !pdl.value) -> (%out_type : !pdl.type)
@@ -165,7 +165,7 @@ module @patterns {
     %val2 = pdl.result 0 of %op2
     %op3 = pdl.operation "tf.ReluGrad" (%rxdelta, %val2 : !pdl.value, !pdl.value) -> (%out_type : !pdl.type)
     %val3 = pdl.result 0 of %op3
-    %attr1 = pdl.attribute true
+    %attr1 = pdl.attribute = true
     %op4 = pdl.operation "tf.MatMul" (%rxact, %val3 : !pdl.value, !pdl.value) {"transpose_a" = %attr1, "transpose_b" = %attr0} -> (%weight_type : !pdl.type)
     %val4 = pdl.result 0 of %op4
     %op5 = pdl.operation "kernel.GD" (%weight, %val4 : !pdl.value, !pdl.value) -> (%weight_type : !pdl.type)
@@ -198,9 +198,9 @@ module @patterns {
     %rxdelta = pdl.operand : %out_type
     %weight = pdl.operand : %weight_type
 
-    %attr0 = pdl.attribute false
+    %attr0 = pdl.attribute = false
     %op0 = pdl.operation "tf.MatMul" (%rxact, %weight : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr0} -> (%out_type : !pdl.type)
-    %attr1 = pdl.attribute true
+    %attr1 = pdl.attribute = true
     %op1 = pdl.operation "tf.MatMul" (%rxdelta, %weight : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr1} -> (%in_type : !pdl.type)
     %op2 = pdl.operation "tf.MatMul" (%rxact, %rxdelta : !pdl.value, !pdl.value) {"transpose_a" = %attr1, "transpose_b" = %attr0} -> (%weight_type : !pdl.type)
     %val2 = pdl.result 0 of %op2

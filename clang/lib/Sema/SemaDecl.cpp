@@ -18057,16 +18057,14 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     // Handle attributes before checking the layout.
     ProcessDeclAttributeList(S, Record, Attrs);
 
-    // Maybe randomize the field order.
+    // Maybe randomize the record's decls.
     if (!getLangOpts().CPlusPlus && Record->hasAttr<RandomizeLayoutAttr>() &&
         !Record->isUnion() && !getLangOpts().RandstructSeed.empty() &&
         !Record->isRandomized()) {
-      SmallVector<Decl *, 32> OrigFieldOrdering(Record->fields());
-      SmallVector<Decl *, 32> NewFieldOrdering;
-      if (randstruct::randomizeStructureLayout(
-              Context, Record->getNameAsString(), OrigFieldOrdering,
-              NewFieldOrdering))
-        Record->reorderFields(NewFieldOrdering);
+      SmallVector<Decl *, 32> NewDeclOrdering;
+      if (randstruct::randomizeStructureLayout(Context, Record,
+                                               NewDeclOrdering))
+        Record->reorderDecls(NewDeclOrdering);
     }
 
     // We may have deferred checking for a deleted destructor. Check now.

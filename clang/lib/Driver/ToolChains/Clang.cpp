@@ -226,12 +226,16 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
   llvm::StringMap<bool> OptionStrings;
   OptionStrings.insert(std::make_pair("divd", false));
   OptionStrings.insert(std::make_pair("divf", false));
+  OptionStrings.insert(std::make_pair("divh", false));
   OptionStrings.insert(std::make_pair("vec-divd", false));
   OptionStrings.insert(std::make_pair("vec-divf", false));
+  OptionStrings.insert(std::make_pair("vec-divh", false));
   OptionStrings.insert(std::make_pair("sqrtd", false));
   OptionStrings.insert(std::make_pair("sqrtf", false));
+  OptionStrings.insert(std::make_pair("sqrth", false));
   OptionStrings.insert(std::make_pair("vec-sqrtd", false));
   OptionStrings.insert(std::make_pair("vec-sqrtf", false));
+  OptionStrings.insert(std::make_pair("vec-sqrth", false));
 
   for (unsigned i = 0; i != NumOptions; ++i) {
     StringRef Val = A->getValue(i);
@@ -255,10 +259,11 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
         D.Diag(diag::err_drv_unknown_argument) << Val;
         return;
       }
-      // The option was specified without a float or double suffix.
-      // Make sure that the double entry was not already specified.
+      // The option was specified without a half or float or double suffix.
+      // Make sure that the double or half entry was not already specified.
       // The float entry will be checked below.
-      if (OptionStrings[ValBase.str() + 'd']) {
+      if (OptionStrings[ValBase.str() + 'd'] ||
+          OptionStrings[ValBase.str() + 'h']) {
         D.Diag(diag::err_drv_invalid_value) << A->getOption().getName() << Val;
         return;
       }
@@ -273,9 +278,12 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
     // Mark the matched option as found. Do not allow duplicate specifiers.
     OptionIter->second = true;
 
-    // If the precision was not specified, also mark the double entry as found.
-    if (ValBase.back() != 'f' && ValBase.back() != 'd')
+    // If the precision was not specified, also mark the double and half entry
+    // as found.
+    if (ValBase.back() != 'f' && ValBase.back() != 'd' && ValBase.back() != 'h') {
       OptionStrings[ValBase.str() + 'd'] = true;
+      OptionStrings[ValBase.str() + 'h'] = true;
+    }
 
     // Build the output string.
     StringRef Prefix = IsDisabled ? DisabledPrefixOut : EnabledPrefixOut;
@@ -459,9 +467,9 @@ static bool addExceptionArgs(const ArgList &Args, types::ID InputType,
   }
 
   if (types::isCXX(InputType)) {
-    // Disable C++ EH by default on XCore and PS4.
+    // Disable C++ EH by default on XCore and PS4/PS5.
     bool CXXExceptionsEnabled =
-        Triple.getArch() != llvm::Triple::xcore && !Triple.isPS4();
+        Triple.getArch() != llvm::Triple::xcore && !Triple.isPS();
     Arg *ExceptionArg = Args.getLastArg(
         options::OPT_fcxx_exceptions, options::OPT_fno_cxx_exceptions,
         options::OPT_fexceptions, options::OPT_fno_exceptions);
@@ -626,7 +634,7 @@ getFramePointerKind(const ArgList &Args, const llvm::Triple &Triple) {
   bool OmitLeafFP =
       Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
                    options::OPT_mno_omit_leaf_frame_pointer,
-                   Triple.isAArch64() || Triple.isPS4() || Triple.isVE());
+                   Triple.isAArch64() || Triple.isPS() || Triple.isVE());
   if (NoOmitFP || mustUseNonLeafFramePointerForTarget(Triple) ||
       (!OmitFP && useFramePointerForTargetByDefault(Args, Triple))) {
     if (OmitLeafFP)
@@ -2303,10 +2311,10 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
 
   // Handle -mtune.
 
-  // Default to "generic" unless -march is present or targetting the PS4.
+  // Default to "generic" unless -march is present or targetting the PS4/PS5.
   std::string TuneCPU;
   if (!Args.hasArg(clang::driver::options::OPT_march_EQ) &&
-      !getToolChain().getTriple().isPS4())
+      !getToolChain().getTriple().isPS())
     TuneCPU = "generic";
 
   // Override based on -mtune.
@@ -6469,9 +6477,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_fborland_extensions,
                     options::OPT_fno_borland_extensions);
 
-  // -fno-declspec is default, except for PS4.
+  // -fno-declspec is default, except for PS4/PS5.
   if (Args.hasFlag(options::OPT_fdeclspec, options::OPT_fno_declspec,
-                   RawTriple.isPS4()))
+                   RawTriple.isPS()))
     CmdArgs.push_back("-fdeclspec");
   else if (Args.hasArg(options::OPT_fno_declspec))
     CmdArgs.push_back("-fno-declspec"); // Explicitly disabling __declspec.

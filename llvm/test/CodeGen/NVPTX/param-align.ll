@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
 
 ;;; Need 4-byte alignment on float* passed byval
 define ptx_device void @t1(float* byval(float) %x) {

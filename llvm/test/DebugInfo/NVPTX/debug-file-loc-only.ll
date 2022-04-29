@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
 ; // Bitcode in this test case is reduced version of compiled code below:
 ;extern "C" {

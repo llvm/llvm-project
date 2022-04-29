@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx | %ptxas-verify %}
 
 ; CHECK: .b8 half_array[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 @"half_array" = addrspace(1) constant [4 x half]

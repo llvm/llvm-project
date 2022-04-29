@@ -5580,9 +5580,14 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       !llvm::all_of(Ops, IsScalarOrSameVectorSize))
     return SDValue();
 
-  // If we are comparing vectors, then the result needs to be a i1 boolean
-  // that is then sign-extended back to the legal result type.
+  // If we are comparing vectors, then the result needs to be a i1 boolean that
+  // is then extended back to the legal result type depending on how booleans
+  // are represented.
   EVT SVT = (Opcode == ISD::SETCC ? MVT::i1 : VT.getScalarType());
+  ISD::NodeType ExtendCode =
+      (Opcode == ISD::SETCC && SVT != VT.getScalarType())
+          ? TargetLowering::getExtendForContent(TLI->getBooleanContents(VT))
+          : ISD::SIGN_EXTEND;
 
   // Find legal integer scalar type for constant promotion and
   // ensure that its scalar size is at least as large as source.
@@ -5640,7 +5645,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
     // Legalize the (integer) scalar constant if necessary.
     if (LegalSVT != SVT)
-      ScalarResult = getNode(ISD::SIGN_EXTEND, DL, LegalSVT, ScalarResult);
+      ScalarResult = getNode(ExtendCode, DL, LegalSVT, ScalarResult);
 
     // Scalar folding only succeeded if the result is a constant or UNDEF.
     if (!ScalarResult.isUndef() && ScalarResult.getOpcode() != ISD::Constant &&

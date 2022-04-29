@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -103,11 +104,12 @@ private:
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
+  bool foldShuffleFromReductions(Instruction &I);
 
   void replaceValue(Value &Old, Value &New) {
     Old.replaceAllUsesWith(&New);
-    New.takeName(&Old);
     if (auto *NewI = dyn_cast<Instruction>(&New)) {
+      New.takeName(&Old);
       Worklist.pushUsersToWorkList(*NewI);
       Worklist.pushValue(NewI);
     }
@@ -1113,6 +1115,118 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   return true;
 }
 
+/// Given a commutative reduction, the order of the input lanes does not alter
+/// the results. We can use this to remove certain shuffles feeding the
+/// reduction, removing the need to shuffle at all.
+bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_umax:
+    break;
+  default:
+    return false;
+  }
+
+  // Find all the inputs when looking through operations that do not alter the
+  // lane order (binops, for example). Currently we look for a single shuffle,
+  // and can ignore splat values.
+  std::queue<Value *> Worklist;
+  SmallPtrSet<Value *, 4> Visited;
+  ShuffleVectorInst *Shuffle = nullptr;
+  if (auto *Op = dyn_cast<Instruction>(I.getOperand(0)))
+    Worklist.push(Op);
+
+  while (!Worklist.empty()) {
+    Value *CV = Worklist.front();
+    Worklist.pop();
+    if (Visited.contains(CV))
+      continue;
+
+    // Splats don't change the order, so can be safely ignored.
+    if (isSplatValue(CV))
+      continue;
+
+    Visited.insert(CV);
+
+    if (auto *CI = dyn_cast<Instruction>(CV)) {
+      if (CI->isBinaryOp()) {
+        for (auto *Op : CI->operand_values())
+          Worklist.push(Op);
+        continue;
+      } else if (auto *SV = dyn_cast<ShuffleVectorInst>(CI)) {
+        if (Shuffle && Shuffle != SV)
+          return false;
+        Shuffle = SV;
+        continue;
+      }
+    }
+
+    // Anything else is currently an unknown node.
+    return false;
+  }
+
+  if (!Shuffle)
+    return false;
+
+  // Check all uses of the binary ops and shuffles are also included in the
+  // lane-invariant operations (Visited should be the list of lanewise
+  // instructions, including the shuffle that we found).
+  for (auto *V : Visited)
+    for (auto *U : V->users())
+      if (!Visited.contains(U) && U != &I)
+        return false;
+
+  FixedVectorType *VecType =
+      dyn_cast<FixedVectorType>(II->getOperand(0)->getType());
+  if (!VecType)
+    return false;
+  FixedVectorType *ShuffleInputType =
+      dyn_cast<FixedVectorType>(Shuffle->getOperand(0)->getType());
+  if (!ShuffleInputType)
+    return false;
+  int NumInputElts = ShuffleInputType->getNumElements();
+
+  // Find the mask from sorting the lanes into order. This is most likely to
+  // become a identity or concat mask. Undef elements are pushed to the end.
+  SmallVector<int> ConcatMask;
+  Shuffle->getShuffleMask(ConcatMask);
+  sort(ConcatMask, [](int X, int Y) {
+    return Y == UndefMaskElem ? true : (X == UndefMaskElem ? false : X < Y);
+  });
+  bool UsesSecondVec =
+      any_of(ConcatMask, [&](int M) { return M >= NumInputElts; });
+  InstructionCost OldCost = TTI.getShuffleCost(
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
+      Shuffle->getShuffleMask());
+  InstructionCost NewCost = TTI.getShuffleCost(
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
+      ConcatMask);
+
+  LLVM_DEBUG(dbgs() << "Found a reduction feeding from a shuffle: " << *Shuffle
+                    << "\n");
+  LLVM_DEBUG(dbgs() << "  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (NewCost < OldCost) {
+    Builder.SetInsertPoint(Shuffle);
+    Value *NewShuffle = Builder.CreateShuffleVector(
+        Shuffle->getOperand(0), Shuffle->getOperand(1), ConcatMask);
+    LLVM_DEBUG(dbgs() << "Created new shuffle: " << *NewShuffle << "\n");
+    replaceValue(*Shuffle, *NewShuffle);
+  }
+
+  return false;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -1132,6 +1246,7 @@ bool VectorCombine::run() {
       MadeChange |= foldBitcastShuf(I);
       MadeChange |= foldExtractedCmps(I);
       MadeChange |= foldShuffleOfBinops(I);
+      MadeChange |= foldShuffleFromReductions(I);
     }
     MadeChange |= scalarizeBinopOrCmp(I);
     MadeChange |= scalarizeLoadExtract(I);
