@@ -422,6 +422,7 @@ define void @no_atomic_vector_store(<2 x float> %p, i8* %p2) {
 }
 
 @c = constant i32 42
+@g = global i32 42
 
 define i32 @atomic_load_from_constant_global() {
 ; CHECK-LABEL: @atomic_load_from_constant_global(
@@ -439,6 +440,15 @@ define i8 @atomic_load_from_constant_global_bitcast() {
 ;
   %v = load atomic i8, i8* bitcast (i32* @c to i8*) seq_cst, align 1
   ret i8 %v
+}
+
+define void @atomic_load_from_non_constant_global() {
+; CHECK-LABEL: @atomic_load_from_non_constant_global(
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, i32* @g seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+  load atomic i32, i32* @g seq_cst, align 4
+  ret void
 }
 
 define void @volatile_load_from_constant_global() {
