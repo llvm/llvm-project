@@ -1238,15 +1238,18 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         // copy of the previous destination register (the cost is
         // TTI::TCC_Basic). If the source register is just reused, the cost for
         // this operation is 0.
-        unsigned NormalizedVF = LT.second.getVectorNumElements() * NumOfSrcs;
+        unsigned E = *NumOfDests.getValue();
+        unsigned NormalizedVF =
+            LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
+        unsigned NumOfSrcRegs = NormalizedVF / LegalVT.getVectorNumElements();
+        unsigned NumOfDestRegs = NormalizedVF / LegalVT.getVectorNumElements();
         SmallVector<int> NormalizedMask(NormalizedVF, UndefMaskElem);
         copy(Mask, NormalizedMask.begin());
-        unsigned E = *NumOfDests.getValue();
         unsigned PrevSrcReg = 0;
         ArrayRef<int> PrevRegMask;
         InstructionCost Cost = 0;
         processShuffleMasks(
-            NormalizedMask, NumOfSrcs, E, E, []() {},
+            NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
             [this, SingleOpTy, &PrevSrcReg, &PrevRegMask,
              &Cost](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
               if (!ShuffleVectorInst::isIdentityMask(RegMask)) {
