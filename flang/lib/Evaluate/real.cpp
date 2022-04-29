@@ -686,6 +686,35 @@ llvm::raw_ostream &Real<W, P>::AsFortran(
   return o;
 }
 
+// 16.9.180
+template <typename W, int P> Real<W, P> Real<W, P>::RRSPACING() const {
+  if (IsNotANumber()) {
+    return *this;
+  } else if (IsInfinite()) {
+    return NotANumber();
+  } else {
+    Real result;
+    result.Normalize(false, binaryPrecision + exponentBias - 1, GetFraction());
+    return result;
+  }
+}
+
+// 16.9.180
+template <typename W, int P> Real<W, P> Real<W, P>::SPACING() const {
+  if (IsNotANumber()) {
+    return *this;
+  } else if (IsInfinite()) {
+    return NotANumber();
+  } else if (IsZero()) {
+    return TINY();
+  } else {
+    Real result;
+    result.Normalize(
+        false, Exponent() - binaryPrecision + 1, Fraction::MASKL(1));
+    return result;
+  }
+}
+
 template class Real<Integer<16>, 11>;
 template class Real<Integer<16>, 8>;
 template class Real<Integer<32>, 24>;

@@ -160,6 +160,8 @@ public:
   static constexpr int RANGE{Details::decimalRange};
   static constexpr int MAXEXPONENT{maxExponent - exponentBias};
   static constexpr int MINEXPONENT{2 - exponentBias};
+  Real RRSPACING() const;
+  Real SPACING() const;
 
   // SCALE(); also known as IEEE_SCALB and (in IEEE-754 '08) ScaleB.
   template <typename INT>
