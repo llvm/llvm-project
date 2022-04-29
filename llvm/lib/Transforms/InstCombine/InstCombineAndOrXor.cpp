@@ -1128,10 +1128,15 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
 /// Fold (icmp Pred1 V1, C1) & (icmp Pred2 V2, C2)
 /// or   (icmp Pred1 V1, C1) | (icmp Pred2 V2, C2)
 /// into a single comparison using range-based reasoning.
-static Value *foldAndOrOfICmpsUsingRanges(
-    ICmpInst::Predicate Pred1, Value *V1, const APInt &C1,
-    ICmpInst::Predicate Pred2, Value *V2, const APInt &C2,
-    IRBuilderBase &Builder, bool IsAnd, bool BothHaveOneUse) {
+static Value *foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
+                                          IRBuilderBase &Builder, bool IsAnd) {
+  ICmpInst::Predicate Pred1, Pred2;
+  Value *V1, *V2;
+  const APInt *C1, *C2;
+  if (!match(ICmp1, m_ICmp(Pred1, m_Value(V1), m_APInt(C1))) ||
+      !match(ICmp2, m_ICmp(Pred2, m_Value(V2), m_APInt(C2))))
+    return nullptr;
+
   // Look through add of a constant offset on V1, V2, or both operands. This
   // allows us to interpret the V + C' < C'' range idiom into a proper range.
   const APInt *Offset1 = nullptr, *Offset2 = nullptr;
@@ -1147,12 +1152,12 @@ static Value *foldAndOrOfICmpsUsingRanges(
     return nullptr;
 
   ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
-      IsAnd ? ICmpInst::getInversePredicate(Pred1) : Pred1, C1);
+      IsAnd ? ICmpInst::getInversePredicate(Pred1) : Pred1, *C1);
   if (Offset1)
     CR1 = CR1.subtract(*Offset1);
 
   ConstantRange CR2 = ConstantRange::makeExactICmpRegion(
-      IsAnd ? ICmpInst::getInversePredicate(Pred2) : Pred2, C2);
+      IsAnd ? ICmpInst::getInversePredicate(Pred2) : Pred2, *C2);
   if (Offset2)
     CR2 = CR2.subtract(*Offset2);
 
@@ -1160,7 +1165,8 @@ static Value *foldAndOrOfICmpsUsingRanges(
   Value *NewV = V1;
   Optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
   if (!CR) {
-    if (!BothHaveOneUse || CR1.isWrappedSet() || CR2.isWrappedSet())
+    if (!(ICmp1->hasOneUse() && ICmp2->hasOneUse()) || CR1.isWrappedSet() ||
+        CR2.isWrappedSet())
       return nullptr;
 
     // Check whether we have equal-size ranges that only differ by one bit.
@@ -2507,9 +2513,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, *LHSC, PredR, RHS0, *RHSC,
-                                     Builder, IsAnd,
-                                     LHS->hasOneUse() && RHS->hasOneUse());
+  return foldAndOrOfICmpsUsingRanges(LHS, RHS, Builder, IsAnd);
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
