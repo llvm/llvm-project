@@ -540,6 +540,42 @@ namespace llvm {
     return MutableArrayRef<T>(data, length);
   }
 
+  /// Construct a MutableArrayRef from a SmallVector.
+  template <typename T>
+  MutableArrayRef<T> makeMutableArrayRef(SmallVectorImpl<T> &Vec) {
+    return Vec;
+  }
+
+  /// Construct a MutableArrayRef from a SmallVector.
+  template <typename T, unsigned N>
+  MutableArrayRef<T> makeMutableArrayRef(SmallVector<T, N> &Vec) {
+    return Vec;
+  }
+
+  /// Construct a MutableArrayRef from a std::vector.
+  template<typename T>
+  MutableArrayRef<T> makeMutableArrayRef(std::vector<T> &Vec) {
+    return Vec;
+  }
+
+  /// Construct a MutableArrayRef from a std::array.
+  template <typename T, std::size_t N>
+  MutableArrayRef<T> makeMutableArrayRef(std::array<T, N> &Arr) {
+    return Arr;
+  }
+
+  /// Construct a MutableArrayRef from a MutableArrayRef (no-op) (const)
+  template <typename T>
+  MutableArrayRef<T> makeMutableArrayRef(const MutableArrayRef<T> &Vec) {
+    return Vec;
+  }
+
+  /// Construct a MutableArrayRef from a C array.
+  template<typename T, size_t N>
+  MutableArrayRef<T> makeMutableArrayRef(T (&Arr)[N]) {
+    return MutableArrayRef<T>(Arr);
+  }
+
   /// @}
   /// @name ArrayRef Comparison Operators
   /// @{
