@@ -141,6 +141,7 @@ bool AVRExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
     // Continue expanding the block until all pseudos are expanded.
     do {
       assert(ExpandCount < 10 && "pseudo expand limit reached");
+      (void)ExpandCount;
 
       bool BlockModified = expandMBB(MBB);
       Modified |= BlockModified;
