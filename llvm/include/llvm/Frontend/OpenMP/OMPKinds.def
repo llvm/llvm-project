@@ -86,6 +86,8 @@ __OMP_ARRAY_TYPE(KmpCriticalName, Int32, 8)
   OMP_STRUCT_TYPE(VarName, "struct." #Name, __VA_ARGS__)
 
 __OMP_STRUCT_TYPE(Ident, ident_t, Int32, Int32, Int32, Int32, Int8Ptr)
+__OMP_STRUCT_TYPE(OffloadEntry, __tgt_offload_entry, Int8Ptr, Int8Ptr, SizeTy,
+                  Int32, Int32)
 __OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, Int8Ptr)
 
 #undef __OMP_STRUCT_TYPE
