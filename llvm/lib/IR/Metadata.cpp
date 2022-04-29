@@ -523,35 +523,26 @@ StringRef MDString::getString() const {
       "Alignment is insufficient after objects prepended to " #CLASS);
 #include "llvm/IR/Metadata.def"
 
-void *MDNode::operator new(size_t Size, unsigned NumOps) {
-  size_t OpSize = NumOps * sizeof(MDOperand);
+void *MDNode::operator new(size_t Size, unsigned NumOps,
+                           StorageType /* Storage */) {
   // uint64_t is the most aligned type we need support (ensured by static_assert
   // above)
-  OpSize = alignTo(OpSize, alignof(uint64_t));
-  void *Ptr = reinterpret_cast<char *>(::operator new(OpSize + Size)) + OpSize;
-  MDOperand *O = static_cast<MDOperand *>(Ptr);
-  for (MDOperand *E = O - NumOps; O != E; --O)
-    (void)new (O - 1) MDOperand;
-  return Ptr;
+  size_t AllocSize = alignTo(Header::getAllocSize(NumOps), alignof(uint64_t));
+  char *Mem = reinterpret_cast<char *>(::operator new(AllocSize + Size));
+  Header *H = new (Mem + AllocSize - sizeof(Header)) Header(NumOps);
+  return reinterpret_cast<void *>(H + 1);
 }
 
-// Repress memory sanitization, due to use-after-destroy by operator
-// delete. Bug report 24578 identifies this issue.
-LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE void MDNode::operator delete(void *Mem) {
-  MDNode *N = static_cast<MDNode *>(Mem);
-  size_t OpSize = N->NumOperands * sizeof(MDOperand);
-  OpSize = alignTo(OpSize, alignof(uint64_t));
-
-  MDOperand *O = static_cast<MDOperand *>(Mem);
-  for (MDOperand *E = O - N->NumOperands; O != E; --O)
-    (O - 1)->~MDOperand();
-  ::operator delete(reinterpret_cast<char *>(Mem) - OpSize);
+void MDNode::operator delete(void *N) {
+  Header *H = reinterpret_cast<Header *>(N) - 1;
+  void *Mem = H->getAllocation();
+  H->~Header();
+  ::operator delete(Mem);
 }
 
 MDNode::MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
                ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2)
-    : Metadata(ID, Storage), NumOperands(Ops1.size() + Ops2.size()),
-      NumUnresolved(0), Context(Context) {
+    : Metadata(ID, Storage), Context(Context) {
   unsigned Op = 0;
   for (Metadata *MD : Ops1)
     setOperand(Op++, MD);
@@ -577,6 +568,19 @@ TempMDNode MDNode::clone() const {
   }
 }
 
+MDNode::Header::Header(unsigned NumOps) {
+  NumOperands = NumOps;
+  MDOperand *O = reinterpret_cast<MDOperand *>(this);
+  for (MDOperand *E = O - NumOps; O != E; --O)
+    (void)new (O - 1) MDOperand();
+}
+
+MDNode::Header::~Header() {
+  MDOperand *O = reinterpret_cast<MDOperand *>(this) - NumOperands;
+  for (MDOperand *E = O + NumOperands; O != E; ++O)
+    (void)O->~MDOperand();
+}
+
 static bool isOperandUnresolved(Metadata *Op) {
   if (auto *N = dyn_cast_or_null<MDNode>(Op))
     return !N->isResolved();
@@ -584,9 +588,9 @@ static bool isOperandUnresolved(Metadata *Op) {
 }
 
 void MDNode::countUnresolvedOperands() {
-  assert(NumUnresolved == 0 && "Expected unresolved ops to be uncounted");
+  assert(getNumUnresolved() == 0 && "Expected unresolved ops to be uncounted");
   assert(isUniqued() && "Expected this to be uniqued");
-  NumUnresolved = count_if(operands(), isOperandUnresolved);
+  setNumUnresolved(count_if(operands(), isOperandUnresolved));
 }
 
 void MDNode::makeUniqued() {
@@ -600,7 +604,7 @@ void MDNode::makeUniqued() {
   // Make this 'uniqued'.
   Storage = Uniqued;
   countUnresolvedOperands();
-  if (!NumUnresolved) {
+  if (!getNumUnresolved()) {
     dropReplaceableUses();
     assert(isResolved() && "Expected this to be resolved");
   }
@@ -624,14 +628,14 @@ void MDNode::resolve() {
   assert(isUniqued() && "Expected this to be uniqued");
   assert(!isResolved() && "Expected this to be unresolved");
 
-  NumUnresolved = 0;
+  setNumUnresolved(0);
   dropReplaceableUses();
 
   assert(isResolved() && "Expected this to be resolved");
 }
 
 void MDNode::dropReplaceableUses() {
-  assert(!NumUnresolved && "Unexpected unresolved operand");
+  assert(!getNumUnresolved() && "Unexpected unresolved operand");
 
   // Drop any RAUW support.
   if (Context.hasReplaceableUses())
@@ -640,13 +644,13 @@ void MDNode::dropReplaceableUses() {
 
 void MDNode::resolveAfterOperandChange(Metadata *Old, Metadata *New) {
   assert(isUniqued() && "Expected this to be uniqued");
-  assert(NumUnresolved != 0 && "Expected unresolved operands");
+  assert(getNumUnresolved() != 0 && "Expected unresolved operands");
 
   // Check if an operand was resolved.
   if (!isOperandUnresolved(Old)) {
     if (isOperandUnresolved(New))
       // An operand was un-resolved!
-      ++NumUnresolved;
+      setNumUnresolved(getNumUnresolved() + 1);
   } else if (!isOperandUnresolved(New))
     decrementUnresolvedOperandCount();
 }
@@ -657,7 +661,8 @@ void MDNode::decrementUnresolvedOperandCount() {
     return;
 
   assert(isUniqued() && "Expected this to be uniqued");
-  if (--NumUnresolved)
+  setNumUnresolved(getNumUnresolved() - 1);
+  if (getNumUnresolved())
     return;
 
   // Last unresolved operand has just been resolved.
@@ -732,7 +737,7 @@ void MDTuple::recalculateHash() {
 }
 
 void MDNode::dropAllReferences() {
-  for (unsigned I = 0, E = NumOperands; I != E; ++I)
+  for (unsigned I = 0, E = getNumOperands(); I != E; ++I)
     setOperand(I, nullptr);
   if (Context.hasReplaceableUses()) {
     Context.getReplaceableUses()->resolveAllUses(/* ResolveUsers */ false);
@@ -868,7 +873,8 @@ MDTuple *MDTuple::getImpl(LLVMContext &Context, ArrayRef<Metadata *> MDs,
     assert(ShouldCreate && "Expected non-uniqued nodes to always be created");
   }
 
-  return storeImpl(new (MDs.size()) MDTuple(Context, Storage, Hash, MDs),
+  return storeImpl(new (MDs.size(), Storage)
+                       MDTuple(Context, Storage, Hash, MDs),
                    Storage, Context.pImpl->MDTuples);
 }
 
@@ -880,7 +886,7 @@ void MDNode::deleteTemporary(MDNode *N) {
 
 void MDNode::storeDistinctInContext() {
   assert(!Context.hasReplaceableUses() && "Unexpected replaceable uses");
-  assert(!NumUnresolved && "Unexpected unresolved nodes");
+  assert(!getNumUnresolved() && "Unexpected unresolved nodes");
   Storage = Distinct;
   assert(isResolved() && "Expected this to be resolved");
 
@@ -913,7 +919,7 @@ void MDNode::replaceOperandWith(unsigned I, Metadata *New) {
 }
 
 void MDNode::setOperand(unsigned I, Metadata *New) {
-  assert(I < NumOperands);
+  assert(I < getNumOperands());
   mutable_begin()[I].reset(New, isUniqued() ? this : nullptr);
 }
 
