@@ -9,6 +9,10 @@
 // This diagnostic client prints out their diagnostic messages.
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "flang/Frontend/TextDiagnostic.h"
@@ -19,9 +23,9 @@
 
 using namespace Fortran::frontend;
 
-TextDiagnosticPrinter::TextDiagnosticPrinter(
-    raw_ostream &os, clang::DiagnosticOptions *diags)
-    : os_(os), diagOpts_(diags) {}
+TextDiagnosticPrinter::TextDiagnosticPrinter(raw_ostream &diagOs,
+                                             clang::DiagnosticOptions *diags)
+    : os(diagOs), diagOpts(diags) {}
 
 TextDiagnosticPrinter::~TextDiagnosticPrinter() {}
 
@@ -35,21 +39,22 @@ void TextDiagnosticPrinter::HandleDiagnostic(
   llvm::SmallString<100> outStr;
   info.FormatDiagnostic(outStr);
 
-  llvm::raw_svector_ostream DiagMessageStream(outStr);
+  llvm::raw_svector_ostream diagMessageStream(outStr);
 
-  if (!prefix_.empty())
-    os_ << prefix_ << ": ";
+  if (!prefix.empty())
+    os << prefix << ": ";
 
   // We only emit diagnostics in contexts that lack valid source locations.
   assert(!info.getLocation().isValid() &&
       "Diagnostics with valid source location are not supported");
 
-  Fortran::frontend::TextDiagnostic::PrintDiagnosticLevel(
-      os_, level, diagOpts_->ShowColors);
-  Fortran::frontend::TextDiagnostic::PrintDiagnosticMessage(os_,
+  Fortran::frontend::TextDiagnostic::printDiagnosticLevel(os, level,
+                                                          diagOpts->ShowColors);
+  Fortran::frontend::TextDiagnostic::printDiagnosticMessage(
+      os,
       /*IsSupplemental=*/level == clang::DiagnosticsEngine::Note,
-      DiagMessageStream.str(), diagOpts_->ShowColors);
+      diagMessageStream.str(), diagOpts->ShowColors);
 
-  os_.flush();
+  os.flush();
   return;
 }

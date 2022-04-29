@@ -10,24 +10,29 @@
 // minimize the impact of pulling in essentially everything else in Flang.
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
+
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/Pass/PassManager.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Pass/PassManager.h"
 
 namespace Fortran::frontend {
 
-static std::unique_ptr<FrontendAction> CreateFrontendAction(
-    CompilerInstance &ci) {
+static std::unique_ptr<FrontendAction>
+createFrontendAction(CompilerInstance &ci) {
 
-  switch (ci.frontendOpts().programAction) {
+  switch (ci.getFrontendOpts().programAction) {
   case InputOutputTest:
     return std::make_unique<InputOutputTestAction>();
   case PrintPreprocessedInput:
@@ -77,14 +82,14 @@ static std::unique_ptr<FrontendAction> CreateFrontendAction(
   case PluginAction: {
     for (const FrontendPluginRegistry::entry &plugin :
         FrontendPluginRegistry::entries()) {
-      if (plugin.getName() == ci.frontendOpts().ActionName) {
+      if (plugin.getName() == ci.getFrontendOpts().actionName) {
         std::unique_ptr<PluginParseTreeAction> p(plugin.instantiate());
         return std::move(p);
       }
     }
-    unsigned diagID = ci.diagnostics().getCustomDiagID(
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "unable to find plugin '%0'");
-    ci.diagnostics().Report(diagID) << ci.frontendOpts().ActionName;
+    ci.getDiagnostics().Report(diagID) << ci.getFrontendOpts().actionName;
     return nullptr;
   }
   }
@@ -92,9 +97,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendAction(
   llvm_unreachable("Invalid program action!");
 }
 
-bool ExecuteCompilerInvocation(CompilerInstance *flang) {
+bool executeCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
-  if (flang->frontendOpts().showHelp) {
+  if (flang->getFrontendOpts().showHelp) {
     clang::driver::getDriverOptTable().printHelp(llvm::outs(),
         "flang-new -fc1 [options] file...", "LLVM 'Flang' Compiler",
         /*Include=*/clang::driver::options::FC1Option,
@@ -104,61 +109,61 @@ bool ExecuteCompilerInvocation(CompilerInstance *flang) {
   }
 
   // Honor -version.
-  if (flang->frontendOpts().showVersion) {
+  if (flang->getFrontendOpts().showVersion) {
     llvm::cl::PrintVersionMessage();
     return true;
   }
 
   // Load any requested plugins.
-  for (const std::string &Path : flang->frontendOpts().plugins) {
-    std::string Error;
-    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(
-            Path.c_str(), &Error)) {
-      unsigned diagID = flang->diagnostics().getCustomDiagID(
+  for (const std::string &path : flang->getFrontendOpts().plugins) {
+    std::string error;
+    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(path.c_str(),
+                                                          &error)) {
+      unsigned diagID = flang->getDiagnostics().getCustomDiagID(
           clang::DiagnosticsEngine::Error, "unable to load plugin '%0': '%1'");
-      flang->diagnostics().Report(diagID) << Path << Error;
+      flang->getDiagnostics().Report(diagID) << path << error;
     }
   }
 
   // Honor -mllvm. This should happen AFTER plugins have been loaded!
-  if (!flang->frontendOpts().llvmArgs.empty()) {
-    unsigned numArgs = flang->frontendOpts().llvmArgs.size();
+  if (!flang->getFrontendOpts().llvmArgs.empty()) {
+    unsigned numArgs = flang->getFrontendOpts().llvmArgs.size();
     auto args = std::make_unique<const char *[]>(numArgs + 2);
     args[0] = "flang (LLVM option parsing)";
 
     for (unsigned i = 0; i != numArgs; ++i)
-      args[i + 1] = flang->frontendOpts().llvmArgs[i].c_str();
+      args[i + 1] = flang->getFrontendOpts().llvmArgs[i].c_str();
 
     args[numArgs + 1] = nullptr;
     llvm::cl::ParseCommandLineOptions(numArgs + 1, args.get());
   }
 
   // Honor -mmlir. This should happen AFTER plugins have been loaded!
-  if (!flang->frontendOpts().mlirArgs.empty()) {
+  if (!flang->getFrontendOpts().mlirArgs.empty()) {
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
-    unsigned numArgs = flang->frontendOpts().mlirArgs.size();
+    unsigned numArgs = flang->getFrontendOpts().mlirArgs.size();
     auto args = std::make_unique<const char *[]>(numArgs + 2);
     args[0] = "flang (MLIR option parsing)";
 
     for (unsigned i = 0; i != numArgs; ++i)
-      args[i + 1] = flang->frontendOpts().mlirArgs[i].c_str();
+      args[i + 1] = flang->getFrontendOpts().mlirArgs[i].c_str();
 
     args[numArgs + 1] = nullptr;
     llvm::cl::ParseCommandLineOptions(numArgs + 1, args.get());
   }
 
   // If there were errors in processing arguments, don't do anything else.
-  if (flang->diagnostics().hasErrorOccurred()) {
+  if (flang->getDiagnostics().hasErrorOccurred()) {
     return false;
   }
 
   // Create and execute the frontend action.
-  std::unique_ptr<FrontendAction> act(CreateFrontendAction(*flang));
+  std::unique_ptr<FrontendAction> act(createFrontendAction(*flang));
   if (!act)
     return false;
 
-  bool success = flang->ExecuteAction(*act);
+  bool success = flang->executeAction(*act);
   return success;
 }
 
