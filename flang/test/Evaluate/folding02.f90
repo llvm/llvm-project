@@ -22,8 +22,8 @@ module m
   ! Expected values come from libpgmath-precise for Real(4) and Real(8) and
   ! were computed on X86_64.
 
-  logical, parameter :: test_sign_i4 = sign(1_4,2_4) == 1_4 .and. sign(1_4,-3_4) == -1_4
-  logical, parameter :: test_sign_i8 = sign(1_8,2_8) == 1_8 .and. sign(1_8,-3_8) == -1_8
+  logical, parameter :: test_sign_i4 = sign(1_4,2) == 1_4 .and. sign(1_4,-3_8) == -1_4
+  logical, parameter :: test_sign_i8 = sign(1_8,2) == 1_8 .and. sign(1_8,-3_8) == -1_8
 
 ! Real scalar intrinsic function tests
 #define TEST_FLOATING(name, result, expected, t, k) \
@@ -67,7 +67,7 @@ module m
   TEST_R4(log_gamma, log_gamma(3.5_4), 1.20097362995147705078125_4)
   TEST_R4(mod, mod(-8.1_4, 5._4), (-3.1000003814697265625_4))
   TEST_R4(real, real(z'3f800000'), 1._4)
-  logical, parameter :: test_sign_r4 = sign(1._4,2._4) == 1._4 .and. sign(1._4,-2._4) == -1._4
+  logical, parameter :: test_sign_r4 = sign(1._4,2._8) == 1._4 .and. sign(1._4,-2._4) == -1._4
   TEST_R4(sin, sin(1.6_4), 0.99957358837127685546875_4)
   TEST_R4(sinh, sinh(0.9_4), 1.0265166759490966796875_4)
   TEST_R4(sqrt, sqrt(1.1_4), 1.0488088130950927734375_4)
@@ -116,7 +116,7 @@ module m
   TEST_R8(mod, mod(-8.1_8, 5._8), &
     (-3.0999999999999996447286321199499070644378662109375_8))
   TEST_R8(real, real(z'3ff0000000000000',8), 1._8)
-  logical, parameter :: test_sign_r8 = sign(1._8,2._8) == 1._8 .and. sign(1._8,-2._8) == -1._8
+  logical, parameter :: test_sign_r8 = sign(1._8,2._8) == 1._8 .and. sign(1._8,-2._4) == -1._8
   TEST_R8(sin, sin(1.6_8), &
     0.99957360304150510987852840116829611361026763916015625_8)
   TEST_R8(sinh, sinh(0.9_8), &
