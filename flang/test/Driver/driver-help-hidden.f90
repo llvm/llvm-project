@@ -44,6 +44,7 @@
 ! CHECK-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! CHECK-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
+! CHECK-NEXT: -fno-integrated-as     Disable the integrated assembler
 ! CHECK-NEXT: -fopenacc              Enable OpenACC
 ! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! CHECK-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
@@ -58,6 +59,8 @@
 ! CHECK-NEXT: -print-effective-triple Print the effective target triple
 ! CHECK-NEXT: -print-target-triple    Print the normalized target triple
 ! CHECK-NEXT: -P                     Disable linemarker output in -E mode
+! CHECK-NEXT: -save-temps=<value>    Save intermediate compilation results.
+! CHECK-NEXT: -save-temps            Save intermediate compilation results
 ! CHECK-NEXT: -std=<value>           Language standard to compile for
 ! CHECK-NEXT: -S                     Only run preprocess and compilation steps
 ! CHECK-NEXT: --target=<value>        Generate code for the given target
