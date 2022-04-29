@@ -301,11 +301,8 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
     return success();
   };
 
-  if (parseCommaSeparatedList(Delimiter::Braces, parseElt,
-                              " in attribute dictionary"))
-    return failure();
-
-  return success();
+  return parseCommaSeparatedList(Delimiter::Braces, parseElt,
+                                 " in attribute dictionary");
 }
 
 /// Parse a float attribute.

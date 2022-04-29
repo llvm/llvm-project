@@ -2193,10 +2193,8 @@ LogicalResult spirv::UConvertOp::verify() {
 //===----------------------------------------------------------------------===//
 
 ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
-  SmallVector<OpAsmParser::UnresolvedOperand> entryArgs;
-  SmallVector<NamedAttrList> argAttrs;
-  SmallVector<NamedAttrList> resultAttrs;
-  SmallVector<Type> argTypes;
+  SmallVector<OpAsmParser::Argument> entryArgs;
+  SmallVector<DictionaryAttr> resultAttrs;
   SmallVector<Type> resultTypes;
   auto &builder = parser.getBuilder();
 
@@ -2209,10 +2207,13 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   // Parse the function signature.
   bool isVariadic = false;
   if (function_interface_impl::parseFunctionSignature(
-          parser, /*allowVariadic=*/false, entryArgs, argTypes, argAttrs,
-          isVariadic, resultTypes, resultAttrs))
+          parser, /*allowVariadic=*/false, entryArgs, isVariadic, resultTypes,
+          resultAttrs))
     return failure();
 
+  SmallVector<Type> argTypes;
+  for (auto &arg : entryArgs)
+    argTypes.push_back(arg.type);
   auto fnType = builder.getFunctionType(argTypes, resultTypes);
   state.addAttribute(FunctionOpInterface::getTypeAttrName(),
                      TypeAttr::get(fnType));
@@ -2227,15 +2228,13 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return failure();
 
   // Add the attributes to the function arguments.
-  assert(argAttrs.size() == argTypes.size());
   assert(resultAttrs.size() == resultTypes.size());
-  function_interface_impl::addArgAndResultAttrs(builder, state, argAttrs,
+  function_interface_impl::addArgAndResultAttrs(builder, state, entryArgs,
                                                 resultAttrs);
 
   // Parse the optional function body.
   auto *body = state.addRegion();
-  OptionalParseResult result = parser.parseOptionalRegion(
-      *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes);
+  OptionalParseResult result = parser.parseOptionalRegion(*body, entryArgs);
   return failure(result.hasValue() && failed(*result));
 }
 

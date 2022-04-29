@@ -275,7 +275,7 @@ ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse the body region.
-  if (parser.parseRegion(*bodyRegion, /*arguments=*/{}, /*argTypes=*/{}))
+  if (parser.parseRegion(*bodyRegion, /*arguments=*/{}))
     return failure();
   AllocaScopeOp::ensureTerminator(*bodyRegion, parser.getBuilder(),
                                   result.location);
@@ -1215,7 +1215,7 @@ ParseResult GenericAtomicRMWOp::parse(OpAsmParser &parser,
     return failure();
 
   Region *body = result.addRegion();
-  if (parser.parseRegion(*body, llvm::None, llvm::None) ||
+  if (parser.parseRegion(*body, {}) ||
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
   result.types.push_back(memrefType.cast<MemRefType>().getElementType());

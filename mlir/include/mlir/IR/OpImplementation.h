@@ -633,14 +633,14 @@ public:
   /// unlike `OpBuilder::getType`, this method does not implicitly insert a
   /// context parameter.
   template <typename T, typename... ParamsT>
-  T getChecked(SMLoc loc, ParamsT &&... params) {
+  T getChecked(SMLoc loc, ParamsT &&...params) {
     return T::getChecked([&] { return emitError(loc); },
                          std::forward<ParamsT>(params)...);
   }
   /// A variant of `getChecked` that uses the result of `getNameLoc` to emit
   /// errors.
   template <typename T, typename... ParamsT>
-  T getChecked(ParamsT &&... params) {
+  T getChecked(ParamsT &&...params) {
     return T::getChecked([&] { return emitError(getNameLoc()); },
                          std::forward<ParamsT>(params)...);
   }
@@ -1093,7 +1093,6 @@ public:
     SMLoc location;  // Location of the token.
     StringRef name;  // Value name, e.g. %42 or %abc
     unsigned number; // Number, e.g. 12 for an operand like %xyz#12
-    Optional<Location> sourceLoc; // Source location specifier if present.
   };
 
   /// Parse different components, viz., use-info of operand(s), successor(s),
@@ -1220,33 +1219,63 @@ public:
                           AffineExpr &expr) = 0;
 
   //===--------------------------------------------------------------------===//
+  // Argument Parsing
+  //===--------------------------------------------------------------------===//
+
+  struct Argument {
+    UnresolvedOperand ssaName;    // SourceLoc, SSA name, result #.
+    Type type;                    // Type.
+    DictionaryAttr attrs;         // Attributes if present.
+    Optional<Location> sourceLoc; // Source location specifier if present.
+  };
+
+  /// Parse a single argument with the following syntax:
+  ///
+  ///   `%ssaName : !type { optionalAttrDict} loc(optionalSourceLoc)`
+  ///
+  /// If `allowType` is false or `allowAttrs` are false then the respective
+  /// parts of the grammar are not parsed.
+  virtual ParseResult parseArgument(Argument &result, bool allowType = false,
+                                    bool allowAttrs = false) = 0;
+
+  /// Parse a single argument if present.
+  virtual OptionalParseResult
+  parseOptionalArgument(Argument &result, bool allowType = false,
+                        bool allowAttrs = false) = 0;
+
+  /// Parse zero or more arguments with a specified surrounding delimiter.
+  virtual ParseResult parseArgumentList(SmallVectorImpl<Argument> &result,
+                                        Delimiter delimiter = Delimiter::None,
+                                        bool allowType = false,
+                                        bool allowAttrs = false) = 0;
+
+  //===--------------------------------------------------------------------===//
   // Region Parsing
   //===--------------------------------------------------------------------===//
 
   /// Parses a region. Any parsed blocks are appended to 'region' and must be
   /// moved to the op regions after the op is created. The first block of the
-  /// region takes 'arguments' of types 'argTypes'.  If 'enableNameShadowing' is
-  /// set to true, the argument names are allowed to shadow the names of other
-  /// existing SSA values defined above the region scope. 'enableNameShadowing'
-  /// can only be set to true for regions attached to operations that are
-  /// 'IsolatedFromAbove'.
+  /// region takes 'arguments'.
+  ///
+  /// If 'enableNameShadowing' is set to true, the argument names are allowed to
+  /// shadow the names of other existing SSA values defined above the region
+  /// scope. 'enableNameShadowing' can only be set to true for regions attached
+  /// to operations that are 'IsolatedFromAbove'.
   virtual ParseResult parseRegion(Region &region,
-                                  ArrayRef<UnresolvedOperand> arguments = {},
-                                  ArrayRef<Type> argTypes = {},
+                                  ArrayRef<Argument> arguments = {},
                                   bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present.
-  virtual OptionalParseResult parseOptionalRegion(
-      Region &region, ArrayRef<UnresolvedOperand> arguments = {},
-      ArrayRef<Type> argTypes = {}, bool enableNameShadowing = false) = 0;
+  virtual OptionalParseResult
+  parseOptionalRegion(Region &region, ArrayRef<Argument> arguments = {},
+                      bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present. If the region is present, a new region is
   /// allocated and placed in `region`. If no region is present or on failure,
   /// `region` remains untouched.
   virtual OptionalParseResult
   parseOptionalRegion(std::unique_ptr<Region> &region,
-                      ArrayRef<UnresolvedOperand> arguments = {},
-                      ArrayRef<Type> argTypes = {},
+                      ArrayRef<Argument> arguments = {},
                       bool enableNameShadowing = false) = 0;
 
   //===--------------------------------------------------------------------===//
@@ -1269,7 +1298,7 @@ public:
 
   /// Parse a list of assignments of the form
   ///   (%x1 = %y1, %x2 = %y2, ...)
-  ParseResult parseAssignmentList(SmallVectorImpl<UnresolvedOperand> &lhs,
+  ParseResult parseAssignmentList(SmallVectorImpl<Argument> &lhs,
                                   SmallVectorImpl<UnresolvedOperand> &rhs) {
     OptionalParseResult result = parseOptionalAssignmentList(lhs, rhs);
     if (!result.hasValue())
@@ -1278,26 +1307,8 @@ public:
   }
 
   virtual OptionalParseResult
-  parseOptionalAssignmentList(SmallVectorImpl<UnresolvedOperand> &lhs,
+  parseOptionalAssignmentList(SmallVectorImpl<Argument> &lhs,
                               SmallVectorImpl<UnresolvedOperand> &rhs) = 0;
-
-  /// Parse a list of assignments of the form
-  ///   (%x1 = %y1 : type1, %x2 = %y2 : type2, ...)
-  ParseResult
-  parseAssignmentListWithTypes(SmallVectorImpl<UnresolvedOperand> &lhs,
-                               SmallVectorImpl<UnresolvedOperand> &rhs,
-                               SmallVectorImpl<Type> &types) {
-    OptionalParseResult result =
-        parseOptionalAssignmentListWithTypes(lhs, rhs, types);
-    if (!result.hasValue())
-      return emitError(getCurrentLocation(), "expected '('");
-    return result.getValue();
-  }
-
-  virtual OptionalParseResult
-  parseOptionalAssignmentListWithTypes(SmallVectorImpl<UnresolvedOperand> &lhs,
-                                       SmallVectorImpl<UnresolvedOperand> &rhs,
-                                       SmallVectorImpl<Type> &types) = 0;
 };
 
 //===--------------------------------------------------------------------===//
@@ -1339,7 +1350,6 @@ public:
   virtual AliasResult getAlias(Type type, raw_ostream &os) const {
     return AliasResult::NoAlias;
   }
-
 };
 } // namespace mlir
 
