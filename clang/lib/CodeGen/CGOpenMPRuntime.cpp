@@ -2644,31 +2644,13 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
                                       OpenMPDirectiveKind Kind, bool EmitChecks,
                                       bool ForceSimpleCall) {
   // Check if we should use the OMPBuilder
-
-  // FIXME: The OpenMPIRBuilder finalization stack does not necessarily
-  // correspond the scope structure expected by CGOpenMPRuntime because until
-  // OpenMPIRBuilder implementation is complete, some directives will still be
-  // emitted by OpenMPIRBuilder itself. Note that
-  // isLastFinalizationInfoCancellable may also be wrong and match the wrong
-  // level which happen to be the same OpenMPDirectiveKind.
-  // CGOpenMPRegionInfo* OMPRegionInfo  =
-  // dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
-  if (auto *IRBuilderRegion =
-          dyn_cast_or_null<OpenMPIRBuilderRegionInfo>(CGF.CapturedStmtInfo)) {
-    // if (OMPBuilder.isLastFinalizationInfoCancellable(Kind)) {
+  auto *OMPRegionInfo =
+      dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
+  if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
     CGF.Builder.restoreIP(OMPBuilder.createBarrier(
         CGF.Builder, Kind, ForceSimpleCall, EmitChecks));
     return;
-    // }
-    // FIXME: CGF.CapturedStmtInfo is unreliable when using OpenMPIRBuilder.
-    // OMPRegionInfo = nullptr;
-    //}  else {
-    //  OMPRegionInfo =
-    //  dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
   }
-
-  auto *OMPRegionInfo =
-      dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
 
   if (!CGF.HaveInsertPoint())
     return;
