@@ -23,9 +23,9 @@ CHECK-32: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.exe-foobar.obj
 CHECK-32: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.pdb
 CHECK-32: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.exe
 CHECK-32: compiling foobar.c -> foo.exe-foobar.obj
-CHECK-32: {{.*}}clang-cl{{(.exe)?}} -m32
+CHECK-32: {{.*}}clang-cl{{(\.EXE)?}} -m32
 CHECK-32: linking foo.exe-foobar.obj -> foo.exe
-CHECK-32: {{.*}}lld-link
+CHECK-32: {{.*}}lld-link{{(\.EXE)?}}
 
 CHECK-64: Script Arguments:
 CHECK-64:   Arch: 64
@@ -44,6 +44,6 @@ CHECK-64: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.exe-foobar.obj
 CHECK-64: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.pdb
 CHECK-64: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.exe
 CHECK-64: compiling foobar.c -> foo.exe-foobar.obj
-CHECK-64: {{.*}}clang-cl{{(.exe)?}} -m64
+CHECK-64: {{.*}}clang-cl{{(\.EXE)?}} -m64
 CHECK-64: linking foo.exe-foobar.obj -> foo.exe
-CHECK-64: {{.*}}lld-link{{(.exe)?}}
+CHECK-64: {{.*}}lld-link{{(\.EXE)?}}
