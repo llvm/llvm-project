@@ -1038,7 +1038,7 @@ public:
       CodeGenFunction &CGF, const CapturedStmt *CS,
       llvm::OpenMPIRBuilder::BodyGenCallbackTy BodyGenCB,
       llvm::OpenMPIRBuilder::PrivatizeCallbackTy PrivCB,
-      llvm::OpenMPIRBuilder::LeaveRegionCallbackTy FiniCB,
+      llvm::OpenMPIRBuilder::FinalizeCallbackTy FiniCB,
       // llvm:: OpenMPIRBuilder::  CancellationCallbackTy CancelCB,
       llvm::Value *IfCondition, llvm::Value *NumThreads,
       llvm::omp::ProcBindKind ProcBind, bool IsCancellable);

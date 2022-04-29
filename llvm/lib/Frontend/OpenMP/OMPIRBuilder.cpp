@@ -757,6 +757,26 @@ void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB,
   RegionStack.pop_back();
 }
 
+void OpenMPIRBuilder ::OMPRegionBreak:: assertOK() const {
+#ifndef NDEBUG
+    assert(!BB || !BB->getTerminator());
+    switch (Reason)    {
+    case OMPD_cancellation_point:
+    case OMPD_barrier:
+        break;
+    default:
+        llvm_unreachable("unexpected region break reason");
+    }    
+    switch (Target)    {
+    case OMPD_parallel:
+    case OMPD_sections:
+        break;
+    default:
+        llvm_unreachable("unexpected region break target");
+    }
+#endif
+}
+
 void OpenMPIRBuilder::OMPRegionInfo::assertOK() const {
 #ifndef NDEBUG
   switch (Kind) {
@@ -775,6 +795,10 @@ void OpenMPIRBuilder::OMPRegionInfo::assertOK() const {
       llvm_unreachable("Not a recognized OpenMP region");
     }
     break;
+  }
+
+  for (auto &B:Breaks) {
+      B.assertOK();
   }
 #endif
 }

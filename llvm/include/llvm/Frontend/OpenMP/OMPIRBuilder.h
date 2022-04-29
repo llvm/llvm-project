@@ -95,18 +95,15 @@ public:
   /// Type used throughout for insertion points.
   using InsertPointTy = IRBuilder<>::InsertPoint;
 
-  struct OMPRegionInfo;
-
   /// Callback type for variable finalization (think destructors).
   ///
-  /// \param ExitingIP is the insertion point at which the finalization code
+  /// \param CodeGenIP is the insertion point at which the finalization code
   ///                  should be placed.
   ///
   /// A finalize callback knows about all objects that need finalization, e.g.
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
-  using FinalizeCallbackTy =
-      std::function<void(InsertPointTy ExitingIP)>; 
+  using FinalizeCallbackTy = std::function<void(InsertPointTy CodeGenIP)>;
 
   enum class RegionKind {
     /// Sentinel object so we don't always have to check whether the stack is
@@ -121,19 +118,27 @@ public:
     Directive
   };
 
+/// An irregular exit out of a region, such as by cancellation.
   struct OMPRegionBreak {
+/// The end of this basic block is current end of the path for breaking out of the region. Must have no terminator so finializations (eg. destructors) can be appended until rejoining at the end of the target region.
     BasicBlock *BB;
+
+    /// What triggered the break out of a region, such as a canecellation point.
     omp::Directive Reason;
+
+    /// The kind of region that is being exited. Control flow will rejoin after the innermost region of this kind.
     omp::Directive Target;
 
     OMPRegionBreak(BasicBlock *BB, omp::Directive Reason, omp::Directive Target)
         : BB(BB), Reason(Reason), Target(Target) {}
+
+    /// Consistency self-check.
+    void assertOK() const;
   };
 
   struct OMPRegionInfo {
     RegionKind Kind;
     omp::Directive DK;
-    // LeaveRegionCallbackTy FiniCB;
 
     /// Inside a parallel region, determines whether a barrier must check
     /// whether cancellation has occured.
