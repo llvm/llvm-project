@@ -40291,7 +40291,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     // Canonicalize SHUFFLE(BINOP(X,Y)) -> BINOP(SHUFFLE(X),SHUFFLE(Y)).
     // Perform this after other shuffle combines to allow inner shuffles to be
     // combined away first.
-    if (SDValue BinOp = canonicalizeShuffleWithBinOps(Op, DAG, SDLoc(N)))
+    if (SDValue BinOp = canonicalizeShuffleWithBinOps(Op, DAG, dl))
       return BinOp;
   }
 
@@ -40478,6 +40478,11 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
                                    Depth + 1))
       return true;
 
+    // Fold shift(0,x) -> 0
+    if (DemandedElts.isSubsetOf(KnownZero))
+      return TLO.CombineTo(
+          Op, getZeroVector(VT.getSimpleVT(), Subtarget, TLO.DAG, SDLoc(Op)));
+
     // Aggressively peek through ops to get at the demanded elts.
     if (!DemandedElts.isAllOnes())
       if (SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
@@ -40498,9 +40503,16 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (SimplifyDemandedVectorElts(LHS, DemandedElts, LHSUndef, LHSZero, TLO,
                                    Depth + 1))
       return true;
+
+    // Fold shift(0,x) -> 0
+    if (DemandedElts.isSubsetOf(LHSZero))
+      return TLO.CombineTo(
+          Op, getZeroVector(VT.getSimpleVT(), Subtarget, TLO.DAG, SDLoc(Op)));
+
     if (SimplifyDemandedVectorElts(RHS, DemandedElts, RHSUndef, RHSZero, TLO,
                                    Depth + 1))
       return true;
+
     KnownZero = LHSZero;
     break;
   }
@@ -50664,6 +50676,11 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   MVT VT = N->getSimpleValueType(0);
+
+  // ANDNP(undef, x) -> 0
+  // ANDNP(x, undef) -> 0
+  if (N0.isUndef() || N1.isUndef())
+    return DAG.getConstant(0, SDLoc(N), VT);
 
   // ANDNP(0, x) -> x
   if (ISD::isBuildVectorAllZeros(N0.getNode()))

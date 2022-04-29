@@ -13,6 +13,13 @@
 // the child_thread. This test ensures sigretrun is handled correctly (see:
 // UnwindCursor<A, R>::setInfoForSigReturn).
 
+// Android/Bionic does not support pthread_cancel.
+#ifdef __BIONIC__
+int main() {
+  return 0;
+}
+#else
+
 #include <chrono>
 #include <condition_variable>
 #include <pthread.h>
@@ -48,3 +55,4 @@ int main() {
   pthread_join(child_thread, NULL);
   return 0;
 }
+#endif

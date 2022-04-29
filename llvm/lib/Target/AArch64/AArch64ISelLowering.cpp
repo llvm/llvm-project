@@ -4630,9 +4630,13 @@ unsigned getSignExtendedGatherOpcode(unsigned Opcode) {
 }
 
 bool getGatherScatterIndexIsExtended(SDValue Index) {
+  // Ignore non-pointer sized indices.
+  if (Index.getValueType() != MVT::nxv2i64)
+    return false;
+
   unsigned Opcode = Index.getOpcode();
   if (Opcode == ISD::SIGN_EXTEND_INREG)
-    return true;
+    return cast<VTSDNode>(Index.getOperand(1))->getVT() == MVT::nxv2i32;
 
   if (Opcode == ISD::AND) {
     SDValue Splat = Index.getOperand(1);
@@ -4656,10 +4660,10 @@ bool getGatherScatterIndexIsExtended(SDValue Index) {
 // VECTOR + IMMEDIATE:
 //    getelementptr nullptr, <vscale x N x T> (splat(#x)) + %indices)
 // -> getelementptr #x, <vscale x N x T> %indices
-void selectGatherScatterAddrMode(SDValue &BasePtr, SDValue &Index, EVT MemVT,
-                                 unsigned &Opcode, bool IsGather,
-                                 SelectionDAG &DAG) {
-  if (!isNullConstant(BasePtr))
+void selectGatherScatterAddrMode(SDValue &BasePtr, SDValue &Index,
+                                 bool IsScaled, EVT MemVT, unsigned &Opcode,
+                                 bool IsGather, SelectionDAG &DAG) {
+  if (!isNullConstant(BasePtr) || IsScaled)
     return;
 
   // FIXME: This will not match for fixed vector type codegen as the nodes in
@@ -4789,7 +4793,7 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
     Index = Index.getOperand(0);
 
   unsigned Opcode = getGatherVecOpcode(IsScaled, IsSigned, IdxNeedsExtend);
-  selectGatherScatterAddrMode(BasePtr, Index, MemVT, Opcode,
+  selectGatherScatterAddrMode(BasePtr, Index, IsScaled, MemVT, Opcode,
                               /*isGather=*/true, DAG);
 
   if (ExtType == ISD::SEXTLOAD)
@@ -4898,7 +4902,7 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
     Index = Index.getOperand(0);
 
   unsigned Opcode = getScatterVecOpcode(IsScaled, IsSigned, NeedsExtend);
-  selectGatherScatterAddrMode(BasePtr, Index, MemVT, Opcode,
+  selectGatherScatterAddrMode(BasePtr, Index, IsScaled, MemVT, Opcode,
                               /*isGather=*/false, DAG);
 
   if (IsFixedLength) {

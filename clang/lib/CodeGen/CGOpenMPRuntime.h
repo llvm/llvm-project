@@ -785,9 +785,6 @@ private:
   /// metadata.
   void loadOffloadInfoMetadata();
 
-  /// Returns __tgt_offload_entry type.
-  QualType getTgtOffloadEntryQTy();
-
   /// Start scanning from statement \a S and and emit all target regions
   /// found along the way.
   /// \param S Starting statement.
