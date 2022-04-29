@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import argparse
 import os
-import shutil
 import signal
 import subprocess
 import sys
@@ -171,14 +170,16 @@ def print_environment(env):
         print('    {0} = {1}'.format(e, formatted_value))
 
 def find_executable(binary_name, search_paths):
-    # shutil.which will ignore PATH if given a path argument, we want to include it.
-    search_paths.append(os.environ.get('PATH', ''))
-    search_path = os.pathsep.join(search_paths)
-    binary_path = shutil.which(binary_name, path=search_path)
-    if binary_path is not None:
-        # So for example, we get '/bin/gcc' instead of '/usr/../bin/gcc'.
-        binary_path = os.path.normpath(binary_path)
-    return binary_path
+    if sys.platform == 'win32':
+        binary_name = binary_name + '.exe'
+
+    search_paths = os.pathsep.join(search_paths)
+    paths = search_paths + os.pathsep + os.environ.get('PATH', '')
+    for path in paths.split(os.pathsep):
+        p = os.path.join(path, binary_name)
+        if os.path.exists(p) and not os.path.isdir(p):
+            return os.path.normpath(p)
+    return None
 
 def find_toolchain(compiler, tools_dir):
     if compiler == 'msvc':
