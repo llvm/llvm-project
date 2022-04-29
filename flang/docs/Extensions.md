@@ -206,6 +206,7 @@ end
 * External unit 0 is predefined and connected to the standard error output,
   and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
 * Objects in blank COMMON may be initialized.
+* Initialization of COMMON blocks outside of BLOCK DATA subprograms.
 * Multiple specifications of the SAVE attribute on the same object
   are allowed, with a warning.
 * Specific intrinsic functions BABS, IIABS, JIABS, KIABS, ZABS, and CDABS.

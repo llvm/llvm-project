@@ -1075,9 +1075,9 @@ ParseResult AffineDmaStartOp::parse(OpAsmParser &parser,
     return failure();
 
   // Parse optional stride and elements per stride.
-  if (parser.parseTrailingOperandList(strideInfo)) {
+  if (parser.parseTrailingOperandList(strideInfo))
     return failure();
-  }
+
   if (!strideInfo.empty() && strideInfo.size() != 2) {
     return parser.emitError(parser.getNameLoc(),
                             "expected two stride related operands");
@@ -1433,7 +1433,8 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   OpAsmParser::UnresolvedOperand inductionVariable;
   // Parse the induction variable followed by '='.
-  if (parser.parseRegionArgument(inductionVariable) || parser.parseEqual())
+  if (parser.parseOperand(inductionVariable, /*allowResultNumber=*/false) ||
+      parser.parseEqual())
     return failure();
 
   // Parse loop bounds.
@@ -3527,8 +3528,8 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
   auto &builder = parser.getBuilder();
   auto indexType = builder.getIndexType();
   SmallVector<OpAsmParser::UnresolvedOperand, 4> ivs;
-  if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
-                                     OpAsmParser::Delimiter::Paren) ||
+  if (parser.parseOperandList(ivs, OpAsmParser::Delimiter::Paren,
+                              /*allowResultNumber=*/false) ||
       parser.parseEqual() ||
       parseAffineMapWithMinMax(parser, result, MinMaxKind::Max) ||
       parser.parseKeyword("to") ||

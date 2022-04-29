@@ -105,6 +105,10 @@ TestAST::TestAST(const TestInputs &In) {
   auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->addFile(Filename, /*ModificationTime=*/0,
                llvm::MemoryBuffer::getMemBufferCopy(In.Code, Filename));
+  for (const auto &Extra : In.ExtraFiles)
+    VFS->addFile(
+        Extra.getKey(), /*ModificationTime=*/0,
+        llvm::MemoryBuffer::getMemBufferCopy(Extra.getValue(), Extra.getKey()));
   Clang->createFileManager(VFS);
 
   // Running the FrontendAction creates the other components: SourceManager,

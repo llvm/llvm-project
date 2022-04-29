@@ -1,17 +1,62 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/data-segment-relro.s -o %t1.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t2.o
-# RUN: ld.lld -shared %t2.o -o %t2.so
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/shared.s -o %t/b.o
+# RUN: ld.lld -shared -soname=b %t/b.o -o %t/b.so
 
 ## With relro or without DATA_SEGMENT_RELRO_END just aligns to
 ## page boundary.
 
-# RUN: ld.lld --hash-style=sysv -z norelro %t1.o %t2.so --script %s -o %t
-# RUN: llvm-readobj -S %t | FileCheck %s
+# RUN: ld.lld --hash-style=sysv -z norelro %t/a.o %t/b.so -T %t/1.t -o %t/a1
+# RUN: llvm-readelf -S -l %t/a1 | FileCheck %s --check-prefixes=CHECK,CHECK1
 
-# RUN: ld.lld --hash-style=sysv -z relro %t1.o %t2.so --script %s -o %t2
-# RUN: llvm-readobj -S %t2 | FileCheck %s
+# RUN: ld.lld --hash-style=sysv -z relro %t/a.o %t/b.so -T %t/1.t -o %t/a2
+# RUN: llvm-readelf -S -l %t/a2 | FileCheck %s --check-prefixes=CHECK,CHECK2
 
+# CHECK:      Name           Type     Address          Off      Size ES Flg
+# CHECK-NEXT:                NULL     {{.*}}
+# CHECK:      .dynamic       DYNAMIC  0000000000001000 001000 0000f0 10  WA
+# CHECK-NEXT: .got           PROGBITS 00000000000010f0 0010f0 000008 00  WA
+# CHECK-NEXT: __libc_atexit  PROGBITS 0000000000002000 002000 000008 00  WA
+# CHECK-NEXT: .got.plt       PROGBITS 0000000000002008 002008 000020 00  WA
+
+# CHECK1:      Program Headers:
+# CHECK1-NOT:  GNU_RELRO
+
+# CHECK2:      Program Headers:
+# CHECK2-NEXT:   Type
+# CHECK2-NEXT:   PHDR
+# CHECK2-NEXT:   LOAD
+# CHECK2-NEXT:   LOAD
+# CHECK2-NEXT:   LOAD
+# CHECK2-NEXT:   LOAD
+# CHECK2-NEXT:   DYNAMIC
+# CHECK2-NEXT:   GNU_RELRO
+# CHECK2-NEXT:   GNU_STACK
+
+# CHECK2:      Section to Segment mapping:
+# CHECK2:        06     .dynamic .got {{$}}
+
+# RUN: sed '/DATA_SEGMENT_RELRO_END/d' %t/1.t > %t/2.t
+# RUN: ld.lld %t/a.o %t/b.so -T %t/2.t -o /dev/null
+
+#--- a.s
+.global _start
+_start:
+  .long bar
+  jmp *bar2@GOTPCREL(%rip)
+
+.section .data,"aw"
+.quad 0
+
+.zero 4
+.section .foo,"aw"
+.section .bss,"",@nobits
+
+.section __libc_atexit,"aw",@progbits
+.dc.a __libc_atexit
+
+#--- 1.t
 SECTIONS {
   . = SIZEOF_HEADERS;
 
@@ -25,42 +70,12 @@ SECTIONS {
 
   . = DATA_SEGMENT_RELRO_END (1 ? 24 : 0, .);
 
+  __libc_atexit : { *(__libc_atexit) }
   .got.plt : { *(.got.plt) }
   .data : { *(.data) }
   .bss : { *(.bss) }
 
   . = DATA_SEGMENT_END (.);
-}
 
-# CHECK:       Section {
-# CHECK:         Index:
-# CHECK:         Name: .got
-# CHECK-NEXT:    Type: SHT_PROGBITS
-# CHECK-NEXT:    Flags [
-# CHECK-NEXT:      SHF_ALLOC
-# CHECK-NEXT:      SHF_WRITE
-# CHECK-NEXT:    ]
-# CHECK-NEXT:    Address: 0x10F0
-# CHECK-NEXT:    Offset: 0x10F0
-# CHECK-NEXT:    Size:
-# CHECK-NEXT:    Link:
-# CHECK-NEXT:    Info:
-# CHECK-NEXT:    AddressAlignment:
-# CHECK-NEXT:    EntrySize:
-# CHECK-NEXT:  }
-# CHECK-NEXT:  Section {
-# CHECK-NEXT:    Index:
-# CHECK-NEXT:    Name: .got.plt
-# CHECK-NEXT:    Type: SHT_PROGBITS
-# CHECK-NEXT:    Flags [
-# CHECK-NEXT:      SHF_ALLOC
-# CHECK-NEXT:      SHF_WRITE
-# CHECK-NEXT:    ]
-# CHECK-NEXT:    Address: 0x2000
-# CHECK-NEXT:    Offset: 0x2000
-# CHECK-NEXT:    Size:
-# CHECK-NEXT:    Link:
-# CHECK-NEXT:    Info:
-# CHECK-NEXT:    AddressAlignment:
-# CHECK-NEXT:    EntrySize:
-# CHECK-NEXT:  }
+  .comment 0 : { *(.comment) }
+}

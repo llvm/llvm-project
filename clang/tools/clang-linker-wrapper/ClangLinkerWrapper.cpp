@@ -160,6 +160,10 @@ static codegen::RegisterCodeGenFlags CodeGenFlags;
 /// section will contain one or more offloading binaries stored contiguously.
 #define OFFLOAD_SECTION_MAGIC_STR ".llvm.offloading"
 
+/// The magic offset for the first object inside CUDA's fatbinary. This can be
+/// different but it should work for what is passed here.
+static constexpr unsigned FatbinaryOffset = 0x50;
+
 /// Information for a device offloading file extracted from the host.
 struct DeviceFile {
   DeviceFile(StringRef Kind, StringRef TheTriple, StringRef Arch,
@@ -173,7 +177,10 @@ struct DeviceFile {
 };
 
 namespace llvm {
-/// Helper that allows DeviceFile to be used as a key in a DenseMap.
+/// Helper that allows DeviceFile to be used as a key in a DenseMap. For now we
+/// assume device files with matching architectures and triples but different
+/// offloading kinds should be handlded together, this may not be true in the
+/// future.
 template <> struct DenseMapInfo<DeviceFile> {
   static DeviceFile getEmptyKey() {
     return {DenseMapInfo<StringRef>::getEmptyKey(),
@@ -953,13 +960,37 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
         MemoryBuffer::getFileOrSTDIN(File);
     if (std::error_code EC = BufferOrErr.getError())
       return createFileError(File, EC);
+    MemoryBufferRef Buffer = **BufferOrErr;
 
     file_magic Type = identify_magic((*BufferOrErr)->getBuffer());
-    if (Type != file_magic::bitcode) {
+    switch (Type) {
+    case file_magic::bitcode: {
+      Expected<std::unique_ptr<lto::InputFile>> InputFileOrErr =
+          llvm::lto::InputFile::create(Buffer);
+      if (!InputFileOrErr)
+        return InputFileOrErr.takeError();
+
+      // Save the input file and the buffer associated with its memory.
+      BitcodeFiles.push_back(std::move(*InputFileOrErr));
+      SavedBuffers.push_back(std::move(*BufferOrErr));
+      continue;
+    }
+    case file_magic::cuda_fatbinary: {
+      // Cuda fatbinaries made by Clang almost almost have an object eighty
+      // bytes from the beginning. This should be sufficient to identify the
+      // symbols.
+      Buffer = MemoryBufferRef(
+          (*BufferOrErr)->getBuffer().drop_front(FatbinaryOffset), "FatBinary");
+      LLVM_FALLTHROUGH;
+    }
+    case file_magic::elf_relocatable:
+    case file_magic::elf_shared_object:
+    case file_magic::macho_object:
+    case file_magic::coff_object: {
       Expected<std::unique_ptr<ObjectFile>> ObjFile =
-          ObjectFile::createObjectFile(**BufferOrErr, Type);
+          ObjectFile::createObjectFile(Buffer);
       if (!ObjFile)
-        return ObjFile.takeError();
+        continue;
 
       NewInputFiles.push_back(File.str());
       for (auto &Sym : (*ObjFile)->symbols()) {
@@ -973,15 +1004,10 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
         else
           UsedInSharedLib.insert(Saver.save(*Name));
       }
-    } else {
-      Expected<std::unique_ptr<lto::InputFile>> InputFileOrErr =
-          llvm::lto::InputFile::create(**BufferOrErr);
-      if (!InputFileOrErr)
-        return InputFileOrErr.takeError();
-
-      // Save the input file and the buffer associated with its memory.
-      BitcodeFiles.push_back(std::move(*InputFileOrErr));
-      SavedBuffers.push_back(std::move(*BufferOrErr));
+      continue;
+    }
+    default:
+      continue;
     }
   }
 

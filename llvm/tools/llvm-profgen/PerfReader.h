@@ -84,19 +84,12 @@ struct PerfInputFile {
 struct LBREntry {
   uint64_t Source = 0;
   uint64_t Target = 0;
-  // An artificial branch stands for a series of consecutive branches starting
-  // from the current binary with a transition through external code and
-  // eventually landing back in the current binary.
-  bool IsArtificial = false;
-  LBREntry(uint64_t S, uint64_t T, bool I)
-      : Source(S), Target(T), IsArtificial(I) {}
+  LBREntry(uint64_t S, uint64_t T) : Source(S), Target(T) {}
 
 #ifndef NDEBUG
   void print() const {
     dbgs() << "from " << format("%#010x", Source) << " to "
            << format("%#010x", Target);
-    if (IsArtificial)
-      dbgs() << " Artificial";
   }
 #endif
 };
@@ -276,7 +269,7 @@ struct UnwindState {
     // When we take a stack sample, ideally the sampling distance between the
     // leaf IP of stack and the last LBR target shouldn't be very large.
     // Use a heuristic size (0x100) to filter out broken records.
-    if (LeafAddr < LBRLeaf || LeafAddr >= LBRLeaf + 0x100) {
+    if (LeafAddr < LBRLeaf || LeafAddr - LBRLeaf >= 0x100) {
       WithColor::warning() << "Bogus trace: stack tip = "
                            << format("%#010x", LeafAddr)
                            << ", LBR tip = " << format("%#010x\n", LBRLeaf);
@@ -478,13 +471,42 @@ public:
   uint64_t NumMissingExternalFrame = 0;
   uint64_t NumMismatchedProEpiBranch = 0;
   uint64_t NumMismatchedExtCallBranch = 0;
+  uint64_t NumUnpairedExtAddr = 0;
+  uint64_t NumPairedExtAddr = 0;
 
 private:
+  bool isSourceExternal(UnwindState &State) const {
+    return State.getCurrentLBRSource() == ExternalAddr;
+  }
+
+  bool isTargetExternal(UnwindState &State) const {
+    return State.getCurrentLBRTarget() == ExternalAddr;
+  }
+
+  // Determine whether the return source is from external code by checking if
+  // the target's the next inst is a call inst.
+  bool isReturnFromExternal(UnwindState &State) const {
+    return isSourceExternal(State) &&
+           (Binary->getCallAddrFromFrameAddr(State.getCurrentLBRTarget()) != 0);
+  }
+
+  // If the source is external address but it's not the `return` case, treat it
+  // as a call from external.
+  bool isCallFromExternal(UnwindState &State) const {
+    return isSourceExternal(State) &&
+           Binary->getCallAddrFromFrameAddr(State.getCurrentLBRTarget()) == 0;
+  }
+
   bool isCallState(UnwindState &State) const {
     // The tail call frame is always missing here in stack sample, we will
     // use a specific tail call tracker to infer it.
-    return isValidState(State) &&
-           Binary->addressIsCall(State.getCurrentLBRSource());
+    if (!isValidState(State))
+      return false;
+
+    if (Binary->addressIsCall(State.getCurrentLBRSource()))
+      return true;
+
+    return isCallFromExternal(State);
   }
 
   bool isReturnState(UnwindState &State) const {
@@ -493,19 +515,10 @@ private:
 
     // Simply check addressIsReturn, as ret is always reliable, both for
     // regular call and tail call.
-    if (!Binary->addressIsReturn(State.getCurrentLBRSource()))
-      return false;
+    if (Binary->addressIsReturn(State.getCurrentLBRSource()))
+      return true;
 
-    // In a callback case, a return from internal code, say A, to external
-    // runtime can happen. The external runtime can then call back to
-    // another internal routine, say B. Making an artificial branch that
-    // looks like a return from A to B can confuse the unwinder to treat
-    // the instruction before B as the call instruction. Here we detect this
-    // case if the return target is not the next inst of call inst, then we just
-    // do not treat it as a return.
-    uint64_t CallAddr =
-        Binary->getCallAddrFromFrameAddr(State.getCurrentLBRTarget());
-    return (CallAddr != 0);
+    return isReturnFromExternal(State);
   }
 
   bool isValidState(UnwindState &State) const { return !State.Invalid; }

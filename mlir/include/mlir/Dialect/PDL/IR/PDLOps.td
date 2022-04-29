@@ -118,14 +118,14 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
     %attr = pdl.attribute : %type
 
     // Define an attribute with a constant value:
-    %attr = pdl.attribute "hello"
+    %attr = pdl.attribute = "hello"
     ```
   }];
 
   let arguments = (ins Optional<PDL_Type>:$type,
                        OptionalAttr<AnyAttr>:$value);
   let results = (outs PDL_Attribute:$attr);
-  let assemblyFormat = "(`:` $type^)? ($value^)? attr-dict-with-keyword";
+  let assemblyFormat = "(`:` $type^)? (`=` $value^)? attr-dict-with-keyword";
 
   let builders = [
     OpBuilder<(ins CArg<"Value", "Value()">:$type), [{
@@ -369,6 +369,12 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
     /// Returns true if the operation type referenced supports result type
     /// inference.
     bool hasTypeInference();
+    
+    /// Returns true if the operation type referenced might support result type
+    /// inference, i.e. it supports type reference or is currently not
+    /// registered in the context. Returns false if the root operation name
+    /// has not been set.
+    bool mightHaveTypeInference();
   }];
   let hasVerifier = 1;
 }

@@ -1329,51 +1329,6 @@ llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
   return Res;
 }
 
-static void buildStructValue(ConstantStructBuilder &Fields, CodeGenModule &CGM,
-                             const RecordDecl *RD, const CGRecordLayout &RL,
-                             ArrayRef<llvm::Constant *> Data) {
-  llvm::StructType *StructTy = RL.getLLVMType();
-  unsigned PrevIdx = 0;
-  ConstantInitBuilder CIBuilder(CGM);
-  const auto *DI = Data.begin();
-  for (const FieldDecl *FD : RD->fields()) {
-    unsigned Idx = RL.getLLVMFieldNo(FD);
-    // Fill the alignment.
-    for (unsigned I = PrevIdx; I < Idx; ++I)
-      Fields.add(llvm::Constant::getNullValue(StructTy->getElementType(I)));
-    PrevIdx = Idx + 1;
-    Fields.add(*DI);
-    ++DI;
-  }
-}
-
-template <class... As>
-static llvm::GlobalVariable *
-createGlobalStruct(CodeGenModule &CGM, QualType Ty, bool IsConstant,
-                   ArrayRef<llvm::Constant *> Data, const Twine &Name,
-                   As &&... Args) {
-  const auto *RD = cast<RecordDecl>(Ty->getAsTagDecl());
-  const CGRecordLayout &RL = CGM.getTypes().getCGRecordLayout(RD);
-  ConstantInitBuilder CIBuilder(CGM);
-  ConstantStructBuilder Fields = CIBuilder.beginStruct(RL.getLLVMType());
-  buildStructValue(Fields, CGM, RD, RL, Data);
-  return Fields.finishAndCreateGlobal(
-      Name, CGM.getContext().getAlignOfGlobalVarInChars(Ty), IsConstant,
-      std::forward<As>(Args)...);
-}
-
-template <typename T>
-static void
-createConstantGlobalStructAndAddToParent(CodeGenModule &CGM, QualType Ty,
-                                         ArrayRef<llvm::Constant *> Data,
-                                         T &Parent) {
-  const auto *RD = cast<RecordDecl>(Ty->getAsTagDecl());
-  const CGRecordLayout &RL = CGM.getTypes().getCGRecordLayout(RD);
-  ConstantStructBuilder Fields = Parent.beginStruct(RL.getLLVMType());
-  buildStructValue(Fields, CGM, RD, RL, Data);
-  Fields.finishAndAddTo(Parent);
-}
-
 void CGOpenMPRuntime::setLocThreadIdInsertPt(CodeGenFunction &CGF,
                                              bool AtCurrentPoint) {
   auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
@@ -3136,32 +3091,7 @@ void CGOpenMPRuntime::OffloadEntriesInfoManagerTy::
 void CGOpenMPRuntime::createOffloadEntry(
     llvm::Constant *ID, llvm::Constant *Addr, uint64_t Size, int32_t Flags,
     llvm::GlobalValue::LinkageTypes Linkage) {
-  StringRef Name = Addr->getName();
-  llvm::Module &M = CGM.getModule();
-  llvm::LLVMContext &C = M.getContext();
-
-  // Create constant string with the name.
-  llvm::Constant *StrPtrInit = llvm::ConstantDataArray::getString(C, Name);
-
-  std::string StringName = getName({"omp_offloading", "entry_name"});
-  auto *Str = new llvm::GlobalVariable(
-      M, StrPtrInit->getType(), /*isConstant=*/true,
-      llvm::GlobalValue::InternalLinkage, StrPtrInit, StringName);
-  Str->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-
-  llvm::Constant *Data[] = {
-      llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(ID, CGM.VoidPtrTy),
-      llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, CGM.Int8PtrTy),
-      llvm::ConstantInt::get(CGM.SizeTy, Size),
-      llvm::ConstantInt::get(CGM.Int32Ty, Flags),
-      llvm::ConstantInt::get(CGM.Int32Ty, 0)};
-  std::string EntryName = getName({"omp_offloading", "entry", ""});
-  llvm::GlobalVariable *Entry = createGlobalStruct(
-      CGM, getTgtOffloadEntryQTy(), /*IsConstant=*/true, Data,
-      Twine(EntryName).concat(Name), llvm::GlobalValue::WeakAnyLinkage);
-
-  // The entry has to be created in the section the linker expects it to be.
-  Entry->setSection("omp_offloading_entries");
+  OMPBuilder.emitOffloadingEntry(ID, Addr->getName(), Size, Flags);
 }
 
 void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
@@ -3424,35 +3354,6 @@ void CGOpenMPRuntime::emitKmpRoutineEntryT(QualType KmpInt32Ty) {
         C.getFunctionType(KmpInt32Ty, KmpRoutineEntryTyArgs, EPI));
     KmpRoutineEntryPtrTy = CGM.getTypes().ConvertType(KmpRoutineEntryPtrQTy);
   }
-}
-
-QualType CGOpenMPRuntime::getTgtOffloadEntryQTy() {
-  // Make sure the type of the entry is already created. This is the type we
-  // have to create:
-  // struct __tgt_offload_entry{
-  //   void      *addr;       // Pointer to the offload entry info.
-  //                          // (function or global)
-  //   char      *name;       // Name of the function or global.
-  //   size_t     size;       // Size of the entry info (0 if it a function).
-  //   int32_t    flags;      // Flags associated with the entry, e.g. 'link'.
-  //   int32_t    reserved;   // Reserved, to use by the runtime library.
-  // };
-  if (TgtOffloadEntryQTy.isNull()) {
-    ASTContext &C = CGM.getContext();
-    RecordDecl *RD = C.buildImplicitRecord("__tgt_offload_entry");
-    RD->startDefinition();
-    addFieldToRecordDecl(C, RD, C.VoidPtrTy);
-    addFieldToRecordDecl(C, RD, C.getPointerType(C.CharTy));
-    addFieldToRecordDecl(C, RD, C.getSizeType());
-    addFieldToRecordDecl(
-        C, RD, C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/true));
-    addFieldToRecordDecl(
-        C, RD, C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/true));
-    RD->completeDefinition();
-    RD->addAttr(PackedAttr::CreateImplicit(C));
-    TgtOffloadEntryQTy = C.getRecordType(RD);
-  }
-  return TgtOffloadEntryQTy;
 }
 
 namespace {

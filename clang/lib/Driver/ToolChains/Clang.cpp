@@ -634,7 +634,7 @@ getFramePointerKind(const ArgList &Args, const llvm::Triple &Triple) {
   bool OmitLeafFP =
       Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
                    options::OPT_mno_omit_leaf_frame_pointer,
-                   Triple.isAArch64() || Triple.isPS4() || Triple.isVE());
+                   Triple.isAArch64() || Triple.isPS() || Triple.isVE());
   if (NoOmitFP || mustUseNonLeafFramePointerForTarget(Triple) ||
       (!OmitFP && useFramePointerForTargetByDefault(Args, Triple))) {
     if (OmitLeafFP)
@@ -2884,6 +2884,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
     case options::OPT_fdenormal_fp_math_EQ:
       DenormalFPMath = llvm::parseDenormalFPAttribute(A->getValue());
+      DenormalFP32Math = DenormalFPMath;
       if (!DenormalFPMath.isValid()) {
         D.Diag(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
@@ -4384,11 +4385,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsHIPDevice = JA.isDeviceOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
-  bool IsOpenMPHost = JA.isHostOffloading(Action::OFK_OpenMP);
   bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
   bool IsExtractAPI = isa<ExtractAPIJobAction>(JA);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
+  bool IsHostOffloadingAction =
+      (JA.isHostOffloading(Action::OFK_OpenMP) &&
+       Args.hasFlag(options::OPT_fopenmp_new_driver,
+                    options::OPT_no_offload_new_driver, true)) ||
+      Args.hasFlag(options::OPT_offload_new_driver,
+                   options::OPT_no_offload_new_driver, false);
   bool IsUsingLTO = D.isUsingLTO(IsDeviceOffloadAction);
   auto LTOMode = D.getLTOMode(IsDeviceOffloadAction);
 
@@ -4415,7 +4421,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   InputInfoList ModuleHeaderInputs;
   InputInfoList ExtractAPIInputs;
-  InputInfoList OpenMPHostInputs;
+  InputInfoList HostOffloadingInputs;
   const InputInfo *CudaDeviceInput = nullptr;
   const InputInfo *OpenMPDeviceInput = nullptr;
   for (const InputInfo &I : Inputs) {
@@ -4438,12 +4444,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << types::getTypeName(ExpectedInputType);
       }
       ExtractAPIInputs.push_back(I);
+    } else if (IsHostOffloadingAction) {
+      HostOffloadingInputs.push_back(I);
     } else if ((IsCuda || IsHIP) && !CudaDeviceInput) {
       CudaDeviceInput = &I;
     } else if (IsOpenMPDevice && !OpenMPDeviceInput) {
       OpenMPDeviceInput = &I;
-    } else if (IsOpenMPHost) {
-      OpenMPHostInputs.push_back(I);
     } else {
       llvm_unreachable("unexpectedly given multiple inputs");
     }
@@ -4684,7 +4690,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // Only AMDGPU supports device-side LTO.
       if (IsDeviceOffloadAction &&
           !Args.hasFlag(options::OPT_fopenmp_new_driver,
-                        options::OPT_fno_openmp_new_driver, true) &&
+                        options::OPT_no_offload_new_driver, true) &&
+          !Args.hasFlag(options::OPT_offload_new_driver,
+                        options::OPT_no_offload_new_driver, false) &&
           !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Args.getLastArg(options::OPT_foffload_lto,
@@ -6229,6 +6237,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (IsCuda || IsHIP) {
+    if (!Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
+        Args.hasArg(options::OPT_offload_new_driver))
+      D.Diag(diag::err_drv_no_rdc_new_driver);
     if (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
       CmdArgs.push_back("-fgpu-rdc");
     if (Args.hasFlag(options::OPT_fgpu_defer_diag,
@@ -6441,9 +6452,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_fborland_extensions,
                     options::OPT_fno_borland_extensions);
 
-  // -fno-declspec is default, except for PS4.
+  // -fno-declspec is default, except for PS4/PS5.
   if (Args.hasFlag(options::OPT_fdeclspec, options::OPT_fno_declspec,
-                   RawTriple.isPS4()))
+                   RawTriple.isPS()))
     CmdArgs.push_back("-fdeclspec");
   else if (Args.hasArg(options::OPT_fno_declspec))
     CmdArgs.push_back("-fno-declspec"); // Explicitly disabling __declspec.
@@ -6948,24 +6959,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // Host-side OpenMP offloading recieves the device object files and embeds it
-  // in a named section including the associated target triple and architecture.
-  if (IsOpenMPHost && !OpenMPHostInputs.empty()) {
-    auto InputFile = OpenMPHostInputs.begin();
-    auto OpenMPTCs = C.getOffloadToolChains<Action::OFK_OpenMP>();
-    for (auto TI = OpenMPTCs.first, TE = OpenMPTCs.second; TI != TE;
-         ++TI, ++InputFile) {
-      const ToolChain *TC = TI->second;
-      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
-      StringRef File =
-          C.getArgs().MakeArgString(TC->getInputFilename(*InputFile));
+  // Host-side offloading recieves the device object files and embeds it in a
+  // named section including the associated target triple and architecture.
+  for (const InputInfo Input : HostOffloadingInputs) {
+    const Action *OffloadAction = Input.getAction();
+    const ToolChain *TC = OffloadAction->getOffloadingToolChain();
+    const ArgList &TCArgs =
+        C.getArgsForToolChain(TC, OffloadAction->getOffloadingArch(),
+                              OffloadAction->getOffloadingDeviceKind());
+    StringRef File = C.getArgs().MakeArgString(TC->getInputFilename(Input));
+    StringRef Arch = (OffloadAction->getOffloadingArch())
+                         ? OffloadAction->getOffloadingArch()
+                         : TCArgs.getLastArgValue(options::OPT_march_EQ);
 
-      CmdArgs.push_back(
-          Args.MakeArgString("-fembed-offload-object=" + File + "," +
-                             Action::GetOffloadKindName(Action::OFK_OpenMP) +
-                             "," + TC->getTripleString() + "," +
-                             TCArgs.getLastArgValue(options::OPT_march_EQ)));
-    }
+    CmdArgs.push_back(Args.MakeArgString(
+        "-fembed-offload-object=" + File + "," +
+        Action::GetOffloadKindName(OffloadAction->getOffloadingDeviceKind()) +
+        "," + TC->getTripleString() + "," + Arch));
   }
 
   if (Triple.isAMDGPU()) {
@@ -8221,14 +8231,17 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
 
   // Pass the CUDA path to the linker wrapper tool.
-  for (auto &I : llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
-    const ToolChain *TC = I.second;
-    if (TC->getTriple().isNVPTX()) {
-      CudaInstallationDetector CudaInstallation(D, TheTriple, Args);
-      if (CudaInstallation.isValid())
-        CmdArgs.push_back(Args.MakeArgString(
-            "--cuda-path=" + CudaInstallation.getInstallPath()));
-      break;
+  for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP}) {
+    auto TCRange = C.getOffloadToolChains(Kind);
+    for (auto &I : llvm::make_range(TCRange.first, TCRange.second)) {
+      const ToolChain *TC = I.second;
+      if (TC->getTriple().isNVPTX()) {
+        CudaInstallationDetector CudaInstallation(D, TheTriple, Args);
+        if (CudaInstallation.isValid())
+          CmdArgs.push_back(Args.MakeArgString(
+              "--cuda-path=" + CudaInstallation.getInstallPath()));
+        break;
+      }
     }
   }
 

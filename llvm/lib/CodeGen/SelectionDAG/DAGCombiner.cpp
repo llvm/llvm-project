@@ -10426,14 +10426,19 @@ static SDValue ConvertSelectToConcatVector(SDNode *N, SelectionDAG &DAG) {
       TopHalf->isZero() ? RHS->getOperand(1) : LHS->getOperand(1));
 }
 
-bool refineUniformBase(SDValue &BasePtr, SDValue &Index, SelectionDAG &DAG) {
+bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
+                       SelectionDAG &DAG) {
   if (!isNullConstant(BasePtr) || Index.getOpcode() != ISD::ADD)
+    return false;
+
+  // Only perform the transformation when existing operands can be reused.
+  if (IndexIsScaled)
     return false;
 
   // For now we check only the LHS of the add.
   SDValue LHS = Index.getOperand(0);
   SDValue SplatVal = DAG.getSplatValue(LHS);
-  if (!SplatVal)
+  if (!SplatVal || SplatVal.getValueType() != BasePtr.getValueType())
     return false;
 
   BasePtr = SplatVal;
@@ -10443,9 +10448,10 @@ bool refineUniformBase(SDValue &BasePtr, SDValue &Index, SelectionDAG &DAG) {
 
 // Fold sext/zext of index into index type.
 bool refineIndexType(MaskedGatherScatterSDNode *MGS, SDValue &Index,
-                     bool Scaled, SelectionDAG &DAG) {
+                     bool Scaled, bool Signed, SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
+  // It's always safe to look through zero extends.
   if (Index.getOpcode() == ISD::ZERO_EXTEND) {
     SDValue Op = Index.getOperand(0);
     MGS->setIndexType(Scaled ? ISD::UNSIGNED_SCALED : ISD::UNSIGNED_UNSCALED);
@@ -10455,7 +10461,8 @@ bool refineIndexType(MaskedGatherScatterSDNode *MGS, SDValue &Index,
     }
   }
 
-  if (Index.getOpcode() == ISD::SIGN_EXTEND) {
+  // It's only safe to look through sign extends when Index is signed.
+  if (Index.getOpcode() == ISD::SIGN_EXTEND && Signed) {
     SDValue Op = Index.getOperand(0);
     MGS->setIndexType(Scaled ? ISD::SIGNED_SCALED : ISD::SIGNED_UNSCALED);
     if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType())) {
@@ -10481,14 +10488,15 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
     return Chain;
 
-  if (refineUniformBase(BasePtr, Index, DAG)) {
+  if (refineUniformBase(BasePtr, Index, MSC->isIndexScaled(), DAG)) {
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(
         DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL, Ops,
         MSC->getMemOperand(), MSC->getIndexType(), MSC->isTruncatingStore());
   }
 
-  if (refineIndexType(MSC, Index, MSC->isIndexScaled(), DAG)) {
+  if (refineIndexType(MSC, Index, MSC->isIndexScaled(), MSC->isIndexSigned(),
+                      DAG)) {
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(
         DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL, Ops,
@@ -10576,7 +10584,7 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
     return CombineTo(N, PassThru, MGT->getChain());
 
-  if (refineUniformBase(BasePtr, Index, DAG)) {
+  if (refineUniformBase(BasePtr, Index, MGT->isIndexScaled(), DAG)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
                                MGT->getMemoryVT(), DL, Ops,
@@ -10584,7 +10592,8 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
                                MGT->getExtensionType());
   }
 
-  if (refineIndexType(MGT, Index, MGT->isIndexScaled(), DAG)) {
+  if (refineIndexType(MGT, Index, MGT->isIndexScaled(), MGT->isIndexSigned(),
+                      DAG)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
                                MGT->getMemoryVT(), DL, Ops,
