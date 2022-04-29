@@ -58,7 +58,6 @@ let test_transforms () =
            ++ add_loop_rotation
            ++ add_loop_reroll
            ++ add_loop_unroll
-           ++ add_loop_unswitch
            ++ add_memcpy_opt
            ++ add_partially_inline_lib_calls
            ++ add_lower_switch
