@@ -126,7 +126,7 @@ declare void @use.ptr(i8*)
 
 define i8* @gep_sub_self() {
 ; CHECK-LABEL: @gep_sub_self(
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    ret i8* getelementptr (i8, i8* @g, i64 sub (i64 0, i64 ptrtoint (i8* @g to i64)))
 ;
   %p.int = ptrtoint i8* @g to i64
   %p.int.neg = sub i64 0, %p.int
@@ -136,7 +136,7 @@ define i8* @gep_sub_self() {
 
 define i8* @gep_sub_self_plus_addr(i64 %addr) {
 ; CHECK-LABEL: @gep_sub_self_plus_addr(
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, i8* null, i64 [[ADDR:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, i8* getelementptr (i8, i8* @g, i64 sub (i64 0, i64 ptrtoint (i8* @g to i64))), i64 [[ADDR:%.*]]
 ; CHECK-NEXT:    ret i8* [[P2]]
 ;
   %p.int = ptrtoint i8* @g to i64
@@ -164,7 +164,7 @@ define i8* @gep_plus_addr_sub_self_in_loop() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ADDR:%.*]] = call i64 @get.i64()
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, i8* null, i64 [[ADDR]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, i8* getelementptr (i8, i8* @g, i64 sub (i64 0, i64 ptrtoint (i8* @g to i64))), i64 [[ADDR]]
 ; CHECK-NEXT:    call void @use.ptr(i8* [[P2]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -182,7 +182,7 @@ loop:
 
 define i8* @gep_sub_other() {
 ; CHECK-LABEL: @gep_sub_other(
-; CHECK-NEXT:    ret i8* inttoptr (i64 sub (i64 ptrtoint (i8* @g to i64), i64 ptrtoint (i8* @g2 to i64)) to i8*)
+; CHECK-NEXT:    ret i8* getelementptr (i8, i8* @g, i64 sub (i64 0, i64 ptrtoint (i8* @g2 to i64)))
 ;
   %p.int = ptrtoint i8* @g2 to i64
   %p.int.neg = sub i64 0, %p.int
