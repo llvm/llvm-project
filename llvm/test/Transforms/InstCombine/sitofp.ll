@@ -245,3 +245,85 @@ define i25 @low_masked_input(i25 %A) {
   %C = fptoui float %B to i25
   ret i25 %C
 }
+
+define i11 @s32_half_s11(i32 %x) {
+; CHECK-LABEL: @s32_half_s11(
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i11
+; CHECK-NEXT:    ret i11 [[R]]
+;
+  %h = sitofp i32 %x to half
+  %r = fptosi half %h to i11
+  ret i11 %r
+}
+
+define i11 @s32_half_u11(i32 %x) {
+; CHECK-LABEL: @s32_half_u11(
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i11
+; CHECK-NEXT:    ret i11 [[R]]
+;
+  %h = sitofp i32 %x to half
+  %r = fptoui half %h to i11
+  ret i11 %r
+}
+
+define i11 @u32_half_s11(i32 %x) {
+; CHECK-LABEL: @u32_half_s11(
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i11
+; CHECK-NEXT:    ret i11 [[R]]
+;
+  %h = uitofp i32 %x to half
+  %r = fptosi half %h to i11
+  ret i11 %r
+}
+
+define i11 @u32_half_u11(i32 %x) {
+; CHECK-LABEL: @u32_half_u11(
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i11
+; CHECK-NEXT:    ret i11 [[R]]
+;
+  %h = uitofp i32 %x to half
+  %r = fptoui half %h to i11
+  ret i11 %r
+}
+
+define i12 @s32_half_s12(i32 %x) {
+; CHECK-LABEL: @s32_half_s12(
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i12
+; CHECK-NEXT:    ret i12 [[R]]
+;
+  %h = sitofp i32 %x to half
+  %r = fptosi half %h to i12
+  ret i12 %r
+}
+
+define i12 @s32_half_u12(i32 %x) {
+; CHECK-LABEL: @s32_half_u12(
+; CHECK-NEXT:    [[H:%.*]] = sitofp i32 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fptoui half [[H]] to i12
+; CHECK-NEXT:    ret i12 [[R]]
+;
+  %h = sitofp i32 %x to half
+  %r = fptoui half %h to i12
+  ret i12 %r
+}
+
+define i12 @u32_half_s12(i32 %x) {
+; CHECK-LABEL: @u32_half_s12(
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i12
+; CHECK-NEXT:    ret i12 [[R]]
+;
+  %h = uitofp i32 %x to half
+  %r = fptosi half %h to i12
+  ret i12 %r
+}
+
+define i12 @u32_half_u12(i32 %x) {
+; CHECK-LABEL: @u32_half_u12(
+; CHECK-NEXT:    [[H:%.*]] = uitofp i32 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fptoui half [[H]] to i12
+; CHECK-NEXT:    ret i12 [[R]]
+;
+  %h = uitofp i32 %x to half
+  %r = fptoui half %h to i12
+  ret i12 %r
+}
