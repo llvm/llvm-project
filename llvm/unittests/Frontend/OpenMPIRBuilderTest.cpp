@@ -355,6 +355,7 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+
 TEST_F(OpenMPIRBuilderTest, DbgLoc) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
@@ -449,8 +450,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
     return CodeGenIP;
   };
 
-  auto FiniCB = [&](InsertPointTy CodeGenIP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy CodeGenIP) {
     ++NumFinalizationPoints;
   };
 
@@ -531,8 +531,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested) {
     return CodeGenIP;
   };
 
-  auto FiniCB = [&](InsertPointTy CodeGenIP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy CodeGenIP) {
     ++NumFinalizationPoints;
   };
 
@@ -628,8 +627,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested2Inner) {
     return CodeGenIP;
   };
 
-  auto FiniCB = [&](InsertPointTy CodeGenIP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy CodeGenIP) {
     ++NumFinalizationPoints;
   };
 
@@ -766,8 +764,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
     return CodeGenIP;
   };
 
-  auto FiniCB = [&](InsertPointTy CodeGenIP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy CodeGenIP) {
     ++NumFinalizationPoints;
     // No destructors.
   };
@@ -900,8 +897,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
   auto *FakeDestructor = Function::Create(
       FakeDestructorTy, Function::ExternalLinkage, "fakeDestructor", M.get());
 
-  auto FiniCB = [&](InsertPointTy IP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy IP) {
     ++NumFinalizationPoints;
     Builder.restoreIP(IP);
     Builder.CreateCall(FakeDestructor,
@@ -2116,8 +2112,7 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
-  auto FiniCB = [&](InsertPointTy IP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy IP) {
     BasicBlock *IPBB = IP.getBlock();
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
@@ -2194,8 +2189,7 @@ TEST_F(OpenMPIRBuilderTest, MaskedDirective) {
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
-  auto FiniCB = [&](InsertPointTy IP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy IP) {
     BasicBlock *IPBB = IP.getBlock();
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
@@ -2261,8 +2255,7 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
-  auto FiniCB = [&](InsertPointTy IP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy IP) {
     BasicBlock *IPBB = IP.getBlock();
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
@@ -2501,8 +2494,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
-  auto FiniCB = [&](InsertPointTy IP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy IP) {
     BasicBlock *IPBB = IP.getBlock();
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
@@ -2573,8 +2565,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveSimd) {
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
-  auto FiniCB = [&](InsertPointTy IP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy IP) {
     BasicBlock *IPBB = IP.getBlock();
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
@@ -2690,8 +2681,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
-  auto FiniCB = [&](InsertPointTy IP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy IP) {
     BasicBlock *IPBB = IP.getBlock();
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
@@ -2781,8 +2771,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
-  auto FiniCB = [&](InsertPointTy IP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy IP) {
     BasicBlock *IPBB = IP.getBlock();
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
@@ -3526,8 +3515,7 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   };
 
   // Do nothing in finalization.
-  auto FiniCB = [&](InsertPointTy CodeGenIP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy CodeGenIP) {
     return CodeGenIP;
   };
 
@@ -3913,8 +3901,7 @@ TEST_F(OpenMPIRBuilderTest, CreateSections) {
   unsigned NumFiniCBCalls = 0;
   PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
 
-  auto FiniCB = [&](InsertPointTy IP, omp::Directive LeaveReason,
-                    OpenMPIRBuilder::OMPRegionInfo *Region) {
+  auto FiniCB = [&](InsertPointTy IP) {
     ++NumFiniCBCalls;
     BasicBlock *IPBB = IP.getBlock();
     EXPECT_NE(IPBB->end(), IP.getPoint());

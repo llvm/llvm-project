@@ -106,8 +106,7 @@ public:
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
   using LeaveRegionCallbackTy =
-      std::function<void(InsertPointTy ExitingIP, omp::Directive LeaveReason,
-                         OMPRegionInfo *Region)>; // TODO: make simpler again
+      std::function<void(InsertPointTy ExitingIP)>; 
 
   enum class RegionKind {
     /// Sentinel object so we don't always have to check whether the stack is
@@ -178,6 +177,7 @@ private:
 
   OMPRegionInfo *getInnermostDirectionRegion(omp::Directive DK);
 
+private:
   OMPRegionInfo *pushRegion(omp::Directive DK, bool IsCancellable
                             //,  LeaveRegionCallbackTy FiniCB = {}
   );
@@ -186,8 +186,9 @@ private:
   // omp::Directive LeaveReason = omp::OMPD_unknown);
 
   void popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB,
-                 LeaveRegionCallbackTy &LeaveCb);
+     function_ref<void(InsertPointTy ExitingIP)> LeaveCb);
 
+private:
   /// Return true if the last entry in the finalization stack is of kind \p DK
   /// and cancellable.
   bool isLastFinalizationInfoCancellable(omp::Directive DK) {

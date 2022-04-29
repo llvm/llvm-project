@@ -720,7 +720,7 @@ void OpenMPIRBuilder::emitRegionExit(InsertPointTy ExitingIP,
 #endif
 
 void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB,
-                                LeaveRegionCallbackTy &LeaveCb) {
+    function_ref<void(InsertPointTy ExitingIP)> LeaveCb) {
   auto DK = R->DK;
   assert(RegionStack.back().get() == R && "balanced region push/pop required");
   R->assertOK();
@@ -743,7 +743,7 @@ void OpenMPIRBuilder::popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB,
       B.BB = nullptr;
     } else if (LeaveCb) {
       B.BB = splitBB(Builder, true, ".fini");
-      LeaveCb(Builder.saveIP(), B.Reason, Innermost);
+      LeaveCb(Builder.saveIP());
       Builder.SetInsertPoint(B.BB);
     }
   }
@@ -1118,7 +1118,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 #endif
 
     if (FiniCB)
-      FiniCB(IP, LeaveReason, Region); // Needed?
+      FiniCB(IP); // Needed?
   };
 
   // FinalizationStack.push_back({FiniCBWrapper, OMPD_parallel, IsCancellable});
@@ -1270,7 +1270,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   if (FiniCB) {
     InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
-    FiniCB(PreFiniIP, OMPD_unknown, ParallelRegion);
+    FiniCB(PreFiniIP );
   }
 #if 0
   for (auto& B : reverse(ParallelRegion->Breaks)) { 
@@ -1582,7 +1582,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
   if (FiniCB) {
     Builder.SetInsertPoint(Finish);
     Finish = splitBB(Builder, true, "section_fini");
-    FiniCB(Builder.saveAndClearIP(), OMPD_unknown, SectionsRegion);
+    FiniCB(Builder.saveAndClearIP() );
   }
 
   // emitRegionExit(Builder.saveIP(), SectionsRegion);
