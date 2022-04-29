@@ -1128,8 +1128,10 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
 /// Fold (icmp Pred1 V1, C1) & (icmp Pred2 V2, C2)
 /// or   (icmp Pred1 V1, C1) | (icmp Pred2 V2, C2)
 /// into a single comparison using range-based reasoning.
-static Value *foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
-                                          IRBuilderBase &Builder, bool IsAnd) {
+/// NOTE: This is also used for logical and/or, must be poison-safe!
+Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
+                                                     ICmpInst *ICmp2,
+                                                     bool IsAnd) {
   ICmpInst::Predicate Pred1, Pred2;
   Value *V1, *V2;
   const APInt *C1, *C2;
@@ -2513,7 +2515,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  return foldAndOrOfICmpsUsingRanges(LHS, RHS, Builder, IsAnd);
+  return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches

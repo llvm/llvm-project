@@ -2805,6 +2805,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
           if (auto *V = foldEqOfParts(ICmp0, ICmp1, IsAnd))
             return replaceInstUsesWith(SI, V);
+
+          // This pattern would usually be converted into a bitwise and/or based
+          // on "implies poison" reasoning. However, this may fail if adds with
+          // nowrap flags are involved.
+          if (auto *V = foldAndOrOfICmpsUsingRanges(ICmp0, ICmp1, IsAnd))
+            return replaceInstUsesWith(SI, V);
         }
       }
     }
