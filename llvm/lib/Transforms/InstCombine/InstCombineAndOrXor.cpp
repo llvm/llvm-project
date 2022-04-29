@@ -706,47 +706,6 @@ Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return Builder.CreateICmp(NewPred, Input, RangeEnd);
 }
 
-static Value *
-foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
-                                     bool JoinedByAnd,
-                                     InstCombiner::BuilderTy &Builder) {
-  Value *X = LHS->getOperand(0);
-  if (X != RHS->getOperand(0))
-    return nullptr;
-
-  const APInt *C1, *C2;
-  if (!match(LHS->getOperand(1), m_APInt(C1)) ||
-      !match(RHS->getOperand(1), m_APInt(C2)))
-    return nullptr;
-
-  // We only handle (X != C1 && X != C2) and (X == C1 || X == C2).
-  ICmpInst::Predicate Pred = LHS->getPredicate();
-  if (Pred !=  RHS->getPredicate())
-    return nullptr;
-  if (JoinedByAnd && Pred != ICmpInst::ICMP_NE)
-    return nullptr;
-  if (!JoinedByAnd && Pred != ICmpInst::ICMP_EQ)
-    return nullptr;
-
-  // The larger unsigned constant goes on the right.
-  if (C1->ugt(*C2))
-    std::swap(C1, C2);
-
-  APInt Xor = *C1 ^ *C2;
-  if (Xor.isPowerOf2()) {
-    // If LHSC and RHSC differ by only one bit, then set that bit in X and
-    // compare against the larger constant:
-    // (X == C1 || X == C2) --> (X | (C1 ^ C2)) == C2
-    // (X != C1 && X != C2) --> (X | (C1 ^ C2)) != C2
-    // We choose an 'or' with a Pow2 constant rather than the inverse mask with
-    // 'and' because that may lead to smaller codegen from a smaller constant.
-    Value *Or = Builder.CreateOr(X, ConstantInt::get(X->getType(), Xor));
-    return Builder.CreateICmp(Pred, Or, ConstantInt::get(X->getType(), *C2));
-  }
-
-  return nullptr;
-}
-
 // Fold (iszero(A & K1) | iszero(A & K2)) -> (A & (K1 | K2)) != (K1 | K2)
 // Fold (!iszero(A & K1) & !iszero(A & K2)) -> (A & (K1 | K2)) == (K1 | K2)
 Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
@@ -2480,9 +2439,6 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
   // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
   if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd))
-    return V;
-
-  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, IsAnd, Builder))
     return V;
 
   if (IsAnd)
