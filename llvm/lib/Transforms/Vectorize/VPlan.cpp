@@ -283,32 +283,34 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
     LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
 
     auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
-    if (isa<UnreachableInst>(PredBBTerminator) ||
-        (TermBr && !TermBr->isConditional())) {
+    if (isa<UnreachableInst>(PredBBTerminator)) {
       assert(PredVPSuccessors.size() == 1 &&
              "Predecessor ending w/o branch must have single successor.");
-      if (TermBr) {
-        TermBr->setSuccessor(0, NewBB);
-      } else {
-        DebugLoc DL = PredBBTerminator->getDebugLoc();
-        PredBBTerminator->eraseFromParent();
-        auto *Br = BranchInst::Create(NewBB, PredBB);
-        Br->setDebugLoc(DL);
-      }
+      DebugLoc DL = PredBBTerminator->getDebugLoc();
+      PredBBTerminator->eraseFromParent();
+      auto *Br = BranchInst::Create(NewBB, PredBB);
+      Br->setDebugLoc(DL);
+    } else if (TermBr && !TermBr->isConditional()) {
+      TermBr->setSuccessor(0, NewBB);
+    } else if (PredVPSuccessors.size() == 2) {
+      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
+      assert(!PredBBTerminator->getSuccessor(idx) &&
+             "Trying to reset an existing successor block.");
+      PredBBTerminator->setSuccessor(idx, NewBB);
     } else {
-      if (PredVPSuccessors.size() == 2) {
-        unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-        assert(!PredBBTerminator->getSuccessor(idx) &&
-               "Trying to reset an existing successor block.");
-        PredBBTerminator->setSuccessor(idx, NewBB);
-      } else {
-        auto *Reg = dyn_cast<VPRegionBlock>(PredVPBB->getParent());
-        assert(Reg && !Reg->isReplicator());
-        assert(this == Reg->getSingleSuccessor());
-        PredBBTerminator->setSuccessor(0, NewBB);
-        PredBBTerminator->setSuccessor(
-            1, CFG.VPBB2IRBB[Reg->getEntryBasicBlock()]);
-      }
+      // PredVPBB is the exit block of a loop region. Connect its successor
+      // outside the region.
+      auto *LoopRegion = cast<VPRegionBlock>(PredVPBB->getParent());
+      assert(!LoopRegion->isReplicator() &&
+             "predecessor must be in a loop region");
+      assert(PredVPSuccessors.empty() &&
+             LoopRegion->getExitBasicBlock() == PredVPBB &&
+             "PredVPBB must be the exit block of its parent region");
+      assert(this == LoopRegion->getSingleSuccessor() &&
+             "the current block must be the single successor of the region");
+      PredBBTerminator->setSuccessor(0, NewBB);
+      PredBBTerminator->setSuccessor(
+          1, CFG.VPBB2IRBB[LoopRegion->getEntryBasicBlock()]);
     }
   }
   return NewBB;
@@ -320,7 +322,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   VPBlockBase *SingleHPred = nullptr;
   BasicBlock *NewBB = State->CFG.PrevBB; // Reuse it if possible.
 
-  auto IsNonReplicateR = [](VPBlockBase *BB) {
+  auto IsLoopRegion = [](VPBlockBase *BB) {
     auto *R = dyn_cast<VPRegionBlock>(BB);
     return R && !R->isReplicator();
   };
@@ -335,7 +337,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
                SingleHPred->getExitBasicBlock() == PrevVPBB &&
                PrevVPBB->getSingleHierarchicalSuccessor() &&
                (SingleHPred->getParent() == getEnclosingLoopRegion() &&
-                !IsNonReplicateR(SingleHPred))) &&      /* B */
+                !IsLoopRegion(SingleHPred))) &&         /* B */
              !(Replica && getPredecessors().empty())) { /* C */
     // The last IR basic block is reused, as an optimization, in three cases:
     // A. the first VPBB reuses the loop pre-header BB - when PrevVPBB is null;
