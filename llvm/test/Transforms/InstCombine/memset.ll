@@ -33,9 +33,10 @@ define void @memset_to_constant() {
   ret void
 }
 
+; FIXME: This is technically incorrect because it might overwrite a poison
+; value. Stop folding it once #52930 is resolved.
 define void @memset_undef(i8* %p) {
 ; CHECK-LABEL: @memset_undef(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(8) [[P:%.*]], i8 undef, i32 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0i8.i32(i8* %p, i8 undef, i32 8, i1 false)
@@ -53,7 +54,6 @@ define void @memset_undef_volatile(i8* %p) {
 
 define void @memset_poison(i8* %p) {
 ; CHECK-LABEL: @memset_poison(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(8) [[P:%.*]], i8 poison, i32 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0i8.i32(i8* %p, i8 poison, i32 8, i1 false)
