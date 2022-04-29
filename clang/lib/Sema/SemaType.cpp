@@ -166,12 +166,6 @@ namespace {
     /// DeclSpec.
     unsigned chunkIndex;
 
-    /// Whether there are non-trivial modifications to the decl spec.
-    bool trivial;
-
-    /// Whether we saved the attributes in the decl spec.
-    bool hasSavedAttrs;
-
     /// The original set of attributes on the DeclSpec.
     SmallVector<ParsedAttr *, 2> savedAttrs;
 
@@ -200,8 +194,7 @@ namespace {
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
         : sema(sema), declarator(declarator),
-          chunkIndex(declarator.getNumTypeObjects()), trivial(true),
-          hasSavedAttrs(false), parsedNoDeref(false) {}
+          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false) {}
 
     Sema &getSema() const {
       return sema;
@@ -233,13 +226,12 @@ namespace {
     /// Save the current set of attributes on the DeclSpec.
     void saveDeclSpecAttrs() {
       // Don't try to save them multiple times.
-      if (hasSavedAttrs) return;
+      if (!savedAttrs.empty())
+        return;
 
       DeclSpec &spec = getMutableDeclSpec();
       llvm::append_range(savedAttrs,
                          llvm::make_pointer_range(spec.getAttributes()));
-      trivial &= savedAttrs.empty();
-      hasSavedAttrs = true;
     }
 
     /// Record that we had nowhere to put the given type attribute.
@@ -330,22 +322,17 @@ namespace {
     bool didParseNoDeref() const { return parsedNoDeref; }
 
     ~TypeProcessingState() {
-      if (trivial) return;
+      if (savedAttrs.empty())
+        return;
 
-      restoreDeclSpecAttrs();
+      getMutableDeclSpec().getAttributes().clearListOnly();
+      for (ParsedAttr *AL : savedAttrs)
+        getMutableDeclSpec().getAttributes().addAtEnd(AL);
     }
 
   private:
     DeclSpec &getMutableDeclSpec() const {
       return const_cast<DeclSpec&>(declarator.getDeclSpec());
-    }
-
-    void restoreDeclSpecAttrs() {
-      assert(hasSavedAttrs);
-
-      getMutableDeclSpec().getAttributes().clearListOnly();
-      for (ParsedAttr *AL : savedAttrs)
-        getMutableDeclSpec().getAttributes().addAtEnd(AL);
     }
   };
 } // end anonymous namespace
