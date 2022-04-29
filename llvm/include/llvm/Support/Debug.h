@@ -67,8 +67,8 @@ void setCurrentDebugTypes(const char **Types, unsigned Count);
 
 #else
 #define isCurrentDebugType(X) (false)
-#define setCurrentDebugType(X)
-#define setCurrentDebugTypes(X, N)
+#define setCurrentDebugType(X) do { (void)(X); } while (false)
+#define setCurrentDebugTypes(X, N) do { (void)(X); (void)(N); } while (false)
 #define DEBUG_WITH_TYPE(TYPE, X) do { } while (false)
 #endif
 
