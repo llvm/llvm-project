@@ -30,6 +30,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <sstream>
@@ -269,28 +270,27 @@ private:
 // translateAttrExpr needs it, but that should be moved too.
 class CapabilityExpr {
 private:
-  /// The capability expression.
-  const til::SExpr* CapExpr;
-
-  /// True if this is a negative capability.
-  bool Negated;
+  /// The capability expression and whether it's negated.
+  llvm::PointerIntPair<const til::SExpr *, 1, bool> CapExpr;
 
 public:
-  CapabilityExpr(const til::SExpr *E, bool Neg) : CapExpr(E), Negated(Neg) {}
+  CapabilityExpr(const til::SExpr *E, bool Neg) : CapExpr(E, Neg) {}
 
-  const til::SExpr* sexpr() const { return CapExpr; }
-  bool negative() const { return Negated; }
+  const til::SExpr *sexpr() const { return CapExpr.getPointer(); }
+  bool negative() const { return CapExpr.getInt(); }
 
   CapabilityExpr operator!() const {
-    return CapabilityExpr(CapExpr, !Negated);
+    return CapabilityExpr(CapExpr.getPointer(), !CapExpr.getInt());
   }
 
   bool equals(const CapabilityExpr &other) const {
-    return (Negated == other.Negated) && sx::equals(CapExpr, other.CapExpr);
+    return (negative() == other.negative()) &&
+           sx::equals(sexpr(), other.sexpr());
   }
 
   bool matches(const CapabilityExpr &other) const {
-    return (Negated == other.Negated) && sx::matches(CapExpr, other.CapExpr);
+    return (negative() == other.negative()) &&
+           sx::matches(sexpr(), other.sexpr());
   }
 
   bool matchesUniv(const CapabilityExpr &CapE) const {
@@ -298,27 +298,27 @@ public:
   }
 
   bool partiallyMatches(const CapabilityExpr &other) const {
-    return (Negated == other.Negated) &&
-            sx::partiallyMatches(CapExpr, other.CapExpr);
+    return (negative() == other.negative()) &&
+           sx::partiallyMatches(sexpr(), other.sexpr());
   }
 
   const ValueDecl* valueDecl() const {
-    if (Negated || CapExpr == nullptr)
+    if (negative() || sexpr() == nullptr)
       return nullptr;
-    if (const auto *P = dyn_cast<til::Project>(CapExpr))
+    if (const auto *P = dyn_cast<til::Project>(sexpr()))
       return P->clangDecl();
-    if (const auto *P = dyn_cast<til::LiteralPtr>(CapExpr))
+    if (const auto *P = dyn_cast<til::LiteralPtr>(sexpr()))
       return P->clangDecl();
     return nullptr;
   }
 
   std::string toString() const {
-    if (Negated)
-      return "!" + sx::toString(CapExpr);
-    return sx::toString(CapExpr);
+    if (negative())
+      return "!" + sx::toString(sexpr());
+    return sx::toString(sexpr());
   }
 
-  bool shouldIgnore() const { return CapExpr == nullptr; }
+  bool shouldIgnore() const { return sexpr() == nullptr; }
 
   bool isInvalid() const { return sexpr() && isa<til::Undefined>(sexpr()); }
 
