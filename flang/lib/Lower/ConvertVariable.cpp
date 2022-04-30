@@ -1004,7 +1004,7 @@ void Fortran::lower::defineCommonBlocks(
   std::vector<std::tuple<fir::GlobalOp, Fortran::semantics::MutableSymbolVector,
                          mlir::Location>>
       delayedInitializations;
-  for (const auto [common, size] : commonBlocks)
+  for (const auto &[common, size] : commonBlocks)
     if (auto delayedInit = declareCommonBlock(converter, common, size))
       delayedInitializations.emplace_back(std::move(*delayedInit));
   for (auto &[global, cmnBlkMems, loc] : delayedInitializations)
