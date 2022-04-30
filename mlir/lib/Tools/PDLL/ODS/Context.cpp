@@ -59,13 +59,12 @@ const Dialect *Context::lookupDialect(StringRef name) const {
   return it == dialects.end() ? nullptr : &*it->second;
 }
 
-std::pair<Operation *, bool> Context::insertOperation(StringRef name,
-                                                      StringRef summary,
-                                                      StringRef desc,
-                                                      SMLoc loc) {
+std::pair<Operation *, bool>
+Context::insertOperation(StringRef name, StringRef summary, StringRef desc,
+                         bool supportsResultTypeInferrence, SMLoc loc) {
   std::pair<StringRef, StringRef> dialectAndName = name.split('.');
   return insertDialect(dialectAndName.first)
-      .insertOperation(name, summary, desc, loc);
+      .insertOperation(name, summary, desc, supportsResultTypeInferrence, loc);
 }
 
 const Operation *Context::lookupOperation(StringRef name) const {

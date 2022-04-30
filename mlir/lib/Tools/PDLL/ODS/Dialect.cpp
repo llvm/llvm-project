@@ -21,15 +21,15 @@ using namespace mlir::pdll::ods;
 Dialect::Dialect(StringRef name) : name(name.str()) {}
 Dialect::~Dialect() = default;
 
-std::pair<Operation *, bool> Dialect::insertOperation(StringRef name,
-                                                      StringRef summary,
-                                                      StringRef desc,
-                                                      llvm::SMLoc loc) {
+std::pair<Operation *, bool>
+Dialect::insertOperation(StringRef name, StringRef summary, StringRef desc,
+                         bool supportsResultTypeInferrence, llvm::SMLoc loc) {
   std::unique_ptr<Operation> &operation = operations[name];
   if (operation)
     return std::make_pair(&*operation, /*wasInserted*/ false);
 
-  operation.reset(new Operation(name, summary, desc, loc));
+  operation.reset(
+      new Operation(name, summary, desc, supportsResultTypeInferrence, loc));
   return std::make_pair(&*operation, /*wasInserted*/ true);
 }
 

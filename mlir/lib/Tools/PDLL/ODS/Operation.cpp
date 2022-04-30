@@ -18,8 +18,9 @@ using namespace mlir::pdll::ods;
 //===----------------------------------------------------------------------===//
 
 Operation::Operation(StringRef name, StringRef summary, StringRef desc,
-                     llvm::SMLoc loc)
+                     bool supportsTypeInferrence, llvm::SMLoc loc)
     : name(name.str()), summary(summary.str()),
+      supportsTypeInferrence(supportsTypeInferrence),
       location(loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)) {
   llvm::raw_string_ostream descOS(description);
   raw_indented_ostream(descOS).printReindented(desc.rtrim(" \t"));
