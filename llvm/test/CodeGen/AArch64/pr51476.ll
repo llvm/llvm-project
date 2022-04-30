@@ -5,12 +5,12 @@ define void @test(i8 %arg) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    cmp w0, #3
 ; CHECK-NEXT:    strb w0, [sp, #12]
-; CHECK-NEXT:    b.eq .LBB0_2
+; CHECK-NEXT:    cbz w8, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %do_call
 ; CHECK-NEXT:    bl unknown
 ; CHECK-NEXT:  .LBB0_2: // %common.ret

@@ -191,13 +191,13 @@ entry:
 define double @double_va_arg(double %a, ...) local_unnamed_addr  {
 ; ASM32-LABEL: double_va_arg:
 ; ASM32:       # %bb.0: # %entry
-; ASM32-NEXT:    stw 6, -12(1)
-; ASM32-NEXT:    addi 3, 1, 32
 ; ASM32-NEXT:    stw 5, -16(1)
+; ASM32-NEXT:    addi 3, 1, 32
+; ASM32-NEXT:    stw 6, -12(1)
 ; ASM32-NEXT:    lfd 0, -16(1)
-; ASM32-NEXT:    stw 6, -20(1)
-; ASM32-NEXT:    fadd 0, 0, 1
 ; ASM32-NEXT:    stw 5, -24(1)
+; ASM32-NEXT:    fadd 0, 0, 1
+; ASM32-NEXT:    stw 6, -20(1)
 ; ASM32-NEXT:    lfd 1, -24(1)
 ; ASM32-NEXT:    fadd 1, 1, 1
 ; ASM32-NEXT:    stw 7, 40(1)
@@ -273,22 +273,22 @@ define double @double_stack_va_arg(double %one, double %two, double %three, doub
 ; ASM32-LABEL: double_stack_va_arg:
 ; ASM32:       # %bb.0: # %entry
 ; ASM32-NEXT:    fadd 0, 1, 2
-; ASM32-NEXT:    addi 3, 1, 128
-; ASM32-NEXT:    lwz 4, 132(1)
+; ASM32-NEXT:    addi 4, 1, 128
+; ASM32-NEXT:    lwz 3, 132(1)
 ; ASM32-NEXT:    fadd 0, 0, 3
-; ASM32-NEXT:    stw 3, -4(1)
+; ASM32-NEXT:    stw 4, -4(1)
 ; ASM32-NEXT:    fadd 0, 0, 4
-; ASM32-NEXT:    lwz 3, 128(1)
+; ASM32-NEXT:    lwz 4, 128(1)
 ; ASM32-NEXT:    fadd 0, 0, 5
-; ASM32-NEXT:    stw 3, -16(1)
+; ASM32-NEXT:    stw 3, -12(1)
 ; ASM32-NEXT:    fadd 0, 0, 6
-; ASM32-NEXT:    stw 4, -12(1)
+; ASM32-NEXT:    stw 4, -16(1)
 ; ASM32-NEXT:    fadd 0, 0, 7
 ; ASM32-NEXT:    lfd 1, -16(1)
 ; ASM32-NEXT:    fadd 0, 0, 8
-; ASM32-NEXT:    stw 3, -24(1)
+; ASM32-NEXT:    stw 3, -20(1)
 ; ASM32-NEXT:    fadd 0, 0, 9
-; ASM32-NEXT:    stw 4, -20(1)
+; ASM32-NEXT:    stw 4, -24(1)
 ; ASM32-NEXT:    fadd 0, 0, 10
 ; ASM32-NEXT:    fadd 0, 0, 11
 ; ASM32-NEXT:    fadd 0, 0, 12
@@ -360,9 +360,9 @@ entry:
 
 ; 32BIT-LABEL:   body:             |
 ; 32BIT-DAG:     liveins: $f1, $f2, $f3, $f4, $f5, $f6, $f7, $f8, $f9, $f10, $f11, $f12, $f13
-; 32BIT-DAG:     renamable $r3 = ADDI %fixed-stack.0, 0
-; 32BIT-DAG:     STW killed renamable $r3, 0, %stack.0.arg1 :: (store (s32) into %ir.0)
-; 32BIT-DAG:     renamable $r3 = LWZ 0, %fixed-stack.0 :: (load (s32) from %ir.argp.cur142, align 16)
+; 32BIT-DAG:     renamable $r4 = ADDI %fixed-stack.0, 0
+; 32BIT-DAG:     STW killed renamable $r4, 0, %stack.0.arg1 :: (store (s32) into %ir.0)
+; 32BIT-DAG:     renamable $r4 = LWZ 0, %fixed-stack.0 :: (load (s32) from %ir.argp.cur142, align 16)
 ; 32BIT-DAG:     renamable $f1 = nofpexcept FADD killed renamable $f0, killed renamable $f1, implicit $rm
 ; 32BIT-DAG:     renamable $f0 = nofpexcept FADD killed renamable $f1, killed renamable $f2, implicit $rm
 ; 32BIT-DAG:     renamable $f0 = nofpexcept FADD killed renamable $f0, killed renamable $f3, implicit $rm
@@ -376,14 +376,13 @@ entry:
 ; 32BIT-DAG:     renamable $f0 = nofpexcept FADD killed renamable $f0, killed renamable $f11, implicit $rm
 ; 32BIT-DAG:     renamable $f0 = nofpexcept FADD killed renamable $f0, killed renamable $f12, implicit $rm
 ; 32BIT-DAG:     renamable $f0 = nofpexcept FADD killed renamable $f0, killed renamable $f13, implicit $rm
-; 32BIT-DAG:     renamable $r4 = LWZ 4, %fixed-stack.0 :: (load (s32) from %ir.argp.cur1 + 4)
-; 32BIT-DAG:     STW renamable $r4, 4, %stack.2 :: (store (s32) into %stack.2 + 4)
+; 32BIT-DAG:     renamable $r3 = LWZ 4, %fixed-stack.0 :: (load (s32) from %ir.argp.cur142 + 4)
+; 32BIT-DAG:     STW renamable $r3, 4, %stack.2 :: (store (s32) into %stack.2 + 4)
 ; 32BIT-DAG:     renamable $f1 = LFD 0, %stack.2 :: (load (s64) from %stack.2)
-; 32BIT-DAG:     STW killed renamable $r3, 0, %stack.3 :: (store (s32) into %stack.3, align 8)
-; 32BIT-DAG:     STW killed renamable $r4, 4, %stack.3 :: (store (s32) into %stack.3 + 4)
+; 32BIT-DAG:     STW killed renamable $r4, 0, %stack.3 :: (store (s32) into %stack.3, align 8)
+; 32BIT-DAG:     STW killed renamable $r3, 4, %stack.3 :: (store (s32) into %stack.3 + 4)
 ; 32BIT-DAG:     renamable $f2 = LFD 0, %stack.3 :: (load (s64) from %stack.3)
 ; 32BIT-DAG:     renamable $f0 = nofpexcept FADD killed renamable $f0, killed renamable $f1, implicit $rm
-; 32BIT-DAG:     STW renamable $r3, 0, %stack.2 :: (store (s32) into %stack.2, align 8)
+; 32BIT-DAG:     STW renamable $r4, 0, %stack.2 :: (store (s32) into %stack.2, align 8)
 ; 32BIT-DAG:     renamable $f1 = nofpexcept FADD killed renamable $f2, renamable $f2, implicit $rm
 ; 32BIT-DAG:     BLR implicit $lr, implicit $rm, implicit $f1
-
