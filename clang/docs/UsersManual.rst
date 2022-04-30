@@ -1219,23 +1219,22 @@ for generating PCH files:
 Using a PCH File
 ^^^^^^^^^^^^^^^^
 
-A PCH file can then be used as a prefix header when a :option:`-include`
+A PCH file can then be used as a prefix header when a :option:`-include-pch`
 option is passed to ``clang``:
 
 .. code-block:: console
 
-  $ clang -include test.h test.c -o test
+  $ clang -include-pch test.h.pch test.c -o test
 
-The ``clang`` driver will first check if a PCH file for ``test.h`` is
+The ``clang`` driver will check if the PCH file ``test.h.pch`` is
 available; if so, the contents of ``test.h`` (and the files it includes)
-will be processed from the PCH file. Otherwise, Clang falls back to
-directly processing the content of ``test.h``. This mirrors the behavior
-of GCC.
+will be processed from the PCH file. Otherwise, Clang will report an error.
 
 .. note::
 
   Clang does *not* automatically use PCH files for headers that are directly
-  included within a source file. For example:
+  included within a source file or indirectly via :option:`-include`.
+  For example:
 
   .. code-block:: console
 
@@ -1246,7 +1245,7 @@ of GCC.
 
   In this example, ``clang`` will not automatically use the PCH file for
   ``test.h`` since ``test.h`` was included directly in the source file and not
-  specified on the command line using :option:`-include`.
+  specified on the command line using :option:`-include-pch`.
 
 Relocatable PCH Files
 ^^^^^^^^^^^^^^^^^^^^^
