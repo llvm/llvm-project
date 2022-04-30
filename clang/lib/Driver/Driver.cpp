@@ -4214,17 +4214,20 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 /// Returns the canonical name for the offloading architecture when using HIP or
 /// CUDA.
 static StringRef getCanonicalArchString(Compilation &C,
-                                        llvm::opt::DerivedArgList &Args,
+                                        const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
-                                        Action::OffloadKind Kind) {
-  if (Kind == Action::OFK_Cuda) {
+                                        Action::OffloadKind Kind,
+                                        const ToolChain *TC) {
+  if (Kind == Action::OFK_Cuda ||
+      (Kind == Action::OFK_OpenMP && TC->getTriple().isNVPTX())) {
     CudaArch Arch = StringToCudaArch(ArchStr);
     if (Arch == CudaArch::UNKNOWN || !IsNVIDIAGpuArch(Arch)) {
       C.getDriver().Diag(clang::diag::err_drv_cuda_bad_gpu_arch) << ArchStr;
       return StringRef();
     }
     return Args.MakeArgStringRef(CudaArchToString(Arch));
-  } else if (Kind == Action::OFK_HIP) {
+  } else if (Kind == Action::OFK_HIP ||
+             (Kind == Action::OFK_OpenMP && TC->getTriple().isAMDGPU())) {
     llvm::StringMap<bool> Features;
     // getHIPOffloadTargetTriple() is known to return valid value as it has
     // been called successfully in the CreateOffloadingDeviceToolChains().
@@ -4239,7 +4242,8 @@ static StringRef getCanonicalArchString(Compilation &C,
     return Args.MakeArgStringRef(
         getCanonicalTargetID(Arch.getValue(), Features));
   }
-  return StringRef();
+  // If the input isn't CUDA or HIP just return the architecture.
+  return ArchStr;
 }
 
 /// Checks if the set offloading architectures does not conflict. Returns the
@@ -4259,12 +4263,8 @@ getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
 /// This function returns a set of bound architectures, if there are no bound
 /// architctures we return a set containing only the empty string.
 static llvm::DenseSet<StringRef>
-getOffloadArchs(Compilation &C, llvm::opt::DerivedArgList &Args,
-                Action::OffloadKind Kind) {
-
-  // If this is OpenMP offloading we don't use a bound architecture.
-  if (Kind == Action::OFK_OpenMP)
-    return llvm::DenseSet<StringRef>{StringRef()};
+getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
+                Action::OffloadKind Kind, const ToolChain *TC) {
 
   // --offload and --offload-arch options are mutually exclusive.
   if (Args.hasArgNoClaim(options::OPT_offload_EQ) &&
@@ -4280,12 +4280,12 @@ getOffloadArchs(Compilation &C, llvm::opt::DerivedArgList &Args,
   llvm::DenseSet<StringRef> Archs;
   for (auto &Arg : Args) {
     if (Arg->getOption().matches(options::OPT_offload_arch_EQ)) {
-      Archs.insert(getCanonicalArchString(C, Args, Arg->getValue(), Kind));
+      Archs.insert(getCanonicalArchString(C, Args, Arg->getValue(), Kind, TC));
     } else if (Arg->getOption().matches(options::OPT_no_offload_arch_EQ)) {
       if (Arg->getValue() == StringRef("all"))
         Archs.clear();
       else
-        Archs.erase(getCanonicalArchString(C, Args, Arg->getValue(), Kind));
+        Archs.erase(getCanonicalArchString(C, Args, Arg->getValue(), Kind, TC));
     }
   }
 
@@ -4301,6 +4301,11 @@ getOffloadArchs(Compilation &C, llvm::opt::DerivedArgList &Args,
       Archs.insert(CudaArchToString(CudaArch::CudaDefault));
     else if (Kind == Action::OFK_HIP)
       Archs.insert(CudaArchToString(CudaArch::HIPDefault));
+    else if (Kind == Action::OFK_OpenMP)
+      Archs.insert(StringRef());
+  } else {
+    Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
+    Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
   }
 
   return Archs;
@@ -4346,7 +4351,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Get the product of all bound architectures and toolchains.
     SmallVector<std::pair<const ToolChain *, StringRef>> TCAndArchs;
     for (const ToolChain *TC : ToolChains)
-      for (StringRef Arch : getOffloadArchs(C, Args, Kind))
+      for (StringRef Arch : getOffloadArchs(
+               C, C.getArgsForToolChain(TC, "generic", Kind), Kind, TC))
         TCAndArchs.push_back(std::make_pair(TC, Arch));
 
     for (unsigned I = 0, E = TCAndArchs.size(); I != E; ++I)
@@ -4375,9 +4381,9 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
           HostAction->setCannotBeCollapsedWithNextDependentAction();
           OffloadAction::HostDependence HDep(
               *HostAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
-              /*BoundArch=*/nullptr, Kind);
+              TCAndArch->second.data(), Kind);
           OffloadAction::DeviceDependences DDep;
-          DDep.add(*A, *TCAndArch->first, /*BoundArch=*/nullptr, Kind);
+          DDep.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
           A = C.MakeAction<OffloadAction>(HDep, DDep);
         } else if (isa<AssembleJobAction>(A) && Kind == Action::OFK_Cuda) {
           // The Cuda toolchain uses fatbinary as the linker phase to bundle the
