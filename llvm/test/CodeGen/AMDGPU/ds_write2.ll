@@ -657,20 +657,20 @@ define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(ptr addrsp
 ; CI-NEXT:    ds_write_b8 v0, v1 offset:5
 ; CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; CI-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
-; CI-NEXT:    ds_write_b8 v0, v2 offset:13
 ; CI-NEXT:    ds_write_b8 v0, v1 offset:9
+; CI-NEXT:    ds_write_b8 v0, v2 offset:13
 ; CI-NEXT:    v_lshrrev_b32_e32 v1, 24, v2
 ; CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
 ; CI-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
 ; CI-NEXT:    ds_write_b8 v0, v3 offset:8
 ; CI-NEXT:    ds_write_b8 v0, v4 offset:7
 ; CI-NEXT:    ds_write_b8 v0, v5 offset:6
-; CI-NEXT:    ds_write_b8 v0, v1 offset:16
-; CI-NEXT:    ds_write_b8 v0, v6 offset:15
-; CI-NEXT:    ds_write_b8 v0, v2 offset:14
 ; CI-NEXT:    ds_write_b8 v0, v3 offset:12
 ; CI-NEXT:    ds_write_b8 v0, v4 offset:11
 ; CI-NEXT:    ds_write_b8 v0, v5 offset:10
+; CI-NEXT:    ds_write_b8 v0, v1 offset:16
+; CI-NEXT:    ds_write_b8 v0, v6 offset:15
+; CI-NEXT:    ds_write_b8 v0, v2 offset:14
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-ALIGNED-LABEL: unaligned_offset_simple_write2_one_val_f64:
@@ -686,18 +686,18 @@ define amdgpu_kernel void @unaligned_offset_simple_write2_one_val_f64(ptr addrsp
 ; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v0 offset:5
 ; GFX9-ALIGNED-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
 ; GFX9-ALIGNED-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
-; GFX9-ALIGNED-NEXT:    ds_write_b8_d16_hi v2, v1 offset:15
-; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v1 offset:13
 ; GFX9-ALIGNED-NEXT:    ds_write_b8_d16_hi v2, v0 offset:11
 ; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v0 offset:9
+; GFX9-ALIGNED-NEXT:    ds_write_b8_d16_hi v2, v1 offset:15
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v1 offset:13
 ; GFX9-ALIGNED-NEXT:    v_lshrrev_b32_e32 v0, 24, v1
 ; GFX9-ALIGNED-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
 ; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v3 offset:8
 ; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v4 offset:6
-; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v0 offset:16
-; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v1 offset:14
 ; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v3 offset:12
 ; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v4 offset:10
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v0 offset:16
+; GFX9-ALIGNED-NEXT:    ds_write_b8 v2, v1 offset:14
 ; GFX9-ALIGNED-NEXT:    s_endpgm
 ;
 ; GFX9-UNALIGNED-LABEL: unaligned_offset_simple_write2_one_val_f64:

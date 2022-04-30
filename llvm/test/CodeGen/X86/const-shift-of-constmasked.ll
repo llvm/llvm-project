@@ -574,7 +574,7 @@ define i16 @test_i16_2032_mask_lshr_3(i16 %a0) {
 define i16 @test_i16_2032_mask_lshr_4(i16 %a0) {
 ; X86-LABEL: test_i16_2032_mask_lshr_4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $4, %eax
 ; X86-NEXT:    andl $127, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -594,7 +594,7 @@ define i16 @test_i16_2032_mask_lshr_4(i16 %a0) {
 define i16 @test_i16_2032_mask_lshr_5(i16 %a0) {
 ; X86-LABEL: test_i16_2032_mask_lshr_5:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $5, %eax
 ; X86-NEXT:    andl $63, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -614,7 +614,7 @@ define i16 @test_i16_2032_mask_lshr_5(i16 %a0) {
 define i16 @test_i16_2032_mask_lshr_6(i16 %a0) {
 ; X86-LABEL: test_i16_2032_mask_lshr_6:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $6, %eax
 ; X86-NEXT:    andl $31, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -755,7 +755,7 @@ define i16 @test_i16_2032_mask_ashr_3(i16 %a0) {
 define i16 @test_i16_2032_mask_ashr_4(i16 %a0) {
 ; X86-LABEL: test_i16_2032_mask_ashr_4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $4, %eax
 ; X86-NEXT:    andl $127, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -775,7 +775,7 @@ define i16 @test_i16_2032_mask_ashr_4(i16 %a0) {
 define i16 @test_i16_2032_mask_ashr_5(i16 %a0) {
 ; X86-LABEL: test_i16_2032_mask_ashr_5:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $5, %eax
 ; X86-NEXT:    andl $63, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -795,7 +795,7 @@ define i16 @test_i16_2032_mask_ashr_5(i16 %a0) {
 define i16 @test_i16_2032_mask_ashr_6(i16 %a0) {
 ; X86-LABEL: test_i16_2032_mask_ashr_6:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $6, %eax
 ; X86-NEXT:    andl $31, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax

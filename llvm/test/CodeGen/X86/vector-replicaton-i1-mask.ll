@@ -790,47 +790,27 @@ define void @mask_replication_factor3_vf16(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
-; AVX512BW-ONLY-LABEL: mask_replication_factor3_vf16:
-; AVX512BW-ONLY:       # %bb.0:
-; AVX512BW-ONLY-NEXT:    kmovw (%rdi), %k1
-; AVX512BW-ONLY-NEXT:    vpmovm2b %k1, %zmm0
-; AVX512BW-ONLY-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
-; AVX512BW-ONLY-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,21,21,22,22,22,23,23,23,24,24,24,25,25,25,26,26,42,43,43,43,44,44,44,45,45,45,46,46,46,47,47,47,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512BW-ONLY-NEXT:    vpmovb2m %zmm0, %k2
-; AVX512BW-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm0 {%k2} {z}
-; AVX512BW-ONLY-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [10,11,11,11,12,12,12,13,13,13,14,14,14,15,15,15]
-; AVX512BW-ONLY-NEXT:    vpermd %zmm1, %zmm2, %zmm1
-; AVX512BW-ONLY-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512BW-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm1 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    kshiftrd $16, %k2, %k1
-; AVX512BW-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm2 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm2, 64(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm1, 128(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm0, (%rdx)
-; AVX512BW-ONLY-NEXT:    vzeroupper
-; AVX512BW-ONLY-NEXT:    retq
-;
-; AVX512VBMI-ONLY-LABEL: mask_replication_factor3_vf16:
-; AVX512VBMI-ONLY:       # %bb.0:
-; AVX512VBMI-ONLY-NEXT:    kmovw (%rdi), %k1
-; AVX512VBMI-ONLY-NEXT:    vpmovm2b %k1, %zmm0
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7,8,8,8,9,9,9,10,10,10,11,11,11,12,12,12,13,13,13,14,14,14,15,15,15,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX512VBMI-ONLY-NEXT:    vpermb %zmm0, %zmm1, %zmm0
-; AVX512VBMI-ONLY-NEXT:    vpmovb2m %zmm0, %k2
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm0 {%k2} {z}
-; AVX512VBMI-ONLY-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [10,11,11,11,12,12,12,13,13,13,14,14,14,15,15,15]
-; AVX512VBMI-ONLY-NEXT:    vpermd %zmm1, %zmm2, %zmm1
-; AVX512VBMI-ONLY-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm1 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    kshiftrd $16, %k2, %k1
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm2 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm2, 64(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm1, 128(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm0, (%rdx)
-; AVX512VBMI-ONLY-NEXT:    vzeroupper
-; AVX512VBMI-ONLY-NEXT:    retq
+; AVX512BW-LABEL: mask_replication_factor3_vf16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    kmovw (%rdi), %k1
+; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm1, %zmm1
+; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX512BW-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [10,11,11,11,12,12,12,13,13,13,14,14,14,15,15,15]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm2, %zmm2
+; AVX512BW-NEXT:    vptestmd %zmm2, %zmm2, %k1
+; AVX512BW-NEXT:    vmovdqa32 128(%rsi), %zmm2 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [5,5,6,6,6,7,7,7,8,8,8,9,9,9,10,10]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm3, %zmm0
+; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512BW-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 %zmm0, 64(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm2, 128(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm1, (%rdx)
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
   %src.mask.padded = load <64 x i1>, ptr %in.maskvec, align 64
   %src.mask = shufflevector <64 x i1> %src.mask.padded, <64 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %tgt.mask = shufflevector <16 x i1> %src.mask, <16 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 10, i32 10, i32 10, i32 11, i32 11, i32 11, i32 12, i32 12, i32 12, i32 13, i32 13, i32 13, i32 14, i32 14, i32 14, i32 15, i32 15, i32 15>
@@ -6155,47 +6135,27 @@ define void @mask_replication_factor6_vf8(ptr %in.maskvec, ptr %in.vec, ptr %out
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
-; AVX512BW-ONLY-LABEL: mask_replication_factor6_vf8:
-; AVX512BW-ONLY:       # %bb.0:
-; AVX512BW-ONLY-NEXT:    kmovw (%rdi), %k1
-; AVX512BW-ONLY-NEXT:    vpmovm2b %k1, %zmm0
-; AVX512BW-ONLY-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
-; AVX512BW-ONLY-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,18,18,19,19,19,19,19,19,20,20,20,20,20,20,21,21,37,37,37,37,38,38,38,38,38,38,39,39,39,39,39,39,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512BW-ONLY-NEXT:    vpmovb2m %zmm0, %k2
-; AVX512BW-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm0 {%k2} {z}
-; AVX512BW-ONLY-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [5,5,5,5,6,6,6,6,6,6,7,7,7,7,7,7]
-; AVX512BW-ONLY-NEXT:    vpermd %zmm1, %zmm2, %zmm1
-; AVX512BW-ONLY-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512BW-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm1 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    kshiftrd $16, %k2, %k1
-; AVX512BW-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm2 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm2, 64(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm1, 128(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm0, (%rdx)
-; AVX512BW-ONLY-NEXT:    vzeroupper
-; AVX512BW-ONLY-NEXT:    retq
-;
-; AVX512VBMI-ONLY-LABEL: mask_replication_factor6_vf8:
-; AVX512VBMI-ONLY:       # %bb.0:
-; AVX512VBMI-ONLY-NEXT:    kmovw (%rdi), %k1
-; AVX512VBMI-ONLY-NEXT:    vpmovm2b %k1, %zmm0
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,6,6,6,6,6,6,7,7,7,7,7,7,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX512VBMI-ONLY-NEXT:    vpermb %zmm0, %zmm1, %zmm0
-; AVX512VBMI-ONLY-NEXT:    vpmovb2m %zmm0, %k2
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm0 {%k2} {z}
-; AVX512VBMI-ONLY-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [5,5,5,5,6,6,6,6,6,6,7,7,7,7,7,7]
-; AVX512VBMI-ONLY-NEXT:    vpermd %zmm1, %zmm2, %zmm1
-; AVX512VBMI-ONLY-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm1 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    kshiftrd $16, %k2, %k1
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm2 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm2, 64(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm1, 128(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm0, (%rdx)
-; AVX512VBMI-ONLY-NEXT:    vzeroupper
-; AVX512VBMI-ONLY-NEXT:    retq
+; AVX512BW-LABEL: mask_replication_factor6_vf8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    kmovw (%rdi), %k1
+; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm1, %zmm1
+; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX512BW-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [5,5,5,5,6,6,6,6,6,6,7,7,7,7,7,7]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm2, %zmm2
+; AVX512BW-NEXT:    vptestmd %zmm2, %zmm2, %k1
+; AVX512BW-NEXT:    vmovdqa32 128(%rsi), %zmm2 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm3, %zmm0
+; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512BW-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 %zmm0, 64(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm2, 128(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm1, (%rdx)
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
   %src.mask.padded = load <64 x i1>, ptr %in.maskvec, align 64
   %src.mask = shufflevector <64 x i1> %src.mask.padded, <64 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %tgt.mask = shufflevector <8 x i1> %src.mask, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -9585,87 +9545,47 @@ define void @mask_replication_factor7_vf16(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
-; AVX512BW-ONLY-LABEL: mask_replication_factor7_vf16:
-; AVX512BW-ONLY:       # %bb.0:
-; AVX512BW-ONLY-NEXT:    kmovw (%rdi), %k2
-; AVX512BW-ONLY-NEXT:    vpmovm2b %k2, %zmm0
-; AVX512BW-ONLY-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
-; AVX512BW-ONLY-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[9,9,9,9,9,9,10,10,10,10,10,10,10,11,11,11,27,27,27,27,28,28,28,28,28,28,28,29,29,29,29,29,45,45,46,46,46,46,46,46,46,47,47,47,47,47,47,47,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512BW-ONLY-NEXT:    vpmovb2m %zmm0, %k1
-; AVX512BW-ONLY-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2]
-; AVX512BW-ONLY-NEXT:    vpermd %zmm0, %zmm1, %zmm1
-; AVX512BW-ONLY-NEXT:    vptestmd %zmm1, %zmm1, %k2
-; AVX512BW-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k2} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [13,13,14,14,14,14,14,14,14,15,15,15,15,15,15,15]
-; AVX512BW-ONLY-NEXT:    vpermd %zmm0, %zmm2, %zmm2
-; AVX512BW-ONLY-NEXT:    vptestmd %zmm2, %zmm2, %k2
-; AVX512BW-ONLY-NEXT:    vmovdqa32 384(%rsi), %zmm2 {%k2} {z}
-; AVX512BW-ONLY-NEXT:    kshiftrd $16, %k1, %k2
-; AVX512BW-ONLY-NEXT:    vmovdqa32 320(%rsi), %zmm3 {%k2} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa32 256(%rsi), %zmm4 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm5 = [6,7,7,7,7,7,7,7,8,8,8,8,8,8,8,9]
-; AVX512BW-ONLY-NEXT:    vpermd %zmm0, %zmm5, %zmm5
-; AVX512BW-ONLY-NEXT:    vptestmd %zmm5, %zmm5, %k1
-; AVX512BW-ONLY-NEXT:    vmovdqa32 192(%rsi), %zmm5 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm6 = [4,4,4,5,5,5,5,5,5,5,6,6,6,6,6,6]
-; AVX512BW-ONLY-NEXT:    vpermd %zmm0, %zmm6, %zmm6
-; AVX512BW-ONLY-NEXT:    vptestmd %zmm6, %zmm6, %k1
-; AVX512BW-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm6 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm7 = [2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4]
-; AVX512BW-ONLY-NEXT:    vpermd %zmm0, %zmm7, %zmm0
-; AVX512BW-ONLY-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512BW-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k1} {z}
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm0, 64(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm6, 128(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm5, 192(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm4, 256(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm3, 320(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm2, 384(%rdx)
-; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm1, (%rdx)
-; AVX512BW-ONLY-NEXT:    vzeroupper
-; AVX512BW-ONLY-NEXT:    retq
-;
-; AVX512VBMI-ONLY-LABEL: mask_replication_factor7_vf16:
-; AVX512VBMI-ONLY:       # %bb.0:
-; AVX512VBMI-ONLY-NEXT:    kmovw (%rdi), %k2
-; AVX512VBMI-ONLY-NEXT:    vpmovm2b %k2, %zmm0
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <9,9,9,9,9,9,10,10,10,10,10,10,10,11,11,11,11,11,11,11,12,12,12,12,12,12,12,13,13,13,13,13,13,13,14,14,14,14,14,14,14,15,15,15,15,15,15,15,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX512VBMI-ONLY-NEXT:    vpermb %zmm0, %zmm1, %zmm0
-; AVX512VBMI-ONLY-NEXT:    vpmovb2m %zmm0, %k1
-; AVX512VBMI-ONLY-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2]
-; AVX512VBMI-ONLY-NEXT:    vpermd %zmm0, %zmm1, %zmm1
-; AVX512VBMI-ONLY-NEXT:    vptestmd %zmm1, %zmm1, %k2
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k2} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [13,13,14,14,14,14,14,14,14,15,15,15,15,15,15,15]
-; AVX512VBMI-ONLY-NEXT:    vpermd %zmm0, %zmm2, %zmm2
-; AVX512VBMI-ONLY-NEXT:    vptestmd %zmm2, %zmm2, %k2
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 384(%rsi), %zmm2 {%k2} {z}
-; AVX512VBMI-ONLY-NEXT:    kshiftrd $16, %k1, %k2
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 320(%rsi), %zmm3 {%k2} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 256(%rsi), %zmm4 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm5 = [6,7,7,7,7,7,7,7,8,8,8,8,8,8,8,9]
-; AVX512VBMI-ONLY-NEXT:    vpermd %zmm0, %zmm5, %zmm5
-; AVX512VBMI-ONLY-NEXT:    vptestmd %zmm5, %zmm5, %k1
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 192(%rsi), %zmm5 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm6 = [4,4,4,5,5,5,5,5,5,5,6,6,6,6,6,6]
-; AVX512VBMI-ONLY-NEXT:    vpermd %zmm0, %zmm6, %zmm6
-; AVX512VBMI-ONLY-NEXT:    vptestmd %zmm6, %zmm6, %k1
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 128(%rsi), %zmm6 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm7 = [2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4]
-; AVX512VBMI-ONLY-NEXT:    vpermd %zmm0, %zmm7, %zmm0
-; AVX512VBMI-ONLY-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512VBMI-ONLY-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k1} {z}
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm0, 64(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm6, 128(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm5, 192(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm4, 256(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm3, 320(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm2, 384(%rdx)
-; AVX512VBMI-ONLY-NEXT:    vmovdqa64 %zmm1, (%rdx)
-; AVX512VBMI-ONLY-NEXT:    vzeroupper
-; AVX512VBMI-ONLY-NEXT:    retq
+; AVX512BW-LABEL: mask_replication_factor7_vf16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    kmovw (%rdi), %k1
+; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm1, %zmm1
+; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX512BW-NEXT:    vmovdqa32 (%rsi), %zmm1 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [13,13,14,14,14,14,14,14,14,15,15,15,15,15,15,15]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm2, %zmm2
+; AVX512BW-NEXT:    vptestmd %zmm2, %zmm2, %k1
+; AVX512BW-NEXT:    vmovdqa32 384(%rsi), %zmm2 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [11,11,11,11,12,12,12,12,12,12,12,13,13,13,13,13]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm3, %zmm3
+; AVX512BW-NEXT:    vptestmd %zmm3, %zmm3, %k1
+; AVX512BW-NEXT:    vmovdqa32 320(%rsi), %zmm3 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm4 = [9,9,9,9,9,9,10,10,10,10,10,10,10,11,11,11]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm4, %zmm4
+; AVX512BW-NEXT:    vptestmd %zmm4, %zmm4, %k1
+; AVX512BW-NEXT:    vmovdqa32 256(%rsi), %zmm4 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm5 = [6,7,7,7,7,7,7,7,8,8,8,8,8,8,8,9]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm5, %zmm5
+; AVX512BW-NEXT:    vptestmd %zmm5, %zmm5, %k1
+; AVX512BW-NEXT:    vmovdqa32 192(%rsi), %zmm5 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm6 = [4,4,4,5,5,5,5,5,5,5,6,6,6,6,6,6]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm6, %zmm6
+; AVX512BW-NEXT:    vptestmd %zmm6, %zmm6, %k1
+; AVX512BW-NEXT:    vmovdqa32 128(%rsi), %zmm6 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm7 = [2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm7, %zmm0
+; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512BW-NEXT:    vmovdqa32 64(%rsi), %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vmovdqa64 %zmm0, 64(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm6, 128(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm5, 192(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm4, 256(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm3, 320(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm2, 384(%rdx)
+; AVX512BW-NEXT:    vmovdqa64 %zmm1, (%rdx)
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
   %src.mask.padded = load <64 x i1>, ptr %in.maskvec, align 64
   %src.mask = shufflevector <64 x i1> %src.mask.padded, <64 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %tgt.mask = shufflevector <16 x i1> %src.mask, <16 x i1> poison, <112 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 12, i32 12, i32 12, i32 12, i32 12, i32 12, i32 12, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 13, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>

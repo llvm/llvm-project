@@ -1165,19 +1165,19 @@ define void @load_i16_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; SSE-LABEL: load_i16_stride4_vf32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $248, %rsp
-; SSE-NEXT:    movdqa 96(%rdi), %xmm3
+; SSE-NEXT:    movdqa 224(%rdi), %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 64(%rdi), %xmm4
+; SSE-NEXT:    movdqa 192(%rdi), %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 80(%rdi), %xmm5
+; SSE-NEXT:    movdqa 208(%rdi), %xmm5
 ; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 160(%rdi), %xmm2
+; SSE-NEXT:    movdqa 96(%rdi), %xmm2
 ; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 176(%rdi), %xmm6
+; SSE-NEXT:    movdqa 112(%rdi), %xmm6
 ; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 128(%rdi), %xmm1
+; SSE-NEXT:    movdqa 64(%rdi), %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 144(%rdi), %xmm0
+; SSE-NEXT:    movdqa 80(%rdi), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1199,10 +1199,10 @@ define void @load_i16_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm4[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm9[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE-NEXT:    movdqa 112(%rdi), %xmm0
+; SSE-NEXT:    movdqa 240(%rdi), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm8[0,1,0,2,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm0[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm6[0,1,0,2,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm3[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm7[0,1,0,2,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
@@ -1212,34 +1212,34 @@ define void @load_i16_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 16(%rdi), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pshufd {{.*#+}} xmm12 = xmm0[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm12[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm14 = xmm1[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm14[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm8[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm1[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm11[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE-NEXT:    movdqa 32(%rdi), %xmm2
 ; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 48(%rdi), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm0[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm11[0,1,0,2,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm6[0,1,0,2,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm12 = xmm0[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm12[0,1,0,2,4,5,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm14 = xmm2[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm14[0,1,0,2,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; SSE-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
 ; SSE-NEXT:    movapd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 192(%rdi), %xmm0
+; SSE-NEXT:    movdqa 128(%rdi), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 208(%rdi), %xmm1
+; SSE-NEXT:    movdqa 144(%rdi), %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm5[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm4[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    movdqa 224(%rdi), %xmm2
+; SSE-NEXT:    movdqa 160(%rdi), %xmm2
 ; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 240(%rdi), %xmm1
+; SSE-NEXT:    movdqa 176(%rdi), %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[0,2,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm3[0,1,0,2,4,5,6,7]
@@ -1262,19 +1262,18 @@ define void @load_i16_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm10[1,3,2,3,4,5,6,7]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm9[1,3,2,3,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm8[0,1,1,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[0,1,1,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm0[0],xmm7[1],xmm0[1]
-; SSE-NEXT:    movsd {{.*#+}} xmm7 = xmm1[0],xmm7[1]
-; SSE-NEXT:    movapd %xmm7, (%rsp) # 16-byte Spill
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm12[1,3,2,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm14[1,3,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm11[0,1,1,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm6[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm7[0,1,1,3,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm0[0],xmm6[1],xmm0[1]
 ; SSE-NEXT:    movsd {{.*#+}} xmm6 = xmm1[0],xmm6[1]
-; SSE-NEXT:    movapd %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movapd %xmm6, (%rsp) # 16-byte Spill
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm8[1,3,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm11[1,3,2,3,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm12[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm14[0,1,1,3,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm8 = xmm8[0],xmm0[0],xmm8[1],xmm0[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm8 = xmm1[0],xmm8[1]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm5[1,3,2,3,4,5,6,7]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm4[1,3,2,3,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -1296,117 +1295,118 @@ define void @load_i16_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Folded Reload
 ; SSE-NEXT:    # xmm3 = mem[3,1,2,3]
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,2,0,4,5,6,7]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm3[0,1,2,0,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm10 = xmm10[0],xmm0[0],xmm10[1],xmm0[1]
 ; SSE-NEXT:    movsd {{.*#+}} xmm10 = xmm1[0],xmm10[1]
-; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm7 = mem[3,1,2,3]
-; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm6 = mem[3,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm7[2,0,2,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm6[2,0,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
-; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm4 = mem[3,1,2,3]
-; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm2 = mem[3,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm4[0,1,2,0,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm13 = xmm2[0,1,2,0,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm13 = xmm13[0],xmm5[0],xmm13[1],xmm5[1]
-; SSE-NEXT:    movsd {{.*#+}} xmm13 = xmm3[0],xmm13[1]
 ; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; SSE-NEXT:    # xmm0 = mem[3,1,2,3]
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm1 = mem[3,1,2,3]
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm0[2,0,2,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm1[2,0,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
+; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm2 = mem[3,1,2,3]
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,0,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[2,0,2,3,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; SSE-NEXT:    # xmm0 = mem[3,1,2,3]
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Folded Reload
 ; SSE-NEXT:    # xmm14 = mem[3,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm0[0,1,2,0,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm9 = xmm14[0,1,2,0,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm9 = xmm9[0],xmm3[0],xmm9[1],xmm3[1]
-; SSE-NEXT:    movsd {{.*#+}} xmm9 = xmm5[0],xmm9[1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,2,0,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm13 = xmm14[0,1,2,0,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm13 = xmm13[0],xmm0[0],xmm13[1],xmm0[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm13 = xmm1[0],xmm13[1]
+; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm0 = mem[3,1,2,3]
+; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm2 = mem[3,1,2,3]
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,0,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[2,0,2,3,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Folded Reload
 ; SSE-NEXT:    # xmm11 = mem[3,1,2,3]
-; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm8 = mem[3,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm11[2,0,2,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm8[2,0,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm7 = mem[3,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm11[0,1,2,0,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm9 = xmm7[0,1,2,0,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm9 = xmm9[0],xmm0[0],xmm9[1],xmm0[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm9 = xmm1[0],xmm9[1]
+; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm6 = mem[3,1,2,3]
 ; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Folded Reload
 ; SSE-NEXT:    # xmm5 = mem[3,1,2,3]
-; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm3 = mem[3,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm5[0,1,2,0,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm15 = xmm3[0,1,2,0,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm6[2,0,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm5[2,0,2,3,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm4 = mem[3,1,2,3]
+; SSE-NEXT:    pshufd $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm2 = mem[3,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm4[0,1,2,0,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm15 = xmm2[0,1,2,0,4,5,6,7]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm15 = xmm15[0],xmm1[0],xmm15[1],xmm1[1]
 ; SSE-NEXT:    movsd {{.*#+}} xmm15 = xmm0[0],xmm15[1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm7[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm6[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,1,3,1,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm2[0,1,3,1,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    pshuflw $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm0 = mem[3,1,2,3,4,5,6,7]
 ; SSE-NEXT:    pshuflw $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; SSE-NEXT:    # xmm1 = mem[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshuflw $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm2 = mem[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE-NEXT:    pshuflw $116, {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm4 = mem[0,1,3,1,4,5,6,7]
-; SSE-NEXT:    pshuflw $116, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm1 = mem[0,1,3,1,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
-; SSE-NEXT:    pshuflw $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm2 = mem[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshuflw $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm4 = mem[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
-; SSE-NEXT:    pshuflw $116, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm2 = mem[0,1,3,1,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm14[0,1,3,1,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm2[0],xmm6[1],xmm2[1]
-; SSE-NEXT:    movsd {{.*#+}} xmm6 = xmm4[0],xmm6[1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm11[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm8[3,1,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm5[0,1,3,1,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    pshuflw $116, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm0 = mem[0,1,3,1,4,5,6,7]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[0,1,3,1,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE-NEXT:    movsd {{.*#+}} xmm3 = xmm4[0],xmm3[1]
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm2, 48(%rsi)
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm2, (%rsi)
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm2, 16(%rsi)
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm2, 32(%rsi)
-; SSE-NEXT:    movapd %xmm12, 48(%rdx)
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm2, (%rdx)
-; SSE-NEXT:    movaps (%rsp), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm2, 16(%rdx)
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm2, 32(%rdx)
-; SSE-NEXT:    movapd %xmm15, 48(%rcx)
+; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm3 = xmm1[0],xmm3[1]
+; SSE-NEXT:    pshuflw $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm0 = mem[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm1 = mem[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    pshuflw $116, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm0 = mem[0,1,3,1,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm14 = xmm14[0,1,3,1,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm14 = xmm14[0],xmm0[0],xmm14[1],xmm0[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm14 = xmm1[0],xmm14[1]
+; SSE-NEXT:    pshuflw $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm0 = mem[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw $231, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm1 = mem[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm11[0,1,3,1,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm7 = xmm7[0,1,3,1,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm0[0],xmm7[1],xmm0[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm7 = xmm1[0],xmm7[1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm6[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm5[3,1,2,3,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm4[0,1,3,1,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,3,1,4,5,6,7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm0, 32(%rsi)
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm0, (%rsi)
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm0, 48(%rsi)
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm0, 16(%rsi)
+; SSE-NEXT:    movapd %xmm12, 32(%rdx)
+; SSE-NEXT:    movapd %xmm8, (%rdx)
+; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm0, 48(%rdx)
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm0, 16(%rdx)
+; SSE-NEXT:    movapd %xmm15, 32(%rcx)
 ; SSE-NEXT:    movapd %xmm9, (%rcx)
-; SSE-NEXT:    movapd %xmm13, 16(%rcx)
-; SSE-NEXT:    movapd %xmm10, 32(%rcx)
-; SSE-NEXT:    movapd %xmm3, 48(%r8)
-; SSE-NEXT:    movapd %xmm6, (%r8)
-; SSE-NEXT:    movapd %xmm1, 32(%r8)
-; SSE-NEXT:    movapd %xmm0, 16(%r8)
+; SSE-NEXT:    movapd %xmm13, 48(%rcx)
+; SSE-NEXT:    movapd %xmm10, 16(%rcx)
+; SSE-NEXT:    movapd %xmm2, 32(%r8)
+; SSE-NEXT:    movapd %xmm7, (%r8)
+; SSE-NEXT:    movapd %xmm14, 48(%r8)
+; SSE-NEXT:    movapd %xmm3, 16(%r8)
 ; SSE-NEXT:    addq $248, %rsp
 ; SSE-NEXT:    retq
 ;
