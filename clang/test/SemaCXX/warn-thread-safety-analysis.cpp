@@ -3862,8 +3862,8 @@ class Foo {
     }
     a = 0; // \
       // expected-warning {{writing variable 'a' requires holding mutex 'mu_' exclusively}}
-    endNoWarnOnWrites();  // \
-      // expected-warning {{releasing mutex '*' that was not held}}
+    endNoWarnOnWrites(); // \
+      // expected-warning {{releasing wildcard '*' that was not held}}
   }
 
 

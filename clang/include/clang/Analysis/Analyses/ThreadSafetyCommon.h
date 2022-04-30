@@ -273,14 +273,23 @@ private:
   /// The capability expression and whether it's negated.
   llvm::PointerIntPair<const til::SExpr *, 1, bool> CapExpr;
 
+  /// The kind of capability as specified by @ref CapabilityAttr::getName.
+  StringRef CapKind;
+
 public:
-  CapabilityExpr(const til::SExpr *E, bool Neg) : CapExpr(E, Neg) {}
+  CapabilityExpr() : CapExpr(nullptr, false) {}
+  CapabilityExpr(const til::SExpr *E, StringRef Kind, bool Neg)
+      : CapExpr(E, Neg), CapKind(Kind) {}
+
+  // Don't allow implicitly-constructed StringRefs since we'll capture them.
+  template <typename T> CapabilityExpr(const til::SExpr *, T, bool) = delete;
 
   const til::SExpr *sexpr() const { return CapExpr.getPointer(); }
+  StringRef getKind() const { return CapKind; }
   bool negative() const { return CapExpr.getInt(); }
 
   CapabilityExpr operator!() const {
-    return CapabilityExpr(CapExpr.getPointer(), !CapExpr.getInt());
+    return CapabilityExpr(CapExpr.getPointer(), CapKind, !CapExpr.getInt());
   }
 
   bool equals(const CapabilityExpr &other) const {

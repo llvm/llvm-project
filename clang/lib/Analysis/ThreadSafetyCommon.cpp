@@ -86,6 +86,28 @@ static bool isCalleeArrow(const Expr *E) {
   return ME ? ME->isArrow() : false;
 }
 
+static StringRef ClassifyDiagnostic(const CapabilityAttr *A) {
+  return A->getName();
+}
+
+static StringRef ClassifyDiagnostic(QualType VDT) {
+  // We need to look at the declaration of the type of the value to determine
+  // which it is. The type should either be a record or a typedef, or a pointer
+  // or reference thereof.
+  if (const auto *RT = VDT->getAs<RecordType>()) {
+    if (const auto *RD = RT->getDecl())
+      if (const auto *CA = RD->getAttr<CapabilityAttr>())
+        return ClassifyDiagnostic(CA);
+  } else if (const auto *TT = VDT->getAs<TypedefType>()) {
+    if (const auto *TD = TT->getDecl())
+      if (const auto *CA = TD->getAttr<CapabilityAttr>())
+        return ClassifyDiagnostic(CA);
+  } else if (VDT->isPointerType() || VDT->isReferenceType())
+    return ClassifyDiagnostic(VDT->getPointeeType());
+
+  return "mutex";
+}
+
 /// Translate a clang expression in an attribute to a til::SExpr.
 /// Constructs the context from D, DeclExp, and SelfDecl.
 ///
@@ -152,16 +174,17 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
 CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
                                                CallingContext *Ctx) {
   if (!AttrExp)
-    return CapabilityExpr(nullptr, false);
+    return CapabilityExpr();
 
   if (const auto* SLit = dyn_cast<StringLiteral>(AttrExp)) {
     if (SLit->getString() == StringRef("*"))
       // The "*" expr is a universal lock, which essentially turns off
       // checks until it is removed from the lockset.
-      return CapabilityExpr(new (Arena) til::Wildcard(), false);
+      return CapabilityExpr(new (Arena) til::Wildcard(), StringRef("wildcard"),
+                            false);
     else
       // Ignore other string literals for now.
-      return CapabilityExpr(nullptr, false);
+      return CapabilityExpr();
   }
 
   bool Neg = false;
@@ -183,14 +206,16 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   // Trap mutex expressions like nullptr, or 0.
   // Any literal value is nonsense.
   if (!E || isa<til::Literal>(E))
-    return CapabilityExpr(nullptr, false);
+    return CapabilityExpr();
+
+  StringRef Kind = ClassifyDiagnostic(AttrExp->getType());
 
   // Hack to deal with smart pointers -- strip off top-level pointer casts.
   if (const auto *CE = dyn_cast<til::Cast>(E)) {
     if (CE->castOpcode() == til::CAST_objToPtr)
-      return CapabilityExpr(CE->expr(), Neg);
+      return CapabilityExpr(CE->expr(), Kind, Neg);
   }
-  return CapabilityExpr(E, Neg);
+  return CapabilityExpr(E, Kind, Neg);
 }
 
 // Translate a clang statement or expression to a TIL expression.
