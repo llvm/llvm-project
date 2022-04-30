@@ -757,7 +757,7 @@ void PerfScriptReader::writeUnsymbolizedProfile(raw_fd_ostream &OS) {
 
   for (auto &CI : OrderedCounters) {
     uint32_t Indent = 0;
-    if (ProfileIsCSFlat) {
+    if (ProfileIsCS) {
       // Context string key
       OS << "[" << CI.first << "]\n";
       Indent = 2;
@@ -844,7 +844,7 @@ void UnsymbolizedProfileReader::readUnsymbolizedProfile(StringRef FileName) {
     StringRef Line = TraceIt.getCurrentLine();
     // Read context stack for CS profile.
     if (Line.startswith("[")) {
-      ProfileIsCSFlat = true;
+      ProfileIsCS = true;
       auto I = ContextStrSet.insert(Line.str());
       SampleContext::createCtxVectorFromStr(*I.first, Key->Context);
       TraceIt.advance();
@@ -1060,8 +1060,8 @@ PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
 }
 
 void HybridPerfReader::generateUnsymbolizedProfile() {
-  ProfileIsCSFlat = !IgnoreStackSamples;
-  if (ProfileIsCSFlat)
+  ProfileIsCS = !IgnoreStackSamples;
+  if (ProfileIsCS)
     unwindSamples();
   else
     PerfScriptReader::generateUnsymbolizedProfile();
