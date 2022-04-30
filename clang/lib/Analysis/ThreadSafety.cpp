@@ -41,7 +41,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -897,25 +896,27 @@ private:
     UCK_ReleasedExclusive, ///< Exclusive capability that was released.
   };
 
-  using UnderlyingCapability =
-      llvm::PointerIntPair<const til::SExpr *, 2, UnderlyingCapabilityKind>;
+  struct UnderlyingCapability {
+    CapabilityExpr Cap;
+    UnderlyingCapabilityKind Kind;
+  };
 
-  SmallVector<UnderlyingCapability, 4> UnderlyingMutexes;
+  SmallVector<UnderlyingCapability, 2> UnderlyingMutexes;
 
 public:
   ScopedLockableFactEntry(const CapabilityExpr &CE, SourceLocation Loc)
       : FactEntry(CE, LK_Exclusive, Loc, Acquired) {}
 
   void addLock(const CapabilityExpr &M) {
-    UnderlyingMutexes.emplace_back(M.sexpr(), UCK_Acquired);
+    UnderlyingMutexes.push_back(UnderlyingCapability{M, UCK_Acquired});
   }
 
   void addExclusiveUnlock(const CapabilityExpr &M) {
-    UnderlyingMutexes.emplace_back(M.sexpr(), UCK_ReleasedExclusive);
+    UnderlyingMutexes.push_back(UnderlyingCapability{M, UCK_ReleasedExclusive});
   }
 
   void addSharedUnlock(const CapabilityExpr &M) {
-    UnderlyingMutexes.emplace_back(M.sexpr(), UCK_ReleasedShared);
+    UnderlyingMutexes.push_back(UnderlyingCapability{M, UCK_ReleasedShared});
   }
 
   void
@@ -923,15 +924,13 @@ public:
                                 SourceLocation JoinLoc, LockErrorKind LEK,
                                 ThreadSafetyHandler &Handler) const override {
     for (const auto &UnderlyingMutex : UnderlyingMutexes) {
-      const auto *Entry = FSet.findLock(
-          FactMan, CapabilityExpr(UnderlyingMutex.getPointer(), false));
-      if ((UnderlyingMutex.getInt() == UCK_Acquired && Entry) ||
-          (UnderlyingMutex.getInt() != UCK_Acquired && !Entry)) {
+      const auto *Entry = FSet.findLock(FactMan, UnderlyingMutex.Cap);
+      if ((UnderlyingMutex.Kind == UCK_Acquired && Entry) ||
+          (UnderlyingMutex.Kind != UCK_Acquired && !Entry)) {
         // If this scoped lock manages another mutex, and if the underlying
         // mutex is still/not held, then warn about the underlying mutex.
         Handler.handleMutexHeldEndOfScope(
-            "mutex", sx::toString(UnderlyingMutex.getPointer()), loc(), JoinLoc,
-            LEK);
+            "mutex", UnderlyingMutex.Cap.toString(), loc(), JoinLoc, LEK);
       }
     }
   }
@@ -940,13 +939,12 @@ public:
                   ThreadSafetyHandler &Handler,
                   StringRef DiagKind) const override {
     for (const auto &UnderlyingMutex : UnderlyingMutexes) {
-      CapabilityExpr UnderCp(UnderlyingMutex.getPointer(), false);
-
-      if (UnderlyingMutex.getInt() == UCK_Acquired)
-        lock(FSet, FactMan, UnderCp, entry.kind(), entry.loc(), &Handler,
-             DiagKind);
+      if (UnderlyingMutex.Kind == UCK_Acquired)
+        lock(FSet, FactMan, UnderlyingMutex.Cap, entry.kind(), entry.loc(),
+             &Handler, DiagKind);
       else
-        unlock(FSet, FactMan, UnderCp, entry.loc(), &Handler, DiagKind);
+        unlock(FSet, FactMan, UnderlyingMutex.Cap, entry.loc(), &Handler,
+               DiagKind);
     }
   }
 
@@ -956,18 +954,18 @@ public:
                     StringRef DiagKind) const override {
     assert(!Cp.negative() && "Managing object cannot be negative.");
     for (const auto &UnderlyingMutex : UnderlyingMutexes) {
-      CapabilityExpr UnderCp(UnderlyingMutex.getPointer(), false);
-
       // Remove/lock the underlying mutex if it exists/is still unlocked; warn
       // on double unlocking/locking if we're not destroying the scoped object.
       ThreadSafetyHandler *TSHandler = FullyRemove ? nullptr : &Handler;
-      if (UnderlyingMutex.getInt() == UCK_Acquired) {
-        unlock(FSet, FactMan, UnderCp, UnlockLoc, TSHandler, DiagKind);
+      if (UnderlyingMutex.Kind == UCK_Acquired) {
+        unlock(FSet, FactMan, UnderlyingMutex.Cap, UnlockLoc, TSHandler,
+               DiagKind);
       } else {
-        LockKind kind = UnderlyingMutex.getInt() == UCK_ReleasedShared
+        LockKind kind = UnderlyingMutex.Kind == UCK_ReleasedShared
                             ? LK_Shared
                             : LK_Exclusive;
-        lock(FSet, FactMan, UnderCp, kind, UnlockLoc, TSHandler, DiagKind);
+        lock(FSet, FactMan, UnderlyingMutex.Cap, kind, UnlockLoc, TSHandler,
+             DiagKind);
       }
     }
     if (FullyRemove)
