@@ -367,7 +367,7 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
-def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
+def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI">;
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 
 // Return the negation of an immediate value.
