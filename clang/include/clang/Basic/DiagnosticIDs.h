@@ -231,6 +231,14 @@ public:
   /// "deprecated-declarations".
   static StringRef getWarningOptionForGroup(diag::Group);
 
+  /// Given a group ID, returns the flag that toggles the group.
+  /// For example, for "deprecated-declarations", returns
+  /// Group::DeprecatedDeclarations.
+  static llvm::Optional<diag::Group> getGroupForWarningOption(StringRef);
+
+  /// Return the lowest-level group that contains the specified diagnostic.
+  static llvm::Optional<diag::Group> getGroupForDiag(unsigned DiagID);
+
   /// Return the lowest-level warning option that enables the specified
   /// diagnostic.
   ///
