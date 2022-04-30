@@ -561,15 +561,11 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.end();
   DebugLoc DL;
   if (!MBB.empty()) {
-    MBBI = MBB.getFirstTerminator();
-    if (MBBI == MBB.end())
-      MBBI = MBB.getLastNonDebugInstr();
-    DL = MBBI->getDebugLoc();
+    MBBI = MBB.getLastNonDebugInstr();
+    if (MBBI != MBB.end())
+      DL = MBBI->getDebugLoc();
 
-    // If this is not a terminator, the actual insert location should be after the
-    // last instruction.
-    if (!MBBI->isTerminator())
-      MBBI = std::next(MBBI);
+    MBBI = MBB.getFirstTerminator();
 
     // If callee-saved registers are saved via libcall, place stack adjustment
     // before this call.
