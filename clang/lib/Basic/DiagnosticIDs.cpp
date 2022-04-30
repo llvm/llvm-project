@@ -628,27 +628,13 @@ StringRef DiagnosticIDs::getWarningOptionForGroup(diag::Group Group) {
   return OptionTable[static_cast<int>(Group)].getName();
 }
 
-llvm::Optional<diag::Group>
-DiagnosticIDs::getGroupForWarningOption(StringRef Name) {
-  const auto *Found = llvm::partition_point(
-      OptionTable, [=](const WarningOption &O) { return O.getName() < Name; });
-  if (Found == std::end(OptionTable) || Found->getName() != Name)
-    return llvm::None;
-  return static_cast<diag::Group>(Found - OptionTable);
-}
-
-llvm::Optional<diag::Group> DiagnosticIDs::getGroupForDiag(unsigned DiagID) {
-  if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
-    return static_cast<diag::Group>(Info->getOptionGroupIndex());
-  return llvm::None;
-}
-
 /// getWarningOptionForDiag - Return the lowest-level warning option that
 /// enables the specified diagnostic.  If there is no -Wfoo flag that controls
 /// the diagnostic, this returns null.
 StringRef DiagnosticIDs::getWarningOptionForDiag(unsigned DiagID) {
-  if (auto G = getGroupForDiag(DiagID))
-    return getWarningOptionForGroup(*G);
+  if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
+    return getWarningOptionForGroup(
+        static_cast<diag::Group>(Info->getOptionGroupIndex()));
   return StringRef();
 }
 
@@ -697,10 +683,12 @@ static bool getDiagnosticsInGroup(diag::Flavor Flavor,
 bool
 DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
                                      SmallVectorImpl<diag::kind> &Diags) const {
-  if (llvm::Optional<diag::Group> G = getGroupForWarningOption(Group))
-    return ::getDiagnosticsInGroup(
-        Flavor, &OptionTable[static_cast<unsigned>(*G)], Diags);
-  return true;
+  auto Found = llvm::partition_point(
+      OptionTable, [=](const WarningOption &O) { return O.getName() < Group; });
+  if (Found == std::end(OptionTable) || Found->getName() != Group)
+    return true; // Option not found.
+
+  return ::getDiagnosticsInGroup(Flavor, Found, Diags);
 }
 
 void DiagnosticIDs::getAllDiagnostics(diag::Flavor Flavor,

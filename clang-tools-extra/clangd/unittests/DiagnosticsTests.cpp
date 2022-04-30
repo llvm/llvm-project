@@ -517,16 +517,13 @@ TEST(DiagnosticTest, ClangTidyWarningAsError) {
           diagSeverity(DiagnosticsEngine::Error)))));
 }
 
-TidyProvider addClangArgs(std::vector<llvm::StringRef> ExtraArgs,
-                          llvm::StringRef Checks) {
-  return [ExtraArgs = std::move(ExtraArgs), Checks = Checks.str()](
-             tidy::ClangTidyOptions &Opts, llvm::StringRef) {
+TidyProvider addClangArgs(std::vector<llvm::StringRef> ExtraArgs) {
+  return [ExtraArgs = std::move(ExtraArgs)](tidy::ClangTidyOptions &Opts,
+                                            llvm::StringRef) {
     if (!Opts.ExtraArgs)
       Opts.ExtraArgs.emplace();
     for (llvm::StringRef Arg : ExtraArgs)
       Opts.ExtraArgs->emplace_back(Arg);
-    if (!Checks.empty())
-      Opts.Checks = Checks;
   };
 }
 
@@ -544,78 +541,53 @@ TEST(DiagnosticTest, ClangTidyEnablesClangWarning) {
   // Check the -Wunused warning isn't initially on.
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
 
-  // We enable warnings based on clang-tidy extra args, if the matching
-  // clang-diagnostic- is there.
-  TU.ClangTidyProvider =
-      addClangArgs({"-Wunused"}, "clang-diagnostic-unused-function");
+  // We enable warnings based on clang-tidy extra args.
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"});
   EXPECT_THAT(*TU.build().getDiagnostics(), ElementsAre(UnusedFooWarning));
 
-  // clang-diagnostic-* is acceptable
-  TU.ClangTidyProvider = addClangArgs({"-Wunused"}, "clang-diagnostic-*");
-  EXPECT_THAT(*TU.build().getDiagnostics(), ElementsAre(UnusedFooWarning));
-  // And plain *
-  TU.ClangTidyProvider = addClangArgs({"-Wunused"}, "*");
-  EXPECT_THAT(*TU.build().getDiagnostics(), ElementsAre(UnusedFooWarning));
-  // And we can explicitly exclude a category too.
-  TU.ClangTidyProvider =
-      addClangArgs({"-Wunused"}, "*,-clang-diagnostic-unused-function");
-  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
-
-  // Without the exact check specified, the warnings are not enabled.
-  TU.ClangTidyProvider = addClangArgs({"-Wunused"}, "clang-diagnostic-unused");
-  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
-
-  // We don't respect other args.
-  TU.ClangTidyProvider = addClangArgs({"-Wunused", "-Dfoo=bar"},
-                                      "clang-diagnostic-unused-function");
+  // But we don't respect other args.
+  TU.ClangTidyProvider = addClangArgs({"-Wunused", "-Dfoo=bar"});
   EXPECT_THAT(*TU.build().getDiagnostics(), ElementsAre(UnusedFooWarning))
       << "Not unused function 'bar'!";
 
   // -Werror doesn't apply to warnings enabled by clang-tidy extra args.
   TU.ExtraArgs = {"-Werror"};
-  TU.ClangTidyProvider =
-      addClangArgs({"-Wunused"}, "clang-diagnostic-unused-function");
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"});
   EXPECT_THAT(*TU.build().getDiagnostics(),
               ElementsAre(diagSeverity(DiagnosticsEngine::Warning)));
 
   // But clang-tidy extra args won't *downgrade* errors to warnings either.
   TU.ExtraArgs = {"-Wunused", "-Werror"};
-  TU.ClangTidyProvider =
-      addClangArgs({"-Wunused"}, "clang-diagnostic-unused-function");
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"});
   EXPECT_THAT(*TU.build().getDiagnostics(),
               ElementsAre(diagSeverity(DiagnosticsEngine::Error)));
 
   // FIXME: we're erroneously downgrading the whole group, this should be Error.
   TU.ExtraArgs = {"-Wunused-function", "-Werror"};
-  TU.ClangTidyProvider =
-      addClangArgs({"-Wunused"}, "clang-diagnostic-unused-label");
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"});
   EXPECT_THAT(*TU.build().getDiagnostics(),
               ElementsAre(diagSeverity(DiagnosticsEngine::Warning)));
 
   // This looks silly, but it's the typical result if a warning is enabled by a
   // high-level .clang-tidy file and disabled by a low-level one.
   TU.ExtraArgs = {};
-  TU.ClangTidyProvider = addClangArgs({"-Wunused", "-Wno-unused"},
-                                      "clang-diagnostic-unused-function");
+  TU.ClangTidyProvider = addClangArgs({"-Wunused", "-Wno-unused"});
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
 
   // Overriding only works in the proper order.
-  TU.ClangTidyProvider =
-      addClangArgs({"-Wunused"}, {"clang-diagnostic-unused-function"});
+  TU.ClangTidyProvider = addClangArgs({"-Wno-unused", "-Wunused"});
   EXPECT_THAT(*TU.build().getDiagnostics(), SizeIs(1));
 
   // More specific vs less-specific: match clang behavior
-  TU.ClangTidyProvider = addClangArgs({"-Wunused", "-Wno-unused-function"},
-                                      {"clang-diagnostic-unused-function"});
+  TU.ClangTidyProvider = addClangArgs({"-Wunused", "-Wno-unused-function"});
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
-  TU.ClangTidyProvider = addClangArgs({"-Wunused-function", "-Wno-unused"},
-                                      {"clang-diagnostic-unused-function"});
+  TU.ClangTidyProvider = addClangArgs({"-Wunused-function", "-Wno-unused"});
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
 
-  // We do allow clang-tidy config to disable warnings from the compile
-  // command. It's unclear this is ideal, but it's hard to avoid.
+  // We do allow clang-tidy config to disable warnings from the compile command.
+  // It's unclear this is ideal, but it's hard to avoid.
   TU.ExtraArgs = {"-Wunused"};
-  TU.ClangTidyProvider = addClangArgs({"-Wno-unused"}, {});
+  TU.ClangTidyProvider = addClangArgs({"-Wno-unused"});
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
 }
 
