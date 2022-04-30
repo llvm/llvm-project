@@ -6,10 +6,10 @@ __fp16 y;
 short z;
 // CHECK-LABEL: @bar1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @y, align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.convert.from.fp16.f32(i16 [[TMP0]])
-// CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP1]] to i16
-// CHECK-NEXT:    store i16 [[CONV]], ptr @z, align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr @y, align 2
+// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP0]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptosi float [[CONV]] to i16
+// CHECK-NEXT:    store i16 [[CONV1]], ptr @z, align 2
 // CHECK-NEXT:    ret void
 //
 void bar1(){
@@ -18,7 +18,9 @@ void bar1(){
 // CHECK-LABEL: @bar2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @z, align 2
-// CHECK-NEXT:    store i16 [[TMP0]], ptr @y, align 2
+// CHECK-NEXT:    [[CONV:%.*]] = sitofp i16 [[TMP0]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = fptrunc float [[CONV]] to half
+// CHECK-NEXT:    store half [[CONV1]], ptr @y, align 2
 // CHECK-NEXT:    ret void
 //
 void bar2(){
