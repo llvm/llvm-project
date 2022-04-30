@@ -570,8 +570,12 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
       assert(match(BI.getCondition(), m_LogicalAnd()) &&
              "Must have an `and` of `i1`s or `select i1 X, Y, false`s for the"
              " condition!");
-    buildPartialUnswitchConditionalBranch(*OldPH, Invariants, ExitDirection,
-                                          *UnswitchedBB, *NewPH, false);
+    buildPartialUnswitchConditionalBranch(
+        *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
+        FreezeLoopUnswitchCond && any_of(Invariants, [&](Value *C) {
+          return !isGuaranteedNotToBeUndefOrPoison(C, nullptr,
+                                                   OldPH->getTerminator(), &DT);
+        }));
   }
 
   // Update the dominator tree with the added edge.
