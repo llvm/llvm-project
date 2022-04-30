@@ -622,8 +622,17 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   Type index = parser.getBuilder().getIndexType();
   SmallVector<Type, LaunchOp::kNumConfigRegionAttributes> dataTypes(
       LaunchOp::kNumConfigRegionAttributes, index);
+
+  SmallVector<OpAsmParser::Argument> regionArguments;
+  for (auto ssaValueAndType : llvm::zip(regionArgs, dataTypes)) {
+    OpAsmParser::Argument arg;
+    arg.ssaName = std::get<0>(ssaValueAndType);
+    arg.type = std::get<1>(ssaValueAndType);
+    regionArguments.push_back(arg);
+  }
+
   Region *body = result.addRegion();
-  if (parser.parseRegion(*body, regionArgs, dataTypes) ||
+  if (parser.parseRegion(*body, regionArguments) ||
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
@@ -758,11 +767,16 @@ static ParseResult parseLaunchFuncOperands(
     SmallVectorImpl<Type> &argTypes) {
   if (parser.parseOptionalKeyword("args"))
     return success();
-  SmallVector<NamedAttrList> argAttrs;
-  bool isVariadic = false;
-  return function_interface_impl::parseFunctionArgumentList(
-      parser, /*allowAttributes=*/false,
-      /*allowVariadic=*/false, argNames, argTypes, argAttrs, isVariadic);
+
+  SmallVector<OpAsmParser::Argument> args;
+  if (parser.parseArgumentList(args, OpAsmParser::Delimiter::Paren,
+                               /*allowType=*/true))
+    return failure();
+  for (auto &arg : args) {
+    argNames.push_back(arg.ssaName);
+    argTypes.push_back(arg.type);
+  }
+  return success();
 }
 
 static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
@@ -778,8 +792,6 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
                         });
   printer << ")";
 }
-
-//
 
 //===----------------------------------------------------------------------===//
 // ShuffleOp
@@ -852,32 +864,13 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
 /// keyword provided as argument.
 static ParseResult
 parseAttributions(OpAsmParser &parser, StringRef keyword,
-                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &args,
-                  SmallVectorImpl<Type> &argTypes) {
+                  SmallVectorImpl<OpAsmParser::Argument> &args) {
   // If we could not parse the keyword, just assume empty list and succeed.
   if (failed(parser.parseOptionalKeyword(keyword)))
     return success();
 
-  if (failed(parser.parseLParen()))
-    return failure();
-
-  // Early exit for an empty list.
-  if (succeeded(parser.parseOptionalRParen()))
-    return success();
-
-  do {
-    OpAsmParser::UnresolvedOperand arg;
-    Type type;
-
-    if (parser.parseOperand(arg, /*allowResultNumber=*/false) ||
-        parser.parseColonType(type))
-      return failure();
-
-    args.push_back(arg);
-    argTypes.push_back(type);
-  } while (succeeded(parser.parseOptionalComma()));
-
-  return parser.parseRParen();
+  return parser.parseArgumentList(args, OpAsmParser::Delimiter::Paren,
+                                  /*allowType=*/true);
 }
 
 /// Parses a GPU function.
@@ -886,10 +879,8 @@ parseAttributions(OpAsmParser &parser, StringRef keyword,
 ///                 (`->` function-result-list)? memory-attribution `kernel`?
 ///                 function-attributes? region
 ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand> entryArgs;
-  SmallVector<NamedAttrList> argAttrs;
-  SmallVector<NamedAttrList> resultAttrs;
-  SmallVector<Type> argTypes;
+  SmallVector<OpAsmParser::Argument> entryArgs;
+  SmallVector<DictionaryAttr> resultAttrs;
   SmallVector<Type> resultTypes;
   bool isVariadic;
 
@@ -901,34 +892,41 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   auto signatureLocation = parser.getCurrentLocation();
   if (failed(function_interface_impl::parseFunctionSignature(
-          parser, /*allowVariadic=*/false, entryArgs, argTypes, argAttrs,
-          isVariadic, resultTypes, resultAttrs)))
+          parser, /*allowVariadic=*/false, entryArgs, isVariadic, resultTypes,
+          resultAttrs)))
     return failure();
 
-  if (entryArgs.empty() && !argTypes.empty())
+  if (!entryArgs.empty() && entryArgs[0].ssaName.name.empty())
     return parser.emitError(signatureLocation)
            << "gpu.func requires named arguments";
 
   // Construct the function type. More types will be added to the region, but
   // not to the function type.
   Builder &builder = parser.getBuilder();
+
+  SmallVector<Type> argTypes;
+  for (auto &arg : entryArgs)
+    argTypes.push_back(arg.type);
   auto type = builder.getFunctionType(argTypes, resultTypes);
   result.addAttribute(GPUFuncOp::getTypeAttrName(), TypeAttr::get(type));
 
+  function_interface_impl::addArgAndResultAttrs(builder, result, entryArgs,
+                                                resultAttrs);
+
   // Parse workgroup memory attributions.
   if (failed(parseAttributions(parser, GPUFuncOp::getWorkgroupKeyword(),
-                               entryArgs, argTypes)))
+                               entryArgs)))
     return failure();
 
   // Store the number of operands we just parsed as the number of workgroup
   // memory attributions.
-  unsigned numWorkgroupAttrs = argTypes.size() - type.getNumInputs();
+  unsigned numWorkgroupAttrs = entryArgs.size() - type.getNumInputs();
   result.addAttribute(GPUFuncOp::getNumWorkgroupAttributionsAttrName(),
                       builder.getI64IntegerAttr(numWorkgroupAttrs));
 
   // Parse private memory attributions.
-  if (failed(parseAttributions(parser, GPUFuncOp::getPrivateKeyword(),
-                               entryArgs, argTypes)))
+  if (failed(
+          parseAttributions(parser, GPUFuncOp::getPrivateKeyword(), entryArgs)))
     return failure();
 
   // Parse the kernel attribute if present.
@@ -939,13 +937,11 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse attributes.
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  function_interface_impl::addArgAndResultAttrs(builder, result, argAttrs,
-                                                resultAttrs);
 
   // Parse the region. If no argument names were provided, take all names
   // (including those of attributions) from the entry block.
   auto *body = result.addRegion();
-  return parser.parseRegion(*body, entryArgs, argTypes);
+  return parser.parseRegion(*body, entryArgs);
 }
 
 static void printAttributions(OpAsmPrinter &p, StringRef keyword,
@@ -1078,16 +1074,14 @@ void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
 ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr nameAttr;
   if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes))
-    return failure();
-
-  // If module attributes are present, parse them.
-  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
+                             result.attributes) ||
+      // If module attributes are present, parse them.
+      parser.parseOptionalAttrDictWithKeyword(result.attributes))
     return failure();
 
   // Parse the module body.
   auto *body = result.addRegion();
-  if (parser.parseRegion(*body, None, None))
+  if (parser.parseRegion(*body, {}))
     return failure();
 
   // Ensure that this module has a valid terminator.

@@ -691,18 +691,16 @@ static void printCustomDirectiveOptionalOperandRef(OpAsmPrinter &printer,
 
 ParseResult IsolatedRegionOp::parse(OpAsmParser &parser,
                                     OperationState &result) {
-  OpAsmParser::UnresolvedOperand argInfo;
-  Type argType = parser.getBuilder().getIndexType();
-
   // Parse the input operand.
-  if (parser.parseOperand(argInfo) ||
-      parser.resolveOperand(argInfo, argType, result.operands))
+  OpAsmParser::Argument argInfo;
+  argInfo.type = parser.getBuilder().getIndexType();
+  if (parser.parseOperand(argInfo.ssaName) ||
+      parser.resolveOperand(argInfo.ssaName, argInfo.type, result.operands))
     return failure();
 
   // Parse the body region, and reuse the operand info as the argument info.
   Region *body = result.addRegion();
-  return parser.parseRegion(*body, argInfo, argType,
-                            /*enableNameShadowing=*/true);
+  return parser.parseRegion(*body, argInfo, /*enableNameShadowing=*/true);
 }
 
 void IsolatedRegionOp::print(OpAsmPrinter &p) {
@@ -930,17 +928,16 @@ void PrettyPrintedRegionOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 ParseResult PolyForOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> ivsInfo;
+  SmallVector<OpAsmParser::Argument, 4> ivsInfo;
   // Parse list of region arguments without a delimiter.
-  if (parser.parseOperandList(ivsInfo, OpAsmParser::Delimiter::None,
-                              /*allowResultNumber=*/false))
+  if (parser.parseArgumentList(ivsInfo, OpAsmParser::Delimiter::None))
     return failure();
 
   // Parse the body region.
   Region *body = result.addRegion();
-  auto &builder = parser.getBuilder();
-  SmallVector<Type, 4> argTypes(ivsInfo.size(), builder.getIndexType());
-  return parser.parseRegion(*body, ivsInfo, argTypes);
+  for (auto &iv : ivsInfo)
+    iv.type = parser.getBuilder().getIndexType();
+  return parser.parseRegion(*body, ivsInfo);
 }
 
 void PolyForOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); }

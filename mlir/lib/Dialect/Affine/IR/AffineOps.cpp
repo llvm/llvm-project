@@ -1431,10 +1431,10 @@ static ParseResult parseBound(bool isLower, OperationState &result,
 
 ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
-  OpAsmParser::UnresolvedOperand inductionVariable;
+  OpAsmParser::Argument inductionVariable;
+  inductionVariable.type = builder.getIndexType();
   // Parse the induction variable followed by '='.
-  if (parser.parseOperand(inductionVariable, /*allowResultNumber=*/false) ||
-      parser.parseEqual())
+  if (parser.parseArgument(inductionVariable) || parser.parseEqual())
     return failure();
 
   // Parse loop bounds.
@@ -1463,8 +1463,10 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   // Parse the optional initial iteration arguments.
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> regionArgs, operands;
-  SmallVector<Type, 4> argTypes;
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
+
+  // Induction variable.
   regionArgs.push_back(inductionVariable);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
@@ -1473,23 +1475,23 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
         parser.parseArrowTypeList(result.types))
       return failure();
     // Resolve input operands.
-    for (auto operandType : llvm::zip(operands, result.types))
-      if (parser.resolveOperand(std::get<0>(operandType),
-                                std::get<1>(operandType), result.operands))
+    for (auto argOperandType :
+         llvm::zip(llvm::drop_begin(regionArgs), operands, result.types)) {
+      Type type = std::get<2>(argOperandType);
+      std::get<0>(argOperandType).type = type;
+      if (parser.resolveOperand(std::get<1>(argOperandType), type,
+                                result.operands))
         return failure();
+    }
   }
-  // Induction variable.
-  Type indexType = builder.getIndexType();
-  argTypes.push_back(indexType);
-  // Loop carried variables.
-  argTypes.append(result.types.begin(), result.types.end());
+
   // Parse the body region.
   Region *body = result.addRegion();
-  if (regionArgs.size() != argTypes.size())
+  if (regionArgs.size() != result.types.size() + 1)
     return parser.emitError(
         parser.getNameLoc(),
         "mismatch between the number of loop-carried values and results");
-  if (parser.parseRegion(*body, regionArgs, argTypes))
+  if (parser.parseRegion(*body, regionArgs))
     return failure();
 
   AffineForOp::ensureTerminator(*body, builder, result.location);
@@ -1548,7 +1550,8 @@ unsigned AffineForOp::getNumIterOperands() {
 
 void AffineForOp::print(OpAsmPrinter &p) {
   p << ' ';
-  p.printOperand(getBody()->getArgument(0));
+  p.printRegionArgument(getBody()->getArgument(0), /*argAtrs=*/{},
+                        /*omitType=*/true);
   p << " = ";
   printBound(getLowerBoundMapAttr(), getLowerBoundOperands(), "max", p);
   p << " to ";
@@ -3527,9 +3530,8 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
                                     OperationState &result) {
   auto &builder = parser.getBuilder();
   auto indexType = builder.getIndexType();
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> ivs;
-  if (parser.parseOperandList(ivs, OpAsmParser::Delimiter::Paren,
-                              /*allowResultNumber=*/false) ||
+  SmallVector<OpAsmParser::Argument, 4> ivs;
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
       parser.parseEqual() ||
       parseAffineMapWithMinMax(parser, result, MinMaxKind::Max) ||
       parser.parseKeyword("to") ||
@@ -3600,8 +3602,9 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
 
   // Now parse the body.
   Region *body = result.addRegion();
-  SmallVector<Type, 4> types(ivs.size(), indexType);
-  if (parser.parseRegion(*body, ivs, types) ||
+  for (auto &iv : ivs)
+    iv.type = indexType;
+  if (parser.parseRegion(*body, ivs) ||
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
