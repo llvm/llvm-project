@@ -237,3 +237,34 @@ define i32 @lw_sw_far_local(i32* %a, i32 %b)  {
   store i32 %b, i32* %1
   ret i32 %2
 }
+
+%struct.quux = type { i32, [0 x i8] }
+
+; Make sure we don't remove the addi and fold the C from
+; (add (addi FrameIndex, C), X) into the store address.
+; FrameIndex cannot be the operand of an ADD. We must keep the ADDI.
+define void @addi_fold_crash(i32 %arg) {
+; RV32I-LABEL: addi_fold_crash:
+; RV32I:       # %bb.0: # %bb
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    addi a1, sp, 12
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    sb zero, 0(a0)
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    call snork@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+bb:
+  %tmp = alloca %struct.quux, align 4
+  %tmp1 = getelementptr inbounds %struct.quux, %struct.quux* %tmp, i32 0, i32 1
+  %tmp2 = getelementptr inbounds %struct.quux, %struct.quux* %tmp, i32 0, i32 1, i32 %arg
+  store i8 0, i8* %tmp2, align 1
+  call void @snork([0 x i8]* %tmp1)
+  ret void
+}
+
+declare void @snork([0 x i8]*)
