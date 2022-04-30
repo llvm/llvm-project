@@ -101,41 +101,29 @@ void ForEachOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
 
 ParseResult ForEachOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the loop variable followed by type.
-  OpAsmParser::UnresolvedOperand loopVariable;
-  Type loopVariableType;
-  if (parser.parseOperand(loopVariable, /*allowResultNumber=*/false) ||
-      parser.parseColonType(loopVariableType))
-    return failure();
-
-  // Parse the "in" keyword.
-  if (parser.parseKeyword("in", " after loop variable"))
-    return failure();
-
-  // Parse the operand (value range).
+  OpAsmParser::Argument loopVariable;
   OpAsmParser::UnresolvedOperand operandInfo;
-  if (parser.parseOperand(operandInfo))
+  if (parser.parseArgument(loopVariable, /*allowType=*/true) ||
+      parser.parseKeyword("in", " after loop variable") ||
+      // Parse the operand (value range).
+      parser.parseOperand(operandInfo))
     return failure();
 
   // Resolve the operand.
-  Type rangeType = pdl::RangeType::get(loopVariableType);
+  Type rangeType = pdl::RangeType::get(loopVariable.type);
   if (parser.resolveOperand(operandInfo, rangeType, result.operands))
     return failure();
 
   // Parse the body region.
   Region *body = result.addRegion();
-  if (parser.parseRegion(*body, {loopVariable}, {loopVariableType}))
-    return failure();
-
-  // Parse the attribute dictionary.
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  // Parse the successor.
   Block *successor;
-  if (parser.parseArrow() || parser.parseSuccessor(successor))
+  if (parser.parseRegion(*body, loopVariable) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      // Parse the successor.
+      parser.parseArrow() || parser.parseSuccessor(successor))
     return failure();
-  result.addSuccessors(successor);
 
+  result.addSuccessors(successor);
   return success();
 }
 

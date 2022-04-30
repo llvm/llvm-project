@@ -202,7 +202,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func.func @launch_func_kernel_operand_attr(%sz : index) {
-    // expected-error@+1 {{expected arguments without attributes}}
+    // expected-error@+1 {{expected ')' in argument list}}
     gpu.launch_func @foo::@bar blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%sz : index {foo})
     return
   }

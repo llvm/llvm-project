@@ -399,15 +399,16 @@ void ForOp::print(OpAsmPrinter &p) {
 
 ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
-  OpAsmParser::UnresolvedOperand inductionVariable, lb, ub, step;
-  // Parse the induction variable followed by '='.
-  if (parser.parseOperand(inductionVariable, /*allowResultNumber=*/false) ||
-      parser.parseEqual())
-    return failure();
-
-  // Parse loop bounds.
   Type indexType = builder.getIndexType();
-  if (parser.parseOperand(lb) ||
+
+  OpAsmParser::Argument inductionVariable;
+  inductionVariable.type = indexType;
+  OpAsmParser::UnresolvedOperand lb, ub, step;
+
+  // Parse the induction variable followed by '='.
+  if (parser.parseArgument(inductionVariable) || parser.parseEqual() ||
+      // Parse loop bounds.
+      parser.parseOperand(lb) ||
       parser.resolveOperand(lb, indexType, result.operands) ||
       parser.parseKeyword("to") || parser.parseOperand(ub) ||
       parser.resolveOperand(ub, indexType, result.operands) ||
@@ -416,8 +417,8 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse the optional initial iteration arguments.
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> regionArgs, operands;
-  SmallVector<Type, 4> argTypes;
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
   regionArgs.push_back(inductionVariable);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
@@ -425,24 +426,26 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.parseAssignmentList(regionArgs, operands) ||
         parser.parseArrowTypeList(result.types))
       return failure();
+
     // Resolve input operands.
-    for (auto operandType : llvm::zip(operands, result.types))
-      if (parser.resolveOperand(std::get<0>(operandType),
-                                std::get<1>(operandType), result.operands))
+    for (auto argOperandType :
+         llvm::zip(llvm::drop_begin(regionArgs), operands, result.types)) {
+      Type type = std::get<2>(argOperandType);
+      std::get<0>(argOperandType).type = type;
+      if (parser.resolveOperand(std::get<1>(argOperandType), type,
+                                result.operands))
         return failure();
+    }
   }
-  // Induction variable.
-  argTypes.push_back(indexType);
-  // Loop carried variables
-  argTypes.append(result.types.begin(), result.types.end());
-  // Parse the body region.
-  Region *body = result.addRegion();
-  if (regionArgs.size() != argTypes.size())
+
+  if (regionArgs.size() != result.types.size() + 1)
     return parser.emitError(
         parser.getNameLoc(),
         "mismatch in number of loop-carried values and defined values");
 
-  if (parser.parseRegion(*body, regionArgs, argTypes))
+  // Parse the body region.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs))
     return failure();
 
   ForOp::ensureTerminator(*body, builder, result.location);
@@ -1975,9 +1978,8 @@ LogicalResult ParallelOp::verify() {
 ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> ivs;
-  if (parser.parseOperandList(ivs, OpAsmParser::Delimiter::Paren,
-                              /*allowResultNumber=*/false))
+  SmallVector<OpAsmParser::Argument, 4> ivs;
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren))
     return failure();
 
   // Parse loop bounds.
@@ -2016,8 +2018,9 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Now parse the body.
   Region *body = result.addRegion();
-  SmallVector<Type, 4> types(ivs.size(), builder.getIndexType());
-  if (parser.parseRegion(*body, ivs, types))
+  for (auto &iv : ivs)
+    iv.type = builder.getIndexType();
+  if (parser.parseRegion(*body, ivs))
     return failure();
 
   // Set `operand_segment_sizes` attribute.
@@ -2370,7 +2373,8 @@ void WhileOp::getSuccessorRegions(Optional<unsigned> index,
 /// assignment-list ::= assignment | assignment `,` assignment-list
 /// assignment ::= ssa-value `=` ssa-value
 ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> regionArgs, operands;
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
   Region *before = result.addRegion();
   Region *after = result.addRegion();
 
@@ -2399,10 +2403,13 @@ ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
                                     result.operands)))
     return failure();
 
-  return failure(
-      parser.parseRegion(*before, regionArgs, functionType.getInputs()) ||
-      parser.parseKeyword("do") || parser.parseRegion(*after) ||
-      parser.parseOptionalAttrDictWithKeyword(result.attributes));
+  // Propagate the types into the region arguments.
+  for (size_t i = 0, e = regionArgs.size(); i != e; ++i)
+    regionArgs[i].type = functionType.getInput(i);
+
+  return failure(parser.parseRegion(*before, regionArgs) ||
+                 parser.parseKeyword("do") || parser.parseRegion(*after) ||
+                 parser.parseOptionalAttrDictWithKeyword(result.attributes));
 }
 
 /// Prints a `while` op.

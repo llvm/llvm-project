@@ -1200,8 +1200,8 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     result.addRegion();
   } else {
     // Parse the optional initializer body.
-    auto parseResult = parser.parseOptionalRegion(
-        *result.addRegion(), /*arguments=*/llvm::None, /*argTypes=*/llvm::None);
+    auto parseResult =
+        parser.parseOptionalRegion(*result.addRegion(), /*arguments=*/{});
     if (parseResult.hasValue() && mlir::failed(*parseResult))
       return mlir::failure();
   }
@@ -1562,9 +1562,9 @@ void fir::IterWhileOp::build(mlir::OpBuilder &builder,
 mlir::ParseResult fir::IterWhileOp::parse(mlir::OpAsmParser &parser,
                                           mlir::OperationState &result) {
   auto &builder = parser.getBuilder();
-  mlir::OpAsmParser::UnresolvedOperand inductionVariable, lb, ub, step;
-  if (parser.parseLParen() ||
-      parser.parseOperand(inductionVariable, /*allowResultNumber=*/false) ||
+  mlir::OpAsmParser::Argument inductionVariable, iterateVar;
+  mlir::OpAsmParser::UnresolvedOperand lb, ub, step, iterateInput;
+  if (parser.parseLParen() || parser.parseArgument(inductionVariable) ||
       parser.parseEqual())
     return mlir::failure();
 
@@ -1577,22 +1577,18 @@ mlir::ParseResult fir::IterWhileOp::parse(mlir::OpAsmParser &parser,
       parser.resolveOperand(ub, indexType, result.operands) ||
       parser.parseKeyword("step") || parser.parseOperand(step) ||
       parser.parseRParen() ||
-      parser.resolveOperand(step, indexType, result.operands))
-    return mlir::failure();
-
-  mlir::OpAsmParser::UnresolvedOperand iterateVar, iterateInput;
-  if (parser.parseKeyword("and") || parser.parseLParen() ||
-      parser.parseOperand(iterateVar, /*allowResultNumber=*/false) ||
-      parser.parseEqual() || parser.parseOperand(iterateInput) ||
-      parser.parseRParen() ||
+      parser.resolveOperand(step, indexType, result.operands) ||
+      parser.parseKeyword("and") || parser.parseLParen() ||
+      parser.parseArgument(iterateVar) || parser.parseEqual() ||
+      parser.parseOperand(iterateInput) || parser.parseRParen() ||
       parser.resolveOperand(iterateInput, i1Type, result.operands))
     return mlir::failure();
 
   // Parse the initial iteration arguments.
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> regionArgs;
   auto prependCount = false;
 
   // Induction variable.
+  llvm::SmallVector<mlir::OpAsmParser::Argument> regionArgs;
   regionArgs.push_back(inductionVariable);
   regionArgs.push_back(iterateVar);
 
@@ -1652,7 +1648,10 @@ mlir::ParseResult fir::IterWhileOp::parse(mlir::OpAsmParser &parser,
         parser.getNameLoc(),
         "mismatch in number of loop-carried values and defined values");
 
-  if (parser.parseRegion(*body, regionArgs, argTypes))
+  for (size_t i = 0, e = regionArgs.size(); i != e; ++i)
+    regionArgs[i].type = argTypes[i];
+
+  if (parser.parseRegion(*body, regionArgs))
     return mlir::failure();
 
   fir::IterWhileOp::ensureTerminator(*body, builder, result.location);
@@ -1876,10 +1875,10 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
 mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
                                        mlir::OperationState &result) {
   auto &builder = parser.getBuilder();
-  mlir::OpAsmParser::UnresolvedOperand inductionVariable, lb, ub, step;
+  mlir::OpAsmParser::Argument inductionVariable;
+  mlir::OpAsmParser::UnresolvedOperand lb, ub, step;
   // Parse the induction variable followed by '='.
-  if (parser.parseOperand(inductionVariable, /*allowResultNumber=*/false) ||
-      parser.parseEqual())
+  if (parser.parseArgument(inductionVariable) || parser.parseEqual())
     return mlir::failure();
 
   // Parse loop bounds.
@@ -1896,7 +1895,8 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
     result.addAttribute("unordered", builder.getUnitAttr());
 
   // Parse the optional initial iteration arguments.
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> regionArgs, operands;
+  llvm::SmallVector<mlir::OpAsmParser::Argument> regionArgs;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
   llvm::SmallVector<mlir::Type> argTypes;
   bool prependCount = false;
   regionArgs.push_back(inductionVariable);
@@ -1939,8 +1939,10 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
     return parser.emitError(
         parser.getNameLoc(),
         "mismatch in number of loop-carried values and defined values");
+  for (size_t i = 0, e = regionArgs.size(); i != e; ++i)
+    regionArgs[i].type = argTypes[i];
 
-  if (parser.parseRegion(*body, regionArgs, argTypes))
+  if (parser.parseRegion(*body, regionArgs))
     return mlir::failure();
 
   DoLoopOp::ensureTerminator(*body, builder, result.location);

@@ -799,10 +799,8 @@ ParseResult GenericOp::parse(OpAsmParser &parser, OperationState &result) {
         failed(parser.parseOptionalAttrDict(result.attributes)))
       return failure();
 
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> regionOperands;
   std::unique_ptr<Region> region = std::make_unique<Region>();
-  SmallVector<Type, 8> operandTypes, regionTypes;
-  if (parser.parseRegion(*region, regionOperands, regionTypes))
+  if (parser.parseRegion(*region, {}))
     return failure();
   result.addRegion(std::move(region));
 
