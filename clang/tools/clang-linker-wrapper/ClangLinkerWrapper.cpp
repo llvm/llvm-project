@@ -638,9 +638,6 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
 
   CmdArgs.push_back(InputFile);
 
-  if (Verbose)
-    printCommands(CmdArgs);
-
   if (Error Err = executeCommands(*PtxasPath, CmdArgs))
     return std::move(Err);
 
@@ -678,9 +675,6 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
 
-  if (Verbose)
-    printCommands(CmdArgs);
-
   if (Error Err = executeCommands(*NvlinkPath, CmdArgs))
     return std::move(Err);
 
@@ -715,9 +709,6 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   // Add extracted input files.
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
-
-  if (Verbose)
-    printCommands(CmdArgs);
 
   if (Error Err = executeCommands(*LLDPath, CmdArgs))
     return std::move(Err);
@@ -795,9 +786,6 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   // Add extracted input files.
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
-
-  if (Verbose)
-    printCommands(CmdArgs);
 
   if (Error Err = executeCommands(LinkerUserPath, CmdArgs))
     return std::move(Err);
