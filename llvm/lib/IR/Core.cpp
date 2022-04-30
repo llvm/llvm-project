@@ -3921,6 +3921,12 @@ LLVMValueRef LLVMBuildFPCast(LLVMBuilderRef B, LLVMValueRef Val,
   return wrap(unwrap(B)->CreateFPCast(unwrap(Val), unwrap(DestTy), Name));
 }
 
+LLVMOpcode LLVMGetCastOpcode(LLVMValueRef Src, LLVMBool SrcIsSigned,
+                             LLVMTypeRef DestTy, LLVMBool DestIsSigned) {
+  return map_to_llvmopcode(CastInst::getCastOpcode(
+      unwrap(Src), SrcIsSigned, unwrap(DestTy), DestIsSigned));
+}
+
 /*--.. Comparisons .........................................................--*/
 
 LLVMValueRef LLVMBuildICmp(LLVMBuilderRef B, LLVMIntPredicate Op,
