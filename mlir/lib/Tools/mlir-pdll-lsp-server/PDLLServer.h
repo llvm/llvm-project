@@ -18,6 +18,8 @@ namespace mlir {
 namespace lsp {
 struct Diagnostic;
 class CompilationDatabase;
+struct PDLLViewOutputResult;
+enum class PDLLViewOutputKind;
 struct CompletionList;
 struct DocumentLink;
 struct DocumentSymbol;
@@ -87,6 +89,11 @@ public:
   /// Get the signature help for the position within the given file.
   SignatureHelp getSignatureHelp(const URIForFile &uri,
                                  const Position &helpPos);
+
+  /// Get the output of the given PDLL file, or None if there is no valid
+  /// output.
+  Optional<PDLLViewOutputResult> getPDLLViewOutput(const URIForFile &uri,
+                                                   PDLLViewOutputKind kind);
 
 private:
   struct Impl;

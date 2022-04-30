@@ -8,7 +8,7 @@
 
 #include "CompilationDatabase.h"
 #include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/Protocol.h"
+#include "Protocol.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
