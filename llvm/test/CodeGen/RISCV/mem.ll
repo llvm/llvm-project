@@ -243,13 +243,11 @@ define i32 @lw_sw_far_local(i32* %a, i32 %b)  {
 ; Make sure we don't remove the addi and fold the C from
 ; (add (addi FrameIndex, C), X) into the store address.
 ; FrameIndex cannot be the operand of an ADD. We must keep the ADDI.
-define void @addi_fold_crash(i32 %arg) {
+define void @addi_fold_crash(i32 %arg) nounwind {
 ; RV32I-LABEL: addi_fold_crash:
 ; RV32I:       # %bb.0: # %bb
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    .cfi_def_cfa_offset 16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    addi a1, sp, 12
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    sb zero, 0(a0)
