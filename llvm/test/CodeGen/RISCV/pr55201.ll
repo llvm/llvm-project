@@ -6,6 +6,7 @@ define i32 @f(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rori a0, a0, 27
 ; CHECK-NEXT:    ori a0, a0, 32
+; CHECK-NEXT:    andi a0, a0, -31
 ; CHECK-NEXT:    ret
   %or1 = or i32 %x, 1
   %sh1 = shl i32 %or1, 5
