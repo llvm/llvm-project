@@ -2016,29 +2016,34 @@ bool SampleProfileLoader::doInitialization(Module &M,
       SampleProfileUseProfi = true;
     if (!EnableExtTspBlockPlacement.getNumOccurrences())
       EnableExtTspBlockPlacement = true;
-  }
-
-  if (Reader->profileIsCS() || Reader->profileIsPreInlined()) {
-    ProfileIsCS = Reader->profileIsCS();
     // Enable priority-base inliner and size inline by default for CSSPGO.
     if (!ProfileSizeInline.getNumOccurrences())
       ProfileSizeInline = true;
     if (!CallsitePrioritizedInline.getNumOccurrences())
       CallsitePrioritizedInline = true;
-
-    // For CSSPGO, use preinliner decision by default when available.
-    if (!UsePreInlinerDecision.getNumOccurrences())
-      UsePreInlinerDecision = true;
-
     // For CSSPGO, we also allow recursive inline to best use context profile.
     if (!AllowRecursiveInline.getNumOccurrences())
       AllowRecursiveInline = true;
 
-    if (FunctionSamples::ProfileIsCS) {
-      // Tracker for profiles under different context
-      ContextTracker = std::make_unique<SampleContextTracker>(
-          Reader->getProfiles(), &GUIDToFuncNameMap);
+    if (Reader->profileIsPreInlined()) {
+      if (!UsePreInlinerDecision.getNumOccurrences())
+        UsePreInlinerDecision = true;
+    } else if (!Reader->profileIsCS()) {
+      // Non-CS profile should be fine without a function size budget for the
+      // inliner since the contexts in the profile are all from inlining in
+      // the prevoius build, thus they are bounded.
+      if (!ProfileInlineLimitMin.getNumOccurrences())
+        ProfileInlineLimitMin = std::numeric_limits<unsigned>::max();
+      if (!ProfileInlineLimitMax.getNumOccurrences())
+        ProfileInlineLimitMax = std::numeric_limits<unsigned>::max();
     }
+  }
+
+  if (FunctionSamples::ProfileIsCS) {
+    ProfileIsCS = true;
+    // Tracker for profiles under different context
+    ContextTracker = std::make_unique<SampleContextTracker>(
+        Reader->getProfiles(), &GUIDToFuncNameMap);
   }
 
   // Load pseudo probe descriptors for probe-based function samples.
