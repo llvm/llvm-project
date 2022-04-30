@@ -17397,16 +17397,24 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
   };
 
   // On AVX2 targets we can permute 256-bit vectors as 64-bit sub-lanes
-  // (with PERMQ/PERMPD). On AVX512BW targets, permuting 32-bit sub-lanes, even
-  // with a variable shuffle, is worth it for 64xi8 vectors. Otherwise we can
-  // only permute whole 128-bit lanes.
-  int SubLaneScale = 1;
-  if (Subtarget.hasAVX2() && VT.is256BitVector())
-    SubLaneScale = 2;
+  // (with PERMQ/PERMPD). On AVX2/AVX512BW targets, permuting 32-bit sub-lanes,
+  // even with a variable shuffle, can be worth it for v32i8/v64i8 vectors.
+  // Otherwise we can only permute whole 128-bit lanes.
+  int MinSubLaneScale = 1, MaxSubLaneScale = 1;
+  if (Subtarget.hasAVX2() && VT.is256BitVector()) {
+    bool OnlyLowestElts = isUndefOrInRange(Mask, 0, NumLaneElts);
+    MinSubLaneScale = 2;
+    MaxSubLaneScale =
+        (!OnlyLowestElts && V2.isUndef() && VT == MVT::v32i8) ? 4 : 2;
+  }
   if (Subtarget.hasBWI() && VT == MVT::v64i8)
-    SubLaneScale = 4;
+    MinSubLaneScale = MaxSubLaneScale = 4;
 
-  return ShuffleSubLanes(SubLaneScale);
+  for (int Scale = MinSubLaneScale; Scale <= MaxSubLaneScale; Scale *= 2)
+    if (SDValue Shuffle = ShuffleSubLanes(Scale))
+      return Shuffle;
+
+  return SDValue();
 }
 
 static bool matchShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
