@@ -134,6 +134,10 @@ Changes to the OCaml bindings
 Changes to the C API
 --------------------
 
+* Add ``LLVMGetCastOpcode`` function to aid users of ``LLVMBuildCast`` in
+  resolving the best cast operation given a source value and destination type.
+  This function is a direct wrapper of ``CastInst::getCastOpcode``.
+
 Changes to the Go bindings
 --------------------------
 
