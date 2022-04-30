@@ -233,69 +233,12 @@ private:
   std::vector<syntax::Token> MainFileTokens;
 };
 
-// Filter for clang diagnostics groups enabled by CTOptions.Checks.
-//
-// These are check names like clang-diagnostics-unused.
-// Note that unlike -Wunused, clang-diagnostics-unused does not imply
-// subcategories like clang-diagnostics-unused-function.
-//
-// This is used to determine which diagnostics can be enabled by ExtraArgs in
-// the clang-tidy configuration.
-class TidyDiagnosticGroups {
-  // Whether all diagnostic groups are enabled by default.
-  // True if we've seen clang-diagnostic-*.
-  bool Default = false;
-  // Set of diag::Group whose enablement != Default.
-  // If Default is false, this is foo where we've seen clang-diagnostic-foo.
-  llvm::DenseSet<unsigned> Exceptions;
-
-public:
-  TidyDiagnosticGroups(llvm::StringRef Checks) {
-    constexpr llvm::StringLiteral CDPrefix = "clang-diagnostic-";
-
-    llvm::StringRef Check;
-    while (!Checks.empty()) {
-      std::tie(Check, Checks) = Checks.split(',');
-      if (Check.empty())
-        continue;
-
-      bool Enable = !Check.consume_front("-");
-      bool Glob = Check.consume_back("*");
-      if (Glob) {
-        // Is this clang-diagnostic-*, or *, or so?
-        // (We ignore all other types of globs).
-        if (CDPrefix.startswith(Check)) {
-          Default = Enable;
-          Exceptions.clear();
-        }
-        continue;
-      }
-
-      // In "*,clang-diagnostic-foo", the latter is a no-op.
-      if (Default == Enable)
-        continue;
-      // The only non-glob entries we care about are clang-diagnostic-foo.
-      if (!Check.consume_front(CDPrefix))
-        continue;
-
-      if (auto Group = DiagnosticIDs::getGroupForWarningOption(Check))
-        Exceptions.insert(static_cast<unsigned>(*Group));
-    }
-  }
-
-  bool operator()(diag::Group GroupID) const {
-    return Exceptions.contains(static_cast<unsigned>(GroupID)) ? !Default
-                                                               : Default;
-  }
-};
-
 // Find -W<group> and -Wno-<group> options in ExtraArgs and apply them to Diags.
 //
 // This is used to handle ExtraArgs in clang-tidy configuration.
 // We don't use clang's standard handling of this as we want slightly different
 // behavior (e.g. we want to exclude these from -Wno-error).
 void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
-                         llvm::function_ref<bool(diag::Group)> EnabledGroups,
                          DiagnosticsEngine &Diags) {
   for (llvm::StringRef Group : ExtraArgs) {
     // Only handle args that are of the form -W[no-]<group>.
@@ -316,9 +259,6 @@ void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
       if (Enable) {
         if (Diags.getDiagnosticLevel(ID, SourceLocation()) <
             DiagnosticsEngine::Warning) {
-          auto Group = DiagnosticIDs::getGroupForDiag(ID);
-          if (!Group || !EnabledGroups(*Group))
-            continue;
           Diags.setSeverity(ID, diag::Severity::Warning, SourceLocation());
           if (Diags.getWarningsAsErrors())
             NeedsWerrorExclusion = true;
@@ -414,25 +354,18 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     //   - ExtraArgs: ["-Wfoo"] causes clang to produce the warnings
     //   - Checks: "clang-diagnostic-foo" prevents clang-tidy filtering them out
     //
-    // In clang-tidy, diagnostics are emitted if they pass both checks.
-    // When groups contain subgroups, -Wparent includes the child, but
-    // clang-diagnostic-parent does not.
+    // We treat these as clang warnings, so the Checks part is not relevant.
+    // We must enable the warnings specified in ExtraArgs.
     //
-    // We *don't* want to change the compile command directly. This can have
+    // We *don't* want to change the compile command directly. this can have
     // too many unexpected effects: breaking the command, interactions with
     // -- and -Werror, etc. Besides, we've already parsed the command.
     // Instead we parse the -W<group> flags and handle them directly.
-    //
-    // Similarly, we don't want to use Checks to filter clang diagnostics after
-    // they are generated, as this spreads clang-tidy emulation everywhere.
-    // Instead, we just use these to filter which extra diagnostics we enable.
     auto &Diags = Clang->getDiagnostics();
-    TidyDiagnosticGroups TidyGroups(ClangTidyOpts.Checks ? *ClangTidyOpts.Checks
-                                                         : llvm::StringRef());
     if (ClangTidyOpts.ExtraArgsBefore)
-      applyWarningOptions(*ClangTidyOpts.ExtraArgsBefore, TidyGroups, Diags);
+      applyWarningOptions(*ClangTidyOpts.ExtraArgsBefore, Diags);
     if (ClangTidyOpts.ExtraArgs)
-      applyWarningOptions(*ClangTidyOpts.ExtraArgs, TidyGroups, Diags);
+      applyWarningOptions(*ClangTidyOpts.ExtraArgs, Diags);
   } else {
     // Skips some analysis.
     Clang->getDiagnosticOpts().IgnoreWarnings = true;
