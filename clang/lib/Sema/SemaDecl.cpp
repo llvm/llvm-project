@@ -934,8 +934,9 @@ Corrected:
       //   appeared.
       //
       // We also allow this in C99 as an extension. However, this is not
-      // allowed in C2x as there are no functions without prototypes there.
-      if (!getLangOpts().C2x) {
+      // allowed in all language modes as functions without prototypes may not
+      // be supported.
+      if (getLangOpts().implicitFunctionsAllowed()) {
         if (NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *Name, S))
           return NameClassification::NonType(D);
       }
@@ -15273,7 +15274,8 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
 NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
                                           IdentifierInfo &II, Scope *S) {
   // It is not valid to implicitly define a function in C2x.
-  assert(!LangOpts.C2x && "Cannot implicitly define a function in C2x");
+  assert(LangOpts.implicitFunctionsAllowed() &&
+         "Implicit function declarations aren't allowed in this language mode");
 
   // Find the scope in which the identifier is injected and the corresponding
   // DeclContext.
@@ -15318,8 +15320,6 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
   if (II.getName().startswith("__builtin_"))
     diag_id = diag::warn_builtin_unknown;
   // OpenCL v2.0 s6.9.u - Implicit function declaration is not supported.
-  else if (getLangOpts().OpenCL)
-    diag_id = diag::err_opencl_implicit_function_decl;
   else if (getLangOpts().C99)
     diag_id = diag::ext_implicit_function_decl_c99;
   else

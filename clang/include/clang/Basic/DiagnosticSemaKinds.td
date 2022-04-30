@@ -10198,8 +10198,6 @@ def err_opencl_scalar_type_rank_greater_than_vector_type : Error<
     "element. (%0 and %1)">;
 def err_bad_kernel_param_type : Error<
   "%0 cannot be used as the type of a kernel parameter">;
-def err_opencl_implicit_function_decl : Error<
-  "implicit declaration of function %0 is invalid in OpenCL">;
 def err_record_with_pointers_kernel_param : Error<
   "%select{struct|union}0 kernel parameters may not contain pointers">;
 def note_within_field_of_type : Note<
