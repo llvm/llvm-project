@@ -97,6 +97,19 @@ private:
   bool eof;
   bool err;
 
+  // This is a convenience RAII class to lock and unlock file objects.
+  class FileLock {
+    File *file;
+
+  public:
+    explicit FileLock(File *f) : file(f) { file->lock(); }
+
+    ~FileLock() { file->unlock(); }
+
+    FileLock(const FileLock &) = delete;
+    FileLock(FileLock &&) = delete;
+  };
+
 protected:
   bool write_allowed() const {
     return mode & (static_cast<ModeFlags>(OpenMode::WRITE) |
@@ -150,10 +163,8 @@ public:
 
   // Buffered write of |len| bytes from |data| under the file lock.
   size_t write(const void *data, size_t len) {
-    lock();
-    size_t ret = write_unlocked(data, len);
-    unlock();
-    return ret;
+    FileLock l(this);
+    return write_unlocked(data, len);
   }
 
   // Buffered read of |len| bytes into |data| without the file lock.
@@ -161,10 +172,8 @@ public:
 
   // Buffered read of |len| bytes into |data| under the file lock.
   size_t read(void *data, size_t len) {
-    lock();
-    size_t ret = read_unlocked(data, len);
-    unlock();
-    return ret;
+    FileLock l(this);
+    return read_unlocked(data, len);
   }
 
   int seek(long offset, int whence);
@@ -184,26 +193,30 @@ public:
   void lock() { mutex.lock(); }
   void unlock() { mutex.unlock(); }
 
-  bool error() const { return err; }
-  void clearerr() { err = false; }
-  bool iseof() const { return eof; }
+  bool error_unlocked() const { return err; }
+
+  bool error() {
+    FileLock l(this);
+    return error_unlocked();
+  }
+
+  void clearerr_unlocked() { err = false; }
+
+  void clearerr() {
+    FileLock l(this);
+    clearerr_unlocked();
+  }
+
+  bool iseof_unlocked() { return eof; }
+
+  bool iseof() {
+    FileLock l(this);
+    return iseof_unlocked();
+  }
 
   // Returns an bit map of flags corresponding to enumerations of
   // OpenMode, ContentType and CreateType.
   static ModeFlags mode_flags(const char *mode);
-};
-
-// This is a convenience RAII class to lock and unlock file objects.
-class FileLock {
-  File *file;
-
-public:
-  explicit FileLock(File *f) : file(f) { file->lock(); }
-
-  ~FileLock() { file->unlock(); }
-
-  FileLock(const FileLock &) = delete;
-  FileLock(FileLock &&) = delete;
 };
 
 // The implementaiton of this function is provided by the platfrom_file
