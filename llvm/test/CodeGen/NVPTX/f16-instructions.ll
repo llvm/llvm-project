@@ -601,7 +601,7 @@ define i1 @test_fcmp_ord(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%f[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%f[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.lt.f32    [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: @[[PRED]] bra   [[LABEL:LBB.*]];
+; CHECK-NEXT: @[[PRED]] bra   [[LABEL:\$L__BB.*]];
 ; CHECK:      st.u32  [%[[C]]],
 ; CHECK:      [[LABEL]]:
 ; CHECK:      st.u32  [%[[D]]],
@@ -620,7 +620,7 @@ else:
 ; CHECK-LABEL: test_phi(
 ; CHECK:      ld.param.u64    %[[P1:rd[0-9]+]], [test_phi_param_0];
 ; CHECK:      ld.b16  {{%h[0-9]+}}, [%[[P1]]];
-; CHECK: [[LOOP:LBB[0-9_]+]]:
+; CHECK: [[LOOP:\$L__BB[0-9_]+]]:
 ; CHECK:      mov.b16 [[R:%h[0-9]+]], [[AB:%h[0-9]+]];
 ; CHECK:      ld.b16  [[AB:%h[0-9]+]], [%[[P1]]];
 ; CHECK:      {

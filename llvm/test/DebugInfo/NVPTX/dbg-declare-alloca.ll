@@ -150,11 +150,11 @@
 ; CHECK-NEXT: .b8 115
 ; CHECK-NEXT: .b8 116
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end0                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 2                                // Abbrev [2] 0x31:0x3c DW_TAG_subprogram
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end0                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
 ; CHECK-NEXT: .b8 117                              // DW_AT_name
