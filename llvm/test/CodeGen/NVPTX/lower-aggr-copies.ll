@@ -36,12 +36,12 @@ entry:
 ; IR:         ret i8* %dst
 
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memcpy_caller
-; PTX:        LBB[[LABEL:[_0-9]+]]:
+; PTX:        $L__BB[[LABEL:[_0-9]+]]:
 ; PTX:        ld.u8 %rs[[REG:[0-9]+]]
 ; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[REG]]
 ; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
 ; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
-; PTX:        @%p[[PRED]] bra LBB[[LABEL]]
+; PTX:        @%p[[PRED]] bra $L__BB[[LABEL]]
 
 }
 
@@ -70,12 +70,12 @@ entry:
 
 
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memcpy_volatile_caller
-; PTX:        LBB[[LABEL:[_0-9]+]]:
+; PTX:        $L__BB[[LABEL:[_0-9]+]]:
 ; PTX:        ld.volatile.u8 %rs[[REG:[0-9]+]]
 ; PTX:        st.volatile.u8 [%rd{{[0-9]+}}], %rs[[REG]]
 ; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
 ; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
-; PTX:        @%p[[PRED]] bra LBB[[LABEL]]
+; PTX:        @%p[[PRED]] bra $L__BB[[LABEL]]
 }
 
 define i8* @memcpy_casting_caller(i32* %dst, i32* %src, i64 %n) #0 {
@@ -130,11 +130,11 @@ entry:
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memset_caller(
 ; PTX:        ld.param.u32 %r[[C:[0-9]+]]
 ; PTX:        cvt.u16.u32  %rs[[REG:[0-9]+]], %r[[C]];
-; PTX:        LBB[[LABEL:[_0-9]+]]:
+; PTX:        $L__BB[[LABEL:[_0-9]+]]:
 ; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[REG]]
 ; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
 ; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
-; PTX:        @%p[[PRED]] bra LBB[[LABEL]]
+; PTX:        @%p[[PRED]] bra $L__BB[[LABEL]]
 }
 
 define i8* @volatile_memset_caller(i8* %dst, i32 %c, i64 %n) #0 {
@@ -166,20 +166,20 @@ entry:
 ; PTX:        ld.param.u64 %rd[[N:[0-9]+]]
 ; PTX-DAG:    setp.eq.s64 %p[[NEQ0:[0-9]+]], %rd[[N]], 0
 ; PTX-DAG:    setp.ge.u64 %p[[SRC_GT_THAN_DST:[0-9]+]], %rd{{[0-9]+}}, %rd{{[0-9]+}}
-; PTX-NEXT:   @%p[[SRC_GT_THAN_DST]] bra LBB[[FORWARD_BB:[0-9_]+]]
+; PTX-NEXT:   @%p[[SRC_GT_THAN_DST]] bra $L__BB[[FORWARD_BB:[0-9_]+]]
 ; -- this is the backwards copying BB
-; PTX:        @%p[[NEQ0]] bra LBB[[EXIT:[0-9_]+]]
+; PTX:        @%p[[NEQ0]] bra $L__BB[[EXIT:[0-9_]+]]
 ; PTX:        add.s64 %rd{{[0-9]}}, %rd{{[0-9]}}, -1
 ; PTX:        ld.u8 %rs[[ELEMENT:[0-9]+]]
 ; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[ELEMENT]]
 ; -- this is the forwards copying BB
-; PTX:        LBB[[FORWARD_BB]]:
-; PTX:        @%p[[NEQ0]] bra LBB[[EXIT]]
+; PTX:        $L__BB[[FORWARD_BB]]:
+; PTX:        @%p[[NEQ0]] bra $L__BB[[EXIT]]
 ; PTX:        ld.u8 %rs[[ELEMENT2:[0-9]+]]
 ; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[ELEMENT2]]
 ; PTX:        add.s64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, 1
 ; -- exit block
-; PTX:        LBB[[EXIT]]:
+; PTX:        $L__BB[[EXIT]]:
 ; PTX-NEXT:   st.param.b64 [func_retval0
 ; PTX-NEXT:   ret
 }
