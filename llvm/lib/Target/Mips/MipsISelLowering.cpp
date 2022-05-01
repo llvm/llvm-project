@@ -950,6 +950,14 @@ static SDValue performMADD_MSUBCombine(SDNode *ROOTNode, SelectionDAG &CurDAG,
       ROOTNode->getOperand(1).getOpcode() != ISD::MUL)
     return SDValue();
 
+  // In the case where we have a multiplication as the left operand of
+  // of a subtraction, we can't combine into a MipsISD::MSub node as the
+  // the instruction definition of msub(u) places the multiplication on
+  // on the right.
+  if (ROOTNode->getOpcode() == ISD::SUB &&
+      ROOTNode->getOperand(0).getOpcode() == ISD::MUL)
+    return SDValue();
+
   // We don't handle vector types here.
   if (ROOTNode->getValueType(0).isVector())
     return SDValue();
