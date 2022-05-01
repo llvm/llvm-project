@@ -355,201 +355,6 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
-TEST_F(OpenMPIRBuilderTest, CreateCancel) {
-  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.initialize();
-
-  BasicBlock *CBB = BasicBlock::Create(Ctx, "", F);
-  new UnreachableInst(Ctx, CBB);
-  auto FiniCB = [&](InsertPointTy IP) {
-    ASSERT_NE(IP.getBlock(), nullptr);
-    ASSERT_EQ(IP.getBlock()->end(), IP.getPoint());
-    BranchInst::Create(CBB, IP.getBlock());
-  };
-  OMPBuilder.pushFinalizationCB({FiniCB, OMPD_parallel, true});
-
-  IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
-  auto NewIP = OMPBuilder.createCancel(Loc, nullptr, OMPD_parallel);
-  Builder.restoreIP(NewIP);
-  EXPECT_FALSE(M->global_empty());
-  EXPECT_EQ(M->size(), 4U);
-  EXPECT_EQ(F->size(), 4U);
-  EXPECT_EQ(BB->size(), 4U);
-
-  CallInst *GTID = dyn_cast<CallInst>(&BB->front());
-  EXPECT_NE(GTID, nullptr);
-  EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
-  EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
-
-  CallInst *Cancel = dyn_cast<CallInst>(GTID->getNextNode());
-  EXPECT_NE(Cancel, nullptr);
-  EXPECT_EQ(Cancel->arg_size(), 3U);
-  EXPECT_EQ(Cancel->getCalledFunction()->getName(), "__kmpc_cancel");
-  EXPECT_FALSE(Cancel->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(Cancel->getCalledFunction()->doesNotFreeMemory());
-  EXPECT_EQ(Cancel->getNumUses(), 1U);
-  Instruction *CancelBBTI = Cancel->getParent()->getTerminator();
-  EXPECT_EQ(CancelBBTI->getNumSuccessors(), 2U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(0), NewIP.getBlock());
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->size(), 3U);
-  CallInst *GTID1 = dyn_cast<CallInst>(&CancelBBTI->getSuccessor(1)->front());
-  EXPECT_NE(GTID1, nullptr);
-  EXPECT_EQ(GTID1->arg_size(), 1U);
-  EXPECT_EQ(GTID1->getCalledFunction()->getName(), "__kmpc_global_thread_num");
-  EXPECT_FALSE(GTID1->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(GTID1->getCalledFunction()->doesNotFreeMemory());
-  CallInst *Barrier = dyn_cast<CallInst>(GTID1->getNextNode());
-  EXPECT_NE(Barrier, nullptr);
-  EXPECT_EQ(Barrier->arg_size(), 2U);
-  EXPECT_EQ(Barrier->getCalledFunction()->getName(), "__kmpc_cancel_barrier");
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotFreeMemory());
-  EXPECT_EQ(Barrier->getNumUses(), 0U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
-            1U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0), CBB);
-
-  EXPECT_EQ(cast<CallInst>(Cancel)->getArgOperand(1), GTID);
-
-  OMPBuilder.popFinalizationCB();
-
-  Builder.CreateUnreachable();
-  EXPECT_FALSE(verifyModule(*M, &errs()));
-}
-
-TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
-  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.initialize();
-
-  BasicBlock *CBB = BasicBlock::Create(Ctx, "", F);
-  new UnreachableInst(Ctx, CBB);
-  auto FiniCB = [&](InsertPointTy IP) {
-    ASSERT_NE(IP.getBlock(), nullptr);
-    ASSERT_EQ(IP.getBlock()->end(), IP.getPoint());
-    BranchInst::Create(CBB, IP.getBlock());
-  };
-  OMPBuilder.pushFinalizationCB({FiniCB, OMPD_parallel, true});
-
-  IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
-  auto NewIP = OMPBuilder.createCancel(Loc, Builder.getTrue(), OMPD_parallel);
-  Builder.restoreIP(NewIP);
-  EXPECT_FALSE(M->global_empty());
-  EXPECT_EQ(M->size(), 4U);
-  EXPECT_EQ(F->size(), 7U);
-  EXPECT_EQ(BB->size(), 1U);
-  ASSERT_TRUE(isa<BranchInst>(BB->getTerminator()));
-  ASSERT_EQ(BB->getTerminator()->getNumSuccessors(), 2U);
-  BB = BB->getTerminator()->getSuccessor(0);
-  EXPECT_EQ(BB->size(), 4U);
-
-  CallInst *GTID = dyn_cast<CallInst>(&BB->front());
-  EXPECT_NE(GTID, nullptr);
-  EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
-  EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
-
-  CallInst *Cancel = dyn_cast<CallInst>(GTID->getNextNode());
-  EXPECT_NE(Cancel, nullptr);
-  EXPECT_EQ(Cancel->arg_size(), 3U);
-  EXPECT_EQ(Cancel->getCalledFunction()->getName(), "__kmpc_cancel");
-  EXPECT_FALSE(Cancel->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(Cancel->getCalledFunction()->doesNotFreeMemory());
-  EXPECT_EQ(Cancel->getNumUses(), 1U);
-  Instruction *CancelBBTI = Cancel->getParent()->getTerminator();
-  EXPECT_EQ(CancelBBTI->getNumSuccessors(), 2U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(0)->size(), 1U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(0)->getUniqueSuccessor(),
-            NewIP.getBlock());
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->size(), 3U);
-  CallInst *GTID1 = dyn_cast<CallInst>(&CancelBBTI->getSuccessor(1)->front());
-  EXPECT_NE(GTID1, nullptr);
-  EXPECT_EQ(GTID1->arg_size(), 1U);
-  EXPECT_EQ(GTID1->getCalledFunction()->getName(), "__kmpc_global_thread_num");
-  EXPECT_FALSE(GTID1->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(GTID1->getCalledFunction()->doesNotFreeMemory());
-  CallInst *Barrier = dyn_cast<CallInst>(GTID1->getNextNode());
-  EXPECT_NE(Barrier, nullptr);
-  EXPECT_EQ(Barrier->arg_size(), 2U);
-  EXPECT_EQ(Barrier->getCalledFunction()->getName(), "__kmpc_cancel_barrier");
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotFreeMemory());
-  EXPECT_EQ(Barrier->getNumUses(), 0U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
-            1U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0), CBB);
-
-  EXPECT_EQ(cast<CallInst>(Cancel)->getArgOperand(1), GTID);
-
-  OMPBuilder.popFinalizationCB();
-
-  Builder.CreateUnreachable();
-  EXPECT_FALSE(verifyModule(*M, &errs()));
-}
-
-TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
-  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.initialize();
-
-  BasicBlock *CBB = BasicBlock::Create(Ctx, "", F);
-  new UnreachableInst(Ctx, CBB);
-  auto FiniCB = [&](InsertPointTy IP) {
-    ASSERT_NE(IP.getBlock(), nullptr);
-    ASSERT_EQ(IP.getBlock()->end(), IP.getPoint());
-    BranchInst::Create(CBB, IP.getBlock());
-  };
-  OMPBuilder.pushFinalizationCB({FiniCB, OMPD_parallel, true});
-
-  IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
-  auto NewIP = OMPBuilder.createBarrier(Loc, OMPD_for);
-  Builder.restoreIP(NewIP);
-  EXPECT_FALSE(M->global_empty());
-  EXPECT_EQ(M->size(), 3U);
-  EXPECT_EQ(F->size(), 4U);
-  EXPECT_EQ(BB->size(), 4U);
-
-  CallInst *GTID = dyn_cast<CallInst>(&BB->front());
-  EXPECT_NE(GTID, nullptr);
-  EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
-  EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
-
-  CallInst *Barrier = dyn_cast<CallInst>(GTID->getNextNode());
-  EXPECT_NE(Barrier, nullptr);
-  EXPECT_EQ(Barrier->arg_size(), 2U);
-  EXPECT_EQ(Barrier->getCalledFunction()->getName(), "__kmpc_cancel_barrier");
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotFreeMemory());
-  EXPECT_EQ(Barrier->getNumUses(), 1U);
-  Instruction *BarrierBBTI = Barrier->getParent()->getTerminator();
-  EXPECT_EQ(BarrierBBTI->getNumSuccessors(), 2U);
-  EXPECT_EQ(BarrierBBTI->getSuccessor(0), NewIP.getBlock());
-  EXPECT_EQ(BarrierBBTI->getSuccessor(1)->size(), 1U);
-  EXPECT_EQ(BarrierBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
-            1U);
-  EXPECT_EQ(BarrierBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0),
-            CBB);
-
-  EXPECT_EQ(cast<CallInst>(Barrier)->getArgOperand(1), GTID);
-
-  OMPBuilder.popFinalizationCB();
-
-  Builder.CreateUnreachable();
-  EXPECT_FALSE(verifyModule(*M, &errs()));
-}
-
 TEST_F(OpenMPIRBuilderTest, DbgLoc) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
@@ -1020,6 +825,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
   F->setName("func");
+  BB->setName("entry");
   IRBuilder<> Builder(BB);
 
   BasicBlock *EnterBB = BasicBlock::Create(Ctx, "parallel.enter", F);
@@ -1100,33 +906,14 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
 
   EXPECT_EQ(NumBodiesGenerated, 1U);
   EXPECT_EQ(NumPrivatizedVars, 0U);
-  EXPECT_EQ(NumFinalizationPoints, 2U);
-  EXPECT_EQ(FakeDestructor->getNumUses(), 2U);
+  EXPECT_EQ(NumFinalizationPoints, 1U);
+  EXPECT_EQ(FakeDestructor->getNumUses(), 1U);
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
-
-  BasicBlock *ExitBB = nullptr;
-  for (const User *Usr : FakeDestructor->users()) {
-    const CallInst *CI = dyn_cast<CallInst>(Usr);
-    ASSERT_EQ(CI->getCalledFunction(), FakeDestructor);
-    ASSERT_TRUE(isa<BranchInst>(CI->getNextNode()));
-    ASSERT_EQ(CI->getNextNode()->getNumSuccessors(), 1U);
-    if (ExitBB)
-      ASSERT_EQ(CI->getNextNode()->getSuccessor(0), ExitBB);
-    else
-      ExitBB = CI->getNextNode()->getSuccessor(0);
-    ASSERT_EQ(ExitBB->size(), 1U);
-    if (!isa<ReturnInst>(ExitBB->front())) {
-      ASSERT_TRUE(isa<BranchInst>(ExitBB->front()));
-      ASSERT_EQ(cast<BranchInst>(ExitBB->front()).getNumSuccessors(), 1U);
-      ASSERT_TRUE(isa<ReturnInst>(
-          cast<BranchInst>(ExitBB->front()).getSuccessor(0)->front()));
-    }
-  }
 }
 
 TEST_F(OpenMPIRBuilderTest, ParallelForwardAsPointers) {
@@ -1176,13 +963,12 @@ TEST_F(OpenMPIRBuilderTest, ParallelForwardAsPointers) {
     ReplacementValue = &Inner;
     return CodeGenIP;
   };
-  auto FiniCB = [](InsertPointTy) {};
 
   IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
                                     F->getEntryBlock().getFirstInsertionPt());
   IRBuilder<>::InsertPoint AfterIP =
-      OMPBuilder.createParallel(Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB,
-                                nullptr, nullptr, OMP_PROC_BIND_default, false);
+      OMPBuilder.createParallel(Loc, AllocaIP, BodyGenCB, PrivCB, {}, nullptr,
+                                nullptr, OMP_PROC_BIND_default, false);
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
 
@@ -3977,16 +3763,12 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
     return Builder.saveIP();
   };
 
-  // Do nothing in finalization.
-  auto FiniCB = [&](InsertPointTy CodeGenIP) { return CodeGenIP; };
-
-  Builder.restoreIP(
-      OMPBuilder.createParallel(Loc, OuterAllocaIP, FirstBodyGenCB, PrivCB,
-                                FiniCB, /* IfCondition */ nullptr,
-                                /* NumThreads */ nullptr, OMP_PROC_BIND_default,
-                                /* IsCancellable */ false));
+  Builder.restoreIP(OMPBuilder.createParallel(
+      Loc, OuterAllocaIP, FirstBodyGenCB, PrivCB, {}, /* IfCondition */ nullptr,
+      /* NumThreads */ nullptr, OMP_PROC_BIND_default,
+      /* IsCancellable */ false));
   InsertPointTy AfterIP = OMPBuilder.createParallel(
-      {Builder.saveIP(), DL}, OuterAllocaIP, SecondBodyGenCB, PrivCB, FiniCB,
+      {Builder.saveIP(), DL}, OuterAllocaIP, SecondBodyGenCB, PrivCB, {},
       /* IfCondition */ nullptr,
       /* NumThreads */ nullptr, OMP_PROC_BIND_default,
       /* IsCancellable */ false);
@@ -4075,7 +3857,6 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
   llvm::SmallVector<BodyGenCallbackTy, 4> SectionCBVector;
   llvm::SmallVector<BasicBlock *, 4> CaseBBs;
 
-  auto FiniCB = [&](InsertPointTy IP) {};
   auto SectionCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {};
   SectionCBVector.push_back(SectionCB);
 
@@ -4085,7 +3866,7 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsSimple) {
   IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
                                     F->getEntryBlock().getFirstInsertionPt());
   Builder.restoreIP(OMPBuilder.createSections(Loc, AllocaIP, SectionCBVector,
-                                              PrivCB, FiniCB, false, false));
+                                              PrivCB, {}, false, false));
   Builder.CreateRetVoid(); // Required at the end of the function
   EXPECT_NE(F->getEntryBlock().getTerminator(), nullptr);
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -4223,10 +4004,9 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsNoWait) {
   auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                    llvm::Value &, llvm::Value &Val,
                    llvm::Value *&ReplVal) { return CodeGenIP; };
-  auto FiniCB = [&](InsertPointTy IP) {};
 
   Builder.restoreIP(OMPBuilder.createSections(Loc, AllocaIP, SectionCBVector,
-                                              PrivCB, FiniCB, false, true));
+                                              PrivCB, {}, false, true));
   Builder.CreateRetVoid(); // Required at the end of the function
   for (auto &Inst : instructions(*F)) {
     EXPECT_FALSE(isa<CallInst>(Inst) &&

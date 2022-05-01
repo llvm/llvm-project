@@ -37,6 +37,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
@@ -487,6 +488,28 @@ public:
       CGF.CapturedStmtInfo = NewCapturedStmtInfo;
     }
     ~CGCapturedStmtRAII() { CGF.CapturedStmtInfo = PrevCapturedStmtInfo; }
+  };
+
+  /// Required until everything can be handled by OpenMPIRBuilder.
+  /// Isn't the ultimate solution to mixing OpenMPIRBuilder and
+  /// non-OpenMPIRBuilder codegen either, but works with the current regression
+  /// tests so far.
+  bool IsInsideNonOpenMPIRBuilderHandledRegion = false;
+  class CGNonOpenMPIRBuilderRegion {
+  private:
+    CodeGenFunction &CGF;
+    bool PreviousIsInsideNonOpenMPIRBuilderHandledRegion;
+
+  public:
+    CGNonOpenMPIRBuilderRegion(CodeGenFunction &CGF)
+        : CGF(CGF), PreviousIsInsideNonOpenMPIRBuilderHandledRegion(
+                        CGF.IsInsideNonOpenMPIRBuilderHandledRegion) {
+      CGF.IsInsideNonOpenMPIRBuilderHandledRegion = true;
+    }
+    ~CGNonOpenMPIRBuilderRegion() {
+      CGF.IsInsideNonOpenMPIRBuilderHandledRegion =
+          PreviousIsInsideNonOpenMPIRBuilderHandledRegion;
+    }
   };
 
   /// An abstract representation of regular/ObjC call/message targets.
@@ -1774,18 +1797,20 @@ public:
     /// Emit the Finalization for an OMP region
     /// \param CGF	The Codegen function this belongs to
     /// \param IP	Insertion point for generating the finalization code.
-    static void FinalizeOMPRegion(CodeGenFunction &CGF, InsertPointTy IP) {
-      CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-      assert(IP.getBlock()->end() != IP.getPoint() &&
-             "OpenMP IR Builder should cause terminated block!");
+    static void FinalizeOMPRegion(CodeGenFunction &CGF,
+                                  InsertPointTy IP) { // TODO: move to .cpp file
+      CGBuilderTy::InsertPointGuard IPG(CGF.Builder); // MK: needed?
 
-      llvm::BasicBlock *IPBB = IP.getBlock();
-      llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
-      assert(DestBB && "Finalization block should have one successor!");
+      CGF.Builder.restoreIP(IP);
+      auto DestBB = llvm::splitBB(CGF.Builder, false, ".ompfinalize");
+
+      //  llvm::BasicBlock *IPBB = IP.getBlock();
+      // llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
+      // assert(DestBB && "Finalization block should have one successor!");
 
       // erase and replace with cleanup branch.
-      IPBB->getTerminator()->eraseFromParent();
-      CGF.Builder.SetInsertPoint(IPBB);
+      //   IPBB->getTerminator()->eraseFromParent(); // Don't do this!
+      //  CGF.Builder.SetInsertPoint(IPBB);
       CodeGenFunction::JumpDest Dest = CGF.getJumpDestInCurrentScope(DestBB);
       CGF.EmitBranchThroughCleanup(Dest);
     }

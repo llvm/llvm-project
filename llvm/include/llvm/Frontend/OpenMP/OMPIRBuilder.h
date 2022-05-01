@@ -76,7 +76,7 @@ class OpenMPIRBuilder {
 public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize).
-  OpenMPIRBuilder(Module &M) : M(M), Builder(M.getContext()) {}
+  OpenMPIRBuilder(Module &M);
   ~OpenMPIRBuilder();
 
   /// Initialize the internal state, this will put structures types and
@@ -103,12 +103,51 @@ public:
   /// A finalize callback knows about all objects that need finalization, e.g.
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
-  using FinalizeCallbackTy = std::function<void(InsertPointTy CodeGenIP)>;
+  using FinalizeCallbackTy = function_ref<void(InsertPointTy CodeGenIP)>;
 
-  struct FinalizationInfo {
-    /// The finalization callback provided by the last in-flight invocation of
-    /// createXXXX for the directive of kind DK.
-    FinalizeCallbackTy FiniCB;
+private:
+  enum class RegionKind {
+    /// Sentinel object so we don't always have to check whether the stack is
+    /// empty.
+    Toplevel,
+
+    /// Actions on loop-associated directives are deferred until all applyXYZ
+    /// actions have been applied to them.
+    CanonicalLoop,
+
+    /// Non-loop OpenMP regions.
+    Directive
+  };
+
+  struct OMPRegionInfo;
+
+  /// An irregular exit out of a region, such as by cancellation.
+  struct OMPRegionBreakInfo {
+    /// The end of this basic block is current end of the path for breaking out
+    /// of the region. Must have no terminator so finializations (eg.
+    /// destructors) can be appended until rejoining at the end of the target
+    /// region.
+    BasicBlock *BB;
+
+    /// What triggered the break out of a region, such as a canecellation point.
+    omp::Directive Reason;
+
+    /// The kind of region that is being exited. Control flow will rejoin after
+    /// the innermost region of this kind.
+    OMPRegionInfo *Target;
+
+    OMPRegionBreakInfo(BasicBlock *BB, omp::Directive Reason,
+                       OMPRegionInfo *Target);
+
+    /// Consistency self-check.
+    void assertOK() const;
+  };
+
+  /// An OpenMP region with a single entry and single exit (unless containing a
+  /// irregular exit) that may be associated with a construct.
+  struct OMPRegionInfo {
+    /// The kind of region: topmost sentinel, loop, or directive.
+    RegionKind Kind;
 
     /// The directive kind of the innermost directive that has an associated
     /// region which might require finalization when it is left.
@@ -116,20 +155,61 @@ public:
 
     /// Flag to indicate if the directive is cancellable.
     bool IsCancellable;
+
+    /// Irregular exits (such as cancellation points) out of this region.
+    SmallVector<OMPRegionBreakInfo, 2> Breaks;
+
+    OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable);
+
+    /// Register an irregular exit to this region.
+    void addBreak(BasicBlock *BB, omp::Directive Reason,
+                  OMPRegionInfo *Target) {
+      assert(IsCancellable &&
+             "Only cancellable region may have irregular exits");
+      assert(!BB->getTerminator());
+      Breaks.emplace_back(BB, Reason, Target);
+    }
+
+    /// Consistency self-check.
+    void assertOK() const;
   };
 
-  /// Push a finalization callback on the finalization stack.
-  ///
-  /// NOTE: Temporary solution until Clang CG is gone.
-  void pushFinalizationCB(const FinalizationInfo &FI) {
-    FinalizationStack.push_back(FI);
+  /// The stack of regions surrounding the current in-progress code generation
+  /// location. Regions are pushed and popped when entering/leaving a region.
+  /// Constructs/directives that are sensitive to surrounding regions (such as
+  /// cancellation) must be emitted inside the BodyGenCallbackTy of the
+  /// surrounding constructs.
+  SmallVector<std::unique_ptr<OMPRegionInfo>, 8> RegionStack;
+
+  /// Return the innermost surrounding region of a specific directive kind, or
+  /// the toplevel region if not present.
+  OMPRegionInfo *getInnermostRegion(omp::Directive DK);
+
+
+  /// @{
+  /// Push a new region to the region stack. Must eventually be popped again
+  /// using exitRegion.
+  OMPRegionInfo *enterRegion(RegionKind Kind, omp::Directive DK,
+                             bool IsCancellable);
+  OMPRegionInfo *enterRegion(omp::Directive DK, bool IsCancellable) {
+    return enterRegion(RegionKind::Directive, DK, IsCancellable);
   }
+  /// @}
 
-  /// Pop the last finalization callback from the finalization stack.
+  /// Pop a region from the region stack. Exits are handled the following way:
   ///
-  /// NOTE: Temporary solution until Clang CG is gone.
-  void popFinalizationCB() { FinalizationStack.pop_back(); }
+  /// 1. For the regular region exit, \p FinCB is used by the caller to emit
+  ///    finalization code somehwere on the control path exiting the region. exitRegion itself does nothing.
+  ///
+  /// 2. For irregular region exits that rejoing with the control flow after
+  ///    this region, exitRegion emits a branch to \p FinalizationBB containing the finalization code. This is typically that same code as for case 1 avoiding emitting the same finialization code multiple times.
+  ///
+  /// 3. For irregular region exits that rejoin a surrounding region, exitRegion
+  ///    calls \p FinCB to insert the finalization code into the exiting control path. The irregular exit is then added as an irregular exit of the sourrounding loop that, opon its exit, can add its own finialization code and/or rejoin the control flow there.
+  void exitRegion(OMPRegionInfo *R, BasicBlock *FinalizationBB,
+                  function_ref<void(InsertPointTy ExitingIP)> FinCB);
 
+public:
   /// Callback type for body (=inner region) code generation
   ///
   /// The callback takes code locations as arguments, each describing a
@@ -805,9 +885,9 @@ public:
   /// \param CancelFlag Flag indicating if the cancellation is performed.
   /// \param CanceledDirective The kind of directive that is cancled.
   /// \param ExitCB Extra code to be generated in the exit block.
-  void emitCancelationCheckImpl(Value *CancelFlag,
-                                omp::Directive CanceledDirective,
-                                FinalizeCallbackTy ExitCB = {});
+  void emitCancelationCheckImpl(LocationDescription Loc, Value *CancelFlag,
+                                omp::Directive CancelledDirective,
+                                omp::Directive CancelledBy);
 
   /// Generate a barrier runtime call.
   ///
@@ -827,19 +907,12 @@ public:
   /// \param Loc The location at which the request originated and is fulfilled.
   void emitFlush(const LocationDescription &Loc);
 
-  /// The finalization stack made up of finalize callbacks currently in-flight,
-  /// wrapped into FinalizationInfo objects that reference also the finalization
-  /// target block and the kind of cancellable directive.
-  SmallVector<FinalizationInfo, 8> FinalizationStack;
-
+private:
   /// Return true if the last entry in the finalization stack is of kind \p DK
   /// and cancellable.
-  bool isLastFinalizationInfoCancellable(omp::Directive DK) {
-    return !FinalizationStack.empty() &&
-           FinalizationStack.back().IsCancellable &&
-           FinalizationStack.back().DK == DK;
-  }
+  bool isLastFinalizationInfoCancellable(omp::Directive DK);
 
+public:
   /// Generate a taskwait runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.

@@ -951,8 +951,6 @@ private:
       return CodeGenIP;
     };
 
-    auto FiniCB = [&](InsertPointTy CodeGenIP) {};
-
     /// Create a sequential execution region within a merged parallel region,
     /// encapsulated in a master construct with a barrier for synchronization.
     auto CreateSequentialRegion = [&](Function *OuterFn,
@@ -983,7 +981,6 @@ private:
         assert(SeqEndBB != nullptr && "SeqEndBB should not be null");
         SeqEndBB->getTerminator()->setSuccessor(0, CGEndBB);
       };
-      auto FiniCB = [&](InsertPointTy CodeGenIP) {};
 
       // Find outputs from the sequential region to outside users and
       // broadcast their values to them.
@@ -1026,7 +1023,7 @@ private:
       OpenMPIRBuilder::LocationDescription Loc(
           InsertPointTy(ParentBB, ParentBB->end()), DL);
       InsertPointTy SeqAfterIP =
-          OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB);
+          OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, {});
 
       OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel);
 
@@ -1101,7 +1098,7 @@ private:
       // Create the merged parallel region with default proc binding, to
       // avoid overriding binding settings, and without explicit cancellation.
       InsertPointTy AfterIP = OMPInfoCache.OMPBuilder.createParallel(
-          Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
+          Loc, AllocaIP, BodyGenCB, PrivCB, {}, nullptr, nullptr,
           OMP_PROC_BIND_default, /* IsCancellable */ false);
       BranchInst::Create(AfterBB, AfterIP.getBlock());
 

@@ -765,8 +765,12 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, i32* @global, align 4
 // CHECK3-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[LOADGEP_VLA]], i64 1
 // CHECK3-NEXT:    store i32 [[TMP3]], i32* [[ARRAYIDX1]], align 4
+// CHECK3-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]]
+// CHECK3:       omp.par.region.parallel.after:
 // CHECK3-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK3:       omp.par.pre_finalize:
+// CHECK3-NEXT:    br label [[DOTOMPFINALIZE:%.*]]
+// CHECK3:       .ompfinalize:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK3:       omp.par.outlined.exit.exitStub:
 // CHECK3-NEXT:    ret void
@@ -830,8 +834,12 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP5:%.*]] = mul nsw i64 0, [[TMP2]]
 // CHECK3-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[TMP4]], i64 [[TMP5]]
 // CHECK3-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[ARRAYIDX2]], i64 0
+// CHECK3-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]]
+// CHECK3:       omp.par.region.parallel.after:
 // CHECK3-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK3:       omp.par.pre_finalize:
+// CHECK3-NEXT:    br label [[DOTOMPFINALIZE:%.*]]
+// CHECK3:       .ompfinalize:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK3:       omp.par.outlined.exit.exitStub:
 // CHECK3-NEXT:    ret void
@@ -903,9 +911,13 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP3:%.*]] = load i32, i32* @global, align 4, !dbg [[DBG35]]
 // CHECK4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[LOADGEP_VLA]], i64 1, !dbg [[DBG35]]
 // CHECK4-NEXT:    store i32 [[TMP3]], i32* [[ARRAYIDX1]], align 4, !dbg [[DBG35]]
-// CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]], !dbg [[DBG35]]
+// CHECK4-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]], !dbg [[DBG35]]
+// CHECK4:       omp.par.region.parallel.after:
+// CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
-// CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG35]]
+// CHECK4-NEXT:    br label [[DOTOMPFINALIZE:%.*]]
+// CHECK4:       .ompfinalize:
+// CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK4:       omp.par.outlined.exit.exitStub:
 // CHECK4-NEXT:    ret void
 //
@@ -971,9 +983,13 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP5:%.*]] = mul nsw i64 0, [[TMP2]], !dbg [[DBG66]]
 // CHECK4-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[TMP4]], i64 [[TMP5]], !dbg [[DBG66]]
 // CHECK4-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[ARRAYIDX2]], i64 0, !dbg [[DBG66]]
-// CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]], !dbg [[DBG67:![0-9]+]]
+// CHECK4-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]], !dbg [[DBG67:![0-9]+]]
+// CHECK4:       omp.par.region.parallel.after:
+// CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
-// CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG67]]
+// CHECK4-NEXT:    br label [[DOTOMPFINALIZE:%.*]]
+// CHECK4:       .ompfinalize:
+// CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK4:       omp.par.outlined.exit.exitStub:
 // CHECK4-NEXT:    ret void
 //

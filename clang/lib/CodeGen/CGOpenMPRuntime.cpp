@@ -63,6 +63,8 @@ public:
     InlinedRegion,
     /// Region with outlined function for standalone 'target' directive.
     TargetRegion,
+    /// Handled by OpenMPIRBuilder.
+    OpenMPIRBuilderRegion,
   };
 
   CGOpenMPRegionInfo(const CapturedStmt &CS,
@@ -108,6 +110,24 @@ protected:
   RegionCodeGenTy CodeGen;
   OpenMPDirectiveKind Kind;
   bool HasCancel;
+};
+
+class OpenMPIRBuilderRegionInfo final : public CGOpenMPRegionInfo {
+public:
+  OpenMPIRBuilderRegionInfo(const CapturedStmt &CS, OpenMPDirectiveKind Kind)
+      : CGOpenMPRegionInfo(
+            CS, OpenMPIRBuilderRegion,
+            [](CodeGenFunction &, PrePostActionTy &) {
+              llvm_unreachable("Should never be called");
+            },
+            Kind, /*HasCancel*/ true) {}
+
+  static bool classof(const CGCapturedStmtInfo *Info) {
+    return CGOpenMPRegionInfo::classof(Info) &&
+           cast<CGOpenMPRegionInfo>(Info)->getRegionKind() ==
+               OpenMPIRBuilderRegion;
+  }
+  const VarDecl *getThreadIDVariable() const override { return nullptr; }
 };
 
 /// API for captured statement code generation in OpenMP constructs.
@@ -1188,9 +1208,10 @@ namespace {
 // Temporary RAII solution to perform a push/pop stack event on the OpenMP IR
 // Builder if one is present.
 struct PushAndPopStackRAII {
+  CodeGenFunction::CGNonOpenMPIRBuilderRegion NonOMPBuilderScope;
   PushAndPopStackRAII(llvm::OpenMPIRBuilder *OMPBuilder, CodeGenFunction &CGF,
                       bool HasCancel, llvm::omp::Directive Kind)
-      : OMPBuilder(OMPBuilder) {
+      : OMPBuilder(OMPBuilder), NonOMPBuilderScope(CGF) {
     if (!OMPBuilder)
       return;
 
@@ -1206,7 +1227,10 @@ struct PushAndPopStackRAII {
     // to push & pop an FinalizationInfo object.
     // The FiniCB will still be needed but at the point where the
     // OpenMPIRBuilder is asked to construct a parallel (or similar) construct.
-    auto FiniCB = [&CGF](llvm::OpenMPIRBuilder::InsertPointTy IP) {
+    auto CancelCB = [&CGF, Kind](llvm::OpenMPIRBuilder::InsertPointTy IP,
+                                 llvm::omp::Directive CanceledDirective,
+                                 llvm::omp::Directive CanceledBy) {
+      assert(CanceledDirective == Kind);
       assert(IP.getBlock()->end() == IP.getPoint() &&
              "Clang CG should cause non-terminated block!");
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
@@ -1216,14 +1240,15 @@ struct PushAndPopStackRAII {
       CGF.EmitBranchThroughCleanup(Dest);
     };
 
-    // TODO: Remove this once we emit parallel regions through the
-    //       OpenMPIRBuilder as it can do this setup internally.
-    llvm::OpenMPIRBuilder::FinalizationInfo FI({FiniCB, Kind, HasCancel});
-    OMPBuilder->pushFinalizationCB(std::move(FI));
+    // llvm_unreachable("TODO: set UserManaged=true");
+    //  TODO: Remove this once we emit parallel regions through the
+    //        OpenMPIRBuilder as it can do this setup internally.
+    //  llvm::OpenMPIRBuilder::FinalizationInfo FI{{}, Kind, HasCancel,
+    //  /*UserManaged*/ true}; OMPBuilder->pushFinalizationCB(std::move(FI));
   }
   ~PushAndPopStackRAII() {
-    if (OMPBuilder)
-      OMPBuilder->popFinalizationCB();
+    // if (OMPBuilder)
+    //   OMPBuilder->popFinalizationCB();
   }
   llvm::OpenMPIRBuilder *OMPBuilder;
 };
@@ -2106,6 +2131,43 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
     RegionCodeGenTy ThenRCG(ThenGen);
     ThenRCG(CGF);
   }
+}
+
+void CGOpenMPRuntime::emitIRBuilderParallel(
+    CodeGenFunction &CGF, const CapturedStmt *CS,
+    llvm::OpenMPIRBuilder::BodyGenCallbackTy BodyGenCB,
+    llvm::OpenMPIRBuilder::PrivatizeCallbackTy PrivCB,
+    llvm::OpenMPIRBuilder::FinalizeCallbackTy FiniCB,
+    // llvm:: OpenMPIRBuilder::  CancellationCallbackTy CancelCB,
+    llvm::Value *IfCond, llvm::Value *NumThreads,
+    llvm::omp::ProcBindKind ProcBind, bool IsCancellable) {
+  auto &Builder = CGF.Builder;
+  auto AllocaInsertPt = CGF.AllocaInsertPt;
+
+  // FIXME: CGCapturedStmtInfo is an abstract class, CGOpenMPOutlinedRegionInfo
+  // would be correct here.
+  // CodeGenFunction::  CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
+
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  auto BodyGenCBWrapper = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    //  CGF.OMPCancelStack.enter(CGF, OMPD_parallel, /* HasCancel*/ true);
+
+    if (BodyGenCB)
+      BodyGenCB(AllocaIP, CodeGenIP);
+
+    // CGF.Builder.ClearInsertionPoint();
+    int a = 0;
+  };
+
+  OpenMPIRBuilderRegionInfo CGSI(*CS, OMPD_parallel);
+  CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGSI);
+
+  llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
+                                                AllocaInsertPt->getIterator());
+  Builder.restoreIP(OMPBuilder.createParallel(
+      Builder, AllocaIP, BodyGenCBWrapper, PrivCB, FiniCB,
+      //    CancelCB,
+      IfCond, NumThreads, ProcBind, IsCancellable));
 }
 
 // If we're inside an (outlined) parallel region, use the region info's

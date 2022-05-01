@@ -13,12 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/RegionPrinter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CFG.h"
@@ -29,6 +31,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
@@ -320,6 +323,12 @@ BasicBlock *llvm::splitBB(IRBuilder<> &Builder, bool CreateBranch,
   return New;
 }
 
+static BasicBlock *splitBBWithSuffix(IRBuilderBase::InsertPoint IP,
+                                     bool CreateBranch, llvm::Twine Suffix) {
+  BasicBlock *Old = IP.getBlock();
+  return splitBB(IP, CreateBranch, Old->getName() + Suffix);
+}
+
 BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
                                     llvm::Twine Suffix) {
   BasicBlock *Old = Builder.GetInsertBlock();
@@ -515,7 +524,16 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   OutlineInfos = std::move(DeferredOutlines);
 }
 
+OpenMPIRBuilder::OpenMPIRBuilder(Module &M) : M(M), Builder(M.getContext()) {
+  RegionStack.emplace_back(new OMPRegionInfo(
+      RegionKind::Toplevel, omp::OMPD_unknown, /*IsCancellable*/false      ));
+  assert(RegionStack.size() == 1);
+}
+
 OpenMPIRBuilder::~OpenMPIRBuilder() {
+  assert(RegionStack.size() == 1 &&
+         RegionStack.back()->Kind == RegionKind::Toplevel &&
+         "OMPRegion push/pop must be balanced");
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
 }
 
@@ -644,6 +662,143 @@ Value *OpenMPIRBuilder::getOrCreateThreadID(Value *Ident) {
       "omp_global_thread_num");
 }
 
+OpenMPIRBuilder::OMPRegionBreakInfo::OMPRegionBreakInfo(BasicBlock *BB,
+                                                        omp::Directive Reason,
+                                                        OMPRegionInfo *Target)
+    : BB(BB), Reason(Reason), Target(Target) {
+  assertOK();
+}
+
+void OpenMPIRBuilder::OMPRegionBreakInfo::assertOK() const {
+#ifndef NDEBUG
+  assert(!BB->getTerminator() && "Pending irregular exit must be amendable");
+
+  assert(Target);
+  switch (Target->DK) {
+  case OMPD_parallel:
+    switch (Reason) {
+    case OMPD_cancellation_point:
+    case OMPD_cancel:
+    case OMPD_barrier:
+      break;
+    default:
+      llvm_unreachable("Unexpected region break reason for parallel construct");
+    }
+    break;
+  case OMPD_sections:
+    switch (Reason) {
+    case OMPD_cancellation_point:
+    case OMPD_cancel:
+      break;
+    default:
+      llvm_unreachable("Unexpected region break reason for sections construct");
+    }
+    break;
+  default:
+    llvm_unreachable("unexpected region break target");
+  }
+#endif
+}
+
+OpenMPIRBuilder::OMPRegionInfo::OMPRegionInfo(RegionKind Kind,
+                                              omp::Directive DK,
+                                              bool IsCancellable)
+    : Kind(Kind), DK(DK), IsCancellable(IsCancellable) {
+  assertOK();
+}
+
+void OpenMPIRBuilder::OMPRegionInfo::assertOK() const {
+#ifndef NDEBUG
+  switch (Kind) {
+  case RegionKind::Toplevel:
+    assert(DK == OMPD_unknown && "toplevel region is not a specific kind");
+    assert(!IsCancellable && "top-level is not cancellable");
+    break;
+  case RegionKind::CanonicalLoop:
+    // TODO
+    break;
+  case RegionKind::Directive:
+    switch (DK) {
+    case OMPD_parallel:
+    case OMPD_sections:
+    case OMPD_section:
+    case OMPD_single:
+    case OMPD_master:
+    case OMPD_masked:
+    case OMPD_critical:
+    case OMPD_ordered:
+      break;
+    default:
+      llvm_unreachable("Not a recognized OpenMP construct with SESE region");
+    }
+    break;
+  }
+
+  for (const OMPRegionBreakInfo &Break : Breaks)
+    Break.assertOK();
+#endif
+}
+
+OpenMPIRBuilder::OMPRegionInfo *
+OpenMPIRBuilder::getInnermostRegion(omp::Directive DK) {
+  for ( const std::unique_ptr<OMPRegionInfo> &R : reverse(RegionStack)) {
+    if (R->Kind == RegionKind::Directive && R->DK == DK)
+      return R.get();
+  }
+  return RegionStack.front().get();
+}
+
+bool OpenMPIRBuilder::isLastFinalizationInfoCancellable(omp::Directive DK) {
+  return getInnermostRegion(DK)->IsCancellable;
+}
+
+OpenMPIRBuilder::OMPRegionInfo *
+OpenMPIRBuilder::enterRegion(OpenMPIRBuilder::RegionKind Kind,
+                             omp::Directive DK, bool IsCancellable) {
+  RegionStack.emplace_back(new OMPRegionInfo(Kind, DK, IsCancellable));
+  return RegionStack.back().get();
+}
+
+void OpenMPIRBuilder::exitRegion(OMPRegionInfo *R, BasicBlock *FinalizationBB,
+                                 FinalizeCallbackTy FinCB) {
+  assert(RegionStack.back().get() == R && "balanced region push/pop required");
+  R->assertOK();
+
+  // Trickly down no yet handled breaks.
+  OMPRegionInfo *Innermost = RegionStack.back().get();
+  OMPRegionInfo *NewInnermost = RegionStack.rbegin()[1].get();
+
+  for (OMPRegionBreakInfo &B : reverse(Innermost->Breaks)) {
+    assert(!B.BB->getTerminator());
+    assert(Innermost->IsCancellable &&
+           "surrounding region must be cancellable");
+    Builder.SetInsertPoint(B.BB);
+
+    if (B.Target == Innermost) {
+      // Join common finialization block
+      Builder.SetInsertPoint(B.BB);
+      Builder.CreateBr(FinalizationBB);
+      B.BB = nullptr;
+    } else if (FinCB) {
+      // Emit dedicated fininalization since we cannot use use the one for the
+      // regular exit.
+      // TODO: Implement switch-on-source-bb-index scheme like Clang's
+      // EmitBranchThroughCleanup does.
+      B.BB = splitBB(Builder, true, ".fini");
+      FinCB(Builder.saveIP());
+      Builder.SetInsertPoint(B.BB);
+    }
+  }
+
+  for (OMPRegionBreakInfo &Break : Innermost->Breaks) {
+    if (Break.BB)
+      NewInnermost->addBreak(Break.BB, Break.Reason, Break.Target);
+  }
+  Innermost->Breaks.clear();
+
+  RegionStack.pop_back();
+}
+
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createBarrier(const LocationDescription &Loc, Directive DK,
                                bool ForceSimpleCall, bool CheckCancelFlag) {
@@ -696,7 +851,7 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
                          Args);
 
   if (UseCancelBarrier && CheckCancelFlag)
-    emitCancelationCheckImpl(Result, OMPD_parallel);
+    emitCancelationCheckImpl(Loc, Result, OMPD_parallel, OMPD_barrier);
 
   return Builder.saveIP();
 }
@@ -708,13 +863,18 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  // LLVM utilities like blocks with terminators.
-  auto *UI = Builder.CreateUnreachable();
+  BasicBlock *New = nullptr;
+  if (IfCondition) {
+    BasicBlock* Old = Builder.GetInsertBlock();
+    New = splitBB(Builder, false);
+    BasicBlock *ThenBlock = BasicBlock::Create(
+        Builder.getContext(), Old->getName() + ".if", New->getParent(), New);
+    Builder.CreateCondBr(IfCondition, ThenBlock, New);
+    Builder.SetInsertPoint(ThenBlock);
+    Builder.CreateBr(New);
+    Builder.SetInsertPoint(ThenBlock->getTerminator());
+  }
 
-  Instruction *ThenTI = UI, *ElseTI = nullptr;
-  if (IfCondition)
-    SplitBlockAndInsertIfThenElse(IfCondition, UI, &ThenTI, &ElseTI);
-  Builder.SetInsertPoint(ThenTI);
 
   Value *CancelKind = nullptr;
   switch (CanceledDirective) {
@@ -733,23 +893,12 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
   Value *Result = Builder.CreateCall(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancel), Args);
-  auto ExitCB = [this, CanceledDirective, Loc](InsertPointTy IP) {
-    if (CanceledDirective == OMPD_parallel) {
-      IRBuilder<>::InsertPointGuard IPG(Builder);
-      Builder.restoreIP(IP);
-      createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
-                    omp::Directive::OMPD_unknown, /* ForceSimpleCall */ false,
-                    /* CheckCancelFlag */ false);
-    }
-  };
 
   // The actual cancel logic is shared with others, e.g., cancel_barriers.
-  emitCancelationCheckImpl(Result, CanceledDirective, ExitCB);
+  emitCancelationCheckImpl(Loc, Result, CanceledDirective, OMPD_cancel);
 
-  // Update the insertion point and remove the terminator we introduced.
-  Builder.SetInsertPoint(UI->getParent());
-  UI->eraseFromParent();
-
+  if (New)
+    return {New, New->begin()};
   return Builder.saveIP();
 }
 
@@ -791,43 +940,58 @@ void OpenMPIRBuilder::emitOffloadingEntry(Constant *Addr, StringRef Name,
   Entry->setAlignment(Align(1));
 }
 
-void OpenMPIRBuilder::emitCancelationCheckImpl(Value *CancelFlag,
-                                               omp::Directive CanceledDirective,
-                                               FinalizeCallbackTy ExitCB) {
+void OpenMPIRBuilder::emitCancelationCheckImpl(
+    LocationDescription Loc, Value *CancelFlag,
+    omp::Directive CancelledDirective, omp::Directive CancelledBy) { 
   assert(isLastFinalizationInfoCancellable(CanceledDirective) &&
          "Unexpected cancellation!");
 
   // For a cancel barrier we create two new blocks.
+  // MK: This is garbage
   BasicBlock *BB = Builder.GetInsertBlock();
-  BasicBlock *NonCancellationBlock;
-  if (Builder.GetInsertPoint() == BB->end()) {
-    // TODO: This branch will not be needed once we moved to the
-    // OpenMPIRBuilder codegen completely.
-    NonCancellationBlock = BasicBlock::Create(
-        BB->getContext(), BB->getName() + ".cont", BB->getParent());
-  } else {
-    NonCancellationBlock = SplitBlock(BB, &*Builder.GetInsertPoint());
-    BB->getTerminator()->eraseFromParent();
-    Builder.SetInsertPoint(BB);
-  }
-  BasicBlock *CancellationBlock = BasicBlock::Create(
-      BB->getContext(), BB->getName() + ".cncl", BB->getParent());
+
+  BasicBlock *NonCancellationBlock = splitBBWithSuffix(Builder, false, ".cont");
+
+  BasicBlock *PreCancellationBlock =
+      BasicBlock::Create(BB->getContext(), BB->getName() + ".cncl.fini",
+                         BB->getParent(), NonCancellationBlock);
+  BasicBlock *CancellationBlock =
+      BasicBlock::Create(BB->getContext(), BB->getName() + ".cncl",
+                         BB->getParent(), NonCancellationBlock);
 
   // Jump to them based on the return value.
   Value *Cmp = Builder.CreateIsNull(CancelFlag);
-  Builder.CreateCondBr(Cmp, NonCancellationBlock, CancellationBlock,
+  Builder.CreateCondBr(Cmp, NonCancellationBlock, PreCancellationBlock,
                        /* TODO weight */ nullptr, nullptr);
 
   // From the cancellation block we finalize all variables and go to the
   // post finalization block that is known to the FiniCB callback.
+  Builder.SetInsertPoint(PreCancellationBlock);
+
+  Builder.CreateBr(CancellationBlock);
+  // if (ExitCB)
+  //   ExitCB(Builder.saveIP(),CanceledDirective);
+
+  // Unless cancellation has been detected by a barrier itself, need to
+  // synchronize between threads (after finalization).
   Builder.SetInsertPoint(CancellationBlock);
-  if (ExitCB)
-    ExitCB(Builder.saveIP());
-  auto &FI = FinalizationStack.back();
-  FI.FiniCB(Builder.saveIP());
+  if (CancelledDirective == OMPD_parallel && CancelledBy != OMPD_barrier)
+    emitBarrierImpl(Loc, CancelledBy, false, false);
+
+  auto CancellationIP = Builder.saveIP();
+
+  // TODO: Clang's codegen emits finalization code only once and inserts a
+  // switch to jump back to the target code path (CGF.EmitBranchThroughCleanup).
+  // Currently in the OpenMPIRBuilder, we emit the finialization multiple times
+  // for each path exiting the region (non-cancellation and each cancellation
+  // check).
+
+  RegionStack.back()->addBreak(CancellationBlock, CancelledBy,
+                               getInnermostRegion(CancelledDirective));
 
   // The continuation block is where code generation continues.
-  Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin());
+  Builder.SetInsertPoint(NonCancellationBlock,
+                         NonCancellationBlock->begin()); // MK: needed?
 }
 
 IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
@@ -909,10 +1073,23 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   BasicBlock *PRegExitBB =
       PRegPreFiniBB->splitBasicBlock(ThenTI, "omp.par.exit");
 
-  auto FiniCBWrapper = [&](InsertPointTy IP) {
+#if 1
+  auto FiniCBWrapper = [&](InsertPointTy IP, omp::Directive LeaveReason,
+                           OMPRegionInfo *Region) {
+    // FIXME: This is broken
+    // 1. Should be done after the FiniCB
+    // 2. It may deadlock
+    if (LeaveReason != OMPD_unknown) {
+      createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
+                    omp::Directive::OMPD_unknown, /* ForceSimpleCall */ false,
+                    /* CheckCancelFlag */ false);
+    }
+
+#if 0
     // Hide "open-ended" blocks from the given FiniCB by setting the right jump
     // target to the region exit block.
     if (IP.getBlock()->end() == IP.getPoint()) {
+        llvm_unreachable("don't do such thing!!!");
       IRBuilder<>::InsertPointGuard IPG(Builder);
       Builder.restoreIP(IP);
       Instruction *I = Builder.CreateBr(PRegExitBB);
@@ -921,10 +1098,17 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     assert(IP.getBlock()->getTerminator()->getNumSuccessors() == 1 &&
            IP.getBlock()->getTerminator()->getSuccessor(0) == PRegExitBB &&
            "Unexpected insertion point for finalization call!");
-    return FiniCB(IP);
+#endif
+
+    if (FiniCB)
+      FiniCB(IP); // Needed?
   };
 
-  FinalizationStack.push_back({FiniCBWrapper, OMPD_parallel, IsCancellable});
+  // FinalizationStack.push_back({FiniCBWrapper, OMPD_parallel, IsCancellable});
+  OMPRegionInfo *ParallelRegion = enterRegion(OMPD_parallel, IsCancellable
+                                              //, FiniCBWrapper
+  );
+#endif
 
   // Generate the privatization allocas in the block that will become the entry
   // of the outlined function.
@@ -1052,9 +1236,10 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     }
 
     for (Instruction *I : ToBeDeleted)
-      I->eraseFromParent();
+      I->eraseFromParent(); // FIXME: Don't add temporary instructions!!
   };
 
+#if 0
   // Adjust the finalization stack, verify the adjustment, and call the
   // finalize function a last time to finalize values between the pre-fini
   // block and the exit block if we left the parallel "the normal way".
@@ -1062,11 +1247,35 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   (void)FiniInfo;
   assert(FiniInfo.DK == OMPD_parallel &&
          "Unexpected finalization stack state!");
+#endif
 
   Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
 
-  InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
-  FiniCB(PreFiniIP);
+  if (FiniCB) {
+    InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
+    FiniCB(PreFiniIP);
+  }
+#if 0
+  for (auto& B : reverse(ParallelRegion->Breaks)) { 
+      Builder.SetInsertPoint(B.BB);
+
+      if (FiniCB) {
+          B.BB =  splitBB(Builder, true, ".fini");
+          FiniCB(Builder.saveIP(), B.Reason, ParallelRegion);
+          Builder.SetInsertPoint( B.BB);
+      }
+
+      if (B.Target == OMPD_parallel) {
+          Builder.CreateBr(PRegExitBB);
+          B.BB = nullptr;
+      }
+  }
+  ParallelRegion->Breaks.erase(  llvm::remove_if(ParallelRegion->Breaks, [](const OMPRegionBreak& B) {
+      return !B.BB;    
+      }), ParallelRegion->Breaks.end() );
+  //emitRegionExit(PreFiniIP, ParallelRegion);
+#endif
+  exitRegion(ParallelRegion, PRegPreFiniBB, FiniCB);
 
   OI.OuterAllocaBB = OuterAllocaBlock;
   OI.EntryBB = PRegEntryBB;
@@ -1262,6 +1471,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
+#if 0
   auto FiniCBWrapper = [&](InsertPointTy IP) {
     if (IP.getBlock()->end() != IP.getPoint())
       return FiniCB(IP);
@@ -1282,7 +1492,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
     return FiniCB(IP);
   };
 
+  // TODO: Use CanonicalLoopInfo finalization.
   FinalizationStack.push_back({FiniCBWrapper, OMPD_sections, IsCancellable});
+#endif
+  auto SectionsRegion = enterRegion(OMPD_sections, IsCancellable);
 
   // Each section is emitted as a switch case
   // Each finalization callback is handled from clang.EmitOMPSectionDirective()
@@ -1329,9 +1542,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
   Value *ST = ConstantInt::get(I32Ty, 1);
   llvm::CanonicalLoopInfo *LoopInfo = createCanonicalLoop(
       Loc, LoopBodyGenCB, LB, UB, ST, true, false, AllocaIP, "section_loop");
-  InsertPointTy AfterIP =
-      applyStaticWorkshareLoop(Loc.DL, LoopInfo, AllocaIP, !IsNowait);
+  auto AfterIP = LoopInfo->getAfterIP();
+  applyStaticWorkshareLoop(Loc.DL, LoopInfo, AllocaIP, !IsNowait);
 
+#if 0
   // Apply the finalization callback in LoopAfterBB
   auto FiniInfo = FinalizationStack.pop_back_val();
   assert(FiniInfo.DK == OMPD_sections &&
@@ -1343,8 +1557,21 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
     CB(Builder.saveIP());
     AfterIP = {FiniBB, FiniBB->begin()};
   }
+#endif
+  // Instruction *I = Builder.CreateBr(ExitBB);
 
-  return AfterIP;
+  Builder.restoreIP(AfterIP);
+  auto Finish = splitBB(Builder, true, "section_finish");
+  if (FiniCB) {
+    Builder.SetInsertPoint(Finish);
+    Finish = splitBB(Builder, true, "section_fini");
+    FiniCB(Builder.saveAndClearIP());
+  }
+
+  // emitRegionExit(Builder.saveIP(), SectionsRegion);
+  exitRegion(SectionsRegion, Finish, FiniCB);
+
+  return {Finish, Finish->begin()};
 }
 
 OpenMPIRBuilder::InsertPointTy
@@ -1354,9 +1581,17 @@ OpenMPIRBuilder::createSection(const LocationDescription &Loc,
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  auto FiniCBWrapper = [&](InsertPointTy IP) {
-    if (IP.getBlock()->end() != IP.getPoint())
-      return FiniCB(IP);
+#if 0
+  auto &SectionsFini = FinalizationStack.back();
+  assert(SectionsFini.DK == OMPD_sections);
+
+  auto FiniCBWrapper = [&](InsertPointTy IP, omp::Directive CancelledDirective,
+                           omp::Directive CancelledBy) {
+    assert(CancelledDirective == OMPD_sections);
+
+#if 0
+      if (IP.getBlock()->end() != IP.getPoint())
+      return FiniCB(IP,LeavingRegion, CancelledBy);
     // This must be done otherwise any nested constructs using FinalizeOMPRegion
     // will fail because that function requires the Finalization Basic Block to
     // have a terminator, which is already removed by EmitOMPRegionBody.
@@ -1371,13 +1606,23 @@ OpenMPIRBuilder::createSection(const LocationDescription &Loc,
     auto *ExitBB = CondBB->getTerminator()->getSuccessor(1);
     Instruction *I = Builder.CreateBr(ExitBB);
     IP = InsertPointTy(I->getParent(), I->getIterator());
-    return FiniCB(IP);
-  };
 
-  Directive OMPD = Directive::OMPD_sections;
+#endif
+    auto UserFini = splitBB(Builder, true, ".section_userfini");
+
+    if (FiniCB)
+      FiniCB(Builder.saveIP(), CancelledDirective, CancelledBy);
+
+    if (SectionsFini.FiniCB)
+      SectionsFini.FiniCB({UserFini, UserFini->begin()}, CancelledDirective,
+                          CancelledBy);
+  };
+#endif
+
+  Directive OMPD = Directive::OMPD_section;
   // Since we are using Finalization Callback here, HasFinalize
   // and IsCancellable have to be true
-  return EmitOMPInlinedRegion(OMPD, nullptr, nullptr, BodyGenCB, FiniCBWrapper,
+  return EmitOMPInlinedRegion(OMPD, nullptr, nullptr, BodyGenCB, {},
                               /*Conditional*/ false, /*hasFinalize*/ true,
                               /*IsCancellable*/ true);
 }
@@ -1693,9 +1938,14 @@ OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
     Builder.CreateBr(CL->getPreheader());
   }
 
+  OMPRegionInfo *LoopRegion = enterRegion(RegionKind::CanonicalLoop,
+                                          OMPD_unknown, /*IsCancellable*/ true);
+
   // Emit the body content. We do it after connecting the loop to the CFG to
   // avoid that the callback encounters degenerate BBs.
   BodyGenCB(CL->getBodyIP(), CL->getIndVar());
+
+  exitRegion(LoopRegion, nullptr, {});
 
 #ifndef NDEBUG
   CL->assertOK();
@@ -3124,8 +3374,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
     BodyGenCallbackTy BodyGenCB, FinalizeCallbackTy FiniCB, bool Conditional,
     bool HasFinalize, bool IsCancellable) {
 
+#if 0
   if (HasFinalize)
     FinalizationStack.push_back({FiniCB, OMPD, IsCancellable});
+#endif
 
   // Create inlined region's entry and body blocks, in preparation
   // for conditional creation
@@ -3137,6 +3389,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   BasicBlock *FiniBB =
       EntryBB->splitBasicBlock(EntryBB->getTerminator(), "omp_region.finalize");
 
+  auto Region = enterRegion(OMPD, IsCancellable);
   Builder.SetInsertPoint(EntryBB->getTerminator());
   emitCommonDirectiveEntry(OMPD, EntryCall, ExitBB, Conditional);
 
@@ -3152,13 +3405,14 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   emitCommonDirectiveExit(OMPD, FinIP, ExitCall, HasFinalize);
   assert(FiniBB->getUniquePredecessor()->getUniqueSuccessor() == FiniBB &&
          "Unexpected Control Flow State!");
-  MergeBlockIntoPredecessor(FiniBB);
+  exitRegion(Region, FiniBB, FiniCB);
+  MergeBlockIntoPredecessor(FiniBB); // stop doing that
 
   // If we are skipping the region of a non conditional, remove the exit
   // block, and clear the builder's insertion point.
   assert(SplitPos->getParent() == ExitBB &&
          "Unexpected Insertion point location!");
-  auto merged = MergeBlockIntoPredecessor(ExitBB);
+  auto merged = MergeBlockIntoPredecessor(ExitBB); // stop doing that
   BasicBlock *ExitPredBB = SplitPos->getParent();
   auto InsertBB = merged ? ExitPredBB : ExitBB;
   if (!isa_and_nonnull<BranchInst>(SplitPos))
@@ -3177,7 +3431,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveEntry(
   BasicBlock *EntryBB = Builder.GetInsertBlock();
   Value *CallBool = Builder.CreateIsNotNull(EntryCall);
   auto *ThenBB = BasicBlock::Create(M.getContext(), "omp_region.body");
-  auto *UI = new UnreachableInst(Builder.getContext(), ThenBB);
+  auto *UI =
+      new UnreachableInst(Builder.getContext(), ThenBB); // stop doing that
 
   // Emit thenBB and set the Builder's insertion point there for
   // body generation next. Place the block after the current block.
@@ -3206,6 +3461,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveExit(
 
   // If there is finalization to do, emit it before the exit call
   if (HasFinalize) {
+#if 0
     assert(!FinalizationStack.empty() &&
            "Unexpected finalization stack state!");
 
@@ -3213,6 +3469,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitCommonDirectiveExit(
     assert(Fi.DK == OMPD && "Unexpected Directive for Finalization call!");
 
     Fi.FiniCB(FinIP);
+#endif
 
     BasicBlock *FiniBB = FinIP.getBlock();
     Instruction *FiniBBTI = FiniBB->getTerminator();
@@ -3451,7 +3708,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   // else
   //   return;
 
-  auto *UI = Builder.CreateUnreachable();
+  auto *UI = Builder.CreateUnreachable(); // Don't do that
   BasicBlock *CheckBB = UI->getParent();
   BasicBlock *UserCodeEntryBB = CheckBB->splitBasicBlock(UI, "user_code.entry");
 

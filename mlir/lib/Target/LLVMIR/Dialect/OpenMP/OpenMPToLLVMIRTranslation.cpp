@@ -281,7 +281,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
-  auto finiCB = [&](InsertPointTy codeGenIP) {};
 
   llvm::Value *ifCond = nullptr;
   if (auto ifExprVar = opInst.if_expr_var())
@@ -299,7 +298,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createParallel(
-      ompLoc, allocaIP, bodyGenCB, privCB, finiCB, ifCond, numThreads, pbKind,
+      ompLoc, allocaIP, bodyGenCB, privCB, {}, ifCond, numThreads, pbKind,
       isCancellable));
 
   return bodyGenStatus;
@@ -324,11 +323,10 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
-  auto finiCB = [&](InsertPointTy codeGenIP) {};
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createMaster(
-      ompLoc, bodyGenCB, finiCB));
+      ompLoc, bodyGenCB, {}));
   return success();
 }
 
@@ -352,7 +350,6 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
-  auto finiCB = [&](InsertPointTy codeGenIP) {};
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
@@ -371,7 +368,7 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
                                static_cast<int>(criticalDeclareOp.hint_val()));
   }
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createCritical(
-      ompLoc, bodyGenCB, finiCB, criticalOp.name().getValueOr(""), hint));
+      ompLoc, bodyGenCB, {}, criticalOp.name().getValueOr(""), hint));
   return success();
 }
 
@@ -583,12 +580,11 @@ convertOmpOrderedRegion(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
-  auto finiCB = [&](InsertPointTy codeGenIP) {};
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   builder.restoreIP(
       moduleTranslation.getOpenMPBuilder()->createOrderedThreadsSimd(
-          ompLoc, bodyGenCB, finiCB, !orderedRegionOp.simd()));
+          ompLoc, bodyGenCB, {}, !orderedRegionOp.simd()));
   return bodyGenStatus;
 }
 
@@ -648,14 +644,12 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
-  auto finiCB = [&](InsertPointTy codeGenIP) {};
 
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createSections(
-      ompLoc, allocaIP, sectionCBs, privCB, finiCB, false,
-      sectionsOp.nowait()));
+      ompLoc, allocaIP, sectionCBs, privCB, {}, false, sectionsOp.nowait()));
   return bodyGenStatus;
 }
 
@@ -671,9 +665,8 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
     convertOmpOpRegions(singleOp.region(), "omp.single.region", builder,
                         moduleTranslation, bodyGenStatus);
   };
-  auto finiCB = [&](InsertPointTy codeGenIP) {};
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createSingle(
-      ompLoc, bodyCB, finiCB, singleOp.nowait(), /*DidIt=*/nullptr));
+      ompLoc, bodyCB, {}, singleOp.nowait(), /*DidIt=*/nullptr));
   return bodyGenStatus;
 }
 

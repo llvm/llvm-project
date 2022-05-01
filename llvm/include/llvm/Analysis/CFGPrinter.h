@@ -30,6 +30,7 @@
 #include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
+
 template <class GraphType> struct GraphTraits;
 class CFGViewerPass : public PassInfoMixin<CFGViewerPass> {
 public:
@@ -52,7 +53,7 @@ public:
 };
 
 class DOTFuncInfo {
-private:
+public:
   const Function *F;
   const BlockFrequencyInfo *BFI;
   const BranchProbabilityInfo *BPI;
@@ -60,13 +61,22 @@ private:
   bool ShowHeat;
   bool EdgeWeights;
   bool RawWeights;
+  const BasicBlock *HighlightBB;
+  const Instruction *HighlightInst;
 
 public:
-  DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr, 0) {}
-
+  // DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr, 0) {}
+  DOTFuncInfo(const Function *F, const BasicBlock *HighlightBB = nullptr,
+              const Instruction *HighlightInst = nullptr)
+      : DOTFuncInfo(F, nullptr, nullptr, 0, HighlightBB, HighlightInst) {}
   DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
               const BranchProbabilityInfo *BPI, uint64_t MaxFreq)
-      : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq) {
+      : DOTFuncInfo(F, BFI, BPI, 0, nullptr, nullptr) {}
+  DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
+              const BranchProbabilityInfo *BPI, uint64_t MaxFreq,
+              const BasicBlock *HighlightBB, const Instruction *HighlightInst)
+      : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq), HighlightBB(HighlightBB),
+        HighlightInst(HighlightInst) {
     ShowHeat = false;
     EdgeWeights = !!BPI; // Print EdgeWeights when BPI is available.
     RawWeights = !!BFI;  // Print RawWeights when BFI is available.
@@ -148,13 +158,44 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   }
 
   static std::string getCompleteNodeLabel(
-      const BasicBlock *Node, DOTFuncInfo *,
+      const BasicBlock *Node, DOTFuncInfo *CFGInfo,
       llvm::function_ref<void(raw_string_ostream &, const BasicBlock &)>
-          HandleBasicBlock = [](raw_string_ostream &OS,
-                                const BasicBlock &Node) -> void { OS << Node; },
+          HandleBasicBlock = {},
       llvm::function_ref<void(std::string &, unsigned &, unsigned)>
-          HandleComment = eraseComment) {
-    enum { MaxColumns = 80 };
+          HandleComment = eraseComment,
+      unsigned LongestCol = 0) {
+
+    auto BasicBlockHandler = HandleBasicBlock;
+    if (!BasicBlockHandler) {
+      BasicBlockHandler = [CFGInfo,
+                           LongestCol](raw_string_ostream &OS,
+                                       const BasicBlock &Node) -> void {
+        if (!CFGInfo || !CFGInfo->HighlightBB) {
+          OS << Node;
+          return;
+        }
+
+        Node.printAsOperand(OS, false);
+        OS << ":\n";
+        for (auto &&Inst : Node) {
+          if (&Inst == CFGInfo->HighlightInst) {
+            OS << '<';
+            for (unsigned I = 2; I < LongestCol; ++I)
+              OS << '-';
+            OS << ">\n";
+          }
+          OS << Inst << "\n";
+        }
+        if (CFGInfo->HighlightBB == &Node && !CFGInfo->HighlightInst) {
+          OS << '<';
+          for (unsigned I = 2; I < LongestCol; ++I)
+            OS << '-';
+          OS << '>';
+        }
+      };
+    }
+
+    // enum { MaxColumns = 80 };
     std::string Str;
     raw_string_ostream OS(Str);
 
@@ -163,23 +204,25 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
       OS << ":";
     }
 
-    HandleBasicBlock(OS, *Node);
+    BasicBlockHandler(OS, *Node);
+    unsigned LongCol = 1;
     std::string OutStr = OS.str();
     if (OutStr[0] == '\n')
       OutStr.erase(OutStr.begin());
 
     // Process string output to make it nicer...
     unsigned ColNum = 0;
-    unsigned LastSpace = 0;
+    // unsigned LastSpace = 0;
     for (unsigned i = 0; i != OutStr.length(); ++i) {
       if (OutStr[i] == '\n') { // Left justify
         OutStr[i] = '\\';
         OutStr.insert(OutStr.begin() + i + 1, 'l');
         ColNum = 0;
-        LastSpace = 0;
+        //  LastSpace = 0;
       } else if (OutStr[i] == ';') {             // Delete comments!
         unsigned Idx = OutStr.find('\n', i + 1); // Find end of line
         HandleComment(OutStr, i, Idx);
+#if 0 
       } else if (ColNum == MaxColumns) { // Wrap lines.
         // Wrap very long names even though we can't find a space.
         if (!LastSpace)
@@ -188,11 +231,19 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
         ColNum = i - LastSpace;
         LastSpace = 0;
         i += 3; // The loop will advance 'i' again.
+#endif
       } else
         ++ColNum;
-      if (OutStr[i] == ' ')
-        LastSpace = i;
+      LongCol = std::max(LongCol, ColNum);
+      //  if (OutStr[i] == ' ')
+      //    LastSpace = i;
     }
+
+    if (!HandleBasicBlock && CFGInfo && CFGInfo->HighlightBB && !LongestCol) {
+      return getCompleteNodeLabel(Node, CFGInfo, HandleBasicBlock,
+                                  HandleComment, LongCol);
+    }
+
     return OutStr;
   }
 
@@ -281,6 +332,9 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   }
 
   std::string getNodeAttributes(const BasicBlock *Node, DOTFuncInfo *CFGInfo) {
+    if (Node == CFGInfo->HighlightBB) {
+      return "style=filled,fillcolor=olivedrab1";
+    }
 
     if (!CFGInfo->showHeatColors())
       return "";
@@ -298,6 +352,17 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   bool isNodeHidden(const BasicBlock *Node, const DOTFuncInfo *CFGInfo);
   void computeDeoptOrUnreachablePaths(const Function *F);
 };
+
+void viewCFG(const Function *F);
+void viewCFG(const Function &F);
+void viewCFG(const BasicBlock *BB);
+void viewCFG(const BasicBlock &BB);
+void viewCFG(const Instruction *I);
+void viewCFG(const Instruction &I);
+
+// RegionPrinter.cpp
+void viewRegion(const Function *F);
+void viewRegion(const Function &F);
 } // End llvm namespace
 
 namespace llvm {
