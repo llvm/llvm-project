@@ -204,13 +204,19 @@ static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
 /// branch on a single value.
 static void buildPartialUnswitchConditionalBranch(
     BasicBlock &BB, ArrayRef<Value *> Invariants, bool Direction,
-    BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze) {
+    BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
+    Instruction *I, AssumptionCache *AC, DominatorTree &DT) {
   IRBuilder<> IRB(&BB);
 
-  Value *Cond = Direction ? IRB.CreateOr(Invariants) :
-    IRB.CreateAnd(Invariants);
-  if (InsertFreeze)
-    Cond = IRB.CreateFreeze(Cond, Cond->getName() + ".fr");
+  SmallVector<Value *> FrozenInvariants;
+  for (Value *Inv : Invariants) {
+    if (InsertFreeze && !isGuaranteedNotToBeUndefOrPoison(Inv, AC, I, &DT))
+      Inv = IRB.CreateFreeze(Inv, Inv->getName() + ".fr");
+    FrozenInvariants.push_back(Inv);
+  }
+
+  Value *Cond = Direction ? IRB.CreateOr(FrozenInvariants)
+                          : IRB.CreateAnd(FrozenInvariants);
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                    Direction ? &NormalSucc : &UnswitchedSucc);
 }
@@ -572,10 +578,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
              " condition!");
     buildPartialUnswitchConditionalBranch(
         *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
-        FreezeLoopUnswitchCond && any_of(Invariants, [&](Value *C) {
-          return !isGuaranteedNotToBeUndefOrPoison(C, nullptr,
-                                                   OldPH->getTerminator(), &DT);
-        }));
+        FreezeLoopUnswitchCond, OldPH->getTerminator(), nullptr, DT);
   }
 
   // Update the dominator tree with the added edge.
@@ -2318,11 +2321,9 @@ static void unswitchNontrivialInvariants(
       buildPartialInvariantUnswitchConditionalBranch(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH, L, MSSAU);
     else {
-      buildPartialUnswitchConditionalBranch(
-          *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH,
-          InsertFreeze && any_of(Invariants, [&](Value *C) {
-            return !isGuaranteedNotToBeUndefOrPoison(C, &AC, BI, &DT);
-          }));
+      buildPartialUnswitchConditionalBranch(*SplitBB, Invariants, Direction,
+                                            *ClonedPH, *LoopPH, InsertFreeze,
+                                            BI, &AC, DT);
     }
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 

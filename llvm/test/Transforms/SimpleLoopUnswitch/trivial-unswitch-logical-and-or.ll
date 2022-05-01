@@ -152,11 +152,14 @@ exit:
 define i32 @test_partial_condition_unswitch_or_select(i32* %var, i1 %cond1, i1 %cond2, i1 %cond3, i1 %cond4, i1 %cond5, i1 %cond6) {
 ; CHECK-LABEL: @test_partial_condition_unswitch_or_select(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4:%.*]], [[COND2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[TMP0]], [[COND3:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[COND1:%.*]]
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i1 [[TMP2]]
-; CHECK-NEXT:    br i1 [[DOTFR]], label [[LOOP_EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK-NEXT:    [[COND4_FR:%.*]] = freeze i1 [[COND4:%.*]]
+; CHECK-NEXT:    [[COND2_FR:%.*]] = freeze i1 [[COND2:%.*]]
+; CHECK-NEXT:    [[COND3_FR:%.*]] = freeze i1 [[COND3:%.*]]
+; CHECK-NEXT:    [[COND1_FR:%.*]] = freeze i1 [[COND1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4_FR]], [[COND2_FR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[TMP0]], [[COND3_FR]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[COND1_FR]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    [[COND6_FR:%.*]] = freeze i1 [[COND6:%.*]]
 ; CHECK-NEXT:    br i1 [[COND6_FR]], label [[LOOP_EXIT_SPLIT1:%.*]], label [[ENTRY_SPLIT_SPLIT:%.*]]
