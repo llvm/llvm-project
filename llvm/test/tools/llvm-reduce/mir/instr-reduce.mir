@@ -8,8 +8,8 @@
 # pattern in the output and that combined with that the MIR has to be valid
 # (pass verify) results in the given sequence.
 
-# CHECK:      %0:gpr = COPY $x10
-# CHECK-NEXT: %2:gpr = ADDI %0, 5
+# CHECK:      [[IMPDEF:%[0-9]+]]:gpr = IMPLICIT_DEF
+# CHECK-NEXT: %{{[0-9]+}}:gpr = ADDI [[IMPDEF]], 5
 # CHECK-NEXT: PseudoRET implicit $x10
 
 ...

@@ -46,7 +46,7 @@
 # RESULT-NEXT:  - { id: 9, name: guard, offset: 128, size: 4, alignment: 4 }
 
 
-# RESULT: S_NOP 0
+# RESULT: bb.0:
 # RESULT-NEXT: [[FI0:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.1, implicit $exec
 # RESULT-NEXT: [[FI1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0.bigalloca, implicit $exec
 # RESULT-NEXT: [[FI2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.2, implicit $exec
