@@ -257,12 +257,12 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
 ExtractElementInst *VectorCombine::getShuffleExtract(
     ExtractElementInst *Ext0, ExtractElementInst *Ext1,
     unsigned PreferredExtractIndex = InvalidIndex) const {
-  assert(isa<ConstantInt>(Ext0->getIndexOperand()) &&
-         isa<ConstantInt>(Ext1->getIndexOperand()) &&
-         "Expected constant extract indexes");
+  auto *Index0C = dyn_cast<ConstantInt>(Ext0->getIndexOperand());
+  auto *Index1C = dyn_cast<ConstantInt>(Ext1->getIndexOperand());
+  assert(Index0C && Index1C && "Expected constant extract indexes");
 
-  unsigned Index0 = cast<ConstantInt>(Ext0->getIndexOperand())->getZExtValue();
-  unsigned Index1 = cast<ConstantInt>(Ext1->getIndexOperand())->getZExtValue();
+  unsigned Index0 = Index0C->getZExtValue();
+  unsigned Index1 = Index1C->getZExtValue();
 
   // If the extract indexes are identical, no shuffle is needed.
   if (Index0 == Index1)
@@ -308,9 +308,10 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
                                           const Instruction &I,
                                           ExtractElementInst *&ConvertToShuffle,
                                           unsigned PreferredExtractIndex) {
-  assert(isa<ConstantInt>(Ext0->getOperand(1)) &&
-         isa<ConstantInt>(Ext1->getOperand(1)) &&
-         "Expected constant extract indexes");
+  auto *Ext0IndexC = dyn_cast<ConstantInt>(Ext0->getOperand(1));
+  auto *Ext1IndexC = dyn_cast<ConstantInt>(Ext1->getOperand(1));
+  assert(Ext0IndexC && Ext1IndexC && "Expected constant extract indexes");
+
   unsigned Opcode = I.getOpcode();
   Type *ScalarTy = Ext0->getType();
   auto *VecTy = cast<VectorType>(Ext0->getOperand(0)->getType());
@@ -333,8 +334,8 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
 
   // Get cost estimates for the extract elements. These costs will factor into
   // both sequences.
-  unsigned Ext0Index = cast<ConstantInt>(Ext0->getOperand(1))->getZExtValue();
-  unsigned Ext1Index = cast<ConstantInt>(Ext1->getOperand(1))->getZExtValue();
+  unsigned Ext0Index = Ext0IndexC->getZExtValue();
+  unsigned Ext1Index = Ext1IndexC->getZExtValue();
 
   InstructionCost Extract0Cost =
       TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, Ext0Index);
