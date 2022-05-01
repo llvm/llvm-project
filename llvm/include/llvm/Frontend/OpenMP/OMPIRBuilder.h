@@ -103,7 +103,7 @@ public:
   /// A finalize callback knows about all objects that need finalization, e.g.
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
-  using FinalizeCallbackTy = function_ref<void(InsertPointTy ExitingIP)>;
+  using FinalizeCallbackTy = function_ref<void(InsertPointTy CodeGenIP)>;
 
 private:
   enum class RegionKind {
@@ -149,14 +149,11 @@ private:
     /// The kind of region: topmost sentinel, loop, or directive.
     RegionKind Kind;
 
-    /// If this region represents a directive-associated region, the kind of
-    /// directive.
+    /// The directive kind of the innermost directive that has an associated
+    /// region which might require finalization when it is left.
     omp::Directive DK;
 
-    /// Inside a parallel region, determines whether a barrier must check
-    /// whether cancellation has occured.
-    // TODO: Do not rely on the frontend to know whether a region contains a
-    // cancellation construct, but determine within OpenMPIRBuilder itself.
+    /// Flag to indicate if the directive is cancellable.
     bool IsCancellable;
 
     /// Irregular exits (such as cancellation points) out of this region.
@@ -205,19 +202,13 @@ private:
   /// Pop a region from the region stack. Exits are handled the following way:
   ///
   /// 1. For the regular region exit, \p FinCB is used by the caller to emit
-  /// finalization code somehwere on the control path exiting the region.
-  /// exitRegion itself does nothing.
+  ///    finalization code somehwere on the control path exiting the region. exitRegion itself does nothing.
   ///
   /// 2. For irregular region exits that rejoing with the control flow after
-  /// this region, exitRegion emits a branch to \p FinalizationBB containing the
-  /// finalization code. This is typically that same code as for case 1 avoiding
-  /// emitting the same finialization code multiple times.
+  ///    this region, exitRegion emits a branch to \p FinalizationBB containing the finalization code. This is typically that same code as for case 1 avoiding emitting the same finialization code multiple times.
   ///
   /// 3. For irregular region exits that rejoin a surrounding region, exitRegion
-  /// calls \p FinCB to insert the finalization code into the exiting control
-  /// path. The irregular exit is then added as an irregular exit of the
-  /// sourrounding loop that, opon its exit, can add its own finialization code
-  /// and/or rejoin the control flow there.
+  ///    calls \p FinCB to insert the finalization code into the exiting control path. The irregular exit is then added as an irregular exit of the sourrounding loop that, opon its exit, can add its own finialization code and/or rejoin the control flow there.
   void exitRegion(OMPRegionInfo *R, BasicBlock *FinalizationBB,
                   function_ref<void(InsertPointTy ExitingIP)> FinCB);
 
