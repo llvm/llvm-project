@@ -6721,3 +6721,77 @@ unsigned llvm::getBLXpredOpcode(const MachineFunction &MF) {
   return (MF.getSubtarget<ARMSubtarget>().hardenSlsBlr()) ? ARM::BLX_pred_noip
                                                           : ARM::BLX_pred;
 }
+
+namespace {
+class ARMPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
+  MachineInstr *EndLoop, *LoopCount;
+  MachineFunction *MF;
+  const TargetInstrInfo *TII;
+
+  // Meanings of the various stuff with loop types:
+  // t2Bcc:
+  //   Loop = null -- there is no setup.
+  //   EndLoop = branch at end of original BB that will become a kernel
+  //   LoopCount = CC setter live into branch
+public:
+  ARMPipelinerLoopInfo(MachineInstr *EndLoop, MachineInstr *LoopCount)
+      : EndLoop(EndLoop), LoopCount(LoopCount),
+        MF(EndLoop->getParent()->getParent()),
+        TII(MF->getSubtarget().getInstrInfo()) {}
+
+  bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
+    // Only ignore the terminator.
+    return MI == EndLoop || MI == LoopCount;
+  }
+
+  Optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &Cond) override {
+
+    if (isCondBranchOpcode(EndLoop->getOpcode())) {
+      Cond.push_back(EndLoop->getOperand(1));
+      Cond.push_back(EndLoop->getOperand(2));
+      if (EndLoop->getOperand(0).getMBB() == EndLoop->getParent()) {
+        TII->reverseBranchCondition(Cond);
+      }
+      return {};
+    } else
+      llvm_unreachable("Unknown EndLoop");
+  }
+
+  void setPreheader(MachineBasicBlock *NewPreheader) override {}
+
+  void adjustTripCount(int TripCountAdjust) override {}
+
+  void disposed() override {}
+};
+} // namespace
+
+std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+ARMBaseInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
+  MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
+  MachineBasicBlock *Preheader = *LoopBB->pred_begin();
+  if (Preheader == LoopBB)
+    Preheader = *std::next(LoopBB->pred_begin());
+
+  if (I != LoopBB->end() && I->getOpcode() == ARM::t2Bcc) {
+    // If the branch is a Bcc, then the CPSR should be set somewhere within the
+    // block.  We need to determine the reaching definition of CPSR so that
+    // it can be marked as non-pipelineable, allowing the pipeliner to force
+    // it into stage 0 or give up if it cannot or will not do so.
+    MachineInstr *CCSetter = nullptr;
+    for (auto &L : LoopBB->instrs()) {
+      if (L.isCall())
+        return nullptr;
+      if (isCPSRDefined(L))
+        CCSetter = &L;
+    }
+    if (CCSetter)
+      return std::make_unique<ARMPipelinerLoopInfo>(&*I, CCSetter);
+    else
+      return nullptr; // Unable to find the CC setter, so unable to guarantee
+                      // that pipeline will work
+  }
+
+  return nullptr;
+}

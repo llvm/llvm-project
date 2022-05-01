@@ -23,7 +23,7 @@ public:
     std::unique_ptr<TCPSocket> socket_a_up;
     std::unique_ptr<TCPSocket> socket_b_up;
     CreateTCPConnectedSockets(ip, &socket_a_up, &socket_b_up);
-    auto socket = socket_a_up.release();
+    auto *socket = socket_a_up.release();
     ConnectionFileDescriptor connection_file_descriptor(socket);
 
     std::string uri(connection_file_descriptor.GetURI());

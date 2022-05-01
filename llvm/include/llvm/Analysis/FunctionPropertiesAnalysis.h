@@ -66,9 +66,9 @@ class FunctionPropertiesAnalysis
 public:
   static AnalysisKey Key;
 
-  using Result = FunctionPropertiesInfo;
+  using Result = const FunctionPropertiesInfo;
 
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  FunctionPropertiesInfo run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Printer pass for the FunctionPropertiesAnalysis results.

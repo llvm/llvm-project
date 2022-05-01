@@ -21,6 +21,7 @@
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include <cassert>
 #include <memory>
 #include <type_traits>
@@ -44,9 +45,6 @@ public:
         FalseVal(createAtomicBoolValue()) {
     assert(this->S != nullptr);
   }
-
-  /// Returns the SAT solver instance that is available in this context.
-  Solver &getSolver() const { return *S; }
 
   /// Takes ownership of `Loc` and returns a reference to it.
   ///
@@ -151,7 +149,39 @@ public:
   /// calls with the same argument will return the same result.
   BoolValue &getOrCreateNegationValue(BoolValue &Val);
 
+  /// Creates a fresh flow condition and returns a token that identifies it. The
+  /// token can be used to perform various operations on the flow condition such
+  /// as adding constraints to it, forking it, joining it with another flow
+  /// condition, or checking implications.
+  AtomicBoolValue &makeFlowConditionToken();
+
+  /// Adds `Constraint` to the flow condition identified by `Token`.
+  void addFlowConditionConstraint(AtomicBoolValue &Token,
+                                  BoolValue &Constraint);
+
+  /// Creates a new flow condition with the same constraints as the flow
+  /// condition identified by `Token` and returns its token.
+  AtomicBoolValue &forkFlowCondition(AtomicBoolValue &Token);
+
+  /// Creates a new flow condition that represents the disjunction of the flow
+  /// conditions identified by `FirstToken` and `SecondToken`, and returns its
+  /// token.
+  AtomicBoolValue &joinFlowConditions(AtomicBoolValue &FirstToken,
+                                      AtomicBoolValue &SecondToken);
+
+  /// Returns true if and only if the constraints of the flow condition
+  /// identified by `Token` imply that `Val` is true.
+  bool flowConditionImplies(AtomicBoolValue &Token, BoolValue &Val);
+
 private:
+  /// Adds all constraints of the flow condition identified by `Token` and all
+  /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
+  /// to track tokens of flow conditions that were already visited by recursive
+  /// calls.
+  void addTransitiveFlowConditionConstraints(
+      AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
+      llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) const;
+
   std::unique_ptr<Solver> S;
 
   // Storage for the state of a program.
@@ -178,6 +208,27 @@ private:
   llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, DisjunctionValue *>
       DisjunctionVals;
   llvm::DenseMap<BoolValue *, NegationValue *> NegationVals;
+
+  // Flow conditions are tracked symbolically: each unique flow condition is
+  // associated with a fresh symbolic variable (token), bound to the clause that
+  // defines the flow condition. Conceptually, each binding corresponds to an
+  // "iff" of the form `FC <=> (C1 ^ C2 ^ ...)` where `FC` is a flow condition
+  // token (an atomic boolean) and `Ci`s are the set of constraints in the flow
+  // flow condition clause. Internally, we do not record the formula directly as
+  // an "iff". Instead, a flow condition clause is encoded as conjuncts of the
+  // form `(FC v !C1 v !C2 v ...) ^ (C1 v !FC) ^ (C2 v !FC) ^ ...`. The first
+  // conjuct is stored in the `FlowConditionFirstConjuncts` map and the set of
+  // remaining conjuncts are stored in the `FlowConditionRemainingConjuncts`
+  // map, both keyed by the token of the flow condition.
+  //
+  // Flow conditions depend on other flow conditions if they are created using
+  // `forkFlowCondition` or `joinFlowConditions`. The graph of flow condition
+  // dependencies is stored in the `FlowConditionDeps` map.
+  llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<AtomicBoolValue *>>
+      FlowConditionDeps;
+  llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionFirstConjuncts;
+  llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<BoolValue *>>
+      FlowConditionRemainingConjuncts;
 };
 
 } // namespace dataflow

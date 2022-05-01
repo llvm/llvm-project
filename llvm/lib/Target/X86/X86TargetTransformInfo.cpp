@@ -1224,6 +1224,63 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       auto *SingleOpTy = FixedVectorType::get(BaseTp->getElementType(),
                                               LegalVT.getVectorNumElements());
 
+      if (!Mask.empty() && NumOfDests.isValid()) {
+        // Try to perform better estimation of the permutation.
+        // 1. Split the source/destination vectors into real registers.
+        // 2. Do the mask analysis to identify which real registers are
+        // permuted. If more than 1 source registers are used for the
+        // destination register building, the cost for this destination register
+        // is (Number_of_source_register - 1) * Cost_PermuteTwoSrc. If only one
+        // source register is used, build mask and calculate the cost as a cost
+        // of PermuteSingleSrc.
+        // Also, for the single register permute we try to identify if the
+        // destination register is just a copy of the source register or the
+        // copy of the previous destination register (the cost is
+        // TTI::TCC_Basic). If the source register is just reused, the cost for
+        // this operation is 0.
+        unsigned E = *NumOfDests.getValue();
+        unsigned NormalizedVF =
+            LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
+        unsigned NumOfSrcRegs = NormalizedVF / LegalVT.getVectorNumElements();
+        unsigned NumOfDestRegs = NormalizedVF / LegalVT.getVectorNumElements();
+        SmallVector<int> NormalizedMask(NormalizedVF, UndefMaskElem);
+        copy(Mask, NormalizedMask.begin());
+        unsigned PrevSrcReg = 0;
+        ArrayRef<int> PrevRegMask;
+        InstructionCost Cost = 0;
+        processShuffleMasks(
+            NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
+            [this, SingleOpTy, &PrevSrcReg, &PrevRegMask,
+             &Cost](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
+              if (!ShuffleVectorInst::isIdentityMask(RegMask)) {
+                // Check if the previous register can be just copied to the next
+                // one.
+                if (PrevRegMask.empty() || PrevSrcReg != SrcReg ||
+                    PrevRegMask != RegMask)
+                  Cost += getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                         RegMask, 0, nullptr);
+                else
+                  // Just a copy of previous destination register.
+                  Cost += TTI::TCC_Basic;
+                return;
+              }
+              if (SrcReg != DestReg &&
+                  any_of(RegMask, [](int I) { return I != UndefMaskElem; })) {
+                // Just a copy of the source register.
+                Cost += TTI::TCC_Basic;
+              }
+              PrevSrcReg = SrcReg;
+              PrevRegMask = RegMask;
+            },
+            [this, SingleOpTy, &Cost](ArrayRef<int> RegMask,
+                                      unsigned /*Unused*/,
+                                      unsigned /*Unused*/) {
+              Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
+                                     0, nullptr);
+            });
+        return Cost;
+      }
+
       InstructionCost NumOfShuffles = (NumOfSrcs - 1) * NumOfDests;
       return NumOfShuffles * getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy,
                                             None, 0, nullptr);
@@ -2461,6 +2518,10 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   std::pair<InstructionCost, MVT> LTDest =
       TLI->getTypeLegalizationCost(DL, Dst);
 
+  // If we're truncating to the same legalized type - just assume its free.
+  if (ISD == ISD::TRUNCATE && LTSrc.second == LTDest.second)
+    return TTI::TCC_Free;
+
   if (ST->useAVX512Regs()) {
     if (ST->hasBWI())
       if (const auto *Entry = ConvertCostTableLookup(
@@ -2643,8 +2704,8 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SETCC,   MVT::v32i16,  2 }, // FIXME: should probably be 4
     { ISD::SETCC,   MVT::v64i8,   2 }, // FIXME: should probably be 4
 
-    { ISD::SELECT,  MVT::v32i16,  2 }, // FIXME: should be 3
-    { ISD::SELECT,  MVT::v64i8,   2 }, // FIXME: should be 3
+    { ISD::SELECT,  MVT::v32i16,  2 },
+    { ISD::SELECT,  MVT::v64i8,   2 },
   };
 
   static const CostTblEntry AVX2CostTbl[] = {
@@ -2672,8 +2733,8 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SELECT,  MVT::v8f32,   1 }, // vblendvps
     { ISD::SELECT,  MVT::v4i64,   1 }, // vblendvpd
     { ISD::SELECT,  MVT::v8i32,   1 }, // vblendvps
-    { ISD::SELECT,  MVT::v16i16,  3 }, // vandps + vandnps + vorps
-    { ISD::SELECT,  MVT::v32i8,   3 }, // vandps + vandnps + vorps
+    { ISD::SELECT,  MVT::v16i16,  2 }, // vandps + vandnps + vorps
+    { ISD::SELECT,  MVT::v32i8,   2 }, // vandps + vandnps + vorps
   };
 
   static const CostTblEntry SSE42CostTbl[] = {
@@ -2699,18 +2760,18 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SETCC,   MVT::v8i16,   1 },
     { ISD::SETCC,   MVT::v16i8,   1 },
 
-    { ISD::SELECT,  MVT::v2f64,   3 }, // andpd + andnpd + orpd
-    { ISD::SELECT,  MVT::v2i64,   3 }, // pand + pandn + por
-    { ISD::SELECT,  MVT::v4i32,   3 }, // pand + pandn + por
-    { ISD::SELECT,  MVT::v8i16,   3 }, // pand + pandn + por
-    { ISD::SELECT,  MVT::v16i8,   3 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v2f64,   2 }, // andpd + andnpd + orpd
+    { ISD::SELECT,  MVT::v2i64,   2 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v4i32,   2 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v8i16,   2 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v16i8,   2 }, // pand + pandn + por
   };
 
   static const CostTblEntry SSE1CostTbl[] = {
     { ISD::SETCC,   MVT::v4f32,   2 },
     { ISD::SETCC,   MVT::f32,     1 },
 
-    { ISD::SELECT,  MVT::v4f32,   3 }, // andps + andnps + orps
+    { ISD::SELECT,  MVT::v4f32,   2 }, // andps + andnps + orps
   };
 
   if (ST->useSLMArithCosts())

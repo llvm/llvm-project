@@ -49,7 +49,7 @@ module @attributes {
   // CHECK-DAG:   pdl_interp.check_type %[[ATTR1_TYPE]] is i64
   pdl.pattern : benefit(1) {
     %type = type : i64
-    %attr = attribute 10 : i64
+    %attr = attribute = 10 : i64
     %attr1 = attribute : %type
     %root = operation {"attr" = %attr, "attr1" = %attr1}
     rewrite %root with "rewriter"
@@ -583,7 +583,7 @@ module @attribute_literal {
 
   // Check the correct lowering of an attribute that hasn't been bound.
   pdl.pattern : benefit(1) {
-    %attr = attribute 10
+    %attr = attribute = 10
     pdl.apply_native_constraint "constraint"(%attr: !pdl.attribute)
 
     %root = operation

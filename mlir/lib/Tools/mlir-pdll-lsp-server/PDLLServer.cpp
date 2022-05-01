@@ -983,9 +983,6 @@ PDLDocument::getCodeCompletion(const lsp::URIForFile &uri,
   if (!posLoc.isValid())
     return lsp::CompletionList();
 
-  // Adjust the position one further to after the completion trigger token.
-  posLoc = SMLoc::getFromPointer(posLoc.getPointer() + 1);
-
   // To perform code completion, we run another parse of the module with the
   // code completion context provided.
   ods::Context tmpODSContext;
@@ -1131,9 +1128,6 @@ lsp::SignatureHelp PDLDocument::getSignatureHelp(const lsp::URIForFile &uri,
   SMLoc posLoc = helpPos.getAsSMLoc(sourceMgr);
   if (!posLoc.isValid())
     return lsp::SignatureHelp();
-
-  // Adjust the position one further to after the completion trigger token.
-  posLoc = SMLoc::getFromPointer(posLoc.getPointer() + 1);
 
   // To perform code completion, we run another parse of the module with the
   // code completion context provided.
