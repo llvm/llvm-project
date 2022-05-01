@@ -81,7 +81,7 @@ You can build an Apple Clang compiler using the following commands:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path to clang>/cmake/caches/Apple-stage1.cmake <path to source>
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/Apple-stage1.cmake <path to source>
   $ ninja stage2-distribution
 
 This CMake invocation configures the stage1 host compiler, and sets
@@ -115,7 +115,7 @@ running:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path_to_clang>/cmake/caches/PGO.cmake <source dir>
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake <path to source>
   $ ninja stage2-instrumented-generate-profdata
 
 If you let that run for a few hours or so, it will place a profdata file in your
@@ -147,7 +147,7 @@ The PGO came cache generates the following additional targets:
 
 **stage2-instrumented-generate-profdata**
   Depends on "stage2-instrumented" and will use the instrumented compiler to
-  generate profdata based on the training files in <clang>/utils/perf-training
+  generate profdata based on the training files in clang/utils/perf-training
 
 **stage2**
   Depends of "stage2-instrumented-generate-profdata" and will use the stage1
@@ -185,7 +185,7 @@ following commands:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path_to_clang>/cmake/caches/3-stage.cmake <source dir>
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/3-stage.cmake <path to source>
   $ cmake --build . --target stage3 --parallel
 
 After the build you can compare the stage2 & stage3 compilers.
