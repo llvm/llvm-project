@@ -309,7 +309,7 @@ public:
 
   static llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   create(EntryRef Entry,
-         ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings);
+         ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings);
 
   llvm::ErrorOr<llvm::vfs::Status> status() override { return Stat; }
 
@@ -329,7 +329,7 @@ private:
 } // end anonymous namespace
 
 llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MinimizedVFSFile::create(
-    EntryRef Entry, ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings) {
+    EntryRef Entry, ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings) {
   assert(!Entry.isError() && "error");
 
   if (Entry.isDirectory())
@@ -342,8 +342,8 @@ llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MinimizedVFSFile::create(
       Entry.getStatus());
 
   const auto *EntrySkipMappings = Entry.getPPSkippedRangeMapping();
-  if (EntrySkipMappings && !EntrySkipMappings->empty() && PPSkipMappings)
-    (*PPSkipMappings)[Result->Buffer->getBufferStart()] = EntrySkipMappings;
+  if (EntrySkipMappings && !EntrySkipMappings->empty())
+    PPSkipMappings[Result->Buffer->getBufferStart()] = EntrySkipMappings;
 
   return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
       std::unique_ptr<llvm::vfs::File>(std::move(Result)));

@@ -53,27 +53,6 @@ namespace sampleprof {
 
 void VirtualUnwinder::unwindCall(UnwindState &State) {
   uint64_t Source = State.getCurrentLBRSource();
-  // An artificial return should push an external frame and an artificial call
-  // will match it and pop the external frame so that the context before and
-  // after the external call will be the same.
-  if (State.getCurrentLBR().IsArtificial) {
-    NumExtCallBranch++;
-    // A return is matched and pop the external frame.
-    if (State.getParentFrame()->isExternalFrame()) {
-      State.popFrame();
-    } else {
-      // An artificial return is missing, it happens that the sample is just hit
-      // in the middle of the external code. In this case, the leading branch is
-      // a call to external, we just keep unwinding use a context-less stack.
-      if (State.getParentFrame() != State.getDummyRootPtr())
-        NumMissingExternalFrame++;
-      State.clearCallStack();
-      State.pushFrame(Source);
-      State.InstPtr.update(Source);
-      return;
-    }
-  }
-
   auto *ParentFrame = State.getParentFrame();
   // The 2nd frame after leaf could be missing if stack sample is
   // taken when IP is within prolog/epilog, as frame chain isn't
@@ -85,7 +64,7 @@ void VirtualUnwinder::unwindCall(UnwindState &State) {
       ParentFrame->Address != Source) {
     State.switchToFrame(Source);
     if (ParentFrame != State.getDummyRootPtr()) {
-      if (State.getCurrentLBR().IsArtificial)
+      if (Source == ExternalAddr)
         NumMismatchedExtCallBranch++;
       else
         NumMismatchedProEpiBranch++;
@@ -100,11 +79,32 @@ void VirtualUnwinder::unwindLinear(UnwindState &State, uint64_t Repeat) {
   InstructionPointer &IP = State.InstPtr;
   uint64_t Target = State.getCurrentLBRTarget();
   uint64_t End = IP.Address;
+
+  if (End == ExternalAddr && Target == ExternalAddr) {
+    // Filter out the case when leaf external frame matches the external LBR
+    // target, this is a valid state, it happens that the code run into external
+    // address then return back.  The call frame under the external frame
+    // remains valid and can be unwound later, just skip recording this range.
+    NumPairedExtAddr++;
+    return;
+  }
+
+  if (End == ExternalAddr || Target == ExternalAddr) {
+    // Range is invalid if only one point is external address. This means LBR
+    // traces contains a standalone external address failing to pair another
+    // one, likely due to interrupt jmp or broken perf script. Set the
+    // state to invalid.
+    NumUnpairedExtAddr++;
+    State.setInvalid();
+    return;
+  }
+
   if (Target > End) {
     // Skip unwinding the rest of LBR trace when a bogus range is seen.
     State.setInvalid();
     return;
   }
+
   if (Binary->usePseudoProbes()) {
     // We don't need to top frame probe since it should be extracted
     // from the range.
@@ -150,19 +150,6 @@ void VirtualUnwinder::unwindReturn(UnwindState &State) {
   const LBREntry &LBR = State.getCurrentLBR();
   uint64_t CallAddr = Binary->getCallAddrFromFrameAddr(LBR.Target);
   State.switchToFrame(CallAddr);
-  // Push an external frame for the case of returning to external
-  // address(callback), later if an aitificial call is matched and it will be
-  // popped up. This is to 1)avoid context being interrupted by callback,
-  // context before or after the callback should be the same. 2) the call stack
-  // of function called by callback should be truncated which is done during
-  // recording the context on trie. For example:
-  //  main (call)--> foo (call)--> callback (call)--> bar (return)--> callback
-  //  (return)--> foo (return)--> main
-  // Context for bar should not include main and foo.
-  // For the code of foo, the context of before and after callback should both
-  // be [foo, main].
-  if (LBR.IsArtificial)
-    State.pushFrame(ExternalAddr);
   State.pushFrame(LBR.Source);
   State.InstPtr.update(LBR.Source);
 }
@@ -179,8 +166,6 @@ std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
   std::shared_ptr<StringBasedCtxKey> KeyStr =
       std::make_shared<StringBasedCtxKey>();
   KeyStr->Context = Binary->getExpandedContext(Stack, KeyStr->WasLeafInlined);
-  if (KeyStr->Context.empty())
-    return nullptr;
   return KeyStr;
 }
 
@@ -262,8 +247,16 @@ void VirtualUnwinder::collectSamplesFromFrameTrie(
 
 void VirtualUnwinder::recordBranchCount(const LBREntry &Branch,
                                         UnwindState &State, uint64_t Repeat) {
-  if (Branch.IsArtificial || Branch.Target == ExternalAddr)
+  if (Branch.Target == ExternalAddr)
     return;
+
+  // Record external-to-internal pattern on the trie root, it later can be
+  // used for generating head samples.
+  if (Branch.Source == ExternalAddr) {
+    State.getDummyRootPtr()->recordBranchCount(Branch.Source, Branch.Target,
+                                               Repeat);
+    return;
+  }
 
   if (Binary->usePseudoProbes()) {
     // Same as recordRangeCount, We don't need to top frame probe since we will
@@ -285,6 +278,7 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
   if (!State.validateInitialState())
     return false;
 
+  NumTotalBranches += State.LBRStack.size();
   // Now process the LBR samples in parrallel with stack sample
   // Note that we do not reverse the LBR entry order so we can
   // unwind the sample stack as we walk through LBR entries.
@@ -300,7 +294,6 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
 
     // Save the LBR branch before it gets unwound.
     const LBREntry &Branch = State.getCurrentLBR();
-
     if (isCallState(State)) {
       // Unwind calls - we know we encountered call if LBR overlaps with
       // transition between leaf the 2nd frame. Note that for calls that
@@ -313,13 +306,6 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
       unwindReturn(State);
     } else if (isValidState(State)) {
       // Unwind branches
-      // For regular intra function branches, we only need to record branch
-      // with context. For an artificial branch cross function boundaries, we
-      // got an issue with returning to external code. Take the two LBR enties
-      // for example: [foo:8(RETURN), ext:1] [ext:3(CALL), bar:1] After perf
-      // reader, we only get[foo:8(RETURN), bar:1], unwinder will be confused
-      // like foo return to bar. Here we detect and treat this case as BRANCH
-      // instead of RETURN which only update the source address.
       unwindBranch(State);
     } else {
       // Skip unwinding the rest of LBR trace. Reset the stack and update the
@@ -520,6 +506,14 @@ void HybridPerfReader::unwindSamples() {
       "of branches'source is a call instruction but doesn't match call frame "
       "stack, likely due to unwinding error of external frame.");
 
+  emitWarningSummary(Unwinder.NumPairedExtAddr * 2, Unwinder.NumTotalBranches,
+                     "of branches containing paired external address.");
+
+  emitWarningSummary(Unwinder.NumUnpairedExtAddr, Unwinder.NumTotalBranches,
+                     "of branches containing external address but doesn't have "
+                     "another external address to pair, likely due to "
+                     "interrupt jmp or broken perf script.");
+
   emitWarningSummary(
       Unwinder.NumMismatchedProEpiBranch, Unwinder.NumTotalBranches,
       "of branches'source is a call instruction but doesn't match call frame "
@@ -556,11 +550,10 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
     }
     Index = 1;
   }
+
   // Now extract LBR samples - note that we do not reverse the
   // LBR entry order so we can unwind the sample stack as we walk
   // through LBR entries.
-  uint64_t PrevTrDst = 0;
-
   while (Index < Records.size()) {
     auto &Token = Records[Index++];
     if (Token.size() == 0)
@@ -580,68 +573,16 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
 
     bool SrcIsInternal = Binary->addressIsCode(Src);
     bool DstIsInternal = Binary->addressIsCode(Dst);
-    bool IsExternal = !SrcIsInternal && !DstIsInternal;
-    bool IsIncoming = !SrcIsInternal && DstIsInternal;
-    bool IsOutgoing = SrcIsInternal && !DstIsInternal;
-    bool IsArtificial = false;
-
-    // Ignore branches outside the current binary.
-    if (IsExternal) {
-      if (!PrevTrDst && !LBRStack.empty()) {
-        WithColor::warning()
-            << "Invalid transfer to external code in LBR record at line "
-            << TraceIt.getLineNumber() << ": " << TraceIt.getCurrentLine()
-            << "\n";
-      }
-      // Do not ignore the entire samples, the remaining LBR can still be
-      // unwound using a context-less stack.
+    if (!SrcIsInternal)
+      Src = ExternalAddr;
+    if (!DstIsInternal)
+      Dst = ExternalAddr;
+    // Filter external-to-external case to reduce LBR trace size.
+    if (!SrcIsInternal && !DstIsInternal)
       continue;
-    }
-
-    if (IsOutgoing) {
-      if (!PrevTrDst) {
-        // This is a leading outgoing LBR, we should keep processing the LBRs.
-        if (LBRStack.empty()) {
-          NumLeadingOutgoingLBR++;
-          // Record this LBR since current source and next LBR' target is still
-          // a valid range.
-          LBRStack.emplace_back(LBREntry(Src, ExternalAddr, false));
-          continue;
-        }
-        // This is middle unpaired outgoing jump which is likely due to
-        // interrupt or incomplete LBR trace. Ignore current and subsequent
-        // entries since they are likely in different contexts.
-        break;
-      }
-
-      // For transition to external code, group the Source with the next
-      // availabe transition target.
-      Dst = PrevTrDst;
-      PrevTrDst = 0;
-      IsArtificial = true;
-    } else {
-      if (PrevTrDst) {
-        // If we have seen an incoming transition from external code to internal
-        // code, but not a following outgoing transition, the incoming
-        // transition is likely due to interrupt which is usually unpaired.
-        // Ignore current and subsequent entries since they are likely in
-        // different contexts.
-        break;
-      }
-
-      if (IsIncoming) {
-        // For transition from external code (such as dynamic libraries) to
-        // the current binary, keep track of the branch target which will be
-        // grouped with the Source of the last transition from the current
-        // binary.
-        PrevTrDst = Dst;
-        continue;
-      }
-    }
 
     // TODO: filter out buggy duplicate branches on Skylake
-
-    LBRStack.emplace_back(LBREntry(Src, Dst, IsArtificial));
+    LBRStack.emplace_back(LBREntry(Src, Dst));
   }
   TraceIt.advance();
   return !LBRStack.empty();
@@ -923,25 +864,22 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
   SampleCounter &Counter = SampleCounters.begin()->second;
   uint64_t EndOffeset = 0;
   for (const LBREntry &LBR : Sample->LBRStack) {
-    assert(LBR.Source != ExternalAddr &&
-           "Branch' source should not be an external address, it should be "
-           "converted to aritificial branch.");
     uint64_t SourceOffset = Binary->virtualAddrToOffset(LBR.Source);
-    uint64_t TargetOffset = LBR.Target == static_cast<uint64_t>(ExternalAddr)
-                                ? static_cast<uint64_t>(ExternalAddr)
-                                : Binary->virtualAddrToOffset(LBR.Target);
+    uint64_t TargetOffset = Binary->virtualAddrToOffset(LBR.Target);
 
-    if (!LBR.IsArtificial && TargetOffset != ExternalAddr) {
+    // Record the branch if its sourceOffset is external. It can be the case an
+    // external source call an internal function, later this branch will be used
+    // to generate the function's head sample.
+    if (Binary->offsetIsCode(TargetOffset)) {
       Counter.recordBranchCount(SourceOffset, TargetOffset, Repeat);
     }
 
     // If this not the first LBR, update the range count between TO of current
     // LBR and FROM of next LBR.
     uint64_t StartOffset = TargetOffset;
-    if (EndOffeset != 0) {
-      if (StartOffset <= EndOffeset)
-        Counter.recordRangeCount(StartOffset, EndOffeset, Repeat);
-    }
+    if (Binary->offsetIsCode(StartOffset) && Binary->offsetIsCode(EndOffeset) &&
+        StartOffset <= EndOffeset)
+      Counter.recordRangeCount(StartOffset, EndOffeset, Repeat);
     EndOffeset = SourceOffset;
   }
 }

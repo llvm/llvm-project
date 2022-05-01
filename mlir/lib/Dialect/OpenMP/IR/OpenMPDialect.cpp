@@ -524,28 +524,24 @@ parseWsLoopControl(OpAsmParser &parser, Region &region,
                    SmallVectorImpl<Type> &loopVarTypes, UnitAttr &inclusive) {
   // Parse an opening `(` followed by induction variables followed by `)`
   SmallVector<OpAsmParser::UnresolvedOperand> ivs;
-  if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
-                                     OpAsmParser::Delimiter::Paren))
+  if (parser.parseOperandList(ivs, OpAsmParser::Delimiter::Paren,
+                              /*allowResultNumber=*/false))
     return failure();
 
   size_t numIVs = ivs.size();
   Type loopVarType;
-  if (parser.parseColonType(loopVarType))
-    return failure();
-
-  // Parse loop bounds.
-  if (parser.parseEqual() ||
+  if (parser.parseColonType(loopVarType) ||
+      // Parse loop bounds.
+      parser.parseEqual() ||
       parser.parseOperandList(lowerBound, numIVs,
-                              OpAsmParser::Delimiter::Paren))
-    return failure();
-  if (parser.parseKeyword("to") ||
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.parseKeyword("to") ||
       parser.parseOperandList(upperBound, numIVs,
                               OpAsmParser::Delimiter::Paren))
     return failure();
 
-  if (succeeded(parser.parseOptionalKeyword("inclusive"))) {
+  if (succeeded(parser.parseOptionalKeyword("inclusive")))
     inclusive = UnitAttr::get(parser.getBuilder().getContext());
-  }
 
   // Parse step values.
   if (parser.parseKeyword("step") ||
@@ -587,8 +583,8 @@ void printWsLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
 ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse an opening `(` followed by induction variables followed by `)`
   SmallVector<OpAsmParser::UnresolvedOperand> ivs;
-  if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
-                                     OpAsmParser::Delimiter::Paren))
+  if (parser.parseOperandList(ivs, OpAsmParser::Delimiter::Paren,
+                              /*allowResultNumber=*/false))
     return failure();
   int numIVs = static_cast<int>(ivs.size());
   Type loopVarType;

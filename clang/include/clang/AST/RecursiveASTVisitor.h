@@ -551,6 +551,7 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptRequirement(
     return getDerived().TraverseConceptNestedRequirement(
         cast<concepts::NestedRequirement>(R));
   }
+  llvm_unreachable("unexpected case");
 }
 
 template <typename Derived>

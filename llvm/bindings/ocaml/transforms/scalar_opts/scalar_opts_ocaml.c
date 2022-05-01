@@ -122,12 +122,6 @@ value llvm_add_loop_unroll(LLVMPassManagerRef PM) {
 }
 
 /* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
-value llvm_add_loop_unswitch(LLVMPassManagerRef PM) {
-  LLVMAddLoopUnswitchPass(PM);
-  return Val_unit;
-}
-
-/* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
 value llvm_add_memcpy_opt(LLVMPassManagerRef PM) {
   LLVMAddMemCpyOptPass(PM);
   return Val_unit;

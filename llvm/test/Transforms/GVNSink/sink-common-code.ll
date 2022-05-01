@@ -604,7 +604,7 @@ succ:
 declare void @g()
 
 ; CHECK-LABEL: test_pr30292
-; CHECK: phi i32 [ 0, %entry ], [ %add1, %succ ], [ %add2, %two ]
+; CHECK: phi i32 [ 0, %entry ], [ %add1, %succ ]
 
 define zeroext i1 @test_pr30244(i1 zeroext %flag, i1 zeroext %flag2, i32 %blksA, i32 %blksB, i32 %nblks) {
 

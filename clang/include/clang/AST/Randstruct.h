@@ -15,9 +15,7 @@
 #define LLVM_CLANG_AST_RANDSTRUCT_H
 
 namespace llvm {
-template <typename T> class ArrayRef;
 template <typename T> class SmallVectorImpl;
-class StringRef;
 } // end namespace llvm
 
 namespace clang {
@@ -28,8 +26,7 @@ class RecordDecl;
 
 namespace randstruct {
 
-bool randomizeStructureLayout(const ASTContext &Context, llvm::StringRef Name,
-                              llvm::ArrayRef<Decl *> Fields,
+bool randomizeStructureLayout(const ASTContext &Context, RecordDecl *RD,
                               llvm::SmallVectorImpl<Decl *> &FinalOrdering);
 
 } // namespace randstruct

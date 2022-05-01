@@ -539,8 +539,8 @@ parseSizeAssignment(OpAsmParser &parser,
                     MutableArrayRef<OpAsmParser::UnresolvedOperand> indices) {
   assert(indices.size() == 3 && "space for three indices expected");
   SmallVector<OpAsmParser::UnresolvedOperand, 3> args;
-  if (parser.parseRegionArgumentList(args, /*requiredOperandCount=*/3,
-                                     OpAsmParser::Delimiter::Paren) ||
+  if (parser.parseOperandList(args, OpAsmParser::Delimiter::Paren,
+                              /*allowResultNumber=*/false) ||
       parser.parseKeyword("in") || parser.parseLParen())
     return failure();
   std::move(args.begin(), args.end(), indices.begin());
@@ -548,8 +548,8 @@ parseSizeAssignment(OpAsmParser &parser,
   for (int i = 0; i < 3; ++i) {
     if (i != 0 && parser.parseComma())
       return failure();
-    if (parser.parseRegionArgument(regionSizes[i]) || parser.parseEqual() ||
-        parser.parseOperand(sizes[i]))
+    if (parser.parseOperand(regionSizes[i], /*allowResultNumber=*/false) ||
+        parser.parseEqual() || parser.parseOperand(sizes[i]))
       return failure();
   }
 
@@ -869,7 +869,8 @@ parseAttributions(OpAsmParser &parser, StringRef keyword,
     OpAsmParser::UnresolvedOperand arg;
     Type type;
 
-    if (parser.parseRegionArgument(arg) || parser.parseColonType(type))
+    if (parser.parseOperand(arg, /*allowResultNumber=*/false) ||
+        parser.parseColonType(type))
       return failure();
 
     args.push_back(arg);

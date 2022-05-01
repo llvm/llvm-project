@@ -220,7 +220,7 @@ def test_native_rewrite():
 # CHECK:   pdl.pattern @attribute_with_value : benefit(1)  {
 # CHECK:     %0 = operation
 # CHECK:     rewrite %0  {
-# CHECK:       %1 = attribute "value"
+# CHECK:       %1 = attribute = "value"
 # CHECK:       apply_native_rewrite "NativeRewrite"(%1 : !pdl.attribute)
 # CHECK:     }
 # CHECK:   }
