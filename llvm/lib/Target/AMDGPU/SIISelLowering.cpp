@@ -5768,14 +5768,11 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   EVT EltVT = VecVT.getVectorElementType();
   unsigned VecSize = VecVT.getSizeInBits();
   unsigned EltSize = EltVT.getSizeInBits();
-
-
-  assert(VecSize <= 64);
-
-  unsigned NumElts = VecVT.getVectorNumElements();
   SDLoc SL(Op);
-  auto KIdx = dyn_cast<ConstantSDNode>(Idx);
 
+  // Specially handle the case of v4i16 with static indexing.
+  unsigned NumElts = VecVT.getVectorNumElements();
+  auto KIdx = dyn_cast<ConstantSDNode>(Idx);
   if (NumElts == 4 && EltSize == 16 && KIdx) {
     SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Vec);
 
@@ -5803,35 +5800,41 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     return DAG.getNode(ISD::BITCAST, SL, VecVT, Concat);
   }
 
+  // Static indexing does not lower to stack access, and hence there is no need
+  // for special custom lowering to avoid stack access.
   if (isa<ConstantSDNode>(Idx))
     return SDValue();
 
-  MVT IntVT = MVT::getIntegerVT(VecSize);
-
-  // Avoid stack access for dynamic indexing.
+  // Avoid stack access for dynamic indexing by custom lowering to
   // v_bfi_b32 (v_bfm_b32 16, (shl idx, 16)), val, vec
 
-  // Create a congruent vector with the target value in each element so that
-  // the required element can be masked and ORed into the target vector.
-  SDValue ExtVal = DAG.getNode(ISD::BITCAST, SL, IntVT,
-                               DAG.getSplatBuildVector(VecVT, SL, InsVal));
+  assert(VecSize <= 64 && "Expected target vector size to be <= 64 bits");
 
+  MVT IntVT = MVT::getIntegerVT(VecSize);
+
+  // Convert vector index to bit-index and get the required bit mask.
   assert(isPowerOf2_32(EltSize));
   SDValue ScaleFactor = DAG.getConstant(Log2_32(EltSize), SL, MVT::i32);
-
-  // Convert vector index to bit-index.
   SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx, ScaleFactor);
-
-  SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, IntVT, Vec);
   SDValue BFM = DAG.getNode(ISD::SHL, SL, IntVT,
                             DAG.getConstant(0xffff, SL, IntVT),
                             ScaledIdx);
 
+  // 1. Create a congruent vector with the target value in each element.
+  SDValue ExtVal = DAG.getNode(ISD::BITCAST, SL, IntVT,
+                               DAG.getSplatBuildVector(VecVT, SL, InsVal));
+
+  // 2. Mask off all other indicies except the required index within (1).
   SDValue LHS = DAG.getNode(ISD::AND, SL, IntVT, BFM, ExtVal);
+
+  // 3. Mask off the required index within the target vector.
+  SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, IntVT, Vec);
   SDValue RHS = DAG.getNode(ISD::AND, SL, IntVT,
                             DAG.getNOT(SL, BFM, IntVT), BCVec);
 
+  // 4. Get (2) and (3) ORed into the target vector.
   SDValue BFI = DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS);
+
   return DAG.getNode(ISD::BITCAST, SL, VecVT, BFI);
 }
 
