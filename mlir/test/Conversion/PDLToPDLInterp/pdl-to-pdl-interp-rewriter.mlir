@@ -127,6 +127,29 @@ module @operation_infer_types_from_otherop_results {
 
 // -----
 
+// CHECK-LABEL: module @operation_infer_types_from_interface
+module @operation_infer_types_from_interface {
+  // Unused operation that ensures the arithmetic dialect is loaded for use in the pattern.
+  arith.constant true
+
+  // CHECK: module @rewriters
+  // CHECK:   func @pdl_generated_rewriter
+  // CHECK:     %[[CST:.*]] = pdl_interp.create_operation "arith.constant" -> <inferred>
+  // CHECK:     %[[CST_RES:.*]] = pdl_interp.get_results of %[[CST]] : !pdl.range<value>
+  // CHECK:     %[[CST_TYPE:.*]] = pdl_interp.get_value_type of %[[CST_RES]] : !pdl.range<type>
+  // CHECK:     pdl_interp.create_operation "foo.op"  -> (%[[CST_TYPE]] : !pdl.range<type>)
+  pdl.pattern : benefit(1) {
+    %root = operation "foo.op"
+    rewrite %root {
+      %types = types
+      %newOp = operation "arith.constant" -> (%types : !pdl.range<type>)
+      %newOp2 = operation "foo.op" -> (%types : !pdl.range<type>)
+    }
+  }
+}
+
+// -----
+
 // CHECK-LABEL: module @replace_with_op
 module @replace_with_op {
   // CHECK: module @rewriters
