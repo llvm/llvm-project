@@ -103,7 +103,7 @@ public:
   /// A finalize callback knows about all objects that need finalization, e.g.
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
-  using FinalizeCallbackTy =  function_ref<void(InsertPointTy ExitingIP)>;
+  using FinalizeCallbackTy = function_ref<void(InsertPointTy ExitingIP)>;
 
 private:
   enum class RegionKind {
@@ -121,47 +121,54 @@ private:
 
   struct OMPRegionInfo;
 
-/// An irregular exit out of a region, such as by cancellation.
+  /// An irregular exit out of a region, such as by cancellation.
   struct OMPRegionBreakInfo {
-/// The end of this basic block is current end of the path for breaking out of the region. Must have no terminator so finializations (eg. destructors) can be appended until rejoining at the end of the target region.
+    /// The end of this basic block is current end of the path for breaking out
+    /// of the region. Must have no terminator so finializations (eg.
+    /// destructors) can be appended until rejoining at the end of the target
+    /// region.
     BasicBlock *BB;
 
     /// What triggered the break out of a region, such as a canecellation point.
     omp::Directive Reason;
 
-    /// The kind of region that is being exited. Control flow will rejoin after the innermost region of this kind.
-    OMPRegionInfo* Target;
+    /// The kind of region that is being exited. Control flow will rejoin after
+    /// the innermost region of this kind.
+    OMPRegionInfo *Target;
 
-    OMPRegionBreakInfo(BasicBlock *BB, omp::Directive Reason, OMPRegionInfo* Target);
+    OMPRegionBreakInfo(BasicBlock *BB, omp::Directive Reason,
+                       OMPRegionInfo *Target);
 
     /// Consistency self-check.
     void assertOK() const;
   };
 
-
-  /// An OpenMP region with a single entry and single exit (unless containing a irregular exit) that may be associated with a construct.
+  /// An OpenMP region with a single entry and single exit (unless containing a
+  /// irregular exit) that may be associated with a construct.
   struct OMPRegionInfo {
     /// The kind of region: topmost sentinel, loop, or directive.
     RegionKind Kind;
 
-    /// If this region represents a directive-associated region, the kind of directive.
+    /// If this region represents a directive-associated region, the kind of
+    /// directive.
     omp::Directive DK;
 
     /// Inside a parallel region, determines whether a barrier must check
     /// whether cancellation has occured.
-    // TODO: Do not rely on the frontend to know whether a region contains a cancellation construct, but determine within OpenMPIRBuilder itself.
+    // TODO: Do not rely on the frontend to know whether a region contains a
+    // cancellation construct, but determine within OpenMPIRBuilder itself.
     bool IsCancellable;
 
     /// Irregular exits (such as cancellation points) out of this region.
     SmallVector<OMPRegionBreakInfo, 2> Breaks;
 
-    OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable                  );
-
+    OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable);
 
     /// Register an irregular exit to this region.
     void addBreak(BasicBlock *BB, omp::Directive Reason,
-                  OMPRegionInfo* Target) {
-        assert(IsCancellable && "Only cancellable region may have irregular exits");
+                  OMPRegionInfo *Target) {
+      assert(IsCancellable &&
+             "Only cancellable region may have irregular exits");
       assert(!BB->getTerminator());
       Breaks.emplace_back(BB, Reason, Target);
     }
@@ -170,37 +177,49 @@ private:
     void assertOK() const;
   };
 
-
-    /// The stack of regions surrounding the current in-progress code generation location. Regions are pushed and popped when entering/leaving a region. Constructs/directives that are sensitive to surrounding regions (such as cancellation) must be emitted inside the BodyGenCallbackTy of the surrounding constructs.   
+  /// The stack of regions surrounding the current in-progress code generation
+  /// location. Regions are pushed and popped when entering/leaving a region.
+  /// Constructs/directives that are sensitive to surrounding regions (such as
+  /// cancellation) must be emitted inside the BodyGenCallbackTy of the
+  /// surrounding constructs.
   SmallVector<std::unique_ptr<OMPRegionInfo>, 8> RegionStack;
 
-  /// Return the innermost surrounding region of a specific directive kind, or the toplevel region if not present.
+  /// Return the innermost surrounding region of a specific directive kind, or
+  /// the toplevel region if not present.
   OMPRegionInfo *getInnermostRegion(omp::Directive DK);
 
   /// Return true if the last entry in the finalization stack is of kind \p DK
   /// and cancellable.
   bool isLastFinalizationInfoCancellable(omp::Directive DK);
 
-
   /// @{
-  /// Push a new region to the region stack. Must eventually be popped again using exitRegion.
-  OMPRegionInfo *enterRegion(RegionKind Kind, omp::Directive DK, bool IsCancellable);
+  /// Push a new region to the region stack. Must eventually be popped again
+  /// using exitRegion.
+  OMPRegionInfo *enterRegion(RegionKind Kind, omp::Directive DK,
+                             bool IsCancellable);
   OMPRegionInfo *enterRegion(omp::Directive DK, bool IsCancellable) {
-   return  enterRegion(RegionKind::Directive, DK, IsCancellable);
+    return enterRegion(RegionKind::Directive, DK, IsCancellable);
   }
   /// @}
 
   /// Pop a region from the region stack. Exits are handled the following way:
-  /// 
-  /// 1. For the regular region exit, \p FinCB is used by the caller to emit finalization code somehwere on the control path exiting the region. exitRegion itself does nothing.
   ///
-  /// 2. For irregular region exits that rejoing with the control flow after this region, exitRegion emits a branch to \p FinalizationBB containing the finalization code. This is typically that same code as for case 1 avoiding emitting the same finialization code multiple times.
- ///
-  /// 3. For irregular region exits that rejoin a surrounding region, exitRegion calls \p FinCB to insert the finalization code into the exiting control path. The irregular exit is then added as an irregular exit of the sourrounding loop that, opon its exit, can add its own finialization code and/or rejoin the control flow there.
+  /// 1. For the regular region exit, \p FinCB is used by the caller to emit
+  /// finalization code somehwere on the control path exiting the region.
+  /// exitRegion itself does nothing.
+  ///
+  /// 2. For irregular region exits that rejoing with the control flow after
+  /// this region, exitRegion emits a branch to \p FinalizationBB containing the
+  /// finalization code. This is typically that same code as for case 1 avoiding
+  /// emitting the same finialization code multiple times.
+  ///
+  /// 3. For irregular region exits that rejoin a surrounding region, exitRegion
+  /// calls \p FinCB to insert the finalization code into the exiting control
+  /// path. The irregular exit is then added as an irregular exit of the
+  /// sourrounding loop that, opon its exit, can add its own finialization code
+  /// and/or rejoin the control flow there.
   void exitRegion(OMPRegionInfo *R, BasicBlock *FinalizationBB,
-     function_ref<void(InsertPointTy ExitingIP)> FinCB);
-
-
+                  function_ref<void(InsertPointTy ExitingIP)> FinCB);
 
 public:
   /// Callback type for body (=inner region) code generation
@@ -1000,7 +1019,7 @@ public:
   /// \returns The insertion position *after* the single call.
   InsertPointTy createSingle(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-      FinalizeCallbackTy FiniCB, bool IsNowait,
+                             FinalizeCallbackTy FiniCB, bool IsNowait,
                              llvm::Value *DidIt);
 
   /// Generator for '#omp master'
@@ -1012,7 +1031,7 @@ public:
   /// \returns The insertion position *after* the master.
   InsertPointTy createMaster(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-      FinalizeCallbackTy FiniCB);
+                             FinalizeCallbackTy FiniCB);
 
   /// Generator for '#omp masked'
   ///
@@ -1023,7 +1042,7 @@ public:
   /// \returns The insertion position *after* the masked.
   InsertPointTy createMasked(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-      FinalizeCallbackTy FiniCB, Value *Filter);
+                             FinalizeCallbackTy FiniCB, Value *Filter);
 
   /// Generator for '#omp critical'
   ///
@@ -1036,7 +1055,7 @@ public:
   /// \returns The insertion position *after* the critical.
   InsertPointTy createCritical(const LocationDescription &Loc,
                                BodyGenCallbackTy BodyGenCB,
-      FinalizeCallbackTy FiniCB,
+                               FinalizeCallbackTy FiniCB,
                                StringRef CriticalName, Value *HintInst);
 
   /// Generator for '#omp ordered depend (source | sink)'
@@ -1065,7 +1084,7 @@ public:
   /// \returns The insertion position *after* the ordered.
   InsertPointTy createOrderedThreadsSimd(const LocationDescription &Loc,
                                          BodyGenCallbackTy BodyGenCB,
-      FinalizeCallbackTy FiniCB,
+                                         FinalizeCallbackTy FiniCB,
                                          bool IsThreads);
 
   /// Generator for '#omp sections'
@@ -1083,7 +1102,7 @@ public:
                                InsertPointTy AllocaIP,
                                ArrayRef<StorableBodyGenCallbackTy> SectionCBs,
                                PrivatizeCallbackTy PrivCB,
-      FinalizeCallbackTy FiniCB, bool IsCancellable,
+                               FinalizeCallbackTy FiniCB, bool IsCancellable,
                                bool IsNowait);
 
   /// Generator for '#omp section'
@@ -1094,7 +1113,7 @@ public:
   /// \returns The insertion position *after* the section.
   InsertPointTy createSection(const LocationDescription &Loc,
                               BodyGenCallbackTy BodyGenCB,
-      FinalizeCallbackTy FiniCB);
+                              FinalizeCallbackTy FiniCB);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
@@ -1298,7 +1317,7 @@ private:
   InsertPointTy
   EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
                        Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
-      FinalizeCallbackTy FiniCB, bool Conditional = false,
+                       FinalizeCallbackTy FiniCB, bool Conditional = false,
                        bool HasFinalize = true, bool IsCancellable = false);
 
   /// Get the platform-specific name separator.

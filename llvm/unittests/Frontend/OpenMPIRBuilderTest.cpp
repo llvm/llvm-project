@@ -355,7 +355,6 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
-
 TEST_F(OpenMPIRBuilderTest, DbgLoc) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
@@ -450,9 +449,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
     return CodeGenIP;
   };
 
-  auto FiniCB = [&](InsertPointTy CodeGenIP) {
-    ++NumFinalizationPoints;
-  };
+  auto FiniCB = [&](InsertPointTy CodeGenIP) { ++NumFinalizationPoints; };
 
   IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
                                     F->getEntryBlock().getFirstInsertionPt());
@@ -531,9 +528,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested) {
     return CodeGenIP;
   };
 
-  auto FiniCB = [&](InsertPointTy CodeGenIP) {
-    ++NumFinalizationPoints;
-  };
+  auto FiniCB = [&](InsertPointTy CodeGenIP) { ++NumFinalizationPoints; };
 
   auto OuterBodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
     ++NumOuterBodiesGenerated;
@@ -627,9 +622,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested2Inner) {
     return CodeGenIP;
   };
 
-  auto FiniCB = [&](InsertPointTy CodeGenIP) {
-    ++NumFinalizationPoints;
-  };
+  auto FiniCB = [&](InsertPointTy CodeGenIP) { ++NumFinalizationPoints; };
 
   auto OuterBodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
     ++NumOuterBodiesGenerated;
@@ -3515,9 +3508,7 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   };
 
   // Do nothing in finalization.
-  auto FiniCB = [&](InsertPointTy CodeGenIP) {
-    return CodeGenIP;
-  };
+  auto FiniCB = [&](InsertPointTy CodeGenIP) { return CodeGenIP; };
 
   InsertPointTy AfterIP =
       OMPBuilder.createParallel(Loc, OuterAllocaIP, BodyGenCB, PrivCB, FiniCB,
