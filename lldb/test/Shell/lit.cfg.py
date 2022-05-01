@@ -12,7 +12,6 @@ import lit.formats
 from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
-from distutils.spawn import find_executable
 
 site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain
@@ -121,7 +120,7 @@ if config.lldb_enable_lua:
 if config.lldb_enable_lzma:
     config.available_features.add('lzma')
 
-if find_executable('xz') != None:
+if shutil.which('xz') != None:
     config.available_features.add('xz')
 
 if config.lldb_system_debugserver:

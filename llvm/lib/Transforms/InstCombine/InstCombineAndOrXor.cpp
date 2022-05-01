@@ -706,47 +706,6 @@ Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return Builder.CreateICmp(NewPred, Input, RangeEnd);
 }
 
-static Value *
-foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
-                                     bool JoinedByAnd,
-                                     InstCombiner::BuilderTy &Builder) {
-  Value *X = LHS->getOperand(0);
-  if (X != RHS->getOperand(0))
-    return nullptr;
-
-  const APInt *C1, *C2;
-  if (!match(LHS->getOperand(1), m_APInt(C1)) ||
-      !match(RHS->getOperand(1), m_APInt(C2)))
-    return nullptr;
-
-  // We only handle (X != C1 && X != C2) and (X == C1 || X == C2).
-  ICmpInst::Predicate Pred = LHS->getPredicate();
-  if (Pred !=  RHS->getPredicate())
-    return nullptr;
-  if (JoinedByAnd && Pred != ICmpInst::ICMP_NE)
-    return nullptr;
-  if (!JoinedByAnd && Pred != ICmpInst::ICMP_EQ)
-    return nullptr;
-
-  // The larger unsigned constant goes on the right.
-  if (C1->ugt(*C2))
-    std::swap(C1, C2);
-
-  APInt Xor = *C1 ^ *C2;
-  if (Xor.isPowerOf2()) {
-    // If LHSC and RHSC differ by only one bit, then set that bit in X and
-    // compare against the larger constant:
-    // (X == C1 || X == C2) --> (X | (C1 ^ C2)) == C2
-    // (X != C1 && X != C2) --> (X | (C1 ^ C2)) != C2
-    // We choose an 'or' with a Pow2 constant rather than the inverse mask with
-    // 'and' because that may lead to smaller codegen from a smaller constant.
-    Value *Or = Builder.CreateOr(X, ConstantInt::get(X->getType(), Xor));
-    return Builder.CreateICmp(Pred, Or, ConstantInt::get(X->getType(), *C2));
-  }
-
-  return nullptr;
-}
-
 // Fold (iszero(A & K1) | iszero(A & K2)) -> (A & (K1 | K2)) != (K1 | K2)
 // Fold (!iszero(A & K1) & !iszero(A & K2)) -> (A & (K1 | K2)) == (K1 | K2)
 Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
@@ -1169,10 +1128,17 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
 /// Fold (icmp Pred1 V1, C1) & (icmp Pred2 V2, C2)
 /// or   (icmp Pred1 V1, C1) | (icmp Pred2 V2, C2)
 /// into a single comparison using range-based reasoning.
-static Value *foldAndOrOfICmpsUsingRanges(
-    ICmpInst::Predicate Pred1, Value *V1, const APInt &C1,
-    ICmpInst::Predicate Pred2, Value *V2, const APInt &C2,
-    IRBuilderBase &Builder, bool IsAnd) {
+/// NOTE: This is also used for logical and/or, must be poison-safe!
+Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
+                                                     ICmpInst *ICmp2,
+                                                     bool IsAnd) {
+  ICmpInst::Predicate Pred1, Pred2;
+  Value *V1, *V2;
+  const APInt *C1, *C2;
+  if (!match(ICmp1, m_ICmp(Pred1, m_Value(V1), m_APInt(C1))) ||
+      !match(ICmp2, m_ICmp(Pred2, m_Value(V2), m_APInt(C2))))
+    return nullptr;
+
   // Look through add of a constant offset on V1, V2, or both operands. This
   // allows us to interpret the V + C' < C'' range idiom into a proper range.
   const APInt *Offset1 = nullptr, *Offset2 = nullptr;
@@ -1187,25 +1153,44 @@ static Value *foldAndOrOfICmpsUsingRanges(
   if (V1 != V2)
     return nullptr;
 
-  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(Pred1, C1);
+  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred1) : Pred1, *C1);
   if (Offset1)
     CR1 = CR1.subtract(*Offset1);
 
-  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(Pred2, C2);
+  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred2) : Pred2, *C2);
   if (Offset2)
     CR2 = CR2.subtract(*Offset2);
 
-  Optional<ConstantRange> CR =
-      IsAnd ? CR1.exactIntersectWith(CR2) : CR1.exactUnionWith(CR2);
-  if (!CR)
-    return nullptr;
+  Type *Ty = V1->getType();
+  Value *NewV = V1;
+  Optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
+  if (!CR) {
+    if (!(ICmp1->hasOneUse() && ICmp2->hasOneUse()) || CR1.isWrappedSet() ||
+        CR2.isWrappedSet())
+      return nullptr;
+
+    // Check whether we have equal-size ranges that only differ by one bit.
+    // In that case we can apply a mask to map one range onto the other.
+    APInt LowerDiff = CR1.getLower() ^ CR2.getLower();
+    APInt UpperDiff = (CR1.getUpper() - 1) ^ (CR2.getUpper() - 1);
+    APInt CR1Size = CR1.getUpper() - CR1.getLower();
+    if (!LowerDiff.isPowerOf2() || LowerDiff != UpperDiff ||
+        CR1Size != CR2.getUpper() - CR2.getLower())
+      return nullptr;
+
+    CR = CR1.getLower().ult(CR2.getLower()) ? CR1 : CR2;
+    NewV = Builder.CreateAnd(NewV, ConstantInt::get(Ty, ~LowerDiff));
+  }
+
+  if (IsAnd)
+    CR = CR->inverse();
 
   CmpInst::Predicate NewPred;
   APInt NewC, Offset;
   CR->getEquivalentICmp(NewPred, NewC, Offset);
 
-  Type *Ty = V1->getType();
-  Value *NewV = V1;
   if (Offset != 0)
     NewV = Builder.CreateAdd(NewV, ConstantInt::get(Ty, Offset));
   return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
@@ -2418,58 +2403,6 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   match(LHS1, m_APInt(LHSC));
   match(RHS1, m_APInt(RHSC));
 
-  // Fold (icmp ult/ule (A + C1), C3) | (icmp ult/ule (A + C2), C3)
-  //                   -->  (icmp ult/ule ((A & ~(C1 ^ C2)) + max(C1, C2)), C3)
-  // The original condition actually refers to the following two ranges:
-  // [MAX_UINT-C1+1, MAX_UINT-C1+1+C3] and [MAX_UINT-C2+1, MAX_UINT-C2+1+C3]
-  // We can fold these two ranges if:
-  // 1) C1 and C2 is unsigned greater than C3.
-  // 2) The two ranges are separated.
-  // 3) C1 ^ C2 is one-bit mask.
-  // 4) LowRange1 ^ LowRange2 and HighRange1 ^ HighRange2 are one-bit mask.
-  // This implies all values in the two ranges differ by exactly one bit.
-  if (!IsAnd && (PredL == ICmpInst::ICMP_ULT || PredL == ICmpInst::ICMP_ULE) &&
-      PredL == PredR && LHSC && RHSC && LHS->hasOneUse() && RHS->hasOneUse() &&
-      LHSC->getBitWidth() == RHSC->getBitWidth() && *LHSC == *RHSC) {
-
-    Value *AddOpnd;
-    const APInt *LAddC, *RAddC;
-    if (match(LHS0, m_Add(m_Value(AddOpnd), m_APInt(LAddC))) &&
-        match(RHS0, m_Add(m_Specific(AddOpnd), m_APInt(RAddC))) &&
-        LAddC->ugt(*LHSC) && RAddC->ugt(*LHSC)) {
-
-      APInt DiffC = *LAddC ^ *RAddC;
-      if (DiffC.isPowerOf2()) {
-        const APInt *MaxAddC = nullptr;
-        if (LAddC->ult(*RAddC))
-          MaxAddC = RAddC;
-        else
-          MaxAddC = LAddC;
-
-        APInt RRangeLow = -*RAddC;
-        APInt RRangeHigh = RRangeLow + *LHSC;
-        APInt LRangeLow = -*LAddC;
-        APInt LRangeHigh = LRangeLow + *LHSC;
-        APInt LowRangeDiff = RRangeLow ^ LRangeLow;
-        APInt HighRangeDiff = RRangeHigh ^ LRangeHigh;
-        APInt RangeDiff = LRangeLow.sgt(RRangeLow) ? LRangeLow - RRangeLow
-                                                   : RRangeLow - LRangeLow;
-
-        if (LowRangeDiff.isPowerOf2() && LowRangeDiff == HighRangeDiff &&
-            RangeDiff.ugt(*LHSC)) {
-          Type *Ty = AddOpnd->getType();
-          Value *MaskC = ConstantInt::get(Ty, ~DiffC);
-
-          Value *NewAnd = Builder.CreateAnd(AddOpnd, MaskC);
-          Value *NewAdd = Builder.CreateAdd(NewAnd,
-                                            ConstantInt::get(Ty, *MaxAddC));
-          return Builder.CreateICmp(LHS->getPredicate(), NewAdd,
-                                    ConstantInt::get(Ty, *LHSC));
-        }
-      }
-    }
-  }
-
   // (icmp1 A, B) | (icmp2 A, B) --> (icmp3 A, B)
   // (icmp1 A, B) & (icmp2 A, B) --> (icmp3 A, B)
   if (predicatesFoldable(PredL, PredR)) {
@@ -2514,9 +2447,6 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
   // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
   if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd))
-    return V;
-
-  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, IsAnd, Builder))
     return V;
 
   if (IsAnd)
@@ -2585,8 +2515,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, *LHSC, PredR, RHS0, *RHSC,
-                                     Builder, IsAnd);
+  return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches

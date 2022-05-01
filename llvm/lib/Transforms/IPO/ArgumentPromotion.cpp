@@ -89,6 +89,8 @@ STATISTIC(NumArgumentsPromoted, "Number of pointer arguments promoted");
 STATISTIC(NumByValArgsPromoted, "Number of byval arguments promoted");
 STATISTIC(NumArgumentsDead, "Number of dead pointer args eliminated");
 
+namespace {
+
 struct ArgPart {
   Type *Ty;
   Align Alignment;
@@ -96,7 +98,10 @@ struct ArgPart {
   /// metadata transfer.
   LoadInst *MustExecLoad;
 };
+
 using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
+
+} // end anonymous namespace
 
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
@@ -509,7 +514,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
     // We limit promotion to only promoting up to a fixed number of elements of
     // the aggregate.
-    if (MaxElements > 0 && ArgParts.size() >= MaxElements) {
+    if (MaxElements > 0 && ArgParts.size() > MaxElements) {
       LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                         << "more than " << MaxElements << " parts\n");
       return false;

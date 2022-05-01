@@ -16,37 +16,76 @@
 
 namespace Fortran::runtime::io {
 
-static bool EditBOZInput(IoStatementState &io, const DataEdit &edit, void *n,
-    int base, int totalBitSize) {
+template <int LOG2_BASE>
+static bool EditBOZInput(
+    IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
   std::optional<int> remaining;
   std::optional<char32_t> next{io.PrepareInput(edit, remaining)};
-  common::UnsignedInt128 value{0};
+  if (*next == '0') {
+    do {
+      next = io.NextInField(remaining, edit);
+    } while (next && *next == '0');
+  }
+  // Count significant digits after any leading white space & zeroes
+  int digits{0};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
       continue;
     }
-    int digit{0};
     if (ch >= '0' && ch <= '1') {
-      digit = ch - '0';
-    } else if (base >= 8 && ch >= '2' && ch <= '7') {
-      digit = ch - '0';
-    } else if (base >= 10 && ch >= '8' && ch <= '9') {
-      digit = ch - '0';
-    } else if (base == 16 && ch >= 'A' && ch <= 'Z') {
-      digit = ch + 10 - 'A';
-    } else if (base == 16 && ch >= 'a' && ch <= 'z') {
-      digit = ch + 10 - 'a';
+    } else if (LOG2_BASE >= 3 && ch >= '2' && ch <= '7') {
+    } else if (LOG2_BASE >= 4 && ch >= '8' && ch <= '9') {
+    } else if (LOG2_BASE >= 4 && ch >= 'A' && ch <= 'F') {
+    } else if (LOG2_BASE >= 4 && ch >= 'a' && ch <= 'f') {
     } else {
       io.GetIoErrorHandler().SignalError(
           "Bad character '%lc' in B/O/Z input field", ch);
       return false;
     }
-    value *= base;
-    value += digit;
+    ++digits;
   }
-  // TODO: check for overflow
-  std::memcpy(n, &value, totalBitSize >> 3);
+  auto significantBytes{static_cast<std::size_t>(digits * LOG2_BASE + 7) / 8};
+  if (significantBytes > bytes) {
+    io.GetIoErrorHandler().SignalError(
+        "B/O/Z input of %d digits overflows %zd-byte variable", digits, bytes);
+    return false;
+  }
+  // Reset to start of significant digits
+  io.HandleRelativePosition(-digits);
+  remaining.reset();
+  // Make a second pass now that the digit count is known
+  std::memset(n, 0, bytes);
+  int increment{isHostLittleEndian ? -1 : 1};
+  auto *data{reinterpret_cast<unsigned char *>(n) +
+      (isHostLittleEndian ? significantBytes - 1 : 0)};
+  int shift{((digits - 1) * LOG2_BASE) & 7};
+  if (shift + LOG2_BASE > 8) {
+    shift -= 8; // misaligned octal
+  }
+  while (digits > 0) {
+    char32_t ch{*io.NextInField(remaining, edit)};
+    int digit{0};
+    if (ch >= '0' && ch <= '9') {
+      digit = ch - '0';
+    } else if (ch >= 'A' && ch <= 'F') {
+      digit = ch + 10 - 'A';
+    } else if (ch >= 'a' && ch <= 'f') {
+      digit = ch + 10 - 'a';
+    } else {
+      continue;
+    }
+    --digits;
+    if (shift < 0) {
+      shift += 8;
+      if (shift + LOG2_BASE > 8) { // misaligned octal
+        *data |= digit >> (8 - shift);
+      }
+      data += increment;
+    }
+    *data |= digit << shift;
+    shift -= LOG2_BASE;
+  }
   return true;
 }
 
@@ -83,11 +122,11 @@ bool EditIntegerInput(
   case 'I':
     break;
   case 'B':
-    return EditBOZInput(io, edit, n, 2, kind << 3);
+    return EditBOZInput<1>(io, edit, n, kind);
   case 'O':
-    return EditBOZInput(io, edit, n, 8, kind << 3);
+    return EditBOZInput<3>(io, edit, n, kind);
   case 'Z':
-    return EditBOZInput(io, edit, n, 16, kind << 3);
+    return EditBOZInput<4>(io, edit, n, kind);
   case 'A': // legacy extension
     return EditCharacterInput(io, edit, reinterpret_cast<char *>(n), kind);
   default:
@@ -457,7 +496,6 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
 
 template <int KIND>
 bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
-  constexpr int binaryPrecision{common::PrecisionOfRealKind(KIND)};
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
     if (IsNamelistName(io)) {
@@ -472,14 +510,14 @@ bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   case 'G':
     return EditCommonRealInput<KIND>(io, edit, n);
   case 'B':
-    return EditBOZInput(
-        io, edit, n, 2, common::BitsForBinaryPrecision(binaryPrecision));
+    return EditBOZInput<1>(io, edit, n,
+        common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
   case 'O':
-    return EditBOZInput(
-        io, edit, n, 8, common::BitsForBinaryPrecision(binaryPrecision));
+    return EditBOZInput<3>(io, edit, n,
+        common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
   case 'Z':
-    return EditBOZInput(
-        io, edit, n, 16, common::BitsForBinaryPrecision(binaryPrecision));
+    return EditBOZInput<4>(io, edit, n,
+        common::BitsForBinaryPrecision(common::PrecisionOfRealKind(KIND)) >> 3);
   case 'A': // legacy extension
     return EditCharacterInput(io, edit, reinterpret_cast<char *>(n), KIND);
   default:
@@ -590,7 +628,7 @@ static bool EditListDirectedCharacterInput(
   // or the end of the current record.  Subtlety: the "remaining" count
   // here is a dummy that's used to avoid the interpretation of separators
   // in NextInField.
-  std::optional<int> remaining{maxUTF8Bytes};
+  std::optional<int> remaining{length > 0 ? maxUTF8Bytes : 0};
   while (std::optional<char32_t> next{io.NextInField(remaining, edit)}) {
     switch (*next) {
     case ' ':
@@ -602,8 +640,7 @@ static bool EditListDirectedCharacterInput(
       break;
     default:
       *x++ = *next;
-      --length;
-      remaining = maxUTF8Bytes;
+      remaining = --length > 0 ? maxUTF8Bytes : 0;
     }
   }
   std::fill_n(x, length, ' ');
@@ -619,6 +656,12 @@ bool EditCharacterInput(
   case 'A':
   case 'G':
     break;
+  case 'B':
+    return EditBOZInput<1>(io, edit, x, length * sizeof *x);
+  case 'O':
+    return EditBOZInput<3>(io, edit, x, length * sizeof *x);
+  case 'Z':
+    return EditBOZInput<4>(io, edit, x, length * sizeof *x);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a CHARACTER data item",

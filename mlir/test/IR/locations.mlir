@@ -13,8 +13,9 @@ func.func @inline_notation() -> i32 {
   // CHECK: arith.constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
   %2 = arith.constant 4 : index loc(callsite("foo" at "mysource.cc":10:8))
 
+  // CHECK: affine.for %arg0 loc("IVlocation") = 0 to 8 {
   // CHECK: } loc(fused["foo", "mysource.cc":10:8])
-  affine.for %i0 = 0 to 8 {
+  affine.for %i0 loc("IVlocation") = 0 to 8 {
   } loc(fused["foo", "mysource.cc":10:8])
 
   // CHECK: } loc(fused<"myPass">["foo", "foo2"])

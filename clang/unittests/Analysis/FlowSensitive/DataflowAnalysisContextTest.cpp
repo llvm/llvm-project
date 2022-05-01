@@ -90,4 +90,54 @@ TEST_F(DataflowAnalysisContextTest,
   EXPECT_NE(&NotX1, &NotY);
 }
 
+TEST_F(DataflowAnalysisContextTest, EmptyFlowCondition) {
+  auto &FC = Context.makeFlowConditionToken();
+  auto &C = Context.createAtomicBoolValue();
+  EXPECT_FALSE(Context.flowConditionImplies(FC, C));
+}
+
+TEST_F(DataflowAnalysisContextTest, AddFlowConditionConstraint) {
+  auto &FC = Context.makeFlowConditionToken();
+  auto &C = Context.createAtomicBoolValue();
+  Context.addFlowConditionConstraint(FC, C);
+  EXPECT_TRUE(Context.flowConditionImplies(FC, C));
+}
+
+TEST_F(DataflowAnalysisContextTest, ForkFlowCondition) {
+  auto &FC1 = Context.makeFlowConditionToken();
+  auto &C1 = Context.createAtomicBoolValue();
+  Context.addFlowConditionConstraint(FC1, C1);
+
+  // Forked flow condition inherits the constraints of its parent flow
+  // condition.
+  auto &FC2 = Context.forkFlowCondition(FC1);
+  EXPECT_TRUE(Context.flowConditionImplies(FC2, C1));
+
+  // Adding a new constraint to the forked flow condition does not affect its
+  // parent flow condition.
+  auto &C2 = Context.createAtomicBoolValue();
+  Context.addFlowConditionConstraint(FC2, C2);
+  EXPECT_TRUE(Context.flowConditionImplies(FC2, C2));
+  EXPECT_FALSE(Context.flowConditionImplies(FC1, C2));
+}
+
+TEST_F(DataflowAnalysisContextTest, JoinFlowConditions) {
+  auto &C1 = Context.createAtomicBoolValue();
+  auto &C2 = Context.createAtomicBoolValue();
+  auto &C3 = Context.createAtomicBoolValue();
+
+  auto &FC1 = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC1, C1);
+  Context.addFlowConditionConstraint(FC1, C3);
+
+  auto &FC2 = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC2, C2);
+  Context.addFlowConditionConstraint(FC2, C3);
+
+  auto &FC3 = Context.joinFlowConditions(FC1, FC2);
+  EXPECT_FALSE(Context.flowConditionImplies(FC3, C1));
+  EXPECT_FALSE(Context.flowConditionImplies(FC3, C2));
+  EXPECT_TRUE(Context.flowConditionImplies(FC3, C3));
+}
+
 } // namespace

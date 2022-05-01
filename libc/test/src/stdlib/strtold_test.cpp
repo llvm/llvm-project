@@ -15,6 +15,7 @@
 #include <limits.h>
 #include <stddef.h>
 
+#ifdef __SIZEOF_INT128__
 class LlvmLibcStrToLDTest : public __llvm_libc::testing::Test {
 public:
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
@@ -221,3 +222,4 @@ TEST_F(LlvmLibcStrToLDTest, NaNTests) {
            (__uint128_t(0x7fffc00000) << 40),
            (__uint128_t(0x7fff800000000000) << 64));
 }
+#endif

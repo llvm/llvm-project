@@ -146,6 +146,7 @@ def True : Predicate<"true">;
 
 def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
 def hasPTX42 : Predicate<"Subtarget->getPTXVersion() >= 42">;
+def hasPTX43 : Predicate<"Subtarget->getPTXVersion() >= 43">;
 def hasPTX60 : Predicate<"Subtarget->getPTXVersion() >= 60">;
 def hasPTX61 : Predicate<"Subtarget->getPTXVersion() >= 61">;
 def hasPTX63 : Predicate<"Subtarget->getPTXVersion() >= 63">;
@@ -204,17 +205,29 @@ multiclass I3<string OpcStr, SDNode OpNode> {
               [(set Int16Regs:$dst, (OpNode Int16Regs:$a, (imm):$b))]>;
 }
 
-// Template for instructions which take 3 int32 args.  The instructions are
+// Template for instructions which take 3 int args.  The instructions are
 // named "<OpcStr>.s32" (e.g. "addc.cc.s32").
-multiclass ADD_SUB_INT_32<string OpcStr, SDNode OpNode> {
-   def i32rr :
-     NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b),
-               !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
-               [(set Int32Regs:$dst, (OpNode Int32Regs:$a, Int32Regs:$b))]>;
-   def i32ri :
-     NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, i32imm:$b),
-               !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
-               [(set Int32Regs:$dst, (OpNode Int32Regs:$a, imm:$b))]>;
+multiclass ADD_SUB_INT_CARRY<string OpcStr, SDNode OpNode> {
+  let hasSideEffects = 1 in {
+    def i32rr :
+      NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b),
+                !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
+                [(set Int32Regs:$dst, (OpNode Int32Regs:$a, Int32Regs:$b))]>;
+    def i32ri :
+      NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, i32imm:$b),
+                !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
+                [(set Int32Regs:$dst, (OpNode Int32Regs:$a, imm:$b))]>;
+    def i64rr :
+      NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, Int64Regs:$b),
+                !strconcat(OpcStr, ".s64 \t$dst, $a, $b;"),
+                [(set Int64Regs:$dst, (OpNode Int64Regs:$a, Int64Regs:$b))]>,
+      Requires<[hasPTX43]>;
+    def i64ri :
+      NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, i64imm:$b),
+                !strconcat(OpcStr, ".s64 \t$dst, $a, $b;"),
+                [(set Int64Regs:$dst, (OpNode Int64Regs:$a, imm:$b))]>,
+      Requires<[hasPTX43]>;
+  }
 }
 
 // Template for instructions which take three fp64 or fp32 args.  The
@@ -584,14 +597,13 @@ defm SUB_i1 : ADD_SUB_i1<sub>;
 defm ADD : I3<"add.s", add>;
 defm SUB : I3<"sub.s", sub>;
 
-// int32 addition and subtraction with carry-out.
-// FIXME: PTX 4.3 adds a 64-bit add.cc (and maybe also 64-bit addc.cc?).
-defm ADDCC : ADD_SUB_INT_32<"add.cc", addc>;
-defm SUBCC : ADD_SUB_INT_32<"sub.cc", subc>;
+// in32 and int64 addition and subtraction with carry-out.
+defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc>;
+defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc>;
 
-// int32 addition and subtraction with carry-in and carry-out.
-defm ADDCCC : ADD_SUB_INT_32<"addc.cc", adde>;
-defm SUBCCC : ADD_SUB_INT_32<"subc.cc", sube>;
+// int32 and int64 addition and subtraction with carry-in and carry-out.
+defm ADDCCC : ADD_SUB_INT_CARRY<"addc.cc", adde>;
+defm SUBCCC : ADD_SUB_INT_CARRY<"subc.cc", sube>;
 
 defm MULT : I3<"mul.lo.s", mul>;
 

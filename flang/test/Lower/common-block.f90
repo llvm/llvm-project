@@ -1,11 +1,11 @@
 ! RUN: bbc %s -o - | tco | FileCheck %s
 
 ! CHECK: @_QB = common global [8 x i8] zeroinitializer
+! CHECK: @_QBrien = common global [1 x i8] zeroinitializer
+! CHECK: @_QBwith_empty_equiv = common global [8 x i8] zeroinitializer
 ! CHECK: @_QBx = global { float, float } { float 1.0{{.*}}, float 2.0{{.*}} }
 ! CHECK: @_QBy = common global [12 x i8] zeroinitializer
 ! CHECK: @_QBz = global { i32, [4 x i8], float } { i32 42, [4 x i8] undef, float 3.000000e+00 }
-! CHECK: @_QBrien = common global [1 x i8] zeroinitializer
-! CHECK: @_QBwith_empty_equiv = common global [8 x i8] zeroinitializer
 
 ! CHECK-LABEL: _QPs0
 subroutine s0
