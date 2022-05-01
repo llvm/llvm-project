@@ -957,13 +957,13 @@ def : InstRW<[GenericWriteFPURcpS], (instrs RECIP_S_MM, RSQRT_S_MM)>;
 def : InstRW<[GenericWriteFPURcpD], (instrs RECIP_D32_MM, RECIP_D64_MM,
                                      RSQRT_D32_MM, RSQRT_D64_MM)>;
 
-def : InstRW<[GenericWriteFPUStore], (instrs SDC1_MM, SWC1_MM, SUXC1_MM,
-                                      SWXC1_MM)>;
+def : InstRW<[GenericWriteFPUStore], (instrs SDC1_MM_D32, SDC1_MM_D64, SWC1_MM,
+                                      SUXC1_MM, SWXC1_MM)>;
 
 def : InstRW<[GenericWriteFPUMoveGPRFPU], (instrs CFC1_MM, CTC1_MM)>;
 
-def : InstRW<[GenericWriteFPULoad], (instrs LDC1_MM, LUXC1_MM, LWC1_MM,
-                                     LWXC1_MM)>;
+def : InstRW<[GenericWriteFPULoad], (instrs LDC1_MM_D32, LDC1_MM_D64, LUXC1_MM,
+                                     LWC1_MM, LWXC1_MM)>;
 
 // microMIPS32r6
 // =============
