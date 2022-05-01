@@ -125,6 +125,7 @@ private:
   bool handleCppAttributes();
   FormatToken *parseIfThenElse(IfStmtKind *IfKind, bool KeepBraces = false);
   void parseTryCatch();
+  void parseLoopBody(bool TryRemoveBraces, bool WrapRightBrace);
   void parseForOrWhileLoop();
   void parseDoWhile();
   void parseLabel(bool LeftAlignLabel = false);
