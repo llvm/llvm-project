@@ -136,6 +136,12 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed nonsensical suggestion of :doc:`altera-struct-pack-align
+  <clang-tidy/checks/altera-struct-pack-align>` check for empty structs.
+
+- Fixed some false positives in :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone-infinite-loop>` involving dependent expressions.
+
 - Fixed a crash in :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone-sizeof-expression>` when `sizeof(...)` is
   compared against a `__int128_t`.
@@ -158,26 +164,20 @@ Changes in existing checks
   <clang-tidy/checks/misc-redundant-expression>` involving assignments in
   conditions. This fixes `Issue 35853 <https://github.com/llvm/llvm-project/issues/35853>`_.
 
-- Fixed a crash in :doc:`readability-const-return-type
-  <clang-tidy/checks/readability-const-return-type>` when a pure virtual function
-  overrided has a const return type. Removed the fix for a virtual function.
-
-- Fixed a false positive in :doc:`readability-non-const-parameter
-  <clang-tidy/checks/readability-non-const-parameter>` when the parameter is
-  referenced by an lvalue.
-
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance-inefficient-vector-operation>` to work when
   the vector is a member of a structure.
 
-- Fixed nonsensical suggestion of :doc:`altera-struct-pack-align
-  <clang-tidy/checks/altera-struct-pack-align>` check for empty structs.
+- Fixed a crash in :doc:`readability-const-return-type
+  <clang-tidy/checks/readability-const-return-type>` when a pure virtual function
+  overrided has a const return type. Removed the fix for a virtual function.
 
 - Fixed incorrect suggestions for :doc:`readability-container-size-empty
   <clang-tidy/checks/readability-container-size-empty>` when smart pointers are involved.
 
-- Fixed some false positives in :doc:`bugprone-infinite-loop
-  <clang-tidy/checks/bugprone-infinite-loop>` involving dependent expressions.
+- Fixed a false positive in :doc:`readability-non-const-parameter
+  <clang-tidy/checks/readability-non-const-parameter>` when the parameter is
+  referenced by an lvalue.
 
 Removed checks
 ^^^^^^^^^^^^^^
