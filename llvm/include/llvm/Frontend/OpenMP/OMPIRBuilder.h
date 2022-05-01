@@ -185,9 +185,6 @@ private:
   /// the toplevel region if not present.
   OMPRegionInfo *getInnermostRegion(omp::Directive DK);
 
-  /// Return true if the last entry in the finalization stack is of kind \p DK
-  /// and cancellable.
-  bool isLastFinalizationInfoCancellable(omp::Directive DK);
 
   /// @{
   /// Push a new region to the region stack. Must eventually be popped again
@@ -868,7 +865,7 @@ public:
   /// \param CanceledDirective The kind of directive that is cancled.
   /// \param ExitCB Extra code to be generated in the exit block.
   void emitCancelationCheckImpl(LocationDescription Loc, Value *CancelFlag,
-                                omp::Directive CanceledDirective,
+                                omp::Directive CancelledDirective,
                                 omp::Directive CancelledBy);
 
   /// Generate a barrier runtime call.
@@ -889,6 +886,12 @@ public:
   /// \param Loc The location at which the request originated and is fulfilled.
   void emitFlush(const LocationDescription &Loc);
 
+private:
+  /// Return true if the last entry in the finalization stack is of kind \p DK
+  /// and cancellable.
+  bool isLastFinalizationInfoCancellable(omp::Directive DK);
+
+public:
   /// Generate a taskwait runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
@@ -1551,7 +1554,6 @@ public:
   /// \returns The CanonicalLoopInfo that represents the emitted loop.
   CanonicalLoopInfo *createLoopSkeleton(DebugLoc DL, Value *TripCount,
                                         Function *F,
-                                        // bool Finalize,
                                         BasicBlock *PreInsertBefore,
                                         BasicBlock *PostInsertBefore,
                                         const Twine &Name = {});

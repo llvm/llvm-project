@@ -526,12 +526,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 
 OpenMPIRBuilder::OpenMPIRBuilder(Module &M) : M(M), Builder(M.getContext()) {
   RegionStack.emplace_back(new OMPRegionInfo(
-      RegionKind::Toplevel, omp::OMPD_unknown, /*IsCancellable*/ false
-      //  , [](InsertPointTy ExitingIP, omp::Directive LeaveReason,
-      //       OMPRegionInfo *Region) {
-      //     llvm_unreachable("top-level is not finialized");
-      //   }
-      ));
+      RegionKind::Toplevel, omp::OMPD_unknown, /*IsCancellable*/false      ));
   assert(RegionStack.size() == 1);
 }
 
@@ -674,7 +669,7 @@ OpenMPIRBuilder::OMPRegionBreakInfo::OMPRegionBreakInfo(BasicBlock *BB,
   assertOK();
 }
 
-void OpenMPIRBuilder ::OMPRegionBreakInfo::assertOK() const {
+void OpenMPIRBuilder::OMPRegionBreakInfo::assertOK() const {
 #ifndef NDEBUG
   assert(!BB->getTerminator() && "Pending irregular exit must be amendable");
 
@@ -746,7 +741,7 @@ void OpenMPIRBuilder::OMPRegionInfo::assertOK() const {
 
 OpenMPIRBuilder::OMPRegionInfo *
 OpenMPIRBuilder::getInnermostRegion(omp::Directive DK) {
-  for (auto &R : reverse(RegionStack)) {
+  for ( const std::unique_ptr<OMPRegionInfo> &R : reverse(RegionStack)) {
     if (R->Kind == RegionKind::Directive && R->DK == DK)
       return R.get();
   }
@@ -766,7 +761,6 @@ OpenMPIRBuilder::enterRegion(OpenMPIRBuilder::RegionKind Kind,
 
 void OpenMPIRBuilder::exitRegion(OMPRegionInfo *R, BasicBlock *FinalizationBB,
                                  FinalizeCallbackTy FinCB) {
-  auto DK = R->DK;
   assert(RegionStack.back().get() == R && "balanced region push/pop required");
   R->assertOK();
 
@@ -783,7 +777,7 @@ void OpenMPIRBuilder::exitRegion(OMPRegionInfo *R, BasicBlock *FinalizationBB,
     if (B.Target == Innermost) {
       // Join common finialization block
       Builder.SetInsertPoint(B.BB);
-      BranchInst *TI = Builder.CreateBr(FinalizationBB);
+      Builder.CreateBr(FinalizationBB);
       B.BB = nullptr;
     } else if (FinCB) {
       // Emit dedicated fininalization since we cannot use use the one for the
@@ -871,7 +865,7 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
 
   BasicBlock *New = nullptr;
   if (IfCondition) {
-    auto Old = Builder.GetInsertBlock();
+    BasicBlock* Old = Builder.GetInsertBlock();
     New = splitBB(Builder, false);
     BasicBlock *ThenBlock = BasicBlock::Create(
         Builder.getContext(), Old->getName() + ".if", New->getParent(), New);
@@ -880,6 +874,7 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
     Builder.CreateBr(New);
     Builder.SetInsertPoint(ThenBlock->getTerminator());
   }
+
 
   Value *CancelKind = nullptr;
   switch (CanceledDirective) {
