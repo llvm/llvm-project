@@ -2518,6 +2518,10 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   std::pair<InstructionCost, MVT> LTDest =
       TLI->getTypeLegalizationCost(DL, Dst);
 
+  // If we're truncating to the same legalized type - just assume its free.
+  if (ISD == ISD::TRUNCATE && LTSrc.second == LTDest.second)
+    return TTI::TCC_Free;
+
   if (ST->useAVX512Regs()) {
     if (ST->hasBWI())
       if (const auto *Entry = ConvertCostTableLookup(
