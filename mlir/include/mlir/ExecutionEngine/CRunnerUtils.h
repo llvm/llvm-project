@@ -312,7 +312,7 @@ public:
   explicit DynamicMemRefType(const StridedMemRefType<T, N> &memRef)
       : rank(N), basePtr(memRef.basePtr), data(memRef.data),
         offset(memRef.offset), sizes(memRef.sizes), strides(memRef.strides) {}
-  explicit DynamicMemRefType(const UnrankedMemRefType<T> &memRef)
+  explicit DynamicMemRefType(const ::UnrankedMemRefType<T> &memRef)
       : rank(memRef.rank) {
     auto *desc = static_cast<StridedMemRefType<T, 1> *>(memRef.descriptor);
     basePtr = desc->basePtr;
@@ -334,8 +334,8 @@ public:
 // Small runtime support library for memref.copy lowering during codegen.
 //===----------------------------------------------------------------------===//
 extern "C" MLIR_CRUNNERUTILS_EXPORT void
-memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *src,
-           UnrankedMemRefType<char> *dst);
+memrefCopy(int64_t elemSize, ::UnrankedMemRefType<char> *src,
+           ::UnrankedMemRefType<char> *dst);
 
 //===----------------------------------------------------------------------===//
 // Small runtime support library for vector.print lowering during codegen.
