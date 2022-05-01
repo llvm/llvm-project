@@ -24,8 +24,8 @@ namespace characteristics = Fortran::evaluate::characteristics;
 
 namespace Fortran::semantics {
 
-static void CheckImplicitInterfaceArg(
-    evaluate::ActualArgument &arg, parser::ContextualMessages &messages) {
+static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
+    parser::ContextualMessages &messages, evaluate::FoldingContext &context) {
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
   if (auto kw{arg.keyword()}) {
@@ -72,6 +72,18 @@ static void CheckImplicitInterfaceArg(
       if (symbol.attrs().test(Attr::VOLATILE)) {
         messages.Say(
             "VOLATILE argument requires an explicit interface"_err_en_US);
+      }
+    } else if (auto argChars{characteristics::DummyArgument::FromActual(
+                   "actual argument", *expr, context)}) {
+      const auto *argProcDesignator{
+          std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
+      const auto *argProcSymbol{
+          argProcDesignator ? argProcDesignator->GetSymbol() : nullptr};
+      if (argProcSymbol && !argChars->IsTypelessIntrinsicDummy() &&
+          argProcDesignator && argProcDesignator->IsElemental()) { // C1533
+        evaluate::SayWithDeclaration(messages, *argProcSymbol,
+            "Non-intrinsic ELEMENTAL procedure '%s' may not be passed as an actual argument"_err_en_US,
+            argProcSymbol->name());
       }
     }
   }
@@ -877,7 +889,7 @@ void CheckArguments(const characteristics::Procedure &proc,
       auto restorer{messages.SetMessages(buffer)};
       for (auto &actual : actuals) {
         if (actual) {
-          CheckImplicitInterfaceArg(*actual, messages);
+          CheckImplicitInterfaceArg(*actual, messages, context);
         }
       }
     }
