@@ -6,6 +6,10 @@
 
 // -----
 
+// Unused operation to force loading the `arithmetic` dialect for the
+// test of type inferrence.
+arith.constant true
+
 func.func @operations(%attribute: !pdl.attribute,
                  %input: !pdl.value,
                  %type: !pdl.type) {
@@ -20,6 +24,9 @@ func.func @operations(%attribute: !pdl.attribute,
 
   // operands, and results
   %op3 = pdl_interp.create_operation "foo.op"(%input : !pdl.value) -> (%type : !pdl.type)
+
+  // inferred results
+  %op4 = pdl_interp.create_operation "arith.constant" -> <inferred>
 
   pdl_interp.finalize
 }
