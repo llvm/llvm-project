@@ -49,9 +49,10 @@ ASAN_FLAG(
     "to find more errors.")
 ASAN_FLAG(bool, replace_intrin, true,
           "If set, uses custom wrappers for memset/memcpy/memmove intrinsics.")
-ASAN_FLAG(bool, detect_stack_use_after_return, false,
+ASAN_FLAG(bool, detect_stack_use_after_return,
+          SANITIZER_LINUX && !SANITIZER_ANDROID,
           "Enables stack-use-after-return checking at run-time.")
-ASAN_FLAG(int, min_uar_stack_size_log, 16, // We can't do smaller anyway.
+ASAN_FLAG(int, min_uar_stack_size_log, 16,  // We can't do smaller anyway.
           "Minimum fake stack size log.")
 ASAN_FLAG(int, max_uar_stack_size_log,
           20, // 1Mb per size class, i.e. ~11Mb per thread

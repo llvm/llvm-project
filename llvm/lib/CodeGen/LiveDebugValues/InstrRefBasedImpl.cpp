@@ -870,70 +870,19 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
     // the variable is.
     if (Offset == 0) {
       const SpillLoc &Spill = SpillLocs[SpillID.id()];
+      Expr = TRI.prependOffsetExpression(Expr, DIExpression::ApplyOffset,
+                                         Spill.SpillOffset);
       unsigned Base = Spill.SpillBase;
       MIB.addReg(Base);
+      MIB.addImm(0);
 
-      // There are several ways we can dereference things, and several inputs
-      // to consider:
-      // * NRVO variables will appear with IsIndirect set, but should have
-      //   nothing else in their DIExpressions,
-      // * Variables with DW_OP_stack_value in their expr already need an
-      //   explicit dereference of the stack location,
-      // * Values that don't match the variable size need DW_OP_deref_size,
-      // * Everything else can just become a simple location expression.
-
-      // We need to use deref_size whenever there's a mismatch between the
-      // size of value and the size of variable portion being read.
-      // Additionally, we should use it whenever dealing with stack_value
-      // fragments, to avoid the consumer having to determine the deref size
-      // from DW_OP_piece.
-      bool UseDerefSize = false;
-      unsigned ValueSizeInBits = getLocSizeInBits(*MLoc);
-      unsigned DerefSizeInBytes = ValueSizeInBits / 8;
-      if (auto Fragment = Var.getFragment()) {
-        unsigned VariableSizeInBits = Fragment->SizeInBits;
-        if (VariableSizeInBits != ValueSizeInBits || Expr->isComplex())
-          UseDerefSize = true;
-      } else if (auto Size = Var.getVariable()->getSizeInBits()) {
-        if (*Size != ValueSizeInBits) {
-          UseDerefSize = true;
-        }
-      }
-
+      // Being on the stack makes this location indirect; if it was _already_
+      // indirect though, we need to add extra indirection. See this test for
+      // a scenario where this happens:
+      //     llvm/test/DebugInfo/X86/spill-nontrivial-param.ll
       if (Properties.Indirect) {
-        // This is something like an NRVO variable, where the pointer has been
-        // spilt to the stack. It should end up being a memory location, with
-        // the pointer to the variable loaded off the stack with a deref:
-        assert(!Expr->isComplex());
-        Expr = TRI.prependOffsetExpression(
-            Expr, DIExpression::ApplyOffset | DIExpression::DerefAfter,
-            Spill.SpillOffset);
-        MIB.addImm(0);
-      } else if (UseDerefSize) {
-        // We're loading a value off the stack that's not the same size as the
-        // variable. Add / subtract stack offset, explicitly deref with a size,
-        // and add DW_OP_stack_value if not already present.
-        SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size,
-                                        DerefSizeInBytes};
-        Expr = DIExpression::prependOpcodes(Expr, Ops, true);
-        unsigned Flags = DIExpression::StackValue | DIExpression::ApplyOffset;
-        Expr = TRI.prependOffsetExpression(Expr, Flags, Spill.SpillOffset);
-        MIB.addReg(0);
-      } else if (Expr->isComplex()) {
-        // A variable with no size ambiguity, but with extra elements in it's
-        // expression. Manually dereference the stack location.
-        assert(Expr->isComplex());
-        Expr = TRI.prependOffsetExpression(
-            Expr, DIExpression::ApplyOffset | DIExpression::DerefAfter,
-            Spill.SpillOffset);
-        MIB.addReg(0);
-      } else {
-        // A plain value that has been spilt to the stack, with no further
-        // context. Request a location expression, marking the DBG_VALUE as
-        // IsIndirect.
-        Expr = TRI.prependOffsetExpression(Expr, DIExpression::ApplyOffset,
-                                           Spill.SpillOffset);
-        MIB.addImm(0);
+        std::vector<uint64_t> Elts = {dwarf::DW_OP_deref};
+        Expr = DIExpression::append(Expr, Elts);
       }
     } else {
       // This is a stack location with a weird subregister offset: emit an undef

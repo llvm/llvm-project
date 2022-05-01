@@ -251,8 +251,14 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.getenv
 
     # stdio.h entrypoints
+    libc.src.stdio.clearerr
+    libc.src.stdio.clearerr_unlocked
     libc.src.stdio.fclose
     libc.src.stdio.flockfile
+    libc.src.stdio.feof
+    libc.src.stdio.feof_unlocked
+    libc.src.stdio.ferror
+    libc.src.stdio.ferror_unlocked
     libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fopencookie

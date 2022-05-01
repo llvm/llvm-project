@@ -49,8 +49,11 @@ template <typename Type> struct IsIntegral {
       IsSameV<unsigned short, TypeNoCV> || IsSameV<int, TypeNoCV> ||
       IsSameV<unsigned int, TypeNoCV> || IsSameV<long, TypeNoCV> ||
       IsSameV<unsigned long, TypeNoCV> || IsSameV<long long, TypeNoCV> ||
-      IsSameV<unsigned long long, TypeNoCV> || IsSameV<bool, TypeNoCV> ||
-      IsSameV<__uint128_t, TypeNoCV> || IsSameV<__int128_t, TypeNoCV>;
+      IsSameV<unsigned long long, TypeNoCV> || IsSameV<bool, TypeNoCV>
+#ifdef __SIZEOF_INT128__
+      || IsSameV<__uint128_t, TypeNoCV> || IsSameV<__int128_t, TypeNoCV>
+#endif
+      ;
 };
 
 template <typename T> struct IsPointerTypeNoCV : public FalseValue {};

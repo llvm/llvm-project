@@ -42,6 +42,7 @@ describeValue(ValType Value) {
 
 std::string describeValue(std::string Value) { return std::string(Value); }
 
+#ifdef __SIZEOF_INT128__
 // When the value is __uint128_t, also show its hexadecimal digits.
 // Using template to force exact match, prevent ambiguous promotion.
 std::string describeValue128(__uint128_t Value) {
@@ -61,6 +62,7 @@ template <> std::string describeValue<__int128_t>(__int128_t Value) {
 template <> std::string describeValue<__uint128_t>(__uint128_t Value) {
   return describeValue128(Value);
 }
+#endif
 
 template <typename ValType>
 void explainDifference(ValType LHS, ValType RHS, const char *LHSStr,
@@ -218,10 +220,12 @@ template bool test<long long>(RunContext *Ctx, TestCondition Cond,
                               const char *RHSStr, const char *File,
                               unsigned long Line);
 
+#ifdef __SIZEOF_INT128__
 template bool test<__int128_t>(RunContext *Ctx, TestCondition Cond,
                                __int128_t LHS, __int128_t RHS,
                                const char *LHSStr, const char *RHSStr,
                                const char *File, unsigned long Line);
+#endif
 
 template bool test<unsigned char>(RunContext *Ctx, TestCondition Cond,
                                   unsigned char LHS, unsigned char RHS,
@@ -253,10 +257,12 @@ template bool test<unsigned long long>(RunContext *Ctx, TestCondition Cond,
                                        const char *LHSStr, const char *RHSStr,
                                        const char *File, unsigned long Line);
 
+#ifdef __SIZEOF_INT128__
 template bool test<__uint128_t>(RunContext *Ctx, TestCondition Cond,
                                 __uint128_t LHS, __uint128_t RHS,
                                 const char *LHSStr, const char *RHSStr,
                                 const char *File, unsigned long Line);
+#endif
 
 } // namespace internal
 
