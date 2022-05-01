@@ -526,19 +526,13 @@ static bool checkNumberingAndReplaceCommutative(
   for (Value *V : SourceOperands) {
     ArgVal = SourceValueToNumberMapping.find(V)->second;
 
+    // Instead of finding a current mapping, we attempt to insert a set.
     std::tie(ValueMappingIt, WasInserted) = CurrentSrcTgtNumberMapping.insert(
         std::make_pair(ArgVal, TargetValueNumbers));
 
-    // Instead of finding a current mapping, we inserted a set.  This means a
-    // mapping did not exist for the source Instruction operand, it has no
-    // current constraints we need to check.
-    if (WasInserted)
-      continue;
-
-    // If a mapping already exists for the source operand to the values in the
-    // other IRSimilarityCandidate we need to iterate over the items in other
-    // IRSimilarityCandidate's Instruction to determine whether there is a valid
-    // mapping of Value to Value.
+    // We need to iterate over the items in other IRSimilarityCandidate's
+    // Instruction to determine whether there is a valid mapping of
+    // Value to Value.
     DenseSet<unsigned> NewSet;
     for (unsigned &Curr : ValueMappingIt->second)
       // If we can find the value in the mapping, we add it to the new set.
@@ -557,7 +551,6 @@ static bool checkNumberingAndReplaceCommutative(
     // any items from the other operands, so we move to check the next operand.
     if (ValueMappingIt->second.size() != 1)
       continue;
-
 
     unsigned ValToRemove = *ValueMappingIt->second.begin();
     // When there is only one item left in the mapping for and operand, remove
