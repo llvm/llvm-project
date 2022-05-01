@@ -103,8 +103,9 @@ public:
   /// A finalize callback knows about all objects that need finalization, e.g.
   /// destruction, when the scope of the currently generated construct is left
   /// at the time, and location, the callback is invoked.
-  using FinalizeCallbackTy = std::function<void(InsertPointTy CodeGenIP)>;
+  using FinalizeCallbackTy =  function_ref<void(InsertPointTy ExitingIP)>;
 
+private:
   enum class RegionKind {
     /// Sentinel object so we don't always have to check whether the stack is
     /// empty.
@@ -121,7 +122,7 @@ public:
   struct OMPRegionInfo;
 
 /// An irregular exit out of a region, such as by cancellation.
-  struct OMPRegionBreak {
+  struct OMPRegionBreakInfo {
 /// The end of this basic block is current end of the path for breaking out of the region. Must have no terminator so finializations (eg. destructors) can be appended until rejoining at the end of the target region.
     BasicBlock *BB;
 
@@ -131,7 +132,7 @@ public:
     /// The kind of region that is being exited. Control flow will rejoin after the innermost region of this kind.
     OMPRegionInfo* Target;
 
-    OMPRegionBreak(BasicBlock *BB, omp::Directive Reason, OMPRegionInfo* Target);
+    OMPRegionBreakInfo(BasicBlock *BB, omp::Directive Reason, OMPRegionInfo* Target);
 
     /// Consistency self-check.
     void assertOK() const;
@@ -152,7 +153,7 @@ public:
     bool IsCancellable;
 
     /// Irregular exits (such as cancellation points) out of this region.
-    SmallVector<OMPRegionBreak, 2> Breaks;
+    SmallVector<OMPRegionBreakInfo, 2> Breaks;
 
     OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable                  );
 
@@ -169,7 +170,7 @@ public:
     void assertOK() const;
   };
 
-private:
+
     /// The stack of regions surrounding the current in-progress code generation location. Regions are pushed and popped when entering/leaving a region. Constructs/directives that are sensitive to surrounding regions (such as cancellation) must be emitted inside the BodyGenCallbackTy of the surrounding constructs.   
   SmallVector<std::unique_ptr<OMPRegionInfo>, 8> RegionStack;
 
@@ -311,20 +312,18 @@ public:
   /// Generator for '#omp parallel'
   ///
   /// \param Loc The insert and source location description.
-  /// \param OuterAllocaIP The insertion points to be used for alloca
-  /// instructions. \param BodyGenCB Callback that will generate the region
-  /// code. \param PrivCB Callback to copy a given variable (think copy
-  /// constructor). \param FiniCB Callback to finalize variable copies. \param
-  /// IfCondition The evaluated 'if' clause expression, if any. \param
-  /// NumThreads The evaluated 'num_threads' clause expression, if any. \param
-  /// ProcBind The value of the 'proc_bind' clause (see ProcBindKind).
-  ///
+  /// \param AllocaIP The insertion points to be used for alloca instructions.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param PrivCB Callback to copy a given variable (think copy constructor).
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \param IfCondition The evaluated 'if' clause expression, if any.
+  /// \param NumThreads The evaluated 'num_threads' clause expression, if any.
+  /// \param ProcBind The value of the 'proc_bind' clause (see ProcBindKind).
   /// \param IsCancellable Flag to indicate a cancellable parallel region.
-  /// MK: Remove? Any non-cancellable? Makes it a difference to the runtime?
   ///
   /// \returns The insertion position *after* the parallel.
   IRBuilder<>::InsertPoint
-  createParallel(const LocationDescription &Loc, InsertPointTy OuterAllocaIP,
+  createParallel(const LocationDescription &Loc, InsertPointTy AllocaIP,
                  BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
                  FinalizeCallbackTy FiniCB, Value *IfCondition,
                  Value *NumThreads, omp::ProcBindKind ProcBind,
@@ -493,7 +492,8 @@ private:
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                         InsertPointTy AllocaIP, bool NeedsBarrier);
+                                         InsertPointTy AllocaIP,
+                                         bool NeedsBarrier);
 
   /// Modifies the canonical loop a statically-scheduled workshare loop with a
   /// user-specified chunk size.
