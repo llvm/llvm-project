@@ -131,43 +131,36 @@ public:
     /// The kind of region that is being exited. Control flow will rejoin after the innermost region of this kind.
     OMPRegionInfo* Target;
 
-    OMPRegionBreak(BasicBlock *BB, omp::Directive Reason, OMPRegionInfo* Target)
-        : BB(BB), Reason(Reason), Target(Target) {}
+    OMPRegionBreak(BasicBlock *BB, omp::Directive Reason, OMPRegionInfo* Target);
 
     /// Consistency self-check.
     void assertOK() const;
   };
 
+
+  /// An OpenMP region with a single entry and single exit (unless containing a irregular exit) that may be associated with a construct.
   struct OMPRegionInfo {
+    /// The kind of region: topmost sentinel, loop, or directive.
     RegionKind Kind;
+
+    /// If this region represents a directive-associated region, the kind of directive.
     omp::Directive DK;
 
     /// Inside a parallel region, determines whether a barrier must check
     /// whether cancellation has occured.
-    // TODO: remove; determine ourselves whether there was a cancelling
-    // construct inside.
+    // TODO: Do not rely on the frontend to know whether a region contains a cancellation construct, but determine within OpenMPIRBuilder itself.
     bool IsCancellable;
 
+    /// Irregular exits (such as cancellation points) out of this region.
     SmallVector<OMPRegionBreak, 2> Breaks;
 
-    OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable
-                  //, LeaveRegionCallbackTy FiniCB
-                  )
-        : Kind(Kind), DK(DK), IsCancellable(IsCancellable)
-    // , FiniCB(std::move(FiniCB))
-    {
-      assertOK();
-    }
+    OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable                  );
 
-#ifndef NDEBUG
-    ~OMPRegionInfo() {
-      assertOK();
-      assert(Breaks.empty());
-    }
-#endif
 
+    /// Register an irregular exit to this region.
     void addBreak(BasicBlock *BB, omp::Directive Reason,
                   OMPRegionInfo* Target) {
+        assert(IsCancellable && "Only cancellable region may have irregular exits");
       assert(!BB->getTerminator());
       Breaks.emplace_back(BB, Reason, Target);
     }
@@ -177,32 +170,36 @@ public:
   };
 
 private:
-  /// The finalization stack made up of finalize callbacks currently in-flight,
-  /// wrapped into FinalizationInfo objects that reference also the finalization
-  /// target block and the kind of cancellable directive.
+    /// The stack of regions surrounding the current in-progress code generation location. Regions are pushed and popped when entering/leaving a region. Constructs/directives that are sensitive to surrounding regions (such as cancellation) must be emitted inside the BodyGenCallbackTy of the surrounding constructs.   
   SmallVector<std::unique_ptr<OMPRegionInfo>, 8> RegionStack;
 
-  OMPRegionInfo *getInnermostDirectionRegion(omp::Directive DK);
+  /// Return the innermost surrounding region of a specific directive kind, or the toplevel region if not present.
+  OMPRegionInfo *getInnermostRegion(omp::Directive DK);
 
-private:
-  OMPRegionInfo *pushRegion(RegionKind Kind, omp::Directive DK, bool IsCancellable);
-  OMPRegionInfo *pushRegion(omp::Directive DK, bool IsCancellable) {
-   return    pushRegion(RegionKind::Directive, DK, IsCancellable);
-  }
-
-  // void emitRegionExit(InsertPointTy ExitingIP, OMPRegionInfo *RegionToLeave,
-  // omp::Directive LeaveReason = omp::OMPD_unknown);
-
-  void popRegion(OMPRegionInfo *R, BasicBlock *ContinueBB,
-     function_ref<void(InsertPointTy ExitingIP)> LeaveCb);
-
-private:
   /// Return true if the last entry in the finalization stack is of kind \p DK
   /// and cancellable.
-  bool isLastFinalizationInfoCancellable(omp::Directive DK) {
-    // FIXME: Don't all the regions in-between also need to be cancellable?
-    return getInnermostDirectionRegion(DK)->IsCancellable;
+  bool isLastFinalizationInfoCancellable(omp::Directive DK);
+
+
+  /// @{
+  /// Push a new region to the region stack. Must eventually be popped again using exitRegion.
+  OMPRegionInfo *enterRegion(RegionKind Kind, omp::Directive DK, bool IsCancellable);
+  OMPRegionInfo *enterRegion(omp::Directive DK, bool IsCancellable) {
+   return  enterRegion(RegionKind::Directive, DK, IsCancellable);
   }
+  /// @}
+
+  /// Pop a region from the region stack. Exits are handled the following way:
+  /// 
+  /// 1. For the regular region exit, \p FinCB is used by the caller to emit finalization code somehwere on the control path exiting the region. exitRegion itself does nothing.
+  ///
+  /// 2. For irregular region exits that rejoing with the control flow after this region, exitRegion emits a branch to \p FinalizationBB containing the finalization code. This is typically that same code as for case 1 avoiding emitting the same finialization code multiple times.
+ ///
+  /// 3. For irregular region exits that rejoin a surrounding region, exitRegion calls \p FinCB to insert the finalization code into the exiting control path. The irregular exit is then added as an irregular exit of the sourrounding loop that, opon its exit, can add its own finialization code and/or rejoin the control flow there.
+  void exitRegion(OMPRegionInfo *R, BasicBlock *FinalizationBB,
+     function_ref<void(InsertPointTy ExitingIP)> FinCB);
+
+
 
 public:
   /// Callback type for body (=inner region) code generation
@@ -410,8 +407,7 @@ public:
                                          Value *Start, Value *Stop, Value *Step,
                                          bool IsSigned, bool InclusiveStop,
                                          InsertPointTy ComputeIP = {},
-                                         const Twine &Name = "loop",
-                                         omp::Directive DK = omp::OMPD_unknown);
+                                         const Twine &Name = "loop");
 
   /// Collapse a loop nest into a single loop.
   ///
@@ -497,8 +493,7 @@ private:
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                         InsertPointTy AllocaIP,
-                                         bool NeedsBarrier);
+                                         InsertPointTy AllocaIP, bool NeedsBarrier);
 
   /// Modifies the canonical loop a statically-scheduled workshare loop with a
   /// user-specified chunk size.
