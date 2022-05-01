@@ -948,9 +948,6 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(LocationDescription Loc,
   BasicBlock *BB = Builder.GetInsertBlock();
 
 
-  // Avoid assertions around "fallthtrough" cleanups in clang.
-  // BasicBlock *NonCancellationCleanupBlock = splitBB(Builder, BB->getName() +
-  // ".cont.cleanup", true);
 
   BasicBlock *NonCancellationBlock = splitBBWithSuffix(Builder, false, ".cont");
 
