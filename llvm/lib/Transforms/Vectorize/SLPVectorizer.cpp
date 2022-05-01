@@ -2543,7 +2543,7 @@ private:
   /// Maps a specific scalar to its tree entry.
   SmallDenseMap<Value*, TreeEntry *> ScalarToTreeEntry;
 
-  /// Maps a value to the proposed vectorizable size.
+  /// Maps a value to the proposed vectorizable size.
   SmallDenseMap<Value *, unsigned> InstrElementSize;
 
   /// A list of scalars that we found that we need to keep as scalars.
