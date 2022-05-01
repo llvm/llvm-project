@@ -112,9 +112,9 @@ bool ProfileGeneratorBase::UseFSDiscriminator = false;
 std::unique_ptr<ProfileGeneratorBase>
 ProfileGeneratorBase::create(ProfiledBinary *Binary,
                              const ContextSampleCounterMap *SampleCounters,
-                             bool ProfileIsCSFlat) {
+                             bool ProfileIsCS) {
   std::unique_ptr<ProfileGeneratorBase> Generator;
-  if (ProfileIsCSFlat) {
+  if (ProfileIsCS) {
     if (Binary->useFSDiscriminator())
       exitWithError("FS discriminator is not supported in CS profile.");
     Generator.reset(new CSProfileGenerator(Binary, SampleCounters));
@@ -130,9 +130,9 @@ ProfileGeneratorBase::create(ProfiledBinary *Binary,
 std::unique_ptr<ProfileGeneratorBase>
 ProfileGeneratorBase::create(ProfiledBinary *Binary,
                              const SampleProfileMap &&Profiles,
-                             bool ProfileIsCSFlat) {
+                             bool ProfileIsCS) {
   std::unique_ptr<ProfileGeneratorBase> Generator;
-  if (ProfileIsCSFlat) {
+  if (ProfileIsCS) {
     if (Binary->useFSDiscriminator())
       exitWithError("FS discriminator is not supported in CS profile.");
     Generator.reset(new CSProfileGenerator(Binary, std::move(Profiles)));
@@ -731,7 +731,7 @@ FunctionSamples &CSProfileGenerator::getFunctionProfileForContext(
 }
 
 void CSProfileGenerator::generateProfile() {
-  FunctionSamples::ProfileIsCSFlat = true;
+  FunctionSamples::ProfileIsCS = true;
 
   collectProfiledFunctions();
 
@@ -950,8 +950,7 @@ void CSProfileGenerator::postProcessProfiles() {
   if (GenCSNestedProfile) {
     CSProfileConverter CSConverter(ProfileMap);
     CSConverter.convertProfiles();
-    FunctionSamples::ProfileIsCSFlat = false;
-    FunctionSamples::ProfileIsCSNested = EnableCSPreInliner;
+    FunctionSamples::ProfileIsCS = false;
   }
 }
 

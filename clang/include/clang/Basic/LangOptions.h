@@ -527,6 +527,12 @@ public:
     return CPlusPlus || C2x || DisableKNRFunctions;
   }
 
+  /// Returns true if implicit function declarations are allowed in the current
+  /// language mode.
+  bool implicitFunctionsAllowed() const {
+    return !requiresStrictPrototypes() && !OpenCL;
+  }
+
   /// Check if return address signing is enabled.
   bool hasSignReturnAddress() const {
     return getSignReturnAddressScope() != SignReturnAddressScopeKind::None;
