@@ -26,6 +26,15 @@ subroutine s01(elem, subr)
   call subr(B"1010")
 end subroutine
 
+subroutine s02
+  !ERROR: Non-intrinsic ELEMENTAL procedure 'elem' may not be passed as an actual argument
+  call sub(elem)
+ contains
+  elemental integer function elem()
+    elem = 1
+  end function
+end
+
 module m01
   procedure(sin) :: elem01
   interface
@@ -72,6 +81,18 @@ module m02
     call callee(coarray[1]) ! C1537
   end subroutine
 end module
+
+module m03
+ contains
+  subroutine test
+    !ERROR: Non-intrinsic ELEMENTAL procedure 'elem' may not be passed as an actual argument
+    call sub(elem)
+   contains
+    elemental integer function elem()
+      elem = 1
+    end function
+  end
+end
 
 program p03
   logical :: l
