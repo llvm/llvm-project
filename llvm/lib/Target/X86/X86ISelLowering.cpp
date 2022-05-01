@@ -48165,7 +48165,7 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
   // clip to 0-255.
   if (Subtarget.hasBWI() && !Subtarget.useAVX512Regs() &&
       InVT == MVT::v16i32 && VT == MVT::v16i8) {
-    if (auto USatVal = detectSSatPattern(In, VT, true)) {
+    if (SDValue USatVal = detectSSatPattern(In, VT, true)) {
       // Emit a VPACKUSDW+VPERMQ followed by a VPMOVUSWB.
       SDValue Mid = truncateVectorWithPACK(X86ISD::PACKUS, MVT::v16i16, USatVal,
                                            DL, DAG, Subtarget);
@@ -48190,7 +48190,7 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
       VT.getSizeInBits() >= 64 &&
       (SVT == MVT::i8 || SVT == MVT::i16) &&
       (InSVT == MVT::i16 || InSVT == MVT::i32)) {
-    if (auto USatVal = detectSSatPattern(In, VT, true)) {
+    if (SDValue USatVal = detectSSatPattern(In, VT, true)) {
       // vXi32 -> vXi8 must be performed as PACKUSWB(PACKSSDW,PACKSSDW).
       // Only do this when the result is at least 64 bits or we'll leaving
       // dangling PACKSSDW nodes.
@@ -48207,7 +48207,7 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
         return truncateVectorWithPACK(X86ISD::PACKUS, VT, USatVal, DL, DAG,
                                       Subtarget);
     }
-    if (auto SSatVal = detectSSatPattern(In, VT))
+    if (SDValue SSatVal = detectSSatPattern(In, VT))
       return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
                                     Subtarget);
   }
@@ -48218,10 +48218,10 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
       (SVT == MVT::i32 || SVT == MVT::i16 || SVT == MVT::i8)) {
     unsigned TruncOpc = 0;
     SDValue SatVal;
-    if (auto SSatVal = detectSSatPattern(In, VT)) {
+    if (SDValue SSatVal = detectSSatPattern(In, VT)) {
       SatVal = SSatVal;
       TruncOpc = X86ISD::VTRUNCS;
-    } else if (auto USatVal = detectUSatPattern(In, VT, DAG, DL)) {
+    } else if (SDValue USatVal = detectUSatPattern(In, VT, DAG, DL)) {
       SatVal = USatVal;
       TruncOpc = X86ISD::VTRUNCUS;
     }
@@ -50025,9 +50025,9 @@ static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG,
   SDValue In = N->getOperand(0);
   SDLoc DL(N);
 
-  if (auto SSatVal = detectSSatPattern(In, VT))
+  if (SDValue SSatVal = detectSSatPattern(In, VT))
     return DAG.getNode(X86ISD::VTRUNCS, DL, VT, SSatVal);
-  if (auto USatVal = detectUSatPattern(In, VT, DAG, DL))
+  if (SDValue USatVal = detectUSatPattern(In, VT, DAG, DL))
     return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -55015,37 +55015,37 @@ TargetLowering::ConstraintWeight
       weight = CW_Register;
     break;
   case 'I':
-    if (ConstantInt *C = dyn_cast<ConstantInt>(info.CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(info.CallOperandVal)) {
       if (C->getZExtValue() <= 31)
         weight = CW_Constant;
     }
     break;
   case 'J':
-    if (ConstantInt *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
       if (C->getZExtValue() <= 63)
         weight = CW_Constant;
     }
     break;
   case 'K':
-    if (ConstantInt *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
       if ((C->getSExtValue() >= -0x80) && (C->getSExtValue() <= 0x7f))
         weight = CW_Constant;
     }
     break;
   case 'L':
-    if (ConstantInt *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
       if ((C->getZExtValue() == 0xff) || (C->getZExtValue() == 0xffff))
         weight = CW_Constant;
     }
     break;
   case 'M':
-    if (ConstantInt *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
       if (C->getZExtValue() <= 3)
         weight = CW_Constant;
     }
     break;
   case 'N':
-    if (ConstantInt *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
       if (C->getZExtValue() <= 0xff)
         weight = CW_Constant;
     }
@@ -55057,14 +55057,14 @@ TargetLowering::ConstraintWeight
     }
     break;
   case 'e':
-    if (ConstantInt *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
       if ((C->getSExtValue() >= -0x80000000LL) &&
           (C->getSExtValue() <= 0x7fffffffLL))
         weight = CW_Constant;
     }
     break;
   case 'Z':
-    if (ConstantInt *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
       if (C->getZExtValue() <= 0xffffffff)
         weight = CW_Constant;
     }
@@ -55129,7 +55129,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   switch (ConstraintLetter) {
   default: break;
   case 'I':
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getZExtValue() <= 31) {
         Result = DAG.getTargetConstant(C->getZExtValue(), SDLoc(Op),
                                        Op.getValueType());
@@ -55138,7 +55138,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     }
     return;
   case 'J':
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getZExtValue() <= 63) {
         Result = DAG.getTargetConstant(C->getZExtValue(), SDLoc(Op),
                                        Op.getValueType());
@@ -55147,7 +55147,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     }
     return;
   case 'K':
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (isInt<8>(C->getSExtValue())) {
         Result = DAG.getTargetConstant(C->getZExtValue(), SDLoc(Op),
                                        Op.getValueType());
@@ -55156,7 +55156,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     }
     return;
   case 'L':
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getZExtValue() == 0xff || C->getZExtValue() == 0xffff ||
           (Subtarget.is64Bit() && C->getZExtValue() == 0xffffffff)) {
         Result = DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
@@ -55166,7 +55166,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     }
     return;
   case 'M':
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getZExtValue() <= 3) {
         Result = DAG.getTargetConstant(C->getZExtValue(), SDLoc(Op),
                                        Op.getValueType());
@@ -55175,7 +55175,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     }
     return;
   case 'N':
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getZExtValue() <= 255) {
         Result = DAG.getTargetConstant(C->getZExtValue(), SDLoc(Op),
                                        Op.getValueType());
@@ -55184,7 +55184,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     }
     return;
   case 'O':
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (C->getZExtValue() <= 127) {
         Result = DAG.getTargetConstant(C->getZExtValue(), SDLoc(Op),
                                        Op.getValueType());
@@ -55194,7 +55194,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     return;
   case 'e': {
     // 32-bit signed value
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (ConstantInt::isValueValidForType(Type::getInt32Ty(*DAG.getContext()),
                                            C->getSExtValue())) {
         // Widen to 64 bits here to get it sign extended.
@@ -55208,7 +55208,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   }
   case 'Z': {
     // 32-bit unsigned value
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
       if (ConstantInt::isValueValidForType(Type::getInt32Ty(*DAG.getContext()),
                                            C->getZExtValue())) {
         Result = DAG.getTargetConstant(C->getZExtValue(), SDLoc(Op),
@@ -55222,7 +55222,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   }
   case 'i': {
     // Literal immediates are always ok.
-    if (ConstantSDNode *CST = dyn_cast<ConstantSDNode>(Op)) {
+    if (auto *CST = dyn_cast<ConstantSDNode>(Op)) {
       bool IsBool = CST->getConstantIntValue()->getBitWidth() == 1;
       BooleanContent BCont = getBooleanContents(MVT::i64);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)

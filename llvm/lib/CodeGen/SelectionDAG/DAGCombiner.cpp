@@ -7480,6 +7480,29 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
     return (LHS->getAPIntValue() + RHS->getAPIntValue()) == EltSizeInBits;
   };
 
+  auto ApplyMasks = [&](SDValue Res) {
+    // If there is an AND of either shifted operand, apply it to the result.
+    if (LHSMask.getNode() || RHSMask.getNode()) {
+      SDValue AllOnes = DAG.getAllOnesConstant(DL, VT);
+      SDValue Mask = AllOnes;
+
+      if (LHSMask.getNode()) {
+        SDValue RHSBits = DAG.getNode(ISD::SRL, DL, VT, AllOnes, RHSShiftAmt);
+        Mask = DAG.getNode(ISD::AND, DL, VT, Mask,
+                           DAG.getNode(ISD::OR, DL, VT, LHSMask, RHSBits));
+      }
+      if (RHSMask.getNode()) {
+        SDValue LHSBits = DAG.getNode(ISD::SHL, DL, VT, AllOnes, LHSShiftAmt);
+        Mask = DAG.getNode(ISD::AND, DL, VT, Mask,
+                           DAG.getNode(ISD::OR, DL, VT, RHSMask, LHSBits));
+      }
+
+      Res = DAG.getNode(ISD::AND, DL, VT, Res, Mask);
+    }
+
+    return Res;
+  };
+
   // TODO: Support pre-legalization funnel-shift by constant.
   bool IsRotate = LHSShift.getOperand(0) == RHSShift.getOperand(0);
   if (!IsRotate && !(HasFSHL || HasFSHR)) {
@@ -7504,18 +7527,21 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
         return false;
       };
 
-      // (shl (X | Y), C1) | (srl X, C2) --> (rotl X, C1) | (shl Y, C1)
+      SDValue Res;
       if (matchOr(LHSShiftArg, RHSShiftArg)) {
+        // (shl (X | Y), C1) | (srl X, C2) --> (rotl X, C1) | (shl Y, C1)
         SDValue RotX = DAG.getNode(ISD::ROTL, DL, VT, X, LHSShiftAmt);
         SDValue ShlY = DAG.getNode(ISD::SHL, DL, VT, Y, LHSShiftAmt);
-        return DAG.getNode(ISD::OR, DL, VT, RotX, ShlY);
-      }
-      // (shl X, C1) | (srl (X | Y), C2) --> (rotl X, C1) | (srl Y, C2)
-      if (matchOr(RHSShiftArg, LHSShiftArg)) {
+        Res = DAG.getNode(ISD::OR, DL, VT, RotX, ShlY);
+      } else if (matchOr(RHSShiftArg, LHSShiftArg)) {
+        // (shl X, C1) | (srl (X | Y), C2) --> (rotl X, C1) | (srl Y, C2)
         SDValue RotX = DAG.getNode(ISD::ROTL, DL, VT, X, LHSShiftAmt);
         SDValue SrlY = DAG.getNode(ISD::SRL, DL, VT, Y, RHSShiftAmt);
-        return DAG.getNode(ISD::OR, DL, VT, RotX, SrlY);
-      }
+        Res = DAG.getNode(ISD::OR, DL, VT, RotX, SrlY);
+      } else
+        return SDValue();
+
+      return ApplyMasks(Res);
     }
 
     return SDValue(); // Requires funnel shift support.
@@ -7538,26 +7564,7 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
                         RHSShiftArg, UseFSHL ? LHSShiftAmt : RHSShiftAmt);
     }
 
-    // If there is an AND of either shifted operand, apply it to the result.
-    if (LHSMask.getNode() || RHSMask.getNode()) {
-      SDValue AllOnes = DAG.getAllOnesConstant(DL, VT);
-      SDValue Mask = AllOnes;
-
-      if (LHSMask.getNode()) {
-        SDValue RHSBits = DAG.getNode(ISD::SRL, DL, VT, AllOnes, RHSShiftAmt);
-        Mask = DAG.getNode(ISD::AND, DL, VT, Mask,
-                           DAG.getNode(ISD::OR, DL, VT, LHSMask, RHSBits));
-      }
-      if (RHSMask.getNode()) {
-        SDValue LHSBits = DAG.getNode(ISD::SHL, DL, VT, AllOnes, LHSShiftAmt);
-        Mask = DAG.getNode(ISD::AND, DL, VT, Mask,
-                           DAG.getNode(ISD::OR, DL, VT, RHSMask, LHSBits));
-      }
-
-      Res = DAG.getNode(ISD::AND, DL, VT, Res, Mask);
-    }
-
-    return Res;
+    return ApplyMasks(Res);
   }
 
   // Even pre-legalization, we can't easily rotate/funnel-shift by a variable
@@ -10966,17 +10973,18 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
                                   CC, SDLoc(N), false)) {
     AddToWorklist(SCC.getNode());
 
-    if (ConstantSDNode *SCCC = dyn_cast<ConstantSDNode>(SCC.getNode())) {
-      if (!SCCC->isZero())
-        return N2;    // cond always true -> true val
-      else
-        return N3;    // cond always false -> false val
-    } else if (SCC->isUndef()) {
-      // When the condition is UNDEF, just return the first operand. This is
-      // coherent the DAG creation, no setcc node is created in this case
+    // cond always true -> true val
+    // cond always false -> false val
+    if (auto *SCCC = dyn_cast<ConstantSDNode>(SCC.getNode()))
+      return SCCC->isZero() ? N3 : N2;
+
+    // When the condition is UNDEF, just return the first operand. This is
+    // coherent the DAG creation, no setcc node is created in this case
+    if (SCC->isUndef())
       return N2;
-    } else if (SCC.getOpcode() == ISD::SETCC) {
-      // Fold to a simpler select_cc
+
+    // Fold to a simpler select_cc
+    if (SCC.getOpcode() == ISD::SETCC) {
       SDValue SelectOp = DAG.getNode(
           ISD::SELECT_CC, SDLoc(N), N2.getValueType(), SCC.getOperand(0),
           SCC.getOperand(1), N2, N3, SCC.getOperand(2));
