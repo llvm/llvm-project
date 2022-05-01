@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -simplify-mir -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -simplify-mir -mtriple=amdgcn-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS-COUNT-15: V_MOV_B32

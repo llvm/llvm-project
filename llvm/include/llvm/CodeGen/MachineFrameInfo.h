@@ -505,6 +505,14 @@ public:
     return Objects[ObjectIdx+NumFixedObjects].Alloca;
   }
 
+  /// Remove the underlying Alloca of the specified stack object if it
+  /// exists. This generally should not be used and is for reduction tooling.
+  void clearObjectAllocation(int ObjectIdx) {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx + NumFixedObjects].Alloca = nullptr;
+  }
+
   /// Return the assigned stack offset of the specified object
   /// from the incoming stack pointer.
   int64_t getObjectOffset(int ObjectIdx) const {
