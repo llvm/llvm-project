@@ -55,9 +55,18 @@ using namespace sema;
 /// instantiating the definition of the given declaration, \p D. This is
 /// used to determine the proper set of template instantiation arguments for
 /// friend function template specializations.
+///
+/// \param LookBeyondLambda Indicates that this collection of arguments should
+/// continue looking when it encounters a lambda generic call operator.
+///
+/// \param IncludeContainingStructArgs Indicates that this collection of
+/// arguments should include arguments for any class template that this
+/// declaration is included inside of.
+
 MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     const NamedDecl *D, const TemplateArgumentList *Innermost,
-    bool RelativeToPrimary, const FunctionDecl *Pattern) {
+    bool RelativeToPrimary, const FunctionDecl *Pattern, bool LookBeyondLambda,
+    bool IncludeContainingStructArgs) {
   // Accumulate the set of template argument lists in this structure.
   MultiLevelTemplateArgumentList Result;
 
@@ -153,11 +162,13 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
           break;
 
         // If this function is a generic lambda specialization, we are done.
-        if (isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function))
+        if (!LookBeyondLambda &&
+            isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function))
           break;
 
       } else if (Function->getDescribedFunctionTemplate()) {
-        assert(Result.getNumSubstitutedLevels() == 0 &&
+        assert((IncludeContainingStructArgs ||
+                Result.getNumSubstitutedLevels() == 0) &&
                "Outer template not instantiated?");
       }
 
@@ -174,10 +185,18 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
       }
     } else if (const auto *Rec = dyn_cast<CXXRecordDecl>(Ctx)) {
       if (ClassTemplateDecl *ClassTemplate = Rec->getDescribedClassTemplate()) {
-        assert(Result.getNumSubstitutedLevels() == 0 &&
+        assert((IncludeContainingStructArgs ||
+                Result.getNumSubstitutedLevels() == 0) &&
                "Outer template not instantiated?");
         if (ClassTemplate->isMemberSpecialization())
           break;
+        if (IncludeContainingStructArgs) {
+          QualType RecordType = Context.getTypeDeclType(Rec);
+          QualType Injected = cast<InjectedClassNameType>(RecordType)
+                                  ->getInjectedSpecializationType();
+          const auto *InjectedType = cast<TemplateSpecializationType>(Injected);
+          Result.addOuterTemplateArguments(InjectedType->template_arguments());
+        }
       }
     }
 
@@ -2304,6 +2323,18 @@ bool Sema::SubstTypeConstraint(
     const MultiLevelTemplateArgumentList &TemplateArgs) {
   const ASTTemplateArgumentListInfo *TemplArgInfo =
       TC->getTemplateArgsAsWritten();
+
+  // If we're not checking a constraint, we shouldn't be instantiating the type
+  // constraint, so we should just create a copy of the previous one.
+  // TODO: ERICH: Should this be RebuildExprInCurrentInstantiation here?
+  if (!IsEvaluatingAConstraint()) {
+    Inst->setTypeConstraint(TC->getNestedNameSpecifierLoc(),
+                            TC->getConceptNameInfo(), TC->getNamedConcept(),
+                            TC->getNamedConcept(), TemplArgInfo,
+                            TC->getImmediatelyDeclaredConstraint());
+    return false;
+  }
+
   TemplateArgumentListInfo InstArgs;
 
   if (TemplArgInfo) {
@@ -3486,6 +3517,14 @@ Sema::SubstExpr(Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs) {
                                     SourceLocation(),
                                     DeclarationName());
   return Instantiator.TransformExpr(E);
+}
+
+ExprResult
+Sema::SubstConstraintExpr(Expr *E,
+                          const MultiLevelTemplateArgumentList &TemplateArgs) {
+
+  ConstraintEvalRAII EvalRAII(*this);
+  return SubstExpr(E, TemplateArgs);
 }
 
 ExprResult Sema::SubstInitializer(Expr *Init,
