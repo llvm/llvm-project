@@ -12,7 +12,7 @@
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<%start>, ir<1>
-; CHECK-NEXT:     WIDEN-CALL ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
+; CHECK-NEXT:     CLONE ir<%min> = call vp<[[IV_STEPS]]>, ir<65535>, ir<@llvm.smin.i32>
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr ir<%dst>, vp<[[IV_STEPS]]>
 ; CHECK-NEXT:     CLONE store ir<%min>, ir<%arrayidx>
 ; CHECK-NEXT:     EMIT vp<[[INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
@@ -27,8 +27,8 @@ define void @test(i32 %start, ptr %dst) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %start, [[INDEX]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i32 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[INDUCTION]], i32 65535)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[INDUCTION1]], i32 65535)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smin.i32(i32 [[INDUCTION]], i32 65535)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[INDUCTION1]], i32 65535)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[INDUCTION]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDUCTION1]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 8
