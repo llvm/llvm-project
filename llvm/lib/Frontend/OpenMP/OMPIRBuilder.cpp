@@ -1511,31 +1511,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-#if 0
-  auto FiniCBWrapper = [&](InsertPointTy IP) {
-    if (IP.getBlock()->end() != IP.getPoint())
-      return FiniCB(IP);
-    // This must be done otherwise any nested constructs using FinalizeOMPRegion
-    // will fail because that function requires the Finalization Basic Block to
-    // have a terminator, which is already removed by EmitOMPRegionBody.
-    // IP is currently at cancelation block.
-    // We need to backtrack to the condition block to fetch
-    // the exit block and create a branch from cancelation
-    // to exit block.
-    IRBuilder<>::InsertPointGuard IPG(Builder);
-    Builder.restoreIP(IP);
-    auto *CaseBB = IP.getBlock()->getSinglePredecessor();
-    auto *CondBB = CaseBB->getSinglePredecessor()->getSinglePredecessor();
-    auto *ExitBB = CondBB->getTerminator()->getSuccessor(1);
-    Instruction *I = Builder.CreateBr(ExitBB);
-    IP = InsertPointTy(I->getParent(), I->getIterator());
-    return FiniCB(IP);
-  };
 
-  // TODO: Use CanonicalLoopInfo finalization.
-  FinalizationStack.push_back({FiniCBWrapper, OMPD_sections, IsCancellable});
-#endif
-  auto SectionsRegion = enterRegion(OMPD_sections, IsCancellable);
+  OMPRegionInfo* SectionsRegion = enterRegion(OMPD_sections, IsCancellable);
 
   // Each section is emitted as a switch case
   // Each finalization callback is handled from clang.EmitOMPSectionDirective()
@@ -1582,46 +1559,38 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
   Value *ST = ConstantInt::get(I32Ty, 1);
   llvm::CanonicalLoopInfo *LoopInfo = createCanonicalLoop(
       Loc, LoopBodyGenCB, LB, UB, ST, true, false, AllocaIP, "section_loop");
-  auto AfterIP = LoopInfo->getAfterIP();
-  applyStaticWorkshareLoop(Loc.DL, LoopInfo, AllocaIP, !IsNowait);
+  InsertPointTy AfterIP =
+      applyStaticWorkshareLoop(Loc.DL, LoopInfo, AllocaIP, !IsNowait);
 
-#if 0
-  // Apply the finalization callback in LoopAfterBB
-  auto FiniInfo = FinalizationStack.pop_back_val();
-  assert(FiniInfo.DK == OMPD_sections &&
-         "Unexpected finalization stack state!");
-  if (FinalizeCallbackTy &CB = FiniInfo.FiniCB) {
-    Builder.restoreIP(AfterIP);
-    BasicBlock *FiniBB =
-        splitBBWithSuffix(Builder, /*CreateBranch=*/true, "sections.fini");
-    CB(Builder.saveIP());
-    AfterIP = {FiniBB, FiniBB->begin()};
-  }
-#endif
-  // Instruction *I = Builder.CreateBr(ExitBB);
-  llvm_unreachable("TODO");
+
+
   Builder.restoreIP(AfterIP);
-  auto Finish = splitBB(Builder, true, "section_finish");
+  BasicBlock* Finish = splitBB(Builder, true, "section_finish");
   if (FiniCB) {
       Builder.SetInsertPoint(Finish);
       Finish = splitBB(Builder, true, "section_fini");
       FiniCB(Builder.saveAndClearIP());
   }
 
+
+
   for (OMPRegionBreakInfo& Break : SectionsRegion->Breaks) {
       if (Break.Target == SectionsRegion) {
+          Builder.SetInsertPoint(Break.BB);
           Builder.CreateBr(Finish);
           Break.BB = nullptr;
-      }      else  if (FiniCB) {
-              Builder.SetInsertPoint(Break.BB);
-              Finish = splitBBWithSuffix(Builder, true, ".finisplit");
-              FiniCB(Builder.saveAndClearIP());
-          
+      } else  if (FiniCB) {
+          Builder.SetInsertPoint(Break.BB);
+          Break.BB = splitBBWithSuffix(Builder, /* CreateBranch */ true, ".finisplit");
+          FiniCB(Builder.saveAndClearIP());
       }
   }
 
-  // emitRegionExit(Builder.saveIP(), SectionsRegion);
-  //exitRegion(SectionsRegion, Finish, FiniCB);
+
+
+
+
+
   exitRegion(SectionsRegion);
 
   return {Finish, Finish->begin()};

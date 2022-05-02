@@ -323,7 +323,7 @@ public:
   ///
   /// \param Loc The location where the directive was encountered.
   /// \param IfCondition The evaluated 'if' clause expression, if any.
-  /// \param CanceledDirective The kind of directive that is cancled.
+  /// \param CancelledDirective The kind of directive that is cancelled.
   ///
   /// \returns The insertion point after the barrier.
   InsertPointTy createCancel(const LocationDescription &Loc, Value *IfCondition,

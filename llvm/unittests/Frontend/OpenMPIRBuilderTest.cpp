@@ -906,8 +906,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
 
   EXPECT_EQ(NumBodiesGenerated, 1U);
   EXPECT_EQ(NumPrivatizedVars, 0U);
-  EXPECT_EQ(NumFinalizationPoints, 1U);
-  EXPECT_EQ(FakeDestructor->getNumUses(), 1U);
+  EXPECT_EQ(NumFinalizationPoints, 2U);
+  EXPECT_EQ(FakeDestructor->getNumUses(), 2U);
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
