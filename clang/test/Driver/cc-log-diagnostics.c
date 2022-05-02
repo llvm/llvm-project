@@ -10,7 +10,7 @@ int f0(void) {}
 // CHECK:   <key>main-file</key>
 // CHECK:   <string>{{.*}}cc-log-diagnostics.c</string>
 // CHECK:   <key>dwarf-debug-flags</key>
-// CHECK:   <string>{{.*}}clang{{.*}}-fsyntax-only{{.*}}</string>
+// CHECK:   <string>{{.*}}-Wfoobar{{.*}}-fsyntax-only{{.*}}</string>
 // CHECK:   <key>diagnostics</key>
 // CHECK:   <array>
 // CHECK:     <dict>
