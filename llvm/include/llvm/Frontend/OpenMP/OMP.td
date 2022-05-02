@@ -163,6 +163,25 @@ def OMPC_MemoryOrder : Clause<"memory_order"> {
   ];
 }
 
+def OMP_CANCELLATION_CONSTRUCT_Parallel : ClauseVal<"parallel", 1, 1> {}
+def OMP_CANCELLATION_CONSTRUCT_Loop : ClauseVal<"loop", 2, 1> {}
+def OMP_CANCELLATION_CONSTRUCT_Sections : ClauseVal<"sections", 3, 1> {}
+def OMP_CANCELLATION_CONSTRUCT_Taskgroup : ClauseVal<"taskgroup", 4, 1> {}
+def OMP_CANCELLATION_CONSTRUCT_None : ClauseVal<"none", 5, 0> {
+  let isDefault = 1;
+}
+
+def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
+  let enumClauseValue = "CancellationConstructType";
+  let allowedClauseValues = [
+    OMP_CANCELLATION_CONSTRUCT_Parallel,
+    OMP_CANCELLATION_CONSTRUCT_Loop,
+    OMP_CANCELLATION_CONSTRUCT_Sections,
+    OMP_CANCELLATION_CONSTRUCT_Taskgroup,
+    OMP_CANCELLATION_CONSTRUCT_None
+  ];
+}
+
 def OMPC_Ordered : Clause<"ordered"> {
   let clangClass = "OMPOrderedClause";
   let flangClass = "ScalarIntConstantExpr";
