@@ -243,9 +243,10 @@ private:
 
   /// Sort the LoopCosts vector by decreasing cache cost.
   void sortLoopCosts() {
-    sort(LoopCosts, [](const LoopCacheCostTy &A, const LoopCacheCostTy &B) {
-      return A.second > B.second;
-    });
+    stable_sort(LoopCosts,
+                [](const LoopCacheCostTy &A, const LoopCacheCostTy &B) {
+                  return A.second > B.second;
+                });
   }
 
 private:
