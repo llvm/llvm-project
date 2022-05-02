@@ -929,13 +929,8 @@ public:
 
   /// Parse a type list.
   ParseResult parseTypeList(SmallVectorImpl<Type> &result) {
-    do {
-      Type type;
-      if (parseType(type))
-        return failure();
-      result.push_back(type);
-    } while (succeeded(parseOptionalComma()));
-    return success();
+    return parseCommaSeparatedList(
+        [&]() { return parseType(result.emplace_back()); });
   }
 
   /// Parse an arrow followed by a type list.

@@ -66,19 +66,19 @@ parseOperandList(OpAsmParser &parser, StringRef keyword,
   if (succeeded(parser.parseOptionalRParen()))
     return success();
 
-  do {
-    OpAsmParser::UnresolvedOperand arg;
-    Type type;
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        OpAsmParser::UnresolvedOperand arg;
+        Type type;
 
-    if (parser.parseOperand(arg, /*allowResultNumber=*/false) ||
-        parser.parseColonType(type))
-      return failure();
+        if (parser.parseOperand(arg, /*allowResultNumber=*/false) ||
+            parser.parseColonType(type))
+          return failure();
 
-    args.push_back(arg);
-    argTypes.push_back(type);
-  } while (succeeded(parser.parseOptionalComma()));
-
-  if (failed(parser.parseRParen()))
+        args.push_back(arg);
+        argTypes.push_back(type);
+        return success();
+      })) ||
+      failed(parser.parseRParen()))
     return failure();
 
   return parser.resolveOperands(args, argTypes, parser.getCurrentLocation(),
