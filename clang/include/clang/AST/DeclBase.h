@@ -906,6 +906,14 @@ public:
                     const_cast<const Decl*>(this)->getParentFunctionOrMethod());
   }
 
+  /// Does the same thing as getParentFunctionOrMethod, except starts with the
+  /// lexical declaration context instead.
+  const DeclContext *getLexicalParentFunctionOrMethod() const;
+  DeclContext *getLexicalParentFunctionOrMethod() {
+    return const_cast<DeclContext *>(
+        const_cast<const Decl *>(this)->getLexicalParentFunctionOrMethod());
+  }
+
   /// Retrieves the "canonical" declaration of the given declaration.
   virtual Decl *getCanonicalDecl() { return this; }
   const Decl *getCanonicalDecl() const {
