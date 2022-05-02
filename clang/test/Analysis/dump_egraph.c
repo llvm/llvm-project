@@ -7,8 +7,6 @@
 // RUN:  -trim-egraph %s
 // RUN: cat %t.dot | FileCheck %s
 
-// REQUIRES: asserts
-
 int getJ(void);
 
 int foo(void) {
@@ -29,7 +27,7 @@ int foo(void) {
 // CHECK-SAME: \{ \"kind\": \"Statement\", \"stmt_kind\": \"IntegerLiteral\",
 // CHECK-SAME:    \"stmt_id\": {{[0-9]*}}, \"pointer\": \"0x{{[0-9a-f]*}}\",
 // CHECK-SAME:    \"pretty\": \"0\", \"location\": \{
-// CHECK-SAME:        \"line\": 15, \"column\": 12, \"file\":
+// CHECK-SAME:        \"line\": 13, \"column\": 12, \"file\":
 // CHECK-SAME:    \}, \"stmt_point_kind\": \"PreStmtPurgeDeadSymbols\",
 // CHECK-SAME:    \"tag\": \"ExprEngine : Clean Node\", \"node_id\": 3,
 // CHECK-SAME:    \"is_sink\": 0, \"has_report\": 0
@@ -37,13 +35,13 @@ int foo(void) {
 // CHECK-SAME: \{ \"kind\": \"Statement\", \"stmt_kind\": \"IntegerLiteral\",
 // CHECK-SAME:    \"stmt_id\": {{[0-9]*}}, \"pointer\": \"0x{{[0-9a-f]*}}\",
 // CHECK-SAME:    \"pretty\": \"0\", \"location\": \{
-// CHECK-SAME:        \"line\": 15, \"column\": 12, \"file\":
+// CHECK-SAME:        \"line\": 13, \"column\": 12, \"file\":
 // CHECK-SAME:    \}, \"stmt_point_kind\": \"PostStmt\", \"tag\": null,
 // CHECK-SAME:    \"node_id\": 4, \"is_sink\": 0, \"has_report\": 0
 // CHECK-SAME: \}
 // CHECK-SAME: ]
 
-// CHECK: \"pretty\": \"*x\", \"location\": \{ \"line\": 18, \"column\": 10, \"file\": \"{{(.+)}}dump_egraph.c\" \}
+// CHECK: \"pretty\": \"*x\", \"location\": \{ \"line\": 16, \"column\": 10, \"file\": \"{{(.+)}}dump_egraph.c\" \}
 
 // CHECK: \"pretty\": \"'\\\\x13'\"
 
