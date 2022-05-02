@@ -1802,7 +1802,7 @@ public:
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder); // MK: needed?
 
       CGF.Builder.restoreIP(IP);
-      auto DestBB = llvm::splitBB(CGF.Builder, false, ".ompfinalize");
+      llvm::BasicBlock * DestBB = llvm::splitBB(CGF.Builder, false, ".ompfinalize");
 
       //  llvm::BasicBlock *IPBB = IP.getBlock();
       // llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
