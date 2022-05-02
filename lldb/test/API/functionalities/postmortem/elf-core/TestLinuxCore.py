@@ -24,12 +24,14 @@ class LinuxCoreTestCase(TestBase):
     _i386_pid = 32306
     _x86_64_pid = 32259
     _s390x_pid = 1045
+    _ppc64_pid = 28146
     _ppc64le_pid = 28147
 
     _aarch64_regions = 4
     _i386_regions = 4
     _x86_64_regions = 5
     _s390x_regions = 2
+    _ppc64_regions = 2
     _ppc64le_regions = 2
 
     @skipIfLLVMTargetMissing("AArch64")
@@ -48,6 +50,12 @@ class LinuxCoreTestCase(TestBase):
         """Test that lldb can read the process information from an ppc64le linux core file."""
         self.do_test("linux-ppc64le", self._ppc64le_pid, self._ppc64le_regions,
                      "linux-ppc64le.ou")
+
+    @skipIfLLVMTargetMissing("PowerPC")
+    def test_ppc64(self):
+        """Test that lldb can read the process information from an ppc64 linux core file."""
+        self.do_test("linux-ppc64", self._ppc64_pid, self._ppc64_regions,
+                     "linux-ppc64.ou")
 
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64(self):
