@@ -41,9 +41,6 @@ public:
 
   llvm::StringRef GetDescription() override { return GetDescriptionStatic(); }
 
-  Status GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid_ptr,
-                         FileSpec &local_file) override;
-
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
