@@ -1252,6 +1252,43 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_riscv6jumptoEv)
 
   ret                       // jump to ra
 
+#elif defined(__s390x__)
+
+DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind15Registers_s390x6jumptoEv)
+//
+// void libunwind::Registers_s390x::jumpto()
+//
+// On entry:
+//  thread_state pointer is in r2
+//
+
+  // Skip PSWM, but load PSWA into r1
+  lg %r1, 8(%r2)
+
+  // Restore FPRs
+  ld %f0, 144(%r2)
+  ld %f1, 152(%r2)
+  ld %f2, 160(%r2)
+  ld %f3, 168(%r2)
+  ld %f4, 176(%r2)
+  ld %f5, 184(%r2)
+  ld %f6, 192(%r2)
+  ld %f7, 200(%r2)
+  ld %f8, 208(%r2)
+  ld %f9, 216(%r2)
+  ld %f10, 224(%r2)
+  ld %f11, 232(%r2)
+  ld %f12, 240(%r2)
+  ld %f13, 248(%r2)
+  ld %f14, 256(%r2)
+  ld %f15, 264(%r2)
+
+  // Restore GPRs - skipping %r0 and %r1
+  lmg  %r2, %r15, 32(%r2)
+
+  // Return to PSWA (was loaded into %r1 above)
+  br %r1
+
 #endif
 
 #endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
