@@ -138,6 +138,38 @@ TEST(ParameterHints, NoName) {
   )cpp");
 }
 
+TEST(ParameterHints, NoNameConstReference) {
+  // No hint for anonymous const l-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(const int&);
+    void bar() {
+      foo(42);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, NoNameReference) {
+  // Reference hint for anonymous l-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(int&);
+    void bar() {
+      int i;
+      foo($param[[i]]);
+    }
+  )cpp",
+                       ExpectedHint{"&: ", "param"});
+}
+
+TEST(ParameterHints, NoNameRValueReference) {
+  // No reference hint for anonymous r-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(int&&);
+    void bar() {
+      foo(42);
+    }
+  )cpp");
+}
+
 TEST(ParameterHints, NameInDefinition) {
   // Parameter name picked up from definition if necessary.
   assertParameterHints(R"cpp(
@@ -160,6 +192,66 @@ TEST(ParameterHints, NameMismatch) {
     void foo(int bad) {};
   )cpp",
                        ExpectedHint{"good: ", "good"});
+}
+
+TEST(ParameterHints, NameConstReference) {
+  // Only name hint for const l-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(const int& param);
+    void bar() {
+      foo($param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, NameTypeAliasConstReference) {
+  // Only name hint for const l-value ref parameter via type alias.
+  assertParameterHints(R"cpp(
+    using alias = const int&;
+    void foo(alias param);
+    void bar() {
+      int i;
+      foo($param[[i]]);
+    }
+  )cpp",
+                       ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, NameReference) {
+  // Reference and name hint for l-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(int& param);
+    void bar() {
+      int i;
+      foo($param[[i]]);
+    }
+  )cpp",
+                       ExpectedHint{"&param: ", "param"});
+}
+
+TEST(ParameterHints, NameTypeAliasReference) {
+  // Reference and name hint for l-value ref parameter via type alias.
+  assertParameterHints(R"cpp(
+    using alias = int&;
+    void foo(alias param);
+    void bar() {
+      int i;
+      foo($param[[i]]);
+    }
+  )cpp",
+                       ExpectedHint{"&param: ", "param"});
+}
+
+TEST(ParameterHints, NameRValueReference) {
+  // Only name hint for r-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(int&& param);
+    void bar() {
+      foo($param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"param: ", "param"});
 }
 
 TEST(ParameterHints, Operator) {
@@ -299,6 +391,21 @@ TEST(ParameterHints, ArgMatchesParam) {
     };
   )cpp",
                        ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, ArgMatchesParamReference) {
+  assertParameterHints(R"cpp(
+    void foo(int& param);
+    void foo2(const int& param);
+    void bar() {
+      int param;
+      // show reference hint on mutable reference
+      foo($param[[param]]);
+      // but not on const reference
+      foo2(param);
+    }
+  )cpp",
+                       ExpectedHint{"&: ", "param"});
 }
 
 TEST(ParameterHints, LeadingUnderscore) {
