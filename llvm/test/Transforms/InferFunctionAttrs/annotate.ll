@@ -490,7 +490,7 @@ declare i32 @fputs(i8*, %opaque*)
 ; CHECK: declare noundef i64 @fread(i8* nocapture noundef, i64 noundef, i64 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
 declare i64 @fread(i8*, i64, i64, %opaque*)
 
-; CHECK: declare void @free(i8* nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare void @free(i8* allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare void @free(i8*)
 
 ; CHECK: declare double @frexp(double, i32* nocapture) [[NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
@@ -779,10 +779,10 @@ declare i64 @read(i32, i8*, i64)
 ; CHECK: declare noundef i64 @readlink(i8* nocapture noundef readonly, i8* nocapture noundef, i64 noundef) [[NOFREE_NOUNWIND]]
 declare i64 @readlink(i8*, i8*, i64)
 
-; CHECK: declare noalias noundef i8* @realloc(i8* nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE:#[0-9]+]]
+; CHECK: declare noalias noundef i8* @realloc(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE:#[0-9]+]]
 declare i8* @realloc(i8*, i64)
 
-; CHECK: declare noalias noundef i8* @reallocf(i8* nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE]]
+; CHECK: declare noalias noundef i8* @reallocf(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE]]
 declare i8* @reallocf(i8*, i64)
 
 ; CHECK: declare noundef i8* @realpath(i8* nocapture noundef readonly, i8* noundef) [[NOFREE_NOUNWIND]]

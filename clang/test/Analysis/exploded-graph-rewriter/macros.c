@@ -11,7 +11,6 @@ void *foo(void) {
 // RUN:                     -analyzer-checker=core \
 // RUN:                     -analyzer-dump-egraph=%t.dot %s
 // RUN: %exploded_graph_rewriter %t.dot | FileCheck %s
-// REQUIRES: asserts
 
 // CHECK: macros.c:<b>3</b>:<b>10</b>
 // CHECK-SAME: <font color="royalblue1">
