@@ -25,6 +25,7 @@ static_library("Linux") {
     "NativeRegisterContextLinux_x86_64.cpp",
     "NativeThreadLinux.cpp",
     "Perf.cpp",
+    "Procfs.cpp",
     "SingleStepCheck.cpp",
   ]
 }
