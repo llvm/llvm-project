@@ -4539,6 +4539,8 @@ define i1 @movmsk_v2f64_var(<2 x double> %x, <2 x double> %y, i32 %z) {
   ret i1 %val
 }
 
+; TODO: We expect similar result as for PR39665_c_ray_opt,
+; but this is not the case in practice.
 define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
 ; SSE-LABEL: PR39665_c_ray:
 ; SSE:       # %bb.0:
@@ -4594,6 +4596,58 @@ define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
   %e1 = extractelement <2 x i1> %cmp, i32 0
   %e2 = extractelement <2 x i1> %cmp, i32 1
   %u = and i1 %e1, %e2
+  %r = select i1 %u, i32 42, i32 99
+  ret i32 %r
+}
+
+define i32 @PR39665_c_ray_opt(<2 x double> %x, <2 x double> %y) {
+; SSE-LABEL: PR39665_c_ray_opt:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cmpltpd %xmm0, %xmm1
+; SSE-NEXT:    movmskpd %xmm1, %eax
+; SSE-NEXT:    cmpb $3, %al
+; SSE-NEXT:    movl $42, %ecx
+; SSE-NEXT:    movl $99, %eax
+; SSE-NEXT:    cmovel %ecx, %eax
+; SSE-NEXT:    retq
+;
+; AVX1OR2-LABEL: PR39665_c_ray_opt:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
+; AVX1OR2-NEXT:    vmovmskpd %xmm0, %eax
+; AVX1OR2-NEXT:    cmpb $3, %al
+; AVX1OR2-NEXT:    movl $42, %ecx
+; AVX1OR2-NEXT:    movl $99, %eax
+; AVX1OR2-NEXT:    cmovel %ecx, %eax
+; AVX1OR2-NEXT:    retq
+;
+; KNL-LABEL: PR39665_c_ray_opt:
+; KNL:       # %bb.0:
+; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
+; KNL-NEXT:    knotw %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    testb $3, %al
+; KNL-NEXT:    movl $42, %ecx
+; KNL-NEXT:    movl $99, %eax
+; KNL-NEXT:    cmovel %ecx, %eax
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: PR39665_c_ray_opt:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    cmpb $3, %al
+; SKX-NEXT:    movl $42, %ecx
+; SKX-NEXT:    movl $99, %eax
+; SKX-NEXT:    cmovel %ecx, %eax
+; SKX-NEXT:    retq
+  %cmp = fcmp ogt <2 x double> %x, %y
+  %shift = shufflevector <2 x i1> %cmp, <2 x i1> poison, <2 x i32> <i32 1, i32 undef>
+  %1 = and <2 x i1> %cmp, %shift
+  %u = extractelement <2 x i1> %1, i64 0
   %r = select i1 %u, i32 42, i32 99
   ret i32 %r
 }
