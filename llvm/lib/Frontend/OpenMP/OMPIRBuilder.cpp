@@ -1642,7 +1642,7 @@ OpenMPIRBuilder::createSection(const LocationDescription &Loc,
   // Since we are using Finalization Callback here, HasFinalize
   // and IsCancellable have to be true
   return EmitOMPInlinedRegion(OMPD, nullptr, nullptr, BodyGenCB, {},
-                              /*Conditional*/ false, /*hasFinalize*/ true,
+                              /*Conditional*/ false, 
                               /*IsCancellable*/ true);
 }
 
@@ -1843,7 +1843,7 @@ OpenMPIRBuilder::createMaster(const LocationDescription &Loc,
   Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
-                              /*Conditional*/ true, /*hasFinalize*/ true);
+                              /*Conditional*/ true);
 }
 
 OpenMPIRBuilder::InsertPointTy
@@ -1868,7 +1868,7 @@ OpenMPIRBuilder::createMasked(const LocationDescription &Loc,
   Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, ArgsEnd);
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
-                              /*Conditional*/ true, /*hasFinalize*/ true);
+                              /*Conditional*/ true);
 }
 
 CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
@@ -3271,8 +3271,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
   // __kmpc_barrier
 
   EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
-                       /*Conditional*/ true,
-                       /*hasFinalize*/ true);
+                       /*Conditional*/ true);
   if (!IsNowait)
     createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
                   omp::Directive::OMPD_unknown, /* ForceSimpleCall */ false,
@@ -3311,7 +3310,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCritical(
   Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
-                              /*Conditional*/ false, /*hasFinalize*/ true);
+                              /*Conditional*/ false);
 }
 
 OpenMPIRBuilder::InsertPointTy
@@ -3386,13 +3385,13 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createOrderedThreadsSimd(
   }
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
-                              /*Conditional*/ false, /*hasFinalize*/ true);
+                              /*Conditional*/ false);
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
     Directive OMPD, Instruction *EntryCall, Instruction *ExitCall,
     BodyGenCallbackTy BodyGenCB, FinalizeCallbackTy FiniCB, bool Conditional,
-    bool HasFinalize, bool IsCancellable) {
+  bool IsCancellable) {
 
 
     OMPRegionInfo* Region = enterRegion(OMPD, IsCancellable);
@@ -3440,7 +3439,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   assert(FiniBB->getTerminator()->getNumSuccessors() == 1 &&
       FiniBB->getTerminator()->getSuccessor(0) == ExitBB &&
          "Unexpected control flow graph state!!");
-  emitCommonDirectiveExit(OMPD, FinIP, ExitCall, HasFinalize);
+  emitCommonDirectiveExit(OMPD, FinIP, ExitCall);
 
 
   for (OMPRegionBreakInfo& Break : Region->Breaks) {
@@ -3454,6 +3453,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
           FiniCB(Builder.saveAndClearIP());
       }
   }
+
 
   exitRegion(Region);
 

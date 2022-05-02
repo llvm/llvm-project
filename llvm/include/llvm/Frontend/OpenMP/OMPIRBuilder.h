@@ -1328,7 +1328,7 @@ private:
   EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
                        Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
                        FinalizeCallbackTy FiniCB, bool Conditional = false,
-                       bool HasFinalize = true, bool IsCancellable = false); // TODO: remove HasFinalize
+                        bool IsCancellable = false); 
 
   /// Get the platform-specific name separator.
   /// \param Parts different parts of the final name that needs separation
