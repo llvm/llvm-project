@@ -82,12 +82,13 @@ define i32 @u32_f32_u24_u32(i32 %a) {
   ret i32 %r
 }
 
+; This requires converting to FP and back.
+
 define i32 @s32_f32_s25_s32(i32 %a) {
 ; CHECK-LABEL: s32_f32_s25_s32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $7, %eax
-; CHECK-NEXT:    sarl $7, %eax
+; CHECK-NEXT:    cvtsi2ss %edi, %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    retq
   %f = sitofp i32 %a to float
   %i = fptosi float %f to i25
@@ -107,12 +108,14 @@ define i32 @s32_f32_u25_u32(i32 %a) {
   ret i32 %r
 }
 
+; TODO: This could avoid converting to FP.
+
 define i32 @u32_f32_s25_s32(i32 %a) {
 ; CHECK-LABEL: u32_f32_s25_s32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $7, %eax
-; CHECK-NEXT:    sarl $7, %eax
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    retq
   %f = uitofp i32 %a to float
   %i = fptosi float %f to i25
