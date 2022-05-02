@@ -382,25 +382,6 @@ const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectoryForOSVersion() 
   return nullptr;
 }
 
-uint32_t PlatformRemoteDarwinDevice::FindFileInAllSDKs(const char *platform_file_path,
-                                              FileSpecList &file_list) {
-  Log *log = GetLog(LLDBLog::Host);
-  if (platform_file_path && platform_file_path[0] &&
-      UpdateSDKDirectoryInfosIfNeeded()) {
-    const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
-    lldb_private::FileSpec local_file;
-    // First try for an exact match of major, minor and update
-    for (uint32_t sdk_idx = 0; sdk_idx < num_sdk_infos; ++sdk_idx) {
-      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file_path,
-                m_sdk_directory_infos[sdk_idx].directory);
-      if (GetFileInSDK(platform_file_path, sdk_idx, local_file)) {
-        file_list.Append(local_file);
-      }
-    }
-  }
-  return file_list.GetSize();
-}
-
 bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
                                      uint32_t sdk_idx,
                                      lldb_private::FileSpec &local_file) {
