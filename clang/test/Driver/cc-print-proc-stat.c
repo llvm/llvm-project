@@ -5,5 +5,5 @@
 // CHECK-CSV: clang{{.*}},"{{.*}}.s",{{[0-9]+}},{{[0-9]+}},{{[0-9]+}}
 
 // RUN: env CC_PRINT_PROC_STAT=1 \
-// RUN: %clang -no-canonical-prefixes -c -fintegrated-as %s | FileCheck %s
+// RUN: %clang -no-canonical-prefixes -c -fintegrated-as %s -o %t.o | FileCheck %s
 // CHECK: clang{{.*}}: output={{.*}}.o, total={{[0-9.]+}} ms, user={{[0-9.]+}} ms, mem={{[0-9]+}} Kb
