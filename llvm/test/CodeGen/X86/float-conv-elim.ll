@@ -31,3 +31,104 @@ define zeroext i8 @u8_f32_u8(i8 zeroext %a) {
   %conv1 = fptoui float %conv to i8
   ret i8 %conv1
 }
+
+define i32 @s32_f32_s24_s32(i32 %a) {
+; CHECK-LABEL: s32_f32_s24_s32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    sarl $8, %eax
+; CHECK-NEXT:    retq
+  %f = sitofp i32 %a to float
+  %i = fptosi float %f to i24
+  %r = sext i24 %i to i32
+  ret i32 %r
+}
+
+define i32 @s32_f32_u24_u32(i32 %a) {
+; CHECK-LABEL: s32_f32_u24_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $16777215, %eax # imm = 0xFFFFFF
+; CHECK-NEXT:    retq
+  %f = sitofp i32 %a to float
+  %i = fptoui float %f to i24
+  %r = zext i24 %i to i32
+  ret i32 %r
+}
+
+define i32 @u32_f32_s24_s32(i32 %a) {
+; CHECK-LABEL: u32_f32_s24_s32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    sarl $8, %eax
+; CHECK-NEXT:    retq
+  %f = uitofp i32 %a to float
+  %i = fptosi float %f to i24
+  %r = sext i24 %i to i32
+  ret i32 %r
+}
+
+define i32 @u32_f32_u24_u32(i32 %a) {
+; CHECK-LABEL: u32_f32_u24_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $16777215, %eax # imm = 0xFFFFFF
+; CHECK-NEXT:    retq
+  %f = uitofp i32 %a to float
+  %i = fptoui float %f to i24
+  %r = zext i24 %i to i32
+  ret i32 %r
+}
+
+define i32 @s32_f32_s25_s32(i32 %a) {
+; CHECK-LABEL: s32_f32_s25_s32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll $7, %eax
+; CHECK-NEXT:    sarl $7, %eax
+; CHECK-NEXT:    retq
+  %f = sitofp i32 %a to float
+  %i = fptosi float %f to i25
+  %r = sext i25 %i to i32
+  ret i32 %r
+}
+
+define i32 @s32_f32_u25_u32(i32 %a) {
+; CHECK-LABEL: s32_f32_u25_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cvtsi2ss %edi, %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
+; CHECK-NEXT:    retq
+  %f = sitofp i32 %a to float
+  %i = fptoui float %f to i25
+  %r = zext i25 %i to i32
+  ret i32 %r
+}
+
+define i32 @u32_f32_s25_s32(i32 %a) {
+; CHECK-LABEL: u32_f32_s25_s32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll $7, %eax
+; CHECK-NEXT:    sarl $7, %eax
+; CHECK-NEXT:    retq
+  %f = uitofp i32 %a to float
+  %i = fptosi float %f to i25
+  %r = sext i25 %i to i32
+  ret i32 %r
+}
+
+define i32 @u32_f32_u25_u32(i32 %a) {
+; CHECK-LABEL: u32_f32_u25_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cvtsi2ss %rax, %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
+; CHECK-NEXT:    retq
+  %f = uitofp i32 %a to float
+  %i = fptoui float %f to i25
+  %r = zext i25 %i to i32
+  ret i32 %r
+}
