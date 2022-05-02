@@ -32,7 +32,7 @@ class PassRegistry;
 
 bool lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
-bool LowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
+bool lowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
                                          MCOperand &MCOp, const AsmPrinter &AP);
 
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM);
