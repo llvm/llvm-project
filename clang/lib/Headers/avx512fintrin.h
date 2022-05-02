@@ -9319,7 +9319,7 @@ _mm512_mask_abs_pd(__m512d __W, __mmask8 __K, __m512d __A)
  */
 
 static __inline__ long long __DEFAULT_FN_ATTRS512 _mm512_reduce_add_epi64(__m512i __W) {
-  return __builtin_ia32_reduce_add_q512(__W);
+  return __builtin_reduce_add((__v8di)__W);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS512 _mm512_reduce_mul_epi64(__m512i __W) {
@@ -9337,7 +9337,7 @@ static __inline__ long long __DEFAULT_FN_ATTRS512 _mm512_reduce_or_epi64(__m512i
 static __inline__ long long __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_add_epi64(__mmask8 __M, __m512i __W) {
   __W = _mm512_maskz_mov_epi64(__M, __W);
-  return __builtin_ia32_reduce_add_q512(__W);
+  return __builtin_reduce_add((__v8di)__W);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS512
@@ -9383,7 +9383,7 @@ _mm512_mask_reduce_mul_pd(__mmask8 __M, __m512d __W) {
 
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_reduce_add_epi32(__m512i __W) {
-  return __builtin_ia32_reduce_add_d512((__v16si)__W);
+  return __builtin_reduce_add((__v16si)__W);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS512
@@ -9404,7 +9404,7 @@ _mm512_reduce_or_epi32(__m512i __W) {
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_add_epi32( __mmask16 __M, __m512i __W) {
   __W = _mm512_maskz_mov_epi32(__M, __W);
-  return __builtin_ia32_reduce_add_d512((__v16si)__W);
+  return __builtin_reduce_add((__v16si)__W);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS512

@@ -2048,6 +2048,11 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   nextToken();
   if (FormatTok->is(tok::l_square))
     return false;
+  if (FormatTok->is(tok::r_square)) {
+    const FormatToken *Next = Tokens->peekNextToken();
+    if (Next && Next->is(tok::greater))
+      return false;
+  }
   parseSquare(/*LambdaIntroducer=*/true);
   return true;
 }

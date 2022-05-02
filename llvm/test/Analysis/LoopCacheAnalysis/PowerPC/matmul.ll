@@ -10,9 +10,9 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ;         C[i][j] = C[i][j] + A[i][k] * B[k][j];
 ; }
 
-; CHECK-DAG:Loop 'for.i' has cost = 2010000
-; CHECK-DAG:Loop 'for.k' has cost = 1040000
-; CHECK-DAG:Loop 'for.j' has cost = 70000
+; CHECK:Loop 'for.i' has cost = 2010000
+; CHECK:Loop 'for.k' has cost = 1040000
+; CHECK:Loop 'for.j' has cost = 70000
     
 define void @matmul(i64 %n, i64 %m, i64 %o, i32* %A, i32* %B, i32* %C) {
 entry:
