@@ -64,7 +64,7 @@ struct ContainerVersion {
 
 struct Header {
   uint8_t Magic[4]; // "DXBC"
-  Hash Hash;
+  Hash FileHash;
   ContainerVersion Version;
   uint32_t FileSize;
   uint32_t PartCount;
