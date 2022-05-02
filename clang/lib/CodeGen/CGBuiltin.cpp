@@ -3273,6 +3273,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         *this, E, GetIntrinsicID(E->getArg(0)->getType()), "rdx.min"));
   }
 
+  case Builtin::BI__builtin_reduce_add:
+    return RValue::get(emitUnaryBuiltin(
+        *this, E, llvm::Intrinsic::vector_reduce_add, "rdx.add"));
   case Builtin::BI__builtin_reduce_xor:
     return RValue::get(emitUnaryBuiltin(
         *this, E, llvm::Intrinsic::vector_reduce_xor, "rdx.xor"));

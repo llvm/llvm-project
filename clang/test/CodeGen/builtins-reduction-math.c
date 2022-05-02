@@ -58,6 +58,28 @@ void test_builtin_reduce_min(float4 vf1, si8 vi1, u4 vu1) {
   unsigned long long r5 = __builtin_reduce_min(cvi1);
 }
 
+void test_builtin_reduce_add(si8 vi1, u4 vu1) {
+  // CHECK:      [[VI1:%.+]] = load <8 x i16>, <8 x i16>* %vi1.addr, align 16
+  // CHECK-NEXT: call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[VI1]])
+  short r2 = __builtin_reduce_add(vi1);
+
+  // CHECK:      [[VU1:%.+]] = load <4 x i32>, <4 x i32>* %vu1.addr, align 16
+  // CHECK-NEXT: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[VU1]])
+  unsigned r3 = __builtin_reduce_add(vu1);
+
+  // CHECK:      [[CVI1:%.+]] = load <8 x i16>, <8 x i16>* %cvi1, align 16
+  // CHECK-NEXT: [[RDX1:%.+]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[CVI1]])
+  // CHECK-NEXT: sext i16 [[RDX1]] to i32
+  const si8 cvi1 = vi1;
+  int r4 = __builtin_reduce_add(cvi1);
+
+  // CHECK:      [[CVU1:%.+]] = load <4 x i32>, <4 x i32>* %cvu1, align 16
+  // CHECK-NEXT: [[RDX2:%.+]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[CVU1]])
+  // CHECK-NEXT: zext i32 [[RDX2]] to i64
+  const u4 cvu1 = vu1;
+  unsigned long long r5 = __builtin_reduce_add(cvu1);
+}
+
 void test_builtin_reduce_xor(si8 vi1, u4 vu1) {
 
   // CHECK:      [[VI1:%.+]] = load <8 x i16>, <8 x i16>* %vi1.addr, align 16
