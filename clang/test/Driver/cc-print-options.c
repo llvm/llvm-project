@@ -4,5 +4,5 @@
 // RUN: FileCheck %s < %t.log
 
 // CHECK: [Logging clang options]
-// CHECK: {{.*}}clang{{.*}}"-S"
+// CHECK: {{.*}} "-S"
 

@@ -1100,6 +1100,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Value *StoredVal, Instruction *TheStore,
     SmallPtrSetImpl<Instruction *> &Stores, const SCEVAddRecExpr *Ev,
     const SCEV *BECount, bool IsNegStride, bool IsLoopMemset) {
+  Module *M = TheStore->getModule();
   Value *SplatValue = isBytewiseValue(StoredVal, *DL);
   Constant *PatternValue = nullptr;
 
@@ -1182,15 +1183,14 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     NewCall = Builder.CreateMemSet(
         BasePtr, SplatValue, NumBytes, MaybeAlign(StoreAlignment),
         /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
-  } else {
+  } else if (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     // Everything is emitted in default address space
     Type *Int8PtrTy = DestInt8PtrTy;
 
-    Module *M = TheStore->getModule();
     StringRef FuncName = "memset_pattern16";
-    FunctionCallee MSP = M->getOrInsertFunction(FuncName, Builder.getVoidTy(),
-                                                Int8PtrTy, Int8PtrTy, IntIdxTy);
-    inferLibFuncAttributes(M, FuncName, *TLI);
+    FunctionCallee MSP = getOrInsertLibFunc(M, *TLI, LibFunc_memset_pattern16,
+                            Builder.getVoidTy(), Int8PtrTy, Int8PtrTy, IntIdxTy);
+    inferNonMandatoryLibFuncAttrs(M, FuncName, *TLI);
 
     // Otherwise we should form a memset_pattern16.  PatternValue is known to be
     // an constant array of 16-bytes.  Plop the value into a mergable global.
@@ -1201,7 +1201,9 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     GV->setAlignment(Align(16));
     Value *PatternPtr = ConstantExpr::getBitCast(GV, Int8PtrTy);
     NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
-  }
+  } else
+    return Changed;
+
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
   if (MSSAU) {

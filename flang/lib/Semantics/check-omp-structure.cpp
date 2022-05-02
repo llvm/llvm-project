@@ -1806,6 +1806,7 @@ CHECK_SIMPLE_CLAUSE(MemoryOrder, OMPC_memory_order)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
 CHECK_SIMPLE_CLAUSE(Align, OMPC_align)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
+CHECK_SIMPLE_CLAUSE(CancellationConstructType, OMPC_cancellation_construct_type)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)
