@@ -2331,6 +2331,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
 
   // These builtins support vectors of integers only.
+  // TODO: ADD should support floating-point types.
+  case Builtin::BI__builtin_reduce_add:
   case Builtin::BI__builtin_reduce_xor:
   case Builtin::BI__builtin_reduce_or:
   case Builtin::BI__builtin_reduce_and: {
