@@ -1408,8 +1408,8 @@ void MallocChecker::checkGMalloc0(const CallEvent &Call,
 void MallocChecker::checkGMemdup(const CallEvent &Call,
                                  CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  State = MallocMemAux(C, Call, Call.getArgExpr(1), UndefinedVal(), State,
-                       AF_Malloc);
+  State =
+      MallocMemAux(C, Call, Call.getArgExpr(1), UnknownVal(), State, AF_Malloc);
   State = ProcessZeroAllocCheck(Call, 1, State);
   C.addTransition(State);
 }
