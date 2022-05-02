@@ -663,6 +663,7 @@ BUILTIN(__builtin_reduce_min, "v.", "nct")
 BUILTIN(__builtin_reduce_xor, "v.", "nct")
 BUILTIN(__builtin_reduce_or, "v.", "nct")
 BUILTIN(__builtin_reduce_and, "v.", "nct")
+BUILTIN(__builtin_reduce_add, "v.", "nct")
 
 BUILTIN(__builtin_matrix_transpose, "v.", "nFt")
 BUILTIN(__builtin_matrix_column_major_load, "v.", "nFt")
