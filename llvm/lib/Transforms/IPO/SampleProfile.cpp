@@ -2025,10 +2025,13 @@ bool SampleProfileLoader::doInitialization(Module &M,
     if (Reader->profileIsPreInlined()) {
       if (!UsePreInlinerDecision.getNumOccurrences())
         UsePreInlinerDecision = true;
-    } else if (!Reader->profileIsCS()) {
+    }
+
+    if (!Reader->profileIsCS()) {
       // Non-CS profile should be fine without a function size budget for the
-      // inliner since the contexts in the profile are all from inlining in
-      // the prevoius build, thus they are bounded.
+      // inliner since the contexts in the profile are either all from inlining
+      // in the prevoius build or pre-computed by the preinliner with a size
+      // cap, thus they are bounded.
       if (!ProfileInlineLimitMin.getNumOccurrences())
         ProfileInlineLimitMin = std::numeric_limits<unsigned>::max();
       if (!ProfileInlineLimitMax.getNumOccurrences())
