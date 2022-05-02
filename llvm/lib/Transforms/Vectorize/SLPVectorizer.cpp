@@ -6351,10 +6351,10 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
             ShuffleMask.emplace_back(VF.back(), UndefMaskElem);
             // Find the insertvector, vectorized in tree, if any.
             Value *Base = VU;
-            while (isa<InsertElementInst>(Base)) {
+            while (auto *IEBase = dyn_cast<InsertElementInst>(Base)) {
               // Build the mask for the vectorized insertelement instructions.
-              if (const TreeEntry *E = getTreeEntry(Base)) {
-                VU = cast<InsertElementInst>(Base);
+              if (const TreeEntry *E = getTreeEntry(IEBase)) {
+                VU = IEBase;
                 do {
                   int Idx = E->findLaneForValue(Base);
                   ShuffleMask.back()[Idx] = Idx;
@@ -6370,8 +6370,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           } else {
             VecId = std::distance(FirstUsers.begin(), It);
           }
-          ShuffleMask[VecId][*InsertIdx] = EU.Lane;
-          DemandedElts[VecId].setBit(*InsertIdx);
+          int InIdx = *InsertIdx;
+          ShuffleMask[VecId][InIdx] = EU.Lane;
+          DemandedElts[VecId].setBit(InIdx);
           continue;
         }
       }
