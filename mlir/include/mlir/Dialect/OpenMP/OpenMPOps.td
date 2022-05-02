@@ -999,6 +999,40 @@ def ThreadprivateOp : OpenMP_Op<"threadprivate"> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.18.1 Cancel Construct
+//===----------------------------------------------------------------------===//
+def CancelOp : OpenMP_Op<"cancel"> {
+  let summary = "cancel directive";
+  let description = [{
+    The cancel construct activates cancellation of the innermost enclosing
+    region of the type specified.
+  }];
+  let arguments = (ins CancellationConstructTypeAttr:$cancellation_construct_type_val,
+                       Optional<I1>:$if_expr);
+  let assemblyFormat = [{ `cancellation_construct_type` `(`
+                          custom<ClauseAttr>($cancellation_construct_type_val) `)`
+                          ( `if` `(` $if_expr^ `)` )? attr-dict}];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.18.2 Cancellation Point Construct
+//===----------------------------------------------------------------------===//
+def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
+  let summary = "cancellation point directive";
+  let description = [{
+    The cancellation point construct introduces a user-defined cancellation
+    point at which implicit or explicit tasks check if cancellation of the
+    innermost enclosing region of the type specified has been activated.
+  }];
+  let arguments = (ins CancellationConstructTypeAttr:$cancellation_construct_type_val);
+  let assemblyFormat = [{ `cancellation_construct_type` `(`
+                           custom<ClauseAttr>($cancellation_construct_type_val) `)`
+                           attr-dict}];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 

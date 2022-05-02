@@ -1143,3 +1143,116 @@ func.func @omp_task(%mem: memref<1xf32>) {
   }
   return
 }
+
+// -----
+
+func @omp_cancel() {
+  omp.sections {
+    // expected-error @below {{cancel parallel must appear inside a parallel region}}
+    omp.cancel cancellation_construct_type(parallel)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_cancel1() {
+  omp.parallel {
+    // expected-error @below {{cancel sections must appear inside a sections region}}
+    omp.cancel cancellation_construct_type(sections)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_cancel2() {
+  omp.sections {
+    // expected-error @below {{cancel loop must appear inside a worksharing-loop region}}
+    omp.cancel cancellation_construct_type(loop)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_cancel3(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
+  omp.wsloop nowait
+    for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
+    // expected-error @below {{A worksharing construct that is canceled must not have a nowait clause}}
+    omp.cancel cancellation_construct_type(loop)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_cancel4(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
+  omp.wsloop ordered(1)
+    for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
+    // expected-error @below {{A worksharing construct that is canceled must not have an ordered clause}}
+    omp.cancel cancellation_construct_type(loop)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_cancel5() -> () {
+  omp.sections nowait {
+    omp.section {
+      // expected-error @below {{A sections construct that is canceled must not have a nowait clause}}
+      omp.cancel cancellation_construct_type(sections)
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_cancellationpoint() {
+  omp.sections {
+    // expected-error @below {{cancellation point parallel must appear inside a parallel region}}
+    omp.cancellationpoint cancellation_construct_type(parallel)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_cancellationpoint1() {
+  omp.parallel {
+    // expected-error @below {{cancellation point sections must appear inside a sections region}}
+    omp.cancellationpoint cancellation_construct_type(sections)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_cancellationpoint2() {
+  omp.sections {
+    // expected-error @below {{cancellation point loop must appear inside a worksharing-loop region}}
+    omp.cancellationpoint cancellation_construct_type(loop)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
