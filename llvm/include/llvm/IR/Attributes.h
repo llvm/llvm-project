@@ -1252,6 +1252,9 @@ void mergeAttributesForInlining(Function &Caller, const Function &Callee);
 /// \param [in] ToMerge - The function to merge attributes from.
 void mergeAttributesForOutlining(Function &Base, const Function &ToMerge);
 
+/// Update min-legal-vector-width if it is in Attribute and less than Width.
+void updateMinLegalVectorWidthAttr(Function &Fn, uint64_t Width);
+
 } // end namespace AttributeFuncs
 
 } // end namespace llvm
