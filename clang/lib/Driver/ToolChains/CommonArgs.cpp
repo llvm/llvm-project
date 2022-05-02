@@ -2129,7 +2129,9 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
 
   StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgpu" : "nvptx";
   std::string LibOmpTargetName =
-      ("libomptarget-" + ArchPrefix + "-" + BitcodeSuffix + ".bc").str();
+      Triple.isAMDGCN()
+          ? ("libomptarget-" + ArchPrefix + "-" + BitcodeSuffix + ".bc").str()
+          : ("libomptarget-new-nvptx-" + BitcodeSuffix + ".bc").str();
 
   // First check whether user specifies bc library
   if (const Arg *A = DriverArgs.getLastArg(LibomptargetBCPathOpt)) {
