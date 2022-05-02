@@ -268,12 +268,9 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
   if (!Fn.hasExactDefinition())
     return false;
 
-  // Functions with local linkage should already have been handled, except if
-  // they are fully alive (e.g., called indirectly) and except for the fragile
-  // (variadic) ones. In these cases, we may still be able to improve their
-  // statically known call sites.
-  if ((Fn.hasLocalLinkage() && !LiveFunctions.count(&Fn)) &&
-      !Fn.getFunctionType()->isVarArg())
+  // Functions with local linkage should already have been handled, except the
+  // fragile (variadic) ones which we can improve here.
+  if (Fn.hasLocalLinkage() && !Fn.getFunctionType()->isVarArg())
     return false;
 
   // Don't touch naked functions. The assembly might be using an argument, or
