@@ -36,7 +36,7 @@ TEST(DXCFile, ParseHeader) {
   DXContainer C =
       llvm::cantFail(DXContainer::create(getMemoryBuffer<32>(Buffer)));
   EXPECT_TRUE(memcmp(C.getHeader().Magic, "DXBC", 4) == 0);
-  EXPECT_TRUE(memcmp(C.getHeader().Hash.Digest,
+  EXPECT_TRUE(memcmp(C.getHeader().FileHash.Digest,
                      "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16) == 0);
   EXPECT_EQ(C.getHeader().Version.Major, 1u);
   EXPECT_EQ(C.getHeader().Version.Minor, 0u);
