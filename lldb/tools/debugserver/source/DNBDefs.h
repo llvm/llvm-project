@@ -54,6 +54,7 @@ typedef uint32_t nub_event_t;
 typedef uint32_t nub_bool_t;
 
 #define INVALID_NUB_PROCESS ((nub_process_t)0)
+#define INVALID_NUB_PROCESS_ARCH ((nub_process_t)-1)
 #define INVALID_NUB_THREAD ((nub_thread_t)0)
 #define INVALID_NUB_WATCH_ID ((nub_watch_t)0)
 #define INVALID_NUB_HW_INDEX UINT32_MAX
