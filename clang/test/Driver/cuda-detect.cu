@@ -146,18 +146,18 @@
 // RUN:     -check-prefix NOCUDAINC
 
 // Verify that C++ include paths are passed for both host and device frontends.
-// RUN: %clang -### -no-canonical-prefixes -target x86_64-linux-gnu %s \
+// RUN: %clang -### --target=x86_64-linux-gnu %s \
 // RUN: --stdlib=libstdc++ --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 \
 // RUN: --gcc-toolchain="" 2>&1 \
 // RUN: | FileCheck %s --check-prefix CHECK-CXXINCLUDE
 
 // Verify that CUDA SDK version is propagated to the CC1 compilations.
-// RUN: %clang -### -v -target x86_64-linux-gnu --cuda-gpu-arch=sm_50 \
+// RUN: %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_50 \
 // RUN:   --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix CUDA80
 
 // Verify that if no version file is found, we report the default of 7.0.
-// RUN: %clang -### -v -target x86_64-linux-gnu --cuda-gpu-arch=sm_50 \
+// RUN: %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_50 \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix CUDA70
 
@@ -186,9 +186,9 @@
 // because we must search the cuda include directory first.
 // CUDAINC-SAME: "-internal-externc-isystem"
 // COMMON-SAME: "-x" "cuda"
-// CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// CHECK-CXXINCLUDE: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
-// CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+// CHECK-CXXINCLUDE: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
 // CHECK-CXXINCLUDE: ld{{.*}}"
 
