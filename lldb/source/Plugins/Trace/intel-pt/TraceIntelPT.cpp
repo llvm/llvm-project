@@ -81,7 +81,8 @@ TraceIntelPT::TraceIntelPT(
   for (const ThreadPostMortemTraceSP &thread : traced_threads) {
     m_thread_decoders.emplace(thread->GetID(),
                               std::make_unique<ThreadDecoder>(thread, *this));
-    SetPostMortemThreadDataFile(thread->GetID(), "threadTraceBuffer",
+    SetPostMortemThreadDataFile(thread->GetID(),
+                                IntelPTDataKinds::kThreadTraceBuffer,
                                 thread->GetTraceFile());
   }
 }
@@ -179,7 +180,8 @@ llvm::Expected<size_t> TraceIntelPT::GetRawTraceSize(Thread &thread) {
 }
 
 Expected<pt_cpu> TraceIntelPT::GetCPUInfoForLiveProcess() {
-  Expected<std::vector<uint8_t>> cpu_info = GetLiveProcessBinaryData("cpuInfo");
+  Expected<std::vector<uint8_t>> cpu_info =
+      GetLiveProcessBinaryData(IntelPTDataKinds::kProcFsCpuInfo);
   if (!cpu_info)
     return cpu_info.takeError();
 
@@ -393,7 +395,8 @@ Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
 
 Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,
                                        OnBinaryDataReadCallback callback) {
-  return OnThreadBinaryDataRead(tid, "threadTraceBuffer", callback);
+  return OnThreadBinaryDataRead(tid, IntelPTDataKinds::kThreadTraceBuffer,
+                                callback);
 }
 
 TaskTimer &TraceIntelPT::GetTimer() { return m_task_timer; }

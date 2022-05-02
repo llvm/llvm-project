@@ -18,6 +18,12 @@
 /// See docs/lldb-gdb-remote.txt for more information.
 namespace lldb_private {
 
+// List of data kinds used by jLLDBGetState and jLLDBGetBinaryData.
+struct IntelPTDataKinds {
+  static const char *kProcFsCpuInfo;
+  static const char *kThreadTraceBuffer;
+};
+
 /// jLLDBTraceStart gdb-remote packet
 /// \{
 struct TraceIntelPTStartRequest : TraceStartRequest {

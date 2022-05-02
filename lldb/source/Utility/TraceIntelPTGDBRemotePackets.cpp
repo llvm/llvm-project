@@ -13,6 +13,9 @@ using namespace llvm::json;
 
 namespace lldb_private {
 
+const char *IntelPTDataKinds::kProcFsCpuInfo = "procfsCpuInfo";
+const char *IntelPTDataKinds::kThreadTraceBuffer = "threadTraceBuffer";
+
 bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
               Path path) {
   ObjectMapper o(value, path);

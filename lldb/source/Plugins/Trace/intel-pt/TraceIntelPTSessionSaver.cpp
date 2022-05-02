@@ -48,8 +48,8 @@ llvm::Error TraceIntelPTSessionSaver::SaveToDisk(TraceIntelPT &trace_ipt,
     return json_intel_pt_trace.takeError();
 
   llvm::Expected<JSONTraceSessionBase> json_session_description =
-      TraceSessionSaver::BuildProcessesSection(*live_process,
-                                               "threadTraceBuffer", directory);
+      TraceSessionSaver::BuildProcessesSection(
+          *live_process, IntelPTDataKinds::kThreadTraceBuffer, directory);
 
   if (!json_session_description)
     return json_session_description.takeError();
