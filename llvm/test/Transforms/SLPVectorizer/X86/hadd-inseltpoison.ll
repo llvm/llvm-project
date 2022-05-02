@@ -140,6 +140,32 @@ define <8 x i16> @test_v8i16(<8 x i16> %a, <8 x i16> %b) {
   ret <8 x i16> %r07
 }
 
+; PR41892
+define void @test_v4f32_v2f32_store(<4 x float> %f, float* %p){
+; CHECK-LABEL: @test_v4f32_v2f32_store(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[F]], i64 1
+; CHECK-NEXT:    [[ADD01:%.*]] = fadd float [[X0]], [[X1]]
+; CHECK-NEXT:    store float [[ADD01]], float* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x float> [[F]], i64 2
+; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x float> [[F]], i64 3
+; CHECK-NEXT:    [[ADD23:%.*]] = fadd float [[X2]], [[X3]]
+; CHECK-NEXT:    [[P23:%.*]] = getelementptr inbounds float, float* [[P]], i64 1
+; CHECK-NEXT:    store float [[ADD23]], float* [[P23]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <4 x float> %f, i64 0
+  %x1 = extractelement <4 x float> %f, i64 1
+  %add01 = fadd float %x0, %x1
+  store float %add01, float* %p, align 4
+  %x2 = extractelement <4 x float> %f, i64 2
+  %x3 = extractelement <4 x float> %f, i64 3
+  %add23 = fadd float %x2, %x3
+  %p23 = getelementptr inbounds float, float* %p, i64 1
+  store float %add23, float * %p23, align 4
+  ret void
+}
+
 ;
 ; 256-bit vectors
 ;
