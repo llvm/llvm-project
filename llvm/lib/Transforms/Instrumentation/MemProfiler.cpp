@@ -633,8 +633,6 @@ bool MemProfiler::instrumentFunction(Function &F) {
 
   initializeCallbacks(*F.getParent());
 
-  FunctionModified |= insertDynamicShadowAtFunctionEntry(F);
-
   SmallVector<Instruction *, 16> ToInstrument;
 
   // Fill the set of memory operations to instrument.
@@ -644,6 +642,15 @@ bool MemProfiler::instrumentFunction(Function &F) {
         ToInstrument.push_back(&Inst);
     }
   }
+
+  if (ToInstrument.empty()) {
+    LLVM_DEBUG(dbgs() << "MEMPROF done instrumenting: " << FunctionModified
+                      << " " << F << "\n");
+
+    return FunctionModified;
+  }
+
+  FunctionModified |= insertDynamicShadowAtFunctionEntry(F);
 
   int NumInstrumented = 0;
   for (auto *Inst : ToInstrument) {
