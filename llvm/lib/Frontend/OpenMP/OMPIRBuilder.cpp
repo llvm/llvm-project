@@ -974,20 +974,7 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(
                        /* TODO weight */ nullptr, nullptr);
 
 
-  // From the cancellation block we finalize all variables and go to the
-  // post finalization block that is known to the FiniCB callback.
-  //Builder.SetInsertPoint(PreCancellationBlock);
-  //Builder.CreateBr(CancellationBlock);
 
-#if 0
-  // Unless cancellation has been detected by a barrier itself, need to
-  // synchronize between threads (after finalization).
-  Builder.SetInsertPoint(CancellationBlock);
-  if (CancelledDirective == OMPD_parallel && CancelledBy != OMPD_barrier)
-    emitBarrierImpl(Loc, CancelledBy, /*ForceSimpleCall*/ false, /*CheckCancelFlag*/ false);
-#endif
-
-  InsertPointTy CancellationIP = Builder.saveIP();
 
   // TODO: Clang's codegen emits finalization code only once and inserts a
   // switch to jump back to the target code path (CGF.EmitBranchThroughCleanup).
@@ -3418,9 +3405,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   BodyGenCB(/* AllocaIP */ InsertPointTy(),
             /* CodeGenIP */ Builder.saveAndClearIP());
 
-  assert(HasFinalize == !!FiniCB);
+
   BasicBlock *FiniStartBB = FiniBB;
-  if (FiniCB) {
+  if (FiniCB ) {
       Builder.SetInsertPoint(FiniBB, FiniBB->begin());
       FiniBB = splitBBWithSuffix(Builder, /*CreateBranch*/ true, ".finisplit");
       FiniCB(Builder.saveAndClearIP());      
