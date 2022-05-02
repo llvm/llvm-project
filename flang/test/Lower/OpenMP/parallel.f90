@@ -15,8 +15,13 @@ end subroutine parallel_simple
 !===============================================================================
 
 !FIRDialect-LABEL: func @_QPparallel_if
-subroutine parallel_if(alpha)
+subroutine parallel_if(alpha, beta, gamma)
    integer, intent(in) :: alpha
+   logical, intent(in) :: beta
+   logical(1) :: logical1
+   logical(2) :: logical2
+   logical(4) :: logical4
+   logical(8) :: logical8
 
    !OMPDialect: omp.parallel if(%{{.*}} : i1) {
    !$omp parallel if(alpha .le. 0)
@@ -43,6 +48,41 @@ subroutine parallel_if(alpha)
    !$omp parallel if(.true.)
    !FIRDialect: fir.call
    call f4()
+   !OMPDialect: omp.terminator
+   !$omp end parallel
+
+   !OMPDialect: omp.parallel if(%{{.*}} : i1) {
+   !$omp parallel if(beta)
+   !FIRDialect: fir.call
+   call f1()
+   !OMPDialect: omp.terminator
+   !$omp end parallel
+
+   !OMPDialect: omp.parallel if(%{{.*}} : i1) {
+   !$omp parallel if(logical1)
+   !FIRDialect: fir.call
+   call f1()
+   !OMPDialect: omp.terminator
+   !$omp end parallel
+
+   !OMPDialect: omp.parallel if(%{{.*}} : i1) {
+   !$omp parallel if(logical2)
+   !FIRDialect: fir.call
+   call f1()
+   !OMPDialect: omp.terminator
+   !$omp end parallel
+
+   !OMPDialect: omp.parallel if(%{{.*}} : i1) {
+   !$omp parallel if(logical4)
+   !FIRDialect: fir.call
+   call f1()
+   !OMPDialect: omp.terminator
+   !$omp end parallel
+
+   !OMPDialect: omp.parallel if(%{{.*}} : i1) {
+   !$omp parallel if(logical8)
+   !FIRDialect: fir.call
+   call f1()
    !OMPDialect: omp.terminator
    !$omp end parallel
 
