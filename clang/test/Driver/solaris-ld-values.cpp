@@ -3,7 +3,7 @@
 // independent of the host system.
 
 // Check sparc-sun-solaris2.11, 32bit
-// RUN: %clang -no-canonical-prefixes -ansi %s -### -o %t.o 2>&1 \
+// RUN: %clang -ansi -### %s 2>&1 \
 // RUN:     --target=sparc-sun-solaris2.11 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
@@ -11,7 +11,7 @@
 // CHECK-LD-SPARC32-ANSI: values-Xc.o
 // CHECK-LD-SPARC32-ANSI: values-xpg6.o
 
-// RUN: %clang -no-canonical-prefixes -std=c++98 %s -### -o %t.o 2>&1 \
+// RUN: %clang -std=c++98 -### %s 2>&1 \
 // RUN:     --target=sparc-sun-solaris2.11 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
@@ -19,7 +19,7 @@
 // CHECK-LD-SPARC32-CPP98: values-Xc.o
 // CHECK-LD-SPARC32-CPP98: values-xpg6.o
 
-// RUN: %clang -no-canonical-prefixes -std=c++11 %s -### -o %t.o 2>&1 \
+// RUN: %clang -std=c++11 -### %s 2>&1 \
 // RUN:     --target=sparc-sun-solaris2.11 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
@@ -27,7 +27,7 @@
 // CHECK-LD-SPARC32-CPP11: values-Xc.o
 // CHECK-LD-SPARC32-CPP11: values-xpg6.o
 
-// RUN: %clang -no-canonical-prefixes -std=gnu++98 %s -### -o %t.o 2>&1 \
+// RUN: %clang -std=gnu++98 -### %s 2>&1 \
 // RUN:     --target=sparc-sun-solaris2.11 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
@@ -36,7 +36,7 @@
 // CHECK-LD-SPARC32-GNUPP98: values-xpg6.o
 
 // Check i386-pc-solaris2.11, 32bit
-// RUN: %clang -no-canonical-prefixes -ANSI %s -### -o %t.o 2>&1 \
+// RUN: %clang -ANSI -### %s 2>&1 \
 // RUN:     --target=i386-pc-solaris2.11 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/solaris_x86_tree \

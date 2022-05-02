@@ -5,111 +5,111 @@
 // REQUIRES: nvptx-registered-target
 
 // Regular compiles with -O{0,1,2,3,4,fast}.  -O4 and -Ofast map to ptxas O3.
-// RUN: %clang -### -target x86_64-linux-gnu -O0 -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -O0 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT0 %s
-// RUN: %clang -### -target x86_64-linux-gnu -O1 -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -O1 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT1 %s
-// RUN: %clang -### -target x86_64-linux-gnu -O2 -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -O2 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT2 %s
-// RUN: %clang -### -target x86_64-linux-gnu -O3 -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -O3 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT3 %s
-// RUN: %clang -### -target x86_64-linux-gnu -O4 -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -O4 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT3 %s
-// RUN: %clang -### -target x86_64-linux-gnu -Ofast -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -Ofast -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT3 %s
 // Generating relocatable device code
-// RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,RDC %s
 
 // With debugging enabled, ptxas should be run with with no ptxas optimizations.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-noopt-device-debug -O2 -g -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu --cuda-noopt-device-debug -O2 -g -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,DBG %s
 
 // --no-cuda-noopt-device-debug overrides --cuda-noopt-device-debug.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-noopt-device-debug \
+// RUN: %clang -### --target=x86_64-linux-gnu --cuda-noopt-device-debug \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN:   --no-cuda-noopt-device-debug -O2 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT2 %s
 
 // Regular compile without -O.  This should result in us passing -O0 to ptxas.
-// RUN: %clang -### -target x86_64-linux-gnu -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT0 %s
 
 // Regular compiles with -Os and -Oz.  For lack of a better option, we map
 // these to ptxas -O3.
-// RUN: %clang -### -target x86_64-linux-gnu -Os -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -Os -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT2 %s
-// RUN: %clang -### -target x86_64-linux-gnu -Oz -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -Oz -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT2 %s
 
 // Regular compile targeting sm_35.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_35 -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu --cuda-gpu-arch=sm_35 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35 %s
 // Separate compilation targeting sm_35.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_35 -fgpu-rdc -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu --cuda-gpu-arch=sm_35 -fgpu-rdc -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,RDC %s
 
 // 32-bit compile.
-// RUN: %clang -### -target i386-linux-gnu -c %s 2>&1 \
+// RUN: %clang -### --target=i386-linux-gnu -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH32,SM35 %s
 // 32-bit compile when generating relocatable device code.
-// RUN: %clang -### -target i386-linux-gnu -fgpu-rdc -c %s 2>&1 \
+// RUN: %clang -### --target=i386-linux-gnu -fgpu-rdc -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH32,SM35,RDC %s
 
 // Compile with -fintegrated-as.  This should still cause us to invoke ptxas.
-// RUN: %clang -### -target x86_64-linux-gnu -fintegrated-as -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -fintegrated-as -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT0 %s
 // Check that we still pass -c when generating relocatable device code.
-// RUN: %clang -### -target x86_64-linux-gnu -fintegrated-as -fgpu-rdc -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -fintegrated-as -fgpu-rdc -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,RDC %s
 
 // Check -Xcuda-ptxas and -Xcuda-fatbinary
-// RUN: %clang -### -target x86_64-linux-gnu -c -Xcuda-ptxas -foo1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -c -Xcuda-ptxas -foo1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN:   -Xcuda-fatbinary -bar1 -Xcuda-ptxas -foo2 -Xcuda-fatbinary -bar2 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHECK,SM35,PTXAS-EXTRA,FATBINARY-EXTRA %s
 
 // MacOS spot-checks
-// RUN: %clang -### -target x86_64-apple-macosx -O0 -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-apple-macosx -O0 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,OPT0 %s
-// RUN: %clang -### -target x86_64-apple-macosx --cuda-gpu-arch=sm_35 -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-apple-macosx --cuda-gpu-arch=sm_35 -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35 %s
-// RUN: %clang -### -target i386-apple-macosx -c %s 2>&1 \
+// RUN: %clang -### --target=i386-apple-macosx -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH32,SM35 %s
 
 // Check relocatable device code generation on MacOS.
-// RUN: %clang -### -target x86_64-apple-macosx -O0 -fgpu-rdc -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-apple-macosx -O0 -fgpu-rdc -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,RDC %s
-// RUN: %clang -### -target x86_64-apple-macosx --cuda-gpu-arch=sm_35 -fgpu-rdc -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-apple-macosx --cuda-gpu-arch=sm_35 -fgpu-rdc -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH64,SM35,RDC %s
-// RUN: %clang -### -target i386-apple-macosx -fgpu-rdc -c %s 2>&1 \
+// RUN: %clang -### --target=i386-apple-macosx -fgpu-rdc -c %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefixes=CHECK,ARCH32,SM35,RDC %s
 
 // Check that CLANG forwards the -v flag to PTXAS.
-// RUN: %clang -### -save-temps -no-canonical-prefixes -v %s 2>&1 \
+// RUN: %clang -### -save-temps -v %s 2>&1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
 // RUN: | FileCheck -check-prefix=CHK-PTXAS-VERBOSE %s
 

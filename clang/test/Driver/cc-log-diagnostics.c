@@ -1,7 +1,7 @@
 // RUN: rm -f %t.log
 // RUN: env RC_DEBUG_OPTIONS=1 \
 // RUN:     CC_LOG_DIAGNOSTICS=1 CC_LOG_DIAGNOSTICS_FILE=%t.log \
-// RUN: %clang -Wfoobar -no-canonical-prefixes -target x86_64-apple-darwin10 -fsyntax-only %s
+// RUN: %clang -Wfoobar --target=x86_64-apple-darwin10 -fsyntax-only %s
 // RUN: FileCheck %s < %t.log
 
 int f0(void) {}
