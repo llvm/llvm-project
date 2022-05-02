@@ -96,7 +96,7 @@ PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch) {
 }
 
 /// Default Constructor
-PlatformMacOSX::PlatformMacOSX() : PlatformDarwin(true) {}
+PlatformMacOSX::PlatformMacOSX() : PlatformDarwinDevice(true) {}
 
 ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   ModuleSP exe_module_sp(target.GetExecutableModule());
@@ -211,3 +211,9 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
   }
   return error;
 }
+
+llvm::StringRef PlatformMacOSX::GetDeviceSupportDirectoryName() {
+  return "macOS DeviceSupport";
+}
+
+llvm::StringRef PlatformMacOSX::GetPlatformName() { return "MacOSX.platform"; }
