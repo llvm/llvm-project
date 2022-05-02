@@ -3833,10 +3833,21 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
     }
   }
 
-  // TODO: Use default extraction for now, but we should investigate extending this
-  // to handle repeated subvector extraction.
-  if (Extract)
+  if (Extract) {
+    // vXi1 can be efficiently extracted with MOVMSK.
+    // TODO: AVX512 predicate mask handling.
+    // NOTE: This doesn't work well for roundtrip scalarization.
+    if (!Insert && Ty->getScalarSizeInBits() == 1 && !ST->hasAVX512()) {
+      unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
+      unsigned MaxElts = ST->hasAVX2() ? 32 : 16;
+      unsigned MOVMSKCost = (NumElts + MaxElts - 1) / MaxElts;
+      return MOVMSKCost;
+    }
+
+    // TODO: Use default extraction for now, but we should investigate extending
+    // this to handle repeated subvector extraction.
     Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, false, Extract);
+  }
 
   return Cost;
 }
