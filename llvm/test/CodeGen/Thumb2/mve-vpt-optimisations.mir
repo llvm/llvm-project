@@ -9,143 +9,149 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf16_:%[0-9]+]]:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:gprwithzr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPf16_:%[0-9]+]]:vccr = MVE_VCMPf16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPf16_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf32_:%[0-9]+]]:vccr = MVE_VCMPf32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf32_:%[0-9]+]]:vccr = MVE_VCMPf32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT1:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPf32_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi16_:%[0-9]+]]:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi16_:%[0-9]+]]:vccr = MVE_VCMPi16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT2:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPi16_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi32_:%[0-9]+]]:vccr = MVE_VCMPi32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi32_:%[0-9]+]]:vccr = MVE_VCMPi32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT3:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPi32_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi8_:%[0-9]+]]:vccr = MVE_VCMPi8 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi8_:%[0-9]+]]:vccr = MVE_VCMPi8 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT4:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPi8_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.6(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs16_:%[0-9]+]]:vccr = MVE_VCMPs16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs16_:%[0-9]+]]:vccr = MVE_VCMPs16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT5:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs16_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6:
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT6:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs8_:%[0-9]+]]:vccr = MVE_VCMPs8 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs8_:%[0-9]+]]:vccr = MVE_VCMPs8 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT7:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs8_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8:
   ; CHECK-NEXT:   successors: %bb.9(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPu16_:%[0-9]+]]:vccr = MVE_VCMPu16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu16_:%[0-9]+]]:vccr = MVE_VCMPu16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT8:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu16_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.9:
   ; CHECK-NEXT:   successors: %bb.10(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPu32_:%[0-9]+]]:vccr = MVE_VCMPu32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu32_:%[0-9]+]]:vccr = MVE_VCMPu32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT9:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu32_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.10:
   ; CHECK-NEXT:   successors: %bb.11(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPu8_:%[0-9]+]]:vccr = MVE_VCMPu8 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu8_:%[0-9]+]]:vccr = MVE_VCMPu8 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT10:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu8_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.11:
   ; CHECK-NEXT:   successors: %bb.12(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf16r:%[0-9]+]]:vccr = MVE_VCMPf16r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf16r:%[0-9]+]]:vccr = MVE_VCMPf16r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT11:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPf16r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.12:
   ; CHECK-NEXT:   successors: %bb.13(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf32r:%[0-9]+]]:vccr = MVE_VCMPf32r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf32r:%[0-9]+]]:vccr = MVE_VCMPf32r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT12:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPf32r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.13:
   ; CHECK-NEXT:   successors: %bb.14(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi16r:%[0-9]+]]:vccr = MVE_VCMPi16r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi16r:%[0-9]+]]:vccr = MVE_VCMPi16r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT13:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPi16r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.14:
   ; CHECK-NEXT:   successors: %bb.15(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi32r:%[0-9]+]]:vccr = MVE_VCMPi32r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi32r:%[0-9]+]]:vccr = MVE_VCMPi32r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT14:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPi32r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.15:
   ; CHECK-NEXT:   successors: %bb.16(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi8r:%[0-9]+]]:vccr = MVE_VCMPi8r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi8r:%[0-9]+]]:vccr = MVE_VCMPi8r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT15:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPi8r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.16:
   ; CHECK-NEXT:   successors: %bb.17(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs16r:%[0-9]+]]:vccr = MVE_VCMPs16r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs16r:%[0-9]+]]:vccr = MVE_VCMPs16r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT16:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs16r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.17:
   ; CHECK-NEXT:   successors: %bb.18(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32r:%[0-9]+]]:vccr = MVE_VCMPs32r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32r:%[0-9]+]]:vccr = MVE_VCMPs32r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT17:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.18:
   ; CHECK-NEXT:   successors: %bb.19(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs8r:%[0-9]+]]:vccr = MVE_VCMPs8r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs8r:%[0-9]+]]:vccr = MVE_VCMPs8r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT18:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs8r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.19:
   ; CHECK-NEXT:   successors: %bb.20(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPu16r:%[0-9]+]]:vccr = MVE_VCMPu16r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu16r:%[0-9]+]]:vccr = MVE_VCMPu16r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT19:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu16r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.20:
   ; CHECK-NEXT:   successors: %bb.21(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPu32r:%[0-9]+]]:vccr = MVE_VCMPu32r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu32r:%[0-9]+]]:vccr = MVE_VCMPu32r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT20:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu32r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.21:
   ; CHECK-NEXT:   successors: %bb.22(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPu8r:%[0-9]+]]:vccr = MVE_VCMPu8r %1:mqpr, %25:gprwithzr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu8r:%[0-9]+]]:vccr = MVE_VCMPu8r [[DEF]], [[DEF2]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT21:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu8r]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.22:
-  ; CHECK-NEXT:   [[MVE_VCMPu8r1:%[0-9]+]]:vccr = MVE_VCMPu8r %1:mqpr, $zr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu8r1:%[0-9]+]]:vccr = MVE_VCMPu8r [[DEF]], $zr, 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT22:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu8r1]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   ;
   ; Tests that VCMPs with an opposite condition are correctly converted into VPNOTs.
   ;
   bb.0:
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
+    %25:gprwithzr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 11, 0, $noreg, $noreg
 
@@ -248,60 +254,64 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi16_:%[0-9]+]]:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPi16_:%[0-9]+]]:vccr = MVE_VCMPi16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPi16_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi32_:%[0-9]+]]:vccr = MVE_VCMPi32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi32_:%[0-9]+]]:vccr = MVE_VCMPi32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT1:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPi32_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi8_:%[0-9]+]]:vccr = MVE_VCMPi8 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi8_:%[0-9]+]]:vccr = MVE_VCMPi8 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT2:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPi8_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs16_:%[0-9]+]]:vccr = MVE_VCMPs16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs16_:%[0-9]+]]:vccr = MVE_VCMPs16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT3:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs16_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT4:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.6(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs8_:%[0-9]+]]:vccr = MVE_VCMPs8 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs8_:%[0-9]+]]:vccr = MVE_VCMPs8 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT5:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs8_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6:
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPu16_:%[0-9]+]]:vccr = MVE_VCMPu16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu16_:%[0-9]+]]:vccr = MVE_VCMPu16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT6:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu16_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPu32_:%[0-9]+]]:vccr = MVE_VCMPu32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu32_:%[0-9]+]]:vccr = MVE_VCMPu32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT7:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu32_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8:
-  ; CHECK-NEXT:   [[MVE_VCMPu8_:%[0-9]+]]:vccr = MVE_VCMPu8 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPu8_:%[0-9]+]]:vccr = MVE_VCMPu8 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT8:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPu8_]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   ;
   ; Tests that VCMPs with an opposite condition and swapped operands are
   ; correctly converted into VPNOTs.
   ;
   bb.0:
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:vccr = MVE_VCMPi16 %2:mqpr, %1:mqpr, 12, 0, $noreg, $noreg
 
@@ -368,42 +378,46 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf16_:%[0-9]+]]:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, [[MVE_VCMPf16_]], $noreg, undef [[MVE_VORR]]
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPf16_:%[0-9]+]]:vccr = MVE_VCMPf16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF1]], 1, [[MVE_VCMPf16_]], $noreg, undef [[MVE_VORR]]
   ; CHECK-NEXT:   [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPf16_]], 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT1:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT1]], $noreg, undef [[MVE_VORR1]]
+  ; CHECK-NEXT:   [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT1]], $noreg, undef [[MVE_VORR1]]
   ; CHECK-NEXT:   [[MVE_VPNOT2:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT1]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR2:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR1]], [[MVE_VORR1]], 1, [[MVE_VPNOT2]], $noreg, undef [[MVE_VORR2]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT3:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_1]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT3]], $noreg, undef [[MVE_VORR3]]
+  ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT3]], $noreg, undef [[MVE_VORR3]]
   ; CHECK-NEXT:   [[MVE_VPNOT4:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT3]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR4:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR3]], [[MVE_VORR3]], 1, [[MVE_VPNOT4]], $noreg, undef [[MVE_VORR4]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   [[MVE_VCMPs32_2:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_2:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT5:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_2]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR5:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT5]], $noreg, undef [[MVE_VORR5]]
+  ; CHECK-NEXT:   [[MVE_VORR5:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT5]], $noreg, undef [[MVE_VORR5]]
   ; CHECK-NEXT:   [[MVE_VPNOT6:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT5]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR6:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR5]], [[MVE_VORR5]], 1, [[MVE_VPNOT6]], $noreg, undef [[MVE_VORR6]]
   ; CHECK-NEXT:   [[MVE_VORR7:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR6]], [[MVE_VORR6]], 1, [[MVE_VPNOT6]], $noreg, undef [[MVE_VORR7]]
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   bb.0:
     ;
     ; Tests that, if the result of the VCMP is killed before the
     ; second VCMP (that will be converted into a VPNOT) is found,
     ; the kill flag is removed.
     ;
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, killed %0, $noreg, undef %3
     %4:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 11, 0, $noreg, $noreg
@@ -447,47 +461,51 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi16_:%[0-9]+]]:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPi16_1:%[0-9]+]]:vccr = MVE_VCMPi16 %2:mqpr, %1:mqpr, 12, 1, [[MVE_VCMPi16_]], $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPi16_2:%[0-9]+]]:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 10, 1, [[MVE_VCMPi16_]], $noreg
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPi16_:%[0-9]+]]:vccr = MVE_VCMPi16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi16_1:%[0-9]+]]:vccr = MVE_VCMPi16 [[DEF1]], [[DEF]], 12, 1, [[MVE_VCMPi16_]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi16_2:%[0-9]+]]:vccr = MVE_VCMPi16 [[DEF]], [[DEF1]], 10, 1, [[MVE_VCMPi16_]], $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi32_:%[0-9]+]]:vccr = MVE_VCMPi32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPi32_1:%[0-9]+]]:vccr = MVE_VCMPi32 %2:mqpr, %1:mqpr, 12, 1, [[MVE_VCMPi32_]], $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPi32_2:%[0-9]+]]:vccr = MVE_VCMPi32 %1:mqpr, %2:mqpr, 10, 1, [[MVE_VCMPi32_]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi32_:%[0-9]+]]:vccr = MVE_VCMPi32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi32_1:%[0-9]+]]:vccr = MVE_VCMPi32 [[DEF1]], [[DEF]], 12, 1, [[MVE_VCMPi32_]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi32_2:%[0-9]+]]:vccr = MVE_VCMPi32 [[DEF]], [[DEF1]], 10, 1, [[MVE_VCMPi32_]], $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf16_:%[0-9]+]]:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPf16_1:%[0-9]+]]:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 11, 1, [[MVE_VCMPf16_]], $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPf16_2:%[0-9]+]]:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 1, [[MVE_VCMPf16_]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf16_:%[0-9]+]]:vccr = MVE_VCMPf16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf16_1:%[0-9]+]]:vccr = MVE_VCMPf16 [[DEF]], [[DEF1]], 11, 1, [[MVE_VCMPf16_]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf16_2:%[0-9]+]]:vccr = MVE_VCMPf16 [[DEF]], [[DEF1]], 10, 1, [[MVE_VCMPf16_]], $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf32_:%[0-9]+]]:vccr = MVE_VCMPf32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPf32_1:%[0-9]+]]:vccr = MVE_VCMPf32 %1:mqpr, %2:mqpr, 11, 1, [[MVE_VCMPf32_]], $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPf32_2:%[0-9]+]]:vccr = MVE_VCMPf32 %1:mqpr, %2:mqpr, 10, 1, [[MVE_VCMPf32_]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf32_:%[0-9]+]]:vccr = MVE_VCMPf32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf32_1:%[0-9]+]]:vccr = MVE_VCMPf32 [[DEF]], [[DEF1]], 11, 1, [[MVE_VCMPf32_]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf32_2:%[0-9]+]]:vccr = MVE_VCMPf32 [[DEF]], [[DEF1]], 10, 1, [[MVE_VCMPf32_]], $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPi16_3:%[0-9]+]]:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPi16_4:%[0-9]+]]:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 11, 1, [[MVE_VCMPi16_3]], $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPi16_5:%[0-9]+]]:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 10, 1, [[MVE_VCMPi16_3]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi16_3:%[0-9]+]]:vccr = MVE_VCMPi16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi16_4:%[0-9]+]]:vccr = MVE_VCMPi16 [[DEF]], [[DEF1]], 11, 1, [[MVE_VCMPi16_3]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi16_5:%[0-9]+]]:vccr = MVE_VCMPi16 [[DEF]], [[DEF1]], 10, 1, [[MVE_VCMPi16_3]], $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   [[MVE_VCMPi32_3:%[0-9]+]]:vccr = MVE_VCMPi32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPi32_4:%[0-9]+]]:vccr = MVE_VCMPi32 %1:mqpr, %2:mqpr, 11, 1, [[MVE_VCMPi32_3]], $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPi32_5:%[0-9]+]]:vccr = MVE_VCMPi32 %1:mqpr, %2:mqpr, 10, 1, [[MVE_VCMPi32_3]], $noreg
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
+  ; CHECK-NEXT:   [[MVE_VCMPi32_3:%[0-9]+]]:vccr = MVE_VCMPi32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi32_4:%[0-9]+]]:vccr = MVE_VCMPi32 [[DEF]], [[DEF1]], 11, 1, [[MVE_VCMPi32_3]], $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPi32_5:%[0-9]+]]:vccr = MVE_VCMPi32 [[DEF]], [[DEF1]], 10, 1, [[MVE_VCMPi32_3]], $noreg
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   ;
   ; Tests that predicated VCMPs are not replaced.
   ;
   bb.0:
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:vccr = MVE_VCMPi16 %2:mqpr, %1:mqpr, 12, 1, %0, $noreg
     %4:vccr = MVE_VCMPi16 %1:mqpr, %2:mqpr, 10, 1, %0, $noreg
@@ -526,30 +544,34 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf16_:%[0-9]+]]:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPf16_1:%[0-9]+]]:vccr = MVE_VCMPf16 %2:mqpr, %1:mqpr, 12, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPf16_:%[0-9]+]]:vccr = MVE_VCMPf16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf16_1:%[0-9]+]]:vccr = MVE_VCMPf16 [[DEF1]], [[DEF]], 12, 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf32_:%[0-9]+]]:vccr = MVE_VCMPf32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPf32_1:%[0-9]+]]:vccr = MVE_VCMPf32 %2:mqpr, %1:mqpr, 12, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf32_:%[0-9]+]]:vccr = MVE_VCMPf32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf32_1:%[0-9]+]]:vccr = MVE_VCMPf32 [[DEF1]], [[DEF]], 12, 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPf16_2:%[0-9]+]]:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPf16_3:%[0-9]+]]:vccr = MVE_VCMPf16 %2:mqpr, %1:mqpr, 11, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf16_2:%[0-9]+]]:vccr = MVE_VCMPf16 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf16_3:%[0-9]+]]:vccr = MVE_VCMPf16 [[DEF1]], [[DEF]], 11, 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   [[MVE_VCMPf32_2:%[0-9]+]]:vccr = MVE_VCMPf32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPf32_3:%[0-9]+]]:vccr = MVE_VCMPf32 %2:mqpr, %1:mqpr, 11, 0, $noreg, $noreg
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
+  ; CHECK-NEXT:   [[MVE_VCMPf32_2:%[0-9]+]]:vccr = MVE_VCMPf32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPf32_3:%[0-9]+]]:vccr = MVE_VCMPf32 [[DEF1]], [[DEF]], 11, 0, $noreg, $noreg
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   ;
   ; Tests that float VCMPs with an opposite condition and swapped operands
   ; are not transformed into VPNOTs.
   ;
   bb.0:
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPf16 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:vccr = MVE_VCMPf16 %2:mqpr, %1:mqpr, 12, 0, $noreg, $noreg
 
@@ -592,18 +614,22 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 %2:mqpr, %1:mqpr, 11, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF1]], [[DEF]], 11, 0, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[MVE_VCMPs32_2:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VCMPs32_3:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 12, 0, $noreg, $noreg
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
+  ; CHECK-NEXT:   [[MVE_VCMPs32_2:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_3:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 12, 0, $noreg, $noreg
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   ;
   ; Tests that a VCMP is not transformed into a VPNOT if its CondCode is not
   ; the opposite CondCode.
   ;
   bb.0:
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:vccr = MVE_VCMPs32 %2:mqpr, %1:mqpr, 11, 0, $noreg, $noreg
 
@@ -640,9 +666,12 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:gpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR]]
+  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR]]
   ; CHECK-NEXT:   [[MVE_VPNOT1:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR]], [[MVE_VORR]], 1, [[MVE_VPNOT1]], $noreg, undef [[MVE_VORR1]]
   ; CHECK-NEXT:   [[MVE_VPNOT2:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT1]], 0, $noreg, $noreg
@@ -655,9 +684,9 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT5:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_1]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR5:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT5]], $noreg, undef [[MVE_VORR5]]
+  ; CHECK-NEXT:   [[MVE_VORR5:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT5]], $noreg, undef [[MVE_VORR5]]
   ; CHECK-NEXT:   [[MVE_VORR6:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR5]], [[MVE_VORR5]], 0, $noreg, $noreg, undef [[MVE_VORR6]]
   ; CHECK-NEXT:   [[MVE_VPNOT6:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT5]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR7:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR6]], [[MVE_VORR6]], 1, [[MVE_VPNOT6]], $noreg, undef [[MVE_VORR7]]
@@ -668,9 +697,9 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_2:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_2:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT8:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_2]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR10:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT8]], $noreg, undef [[MVE_VORR10]]
+  ; CHECK-NEXT:   [[MVE_VORR10:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT8]], $noreg, undef [[MVE_VORR10]]
   ; CHECK-NEXT:   [[MVE_VORR11:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR10]], [[MVE_VORR10]], 1, [[MVE_VPNOT8]], $noreg, undef [[MVE_VORR11]]
   ; CHECK-NEXT:   [[MVE_VPNOT9:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT8]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR12:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR11]], [[MVE_VORR11]], 1, [[MVE_VPNOT9]], $noreg, undef [[MVE_VORR12]]
@@ -685,14 +714,14 @@ body:             |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_3:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_3:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT12:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_3]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR18:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT12]], $noreg, undef [[MVE_VORR11]]
+  ; CHECK-NEXT:   [[MVE_VORR18:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT12]], $noreg, undef [[MVE_VORR11]]
   ; CHECK-NEXT:   [[MVE_VPNOT13:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT12]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR19:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT13]], $noreg, undef [[MVE_VORR19]]
+  ; CHECK-NEXT:   [[MVE_VORR19:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT13]], $noreg, undef [[MVE_VORR19]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
-  ; CHECK-NEXT:   [[VMSR_P0_:%[0-9]+]]:vccr = VMSR_P0 killed %32:gpr, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   [[VMSR_P0_:%[0-9]+]]:vccr = VMSR_P0 killed [[DEF2]], 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT14:%[0-9]+]]:vccr = MVE_VPNOT [[VMSR_P0_]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR20:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR19]], [[MVE_VORR19]], 1, [[MVE_VPNOT14]], $noreg, undef [[MVE_VORR20]]
   ; CHECK-NEXT:   [[MVE_VPNOT15:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT14]], 0, $noreg, $noreg
@@ -703,11 +732,15 @@ body:             |
   ; CHECK-NEXT:   [[MVE_VORR23:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR22]], [[MVE_VORR22]], 1, [[MVE_VPNOT17]], $noreg, undef [[MVE_VORR23]]
   ; CHECK-NEXT:   [[MVE_VPNOT18:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT17]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR24:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR23]], [[MVE_VORR23]], 1, [[MVE_VPNOT18]], $noreg, undef [[MVE_VORR24]]
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   bb.0:
     ;
     ; Basic test case
     ;
+
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
+    %32:gpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:vccr = MVE_VPNOT %0, 0, $noreg, $noreg
     %4:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, %3, $noreg, undef %4
@@ -830,23 +863,27 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 1, [[MVE_VCMPs32_]], $noreg
-  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR]]
+  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR]]
   ; CHECK-NEXT:   [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR]], [[MVE_VORR]], 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR1]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT1:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 1, [[MVE_VCMPs32_1]], $noreg
-  ; CHECK-NEXT:   [[MVE_VORR2:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, [[MVE_VPNOT1]], $noreg, undef [[MVE_VORR]]
-  ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VCMPs32_1]], $noreg, undef [[MVE_VORR1]]
-  ; CHECK-NEXT:   [[MVE_VORR4:%[0-9]+]]:mqpr = MVE_VORR %2:mqpr, %1:mqpr, 1, [[MVE_VPNOT1]], $noreg, undef %11:mqpr
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
+  ; CHECK-NEXT:   [[MVE_VORR2:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF1]], 1, [[MVE_VPNOT1]], $noreg, undef [[MVE_VORR]]
+  ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VCMPs32_1]], $noreg, undef [[MVE_VORR1]]
+  ; CHECK-NEXT:   [[MVE_VORR4:%[0-9]+]]:mqpr = MVE_VORR [[DEF1]], [[DEF]], 1, [[MVE_VPNOT1]], $noreg, undef %11:mqpr
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   ;
   ; Tests that predicated VPNOTs are not considered by this pass
   ; (This means that these examples should not be optimized.)
   ;
   bb.0:
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:vccr = MVE_VPNOT %0, 1, %0, $noreg
     %4:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, %0, $noreg, undef %4
@@ -893,24 +930,28 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR]]
-  ; CHECK-NEXT:   [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR %2:mqpr, %1:mqpr, 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR1]]
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF1]], 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR]]
+  ; CHECK-NEXT:   [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[DEF1]], [[DEF]], 1, [[MVE_VCMPs32_]], $noreg, undef [[MVE_VORR1]]
   ; CHECK-NEXT:   [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR2:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR]], [[MVE_VORR1]], 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR2]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, [[MVE_VCMPs32_1]], $noreg, undef [[MVE_VORR3]]
-  ; CHECK-NEXT:   [[MVE_VORR4:%[0-9]+]]:mqpr = MVE_VORR %2:mqpr, %1:mqpr, 1, [[MVE_VCMPs32_1]], $noreg, undef [[MVE_VORR4]]
+  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF1]], 1, [[MVE_VCMPs32_1]], $noreg, undef [[MVE_VORR3]]
+  ; CHECK-NEXT:   [[MVE_VORR4:%[0-9]+]]:mqpr = MVE_VORR [[DEF1]], [[DEF]], 1, [[MVE_VCMPs32_1]], $noreg, undef [[MVE_VORR4]]
   ; CHECK-NEXT:   [[MVE_VPNOT1:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_1]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR5:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR3]], [[MVE_VORR4]], 1, [[MVE_VPNOT1]], $noreg, undef [[MVE_VORR5]]
-  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit %1:mqpr
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit [[DEF]]
   ;
   ; Tests that the first VPNOT is moved down when the result of the VCMP is used
   ; before the first usage of the VPNOT's result.
   ;
   bb.0:
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:vccr = MVE_VPNOT %0, 0, $noreg, $noreg
     %4:mqpr = MVE_VORR %1:mqpr, %2:mqpr, 1, %0, $noreg, undef %4
@@ -934,9 +975,11 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:mqpr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[MVE_VCMPs32_:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR]]
+  ; CHECK-NEXT:   [[MVE_VORR:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR]]
   ; CHECK-NEXT:   [[MVE_VPNOT1:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR1:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR]], [[MVE_VORR]], 1, [[MVE_VPNOT1]], $noreg, undef [[MVE_VORR1]]
   ; CHECK-NEXT:   [[VMSR_P0_:%[0-9]+]]:vccr = VMSR_P0 killed %7:gpr, 14 /* CC::al */, $noreg
@@ -944,12 +987,12 @@ body:             |
   ; CHECK-NEXT:   [[MVE_VORR3:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR2]], [[MVE_VORR2]], 1, [[MVE_VPNOT]], $noreg, undef [[MVE_VORR3]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_1:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF]], [[DEF1]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VPNOT2:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VCMPs32_1]], 0, $noreg, $noreg
-  ; CHECK-NEXT:   [[MVE_VORR4:%[0-9]+]]:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, [[MVE_VPNOT2]], $noreg, undef [[MVE_VORR]]
+  ; CHECK-NEXT:   [[MVE_VORR4:%[0-9]+]]:mqpr = MVE_VORR [[DEF]], [[DEF]], 1, [[MVE_VPNOT2]], $noreg, undef [[MVE_VORR]]
   ; CHECK-NEXT:   [[MVE_VPNOT3:%[0-9]+]]:vccr = MVE_VPNOT [[MVE_VPNOT2]], 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR5:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR4]], [[MVE_VORR4]], 1, [[MVE_VPNOT3]], $noreg, undef [[MVE_VORR5]]
-  ; CHECK-NEXT:   [[MVE_VCMPs32_2:%[0-9]+]]:vccr = MVE_VCMPs32 %2:mqpr, %1:mqpr, 10, 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[MVE_VCMPs32_2:%[0-9]+]]:vccr = MVE_VCMPs32 [[DEF1]], [[DEF]], 10, 0, $noreg, $noreg
   ; CHECK-NEXT:   [[MVE_VORR6:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR5]], [[MVE_VORR5]], 1, [[MVE_VPNOT2]], $noreg, undef [[MVE_VORR6]]
   ; CHECK-NEXT:   [[MVE_VORR7:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR6]], [[MVE_VORR6]], 1, [[MVE_VCMPs32_1]], $noreg, undef [[MVE_VORR7]]
   ; CHECK-NEXT:   [[MVE_VORR8:%[0-9]+]]:mqpr = MVE_VORR [[MVE_VORR7]], [[MVE_VORR7]], 1, [[MVE_VPNOT2]], $noreg, undef [[MVE_VORR8]]
@@ -958,6 +1001,8 @@ body:             |
   ; that writes to VPR, and that doesn't use any of the registers we care about.
   ;
   bb.0:
+    %1:mqpr = IMPLICIT_DEF
+    %2:mqpr = IMPLICIT_DEF
     %0:vccr = MVE_VCMPs32 %1:mqpr, %2:mqpr, 10, 0, $noreg, $noreg
     %3:vccr = MVE_VPNOT %0, 0, $noreg, $noreg
     %4:mqpr = MVE_VORR %1:mqpr, %1:mqpr, 1, %3, $noreg, undef %4
