@@ -75,9 +75,6 @@ enum class TemplateSubstitutionKind : char {
   class MultiLevelTemplateArgumentList {
     /// The template argument list at a certain template depth
     using ArgList = ArrayRef<TemplateArgument>;
-    using ArgListsIterator = SmallVector<ArgList, 4>::reverse_iterator;
-    using ConstArgListsIterator =
-        SmallVector<ArgList, 4>::const_reverse_iterator;
 
     /// The template argument lists, stored from the innermost template
     /// argument list (first) to the outermost template argument list (last).
@@ -124,12 +121,6 @@ enum class TemplateSubstitutionKind : char {
       return TemplateArgumentLists.size();
     }
 
-    /// Determine the number of substituted args at 'Depth'.
-    unsigned getNumSubstitutedArgs(unsigned Depth) const {
-      assert(NumRetainedOuterLevels <= Depth && Depth < getNumLevels());
-      return TemplateArgumentLists[getNumLevels() - Depth - 1].size();
-    }
-
     unsigned getNumRetainedOuterLevels() const {
       return NumRetainedOuterLevels;
     }
@@ -165,14 +156,6 @@ enum class TemplateSubstitutionKind : char {
         return false;
 
       return !(*this)(Depth, Index).isNull();
-    }
-
-    bool isAnyArgInstantiationDependent() const {
-      for (ArgList List : TemplateArgumentLists)
-        for (const TemplateArgument &TA : List)
-          if (TA.isInstantiationDependent())
-            return true;
-      return false;
     }
 
     /// Clear out a specific template argument.
@@ -214,16 +197,6 @@ enum class TemplateSubstitutionKind : char {
     const ArgList &getInnermost() const {
       return TemplateArgumentLists.front();
     }
-
-    /// Retrieve the outermost template argument list.
-    const ArgList &getOutermost() const { return TemplateArgumentLists.back(); }
-
-    ArgListsIterator begin() { return TemplateArgumentLists.rbegin(); }
-    ConstArgListsIterator begin() const {
-      return TemplateArgumentLists.rbegin();
-    }
-    ArgListsIterator end() { return TemplateArgumentLists.rend(); }
-    ConstArgListsIterator end() const { return TemplateArgumentLists.rend(); }
   };
 
   /// The context in which partial ordering of function templates occurs.
