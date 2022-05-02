@@ -14,10 +14,51 @@
 #ifndef LLVM_UTILS_TABLEGEN_VARLENCODEEMITTERGEN_H
 #define LLVM_UTILS_TABLEGEN_VARLENCODEEMITTERGEN_H
 
+#include "llvm/TableGen/Record.h"
+
 namespace llvm {
 
-class RecordKeeper;
-class raw_ostream;
+struct EncodingSegment {
+  unsigned BitWidth;
+  const Init *Value;
+  StringRef CustomEncoder = "";
+};
+
+class VarLenInst {
+  const RecordVal *TheDef;
+  size_t NumBits;
+
+  // Set if any of the segment is not fixed value.
+  bool HasDynamicSegment;
+
+  SmallVector<EncodingSegment, 4> Segments;
+
+  void buildRec(const DagInit *DI);
+
+  StringRef getCustomEncoderName(const Init *EI) const {
+    if (const auto *DI = dyn_cast<DagInit>(EI)) {
+      if (DI->getNumArgs() && isa<StringInit>(DI->getArg(0)))
+        return cast<StringInit>(DI->getArg(0))->getValue();
+    }
+    return "";
+  }
+
+public:
+  VarLenInst() : TheDef(nullptr), NumBits(0U), HasDynamicSegment(false) {}
+
+  explicit VarLenInst(const DagInit *DI, const RecordVal *TheDef);
+
+  /// Number of bits
+  size_t size() const { return NumBits; }
+
+  using const_iterator = decltype(Segments)::const_iterator;
+
+  const_iterator begin() const { return Segments.begin(); }
+  const_iterator end() const { return Segments.end(); }
+  size_t getNumSegments() const { return Segments.size(); }
+
+  bool isFixedValueOnly() const { return !HasDynamicSegment; }
+};
 
 void emitVarLenCodeEmitter(RecordKeeper &R, raw_ostream &OS);
 
