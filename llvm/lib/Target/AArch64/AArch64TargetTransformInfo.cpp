@@ -371,6 +371,49 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         return Entry->Cost;
     break;
   }
+  case Intrinsic::fptosi_sat:
+  case Intrinsic::fptoui_sat: {
+    if (ICA.getArgTypes().empty())
+      break;
+    bool IsSigned = ICA.getID() == Intrinsic::fptosi_sat;
+    auto LT = TLI->getTypeLegalizationCost(DL, ICA.getArgTypes()[0]);
+    EVT MTy = TLI->getValueType(DL, RetTy);
+    // Check for the legal types, which are where the size of the input and the
+    // output are the same, or we are using cvt f64->i32 or f32->i64.
+    if ((LT.second == MVT::f32 || LT.second == MVT::f64 ||
+         LT.second == MVT::v2f32 || LT.second == MVT::v4f32 ||
+         LT.second == MVT::v2f64) &&
+        (LT.second.getScalarSizeInBits() == MTy.getScalarSizeInBits() ||
+         (LT.second == MVT::f64 && MTy == MVT::i32) ||
+         (LT.second == MVT::f32 && MTy == MVT::i64)))
+      return LT.first;
+    // Similarly for fp16 sizes
+    if (ST->hasFullFP16() &&
+        ((LT.second == MVT::f16 && MTy == MVT::i32) ||
+         ((LT.second == MVT::v4f16 || LT.second == MVT::v8f16) &&
+          (LT.second.getScalarSizeInBits() == MTy.getScalarSizeInBits()))))
+      return LT.first;
+
+    // Otherwise we use a legal convert followed by a min+max
+    if ((LT.second.getScalarType() == MVT::f32 ||
+         LT.second.getScalarType() == MVT::f64 ||
+         (ST->hasFullFP16() && LT.second.getScalarType() == MVT::f16)) &&
+        LT.second.getScalarSizeInBits() >= MTy.getScalarSizeInBits()) {
+      Type *LegalTy =
+          Type::getIntNTy(RetTy->getContext(), LT.second.getScalarSizeInBits());
+      if (LT.second.isVector())
+        LegalTy = VectorType::get(LegalTy, LT.second.getVectorElementCount());
+      InstructionCost Cost = 1;
+      IntrinsicCostAttributes Attrs1(IsSigned ? Intrinsic::smin : Intrinsic::umin,
+                                    LegalTy, {LegalTy, LegalTy});
+      Cost += getIntrinsicInstrCost(Attrs1, CostKind);
+      IntrinsicCostAttributes Attrs2(IsSigned ? Intrinsic::smax : Intrinsic::umax,
+                                    LegalTy, {LegalTy, LegalTy});
+      Cost += getIntrinsicInstrCost(Attrs2, CostKind);
+      return LT.first * Cost;
+    }
+    break;
+  }
   default:
     break;
   }
