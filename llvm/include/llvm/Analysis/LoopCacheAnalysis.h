@@ -116,7 +116,7 @@ private:
   /// succesfully located and a negative value otherwise. For example given the
   /// indexed reference 'A[i][2j+1][3k+2]', the call
   /// 'getSubscriptIndex(loop-k)' would return value 2.
-  unsigned getSubscriptIndex(const Loop &L) const;
+  int getSubscriptIndex(const Loop &L) const;
 
   /// Return the coefficient used in the rightmost dimension.
   const SCEV *getLastCoefficient() const;
