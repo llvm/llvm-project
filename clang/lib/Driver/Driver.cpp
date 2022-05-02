@@ -3109,14 +3109,14 @@ class OffloadingActionBuilder final {
               : C.getSingleOffloadToolChain<Action::OFK_HIP>());
 
       Arg *PartialCompilationArg = Args.getLastArg(
-          options::OPT_cuda_host_only, options::OPT_cuda_device_only,
-          options::OPT_cuda_compile_host_device);
-      CompileHostOnly = PartialCompilationArg &&
-                        PartialCompilationArg->getOption().matches(
-                            options::OPT_cuda_host_only);
-      CompileDeviceOnly = PartialCompilationArg &&
-                          PartialCompilationArg->getOption().matches(
-                              options::OPT_cuda_device_only);
+          options::OPT_offload_host_only, options::OPT_offload_device_only,
+          options::OPT_offload_host_device);
+      CompileHostOnly =
+          PartialCompilationArg && PartialCompilationArg->getOption().matches(
+                                       options::OPT_offload_host_only);
+      CompileDeviceOnly =
+          PartialCompilationArg && PartialCompilationArg->getOption().matches(
+                                       options::OPT_offload_device_only);
       EmitLLVM = Args.getLastArg(options::OPT_emit_llvm);
       EmitAsm = Args.getLastArg(options::OPT_S);
       FixedCUID = Args.getLastArgValue(options::OPT_cuid_EQ);
@@ -3767,7 +3767,7 @@ class OffloadingActionBuilder final {
 
     bool initialize() override {
       if (Arg *cu_dev_only =
-              C.getInputArgs().getLastArg(options::OPT_cuda_device_only)) {
+              C.getInputArgs().getLastArg(options::OPT_offload_device_only)) {
         cu_dev_only->claim();
         CompileDeviceOnly = true;
         // TODO: Check emitting IR for OpenMP when cuda-device-only is set
@@ -4355,11 +4355,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         break;
       }
 
-      // Try to build the offloading actions and add the result as a dependency
-      // to the host.
-      if (UseNewOffloadingDriver)
-        Current = BuildOffloadingActions(C, Args, I, Current);
-
       // FIXME: Should we include any prior module file outputs as inputs of
       // later actions in the same command line?
 
@@ -4382,6 +4377,11 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       if (!UseNewOffloadingDriver)
         if (OffloadBuilder.addHostDependenceToDeviceActions(Current, InputArg))
           break;
+
+      // Try to build the offloading actions and add the result as a dependency
+      // to the host.
+      if (UseNewOffloadingDriver)
+        Current = BuildOffloadingActions(C, Args, I, Current);
 
       if (Current->getType() == types::TY_Nothing)
         break;
@@ -4505,10 +4505,10 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   // Claim ignored clang-cl options.
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 
-  // Claim --cuda-host-only and --cuda-compile-host-device, which may be passed
-  // to non-CUDA compilations and should not trigger warnings there.
-  Args.ClaimAllArgs(options::OPT_cuda_host_only);
-  Args.ClaimAllArgs(options::OPT_cuda_compile_host_device);
+  // Claim --offload-host-only and --offload-compile-host-device, which may be
+  // passed to non-CUDA compilations and should not trigger warnings there.
+  Args.ClaimAllArgs(options::OPT_offload_host_only);
+  Args.ClaimAllArgs(options::OPT_offload_host_device);
 }
 
 /// Returns the canonical name for the offloading architecture when using HIP or
@@ -4610,13 +4610,21 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
                                        llvm::opt::DerivedArgList &Args,
                                        const InputTy &Input,
                                        Action *HostAction) const {
-  if (!isa<CompileJobAction>(HostAction))
+  const Arg *Mode = Args.getLastArg(options::OPT_offload_host_only,
+                                    options::OPT_offload_device_only,
+                                    options::OPT_offload_host_device);
+  const bool HostOnly =
+      Mode && Mode->getOption().matches(options::OPT_offload_host_only);
+  const bool DeviceOnly =
+      Mode && Mode->getOption().matches(options::OPT_offload_device_only);
+
+  // Don't build offloading actions if explicitly disabled or we do not have a
+  // compile action to embed it in. If preprocessing only ignore embedding.
+  if (HostOnly || !(isa<CompileJobAction>(HostAction) ||
+                    getFinalPhase(Args) == phases::Preprocess))
     return HostAction;
 
   OffloadAction::DeviceDependences DDeps;
-
-  types::ID InputType = Input.first;
-  const Arg *InputArg = Input.second;
 
   const Action::OffloadKind OffloadKinds[] = {
       Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP};
@@ -4631,6 +4639,9 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
 
     if (ToolChains.empty())
       continue;
+
+    types::ID InputType = Input.first;
+    const Arg *InputArg = Input.second;
 
     // Get the product of all bound architectures and toolchains.
     SmallVector<std::pair<const ToolChain *, StringRef>> TCAndArchs;
@@ -4656,7 +4667,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       for (Action *&A : DeviceActions) {
         A = ConstructPhaseAction(C, Args, Phase, A, Kind);
 
-        if (isa<CompileJobAction>(A) && Kind == Action::OFK_OpenMP) {
+        if (isa<CompileJobAction>(A) && isa<CompileJobAction>(HostAction) &&
+            Kind == Action::OFK_OpenMP) {
           // OpenMP offloading has a dependency on the host compile action to
           // identify which declarations need to be emitted. This shouldn't be
           // collapsed with any other actions so we can use it in the device.
@@ -4689,6 +4701,9 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       ++TCAndArch;
     }
   }
+
+  if (DeviceOnly)
+    return C.MakeAction<OffloadAction>(DDeps, types::TY_Nothing);
 
   OffloadAction::HostDependence HDep(
       *HostAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),

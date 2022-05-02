@@ -523,20 +523,16 @@ parseWsLoopControl(OpAsmParser &parser, Region &region,
                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
                    SmallVectorImpl<Type> &loopVarTypes, UnitAttr &inclusive) {
   // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::UnresolvedOperand> ivs;
-  if (parser.parseOperandList(ivs, OpAsmParser::Delimiter::Paren,
-                              /*allowResultNumber=*/false))
-    return failure();
-
-  size_t numIVs = ivs.size();
+  SmallVector<OpAsmParser::Argument> ivs;
   Type loopVarType;
-  if (parser.parseColonType(loopVarType) ||
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
+      parser.parseColonType(loopVarType) ||
       // Parse loop bounds.
       parser.parseEqual() ||
-      parser.parseOperandList(lowerBound, numIVs,
+      parser.parseOperandList(lowerBound, ivs.size(),
                               OpAsmParser::Delimiter::Paren) ||
       parser.parseKeyword("to") ||
-      parser.parseOperandList(upperBound, numIVs,
+      parser.parseOperandList(upperBound, ivs.size(),
                               OpAsmParser::Delimiter::Paren))
     return failure();
 
@@ -545,15 +541,14 @@ parseWsLoopControl(OpAsmParser &parser, Region &region,
 
   // Parse step values.
   if (parser.parseKeyword("step") ||
-      parser.parseOperandList(steps, numIVs, OpAsmParser::Delimiter::Paren))
+      parser.parseOperandList(steps, ivs.size(), OpAsmParser::Delimiter::Paren))
     return failure();
 
   // Now parse the body.
-  loopVarTypes = SmallVector<Type>(numIVs, loopVarType);
-  SmallVector<OpAsmParser::UnresolvedOperand> blockArgs(ivs);
-  if (parser.parseRegion(region, blockArgs, loopVarTypes))
-    return failure();
-  return success();
+  loopVarTypes = SmallVector<Type>(ivs.size(), loopVarType);
+  for (auto &iv : ivs)
+    iv.type = loopVarType;
+  return parser.parseRegion(region, ivs);
 }
 
 void printWsLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
@@ -582,33 +577,28 @@ void printWsLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
 /// clause ::= TODO
 ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::UnresolvedOperand> ivs;
-  if (parser.parseOperandList(ivs, OpAsmParser::Delimiter::Paren,
-                              /*allowResultNumber=*/false))
-    return failure();
-  int numIVs = static_cast<int>(ivs.size());
+  SmallVector<OpAsmParser::Argument> ivs;
   Type loopVarType;
-  if (parser.parseColonType(loopVarType))
-    return failure();
-  // Parse loop bounds.
-  SmallVector<OpAsmParser::UnresolvedOperand> lower;
-  if (parser.parseEqual() ||
-      parser.parseOperandList(lower, numIVs, OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(lower, loopVarType, result.operands))
-    return failure();
-  SmallVector<OpAsmParser::UnresolvedOperand> upper;
-  if (parser.parseKeyword("to") ||
-      parser.parseOperandList(upper, numIVs, OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(upper, loopVarType, result.operands))
-    return failure();
-
-  // Parse step values.
-  SmallVector<OpAsmParser::UnresolvedOperand> steps;
-  if (parser.parseKeyword("step") ||
-      parser.parseOperandList(steps, numIVs, OpAsmParser::Delimiter::Paren) ||
+  SmallVector<OpAsmParser::UnresolvedOperand> lower, upper, steps;
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
+      parser.parseColonType(loopVarType) ||
+      // Parse loop bounds.
+      parser.parseEqual() ||
+      parser.parseOperandList(lower, ivs.size(),
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(lower, loopVarType, result.operands) ||
+      parser.parseKeyword("to") ||
+      parser.parseOperandList(upper, ivs.size(),
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(upper, loopVarType, result.operands) ||
+      // Parse step values.
+      parser.parseKeyword("step") ||
+      parser.parseOperandList(steps, ivs.size(),
+                              OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(steps, loopVarType, result.operands))
     return failure();
 
+  int numIVs = static_cast<int>(ivs.size());
   SmallVector<int> segments{numIVs, numIVs, numIVs};
   // TODO: Add parseClauses() when we support clauses
   result.addAttribute("operand_segment_sizes",
@@ -616,11 +606,9 @@ ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Now parse the body.
   Region *body = result.addRegion();
-  SmallVector<Type> ivTypes(numIVs, loopVarType);
-  SmallVector<OpAsmParser::UnresolvedOperand> blockArgs(ivs);
-  if (parser.parseRegion(*body, blockArgs, ivTypes))
-    return failure();
-  return success();
+  for (auto &iv : ivs)
+    iv.type = loopVarType;
+  return parser.parseRegion(*body, ivs);
 }
 
 void SimdLoopOp::print(OpAsmPrinter &p) {

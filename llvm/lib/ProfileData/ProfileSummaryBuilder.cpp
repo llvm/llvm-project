@@ -196,7 +196,7 @@ SampleProfileSummaryBuilder::computeSummaryForProfiles(
   // more function profiles each with lower counts, which in turn leads to lower
   // hot thresholds. To compensate for that, by default we merge context
   // profiles before computing profile summary.
-  if (UseContextLessSummary || (sampleprof::FunctionSamples::ProfileIsCSFlat &&
+  if (UseContextLessSummary || (sampleprof::FunctionSamples::ProfileIsCS &&
                                 !UseContextLessSummary.getNumOccurrences())) {
     for (const auto &I : Profiles) {
       ContextLessProfiles[I.second.getName()].merge(I.second);

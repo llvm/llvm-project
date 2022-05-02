@@ -8,21 +8,21 @@
 ; CHECK: )
 ; CHECK: {
 ; CHECK: .loc 1 1 0
-; CHECK: Lfunc_begin0:
+; CHECK: $L__func_begin0:
 ; CHECK: .loc 1 1 0
 ; CHECK: .loc 1 1 0
 ; CHECK: ret;
-; CHECK: Lfunc_end0:
+; CHECK: $L__func_end0:
 ; CHECK: }
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) a(
 ; CHECK: .param .b32 a_param_0
 ; CHECK: )
 ; CHECK: {
-; CHECK: Lfunc_begin1:
+; CHECK: $L__func_begin1:
 ; CHECK-NOT: .loc
 ; CHECK: ret;
-; CHECK: Lfunc_end1:
+; CHECK: $L__func_end1:
 ; CHECK: }
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) d(
@@ -30,10 +30,10 @@
 ; CHECK: )
 ; CHECK: {
 ; CHECK: .loc 1 3 0
-; CHECK: Lfunc_begin2:
+; CHECK: $L__func_begin2:
 ; CHECK: .loc 1 3 0
 ; CHECK: ret;
-; CHECK: Lfunc_end2:
+; CHECK: $L__func_end2:
 ; CHECK: }
 
 ; CHECK: .file 1 "{{.*}}b.c"
@@ -221,11 +221,11 @@ entry:
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 101
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end2                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end2                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 2                                // Abbrev [2] 0x65:0x27 DW_TAG_subprogram
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end0                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
 ; CHECK-NEXT: .b8 98                               // DW_AT_name
@@ -243,8 +243,8 @@ entry:
 ; CHECK-NEXT: .b32 179                             // DW_AT_type
 ; CHECK-NEXT: .b8 0                                // End Of Children Mark
 ; CHECK-NEXT: .b8 2                                // Abbrev [2] 0x8c:0x27 DW_TAG_subprogram
-; CHECK-NEXT: .b64 Lfunc_begin2                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end2                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin2                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end2                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
 ; CHECK-NEXT: .b8 100                              // DW_AT_name

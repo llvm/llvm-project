@@ -453,7 +453,8 @@ entry:
 ; CHECK-NEXT:    br i1 %cond1, label %entry.split, label %loop_exit.split
 ;
 ; CHECK:       entry.split:
-; CHECK-NEXT:    br i1 %cond2, label %entry.split.split, label %loop_exit
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond2
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split.split, label %loop_exit
 ;
 ; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label %loop_begin
@@ -498,7 +499,8 @@ entry:
 ; CHECK-NEXT:    br i1 %cond1, label %entry.split, label %loop_exit.split
 ;
 ; CHECK:       entry.split:
-; CHECK-NEXT:    br i1 %cond2, label %entry.split.split, label %loop_exit
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond2
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split.split, label %loop_exit
 ;
 ; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label %loop_begin
@@ -543,7 +545,8 @@ entry:
 ; CHECK-NEXT:    br i1 %cond1, label %entry.split, label %loop_exit.split
 ;
 ; CHECK:       entry.split:
-; CHECK-NEXT:    br i1 %cond2, label %loop_exit.split1, label %entry.split.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond2
+; CHECK-NEXT:    br i1 [[FROZEN]], label %loop_exit.split1, label %entry.split.split
 ;
 ; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label %loop_begin
@@ -588,9 +591,13 @@ define i32 @test_partial_condition_unswitch_or(i32* %var, i1 %cond1, i1 %cond2, 
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    %[[INV_OR1:.*]] = or i1 %cond4, %cond2
-; CHECK-NEXT:    %[[INV_OR2:.*]] = or i1 %[[INV_OR1]], %cond3
-; CHECK-NEXT:    %[[INV_OR3:.*]] = or i1 %[[INV_OR2]], %cond1
+; CHECK-NEXT:    %[[C4_FR:.+]] = freeze i1 %cond4
+; CHECK-NEXT:    %[[C2_FR:.+]] = freeze i1 %cond2
+; CHECK-NEXT:    %[[C3_FR:.+]] = freeze i1 %cond3
+; CHECK-NEXT:    %[[C1_FR:.+]] = freeze i1 %cond1
+; CHECK-NEXT:    %[[INV_OR1:.*]] = or i1 %[[C4_FR]], %[[C2_FR]]
+; CHECK-NEXT:    %[[INV_OR2:.*]] = or i1 %[[INV_OR1]], %[[C3_FR]]
+; CHECK-NEXT:    %[[INV_OR3:.*]] = or i1 %[[INV_OR2]], %[[C1_FR]]
 ; CHECK-NEXT:    br i1 %[[INV_OR3]], label %loop_exit.split, label %entry.split
 ;
 ; CHECK:       entry.split:
@@ -639,7 +646,8 @@ define i32 @test_partial_condition_unswitch_with_lcssa_phi1(i32* %var, i1 %cond,
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split, label %loop_exit.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split, label %loop_exit.split
 ;
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label %loop_begin
@@ -679,7 +687,8 @@ define i32 @test_partial_condition_unswitch_with_lcssa_phi2(i32* %var, i1 %cond,
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split, label %loop_exit.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split, label %loop_exit.split
 ;
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label %loop_begin
