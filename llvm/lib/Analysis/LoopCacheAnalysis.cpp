@@ -319,7 +319,7 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     // iterations of the i-loop multiplied by iterations of the j-loop.
     RefCost = TripCount;
 
-    unsigned Index = getSubscriptIndex(L);
+    int Index = getSubscriptIndex(L);
     assert(Index >= 0 && "Cound not locate a valid Index");
 
     for (unsigned I = Index + 1; I < getNumSubscripts() - 1; ++I) {
@@ -510,8 +510,8 @@ bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
   return SE.isKnownPredicate(ICmpInst::ICMP_ULT, Stride, CacheLineSize);
 }
 
-unsigned IndexedReference::getSubscriptIndex(const Loop &L) const {
-  for (auto Idx : seq<unsigned>(0, getNumSubscripts())) {
+int IndexedReference::getSubscriptIndex(const Loop &L) const {
+  for (auto Idx : seq<int>(0, getNumSubscripts())) {
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(getSubscript(Idx));
     if (AR && AR->getLoop() == &L) {
       return Idx;
