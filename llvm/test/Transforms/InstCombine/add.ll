@@ -1270,8 +1270,8 @@ define <2 x i8> @ashr_add_sexts(<2 x i1> %x, <2 x i1> %y) {
 
 define i32 @cmp_math_sexts(i32 %x, i32 %y) {
 ; CHECK-LABEL: @cmp_math_sexts(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[DOTNOT]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %gt = icmp ugt i32 %x, %y
@@ -1391,4 +1391,316 @@ define i8 @add_like_or_t2_extrause(i8 %x) {
   call void @use(i8 %i1) ; extra use
   %r = add i8 %i1, 42
   ret i8 %r
+}
+
+define i8 @add_and_xor(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_and_xor(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %xor = xor i8 %x, -1
+  %and = and i8 %xor, %y
+  %add = add i8 %and, %x
+  ret i8 %add
+}
+
+define i8 @add_and_xor_wrong_const(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_and_xor_wrong_const(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %xor = xor i8 %x, -2
+  %and = and i8 %xor, %y
+  %add = add i8 %and, %x
+  ret i8 %add
+}
+
+define i8 @add_and_xor_wrong_op(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @add_and_xor_wrong_op(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Z:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %xor = xor i8 %z, -1
+  %and = and i8 %xor, %y
+  %add = add i8 %and, %x
+  ret i8 %add
+}
+
+define i8 @add_and_xor_commuted1(i8 %x, i8 %_y) {
+; CHECK-LABEL: @add_and_xor_commuted1(
+; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y]], [[XOR]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %y = udiv i8 42, %_y ; thwart complexity-based canonicalization
+  %xor = xor i8 %x, -1
+  %and = and i8 %y, %xor
+  %add = add i8 %and, %x
+  ret i8 %add
+}
+
+define i8 @add_and_xor_commuted2(i8 %_x, i8 %y) {
+; CHECK-LABEL: @add_and_xor_commuted2(
+; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[AND]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %x = udiv i8 42, %_x ; thwart complexity-based canonicalization
+  %xor = xor i8 %x, -1
+  %and = and i8 %xor, %y
+  %add = add i8 %x, %and
+  ret i8 %add
+}
+
+define i8 @add_and_xor_commuted3(i8 %_x, i8 %_y) {
+; CHECK-LABEL: @add_and_xor_commuted3(
+; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y]], [[XOR]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[X]], [[AND]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %x = udiv i8 42, %_x ; thwart complexity-based canonicalization
+  %y = udiv i8 42, %_y ; thwart complexity-based canonicalization
+  %xor = xor i8 %x, -1
+  %and = and i8 %y, %xor
+  %add = add i8 %x, %and
+  ret i8 %add
+}
+
+define i8 @add_and_xor_extra_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_and_xor_extra_use(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[XOR]])
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %xor = xor i8 %x, -1
+  call void @use(i8 %xor)
+  %and = and i8 %xor, %y
+  call void @use(i8 %and)
+  %add = add i8 %and, %x
+  ret i8 %add
+}
+
+define i8 @add_xor_and_const(i8 %x) {
+; CHECK-LABEL: @add_xor_and_const(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], 42
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %and = and i8 %x, 42
+  %xor = xor i8 %and, 42
+  %add = add i8 %xor, %x
+  ret i8 %add
+}
+
+define i8 @add_xor_and_const_wrong_const(i8 %x) {
+; CHECK-LABEL: @add_xor_and_const_wrong_const(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], 88
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %and = and i8 %x, 42
+  %xor = xor i8 %and, 88
+  %add = add i8 %xor, %x
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_xor_and_var(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %and = and i8 %x, %y
+  call void @use(i8 %and)
+  %xor = xor i8 %and, %y
+  %add = add i8 %xor, %x
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_wrong_op1(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @add_xor_and_var_wrong_op1(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], [[Z:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %and = and i8 %x, %y
+  call void @use(i8 %and)
+  %xor = xor i8 %and, %z
+  %add = add i8 %xor, %x
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_wrong_op2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @add_xor_and_var_wrong_op2(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %and = and i8 %x, %y
+  call void @use(i8 %and)
+  %xor = xor i8 %and, %y
+  %add = add i8 %xor, %z
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_commuted1(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_xor_and_var_commuted1(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %and = and i8 %y, %x
+  call void @use(i8 %and)
+  %xor = xor i8 %and, %y
+  %add = add i8 %xor, %x
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_commuted2(i8 %x, i8 %_y) {
+; CHECK-LABEL: @add_xor_and_var_commuted2(
+; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y]], [[AND]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %y = udiv i8 42, %_y ; thwart complexity-based canonicalization
+  %and = and i8 %x, %y
+  call void @use(i8 %and)
+  %xor = xor i8 %y, %and
+  %add = add i8 %xor, %x
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_commuted3(i8 %x, i8 %_y) {
+; CHECK-LABEL: @add_xor_and_var_commuted3(
+; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y]], [[AND]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %y = udiv i8 42, %_y ; thwart complexity-based canonicalization
+  %and = and i8 %y, %x
+  call void @use(i8 %and)
+  %xor = xor i8 %y, %and
+  %add = add i8 %xor, %x
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_commuted4(i8 %_x, i8 %y) {
+; CHECK-LABEL: @add_xor_and_var_commuted4(
+; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[XOR]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %x = udiv i8 42, %_x ; thwart complexity-based canonicalization
+  %and = and i8 %x, %y
+  call void @use(i8 %and)
+  %xor = xor i8 %and, %y
+  %add = add i8 %x, %xor
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_commuted5(i8 %_x, i8 %y) {
+; CHECK-LABEL: @add_xor_and_var_commuted5(
+; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[XOR]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %x = udiv i8 42, %_x ; thwart complexity-based canonicalization
+  %and = and i8 %y, %x
+  call void @use(i8 %and)
+  %xor = xor i8 %and, %y
+  %add = add i8 %x, %xor
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_commuted6(i8 %_x, i8 %_y) {
+; CHECK-LABEL: @add_xor_and_var_commuted6(
+; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y]], [[AND]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[X]], [[XOR]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %x = udiv i8 42, %_x ; thwart complexity-based canonicalization
+  %y = udiv i8 42, %_y ; thwart complexity-based canonicalization
+  %and = and i8 %x, %y
+  call void @use(i8 %and)
+  %xor = xor i8 %y, %and
+  %add = add i8 %x, %xor
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_commuted7(i8 %_x, i8 %_y) {
+; CHECK-LABEL: @add_xor_and_var_commuted7(
+; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y]], [[X]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y]], [[AND]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[X]], [[XOR]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %x = udiv i8 42, %_x ; thwart complexity-based canonicalization
+  %y = udiv i8 42, %_y ; thwart complexity-based canonicalization
+  %and = and i8 %y, %x
+  call void @use(i8 %and)
+  %xor = xor i8 %y, %and
+  %add = add i8 %x, %xor
+  ret i8 %add
+}
+
+define i8 @add_xor_and_var_extra_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_xor_and_var_extra_use(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], [[Y]]
+; CHECK-NEXT:    call void @use(i8 [[XOR]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %and = and i8 %x, %y
+  call void @use(i8 %and)
+  %xor = xor i8 %and, %y
+  call void @use(i8 %xor)
+  %add = add i8 %xor, %x
+  ret i8 %add
 }
