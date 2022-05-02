@@ -146,6 +146,7 @@ categorize(const index::SymbolInfo &D) {
   case index::SymbolKind::Using:
   case index::SymbolKind::Module:
   case index::SymbolKind::Unknown:
+  case index::SymbolKind::CommentTag:
     return SymbolQualitySignals::Unknown;
   }
   llvm_unreachable("Unknown index::SymbolKind");

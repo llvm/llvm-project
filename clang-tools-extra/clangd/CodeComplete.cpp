@@ -82,6 +82,7 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
   using SK = index::SymbolKind;
   switch (Kind) {
   case SK::Unknown:
+  case SK::CommentTag:
     return CompletionItemKind::Missing;
   case SK::Module:
   case SK::Namespace:
