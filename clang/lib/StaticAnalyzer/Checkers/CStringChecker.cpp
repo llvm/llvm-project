@@ -355,8 +355,8 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
   // Get the index of the accessed element.
   DefinedOrUnknownSVal Idx = ER->getIndex().castAs<DefinedOrUnknownSVal>();
 
-  ProgramStateRef StInBound = state->assumeInBound(Idx, Size, true);
-  ProgramStateRef StOutBound = state->assumeInBound(Idx, Size, false);
+  ProgramStateRef StInBound, StOutBound;
+  std::tie(StInBound, StOutBound) = state->assumeInBoundDual(Idx, Size);
   if (StOutBound && !StInBound) {
     // These checks are either enabled by the CString out-of-bounds checker
     // explicitly or implicitly by the Malloc checker.

@@ -225,6 +225,10 @@ public:
   LLVM_NODISCARD std::pair<ProgramStateRef, ProgramStateRef>
   assume(DefinedOrUnknownSVal cond) const;
 
+  LLVM_NODISCARD std::pair<ProgramStateRef, ProgramStateRef>
+  assumeInBoundDual(DefinedOrUnknownSVal idx, DefinedOrUnknownSVal upperBound,
+                    QualType IndexType = QualType()) const;
+
   LLVM_NODISCARD ProgramStateRef
   assumeInBound(DefinedOrUnknownSVal idx, DefinedOrUnknownSVal upperBound,
                 bool assumption, QualType IndexType = QualType()) const;
