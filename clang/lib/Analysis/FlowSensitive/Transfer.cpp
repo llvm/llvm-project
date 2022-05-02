@@ -33,7 +33,7 @@
 namespace clang {
 namespace dataflow {
 
-static const Expr *skipExprWithCleanups(const Expr *E) {
+const Expr *ignoreExprWithCleanups(const Expr *E) {
   if (auto *C = dyn_cast_or_null<ExprWithCleanups>(E))
     return C->getSubExpr();
   return E;
@@ -155,9 +155,7 @@ public:
       return;
     }
 
-    // The CFG does not contain `ParenExpr` as top-level statements in basic
-    // blocks, however sub-expressions can still be of that type.
-    InitExpr = skipExprWithCleanups(D.getInit()->IgnoreParens());
+    InitExpr = ignoreExprWithCleanups(D.getInit());
     assert(InitExpr != nullptr);
 
     if (D.getType()->isReferenceType()) {
@@ -190,10 +188,7 @@ public:
   }
 
   void VisitImplicitCastExpr(const ImplicitCastExpr *S) {
-    // The CFG does not contain `ParenExpr` as top-level statements in basic
-    // blocks, however sub-expressions can still be of that type.
-    assert(S->getSubExpr() != nullptr);
-    const Expr *SubExpr = S->getSubExpr()->IgnoreParens();
+    const Expr *SubExpr = S->getSubExpr();
     assert(SubExpr != nullptr);
 
     switch (S->getCastKind()) {
@@ -252,10 +247,7 @@ public:
   }
 
   void VisitUnaryOperator(const UnaryOperator *S) {
-    // The CFG does not contain `ParenExpr` as top-level statements in basic
-    // blocks, however sub-expressions can still be of that type.
-    assert(S->getSubExpr() != nullptr);
-    const Expr *SubExpr = S->getSubExpr()->IgnoreParens();
+    const Expr *SubExpr = S->getSubExpr();
     assert(SubExpr != nullptr);
 
     switch (S->getOpcode()) {
@@ -444,9 +436,6 @@ public:
 
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {
     if (S->getCastKind() == CK_ConstructorConversion) {
-      // The CFG does not contain `ParenExpr` as top-level statements in basic
-      // blocks, however sub-expressions can still be of that type.
-      assert(S->getSubExpr() != nullptr);
       const Expr *SubExpr = S->getSubExpr();
       assert(SubExpr != nullptr);
 
@@ -604,7 +593,7 @@ private:
 };
 
 void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env) {
-  assert(!isa<ParenExpr>(&S));
+  assert(!(isa<ParenExpr, ExprWithCleanups>(&S)));
   TransferVisitor(StmtToEnv, Env).Visit(&S);
 }
 

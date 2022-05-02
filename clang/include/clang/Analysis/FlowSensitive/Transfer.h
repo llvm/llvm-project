@@ -35,8 +35,18 @@ public:
 ///
 /// Requirements:
 ///
-///  The type of `S` must not be `ParenExpr`.
+///  `S` must not be `ParenExpr` or `ExprWithCleanups`.
 void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env);
+
+/// Skip past a `ExprWithCleanups` which might surround `E`. Returns null if `E`
+/// is null.
+///
+/// The CFG omits `ExprWithCleanups` nodes (as it does with `ParenExpr`), and so
+/// the transfer function doesn't accept them as valid input. Manual traversal
+/// of the AST should skip and unwrap any `ExprWithCleanups` it might expect to
+/// see. They are safe to skip, as the CFG will emit calls to destructors as
+/// appropriate.
+const Expr *ignoreExprWithCleanups(const Expr *E);
 
 } // namespace dataflow
 } // namespace clang
