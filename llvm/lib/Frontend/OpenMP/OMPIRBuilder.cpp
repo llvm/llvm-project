@@ -517,12 +517,12 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 
 OpenMPIRBuilder::OpenMPIRBuilder(Module &M) : M(M), Builder(M.getContext()) {
   RegionStack.emplace_back(new OMPRegionInfo(
-      RegionKind::Toplevel, omp::OMPD_unknown, /*IsCancellable*/false      ));
+      RegionKind::Function, omp::OMPD_unknown, /*IsCancellable*/false      ));
 }
 
 OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(RegionStack.size() == 1 &&
-         RegionStack.back()->Kind == RegionKind::Toplevel &&
+         RegionStack.back()->Kind == RegionKind::Function &&
          "OMPRegion push/pop must be balanced");
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
 }
@@ -663,7 +663,7 @@ void OpenMPIRBuilder::OMPRegionBreakInfo::assertOK() const {
 #ifndef NDEBUG
   assert(!BB->getTerminator() && "Pending irregular exit must be amendable");
 
-  assert(Target);
+  assert(Target && "Irregular exit requires a target");
   switch (Target->DK) {
   case OMPD_parallel:
     switch (Reason) {
@@ -697,12 +697,22 @@ OpenMPIRBuilder::OMPRegionInfo::OMPRegionInfo(RegionKind Kind,
   assertOK();
 }
 
+void  OpenMPIRBuilder::OMPRegionInfo::addBreak(BasicBlock *BB, omp::Directive Reason,
+    OMPRegionInfo *Target) {
+    assert(IsCancellable &&
+        "Only cancellable region may have irregular exits");
+    assert(!BB->getTerminator() && "Irregular exit must not rejoin the cfg");
+    Breaks.emplace_back(BB, Reason, Target);
+    assertOK();
+}
+
 void OpenMPIRBuilder::OMPRegionInfo::assertOK() const {
 #ifndef NDEBUG
   switch (Kind) {
-  case RegionKind::Toplevel:
+  case RegionKind::Function:
     assert(DK == OMPD_unknown && "toplevel region is not a specific kind");
     assert(!IsCancellable && "top-level is not cancellable");
+    assert(Breaks.empty() && "Topmost region cannot have irregular exits");
     break;
   case RegionKind::CanonicalLoop:
     // TODO
@@ -3405,6 +3415,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   BodyGenCB(/* AllocaIP */ InsertPointTy(),
             /* CodeGenIP */ Builder.saveAndClearIP());
 
+
+
+  //  Exits are handled the following way:
+  //
+  // 1. For the regular region exit, \p FinCB is used by the caller to emit
+  //    finalization code somehwere on the control path exiting the region. exitRegion itself does nothing.
+  //
+  // 2. For irregular region exits that rejoing with the control flow after
+  //    this region, exitRegion emits a branch to \p FinBB containing the finalization code. This is typically that same code as for case 1 avoiding emitting the same finialization code multiple times.
+  //
+  // 3. For irregular region exits that rejoin a surrounding region, exitRegion
+  //    calls \p FinCB to insert the finalization code into the exiting control path. The irregular exit is then added as an irregular exit of the sourrounding loop that, opon its exit, can add its own finialization code and/or rejoin the control flow there.
 
   BasicBlock *FiniStartBB = FiniBB;
   if (FiniCB ) {

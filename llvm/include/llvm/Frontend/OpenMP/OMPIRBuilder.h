@@ -111,7 +111,7 @@ private:
   enum class RegionKind {
     /// Sentinel object so we don't always have to check whether the stack is
     /// empty.
-    Toplevel,
+    Function,
 
     /// Actions on loop-associated directives are deferred until all applyXYZ
     /// actions have been applied to them.
@@ -169,12 +169,7 @@ private:
 
     /// Register an irregular exit to this region.
     void addBreak(BasicBlock *BB, omp::Directive Reason,
-                  OMPRegionInfo *Target) {
-      assert(IsCancellable &&
-             "Only cancellable region may have irregular exits");
-      assert(!BB->getTerminator() && "Irregular exit must not rejoin the cfg");
-      Breaks.emplace_back(BB, Reason, Target);
-    }
+                  OMPRegionInfo *Target) ;
 
     /// Consistency self-check.
     void assertOK() const;
@@ -205,21 +200,8 @@ private:
   /// @}
 
 
- // using RegionBreakCallbackTy = function_ref<void(OMPRegionBreakInfo*)>;
-  //using RegionBreakCallbackTy = function_ref<void(omp::Directive BreakReason)>;
 
-#if 0
-  /// Pop a region from the region stack. Exits are handled the following way:
-  ///
-  /// 1. For the regular region exit, \p FinCB is used by the caller to emit
-  ///    finalization code somehwere on the control path exiting the region. exitRegion itself does nothing.
-  ///
-  /// 2. For irregular region exits that rejoing with the control flow after
-  ///    this region, exitRegion emits a branch to \p FinBB containing the finalization code. This is typically that same code as for case 1 avoiding emitting the same finialization code multiple times.
-  ///
-  /// 3. For irregular region exits that rejoin a surrounding region, exitRegion
-  ///    calls \p FinCB to insert the finalization code into the exiting control path. The irregular exit is then added as an irregular exit of the sourrounding loop that, opon its exit, can add its own finialization code and/or rejoin the control flow there.
-#endif
+  /// Pop a region from the region stack. Net yet rejoined irregular exits fall through the outer surrounding region.
   void exitRegion(OMPRegionInfo *R);
 
 public:
