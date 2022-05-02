@@ -440,23 +440,11 @@ define <4 x float> @reschedule_extract(<4 x float> %a, <4 x float> %b) {
 ;
 ; MINTREESIZE-LABEL: @reschedule_extract(
 ; MINTREESIZE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i32 3
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B]], i32 2
-; MINTREESIZE-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[B]], i32 1
-; MINTREESIZE-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[B]], i32 0
-; MINTREESIZE-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[A:%.*]], i32 3
-; MINTREESIZE-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[A]], i32 2
-; MINTREESIZE-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[A]], i32 1
-; MINTREESIZE-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[A]], i32 0
-; MINTREESIZE-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP8]], i32 0
-; MINTREESIZE-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[TMP4]], i32 1
-; MINTREESIZE-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
-; MINTREESIZE-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> [[TMP11]], float [[TMP3]], i32 1
-; MINTREESIZE-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i32 0
-; MINTREESIZE-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP13]], float [[TMP2]], i32 1
-; MINTREESIZE-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
-; MINTREESIZE-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP1]], i32 1
-; MINTREESIZE-NEXT:    [[TMP17:%.*]] = fadd <4 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <4 x float> [[TMP17]]
+; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[A:%.*]], i32 3
+; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
+; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP1]], i32 1
+; MINTREESIZE-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[A]], [[B]]
+; MINTREESIZE-NEXT:    ret <4 x float> [[TMP5]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %b0 = extractelement <4 x float> %b, i32 0
@@ -490,23 +478,11 @@ define <4 x float> @take_credit(<4 x float> %a, <4 x float> %b) {
 ;
 ; MINTREESIZE-LABEL: @take_credit(
 ; MINTREESIZE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i32 3
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B]], i32 2
-; MINTREESIZE-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[B]], i32 1
-; MINTREESIZE-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[B]], i32 0
-; MINTREESIZE-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[A:%.*]], i32 3
-; MINTREESIZE-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[A]], i32 2
-; MINTREESIZE-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[A]], i32 1
-; MINTREESIZE-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[A]], i32 0
-; MINTREESIZE-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP8]], i32 0
-; MINTREESIZE-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[TMP4]], i32 1
-; MINTREESIZE-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
-; MINTREESIZE-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> [[TMP11]], float [[TMP3]], i32 1
-; MINTREESIZE-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i32 0
-; MINTREESIZE-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP13]], float [[TMP2]], i32 1
-; MINTREESIZE-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
-; MINTREESIZE-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP1]], i32 1
-; MINTREESIZE-NEXT:    [[TMP17:%.*]] = fadd <4 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <4 x float> [[TMP17]]
+; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[A:%.*]], i32 3
+; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
+; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP1]], i32 1
+; MINTREESIZE-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[A]], [[B]]
+; MINTREESIZE-NEXT:    ret <4 x float> [[TMP5]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %b0 = extractelement <4 x float> %b, i32 0
@@ -564,39 +540,11 @@ define <8 x float> @_vadd256(<8 x float> %a, <8 x float> %b) local_unnamed_addr 
 ;
 ; MINTREESIZE-LABEL: @_vadd256(
 ; MINTREESIZE-NEXT:    [[TMP1:%.*]] = extractelement <8 x float> [[B:%.*]], i32 7
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[B]], i32 6
-; MINTREESIZE-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[B]], i32 5
-; MINTREESIZE-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[B]], i32 4
-; MINTREESIZE-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[B]], i32 3
-; MINTREESIZE-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[B]], i32 2
-; MINTREESIZE-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[B]], i32 1
-; MINTREESIZE-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[B]], i32 0
-; MINTREESIZE-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[A:%.*]], i32 7
-; MINTREESIZE-NEXT:    [[TMP10:%.*]] = extractelement <8 x float> [[A]], i32 6
-; MINTREESIZE-NEXT:    [[TMP11:%.*]] = extractelement <8 x float> [[A]], i32 5
-; MINTREESIZE-NEXT:    [[TMP12:%.*]] = extractelement <8 x float> [[A]], i32 4
-; MINTREESIZE-NEXT:    [[TMP13:%.*]] = extractelement <8 x float> [[A]], i32 3
-; MINTREESIZE-NEXT:    [[TMP14:%.*]] = extractelement <8 x float> [[A]], i32 2
-; MINTREESIZE-NEXT:    [[TMP15:%.*]] = extractelement <8 x float> [[A]], i32 1
-; MINTREESIZE-NEXT:    [[TMP16:%.*]] = extractelement <8 x float> [[A]], i32 0
-; MINTREESIZE-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> poison, float [[TMP16]], i32 0
-; MINTREESIZE-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> [[TMP17]], float [[TMP8]], i32 1
-; MINTREESIZE-NEXT:    [[TMP19:%.*]] = insertelement <2 x float> poison, float [[TMP15]], i32 0
-; MINTREESIZE-NEXT:    [[TMP20:%.*]] = insertelement <2 x float> [[TMP19]], float [[TMP7]], i32 1
-; MINTREESIZE-NEXT:    [[TMP21:%.*]] = insertelement <2 x float> poison, float [[TMP14]], i32 0
-; MINTREESIZE-NEXT:    [[TMP22:%.*]] = insertelement <2 x float> [[TMP21]], float [[TMP6]], i32 1
-; MINTREESIZE-NEXT:    [[TMP23:%.*]] = insertelement <2 x float> poison, float [[TMP13]], i32 0
-; MINTREESIZE-NEXT:    [[TMP24:%.*]] = insertelement <2 x float> [[TMP23]], float [[TMP5]], i32 1
-; MINTREESIZE-NEXT:    [[TMP25:%.*]] = insertelement <2 x float> poison, float [[TMP12]], i32 0
-; MINTREESIZE-NEXT:    [[TMP26:%.*]] = insertelement <2 x float> [[TMP25]], float [[TMP4]], i32 1
-; MINTREESIZE-NEXT:    [[TMP27:%.*]] = insertelement <2 x float> poison, float [[TMP11]], i32 0
-; MINTREESIZE-NEXT:    [[TMP28:%.*]] = insertelement <2 x float> [[TMP27]], float [[TMP3]], i32 1
-; MINTREESIZE-NEXT:    [[TMP29:%.*]] = insertelement <2 x float> poison, float [[TMP10]], i32 0
-; MINTREESIZE-NEXT:    [[TMP30:%.*]] = insertelement <2 x float> [[TMP29]], float [[TMP2]], i32 1
-; MINTREESIZE-NEXT:    [[TMP31:%.*]] = insertelement <2 x float> poison, float [[TMP9]], i32 0
-; MINTREESIZE-NEXT:    [[TMP32:%.*]] = insertelement <2 x float> [[TMP31]], float [[TMP1]], i32 1
-; MINTREESIZE-NEXT:    [[TMP33:%.*]] = fadd <8 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <8 x float> [[TMP33]]
+; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[A:%.*]], i32 7
+; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
+; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP1]], i32 1
+; MINTREESIZE-NEXT:    [[TMP5:%.*]] = fadd <8 x float> [[A]], [[B]]
+; MINTREESIZE-NEXT:    ret <8 x float> [[TMP5]]
 ;
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %b, i32 0
