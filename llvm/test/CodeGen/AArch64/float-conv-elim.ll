@@ -45,10 +45,13 @@ define i32 @u32_f32_u24_u32(i32 %a) {
   ret i32 %r
 }
 
+; This requires converting to FP and back.
+
 define i32 @s32_f32_s25_s32(i32 %a) {
 ; CHECK-LABEL: s32_f32_s25_s32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sbfx w0, w0, #0, #25
+; CHECK-NEXT:    scvtf s0, w0
+; CHECK-NEXT:    fcvtzs w0, s0
 ; CHECK-NEXT:    ret
   %f = sitofp i32 %a to float
   %i = fptosi float %f to i25
@@ -68,10 +71,13 @@ define i32 @s32_f32_u25_u32(i32 %a) {
   ret i32 %r
 }
 
+; TODO: This could avoid converting to FP.
+
 define i32 @u32_f32_s25_s32(i32 %a) {
 ; CHECK-LABEL: u32_f32_s25_s32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sbfx w0, w0, #0, #25
+; CHECK-NEXT:    ucvtf s0, w0
+; CHECK-NEXT:    fcvtzs w0, s0
 ; CHECK-NEXT:    ret
   %f = uitofp i32 %a to float
   %i = fptosi float %f to i25
