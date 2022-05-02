@@ -433,6 +433,14 @@ static_library("builtins") {
     }
   }
 
+  if (current_cpu == "avr") {
+    sources += [
+      "avr/exit.S",
+      "avr/mulhi3.S",
+      "avr/mulqi3.S",
+    ]
+  }
+
   if (current_cpu == "hexagon") {
     sources += [
       "hexagon/common_entry_exit_abi1.S",
