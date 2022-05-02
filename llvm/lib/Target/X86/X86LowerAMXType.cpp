@@ -964,7 +964,7 @@ static void combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
 static bool combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
   bool Change = false;
   for (auto *Cast : Casts) {
-    IntrinsicInst *II = dyn_cast<IntrinsicInst>(Cast);
+    auto *II = cast<IntrinsicInst>(Cast);
     // %43 = call <256 x i32> @llvm.x86.cast.tile.to.vector(x86_amx %42)
     // store <256 x i32> %43, <256 x i32>* %p, align 64
     // -->
@@ -984,7 +984,7 @@ static bool combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
         Store->eraseFromParent();
     } else { // x86_cast_vector_to_tile
       SmallVector<Instruction *, 2> DeadLoads;
-      LoadInst *Load = dyn_cast<LoadInst>(Cast->getOperand(0));
+      auto *Load = dyn_cast<LoadInst>(Cast->getOperand(0));
       if (!Load || !Load->hasOneUse())
         continue;
       // %65 = load <256 x i32>, <256 x i32>* %p, align 64
