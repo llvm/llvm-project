@@ -202,11 +202,11 @@ private:
   ///    finalization code somehwere on the control path exiting the region. exitRegion itself does nothing.
   ///
   /// 2. For irregular region exits that rejoing with the control flow after
-  ///    this region, exitRegion emits a branch to \p FinalizationBB containing the finalization code. This is typically that same code as for case 1 avoiding emitting the same finialization code multiple times.
+  ///    this region, exitRegion emits a branch to \p FinBB containing the finalization code. This is typically that same code as for case 1 avoiding emitting the same finialization code multiple times.
   ///
   /// 3. For irregular region exits that rejoin a surrounding region, exitRegion
   ///    calls \p FinCB to insert the finalization code into the exiting control path. The irregular exit is then added as an irregular exit of the sourrounding loop that, opon its exit, can add its own finialization code and/or rejoin the control flow there.
-  void exitRegion(OMPRegionInfo *R, BasicBlock *FinalizationBB,
+  void exitRegion(OMPRegionInfo *R, BasicBlock *FinBB,
                   function_ref<void(InsertPointTy ExitingIP)> FinCB);
 
 public:
