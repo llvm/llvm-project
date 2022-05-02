@@ -1970,7 +1970,7 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
           CGI.Operands[SO.first].MIOperandInfo->getNumArgs()) {
         Init *Arg = CGI.Operands[SO.first].MIOperandInfo->
                       getArg(SO.second);
-        if (DefInit *DI = dyn_cast<DefInit>(Arg))
+        if (DefInit *DI = cast<DefInit>(Arg))
           TypeRecord = DI->getDef();
       }
 
