@@ -23,6 +23,13 @@ void initializeDXILPrepareModulePass(PassRegistry &);
 
 /// Pass to convert modules into DXIL-compatable modules
 ModulePass *createDXILPrepareModulePass();
+
+/// Initializer for DXILOpLowering
+void initializeDXILOpLoweringLegacyPass(PassRegistry &);
+
+/// Pass to lowering LLVM intrinsic call to DXIL op function call.
+ModulePass *createDXILOpLoweringLegacyPass();
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
