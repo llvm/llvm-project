@@ -45,6 +45,7 @@ define void @i32_ZextLoad_i1() {
 ; CHECK-LE-LABEL: i32_ZextLoad_i1:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    plbz r3, GlobLd1@PCREL(0), 1
+; CHECK-LE-NEXT:    clrldi r3, r3, 63
 ; CHECK-LE-NEXT:    pstb r3, GlobSt1@PCREL(0), 1
 ; CHECK-LE-NEXT:    blr
 ;
@@ -53,6 +54,7 @@ define void @i32_ZextLoad_i1() {
 ; CHECK-BE-NEXT:    addis r3, r2, GlobLd1@toc@ha
 ; CHECK-BE-NEXT:    addis r4, r2, GlobSt1@toc@ha
 ; CHECK-BE-NEXT:    lbz r3, GlobLd1@toc@l(r3)
+; CHECK-BE-NEXT:    clrldi r3, r3, 63
 ; CHECK-BE-NEXT:    stb r3, GlobSt1@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -77,11 +79,11 @@ define dso_local i1 @i32_ExtLoad_i1() local_unnamed_addr #0 {
 ; CHECK-LE-NEXT:    paddi r3, 0, Glob1@PCREL, 1
 ; CHECK-LE-NEXT:    paddi r4, 0, Glob2@PCREL, 1
 ; CHECK-LE-NEXT:    bl Decl@notoc
-; CHECK-LE-NEXT:    plbz r4, GlobLd1@PCREL(0), 1
-; CHECK-LE-NEXT:    cmplwi r3, 0
-; CHECK-LE-NEXT:    li r3, 1
-; CHECK-LE-NEXT:    iseleq r3, 0, r3
-; CHECK-LE-NEXT:    and r3, r3, r4
+; CHECK-LE-NEXT:    cmpwi cr1, r3, 0
+; CHECK-LE-NEXT:    plbz r3, GlobLd1@PCREL(0), 1
+; CHECK-LE-NEXT:    andi. r3, r3, 1
+; CHECK-LE-NEXT:    crandc 4*cr5+lt, gt, 4*cr1+eq
+; CHECK-LE-NEXT:    setbc r3, 4*cr5+lt
 ; CHECK-LE-NEXT:    addi r1, r1, 32
 ; CHECK-LE-NEXT:    ld r0, 16(r1)
 ; CHECK-LE-NEXT:    mtlr r0
@@ -100,12 +102,12 @@ define dso_local i1 @i32_ExtLoad_i1() local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    addi r4, r4, Glob2@toc@l
 ; CHECK-BE-NEXT:    bl Decl
 ; CHECK-BE-NEXT:    nop
-; CHECK-BE-NEXT:    addis r4, r2, GlobLd1@toc@ha
-; CHECK-BE-NEXT:    cmplwi r3, 0
-; CHECK-BE-NEXT:    li r3, 1
-; CHECK-BE-NEXT:    lbz r4, GlobLd1@toc@l(r4)
-; CHECK-BE-NEXT:    iseleq r3, 0, r3
-; CHECK-BE-NEXT:    and r3, r3, r4
+; CHECK-BE-NEXT:    cmpwi cr1, r3, 0
+; CHECK-BE-NEXT:    addis r3, r2, GlobLd1@toc@ha
+; CHECK-BE-NEXT:    lbz r3, GlobLd1@toc@l(r3)
+; CHECK-BE-NEXT:    andi. r3, r3, 1
+; CHECK-BE-NEXT:    crandc 4*cr5+lt, gt, 4*cr1+eq
+; CHECK-BE-NEXT:    setbc r3, 4*cr5+lt
 ; CHECK-BE-NEXT:    addi r1, r1, 112
 ; CHECK-BE-NEXT:    ld r0, 16(r1)
 ; CHECK-BE-NEXT:    mtlr r0

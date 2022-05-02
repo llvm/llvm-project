@@ -376,7 +376,8 @@ def ProcessorFeatures {
      FeaturePartwordAtomic,
      FeatureQuadwordAtomic,
      FeaturePredictableSelectIsExpensive,
-     FeatureISA2_07
+     FeatureISA2_07,
+     FeatureCRBits
     ];
 
   list<SubtargetFeature> P8SpecificFeatures = [FeatureAddiLoadFusion,
