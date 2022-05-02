@@ -35,7 +35,7 @@ public:
         AnyResumeFnPtrTy(FunctionType::get(Type::getVoidTy(Context), Int8Ptr,
                                            /*isVarArg=*/false)
                              ->getPointerTo()) {}
-  void lowerEarlyIntrinsics(Function &F);
+  bool lowerEarlyIntrinsics(Function &F);
 };
 }
 
@@ -145,7 +145,8 @@ static void setCannotDuplicate(CoroIdInst *CoroId) {
       CB->setCannotDuplicate();
 }
 
-void Lowerer::lowerEarlyIntrinsics(Function &F) {
+bool Lowerer::lowerEarlyIntrinsics(Function &F) {
+  bool Changed = false;
   CoroIdInst *CoroId = nullptr;
   SmallVector<CoroFreeInst *, 4> CoroFrees;
   bool HasCoroSuspend = false;
@@ -181,8 +182,11 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
         if (auto *CII = cast<CoroIdInst>(&I)) {
           if (CII->getInfo().isPreSplit()) {
             assert(F.hasFnAttribute(CORO_PRESPLIT_ATTR) &&
+                   F.getFnAttribute(CORO_PRESPLIT_ATTR).getValueAsString() ==
+                       UNPREPARED_FOR_SPLIT &&
                    "The frontend uses Swtich-Resumed ABI should emit "
-                   "\"coroutine.presplit\" attribute for the coroutine.");
+                   "\"coroutine.presplit\" attribute with value \"0\" for the "
+                   "coroutine.");
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();
             CoroId = cast<CoroIdInst>(&I);
@@ -194,7 +198,7 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_id_async:
         // TODO: Remove the line once we support it in the corresponding
         // frontend.
-        F.addFnAttr(CORO_PRESPLIT_ATTR);
+        F.addFnAttr(CORO_PRESPLIT_ATTR, PREPARED_FOR_SPLIT);
         break;
       case Intrinsic::coro_resume:
         lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
@@ -209,6 +213,8 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
         lowerCoroDone(cast<IntrinsicInst>(&I));
         break;
     }
+
+    Changed = true;
   }
 
   // Make sure that all CoroFree reference the coro.id intrinsic.
@@ -225,6 +231,8 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
     for (Argument &A : F.args())
       if (A.hasNoAliasAttr())
         A.removeAttr(Attribute::NoAlias);
+
+  return Changed;
 }
 
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
