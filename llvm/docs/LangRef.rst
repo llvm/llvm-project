@@ -1569,6 +1569,14 @@ example:
     epilogue, the backend should forcibly align the stack pointer.
     Specify the desired alignment, which must be a power of two, in
     parentheses.
+``"alloc-family"="FAMILY"``
+    This indicates which "family" an allocator function is part of. To avoid 
+    collisions, the family name should match the mangled name of the primary 
+    allocator function, that is "malloc" for malloc/calloc/realloc/free, 
+    "_Znwm" for ``::operator::new`` and ``::operator::delete``, and
+    "_ZnwmSt11align_val_t" for aligned ``::operator::new`` and
+    ``::operator::delete``. Matching malloc/realloc/free calls within a family
+    can be optimized, but mismatched ones will be left alone.
 ``allocsize(<EltSizeParam>[, <NumEltsParam>])``
     This attribute indicates that the annotated function will always return at
     least a given number of bytes (or null). Its arguments are zero-indexed
