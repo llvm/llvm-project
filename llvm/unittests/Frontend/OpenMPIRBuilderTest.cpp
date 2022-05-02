@@ -3507,11 +3507,9 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
     return Builder.saveIP();
   };
 
-  // Do nothing in finalization.
-  auto FiniCB = [&](InsertPointTy CodeGenIP) { return CodeGenIP; };
 
   InsertPointTy AfterIP =
-      OMPBuilder.createParallel(Loc, OuterAllocaIP, BodyGenCB, PrivCB, FiniCB,
+      OMPBuilder.createParallel(Loc, OuterAllocaIP, BodyGenCB, PrivCB, /* FiniCB */ {},
                                 /* IfCondition */ nullptr,
                                 /* NumThreads */ nullptr, OMP_PROC_BIND_default,
                                 /* IsCancellable */ false);

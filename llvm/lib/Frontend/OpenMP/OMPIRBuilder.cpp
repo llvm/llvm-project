@@ -859,7 +859,7 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
                               Value *IfCondition,
-                              omp::Directive CanceledDirective) {
+                              omp::Directive CancelledDirective) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -877,7 +877,7 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
 
 
   Value *CancelKind = nullptr;
-  switch (CanceledDirective) {
+  switch (CancelledDirective) {
 #define OMP_CANCEL_KIND(Enum, Str, DirectiveEnum, Value)                       \
   case DirectiveEnum:                                                          \
     CancelKind = Builder.getInt32(Value);                                      \
@@ -895,7 +895,7 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancel), Args);
 
   // The actual cancel logic is shared with others, e.g., cancel_barriers.
-  emitCancelationCheckImpl(Loc, Result, CanceledDirective, OMPD_cancel);
+  emitCancelationCheckImpl(Loc, Result, CancelledDirective, OMPD_cancel);
 
   if (New)
     return {New, New->begin()};
@@ -943,7 +943,7 @@ void OpenMPIRBuilder::emitOffloadingEntry(Constant *Addr, StringRef Name,
 void OpenMPIRBuilder::emitCancelationCheckImpl(
     LocationDescription Loc, Value *CancelFlag,
     omp::Directive CancelledDirective, omp::Directive CancelledBy) { 
-  assert(isLastFinalizationInfoCancellable(CanceledDirective) &&
+  assert(isLastFinalizationInfoCancellable(CancelledDirective) &&
          "Unexpected cancellation!");
 
   // For a cancel barrier we create two new blocks.

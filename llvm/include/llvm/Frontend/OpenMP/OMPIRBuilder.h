@@ -314,7 +314,7 @@ public:
   ///
   /// \returns The insertion point after the barrier.
   InsertPointTy createCancel(const LocationDescription &Loc, Value *IfCondition,
-                             omp::Directive CanceledDirective);
+                             omp::Directive CancelledDirective);
 
   /// Generator for '#omp parallel'
   ///
