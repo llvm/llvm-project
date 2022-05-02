@@ -485,12 +485,6 @@ defm : Zn2WriteResFpuPair<WriteFVarShuffle256, [Zn2FPU], 100>;
 def Zn2WriteMicrocoded : SchedWriteRes<[]> {
   let Latency = 100;
 }
-defm : Zn2WriteResPair<WriteDPPS, [], 15>;
-defm : Zn2WriteResPair<WriteFHAdd, [], 7>;
-defm : Zn2WriteResPair<WriteFHAddY, [], 7>;
-defm : Zn2WriteResPair<WritePHAdd, [], 3>;
-defm : Zn2WriteResPair<WritePHAddX, [], 3>;
-defm : Zn2WriteResPair<WritePHAddY, [], 3>;
 
 def : SchedAlias<WriteMicrocoded, Zn2WriteMicrocoded>;
 def : SchedAlias<WriteFCMOV, Zn2WriteMicrocoded>;
@@ -1108,6 +1102,14 @@ def : InstRW<[WriteMicrocoded], (instregex "VPGATHER(Q|D)(Q|D)(Y?)rm")>;
 
 //-- Arithmetic instructions --//
 
+// HADD, HSUB PS/PD
+// PHADD|PHSUB (S) W/D.
+defm : Zn2WriteResPair<WriteFHAdd, [], 7>;
+defm : Zn2WriteResPair<WriteFHAddY, [], 7>;
+defm : Zn2WriteResPair<WritePHAdd, [], 3>;
+defm : Zn2WriteResPair<WritePHAddX, [], 3>;
+defm : Zn2WriteResPair<WritePHAddY, [], 3>;
+
 // PCMPGTQ.
 def Zn2WritePCMPGTQr : SchedWriteRes<[Zn2FPU03]>;
 def : InstRW<[Zn2WritePCMPGTQr], (instregex "(V?)PCMPGTQ(Y?)rr")>;
@@ -1478,6 +1480,7 @@ def : SchedAlias<WriteFDiv64YLd, Zn2WriteVDIVPDYLd>;
 
 // DPPS.
 // x,x,i / v,v,v,i.
+defm : Zn2WriteResPair<WriteDPPS, [], 15>;
 def : SchedAlias<WriteDPPSY,  Zn2WriteMicrocoded>;
 
 // x,m,i / v,v,m,i.
