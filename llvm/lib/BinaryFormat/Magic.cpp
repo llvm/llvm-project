@@ -225,6 +225,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (startswith(Magic, "--- !tapi") || startswith(Magic, "---\narchs:"))
       return file_magic::tapi_file;
     break;
+  
+  case 'D': // DirectX container file - DXBC
+    if (startswith(Magic, "DXBC") && Magic.size() == 4)
+      return file_magic::dxcontainer_object;
+    break;
 
   default:
     break;

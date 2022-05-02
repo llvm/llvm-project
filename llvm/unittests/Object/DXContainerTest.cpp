@@ -21,6 +21,11 @@ template <std::size_t X> MemoryBufferRef getMemoryBuffer(uint8_t Data[X]) {
   return MemoryBufferRef(Obj, "");
 }
 
+TEST(DXCFile, IdentifyMagic) {
+  StringRef Buffer("DXBC");
+  EXPECT_EQ(identify_magic(Buffer), file_magic::dxcontainer_object);
+}
+
 TEST(DXCFile, ParseHeaderErrors) {
   uint8_t Buffer[] = {0x44, 0x58, 0x42, 0x43};
   EXPECT_THAT_EXPECTED(
