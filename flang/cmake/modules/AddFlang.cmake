@@ -18,7 +18,7 @@ endmacro()
 
 macro(add_flang_library name)
   cmake_parse_arguments(ARG
-    "SHARED"
+    "SHARED;STATIC"
     ""
     "ADDITIONAL_HEADERS"
     ${ARGN})
@@ -53,7 +53,7 @@ macro(add_flang_library name)
   else()
     # llvm_add_library ignores BUILD_SHARED_LIBS if STATIC is explicitly set,
     # so we need to handle it here.
-    if (BUILD_SHARED_LIBS)
+    if (BUILD_SHARED_LIBS AND NOT ARG_STATIC)
       set(LIBTYPE SHARED OBJECT)
     else()
       set(LIBTYPE STATIC OBJECT)
