@@ -3729,8 +3729,6 @@ const IdentifierInfo *FunctionDecl::getLiteralIdentifier() const {
 FunctionDecl::TemplatedKind FunctionDecl::getTemplatedKind() const {
   if (TemplateOrSpecialization.isNull())
     return TK_NonTemplate;
-  if (TemplateOrSpecialization.is<FunctionDecl *>())
-    return TK_DependentNonTemplate;
   if (TemplateOrSpecialization.is<FunctionTemplateDecl *>())
     return TK_FunctionTemplate;
   if (TemplateOrSpecialization.is<MemberSpecializationInfo *>())
@@ -3780,16 +3778,6 @@ void FunctionDecl::setDescribedFunctionTemplate(FunctionTemplateDecl *Template) 
   assert(TemplateOrSpecialization.isNull() &&
          "Member function is already a specialization");
   TemplateOrSpecialization = Template;
-}
-
-void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
-  assert(TemplateOrSpecialization.isNull() &&
-         "function is already a specialization");
-  TemplateOrSpecialization = FD;
-}
-
-FunctionDecl *FunctionDecl::getInstantiatedFromDecl() const {
-  return TemplateOrSpecialization.dyn_cast<FunctionDecl *>();
 }
 
 bool FunctionDecl::isImplicitlyInstantiable() const {

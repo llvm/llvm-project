@@ -1890,9 +1890,7 @@ public:
     TK_FunctionTemplateSpecialization,
     // A function template specialization that hasn't yet been resolved to a
     // particular specialized function template.
-    TK_DependentFunctionTemplateSpecialization,
-    // A non templated function which is in a dependent scope.
-    TK_DependentNonTemplate
+    TK_DependentFunctionTemplateSpecialization
   };
 
   /// Stashed information about a defaulted function definition whose body has
@@ -1941,21 +1939,20 @@ private:
   /// The template or declaration that this declaration
   /// describes or was instantiated from, respectively.
   ///
-  /// For non-templates this value will be NULL, unless this non-template
-  /// function declaration was declared directly inside of a function template,
-  /// in which case this will have a pointer to a FunctionDecl. For function
-  /// declarations that describe a function template, this will be a pointer to
-  /// a FunctionTemplateDecl. For member functions of class template
-  /// specializations, this will be a MemberSpecializationInfo pointer
-  /// containing information about the specialization. For function template
-  /// specializations, this will be a FunctionTemplateSpecializationInfo, which
-  /// contains information about the template being specialized and the template
-  /// arguments involved in that specialization.
-  llvm::PointerUnion<FunctionDecl *, FunctionTemplateDecl *,
+  /// For non-templates, this value will be NULL. For function
+  /// declarations that describe a function template, this will be a
+  /// pointer to a FunctionTemplateDecl. For member functions
+  /// of class template specializations, this will be a MemberSpecializationInfo
+  /// pointer containing information about the specialization.
+  /// For function template specializations, this will be a
+  /// FunctionTemplateSpecializationInfo, which contains information about
+  /// the template being specialized and the template arguments involved in
+  /// that specialization.
+  llvm::PointerUnion<FunctionTemplateDecl *,
                      MemberSpecializationInfo *,
                      FunctionTemplateSpecializationInfo *,
                      DependentFunctionTemplateSpecializationInfo *>
-      TemplateOrSpecialization;
+    TemplateOrSpecialization;
 
   /// Provides source/type location info for the declaration name embedded in
   /// the DeclaratorDecl base class.
@@ -2691,11 +2688,6 @@ public:
     setInstantiationOfMemberFunction(getASTContext(), FD, TSK);
   }
 
-  /// Specify that this function declaration was instantiated from FunctionDecl
-  /// FD. This is only used if this is a function declaration declared locally
-  /// inside of a function template.
-  void setInstantiatedFromDecl(FunctionDecl *FD);
-
   /// Retrieves the function template that is described by this
   /// function declaration.
   ///
@@ -2709,8 +2701,6 @@ public:
   /// getDescribedFunctionTemplate() retrieves the
   /// FunctionTemplateDecl from a FunctionDecl.
   FunctionTemplateDecl *getDescribedFunctionTemplate() const;
-
-  FunctionDecl *getInstantiatedFromDecl() const;
 
   void setDescribedFunctionTemplate(FunctionTemplateDecl *Template);
 
