@@ -231,6 +231,13 @@ static bool setAlignedAllocParam(Function &F, unsigned ArgNo) {
   return true;
 }
 
+static bool setAllocatedPointerParam(Function &F, unsigned ArgNo) {
+  if (F.hasParamAttribute(ArgNo, Attribute::AllocatedPointer))
+    return false;
+  F.addParamAttr(ArgNo, Attribute::AllocatedPointer);
+  return true;
+}
+
 static bool setAllocSize(Function &F, unsigned ElemSizeArg,
                          Optional<unsigned> NumElemsArg) {
   if (F.hasFnAttribute(Attribute::AllocSize))
@@ -524,6 +531,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_realloc:
   case LibFunc_vec_realloc:
   case LibFunc_reallocf:
+    Changed |= setAllocatedPointerParam(F, 0);
     Changed |= setAllocSize(F, 1, None);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setRetNoUndef(F);
@@ -657,6 +665,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_free:
   case LibFunc_vec_free:
+    Changed |= setAllocatedPointerParam(F, 0);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
