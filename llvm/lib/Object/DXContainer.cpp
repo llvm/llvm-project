@@ -39,6 +39,6 @@ Error DXContainer::parseHeader() {
 Expected<DXContainer> DXContainer::create(MemoryBufferRef Object) {
   DXContainer Container(Object);
   if (Error Err = Container.parseHeader())
-    return Err;
+    return std::move(Err);
   return Container;
 }
