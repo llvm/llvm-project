@@ -1,4 +1,4 @@
-//===------------ FixedLenDecoderEmitter.cpp - Decoder Generator ----------===//
+//===---------------- DecoderEmitter.cpp - Decoder Generator --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // It contains the tablegen backend that emits the decoder functions for
-// targets with fixed length instruction set.
+// targets with fixed/variable length instruction set.
 //
 //===----------------------------------------------------------------------===//
 
@@ -122,19 +122,18 @@ raw_ostream &operator<<(raw_ostream &OS, const EncodingAndInst &Value) {
   return OS;
 }
 
-class FixedLenDecoderEmitter {
+class DecoderEmitter {
   RecordKeeper &RK;
   std::vector<EncodingAndInst> NumberedEncodings;
 
 public:
   // Defaults preserved here for documentation, even though they aren't
   // strictly necessary given the way that this is currently being called.
-  FixedLenDecoderEmitter(RecordKeeper &R, std::string PredicateNamespace,
-                         std::string GPrefix = "if (",
-                         std::string GPostfix = " == MCDisassembler::Fail)",
-                         std::string ROK = "MCDisassembler::Success",
-                         std::string RFail = "MCDisassembler::Fail",
-                         std::string L = "")
+  DecoderEmitter(RecordKeeper &R, std::string PredicateNamespace,
+                 std::string GPrefix = "if (",
+                 std::string GPostfix = " == MCDisassembler::Fail)",
+                 std::string ROK = "MCDisassembler::Success",
+                 std::string RFail = "MCDisassembler::Fail", std::string L = "")
       : RK(R), Target(R), PredicateNamespace(std::move(PredicateNamespace)),
         GuardPrefix(std::move(GPrefix)), GuardPostfix(std::move(GPostfix)),
         ReturnOK(std::move(ROK)), ReturnFail(std::move(RFail)),
@@ -411,13 +410,13 @@ protected:
   unsigned BitWidth;
 
   // Parent emitter
-  const FixedLenDecoderEmitter *Emitter;
+  const DecoderEmitter *Emitter;
 
 public:
   FilterChooser(ArrayRef<EncodingAndInst> Insts,
                 const std::vector<EncodingIDAndOpcode> &IDs,
                 const std::map<unsigned, std::vector<OperandInfo>> &Ops,
-                unsigned BW, const FixedLenDecoderEmitter *E)
+                unsigned BW, const DecoderEmitter *E)
       : AllInstructions(Insts), Opcodes(IDs), Operands(Ops),
         FilterBitValues(BW, BIT_UNFILTERED), Parent(nullptr), BestIndex(-1),
         BitWidth(BW), Emitter(E) {
@@ -771,11 +770,9 @@ unsigned Filter::usefulness() const {
 //////////////////////////////////
 
 // Emit the decoder state machine table.
-void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
-                                       DecoderTable &Table,
-                                       unsigned Indentation,
-                                       unsigned BitWidth,
-                                       StringRef Namespace) const {
+void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
+                               unsigned Indentation, unsigned BitWidth,
+                               StringRef Namespace) const {
   OS.indent(Indentation) << "static const uint8_t DecoderTable" << Namespace
     << BitWidth << "[] = {\n";
 
@@ -960,8 +957,8 @@ void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
   OS.indent(Indentation) << "};\n\n";
 }
 
-void FixedLenDecoderEmitter::emitInstrLenTable(
-    formatted_raw_ostream &OS, std::vector<unsigned> &InstrLen) const {
+void DecoderEmitter::emitInstrLenTable(formatted_raw_ostream &OS,
+                                       std::vector<unsigned> &InstrLen) const {
   OS << "static const uint8_t InstrLenTable[] = {\n";
   for (unsigned &Len : InstrLen) {
     OS << Len << ",\n";
@@ -969,9 +966,9 @@ void FixedLenDecoderEmitter::emitInstrLenTable(
   OS << "};\n\n";
 }
 
-void FixedLenDecoderEmitter::
-emitPredicateFunction(formatted_raw_ostream &OS, PredicateSet &Predicates,
-                      unsigned Indentation) const {
+void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
+                                           PredicateSet &Predicates,
+                                           unsigned Indentation) const {
   // The predicate function is just a big switch statement based on the
   // input predicate index.
   OS.indent(Indentation) << "static bool checkDecoderPredicate(unsigned Idx, "
@@ -994,9 +991,9 @@ emitPredicateFunction(formatted_raw_ostream &OS, PredicateSet &Predicates,
   OS.indent(Indentation) << "}\n\n";
 }
 
-void FixedLenDecoderEmitter::
-emitDecoderFunction(formatted_raw_ostream &OS, DecoderSet &Decoders,
-                    unsigned Indentation) const {
+void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
+                                         DecoderSet &Decoders,
+                                         unsigned Indentation) const {
   // The decoder function is just a big switch statement based on the
   // input decoder index.
   OS.indent(Indentation) << "template <typename InsnType>\n";
@@ -2518,7 +2515,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS,
 }
 
 // Emits disassembler code for instruction decoding.
-void FixedLenDecoderEmitter::run(raw_ostream &o) {
+void DecoderEmitter::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
   OS << "#include \"llvm/MC/MCInst.h\"\n";
   OS << "#include \"llvm/MC/MCSubtargetInfo.h\"\n";
@@ -2690,13 +2687,13 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
 
 namespace llvm {
 
-void EmitFixedLenDecoder(RecordKeeper &RK, raw_ostream &OS,
-                         const std::string &PredicateNamespace,
-                         const std::string &GPrefix,
-                         const std::string &GPostfix, const std::string &ROK,
-                         const std::string &RFail, const std::string &L) {
-  FixedLenDecoderEmitter(RK, PredicateNamespace, GPrefix, GPostfix,
-                         ROK, RFail, L).run(OS);
+void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
+                 const std::string &PredicateNamespace,
+                 const std::string &GPrefix, const std::string &GPostfix,
+                 const std::string &ROK, const std::string &RFail,
+                 const std::string &L) {
+  DecoderEmitter(RK, PredicateNamespace, GPrefix, GPostfix, ROK, RFail, L)
+      .run(OS);
 }
 
 } // end namespace llvm
