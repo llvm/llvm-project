@@ -41,6 +41,27 @@ transform::TransformState::getPayloadOps(Value value) const {
   return iter->getSecond();
 }
 
+Value transform::TransformState::getHandleForPayloadOp(Operation *op) const {
+  for (const Mappings &mapping : llvm::make_second_range(mappings)) {
+    if (Value handle = mapping.reverse.lookup(op))
+      return handle;
+  }
+  return Value();
+}
+
+LogicalResult transform::TransformState::tryEmplaceReverseMapping(
+    Mappings &map, Operation *operation, Value handle) {
+  auto insertionResult = map.reverse.insert({operation, handle});
+  if (!insertionResult.second) {
+    InFlightDiagnostic diag = operation->emitError()
+                              << "operation tracked by two handles";
+    diag.attachNote(handle.getLoc()) << "handle";
+    diag.attachNote(insertionResult.first->second.getLoc()) << "handle";
+    return diag;
+  }
+  return success();
+}
+
 LogicalResult
 transform::TransformState::setPayloadOps(Value value,
                                          ArrayRef<Operation *> targets) {
@@ -63,14 +84,8 @@ transform::TransformState::setPayloadOps(Value value,
   // expressed using the dialect and may be constructed by valid API calls from
   // valid IR. Emit an error here.
   for (Operation *op : targets) {
-    auto insertionResult = mappings.reverse.insert({op, value});
-    if (!insertionResult.second) {
-      InFlightDiagnostic diag = op->emitError()
-                                << "operation tracked by two handles";
-      diag.attachNote(value.getLoc()) << "handle";
-      diag.attachNote(insertionResult.first->second.getLoc()) << "handle";
-      return diag;
-    }
+    if (failed(tryEmplaceReverseMapping(mappings, op, value)))
+      return failure();
   }
 
   return success();
@@ -83,19 +98,26 @@ void transform::TransformState::removePayloadOps(Value value) {
   mappings.direct.erase(value);
 }
 
-void transform::TransformState::updatePayloadOps(
+LogicalResult transform::TransformState::updatePayloadOps(
     Value value, function_ref<Operation *(Operation *)> callback) {
-  auto it = getMapping(value).direct.find(value);
-  assert(it != getMapping(value).direct.end() && "unknown handle");
+  Mappings &mappings = getMapping(value);
+  auto it = mappings.direct.find(value);
+  assert(it != mappings.direct.end() && "unknown handle");
   SmallVector<Operation *> &association = it->getSecond();
   SmallVector<Operation *> updated;
   updated.reserve(association.size());
 
-  for (Operation *op : association)
-    if (Operation *updatedOp = callback(op))
+  for (Operation *op : association) {
+    mappings.reverse.erase(op);
+    if (Operation *updatedOp = callback(op)) {
       updated.push_back(updatedOp);
+      if (failed(tryEmplaceReverseMapping(mappings, updatedOp, value)))
+        return failure();
+    }
+  }
 
   std::swap(association, updated);
+  return success();
 }
 
 LogicalResult
@@ -132,7 +154,20 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// TransformState::Extension
+//===----------------------------------------------------------------------===//
+
 transform::TransformState::Extension::~Extension() = default;
+
+LogicalResult
+transform::TransformState::Extension::replacePayloadOp(Operation *op,
+                                                       Operation *replacement) {
+  return state.updatePayloadOps(state.getHandleForPayloadOp(op),
+                                [&](Operation *current) {
+                                  return current == op ? replacement : current;
+                                });
+}
 
 //===----------------------------------------------------------------------===//
 // TransformResults
