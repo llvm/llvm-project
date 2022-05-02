@@ -737,7 +737,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BUILD_VECTOR, Vec16, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec16, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, Vec16, Expand);
-      setOperationAction(ISD::SCALAR_TO_VECTOR, Vec16, Expand);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, Vec16, Custom);
     }
   }
 
@@ -4772,6 +4772,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::SCALAR_TO_VECTOR:
+    return lowerSCALAR_TO_VECTOR(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::FP_ROUND:
@@ -5955,6 +5957,22 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   }
 
   return DAG.getNode(ISD::CONCAT_VECTORS, SL, ResultVT, Pieces);
+}
+
+SDValue SITargetLowering::lowerSCALAR_TO_VECTOR(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDValue SVal = Op.getOperand(0);
+  EVT ResultVT = Op.getValueType();
+  EVT SValVT = SVal.getValueType();
+  SDValue UndefVal = DAG.getUNDEF(SValVT);
+  SDLoc SL(Op);
+
+  SmallVector<SDValue, 8> VElts;
+  VElts.push_back(SVal);
+  for (int I = 1, E = ResultVT.getVectorNumElements(); I < E; ++I)
+    VElts.push_back(UndefVal);
+
+  return DAG.getBuildVector(ResultVT, SL, VElts);
 }
 
 SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
