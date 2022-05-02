@@ -151,10 +151,7 @@ private:
     auto type = value->getType();
     switch (tag) {
     case VoidPtr:
-      if (auto ptrType = dyn_cast<PointerType>(type))
-        return ptrType->getAddressSpace() == 0 &&
-               ptrType->getPointerElementType()->isIntegerTy(8);
-      return false;
+      return type == Type::getInt8PtrTy(M->getContext());
     case Key:
       return type->isIntegerTy(32);
     case IntPtr:
