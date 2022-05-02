@@ -1,7 +1,7 @@
 // Check frontend and linker invocations on the MTI MIPS toolchain.
 
 // -EB -mhard-float -mabi=32
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -30,7 +30,7 @@
 // EB-HARD-O32: "[[TC]]/../../../../sysroot/mips-r2-hard/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EB -mhard-float -mabi=n32
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -59,7 +59,7 @@
 // EB-HARD-N32: "[[TC]]/../../../../sysroot/mips-r2-hard/usr/lib/../lib32{{/|\\\\}}crtn.o"
 
 // -EB -mhard-float -mabi=64
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips64-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -88,7 +88,7 @@
 // EB-HARD-N64: "[[TC]]/../../../../sysroot/mips-r2-hard/usr/lib/../lib64{{/|\\\\}}crtn.o"
 
 // -EL -mhard-float -mabi=32
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -117,7 +117,7 @@
 // EL-HARD-O32: "[[TC]]/../../../../sysroot/mipsel-r2-hard/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EL -mhard-float -mabi=n32
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -146,7 +146,7 @@
 // EL-HARD-N32: "[[TC]]/../../../../sysroot/mipsel-r2-hard/usr/lib/../lib32{{/|\\\\}}crtn.o"
 
 // -EL -mhard-float -mabi=64
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips64-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -175,7 +175,7 @@
 // EL-HARD-N64: "[[TC]]/../../../../sysroot/mipsel-r2-hard/usr/lib/../lib64{{/|\\\\}}crtn.o"
 
 // -EB -msoft-float
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -204,7 +204,7 @@
 // EB-SOFT: "[[TC]]/../../../../sysroot/mips-r2-soft/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EL -msoft-float
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -233,7 +233,7 @@
 // EL-SOFT: "[[TC]]/../../../../sysroot/mipsel-r2-soft/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EB -mhard-float -muclibc
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -262,7 +262,7 @@
 // EB-HARD-UCLIBC: "[[TC]]/../../../../sysroot/mips-r2-hard-uclibc/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EL -mhard-float -muclibc
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -291,7 +291,7 @@
 // EL-HARD-UCLIBC: "[[TC]]/../../../../sysroot/mipsel-r2-hard-uclibc/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EB -mhard-float -mnan=2008
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -320,7 +320,7 @@
 // EB-HARD-NAN2008: "[[TC]]/../../../../sysroot/mips-r2-hard-nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EL -mhard-float -mnan=2008
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -349,7 +349,7 @@
 // EL-HARD-NAN2008: "[[TC]]/../../../../sysroot/mipsel-r2-hard-nan2008/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EB -mhard-float -muclibc -mnan=2008
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -378,7 +378,7 @@
 // EB-HARD-UCLIBC-NAN2008: "[[TC]]/../../../../sysroot/mips-r2-hard-nan2008-uclibc/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EL -mhard-float -muclibc -mnan=2008
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -407,7 +407,7 @@
 // EL-HARD-UCLIBC-NAN2008: "[[TC]]/../../../../sysroot/mipsel-r2-hard-nan2008-uclibc/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EL -msoft-float -mmicromips
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -436,7 +436,7 @@
 // EL-SOFT-MICRO: "[[TC]]/../../../../sysroot/micromipsel-r2-soft/usr/lib/../lib{{/|\\\\}}crtn.o"
 
 // -EL -mhard-float -mmicromips -mnan=2008
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \

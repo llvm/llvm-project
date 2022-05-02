@@ -811,6 +811,11 @@ template <typename T> struct isa_impl<T, ::mlir::Operation> {
   }
 };
 
+/// Allow isa<Operation *> on operations.
+template <> struct isa_impl<::mlir::Operation *, ::mlir::Operation> {
+  static inline bool doit(const ::mlir::Operation &op) { return true; }
+};
+
 /// Provide specializations for operation casts as the resulting T is value
 /// typed.
 template <typename T> struct cast_retty_impl<T, ::mlir::Operation *> {

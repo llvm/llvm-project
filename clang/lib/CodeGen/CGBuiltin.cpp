@@ -3273,6 +3273,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         *this, E, GetIntrinsicID(E->getArg(0)->getType()), "rdx.min"));
   }
 
+  case Builtin::BI__builtin_reduce_add:
+    return RValue::get(emitUnaryBuiltin(
+        *this, E, llvm::Intrinsic::vector_reduce_add, "rdx.add"));
   case Builtin::BI__builtin_reduce_xor:
     return RValue::get(emitUnaryBuiltin(
         *this, E, llvm::Intrinsic::vector_reduce_xor, "rdx.xor"));
@@ -14493,12 +14496,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return EmitX86FunnelShift(*this, Ops[1], Ops[0], Ops[2], true);
 
   // Reductions
-  case X86::BI__builtin_ia32_reduce_add_d512:
-  case X86::BI__builtin_ia32_reduce_add_q512: {
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::vector_reduce_add, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0]});
-  }
   case X86::BI__builtin_ia32_reduce_fadd_pd512:
   case X86::BI__builtin_ia32_reduce_fadd_ps512:
   case X86::BI__builtin_ia32_reduce_fadd_ph512:
