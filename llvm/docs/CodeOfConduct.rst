@@ -143,7 +143,7 @@ The current committee members are:
 Transparency Reports
 ====================
 
-There are currently no transparency reports.
+* `April 28, 2022 <https://llvm.org/coc-reports/2022-04-28-report.html>`_
 
 For details about what a Transparency Report is and what it contains, please see the :doc:`Response Guide<ResponseGuide>`.
 
