@@ -983,8 +983,8 @@ SVal SValBuilder::evalCastSubKind(nonloc::SymbolVal V, QualType CastTy,
 
     // Produce SymbolCast if CastTy and T are different integers.
     // NOTE: In the end the type of SymbolCast shall be equal to CastTy.
-    if (T->isIntegralOrEnumerationType() &&
-        CastTy->isIntegralOrEnumerationType()) {
+    if (T->isIntegralOrUnscopedEnumerationType() &&
+        CastTy->isIntegralOrUnscopedEnumerationType()) {
       AnalyzerOptions &Opts =
           StateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions();
       // If appropriate option is disabled, ignore the cast.
