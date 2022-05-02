@@ -2138,7 +2138,7 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
       MasterEndCI = nullptr;
     }
   }
-  EXPECT_NE(MasterEndCI, nullptr);
+  ASSERT_NE(MasterEndCI, nullptr);
   EXPECT_EQ(MasterEndCI->arg_size(), 2U);
   EXPECT_TRUE(isa<GlobalVariable>(MasterEndCI->getArgOperand(0)));
   EXPECT_EQ(MasterEndCI->getArgOperand(1), MasterEntryCI->getArgOperand(1));

@@ -105,6 +105,8 @@ public:
   /// at the time, and location, the callback is invoked.
   using FinalizeCallbackTy = function_ref<void(InsertPointTy CodeGenIP)>;
 
+
+
 private:
   enum class RegionKind {
     /// Sentinel object so we don't always have to check whether the stack is
@@ -120,6 +122,8 @@ private:
   };
 
   struct OMPRegionInfo;
+
+
 
   /// An irregular exit out of a region, such as by cancellation.
   struct OMPRegionBreakInfo {
@@ -142,6 +146,8 @@ private:
     /// Consistency self-check.
     void assertOK() const;
   };
+
+
 
   /// An OpenMP region with a single entry and single exit (unless containing a
   /// irregular exit) that may be associated with a construct.
@@ -166,7 +172,7 @@ private:
                   OMPRegionInfo *Target) {
       assert(IsCancellable &&
              "Only cancellable region may have irregular exits");
-      assert(!BB->getTerminator());
+      assert(!BB->getTerminator() && "Irregular exit must not rejoin the cfg");
       Breaks.emplace_back(BB, Reason, Target);
     }
 
@@ -186,6 +192,8 @@ private:
   OMPRegionInfo *getInnermostRegion(omp::Directive DK);
 
 
+
+
   /// @{
   /// Push a new region to the region stack. Must eventually be popped again
   /// using exitRegion.
@@ -196,6 +204,11 @@ private:
   }
   /// @}
 
+
+ // using RegionBreakCallbackTy = function_ref<void(OMPRegionBreakInfo*)>;
+  //using RegionBreakCallbackTy = function_ref<void(omp::Directive BreakReason)>;
+
+#if 0
   /// Pop a region from the region stack. Exits are handled the following way:
   ///
   /// 1. For the regular region exit, \p FinCB is used by the caller to emit
@@ -206,8 +219,8 @@ private:
   ///
   /// 3. For irregular region exits that rejoin a surrounding region, exitRegion
   ///    calls \p FinCB to insert the finalization code into the exiting control path. The irregular exit is then added as an irregular exit of the sourrounding loop that, opon its exit, can add its own finialization code and/or rejoin the control flow there.
-  void exitRegion(OMPRegionInfo *R, BasicBlock *FinBB,
-                  function_ref<void(InsertPointTy ExitingIP)> FinCB);
+#endif
+  void exitRegion(OMPRegionInfo *R);
 
 public:
   /// Callback type for body (=inner region) code generation
@@ -883,7 +896,7 @@ public:
   /// Generate control flow and cleanup for cancellation.
   ///
   /// \param CancelFlag Flag indicating if the cancellation is performed.
-  /// \param CanceledDirective The kind of directive that is cancled.
+  /// \param CancelledDirective The kind of directive that is cancled.
   /// \param ExitCB Extra code to be generated in the exit block.
   void emitCancelationCheckImpl(LocationDescription Loc, Value *CancelFlag,
                                 omp::Directive CancelledDirective,
@@ -1333,7 +1346,7 @@ private:
   EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
                        Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
                        FinalizeCallbackTy FiniCB, bool Conditional = false,
-                       bool HasFinalize = true, bool IsCancellable = false);
+                       bool HasFinalize = true, bool IsCancellable = false); // TODO: remove HasFinalize
 
   /// Get the platform-specific name separator.
   /// \param Parts different parts of the final name that needs separation
