@@ -265,6 +265,10 @@ C++ Language Changes in Clang
   ``std::move_if_noexcept``, ``std::addressof``, and ``std::as_const``. These
   are now treated as compiler builtins and implemented directly, rather than
   instantiating the definition from the standard library.
+- Fixed mangling of nested dependent names such as ``T::a::b``, where ``T`` is a
+  template parameter, to conform to the Itanium C++ ABI and be compatible with
+  GCC. This breaks binary compatibility with code compiled with earlier versions
+  of clang; use the ``-fclang-abi-compat=14`` option to get the old mangling.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
