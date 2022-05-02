@@ -3,7 +3,7 @@
 ! being supported by gfortran to GCC when falling back to GCC for
 ! a fortran input file.
 !
-! RUN: %clang -no-canonical-prefixes -target i386-linux -### %s -o %t 2>&1 \
+! RUN: %clang --target=i386-linux -### %s 2>&1 \
 ! RUN:     -Aquestion=answer \
 ! RUN:     -A-question=answer \
 ! RUN:     -C \
@@ -244,7 +244,7 @@
 !
 ! PR22234: Ensure that -fsyntax-only doesn't complain about output types and
 !          passes along correctly.
-! RUN: %clang -no-canonical-prefixes -target i386-linux -fsyntax-only -### %s -o %t 2>&1 | \
+! RUN: %clang --target=i386-linux -fsyntax-only -### %s 2>&1 | \
 ! grep for error message and command-line
 ! RUN: grep -e error: -e -fsyntax-only | FileCheck %s --check-prefix=CHECK-PR22234
 !
@@ -254,6 +254,6 @@
 ! Regression test for the bug introduced with PR22234 fix.
 ! Make sure -fsyntax-only is not passed to gfortran during normal compilation.
 !
-! RUN: %clang -no-canonical-prefixes -target i386-linux -### %s -o %t 2>&1 \
+! RUN: %clang --target=i386-linux -### %s 2>&1 \
 ! RUN: | FileCheck %s --check-prefix=CHECK-PR22234-R
 ! CHECK-PR22234-R-NOT: "-fsyntax-only"

@@ -1,5 +1,5 @@
-// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-linux-musl -stdlib=libc++ \
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-linux-musl -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree --gcc-toolchain= \
@@ -14,8 +14,8 @@
 // CHECK-X86-64-LIBCXX: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 // CHECK-X86-64-LIBCXX: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 
-// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only -nobuiltininc 2>&1 \
-// RUN:     -target x86_64-linux-musl \
+// RUN: %clang -### %s -fsyntax-only -nobuiltininc 2>&1 \
+// RUN:     --target=x86_64-linux-musl \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree --gcc-toolchain= \
@@ -24,8 +24,8 @@
 // CHECK-NOBUILTININC: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-NOBUILTININC-NOT: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 
-// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only -nostdlibinc 2>&1 \
-// RUN:     -target x86_64-linux-musl \
+// RUN: %clang -### %s -fsyntax-only -nostdlibinc 2>&1 \
+// RUN:     --target=x86_64-linux-musl \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree --gcc-toolchain= \
