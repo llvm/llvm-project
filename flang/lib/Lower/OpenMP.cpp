@@ -254,8 +254,10 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     if (const auto &ifClause =
             std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
       auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
-      ifClauseOperand = fir::getBase(
+      mlir::Value ifVal = fir::getBase(
           converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
+      ifClauseOperand = firOpBuilder.createConvert(
+          currentLocation, firOpBuilder.getI1Type(), ifVal);
     } else if (const auto &numThreadsClause =
                    std::get_if<Fortran::parser::OmpClause::NumThreads>(
                        &clause.u)) {
