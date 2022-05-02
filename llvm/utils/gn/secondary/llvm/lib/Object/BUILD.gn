@@ -19,6 +19,7 @@ static_library("Object") {
     "COFFImportFile.cpp",
     "COFFModuleDefinition.cpp",
     "COFFObjectFile.cpp",
+    "DXContainer.cpp",
     "Decompressor.cpp",
     "ELF.cpp",
     "ELFObjectFile.cpp",
