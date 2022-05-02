@@ -1,13 +1,13 @@
 // UNSUPPORTED: system-windows
 // A basic clang -cc1 command-line, and simple environment check.
 
-// RUN: %clang %s -### -no-canonical-prefixes --target=riscv64 \
+// RUN: %clang -### %s --target=riscv64 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=CC1 %s
-// CC1: clang{{.*}} "-cc1" "-triple" "riscv64"
+// CC1: "-cc1" "-triple" "riscv64"
 
 // Test interaction with -fuse-ld=lld, if lld is available.
-// RUN: %clang %s -### --target=riscv32 -fuse-ld=lld \
+// RUN: %clang -### %s --target=riscv32 -fuse-ld=lld \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=LLD %s
 // LLD: {{(error: invalid linker name in argument '-fuse-ld=lld')|(ld.lld)}}
@@ -15,7 +15,7 @@
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
 
-// RUN: %clang %s -### -fuse-ld= \
+// RUN: %clang -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 -no-pie \
@@ -30,7 +30,7 @@
 // C-RV64-BAREMETAL-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang %s -### -fuse-ld= \
+// RUN: %clang -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
@@ -44,7 +44,7 @@
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx %s -### -fuse-ld= \
+// RUN: %clangxx -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
@@ -60,7 +60,7 @@
 // CXX-RV64-BAREMETAL-LP64: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx %s -### -fuse-ld= \
+// RUN: %clangxx -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
@@ -75,7 +75,7 @@
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang %s -### -fuse-ld= -no-pie \
+// RUN: %clang -### %s -fuse-ld= -no-pie \
 // RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform -mabi=lp64 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
@@ -90,7 +90,7 @@
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib64/lp64"
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib64/lp64"
 
-// RUN: %clang %s -### -fuse-ld=ld -no-pie \
+// RUN: %clang -### %s -fuse-ld=ld -no-pie \
 // RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform -march=rv64imafd \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
@@ -105,7 +105,7 @@
 // C-RV64-LINUX-MULTI-LP64D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib64/lp64d"
 // C-RV64-LINUX-MULTI-LP64D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib64/lp64d"
 
-// RUN: env "PATH=" %clang %s -### -fuse-ld=ld \
+// RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform --sysroot= \
 // RUN:   -march=rv64imac -mabi=lp64\
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
@@ -120,7 +120,7 @@
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imac/lp64{{/|\\\\}}crtend.o"
 
-// RUN: env "PATH=" %clang %s -### -fuse-ld=ld \
+// RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform --sysroot= \
 // RUN:   -march=rv64imafdc -mabi=lp64d \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
@@ -136,7 +136,7 @@
 // C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imafdc/lp64d{{/|\\\\}}crtend.o"
 
 // Check that --rtlib can be used to override the used runtime library
-// RUN: %clang %s -### \
+// RUN: %clang -### %s \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \
 // RUN:   --target=riscv64-unknown-elf --rtlib=libgcc 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-LIBGCC-LP64 %s
@@ -145,7 +145,7 @@
 // C-RV64-RTLIB-LIBGCC-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64-RTLIB-LIBGCC-LP64: "{{.*}}crtend.o"
 
-// RUN: %clang %s -### \
+// RUN: %clang -### %s \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \
 // RUN:   --target=riscv64-unknown-elf --rtlib=compiler-rt 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-COMPILERRT-LP64 %s
@@ -154,14 +154,14 @@
 // C-RV64-RTLIB-COMPILERRT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins-riscv64.a"
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtend-riscv64.o"
 
-// RUN: %clang %s -### --target=riscv64 \
+// RUN: %clang -### %s --target=riscv64 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree --sysroot= \
 // RUN:   -resource-dir=%s/Inputs/resource_dir 2>&1 \
 // RUN:   | FileCheck -check-prefix=RESOURCE-INC %s
 // RESOURCE-INC: "-internal-isystem" "{{.*}}/Inputs/resource_dir{{/|\\\\}}include"
 // RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv64_tree/{{.*}}riscv64-unknown-elf{{/|\\\\}}include"
 
-// RUN: %clang %s -### --target=riscv64 \
+// RUN: %clang -### %s --target=riscv64 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree --sysroot= \
 // RUN:   -resource-dir=%s/Inputs/resource_dir -nobuiltininc 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO-RESOURCE-INC %s
