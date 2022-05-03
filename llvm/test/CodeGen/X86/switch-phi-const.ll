@@ -97,27 +97,27 @@ default:
 define void @switch_trunc_phi_const(i32 %x) {
 ; CHECK-LABEL: switch_trunc_phi_const:
 ; CHECK:       # %bb.0: # %bb0
-; CHECK-NEXT:    movl $3895, %r8d # imm = 0xF37
+; CHECK-NEXT:    movzbl %dil, %r8d
+; CHECK-NEXT:    movl $3895, %ecx # imm = 0xF37
 ; CHECK-NEXT:    movl $42, %esi
 ; CHECK-NEXT:    movl $13, %edx
-; CHECK-NEXT:    movl $5, %eax
-; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    decb %dil
-; CHECK-NEXT:    movzbl %dil, %edi
-; CHECK-NEXT:    cmpb $54, %dil
+; CHECK-NEXT:    movl $5, %edi
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    decl %r8d
+; CHECK-NEXT:    cmpl $54, %r8d
 ; CHECK-NEXT:    ja .LBB1_8
 ; CHECK-NEXT:  # %bb.1: # %bb0
-; CHECK-NEXT:    jmpq *.LJTI1_0(,%rdi,8)
+; CHECK-NEXT:    jmpq *.LJTI1_0(,%r8,8)
 ; CHECK-NEXT:  .LBB1_8: # %default
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_2: # %case_1_loop
-; CHECK-NEXT:    movq effect64@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movq $1, (%rax)
-; CHECK-NEXT:    movq %rcx, %rax
-; CHECK-NEXT:  .LBB1_3: # %case_5
 ; CHECK-NEXT:    movq effect64@GOTPCREL(%rip), %rcx
-; CHECK-NEXT:    movq $5, (%rcx)
-; CHECK-NEXT:    movq %rax, %rdx
+; CHECK-NEXT:    movq $1, (%rcx)
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:  .LBB1_3: # %case_5
+; CHECK-NEXT:    movq effect64@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq $5, (%rax)
+; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:  .LBB1_4: # %case_13
 ; CHECK-NEXT:    movq effect64@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq $13, (%rax)
@@ -125,15 +125,15 @@ define void @switch_trunc_phi_const(i32 %x) {
 ; CHECK-NEXT:  .LBB1_5: # %case_42
 ; CHECK-NEXT:    movq effect64@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq %rsi, (%rax)
-; CHECK-NEXT:    movl $55, %r8d
+; CHECK-NEXT:    movl $55, %ecx
 ; CHECK-NEXT:  .LBB1_6: # %case_55
 ; CHECK-NEXT:    movq effect64@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movq %r8, (%rax)
+; CHECK-NEXT:    movq %rcx, (%rax)
 ; CHECK-NEXT:  .LBB1_7: # %case_7
 ; CHECK-NEXT:    movq g64@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movq (%rax), %rcx
-; CHECK-NEXT:    movq effect64@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movq $7, (%rax)
+; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    movq effect64@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movq $7, (%rcx)
 ; CHECK-NEXT:    jmp .LBB1_2
 bb0:
   %x_trunc = trunc i32 %x to i8

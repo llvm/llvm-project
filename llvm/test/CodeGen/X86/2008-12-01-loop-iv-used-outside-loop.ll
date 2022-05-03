@@ -18,11 +18,11 @@ define i8* @test(i8* %Q, i32* %L) nounwind {
 ; CHECK-NEXT:  LBB0_2: ## %bb1
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl (%eax), %ecx
-; CHECK-NEXT:    cmpb $12, %cl
+; CHECK-NEXT:    cmpl $12, %ecx
 ; CHECK-NEXT:    je LBB0_1
 ; CHECK-NEXT:  ## %bb.3: ## %bb1
 ; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    cmpb $42, %cl
+; CHECK-NEXT:    cmpl $42, %ecx
 ; CHECK-NEXT:    je LBB0_1
 ; CHECK-NEXT:  ## %bb.4: ## %bb3
 ; CHECK-NEXT:    movb $4, 2(%eax)

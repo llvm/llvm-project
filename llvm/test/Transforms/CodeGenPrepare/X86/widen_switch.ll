@@ -3,7 +3,7 @@
 ; RUN: opt < %s -codegenprepare -S -mtriple=x86_64-unknown-unknown    | FileCheck %s --check-prefix=X86
 ; RUN: opt < %s -debugify -codegenprepare -S -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=DEBUG
 
-; No change for x86 because 16-bit registers are part of the architecture.
+; X86 prefers i32 over i16 for address calculation.
 
 define i32 @widen_switch_i16(i32 %a)  {
 entry:
@@ -28,9 +28,10 @@ return:
 
 ; X86-LABEL: @widen_switch_i16(
 ; X86:       %trunc = trunc i32 %a to i16
-; X86-NEXT:  switch i16 %trunc, label %sw.default [
-; X86-NEXT:    i16 1, label %sw.bb0
-; X86-NEXT:    i16 -1, label %sw.bb1
+; X86-NEXT:  %0 = zext i16 %trunc to i32
+; X86-NEXT:  switch i32 %0, label %sw.default [
+; X86-NEXT:    i32 1, label %sw.bb0
+; X86-NEXT:    i32 65535, label %sw.bb1
 }
 
 ; Widen to 32-bit from a smaller, non-native type.
@@ -95,9 +96,9 @@ return:
   ret i32 %retval
 
 ; X86-LABEL: @widen_switch_i16_sext(
-; X86:       %0 = sext i2 %a to i8
-; X86-NEXT:  switch i8 %0, label %sw.default [
-; X86-NEXT:    i8 1, label %sw.bb0
-; X86-NEXT:    i8 -1, label %sw.bb1
+; X86:       %0 = sext i2 %a to i32
+; X86-NEXT:  switch i32 %0, label %sw.default [
+; X86-NEXT:    i32 1, label %sw.bb0
+; X86-NEXT:    i32 -1, label %sw.bb1
 }
 

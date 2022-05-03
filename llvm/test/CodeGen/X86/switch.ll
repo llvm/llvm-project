@@ -1417,8 +1417,8 @@ sw:
 define void @int_max_table_cluster(i8 %x) {
 ; CHECK-LABEL: int_max_table_cluster:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addb $64, %dil
-; CHECK-NEXT:    cmpb $-65, %dil
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    cmpb $-9, %dil
 ; CHECK-NEXT:    ja .LBB15_4
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movzbl %dil, %eax
@@ -2445,7 +2445,6 @@ return: ret void
 define void @pr23738(i4 %x) {
 ; CHECK-LABEL: pr23738:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    andb $15, %al
 ; CHECK-NEXT:    cmpb $11, %al
@@ -2453,7 +2452,7 @@ define void @pr23738(i4 %x) {
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    andl $15, %edi
 ; CHECK-NEXT:    movl $2051, %eax # imm = 0x803
-; CHECK-NEXT:    btq %rdi, %rax
+; CHECK-NEXT:    btl %edi, %eax
 ; CHECK-NEXT:    jae .LBB23_2
 ; CHECK-NEXT:  # %bb.3: # %bb1
 ; CHECK-NEXT:    movl $1, %edi
@@ -2651,21 +2650,20 @@ define void @switch_i8(i32 %a) {
 ; CHECK-LABEL: switch_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andb $127, %dil
+; CHECK-NEXT:    andl $127, %edi
 ; CHECK-NEXT:    leal -1(%rdi), %eax
-; CHECK-NEXT:    cmpb $8, %al
+; CHECK-NEXT:    cmpl $8, %eax
 ; CHECK-NEXT:    ja .LBB26_1
 ; CHECK-NEXT:  # %bb.10:
-; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    jmpq *.LJTI26_0(,%rax,8)
 ; CHECK-NEXT:  .LBB26_4: # %bb0
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB26_1:
-; CHECK-NEXT:    cmpb $13, %dil
+; CHECK-NEXT:    cmpl $13, %edi
 ; CHECK-NEXT:    je .LBB26_8
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    cmpb $42, %dil
+; CHECK-NEXT:    cmpl $42, %edi
 ; CHECK-NEXT:    jne .LBB26_9
 ; CHECK-NEXT:  # %bb.3: # %bb5
 ; CHECK-NEXT:    movl $5, %edi
