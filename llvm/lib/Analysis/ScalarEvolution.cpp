@@ -8464,11 +8464,6 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
       BECount = getUMinFromMismatchedTypes(
           EL0.ExactNotTaken, EL1.ExactNotTaken,
           /*Sequential=*/!isa<BinaryOperator>(ExitCond));
-
-      // If EL0.ExactNotTaken was zero and ExitCond was a short-circuit form,
-      // it should have been simplified to zero (see the condition (3) above)
-      assert(!isa<BinaryOperator>(ExitCond) || !EL0.ExactNotTaken->isZero() ||
-             BECount->isZero());
     }
     if (EL0.MaxNotTaken == getCouldNotCompute())
       MaxBECount = EL1.MaxNotTaken;
