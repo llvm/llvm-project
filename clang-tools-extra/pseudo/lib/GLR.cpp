@@ -90,12 +90,13 @@ const ForestNode &glrParse(const TokenStream &Tokens,
             });
 
   if (!PendingAccept.empty()) {
-    LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Accept: {0} accepted result:\n",
-                                             PendingAccept.size()));
-    for (const auto &Accept : PendingAccept)
-      LLVM_DEBUG(llvm::dbgs()
-                 << "  - " << G.symbolName(Accept.Head->Payload->symbol())
-                 << "\n");
+    LLVM_DEBUG({
+      llvm::dbgs() << llvm::formatv("Accept: {0} accepted result:\n",
+                                             PendingAccept.size());
+      for (const auto &Accept : PendingAccept)
+        llvm::dbgs() << "  - " << G.symbolName(Accept.Head->Payload->symbol())
+                     << "\n";
+    });
     assert(PendingAccept.size() == 1);
     return *PendingAccept.front().Head->Payload;
   }
