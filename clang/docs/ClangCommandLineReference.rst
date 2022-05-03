@@ -3575,6 +3575,8 @@ PowerPC
 
 .. option:: -mcrbits, -mno-crbits
 
+Control the CR-bit tracking feature on PowerPC. ``-mcrbits`` (the enablement of CR-bit tracking support) is the default for POWER8 and above, as well as for all other CPUs when optimization is applied (-O2 and above).
+
 .. option:: -mcrypto, -mno-crypto
 
 .. option:: -mdirect-move, -mno-direct-move

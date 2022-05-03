@@ -10,7 +10,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ;         A[2*i+3][3*j-4][2*k+7] = 1;
 ; }
 
-; CHECK: Loop 'for.i' has cost = 1000000
+; CHECK: Loop 'for.i' has cost = 100000000
 ; CHECK: Loop 'for.j' has cost = 1000000
 ; CHECK: Loop 'for.k' has cost = 60000
 
