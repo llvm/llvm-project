@@ -19,6 +19,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCMachObjectWriter.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -751,6 +753,24 @@ static MachO::LoadCommandType getLCFromMCVM(MCVersionMinType Type) {
   llvm_unreachable("Invalid mc version min type");
 }
 
+// Encode addrsig data as symbol indexes in variable length encoding.
+void MachObjectWriter::writeAddrsigSection(MCAssembler &Asm) {
+  MCSection *AddrSigSection =
+      Asm.getContext().getObjectFileInfo()->getAddrSigSection();
+  MCSection::FragmentListType &fragmentList = AddrSigSection->getFragmentList();
+  if (!fragmentList.size())
+    return;
+
+  assert(fragmentList.size() == 1);
+  MCFragment *pFragment = &*fragmentList.begin();
+  MCDataFragment *pDataFragment = dyn_cast_or_null<MCDataFragment>(pFragment);
+  assert(pDataFragment);
+
+  raw_svector_ostream OS(pDataFragment->getContents());
+  for (const MCSymbol *sym : this->getAddrsigSyms())
+    encodeULEB128(sym->getIndex(), OS);
+}
+
 uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
                                        const MCAsmLayout &Layout) {
   uint64_t StartOffset = W.OS.tell();
@@ -758,6 +778,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   // Compute symbol table information and bind symbol indices.
   computeSymbolTable(Asm, LocalSymbolData, ExternalSymbolData,
                      UndefinedSymbolData);
+  writeAddrsigSection(Asm);
 
   if (!Asm.CGProfile.empty()) {
     MCSection *CGProfileSection = Asm.getContext().getMachOSection(
