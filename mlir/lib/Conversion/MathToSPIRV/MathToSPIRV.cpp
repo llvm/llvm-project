@@ -54,12 +54,12 @@ class CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
     Location loc = copySignOp.getLoc();
     int bitwidth = floatType.getWidth();
     Type intType = rewriter.getIntegerType(bitwidth);
+    uint64_t intValue = uint64_t(1) << (bitwidth - 1);
 
     Value signMask = rewriter.create<spirv::ConstantOp>(
-        loc, intType, rewriter.getIntegerAttr(intType, (1u << (bitwidth - 1))));
+        loc, intType, rewriter.getIntegerAttr(intType, intValue));
     Value valueMask = rewriter.create<spirv::ConstantOp>(
-        loc, intType,
-        rewriter.getIntegerAttr(intType, (1u << (bitwidth - 1)) - 1u));
+        loc, intType, rewriter.getIntegerAttr(intType, intValue - 1u));
 
     if (auto vectorType = copySignOp.getType().dyn_cast<VectorType>()) {
       assert(vectorType.getRank() == 1);
