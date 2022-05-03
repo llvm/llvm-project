@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include "stub.h"
 
 int inc(int x) {
   switch (x) {
