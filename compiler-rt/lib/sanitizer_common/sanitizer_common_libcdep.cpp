@@ -98,15 +98,19 @@ void MaybeStartBackgroudThread() {
 }
 
 #  if !SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL
+#    ifdef __clang__
 #    pragma clang diagnostic push
 // We avoid global-constructors to be sure that globals are ready when
 // sanitizers need them. This can happend before global constructors executed.
 // Here we don't mind if thread is started on later stages.
 #    pragma clang diagnostic ignored "-Wglobal-constructors"
+#    endif
 static struct BackgroudThreadStarted {
   BackgroudThreadStarted() { MaybeStartBackgroudThread(); }
 } background_thread_strarter UNUSED;
+#    ifdef __clang__
 #    pragma clang diagnostic pop
+#    endif
 #  endif
 #else
 void MaybeStartBackgroudThread() {}
