@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS Support)
 add_clang_library(clangPseudo
   DirectiveTree.cpp
   Forest.cpp
+  GLR.cpp
   Grammar.cpp
   GrammarBNF.cpp
   Lex.cpp
