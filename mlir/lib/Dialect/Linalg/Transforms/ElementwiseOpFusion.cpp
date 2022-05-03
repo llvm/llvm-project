@@ -518,12 +518,8 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
     return failure();
   AffineMap fusedIndexMap = linalgOp.getTiedIndexingMap(fusableOpOperand);
 
-  Optional<SmallVector<int64_t, 4>> originalLoopRange =
-      linalgOp.getStaticLoopRanges();
-  if (!originalLoopRange)
-    return rewriter.notifyMatchFailure(linalgOp, "unable to find loop range");
-  originalLoopExtent.assign(originalLoopRange->begin(),
-                            originalLoopRange->end());
+  SmallVector<int64_t, 4> originalLoopRange = linalgOp.getStaticLoopRanges();
+  originalLoopExtent.assign(originalLoopRange.begin(), originalLoopRange.end());
 
   reassociation.clear();
   expandedShapeMap.clear();
