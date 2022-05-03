@@ -788,7 +788,10 @@ bool FunctionResult::IsCompatibleWith(const FunctionResult &actual) const {
     return false;
   } else if (const auto *ifaceTypeShape{std::get_if<TypeAndShape>(&u)}) {
     if (const auto *actualTypeShape{std::get_if<TypeAndShape>(&actual.u)}) {
-      if (ifaceTypeShape->shape() != actualTypeShape->shape()) {
+      if (ifaceTypeShape->Rank() != actualTypeShape->Rank()) {
+        return false;
+      } else if (!attrs.test(Attr::Allocatable) && !attrs.test(Attr::Pointer) &&
+          ifaceTypeShape->shape() != actualTypeShape->shape()) {
         return false;
       } else {
         return ifaceTypeShape->type().IsTkCompatibleWith(
