@@ -233,7 +233,7 @@ func.func @volatile_aligned_load() -> () {
 
 func.func @simple_load_missing_storageclass() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
-  // expected-error @+1 {{expected non-function type}}
+  // expected-error @+1 {{expected attribute value}}
   %1 = spv.Load %0 : f32
   return
 }
@@ -387,7 +387,7 @@ func.func @aligned_store(%arg0 : f32) -> () {
 
 func.func @simple_store_missing_ptr_type(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
-  // expected-error @+1 {{expected non-function type}}
+  // expected-error @+1 {{expected attribute value}}
   spv.Store  %0, %arg0 : f32
   return
 }

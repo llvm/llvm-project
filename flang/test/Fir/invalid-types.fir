@@ -6,7 +6,7 @@ func private @box3() -> !fir.boxproc<>
 
 // -----
 
-// expected-error@+2 {{expected non-function type}}
+// expected-error@+2 {{expected attribute value}}
 // expected-error@+1 {{expected affine map}}
 func private @box1() -> !fir.box<!fir.array<?xf32>, >
 

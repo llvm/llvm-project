@@ -206,10 +206,13 @@ Attribute Parser::parseAttribute(Type type) {
     return builder.getUnitAttr();
 
   default:
-    // Parse a type attribute.
-    if (Type type = parseType())
-      return TypeAttr::get(type);
-    return nullptr;
+    // Parse a type attribute. We parse `Optional` here to allow for providing a
+    // better error message.
+    Type type;
+    OptionalParseResult result = parseOptionalType(type);
+    if (!result.hasValue())
+      return emitError("expected attribute value"), Attribute();
+    return failed(*result) ? Attribute() : TypeAttr::get(type);
   }
 }
 
