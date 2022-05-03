@@ -110,9 +110,14 @@ contains
     if (i>0) then
       foo = array1(2,U)
     else if (i<0) then
-      !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types CLASS(t1) and CLASS(t2)
-      foo = array2(2,U)
+      foo = array2(2,U) ! ok: t2 extends t1
     end if
+  end function
+
+  function foo2()
+    class(t2),DIMENSION(:),allocatable :: foo2
+    !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types CLASS(t2) and CLASS(t1)
+    foo2 = array1(2,:)
   end function
 
   subroutine sub_with_in_and_inout_param(y, z)

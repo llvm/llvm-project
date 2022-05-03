@@ -94,7 +94,7 @@ const Scope *FindPureProcedureContaining(const Scope &start) {
 static bool MightBeSameDerivedType(
     const std::optional<evaluate::DynamicType> &lhsType,
     const std::optional<evaluate::DynamicType> &rhsType) {
-  return lhsType && rhsType && rhsType->IsTkCompatibleWith(*lhsType);
+  return lhsType && rhsType && lhsType->IsTkCompatibleWith(*rhsType);
 }
 
 Tristate IsDefinedAssignment(
