@@ -70,8 +70,8 @@ PlatformSP PlatformRemoteMacOSX::CreateInstance(bool force,
     const char *triple_cstr =
         arch ? arch->GetTriple().getTriple().c_str() : "<null>";
 
-    LLDB_LOGF(log, "PlatformMacOSX::%s(force=%s, arch={%s,%s})", __FUNCTION__,
-              force ? "true" : "false", arch_name, triple_cstr);
+    LLDB_LOGF(log, "PlatformRemoteMacOSX::%s(force=%s, arch={%s,%s})",
+              __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
   }
 
   bool create = force;
@@ -139,52 +139,6 @@ PlatformRemoteMacOSX::GetSupportedArchitectures(const ArchSpec &host_info) {
   result.push_back(ArchSpec("arm64-apple-ios"));
   result.push_back(ArchSpec("arm64e-apple-ios"));
   return result;
-}
-
-lldb_private::Status PlatformRemoteMacOSX::GetFileWithUUID(
-    const lldb_private::FileSpec &platform_file,
-    const lldb_private::UUID *uuid_ptr, lldb_private::FileSpec &local_file) {
-  if (m_remote_platform_sp) {
-    std::string local_os_build;
-#if !defined(__linux__)
-    local_os_build = HostInfo::GetOSBuildString().getValueOr("");
-#endif
-    llvm::Optional<std::string> remote_os_build =
-        m_remote_platform_sp->GetOSBuildString();
-    if (local_os_build == remote_os_build) {
-      // same OS version: the local file is good enough
-      local_file = platform_file;
-      return Status();
-    } else {
-      // try to find the file in the cache
-      std::string cache_path(GetLocalCacheDirectory());
-      std::string module_path(platform_file.GetPath());
-      cache_path.append(module_path);
-      FileSpec module_cache_spec(cache_path);
-      if (FileSystem::Instance().Exists(module_cache_spec)) {
-        local_file = module_cache_spec;
-        return Status();
-      }
-      // bring in the remote module file
-      FileSpec module_cache_folder =
-          module_cache_spec.CopyByRemovingLastPathComponent();
-      // try to make the local directory first
-      Status err(
-          llvm::sys::fs::create_directory(module_cache_folder.GetPath()));
-      if (err.Fail())
-        return err;
-      err = GetFile(platform_file, module_cache_spec);
-      if (err.Fail())
-        return err;
-      if (FileSystem::Instance().Exists(module_cache_spec)) {
-        local_file = module_cache_spec;
-        return Status();
-      } else
-        return Status("unable to obtain valid module file");
-    }
-  }
-  local_file = platform_file;
-  return Status();
 }
 
 llvm::StringRef PlatformRemoteMacOSX::GetDescriptionStatic() {
