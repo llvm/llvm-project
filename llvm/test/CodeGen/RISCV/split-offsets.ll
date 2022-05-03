@@ -118,3 +118,38 @@ while_end:
   ret void
 }
 
+; GEPs have been manually split so the base GEP does not get used by any memory
+; instructions. Make sure we use a small offset in each of the stores.
+define void @test3([65536 x i32]* %t) {
+; RV32I-LABEL: test3:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    lui a1, 20
+; RV32I-NEXT:    addi a1, a1, -1920
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    li a1, 2
+; RV32I-NEXT:    sw a1, 4(a0)
+; RV32I-NEXT:    li a1, 3
+; RV32I-NEXT:    sw a1, 8(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test3:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    lui a1, 20
+; RV64I-NEXT:    addiw a1, a1, -1920
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    li a1, 2
+; RV64I-NEXT:    sw a1, 4(a0)
+; RV64I-NEXT:    li a1, 3
+; RV64I-NEXT:    sw a1, 8(a0)
+; RV64I-NEXT:    ret
+entry:
+  %0 = bitcast [65536 x i32]* %t to i8*
+  %splitgep = getelementptr i8, i8* %0, i64 80000
+  %1 = getelementptr i8, i8* %splitgep, i64 4
+  %2 = bitcast i8* %1 to i32*
+  %3 = getelementptr i8, i8* %splitgep, i64 8
+  %4 = bitcast i8* %3 to i32*
+  store i32 2, i32* %2, align 4
+  store i32 3, i32* %4, align 4
+  ret void
+}
