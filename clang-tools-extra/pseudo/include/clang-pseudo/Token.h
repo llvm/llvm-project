@@ -29,6 +29,7 @@
 #define CLANG_PSEUDO_TOKEN_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -193,6 +194,10 @@ enum class LexFlags : uint8_t {
   /// The text() of such tokens will contain the raw trigrah.
   NeedsCleaning = 1 << 1,
 };
+/// A generic lang options suitable for lexing/parsing a langage.
+clang::LangOptions genericLangOpts(
+    clang::Language = clang::Language::CXX,
+    clang::LangStandard::Kind = clang::LangStandard::lang_unspecified);
 
 /// Derives a token stream by decoding escapes, interpreting raw_identifiers and
 /// splitting the greatergreater token.
