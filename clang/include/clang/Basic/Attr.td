@@ -1775,8 +1775,9 @@ def Convergent : InheritableAttr {
 }
 
 def NoInline : DeclOrStmtAttr {
-  let Spellings = [GCC<"noinline">, CXX11<"clang", "noinline">,
-                   C2x<"clang", "noinline">, Declspec<"noinline">];
+  let Spellings = [Keyword<"__noinline__">, GCC<"noinline">,
+                   CXX11<"clang", "noinline">, C2x<"clang", "noinline">,
+                   Declspec<"noinline">];
   let Accessors = [Accessor<"isClangNoInline", [CXX11<"clang", "noinline">,
                                                 C2x<"clang", "noinline">]>];
   let Documentation = [NoInlineDocs];

@@ -351,8 +351,11 @@ C++2b Feature Support
 - Implemented `P0849R8: auto(x): decay-copy in the language <https://wg21.link/P0849R8>`_.
 - Implemented `P2242R3: Non-literal variables (and labels and gotos) in constexpr functions	<https://wg21.link/P2242R3>`_.
 
-CUDA Language Changes in Clang
-------------------------------
+CUDA/HIP Language Changes in Clang
+----------------------------------
+
+- Added `__noinline__` as a keyword to avoid diagnostics due to usage of
+ `__attribute__((__noinline__))` in CUDA/HIP programs.
 
 Objective-C Language Changes in Clang
 -------------------------------------
