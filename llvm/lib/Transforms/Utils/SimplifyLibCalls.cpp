@@ -1190,13 +1190,15 @@ Value *LibCallSimplifier::optimizeMemCmpBCmpCommon(CallInst *CI,
 }
 
 Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilderBase &B) {
+  Module *M = CI->getModule();
   if (Value *V = optimizeMemCmpBCmpCommon(CI, B))
     return V;
 
   // memcmp(x, y, Len) == 0 -> bcmp(x, y, Len) == 0
   // bcmp can be more efficient than memcmp because it only has to know that
   // there is a difference, not how different one is to the other.
-  if (TLI->has(LibFunc_bcmp) && isOnlyUsedInZeroEqualityComparison(CI)) {
+  if (isLibFuncEmittable(M, TLI, LibFunc_bcmp) &&
+      isOnlyUsedInZeroEqualityComparison(CI)) {
     Value *LHS = CI->getArgOperand(0);
     Value *RHS = CI->getArgOperand(1);
     Value *Size = CI->getArgOperand(2);
@@ -1360,7 +1362,8 @@ static Value *valueHasFloatPrecision(Value *Val) {
 
 /// Shrink double -> float functions.
 static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
-                               bool isBinary, bool isPrecise = false) {
+                               bool isBinary, const TargetLibraryInfo *TLI,
+                               bool isPrecise = false) {
   Function *CalleeFn = CI->getCalledFunction();
   if (!CI->getType()->isDoubleTy() || !CalleeFn)
     return nullptr;
@@ -1410,22 +1413,25 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
     R = isBinary ? B.CreateCall(Fn, V) : B.CreateCall(Fn, V[0]);
   } else {
     AttributeList CalleeAttrs = CalleeFn->getAttributes();
-    R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], CalleeName, B, CalleeAttrs)
-                 : emitUnaryFloatFnCall(V[0], CalleeName, B, CalleeAttrs);
+    R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
+                                         CalleeAttrs)
+                 : emitUnaryFloatFnCall(V[0], TLI, CalleeName, B, CalleeAttrs);
   }
   return B.CreateFPExt(R, B.getDoubleTy());
 }
 
 /// Shrink double -> float for unary functions.
 static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilderBase &B,
+                                    const TargetLibraryInfo *TLI,
                                     bool isPrecise = false) {
-  return optimizeDoubleFP(CI, B, false, isPrecise);
+  return optimizeDoubleFP(CI, B, false, TLI, isPrecise);
 }
 
 /// Shrink double -> float for binary functions.
 static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilderBase &B,
+                                     const TargetLibraryInfo *TLI,
                                      bool isPrecise = false) {
-  return optimizeDoubleFP(CI, B, true, isPrecise);
+  return optimizeDoubleFP(CI, B, true, TLI, isPrecise);
 }
 
 // cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
@@ -1541,6 +1547,7 @@ static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B, unsigned DstWidth) {
 /// ldexp(1.0, x) for pow(2.0, itofp(x)); exp2(n * x) for pow(2.0 ** n, x);
 /// exp10(x) for pow(10.0, x); exp2(log2(n) * x) for pow(n, x).
 Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
+  Module *M = Pow->getModule();
   Value *Base = Pow->getArgOperand(0), *Expo = Pow->getArgOperand(1);
   AttributeList Attrs; // Attributes are only meaningful on the original call
   Module *Mod = Pow->getModule();
@@ -1568,7 +1575,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
 
     Function *CalleeFn = BaseFn->getCalledFunction();
     if (CalleeFn &&
-        TLI->getLibFunc(CalleeFn->getName(), LibFn) && TLI->has(LibFn)) {
+        TLI->getLibFunc(CalleeFn->getName(), LibFn) &&
+        isLibFuncEmittable(M, TLI, LibFn)) {
       StringRef ExpName;
       Intrinsic::ID ID;
       Value *ExpFn;
@@ -1620,7 +1628,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   // pow(2.0, itofp(x)) -> ldexp(1.0, x)
   if (match(Base, m_SpecificFP(2.0)) &&
       (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo)) &&
-      hasFloatFn(TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
+      hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
     if (Value *ExpoI = getIntToFPVal(Expo, B, TLI->getIntSize()))
       return copyFlags(*Pow,
                        emitBinaryFloatFnCall(ConstantFP::get(Ty, 1.0), ExpoI,
@@ -1629,7 +1637,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   }
 
   // pow(2.0 ** n, x) -> exp2(n * x)
-  if (hasFloatFn(TLI, Ty, LibFunc_exp2, LibFunc_exp2f, LibFunc_exp2l)) {
+  if (hasFloatFn(M, TLI, Ty, LibFunc_exp2, LibFunc_exp2f, LibFunc_exp2l)) {
     APFloat BaseR = APFloat(1.0);
     BaseR.convert(BaseF->getSemantics(), APFloat::rmTowardZero, &Ignored);
     BaseR = BaseR / *BaseF;
@@ -1656,7 +1664,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   // pow(10.0, x) -> exp10(x)
   // TODO: There is no exp10() intrinsic yet, but some day there shall be one.
   if (match(Base, m_SpecificFP(10.0)) &&
-      hasFloatFn(TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l))
+      hasFloatFn(M, TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l))
     return copyFlags(*Pow, emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10,
                                                 LibFunc_exp10f, LibFunc_exp10l,
                                                 B, Attrs));
@@ -1681,7 +1689,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
         return copyFlags(*Pow, B.CreateCall(Intrinsic::getDeclaration(
                                                 Mod, Intrinsic::exp2, Ty),
                                             FMul, "exp2"));
-      else if (hasFloatFn(TLI, Ty, LibFunc_exp2, LibFunc_exp2f, LibFunc_exp2l))
+      else if (hasFloatFn(M, TLI, Ty, LibFunc_exp2, LibFunc_exp2f,
+                          LibFunc_exp2l))
         return copyFlags(*Pow, emitUnaryFloatFnCall(FMul, TLI, LibFunc_exp2,
                                                     LibFunc_exp2f,
                                                     LibFunc_exp2l, B, Attrs));
@@ -1702,7 +1711,8 @@ static Value *getSqrtCall(Value *V, AttributeList Attrs, bool NoErrno,
   }
 
   // Otherwise, use the libcall for sqrt().
-  if (hasFloatFn(TLI, V->getType(), LibFunc_sqrt, LibFunc_sqrtf, LibFunc_sqrtl))
+  if (hasFloatFn(M, TLI, V->getType(), LibFunc_sqrt, LibFunc_sqrtf,
+                 LibFunc_sqrtl))
     // TODO: We also should check that the target can in fact lower the sqrt()
     // libcall. We currently have no way to ask this question, so we ask if
     // the target has a sqrt() libcall, which is not exactly the same.
@@ -1892,8 +1902,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   // Shrink pow() to powf() if the arguments are single precision,
   // unless the result is expected to be double precision.
   if (UnsafeFPShrink && Name == TLI->getName(LibFunc_pow) &&
-      hasFloatVersion(Name)) {
-    if (Value *Shrunk = optimizeBinaryDoubleFP(Pow, B, true))
+      hasFloatVersion(M, Name)) {
+    if (Value *Shrunk = optimizeBinaryDoubleFP(Pow, B, TLI, true))
       return Shrunk;
   }
 
@@ -1901,13 +1911,14 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
+  Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   AttributeList Attrs; // Attributes are only meaningful on the original call
   StringRef Name = Callee->getName();
   Value *Ret = nullptr;
   if (UnsafeFPShrink && Name == TLI->getName(LibFunc_exp2) &&
-      hasFloatVersion(Name))
-    Ret = optimizeUnaryDoubleFP(CI, B, true);
+      hasFloatVersion(M, Name))
+    Ret = optimizeUnaryDoubleFP(CI, B, TLI, true);
 
   Type *Ty = CI->getType();
   Value *Op = CI->getArgOperand(0);
@@ -1915,7 +1926,7 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   // Turn exp2(sitofp(x)) -> ldexp(1.0, sext(x))  if sizeof(x) <= IntSize
   // Turn exp2(uitofp(x)) -> ldexp(1.0, zext(x))  if sizeof(x) < IntSize
   if ((isa<SIToFPInst>(Op) || isa<UIToFPInst>(Op)) &&
-      hasFloatFn(TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
+      hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
     if (Value *Exp = getIntToFPVal(Op, B, TLI->getIntSize()))
       return emitBinaryFloatFnCall(ConstantFP::get(Ty, 1.0), Exp, TLI,
                                    LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl,
@@ -1926,12 +1937,14 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
+  Module *M = CI->getModule();
+
   // If we can shrink the call to a float function rather than a double
   // function, do that first.
   Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
-  if ((Name == "fmin" || Name == "fmax") && hasFloatVersion(Name))
-    if (Value *Ret = optimizeBinaryDoubleFP(CI, B))
+  if ((Name == "fmin" || Name == "fmax") && hasFloatVersion(M, Name))
+    if (Value *Ret = optimizeBinaryDoubleFP(CI, B, TLI))
       return Ret;
 
   // The LLVM intrinsics minnum/maxnum correspond to fmin/fmax. Canonicalize to
@@ -1962,8 +1975,8 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Type *Ty = Log->getType();
   Value *Ret = nullptr;
 
-  if (UnsafeFPShrink && hasFloatVersion(LogNm))
-    Ret = optimizeUnaryDoubleFP(Log, B, true);
+  if (UnsafeFPShrink && hasFloatVersion(Mod, LogNm))
+    Ret = optimizeUnaryDoubleFP(Log, B, TLI, true);
 
   // The earlier call must also be 'fast' in order to do these transforms.
   CallInst *Arg = dyn_cast<CallInst>(Log->getArgOperand(0));
@@ -2071,7 +2084,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
         Log->doesNotAccessMemory()
             ? B.CreateCall(Intrinsic::getDeclaration(Mod, LogID, Ty),
                            Arg->getOperand(0), "log")
-            : emitUnaryFloatFnCall(Arg->getOperand(0), LogNm, B, Attrs);
+            : emitUnaryFloatFnCall(Arg->getOperand(0), TLI, LogNm, B, Attrs);
     Value *MulY = B.CreateFMul(Arg->getArgOperand(1), LogX, "mul");
     // Since pow() may have side effects, e.g. errno,
     // dead code elimination may not be trusted to remove it.
@@ -2094,7 +2107,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
     Value *LogE = Log->doesNotAccessMemory()
                       ? B.CreateCall(Intrinsic::getDeclaration(Mod, LogID, Ty),
                                      Eul, "log")
-                      : emitUnaryFloatFnCall(Eul, LogNm, B, Attrs);
+                      : emitUnaryFloatFnCall(Eul, TLI, LogNm, B, Attrs);
     Value *MulY = B.CreateFMul(Arg->getArgOperand(0), LogE, "mul");
     // Since exp() may have side effects, e.g. errno,
     // dead code elimination may not be trusted to remove it.
@@ -2106,14 +2119,16 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
+  Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   Value *Ret = nullptr;
   // TODO: Once we have a way (other than checking for the existince of the
   // libcall) to tell whether our target can lower @llvm.sqrt, relax the
   // condition below.
-  if (TLI->has(LibFunc_sqrtf) && (Callee->getName() == "sqrt" ||
-                                  Callee->getIntrinsicID() == Intrinsic::sqrt))
-    Ret = optimizeUnaryDoubleFP(CI, B, true);
+  if (isLibFuncEmittable(M, TLI, LibFunc_sqrtf) &&
+      (Callee->getName() == "sqrt" ||
+       Callee->getIntrinsicID() == Intrinsic::sqrt))
+    Ret = optimizeUnaryDoubleFP(CI, B, TLI, true);
 
   if (!CI->isFast())
     return Ret;
@@ -2158,7 +2173,6 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
   // If we found a repeated factor, hoist it out of the square root and
   // replace it with the fabs of that factor.
-  Module *M = Callee->getParent();
   Type *ArgType = I->getType();
   Function *Fabs = Intrinsic::getDeclaration(M, Intrinsic::fabs, ArgType);
   Value *FabsCall = B.CreateCall(Fabs, RepeatOp, "fabs");
@@ -2175,11 +2189,12 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
 // TODO: Generalize to handle any trig function and its inverse.
 Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilderBase &B) {
+  Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
-  if (UnsafeFPShrink && Name == "tan" && hasFloatVersion(Name))
-    Ret = optimizeUnaryDoubleFP(CI, B, true);
+  if (UnsafeFPShrink && Name == "tan" && hasFloatVersion(M, Name))
+    Ret = optimizeUnaryDoubleFP(CI, B, TLI, true);
 
   Value *Op1 = CI->getArgOperand(0);
   auto *OpC = dyn_cast<CallInst>(Op1);
@@ -2195,7 +2210,8 @@ Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilderBase &B) {
   // tanl(atanl(x)) -> x
   LibFunc Func;
   Function *F = OpC->getCalledFunction();
-  if (F && TLI->getLibFunc(F->getName(), Func) && TLI->has(Func) &&
+  if (F && TLI->getLibFunc(F->getName(), Func) &&
+      isLibFuncEmittable(M, TLI, Func) &&
       ((Func == LibFunc_atan && Callee->getName() == "tan") ||
        (Func == LibFunc_atanf && Callee->getName() == "tanf") ||
        (Func == LibFunc_atanl && Callee->getName() == "tanl")))
@@ -2211,9 +2227,10 @@ static bool isTrigLibCall(CallInst *CI) {
          CI->hasFnAttr(Attribute::ReadNone);
 }
 
-static void insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
+static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
                              bool UseFloat, Value *&Sin, Value *&Cos,
-                             Value *&SinCos) {
+                             Value *&SinCos, const TargetLibraryInfo *TLI) {
+  Module *M = OrigCallee->getParent();
   Type *ArgTy = Arg->getType();
   Type *ResTy;
   StringRef Name;
@@ -2233,9 +2250,12 @@ static void insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
     ResTy = StructType::get(ArgTy, ArgTy);
   }
 
-  Module *M = OrigCallee->getParent();
-  FunctionCallee Callee =
-      M->getOrInsertFunction(Name, OrigCallee->getAttributes(), ResTy, ArgTy);
+  if (!isLibFuncEmittable(M, TLI, Name))
+    return false;
+  LibFunc TheLibFunc;
+  TLI->getLibFunc(Name, TheLibFunc);
+  FunctionCallee Callee = getOrInsertLibFunc(
+      M, *TLI, TheLibFunc, OrigCallee->getAttributes(), ResTy, ArgTy);
 
   if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
     // If the argument is an instruction, it must dominate all uses so put our
@@ -2259,6 +2279,8 @@ static void insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
     Cos = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 1),
                                  "cospi");
   }
+
+  return true;
 }
 
 Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilderBase &B) {
@@ -2286,7 +2308,9 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   Value *Sin, *Cos, *SinCos;
-  insertSinCosCall(B, CI->getCalledFunction(), Arg, IsFloat, Sin, Cos, SinCos);
+  if (!insertSinCosCall(B, CI->getCalledFunction(), Arg, IsFloat, Sin, Cos,
+                        SinCos, TLI))
+    return nullptr;
 
   auto replaceTrigInsts = [this](SmallVectorImpl<CallInst *> &Calls,
                                  Value *Res) {
@@ -2307,6 +2331,7 @@ void LibCallSimplifier::classifyArgUse(
     SmallVectorImpl<CallInst *> &CosCalls,
     SmallVectorImpl<CallInst *> &SinCosCalls) {
   CallInst *CI = dyn_cast<CallInst>(Val);
+  Module *M = CI->getModule();
 
   if (!CI || CI->use_empty())
     return;
@@ -2317,7 +2342,8 @@ void LibCallSimplifier::classifyArgUse(
 
   Function *Callee = CI->getCalledFunction();
   LibFunc Func;
-  if (!Callee || !TLI->getLibFunc(*Callee, Func) || !TLI->has(Func) ||
+  if (!Callee || !TLI->getLibFunc(*Callee, Func) ||
+      !isLibFuncEmittable(M, TLI, Func) ||
       !isTrigLibCall(CI))
     return;
 
@@ -2532,6 +2558,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilderBase &B) {
 
+  Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   FunctionType *FT = Callee->getFunctionType();
   if (Value *V = optimizePrintFString(CI, B)) {
@@ -2540,10 +2567,10 @@ Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilderBase &B) {
 
   // printf(format, ...) -> iprintf(format, ...) if no floating point
   // arguments.
-  if (TLI->has(LibFunc_iprintf) && !callHasFloatingPointArgument(CI)) {
-    Module *M = B.GetInsertBlock()->getParent()->getParent();
-    FunctionCallee IPrintFFn =
-        M->getOrInsertFunction("iprintf", FT, Callee->getAttributes());
+  if (isLibFuncEmittable(M, TLI, LibFunc_iprintf) &&
+      !callHasFloatingPointArgument(CI)) {
+    FunctionCallee IPrintFFn = getOrInsertLibFunc(M, *TLI, LibFunc_iprintf, FT,
+                                                  Callee->getAttributes());
     CallInst *New = cast<CallInst>(CI->clone());
     New->setCalledFunction(IPrintFFn);
     B.Insert(New);
@@ -2552,11 +2579,10 @@ Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilderBase &B) {
 
   // printf(format, ...) -> __small_printf(format, ...) if no 128-bit floating point
   // arguments.
-  if (TLI->has(LibFunc_small_printf) && !callHasFP128Argument(CI)) {
-    Module *M = B.GetInsertBlock()->getParent()->getParent();
-    auto SmallPrintFFn =
-        M->getOrInsertFunction(TLI->getName(LibFunc_small_printf),
-                               FT, Callee->getAttributes());
+  if (isLibFuncEmittable(M, TLI, LibFunc_small_printf) &&
+      !callHasFP128Argument(CI)) {
+    auto SmallPrintFFn = getOrInsertLibFunc(M, *TLI, LibFunc_small_printf, FT,
+                                            Callee->getAttributes());
     CallInst *New = cast<CallInst>(CI->clone());
     New->setCalledFunction(SmallPrintFFn);
     B.Insert(New);
@@ -2655,6 +2681,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
 }
 
 Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilderBase &B) {
+  Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   FunctionType *FT = Callee->getFunctionType();
   if (Value *V = optimizeSPrintFString(CI, B)) {
@@ -2663,10 +2690,10 @@ Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilderBase &B) {
 
   // sprintf(str, format, ...) -> siprintf(str, format, ...) if no floating
   // point arguments.
-  if (TLI->has(LibFunc_siprintf) && !callHasFloatingPointArgument(CI)) {
-    Module *M = B.GetInsertBlock()->getParent()->getParent();
-    FunctionCallee SIPrintFFn =
-        M->getOrInsertFunction("siprintf", FT, Callee->getAttributes());
+  if (isLibFuncEmittable(M, TLI, LibFunc_siprintf) &&
+      !callHasFloatingPointArgument(CI)) {
+    FunctionCallee SIPrintFFn = getOrInsertLibFunc(M, *TLI, LibFunc_siprintf,
+                                                   FT, Callee->getAttributes());
     CallInst *New = cast<CallInst>(CI->clone());
     New->setCalledFunction(SIPrintFFn);
     B.Insert(New);
@@ -2675,11 +2702,10 @@ Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilderBase &B) {
 
   // sprintf(str, format, ...) -> __small_sprintf(str, format, ...) if no 128-bit
   // floating point arguments.
-  if (TLI->has(LibFunc_small_sprintf) && !callHasFP128Argument(CI)) {
-    Module *M = B.GetInsertBlock()->getParent()->getParent();
-    auto SmallSPrintFFn =
-        M->getOrInsertFunction(TLI->getName(LibFunc_small_sprintf),
-                               FT, Callee->getAttributes());
+  if (isLibFuncEmittable(M, TLI, LibFunc_small_sprintf) &&
+      !callHasFP128Argument(CI)) {
+    auto SmallSPrintFFn = getOrInsertLibFunc(M, *TLI, LibFunc_small_sprintf, FT,
+                                             Callee->getAttributes());
     CallInst *New = cast<CallInst>(CI->clone());
     New->setCalledFunction(SmallSPrintFFn);
     B.Insert(New);
@@ -2835,6 +2861,7 @@ Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI,
 }
 
 Value *LibCallSimplifier::optimizeFPrintF(CallInst *CI, IRBuilderBase &B) {
+  Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   FunctionType *FT = Callee->getFunctionType();
   if (Value *V = optimizeFPrintFString(CI, B)) {
@@ -2843,10 +2870,10 @@ Value *LibCallSimplifier::optimizeFPrintF(CallInst *CI, IRBuilderBase &B) {
 
   // fprintf(stream, format, ...) -> fiprintf(stream, format, ...) if no
   // floating point arguments.
-  if (TLI->has(LibFunc_fiprintf) && !callHasFloatingPointArgument(CI)) {
-    Module *M = B.GetInsertBlock()->getParent()->getParent();
-    FunctionCallee FIPrintFFn =
-        M->getOrInsertFunction("fiprintf", FT, Callee->getAttributes());
+  if (isLibFuncEmittable(M, TLI, LibFunc_fiprintf) &&
+      !callHasFloatingPointArgument(CI)) {
+    FunctionCallee FIPrintFFn = getOrInsertLibFunc(M, *TLI, LibFunc_fiprintf,
+                                                   FT, Callee->getAttributes());
     CallInst *New = cast<CallInst>(CI->clone());
     New->setCalledFunction(FIPrintFFn);
     B.Insert(New);
@@ -2855,11 +2882,11 @@ Value *LibCallSimplifier::optimizeFPrintF(CallInst *CI, IRBuilderBase &B) {
 
   // fprintf(stream, format, ...) -> __small_fprintf(stream, format, ...) if no
   // 128-bit floating point arguments.
-  if (TLI->has(LibFunc_small_fprintf) && !callHasFP128Argument(CI)) {
-    Module *M = B.GetInsertBlock()->getParent()->getParent();
+  if (isLibFuncEmittable(M, TLI, LibFunc_small_fprintf) &&
+      !callHasFP128Argument(CI)) {
     auto SmallFPrintFFn =
-        M->getOrInsertFunction(TLI->getName(LibFunc_small_fprintf),
-                               FT, Callee->getAttributes());
+        getOrInsertLibFunc(M, *TLI, LibFunc_small_fprintf, FT,
+                           Callee->getAttributes());
     CallInst *New = cast<CallInst>(CI->clone());
     New->setCalledFunction(SmallFPrintFFn);
     B.Insert(New);
@@ -2944,21 +2971,19 @@ Value *LibCallSimplifier::optimizeBCopy(CallInst *CI, IRBuilderBase &B) {
                                         CI->getArgOperand(2)));
 }
 
-bool LibCallSimplifier::hasFloatVersion(StringRef FuncName) {
-  LibFunc Func;
+bool LibCallSimplifier::hasFloatVersion(const Module *M, StringRef FuncName) {
   SmallString<20> FloatFuncName = FuncName;
   FloatFuncName += 'f';
-  if (TLI->getLibFunc(FloatFuncName, Func))
-    return TLI->has(Func);
-  return false;
+  return isLibFuncEmittable(M, TLI, FloatFuncName);
 }
 
 Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
                                                       IRBuilderBase &Builder) {
+  Module *M = CI->getModule();
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
   // Check for string/memory library functions.
-  if (TLI->getLibFunc(*Callee, Func) && TLI->has(Func)) {
+  if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {
     // Make sure we never change the calling convention.
     assert(
         (ignoreCallingConv(Func) ||
@@ -3039,6 +3064,8 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
 Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
                                                        LibFunc Func,
                                                        IRBuilderBase &Builder) {
+  const Module *M = CI->getModule();
+
   // Don't optimize calls that require strict floating point semantics.
   if (CI->isStrictFP())
     return nullptr;
@@ -3117,12 +3144,12 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_sin:
   case LibFunc_sinh:
   case LibFunc_tanh:
-    if (UnsafeFPShrink && hasFloatVersion(CI->getCalledFunction()->getName()))
-      return optimizeUnaryDoubleFP(CI, Builder, true);
+    if (UnsafeFPShrink && hasFloatVersion(M, CI->getCalledFunction()->getName()))
+      return optimizeUnaryDoubleFP(CI, Builder, TLI, true);
     return nullptr;
   case LibFunc_copysign:
-    if (hasFloatVersion(CI->getCalledFunction()->getName()))
-      return optimizeBinaryDoubleFP(CI, Builder);
+    if (hasFloatVersion(M, CI->getCalledFunction()->getName()))
+      return optimizeBinaryDoubleFP(CI, Builder, TLI);
     return nullptr;
   case LibFunc_fminf:
   case LibFunc_fmin:
@@ -3141,6 +3168,7 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
 }
 
 Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
+  Module *M = CI->getModule();
   assert(!CI->isMustTailCall() && "These transforms aren't musttail safe.");
 
   // TODO: Split out the code below that operates on FP calls so that
@@ -3219,7 +3247,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
   }
 
   // Then check for known library functions.
-  if (TLI->getLibFunc(*Callee, Func) && TLI->has(Func)) {
+  if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {
     // We never change the calling convention.
     if (!ignoreCallingConv(Func) && !IsCallingConvC)
       return nullptr;

@@ -8,8 +8,11 @@
 
 #include "Perf.h"
 
+#include "lldb/Host/linux/Support.h"
+
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #include <sys/mman.h>
 #include <sys/syscall.h>

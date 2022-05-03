@@ -443,6 +443,7 @@ public:
 private:
 
   bool mangleSubstitution(const NamedDecl *ND);
+  bool mangleSubstitution(NestedNameSpecifier *NNS);
   bool mangleSubstitution(QualType T);
   bool mangleSubstitution(TemplateName Template);
   bool mangleSubstitution(uintptr_t Ptr);
@@ -455,6 +456,11 @@ private:
     ND = cast<NamedDecl>(ND->getCanonicalDecl());
 
     addSubstitution(reinterpret_cast<uintptr_t>(ND));
+  }
+  void addSubstitution(NestedNameSpecifier *NNS) {
+    NNS = Context.getASTContext().getCanonicalNestedNameSpecifier(NNS);
+
+    addSubstitution(reinterpret_cast<uintptr_t>(NNS));
   }
   void addSubstitution(QualType T);
   void addSubstitution(TemplateName Template);
@@ -2036,12 +2042,21 @@ void CXXNameMangler::manglePrefix(NestedNameSpecifier *qualifier) {
     return;
 
   case NestedNameSpecifier::Identifier:
+    // Clang 14 and before did not consider this substitutable.
+    bool Clang14Compat = getASTContext().getLangOpts().getClangABICompat() <=
+                         LangOptions::ClangABI::Ver14;
+    if (!Clang14Compat && mangleSubstitution(qualifier))
+      return;
+
     // Member expressions can have these without prefixes, but that
     // should end up in mangleUnresolvedPrefix instead.
     assert(qualifier->getPrefix());
     manglePrefix(qualifier->getPrefix());
 
     mangleSourceName(qualifier->getAsIdentifier());
+
+    if (!Clang14Compat)
+      addSubstitution(qualifier);
     return;
   }
 
@@ -6007,6 +6022,14 @@ bool CXXNameMangler::mangleSubstitution(const NamedDecl *ND) {
 
   ND = cast<NamedDecl>(ND->getCanonicalDecl());
   return mangleSubstitution(reinterpret_cast<uintptr_t>(ND));
+}
+
+bool CXXNameMangler::mangleSubstitution(NestedNameSpecifier *NNS) {
+  assert(NNS->getKind() == NestedNameSpecifier::Identifier &&
+         "mangleSubstitution(NestedNameSpecifier *) is only used for "
+         "identifier nested name specifiers.");
+  NNS = Context.getASTContext().getCanonicalNestedNameSpecifier(NNS);
+  return mangleSubstitution(reinterpret_cast<uintptr_t>(NNS));
 }
 
 /// Determine whether the given type has any qualifiers that are relevant for
