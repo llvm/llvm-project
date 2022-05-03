@@ -259,10 +259,10 @@ typedef u64 tid_t;
 # define NOEXCEPT throw()
 #endif
 
-#if __has_cpp_attribute(fallthrough)
-#  define FALLTHROUGH [[fallthrough]]
-#elif __has_cpp_attribute(clang::fallthrough)
+#if __has_cpp_attribute(clang::fallthrough)
 #  define FALLTHROUGH [[clang::fallthrough]]
+#elif __has_cpp_attribute(fallthrough)
+#  define FALLTHROUGH [[fallthrough]]
 #else
 #  define FALLTHROUGH
 #endif

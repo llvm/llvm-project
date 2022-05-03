@@ -23310,8 +23310,8 @@ The first argument to the '``llvm.is.fpclass``' intrinsic must be
 :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
 of floating-point values.
 
-The second argument specifies, which tests to perform. It is an integer value,
-each bit in which specifies floating-point class:
+The second argument specifies, which tests to perform. It must be a compile-time
+integer constant, each bit in which specifies floating-point class:
 
 +-------+----------------------+
 | Bit # | floating-point class |

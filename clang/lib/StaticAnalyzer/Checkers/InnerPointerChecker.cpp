@@ -35,9 +35,9 @@ namespace {
 class InnerPointerChecker
     : public Checker<check::DeadSymbols, check::PostCall> {
 
-  CallDescription AppendFn, AssignFn, AddressofFn, ClearFn, CStrFn, DataFn,
-      DataMemberFn, EraseFn, InsertFn, PopBackFn, PushBackFn, ReplaceFn,
-      ReserveFn, ResizeFn, ShrinkToFitFn, SwapFn;
+  CallDescription AppendFn, AssignFn, AddressofFn, AddressofFn_, ClearFn,
+      CStrFn, DataFn, DataMemberFn, EraseFn, InsertFn, PopBackFn, PushBackFn,
+      ReplaceFn, ReserveFn, ResizeFn, ShrinkToFitFn, SwapFn;
 
 public:
   class InnerPointerBRVisitor : public BugReporterVisitor {
@@ -74,7 +74,7 @@ public:
   InnerPointerChecker()
       : AppendFn({"std", "basic_string", "append"}),
         AssignFn({"std", "basic_string", "assign"}),
-        AddressofFn({"std", "addressof"}),
+        AddressofFn({"std", "addressof"}), AddressofFn_({"std", "__addressof"}),
         ClearFn({"std", "basic_string", "clear"}),
         CStrFn({"std", "basic_string", "c_str"}), DataFn({"std", "data"}, 1),
         DataMemberFn({"std", "basic_string", "data"}),
@@ -179,9 +179,9 @@ void InnerPointerChecker::checkFunctionArguments(const CallEvent &Call,
       if (!ArgRegion)
         continue;
 
-      // std::addressof function accepts a non-const reference as an argument,
+      // std::addressof functions accepts a non-const reference as an argument,
       // but doesn't modify it.
-      if (AddressofFn.matches(Call))
+      if (matchesAny(Call, AddressofFn, AddressofFn_))
         continue;
 
       markPtrSymbolsReleased(Call, State, ArgRegion, C);
