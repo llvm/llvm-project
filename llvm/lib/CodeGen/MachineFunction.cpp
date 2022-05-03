@@ -1033,7 +1033,32 @@ void MachineFunction::substituteDebugValuesForInst(const MachineInstr &Old,
   }
 }
 
-auto MachineFunction::salvageCopySSA(MachineInstr &MI)
+auto MachineFunction::salvageCopySSA(
+    MachineInstr &MI, DenseMap<Register, DebugInstrOperandPair> &DbgPHICache)
+    -> DebugInstrOperandPair {
+  const TargetInstrInfo &TII = *getSubtarget().getInstrInfo();
+
+  // Check whether this copy-like instruction has already been salvaged into
+  // an operand pair.
+  Register Dest;
+  if (auto CopyDstSrc = TII.isCopyInstr(MI)) {
+    Dest = CopyDstSrc->Destination->getReg();
+  } else {
+    assert(MI.isSubregToReg());
+    Dest = MI.getOperand(0).getReg();
+  }
+
+  auto CacheIt = DbgPHICache.find(Dest);
+  if (CacheIt != DbgPHICache.end())
+    return CacheIt->second;
+
+  // Calculate the instruction number to use, or install a DBG_PHI.
+  auto OperandPair = salvageCopySSAImpl(MI);
+  DbgPHICache.insert({Dest, OperandPair});
+  return OperandPair;
+}
+
+auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     -> DebugInstrOperandPair {
   MachineRegisterInfo &MRI = getRegInfo();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
@@ -1189,6 +1214,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
     MI.getOperand(1).ChangeToRegister(0, false);
   };
 
+  DenseMap<Register, DebugInstrOperandPair> ArgDbgPHIs;
   for (auto &MBB : *this) {
     for (auto &MI : MBB) {
       if (!MI.isDebugRef() || !MI.getOperand(0).isReg())
@@ -1211,7 +1237,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
       // instruction that defines the source value, see salvageCopySSA docs
       // for why this is important.
       if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
-        auto Result = salvageCopySSA(DefMI);
+        auto Result = salvageCopySSA(DefMI, ArgDbgPHIs);
         MI.getOperand(0).ChangeToImmediate(Result.first);
         MI.getOperand(1).setImm(Result.second);
       } else {
