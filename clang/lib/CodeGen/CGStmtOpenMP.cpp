@@ -1718,7 +1718,6 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
   if (CGM.getLangOpts().OpenMPIRBuilder &&
       !IsInsideNonOpenMPIRBuilderHandledRegion) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-
     // Check if we have any if clause associated with the directive.
     llvm::Value *IfCond = nullptr;
     if (const auto *C = S.getSingleClause<OMPIfClause>())
@@ -1795,7 +1794,6 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_parallel);
   };
   {
-
     auto LPCRegion =
         CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
     emitCommonOMPParallelDirective(*this, S, OMPD_parallel, CodeGen,
@@ -3864,7 +3862,6 @@ void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
       return;
     }
 
-
     HasLastprivates = emitWorksharingDirective(CGF, S, S.hasCancel());
   };
   {
@@ -4159,7 +4156,6 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
 
     return;
   }
-
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(&S);
   EmitStmt(S.getAssociatedStmt());
