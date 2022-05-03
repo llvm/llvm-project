@@ -109,11 +109,11 @@ defm : FPFMADynFrmAlias_m<FNMSUB_H, "fnmsub.h", HINX>;
 defm : FPFMADynFrmAlias_m<FNMADD_H, "fnmadd.h", HINX>;
 
 let SchedRW = [WriteFALU16, ReadFALU16, ReadFALU16] in {
-defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", HINX>;
+defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", HINX, /*Commutable*/1>;
 defm FSUB_H : FPALU_rr_frm_m<0b0000110, "fsub.h", HINX>;
 }
 let SchedRW = [WriteFMul16, ReadFMul16, ReadFMul16] in
-defm FMUL_H : FPALU_rr_frm_m<0b0001010, "fmul.h", HINX>;
+defm FMUL_H : FPALU_rr_frm_m<0b0001010, "fmul.h", HINX, /*Commutable*/1>;
 
 let SchedRW = [WriteFDiv16, ReadFDiv16, ReadFDiv16] in
 defm FDIV_H : FPALU_rr_frm_m<0b0001110, "fdiv.h", HINX>;
@@ -135,8 +135,8 @@ defm FSGNJX_H : FPALU_rr_m<0b0010010, 0b010, "fsgnjx.h", HINX>;
 }
 
 let SchedRW = [WriteFMinMax16, ReadFMinMax16, ReadFMinMax16] in {
-defm FMIN_H   : FPALU_rr_m<0b0010110, 0b000, "fmin.h", HINX>;
-defm FMAX_H   : FPALU_rr_m<0b0010110, 0b001, "fmax.h", HINX>;
+defm FMIN_H   : FPALU_rr_m<0b0010110, 0b000, "fmin.h", HINX, /*Commutable*/1>;
+defm FMAX_H   : FPALU_rr_m<0b0010110, 0b001, "fmax.h", HINX, /*Commutable*/1>;
 }
 
 defm FCVT_W_H : FPUnaryOp_r_frm_m<0b1100010, 0b00000, XHINX, "fcvt.w.h">,
@@ -173,7 +173,7 @@ def FMV_H_X : FPUnaryOp_r<0b1111010, 0b00000, 0b000, FPR16, GPR, "fmv.h.x">,
 } // Predicates = [HasStdExtZfhOrZfhmin]
 
 let SchedRW = [WriteFCmp16, ReadFCmp16, ReadFCmp16] in {
-defm FEQ_H : FPCmp_rr_m<0b1010010, 0b010, "feq.h", HINX>;
+defm FEQ_H : FPCmp_rr_m<0b1010010, 0b010, "feq.h", HINX, /*Commutable*/1>;
 defm FLT_H : FPCmp_rr_m<0b1010010, 0b001, "flt.h", HINX>;
 defm FLE_H : FPCmp_rr_m<0b1010010, 0b000, "fle.h", HINX>;
 }

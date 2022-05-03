@@ -504,3 +504,207 @@ trueblock:
 falseblock:
   ret void
 }
+
+define void @commute_fadd_f16(half %x, half %y, half* %p1, half* %p2, i1 zeroext %cond) {
+; RV32-LABEL: commute_fadd_f16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    fadd.h ft0, fa0, fa1
+; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    beqz a2, .LBB14_2
+; RV32-NEXT:  # %bb.1: # %trueblock
+; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:  .LBB14_2: # %falseblock
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: commute_fadd_f16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    fadd.h ft0, fa0, fa1
+; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    beqz a2, .LBB14_2
+; RV64-NEXT:  # %bb.1: # %trueblock
+; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:  .LBB14_2: # %falseblock
+; RV64-NEXT:    ret
+  %a = fadd half %x, %y
+  store half %a, half* %p1
+  br i1 %cond, label %trueblock, label %falseblock
+
+trueblock:
+  %b = fadd half %y, %x
+  store half %b, half* %p1
+  br label %falseblock
+
+falseblock:
+  ret void
+}
+
+define void @commute_fadd_f32(float %x, float %y, float* %p1, float* %p2, i1 zeroext %cond) {
+; RV32-LABEL: commute_fadd_f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    fadd.s ft0, fa0, fa1
+; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    beqz a2, .LBB15_2
+; RV32-NEXT:  # %bb.1: # %trueblock
+; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:  .LBB15_2: # %falseblock
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: commute_fadd_f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    fadd.s ft0, fa0, fa1
+; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    beqz a2, .LBB15_2
+; RV64-NEXT:  # %bb.1: # %trueblock
+; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:  .LBB15_2: # %falseblock
+; RV64-NEXT:    ret
+  %a = fadd float %x, %y
+  store float %a, float* %p1
+  br i1 %cond, label %trueblock, label %falseblock
+
+trueblock:
+  %b = fadd float %y, %x
+  store float %b, float* %p1
+  br label %falseblock
+
+falseblock:
+  ret void
+}
+
+define void @commute_fadd_f64(double %x, double %y, double* %p1, double* %p2, i1 zeroext %cond) {
+; RV32-LABEL: commute_fadd_f64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    fadd.d ft0, fa0, fa1
+; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    beqz a2, .LBB16_2
+; RV32-NEXT:  # %bb.1: # %trueblock
+; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:  .LBB16_2: # %falseblock
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: commute_fadd_f64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    fadd.d ft0, fa0, fa1
+; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    beqz a2, .LBB16_2
+; RV64-NEXT:  # %bb.1: # %trueblock
+; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:  .LBB16_2: # %falseblock
+; RV64-NEXT:    ret
+  %a = fadd double %x, %y
+  store double %a, double* %p1
+  br i1 %cond, label %trueblock, label %falseblock
+
+trueblock:
+  %b = fadd double %y, %x
+  store double %b, double* %p1
+  br label %falseblock
+
+falseblock:
+  ret void
+}
+
+define void @commute_feq_f16(half %x, half %y, i8* %p1, i8* %p2, i1 zeroext %cond) {
+; RV32-LABEL: commute_feq_f16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    feq.h a1, fa0, fa1
+; RV32-NEXT:    sb a1, 0(a0)
+; RV32-NEXT:    beqz a2, .LBB17_2
+; RV32-NEXT:  # %bb.1: # %trueblock
+; RV32-NEXT:    sb a1, 0(a0)
+; RV32-NEXT:  .LBB17_2: # %falseblock
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: commute_feq_f16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    feq.h a1, fa0, fa1
+; RV64-NEXT:    sb a1, 0(a0)
+; RV64-NEXT:    beqz a2, .LBB17_2
+; RV64-NEXT:  # %bb.1: # %trueblock
+; RV64-NEXT:    sb a1, 0(a0)
+; RV64-NEXT:  .LBB17_2: # %falseblock
+; RV64-NEXT:    ret
+  %a = fcmp oeq half %x, %y
+  %b = zext i1 %a to i8
+  store i8 %b, i8* %p1
+  br i1 %cond, label %trueblock, label %falseblock
+
+trueblock:
+  %c = fcmp oeq half %y, %x
+  %d = zext i1 %c to i8
+  store i8 %d, i8* %p1
+  br label %falseblock
+
+falseblock:
+  ret void
+}
+
+define void @commute_feq_f32(float %x, float %y, i8* %p1, i8* %p2, i1 zeroext %cond) {
+; RV32-LABEL: commute_feq_f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    feq.s a1, fa0, fa1
+; RV32-NEXT:    sb a1, 0(a0)
+; RV32-NEXT:    beqz a2, .LBB18_2
+; RV32-NEXT:  # %bb.1: # %trueblock
+; RV32-NEXT:    sb a1, 0(a0)
+; RV32-NEXT:  .LBB18_2: # %falseblock
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: commute_feq_f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    feq.s a1, fa0, fa1
+; RV64-NEXT:    sb a1, 0(a0)
+; RV64-NEXT:    beqz a2, .LBB18_2
+; RV64-NEXT:  # %bb.1: # %trueblock
+; RV64-NEXT:    sb a1, 0(a0)
+; RV64-NEXT:  .LBB18_2: # %falseblock
+; RV64-NEXT:    ret
+  %a = fcmp oeq float %x, %y
+  %b = zext i1 %a to i8
+  store i8 %b, i8* %p1
+  br i1 %cond, label %trueblock, label %falseblock
+
+trueblock:
+  %c = fcmp oeq float %y, %x
+  %d = zext i1 %c to i8
+  store i8 %d, i8* %p1
+  br label %falseblock
+
+falseblock:
+  ret void
+}
+
+define void @commute_feq_f64(double %x, double %y, i8* %p1, i8* %p2, i1 zeroext %cond) {
+; RV32-LABEL: commute_feq_f64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    feq.d a1, fa0, fa1
+; RV32-NEXT:    sb a1, 0(a0)
+; RV32-NEXT:    beqz a2, .LBB19_2
+; RV32-NEXT:  # %bb.1: # %trueblock
+; RV32-NEXT:    sb a1, 0(a0)
+; RV32-NEXT:  .LBB19_2: # %falseblock
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: commute_feq_f64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    feq.d a1, fa0, fa1
+; RV64-NEXT:    sb a1, 0(a0)
+; RV64-NEXT:    beqz a2, .LBB19_2
+; RV64-NEXT:  # %bb.1: # %trueblock
+; RV64-NEXT:    sb a1, 0(a0)
+; RV64-NEXT:  .LBB19_2: # %falseblock
+; RV64-NEXT:    ret
+  %a = fcmp oeq double %x, %y
+  %b = zext i1 %a to i8
+  store i8 %b, i8* %p1
+  br i1 %cond, label %trueblock, label %falseblock
+
+trueblock:
+  %c = fcmp oeq double %y, %x
+  %d = zext i1 %c to i8
+  store i8 %d, i8* %p1
+  br label %falseblock
+
+falseblock:
+  ret void
+}
