@@ -241,10 +241,7 @@ public:
 
     /// Creates a new insertion point at the given location.
     InsertPoint(BasicBlock *InsertBlock, BasicBlock::iterator InsertPoint)
-        : Block(InsertBlock), Point(InsertPoint) {
-      assert(!isSet() || InsertBlock->end() == InsertPoint ||
-             InsertPoint->getParent() == InsertBlock);
-    }
+        : Block(InsertBlock), Point(InsertPoint) {}
 
     /// Returns true if this insert point is set.
     bool isSet() const { return (Block != nullptr); }
@@ -2554,10 +2551,6 @@ public:
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRBuilder<>, LLVMBuilderRef)
 
-void viewCFG(const llvm::IRBuilderBase *Builder);
-void viewCFG(const llvm::IRBuilderBase &Builder);
-void viewCFG(const llvm::IRBuilderBase::InsertPoint *IP);
-void viewCFG(const llvm::IRBuilderBase::InsertPoint &IP);
 } // end namespace llvm
 
 #endif // LLVM_IR_IRBUILDER_H

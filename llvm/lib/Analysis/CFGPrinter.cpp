@@ -19,7 +19,6 @@
 
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -129,7 +128,7 @@ PreservedAnalyses CFGViewerPass::run(Function &F, FunctionAnalysisManager &AM) {
     return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
-  ::viewCFG(F, BFI, BPI, getMaxFreq(F, BFI));
+  viewCFG(F, BFI, BPI, getMaxFreq(F, BFI));
   return PreservedAnalyses::all();
 }
 
@@ -145,7 +144,7 @@ struct CFGOnlyViewerLegacyPass : public FunctionPass {
       return false;
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
-    ::viewCFG(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
+    viewCFG(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
     return false;
   }
 
@@ -170,7 +169,7 @@ PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
     return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
-  ::viewCFG(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
+  viewCFG(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
   return PreservedAnalyses::all();
 }
 
@@ -332,60 +331,4 @@ bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
     return isOnDeoptOrUnreachablePath[Node];
   }
   return false;
-}
-
-void llvm::viewCFG(const Function *F) {
-  if (!F)
-    return;
-  F->viewCFG();
-}
-void llvm::viewCFG(const Function &F) { return viewCFG(&F); }
-
-void llvm::viewCFG(const BasicBlock *BB) {
-  if (!BB)
-    return;
-  auto *F = BB->getParent();
-  DOTFuncInfo CFGInfo(F, BB, nullptr);
-  ViewGraph(&CFGInfo, "cfg" + F->getName(), false);
-}
-void llvm::viewCFG(const BasicBlock &BB) { return viewCFG(&BB); }
-
-void llvm::viewCFG(const Instruction *I) {
-  if (!I)
-    return;
-  auto *BB = I->getParent();
-  auto *F = BB->getParent();
-  DOTFuncInfo CFGInfo(F, BB, I);
-  ViewGraph(&CFGInfo, "cfg" + F->getName(), false);
-}
-void llvm::viewCFG(const Instruction &I) { return viewCFG(&I); }
-
-void llvm::viewCFG(const llvm::IRBuilderBase *Builder) {
-  if (!Builder)
-    return;
-  return viewCFG(Builder->saveIP());
-}
-void llvm::viewCFG(const llvm::IRBuilderBase &Builder) {
-  return viewCFG(&Builder);
-}
-
-void llvm::viewCFG(const llvm::IRBuilderBase::InsertPoint *IP) {
-  if (!IP)
-    return;
-  if (!IP->isSet())
-    return;
-
-  assert(IP->isSet());
-  BasicBlock *Block = IP->getBlock();
-  BasicBlock::iterator Point = IP->getPoint();
-  Function *F = Block->getParent();
-
-  // if (!CFGFuncName.empty() && !getName().contains(CFGFuncName))
-  //     return;
-  Instruction *Inst = (Point == Block->end()) ? nullptr : &*Point;
-  DOTFuncInfo CFGInfo(F, Block, Inst);
-  ViewGraph(&CFGInfo, "cfg" + F->getName(), false);
-}
-void llvm::viewCFG(const llvm::IRBuilderBase ::InsertPoint &IP) {
-  return viewCFG(&IP);
 }

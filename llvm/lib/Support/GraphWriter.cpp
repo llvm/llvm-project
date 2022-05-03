@@ -256,7 +256,7 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
   if (!Viewer && S.TryFindProgram("xdg-open", ViewerPath))
     Viewer = VK_XDGOpen;
 #ifdef _WIN32
-  if (!Viewer && S.TryFindProgram("cmd.exe", ViewerPath)) {
+  if (!Viewer && S.TryFindProgram("cmd", ViewerPath)) {
     Viewer = VK_CmdStart;
   }
 #endif

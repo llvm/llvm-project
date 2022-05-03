@@ -18,12 +18,8 @@ namespace llvm {
   class FunctionPass;
   class Function;
   class RegionInfo;
-  class BasicBlock;
-  class Instruction;
 
   FunctionPass *createRegionViewerPass();
-  FunctionPass *createRegionViewerPass(const BasicBlock *BB,
-                                       const Instruction *Inst);
   FunctionPass *createRegionOnlyViewerPass();
   FunctionPass *createRegionPrinterPass();
   FunctionPass *createRegionOnlyPrinterPass();
@@ -36,8 +32,7 @@ namespace llvm {
   /// Includes the instructions in each BasicBlock.
   ///
   /// @param RI The analysis to display.
-  void viewRegion(RegionInfo *RI);
-  void viewRegion(RegionInfo &RI);
+  void viewRegion(llvm::RegionInfo *RI);
 
   /// Analyze the regions of a function and open its GraphViz
   /// visualization in a viewer.
@@ -48,14 +43,7 @@ namespace llvm {
   /// manager currently holds.
   ///
   /// @param F Function to analyze.
-  void viewRegion(const Function *F);
-  void viewRegion(const Function &F);
-
-  void viewRegion(const BasicBlock *I);
-  void viewRegion(const BasicBlock &I);
-
-  void viewRegion(const Instruction *I);
-  void viewRegion(const Instruction &I);
+  void viewRegion(const llvm::Function *F);
 
   /// Open a viewer to display the GraphViz vizualization of the analysis
   /// result.
