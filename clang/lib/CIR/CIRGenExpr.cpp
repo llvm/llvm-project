@@ -23,9 +23,81 @@ static mlir::FuncOp buildFunctionDeclPointer(CIRGenModule &CGM, GlobalDecl GD) {
   return V;
 }
 
+static Address buildPreserveStructAccess(CIRGenFunction &CGF, LValue base,
+                                         Address addr, const FieldDecl *field) {
+  llvm_unreachable("NYI");
+}
+
 LValue CIRGenFunction::buildLValueForField(LValue base,
                                            const FieldDecl *field) {
+  LValueBaseInfo BaseInfo = base.getBaseInfo();
+
+  if (field->isBitField()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Fields of may-alias structures are may-alais themselves.
+  // FIXME: this hould get propagated down through anonymous structs and unions.
+  QualType FieldType = field->getType();
+  const RecordDecl *rec = field->getParent();
+  AlignmentSource BaseAlignSource = BaseInfo.getAlignmentSource();
+  LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(BaseAlignSource));
+  if (UnimplementedFeature::tbaa() || rec->hasAttr<MayAliasAttr>() ||
+      FieldType->isVectorType()) {
+    // TODO(CIR): TBAAAccessInfo FieldTBAAInfo
+    llvm_unreachable("NYI");
+  } else if (rec->isUnion()) {
+    llvm_unreachable("NYI");
+  } else {
+    // If no base type been assigned for the base access, then try to generate
+    // one for this base lvalue.
+    assert(!UnimplementedFeature::tbaa() && "NYI");
+  }
+
+  Address addr = base.getAddress();
+  if (auto *ClassDef = dyn_cast<CXXRecordDecl>(rec)) {
+    if (CGM.getCodeGenOpts().StrictVTablePointers &&
+        ClassDef->isDynamicClass()) {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  unsigned RecordCVR = base.getVRQualifiers();
+  if (rec->isUnion()) {
+    llvm_unreachable("NYI");
+  } else {
+    if (!IsInPreservedAIRegion &&
+        (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>()))
+      llvm_unreachable("NYI");
+    else
+      // Remember the original struct field index
+      addr = buildPreserveStructAccess(*this, base, addr, field);
+  }
+
+  // If this is a reference field, load the reference right now.
+  if (FieldType->isReferenceType()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Make sure that the address is pointing to the right type. This is critical
+  // for both unions and structs. A union needs a bitcast, a struct element will
+  // need a bitcast if the CIR type laid out doesn't match the desired type.
   llvm_unreachable("NYI");
+
+  if (field->hasAttr<AnnotateAttr>())
+    llvm_unreachable("NYI");
+
+  if (UnimplementedFeature::tbaa())
+    // Next line should take a TBAA object
+    llvm_unreachable("NYI");
+  LValue LV = makeAddrLValue(addr, FieldType, FieldBaseInfo);
+  LV.getQuals().addCVRQualifiers(RecordCVR);
+
+  // __weak attribute on a field is ignored.
+  if (LV.getQuals().getObjCGCAttr() == Qualifiers::Weak)
+    llvm_unreachable("NYI");
+
+  return LV;
 }
 
 LValue CIRGenFunction::buildLValueForFieldInitialization(

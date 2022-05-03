@@ -362,6 +362,9 @@ public:
   /// potentially set the return value.
   bool SawAsmBlock = false;
 
+  /// True if CodeGen currently emits code inside preserved access index region.
+  bool IsInPreservedAIRegion = false;
+
   /// In C++, whether we are code generating a thunk. This controls whether we
   /// should emit cleanups.
   bool CurFuncIsThunk = false;
