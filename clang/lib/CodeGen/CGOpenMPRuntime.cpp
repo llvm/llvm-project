@@ -1204,47 +1204,7 @@ CGOpenMPRuntime::getUserDefinedReduction(const OMPDeclareReductionDecl *D) {
   return UDRMap.lookup(D);
 }
 
-namespace {
-// Temporary RAII solution to perform a push/pop stack event on the OpenMP IR
-// Builder if one is present.
-struct PushAndPopStackRAII {
-  CodeGenFunction::CGNonOpenMPIRBuilderRegion NonOMPBuilderScope;
-  PushAndPopStackRAII(llvm::OpenMPIRBuilder *OMPBuilder, CodeGenFunction &CGF,
-                      bool HasCancel, llvm::omp::Directive Kind)
-      : OMPBuilder(OMPBuilder), NonOMPBuilderScope(CGF) {
-    if (!OMPBuilder)
-      return;
 
-    // The following callback is the crucial part of clangs cleanup process.
-    //
-    // NOTE:
-    // Once the OpenMPIRBuilder is used to create parallel regions (and
-    // similar), the cancellation destination (Dest below) is determined via
-    // IP. That means if we have variables to finalize we split the block at IP,
-    // use the new block (=BB) as destination to build a JumpDest (via
-    // getJumpDestInCurrentScope(BB)) which then is fed to
-    // EmitBranchThroughCleanup. Furthermore, there will not be the need
-    // to push & pop an FinalizationInfo object.
-    // The FiniCB will still be needed but at the point where the
-    // OpenMPIRBuilder is asked to construct a parallel (or similar) construct.
-    auto CancelCB = [&CGF, Kind](llvm::OpenMPIRBuilder::InsertPointTy IP,
-                                 llvm::omp::Directive CanceledDirective,
-                                 llvm::omp::Directive CanceledBy) {
-      assert(CanceledDirective == Kind);
-      assert(IP.getBlock()->end() == IP.getPoint() &&
-             "Clang CG should cause non-terminated block!");
-      CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-      CGF.Builder.restoreIP(IP);
-      CodeGenFunction::JumpDest Dest =
-          CGF.getOMPCancelDestination(OMPD_parallel);
-      CGF.EmitBranchThroughCleanup(Dest);
-    };
-
-  }
-  ~PushAndPopStackRAII() { }
-  llvm::OpenMPIRBuilder *OMPBuilder;
-};
-} // namespace
 
 static llvm::Function *emitParallelOrTeamsOutlinedFunction(
     CodeGenModule &CGM, const OMPExecutableDirective &D, const CapturedStmt *CS,
@@ -1273,10 +1233,7 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
                dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&D))
     HasCancel = OPFD->hasCancel();
 
-  // TODO: Temporarily inform the OpenMPIRBuilder, if any, about the new
-  //       parallel region to make cancellation barriers work properly.
-  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-  PushAndPopStackRAII PSR(&OMPBuilder, CGF, HasCancel, InnermostKind);
+
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);

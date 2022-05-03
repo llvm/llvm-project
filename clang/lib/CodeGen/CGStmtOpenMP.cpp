@@ -3730,6 +3730,8 @@ static void emitScanBasedDirective(
 static bool emitWorksharingDirective(CodeGenFunction &CGF,
                                      const OMPLoopDirective &S,
                                      bool HasCancel) {
+   CodeGenFunction:: CGNonOpenMPIRBuilderRegion NonOmpBuilderScope(CGF);
+
   bool HasLastprivates;
   if (llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
                    [](const OMPReductionClause *C) {
@@ -3908,6 +3910,7 @@ static LValue createSectionLVal(CodeGenFunction &CGF, QualType Ty,
 }
 
 void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
+    CGNonOpenMPIRBuilderRegion NonOmpBuilderScope(*this);
   const Stmt *CapturedStmt = S.getInnermostCapturedStmt()->getCapturedStmt();
   const auto *CS = dyn_cast<CompoundStmt>(CapturedStmt);
   bool HasLastprivates = false;
