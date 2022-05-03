@@ -7,9 +7,8 @@ define i8 @add_and_xor(i8 %x, i8 %y) {
 ; CHECK-LABEL: add_and_xor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    addb %dil, %al
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %xor = xor i8 %x, -1
   %and = and i8 %xor, %y
@@ -51,9 +50,8 @@ define i8 @add_and_xor_commuted1(i8 %x, i8 %y) {
 ; CHECK-LABEL: add_and_xor_commuted1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    addb %dil, %al
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %xor = xor i8 %x, -1
   %and = and i8 %y, %xor
@@ -65,9 +63,8 @@ define i8 @add_and_xor_commuted2(i8 %x, i8 %y) {
 ; CHECK-LABEL: add_and_xor_commuted2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    addb %dil, %al
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %xor = xor i8 %x, -1
   %and = and i8 %xor, %y
@@ -79,9 +76,8 @@ define i8 @add_and_xor_commuted3(i8 %x, i8 %y) {
 ; CHECK-LABEL: add_and_xor_commuted3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    addb %dil, %al
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %xor = xor i8 %x, -1
   %and = and i8 %y, %xor
@@ -95,18 +91,17 @@ define i8 @add_and_xor_extra_use(i8 %x, i8 %y) nounwind {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movl %esi, %r14d
-; CHECK-NEXT:    movl %edi, %ebp
-; CHECK-NEXT:    movl %ebp, %eax
+; CHECK-NEXT:    movl %esi, %ebx
+; CHECK-NEXT:    movl %edi, %r14d
+; CHECK-NEXT:    movl %r14d, %eax
 ; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    movzbl %al, %ebx
-; CHECK-NEXT:    movl %ebx, %edi
+; CHECK-NEXT:    movzbl %al, %ebp
+; CHECK-NEXT:    movl %ebp, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    andb %r14b, %bl
-; CHECK-NEXT:    movzbl %bl, %ebx
-; CHECK-NEXT:    movl %ebx, %edi
+; CHECK-NEXT:    andb %bl, %bpl
+; CHECK-NEXT:    movzbl %bpl, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    addb %bpl, %bl
+; CHECK-NEXT:    orb %r14b, %bl
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
