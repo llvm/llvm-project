@@ -1121,16 +1121,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue V0 = CurDAG->getRegister(RISCV::V0, VT);
 
       // Otherwise use
-      // vmslt{u}.vx vd, va, x, v0.t; if mask policy is agnostic.
+      // vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
+      // The result is mask undisturbed.
+      // We use the same instructions to emulate mask agnostic behavior, because
+      // the agnostic result can be either undisturbed or all 1.
       SDValue Cmp = SDValue(
           CurDAG->getMachineNode(VMSLTMaskOpcode, DL, VT,
                                  {MaskedOff, Src1, Src2, V0, VL, SEW, Glue}),
           0);
-      if (MaskedOff.isUndef()) {
-        ReplaceNode(Node, Cmp.getNode());
-        return;
-      }
-      // Need vmxor.mm vd, vd, v0 to assign inactive value.
+      // vmxor.mm vd, vd, v0 is used to update active value.
       ReplaceNode(Node, CurDAG->getMachineNode(VMXOROpcode, DL, VT,
                                                {Cmp, Mask, VL, MaskSEW}));
       return;

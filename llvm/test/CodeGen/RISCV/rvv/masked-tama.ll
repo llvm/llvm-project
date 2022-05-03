@@ -1431,7 +1431,9 @@ define <vscale x 1 x i1> @intrinsic_vmsge_mask_vx_nxv1i64_i64(<vscale x 1 x i64>
 ; RV64-LABEL: intrinsic_vmsge_mask_vx_nxv1i64_i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; RV64-NEXT:    vmslt.vx v0, v8, a0, v0.t
+; RV64-NEXT:    vmslt.vx v8, v8, a0, v0.t
+; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
+; RV64-NEXT:    vmxor.mm v0, v8, v0
 ; RV64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i1> @llvm.riscv.vmsge.mask.nxv1i64.i64(
