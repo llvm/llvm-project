@@ -50,9 +50,13 @@ public:
   // mlir::Attribute.
   std::string getConditionTemplate() const;
 
-  // Returns the user-readable description of this constraint. If the
-  // description is not provided, returns the TableGen def name.
+  // Returns the user-readable summary of this constraint. If the summary is not
+  // provided, returns the TableGen def name.
   StringRef getSummary() const;
+
+  // Returns the long-form description of this constraint. If the description is
+  // not provided, returns an empty string.
+  StringRef getDescription() const;
 
   /// Returns the name of the TablGen def of this constraint. In some cases
   /// where the current def is anonymous, the name of the base def is used (e.g.
