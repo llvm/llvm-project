@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-pseudo/DirectiveTree.h"
-#include "clang-pseudo/GLR.h"
 #include "clang-pseudo/Grammar.h"
 #include "clang-pseudo/LRGraph.h"
 #include "clang-pseudo/LRTable.h"
@@ -36,8 +35,6 @@ static opt<bool> PrintTokens("print-tokens", desc("Print detailed token info"));
 static opt<bool>
     PrintDirectiveTree("print-directive-tree",
                       desc("Print directive structure of source code"));
-static opt<bool> PrintStatistics("print-statistics", desc("Print GLR parser statistics"));
-static opt<bool> PrintForest("print-forest", desc("Print parse forest"));
 
 static std::string readOrDie(llvm::StringRef Path) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
@@ -52,28 +49,6 @@ static std::string readOrDie(llvm::StringRef Path) {
 
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "");
-
-  clang::LangOptions LangOpts; // FIXME: use real options.
-  LangOpts.CPlusPlus = 1;
-  std::string SourceText;
-  llvm::Optional<clang::pseudo::TokenStream> RawStream;
-  llvm::Optional<clang::pseudo::DirectiveTree> DirectiveStructure;
-  llvm::Optional<clang::pseudo::TokenStream> ParseableStream;
-  if (Source.getNumOccurrences()) {
-    SourceText = readOrDie(Source);
-    RawStream = clang::pseudo::lex(SourceText, LangOpts);
-    DirectiveStructure = clang::pseudo::DirectiveTree::parse(*RawStream);
-    clang::pseudo::chooseConditionalBranches(*DirectiveStructure, *RawStream);
-
-    if (PrintDirectiveTree)
-      llvm::outs() << DirectiveStructure;
-    if (PrintSource)
-      RawStream->print(llvm::outs());
-    if (PrintTokens)
-      llvm::outs() << RawStream;
-
-    ParseableStream = clang::pseudo::stripComments(cook(*RawStream, LangOpts));
-  }
 
   if (Grammar.getNumOccurrences()) {
     std::string Text = readOrDie(Grammar);
@@ -90,26 +65,24 @@ int main(int argc, char *argv[]) {
       llvm::outs() << G->dump();
     if (PrintGraph)
       llvm::outs() << clang::pseudo::LRGraph::buildLR0(*G).dumpForTests(*G);
-    auto LRTable = clang::pseudo::LRTable::buildSLR(*G);
     if (PrintTable)
-      llvm::outs() << LRTable.dumpForTests(*G);
+      llvm::outs() << clang::pseudo::LRTable::buildSLR(*G).dumpForTests(*G);
+    return 0;
+  }
 
-    if (ParseableStream) {
-      clang::pseudo::ForestArena Arena;
-      clang::pseudo::GSS GSS;
-      auto &Root =
-          glrParse(*ParseableStream,
-                   clang::pseudo::ParseParams{*G, LRTable, Arena, GSS});
-      if (PrintForest)
-        llvm::outs() << Root.dumpRecursive(*G, /*Abbreviated=*/true);
+  if (Source.getNumOccurrences()) {
+    std::string Text = readOrDie(Source);
+    clang::LangOptions LangOpts; // FIXME: use real options.
+    auto Stream = clang::pseudo::lex(Text, LangOpts);
+    auto Structure = clang::pseudo::DirectiveTree::parse(Stream);
+    clang::pseudo::chooseConditionalBranches(Structure, Stream);
 
-      if (PrintStatistics) {
-        llvm::outs() << "Forest bytes: " << Arena.bytes()
-                     << " nodes: " << Arena.nodeCount() << "\n";
-        llvm::outs() << "GSS bytes: " << GSS.bytes()
-                     << " nodes: " << GSS.nodeCount() << "\n";
-      }
-    }
+    if (PrintDirectiveTree)
+      llvm::outs() << Structure;
+    if (PrintSource)
+      Stream.print(llvm::outs());
+    if (PrintTokens)
+      llvm::outs() << Stream;
   }
 
   return 0;
