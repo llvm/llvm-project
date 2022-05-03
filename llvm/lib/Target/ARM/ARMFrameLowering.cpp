@@ -2562,8 +2562,9 @@ void ARMFrameLowering::adjustForSegmentedStacks(
     // Make sure the LiveIns are still sorted and unique.
     MBB->sortUniqueLiveIns();
     // Replace the edges to PrologueMBB by edges to the sequences
-    // we are about to add.
-    MBB->ReplaceUsesOfBlockWith(&PrologueMBB, AddedBlocks[0]);
+    // we are about to add, but only update for immediate predecessors.
+    if (MBB->isSuccessor(&PrologueMBB))
+      MBB->ReplaceUsesOfBlockWith(&PrologueMBB, AddedBlocks[0]);
   }
 
   // The required stack size that is aligned to ARM constant criterion.
