@@ -66,30 +66,29 @@ define void @foo(i8 *%buf) nounwind {
 ; AVX512-O0-NEXT:    pushq %rbp
 ; AVX512-O0-NEXT:    movq %rsp, %rbp
 ; AVX512-O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; AVX512-O0-NEXT:    subq $2048, %rsp # imm = 0x800
-; AVX512-O0-NEXT:    movq %rsp, %rdx
+; AVX512-O0-NEXT:    subq $3072, %rsp # imm = 0xC00
 ; AVX512-O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512-O0-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; AVX512-O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; AVX512-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; AVX512-O0-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; AVX512-O0-NEXT:    movw $32, {{[0-9]+}}(%rsp)
-; AVX512-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; AVX512-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-O0-NEXT:    movw $32, %cx
 ; AVX512-O0-NEXT:    movw $8, %ax
+; AVX512-O0-NEXT:    # implicit-def: $al
+; AVX512-O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX512-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; AVX512-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; AVX512-O0-NEXT:    tilezero %tmm0
 ; AVX512-O0-NEXT:    movl $64, %esi
+; AVX512-O0-NEXT:    movw $32, %cx
+; AVX512-O0-NEXT:    movw $8, %ax
 ; AVX512-O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
-; AVX512-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; AVX512-O0-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
-; AVX512-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; AVX512-O0-NEXT:    movw $8, %cx
-; AVX512-O0-NEXT:    # kill: def $cl killed $cl killed $cx
-; AVX512-O0-NEXT:    movb %cl, {{[0-9]+}}(%rsp)
-; AVX512-O0-NEXT:    movw $32, {{[0-9]+}}(%rsp)
-; AVX512-O0-NEXT:    ldtilecfg (%rax)
 ; AVX512-O0-NEXT:    movl $64, %esi
 ; AVX512-O0-NEXT:    movw $32, %cx
 ; AVX512-O0-NEXT:    movw $8, %ax
+; AVX512-O0-NEXT:    # implicit-def: $al
+; AVX512-O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX512-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; AVX512-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; AVX512-O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; AVX512-O0-NEXT:    movl $1024, %edx # imm = 0x400
 ; AVX512-O0-NEXT:    movw $32, %cx
@@ -106,32 +105,30 @@ define void @foo(i8 *%buf) nounwind {
 ; AVX2-O0-NEXT:    pushq %rbp
 ; AVX2-O0-NEXT:    movq %rsp, %rbp
 ; AVX2-O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; AVX2-O0-NEXT:    subq $2048, %rsp # imm = 0x800
-; AVX2-O0-NEXT:    movq %rsp, %rdx
+; AVX2-O0-NEXT:    subq $3072, %rsp # imm = 0xC00
 ; AVX2-O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX2-O0-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
 ; AVX2-O0-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
 ; AVX2-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; AVX2-O0-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; AVX2-O0-NEXT:    movw $32, {{[0-9]+}}(%rsp)
-; AVX2-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; AVX2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX2-O0-NEXT:    movw $32, %cx
 ; AVX2-O0-NEXT:    movw $8, %ax
+; AVX2-O0-NEXT:    # implicit-def: $al
+; AVX2-O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX2-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; AVX2-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; AVX2-O0-NEXT:    tilezero %tmm0
 ; AVX2-O0-NEXT:    movl $64, %esi
+; AVX2-O0-NEXT:    movw $32, %cx
+; AVX2-O0-NEXT:    movw $8, %ax
 ; AVX2-O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
-; AVX2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; AVX2-O0-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
-; AVX2-O0-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
-; AVX2-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; AVX2-O0-NEXT:    movw $8, %cx
-; AVX2-O0-NEXT:    # kill: def $cl killed $cl killed $cx
-; AVX2-O0-NEXT:    movb %cl, {{[0-9]+}}(%rsp)
-; AVX2-O0-NEXT:    movw $32, {{[0-9]+}}(%rsp)
-; AVX2-O0-NEXT:    ldtilecfg (%rax)
 ; AVX2-O0-NEXT:    movl $64, %esi
 ; AVX2-O0-NEXT:    movw $32, %cx
 ; AVX2-O0-NEXT:    movw $8, %ax
+; AVX2-O0-NEXT:    # implicit-def: $al
+; AVX2-O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX2-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; AVX2-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; AVX2-O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; AVX2-O0-NEXT:    movl $1024, %edx # imm = 0x400
 ; AVX2-O0-NEXT:    movw $32, %cx
@@ -148,36 +145,32 @@ define void @foo(i8 *%buf) nounwind {
 ; SSE2-O0-NEXT:    pushq %rbp
 ; SSE2-O0-NEXT:    movq %rsp, %rbp
 ; SSE2-O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; SSE2-O0-NEXT:    subq $2048, %rsp # imm = 0x800
-; SSE2-O0-NEXT:    movq %rsp, %rdx
+; SSE2-O0-NEXT:    subq $3072, %rsp # imm = 0xC00
 ; SSE2-O0-NEXT:    xorps %xmm0, %xmm0
 ; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    movw $32, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; SSE2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; SSE2-O0-NEXT:    movw $32, %cx
 ; SSE2-O0-NEXT:    movw $8, %ax
+; SSE2-O0-NEXT:    # implicit-def: $al
+; SSE2-O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; SSE2-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; SSE2-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    tilezero %tmm0
 ; SSE2-O0-NEXT:    movl $64, %esi
+; SSE2-O0-NEXT:    movw $32, %cx
+; SSE2-O0-NEXT:    movw $8, %ax
 ; SSE2-O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
-; SSE2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    movw $8, %cx
-; SSE2-O0-NEXT:    # kill: def $cl killed $cl killed $cx
-; SSE2-O0-NEXT:    movb %cl, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    movw $32, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    ldtilecfg (%rax)
 ; SSE2-O0-NEXT:    movl $64, %esi
 ; SSE2-O0-NEXT:    movw $32, %cx
 ; SSE2-O0-NEXT:    movw $8, %ax
+; SSE2-O0-NEXT:    # implicit-def: $al
+; SSE2-O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; SSE2-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; SSE2-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; SSE2-O0-NEXT:    movl $1024, %edx # imm = 0x400
 ; SSE2-O0-NEXT:    movw $32, %cx

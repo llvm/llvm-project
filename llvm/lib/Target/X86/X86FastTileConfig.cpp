@@ -40,40 +40,25 @@ namespace {
 class X86FastTileConfig : public MachineFunctionPass {
   // context
   MachineFunction *MF = nullptr;
-  const X86Subtarget *ST = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   X86MachineFunctionInfo *X86FI = nullptr;
 
-  MachineInstr *getTileConfigPoint();
-  void tileConfig();
+  bool configBasicBlock(MachineBasicBlock &MBB);
 
 public:
   X86FastTileConfig() : MachineFunctionPass(ID) {}
-
-  bool fastTileConfig();
-  bool isTileLoad(MachineInstr &MI);
-  bool isTileStore(MachineInstr &MI);
-  bool isAMXInstr(MachineInstr &MI);
-
-  MachineInstr *getKeyAMXInstr(MachineInstr *MI);
-  void getTileShapesCfg(MachineInstr *MI,
-                        SmallVector<MachineOperand *> &ShapedTiles);
-  void getShapeCfgInstrs(MachineInstr *MI,
-                         std::map<unsigned, MachineInstr *> &RowCfgs,
-                         std::map<unsigned, MachineInstr *> &ColCfgs);
 
   /// Return the pass name.
   StringRef getPassName() const override {
     return "Fast Tile Register Configure";
   }
 
-  void materializeTileCfg(MachineInstr *MI);
-
-  void rewriteTileCfg(SmallVector<MachineOperand *> &ShapedTiles,
-                      std::map<unsigned, MachineInstr *> &RowCfgs,
-                      std::map<unsigned, MachineInstr *> &ColCfgs);
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
   /// Perform register allocation.
   bool runOnMachineFunction(MachineFunction &MFunc) override;
@@ -95,210 +80,107 @@ INITIALIZE_PASS_BEGIN(X86FastTileConfig, DEBUG_TYPE,
 INITIALIZE_PASS_END(X86FastTileConfig, DEBUG_TYPE,
                     "Fast Tile Register Configure", false, false)
 
-static bool isTilePhysReg(MachineOperand &Op) {
-  if (!Op.isReg())
+static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
+  // There is no phi instruction after register allocation.
+  assert(MI.isPHI() == false);
+  // The instruction must have 3 operands: tile def, row, col.
+  // It should be AMX pseudo instruction that have shape operand.
+  if (MI.isDebugInstr() || MI.isCopy() || MI.getNumOperands() < 3 ||
+      !MI.isPseudo())
     return false;
+  MachineOperand &MO = MI.getOperand(0);
 
-  Register Reg = Op.getReg();
-  if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
-    return true;
+  if (MO.isReg()) {
+    Register Reg = MO.getReg();
+    // FIXME it may be used after Greedy RA and the physical
+    // register is not rewritten yet.
+    if (Reg.isVirtual() &&
+        MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)
+      return true;
+    if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
+      return true;
+  }
+
   return false;
 }
 
-static unsigned getTilePhysRegIdx(MachineOperand *Op) {
-  assert(isTilePhysReg(*Op) && "Tile Operand is invalid");
-  return Op->getReg() - X86::TMM0;
-}
-
-static inline void adjustRowCfg(unsigned TIdx, MachineInstr *MI) {
-  unsigned Offset = 48 + TIdx;
-  MI->getOperand(3).ChangeToImmediate(Offset);
-}
-
-static inline void adjustColCfg(unsigned TIdx, MachineInstr *MI) {
-  unsigned Offset = 16 + TIdx * 2;
-  MI->getOperand(3).ChangeToImmediate(Offset);
-}
-
-bool X86FastTileConfig::isTileLoad(MachineInstr &MI) {
-  return MI.getOpcode() == X86::PTILELOADDV ||
-         MI.getOpcode() == X86::PTILELOADDT1V;
-}
-bool X86FastTileConfig::isTileStore(MachineInstr &MI) {
-  return MI.getOpcode() == X86::PTILESTOREDV;
-}
-bool X86FastTileConfig::isAMXInstr(MachineInstr &MI) {
-  // TODO: May need to handle some special nontile amx instrucion.
-  if (MI.getOpcode() == X86::PLDTILECFGV || MI.isDebugInstr())
-    return false;
-
-  return llvm::any_of(MI.operands(), isTilePhysReg);
-}
-
-MachineInstr *X86FastTileConfig::getKeyAMXInstr(MachineInstr *MI) {
-  auto Cfg = MachineBasicBlock::iterator(MI);
-  MachineBasicBlock *MBB = MI->getParent();
-  MachineInstr *KeyMI = nullptr;
-  int KeyAMXNum = 0;
-
-  for (auto II = Cfg; II != MBB->end(); II++) {
-    if (isTileLoad(*II)) {
-      KeyMI = &*II;
+// PreTileConfig should configure the tile registers based on basic
+// block.
+bool X86FastTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
+  bool Change = false;
+  SmallVector<std::pair<unsigned, ShapeT>, 6> ShapeInfos;
+  for (MachineInstr &MI : reverse(MBB)) {
+    if (!isTileDef(MRI, MI) && MI.getOpcode() != X86::LDTILECFG)
       continue;
+    // AMX instructions that define tile register.
+    if (MI.getOpcode() != X86::LDTILECFG) {
+      MachineOperand &Row = MI.getOperand(1);
+      MachineOperand &Col = MI.getOperand(2);
+      unsigned TMMIdx = MI.getOperand(0).getReg() - X86::TMM0;
+      ShapeInfos.push_back({TMMIdx, ShapeT(&Row, &Col)});
+    } else { // LDTILECFG
+      // Rewrite the shape information to memory. Stack slot should have
+      // been initialized to zero in pre config.
+      int SS = MI.getOperand(0).getIndex(); // tile config stack slot.
+      for (auto &ShapeInfo : ShapeInfos) {
+        DebugLoc DL;
+        unsigned TMMIdx = ShapeInfo.first;
+        Register RowReg = ShapeInfo.second.getRow()->getReg();
+        Register ColReg = ShapeInfo.second.getCol()->getReg();
+        // Here is the data format for the tile config.
+        // 0      palette
+        // 1      start_row
+        // 2-15   reserved, must be zero
+        // 16-17  tile0.colsb Tile 0 bytes per row.
+        // 18-19  tile1.colsb Tile 1 bytes per row.
+        // 20-21  tile2.colsb Tile 2 bytes per row.
+        // ... (sequence continues)
+        // 30-31  tile7.colsb Tile 7 bytes per row.
+        // 32-47  reserved, must be zero
+        // 48     tile0.rows Tile 0 rows.
+        // 49     tile1.rows Tile 1 rows.
+        // 50     tile2.rows Tile 2 rows.
+        // ... (sequence continues)
+        // 55     tile7.rows Tile 7 rows.
+        // 56-63  reserved, must be zero
+        int RowOffset = 48 + TMMIdx;
+        int ColOffset = 16 + TMMIdx * 2;
+
+        Register SubRowReg = TRI->getSubReg(RowReg, X86::sub_8bit);
+        BuildMI(MBB, MI, DL, TII->get(X86::IMPLICIT_DEF), SubRowReg);
+        MachineInstrBuilder StoreRow =
+            BuildMI(MBB, MI, DL, TII->get(X86::MOV8mr));
+        addFrameReference(StoreRow, SS, RowOffset).addReg(SubRowReg);
+
+        MachineInstrBuilder StoreCol =
+            BuildMI(MBB, MI, DL, TII->get(X86::MOV16mr));
+        addFrameReference(StoreCol, SS, ColOffset).addReg(ColReg);
+      }
+      ShapeInfos.clear();
+      Change = true;
     }
-
-    if (isTileStore(*II)) {
-      assert(KeyMI && "Key AMX Should be found before!");
-      break;
-    }
-
-    if (isAMXInstr(*II)) {
-      assert((KeyAMXNum == 0) && "Too many Key AMX instruction!");
-      (void) KeyAMXNum;
-      KeyAMXNum++;
-      KeyMI = &*II;
-    }
   }
-  assert(KeyMI && "There must be an AMX instruction.");
-  return KeyMI;
-}
 
-// Orderly get the tiles in key amx instruction, uses before defs.
-void X86FastTileConfig::getTileShapesCfg(
-    MachineInstr *CfgMI, SmallVector<MachineOperand *> &ShapedTiles) {
-  MachineInstr *KeyMI = getKeyAMXInstr(CfgMI);
-
-  SmallVector<MachineOperand *> DefTiles;
-  for (MachineOperand &MO : KeyMI->operands()) {
-    if (!isTilePhysReg(MO))
-      continue;
-    if (MO.isDef())
-      DefTiles.push_back(&MO);
-    else
-      ShapedTiles.push_back(&MO);
-  }
-  ShapedTiles.append(DefTiles);
-}
-
-// We pre-config the shapes at position named with "amx.tmm.N.shape.row* and
-// amx.shape.N.col*" at pass "Pre AMX Tile Config".
-// The 'N' implies the order of tiles in key amx intrinsic.
-void X86FastTileConfig::getShapeCfgInstrs(
-    MachineInstr *MI, std::map<unsigned, MachineInstr *> &RowCfgs,
-    std::map<unsigned, MachineInstr *> &ColCfgs) {
-  auto Cfg = MachineBasicBlock::iterator(MI);
-  MachineBasicBlock *MBB = MI->getParent();
-
-  for (auto II = Cfg; II != MBB->begin(); II--) {
-    if (isAMXInstr(*II) || II->isTerminator() || II->isCall())
-      break;
-    if (!II->mayStore() || !II->hasOneMemOperand())
-      continue;
-    const Value *MemPtr = II->memoperands()[0]->getValue();
-    if (!MemPtr)
-      continue;
-
-    StringRef Name = MemPtr->getName();
-    if (!Name.startswith("amx.tmm."))
-      continue;
-
-    // Get the 'N'th tile shape config in key amx instruction.
-    auto N = Name.find(".shape");
-    StringRef STileIdx = Name.slice(8, N);
-    unsigned Idx;
-    STileIdx.getAsInteger(10, Idx);
-
-    // And related them with their store instructions.
-    if (Name.contains("row"))
-      RowCfgs[Idx] = &*II;
-    else if (Name.contains("col"))
-      ColCfgs[Idx] = &*II;
-    else
-      llvm_unreachable("Invalid tile shape info!");
-  }
-  assert((RowCfgs.size() == ColCfgs.size()) &&
-         "The number of tile row and col must be equal!");
-}
-
-// Here is the data format for the tile config.
-// 0      palette   = 1 now.
-// 1      start_row = 0 now.
-// 2-15   reserved, must be zero
-// 16-17  tile0.colsb Tile 0 bytes per row.
-// 18-19  tile1.colsb Tile 1 bytes per row.
-// 20-21  tile2.colsb Tile 2 bytes per row.
-// ... (sequence continues)
-// 30-31  tile7.colsb Tile 7 bytes per row.
-// 32-47  reserved, must be zero
-// 48     tile0.rows Tile 0 rows.
-// 49     tile1.rows Tile 1 rows.
-// 50     tile2.rows Tile 2 rows.
-// ... (sequence continues)
-// 55     tile7.rows Tile 7 rows.
-// 56-63  reserved, must be zero
-void X86FastTileConfig::rewriteTileCfg(
-    SmallVector<MachineOperand *> &ShapedTiles,
-    std::map<unsigned, MachineInstr *> &RowCfgs,
-    std::map<unsigned, MachineInstr *> &ColCfgs) {
-  assert((RowCfgs.size() == ShapedTiles.size()) &&
-         "The number of tile shapes not equal with the number of tiles!");
-
-  // Orderly get the tiles and adjust the shape config.
-  for (unsigned I = 0, E = ShapedTiles.size(); I < E; I++) {
-    MachineOperand *MO = ShapedTiles[I];
-    unsigned TmmIdx = getTilePhysRegIdx(MO);
-    if (I == TmmIdx)
-      continue;
-    adjustRowCfg(TmmIdx, RowCfgs[I]);
-    adjustColCfg(TmmIdx, ColCfgs[I]);
-  }
-}
-
-// We have already preconfig the shapes before fast register allocation at
-// X86PreAMXConfig::preWriteTileCfg(). Now, we have done fast register
-// allocation, the shapes pre-written before may not rightly corresponding
-// to the correct tmm registers, so we need adjust them.
-void X86FastTileConfig::materializeTileCfg(MachineInstr *CfgMI) {
-  SmallVector<MachineOperand *> ShapedTiles;
-  std::map<unsigned, MachineInstr *> RowCfgs;
-  std::map<unsigned, MachineInstr *> ColCfgs;
-
-  // Orderly keep the tile uses and def in ShapedTiles;
-  getTileShapesCfg(CfgMI, ShapedTiles);
-  assert(ShapedTiles.size() && "Not find shapes config!");
-
-  getShapeCfgInstrs(CfgMI, RowCfgs, ColCfgs);
-
-  rewriteTileCfg(ShapedTiles, RowCfgs, ColCfgs);
-}
-
-bool X86FastTileConfig::fastTileConfig() {
-  bool Changed = false;
-
-  for (MachineBasicBlock &MBB : *MF) {
-    SmallVector<MachineInstr *, 2> CFGs;
-    for (MachineInstr &MI : MBB)
-      if (MI.getOpcode() == X86::PLDTILECFGV)
-        CFGs.push_back(&MI);
-    for (auto *MI : CFGs)
-      materializeTileCfg(MI);
-    if (!CFGs.empty())
-      Changed = true;
-  }
-  if (Changed)
+  if (Change)
     X86FI->setHasVirtualTileReg(true);
-  return Changed;
+
+  return Change;
 }
 
 bool X86FastTileConfig::runOnMachineFunction(MachineFunction &MFunc) {
   MF = &MFunc;
   MRI = &MFunc.getRegInfo();
-  ST = &MFunc.getSubtarget<X86Subtarget>();
+  const TargetSubtargetInfo *ST = &MFunc.getSubtarget<X86Subtarget>();
   TRI = ST->getRegisterInfo();
   TII = MFunc.getSubtarget().getInstrInfo();
   X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
+  bool Change = false;
 
-  return fastTileConfig();
+  // Loop over all of the basic blocks, eliminating virtual register references
+  for (MachineBasicBlock &MBB : MFunc)
+    Change |= configBasicBlock(MBB);
+
+  return Change;
 }
 
 FunctionPass *llvm::createX86FastTileConfigPass() {
