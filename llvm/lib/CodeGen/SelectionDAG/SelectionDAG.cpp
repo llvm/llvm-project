@@ -4684,10 +4684,7 @@ bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
   return false;
 }
 
-// FIXME: unify with llvm::haveNoCommonBitsSet.
-bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
-  assert(A.getValueType() == B.getValueType() &&
-         "Values must have the same type");
+static bool haveNoCommonBitsSetCommutative(SDValue A, SDValue B) {
   // Match masked merge pattern (X & ~M) op (Y & M)
   if (A->getOpcode() == ISD::AND && B->getOpcode() == ISD::AND) {
     auto MatchNoCommonBitsPattern = [&](SDValue NotM, SDValue And) {
@@ -4698,12 +4695,19 @@ bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
       }
       return false;
     };
-    if (MatchNoCommonBitsPattern(A->getOperand(0), B) ||
-        MatchNoCommonBitsPattern(A->getOperand(1), B) ||
-        MatchNoCommonBitsPattern(B->getOperand(0), A) ||
-        MatchNoCommonBitsPattern(B->getOperand(1), A))
-      return true;
+    return MatchNoCommonBitsPattern(A->getOperand(0), B) ||
+           MatchNoCommonBitsPattern(A->getOperand(1), B);
   }
+  return false;
+}
+
+// FIXME: unify with llvm::haveNoCommonBitsSet.
+bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
+  assert(A.getValueType() == B.getValueType() &&
+         "Values must have the same type");
+  if (haveNoCommonBitsSetCommutative(A, B) ||
+      haveNoCommonBitsSetCommutative(B, A))
+    return true;
   return KnownBits::haveNoCommonBitsSet(computeKnownBits(A),
                                         computeKnownBits(B));
 }
