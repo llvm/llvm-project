@@ -1862,6 +1862,19 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
       });
 }
 
+static int64_t getPCBias(RelType type) {
+  if (config->emachine != EM_ARM)
+    return 0;
+  switch (type) {
+  case R_ARM_THM_JUMP19:
+  case R_ARM_THM_JUMP24:
+  case R_ARM_THM_CALL:
+    return 4;
+  default:
+    return 8;
+  }
+}
+
 // Find or create a ThunkSection within the InputSectionDescription (ISD) that
 // is in range of Src. An ISD maps to a range of InputSections described by a
 // linker script section pattern such as { .text .text.* }.
@@ -1870,10 +1883,12 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
                                            InputSectionDescription *isd,
                                            const Relocation &rel,
                                            uint64_t src) {
+  // See the comment in getThunk for -pcBias below.
+  const int64_t pcBias = getPCBias(rel.type);
   for (std::pair<ThunkSection *, uint32_t> tp : isd->thunkSections) {
     ThunkSection *ts = tp.first;
-    uint64_t tsBase = os->addr + ts->outSecOff + rel.addend;
-    uint64_t tsLimit = tsBase + ts->getSize() + rel.addend;
+    uint64_t tsBase = os->addr + ts->outSecOff - pcBias;
+    uint64_t tsLimit = tsBase + ts->getSize();
     if (target->inBranchRange(rel.type, src,
                               (src > tsLimit) ? tsBase : tsLimit))
       return ts;
@@ -2022,19 +2037,6 @@ static bool isThunkSectionCompatible(InputSection *source,
   if (source->partition != target->partition)
     return target->partition == 1;
   return true;
-}
-
-static int64_t getPCBias(RelType type) {
-  if (config->emachine != EM_ARM)
-    return 0;
-  switch (type) {
-  case R_ARM_THM_JUMP19:
-  case R_ARM_THM_JUMP24:
-  case R_ARM_THM_CALL:
-    return 4;
-  default:
-    return 8;
-  }
 }
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
