@@ -65,12 +65,18 @@ public:
   DecoderUInt128 operator&(const DecoderUInt128 &RHS) const {
     return DecoderUInt128(Lo & RHS.Lo, Hi & RHS.Hi);
   }
+  DecoderUInt128 operator&(const uint64_t &RHS) const {
+    return *this & DecoderUInt128(RHS);
+  }
   DecoderUInt128 operator~() const { return DecoderUInt128(~Lo, ~Hi); }
   bool operator==(const DecoderUInt128 &RHS) {
     return Lo == RHS.Lo && Hi == RHS.Hi;
   }
   bool operator!=(const DecoderUInt128 &RHS) {
     return Lo != RHS.Lo || Hi != RHS.Hi;
+  }
+  bool operator!=(const int &RHS) {
+    return *this != DecoderUInt128(RHS);
   }
   friend raw_ostream &operator<<(raw_ostream &OS, const DecoderUInt128 &RHS) {
     return OS << APInt(128, {RHS.Lo, RHS.Hi});
