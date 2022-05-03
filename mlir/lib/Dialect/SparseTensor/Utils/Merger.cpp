@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
@@ -20,18 +21,18 @@ namespace sparse_tensor {
 // Constructors.
 //===----------------------------------------------------------------------===//
 
-TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
-    : kind(k), val(v) {
+TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
+    : kind(k), val(v), op(o) {
   switch (kind) {
   case kTensor:
-    assert(x != -1u && y == -1u && !v);
+    assert(x != -1u && y == -1u && !v && !o);
     tensor = x;
     break;
   case kInvariant:
-    assert(x == -1u && y == -1u && v);
+    assert(x == -1u && y == -1u && v && !o);
     break;
   case kIndex:
-    assert(x != -1u && y == -1u && !v);
+    assert(x != -1u && y == -1u && !v && !o);
     index = x;
     break;
   case kAbsF:
@@ -39,7 +40,7 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
   case kFloorF:
   case kNegF:
   case kNegI:
-    assert(x != -1u && y == -1u && !v);
+    assert(x != -1u && y == -1u && !v && !o);
     children.e0 = x;
     children.e1 = y;
     break;
@@ -54,12 +55,29 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
   case kCastIdx:
   case kTruncI:
   case kBitCast:
-    assert(x != -1u && y == -1u && v);
+    assert(x != -1u && y == -1u && v && !o);
+    children.e0 = x;
+    children.e1 = y;
+    break;
+  case kBinaryBranch:
+    assert(x != -1u && y == -1u && !v && o);
+    children.e0 = x;
+    children.e1 = y;
+    break;
+  case kUnary:
+    // No assertion on y can be made, as the branching paths involve both
+    // a unary (mapSet) and binary (takeDisj) pathway.
+    assert(x != -1u && !v && o);
+    children.e0 = x;
+    children.e1 = y;
+    break;
+  case kBinary:
+    assert(x != -1u && y != -1u && !v && o);
     children.e0 = x;
     children.e1 = y;
     break;
   default:
-    assert(x != -1u && y != -1u && !v);
+    assert(x != -1u && y != -1u && !v && !o);
     children.e0 = x;
     children.e1 = y;
     break;
@@ -78,9 +96,10 @@ LatPoint::LatPoint(const BitVector &b, unsigned e)
 // Lattice methods.
 //===----------------------------------------------------------------------===//
 
-unsigned Merger::addExp(Kind k, unsigned e0, unsigned e1, Value v) {
+unsigned Merger::addExp(Kind k, unsigned e0, unsigned e1, Value v,
+                        Operation *op) {
   unsigned e = tensorExps.size();
-  tensorExps.push_back(TensorExp(k, e0, e1, v));
+  tensorExps.push_back(TensorExp(k, e0, e1, v, op));
   return e;
 }
 
@@ -97,29 +116,31 @@ unsigned Merger::addSet() {
   return s;
 }
 
-unsigned Merger::conjLatPoint(Kind kind, unsigned p0, unsigned p1) {
+unsigned Merger::conjLatPoint(Kind kind, unsigned p0, unsigned p1,
+                              Operation *op) {
   unsigned p = latPoints.size();
   BitVector nb = BitVector(latPoints[p0].bits);
   nb |= latPoints[p1].bits;
-  unsigned e = addExp(kind, latPoints[p0].exp, latPoints[p1].exp);
+  unsigned e = addExp(kind, latPoints[p0].exp, latPoints[p1].exp, Value(), op);
   latPoints.push_back(LatPoint(nb, e));
   return p;
 }
 
-unsigned Merger::takeConj(Kind kind, unsigned s0, unsigned s1) {
+unsigned Merger::takeConj(Kind kind, unsigned s0, unsigned s1, Operation *op) {
   unsigned s = addSet();
   for (unsigned p0 : latSets[s0])
     for (unsigned p1 : latSets[s1])
-      latSets[s].push_back(conjLatPoint(kind, p0, p1));
+      latSets[s].push_back(conjLatPoint(kind, p0, p1, op));
   return s;
 }
 
-unsigned Merger::takeDisj(Kind kind, unsigned s0, unsigned s1) {
-  unsigned s = takeConj(kind, s0, s1);
+unsigned Merger::takeDisj(Kind kind, unsigned s0, unsigned s1, Operation *op) {
+  unsigned s = takeConj(kind, s0, s1, op);
   // Followed by all in s0.
   for (unsigned p : latSets[s0])
     latSets[s].push_back(p);
   // Map binary 0-y to unary -y.
+  // TODO: move this if-else logic into buildLattices
   if (kind == kSubF)
     s1 = mapSet(kNegF, s1);
   else if (kind == kSubI)
@@ -130,11 +151,32 @@ unsigned Merger::takeDisj(Kind kind, unsigned s0, unsigned s1) {
   return s;
 }
 
-unsigned Merger::mapSet(Kind kind, unsigned s0, Value v) {
-  assert(kAbsF <= kind && kind <= kBitCast);
+unsigned Merger::takeCombi(Kind kind, unsigned s0, unsigned s1, Operation *orig,
+                           bool includeLeft, Kind ltrans, Operation *opleft,
+                           bool includeRight, Kind rtrans, Operation *opright) {
+  unsigned s = takeConj(kind, s0, s1, orig);
+  // Left Region.
+  if (includeLeft) {
+    if (opleft)
+      s0 = mapSet(ltrans, s0, Value(), opleft);
+    for (unsigned p : latSets[s0])
+      latSets[s].push_back(p);
+  }
+  // Right Region.
+  if (includeRight) {
+    if (opright)
+      s1 = mapSet(rtrans, s1, Value(), opright);
+    for (unsigned p : latSets[s1])
+      latSets[s].push_back(p);
+  }
+  return s;
+}
+
+unsigned Merger::mapSet(Kind kind, unsigned s0, Value v, Operation *op) {
+  assert(kAbsF <= kind && kind <= kUnary);
   unsigned s = addSet();
   for (unsigned p : latSets[s0]) {
-    unsigned e = addExp(kind, latPoints[p].exp, v);
+    unsigned e = addExp(kind, latPoints[p].exp, v, op);
     latPoints.push_back(LatPoint(latPoints[p].bits, e));
     latSets[s].push_back(latPoints.size() - 1);
   }
@@ -304,6 +346,10 @@ static const char *kindToOpSymbol(Kind kind) {
   case kTruncI:
   case kBitCast:
     return "cast";
+  case kBinaryBranch:
+    return "binary_branch";
+  case kUnary:
+    return "unary";
   case kMulF:
     return "*";
   case kMulI:
@@ -334,6 +380,8 @@ static const char *kindToOpSymbol(Kind kind) {
     return ">>";
   case kShlI:
     return "<<";
+  case kBinary:
+    return "binary";
   }
   llvm_unreachable("unexpected kind for symbol");
 }
@@ -475,6 +523,35 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     //    | 0 |-y |
     return mapSet(kind, buildLattices(tensorExps[e].children.e0, i),
                   tensorExps[e].val);
+  case kBinaryBranch:
+    // The left or right half of a binary operation which has already
+    // been split into separate operations for each region.
+    return mapSet(kind, buildLattices(tensorExps[e].children.e0, i), Value(),
+                  tensorExps[e].op);
+  case kUnary:
+    // A custom unary operation.
+    //
+    //  op y|    !y    |     y      |
+    //  ----+----------+------------+
+    //      | absent() | present(y) |
+    {
+      unsigned child0 = buildLattices(tensorExps[e].children.e0, i);
+      UnaryOp unop = cast<UnaryOp>(tensorExps[e].op);
+      Region &absentRegion = unop.absentRegion();
+
+      if (absentRegion.empty()) {
+        // Simple mapping over existing values.
+        return mapSet(kind, child0, Value(), unop);
+      } else {
+        // Use a disjunction with `unop` on the left and the absent value as an
+        // invariant on the right.
+        Block &absentBlock = absentRegion.front();
+        YieldOp absentYield = cast<YieldOp>(absentBlock.getTerminator());
+        Value absentVal = absentYield.result();
+        unsigned rhs = addExp(kInvariant, absentVal);
+        return takeDisj(kind, child0, buildLattices(rhs, i), unop);
+      }
+    }
   case kMulF:
   case kMulI:
   case kAndI:
@@ -534,6 +611,37 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     return takeConj(kind, // take binary conjunction
                     buildLattices(tensorExps[e].children.e0, i),
                     buildLattices(tensorExps[e].children.e1, i));
+  case kBinary:
+    // A custom binary operation.
+    //
+    //  x op y|   !y    |       y      |
+    //  ------+---------+--------------+
+    //    !x  |  empty  |   right(y)   |
+    //     x  | left(x) | overlap(x,y) |
+    {
+      unsigned child0 = buildLattices(tensorExps[e].children.e0, i);
+      unsigned child1 = buildLattices(tensorExps[e].children.e1, i);
+      BinaryOp binop = cast<BinaryOp>(tensorExps[e].op);
+      Region &leftRegion = binop.leftRegion();
+      Region &rightRegion = binop.rightRegion();
+      // Left Region.
+      Operation *leftYield = nullptr;
+      if (!leftRegion.empty()) {
+        Block &leftBlock = leftRegion.front();
+        leftYield = leftBlock.getTerminator();
+      }
+      // Right Region.
+      Operation *rightYield = nullptr;
+      if (!rightRegion.empty()) {
+        Block &rightBlock = rightRegion.front();
+        rightYield = rightBlock.getTerminator();
+      }
+      bool includeLeft = binop.left_identity() || !leftRegion.empty();
+      bool includeRight = binop.right_identity() || !rightRegion.empty();
+      return takeCombi(kBinary, child0, child1, binop, includeLeft,
+                       kBinaryBranch, leftYield, includeRight, kBinaryBranch,
+                       rightYield);
+    }
   }
   llvm_unreachable("unexpected expression kind");
 }
@@ -628,6 +736,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kTruncI, e, v);
       if (isa<arith::BitcastOp>(def))
         return addExp(kBitCast, e, v);
+      if (isa<sparse_tensor::UnaryOp>(def))
+        return addExp(kUnary, e, Value(), def);
     }
   }
   // Construct binary operations if subexpressions can be built.
@@ -669,10 +779,57 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kShrU, e0, e1);
       if (isa<arith::ShLIOp>(def) && isInvariant(e1))
         return addExp(kShlI, e0, e1);
+      if (isa<sparse_tensor::BinaryOp>(def))
+        return addExp(kBinary, e0, e1, Value(), def);
     }
   }
   // Cannot build.
   return None;
+}
+
+static Value insertYieldOp(PatternRewriter &rewriter, Location loc,
+                           Region &region, ValueRange vals) {
+  // Make a clone of overlap region.
+  Region tmpRegion;
+  BlockAndValueMapping mapper;
+  region.cloneInto(&tmpRegion, tmpRegion.begin(), mapper);
+  Block &clonedBlock = tmpRegion.front();
+  YieldOp clonedYield = cast<YieldOp>(clonedBlock.getTerminator());
+  // Merge cloned block and return yield value.
+  Operation *placeholder = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  rewriter.mergeBlockBefore(&tmpRegion.front(), placeholder, vals);
+  Value val = clonedYield.result();
+  rewriter.eraseOp(clonedYield);
+  rewriter.eraseOp(placeholder);
+  return val;
+}
+
+static Value buildUnaryPresent(PatternRewriter &rewriter, Location loc,
+                               Operation *op, Value v0) {
+  if (!v0)
+    // Empty input value must be propagated.
+    return Value();
+  UnaryOp unop = cast<UnaryOp>(op);
+  Region &presentRegion = unop.presentRegion();
+  if (presentRegion.empty())
+    // Uninitialized Value() will be interpreted as missing data in the
+    // output.
+    return Value();
+  return insertYieldOp(rewriter, loc, presentRegion, {v0});
+}
+
+static Value buildBinaryOverlap(PatternRewriter &rewriter, Location loc,
+                                Operation *op, Value v0, Value v1) {
+  if (!v0 || !v1)
+    // Empty input values must be propagated.
+    return Value();
+  BinaryOp binop = cast<BinaryOp>(op);
+  Region &overlapRegion = binop.overlapRegion();
+  if (overlapRegion.empty())
+    // Uninitialized Value() will be interpreted as missing data in the
+    // output.
+    return Value();
+  return insertYieldOp(rewriter, loc, overlapRegion, {v0, v1});
 }
 
 Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
@@ -750,6 +907,14 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
     return rewriter.create<arith::ShRUIOp>(loc, v0, v1);
   case kShlI:
     return rewriter.create<arith::ShLIOp>(loc, v0, v1);
+  // Semiring ops with custom logic.
+  case kBinaryBranch:
+    return insertYieldOp(rewriter, loc,
+                         *tensorExps[e].op->getBlock()->getParent(), {v0});
+  case kUnary:
+    return buildUnaryPresent(rewriter, loc, tensorExps[e].op, v0);
+  case kBinary:
+    return buildBinaryOverlap(rewriter, loc, tensorExps[e].op, v0, v1);
   }
   llvm_unreachable("unexpected expression kind in build");
 }
