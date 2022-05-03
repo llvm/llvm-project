@@ -67,7 +67,7 @@ static void EncodeDecode(const NameToDIE &object, ByteOrder byte_order) {
   NameToDIE decoded_object;
   offset_t data_offset = 0;
   decoded_object.Decode(data, &data_offset, strtab_reader);
-  EXPECT_TRUE(object == decoded_object);
+  EXPECT_EQ(object, decoded_object);
 }
 
 static void EncodeDecode(const NameToDIE &object) {
@@ -83,6 +83,7 @@ TEST(DWARFIndexCachingTest, NameToDIEEncodeDecode) {
              DIERef(llvm::None, DIERef::Section::DebugInfo, 0x11223344));
   map.Insert(ConstString("workd"),
              DIERef(100, DIERef::Section::DebugInfo, 0x11223344));
+  map.Finalize();
   // Make sure a valid NameToDIE map encodes and decodes correctly.
   EncodeDecode(map);
 }
