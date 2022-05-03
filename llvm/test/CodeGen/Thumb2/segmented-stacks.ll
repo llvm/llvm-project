@@ -171,4 +171,24 @@ define fastcc void @test_fastcc_large() #0 {
 ; ARM-NEXT:    .long   40192
 }
 
+
+declare void @panic() unnamed_addr
+
+; We used to crash while compiling the following function.
+; THUMB-LABEL: build_should_not_segfault:
+; ARM-LABEL: build_should_not_segfault:
+define void @build_should_not_segfault(i8 %x) unnamed_addr #0 {
+start:
+  %_0 = icmp ult i8 %x, 16
+  %or.cond = select i1 undef, i1 true, i1 %_0
+  br i1 %or.cond, label %bb1, label %bb2
+
+bb1:
+  ret void
+
+bb2:
+  call void @panic()
+  unreachable
+}
+
 attributes #0 = { "split-stack" }
