@@ -1080,6 +1080,43 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
   return CallInst::Create(MinMax, { MinMaxOp, ThirdOp });
 }
 
+/// If all arguments of the intrinsic are unary shuffles with the same mask,
+/// try to shuffle after the intrinsic.
+static Instruction *
+foldShuffledIntrinsicOperands(IntrinsicInst *II,
+                              InstCombiner::BuilderTy &Builder) {
+  // TODO: This should be extended to handle other intrinsics like fshl, ctpop,
+  //       etc. Use llvm::isTriviallyVectorizable() and related to determine
+  //       which intrinsics are safe to shuffle?
+  if (!match(II, m_MaxOrMin(m_Value(), m_Value())))
+    return nullptr;
+
+  Value *X;
+  ArrayRef<int> Mask;
+  if (!match(II->getArgOperand(0),
+             m_Shuffle(m_Value(X), m_Undef(), m_Mask(Mask))))
+    return nullptr;
+
+  // At least 1 operand must have 1 use because we are creating 2 instructions.
+  if (none_of(II->args(), [](Value *V) { return V->hasOneUse(); }))
+    return nullptr;
+
+  // See if all arguments are shuffled with the same mask.
+  SmallVector<Value *, 4> NewArgs(II->arg_size());
+  NewArgs[0] = X;
+  for (unsigned i = 1, e = II->arg_size(); i != e; ++i) {
+    if (!match(II->getArgOperand(i),
+               m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))))
+      return nullptr;
+    NewArgs[i] = X;
+  }
+
+  // intrinsic (shuf X, M), (shuf Y, M), ... --> shuf (intrinsic X, Y, ...), M
+  Value *NewIntrinsic =
+      Builder.CreateIntrinsic(II->getIntrinsicID(), X->getType(), NewArgs);
+  return new ShuffleVectorInst(NewIntrinsic, Mask);
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -2622,6 +2659,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   }
+
+  if (Instruction *Shuf = foldShuffledIntrinsicOperands(II, Builder))
+    return Shuf;
+
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
   // context, so it is handled in visitCallBase and we should trigger it.
   return visitCallBase(*II);
