@@ -88,10 +88,13 @@ class Shadow {
     if (size)
       *size = part_.access_ == kFreeAccess ? kShadowCell
                                            : __builtin_popcount(part_.access_);
-    if (typ)
-      *typ = (part_.is_read_ ? kAccessRead : kAccessWrite) |
-             (part_.is_atomic_ ? kAccessAtomic : 0) |
-             (part_.access_ == kFreeAccess ? kAccessFree : 0);
+    if (typ) {
+      *typ = part_.is_read_ ? kAccessRead : kAccessWrite;
+      if (part_.is_atomic_)
+        *typ |= kAccessAtomic;
+      if (part_.access_ == kFreeAccess)
+        *typ |= kAccessFree;
+    }
   }
 
   ALWAYS_INLINE
