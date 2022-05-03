@@ -825,7 +825,6 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
   F->setName("func");
-  BB->setName("entry");
   IRBuilder<> Builder(BB);
 
   BasicBlock *EnterBB = BasicBlock::Create(Ctx, "parallel.enter", F);
@@ -2138,7 +2137,7 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
       MasterEndCI = nullptr;
     }
   }
-  ASSERT_NE(MasterEndCI, nullptr);
+  EXPECT_NE(MasterEndCI, nullptr);
   EXPECT_EQ(MasterEndCI->arg_size(), 2U);
   EXPECT_TRUE(isa<GlobalVariable>(MasterEndCI->getArgOperand(0)));
   EXPECT_EQ(MasterEndCI->getArgOperand(1), MasterEntryCI->getArgOperand(1));
@@ -3508,7 +3507,7 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   };
 
   InsertPointTy AfterIP = OMPBuilder.createParallel(
-      Loc, OuterAllocaIP, BodyGenCB, PrivCB, /* FiniCB */ {},
+      Loc, OuterAllocaIP, BodyGenCB, PrivCB, {},
       /* IfCondition */ nullptr,
       /* NumThreads */ nullptr, OMP_PROC_BIND_default,
       /* IsCancellable */ false);
