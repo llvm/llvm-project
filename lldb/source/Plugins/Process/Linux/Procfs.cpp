@@ -60,8 +60,8 @@ lldb_private::process_linux::GetAvailableLogicalCoreIDs() {
     if (!cpuinfo)
       return cpuinfo.takeError();
 
-    Expected<std::vector<int>> core_ids = GetAvailableLogicalCoreIDs(
-        StringRef(reinterpret_cast<const char *>(cpuinfo->data())));
+    Expected<std::vector<int>> core_ids = GetAvailableLogicalCoreIDs(StringRef(
+        reinterpret_cast<const char *>(cpuinfo->data()), cpuinfo->size()));
     if (!core_ids)
       return core_ids.takeError();
 
