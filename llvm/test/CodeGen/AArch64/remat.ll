@@ -24,6 +24,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=tsv110 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mattr=+custom-cheap-as-move -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=thunderx3t110 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=ampere1 -o - %s | FileCheck %s
 
 %X = type { i64, i64, i64 }
 declare void @f(%X*)
