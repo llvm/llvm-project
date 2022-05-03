@@ -435,5 +435,18 @@ define i32 @fuzz9935() {
   ret i32 %4
 }
 
+; FIXME: Failure to modulo the inner rotation before adding the results
+define i5 @rotl_merge_i5(i5 %x) {
+; CHECK-LABEL: rotl_merge_i5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %r1 = call i5 @llvm.fshl.i5(i5 %x, i5 %x, i5 -1)
+  %r2 = call i5 @llvm.fshl.i5(i5 %r1, i5 %r1, i5 1)
+  ret i5 %r2
+}
+declare i5 @llvm.fshl.i5(i5, i5, i5)
+
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
