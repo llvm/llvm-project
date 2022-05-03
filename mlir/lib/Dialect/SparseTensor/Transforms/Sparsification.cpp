@@ -798,8 +798,7 @@ static void genTensorStore(Merger &merger, CodeGen &codegen,
     if (!rhs) {
       // Only unary and binary are allowed to return uninitialized rhs
       // to indicate missing output.
-      Kind kind = merger.exp(exp).kind;
-      assert(kind == kUnary || kind == kBinary);
+      assert(merger.exp(exp).kind == kUnary || merger.exp(exp).kind == kBinary);
     } else {
       genInsertionStore(codegen, rewriter, op, t, rhs);
     }
