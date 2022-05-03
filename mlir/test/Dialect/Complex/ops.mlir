@@ -26,6 +26,9 @@ func.func @ops(%f: f32) {
   // CHECK: complex.add %[[C]], %[[C]] : complex<f32>
   %sum = complex.add %complex, %complex : complex<f32>
 
+  // CHECK: complex.cos %[[C]] : complex<f32>
+  %cos = complex.cos %complex : complex<f32>
+
   // CHECK: complex.div %[[C]], %[[C]] : complex<f32>
   %div = complex.div %complex, %complex : complex<f32>
 
@@ -52,6 +55,9 @@ func.func @ops(%f: f32) {
 
   // CHECK: complex.sign %[[C]] : complex<f32>
   %sign = complex.sign %complex : complex<f32>
+
+  // CHECK: complex.sin %[[C]] : complex<f32>
+  %sin = complex.sin %complex : complex<f32>
 
   // CHECK: complex.sub %[[C]], %[[C]] : complex<f32>
   %diff = complex.sub %complex, %complex : complex<f32>
