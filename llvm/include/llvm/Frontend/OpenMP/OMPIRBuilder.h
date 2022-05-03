@@ -105,8 +105,6 @@ public:
   /// at the time, and location, the callback is invoked.
   using FinalizeCallbackTy = function_ref<void(InsertPointTy CodeGenIP)>;
 
-
-
 private:
   enum class RegionKind {
     /// Sentinel object so we don't always have to check whether the stack is
@@ -122,8 +120,6 @@ private:
   };
 
   struct OMPRegionInfo;
-
-
 
   /// An irregular exit out of a region, such as by cancellation.
   struct OMPRegionBreakInfo {
@@ -147,8 +143,6 @@ private:
     void assertOK() const;
   };
 
-
-
   /// An OpenMP region with a single entry and single exit (unless containing a
   /// irregular exit) that may be associated with a construct.
   struct OMPRegionInfo {
@@ -168,8 +162,7 @@ private:
     OMPRegionInfo(RegionKind Kind, omp::Directive DK, bool IsCancellable);
 
     /// Register an irregular exit to this region.
-    void addBreak(BasicBlock *BB, omp::Directive Reason,
-                  OMPRegionInfo *Target) ;
+    void addBreak(BasicBlock *BB, omp::Directive Reason, OMPRegionInfo *Target);
 
     /// Consistency self-check.
     void assertOK() const;
@@ -186,9 +179,6 @@ private:
   /// the toplevel region if not present.
   OMPRegionInfo *getInnermostRegion(omp::Directive DK);
 
-
-
-
   /// @{
   /// Push a new region to the region stack. Must eventually be popped again
   /// using exitRegion.
@@ -199,9 +189,8 @@ private:
   }
   /// @}
 
-
-
-  /// Pop a region from the region stack. Net yet rejoined irregular exits fall through the outer surrounding region.
+  /// Pop a region from the region stack. Net yet rejoined irregular exits fall
+  /// through the outer surrounding region.
   void exitRegion(OMPRegionInfo *R);
 
 public:
@@ -1328,7 +1317,7 @@ private:
   EmitOMPInlinedRegion(omp::Directive OMPD, Instruction *EntryCall,
                        Instruction *ExitCall, BodyGenCallbackTy BodyGenCB,
                        FinalizeCallbackTy FiniCB, bool Conditional = false,
-                        bool IsCancellable = false); 
+                       bool IsCancellable = false);
 
   /// Get the platform-specific name separator.
   /// \param Parts different parts of the final name that needs separation
