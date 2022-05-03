@@ -1767,7 +1767,8 @@ TSAN_INTERCEPTOR(int, listen, int fd, int backlog) {
 
 TSAN_INTERCEPTOR(int, close, int fd) {
   SCOPED_INTERCEPTOR_RAW(close, fd);
-  FdClose(thr, pc, fd);
+  if (!in_symbolizer())
+    FdClose(thr, pc, fd);
   return REAL(close)(fd);
 }
 

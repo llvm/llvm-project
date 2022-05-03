@@ -358,10 +358,10 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
      0xFFFFFFFFu, 0xFFFFFFFFu}, // Intel MCU // FIXME: is this correct?
     {ArchSpec::eCore_ppc_generic, llvm::ELF::EM_PPC, LLDB_INVALID_CPUTYPE,
      0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC
-    {ArchSpec::eCore_ppc64le_generic, llvm::ELF::EM_PPC64, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64le
-    {ArchSpec::eCore_ppc64_generic, llvm::ELF::EM_PPC64, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64
+    {ArchSpec::eCore_ppc64le_generic, llvm::ELF::EM_PPC64,
+     ArchSpec::eCore_ppc64le_generic, 0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64le
+    {ArchSpec::eCore_ppc64_generic, llvm::ELF::EM_PPC64,
+     ArchSpec::eCore_ppc64_generic, 0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64
     {ArchSpec::eCore_arm_generic, llvm::ELF::EM_ARM, LLDB_INVALID_CPUTYPE,
      0xFFFFFFFFu, 0xFFFFFFFFu}, // ARM
     {ArchSpec::eCore_arm_aarch64, llvm::ELF::EM_AARCH64, LLDB_INVALID_CPUTYPE,
@@ -400,8 +400,8 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
      LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // HEXAGON
     {ArchSpec::eCore_arc, llvm::ELF::EM_ARC_COMPACT2, LLDB_INVALID_CPUTYPE,
      0xFFFFFFFFu, 0xFFFFFFFFu}, // ARC
-    {ArchSpec::eCore_avr, llvm::ELF::EM_AVR, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // AVR
+    {ArchSpec::eCore_avr, llvm::ELF::EM_AVR, LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu,
+     0xFFFFFFFFu}, // AVR
     {ArchSpec::eCore_riscv32, llvm::ELF::EM_RISCV,
      ArchSpec::eRISCVSubType_riscv32, 0xFFFFFFFFu, 0xFFFFFFFFu}, // riscv32
     {ArchSpec::eCore_riscv64, llvm::ELF::EM_RISCV,
