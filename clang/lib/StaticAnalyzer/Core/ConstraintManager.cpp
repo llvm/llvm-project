@@ -41,3 +41,32 @@ ConditionTruthVal ConstraintManager::checkNull(ProgramStateRef State,
     return ConditionTruthVal(true);
   return {};
 }
+
+ConstraintManager::ProgramStatePair
+ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
+  ProgramStateRef StTrue = assume(State, Cond, true);
+
+  if (!StTrue) {
+    ProgramStateRef StFalse = assume(State, Cond, false);
+    if (LLVM_UNLIKELY(!StFalse)) { // both infeasible
+      ProgramStateRef StInfeasible = State->cloneAsPosteriorlyOverconstrained();
+      assert(StInfeasible->isPosteriorlyOverconstrained());
+      // Checkers might rely on the API contract that both returned states
+      // cannot be null. Thus, we return StInfeasible for both branches because
+      // it might happen that a Checker uncoditionally uses one of them if the
+      // other is a nullptr. This may also happen with the non-dual and
+      // adjacent `assume(true)` and `assume(false)` calls. By implementing
+      // assume in therms of assumeDual, we can keep our API contract there as
+      // well.
+      return ProgramStatePair(StInfeasible, StInfeasible);
+    }
+    return ProgramStatePair(nullptr, StFalse);
+  }
+
+  ProgramStateRef StFalse = assume(State, Cond, false);
+  if (!StFalse) {
+    return ProgramStatePair(StTrue, nullptr);
+  }
+
+  return ProgramStatePair(StTrue, StFalse);
+}

@@ -78,11 +78,42 @@ private:
   friend class ProgramStateManager;
   friend class ExplodedGraph;
   friend class ExplodedNode;
+  friend class NodeBuilder;
+  friend class ConstraintManager;
 
   ProgramStateManager *stateMgr;
   Environment Env;           // Maps a Stmt to its current SVal.
   Store store;               // Maps a location to its current value.
   GenericDataMap   GDM;      // Custom data stored by a client of this class.
+
+  // A state is infeasible if there is a contradiction among the constraints.
+  // An infeasible state is represented by a `nullptr`.
+  // In the sense of `assumeDual`, a state can have two children by adding a
+  // new constraint and the negation of that new constraint. A parent state is
+  // over-constrained if both of its children are infeasible. In the
+  // mathematical sense, it means that the parent is infeasible and we should
+  // have realized that at the moment when we have created it. However, we
+  // could not recognize that because of the imperfection of the underlying
+  // constraint solver. We say it is posteriorly over-constrained because we
+  // recognize that a parent is infeasible only *after* a new and more specific
+  // constraint and its negation are evaluated.
+  //
+  // Example:
+  //
+  // x * x = 4 and x is in the range [0, 1]
+  // This is an already infeasible state, but the constraint solver is not
+  // capable of handling sqrt, thus we don't know it yet.
+  //
+  // Then a new constraint `x = 0` is added. At this moment the constraint
+  // solver re-evaluates the existing constraints and realizes the
+  // contradiction `0 * 0 = 4`.
+  // We also evaluate the negated constraint `x != 0`;  the constraint solver
+  // deduces `x = 1` and then realizes the contradiction `1 * 1 = 4`.
+  // Both children are infeasible, thus the parent state is marked as
+  // posteriorly over-constrained. These parents are handled with special care:
+  // we do not allow transitions to exploded nodes with such states.
+  bool PosteriorlyOverconstrained = false;
+
   unsigned refCount;
 
   /// makeWithStore - Return a ProgramState with the same values as the current
@@ -90,6 +121,11 @@ private:
   ProgramStateRef makeWithStore(const StoreRef &store) const;
 
   void setStore(const StoreRef &storeRef);
+
+  ProgramStateRef cloneAsPosteriorlyOverconstrained() const;
+  bool isPosteriorlyOverconstrained() const {
+    return PosteriorlyOverconstrained;
+  }
 
 public:
   /// This ctor is used when creating the first ProgramState object.
@@ -135,6 +171,7 @@ public:
     V->Env.Profile(ID);
     ID.AddPointer(V->store);
     V->GDM.Profile(ID);
+    ID.AddBoolean(V->PosteriorlyOverconstrained);
   }
 
   /// Profile - Used to profile the contents of this object for inclusion
