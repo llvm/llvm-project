@@ -6,6 +6,7 @@ add_custom_target(ClangPseudoUnitTests)
 add_unittest(ClangPseudoUnitTests ClangPseudoTests
   DirectiveTreeTest.cpp
   ForestTest.cpp
+  GLRTest.cpp
   GrammarTest.cpp
   LRTableTest.cpp
   TokenTest.cpp
