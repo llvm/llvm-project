@@ -945,13 +945,11 @@ MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
 AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                                 ArrayRef<AffineExpr> exprs,
                                                 MLIRContext *context) {
-  assert(!sizes.empty() && !exprs.empty() &&
-         "expected non-empty sizes and exprs");
-
   // Size 0 corner case is useful for canonicalizations.
-  if (llvm::is_contained(sizes, 0))
+  if (sizes.empty() || llvm::is_contained(sizes, 0))
     return getAffineConstantExpr(0, context);
 
+  assert(!exprs.empty() && "expected exprs");
   auto maps = AffineMap::inferFromExprList(exprs);
   assert(!maps.empty() && "Expected one non-empty map");
   unsigned numDims = maps[0].getNumDims(), nSymbols = maps[0].getNumSymbols();

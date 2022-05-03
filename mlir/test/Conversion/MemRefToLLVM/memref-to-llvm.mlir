@@ -1052,6 +1052,20 @@ func.func @memref_copy_contiguous(%in: memref<16x2xi32>, %offset: index) {
 
 // -----
 
+// CHECK-LABEL: func @memref_copy_0d_offset
+#map0 = affine_map<(d0) -> (d0 + 1)>
+#map1 = affine_map<() -> (1)>
+func.func @memref_copy_0d_offset(%in: memref<2xi32>) {
+  %buf = memref.alloc() : memref<i32>
+  %sub = memref.subview %in[1] [1] [1] : memref<2xi32> to memref<1xi32, #map0>
+  %scalar = memref.collapse_shape %sub [] : memref<1xi32, #map0> into memref<i32, #map1>
+  memref.copy %scalar, %buf : memref<i32, #map1> to memref<i32>
+  // CHECK: llvm.intr.memcpy
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_copy_noncontiguous
 #map = affine_map<(d0, d1)[s0] -> (d0 * 2 + s0 + d1)>
 func.func @memref_copy_noncontiguous(%in: memref<16x2xi32>, %offset: index) {
