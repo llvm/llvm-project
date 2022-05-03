@@ -3114,6 +3114,7 @@ void ASTWriter::WriteFileDeclIDsMap() {
   for (auto &FileDeclEntry : SortedFileDeclIDs) {
     DeclIDInFileInfo &Info = *FileDeclEntry.second;
     Info.FirstDeclIndex = FileGroupedDeclIDs.size();
+    llvm::stable_sort(Info.DeclIDs);
     for (auto &LocDeclEntry : Info.DeclIDs)
       FileGroupedDeclIDs.push_back(LocDeclEntry.second);
   }
@@ -5462,16 +5463,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
 
   std::pair<unsigned, serialization::DeclID> LocDecl(Offset, ID);
   LocDeclIDsTy &Decls = Info->DeclIDs;
-
-  if (Decls.empty() || Decls.back().first <= Offset) {
-    Decls.push_back(LocDecl);
-    return;
-  }
-
-  LocDeclIDsTy::iterator I =
-      llvm::upper_bound(Decls, LocDecl, llvm::less_first());
-
-  Decls.insert(I, LocDecl);
+  Decls.push_back(LocDecl);
 }
 
 unsigned ASTWriter::getAnonymousDeclarationNumber(const NamedDecl *D) {
