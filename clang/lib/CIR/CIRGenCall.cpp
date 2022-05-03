@@ -803,6 +803,65 @@ void CIRGenFunction::buildDelegateCallArg(CallArgList &args,
   }
 }
 
+/// Returns the "extra-canonicalized" return type, which discards qualifiers on
+/// the return type. Codegen doesn't care about them, and it makes ABI code a
+/// little easier to be able to assume that all parameter and return types are
+/// top-level unqualified.
+/// FIXME(CIR): This should be a common helper extracted from CodeGen
+static CanQualType GetReturnType(QualType RetTy) {
+  return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
+}
+
+/// Arrange a call as unto a free function, except possibly with an additional
+/// number of formal parameters considered required.
+static const CIRGenFunctionInfo &
+arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
+                            const CallArgList &args, const FunctionType *fnType,
+                            unsigned numExtraRequiredArgs, bool chainCall) {
+  assert(args.size() >= numExtraRequiredArgs);
+  assert(!chainCall && "Chain call NYI");
+
+  llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
+
+  // In most cases, there are no optional arguments.
+  RequiredArgs required = RequiredArgs::All;
+
+  // if we have a variadic prototype, the required arguments are the extra
+  // prefix plus the arguments in the prototype.
+  auto *proto = dyn_cast<FunctionProtoType>(fnType);
+  assert(proto && "Only FunctionProtoType supported so far");
+  assert(dyn_cast<FunctionProtoType>(fnType) &&
+         "Only FunctionProtoType supported so far");
+  assert(!proto->isVariadic() && "Variadic NYI");
+  assert(!proto->hasExtParameterInfos() && "extparameterinfos NYI");
+
+  // FIXME: Kill copy.
+  SmallVector<CanQualType, 16> argTypes;
+  for (const auto &arg : args)
+    argTypes.push_back(CGT.getContext().getCanonicalParamType(arg.Ty));
+  return CGT.arrangeCIRFunctionInfo(
+      GetReturnType(fnType->getReturnType()), /*instanceMethod=*/false,
+      chainCall, argTypes, fnType->getExtInfo(), paramInfos, required);
+}
+
+static llvm::SmallVector<CanQualType, 16>
+getArgTypesForCall(ASTContext &ctx, const CallArgList &args) {
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  for (auto &arg : args)
+    argTypes.push_back(ctx.getCanonicalParamType(arg.Ty));
+  return argTypes;
+}
+
+static llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16>
+getExtParameterInfosForCall(const FunctionProtoType *proto, unsigned prefixArgs,
+                            unsigned totalArgs) {
+  llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> result;
+  if (proto->hasExtParameterInfos()) {
+    llvm_unreachable("NYI");
+  }
+  return result;
+}
+
 /// Arrange a call to a C++ method, passing the given arguments.
 ///
 /// numPrefixArgs is the number of the ABI-specific prefix arguments we have. It
@@ -810,6 +869,28 @@ void CIRGenFunction::buildDelegateCallArg(CallArgList &args,
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
     const CallArgList &args, const FunctionProtoType *proto,
     RequiredArgs required, unsigned numPrefixArgs) {
-  llvm_unreachable("NYI");
+  assert(numPrefixArgs + 1 <= args.size() &&
+         "Emitting a call with less args than the required prefix?");
+  // Add one to account for `this`. It is a bit awkard here, but we don't count
+  // `this` in similar places elsewhere.
+  auto paramInfos =
+      getExtParameterInfosForCall(proto, numPrefixArgs + 1, args.size());
+
+  // FIXME: Kill copy.
+  auto argTypes = getArgTypesForCall(Context, args);
+
+  auto info = proto->getExtInfo();
+  return arrangeCIRFunctionInfo(
+      GetReturnType(proto->getReturnType()), /*instanceMethod=*/true,
+      /*chainCall=*/false, argTypes, info, paramInfos, required);
 }
 
+/// Figure out the rules for calling a function with the given formal type using
+/// the given arguments. The arguments are necessary because the function might
+/// be unprototyped, in which case it's target-dependent in crazy ways.
+const CIRGenFunctionInfo &CIRGenTypes::arrangeFreeFunctionCall(
+    const CallArgList &args, const FunctionType *fnType, bool ChainCall) {
+  assert(!ChainCall && "ChainCall NYI");
+  return arrangeFreeFunctionLikeCall(*this, CGM, args, fnType,
+                                     ChainCall ? 1 : 0, ChainCall);
+}
