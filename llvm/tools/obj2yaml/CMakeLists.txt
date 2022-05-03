@@ -12,6 +12,7 @@ add_llvm_utility(obj2yaml
   obj2yaml.cpp
   coff2yaml.cpp
   dwarf2yaml.cpp
+  dxcontainer2yaml.cpp
   elf2yaml.cpp
   macho2yaml.cpp
   minidump2yaml.cpp

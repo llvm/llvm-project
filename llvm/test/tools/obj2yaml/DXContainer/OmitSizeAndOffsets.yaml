@@ -1,0 +1,53 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s 
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       7
+Parts:
+  - Name:            SFI0
+    Size:            8
+  - Name:            ISG1
+    Size:            8
+  - Name:            OSG1
+    Size:            8
+  - Name:            PSV0
+    Size:            8
+  - Name:            STAT
+    Size:            8
+  - Name:            HASH
+    Size:            8
+  - Name:            CXIL
+    Size:            8
+...
+
+# CHECK: --- !dxcontainer
+# CHECK-NEXT: Header:
+# CHECK-NEXT:   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+# CHECK-NEXT:                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+# CHECK-NEXT:   Version:
+# CHECK-NEXT:     Major:           1
+# CHECK-NEXT:     Minor:           0
+# CHECK-NEXT:   FileSize:        172
+# CHECK-NEXT:   PartCount:       7
+# CHECK-NEXT:   PartOffsets:     [ 60, 76, 92, 108, 124, 140, 156 ]
+# CHECK-NEXT: Parts:
+# CHECK-NEXT:   - Name:            SFI0
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            ISG1
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            OSG1
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            PSV0
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            STAT
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            HASH
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            CXIL
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT: ...
