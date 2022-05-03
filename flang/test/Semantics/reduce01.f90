@@ -1,5 +1,9 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
+  type :: pdt(len)
+    integer, len :: len
+    character(len=len) :: ch
+  end type
  contains
   impure real function f1(x,y)
     f1 = x + y
@@ -48,8 +52,13 @@ module m
     real, intent(in) :: y
     f10 = x + y
   end function
+  pure function f11(x,y) result(res)
+    type(pdt(*)), intent(in) :: x, y
+    type(pdt(max(x%len, y%len))) :: res
+    res%ch = x%ch // y%ch
+  end function
 
-  subroutine test
+  subroutine errors
     real :: a(10,10), b
     !ERROR: OPERATION= argument of REDUCE() must be a pure function of two data arguments
     b = reduce(a, f1)
@@ -71,5 +80,9 @@ module m
     b = reduce(a, f9)
     !ERROR: If either argument of the OPERATION= procedure of REDUCE() has the ASYNCHRONOUS, VOLATILE, or TARGET attribute, both must have that attribute
     b = reduce(a, f10)
+  end subroutine
+  subroutine not_errors
+    type(pdt(10)) :: a(10), b
+    b = reduce(a, f11) ! check no bogus type incompatibility diagnostic
   end subroutine
 end module
