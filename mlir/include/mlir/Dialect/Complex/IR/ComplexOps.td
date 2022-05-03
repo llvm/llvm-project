@@ -110,6 +110,26 @@ def ConstantOp : Complex_Op<"constant", [
 }
 
 //===----------------------------------------------------------------------===//
+// CosOp
+//===----------------------------------------------------------------------===//
+
+def CosOp : ComplexUnaryOp<"cos", [SameOperandsAndResultType]> {
+  let summary = "computes cosine of a complex number";
+  let description = [{
+    The `cos` op takes a single complex number and computes the cosine of
+    it, i.e. `cos(x)`, where `x` is the input value.
+
+    Example:
+
+    ```mlir
+    %a = complex.cos %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
 // CreateOp
 //===----------------------------------------------------------------------===//
 
@@ -363,6 +383,26 @@ def SignOp : ComplexUnaryOp<"sign", [SameOperandsAndResultType]> {
 
     ```mlir
     %a = complex.sign %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
+// SinOp
+//===----------------------------------------------------------------------===//
+
+def SinOp : ComplexUnaryOp<"sin", [SameOperandsAndResultType]> {
+  let summary = "computes sine of a complex number";
+  let description = [{
+    The `sin` op takes a single complex number and computes the sine of
+    it, i.e. `sin(x)`, where `x` is the input value.
+
+    Example:
+
+    ```mlir
+    %a = complex.sin %b : complex<f32>
     ```
   }];
 
