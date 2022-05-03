@@ -8,6 +8,7 @@
 
 #include "LibcTest.h"
 
+#include "src/__support/CPP/UInt.h"
 #include "utils/testutils/ExecuteFunction.h"
 #include <cassert>
 #include <iostream>
@@ -41,7 +42,6 @@ describeValue(ValType Value) {
 }
 
 std::string describeValue(std::string Value) { return std::string(Value); }
-
 #ifdef __SIZEOF_INT128__
 // When the value is __uint128_t, also show its hexadecimal digits.
 // Using template to force exact match, prevent ambiguous promotion.
@@ -63,6 +63,20 @@ template <> std::string describeValue<__uint128_t>(__uint128_t Value) {
   return describeValue128(Value);
 }
 #endif
+
+// When the value is UInt<128>, also show its hexadecimal digits.
+template <>
+std::string
+describeValue<__llvm_libc::cpp::UInt<128>>(__llvm_libc::cpp::UInt<128> Value) {
+  std::string S(sizeof(__llvm_libc::cpp::UInt<128>) * 2, '0');
+
+  for (auto I = S.rbegin(), End = S.rend(); I != End; ++I, Value = Value >> 4) {
+    unsigned char Mod = static_cast<unsigned char>(Value) & 15;
+    *I = Mod < 10 ? '0' + Mod : 'a' + Mod - 10;
+  }
+
+  return "0x" + S;
+}
 
 template <typename ValType>
 void explainDifference(ValType LHS, ValType RHS, const char *LHSStr,
@@ -226,6 +240,10 @@ template bool test<__int128_t>(RunContext *Ctx, TestCondition Cond,
                                const char *LHSStr, const char *RHSStr,
                                const char *File, unsigned long Line);
 #endif
+template bool test<__llvm_libc::cpp::UInt<128>>(
+    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<128> LHS,
+    __llvm_libc::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
+    const char *File, unsigned long Line);
 
 template bool test<unsigned char>(RunContext *Ctx, TestCondition Cond,
                                   unsigned char LHS, unsigned char RHS,
