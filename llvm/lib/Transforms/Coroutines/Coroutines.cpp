@@ -15,7 +15,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -24,14 +23,10 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstddef>

@@ -30,7 +30,6 @@
 #ifndef LLVM_CODEGEN_MACHINEMODULEINFO_H
 #define LLVM_CODEGEN_MACHINEMODULEINFO_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/PassManager.h"

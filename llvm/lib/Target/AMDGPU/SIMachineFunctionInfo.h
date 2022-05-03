@@ -17,7 +17,7 @@
 #include "AMDGPUMachineFunction.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/raw_ostream.h"

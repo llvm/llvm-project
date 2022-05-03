@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMachineFunction.h"
+#include "AMDGPU.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"

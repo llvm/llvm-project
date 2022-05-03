@@ -27,8 +27,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"

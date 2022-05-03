@@ -14,9 +14,9 @@
 #include <mutex>
 #include <thread>
 
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/MC/StringTableBuilder.h"

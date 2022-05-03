@@ -13,7 +13,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
