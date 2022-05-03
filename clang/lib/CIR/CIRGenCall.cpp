@@ -947,7 +947,9 @@ CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
 /// definition of the given function.
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
-  assert(!dyn_cast<CXXMethodDecl>(FD) && "NYI");
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD))
+    if (MD->isInstance())
+      return arrangeCXXMethodDeclaration(MD);
 
   auto FTy = FD->getType()->getCanonicalTypeUnqualified();
 
