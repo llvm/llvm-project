@@ -141,8 +141,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl))
     llvm_unreachable("NYI");
   else
-    llvm_unreachable("NYI");
-  // FInfo = &CGM.getTypes().arrangeCXXMethodDeclaration(CalleeDecl);
+    FInfo = &CGM.getTypes().arrangeCXXMethodDeclaration(CalleeDecl);
 
   mlir::FunctionType Ty = CGM.getTypes().GetFunctionType(*FInfo);
 

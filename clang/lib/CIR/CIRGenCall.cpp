@@ -894,3 +894,39 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeFreeFunctionCall(
   return arrangeFreeFunctionLikeCall(*this, CGM, args, fnType,
                                      ChainCall ? 1 : 0, ChainCall);
 }
+
+/// Set calling convention for CUDA/HIP kernel.
+static void setCUDAKernelCallingConvention(CanQualType &FTy, CIRGenModule &CGM,
+                                           const FunctionDecl *FD) {
+  if (FD->hasAttr<CUDAGlobalAttr>()) {
+    llvm_unreachable("NYI");
+  }
+}
+
+/// Arrange the argument and result information for a declaration or definition
+/// of the given C++ non-static member function. The member function must be an
+/// ordinary function, i.e. not a constructor or destructor.
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
+  assert(!isa<CXXConstructorDecl>(MD) && "wrong method for constructors!");
+  assert(!isa<CXXDestructorDecl>(MD) && "wrong method for destructors!");
+
+  CanQualType FT = GetFormalType(MD).getAs<Type>();
+  setCUDAKernelCallingConvention(FT, CGM, MD);
+  auto prototype = FT.getAs<FunctionProtoType>();
+
+  if (MD->isInstance()) {
+    // The abstarct case is perfectly fine.
+    auto *ThisType = TheCXXABI.getThisArgumentTypeForMethod(MD);
+    return arrangeCXXMethodType(ThisType, prototype.getTypePtr(), MD);
+  }
+
+  llvm_unreachable("NYI");
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
+                                  const FunctionProtoType *FTP,
+                                  const CXXMethodDecl *MD) {
+  llvm_unreachable("NYI");
+}
