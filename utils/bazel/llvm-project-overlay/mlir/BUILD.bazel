@@ -1949,6 +1949,7 @@ cc_library(
         ":IR",
         ":LinalgOps",
         ":MathDialect",
+        ":SparseTensor",
         "//llvm:Support",
     ],
 )
