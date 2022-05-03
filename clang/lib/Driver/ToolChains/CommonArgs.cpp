@@ -761,13 +761,41 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
   }
 }
 
+bool requiresCOMGrLinking(const ToolChain &TC, const ArgList &Args) {
+  std::vector<std::string> extractValues =
+      Args.getAllArgValues(options::OPT_Xopenmp_target_EQ);
+  std::vector<std::string>::iterator itr;
+  if (!extractValues.empty()) {
+    itr = extractValues.begin();
+    while ((itr = std::find(itr, extractValues.end(), "amdgcn-amd-amdhsa")) !=
+           extractValues.end()) {
+      StringRef archVal(*(itr + 1));
+      if (archVal.contains("xnack+") && TC.getSanitizerArgs(Args).needsAsanRt())
+        return true;
+      itr += 2;
+    }
+  } else {
+    std::string tgtArch =
+        getAMDGPUTargetGPU(llvm::Triple("amdgcn-amd-amdhsa"), Args);
+    extractValues = Args.getAllArgValues(options::OPT_offload_arch_EQ);
+    itr = extractValues.begin();
+    while (itr != extractValues.end()) {
+      StringRef archVal(*itr);
+      if (!tgtArch.empty() && archVal.contains("xnack+") &&
+          TC.getSanitizerArgs(Args).needsAsanRt())
+        return true;
+      itr++;
+    }
+  }
+  return false;
+}
+
 bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
                              const ArgList &Args, bool ForceStaticHostRuntime,
                              bool IsOffloadingHost, bool GompNeedsRT) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                     options::OPT_fno_openmp, false))
     return false;
-
   Driver::OpenMPRuntimeKind RTKind = TC.getDriver().getOpenMPRuntime(Args);
 
   if (RTKind == Driver::OMPRT_Unknown)
@@ -801,6 +829,9 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
       CmdArgs.push_back("-lrt");
 
   if (IsOffloadingHost) {
+    if (requiresCOMGrLinking(TC, Args)) {
+      CmdArgs.push_back("-lamd_comgr");
+    }
     CmdArgs.push_back("-lomptarget");
   }
 
