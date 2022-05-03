@@ -62,15 +62,23 @@ def LinalgComprehensiveModuleBufferize :
     Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
            /*default=*/"0",
            "Analyze ops in random order with a given seed (fuzzer)">,
-    Option<"initTensorElimination", "init-tensor-elimination", "bool",
-            /*default=*/"false",
-           "(Experimental) Try to eliminate init_tensor operations that are "
-           "anchored at an insert_slice op">,
     Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
            "Specify if buffers should be deallocated. For compatibility with "
            "core bufferization passes.">,
   ];
   let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
+}
+
+def LinalgInitTensorElimination : Pass<"linalg-eliminate-init-tensors"> {
+  let summary = "Try to eliminate all init_tensor ops.";
+  let description = [{
+    This pass tries to eliminate all insert_slice op-anchored init_tensor ops.
+    I.e., when a value that is aliasing with an init_tensor op is inserted into
+    another tensor, this pass tries to rewrite the IR in such a way that the
+    destination tensor of the insert_slice op is used directly instead of the
+    init_tensor result.
+  }];
+  let constructor = "mlir::createLinalgInitTensorEliminationPass()";
 }
 
 def LinalgFoldUnitExtentDims : Pass<"linalg-fold-unit-extent-dims", ""> {

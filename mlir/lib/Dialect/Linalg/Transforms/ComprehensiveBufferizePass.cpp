@@ -63,6 +63,17 @@ struct LinalgComprehensiveModuleBufferize
 private:
   llvm::Optional<OneShotBufferizationOptions> options;
 };
+
+struct LinalgInitTensorElimination
+    : public LinalgInitTensorEliminationBase<LinalgInitTensorElimination> {
+  LinalgInitTensorElimination() = default;
+
+  void runOnOperation() override;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<linalg::LinalgDialect, tensor::TensorDialect>();
+  }
+};
 } // namespace
 
 static void applyEnablingTransformations(ModuleOp moduleOp) {
@@ -100,9 +111,6 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
     opt.testAnalysisOnly = testAnalysisOnly;
     opt.alwaysAliasingWithDest = alwaysAliasingWithDest;
     opt.bufferizeFunctionBoundaries = true;
-    if (initTensorElimination) {
-      opt.addPostAnalysisStep(insertSliceAnchoredInitTensorEliminationStep);
-    }
   } else {
     opt = *options;
   }
@@ -125,6 +133,20 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   (void)runPipeline(cleanupPipeline, moduleOp);
 }
 
+void LinalgInitTensorElimination::runOnOperation() {
+  Operation *op = getOperation();
+  OneShotBufferizationOptions options;
+  OneShotAnalysisState state(op, options);
+  if (failed(analyzeOp(op, state))) {
+    signalPassFailure();
+    return;
+  }
+
+  IRRewriter rewriter(op->getContext());
+  if (failed(insertSliceAnchoredInitTensorEliminationStep(rewriter, op, state)))
+    signalPassFailure();
+}
+
 std::unique_ptr<Pass> mlir::createLinalgComprehensiveModuleBufferizePass() {
   return std::make_unique<LinalgComprehensiveModuleBufferize>();
 }
@@ -132,4 +154,8 @@ std::unique_ptr<Pass> mlir::createLinalgComprehensiveModuleBufferizePass() {
 std::unique_ptr<Pass> mlir::createLinalgComprehensiveModuleBufferizePass(
     const OneShotBufferizationOptions &options) {
   return std::make_unique<LinalgComprehensiveModuleBufferize>(options);
+}
+
+std::unique_ptr<Pass> mlir::createLinalgInitTensorEliminationPass() {
+  return std::make_unique<LinalgInitTensorElimination>();
 }

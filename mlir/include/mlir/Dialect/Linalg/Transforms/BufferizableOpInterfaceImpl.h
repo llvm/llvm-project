@@ -33,21 +33,16 @@ using RewriteFn = std::function<Value(OpBuilder &, Location, OpOperand &)>;
 ///   on the reverse SSA use-def chain, starting from the OpOperand and always
 ///   following the aliasing  OpOperand, that eventually ends at a single
 ///   InitTensorOp.
-/// * The result of `rewriteFunc` must usually be analyzed for inplacability.
-///   This analysis can be skipped with `skipAnalysis`.
-LogicalResult
-eliminateInitTensors(Operation *op, bufferization::AnalysisState &state,
-                     bufferization::BufferizationAliasInfo &aliasInfo,
-                     AnchorMatchFn anchorMatchFunc, RewriteFn rewriteFunc,
-                     SmallVector<Operation *> &newOps);
+LogicalResult eliminateInitTensors(RewriterBase &rewriter, Operation *op,
+                                   bufferization::AnalysisState &state,
+                                   AnchorMatchFn anchorMatchFunc,
+                                   RewriteFn rewriteFunc);
 
 /// Try to eliminate InitTensorOps inside `op` that are anchored on an
 /// InsertSliceOp, i.e., if it is eventually inserted into another tensor
 /// (and some other conditions are met).
 LogicalResult insertSliceAnchoredInitTensorEliminationStep(
-    Operation *op, bufferization::AnalysisState &state,
-    bufferization::BufferizationAliasInfo &aliasInfo,
-    SmallVector<Operation *> &newOps);
+    RewriterBase &rewriter, Operation *op, bufferization::AnalysisState &state);
 
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
 

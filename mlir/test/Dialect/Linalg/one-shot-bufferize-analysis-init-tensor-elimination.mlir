@@ -1,6 +1,4 @@
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="test-analysis-only allow-return-allocs init-tensor-elimination" -split-input-file | FileCheck %s
-
-// -----
+// RUN: mlir-opt %s -linalg-eliminate-init-tensors -one-shot-bufferize="bufferize-function-boundaries test-analysis-only allow-return-allocs" -split-input-file | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // InitTensorOp elimination
