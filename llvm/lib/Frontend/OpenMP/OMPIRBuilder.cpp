@@ -700,7 +700,7 @@ OpenMPIRBuilder::OMPRegionInfo::OMPRegionInfo(RegionKind Kind,
 void OpenMPIRBuilder::OMPRegionInfo::addBreak(BasicBlock *BB,
                                               omp::Directive Reason,
                                               OMPRegionInfo *Target) {
-    // TODO: Multiple breaks with same Target/Reasons can be combined.
+  // TODO: Multiple breaks with same Target/Reasons can be combined.
 
   assert(IsCancellable && "Only cancellable region may have irregular exits");
   assert(!BB->getTerminator() && "Irregular exit must not rejoin the cfg");
@@ -835,7 +835,9 @@ OpenMPIRBuilder::emitBarrierImpl(const LocationDescription &Loc, Directive Kind,
                          Args);
 
   if (UseCancelBarrier && CheckCancelFlag)
-    emitCancelationCheckImpl(Loc, Result,  /* CancelledDirective */ OMPD_parallel, /* CancelReason */ OMPD_barrier);
+    emitCancelationCheckImpl(Loc, Result,
+                             /* CancelledDirective */ OMPD_parallel,
+                             /* CancelReason */ OMPD_barrier);
 
   return Builder.saveIP();
 }
@@ -885,7 +887,8 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancel), Args);
 
   // The actual cancel logic is shared with others, e.g., cancel_barriers.
-  emitCancelationCheckImpl(Loc, Result, CancelledDirective, /* CancelReason */  OMPD_cancel);
+  emitCancelationCheckImpl(Loc, Result, CancelledDirective,
+                           /* CancelReason */ OMPD_cancel);
 
   if (ContBB)
     return {ContBB, ContBB->begin()};
@@ -940,8 +943,8 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(
   BasicBlock *BB = Builder.GetInsertBlock();
   LLVMContext &Ctx = BB->getContext();
 
-   // Building the folloing control flow:
-//
+  // Building the folloing control flow:
+  //
   // BB:
   // br i1 CancelFlag
   //  |   |
@@ -961,7 +964,7 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(
   Builder.CreateCondBr(Cmp, NonCancellationBlock, CancellationBlock,
                        /* TODO weight */ nullptr, nullptr);
 
-// Register an irregular exit to be handled by the surrounding construct.
+  // Register an irregular exit to be handled by the surrounding construct.
   RegionStack.back()->addBreak(CancellationBlock, CancelReason,
                                getInnermostRegion(CancelledDirective));
 
@@ -1047,7 +1050,6 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
       PRegBodyBB->splitBasicBlock(ThenTI, "omp.par.pre_finalize");
   BasicBlock *PRegExitBB =
       PRegPreFiniBB->splitBasicBlock(ThenTI, "omp.par.exit");
-
 
   OMPRegionInfo *ParallelRegion = enterRegion(OMPD_parallel, IsCancellable);
 
@@ -1180,18 +1182,19 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
       I->eraseFromParent();
   };
 
-
-
   Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
 
-// Emit frontend finializations (eg. destructors) at the end of the regular exit.
+  // Emit frontend finializations (eg. destructors) at the end of the regular
+  // exit.
   if (FiniCB) {
     InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
     FiniCB(PreFiniIP);
   }
 
-// Also emit finializations to each irregular exit.
-// Note that we cannot reuse the regular exit finialization code (like EmitOMPInlinedRegion and createSections) because some of the cancellation may need an additional barrier.
+  // Also emit finializations to each irregular exit.
+  // Note that we cannot reuse the regular exit finialization code (like
+  // EmitOMPInlinedRegion and createSections) because some of the cancellation
+  // may need an additional barrier.
   for (OMPRegionBreakInfo &Break : ParallelRegion->Breaks) {
     Builder.SetInsertPoint(Break.BB);
 
@@ -1218,7 +1221,6 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     Break.BB = Builder.GetInsertBlock();
     assert(!Break.BB || !Break.BB->getTerminator());
   }
-
 
   exitRegion(ParallelRegion);
 
@@ -1498,7 +1500,6 @@ OpenMPIRBuilder::createSection(const LocationDescription &Loc,
                                FinalizeCallbackTy FiniCB) {
   if (!updateToLocation(Loc))
     return Loc.IP;
-
 
   Directive OMPD = Directive::OMPD_section;
   // Since we are using Finalization Callback here, HasFinalize
@@ -3289,13 +3290,12 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   //    path. The irregular exit is then added as an irregular exit of the
   //    sourrounding loop that, upon its exit, can add its own finialization
   //    code and/or rejoin the control flow there.
-  // 
+  //
   // TODO: Clang's codegen emits finalization code only once and inserts a
   // switch to jump back to the target code path (CGF.EmitBranchThroughCleanup).
   // Currently in the OpenMPIRBuilder, we emit the finialization multiple times
   // for each path exiting the region (non-cancellation and each cancellation
   // check).
-
 
   BasicBlock *FiniStartBB = FiniBB;
   if (FiniCB) {
@@ -3310,7 +3310,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::EmitOMPInlinedRegion(
          FiniBB->getTerminator()->getSuccessor(0) == ExitBB &&
          "Unexpected control flow graph state!!");
   emitCommonDirectiveExit(OMPD, FinIP, ExitCall);
-
 
   for (OMPRegionBreakInfo &Break : Region->Breaks) {
     if (Break.Target == Region) {

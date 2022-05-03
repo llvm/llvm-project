@@ -489,8 +489,10 @@ public:
     ~CGCapturedStmtRAII() { CGF.CapturedStmtInfo = PrevCapturedStmtInfo; }
   };
 
-  /// While in a region handled by Clang's CGOpenMPRuntime, do not use the OpenMPIRBuilder which requires all surrounding regions to be handled by OpenMPIRBuilder as well.
-  /// 
+  /// While in a region handled by Clang's CGOpenMPRuntime, do not use the
+  /// OpenMPIRBuilder which requires all surrounding regions to be handled by
+  /// OpenMPIRBuilder as well.
+  ///
   /// Required until everything can be handled by OpenMPIRBuilder.
   /// Isn't the ultimate solution to mixing OpenMPIRBuilder and
   /// non-OpenMPIRBuilder codegen either, but works with the current regression
@@ -502,7 +504,7 @@ public:
     bool PreviousIsInsideNonOpenMPIRBuilderHandledRegion;
 
   public:
-      NonOpenMPIRBuilderRegion(CodeGenFunction &CGF)
+    NonOpenMPIRBuilderRegion(CodeGenFunction &CGF)
         : CGF(CGF), PreviousIsInsideNonOpenMPIRBuilderHandledRegion(
                         CGF.IsInsideNonOpenMPIRBuilderHandledRegion) {
       CGF.IsInsideNonOpenMPIRBuilderHandledRegion = true;
@@ -1798,17 +1800,13 @@ public:
     /// Emit the Finalization for an OMP region
     /// \param CGF	The Codegen function this belongs to
     /// \param IP	Insertion point for generating the finalization code.
-    static void FinalizeOMPRegion(CodeGenFunction &CGF,
-                                  InsertPointTy IP) {
+    static void FinalizeOMPRegion(CodeGenFunction &CGF, InsertPointTy IP) {
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
 
       CGF.Builder.restoreIP(IP);
       llvm::BasicBlock *DestBB =
-          llvm::splitBB(CGF.Builder, /*CreateBranch*/false, ".ompfinalize");
+          llvm::splitBB(CGF.Builder, /*CreateBranch*/ false, ".ompfinalize");
 
-      
-
-   
       CodeGenFunction::JumpDest Dest = CGF.getJumpDestInCurrentScope(DestBB);
       CGF.EmitBranchThroughCleanup(Dest);
     }

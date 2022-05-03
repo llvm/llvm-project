@@ -3506,11 +3506,11 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
     return Builder.saveIP();
   };
 
-  InsertPointTy AfterIP = OMPBuilder.createParallel(
-      Loc, OuterAllocaIP, BodyGenCB, PrivCB, {},
-      /* IfCondition */ nullptr,
-      /* NumThreads */ nullptr, OMP_PROC_BIND_default,
-      /* IsCancellable */ false);
+  InsertPointTy AfterIP =
+      OMPBuilder.createParallel(Loc, OuterAllocaIP, BodyGenCB, PrivCB, {},
+                                /* IfCondition */ nullptr,
+                                /* NumThreads */ nullptr, OMP_PROC_BIND_default,
+                                /* IsCancellable */ false);
   Builder.restoreIP(AfterIP);
 
   OpenMPIRBuilder::ReductionInfo ReductionInfos[] = {

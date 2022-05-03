@@ -1204,8 +1204,6 @@ CGOpenMPRuntime::getUserDefinedReduction(const OMPDeclareReductionDecl *D) {
   return UDRMap.lookup(D);
 }
 
-
-
 static llvm::Function *emitParallelOrTeamsOutlinedFunction(
     CodeGenModule &CGM, const OMPExecutableDirective &D, const CapturedStmt *CS,
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
@@ -1232,7 +1230,6 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   else if (const auto *OPFD =
                dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&D))
     HasCancel = OPFD->hasCancel();
-
 
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
@@ -2081,8 +2078,6 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
     ThenRCG(CGF);
   }
 }
-
-
 
 // If we're inside an (outlined) parallel region, use the region info's
 // thread-ID variable (it is passed in a first argument of the outlined function

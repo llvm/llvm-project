@@ -1540,7 +1540,7 @@ static void emitCommonOMPParallelDirective(
     CodeGenFunction &CGF, const OMPExecutableDirective &S,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen,
     const CodeGenBoundParametersTy &CodeGenBoundParameters) {
-    CodeGenFunction::  NonOpenMPIRBuilderRegion NonBuilderScope(CGF);
+  CodeGenFunction::NonOpenMPIRBuilderRegion NonBuilderScope(CGF);
 
   const CapturedStmt *CS = S.getCapturedStmt(OMPD_parallel);
   llvm::Value *NumThreads = nullptr;
@@ -1716,8 +1716,8 @@ void CodeGenFunction::OMPBuilderCBHelpers::EmitOMPOutlinedRegionBody(
 
 void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
   if (CGM.getLangOpts().OpenMPIRBuilder &&
-      !IsInsideNonOpenMPIRBuilderHandledRegion) { 
-      llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+      !IsInsideNonOpenMPIRBuilderHandledRegion) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
 
     // Check if we have any if clause associated with the directive.
     llvm::Value *IfCond = nullptr;
@@ -1769,12 +1769,10 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
         AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
     Builder.restoreIP(
-       OMPBuilder.createParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,
+        OMPBuilder.createParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,
                                   IfCond, NumThreads, ProcBind, S.hasCancel()));
     return;
   }
-
-
 
   // Emit parallel region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -3736,7 +3734,7 @@ static void emitScanBasedDirective(
 static bool emitWorksharingDirective(CodeGenFunction &CGF,
                                      const OMPLoopDirective &S,
                                      bool HasCancel) {
-   CodeGenFunction:: NonOpenMPIRBuilderRegion NonOmpBuilderScope(CGF);
+  CodeGenFunction::NonOpenMPIRBuilderRegion NonOmpBuilderScope(CGF);
 
   bool HasLastprivates;
   if (llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
@@ -3916,8 +3914,7 @@ static LValue createSectionLVal(CodeGenFunction &CGF, QualType Ty,
 }
 
 void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
-    NonOpenMPIRBuilderRegion NonOmpBuilderScope(*this);
-
+  NonOpenMPIRBuilderRegion NonOmpBuilderScope(*this);
 
   const Stmt *CapturedStmt = S.getInnermostCapturedStmt()->getCapturedStmt();
   const auto *CS = dyn_cast<CompoundStmt>(CapturedStmt);
@@ -4147,7 +4144,8 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
     auto BodyGenCB = [SectionRegionBodyStmt, this](InsertPointTy AllocaIP,
                                                    InsertPointTy CodeGenIP) {
       Builder.restoreIP(CodeGenIP);
-      llvm::BasicBlock * FiniBB = splitBBWithSuffix(Builder, false, ".sectionfini");
+      llvm::BasicBlock *FiniBB =
+          splitBBWithSuffix(Builder, false, ".sectionfini");
 
       OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, *FiniBB);
       EmitStmt(SectionRegionBodyStmt);
@@ -4161,7 +4159,6 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
 
     return;
   }
-
 
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(&S);
@@ -5050,7 +5047,7 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
 }
 
 void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
-    NonOpenMPIRBuilderRegion NonOmpBuilderScope(*this);
+  NonOpenMPIRBuilderRegion NonOmpBuilderScope(*this);
 
   // Emit outlined function for task construct.
   const CapturedStmt *CS = S.getCapturedStmt(OMPD_task);
@@ -5069,7 +5066,7 @@ void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
   // Check if we should emit tied or untied task.
   Data.Tied = !S.getSingleClause<OMPUntiedClause>();
   auto &&BodyGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
-      NonOpenMPIRBuilderRegion NonOmpBuilderScope(CGF);
+    NonOpenMPIRBuilderRegion NonOmpBuilderScope(CGF);
     CGF.EmitStmt(CS->getCapturedStmt());
   };
   auto &&TaskGen = [&S, SharedsTy, CapturedStruct,
