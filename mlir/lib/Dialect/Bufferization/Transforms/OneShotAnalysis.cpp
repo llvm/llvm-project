@@ -340,6 +340,19 @@ getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values) {
   return r;
 }
 
+/// Return `true` if the given tensor value is a memory write. Most values are
+/// tensor writes, but ops that define a tensor SSA value without specifying its
+/// contents (e.g., init_tensor) are not.
+static bool isMemoryWrite(Value value, const AnalysisState &state) {
+  auto opResult = value.dyn_cast<OpResult>();
+  if (!opResult)
+    return true;
+  auto bufferizableOp = state.getOptions().dynCastBufferizableOp(value);
+  if (!bufferizableOp)
+    return true;
+  return bufferizableOp.isMemoryWrite(opResult, state);
+}
+
 /// Annotate IR with details about the detected RaW conflict.
 static void annotateConflict(OpOperand *uRead, OpOperand *uConflictingWrite,
                              Value lastWrite) {
@@ -386,10 +399,11 @@ static bool hasReadAfterWriteInterference(
     AnalysisState &state, const BufferizationAliasInfo &aliasInfo) {
   const BufferizationOptions &options = state.getOptions();
 
-  // Gather all written aliases.
+  // Gather all written aliases. Skip over aliases that are not actual writes.
   SmallVector<Value> writtenAliases;
   for (OpOperand *uWrite : usesWrite)
-    writtenAliases.push_back(uWrite->get());
+    if (isMemoryWrite(uWrite->get(), state))
+      writtenAliases.push_back(uWrite->get());
   // Find the inner-most enclosing repetitive region of each alias. If this is
   // the same region for every alias, save it in `repetitiveRegionOfWrites`.
   Optional<Region *> repetitiveRegionOfWrites =
@@ -451,9 +465,14 @@ static bool hasReadAfterWriteInterference(
       // Note: iter_args of loops are not aliases of their respective block
       // arguments, so op domanice can be used when analyzing ops that operate
       // on them.
+      //
+      // Note: If `writtenAliases` is empty, there are no memory writes outside
+      // of the repetitive region of conflictingWritingOp, which means that all
+      // relevant aliases are inside the same repetitive region.
       bool canUseOpDominance =
+          writtenAliases.empty() ||
           repetitiveRegionOfWrites ==
-          getEnclosingRepetitiveRegion(conflictingWritingOp);
+              getEnclosingRepetitiveRegion(conflictingWritingOp);
 
       // No conflict if the readingOp dominates conflictingWritingOp, i.e., the
       // write is not visible when reading.
