@@ -22,7 +22,11 @@ struct X {
 
 X blocksNRVO() {
   return ^{
-    // CHECK-LABEL: define internal void @___Z10blocksNRVOv_block_invoke
+    // With the optimizer enabled, the DeadArgElim pass is able to
+    // mark the block litteral address argument as unused and later the
+    // related block_litteral global variable is removed.
+    // This allows to promote this call to a fastcc call.
+    // CHECK-LABEL: define internal fastcc void @___Z10blocksNRVOv_block_invoke
     X x;
     // CHECK: call void @_ZN1XC1Ev
     // CHECK-NEXT: ret void
