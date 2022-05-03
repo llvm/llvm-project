@@ -142,11 +142,13 @@ private:
   template <typename ConstraintT>
   ast::Decl *createODSNativePDLLConstraintDecl(StringRef name,
                                                StringRef codeBlock, SMRange loc,
-                                               ast::Type type);
+                                               ast::Type type,
+                                               StringRef nativeType);
   template <typename ConstraintT>
   ast::Decl *
   createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
-                                    SMRange loc, ast::Type type);
+                                    SMRange loc, ast::Type type,
+                                    StringRef nativeType);
 
   //===--------------------------------------------------------------------===//
   // Decls
@@ -610,8 +612,7 @@ LogicalResult Parser::convertExpressionTo(
     if (type == valueTy) {
       // If the operation is registered, we can verify if it can ever have a
       // single result.
-      Optional<StringRef> opName = exprOpType.getName();
-      if (const ods::Operation *odsOp = lookupODSOperation(opName)) {
+      if (const ods::Operation *odsOp = exprOpType.getODSOperation()) {
         if (odsOp->getResults().empty()) {
           return emitConvertError()->attachNote(
               llvm::formatv("see the definition of `{0}`, which was defined "
@@ -821,7 +822,8 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
     ods::Operation *odsOp = nullptr;
     std::tie(odsOp, inserted) = odsContext.insertOperation(
         op.getOperationName(), op.getSummary(), op.getDescription(),
-        supportsResultTypeInferrence, op.getLoc().front());
+        op.getQualCppClassName(), supportsResultTypeInferrence,
+        op.getLoc().front());
 
     // Ignore operations that have already been added.
     if (!inserted)
@@ -846,19 +848,21 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
   /// Attr constraints.
   for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Attr")) {
     if (!def->isAnonymous() && !curDeclScope->lookup(def->getName())) {
+      tblgen::Attribute constraint(def);
       decls.push_back(
           createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
-              tblgen::AttrConstraint(def),
-              convertLocToRange(def->getLoc().front()), attrTy));
+              constraint, convertLocToRange(def->getLoc().front()), attrTy,
+              constraint.getStorageType()));
     }
   }
   /// Type constraints.
   for (llvm::Record *def : tdRecords.getAllDerivedDefinitions("Type")) {
     if (!def->isAnonymous() && !curDeclScope->lookup(def->getName())) {
+      tblgen::TypeConstraint constraint(def);
       decls.push_back(
           createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
-              tblgen::TypeConstraint(def),
-              convertLocToRange(def->getLoc().front()), typeTy));
+              constraint, convertLocToRange(def->getLoc().front()), typeTy,
+              constraint.getCPPClassName()));
     }
   }
   /// Interfaces.
@@ -870,24 +874,26 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
       continue;
     SMRange loc = convertLocToRange(def->getLoc().front());
 
-    StringRef className = def->getValueAsString("cppClassName");
-    StringRef cppNamespace = def->getValueAsString("cppNamespace");
+    std::string cppClassName =
+        llvm::formatv("{0}::{1}", def->getValueAsString("cppNamespace"),
+                      def->getValueAsString("cppClassName"))
+            .str();
     std::string codeBlock =
-        llvm::formatv("return ::mlir::success(llvm::isa<{0}::{1}>(self));",
-                      cppNamespace, className)
+        llvm::formatv("return ::mlir::success(llvm::isa<{0}>(self));",
+                      cppClassName)
             .str();
 
     if (def->isSubClassOf("OpInterface")) {
       decls.push_back(createODSNativePDLLConstraintDecl<ast::OpConstraintDecl>(
-          name, codeBlock, loc, opTy));
+          name, codeBlock, loc, opTy, cppClassName));
     } else if (def->isSubClassOf("AttrInterface")) {
       decls.push_back(
           createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
-              name, codeBlock, loc, attrTy));
+              name, codeBlock, loc, attrTy, cppClassName));
     } else if (def->isSubClassOf("TypeInterface")) {
       decls.push_back(
           createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
-              name, codeBlock, loc, typeTy));
+              name, codeBlock, loc, typeTy, cppClassName));
     }
   }
 }
@@ -895,7 +901,8 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
 template <typename ConstraintT>
 ast::Decl *
 Parser::createODSNativePDLLConstraintDecl(StringRef name, StringRef codeBlock,
-                                          SMRange loc, ast::Type type) {
+                                          SMRange loc, ast::Type type,
+                                          StringRef nativeType) {
   // Build the single input parameter.
   ast::DeclScope *argScope = pushDeclScope();
   auto *paramVar = ast::VariableDecl::create(
@@ -907,7 +914,7 @@ Parser::createODSNativePDLLConstraintDecl(StringRef name, StringRef codeBlock,
   // Build the native constraint.
   auto *constraintDecl = ast::UserConstraintDecl::createNative(
       ctx, ast::Name::create(ctx, name, loc), paramVar,
-      /*results=*/llvm::None, codeBlock, ast::TupleType::get(ctx));
+      /*results=*/llvm::None, codeBlock, ast::TupleType::get(ctx), nativeType);
   curDeclScope->add(constraintDecl);
   return constraintDecl;
 }
@@ -915,7 +922,8 @@ Parser::createODSNativePDLLConstraintDecl(StringRef name, StringRef codeBlock,
 template <typename ConstraintT>
 ast::Decl *
 Parser::createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
-                                          SMRange loc, ast::Type type) {
+                                          SMRange loc, ast::Type type,
+                                          StringRef nativeType) {
   // Format the condition template.
   tblgen::FmtContext fmtContext;
   fmtContext.withSelf("self");
@@ -924,7 +932,7 @@ Parser::createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
       &fmtContext);
 
   return createODSNativePDLLConstraintDecl<ConstraintT>(
-      constraint.getUniqueDefName(), codeBlock, loc, type);
+      constraint.getUniqueDefName(), codeBlock, loc, type, nativeType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2534,7 +2542,8 @@ LogicalResult Parser::validateVariableConstraint(const ast::ConstraintRef &ref,
     constraintType = ast::AttributeType::get(ctx);
   } else if (const auto *cst =
                  dyn_cast<ast::OpConstraintDecl>(ref.constraint)) {
-    constraintType = ast::OperationType::get(ctx, cst->getName());
+    constraintType = ast::OperationType::get(
+        ctx, cst->getName(), lookupODSOperation(cst->getName()));
   } else if (isa<ast::TypeConstraintDecl>(ref.constraint)) {
     constraintType = typeTy;
   } else if (isa<ast::TypeRangeConstraintDecl>(ref.constraint)) {
@@ -2710,7 +2719,7 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
       return valueRangeTy;
 
     // Verify member access based on the operation type.
-    if (const ods::Operation *odsOp = lookupODSOperation(opType.getName())) {
+    if (const ods::Operation *odsOp = opType.getODSOperation()) {
       auto results = odsOp->getResults();
 
       // Handle indexed results.
@@ -2792,7 +2801,7 @@ FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
     checkOperationResultTypeInferrence(loc, *opNameRef, odsOp);
   }
 
-  return ast::OperationExpr::create(ctx, loc, name, operands, results,
+  return ast::OperationExpr::create(ctx, loc, odsOp, name, operands, results,
                                     attributes);
 }
 

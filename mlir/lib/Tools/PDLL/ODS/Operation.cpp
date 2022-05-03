@@ -18,8 +18,10 @@ using namespace mlir::pdll::ods;
 //===----------------------------------------------------------------------===//
 
 Operation::Operation(StringRef name, StringRef summary, StringRef desc,
-                     bool supportsTypeInferrence, llvm::SMLoc loc)
+                     StringRef nativeClassName, bool supportsTypeInferrence,
+                     llvm::SMLoc loc)
     : name(name.str()), summary(summary.str()),
+      nativeClassName(nativeClassName.str()),
       supportsTypeInferrence(supportsTypeInferrence),
       location(loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)) {
   llvm::raw_string_ostream descOS(description);

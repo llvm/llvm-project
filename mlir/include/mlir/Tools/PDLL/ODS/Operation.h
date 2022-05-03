@@ -154,6 +154,9 @@ public:
   /// Returns the description of the operation.
   StringRef getDescription() const { return description; }
 
+  /// Returns the native class name of the operation.
+  StringRef getNativeClassName() const { return nativeClassName; }
+
   /// Returns the attributes of this operation.
   ArrayRef<Attribute> getAttributes() const { return attributes; }
 
@@ -168,7 +171,7 @@ public:
 
 private:
   Operation(StringRef name, StringRef summary, StringRef desc,
-            bool supportsTypeInferrence, SMLoc loc);
+            StringRef nativeClassName, bool supportsTypeInferrence, SMLoc loc);
 
   /// The name of the operation.
   std::string name;
@@ -176,6 +179,9 @@ private:
   /// The documentation of the operation.
   std::string summary;
   std::string description;
+
+  /// The native class name of the operation, used when generating native code.
+  std::string nativeClassName;
 
   /// Flag indicating if the operation is known to support type inferrence.
   bool supportsTypeInferrence;
