@@ -1979,11 +1979,20 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   // Build list of Static Device Libraries SDLs specified by -l option
   llvm::SmallSet<std::string, 16> SDLNames;
   static const StringRef HostOnlyArchives[] = {
-      "omp", "cudart", "m", "gcc", "gcc_s", "pthread", "hip_hcc"};
+      "omp",     "cudart",        "m",         "gcc", "gcc_s", "pthread",
+      "hip_hcc", "cudart_static", "cudadevrt", "rt",  "dl"};
+  // TODO: Create a comannd line option that a library specified with -l
+  // is host-only to prevent many extraction attempts that create empty
+  // device specific archive libraries (DAL).
   for (auto SDLName : DriverArgs.getAllArgValues(options::OPT_l)) {
-    if (!HostOnlyArchives->contains(SDLName)) {
+    bool found = false;
+    for (auto hostlibname : HostOnlyArchives)
+      if (hostlibname == SDLName) {
+        found = true;
+        continue;
+      }
+    if (!found)
       SDLNames.insert(SDLName);
-    }
   }
 
   // The search stops as soon as an SDL file is found. The driver then provides
