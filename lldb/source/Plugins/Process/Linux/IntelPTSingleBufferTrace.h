@@ -23,10 +23,8 @@ namespace process_linux {
 
 llvm::Expected<uint32_t> GetIntelPTOSEventType();
 
-class IntelPTTrace;
 class IntelPTSingleBufferTrace;
 
-using IntelPTThreadTraceUP = std::unique_ptr<IntelPTTrace>;
 using IntelPTSingleBufferTraceUP = std::unique_ptr<IntelPTSingleBufferTrace>;
 
 /// This class wraps a single perf event collecting intel pt data in a single
@@ -39,13 +37,19 @@ public:
   ///     Intel PT configuration parameters.
   ///
   /// \param[in] tid
-  ///     The tid of the thread to be traced.
+  ///     The tid of the thread to be traced. If \b None, then this traces all
+  ///     threads of all processes.
+  ///
+  /// \param[in] core_id
+  ///     The CPU core id where to trace. If \b None, then this traces all CPUs.
   ///
   /// \return
   ///   A \a IntelPTSingleBufferTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
   static llvm::Expected<IntelPTSingleBufferTraceUP>
-  Start(const TraceIntelPTStartRequest &request, lldb::tid_t tid);
+  Start(const TraceIntelPTStartRequest &request,
+        llvm::Optional<lldb::tid_t> tid,
+        llvm::Optional<lldb::core_id_t> core_id = llvm::None);
 
   /// \return
   ///    The bytes requested by a jLLDBTraceGetBinaryData packet that was routed
@@ -80,10 +84,7 @@ private:
   ///
   /// \param[in] perf_event
   ///   perf event configured for IntelPT.
-  ///
-  /// \param[in] tid
-  ///   The thread being traced.
-  IntelPTSingleBufferTrace(PerfEvent &&perf_event, lldb::tid_t tid)
+  IntelPTSingleBufferTrace(PerfEvent &&perf_event)
       : m_perf_event(std::move(perf_event)) {}
 
   /// perf event configured for IntelPT.

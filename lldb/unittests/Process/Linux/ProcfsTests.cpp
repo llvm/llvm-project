@@ -18,7 +18,7 @@ using namespace process_linux;
 using namespace llvm;
 
 TEST(Perf, HardcodedLogicalCoreIDs) {
-  Expected<std::vector<int>> core_ids =
+  Expected<std::vector<lldb::core_id_t>> core_ids =
       GetAvailableLogicalCoreIDs(R"(processor       : 13
 vendor_id       : GenuineIntel
 cpu family      : 6
@@ -98,7 +98,7 @@ TEST(Perf, RealLogicalCoreIDs) {
     GTEST_SKIP() << toString(buffer_or_error.takeError());
 
   // At this point we shouldn't fail parsing the core ids
-  Expected<ArrayRef<int>> core_ids = GetAvailableLogicalCoreIDs();
+  Expected<ArrayRef<lldb::core_id_t>> core_ids = GetAvailableLogicalCoreIDs();
   ASSERT_TRUE((bool)core_ids);
   ASSERT_GT((int)core_ids->size(), 0) << "We must see at least one core";
 }

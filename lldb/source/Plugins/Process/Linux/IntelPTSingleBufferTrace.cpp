@@ -260,14 +260,16 @@ IntelPTSingleBufferTrace::GetTraceBuffer(size_t offset, size_t size) const {
 
 Expected<IntelPTSingleBufferTraceUP>
 IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
-                                lldb::tid_t tid) {
+                                Optional<lldb::tid_t> tid,
+                                Optional<core_id_t> core_id) {
 #ifndef PERF_ATTR_SIZE_VER5
   return createStringError(inconvertibleErrorCode(),
                            "Intel PT Linux perf event not supported");
 #else
   Log *log = GetLog(POSIXLog::Trace);
 
-  LLDB_LOG(log, "Will start tracing thread id {0}", tid);
+  LLDB_LOG(log, "Will start tracing thread id {0} and cpu id {1}", tid,
+           core_id);
 
   if (__builtin_popcount(request.trace_buffer_size) != 1 ||
       request.trace_buffer_size < 4096) {
@@ -291,13 +293,13 @@ IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
   LLDB_LOG(log, "Will create trace buffer of size {0}",
            request.trace_buffer_size);
 
-  if (Expected<PerfEvent> perf_event = PerfEvent::Init(*attr, tid)) {
+  if (Expected<PerfEvent> perf_event = PerfEvent::Init(*attr, tid, core_id)) {
     if (Error mmap_err = perf_event->MmapMetadataAndBuffers(buffer_numpages,
                                                             buffer_numpages)) {
       return std::move(mmap_err);
     }
     return IntelPTSingleBufferTraceUP(
-        new IntelPTSingleBufferTrace(std::move(*perf_event), tid));
+        new IntelPTSingleBufferTrace(std::move(*perf_event)));
   } else {
     return perf_event.takeError();
   }

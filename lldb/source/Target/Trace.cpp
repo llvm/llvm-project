@@ -199,12 +199,12 @@ void Trace::RefreshLiveProcessState() {
   }
 
   for (const TraceThreadState &thread_state :
-       live_process_state->tracedThreads) {
-    for (const TraceBinaryData &item : thread_state.binaryData)
+       live_process_state->traced_threads) {
+    for (const TraceBinaryData &item : thread_state.binary_data)
       m_live_thread_data[thread_state.tid][item.kind] = item.size;
   }
 
-  for (const TraceBinaryData &item : live_process_state->processBinaryData)
+  for (const TraceBinaryData &item : live_process_state->process_binary_data)
     m_live_process_data[item.kind] = item.size;
 
   DoRefreshLiveProcessState(std::move(live_process_state));

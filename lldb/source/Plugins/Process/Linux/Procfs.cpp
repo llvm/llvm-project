@@ -11,6 +11,7 @@
 #include "lldb/Host/linux/Support.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+using namespace lldb;
 using namespace lldb_private;
 using namespace process_linux;
 using namespace llvm;
@@ -29,18 +30,18 @@ Expected<ArrayRef<uint8_t>> lldb_private::process_linux::GetProcfsCpuInfo() {
   return *cpu_info;
 }
 
-Expected<std::vector<int>>
+Expected<std::vector<core_id_t>>
 lldb_private::process_linux::GetAvailableLogicalCoreIDs(StringRef cpuinfo) {
   SmallVector<StringRef, 8> lines;
   cpuinfo.split(lines, "\n", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-  std::vector<int> logical_cores;
+  std::vector<core_id_t> logical_cores;
 
   for (StringRef line : lines) {
     std::pair<StringRef, StringRef> key_value = line.split(':');
     auto key = key_value.first.trim();
     auto val = key_value.second.trim();
     if (key == "processor") {
-      int processor;
+      core_id_t processor;
       if (val.getAsInteger(10, processor))
         return createStringError(
             inconvertibleErrorCode(),
@@ -51,17 +52,17 @@ lldb_private::process_linux::GetAvailableLogicalCoreIDs(StringRef cpuinfo) {
   return logical_cores;
 }
 
-llvm::Expected<llvm::ArrayRef<int>>
+llvm::Expected<llvm::ArrayRef<core_id_t>>
 lldb_private::process_linux::GetAvailableLogicalCoreIDs() {
-  static Optional<std::vector<int>> logical_cores_ids;
+  static Optional<std::vector<core_id_t>> logical_cores_ids;
   if (!logical_cores_ids) {
     // We find the actual list of core ids by parsing /proc/cpuinfo
     Expected<ArrayRef<uint8_t>> cpuinfo = GetProcfsCpuInfo();
     if (!cpuinfo)
       return cpuinfo.takeError();
 
-    Expected<std::vector<int>> core_ids = GetAvailableLogicalCoreIDs(StringRef(
-        reinterpret_cast<const char *>(cpuinfo->data()), cpuinfo->size()));
+    Expected<std::vector<core_id_t>> core_ids = GetAvailableLogicalCoreIDs(
+        StringRef(reinterpret_cast<const char *>(cpuinfo->data())));
     if (!core_ids)
       return core_ids.takeError();
 

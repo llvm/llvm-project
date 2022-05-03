@@ -87,24 +87,42 @@ json::Value toJSON(const TraceBinaryData &packet) {
 bool fromJSON(const json::Value &value, TraceThreadState &packet, Path path) {
   ObjectMapper o(value, path);
   return o && o.map("tid", packet.tid) &&
-         o.map("binaryData", packet.binaryData);
+         o.map("binaryData", packet.binary_data);
 }
 
 json::Value toJSON(const TraceThreadState &packet) {
   return json::Value(
-      Object{{"tid", packet.tid}, {"binaryData", packet.binaryData}});
+      Object{{"tid", packet.tid}, {"binaryData", packet.binary_data}});
 }
 
 bool fromJSON(const json::Value &value, TraceGetStateResponse &packet,
               Path path) {
   ObjectMapper o(value, path);
-  return o && o.map("tracedThreads", packet.tracedThreads) &&
-         o.map("processBinaryData", packet.processBinaryData);
+  return o && o.map("tracedThreads", packet.traced_threads) &&
+         o.map("processBinaryData", packet.process_binary_data) &&
+         o.map("cores", packet.cores);
 }
 
 json::Value toJSON(const TraceGetStateResponse &packet) {
-  return json::Value(Object{{"tracedThreads", packet.tracedThreads},
-                            {"processBinaryData", packet.processBinaryData}});
+  return json::Value(Object{{"tracedThreads", packet.traced_threads},
+                            {"processBinaryData", packet.process_binary_data},
+                            {"cores", packet.cores}});
+}
+
+bool fromJSON(const json::Value &value, TraceCoreState &packet,
+              json::Path path) {
+  ObjectMapper o(value, path);
+  int64_t core_id;
+  if (!o || !o.map("coreId", core_id) ||
+      !o.map("binaryData", packet.binary_data))
+    return false;
+  packet.core_id = static_cast<lldb::core_id_t>(core_id);
+  return true;
+}
+
+json::Value toJSON(const TraceCoreState &packet) {
+  return json::Value(
+      Object{{"coreId", packet.core_id}, {"binaryData", packet.binary_data}});
 }
 /// \}
 

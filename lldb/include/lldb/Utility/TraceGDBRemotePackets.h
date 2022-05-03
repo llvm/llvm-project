@@ -109,13 +109,24 @@ llvm::json::Value toJSON(const TraceBinaryData &packet);
 struct TraceThreadState {
   lldb::tid_t tid;
   /// List of binary data objects for this thread.
-  std::vector<TraceBinaryData> binaryData;
+  std::vector<TraceBinaryData> binary_data;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceThreadState &packet,
               llvm::json::Path path);
 
 llvm::json::Value toJSON(const TraceThreadState &packet);
+
+struct TraceCoreState {
+  lldb::core_id_t core_id;
+  /// List of binary data objects for this core.
+  std::vector<TraceBinaryData> binary_data;
+};
+
+bool fromJSON(const llvm::json::Value &value, TraceCoreState &packet,
+              llvm::json::Path path);
+
+llvm::json::Value toJSON(const TraceCoreState &packet);
 
 /// Interface for different algorithms used to convert trace
 /// counters into different units.
@@ -143,8 +154,9 @@ using TraceTscConversionUP =
     std::unique_ptr<TraceCounterConversion<std::chrono::nanoseconds>>;
 
 struct TraceGetStateResponse {
-  std::vector<TraceThreadState> tracedThreads;
-  std::vector<TraceBinaryData> processBinaryData;
+  std::vector<TraceThreadState> traced_threads;
+  std::vector<TraceBinaryData> process_binary_data;
+  llvm::Optional<std::vector<TraceCoreState>> cores;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceGetStateResponse &packet,

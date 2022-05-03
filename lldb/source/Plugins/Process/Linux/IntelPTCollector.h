@@ -1,4 +1,4 @@
-//===-- IntelPTCollector.h -------------------------------------- -*- C++ -*-===//
+//===-- IntelPTCollector.h ------------------------------------ -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,10 @@
 
 #include "Perf.h"
 
+#include "IntelPTMultiCoreTrace.h"
 #include "IntelPTSingleBufferTrace.h"
 
+#include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
@@ -47,17 +49,37 @@ public:
 
   llvm::Error TraceStop(lldb::tid_t tid);
 
+  size_t GetTracedThreadsCount() const;
+
 private:
   llvm::DenseMap<lldb::tid_t, IntelPTSingleBufferTraceUP> m_thread_traces;
   /// Total actual thread buffer size in bytes
   size_t m_total_buffer_size = 0;
 };
 
-/// Manages a "process trace" instance.
-class IntelPTProcessTrace {
+class IntelPTPerThreadProcessTrace;
+using IntelPTPerThreadProcessTraceUP =
+    std::unique_ptr<IntelPTPerThreadProcessTrace>;
+
+/// Manages a "process trace" instance by tracing each thread individually.
+class IntelPTPerThreadProcessTrace {
 public:
-  IntelPTProcessTrace(const TraceIntelPTStartRequest &request)
-      : m_tracing_params(request) {}
+  /// Start tracing the current process by tracing each of its tids
+  /// individually.
+  ///
+  /// \param[in] request
+  ///   Intel PT configuration parameters.
+  ///
+  /// \param[in] current_tids
+  ///   List of tids currently alive. In the future, whenever a new thread is
+  ///   spawned, they should be traced by calling the \a TraceStart(tid) method.
+  ///
+  /// \return
+  ///   An \a IntelPTMultiCoreTrace instance if tracing was successful, or
+  ///   an \a llvm::Error otherwise.
+  static llvm::Expected<IntelPTPerThreadProcessTraceUP>
+  Start(const TraceIntelPTStartRequest &request,
+        llvm::ArrayRef<lldb::tid_t> current_tids);
 
   bool TracesThread(lldb::tid_t tid) const;
 
@@ -68,6 +90,9 @@ public:
   llvm::Error TraceStop(lldb::tid_t tid);
 
 private:
+  IntelPTPerThreadProcessTrace(const TraceIntelPTStartRequest &request)
+      : m_tracing_params(request) {}
+
   IntelPTThreadTraceCollection m_thread_traces;
   /// Params used to trace threads when the user started "process tracing".
   TraceIntelPTStartRequest m_tracing_params;
@@ -76,7 +101,9 @@ private:
 /// Main class that manages intel-pt process and thread tracing.
 class IntelPTCollector {
 public:
-  IntelPTCollector();
+  /// \param[in] process
+  ///     Process to be traced.
+  IntelPTCollector(NativeProcessProtocol &process);
 
   static bool IsSupported();
 
@@ -90,11 +117,7 @@ public:
   llvm::Error TraceStop(const TraceStopRequest &request);
 
   /// Implementation of the jLLDBTraceStart packet
-  ///
-  /// \param[in] process_threads
-  ///     A list of all threads owned by the process.
-  llvm::Error TraceStart(const TraceIntelPTStartRequest &request,
-                         const std::vector<lldb::tid_t> &process_threads);
+  llvm::Error TraceStart(const TraceIntelPTStartRequest &request);
 
   /// Implementation of the jLLDBTraceGetState packet
   llvm::Expected<llvm::json::Value> GetState() const;
@@ -120,11 +143,21 @@ private:
 
   void ClearProcessTracing();
 
+  NativeProcessProtocol &m_process;
   /// Threads traced due to "thread tracing"
   IntelPTThreadTraceCollection m_thread_traces;
-  /// Threads traced due to "process tracing". Only one active "process tracing"
-  /// instance is assumed for a single process.
-  llvm::Optional<IntelPTProcessTrace> m_process_trace;
+
+  /// Only one of the following "process tracing" handlers can be active at a
+  /// given time.
+  ///
+  /// \{
+  /// Threads traced due to per-thread "process tracing".  This might be \b
+  /// nullptr.
+  IntelPTPerThreadProcessTraceUP m_per_thread_process_trace_up;
+  /// Cores traced due to per-core "process tracing".  This might be \b nullptr.
+  IntelPTMultiCoreTraceUP m_per_core_process_trace_up;
+  /// \}
+
   /// TSC to wall time conversion.
   TraceTscConversionUP m_tsc_conversion;
 };
