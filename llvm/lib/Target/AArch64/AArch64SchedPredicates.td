@@ -53,7 +53,7 @@ let FunctionMapper = "AArch64_AM::getShiftType" in {
 }
 
 // Check for shifting in arithmetic and logic instructions.
-foreach I = {0-3, 8} in {
+foreach I = {0-4, 8} in {
   let FunctionMapper = "AArch64_AM::getShiftValue" in
   def CheckShiftBy#I        : CheckImmOperand<3, I>;
 }
