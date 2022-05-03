@@ -3,7 +3,6 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-LINUX %s
 ; RUN: opt < %s -mtriple=nvptx -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-NVPTX %s
-; RUN: opt < %s -mtriple=s390x-linux-gnu -inferattrs -S | FileCheck --check-prefixes=CHECK-SYSTEMZ %s
 
 declare i32 @__nvvm_reflect(i8*)
 ; CHECK-NVPTX: declare noundef i32 @__nvvm_reflect(i8* noundef) [[NOFREE_NOUNWIND_READNONE:#[0-9]+]]
@@ -220,7 +219,7 @@ declare x86_fp80 @acoshl(x86_fp80)
 ; CHECK: declare x86_fp80 @acosl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @acosl(x86_fp80)
 
-; CHECK: declare noalias noundef i8* @aligned_alloc(i64 allocalign noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare noalias noundef i8* @aligned_alloc(i64 allocalign noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE1_FAMILY_MALLOC:#[0-9]+]]
 declare i8* @aligned_alloc(i64, i64)
 
 ; CHECK: declare double @asin(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
@@ -290,7 +289,7 @@ declare void @bcopy(i8*, i8*, i64)
 ; CHECK: declare void @bzero(i8* nocapture writeonly, i64)  [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare void @bzero(i8*, i64)
 
-; CHECK: declare noalias noundef i8* @calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01:#[0-9]+]]
+; CHECK: declare noalias noundef i8* @calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_MALLOC:#[0-9]+]]
 declare i8* @calloc(i64, i64)
 
 ; CHECK: declare double @cbrt(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
@@ -490,7 +489,7 @@ declare i32 @fputs(i8*, %opaque*)
 ; CHECK: declare noundef i64 @fread(i8* nocapture noundef, i64 noundef, i64 noundef, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
 declare i64 @fread(i8*, i64, i64, %opaque*)
 
-; CHECK: declare void @free(i8* allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare void @free(i8* allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_MALLOC:#[0-9]+]]
 declare void @free(i8*)
 
 ; CHECK: declare double @frexp(double, i32* nocapture) [[NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
@@ -592,11 +591,9 @@ declare i64 @labs(i64)
 declare i32 @lchown(i8*, i32, i32)
 
 ; CHECK: declare double @ldexp(double, i32) [[NOFREE_WILLRETURN:#[0-9]+]]
-; CHECK-SYSTEMZ: declare double @ldexp(double, i32 signext)
 declare double @ldexp(double, i32)
 
 ; CHECK: declare float @ldexpf(float, i32) [[NOFREE_WILLRETURN]]
-; CHECK-SYSTEMZ: declare float @ldexpf(float, i32 signext)
 declare float @ldexpf(float, i32)
 
 ; CHECK: declare x86_fp80 @ldexpl(x86_fp80, i32) [[NOFREE_WILLRETURN]]
@@ -656,7 +653,7 @@ declare i32 @lstat(i8*, %opaque*)
 ; CHECK-LINUX: declare noundef i32 @lstat64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[NOFREE_NOUNWIND]]
 declare i32 @lstat64(i8*, %opaque*)
 
-; CHECK: declare noalias noundef i8* @malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE:#[0-9]+]]
+; CHECK: declare noalias noundef i8* @malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_MALLOC:#[0-9]+]]
 declare i8* @malloc(i64)
 
 ; CHECK-LINUX: declare noalias noundef i8* @memalign(i64 allocalign, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
@@ -756,12 +753,10 @@ declare i32 @printf(i8*, ...)
 declare i32 @putc(i32, %opaque*)
 
 ; CHECK: declare noundef i32 @putchar(i32 noundef) [[NOFREE_NOUNWIND]]
-; CHECK-SYSTEMZ: declare noundef i32 @putchar(i32 noundef signext)
 declare i32 @putchar(i32)
 
 ; CHECK-KNOWN: declare noundef i32 @putchar_unlocked(i32 noundef) [[NOFREE_NOUNWIND]]
 ; CHECK-UNKNOWN: declare i32 @putchar_unlocked(i32){{$}}
-; CHECK-SYSTEMZ: declare noundef i32 @putchar_unlocked(i32 noundef signext)
 declare i32 @putchar_unlocked(i32)
 
 ; CHECK: declare noundef i32 @puts(i8* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
@@ -779,10 +774,10 @@ declare i64 @read(i32, i8*, i64)
 ; CHECK: declare noundef i64 @readlink(i8* nocapture noundef readonly, i8* nocapture noundef, i64 noundef) [[NOFREE_NOUNWIND]]
 declare i64 @readlink(i8*, i8*, i64)
 
-; CHECK: declare noalias noundef i8* @realloc(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE:#[0-9]+]]
+; CHECK: declare noalias noundef i8* @realloc(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_MALLOC:#[0-9]+]]
 declare i8* @realloc(i8*, i64)
 
-; CHECK: declare noalias noundef i8* @reallocf(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE]]
+; CHECK: declare noalias noundef i8* @reallocf(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_MALLOC]]
 declare i8* @reallocf(i8*, i64)
 
 ; CHECK: declare noundef i8* @realpath(i8* nocapture noundef readonly, i8* noundef) [[NOFREE_NOUNWIND]]
@@ -905,7 +900,7 @@ declare i8* @strcpy(i8*, i8*)
 ; CHECK: declare i64 @strcspn(i8* nocapture, i8* nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
 declare i64 @strcspn(i8*, i8*)
 
-; CHECK: declare noalias i8* @strdup(i8* nocapture readonly) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare noalias i8* @strdup(i8* nocapture readonly) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC:#[0-9]+]]
 declare i8* @strdup(i8*)
 
 ; CHECK: declare i64 @strlen(i8* nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
@@ -923,7 +918,7 @@ declare i32 @strncmp(i8*, i8*, i64)
 ; CHECK: declare i8* @strncpy(i8* noalias returned writeonly, i8* noalias nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i8* @strncpy(i8*, i8*, i64)
 
-; CHECK: declare noalias i8* @strndup(i8* nocapture readonly, i64 noundef) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare noalias i8* @strndup(i8* nocapture readonly, i64 noundef) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
 declare i8* @strndup(i8*, i64)
 
 ; CHECK: declare i64 @strnlen(i8* nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
@@ -1031,7 +1026,7 @@ declare i32 @utime(i8*, %opaque*)
 ; CHECK: declare noundef i32 @utimes(i8* nocapture noundef readonly, %opaque* nocapture noundef readonly) [[NOFREE_NOUNWIND]]
 declare i32 @utimes(i8*, %opaque*)
 
-; CHECK: declare noalias noundef i8* @valloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE]]
+; CHECK: declare noalias noundef i8* @valloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_MALLOC]]
 declare i8* @valloc(i64)
 
 ; CHECK: declare noundef i32 @vfprintf(%opaque* nocapture noundef, i8* nocapture noundef readonly, %opaque* noundef) [[NOFREE_NOUNWIND]]
@@ -1070,16 +1065,18 @@ declare void @memset_pattern16(i8*, i8*, i64)
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]] = { mustprogress nofree nounwind willreturn writeonly }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND]] = { nofree nounwind }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allocsize(0) }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allocsize(0,1) }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE1_FAMILY_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allocsize(1) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nofree nounwind readonly willreturn }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { argmemonly mustprogress nofree nounwind willreturn }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY]] = { nofree nounwind readonly }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn allocsize(1) }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[NOFREE_WILLRETURN]] = { mustprogress nofree willreturn }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allocsize(0) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { argmemonly mustprogress nofree nounwind readonly willreturn }
 ; CHECK-DAG: attributes [[NOFREE]] = { nofree }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN]]  = { inaccessiblemem_or_argmemonly mustprogress nofree nounwind willreturn }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { argmemonly nofree nounwind }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn allocsize(1) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nofree nounwind willreturn "alloc-family"="malloc" }
+
 ; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind readnone }

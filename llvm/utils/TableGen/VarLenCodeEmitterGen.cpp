@@ -58,7 +58,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
-#include "llvm/TableGen/Record.h"
 
 using namespace llvm;
 
@@ -66,48 +65,6 @@ namespace {
 
 class VarLenCodeEmitterGen {
   RecordKeeper &Records;
-
-  struct EncodingSegment {
-    unsigned BitWidth;
-    const Init *Value;
-    StringRef CustomEncoder = "";
-  };
-
-  class VarLenInst {
-    RecordVal *TheDef;
-    size_t NumBits;
-
-    // Set if any of the segment is not fixed value.
-    bool HasDynamicSegment;
-
-    SmallVector<EncodingSegment, 4> Segments;
-
-    void buildRec(const DagInit *DI);
-
-    StringRef getCustomEncoderName(const Init *EI) const {
-      if (const auto *DI = dyn_cast<DagInit>(EI)) {
-        if (DI->getNumArgs() && isa<StringInit>(DI->getArg(0)))
-          return cast<StringInit>(DI->getArg(0))->getValue();
-      }
-      return "";
-    }
-
-  public:
-    VarLenInst() : TheDef(nullptr), NumBits(0U), HasDynamicSegment(false) {}
-
-    explicit VarLenInst(const DagInit *DI, RecordVal *TheDef);
-
-    /// Number of bits
-    size_t size() const { return NumBits; }
-
-    using const_iterator = decltype(Segments)::const_iterator;
-
-    const_iterator begin() const { return Segments.begin(); }
-    const_iterator end() const { return Segments.end(); }
-    size_t getNumSegments() const { return Segments.size(); }
-
-    bool isFixedValueOnly() const { return !HasDynamicSegment; }
-  };
 
   DenseMap<Record *, VarLenInst> VarLenInsts;
 
@@ -129,15 +86,14 @@ public:
 
 } // end anonymous namespace
 
-VarLenCodeEmitterGen::VarLenInst::VarLenInst(const DagInit *DI,
-                                             RecordVal *TheDef)
+VarLenInst::VarLenInst(const DagInit *DI, const RecordVal *TheDef)
     : TheDef(TheDef), NumBits(0U) {
   buildRec(DI);
   for (const auto &S : Segments)
     NumBits += S.BitWidth;
 }
 
-void VarLenCodeEmitterGen::VarLenInst::buildRec(const DagInit *DI) {
+void VarLenInst::buildRec(const DagInit *DI) {
   assert(TheDef && "The def record is nullptr ?");
 
   std::string Op = DI->getOperator()->getAsString();
