@@ -32,6 +32,8 @@
 #define LauncherXPCServiceErrorTypeKey "errorType"
 #define LauncherXPCServiceCodeTypeKey "errorCode"
 
+#include <bsm/audit.h>
+#include <bsm/audit_session.h>
 #endif
 
 #include "llvm/Support/Host.h"
@@ -404,6 +406,16 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
 
   return true;
 #endif // TARGET_OS_OSX
+}
+
+bool Host::IsInteractiveGraphicSession() {
+#if !TARGET_OS_OSX
+  return false;
+#else
+  auditinfo_addr_t info;
+  getaudit_addr(&info, sizeof(info));
+  return info.ai_flags & AU_SESSION_FLAG_HAS_GRAPHIC_ACCESS;
+#endif
 }
 
 Environment Host::GetEnvironment() { return Environment(*_NSGetEnviron()); }

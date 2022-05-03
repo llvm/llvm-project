@@ -242,6 +242,13 @@ public:
   static bool OpenFileInExternalEditor(const FileSpec &file_spec,
                                        uint32_t line_no);
 
+  /// Check if we're running in an interactive graphical session.
+  ///
+  /// \return
+  ///     True if we're running in an interactive graphical session. False if
+  ///     we're not or don't know.
+  static bool IsInteractiveGraphicSession();
+
   static Environment GetEnvironment();
 
   static std::unique_ptr<Connection>
