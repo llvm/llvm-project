@@ -16030,6 +16030,10 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "#define ccc  (5)",
                Style);
 
+  verifyFormat("#define true  1\n"
+               "#define false 0",
+               Style);
+
   verifyFormat("#define f(x)         (x * x)\n"
                "#define fff(x, y, z) (x * y + z)\n"
                "#define ffff(x, y)   (x - y)",
