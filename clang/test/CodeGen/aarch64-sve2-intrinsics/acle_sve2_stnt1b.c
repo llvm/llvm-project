@@ -3,8 +3,6 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -no-opaque-pointers -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -no-opaque-pointers -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -no-opaque-pointers -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -32,8 +30,6 @@
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u32base_s32(svbool_t pg, svuint32_t bases, svint32_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u32base_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter, _u32base, , _s32)(pg, bases, data);
 }
 
@@ -52,8 +48,6 @@ void test_svstnt1b_scatter_u32base_s32(svbool_t pg, svuint32_t bases, svint32_t 
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u64base_s64(svbool_t pg, svuint64_t bases, svint64_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u64base_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter, _u64base, , _s64)(pg, bases, data);
 }
 
@@ -72,8 +66,6 @@ void test_svstnt1b_scatter_u64base_s64(svbool_t pg, svuint64_t bases, svint64_t 
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u32base_u32(svbool_t pg, svuint32_t bases, svuint32_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u32base_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter, _u32base, , _u32)(pg, bases, data);
 }
 
@@ -92,8 +84,6 @@ void test_svstnt1b_scatter_u32base_u32(svbool_t pg, svuint32_t bases, svuint32_t
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u64base_u64(svbool_t pg, svuint64_t bases, svuint64_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u64base_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter, _u64base, , _u64)(pg, bases, data);
 }
 
@@ -112,8 +102,6 @@ void test_svstnt1b_scatter_u64base_u64(svbool_t pg, svuint64_t bases, svuint64_t
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_s64offset_s64(svbool_t pg, int8_t *base, svint64_t offsets, svint64_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_s64offset_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter_, s64, offset, _s64)(pg, base, offsets, data);
 }
 
@@ -132,8 +120,6 @@ void test_svstnt1b_scatter_s64offset_s64(svbool_t pg, int8_t *base, svint64_t of
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_s64offset_u64(svbool_t pg, uint8_t *base, svint64_t offsets, svuint64_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_s64offset_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter_, s64, offset, _u64)(pg, base, offsets, data);
 }
 
@@ -152,8 +138,6 @@ void test_svstnt1b_scatter_s64offset_u64(svbool_t pg, uint8_t *base, svint64_t o
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u32offset_s32(svbool_t pg, int8_t *base, svuint32_t offsets, svint32_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u32offset_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter_, u32, offset, _s32)(pg, base, offsets, data);
 }
 
@@ -172,8 +156,6 @@ void test_svstnt1b_scatter_u32offset_s32(svbool_t pg, int8_t *base, svuint32_t o
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u64offset_s64(svbool_t pg, int8_t *base, svuint64_t offsets, svint64_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u64offset_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter_, u64, offset, _s64)(pg, base, offsets, data);
 }
 
@@ -192,8 +174,6 @@ void test_svstnt1b_scatter_u64offset_s64(svbool_t pg, int8_t *base, svuint64_t o
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u32offset_u32(svbool_t pg, uint8_t *base, svuint32_t offsets, svuint32_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u32offset_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter_, u32, offset, _u32)(pg, base, offsets, data);
 }
 
@@ -212,8 +192,6 @@ void test_svstnt1b_scatter_u32offset_u32(svbool_t pg, uint8_t *base, svuint32_t 
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u64offset_u64(svbool_t pg, uint8_t *base, svuint64_t offsets, svuint64_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u64offset_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter_, u64, offset, _u64)(pg, base, offsets, data);
 }
 
@@ -232,8 +210,6 @@ void test_svstnt1b_scatter_u64offset_u64(svbool_t pg, uint8_t *base, svuint64_t 
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u32base_offset_s32(svbool_t pg, svuint32_t bases, int64_t offset, svint32_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u32base_offset_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter, _u32base, _offset, _s32)(pg, bases, offset, data);
 }
 
@@ -252,8 +228,6 @@ void test_svstnt1b_scatter_u32base_offset_s32(svbool_t pg, svuint32_t bases, int
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u64base_offset_s64(svbool_t pg, svuint64_t bases, int64_t offset, svint64_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u64base_offset_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter, _u64base, _offset, _s64)(pg, bases, offset, data);
 }
 
@@ -272,8 +246,6 @@ void test_svstnt1b_scatter_u64base_offset_s64(svbool_t pg, svuint64_t bases, int
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u32base_offset_u32(svbool_t pg, svuint32_t bases, int64_t offset, svuint32_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u32base_offset_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter, _u32base, _offset, _u32)(pg, bases, offset, data);
 }
 
@@ -292,7 +264,5 @@ void test_svstnt1b_scatter_u32base_offset_u32(svbool_t pg, svuint32_t bases, int
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svstnt1b_scatter_u64base_offset_u64(svbool_t pg, svuint64_t bases, int64_t offset, svuint64_t data) {
-  // overload-warning@+2 {{call to undeclared function 'svstnt1b_scatter_offset'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svstnt1b_scatter_u64base_offset_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svstnt1b_scatter, _u64base, _offset, _u64)(pg, bases, offset, data);
 }
