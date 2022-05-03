@@ -3,6 +3,7 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-LINUX %s
 ; RUN: opt < %s -mtriple=nvptx -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-NVPTX %s
+; RUN: opt < %s -mtriple=powerpc-ibm-aix-xcoff -inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-AIX %s
 
 declare i32 @__nvvm_reflect(i8*)
 ; CHECK-NVPTX: declare noundef i32 @__nvvm_reflect(i8* noundef) [[NOFREE_NOUNWIND_READNONE:#[0-9]+]]
@@ -292,6 +293,9 @@ declare void @bzero(i8*, i64)
 ; CHECK: declare noalias noundef i8* @calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_MALLOC:#[0-9]+]]
 declare i8* @calloc(i64, i64)
 
+; CHECK-AIX: declare noalias noundef i8* @vec_calloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_VEC_MALLOC:#[0-9]+]]
+declare i8* @vec_calloc(i64, i64)
+
 ; CHECK: declare double @cbrt(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @cbrt(double)
 
@@ -492,6 +496,9 @@ declare i64 @fread(i8*, i64, i64, %opaque*)
 ; CHECK: declare void @free(i8* allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_MALLOC:#[0-9]+]]
 declare void @free(i8*)
 
+; CHECK-AIX: declare void @vec_free(i8* allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_VEC_MALLOC:#[0-9]+]]
+declare void @vec_free(i8*)
+
 ; CHECK: declare double @frexp(double, i32* nocapture) [[NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare double @frexp(double, i32*)
 
@@ -656,6 +663,9 @@ declare i32 @lstat64(i8*, %opaque*)
 ; CHECK: declare noalias noundef i8* @malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_MALLOC:#[0-9]+]]
 declare i8* @malloc(i64)
 
+; CHECK-AIX: declare noalias noundef i8* @vec_malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_VEC_MALLOC:#[0-9]+]]
+declare i8* @vec_malloc(i64)
+
 ; CHECK-LINUX: declare noalias noundef i8* @memalign(i64 allocalign, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i8* @memalign(i64, i64)
 
@@ -779,6 +789,9 @@ declare i8* @realloc(i8*, i64)
 
 ; CHECK: declare noalias noundef i8* @reallocf(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_MALLOC]]
 declare i8* @reallocf(i8*, i64)
+
+; CHECK-AIX: declare noalias noundef i8* @vec_realloc(i8* allocptr nocapture, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_VEC_MALLOC:#[0-9]+]]
+declare i8* @vec_realloc(i8*, i64)
 
 ; CHECK: declare noundef i8* @realpath(i8* nocapture noundef readonly, i8* noundef) [[NOFREE_NOUNWIND]]
 declare i8* @realpath(i8*, i8*)
@@ -1080,3 +1093,8 @@ declare void @memset_pattern16(i8*, i8*, i64)
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nofree nounwind willreturn "alloc-family"="malloc" }
 
 ; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind readnone }
+
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_VEC_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allocsize(0) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_VEC_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_VEC_MALLOC]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn allocsize(1) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_VEC_MALLOC]] = { inaccessiblememonly mustprogress nofree nounwind willreturn allocsize(0,1) "alloc-family"="vec_malloc" }
