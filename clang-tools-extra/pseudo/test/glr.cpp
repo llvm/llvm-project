@@ -21,3 +21,15 @@ void foo() {
 // CHECK-NEXT:   │ └─ptr-declarator~IDENTIFIER := tok[7]
 // CHECK-NEXT:   └─; := tok[8]
 }
+
+bool operator<();
+// CHECK:      declaration~simple-declaration := decl-specifier-seq init-declarator-list ;
+// CHECK-NEXT: ├─decl-specifier-seq~BOOL
+// CHECK-NEXT: ├─init-declarator-list~noptr-declarator := noptr-declarator parameters-and-qualifiers
+// CHECK-NEXT: │ ├─noptr-declarator~operator-function-id := OPERATOR operator-name
+// CHECK-NEXT: │ │ ├─OPERATOR
+// CHECK-NEXT: │ │ └─operator-name~<
+// CHECK-NEXT: │ └─parameters-and-qualifiers := ( )
+// CHECK-NEXT: │   ├─(
+// CHECK-NEXT: │   └─)
+// CHECK-NEXT: └─;

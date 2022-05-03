@@ -53,8 +53,7 @@ static std::string readOrDie(llvm::StringRef Path) {
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "");
 
-  clang::LangOptions LangOpts; // FIXME: use real options.
-  LangOpts.CPlusPlus = 1;
+  clang::LangOptions LangOpts = clang::pseudo::genericLangOpts();
   std::string SourceText;
   llvm::Optional<clang::pseudo::TokenStream> RawStream;
   llvm::Optional<clang::pseudo::DirectiveTree> DirectiveStructure;
