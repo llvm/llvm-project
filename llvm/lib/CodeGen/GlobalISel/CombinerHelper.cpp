@@ -4384,6 +4384,14 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   if (ShrAmt < 0 || ShrAmt >= Size)
     return false;
 
+  // If the shift subsumes the mask, emit the 0 directly.
+  if (0 == (SMask >> ShrAmt)) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildConstant(Dst, 0);
+    };
+    return true;
+  }
+
   // Check that ubfx can do the extraction, with no holes in the mask.
   uint64_t UMask = SMask;
   UMask |= maskTrailingOnes<uint64_t>(ShrAmt);
