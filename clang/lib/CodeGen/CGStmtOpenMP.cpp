@@ -4129,19 +4129,16 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
     const Stmt *SectionRegionBodyStmt = S.getAssociatedStmt();
-    auto FiniCB = [this](InsertPointTy ExitingIP) {
-      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, ExitingIP);
+    auto FiniCB = [this](InsertPointTy IP) {
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
     };
 
     auto BodyGenCB = [SectionRegionBodyStmt, this](InsertPointTy AllocaIP,
                                                    InsertPointTy CodeGenIP) {
       Builder.restoreIP(CodeGenIP);
-      auto FiniBB = splitBBWithSuffix(Builder, false, ".sectionfini");
+      llvm::BasicBlock * FiniBB = splitBBWithSuffix(Builder, false, ".sectionfini");
 
       OMPBuilderCBHelpers::InlinedRegionBodyRAII IRB(*this, AllocaIP, *FiniBB);
-      // OMPBuilderCBHelpers::EmitOMPRegionBody(*this,
-      // SectionRegionBodyStmt, CodeGenIP, FiniBB);
-
       EmitStmt(SectionRegionBodyStmt);
 
       Builder.CreateBr(FiniBB);
@@ -6934,9 +6931,8 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
     llvm::Value *IfCondition = nullptr;
     if (IfCond)
       IfCondition = EvaluateExprAsBool(IfCond);
-    Builder.restoreIP(
+    return Builder.restoreIP(
         OMPBuilder.createCancel(Builder, IfCondition, S.getCancelRegion()));
-    return;
   }
 
   CGM.getOpenMPRuntime().emitCancelCall(*this, S.getBeginLoc(), IfCond,

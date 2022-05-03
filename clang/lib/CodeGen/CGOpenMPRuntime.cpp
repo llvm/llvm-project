@@ -1240,16 +1240,8 @@ struct PushAndPopStackRAII {
       CGF.EmitBranchThroughCleanup(Dest);
     };
 
-    // llvm_unreachable("TODO: set UserManaged=true");
-    //  TODO: Remove this once we emit parallel regions through the
-    //        OpenMPIRBuilder as it can do this setup internally.
-    //  llvm::OpenMPIRBuilder::FinalizationInfo FI{{}, Kind, HasCancel,
-    //  /*UserManaged*/ true}; OMPBuilder->pushFinalizationCB(std::move(FI));
   }
-  ~PushAndPopStackRAII() {
-    // if (OMPBuilder)
-    //   OMPBuilder->popFinalizationCB();
-  }
+  ~PushAndPopStackRAII() { }
   llvm::OpenMPIRBuilder *OMPBuilder;
 };
 } // namespace
@@ -2150,13 +2142,8 @@ void CGOpenMPRuntime::emitIRBuilderParallel(
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   auto BodyGenCBWrapper = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
-    //  CGF.OMPCancelStack.enter(CGF, OMPD_parallel, /* HasCancel*/ true);
-
     if (BodyGenCB)
       BodyGenCB(AllocaIP, CodeGenIP);
-
-    // CGF.Builder.ClearInsertionPoint();
-    int a = 0;
   };
 
   OpenMPIRBuilderRegionInfo CGSI(*CS, OMPD_parallel);
@@ -2166,7 +2153,6 @@ void CGOpenMPRuntime::emitIRBuilderParallel(
                                                 AllocaInsertPt->getIterator());
   Builder.restoreIP(OMPBuilder.createParallel(
       Builder, AllocaIP, BodyGenCBWrapper, PrivCB, FiniCB,
-      //    CancelCB,
       IfCond, NumThreads, ProcBind, IsCancellable));
 }
 
