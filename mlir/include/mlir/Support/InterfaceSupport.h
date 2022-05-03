@@ -193,6 +193,7 @@ public:
 
     std::array<std::pair<TypeID, void *>, numInterfaces> elements;
     std::pair<TypeID, void *> *elementIt = elements.data();
+    (void)elementIt;
     (void)std::initializer_list<int>{
         0, (addModelAndUpdateIterator<Types>(elementIt), 0)...};
     return InterfaceMap(elements);
