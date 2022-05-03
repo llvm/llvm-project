@@ -237,12 +237,24 @@ TEST(CommandLineTest, TokenizeWindowsCommandLine2) {
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLineQuotedLastArgument) {
+  // Whitespace at the end of the command line doesn't cause an empty last word
+  const char Input0[] = R"(a b c d )";
+  const char *const Output0[] = {"a", "b", "c", "d"};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input0, Output0);
+
+  // But an explicit "" does
   const char Input1[] = R"(a b c d "")";
   const char *const Output1[] = {"a", "b", "c", "d", ""};
   testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input1, Output1);
+
+  // An unterminated quoted string is also emitted as an argument word, empty
+  // or not
   const char Input2[] = R"(a b c d ")";
-  const char *const Output2[] = {"a", "b", "c", "d"};
+  const char *const Output2[] = {"a", "b", "c", "d", ""};
   testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input2, Output2);
+  const char Input3[] = R"(a b c d "text)";
+  const char *const Output3[] = {"a", "b", "c", "d", "text"};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input3, Output3);
 }
 
 TEST(CommandLineTest, TokenizeAndMarkEOLs) {
