@@ -1008,7 +1008,7 @@ tokenizeWindowsCommandLineImpl(StringRef Src, StringSaver &Saver,
     }
   }
 
-  if (State == UNQUOTED)
+  if (State != INIT)
     AddToken(Saver.save(Token.str()));
 }
 
