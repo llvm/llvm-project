@@ -575,9 +575,11 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
     if (OpI->getType()->isVectorTy()) {
       Scattered[I] = scatter(&CI, OpI);
       assert(Scattered[I].size() == NumElems && "mismatched call operands");
+      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
+        Tys.push_back(OpI->getType()->getScalarType());
     } else {
       ScalarOperands[I] = OpI;
-      if (hasVectorIntrinsicOverloadedScalarOpd(ID, I))
+      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
         Tys.push_back(OpI->getType());
     }
   }
@@ -593,7 +595,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
     ScalarCallOps.clear();
 
     for (unsigned J = 0; J != NumArgs; ++J) {
-      if (hasVectorIntrinsicScalarOpd(ID, J))
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, J))
         ScalarCallOps.push_back(ScalarOperands[J]);
       else
         ScalarCallOps.push_back(Scattered[J][Elem]);

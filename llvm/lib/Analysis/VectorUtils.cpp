@@ -40,7 +40,7 @@ static cl::opt<unsigned> MaxInterleaveGroupFactor(
 /// Return true if all of the intrinsic's arguments and return type are scalars
 /// for the scalar form of the intrinsic, and vectors for the vector form of the
 /// intrinsic (except operands that are marked as always being scalar by
-/// hasVectorIntrinsicScalarOpd).
+/// isVectorIntrinsicWithScalarOpAtArg).
 bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::abs:   // Begin integer bit-manipulation.
@@ -89,6 +89,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::fmuladd:
   case Intrinsic::powi:
   case Intrinsic::canonicalize:
+  case Intrinsic::fptosi_sat:
+  case Intrinsic::fptoui_sat:
     return true;
   default:
     return false;
@@ -96,8 +98,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
 }
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
-bool llvm::hasVectorIntrinsicScalarOpd(Intrinsic::ID ID,
-                                       unsigned ScalarOpdIdx) {
+bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                              unsigned ScalarOpdIdx) {
   switch (ID) {
   case Intrinsic::abs:
   case Intrinsic::ctlz:
@@ -114,11 +116,14 @@ bool llvm::hasVectorIntrinsicScalarOpd(Intrinsic::ID ID,
   }
 }
 
-bool llvm::hasVectorIntrinsicOverloadedScalarOpd(Intrinsic::ID ID,
-                                                 unsigned ScalarOpdIdx) {
+bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                                  unsigned OpdIdx) {
   switch (ID) {
+  case Intrinsic::fptosi_sat:
+  case Intrinsic::fptoui_sat:
+    return OpdIdx == 0;
   case Intrinsic::powi:
-    return (ScalarOpdIdx == 1);
+    return OpdIdx == 1;
   default:
     return false;
   }

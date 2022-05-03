@@ -109,7 +109,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
     auto *ArgType = Arg.value()->getType();
     // Vector calls to intrinsics can still have
     // scalar operands for specific arguments.
-    if (hasVectorIntrinsicScalarOpd(IntrinsicID, Arg.index())) {
+    if (isVectorIntrinsicWithScalarOpAtArg(IntrinsicID, Arg.index())) {
       ScalarTypes.push_back(ArgType);
     } else {
       // The argument in this place should be a vector if

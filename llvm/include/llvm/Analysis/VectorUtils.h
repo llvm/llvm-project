@@ -309,16 +309,16 @@ inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
 /// for the scalar form of the intrinsic and all vectors (or scalars handled by
-/// hasVectorIntrinsicScalarOpd) for the vector form of the intrinsic.
+/// isVectorIntrinsicWithScalarOpAtArg) for the vector form of the intrinsic.
 bool isTriviallyVectorizable(Intrinsic::ID ID);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
-bool hasVectorIntrinsicScalarOpd(Intrinsic::ID ID, unsigned ScalarOpdIdx);
+bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                        unsigned ScalarOpdIdx);
 
-/// Identifies if the vector form of the intrinsic has a scalar operand that has
+/// Identifies if the vector form of the intrinsic has a operand that has
 /// an overloaded type.
-bool hasVectorIntrinsicOverloadedScalarOpd(Intrinsic::ID ID,
-                                           unsigned ScalarOpdIdx);
+bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, unsigned OpdIdx);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
