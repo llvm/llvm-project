@@ -236,6 +236,10 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"allowUnknownOps", "allow-unknown-ops", "bool",
            /*default=*/"false",
            "Allows unknown (not bufferizable) ops in the input IR.">,
+    Option<"alwaysAliasingWithDest", "always-aliasing-with-dest", "bool",
+            /*default=*/"true",
+            "Tensor OpResult cannot bufferize inplace OpOperands other than "
+            "out/dest OpOperands (if the op has such operands; experimental)">,
     Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
            /*default=*/"0",
            "Test only: Analyze ops in random order with a given seed (fuzzer)">,

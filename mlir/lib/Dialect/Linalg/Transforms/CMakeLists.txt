@@ -3,7 +3,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
   CodegenStrategy.cpp
-  ComprehensiveBufferizePass.cpp
   ConstantFold.cpp
   Detensorize.cpp
   DropUnitDims.cpp
@@ -14,6 +13,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Generalization.cpp
   Hoisting.cpp
   HoistPadding.cpp
+  InitTensorElimination.cpp
   InlineScalarOperands.cpp
   Interchange.cpp
   Loops.cpp
