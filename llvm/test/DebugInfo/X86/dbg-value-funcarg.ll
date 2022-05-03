@@ -122,14 +122,13 @@ define dso_local void @foo_same_param(i32 %t3a) local_unnamed_addr #0 !dbg !31 {
 ; CHECK: DBG_VALUE %0, $noreg, ![[T3A]], !DIExpression(),
 ; CHECK: TCRETURNdi64 @bar,
 ; INSTRREF-LABEL: name:            foo_same_param
-; INSTRREF: DBG_PHI $edi, 2
 ; INSTRREF: DBG_PHI $edi, 1
 ; INSTRREF: DBG_VALUE $edi, $noreg, ![[T3A]], !DIExpression(),
 ; INSTRREF: CALL64pcrel32 @bar,
 ; INSTRREF: DBG_INSTR_REF 1, 0, ![[TMP]], !DIExpression(),
 ; INSTRREF: DBG_VALUE 123, $noreg, ![[T3A]], !DIExpression(),
 ; INSTRREF: CALL64pcrel32 @bar,
-; INSTRREF: DBG_INSTR_REF 2, 0, ![[T3A]], !DIExpression(),
+; INSTRREF: DBG_INSTR_REF 1, 0, ![[T3A]], !DIExpression(),
 ; INSTRREF: TCRETURNdi64 @bar,
 entry:
   call void @llvm.dbg.value(metadata i32 %t3a, metadata !33, metadata !DIExpression()), !dbg !35
