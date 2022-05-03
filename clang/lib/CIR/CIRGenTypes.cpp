@@ -580,29 +580,6 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
   return arrangeFunctionDeclaration(FD);
 }
 
-/// Arrange the argument and result information for the declaration or
-/// definition of the given function.
-const CIRGenFunctionInfo &
-CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
-  assert(!dyn_cast<CXXMethodDecl>(FD) && "NYI");
-
-  auto FTy = FD->getType()->getCanonicalTypeUnqualified();
-
-  assert(isa<FunctionType>(FTy));
-  // TODO: setCUDAKernelCallingConvention
-
-  // When declaring a function without a prototype, always use a non-variadic
-  // type.
-  if (CanQual<FunctionNoProtoType> noProto = FTy.getAs<FunctionNoProtoType>()) {
-    return arrangeCIRFunctionInfo(noProto->getReturnType(),
-                                  /*instanceMethod=*/false,
-                                  /*chainCall=*/false, std::nullopt,
-                                  noProto->getExtInfo(), {}, RequiredArgs::All);
-  }
-
-  return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());
-}
-
 // UpdateCompletedType - When we find the full definition for a TagDecl,
 // replace the 'opaque' type we previously made for it if applicable.
 void CIRGenTypes::UpdateCompletedType(const TagDecl *TD) {
