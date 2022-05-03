@@ -97,14 +97,8 @@ protected:
                                                llvm::sys::fs::file_type ft,
                                                llvm::StringRef path);
 
-  uint32_t FindFileInAllSDKs(const char *platform_file_path,
-                             FileSpecList &file_list);
-
   bool GetFileInSDK(const char *platform_file_path, uint32_t sdk_idx,
                     FileSpec &local_file);
-
-  uint32_t FindFileInAllSDKs(const FileSpec &platform_file,
-                             FileSpecList &file_list);
 
   uint32_t GetConnectedSDKIndex();
 
