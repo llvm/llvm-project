@@ -677,9 +677,6 @@ public:
     ~CUDAConstantEvalContextRAII() { Ctx.CUDAConstantEvalCtx = SavedCtx; }
   };
 
-  /// Current CUDA name mangling is for device name in host compilation.
-  bool CUDAMangleDeviceNameInHostCompilation = false;
-
   /// Returns the dynamic AST node parent map context.
   ParentMapContext &getParentMapContext();
 
@@ -3044,7 +3041,8 @@ public:
   DeclaratorDecl *getDeclaratorForUnnamedTagDecl(const TagDecl *TD);
 
   void setManglingNumber(const NamedDecl *ND, unsigned Number);
-  unsigned getManglingNumber(const NamedDecl *ND) const;
+  unsigned getManglingNumber(const NamedDecl *ND,
+                             bool ForAuxTarget = false) const;
 
   void setStaticLocalNumber(const VarDecl *VD, unsigned Number);
   unsigned getStaticLocalNumber(const VarDecl *VD) const;

@@ -24,7 +24,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -261,8 +260,6 @@ llvm::FunctionType *CGNVCUDARuntime::getRegisterLinkedBinaryFnTy() const {
 }
 
 std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
-  llvm::SaveAndRestore<bool> MangleAsDevice(
-      CGM.getContext().CUDAMangleDeviceNameInHostCompilation, true);
   GlobalDecl GD;
   // D could be either a kernel or a variable.
   if (auto *FD = dyn_cast<FunctionDecl>(ND))

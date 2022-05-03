@@ -11692,9 +11692,11 @@ MangleContext *ASTContext::createDeviceMangleContext(const TargetInfo &T) {
           if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
             return RD->getDeviceLambdaManglingNumber();
           return llvm::None;
-        });
+        },
+        /*IsAux=*/true);
   case TargetCXXABI::Microsoft:
-    return MicrosoftMangleContext::create(*this, getDiagnostics());
+    return MicrosoftMangleContext::create(*this, getDiagnostics(),
+                                          /*IsAux=*/true);
   }
   llvm_unreachable("Unsupported ABI");
 }
@@ -11760,15 +11762,18 @@ void ASTContext::setManglingNumber(const NamedDecl *ND, unsigned Number) {
     MangleNumbers[ND] = Number;
 }
 
-unsigned ASTContext::getManglingNumber(const NamedDecl *ND) const {
+unsigned ASTContext::getManglingNumber(const NamedDecl *ND,
+                                       bool ForAuxTarget) const {
   auto I = MangleNumbers.find(ND);
   unsigned Res = I != MangleNumbers.end() ? I->second : 1;
-  if (!LangOpts.CUDA || LangOpts.CUDAIsDevice)
-    return Res;
-
   // CUDA/HIP host compilation encodes host and device mangling numbers
   // as lower and upper half of 32 bit integer.
-  Res = CUDAMangleDeviceNameInHostCompilation ? Res >> 16 : Res & 0xFFFF;
+  if (LangOpts.CUDA && !LangOpts.CUDAIsDevice) {
+    Res = ForAuxTarget ? Res >> 16 : Res & 0xFFFF;
+  } else {
+    assert(!ForAuxTarget && "Only CUDA/HIP host compilation supports mangling "
+                            "number for aux target");
+  }
   return Res > 1 ? Res : 1;
 }
 
