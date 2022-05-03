@@ -19,6 +19,14 @@
 
 namespace clang {
 namespace pseudo {
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const std::vector<const GSS::Node *> &Heads) {
+  for (const auto *Head : Heads)
+    OS << *Head << "\n";
+  return OS;
+}
+
 namespace {
 
 using Action = LRTable::Action;
@@ -27,16 +35,6 @@ using testing::AllOf;
 MATCHER_P(state, StateID, "") { return arg->State == StateID; }
 MATCHER_P(parsedSymbol, FNode, "") { return arg->Payload == FNode; }
 MATCHER_P(parsedSymbolID, SID, "") { return arg->Payload->symbol() == SID; }
-
-
-// llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const NewHeadResult &R) {
-//   std::vector<std::string> ParentStates;
-//   for (const auto &P : R.Parents)
-//     ParentStates.push_back(llvm::formatv("{0}", P->State));
-//   OS << llvm::formatv("state {0}, parsed symbol {1}, parents {2}", R.State,
-//                       R.Parsed->symbol(), llvm::join(ParentStates, " "));
-//   return OS;
-// }
 
 testing::Matcher<const GSS::Node *>
 parents(llvm::ArrayRef<const GSS::Node *> Parents) {
@@ -134,7 +132,8 @@ TEST_F(GLRTest, ShiftMergingHeads) {
                                   AllOf(state(4), parsedSymbol(&SemiTerminal),
                                         parents({GSSNode1, GSSNode2})),
                                   AllOf(state(5), parsedSymbol(&SemiTerminal),
-                                        parents({GSSNode3}))));
+                                        parents({GSSNode3}))))
+      << NewHeadResults;
 }
 
 TEST_F(GLRTest, ReduceConflictsSplitting) {
@@ -161,13 +160,12 @@ TEST_F(GLRTest, ReduceConflictsSplitting) {
       {GSSNode1, Action::reduce(ruleFor("enum-name"))}};
   glrReduce(PendingReduce, {*G, Table, Arena, GSStack},
             captureNewHeads());
-  // Verify
   EXPECT_THAT(NewHeadResults,
               testing::UnorderedElementsAre(
                   AllOf(state(2), parsedSymbolID(id("class-name")),
                         parents({GSSNode0})),
                   AllOf(state(3), parsedSymbolID(id("enum-name")),
-                        parents({GSSNode0}))));
+                        parents({GSSNode0})))) << NewHeadResults;
 }
 
 TEST_F(GLRTest, ReduceSplittingDueToMultipleBases) {
@@ -205,7 +203,7 @@ TEST_F(GLRTest, ReduceSplittingDueToMultipleBases) {
                   AllOf(state(5), parsedSymbolID(id("ptr-operator")),
                         parents({GSSNode2})),
                   AllOf(state(6), parsedSymbolID(id("ptr-operator")),
-                        parents({GSSNode3}))));
+                        parents({GSSNode3})))) << NewHeadResults;
   // Verify that the payload of the two new heads is shared, only a single
   // ptr-operator node is created in the forest.
   EXPECT_EQ(NewHeadResults[0]->Payload, NewHeadResults[1]->Payload);
@@ -258,7 +256,8 @@ TEST_F(GLRTest, ReduceJoiningWithMultipleBases) {
   // Verify that the stack heads are joint at state 5 after reduces.
   EXPECT_THAT(NewHeadResults, testing::UnorderedElementsAre(AllOf(
                                   state(5), parsedSymbolID(id("type-name")),
-                                  parents({GSSNode1, GSSNode2}))));
+                                  parents({GSSNode1, GSSNode2}))))
+      << NewHeadResults;
   // Verify that we create an ambiguous ForestNode of two parses of `type-name`.
   EXPECT_EQ(NewHeadResults.front()->Payload->dumpRecursive(*G),
             "[  1, end) type-name := <ambiguous>\n"
@@ -312,7 +311,8 @@ TEST_F(GLRTest, ReduceJoiningWithSameBase) {
 
   EXPECT_THAT(NewHeadResults, testing::UnorderedElementsAre(
                                   AllOf(state(5), parsedSymbolID(id("pointer")),
-                                        parents({GSSNode0}))));
+                                        parents({GSSNode0}))))
+      << NewHeadResults;
   EXPECT_EQ(NewHeadResults.front()->Payload->dumpRecursive(*G),
             "[  0, end) pointer := <ambiguous>\n"
             "[  0, end) ├─pointer := class-name *\n"
