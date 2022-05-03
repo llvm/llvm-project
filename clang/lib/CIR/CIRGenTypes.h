@@ -202,7 +202,15 @@ public:
                        const clang::FunctionProtoType *type,
                        RequiredArgs required, unsigned numPrefixArgs);
 
+  /// C++ methods have some special rules and also have implicit parameters.
+  const CIRGenFunctionInfo &
+  arrangeCXXMethodDeclaration(const clang::CXXMethodDecl *MD);
   const CIRGenFunctionInfo &arrangeCXXStructorDeclaration(clang::GlobalDecl GD);
+
+  const CIRGenFunctionInfo &
+  arrangeCXXMethodType(const clang::CXXRecordDecl *RD,
+                       const clang::FunctionProtoType *FTP,
+                       const clang::CXXMethodDecl *MD);
 
   const CIRGenFunctionInfo &
   arrangeFreeFunctionCall(const CallArgList &Args,
