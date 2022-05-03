@@ -386,7 +386,44 @@ public:
     // Otherwise just use whatever is in this block.
     return Other;
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Support for debugging, callable in GDB: V->dump()
+  LLVM_DUMP_METHOD void dump() const {
+    print(dbgs());
+    dbgs() << "\n";
+  }
+#endif
+
+  /// Implement operator<<.
+  /// @{
+  void print(raw_ostream &OS) const {
+    OS << "{";
+    if (!isValid())
+      OS << "Uninitialized";
+    if (isUnknown())
+      OS << "unknown";;
+    if (hasAVLReg())
+      OS << "AVLReg=" << (unsigned)AVLReg;
+    if (hasAVLImm())
+      OS << "AVLImm=" << (unsigned)AVLImm;
+    OS << ", "
+       << "VLMul=" << (unsigned)VLMul << ", "
+       << "SEW=" << (unsigned)SEW << ", "
+       << "TailAgnostic=" << (bool)TailAgnostic << ", "
+       << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
+       << "MaskRegOp=" << (bool)MaskRegOp << ", "
+       << "StoreOp=" << (bool)StoreOp << ", "
+       << "ScalarMovOp=" << (bool)ScalarMovOp << ", "
+       << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << "}";
+  }
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS, const VSETVLIInfo &V) {
+  V.print(OS);
+  return OS;
+}
+
 
 struct BlockData {
   // The VSETVLIInfo that represents the net changes to the VL/VTYPE registers
