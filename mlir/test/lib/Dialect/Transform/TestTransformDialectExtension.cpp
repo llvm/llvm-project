@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestTransformDialectExtension.h"
+#include "TestTransformStateExtension.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 
 using namespace mlir;
@@ -139,6 +139,49 @@ LogicalResult mlir::test::TestPrintRemarkAtOperandOp::apply(
   for (Operation *op : payload)
     op->emitRemark() << getMessage();
 
+  return success();
+}
+
+LogicalResult
+mlir::test::TestAddTestExtensionOp::apply(transform::TransformResults &results,
+                                          transform::TransformState &state) {
+  state.addExtension<TestTransformStateExtension>(getMessageAttr());
+  return success();
+}
+
+LogicalResult mlir::test::TestCheckIfTestExtensionPresentOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  auto *extension = state.getExtension<TestTransformStateExtension>();
+  if (!extension) {
+    emitRemark() << "extension absent";
+    return success();
+  }
+
+  InFlightDiagnostic diag = emitRemark()
+                            << "extension present, " << extension->getMessage();
+  for (Operation *payload : state.getPayloadOps(getOperand())) {
+    diag.attachNote(payload->getLoc()) << "associated payload op";
+    assert(state.getHandleForPayloadOp(payload) == getOperand() &&
+           "inconsistent mapping between transform IR handles and payload IR "
+           "operations");
+  }
+
+  return success();
+}
+
+LogicalResult mlir::test::TestRemapOperandPayloadToSelfOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  auto *extension = state.getExtension<TestTransformStateExtension>();
+  if (!extension)
+    return emitError() << "TestTransformStateExtension missing";
+
+  return extension->updateMapping(state.getPayloadOps(getOperand()).front(),
+                                  getOperation());
+}
+
+LogicalResult mlir::test::TestRemoveTestExtensionOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  state.removeExtension<TestTransformStateExtension>();
   return success();
 }
 

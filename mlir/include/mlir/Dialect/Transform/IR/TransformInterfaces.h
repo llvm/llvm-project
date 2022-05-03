@@ -74,6 +74,10 @@ public:
   /// This is helpful for transformations that apply to a particular handle.
   ArrayRef<Operation *> getPayloadOps(Value value) const;
 
+  /// Returns the Transform IR handle for the given Payload IR op if it exists
+  /// in the state, null otherwise.
+  Value getHandleForPayloadOp(Operation *op) const;
+
   /// Applies the transformation specified by the given transform op and updates
   /// the state accordingly.
   LogicalResult applyTransform(TransformOpInterface transform);
@@ -185,6 +189,10 @@ public:
     /// Provides read-only access to the parent TransformState object.
     const TransformState &getTransformState() const { return state; }
 
+    /// Replaces the given payload op with another op. If the replacement op is
+    /// null, removes the association of the payload op with its handle.
+    LogicalResult replacePayloadOp(Operation *op, Operation *replacement);
+
   private:
     /// Back-reference to the state that is being extended.
     TransformState &state;
@@ -276,9 +284,17 @@ private:
   /// The callback function is called once per associated operation and is
   /// expected to return the modified operation or nullptr. In the latter case,
   /// the corresponding operation is no longer associated with the transform IR
-  /// value.
-  void updatePayloadOps(Value value,
-                        function_ref<Operation *(Operation *)> callback);
+  /// value. May fail if the operation produced by the update callback is
+  /// already associated with a different Transform IR handle value.
+  LogicalResult
+  updatePayloadOps(Value value,
+                   function_ref<Operation *(Operation *)> callback);
+
+  /// Attempts to record the mapping between the given Payload IR operation and
+  /// the given Transform IR handle. Fails and reports an error if the operation
+  /// is already tracked by another handle.
+  static LogicalResult tryEmplaceReverseMapping(Mappings &map, Operation *op,
+                                                Value handle);
 
   /// The mappings between transform IR values and payload IR ops, aggregated by
   /// the region in which the transform IR values are defined.
