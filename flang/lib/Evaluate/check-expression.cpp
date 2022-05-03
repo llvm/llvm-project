@@ -48,7 +48,7 @@ public:
     return IsNamedConstant(ultimate) || IsImpliedDoIndex(ultimate) ||
         IsInitialProcedureTarget(ultimate) ||
         ultimate.has<semantics::TypeParamDetails>() ||
-        (INVARIANT && IsIntentIn(symbol) &&
+        (INVARIANT && IsIntentIn(symbol) && !IsOptional(symbol) &&
             !symbol.attrs().test(semantics::Attr::VALUE));
   }
   bool operator()(const CoarrayRef &) const { return false; }
@@ -84,7 +84,8 @@ public:
     const Symbol &sym{x.base().GetLastSymbol()};
     return INVARIANT && !IsAllocatable(sym) &&
         (!IsDummy(sym) ||
-            (IsIntentIn(sym) && !sym.attrs().test(semantics::Attr::VALUE)));
+            (IsIntentIn(sym) && !IsOptional(sym) &&
+                !sym.attrs().test(semantics::Attr::VALUE)));
   }
 
 private:
@@ -109,27 +110,21 @@ bool IsConstantExprHelper<INVARIANT>::IsConstantStructureConstructorComponent(
 template <bool INVARIANT>
 bool IsConstantExprHelper<INVARIANT>::operator()(
     const ProcedureRef &call) const {
-  // LBOUND, UBOUND, and SIZE with DIM= arguments will have been rewritten
-  // into DescriptorInquiry operations.
+  // LBOUND, UBOUND, and SIZE with truly constant DIM= arguments will have
+  // been rewritten into DescriptorInquiry operations.
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&call.proc().u)}) {
     if (intrinsic->name == "kind" ||
         intrinsic->name == IntrinsicProcTable::InvalidName) {
       // kind is always a constant, and we avoid cascading errors by considering
       // invalid calls to intrinsics to be constant
       return true;
-    } else if (intrinsic->name == "lbound" && call.arguments().size() == 1) {
-      // LBOUND(x) without DIM=
+    } else if (intrinsic->name == "lbound") {
       auto base{ExtractNamedEntity(call.arguments()[0]->UnwrapExpr())};
       return base && IsConstantExprShape(GetLBOUNDs(*base));
-    } else if (intrinsic->name == "ubound" && call.arguments().size() == 1) {
-      // UBOUND(x) without DIM=
+    } else if (intrinsic->name == "ubound") {
       auto base{ExtractNamedEntity(call.arguments()[0]->UnwrapExpr())};
       return base && IsConstantExprShape(GetUBOUNDs(*base));
-    } else if (intrinsic->name == "shape") {
-      auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
-      return shape && IsConstantExprShape(*shape);
-    } else if (intrinsic->name == "size" && call.arguments().size() == 1) {
-      // SIZE(x) without DIM
+    } else if (intrinsic->name == "shape" || intrinsic->name == "size") {
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
     }
@@ -527,7 +522,8 @@ public:
       if (ultimate.attrs().test(semantics::Attr::OPTIONAL)) {
         return "reference to OPTIONAL dummy argument '"s +
             ultimate.name().ToString() + "'";
-      } else if (ultimate.attrs().test(semantics::Attr::INTENT_OUT)) {
+      } else if (!inInquiry_ &&
+          ultimate.attrs().test(semantics::Attr::INTENT_OUT)) {
         return "reference to INTENT(OUT) dummy argument '"s +
             ultimate.name().ToString() + "'";
       } else if (ultimate.has<semantics::ObjectEntityDetails>()) {
@@ -550,11 +546,33 @@ public:
     // Don't look at the component symbol.
     return (*this)(x.base());
   }
-  Result operator()(const DescriptorInquiry &) const {
-    // Subtle: Uses of SIZE(), LBOUND(), &c. that are valid in specification
+  Result operator()(const ArrayRef &x) const {
+    if (auto result{(*this)(x.base())}) {
+      return result;
+    }
+    // The subscripts don't get special protection for being in a
+    // specification inquiry context;
+    auto restorer{common::ScopedSet(inInquiry_, false)};
+    return (*this)(x.subscript());
+  }
+  Result operator()(const Substring &x) const {
+    if (auto result{(*this)(x.parent())}) {
+      return result;
+    }
+    // The bounds don't get special protection for being in a
+    // specification inquiry context;
+    auto restorer{common::ScopedSet(inInquiry_, false)};
+    if (auto result{(*this)(x.lower())}) {
+      return result;
+    }
+    return (*this)(x.upper());
+  }
+  Result operator()(const DescriptorInquiry &x) const {
+    // Many uses of SIZE(), LBOUND(), &c. that are valid in specification
     // expressions will have been converted to expressions over descriptor
     // inquiries by Fold().
-    return std::nullopt;
+    auto restorer{common::ScopedSet(inInquiry_, true)};
+    return (*this)(x.base());
   }
 
   Result operator()(const TypeParamInquiry &inq) const {
@@ -567,6 +585,7 @@ public:
   }
 
   Result operator()(const ProcedureRef &x) const {
+    bool inInquiry{false};
     if (const auto *symbol{x.proc().GetSymbol()}) {
       const Symbol &ultimate{symbol->GetUltimate()};
       if (!semantics::IsPureProcedure(ultimate)) {
@@ -599,40 +618,44 @@ public:
       // TODO: other checks for standard module procedures
     } else {
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};
+      inInquiry = context_.intrinsics().GetIntrinsicClass(intrin.name) ==
+          IntrinsicClass::inquiryFunction;
       if (scope_.IsDerivedType()) { // C750, C754
         if ((context_.intrinsics().IsIntrinsic(intrin.name) &&
                 badIntrinsicsForComponents_.find(intrin.name) !=
-                    badIntrinsicsForComponents_.end()) ||
-            IsProhibitedFunction(intrin.name)) {
+                    badIntrinsicsForComponents_.end())) {
           return "reference to intrinsic '"s + intrin.name +
               "' not allowed for derived type components or type parameter"
               " values";
         }
-        if (context_.intrinsics().GetIntrinsicClass(intrin.name) ==
-                IntrinsicClass::inquiryFunction &&
-            !IsConstantExpr(x)) {
+        if (inInquiry && !IsConstantExpr(x)) {
           return "non-constant reference to inquiry intrinsic '"s +
               intrin.name +
               "' not allowed for derived type components or type"
               " parameter values";
         }
-      } else if (intrin.name == "present") {
-        return std::nullopt; // no need to check argument(s)
+      }
+      if (intrin.name == "present") {
+        // don't bother looking at argument
+        return std::nullopt;
       }
       if (IsConstantExpr(x)) {
         // inquiry functions may not need to check argument(s)
         return std::nullopt;
       }
     }
+    auto restorer{common::ScopedSet(inInquiry_, inInquiry)};
     return (*this)(x.arguments());
   }
 
 private:
   const semantics::Scope &scope_;
   FoldingContext &context_;
+  // Contextual information: this flag is true when in an argument to
+  // an inquiry intrinsic like SIZE().
+  mutable bool inInquiry_{false};
   const std::set<std::string> badIntrinsicsForComponents_{
       "allocated", "associated", "extends_type_of", "present", "same_type_as"};
-  static bool IsProhibitedFunction(std::string name) { return false; }
 };
 
 template <typename A>
