@@ -221,8 +221,6 @@ class ELFObjectWriter : public MCObjectWriter {
   DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
 
   bool SeenGnuAbi = false;
-  bool EmitAddrsigSection = false;
-  std::vector<const MCSymbol *> AddrsigSyms;
 
   bool hasRelocationAddend() const;
 
@@ -262,10 +260,6 @@ public:
 
   void markGnuAbi() override { SeenGnuAbi = true; }
   bool seenGnuAbi() const { return SeenGnuAbi; }
-  void emitAddrsigSection() override { EmitAddrsigSection = true; }
-  void addAddrsigSymbol(const MCSymbol *Sym) override {
-    AddrsigSyms.push_back(Sym);
-  }
 
   friend struct ELFWriter;
 };

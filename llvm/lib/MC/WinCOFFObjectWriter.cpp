@@ -154,9 +154,7 @@ public:
   bool UseBigObj;
   bool UseOffsetLabels = false;
 
-  bool EmitAddrsigSection = false;
   MCSectionCOFF *AddrsigSection;
-  std::vector<const MCSymbol *> AddrsigSyms;
 
   MCSectionCOFF *CGProfileSection = nullptr;
 
@@ -219,11 +217,6 @@ public:
   void setWeakDefaultNames();
   void assignSectionNumbers();
   void assignFileOffsets(MCAssembler &Asm, const MCAsmLayout &Layout);
-
-  void emitAddrsigSection() override { EmitAddrsigSection = true; }
-  void addAddrsigSymbol(const MCSymbol *Sym) override {
-    AddrsigSyms.push_back(Sym);
-  }
 
   uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
 };

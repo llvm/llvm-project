@@ -182,6 +182,9 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
                            MachO::S_THREAD_LOCAL_VARIABLE_POINTERS,
                            SectionKind::getMetadata());
 
+  AddrSigSection = Ctx->getMachOSection("__DATA", "__llvm_addrsig", 0,
+                                        SectionKind::getData());
+
   // Exception Handling.
   LSDASection = Ctx->getMachOSection("__TEXT", "__gcc_except_tab", 0,
                                      SectionKind::getReadOnlyWithRel());

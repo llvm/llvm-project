@@ -213,6 +213,7 @@ protected:
   MCSection *LazySymbolPointerSection = nullptr;
   MCSection *NonLazySymbolPointerSection = nullptr;
   MCSection *ThreadLocalPointerSection = nullptr;
+  MCSection *AddrSigSection = nullptr;
 
   /// COFF specific sections.
   MCSection *DrectveSection = nullptr;
@@ -410,6 +411,7 @@ public:
   MCSection *getThreadLocalPointerSection() const {
     return ThreadLocalPointerSection;
   }
+  MCSection *getAddrSigSection() const { return AddrSigSection; }
 
   // COFF specific sections.
   MCSection *getDrectveSection() const { return DrectveSection; }
