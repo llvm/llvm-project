@@ -52,6 +52,16 @@ static cl::opt<bool>
 static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
 
+static cl::opt<unsigned> OverrideVectorInsertExtractBaseCost(
+    "aarch64-insert-extract-base-cost",
+    cl::desc("Base cost of vector insert/extract element"), cl::Hidden);
+
+unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
+  if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
+    return OverrideVectorInsertExtractBaseCost;
+  return VectorInsertExtractBaseCost;
+}
+
 AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
     StringRef FS, StringRef CPUString, StringRef TuneCPUString) {
   // Determine default and user-specified characteristics
