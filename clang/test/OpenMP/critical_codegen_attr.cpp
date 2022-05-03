@@ -33,8 +33,10 @@ int main() {
 // ALL:       			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
 // ALL:       			call {{.*}}void @__kmpc_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[UNNAMED_LOCK]])
 // ALL-NEXT:  			store i8 2, i8* [[A_ADDR]]
-// IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
-// IRBUILDER:			[[AFTER]]
+// IRBUILDER-NEXT:  br label %[[AFTER:[^ ,]+]]
+// IRBUILDER:       [[AFTER]]
+// IRBUILDER-NEXT:  br label %[[FINALIZE:[^ ,]+]]
+// IRBUILDER:       [[FINALIZE]]
 // ALL-NEXT:  			call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[UNNAMED_LOCK]])
   [[omp::directive(critical)]]
   a = 2;
@@ -42,8 +44,10 @@ int main() {
 // ALL:       			call {{.*}}void @__kmpc_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK]])
 // IRBUILDER-NEXT:	call {{.*}}void [[FOO]]()
 // NORMAL-NEXT:  		invoke {{.*}}void [[FOO]]()
-// IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
-// IRBUILDER:			[[AFTER]]
+// IRBUILDER-NEXT:  br label %[[AFTER:[^ ,]+]]
+// IRBUILDER:       [[AFTER]]
+// IRBUILDER-NEXT:  br label %[[FINALIZE:[^ ,]+]]
+// IRBUILDER:       [[FINALIZE]]
 // ALL:      				call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK]])
   [[omp::directive(critical(the_name))]]
   foo();
@@ -53,6 +57,8 @@ int main() {
 // NORMAL-NEXT:		  invoke {{.*}}void [[FOO]]()
 // IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
 // IRBUILDER:			[[AFTER]]
+// IRBUILDER-NEXT:  br label %[[FINALIZE:[^ ,]+]]
+// IRBUILDER:       [[FINALIZE]]
 // ALL:		       		call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK1]])
   [[omp::directive(critical(the_name1) hint(23))]]
   foo();

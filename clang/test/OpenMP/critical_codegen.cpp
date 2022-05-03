@@ -35,6 +35,8 @@ int main() {
 // ALL-NEXT:  			store i8 2, i8* [[A_ADDR]]
 // IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
 // IRBUILDER:			[[AFTER]]
+// IRBUILDER-NEXT:  br label %[[FINALIZE:[^ ,]+]]
+// IRBUILDER:       [[FINALIZE]]
 // ALL-NEXT:  			call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[UNNAMED_LOCK]])
 #pragma omp critical
   a = 2;
@@ -44,6 +46,8 @@ int main() {
 // NORMAL-NEXT:  		invoke {{.*}}void [[FOO]]()
 // IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
 // IRBUILDER:			[[AFTER]]
+// IRBUILDER-NEXT:  br label %[[FINALIZE:[^ ,]+]]
+// IRBUILDER:       [[FINALIZE]]
 // ALL:      				call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK]])
 #pragma omp critical(the_name)
   foo();
@@ -53,6 +57,8 @@ int main() {
 // NORMAL-NEXT:		  invoke {{.*}}void [[FOO]]()
 // IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
 // IRBUILDER:			[[AFTER]]
+// IRBUILDER-NEXT:  br label %[[FINALIZE:[^ ,]+]]
+// IRBUILDER:       [[FINALIZE]]
 // ALL:		       		call {{.*}}void @__kmpc_end_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK1]])
 #pragma omp critical(the_name1) hint(23)
   foo();
