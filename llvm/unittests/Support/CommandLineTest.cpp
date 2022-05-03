@@ -257,6 +257,24 @@ TEST(CommandLineTest, TokenizeWindowsCommandLineQuotedLastArgument) {
   testCommandLineTokenizer(cl::TokenizeWindowsCommandLine, Input3, Output3);
 }
 
+TEST(CommandLineTest, TokenizeWindowsCommandLineExeName) {
+  const char Input1[] =
+      R"("C:\Program Files\Whatever\"clang.exe z.c -DY=\"x\")";
+  const char *const Output1[] = {"C:\\Program Files\\Whatever\\clang.exe",
+                                 "z.c", "-DY=\"x\""};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLineFull, Input1, Output1);
+
+  const char Input2[] = "\"a\\\"b c\\\"d\n\"e\\\"f g\\\"h\n";
+  const char *const Output2[] = {"a\\b", "c\"d", nullptr,
+                                 "e\\f", "g\"h", nullptr};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLineFull, Input2, Output2,
+                           /*MarkEOLs=*/true);
+
+  const char Input3[] = R"(\\server\share\subdir\clang.exe)";
+  const char *const Output3[] = {"\\\\server\\share\\subdir\\clang.exe"};
+  testCommandLineTokenizer(cl::TokenizeWindowsCommandLineFull, Input3, Output3);
+}
+
 TEST(CommandLineTest, TokenizeAndMarkEOLs) {
   // Clang uses EOL marking in response files to support options that consume
   // the rest of the arguments on the current line, but do not consume arguments

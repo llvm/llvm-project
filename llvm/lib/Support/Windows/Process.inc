@@ -247,7 +247,7 @@ windows::GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
 
   SmallVector<const char *, 20> TmpArgs;
   StringSaver Saver(Alloc);
-  cl::TokenizeWindowsCommandLine(Cmd, Saver, TmpArgs, /*MarkEOLs=*/false);
+  cl::TokenizeWindowsCommandLineFull(Cmd, Saver, TmpArgs, /*MarkEOLs=*/false);
 
   for (const char *Arg : TmpArgs) {
     EC = WildcardExpand(Arg, Args, Saver);
