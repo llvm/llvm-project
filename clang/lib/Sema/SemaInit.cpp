@@ -2170,11 +2170,6 @@ void InitListChecker::CheckStructUnionTypes(
       continue;
     }
 
-    if (Field == FieldEnd) {
-      // We've run out of fields. We're done.
-      break;
-    }
-
     // Check if this is an initializer of forms:
     //
     //   struct foo f = {};
@@ -2201,6 +2196,11 @@ void InitListChecker::CheckStructUnionTypes(
       if (!VerifyOnly)
         SemaRef.Diag(InitLoc, diag::err_non_designated_init_used);
       hadError = true;
+      break;
+    }
+
+    if (Field == FieldEnd) {
+      // We've run out of fields. We're done.
       break;
     }
 
