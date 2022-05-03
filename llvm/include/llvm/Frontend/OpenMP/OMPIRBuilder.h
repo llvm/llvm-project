@@ -866,12 +866,14 @@ public:
 
   /// Generate control flow and cleanup for cancellation.
   ///
+  /// \param Loc Source location used fir debug info and ident_t.
   /// \param CancelFlag Flag indicating if the cancellation is performed.
   /// \param CancelledDirective The kind of directive that is cancled.
+  /// \param CancelReason Cause of the irregular exit.
   /// \param ExitCB Extra code to be generated in the exit block.
   void emitCancelationCheckImpl(LocationDescription Loc, Value *CancelFlag,
                                 omp::Directive CancelledDirective,
-                                omp::Directive CancelledBy);
+                                omp::Directive CancelReason);
 
   /// Generate a barrier runtime call.
   ///
@@ -1306,9 +1308,6 @@ private:
   /// \param Conditional indicate if the entry call result will be used
   ///        to evaluate a conditional of whether a thread will execute
   ///        body code or not.
-  /// \param HasFinalize indicate if the directive will require finalization
-  ///        and has a finalization callback in the stack that
-  ///        should be called.
   /// \param IsCancellable if HasFinalize is set to true, indicate if the
   ///        the directive should be cancellable.
   /// \return The insertion point after the region
