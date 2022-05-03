@@ -63,8 +63,6 @@ public:
     InlinedRegion,
     /// Region with outlined function for standalone 'target' directive.
     TargetRegion,
-    /// Handled by OpenMPIRBuilder.
-    OpenMPIRBuilderRegion,
   };
 
   CGOpenMPRegionInfo(const CapturedStmt &CS,
@@ -110,24 +108,6 @@ protected:
   RegionCodeGenTy CodeGen;
   OpenMPDirectiveKind Kind;
   bool HasCancel;
-};
-
-class OpenMPIRBuilderRegionInfo final : public CGOpenMPRegionInfo {
-public:
-  OpenMPIRBuilderRegionInfo(const CapturedStmt &CS, OpenMPDirectiveKind Kind)
-      : CGOpenMPRegionInfo(
-            CS, OpenMPIRBuilderRegion,
-            [](CodeGenFunction &, PrePostActionTy &) {
-              llvm_unreachable("Should never be called");
-            },
-            Kind, /*HasCancel*/ true) {}
-
-  static bool classof(const CGCapturedStmtInfo *Info) {
-    return CGOpenMPRegionInfo::classof(Info) &&
-           cast<CGOpenMPRegionInfo>(Info)->getRegionKind() ==
-               OpenMPIRBuilderRegion;
-  }
-  const VarDecl *getThreadIDVariable() const override { return nullptr; }
 };
 
 /// API for captured statement code generation in OpenMP constructs.
