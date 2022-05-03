@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int inc(int x) {
   switch (x) {
     case 0: puts("0"); return 1;
