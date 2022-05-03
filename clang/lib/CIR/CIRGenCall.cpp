@@ -924,9 +924,21 @@ CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
   llvm_unreachable("NYI");
 }
 
+/// Arrange the argument and result information for a call to an unknown C++
+/// non-static member function of the given abstract type. (A null RD means we
+/// don't have any meaningful "this" argument type, so fall back to a generic
+/// pointer type). The member fucntion must be an ordinary function, i.e. not a
+/// constructor or destructor.
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
                                   const FunctionProtoType *FTP,
                                   const CXXMethodDecl *MD) {
-  llvm_unreachable("NYI");
+  llvm::SmallVector<CanQualType, 16> argTypes;
+
+  // Add the 'this' pointer.
+  argTypes.push_back(DeriveThisType(RD, MD));
+
+  return ::arrangeCIRFunctionInfo(
+      *this, true, argTypes,
+      FTP->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
 }
