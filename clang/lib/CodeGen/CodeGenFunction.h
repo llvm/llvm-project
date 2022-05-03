@@ -496,18 +496,18 @@ public:
   /// non-OpenMPIRBuilder codegen either, but works with the current regression
   /// tests so far.
   bool IsInsideNonOpenMPIRBuilderHandledRegion = false;
-  class CGNonOpenMPIRBuilderRegion {
+  class NonOpenMPIRBuilderRegion {
   private:
     CodeGenFunction &CGF;
     bool PreviousIsInsideNonOpenMPIRBuilderHandledRegion;
 
   public:
-    CGNonOpenMPIRBuilderRegion(CodeGenFunction &CGF)
+      NonOpenMPIRBuilderRegion(CodeGenFunction &CGF)
         : CGF(CGF), PreviousIsInsideNonOpenMPIRBuilderHandledRegion(
                         CGF.IsInsideNonOpenMPIRBuilderHandledRegion) {
       CGF.IsInsideNonOpenMPIRBuilderHandledRegion = true;
     }
-    ~CGNonOpenMPIRBuilderRegion() {
+    ~NonOpenMPIRBuilderRegion() {
       CGF.IsInsideNonOpenMPIRBuilderHandledRegion =
           PreviousIsInsideNonOpenMPIRBuilderHandledRegion;
     }

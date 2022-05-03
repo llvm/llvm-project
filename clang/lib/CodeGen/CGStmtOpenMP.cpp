@@ -1540,6 +1540,8 @@ static void emitCommonOMPParallelDirective(
     CodeGenFunction &CGF, const OMPExecutableDirective &S,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen,
     const CodeGenBoundParametersTy &CodeGenBoundParameters) {
+    CodeGenFunction::  NonOpenMPIRBuilderRegion NonBuilderScope(CGF);
+
   const CapturedStmt *CS = S.getCapturedStmt(OMPD_parallel);
   llvm::Value *NumThreads = nullptr;
   llvm::Function *OutlinedFn =
@@ -1795,7 +1797,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_parallel);
   };
   {
-  CGNonOpenMPIRBuilderRegion RegionScope(*this);
+
     auto LPCRegion =
         CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
     emitCommonOMPParallelDirective(*this, S, OMPD_parallel, CodeGen,
@@ -3734,7 +3736,7 @@ static void emitScanBasedDirective(
 static bool emitWorksharingDirective(CodeGenFunction &CGF,
                                      const OMPLoopDirective &S,
                                      bool HasCancel) {
-   CodeGenFunction:: CGNonOpenMPIRBuilderRegion NonOmpBuilderScope(CGF);
+   CodeGenFunction:: NonOpenMPIRBuilderRegion NonOmpBuilderScope(CGF);
 
   bool HasLastprivates;
   if (llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
@@ -3864,7 +3866,7 @@ void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
       return;
     }
 
-    CGNonOpenMPIRBuilderRegion Scope(*this);
+
     HasLastprivates = emitWorksharingDirective(CGF, S, S.hasCancel());
   };
   {
@@ -3914,7 +3916,9 @@ static LValue createSectionLVal(CodeGenFunction &CGF, QualType Ty,
 }
 
 void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
-    CGNonOpenMPIRBuilderRegion NonOmpBuilderScope(*this);
+    NonOpenMPIRBuilderRegion NonOmpBuilderScope(*this);
+
+
   const Stmt *CapturedStmt = S.getInnermostCapturedStmt()->getCapturedStmt();
   const auto *CS = dyn_cast<CompoundStmt>(CapturedStmt);
   bool HasLastprivates = false;
@@ -4158,7 +4162,7 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
     return;
   }
 
-  CGNonOpenMPIRBuilderRegion NonOpenMPIRBuilderRegion(*this);
+
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(&S);
   EmitStmt(S.getAssociatedStmt());
@@ -4502,7 +4506,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     const OMPExecutableDirective &S, const OpenMPDirectiveKind CapturedRegion,
     const RegionCodeGenTy &BodyGen, const TaskGenTy &TaskGen,
     OMPTaskDataTy &Data) {
-  CGNonOpenMPIRBuilderRegion NonIrBuilderScope(*this);
+  NonOpenMPIRBuilderRegion NonOmpBuilderScope(*this);
 
   // Emit outlined function for task construct.
   const CapturedStmt *CS = S.getCapturedStmt(CapturedRegion);
@@ -5046,7 +5050,7 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
 }
 
 void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
-  CGNonOpenMPIRBuilderRegion Scope(*this);
+    NonOpenMPIRBuilderRegion NonOmpBuilderScope(*this);
 
   // Emit outlined function for task construct.
   const CapturedStmt *CS = S.getCapturedStmt(OMPD_task);
@@ -5065,7 +5069,7 @@ void CodeGenFunction::EmitOMPTaskDirective(const OMPTaskDirective &S) {
   // Check if we should emit tied or untied task.
   Data.Tied = !S.getSingleClause<OMPUntiedClause>();
   auto &&BodyGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
-    CGNonOpenMPIRBuilderRegion Scope(CGF);
+      NonOpenMPIRBuilderRegion NonOmpBuilderScope(CGF);
     CGF.EmitStmt(CS->getCapturedStmt());
   };
   auto &&TaskGen = [&S, SharedsTy, CapturedStruct,
