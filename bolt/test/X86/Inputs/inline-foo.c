@@ -1,4 +1,4 @@
-// don't include stdio as the test is linked with -nostdlib
+#include <stdio.h>
 
 void foo() {
   puts("Hello world!\n");
