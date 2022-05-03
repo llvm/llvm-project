@@ -415,7 +415,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
       would be equivalent to a union operation where non-overlapping values
       in the inputs are copied to the output unchanged.
 
-      Example of isEqual applied to intersecting elements only:
+      Example of isEqual applied to intersecting elements only.
       ```mlir
       %C = sparse_tensor.init...
       %0 = linalg.generic #trait
@@ -435,7 +435,8 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
       } -> tensor<?xi8, #SparseVec>
       ```
 
-      Example of A+B in upper triangle, A-B in lower triangle:
+      Example of A+B in upper triangle, A-B in lower triangle
+      (not working yet, but construct will be available soon).
       ```mlir
       %C = sparse_tensor.init...
       %1 = linalg.generic #trait
