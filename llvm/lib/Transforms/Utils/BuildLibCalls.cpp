@@ -442,10 +442,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     LLVM_FALLTHROUGH;
   case LibFunc_valloc:
   case LibFunc_malloc:
-    Changed |= setAllocFamily(F, "malloc");
-    LLVM_FALLTHROUGH;
   case LibFunc_vec_malloc:
-    Changed |= setAllocFamily(F, "vec_malloc");
+    Changed |= setAllocFamily(F, TheLibFunc == LibFunc_vec_malloc ? "vec_malloc"
+                                                                  : "malloc");
     Changed |= setAllocSize(F, 0, None);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetAndArgsNoUndef(F);
@@ -532,10 +531,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     return Changed;
   case LibFunc_realloc:
   case LibFunc_reallocf:
-    Changed |= setAllocFamily(F, "malloc");
-    LLVM_FALLTHROUGH;
   case LibFunc_vec_realloc:
-    Changed |= setAllocFamily(F, "vec_malloc");
+    Changed |= setAllocFamily(
+        F, TheLibFunc == LibFunc_vec_realloc ? "vec_malloc" : "malloc");
     Changed |= setAllocatedPointerParam(F, 0);
     Changed |= setAllocSize(F, 1, None);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
@@ -610,10 +608,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyWritesMemory(F, 0);
     return Changed;
   case LibFunc_calloc:
-    Changed |= setAllocFamily(F, "malloc");
-    LLVM_FALLTHROUGH;
   case LibFunc_vec_calloc:
-    Changed |= setAllocFamily(F, "vec_malloc");
+    Changed |= setAllocFamily(F, TheLibFunc == LibFunc_vec_calloc ? "vec_malloc"
+                                                                  : "malloc");
     Changed |= setAllocSize(F, 0, 1);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetAndArgsNoUndef(F);
@@ -672,10 +669,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_free:
-    Changed |= setAllocFamily(F, "malloc");
-    LLVM_FALLTHROUGH;
   case LibFunc_vec_free:
-    Changed |= setAllocFamily(F, "vec_malloc");
+    Changed |= setAllocFamily(F, TheLibFunc == LibFunc_vec_free ? "vec_malloc"
+                                                                : "malloc");
     Changed |= setAllocatedPointerParam(F, 0);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setArgsNoUndef(F);
