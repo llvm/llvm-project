@@ -4447,7 +4447,11 @@ Node *AbstractManglingParser<Derived, Alloc>::parseFoldExpr() {
   ++First;
 
   const auto *Op = parseOperatorEncoding();
-  if (!Op || Op->getKind() != OperatorInfo::Binary)
+  if (!Op)
+    return nullptr;
+  if (!(Op->getKind() == OperatorInfo::Binary
+        || (Op->getKind() == OperatorInfo::Member
+            && Op->getName().back() == '*')))
     return nullptr;
 
   Node *Pack = getDerived().parseExpr();
