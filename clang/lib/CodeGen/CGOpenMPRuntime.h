@@ -1022,15 +1022,6 @@ public:
                                 ArrayRef<llvm::Value *> CapturedVars,
                                 const Expr *IfCond, llvm::Value *NumThreads);
 
-  void emitIRBuilderParallel(
-      CodeGenFunction &CGF, const CapturedStmt *CS,
-      llvm::OpenMPIRBuilder::BodyGenCallbackTy BodyGenCB,
-      llvm::OpenMPIRBuilder::PrivatizeCallbackTy PrivCB,
-      llvm::OpenMPIRBuilder::FinalizeCallbackTy FiniCB,
-      // llvm:: OpenMPIRBuilder::  CancellationCallbackTy CancelCB,
-      llvm::Value *IfCondition, llvm::Value *NumThreads,
-      llvm::omp::ProcBindKind ProcBind, bool IsCancellable);
-
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
   /// \param CriticalOpGen Generator for the statement associated with the given

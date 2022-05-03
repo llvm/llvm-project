@@ -489,6 +489,8 @@ public:
     ~CGCapturedStmtRAII() { CGF.CapturedStmtInfo = PrevCapturedStmtInfo; }
   };
 
+  /// While in a region handled by Clang's CGOpenMPRuntime, do not use the OpenMPIRBuilder which requires all surrounding regions to be handled by OpenMPIRBuilder as well.
+  /// 
   /// Required until everything can be handled by OpenMPIRBuilder.
   /// Isn't the ultimate solution to mixing OpenMPIRBuilder and
   /// non-OpenMPIRBuilder codegen either, but works with the current regression

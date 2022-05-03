@@ -2082,36 +2082,7 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
   }
 }
 
-void CGOpenMPRuntime::emitIRBuilderParallel(
-    CodeGenFunction &CGF, const CapturedStmt *CS,
-    llvm::OpenMPIRBuilder::BodyGenCallbackTy BodyGenCB,
-    llvm::OpenMPIRBuilder::PrivatizeCallbackTy PrivCB,
-    llvm::OpenMPIRBuilder::FinalizeCallbackTy FiniCB,
-    // llvm:: OpenMPIRBuilder::  CancellationCallbackTy CancelCB,
-    llvm::Value *IfCond, llvm::Value *NumThreads,
-    llvm::omp::ProcBindKind ProcBind, bool IsCancellable) {
-  auto &Builder = CGF.Builder;
-  auto AllocaInsertPt = CGF.AllocaInsertPt;
 
-  // FIXME: CGCapturedStmtInfo is an abstract class, CGOpenMPOutlinedRegionInfo
-  // would be correct here.
-  // CodeGenFunction::  CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
-
-  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  auto BodyGenCBWrapper = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
-    if (BodyGenCB)
-      BodyGenCB(AllocaIP, CodeGenIP);
-  };
-
-  OpenMPIRBuilderRegionInfo CGSI(*CS, OMPD_parallel);
-  CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGSI);
-
-  llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
-                                                AllocaInsertPt->getIterator());
-  Builder.restoreIP(OMPBuilder.createParallel(
-      Builder, AllocaIP, BodyGenCBWrapper, PrivCB, FiniCB,
-      IfCond, NumThreads, ProcBind, IsCancellable));
-}
 
 // If we're inside an (outlined) parallel region, use the region info's
 // thread-ID variable (it is passed in a first argument of the outlined function
