@@ -199,6 +199,10 @@ public:
   bool isGlobalReg() const { return LVType == GlobalReg; }
   bool isMatrixElt() const { return LVType == MatrixElt; }
 
+  unsigned getVRQualifiers() const {
+    return Quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
+  }
+
   bool isVolatile() const { return Quals.hasVolatile(); }
 
   bool isNontemporal() const { return Nontemporal; }

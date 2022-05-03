@@ -20,6 +20,7 @@ struct UnimplementedFeature {
   // TODO(CIR): Implement the CIRGenFunction::buildTypeCheck method that handles
   // sanitizer related type check features
   static bool buildTypeCheck() { return false; }
+  static bool tbaa() { return false; }
 };
 } // namespace cir
 
