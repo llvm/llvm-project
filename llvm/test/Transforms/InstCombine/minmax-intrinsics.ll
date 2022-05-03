@@ -10,6 +10,7 @@ declare <3 x i8> @llvm.umax.v3i8(<3 x i8>, <3 x i8>)
 declare <3 x i8> @llvm.smin.v3i8(<3 x i8>, <3 x i8>)
 declare <3 x i8> @llvm.smax.v3i8(<3 x i8>, <3 x i8>)
 declare void @use(i8)
+declare void @use_vec(<3 x i8>)
 
 define i8 @umin_known_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_known_bits(
@@ -2359,4 +2360,114 @@ define i8 @umax_umax_reassoc_constantexpr_sink(i8 %x, i8 %y) {
   %m1 = call i8 @llvm.umax.i8(i8 %x, i8 42)
   %m2 = call i8 @llvm.umax.i8(i8 %m1, i8 ptrtoint (i8 (i8, i8)* @umax_umax_reassoc_constantexpr_sink to i8))
   ret i8 %m2
+}
+
+define <3 x i8> @smax_unary_shuffle_ops(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @smax_unary_shuffle_ops(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    [[SY:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SX]], <3 x i8> [[SY]])
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  %sy = shufflevector <3 x i8> %y, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  %r = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %sx, <3 x i8> %sy)
+  ret <3 x i8> %r
+}
+
+define <3 x i8> @smin_unary_shuffle_ops_use_poison_mask_elt(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @smin_unary_shuffle_ops_use_poison_mask_elt(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 undef, i32 0, i32 2>
+; CHECK-NEXT:    call void @use_vec(<3 x i8> [[SX]])
+; CHECK-NEXT:    [[SY:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> poison, <3 x i32> <i32 undef, i32 0, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[SX]], <3 x i8> [[SY]])
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 poison, i32 0, i32 2>
+  call void @use_vec(<3 x i8> %sx)
+  %sy = shufflevector <3 x i8> %y, <3 x i8> poison, <3 x i32> <i32 poison, i32 0, i32 2>
+  %r = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %sx, <3 x i8> %sy)
+  ret <3 x i8> %r
+}
+
+define <3 x i8> @umax_unary_shuffle_ops_use_widening(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @umax_unary_shuffle_ops_use_widening(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 0>
+; CHECK-NEXT:    [[SY:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 0>
+; CHECK-NEXT:    call void @use_vec(<3 x i8> [[SY]])
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[SX]], <3 x i8> [[SY]])
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <2 x i8> %x, <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 0>
+  %sy = shufflevector <2 x i8> %y, <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 0>
+  call void @use_vec(<3 x i8> %sy)
+  %r = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %sx, <3 x i8> %sy)
+  ret <3 x i8> %r
+}
+
+define <3 x i8> @umin_unary_shuffle_ops_narrowing(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @umin_unary_shuffle_ops_narrowing(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> poison, <3 x i32> <i32 1, i32 0, i32 3>
+; CHECK-NEXT:    [[SY:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> poison, <3 x i32> <i32 1, i32 0, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.umin.v3i8(<3 x i8> [[SX]], <3 x i8> [[SY]])
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <4 x i8> %x, <4 x i8> poison, <3 x i32> <i32 1, i32 0, i32 3>
+  %sy = shufflevector <4 x i8> %y, <4 x i8> poison, <3 x i32> <i32 1, i32 0, i32 3>
+  %r = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %sx, <3 x i8> %sy)
+  ret <3 x i8> %r
+}
+
+define <3 x i8> @smax_unary_shuffle_ops_unshuffled_op(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @smax_unary_shuffle_ops_unshuffled_op(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 0, i32 0, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SX]], <3 x i8> [[Y:%.*]])
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 0, i32 0, i32 2>
+  %r = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %sx, <3 x i8> %y)
+  ret <3 x i8> %r
+}
+
+define <3 x i8> @smax_unary_shuffle_ops_wrong_mask(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @smax_unary_shuffle_ops_wrong_mask(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 0, i32 0, i32 2>
+; CHECK-NEXT:    [[SY:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SX]], <3 x i8> [[SY]])
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 0, i32 0, i32 2>
+  %sy = shufflevector <3 x i8> %y, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  %r = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %sx, <3 x i8> %sy)
+  ret <3 x i8> %r
+}
+
+define <3 x i8> @smax_unary_shuffle_ops_wrong_shuf(<3 x i8> %x, <3 x i8> %y, <3 x i8> %z) {
+; CHECK-LABEL: @smax_unary_shuffle_ops_wrong_shuf(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> [[Z:%.*]], <3 x i32> <i32 1, i32 0, i32 3>
+; CHECK-NEXT:    [[SY:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> [[Z]], <3 x i32> <i32 1, i32 0, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SX]], <3 x i8> [[SY]])
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> %z, <3 x i32> <i32 1, i32 0, i32 3>
+  %sy = shufflevector <3 x i8> %y, <3 x i8> %z, <3 x i32> <i32 1, i32 0, i32 3>
+  %r = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %sx, <3 x i8> %sy)
+  ret <3 x i8> %r
+}
+
+define <3 x i8> @smin_unary_shuffle_ops_uses(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @smin_unary_shuffle_ops_uses(
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    call void @use_vec(<3 x i8> [[SX]])
+; CHECK-NEXT:    [[SY:%.*]] = shufflevector <3 x i8> [[Y:%.*]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    call void @use_vec(<3 x i8> [[SY]])
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[SX]], <3 x i8> [[SY]])
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  call void @use_vec(<3 x i8> %sx)
+  %sy = shufflevector <3 x i8> %y, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  call void @use_vec(<3 x i8> %sy)
+  %r = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %sx, <3 x i8> %sy)
+  ret <3 x i8> %r
 }
