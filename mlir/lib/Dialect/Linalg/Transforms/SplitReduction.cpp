@@ -73,12 +73,10 @@ FailureOr<LinalgOp> mlir::linalg::splitReduction(
   op.getReductionDims(dims);
   assert(dims.size() == 1);
   unsigned reductionDim = dims[0];
-  Optional<SmallVector<int64_t, 4>> loopRanges = op.getStaticLoopRanges();
-  if (!loopRanges)
-    return b.notifyMatchFailure(op, "Cannot analyze loops");
-  int64_t reductionDimSize = (*loopRanges)[reductionDim];
+  SmallVector<int64_t, 4> loopRanges = op.getStaticLoopRanges();
+  int64_t reductionDimSize = loopRanges[reductionDim];
   if (reductionDimSize == ShapedType::kDynamicSize ||
-      reductionDimSize % ratio != 0 || insertDimIndex >= loopRanges->size())
+      reductionDimSize % ratio != 0 || insertDimIndex >= loopRanges.size())
     return b.notifyMatchFailure(
         op, "Reduction dimension not divisible by split ratio");
   SmallVector<Operation *, 4> combinerOps;
