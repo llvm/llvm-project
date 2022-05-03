@@ -40,6 +40,7 @@ public:
   enum ARMProcFamilyEnum : uint8_t {
     Others,
     A64FX,
+    Ampere1,
     AppleA7,
     AppleA10,
     AppleA11,
