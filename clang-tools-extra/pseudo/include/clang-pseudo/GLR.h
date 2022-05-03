@@ -108,6 +108,7 @@ private:
   llvm::BumpPtrAllocator Arena;
   unsigned NodeCount = 0;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GSS::Node &);
 
 // Parameters for the GLR parsing.
 struct ParseParams {

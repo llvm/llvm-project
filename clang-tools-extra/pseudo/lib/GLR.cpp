@@ -12,6 +12,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -25,6 +26,15 @@ namespace clang {
 namespace pseudo {
 
 using StateID = LRTable::StateID;
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GSS::Node &N) {
+  std::vector<std::string> ParentStates;
+  for (const auto *Parent : N.parents())
+    ParentStates.push_back(llvm::formatv("{0}", Parent->State));
+  OS << llvm::formatv("state {0}, parsed symbol {1}, parents {2}", N.State,
+                      N.Payload->symbol(), llvm::join(ParentStates, ", "));
+  return OS;
+}
 
 const ForestNode &glrParse(const TokenStream &Tokens,
                            const ParseParams &Params) {
