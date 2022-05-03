@@ -597,7 +597,7 @@ void CIRGenFunction::buildCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CIRGenCallee Callee = CIRGenCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
   mlir::func::CallOp C;
-  buildCall(Info, Callee, ReturnValueSlot(), Args, C, false, Loc);
+  buildCall(Info, Callee, ReturnValueSlot(), Args, &C, false, Loc);
 
   assert(CGM.getCodeGenOpts().OptimizationLevel == 0 ||
          ClassDecl->isDynamicClass() || Type == Ctor_Base ||
