@@ -411,39 +411,14 @@ static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
   // (mo_relaxed) when those are used.
   DCHECK(IsLoadOrder(fmo));
 
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
     T cc = *c;
     T pr = func_cas(a, cc, v);
-    bool success = pr == cc;
-    if (!success)
-      *c = pr;
-    // We used to always model a write and before the actual CAS.
-    // However, the standard 29.6.5/21 says:
-    // If the operation returns true, these operations are atomic
-    // read-modify-write operations (1.10). Otherwise, these operations
-    // are atomic load operations.
-    //
-    // And this difference can lead to false positive reports when
-    // a program uses __atomic builtins and one thread executes a failing CAS
-    // while another executes a non-atomic load. If we always model a write
-    // these operations will race.
-    //
-    // This leads to another subtle aspect:
-    // Atomics provide destruction-safety and can be used to synchronize
-    // own destruction/freeing of underlying memory.
-    // So one thread can do (a successful) CAS to signal to free the memory,
-    // and another thread do an atomic load, observe the CAS and free the
-    // memory. So modelling the memory access after the actual access is
-    // somewhat risky (can potentially lead to other false positive reports if
-    // the memory is already reused when we model the memory access). However,
-    // destruction signalling must use acquire/release memory ordering
-    // constraints. So we should lock s->mtx below and it should prevent the
-    // reuse race. If/when we support stand-alone memory fences, it's unclear
-    // how to handle this case. We could always lock s->mtx even for relaxed
-    // accesses, but it will have severe performance impact on relaxed loads.
-    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
-                 kAccessAtomic | (success ? kAccessWrite : kAccessRead));
-    return success;
+    if (pr == cc)
+      return true;
+    *c = pr;
+    return false;
   }
   SlotLocker locker(thr);
   bool release = IsReleaseOrder(mo);
@@ -458,9 +433,6 @@ static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
       *c = pr;
       mo = fmo;
     }
-    // See the comment on the previous MemoryAccess.
-    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
-                 kAccessAtomic | (success ? kAccessWrite : kAccessRead));
     if (success && IsAcqRelOrder(mo))
       thr->clock.ReleaseAcquire(&s->clock);
     else if (success && IsReleaseOrder(mo))
