@@ -4686,18 +4686,21 @@ bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
 
 static bool haveNoCommonBitsSetCommutative(SDValue A, SDValue B) {
   // Match masked merge pattern (X & ~M) op (Y & M)
-  if (A->getOpcode() == ISD::AND && B->getOpcode() == ISD::AND) {
-    auto MatchNoCommonBitsPattern = [&](SDValue NotM, SDValue And) {
-      if (isBitwiseNot(NotM, true)) {
-        SDValue NotOperand = NotM->getOperand(0);
-        return NotOperand == And->getOperand(0) ||
-               NotOperand == And->getOperand(1);
-      }
-      return false;
-    };
+  // Including degenerate case (X & ~M) op M
+  auto MatchNoCommonBitsPattern = [&](SDValue NotM, SDValue Other) {
+    if (isBitwiseNot(NotM, true)) {
+      SDValue NotOperand = NotM->getOperand(0);
+      if (Other == NotOperand)
+        return true;
+      if (Other->getOpcode() == ISD::AND)
+        return NotOperand == Other->getOperand(0) ||
+               NotOperand == Other->getOperand(1);
+    }
+    return false;
+  };
+  if (A->getOpcode() == ISD::AND)
     return MatchNoCommonBitsPattern(A->getOperand(0), B) ||
            MatchNoCommonBitsPattern(A->getOperand(1), B);
-  }
   return false;
 }
 

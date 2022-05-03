@@ -13,6 +13,7 @@ unittest("ClangPseudoTests") {
   sources = [
     "DirectiveTreeTest.cpp",
     "ForestTest.cpp",
+    "GLRTest.cpp",
     "GrammarTest.cpp",
     "LRTableTest.cpp",
     "TokenTest.cpp",

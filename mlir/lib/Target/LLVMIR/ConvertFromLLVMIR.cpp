@@ -583,7 +583,7 @@ static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
   static const DenseMap<unsigned, StringRef> opcMap = {
       // Ret is handled specially.
       // Br is handled specially.
-      // FIXME: switch
+      // Switch is handled specially.
       // FIXME: indirectbr
       // FIXME: invoke
       INST(Resume, Resume),
@@ -856,6 +856,40 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     }
 
     b.create(state);
+    return success();
+  }
+  case llvm::Instruction::Switch: {
+    auto *swInst = cast<llvm::SwitchInst>(inst);
+    // Process the condition value.
+    Value condition = processValue(swInst->getCondition());
+    if (!condition)
+      return failure();
+
+    SmallVector<Value> defaultBlockArgs;
+    // Process the default case.
+    llvm::BasicBlock *defaultBB = swInst->getDefaultDest();
+    if (failed(processBranchArgs(swInst, defaultBB, defaultBlockArgs)))
+      return failure();
+
+    // Process the cases.
+    unsigned numCases = swInst->getNumCases();
+    SmallVector<SmallVector<Value>> caseOperands(numCases);
+    SmallVector<ValueRange> caseOperandRefs(numCases);
+    SmallVector<int32_t> caseValues(numCases);
+    SmallVector<Block *> caseBlocks(numCases);
+    for (const auto &en : llvm::enumerate(swInst->cases())) {
+      const llvm::SwitchInst::CaseHandle &caseHandle = en.value();
+      unsigned i = en.index();
+      llvm::BasicBlock *succBB = caseHandle.getCaseSuccessor();
+      if (failed(processBranchArgs(swInst, succBB, caseOperands[i])))
+        return failure();
+      caseOperandRefs[i] = caseOperands[i];
+      caseValues[i] = caseHandle.getCaseValue()->getSExtValue();
+      caseBlocks[i] = blocks[succBB];
+    }
+
+    b.create<SwitchOp>(loc, condition, blocks[defaultBB], defaultBlockArgs,
+                       caseValues, caseBlocks, caseOperandRefs);
     return success();
   }
   case llvm::Instruction::PHI: {

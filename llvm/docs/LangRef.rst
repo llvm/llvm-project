@@ -14945,7 +14945,7 @@ Semantics:
 """"""""""
 
 The ``llvm.bitreverse.iN`` intrinsic returns an iN value that has bit
-``M`` in the input moved to bit ``N-M`` in the output. The vector
+``M`` in the input moved to bit ``N-M-1`` in the output. The vector
 intrinsics, such as ``llvm.bitreverse.v4i32``, operate on a per-element
 basis and the element order is not affected.
 

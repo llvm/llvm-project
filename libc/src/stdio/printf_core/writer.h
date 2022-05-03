@@ -1,4 +1,4 @@
-//===-- String writer for printf --------------------------------*- C++ -*-===//
+//===-- Writer definition for printf ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,11 +26,11 @@ class Writer final {
   // onto the end of output.
   WriteFunc raw_write;
 
-  size_t max_length;
-  size_t chars_written;
+  unsigned long long chars_written = 0;
 
 public:
-  Writer(void *output, WriteFunc raw_write, size_t max_length);
+  Writer(void *init_output, WriteFunc init_raw_write)
+      : output(init_output), raw_write(init_raw_write) {}
 
   // write will copy length bytes from new_string into output using
   // raw_write, unless that would cause more bytes than max_length to be
@@ -42,7 +42,7 @@ public:
   // increments chars_written by length.
   void write_chars(char new_char, size_t length);
 
-  size_t get_chars_written();
+  unsigned long long get_chars_written() { return chars_written; }
 };
 
 } // namespace printf_core

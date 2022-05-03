@@ -82,7 +82,7 @@ float2 float2x;
 register int rix __asm__("esp");
 
 int main(void) {
-// CHECK-NOT: atomicrmw
+// CHECK: atomicrmw fadd double* @{{.+}}, double 1.000000e+00 monotonic, align 8
 #pragma omp atomic
   ++dv;
 // CHECK: atomicrmw add i8* @{{.+}}, i8 1 monotonic, align 1
@@ -192,20 +192,7 @@ int main(void) {
 #pragma omp atomic
   ullx |= ullv;
 // CHECK: [[EXPR:%.+]] = load float, float* @{{.+}},
-// CHECK: [[OLD:%.+]] = load atomic i32, i32*  bitcast (float* [[X_ADDR:@.+]] to i32*) monotonic, align 4
-// CHECK: br label %[[CONT:.+]]
-// CHECK: [[CONT]]
-// CHECK: [[EXPECTED:%.+]] = phi i32 [ [[OLD]], %{{.+}} ], [ [[PREV:%.+]], %[[CONT]] ]
-// CHECK: [[BITCAST:%.+]] = bitcast float* [[TEMP:%.+]] to i32*
-// CHECK: [[OLD:%.+]] = bitcast i32 [[EXPECTED]] to float
-// CHECK: [[ADD:%.+]] = fadd float [[OLD]], [[EXPR]]
-// CHECK: store float [[ADD]], float* [[TEMP]],
-// CHECK: [[DESIRED:%.+]] = load i32, i32* [[BITCAST]],
-// CHECK: [[RES:%.+]] = cmpxchg i32* bitcast (float* [[X_ADDR]] to i32*), i32 [[EXPECTED]], i32 [[DESIRED]] monotonic monotonic, align 4
-// CHECK: [[PREV:%.+]] = extractvalue { i32, i1 } [[RES]], 0
-// CHECK: [[SUCCESS_FAIL:%.+]] = extractvalue { i32, i1 } [[RES]], 1
-// CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
-// CHECK: [[EXIT]]
+// CHECK: atomicrmw fadd float* @{{.+}}, float [[EXPR]] monotonic, align 4
 #pragma omp atomic update
   fx = fx + fv;
 // CHECK: [[EXPR:%.+]] = load double, double* @{{.+}},
