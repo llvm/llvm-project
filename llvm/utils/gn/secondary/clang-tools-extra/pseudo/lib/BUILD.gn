@@ -10,7 +10,6 @@ static_library("lib") {
   sources = [
     "DirectiveTree.cpp",
     "Forest.cpp",
-    "GLR.cpp",
     "Grammar.cpp",
     "GrammarBNF.cpp",
     "LRGraph.cpp",
