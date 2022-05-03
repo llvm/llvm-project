@@ -12153,6 +12153,27 @@ static llvm::Value *getAllocatorVal(CodeGenFunction &CGF,
   return AllocVal;
 }
 
+/// Given the allocate directive list item type and align clause value,
+/// return appropriate alignment.
+static llvm::Value *getAlignmentValue(CodeGenFunction &CGF, QualType ListItemTy,
+                                      const Expr *Alignment) {
+  if (!Alignment)
+    return nullptr;
+
+  unsigned UserAlign =
+      Alignment->EvaluateKnownConstInt(CGF.getContext()).getExtValue();
+  CharUnits NaturalAlign = CGF.CGM.getNaturalTypeAlignment(ListItemTy);
+
+  // OpenMP5.1 pg 185 lines 7-10
+  //   Each item in the align modifier list must be aligned to the maximum
+  //   of the specified alignment and the type's natural alignment.
+  //
+  // If no alignment specified then use the natural alignment.
+  return llvm::ConstantInt::get(
+      CGF.CGM.SizeTy,
+      std::max<unsigned>(UserAlign, NaturalAlign.getQuantity()));
+}
+
 Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
                                                    const VarDecl *VD) {
   if (!VD)
@@ -12191,11 +12212,8 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
     const auto *AA = CVD->getAttr<OMPAllocateDeclAttr>();
     const Expr *Allocator = AA->getAllocator();
     llvm::Value *AllocVal = getAllocatorVal(CGF, Allocator);
-    llvm::Value *Alignment =
-        AA->getAlignment()
-            ? CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(AA->getAlignment()),
-                                        CGM.SizeTy, /*isSigned=*/false)
-            : nullptr;
+    llvm::Value *Alignment = getAlignmentValue(
+        CGF, VD->getType().getNonReferenceType(), AA->getAlignment());
     SmallVector<llvm::Value *, 4> Args;
     Args.push_back(ThreadID);
     if (Alignment)

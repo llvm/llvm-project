@@ -85,9 +85,9 @@ int template_test() {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[MYALLOC:%.*]] = alloca i32, align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
-// CHECK-32-NEXT:    [[DOTFOO0__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 1, i32 20, i8* null)
+// CHECK-32-NEXT:    [[DOTFOO0__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 4, i32 20, i8* null)
 // CHECK-32-NEXT:    [[DOTFOO0__ADDR:%.*]] = bitcast i8* [[DOTFOO0__VOID_ADDR]] to [5 x i32]*
-// CHECK-32-NEXT:    [[DOTFOO1__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 2, i32 40, i8* inttoptr (i32 7 to i8*))
+// CHECK-32-NEXT:    [[DOTFOO1__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 4, i32 40, i8* inttoptr (i32 7 to i8*))
 // CHECK-32-NEXT:    [[DOTFOO1__ADDR:%.*]] = bitcast i8* [[DOTFOO1__VOID_ADDR]] to [10 x i32]*
 // CHECK-32-NEXT:    [[DOTFOO2__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 4, i32 80, i8* inttoptr (i32 6 to i8*))
 // CHECK-32-NEXT:    [[DOTFOO2__ADDR:%.*]] = bitcast i8* [[DOTFOO2__VOID_ADDR]] to [20 x i32]*
@@ -114,15 +114,15 @@ int template_test() {
 // CHECK-32-NEXT:    call void @__kmpc_free(i32 [[TMP0]], i8* [[TMP2]], i8* inttoptr (i32 8 to i8*))
 // CHECK-32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[MYALLOC]], align 4
 // CHECK-32-NEXT:    [[CONV:%.*]] = inttoptr i32 [[TMP3]] to i8*
-// CHECK-32-NEXT:    [[DOTBAR1__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 2, i32 4, i8* [[CONV]])
+// CHECK-32-NEXT:    [[DOTBAR1__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 4, i32 4, i8* [[CONV]])
 // CHECK-32-NEXT:    [[DOTBAR1__ADDR:%.*]] = bitcast i8* [[DOTBAR1__VOID_ADDR]] to i32*
 // CHECK-32-NEXT:    [[TMP4:%.*]] = load i32, i32* [[MYALLOC]], align 4
 // CHECK-32-NEXT:    [[CONV1:%.*]] = inttoptr i32 [[TMP4]] to i8*
-// CHECK-32-NEXT:    [[DOTBAR2__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 2, i32 40, i8* [[CONV1]])
+// CHECK-32-NEXT:    [[DOTBAR2__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 4, i32 40, i8* [[CONV1]])
 // CHECK-32-NEXT:    [[DOTBAR2__ADDR:%.*]] = bitcast i8* [[DOTBAR2__VOID_ADDR]] to [10 x i32]*
 // CHECK-32-NEXT:    [[TMP5:%.*]] = load i32, i32* [[MYALLOC]], align 4
 // CHECK-32-NEXT:    [[CONV2:%.*]] = inttoptr i32 [[TMP5]] to i8*
-// CHECK-32-NEXT:    [[DOTBAR3__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 2, i32 80, i8* [[CONV2]])
+// CHECK-32-NEXT:    [[DOTBAR3__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 4, i32 80, i8* [[CONV2]])
 // CHECK-32-NEXT:    [[DOTBAR3__ADDR:%.*]] = bitcast i8* [[DOTBAR3__VOID_ADDR]] to [20 x i32]*
 // CHECK-32-NEXT:    [[DOTBAR4__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i32 16, i32 4, i8* null)
 // CHECK-32-NEXT:    [[DOTBAR4__ADDR:%.*]] = bitcast i8* [[DOTBAR4__VOID_ADDR]] to i32**
@@ -196,9 +196,9 @@ int template_test() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[MYALLOC:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
-// CHECK-NEXT:    [[DOTFOO0__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 1, i64 32, i8* null)
+// CHECK-NEXT:    [[DOTFOO0__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 4, i64 32, i8* null)
 // CHECK-NEXT:    [[DOTFOO0__ADDR:%.*]] = bitcast i8* [[DOTFOO0__VOID_ADDR]] to [5 x i32]*
-// CHECK-NEXT:    [[DOTFOO1__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 2, i64 48, i8* inttoptr (i64 7 to i8*))
+// CHECK-NEXT:    [[DOTFOO1__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 4, i64 48, i8* inttoptr (i64 7 to i8*))
 // CHECK-NEXT:    [[DOTFOO1__ADDR:%.*]] = bitcast i8* [[DOTFOO1__VOID_ADDR]] to [10 x i32]*
 // CHECK-NEXT:    [[DOTFOO2__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 4, i64 80, i8* inttoptr (i64 6 to i8*))
 // CHECK-NEXT:    [[DOTFOO2__ADDR:%.*]] = bitcast i8* [[DOTFOO2__VOID_ADDR]] to [20 x i32]*
@@ -225,15 +225,15 @@ int template_test() {
 // CHECK-NEXT:    call void @__kmpc_free(i32 [[TMP0]], i8* [[TMP2]], i8* inttoptr (i64 8 to i8*))
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, i64* [[MYALLOC]], align 8
 // CHECK-NEXT:    [[CONV:%.*]] = inttoptr i64 [[TMP3]] to i8*
-// CHECK-NEXT:    [[DOTBAR1__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 2, i64 4, i8* [[CONV]])
+// CHECK-NEXT:    [[DOTBAR1__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 4, i64 4, i8* [[CONV]])
 // CHECK-NEXT:    [[DOTBAR1__ADDR:%.*]] = bitcast i8* [[DOTBAR1__VOID_ADDR]] to i32*
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, i64* [[MYALLOC]], align 8
 // CHECK-NEXT:    [[CONV1:%.*]] = inttoptr i64 [[TMP4]] to i8*
-// CHECK-NEXT:    [[DOTBAR2__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 2, i64 48, i8* [[CONV1]])
+// CHECK-NEXT:    [[DOTBAR2__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 4, i64 48, i8* [[CONV1]])
 // CHECK-NEXT:    [[DOTBAR2__ADDR:%.*]] = bitcast i8* [[DOTBAR2__VOID_ADDR]] to [10 x i32]*
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, i64* [[MYALLOC]], align 8
 // CHECK-NEXT:    [[CONV2:%.*]] = inttoptr i64 [[TMP5]] to i8*
-// CHECK-NEXT:    [[DOTBAR3__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 2, i64 80, i8* [[CONV2]])
+// CHECK-NEXT:    [[DOTBAR3__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 4, i64 80, i8* [[CONV2]])
 // CHECK-NEXT:    [[DOTBAR3__ADDR:%.*]] = bitcast i8* [[DOTBAR3__VOID_ADDR]] to [20 x i32]*
 // CHECK-NEXT:    [[DOTBAR4__VOID_ADDR:%.*]] = call i8* @__kmpc_aligned_alloc(i32 [[TMP0]], i64 16, i64 8, i8* null)
 // CHECK-NEXT:    [[DOTBAR4__ADDR:%.*]] = bitcast i8* [[DOTBAR4__VOID_ADDR]] to i32**
