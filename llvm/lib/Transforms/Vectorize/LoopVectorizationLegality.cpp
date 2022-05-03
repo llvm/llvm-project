@@ -772,7 +772,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         auto *SE = PSE.getSE();
         Intrinsic::ID IntrinID = getVectorIntrinsicIDForCall(CI, TLI);
         for (unsigned i = 0, e = CI->arg_size(); i != e; ++i)
-          if (hasVectorIntrinsicScalarOpd(IntrinID, i)) {
+          if (isVectorIntrinsicWithScalarOpAtArg(IntrinID, i)) {
             if (!SE->isLoopInvariant(PSE.getSCEV(CI->getOperand(i)), TheLoop)) {
               reportVectorizationFailure("Found unvectorizable intrinsic",
                   "intrinsic instruction cannot be vectorized",

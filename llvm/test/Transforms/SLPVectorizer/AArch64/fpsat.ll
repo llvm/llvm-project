@@ -6,24 +6,9 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define void @signed(ptr %x, ptr %y, i32 %n) {
 ; CHECK-LABEL: @signed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L0:%.*]] = load float, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
-; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; CHECK-NEXT:    [[L4:%.*]] = load float, ptr [[ARRAYIDX_2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
-; CHECK-NEXT:    [[L6:%.*]] = load float, ptr [[ARRAYIDX_3]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = tail call i32 @llvm.fptosi.sat.i32.f32(float [[L0]])
-; CHECK-NEXT:    [[L3:%.*]] = tail call i32 @llvm.fptosi.sat.i32.f32(float [[L2]])
-; CHECK-NEXT:    [[L5:%.*]] = tail call i32 @llvm.fptosi.sat.i32.f32(float [[L4]])
-; CHECK-NEXT:    [[L7:%.*]] = tail call i32 @llvm.fptosi.sat.i32.f32(float [[L6]])
-; CHECK-NEXT:    store i32 [[L1]], ptr [[Y:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 1
-; CHECK-NEXT:    store i32 [[L3]], ptr [[ARRAYIDX2_1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 2
-; CHECK-NEXT:    store i32 [[L5]], ptr [[ARRAYIDX2_2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 3
-; CHECK-NEXT:    store i32 [[L7]], ptr [[ARRAYIDX2_3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[TMP0]])
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[Y:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -51,24 +36,9 @@ entry:
 define void @unsigned(ptr %x, ptr %y, i32 %n) {
 ; CHECK-LABEL: @unsigned(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L0:%.*]] = load float, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
-; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; CHECK-NEXT:    [[L4:%.*]] = load float, ptr [[ARRAYIDX_2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
-; CHECK-NEXT:    [[L6:%.*]] = load float, ptr [[ARRAYIDX_3]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = tail call i32 @llvm.fptoui.sat.i32.f32(float [[L0]])
-; CHECK-NEXT:    [[L3:%.*]] = tail call i32 @llvm.fptoui.sat.i32.f32(float [[L2]])
-; CHECK-NEXT:    [[L5:%.*]] = tail call i32 @llvm.fptoui.sat.i32.f32(float [[L4]])
-; CHECK-NEXT:    [[L7:%.*]] = tail call i32 @llvm.fptoui.sat.i32.f32(float [[L6]])
-; CHECK-NEXT:    store i32 [[L1]], ptr [[Y:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 1
-; CHECK-NEXT:    store i32 [[L3]], ptr [[ARRAYIDX2_1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 2
-; CHECK-NEXT:    store i32 [[L5]], ptr [[ARRAYIDX2_2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 3
-; CHECK-NEXT:    store i32 [[L7]], ptr [[ARRAYIDX2_3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[TMP0]])
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[Y:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

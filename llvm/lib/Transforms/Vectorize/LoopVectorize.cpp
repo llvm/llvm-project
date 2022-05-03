@@ -4244,13 +4244,13 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
       Value *Arg;
-      if (!UseVectorIntrinsic || !hasVectorIntrinsicScalarOpd(ID, I.index()))
+      if (!UseVectorIntrinsic ||
+          !isVectorIntrinsicWithScalarOpAtArg(ID, I.index()))
         Arg = State.get(I.value(), Part);
-      else {
+      else
         Arg = State.get(I.value(), VPIteration(0, 0));
-        if (hasVectorIntrinsicOverloadedScalarOpd(ID, I.index()))
-          TysForDecl.push_back(Arg->getType());
-      }
+      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I.index()))
+        TysForDecl.push_back(Arg->getType());
       Args.push_back(Arg);
     }
 
