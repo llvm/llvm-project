@@ -146,6 +146,50 @@ for.end:                                          ; preds = %for.body, %entry
   ret float %red.next
 }
 
+define void @print_reduction_with_invariant_store(i64 %n, float* noalias %y, float* noalias %dst) {
+; CHECK-LABEL: Checking a loop in 'print_reduction_with_invariant_store'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
+; CHECK-NEXT:   vp<[[IV:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%y>, vp<[[IV]]>
+; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
+; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + fast reduce.fadd (ir<%lv>) (with final reduction value stored in invariant address sank outside of loop)
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %red = phi float [ %red.next, %for.body ], [ 0.0, %entry ]
+  %arrayidx = getelementptr inbounds float, float* %y, i64 %iv
+  %lv = load float, float* %arrayidx, align 4
+  %red.next = fadd fast float %lv, %red
+  store float %red.next, float* %dst, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ; CHECK-LABEL: Checking a loop in 'print_replicate_predicated_phi'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
