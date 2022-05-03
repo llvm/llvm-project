@@ -296,6 +296,12 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0xc0") { // Ampere Computing
+    return StringSwitch<const char *>(Part)
+        .Case("0xac3", "ampere1")
+        .Default("generic");
+  }
+
   return "generic";
 }
 
