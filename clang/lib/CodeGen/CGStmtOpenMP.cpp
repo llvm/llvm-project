@@ -5838,25 +5838,38 @@ static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
   // Allow atomicrmw only if 'x' and 'update' are integer values, lvalue for 'x'
   // expression is simple and atomic is allowed for the given type for the
   // target platform.
-  if (BO == BO_Comma || !Update.isScalar() ||
-      !Update.getScalarVal()->getType()->isIntegerTy() || !X.isSimple() ||
+  if (BO == BO_Comma || !Update.isScalar() || !X.isSimple() ||
       (!isa<llvm::ConstantInt>(Update.getScalarVal()) &&
        (Update.getScalarVal()->getType() !=
         X.getAddress(CGF).getElementType())) ||
-      !X.getAddress(CGF).getElementType()->isIntegerTy() ||
       !Context.getTargetInfo().hasBuiltinAtomic(
           Context.getTypeSize(X.getType()), Context.toBits(X.getAlignment())))
     return std::make_pair(false, RValue::get(nullptr));
 
+  auto &&CheckAtomicSupport = [&CGF](llvm::Type *T, BinaryOperatorKind BO) {
+    if (T->isIntegerTy())
+      return true;
+
+    if (T->isFloatingPointTy() && (BO == BO_Add || BO == BO_Sub))
+      return llvm::isPowerOf2_64(CGF.CGM.getDataLayout().getTypeStoreSize(T));
+
+    return false;
+  };
+
+  if (!CheckAtomicSupport(Update.getScalarVal()->getType(), BO) ||
+      !CheckAtomicSupport(X.getAddress(CGF).getElementType(), BO))
+    return std::make_pair(false, RValue::get(nullptr));
+
+  bool IsInteger = X.getAddress(CGF).getElementType()->isIntegerTy();
   llvm::AtomicRMWInst::BinOp RMWOp;
   switch (BO) {
   case BO_Add:
-    RMWOp = llvm::AtomicRMWInst::Add;
+    RMWOp = IsInteger ? llvm::AtomicRMWInst::Add : llvm::AtomicRMWInst::FAdd;
     break;
   case BO_Sub:
     if (!IsXLHSInRHSPart)
       return std::make_pair(false, RValue::get(nullptr));
-    RMWOp = llvm::AtomicRMWInst::Sub;
+    RMWOp = IsInteger ? llvm::AtomicRMWInst::Sub : llvm::AtomicRMWInst::FSub;
     break;
   case BO_And:
     RMWOp = llvm::AtomicRMWInst::And;
@@ -5914,9 +5927,13 @@ static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
   }
   llvm::Value *UpdateVal = Update.getScalarVal();
   if (auto *IC = dyn_cast<llvm::ConstantInt>(UpdateVal)) {
-    UpdateVal = CGF.Builder.CreateIntCast(
-        IC, X.getAddress(CGF).getElementType(),
-        X.getType()->hasSignedIntegerRepresentation());
+    if (IsInteger)
+      UpdateVal = CGF.Builder.CreateIntCast(
+          IC, X.getAddress(CGF).getElementType(),
+          X.getType()->hasSignedIntegerRepresentation());
+    else
+      UpdateVal = CGF.Builder.CreateCast(llvm::Instruction::CastOps::UIToFP, IC,
+                                         X.getAddress(CGF).getElementType());
   }
   llvm::Value *Res =
       CGF.Builder.CreateAtomicRMW(RMWOp, X.getPointer(CGF), UpdateVal, AO);
