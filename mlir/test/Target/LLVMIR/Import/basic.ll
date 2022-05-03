@@ -281,6 +281,62 @@ define void @FPArithmetic(float %a, float %b, double %c, double %d) {
   ret void
 }
 
+; CHECK-LABEL: llvm.func @FPComparison(%arg0: f32, %arg1: f32)
+define void @FPComparison(float %a, float %b) {
+  ; CHECK: llvm.fcmp "_false" %arg0, %arg1
+  %1 = fcmp false float %a, %b
+  ; CHECK: llvm.fcmp "oeq" %arg0, %arg1
+  %2 = fcmp oeq float %a, %b
+  ; CHECK: llvm.fcmp "ogt" %arg0, %arg1
+  %3 = fcmp ogt float %a, %b
+  ; CHECK: llvm.fcmp "oge" %arg0, %arg1
+  %4 = fcmp oge float %a, %b
+  ; CHECK: llvm.fcmp "olt" %arg0, %arg1
+  %5 = fcmp olt float %a, %b
+  ; CHECK: llvm.fcmp "ole" %arg0, %arg1
+  %6 = fcmp ole float %a, %b
+  ; CHECK: llvm.fcmp "one" %arg0, %arg1
+  %7 = fcmp one float %a, %b
+  ; CHECK: llvm.fcmp "ord" %arg0, %arg1
+  %8 = fcmp ord float %a, %b
+  ; CHECK: llvm.fcmp "ueq" %arg0, %arg1
+  %9 = fcmp ueq float %a, %b
+  ; CHECK: llvm.fcmp "ugt" %arg0, %arg1
+  %10 = fcmp ugt float %a, %b
+  ; CHECK: llvm.fcmp "uge" %arg0, %arg1
+  %11 = fcmp uge float %a, %b
+  ; CHECK: llvm.fcmp "ult" %arg0, %arg1
+  %12 = fcmp ult float %a, %b
+  ; CHECK: llvm.fcmp "ule" %arg0, %arg1
+  %13 = fcmp ule float %a, %b
+  ; CHECK: llvm.fcmp "une" %arg0, %arg1
+  %14 = fcmp une float %a, %b
+  ; CHECK: llvm.fcmp "uno" %arg0, %arg1
+  %15 = fcmp uno float %a, %b
+  ; CHECK: llvm.fcmp "_true" %arg0, %arg1
+  %16 = fcmp true float %a, %b
+  ret void
+}
+
+; Testing rest of the floating point constant kinds.
+; CHECK-LABEL: llvm.func @FPConstant(%arg0: f16, %arg1: bf16, %arg2: f128, %arg3: f80)
+define void @FPConstant(half %a, bfloat %b, fp128 %c, x86_fp80 %d) {
+  ; CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(7.000000e+00 : f80) : f80
+  ; CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(0.000000e+00 : f128) : f128
+  ; CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(1.000000e+00 : bf16) : bf16
+  ; CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(1.000000e+00 : f16) : f16
+
+  ; CHECK: llvm.fadd %[[C3]], %arg0  : f16
+  %1 = fadd half 1.0, %a
+  ; CHECK: llvm.fadd %[[C2]], %arg1  : bf16
+  %2 = fadd bfloat 1.0, %b
+  ; CHECK: llvm.fadd %[[C1]], %arg2  : f128
+  %3 = fadd fp128 0xL00000000000000000000000000000000, %c
+  ; CHECK: llvm.fadd %[[C0]], %arg3  : f80
+  %4 = fadd x86_fp80 0xK4001E000000000000000, %d
+  ret void
+}
+
 ;
 ; Functions as constants.
 ;
