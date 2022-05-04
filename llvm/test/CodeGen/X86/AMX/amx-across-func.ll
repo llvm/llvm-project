@@ -26,8 +26,8 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    subq $2120, %rsp # imm = 0x848
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, (%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, (%rsp)
 ; CHECK-NEXT:    movb $1, (%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
@@ -68,8 +68,8 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; IPRA-LABEL: test_api:
 ; IPRA:       # %bb.0:
 ; IPRA-NEXT:    subq $72, %rsp
-; IPRA-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; IPRA-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; IPRA-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
@@ -113,8 +113,8 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $1096, %rsp # imm = 0x448
 ; CHECK-NEXT:    movl %edi, %r14d
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, (%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, (%rsp)
 ; CHECK-NEXT:    movb $1, (%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
@@ -179,8 +179,8 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; IPRA:       # %bb.0:
 ; IPRA-NEXT:    subq $72, %rsp
 ; IPRA-NEXT:    movl %edi, %eax
-; IPRA-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; IPRA-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; IPRA-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)
@@ -272,8 +272,8 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $1088, %rsp # imm = 0x440
 ; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, (%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, (%rsp)
 ; CHECK-NEXT:    movb $1, (%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
@@ -312,8 +312,8 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; IPRA-LABEL: test_loop2:
 ; IPRA:       # %bb.0:
 ; IPRA-NEXT:    subq $72, %rsp
-; IPRA-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; IPRA-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; IPRA-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)

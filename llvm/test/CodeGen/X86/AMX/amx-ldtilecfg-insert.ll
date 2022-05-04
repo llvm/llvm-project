@@ -5,8 +5,8 @@
 define dso_local void @test1(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, -{{[0-9]+}}(%rsp)
@@ -46,8 +46,8 @@ define dso_local void @test2(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
@@ -119,8 +119,8 @@ exit:
 define dso_local void @test3(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
@@ -162,8 +162,8 @@ exit:
 define dso_local void @test4(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
@@ -231,8 +231,8 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
@@ -292,8 +292,8 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %r8d, %r8d
