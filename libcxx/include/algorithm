@@ -238,6 +238,24 @@ namespace ranges {
     requires indirectly_copyable<iterator_t<R>, I>
     constexpr ranges::copy_backward_result<borrowed_iterator_t<R>, I>
       ranges::copy_backward(R&& r, I result);                                               // since C++20
+
+  template<class I, class F>
+    using for_each_result = in_fun_result<I, F>;                                            // since C++20
+
+  template<input_iterator I, sentinel_for<I> S, class Proj = identity,
+           indirectly_unary_invocable<projected<I, Proj>> Fun>
+    constexpr ranges::for_each_result<I, Fun>
+      ranges::for_each(I first, S last, Fun f, Proj proj = {});                             // since C++20
+
+  template<input_range R, class Proj = identity,
+           indirectly_unary_invocable<projected<iterator_t<R>, Proj>> Fun>
+    constexpr ranges::for_each_result<borrowed_iterator_t<R>, Fun>
+      ranges::for_each(R&& r, Fun f, Proj proj = {});                                       // since C++20
+
+  template<input_iterator I, class Proj = identity,
+           indirectly_unary_invocable<projected<I, Proj>> Fun>
+    constexpr ranges::for_each_n_result<I, Fun>
+      ranges::for_each_n(I first, iter_difference_t<I> n, Fun f, Proj proj = {});           // since C++20
 }
 
     constexpr bool     // constexpr in C++20
@@ -963,6 +981,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_find.h>
 #include <__algorithm/ranges_find_if.h>
 #include <__algorithm/ranges_find_if_not.h>
+#include <__algorithm/ranges_for_each.h>
+#include <__algorithm/ranges_for_each_n.h>
 #include <__algorithm/ranges_max.h>
 #include <__algorithm/ranges_max_element.h>
 #include <__algorithm/ranges_min.h>
