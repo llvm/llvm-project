@@ -1050,9 +1050,9 @@ IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
                                       "no memprof data available in profile");
   auto Iter = MemProfRecordTable->find(FuncNameHash);
   if (Iter == MemProfRecordTable->end())
-    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
-                                      "memprof record not found for hash " +
-                                          Twine(FuncNameHash));
+    return make_error<InstrProfError>(
+        instrprof_error::unknown_function,
+        "memprof record not found for function hash " + Twine(FuncNameHash));
 
   // Setup a callback to convert from frame ids to frame using the on-disk
   // FrameData hash table.
