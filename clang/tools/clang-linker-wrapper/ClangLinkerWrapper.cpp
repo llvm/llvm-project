@@ -1185,9 +1185,8 @@ Expected<std::string> compileModule(Module &M) {
 
   SmallString<128> ObjectFile;
   int FD = -1;
-  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
-                                       "offload-wrapper",
-                                   "o", ObjectFile))
+  if (Error Err = createOutputFile(
+          sys::path::filename(ExecutableName) + "-wrapper", "o", ObjectFile))
     return std::move(Err);
   if (std::error_code EC = sys::fs::openFileForWrite(ObjectFile, FD))
     return errorCodeToError(EC);
