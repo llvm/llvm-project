@@ -15,6 +15,8 @@
 ; ICFALL-NEXT:    bl _func03_takeaddr
 ; ICFALL-NEXT:    bl _func03_takeaddr
 
+; REQUIRES: aarch64
+
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios7.0.0"
 
