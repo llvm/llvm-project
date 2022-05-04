@@ -32,7 +32,7 @@ nested(baz)  rise of the dead tokens
 // rdar://8197149 - VC++ allows invalid token pastes: (##baz
 #define foo(x) abc(x)
 #define bar(y) foo(##baz(y))
-bar(q) // expected-warning {{type specifier missing}} expected-error {{invalid preprocessing token}} expected-error {{parameter list without types}}
+bar(q) // expected-error {{type specifier missing}} expected-error {{invalid preprocessing token}} expected-error {{parameter list without types}}
 
 // CHECK: abc(baz(q))
 
