@@ -34,7 +34,7 @@ CLANG_ENABLE_BOOTSTRAP.
 
 .. code-block:: console
 
-  $ cmake -G Ninja -DCLANG_ENABLE_BOOTSTRAP=On <path to source>
+  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCLANG_ENABLE_BOOTSTRAP=On <path to source>
   $ ninja stage2
 
 This command itself isn't terribly useful because it assumes default
@@ -48,7 +48,7 @@ CMake option, each variable separated by a ";". As example:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -DCLANG_ENABLE_BOOTSTRAP=On -DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_INSTALL_PREFIX;CMAKE_VERBOSE_MAKEFILE" <path to source>
+  $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCLANG_ENABLE_BOOTSTRAP=On -DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_INSTALL_PREFIX;CMAKE_VERBOSE_MAKEFILE" <path to source>
   $ ninja stage2
 
 CMake options starting by ``BOOTSTRAP_`` will be passed only to the stage2 build.

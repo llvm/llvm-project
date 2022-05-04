@@ -145,13 +145,13 @@ Finally, if you're using your platform compiler, run:
 
    .. code-block:: bash
 
-     $ cmake -G Ninja <source-dir> <options above>
+     $ cmake -G Ninja <source-dir> -DCMAKE_BUILD_TYPE=<type> <options above>
 
 If you're using Clang as the cross-compiler, run:
 
    .. code-block:: bash
 
-     $ CC='clang' CXX='clang++' cmake -G Ninja <source-dir> <options above>
+     $ CC='clang' CXX='clang++' cmake -G Ninja <source-dir> -DCMAKE_BUILD_TYPE=<type> <options above>
 
 If you have ``clang``/``clang++`` on the path, it should just work, and special
 Ninja files will be created in the build directory. I strongly suggest
