@@ -213,6 +213,19 @@ public:
   ///   \a ArrayRef<uint8_t> extending \a aux_size bytes from \a aux_offset.
   llvm::ArrayRef<uint8_t> GetAuxBuffer() const;
 
+  /// Use the ioctl API to disable the perf event. This doesn't terminate the
+  /// perf event.
+  ///
+  /// \return
+  ///   An Error if the perf event couldn't be disabled.
+  llvm::Error DisableWithIoctl() const;
+
+  /// Use the ioctl API to enable the perf event.
+  ///
+  /// \return
+  ///   An Error if the perf event couldn't be enabled.
+  llvm::Error EnableWithIoctl() const;
+
 private:
   /// Create new \a PerfEvent.
   ///

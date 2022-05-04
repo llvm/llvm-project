@@ -41,8 +41,7 @@ public:
 
   std::vector<TraceThreadState> GetThreadStates() const;
 
-  llvm::Expected<const IntelPTSingleBufferTrace &>
-  GetTracedThread(lldb::tid_t tid) const;
+  llvm::Expected<IntelPTSingleBufferTrace &> GetTracedThread(lldb::tid_t tid);
 
   llvm::Error TraceStart(lldb::tid_t tid,
                          const TraceIntelPTStartRequest &request);
@@ -83,7 +82,7 @@ public:
 
   bool TracesThread(lldb::tid_t tid) const;
 
-  const IntelPTThreadTraceCollection &GetThreadTraces() const;
+  IntelPTThreadTraceCollection &GetThreadTraces();
 
   llvm::Error TraceStart(lldb::tid_t tid);
 
@@ -107,6 +106,9 @@ public:
 
   static bool IsSupported();
 
+  /// To be invoked whenever the state of the target process has changed.
+  void OnProcessStateChanged(lldb::StateType state);
+
   /// If "process tracing" is enabled, then trace the given thread.
   llvm::Error OnThreadCreated(lldb::tid_t tid);
 
@@ -124,7 +126,7 @@ public:
 
   /// Implementation of the jLLDBTraceGetBinaryData packet
   llvm::Expected<std::vector<uint8_t>>
-  GetBinaryData(const TraceGetBinaryDataRequest &request) const;
+  GetBinaryData(const TraceGetBinaryDataRequest &request);
 
   /// Dispose of all traces
   void Clear();
@@ -136,8 +138,7 @@ private:
   llvm::Error TraceStart(lldb::tid_t tid,
                          const TraceIntelPTStartRequest &request);
 
-  llvm::Expected<const IntelPTSingleBufferTrace &>
-  GetTracedThread(lldb::tid_t tid) const;
+  llvm::Expected<IntelPTSingleBufferTrace &> GetTracedThread(lldb::tid_t tid);
 
   bool IsProcessTracingEnabled() const;
 

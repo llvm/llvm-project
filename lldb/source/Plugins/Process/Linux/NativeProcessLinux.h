@@ -209,6 +209,8 @@ private:
   /// stopping for threads being destroyed.
   Status NotifyTracersOfThreadDestroyed(lldb::tid_t tid);
 
+  void NotifyTracersProcessStateChanged(lldb::StateType state) override;
+
   /// Writes the raw event message code (vis-a-vis PTRACE_GETEVENTMSG)
   /// corresponding to the given thread ID to the memory pointed to by @p
   /// message.

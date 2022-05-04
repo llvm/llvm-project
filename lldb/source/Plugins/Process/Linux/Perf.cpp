@@ -15,6 +15,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -218,4 +219,20 @@ ArrayRef<uint8_t> PerfEvent::GetAuxBuffer() const {
   perf_event_mmap_page &mmap_metadata = GetMetadataPage();
   return {reinterpret_cast<uint8_t *>(m_aux_base.get()),
            static_cast<size_t>(mmap_metadata.aux_size)};
+}
+
+Error PerfEvent::DisableWithIoctl() const {
+  if (ioctl(*m_fd, PERF_EVENT_IOC_DISABLE) < 0)
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't disable perf event. %s",
+                             std::strerror(errno));
+  return Error::success();
+}
+
+Error PerfEvent::EnableWithIoctl() const {
+  if (ioctl(*m_fd, PERF_EVENT_IOC_ENABLE) < 0)
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't disable perf event. %s",
+                             std::strerror(errno));
+  return Error::success();
 }
