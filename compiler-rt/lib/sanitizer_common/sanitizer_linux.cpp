@@ -343,7 +343,7 @@ uptr internal_stat(const char *path, void *buf) {
 #if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf, 0);
 #    elif SANITIZER_LINUX
-#      if SANITIZER_WORDSIZE == 64
+#      if SANITIZER_WORDSIZE == 64 || SANITIZER_X32
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           0);
 #      else
@@ -366,7 +366,7 @@ uptr internal_lstat(const char *path, void *buf) {
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
 #    elif SANITIZER_LINUX
-#      if defined(_LP64)
+#      if defined(_LP64) || SANITIZER_X32
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
 #      else
