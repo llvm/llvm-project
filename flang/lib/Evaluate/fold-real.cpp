@@ -129,6 +129,12 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           }
           return y.value;
         }));
+  } else if (name == "dim") {
+    return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T, T>(
+            [](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
+              return x.DIM(y).value;
+            }));
   } else if (name == "dprod") {
     if (auto scalars{GetScalarConstantArguments<T, T>(context, args)}) {
       return Fold(context,
@@ -284,8 +290,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   }
-  // TODO: dim, dot_product, fraction, matmul,
-  // modulo, norm2, set_exponent, transfer,
+  // TODO: dot_product, fraction, matmul, norm2, set_exponent, transfer
   return Expr<T>{std::move(funcRef)};
 }
 

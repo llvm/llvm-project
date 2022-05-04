@@ -120,7 +120,7 @@ static constexpr bool Satisfies(RelationalOperator op, Relation relation) {
   case Relation::Greater:
     return Satisfies(op, Ordering::Greater);
   case Relation::Unordered:
-    return false;
+    return op == RelationalOperator::NE;
   }
   return false; // silence g++ warning
 }

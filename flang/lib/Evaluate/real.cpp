@@ -423,6 +423,21 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::HYPOT(
 }
 
 template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::DIM(
+    const Real &y, Rounding rounding) const {
+  ValueWithRealFlags<Real> result;
+  if (IsNotANumber() || y.IsNotANumber()) {
+    result.flags.set(RealFlag::InvalidArgument);
+    result.value = NotANumber();
+  } else if (Compare(y) == Relation::Greater) {
+    result = Subtract(y, rounding);
+  } else {
+    // result is already zero
+  }
+  return result;
+}
+
+template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::ToWholeNumber(
     common::RoundingMode mode) const {
   ValueWithRealFlags<Real> result{*this};

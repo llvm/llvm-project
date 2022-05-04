@@ -85,7 +85,9 @@ module real_tests
   real(4), parameter :: r4_ninf = -1._4/0._4
 
   logical, parameter :: test_r4_nan_parentheses1 = .NOT.(((r4_nan)).EQ.r4_nan)
-  logical, parameter :: test_r4_nan_parentheses2 = .NOT.(((r4_nan)).NE.r4_nan)
+  logical, parameter :: test_r4_nan_parentheses2 = .NOT.(((r4_nan)).LT.r4_nan)
+  logical, parameter :: test_r4_nan_parentheses3 = .NOT.(((r4_nan)).GT.r4_nan)
+  logical, parameter :: test_r4_nan_parentheses4 = ((r4_nan)).NE.r4_nan
   logical, parameter :: test_r4_pinf_parentheses = ((r4_pinf)).EQ.r4_pinf
   logical, parameter :: test_r4_ninf_parentheses = ((r4_ninf)).EQ.r4_ninf
 
@@ -251,7 +253,9 @@ module real_tests
 
   ! Invalid relational argument
   logical, parameter :: test_nan_r4_eq1 = .NOT.(r4_nan.EQ.r4_nan)
-  logical, parameter :: test_nan_r4_ne1 = .NOT.(r4_nan.NE.r4_nan)
+  logical, parameter :: test_nan_r4_lt1 = .NOT.(r4_nan.LE.r4_nan)
+  logical, parameter :: test_nan_r4_gt1 = .NOT.(r4_nan.GT.r4_nan)
+  logical, parameter :: test_nan_r4_ne1 = r4_nan.NE.r4_nan
 
 end module
 
