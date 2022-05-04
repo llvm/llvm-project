@@ -353,6 +353,11 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   assert(!D->getAttr<AnnotateAttr>() && "NYI");
 }
 
+void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
+                                            bool IsTentative) {
+  assert(0 && "not implemented");
+}
+
 void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
   const auto *D = cast<ValueDecl>(GD.getDecl());
 
@@ -385,7 +390,7 @@ void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
   }
 
   if (const auto *VD = dyn_cast<VarDecl>(D))
-    llvm_unreachable("NYI");
+    return buildGlobalVarDefinition(VD, !VD->hasDefinition());
 
   llvm_unreachable("Invalid argument to buildGlobalDefinition()");
 }
