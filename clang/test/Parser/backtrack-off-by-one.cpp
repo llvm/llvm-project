@@ -17,7 +17,7 @@ template <typename T> class B : T // not ',' or '{'
 // expected-error@+8 {{expected ';' after top level declarator}}
 #endif
 #if __cplusplus <= 201402L
-// expected-error@+5 {{C++ requires a type specifier for all declarations}}
+// expected-error@+5 {{a type specifier is required for all declarations}}
 #else
 // expected-error@+3 {{expected unqualified-id}}
 #endif

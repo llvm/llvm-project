@@ -121,6 +121,10 @@
     ret void
   }
 
+  define void @vsetvli_vluxei64_regression() {
+    ret void
+  }
+
   ; Function Attrs: nofree nosync nounwind readnone willreturn
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
@@ -732,6 +736,89 @@ body:             |
     %24:vr = IMPLICIT_DEF
     %23:vr = PseudoVREDSUM_VS_M1 %24, %16, killed %20, 4, 5
     PseudoVSE32_V_M1 killed %23, %8, 1, 5 :: (store (s32) into %ir.res)
+    PseudoRET
+
+...
+---
+# FIXME: This test shows incorrect VSETVLI insertion. The VLUXEI64 needs
+# configuration for SEW=8 but it instead inherits a SEW=64 from the entry
+# block.
+name:            vsetvli_vluxei64_regression
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: vsetvli_vluxei64_regression
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $v0, $v1, $v2, $v3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %a:gpr = COPY $x10
+  ; CHECK-NEXT:   %b:gpr = COPY $x11
+  ; CHECK-NEXT:   %inaddr:gpr = COPY $x12
+  ; CHECK-NEXT:   %idxs:vr = COPY $v0
+  ; CHECK-NEXT:   %t1:vr = COPY $v1
+  ; CHECK-NEXT:   %t3:vr = COPY $v2
+  ; CHECK-NEXT:   %t4:vr = COPY $v3
+  ; CHECK-NEXT:   %t5:vrnov0 = COPY $v1
+  ; CHECK-NEXT:   dead %14:gpr = PseudoVSETVLIX0 $x0, 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   %t6:vr = PseudoVMSEQ_VI_M1 %t1, 0, -1, 6 /* e64 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %mask:vr = PseudoVMANDN_MM_MF8 %t6, %t3, -1, 0 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   %t2:gpr = COPY $x0
+  ; CHECK-NEXT:   BEQ %a, %t2, %bb.3
+  ; CHECK-NEXT:   PseudoBR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $v0 = COPY %mask
+  ; CHECK-NEXT:   early-clobber %t0:vrnov0 = PseudoVLUXEI64_V_M1_MF8_MASK %t5, killed %inaddr, %idxs, $v0, -1, 3 /* e8 */, 1, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   %ldval:vr = COPY %t0
+  ; CHECK-NEXT:   PseudoBR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   %stval:vr = PHI %t4, %bb.1, %ldval, %bb.2
+  ; CHECK-NEXT:   $v0 = COPY %mask
+  ; CHECK-NEXT:   PseudoVSOXEI64_V_M1_MF8_MASK killed %stval, killed %b, %idxs, $v0, -1, 3 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    successors: %bb.1
+    liveins: $x10, $x11, $x12, $v0, $v1, $v2, $v3
+
+    %a:gpr = COPY $x10
+    %b:gpr = COPY $x11
+    %inaddr:gpr = COPY $x12
+    %idxs:vr = COPY $v0
+    %t1:vr = COPY $v1
+    %t3:vr = COPY $v2
+    %t4:vr = COPY $v3
+    %t5:vrnov0 = COPY $v1
+    %t6:vr = PseudoVMSEQ_VI_M1 %t1, 0, -1, 6
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.3, %bb.2
+
+    %mask:vr = PseudoVMANDN_MM_MF8 %t6, %t3, -1, 0
+    %t2:gpr = COPY $x0
+    BEQ %a, %t2, %bb.3
+    PseudoBR %bb.2
+
+  bb.2:
+    successors: %bb.3
+
+    $v0 = COPY %mask
+    early-clobber %t0:vrnov0 = PseudoVLUXEI64_V_M1_MF8_MASK %t5, killed %inaddr, %idxs, $v0, -1, 3, 1
+    %ldval:vr = COPY %t0
+    PseudoBR %bb.3
+
+  bb.3:
+    %stval:vr = PHI %t4, %bb.1, %ldval, %bb.2
+    $v0 = COPY %mask
+    PseudoVSOXEI64_V_M1_MF8_MASK killed %stval, killed %b, %idxs, $v0, -1, 3
     PseudoRET
 
 ...

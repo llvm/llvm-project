@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 // Don't crash.
 
@@ -18,7 +18,7 @@ int _S_construct();
 
 int _S_construct(int);
 
-_S_construct(); // expected-error {{requires}}
+_S_construct(); // expected-error {{a type specifier is required}}
 };
 
 template<typename _CharT,typename _Traits,typename _Alloc>
