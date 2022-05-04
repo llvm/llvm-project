@@ -1014,6 +1014,10 @@ bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AM.BaseGV)
     return false;
 
+  // RVV instructions only support register addressing.
+  if (Subtarget.hasVInstructions() && isa<VectorType>(Ty))
+    return AM.HasBaseReg && AM.Scale == 0 && !AM.BaseOffs;
+
   // Require a 12-bit signed offset.
   if (!isInt<12>(AM.BaseOffs))
     return false;
