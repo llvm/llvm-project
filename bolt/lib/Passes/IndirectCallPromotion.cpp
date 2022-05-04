@@ -28,7 +28,7 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-extern cl::opt<IndirectCallPromotionType> IndirectCallPromotion;
+extern cl::opt<IndirectCallPromotionType> ICP;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<unsigned> ExecutionCountThreshold;
 
@@ -58,13 +58,13 @@ static cl::opt<unsigned> ICPCallsTotalPercentThreshold(
         "calls"),
     cl::init(30), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> IndirectCallPromotionMispredictThreshold(
+static cl::opt<unsigned> ICPMispredictThreshold(
     "indirect-call-promotion-mispredict-threshold",
     cl::desc("misprediction threshold for skipping ICP on an "
              "indirect call"),
     cl::init(0), cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
-static cl::opt<bool> IndirectCallPromotionUseMispredicts(
+static cl::opt<bool> ICPUseMispredicts(
     "indirect-call-promotion-use-mispredicts",
     cl::desc("use misprediction frequency for determining whether or not ICP "
              "should be applied at a callsite.  The "
@@ -72,19 +72,19 @@ static cl::opt<bool> IndirectCallPromotionUseMispredicts(
              "by this heuristic"),
     cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> IndirectCallPromotionTopN(
-    "indirect-call-promotion-topn",
-    cl::desc("limit number of targets to consider when doing indirect "
-             "call promotion. 0 = no limit"),
-    cl::init(3), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::opt<unsigned>
+    ICPTopN("indirect-call-promotion-topn",
+            cl::desc("limit number of targets to consider when doing indirect "
+                     "call promotion. 0 = no limit"),
+            cl::init(3), cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> IndirectCallPromotionCallsTopN(
+static cl::opt<unsigned> ICPCallsTopN(
     "indirect-call-promotion-calls-topn",
     cl::desc("limit number of targets to consider when doing indirect "
              "call promotion on calls. 0 = no limit"),
     cl::init(0), cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned> IndirectCallPromotionJumpTablesTopN(
+static cl::opt<unsigned> ICPJumpTablesTopN(
     "indirect-call-promotion-jump-tables-topn",
     cl::desc("limit number of targets to consider when doing indirect "
              "call promotion on jump tables. 0 = no limit"),
@@ -545,9 +545,8 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
       TotalMemAccesses += HotTargets[I].first;
     }
     uint64_t RemainingMemAccesses = TotalMemAccesses;
-    const size_t TopN = opts::IndirectCallPromotionJumpTablesTopN != 0
-                            ? opts::IndirectCallPromotionTopN
-                            : opts::IndirectCallPromotionTopN;
+    const size_t TopN =
+        opts::ICPJumpTablesTopN != 0 ? opts::ICPTopN : opts::ICPTopN;
     size_t I = 0;
     for (; I < HotTargets.size(); ++I) {
       const uint64_t MemAccesses = HotTargets[I].first;
@@ -942,12 +941,12 @@ size_t IndirectCallPromotion::canPromoteCallsite(
     return 0;
   }
 
-  size_t TopN = opts::IndirectCallPromotionTopN;
+  size_t TopN = opts::ICPTopN;
   if (IsJumpTable) {
-    if (opts::IndirectCallPromotionJumpTablesTopN != 0)
-      TopN = opts::IndirectCallPromotionJumpTablesTopN;
-  } else if (opts::IndirectCallPromotionCallsTopN != 0) {
-    TopN = opts::IndirectCallPromotionCallsTopN;
+    if (opts::ICPJumpTablesTopN != 0)
+      TopN = opts::ICPJumpTablesTopN;
+  } else if (opts::ICPCallsTopN != 0) {
+    TopN = opts::ICPCallsTopN;
   }
   const size_t TrialN = TopN ? std::min(TopN, Targets.size()) : Targets.size();
 
@@ -961,12 +960,12 @@ size_t IndirectCallPromotion::canPromoteCallsite(
   uint64_t TotalMispredictsTopN = 0;
   size_t N = 0;
 
-  if (opts::IndirectCallPromotionUseMispredicts &&
+  if (opts::ICPUseMispredicts &&
       (!IsJumpTable || opts::ICPJumpTablesByTarget)) {
     // Count total number of mispredictions for (at most) the top N targets.
     // We may choose a smaller N (TrialN vs. N) if the frequency threshold
     // is exceeded by fewer targets.
-    double Threshold = double(opts::IndirectCallPromotionMispredictThreshold);
+    double Threshold = double(opts::ICPMispredictThreshold);
     for (size_t I = 0; I < TrialN && Threshold > 0; ++I, ++N) {
       Threshold -= (100.0 * Targets[I].Mispreds) / NumCalls;
       TotalMispredictsTopN += Targets[I].Mispreds;
@@ -977,15 +976,13 @@ size_t IndirectCallPromotion::canPromoteCallsite(
     // frequency is greater than the threshold, we should try ICP on this
     // callsite.
     const double TopNFrequency = (100.0 * TotalMispredictsTopN) / NumCalls;
-    if (TopNFrequency == 0 ||
-        TopNFrequency < opts::IndirectCallPromotionMispredictThreshold) {
+    if (TopNFrequency == 0 || TopNFrequency < opts::ICPMispredictThreshold) {
       if (opts::Verbosity >= 1) {
         const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
         outs() << "BOLT-INFO: ICP failed in " << *BB.getFunction() << " @ "
                << InstIdx << " in " << BB.getName() << ", calls = " << NumCalls
                << ", top N mis. frequency " << format("%.1f", TopNFrequency)
-               << "% < " << opts::IndirectCallPromotionMispredictThreshold
-               << "%\n";
+               << "% < " << opts::ICPMispredictThreshold << "%\n";
       }
       return 0;
     }
@@ -1025,15 +1022,14 @@ size_t IndirectCallPromotion::canPromoteCallsite(
       const double TopNMispredictFrequency =
           (100.0 * TotalMispredictsTopN) / NumCalls;
 
-      if (TopNMispredictFrequency <
-          opts::IndirectCallPromotionMispredictThreshold) {
+      if (TopNMispredictFrequency < opts::ICPMispredictThreshold) {
         if (opts::Verbosity >= 1) {
           const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
           outs() << "BOLT-INFO: ICP failed in " << *BB.getFunction() << " @ "
                  << InstIdx << " in " << BB.getName()
                  << ", calls = " << NumCalls << ", top N mispredict frequency "
                  << format("%.1f", TopNMispredictFrequency) << "% < "
-                 << opts::IndirectCallPromotionMispredictThreshold << "%\n";
+                 << opts::ICPMispredictThreshold << "%\n";
         }
         return 0;
       }
@@ -1092,16 +1088,14 @@ void IndirectCallPromotion::printCallsiteInfo(
 }
 
 void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
-  if (opts::IndirectCallPromotion == ICP_NONE)
+  if (opts::ICP == ICP_NONE)
     return;
 
   auto &BFs = BC.getBinaryFunctions();
 
-  const bool OptimizeCalls = (opts::IndirectCallPromotion == ICP_CALLS ||
-                              opts::IndirectCallPromotion == ICP_ALL);
+  const bool OptimizeCalls = (opts::ICP == ICP_CALLS || opts::ICP == ICP_ALL);
   const bool OptimizeJumpTables =
-      (opts::IndirectCallPromotion == ICP_JUMP_TABLES ||
-       opts::IndirectCallPromotion == ICP_ALL);
+      (opts::ICP == ICP_JUMP_TABLES || opts::ICP == ICP_ALL);
 
   std::unique_ptr<RegAnalysis> RA;
   std::unique_ptr<BinaryFunctionCallGraph> CG;
