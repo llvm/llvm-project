@@ -136,6 +136,9 @@ Bug Fixes
   floating-point vector type when the width of the initialization is exactly
   the same as the elements of the vector being initialized.
   Fixes `Issue 50216 <https://github.com/llvm/llvm-project/issues/50216>`_.
+- Fixed a crash when the ``__bf16`` type is used such that its size or
+  alignment is calculated on a target which does not support that type. This
+  fixes `Issue 50171 <https://github.com/llvm/llvm-project/issues/50171>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
