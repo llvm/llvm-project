@@ -1777,6 +1777,21 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(VL, RegState::Kill)
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
+  } else if ((NumOfVReg == 3 || NumOfVReg == 5 || NumOfVReg == 9) &&
+             STI.hasStdExtZba()) {
+    // We can use Zba SHXADD instructions for multiply in some cases.
+    // TODO: Generalize to SHXADD+SLLI.
+    unsigned Opc;
+    switch (NumOfVReg) {
+    default: llvm_unreachable("Unexpected number of vregs");
+    case 3: Opc = RISCV::SH1ADD; break;
+    case 5: Opc = RISCV::SH2ADD; break;
+    case 9: Opc = RISCV::SH3ADD; break;
+    }
+    BuildMI(MBB, II, DL, get(Opc), VL)
+        .addReg(VL, RegState::Kill)
+        .addReg(VL)
+        .setMIFlag(Flag);
   } else if (isPowerOf2_32(NumOfVReg - 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(NumOfVReg - 1);
