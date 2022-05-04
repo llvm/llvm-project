@@ -108,7 +108,10 @@
 #define C NASTY_MACRO
 #define Cp NASTY_MACRO
 #define Cs NASTY_MACRO
-#define D NASTY_MACRO
+// Windows setjmp.h contains a struct member named 'D' on ARM/AArch64.
+#ifndef _WIN32
+# define D NASTY_MACRO
+#endif
 #define Dp NASTY_MACRO
 #define Ds NASTY_MACRO
 #define E NASTY_MACRO
