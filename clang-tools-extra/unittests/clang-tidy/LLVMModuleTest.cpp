@@ -204,6 +204,14 @@ TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
                 "include/llvm/ADT/foo.h",
                 StringRef("header guard does not follow preferred style")));
 
+  // An extra space inside the comment is OK.
+  llvm::StringRef WithExtraSpace = "#ifndef LLVM_ADT_FOO_H\n"
+                                   "#define LLVM_ADT_FOO_H\n"
+                                   "#endif //  LLVM_ADT_FOO_H\n";
+  EXPECT_EQ(WithExtraSpace,
+            runHeaderGuardCheckWithEndif(WithExtraSpace,
+                                         "include/llvm/ADT/foo.h", None));
+
   EXPECT_EQ("#ifndef LLVM_ADT_FOO_H\n"
             "#define LLVM_ADT_FOO_H\n"
             "#endif \\ \n"
