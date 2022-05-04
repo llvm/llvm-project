@@ -86,7 +86,8 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
-* ...
+* 8 and 16-bit atomic loads and stores are now supported
+
 
 Changes to the ARM Backend
 --------------------------
