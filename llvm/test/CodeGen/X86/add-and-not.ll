@@ -121,7 +121,7 @@ define i64 @add_and_xor_const(i64 %x) {
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
   %xor = xor i64 %x, -1
   %and = and i64 %xor, 1
@@ -148,7 +148,7 @@ define i64 @add_and_xor_const_explicit_trunc(i64 %x) {
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
   %trunc = trunc i64 %x to i32
   %xor = xor i32 %trunc, -1
@@ -195,7 +195,7 @@ define i8* @gep_and_xor_const(i8* %a) {
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
   %old = ptrtoint i8* %a to i64
   %old.not = and i64 %old, 1
