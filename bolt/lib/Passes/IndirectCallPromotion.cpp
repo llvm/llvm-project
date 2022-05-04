@@ -515,20 +515,17 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
   JumpTableInfoType HotTargets =
       maybeGetHotJumpTableTargets(BB, CallInst, TargetFetchInst, JT);
 
-  if (!HotTargets.empty()) {
-    auto findTargetsIndex = [&](uint64_t JTIndex) {
-      for (size_t I = 0; I < Targets.size(); ++I) {
-        std::vector<uint64_t> &JTIs = Targets[I].JTIndices;
-        if (std::find(JTIs.begin(), JTIs.end(), JTIndex) != JTIs.end())
-          return I;
-      }
-      LLVM_DEBUG(
-          dbgs() << "BOLT-ERROR: Unable to find target index for hot jump "
-                 << " table entry in " << *BB.getFunction() << "\n");
-      llvm_unreachable("Hot indices must be referred to by at least one "
-                       "callsite");
-    };
+  auto findTargetsIndex = [&](uint64_t JTIndex) {
+    for (size_t I = 0; I < Targets.size(); ++I)
+      if (llvm::is_contained(Targets[I].JTIndices, JTIndex))
+        return I;
+    LLVM_DEBUG(dbgs() << "BOLT-ERROR: Unable to find target index for hot jump "
+                      << " table entry in " << *BB.getFunction() << "\n");
+    llvm_unreachable("Hot indices must be referred to by at least one "
+                     "callsite");
+  };
 
+  if (!HotTargets.empty()) {
     if (opts::Verbosity >= 1)
       for (size_t I = 0; I < HotTargets.size(); ++I)
         outs() << "BOLT-INFO: HotTarget[" << I << "] = (" << HotTargets[I].first
