@@ -1152,4 +1152,38 @@ TEST_F(FlowConditionTest, OpaqueFlowConditionInsideBranchMergesToOpaqueBool) {
       });
 }
 
+TEST_F(FlowConditionTest, PointerToBoolImplicitCast) {
+  std::string Code = R"(
+    void target(int *Ptr) {
+      bool Foo = false;
+      if (Ptr) {
+        Foo = true;
+        /*[[p1]]*/
+      }
+
+      (void)0;
+      /*[[p2]]*/
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p2", _), Pair("p1", _)));
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const Environment &Env1 = Results[1].second.Env;
+        auto &FooVal1 =
+            *cast<BoolValue>(Env1.getValue(*FooDecl, SkipPast::Reference));
+        EXPECT_TRUE(Env1.flowConditionImplies(FooVal1));
+
+        const Environment &Env2 = Results[0].second.Env;
+        auto &FooVal2 =
+            *cast<BoolValue>(Env2.getValue(*FooDecl, SkipPast::Reference));
+        EXPECT_FALSE(Env2.flowConditionImplies(FooVal2));
+      });
+}
+
 } // namespace

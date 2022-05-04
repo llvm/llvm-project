@@ -15,6 +15,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
@@ -342,6 +343,7 @@ StorageLocation &Environment::createStorageLocation(const VarDecl &D) {
 }
 
 StorageLocation &Environment::createStorageLocation(const Expr &E) {
+  assert(!isa<ExprWithCleanups>(&E));
   // Evaluated expressions are always assigned the same storage locations to
   // ensure that the environment stabilizes across loop iterations. Storage
   // locations for evaluated expressions are stored in the analysis context.
@@ -364,12 +366,14 @@ StorageLocation *Environment::getStorageLocation(const ValueDecl &D,
 }
 
 void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
+  assert(!isa<ExprWithCleanups>(&E));
   assert(ExprToLoc.find(&E) == ExprToLoc.end());
   ExprToLoc[&E] = &Loc;
 }
 
 StorageLocation *Environment::getStorageLocation(const Expr &E,
                                                  SkipPast SP) const {
+  assert(!isa<ExprWithCleanups>(&E));
   // FIXME: Add a test with parens.
   auto It = ExprToLoc.find(E.IgnoreParens());
   return It == ExprToLoc.end() ? nullptr : &skip(*It->second, SP);
