@@ -34,8 +34,8 @@ Read-only,is_heap,Not assigned,n/a,Not started
 Read-only,is_heap_until,Not assigned,n/a,Not started
 Read-only,clamp,Not assigned,n/a,Not started
 Read-only,is_permutation,Not assigned,n/a,Not started
-Read-only,for_each,Not assigned,n/a,Not started
-Read-only,for_each_n,Not assigned,n/a,Not started
+Read-only,for_each,Nikolas Klauser,n/a,✅
+Read-only,for_each_n,Nikolas Klauser,n/a,✅
 Write,copy,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,copy_if,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,copy_n,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅

@@ -964,6 +964,14 @@ public:
            getGeneration() <= AMDGPUSubtarget::GFX9;
   }
 
+  bool hasReadM0LdsDmaHazard() const {
+    return getGeneration() == AMDGPUSubtarget::GFX9;
+  }
+
+  bool hasReadM0LdsDirectHazard() const {
+    return getGeneration() == AMDGPUSubtarget::GFX9;
+  }
+
   bool hasVcmpxPermlaneHazard() const {
     return HasVcmpxPermlaneHazard;
   }

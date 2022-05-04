@@ -269,17 +269,19 @@ struct CallOpInterface
         continue;
       }
 
-      if (Optional<int64_t> bbArgIdx =
-              getEquivalentFuncArgIdx(funcOp, funcState, returnValIdx)) {
-        // Return operands that are equivalent to some bbArg, are not
-        // returned.
-        FailureOr<Value> bufferOrFailure =
-            state.getBuffer(rewriter, callOp->getOpOperand(*bbArgIdx));
-        if (failed(bufferOrFailure))
-          return failure();
-        replacementValues[returnValIdx] = *bufferOrFailure;
-        newOperands[*bbArgIdx] = *bufferOrFailure;
-        continue;
+      if (options.dropEquivalentFuncResults) {
+        if (Optional<int64_t> bbArgIdx =
+                getEquivalentFuncArgIdx(funcOp, funcState, returnValIdx)) {
+          // Return operands that are equivalent to some bbArg, are not
+          // returned.
+          FailureOr<Value> bufferOrFailure =
+              state.getBuffer(rewriter, callOp->getOpOperand(*bbArgIdx));
+          if (failed(bufferOrFailure))
+            return failure();
+          replacementValues[returnValIdx] = *bufferOrFailure;
+          newOperands[*bbArgIdx] = *bufferOrFailure;
+          continue;
+        }
       }
 
       if (!options.allowReturnAllocs)
@@ -404,7 +406,8 @@ struct FuncOpInterface
     FunctionType funcType = funcOp.getFunctionType();
     const FuncAnalysisState &funcState =
         getFuncAnalysisState(state.getAnalysisState());
-    const BufferizationOptions &options = state.getOptions();
+    const OneShotBufferizationOptions &options =
+        static_cast<const OneShotBufferizationOptions &>(state.getOptions());
 
     // Construct the bufferized function type.
     SmallVector<Type> argTypes;
@@ -479,20 +482,23 @@ struct FuncOpInterface
       }
 
       // If return operand is equivalent to some bbArg, no need to return it.
-      if (Optional<int64_t> equivBbArgIdx = getEquivalentFuncArgIdx(
-              funcOp, funcState, returnOperand.getOperandNumber())) {
-        rewriter.setInsertionPoint(returnOp);
-        Location loc = returnOp.getLoc();
-        Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
-            loc, getMemRefType(returnVal.getType().cast<TensorType>(), options),
-            returnVal);
-        BlockArgument equivBbArg = funcOp.getArgument(*equivBbArgIdx);
-        // Note: This copy will fold away. It must be inserted here to ensure
-        // that `returnVal` still has at least one use and does not fold away.
-        if (failed(
-                createMemCpy(rewriter, loc, toMemrefOp, equivBbArg, options)))
-          return funcOp->emitError("could not generate copy for bbArg");
-        continue;
+      if (options.dropEquivalentFuncResults) {
+        if (Optional<int64_t> equivBbArgIdx = getEquivalentFuncArgIdx(
+                funcOp, funcState, returnOperand.getOperandNumber())) {
+          rewriter.setInsertionPoint(returnOp);
+          Location loc = returnOp.getLoc();
+          Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+              loc,
+              getMemRefType(returnVal.getType().cast<TensorType>(), options),
+              returnVal);
+          BlockArgument equivBbArg = funcOp.getArgument(*equivBbArgIdx);
+          // Note: This copy will fold away. It must be inserted here to ensure
+          // that `returnVal` still has at least one use and does not fold away.
+          if (failed(
+                  createMemCpy(rewriter, loc, toMemrefOp, equivBbArg, options)))
+            return funcOp->emitError("could not generate copy for bbArg");
+          continue;
+        }
       }
 
       returnValues.push_back(*state.getBuffer(rewriter, returnOperand));
