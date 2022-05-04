@@ -968,7 +968,7 @@ bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
     if (RISBG.Input.getOpcode() != ISD::ANY_EXTEND &&
         RISBG.Input.getOpcode() != ISD::TRUNCATE)
       Count += 1;
-  if (Count == 0)
+  if (Count == 0 || isa<ConstantSDNode>(RISBG.Input))
     return false;
 
   // Prefer to use normal shift instructions over RISBG, since they can handle

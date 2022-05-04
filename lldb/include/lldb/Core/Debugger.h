@@ -49,6 +49,7 @@
 
 namespace llvm {
 class raw_ostream;
+class ThreadPool;
 }
 
 namespace lldb_private {
@@ -378,6 +379,9 @@ public:
   lldb::BroadcasterManagerSP GetBroadcasterManager() {
     return m_broadcaster_manager_sp;
   }
+
+  /// Shared thread poll. Use only with ThreadPoolTaskGroup.
+  static llvm::ThreadPool &GetThreadPool();
 
   /// Report warning events.
   ///
