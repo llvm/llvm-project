@@ -4,7 +4,7 @@ typedef unsigned int uint32_t;
 struct S0 {
   signed f2;
 };
-static g_463 = 0x1561983AL;
+static int g_463 = 0x1561983AL;
 void func_1(void)
 {
   struct S0 l_19;
