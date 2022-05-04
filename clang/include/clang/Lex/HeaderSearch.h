@@ -20,6 +20,7 @@
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -313,6 +314,9 @@ class HeaderSearch {
   /// Set of module map files we've already loaded, and a flag indicating
   /// whether they were valid or not.
   llvm::DenseMap<const FileEntry *, bool> LoadedModuleMaps;
+
+  // A map of discovered headers with their associated include file name.
+  llvm::DenseMap<const FileEntry *, llvm::SmallString<64>> IncludeNames;
 
   /// Uniqued set of framework names, which is used to track which
   /// headers were included as framework headers.
@@ -822,6 +826,13 @@ public:
 
   /// Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);
+
+  /// Retrieve the include name for the header.
+  ///
+  /// \param File The entry for a given header.
+  /// \returns The name of how the file was included when the header's location
+  /// was resolved.
+  StringRef getIncludeNameForHeader(const FileEntry *File) const;
 
   /// Suggest a path by which the specified file could be found, for use in
   /// diagnostics to suggest a #include. Returned path will only contain forward
