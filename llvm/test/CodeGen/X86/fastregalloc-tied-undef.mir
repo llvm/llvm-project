@@ -1,0 +1,36 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=regallocfast -o - %s | FileCheck %s
+
+# If the tied use is undef value, fastregalloc should free the def register.
+# There is no reload needed for the undef value.
+...
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vr128 }
+frameInfo:
+  maxAlignment:    16
+stack:
+  - { id: 0, size: 64, alignment: 16 }
+  - { id: 1, size: 16, alignment: 16 }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: bb.0.entry
+    ; CHECK-NEXT: renamable $xmm0 = PXORrr undef renamable $xmm0, undef renamable $xmm0
+    ; CHECK-NEXT: MOVAPSmr %stack.1, 1, $noreg, 0, $noreg, renamable $xmm0
+    ; CHECK-NEXT: MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, renamable $xmm0
+    ; CHECK-NEXT: MOVAPSmr %stack.0, 1, $noreg, 16, $noreg, renamable $xmm0
+    ; CHECK-NEXT: MOVAPSmr %stack.0, 1, $noreg, 32, $noreg, renamable $xmm0
+    ; CHECK-NEXT: MOVAPSmr %stack.0, 1, $noreg, 48, $noreg, killed renamable $xmm0
+
+    %0:vr128 = PXORrr undef %0, undef %0
+    MOVAPSmr %stack.1, 1, $noreg, 0, $noreg, %0
+    MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, %0
+    MOVAPSmr %stack.0, 1, $noreg, 16, $noreg, %0
+    MOVAPSmr %stack.0, 1, $noreg, 32, $noreg, %0
+    MOVAPSmr %stack.0, 1, $noreg, 48, $noreg, killed %0
+    RET 0
+
+...
