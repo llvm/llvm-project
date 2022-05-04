@@ -318,35 +318,31 @@ bool Sema::CheckConstraintSatisfaction(
     return false;
   }
 
-  llvm::FoldingSetNodeID ID;
-  void *InsertPos;
-  ConstraintSatisfaction *Satisfaction = nullptr;
   bool ShouldCache = LangOpts.ConceptSatisfactionCaching && Template;
-  if (ShouldCache) {
-    ConstraintSatisfaction::Profile(ID, Context, Template, TemplateArgs);
-    Satisfaction = SatisfactionCache.FindNodeOrInsertPos(ID, InsertPos);
-    if (Satisfaction) {
-      OutSatisfaction = *Satisfaction;
-      return false;
-    }
-    Satisfaction = new ConstraintSatisfaction(Template, TemplateArgs);
-  } else {
-    Satisfaction = &OutSatisfaction;
+  if (!ShouldCache) {
+    return ::CheckConstraintSatisfaction(*this, Template, ConstraintExprs,
+                                         TemplateArgs, TemplateIDRange,
+                                         OutSatisfaction);
   }
+  llvm::FoldingSetNodeID ID;
+  ConstraintSatisfaction::Profile(ID, Context, Template, TemplateArgs);
+  void *InsertPos;
+  if (auto *Cached = SatisfactionCache.FindNodeOrInsertPos(ID, InsertPos)) {
+    OutSatisfaction = *Cached;
+    return false;
+  }
+  auto Satisfaction =
+      std::make_unique<ConstraintSatisfaction>(Template, TemplateArgs);
   if (::CheckConstraintSatisfaction(*this, Template, ConstraintExprs,
                                     TemplateArgs, TemplateIDRange,
                                     *Satisfaction)) {
-    if (ShouldCache)
-      delete Satisfaction;
     return true;
   }
-
-  if (ShouldCache) {
-    // We cannot use InsertNode here because CheckConstraintSatisfaction might
-    // have invalidated it.
-    SatisfactionCache.InsertNode(Satisfaction);
-    OutSatisfaction = *Satisfaction;
-  }
+  OutSatisfaction = *Satisfaction;
+  // We cannot use InsertPos here because CheckConstraintSatisfaction might have
+  // invalidated it.
+  // FIXME: this leaks memory, we should allocate in the arena instead.
+  SatisfactionCache.InsertNode(Satisfaction.release());
   return false;
 }
 
