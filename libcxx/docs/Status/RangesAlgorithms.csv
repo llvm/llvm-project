@@ -26,7 +26,7 @@ Search,count_if,Nikolas Klauser, `D121523 <https://llvm.org/D121523>`_,✅
 Search,search,Not assigned,n/a,Not started
 Search,search_n,Not assigned,n/a,Not started
 Search,find_end,Not assigned,n/a,Not started
-Read-only,is_partitioned,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
+Read-only,is_partitioned,Nikolas Klauser,`D124440 <https://llvm.org/D124440>`_,✅
 Read-only,is_sorted,Not assigned,n/a,Not started
 Read-only,is_sorted_unitl,Not assigned,n/a,Not started
 Read-only,includes,Not assigned,n/a,Not started
