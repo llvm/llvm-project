@@ -172,10 +172,6 @@ public:
   /// Creates a storage location for `E`. Does not assign the returned storage
   /// location to `E` in the environment. Does not assign a value to the
   /// returned storage location in the environment.
-  ///
-  /// Requirements:
-  ///
-  ///  `E` must not be a `ExprWithCleanups`.
   StorageLocation &createStorageLocation(const Expr &E);
 
   /// Assigns `Loc` as the storage location of `D` in the environment.
@@ -195,16 +191,11 @@ public:
   /// Requirements:
   ///
   ///  `E` must not be assigned a storage location in the environment.
-  ///  `E` must not be a `ExprWithCleanups`.
   void setStorageLocation(const Expr &E, StorageLocation &Loc);
 
   /// Returns the storage location assigned to `E` in the environment, applying
   /// the `SP` policy for skipping past indirections, or null if `E` isn't
   /// assigned a storage location in the environment.
-  ///
-  /// Requirements:
-  ///
-  ///  `E` must not be a `ExprWithCleanups`.
   StorageLocation *getStorageLocation(const Expr &E, SkipPast SP) const;
 
   /// Returns the storage location assigned to the `this` pointee in the
@@ -235,12 +226,6 @@ public:
 
   /// Equivalent to `getValue(getStorageLocation(E, SP), SkipPast::None)` if `E`
   /// is assigned a storage location in the environment, otherwise returns null.
-  ///
-  /// Requirements:
-  ///
-  ///  `E` must not be a `ExprWithCleanups`.
-  ///
-  /// FIXME: `Environment` should ignore any `ExprWithCleanups` it sees.
   Value *getValue(const Expr &E, SkipPast SP) const;
 
   /// Transfers ownership of `Loc` to the analysis context and returns a

@@ -343,7 +343,6 @@ StorageLocation &Environment::createStorageLocation(const VarDecl &D) {
 }
 
 StorageLocation &Environment::createStorageLocation(const Expr &E) {
-  assert(!isa<ExprWithCleanups>(&E));
   // Evaluated expressions are always assigned the same storage locations to
   // ensure that the environment stabilizes across loop iterations. Storage
   // locations for evaluated expressions are stored in the analysis context.
@@ -366,16 +365,15 @@ StorageLocation *Environment::getStorageLocation(const ValueDecl &D,
 }
 
 void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
-  assert(!isa<ExprWithCleanups>(&E));
-  assert(ExprToLoc.find(&E) == ExprToLoc.end());
-  ExprToLoc[&E] = &Loc;
+  const Expr &CanonE = ignoreCFGOmittedNodes(E);
+  assert(ExprToLoc.find(&CanonE) == ExprToLoc.end());
+  ExprToLoc[&CanonE] = &Loc;
 }
 
 StorageLocation *Environment::getStorageLocation(const Expr &E,
                                                  SkipPast SP) const {
-  assert(!isa<ExprWithCleanups>(&E));
   // FIXME: Add a test with parens.
-  auto It = ExprToLoc.find(E.IgnoreParens());
+  auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
   return It == ExprToLoc.end() ? nullptr : &skip(*It->second, SP);
 }
 

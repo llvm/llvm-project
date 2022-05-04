@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include <cassert>
 #include <memory>
@@ -155,3 +156,22 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
 
 } // namespace dataflow
 } // namespace clang
+
+using namespace clang;
+
+const Expr &clang::dataflow::ignoreCFGOmittedNodes(const Expr &E) {
+  const Expr *Current = &E;
+  if (auto *EWC = dyn_cast<ExprWithCleanups>(Current)) {
+    Current = EWC->getSubExpr();
+    assert(Current != nullptr);
+  }
+  Current = Current->IgnoreParens();
+  assert(Current != nullptr);
+  return *Current;
+}
+
+const Stmt &clang::dataflow::ignoreCFGOmittedNodes(const Stmt &S) {
+  if (auto *E = dyn_cast<Expr>(&S))
+    return ignoreCFGOmittedNodes(*E);
+  return S;
+}

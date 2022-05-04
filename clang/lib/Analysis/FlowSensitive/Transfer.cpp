@@ -33,27 +33,12 @@
 namespace clang {
 namespace dataflow {
 
-const Expr *ignoreExprWithCleanups(const Expr *E) {
-  if (auto *C = dyn_cast_or_null<ExprWithCleanups>(E))
-    return C->getSubExpr();
-  return E;
-}
-
 static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
                                           Environment &Env) {
-  // Equality of booleans involves implicit integral casts. Ignore these casts
-  // for now and focus on the values associated with the wrapped expressions.
-  // FIXME: Consider changing this once the framework offers better support for
-  // integral casts.
-  const Expr *LHSNorm = LHS.IgnoreCasts();
-  const Expr *RHSNorm = RHS.IgnoreCasts();
-  assert(LHSNorm != nullptr);
-  assert(RHSNorm != nullptr);
-
-  if (auto *LHSValue = dyn_cast_or_null<BoolValue>(
-          Env.getValue(*LHSNorm, SkipPast::Reference)))
-    if (auto *RHSValue = dyn_cast_or_null<BoolValue>(
-            Env.getValue(*RHSNorm, SkipPast::Reference)))
+  if (auto *LHSValue =
+          dyn_cast_or_null<BoolValue>(Env.getValue(LHS, SkipPast::Reference)))
+    if (auto *RHSValue =
+            dyn_cast_or_null<BoolValue>(Env.getValue(RHS, SkipPast::Reference)))
       return Env.makeIff(*LHSValue, *RHSValue);
 
   return Env.makeAtomicBoolValue();
@@ -65,14 +50,10 @@ public:
       : StmtToEnv(StmtToEnv), Env(Env) {}
 
   void VisitBinaryOperator(const BinaryOperator *S) {
-    // The CFG does not contain `ParenExpr` as top-level statements in basic
-    // blocks, however sub-expressions can still be of that type.
-    assert(S->getLHS() != nullptr);
-    const Expr *LHS = S->getLHS()->IgnoreParens();
+    const Expr *LHS = S->getLHS();
     assert(LHS != nullptr);
 
-    assert(S->getRHS() != nullptr);
-    const Expr *RHS = S->getRHS()->IgnoreParens();
+    const Expr *RHS = S->getRHS();
     assert(RHS != nullptr);
 
     switch (S->getOpcode()) {
@@ -155,7 +136,7 @@ public:
       return;
     }
 
-    InitExpr = ignoreExprWithCleanups(D.getInit());
+    InitExpr = D.getInit();
     assert(InitExpr != nullptr);
 
     if (D.getType()->isReferenceType()) {
@@ -476,8 +457,7 @@ public:
       assert(S->getArg(0) != nullptr);
       // `__builtin_expect` returns by-value, so strip away any potential
       // references in the argument.
-      auto *ArgLoc = Env.getStorageLocation(
-          *S->getArg(0)->IgnoreParenImpCasts(), SkipPast::Reference);
+      auto *ArgLoc = Env.getStorageLocation(*S->getArg(0), SkipPast::Reference);
       if (ArgLoc == nullptr)
         return;
       Env.setStorageLocation(*S, *ArgLoc);
@@ -562,6 +542,24 @@ public:
     Env.setValue(Loc, Env.getBoolLiteralValue(S->getValue()));
   }
 
+  void VisitParenExpr(const ParenExpr *S) {
+    // The CFG does not contain `ParenExpr` as top-level statements in basic
+    // blocks, however manual traversal to sub-expressions may encounter them.
+    // Redirect to the sub-expression.
+    auto *SubExpr = S->getSubExpr();
+    assert(SubExpr != nullptr);
+    Visit(SubExpr);
+  }
+
+  void VisitExprWithCleanups(const ExprWithCleanups *S) {
+    // The CFG does not contain `ExprWithCleanups` as top-level statements in
+    // basic blocks, however manual traversal to sub-expressions may encounter
+    // them. Redirect to the sub-expression.
+    auto *SubExpr = S->getSubExpr();
+    assert(SubExpr != nullptr);
+    Visit(SubExpr);
+  }
+
 private:
   BoolValue &getLogicOperatorSubExprValue(const Expr &SubExpr) {
     // `SubExpr` and its parent logic operator might be part of different basic
@@ -593,7 +591,6 @@ private:
 };
 
 void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env) {
-  assert(!(isa<ParenExpr, ExprWithCleanups>(&S)));
   TransferVisitor(StmtToEnv, Env).Visit(&S);
 }
 
