@@ -759,7 +759,7 @@ define <3 x float> @fma_unary_shuffle_ops_widening(<2 x float> %x, <2 x float> %
   call void @use_vec3(<3 x float> %a)
   %b = shufflevector <2 x float> %y, <2 x float> poison, <3 x i32> <i32 1, i32 0, i32 1>
   %c = shufflevector <2 x float> %z, <2 x float> poison, <3 x i32> <i32 1, i32 0, i32 1>
-  %r = call <3 x float> @llvm.fma.v3f32(<3 x float> %a, <3 x float> %b, <3 x float> %c)
+  %r = call fast <3 x float> @llvm.fma.v3f32(<3 x float> %a, <3 x float> %b, <3 x float> %c)
   ret <3 x float> %r
 }
 
@@ -775,7 +775,7 @@ define <2 x float> @fma_unary_shuffle_ops_narrowing(<3 x float> %x, <3 x float> 
   %b = shufflevector <3 x float> %y, <3 x float> poison, <2 x i32> <i32 1, i32 0>
   call void @use_vec(<2 x float> %b)
   %c = shufflevector <3 x float> %z, <3 x float> poison, <2 x i32> <i32 1, i32 0>
-  %r = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
+  %r = call nnan nsz <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
   ret <2 x float> %r
 }
 
