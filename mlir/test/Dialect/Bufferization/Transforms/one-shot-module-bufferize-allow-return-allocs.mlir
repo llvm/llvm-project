@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs drop-equivalent-func-results=false" -split-input-file | FileCheck %s --check-prefix=EQUIV
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
@@ -62,3 +63,16 @@ func.func @main(%t: tensor<?xf32>, %sz: index, %idx: index) -> (f32, f32) {
   %r2 = tensor.extract %filled[%idx] : tensor<?xf32>
   return %r1, %r2 : f32, f32
 }
+
+// -----
+
+func.func @return_arg(%A: tensor<?xf32>) -> tensor<?xf32> {
+  func.return %A : tensor<?xf32>
+}
+// CHECK-LABEL: func @return_arg
+// CHECK-SAME:      %[[A:.*]]: memref<?xf32
+//  CHECK-NOT:    return %[[A]]
+
+// EQUIV-LABEL: func @return_arg
+// EQUIV-SAME:      %[[A:.*]]: memref<?xf32
+//      EQUIV:    return %[[A]]
