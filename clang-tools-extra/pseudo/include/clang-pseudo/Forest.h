@@ -157,6 +157,10 @@ public:
     return create(ForestNode::Opaque, SID, Start, 0, {});
   }
 
+  ForestNode &createTerminal(tok::TokenKind TK, Token::Index Start) {
+    return create(ForestNode::Terminal, tokenSymbol(TK), Start, 0, {});
+  }
+
   size_t nodeCount() const { return NodeCount; }
   size_t bytes() const { return Arena.getBytesAllocated() + sizeof(this); }
 

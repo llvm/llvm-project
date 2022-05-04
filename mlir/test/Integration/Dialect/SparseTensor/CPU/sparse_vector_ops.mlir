@@ -125,13 +125,13 @@ module {
   // Sum reduces dot product of two sparse vectors.
   func.func @vector_dotprod(%arga: tensor<?xf64, #SparseVector>,
                        %argb: tensor<?xf64, #SparseVector>,
-		       %argx: tensor<f64> {linalg.inplaceable = true}) -> tensor<f64> {
+                       %argx: tensor<f64> {linalg.inplaceable = true}) -> tensor<f64> {
     %0 = linalg.generic #trait_dot
        ins(%arga, %argb: tensor<?xf64, #SparseVector>, tensor<?xf64, #SparseVector>)
         outs(%argx: tensor<f64>) {
         ^bb(%a: f64, %b: f64, %x: f64):
           %1 = arith.mulf %a, %b : f64
-	  %2 = arith.addf %x, %1 : f64
+          %2 = arith.addf %x, %1 : f64
           linalg.yield %2 : f64
     } -> tensor<f64>
     return %0 : tensor<f64>

@@ -1993,9 +1993,12 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   for (StoreInst *ST : Stores) {
     Value *Ptr = ST->getPointerOperand();
 
-    if (isUniform(Ptr))
+    if (isUniform(Ptr)) {
+      // Record store instructions to loop invariant addresses
+      StoresToInvariantAddresses.push_back(ST);
       HasDependenceInvolvingLoopInvariantAddress |=
           !UniformStores.insert(Ptr).second;
+    }
 
     // If we did *not* see this pointer before, insert it to  the read-write
     // list. At this phase it is only a 'write' list.

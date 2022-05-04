@@ -999,18 +999,17 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*desc=*/[{
         Returns the statically-known loop ranges. Composes
         `getShapesToLoopsMap()` with the result of `getStaticShape`.
-        Returns None if `getShapesToLoopsMap()` fails. Returns
-        ShapeType::kDynamicSize for non-statically-known loop ranges.
+        Returns ShapeType::kDynamicSize for non-statically-known loop ranges.
+        This is expected to be called by a valid Linalg op
       }],
-      /*retTy=*/"Optional<SmallVector<int64_t, 4>>",
+      /*retTy=*/"SmallVector<int64_t, 4>",
       /*methodName=*/"getStaticLoopRanges",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         SmallVector<int64_t> viewSizes = getStaticShape();
         AffineMap invertedMap = getShapesToLoopsMap();
-        if (!invertedMap)
-          return {};
+        assert(invertedMap && "expected a valid Linalg op to call the method");
         return invertedMap.compose(viewSizes);
       }]
     >,
