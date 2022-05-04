@@ -18010,10 +18010,20 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                Style);
   // clang-format on
 
-  Style = getLLVMStyleWithColumns(120);
+  Style = getLLVMStyleWithColumns(20);
   Style.AlignConsecutiveAssignments.Enabled = true;
-  Style.ContinuationIndentWidth = 4;
   Style.IndentWidth = 4;
+
+  verifyFormat("void foo() {\n"
+               "    int i1 = 1;\n"
+               "    int j  = 0;\n"
+               "    int k  = bar(\n"
+               "        argument1,\n"
+               "        argument2);\n"
+               "}",
+               Style);
+
+  Style.ColumnLimit = 120;
 
   // clang-format off
   verifyFormat("void SomeFunc() {\n"
