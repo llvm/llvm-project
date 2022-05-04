@@ -1243,3 +1243,62 @@ func.func @write_to_same_tensor_in_loop_out_of_place(
 
   return %r0 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @write_to_same_init_tensor_in_place(
+func.func @write_to_same_init_tensor_in_place(
+    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %lb : index, %ub : index, %step : index, %sz: index, %sz2: index)
+  -> (tensor<?xf32>)
+{
+  %B = linalg.init_tensor [%sz2] : tensor<?xf32>
+
+  // CHECK: scf.for {{.*}} {
+  %r0 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
+    %i2 = arith.index_cast %i : index to i32
+    %i3 = arith.sitofp %i2 : i32 to f32
+    // %B is written multiple times inside a loop, but it is an init_tensor.
+    //      CHECK: tensor.insert
+    // CHECK-SAME:   {__inplace_operands_attr__ = ["none", "true", "none"]}
+    %B2 = tensor.insert %i3 into %B[%i] : tensor<?xf32>
+    //      CHECK: tensor.insert_slice
+    // CHECK-SAME:   {__inplace_operands_attr__ = ["true", "true", "none", "none"]}
+    %A2 = tensor.insert_slice %B2 into %t[%i][%sz][1] : tensor<?xf32> into tensor<?xf32>
+    scf.yield %A2 : tensor<?xf32>
+  }
+  // CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "true"]}
+
+  return %r0 : tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @write_to_same_init_tensor_out_of_place(
+func.func @write_to_same_init_tensor_out_of_place(
+    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %lb : index, %ub : index, %step : index, %sz: index, %sz2: index, %f: f32)
+  -> (tensor<?xf32>)
+{
+  %B = linalg.init_tensor [%sz2] : tensor<?xf32>
+  %C = tensor.insert %f into %B[%lb] : tensor<?xf32>
+
+  // CHECK: scf.for {{.*}} {
+  %r0 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
+    %i2 = arith.index_cast %i : index to i32
+    %i3 = arith.sitofp %i2 : i32 to f32
+    // %C is written multiple times inside a loop. Even though %C aliases with
+    // an init_tensor, out-of-bounds bufferization is necessary because there is
+    // another alias (%C) outside of the loop.
+    //      CHECK: tensor.insert
+    // CHECK-SAME:   {__inplace_operands_attr__ = ["none", "false", "none"]}
+    %B2 = tensor.insert %i3 into %C[%i] : tensor<?xf32>
+    //      CHECK: tensor.insert_slice
+    // CHECK-SAME:   {__inplace_operands_attr__ = ["true", "true", "none", "none"]}
+    %A2 = tensor.insert_slice %B2 into %t[%i][%sz][1] : tensor<?xf32> into tensor<?xf32>
+    scf.yield %A2 : tensor<?xf32>
+  }
+  // CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "true"]}
+
+  return %r0 : tensor<?xf32>
+}

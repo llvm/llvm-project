@@ -37,7 +37,7 @@ void f0(void) {
 
 // rdar://problem/8962770
 void test4(void) {
-  int (^f)(void) = ^((x)) { }; // expected-warning {{type specifier missing}} expected-error {{type-id cannot have a name}}
+  int (^f)(void) = ^((x)) { }; // expected-error {{type specifier missing}} expected-error {{type-id cannot have a name}}
 }
 
 // rdar://problem/9170609
