@@ -202,6 +202,11 @@ struct CreateInvocationOptions {
   /// if any errors were encountered.
   /// By default, always return null on errors.
   bool RecoverOnError = false;
+  /// Allow the driver to probe the filesystem for PCH files.
+  /// This is used to replace -include with -include-pch in the cc1 args.
+  /// FIXME: ProbePrecompiled=true is a poor, historical default.
+  /// It misbehaves if the PCH file is from GCC, has the wrong version, etc.
+  bool ProbePrecompiled = true;
   /// If set, the target is populated with the cc1 args produced by the driver.
   /// This may be populated even if createInvocation returns nullptr.
   std::vector<std::string> *CC1Args = nullptr;
@@ -236,7 +241,7 @@ std::unique_ptr<CompilerInvocation> createInvocationFromCommandLine(
         IntrusiveRefCntPtr<DiagnosticsEngine>(),
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr,
     bool ShouldRecoverOnErrors = false,
-    std::vector<std::string> *CC1Args = nullptr);
+    std::vector<std::string> *CC1Args = nullptr, bool ProbePrecompiled = true);
 
 } // namespace clang
 
