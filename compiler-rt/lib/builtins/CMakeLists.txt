@@ -572,6 +572,7 @@ set(avr_SOURCES
   avr/mulqi3.S
   avr/mulhi3.S
   avr/exit.S
+  ${GENERIC_SOURCES}
 )
 
 # hexagon arch
