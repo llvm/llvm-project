@@ -36,18 +36,17 @@
 
 // C89-ish modes.
 LANGSTANDARD(c89, "c89",
-             C, "ISO C 1990",
-             ImplicitInt)
+             C, "ISO C 1990", 0)
 LANGSTANDARD_ALIAS(c89, "c90")
 LANGSTANDARD_ALIAS(c89, "iso9899:1990")
 
 LANGSTANDARD(c94, "iso9899:199409",
              C, "ISO C 1990 with amendment 1",
-             Digraphs | ImplicitInt)
+             Digraphs)
 
 LANGSTANDARD(gnu89, "gnu89",
              C, "ISO C 1990 with GNU extensions",
-             LineComment | Digraphs | GNUMode | ImplicitInt)
+             LineComment | Digraphs | GNUMode)
 LANGSTANDARD_ALIAS(gnu89, "gnu90")
 
 // C99-ish modes

@@ -30,7 +30,7 @@ y::a a3 = a2;
 void foo() {
 y:  // label
   y::a s;
-  
+
   int a = 4;
   a = a ? a : a+1;
 }
@@ -39,7 +39,7 @@ struct b : y::a {};
 
 template <typename T>
 class someclass {
-  
+
   int bar() {
     T *P;
     return 1 ? P->x : P->y;
@@ -62,7 +62,7 @@ struct a {
 void test(struct Type *P) {
   int Type;
   Type = 1 ? P->Type : Type;
-  
+
   Type = (y:b) 4;   // expected-error {{unexpected ':' in nested name specifier}}
   Type = 1 ? (
               (y:b)  // expected-error {{unexpected ':' in nested name specifier}}
@@ -128,7 +128,7 @@ struct CodeCompleteConsumer {
 };
 
 void CodeCompleteConsumer::() { // expected-error {{xpected unqualified-id}}
-} 
+}
 
 ;
 
@@ -306,14 +306,14 @@ namespace rdar37099386 {
 
 // PR8380
 extern ""      // expected-error {{unknown linkage language}}
-test6a { ;// expected-error {{C++ requires a type specifier for all declarations}}
+test6a { ;// expected-error {{a type specifier is required for all declarations}}
 #if __cplusplus <= 199711L
 // expected-error@-2 {{expected ';' after top level declarator}}
 #else
 // expected-error@-4 {{expected expression}}
 // expected-note@-5 {{to match this}}
 #endif
-  
+
   int test6b;
 #if __cplusplus >= 201103L
 // expected-error@+3 {{expected}}

@@ -14,7 +14,7 @@ void test() {
 
 namespace rdar13267210 {
   template < typename T > class A {
-    BaseTy; // expected-error{{C++ requires a type specifier for all declarations}}
+    BaseTy; // expected-error{{a type specifier is required for all declarations}}
   };
 
   template < typename T, int N > class C: A < T > {};

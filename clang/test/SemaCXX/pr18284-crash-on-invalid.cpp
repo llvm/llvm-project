@@ -5,7 +5,7 @@ namespace n1 {
 class A { };
 class C { A a; };
 
-A::RunTest() {} // expected-error {{C++ requires a type specifier for all declarations}}
+A::RunTest() {} // expected-error {{a type specifier is required for all declarations}}
 
 void f() {
   new C;
@@ -16,7 +16,7 @@ namespace n2 {
 class A { };
 class C : public A { };
 
-A::RunTest() {} // expected-error {{C++ requires a type specifier for all declarations}}
+A::RunTest() {} // expected-error {{a type specifier is required for all declarations}}
 
 void f() {
   new C;

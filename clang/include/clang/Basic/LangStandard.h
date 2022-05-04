@@ -59,9 +59,8 @@ enum LangFeatures {
   Digraphs = (1 << 11),
   GNUMode = (1 << 12),
   HexFloat = (1 << 13),
-  ImplicitInt = (1 << 14),
-  OpenCL = (1 << 15),
-  HLSL = (1 << 16)
+  OpenCL = (1 << 14),
+  HLSL = (1 << 15)
 };
 
 /// LangStandard - Information about the properties of a particular language
@@ -130,9 +129,6 @@ public:
 
   /// hasHexFloats - Language supports hexadecimal float constants.
   bool hasHexFloats() const { return Flags & HexFloat; }
-
-  /// hasImplicitInt - Language allows variables to be typed as int implicitly.
-  bool hasImplicitInt() const { return Flags & ImplicitInt; }
 
   /// isOpenCL - Language is a OpenCL variant.
   bool isOpenCL() const { return Flags & OpenCL; }

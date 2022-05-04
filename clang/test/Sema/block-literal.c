@@ -29,7 +29,7 @@ void test2(void) {
   takeblock(^{ printf("%d\n", x); });
 
   while (1) {
-    takeblock(^{ 
+    takeblock(^{
         break;  // expected-error {{'break' statement not in loop or switch statement}}
         continue; // expected-error {{'continue' statement not in loop statement}}
         while(1) break;  // ok
@@ -41,12 +41,12 @@ void test2(void) {
 
   foo:
   takeblock(^{ x = 4; });  // expected-error {{variable is not assignable (missing __block type specifier)}}
-  __block y = 7;    // expected-warning {{type specifier missing, defaults to 'int'}}
+  __block y = 7;    // expected-error {{type specifier missing, defaults to 'int'}}
   takeblock(^{ y = 8; });
 }
 
 
-void (^test3(void))(void) { 
+void (^test3(void))(void) {
   return ^{};
 }
 
@@ -86,4 +86,4 @@ typedef void (^void_block_t)(void);
 
 static const void_block_t myBlock = ^{ };
 
-static const void_block_t myBlock2 = ^ void(void) { }; 
+static const void_block_t myBlock2 = ^ void(void) { };

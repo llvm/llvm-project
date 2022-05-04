@@ -159,7 +159,7 @@ __typeof blur y;  // expected-error {{use of undeclared identifier 'blur'; did y
 }
 
 namespace PR22092 {
-a = b ? : 0;  // expected-error {{C++ requires a type specifier for all declarations}} \
+a = b ? : 0;  // expected-error {{a type specifier is required for all declarations}} \
               // expected-error-re {{use of undeclared identifier 'b'{{$}}}}
 }
 

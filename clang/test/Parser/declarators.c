@@ -6,7 +6,7 @@ void f0(); /* expected-warning {{a function declaration without a prototype is d
 void f1(int [*]);
 void f2(int [const *]);
 void f3(int [volatile const*]);
-int f4(*XX)(void); /* expected-error {{cannot return}} expected-warning {{type specifier missing, defaults to 'int'}} */
+int f4(*XX)(void); /* expected-error {{cannot return}} expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}} */
 int f5(int [static]); /* expected-error {{'static' may not be used without an array size}} */
 
 char ((((*X))));
@@ -64,9 +64,9 @@ struct xyz test8(void) { return a; }  // a should be be marked invalid, no diag.
 
 
 // Verify that implicit int still works.
-static f;      // expected-warning {{type specifier missing, defaults to 'int'}}
-static g = 4;  // expected-warning {{type specifier missing, defaults to 'int'}}
-static h        // expected-warning {{type specifier missing, defaults to 'int'}} 
+static f;      // expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+static g = 4;  // expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+static h        // expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
       __asm__("foo");
 
 

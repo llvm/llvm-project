@@ -20,7 +20,7 @@ struct Foo {
 // CHECK-MESSAGES: -input.cpp:3:7: error: 'a' declared as an array with a negative size [clang-diagnostic-error]
 // CHECK-MESSAGES: -input.cpp:4:7: warning: zero size arrays are an extension [clang-diagnostic-zero-length-array]
 // CHECK-MESSAGES: -input.cpp:6:11: error: unknown type name 'x' [clang-diagnostic-error]
-// CHECK-MESSAGES: -input.cpp:8:3: error: C++ requires a type specifier for all declarations [clang-diagnostic-error]
+// CHECK-MESSAGES: -input.cpp:8:3: error: a type specifier is required for all declarations [clang-diagnostic-error]
 
 // CHECK-YAML: ---
 // CHECK-YAML-NEXT: MainSourceFile:  '{{.*}}-input.cpp'
@@ -88,7 +88,7 @@ struct Foo {
 // CHECK-YAML-NEXT:     BuildDirectory:  '{{.*}}'
 // CHECK-YAML-NEXT:   - DiagnosticName:  clang-diagnostic-error
 // CHECK-YAML-NEXT:     DiagnosticMessage:
-// CHECK-YAML-NEXT:       Message:         'C++ requires a type specifier for all declarations'
+// CHECK-YAML-NEXT:       Message:         a type specifier is required for all declarations
 // CHECK-YAML-NEXT:       FilePath:        '{{.*}}-input.cpp'
 // CHECK-YAML-NEXT:       FileOffset:      86
 // CHECK-YAML-NEXT:       Replacements:    []

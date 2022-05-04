@@ -4,7 +4,7 @@
 
 // Functions with an identifier list are not supported in C2x.
 void ident_list(a) // c2x-error {{expected ';' after top level declarator}} \
-                      c2x-warning {{type specifier missing, defaults to 'int'}}
+                      c2x-error {{unknown type name 'a'}}
   int a;
 {}                 // c2x-error {{expected identifier or '('}}
 

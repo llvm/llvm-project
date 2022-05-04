@@ -54,7 +54,7 @@ struct B {
   // cxx20-warning@#4 {{incompatible with C++ standards before C++20}}
 
   explicit (operator+(A())) operator int(); // #5
-  // cxx17-error@#5 {{requires a type specifier}} cxx17-error@#5 {{expected ';'}}
+  // cxx17-error@#5 {{a type specifier is required}} cxx17-error@#5 {{expected ';'}}
   // cxx17-warning@#5 {{will be parsed as explicit(bool)}}
   // cxx20-warning@#5 {{incompatible with C++ standards before C++20}}
 };

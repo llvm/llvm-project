@@ -29,7 +29,7 @@ int array0[5] = { [3] 3 }; // expected-warning {{GNU 'missing ='}}
 
 // CHECK: int x
 // CHECK: int y
-void f1(x, y) // expected-warning 2{{defaulting to type 'int'}}
+void f1(x, y) // expected-error 2{{was not declared, defaults to 'int'; ISO C99 and later do not support implicit int}}
 {
 }
 
@@ -50,7 +50,7 @@ int test_cond(int y, int fooBar) { // expected-note {{here}}
 const typedef typedef int int_t; // expected-warning {{duplicate 'typedef'}}
 
 // <rdar://problem/7159693>
-enum Color { 
+enum Color {
   Red // expected-error{{missing ',' between enumerators}}
   Green = 17 // expected-error{{missing ',' between enumerators}}
   Blue,

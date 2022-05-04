@@ -113,7 +113,6 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.GNUMode = Std.isGNUMode();
   Opts.GNUCVersion = 0;
   Opts.HexFloats = Std.hasHexFloats();
-  Opts.ImplicitInt = Std.hasImplicitInt();
   Opts.WChar = Std.isCPlusPlus();
   Opts.Digraphs = Std.hasDigraphs();
 

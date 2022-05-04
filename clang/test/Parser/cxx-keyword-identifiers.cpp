@@ -26,6 +26,6 @@ void test() {
   };
 }
 struct Foo {
-  void bar(*decltype(1) aux); // expected-error {{C++ requires a type specifier for all declarations}}. \
+  void bar(*decltype(1) aux); // expected-error {{a type specifier is required for all declarations}}. \
                                  // expected-error {{expected ')'}} expected-note {{to match this '('}}
 };
