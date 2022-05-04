@@ -116,4 +116,4 @@ template<typename T> int i(T::type, int());
 // FIXME: We know which type specifier should have been specified here. Provide
 //        a fix-it to add 'typename A<T>::type'
 template<typename T>
-A<T>::g() { } // expected-error{{requires a type specifier}}
+A<T>::g() { } // expected-error{{a type specifier is required}}

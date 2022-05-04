@@ -97,8 +97,8 @@ vector unsigned long int v_uli;     // nonaix-warning {{Use of 'long' with '__ve
 // These should have warnings.
 __vector long double  vv_ld;        // expected-error {{cannot use 'long double' with '__vector'}}
 vector long double  v_ld;           // expected-error {{cannot use 'long double' with '__vector'}}
-vector bool v_b;                    // expected-warning {{type specifier missing, defaults to 'int'}}
-vector __bool v___b;                // expected-warning {{type specifier missing, defaults to 'int'}}
+vector bool v_b;                    // expected-error {{type specifier missing, defaults to 'int'}}
+vector __bool v___b;                // expected-error {{type specifier missing, defaults to 'int'}}
 
 // These should have errors.
 #ifndef __VSX__

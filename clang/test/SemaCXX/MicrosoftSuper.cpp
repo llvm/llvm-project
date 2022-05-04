@@ -7,7 +7,7 @@ struct Errors {
   void foo() {
     // expected-note@+4 {{replace parentheses with an initializer to declare a variable}}
     // expected-warning@+3 {{empty parentheses interpreted as a function declaration}}
-    // expected-error@+2 {{C++ requires a type specifier for all declarations}}
+    // expected-error@+2 {{a type specifier is required for all declarations}}
     // expected-error@+1 {{use of '__super' inside a lambda is unsupported}}
     auto lambda = []{ __super::foo(); };
   }

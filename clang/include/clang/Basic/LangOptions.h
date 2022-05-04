@@ -537,6 +537,12 @@ public:
     return !requiresStrictPrototypes() && !OpenCL;
   }
 
+  /// Returns true if implicit int is part of the language requirements.
+  bool isImplicitIntRequired() const { return !CPlusPlus && !C99; }
+
+  /// Returns true if implicit int is supported at all.
+  bool isImplicitIntAllowed() const { return !CPlusPlus && !C2x; }
+
   /// Check if return address signing is enabled.
   bool hasSignReturnAddress() const {
     return getSignReturnAddressScope() != SignReturnAddressScopeKind::None;

@@ -170,7 +170,17 @@ Improvements to Clang's diagnostics
   ``-Wno-implicit-function-declaration``. As of C2x, support for implicit
   function declarations has been removed, and the warning options will have no
   effect.
-
+- The ``-Wimplicit-int`` warning diagnostic now defaults to an error in C99 and
+  later. Prior to C2x, it may be downgraded to a warning with
+  ``-Wno-error=implicit-int``, or disabled entirely with ``-Wno-implicit-int``.
+  As of C2x, support for implicit int has been removed, and the warning options
+  will have no effect. Specifying ``-Wimplicit-int`` in C89 mode will now issue
+  warnings instead of being a noop.
+- No longer issue a "declaration specifiers missing, defaulting to int"
+  diagnostic in C89 mode because it is not an extension in C89, it was valid
+  code. The diagnostic has been removed entirely as it did not have a
+  diagnostic group to disable it, but it can be covered wholly by
+  ``-Wimplicit-int``.
 - ``-Wmisexpect`` warns when the branch weights collected during profiling
   conflict with those added by ``llvm.expect``.
 

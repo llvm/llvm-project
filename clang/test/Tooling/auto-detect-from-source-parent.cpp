@@ -4,5 +4,5 @@
 // RUN: cp "%s" "%t/abc/def/ijk/qwe/test.cpp"
 // RUN: not clang-check "%t/abc/def/ijk/qwe/test.cpp" 2>&1 | FileCheck %s
 
-// CHECK: C++ requires
+// CHECK: a type specifier is required
 invalid;

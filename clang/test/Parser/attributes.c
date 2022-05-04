@@ -7,7 +7,7 @@ foo(void) {
 }
 
 
-__attribute__(()) y;   // expected-warning {{defaults to 'int'}}
+__attribute__(()) y;   // expected-error {{type specifier missing, defaults to 'int'}}
 
 // PR2796
 int (__attribute__(()) *z)(long y);
@@ -19,8 +19,8 @@ int f2(y, __attribute__(()) x);     // expected-error {{expected identifier}}
 
 // This is parsed as a normal argument list (with two args that are implicit
 // int) because the __attribute__ is a declspec.
-void f3(__attribute__(()) x,  // expected-warning {{defaults to 'int'}}
-        y);               // expected-warning {{defaults to 'int'}}
+void f3(__attribute__(()) x,  // expected-error {{type specifier missing, defaults to 'int'}}
+        y);               // expected-error {{type specifier missing, defaults to 'int'}}
 
 void f4(__attribute__(()));   // expected-error {{expected parameter declarator}}
 
@@ -30,14 +30,14 @@ int baz(int (__attribute__(()) *x)(long y));
 
 void g1(void (*f1)(__attribute__(()) int x));
 void g2(int (*f2)(y, __attribute__(()) x));    // expected-error {{expected identifier}}
-void g3(void (*f3)(__attribute__(()) x, int y));  // expected-warning {{defaults to 'int'}}
+void g3(void (*f3)(__attribute__(()) x, int y));  // expected-error {{type specifier missing, defaults to 'int'}}
 void g4(void (*f4)(__attribute__(())));  // expected-error {{expected parameter declarator}}
 
 
 void (*h1)(void (*f1)(__attribute__(()) int x));
 void (*h2)(int (*f2)(y, __attribute__(()) x));    // expected-error {{expected identifier}}
 
-void (*h3)(void (*f3)(__attribute__(()) x));   // expected-warning {{defaults to 'int'}}
+void (*h3)(void (*f3)(__attribute__(()) x));   // expected-error {{type specifier missing, defaults to 'int'}}
 void (*h4)(void (*f4)(__attribute__(())));  // expected-error {{expected parameter declarator}}
 
 
