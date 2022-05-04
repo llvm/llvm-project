@@ -167,10 +167,7 @@ uint64_t Inliner::getSizeOfTailCallInst(const BinaryContext &BC) {
   return SizeOfTailCallInst;
 }
 
-Inliner::InliningInfo Inliner::getInliningInfo(const BinaryFunction &BF) const {
-  if (!shouldOptimize(BF))
-    return INL_NONE;
-
+InliningInfo getInliningInfo(const BinaryFunction &BF) {
   const BinaryContext &BC = BF.getBinaryContext();
   bool DirectSP = false;
   bool HasCFI = false;
@@ -250,6 +247,8 @@ Inliner::InliningInfo Inliner::getInliningInfo(const BinaryFunction &BF) const {
 void Inliner::findInliningCandidates(BinaryContext &BC) {
   for (const auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction &Function = BFI.second;
+    if (!shouldOptimize(Function))
+      continue;
     const InliningInfo InlInfo = getInliningInfo(Function);
     if (InlInfo.Type != INL_NONE)
       InliningCandidates[&Function] = InlInfo;

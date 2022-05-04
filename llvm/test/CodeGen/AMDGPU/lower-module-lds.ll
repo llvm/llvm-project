@@ -48,13 +48,16 @@ define amdgpu_kernel void @kern_call() {
   ret void
 }
 
-; This kernel does not need to alloc the LDS block as it makes no calls
+; This kernel does alloc the LDS block as it makes no calls
 ; CHECK-LABEL: @kern_empty()
-; CHECK: call void @llvm.donothing() [ "ExplicitUse"(%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds) ]
-define spir_kernel void @kern_empty() {
+; CHECK-NOT: call void @llvm.donothing()
+define spir_kernel void @kern_empty() #0{
   ret void
 }
 
 ; Make sure we don't crash trying to insert code into a kernel
 ; declaration.
 declare amdgpu_kernel void @kernel_declaration()
+
+attributes #0 = { "amdgpu-elide-module-lds" }
+; CHECK: attributes #0 = { "amdgpu-elide-module-lds" }
