@@ -311,9 +311,8 @@ bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
 } // anonymous namespace
 
 Expected<std::unique_ptr<RewriteInstance>>
-RewriteInstance::createRewriteInstance(ELFObjectFileBase *File, const int Argc,
-                                       const char *const *Argv,
-                                       StringRef ToolPath) {
+RewriteInstance::create(ELFObjectFileBase *File, const int Argc,
+                        const char *const *Argv, StringRef ToolPath) {
   Error Err = Error::success();
   auto RI = std::make_unique<RewriteInstance>(File, Argc, Argv, ToolPath, Err);
   if (Err)

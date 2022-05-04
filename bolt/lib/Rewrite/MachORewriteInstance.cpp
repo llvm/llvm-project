@@ -85,8 +85,8 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 #define DEBUG_TYPE "bolt"
 
 Expected<std::unique_ptr<MachORewriteInstance>>
-MachORewriteInstance::createMachORewriteInstance(
-    object::MachOObjectFile *InputFile, StringRef ToolPath) {
+MachORewriteInstance::create(object::MachOObjectFile *InputFile,
+                             StringRef ToolPath) {
   Error Err = Error::success();
   auto MachORI =
       std::make_unique<MachORewriteInstance>(InputFile, ToolPath, Err);
