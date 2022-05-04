@@ -1088,8 +1088,16 @@ foldShuffledIntrinsicOperands(IntrinsicInst *II,
   // TODO: This should be extended to handle other intrinsics like fshl, ctpop,
   //       etc. Use llvm::isTriviallyVectorizable() and related to determine
   //       which intrinsics are safe to shuffle?
-  if (!match(II, m_MaxOrMin(m_Value(), m_Value())))
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+  case Intrinsic::fma:
+    break;
+  default:
     return nullptr;
+  }
 
   Value *X;
   ArrayRef<int> Mask;
