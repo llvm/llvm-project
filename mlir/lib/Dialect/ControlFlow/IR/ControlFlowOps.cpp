@@ -705,6 +705,7 @@ static LogicalResult simplifyPassThroughSwitch(SwitchOp op,
   SmallVector<ValueRange> newCaseOperands;
   SmallVector<SmallVector<Value>> argStorage;
   auto caseValues = op.getCaseValues();
+  argStorage.reserve(caseValues->size() + 1);
   auto caseDests = op.getCaseDestinations();
   bool requiresChange = false;
   for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {

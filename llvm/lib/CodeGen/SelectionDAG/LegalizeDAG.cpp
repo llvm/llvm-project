@@ -2918,7 +2918,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // SIGN_EXTEND_INREG does not guarantee that the high bits are already zero.
 
     // TODO: Do this for vectors too?
-    if (ExtraVT.getSizeInBits() == 1) {
+    if (ExtraVT.isScalarInteger() && ExtraVT.getSizeInBits() == 1) {
       SDValue One = DAG.getConstant(1, dl, VT);
       SDValue And = DAG.getNode(ISD::AND, dl, VT, Node->getOperand(0), One);
       SDValue Zero = DAG.getConstant(0, dl, VT);

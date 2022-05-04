@@ -4651,63 +4651,29 @@ bool getGatherScatterIndexIsExtended(SDValue Index) {
   return false;
 }
 
-// If the base pointer of a masked gather or scatter is null, we
-// may be able to swap BasePtr & Index and use the vector + register
-// or vector + immediate addressing mode, e.g.
-// VECTOR + REGISTER:
-//    getelementptr nullptr, <vscale x N x T> (splat(%offset)) + %indices)
-// -> getelementptr %offset, <vscale x N x T> %indices
+// If the base pointer of a masked gather or scatter is constant, we
+// may be able to swap BasePtr & Index and use the vector + immediate addressing
+// mode, e.g.
 // VECTOR + IMMEDIATE:
 //    getelementptr nullptr, <vscale x N x T> (splat(#x)) + %indices)
 // -> getelementptr #x, <vscale x N x T> %indices
 void selectGatherScatterAddrMode(SDValue &BasePtr, SDValue &Index,
                                  bool IsScaled, EVT MemVT, unsigned &Opcode,
                                  bool IsGather, SelectionDAG &DAG) {
-  if (!isNullConstant(BasePtr) || IsScaled)
+  ConstantSDNode *Offset = dyn_cast<ConstantSDNode>(BasePtr);
+  if (!Offset || IsScaled)
     return;
-
-  // FIXME: This will not match for fixed vector type codegen as the nodes in
-  // question will have fixed<->scalable conversions around them. This should be
-  // moved to a DAG combine or complex pattern so that is executes after all of
-  // the fixed vector insert and extracts have been removed. This deficiency
-  // will result in a sub-optimal addressing mode being used, i.e. an ADD not
-  // being folded into the scatter/gather.
-  ConstantSDNode *Offset = nullptr;
-  if (Index.getOpcode() == ISD::ADD)
-    if (auto SplatVal = DAG.getSplatValue(Index.getOperand(1))) {
-      if (isa<ConstantSDNode>(SplatVal))
-        Offset = cast<ConstantSDNode>(SplatVal);
-      else {
-        BasePtr = SplatVal;
-        Index = Index->getOperand(0);
-        return;
-      }
-    }
-
-  unsigned NewOp =
-      IsGather ? AArch64ISD::GLD1_IMM_MERGE_ZERO : AArch64ISD::SST1_IMM_PRED;
-
-  if (!Offset) {
-    std::swap(BasePtr, Index);
-    Opcode = NewOp;
-    return;
-  }
 
   uint64_t OffsetVal = Offset->getZExtValue();
   unsigned ScalarSizeInBytes = MemVT.getScalarSizeInBits() / 8;
-  auto ConstOffset = DAG.getConstant(OffsetVal, SDLoc(Index), MVT::i64);
 
-  if (OffsetVal % ScalarSizeInBytes || OffsetVal / ScalarSizeInBytes > 31) {
-    // Index is out of range for the immediate addressing mode
-    BasePtr = ConstOffset;
-    Index = Index->getOperand(0);
+  if (OffsetVal % ScalarSizeInBytes || OffsetVal / ScalarSizeInBytes > 31)
     return;
-  }
 
   // Immediate is in range
-  Opcode = NewOp;
-  BasePtr = Index->getOperand(0);
-  Index = ConstOffset;
+  Opcode =
+      IsGather ? AArch64ISD::GLD1_IMM_MERGE_ZERO : AArch64ISD::SST1_IMM_PRED;
+  std::swap(BasePtr, Index);
 }
 
 SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
@@ -17136,43 +17102,43 @@ static bool foldIndexIntoBase(SDValue &BasePtr, SDValue &Index, SDValue Scale,
 static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
                                      SDValue &BasePtr, SDValue &Index,
                                      SelectionDAG &DAG) {
+  // Try to iteratively fold parts of the index into the base pointer to
+  // simplify the index as much as possible.
+  bool Changed = false;
+  while (foldIndexIntoBase(BasePtr, Index, N->getScale(), SDLoc(N), DAG))
+    Changed = true;
+
   // Only consider element types that are pointer sized as smaller types can
   // be easily promoted.
   EVT IndexVT = Index.getValueType();
   if (IndexVT.getVectorElementType() != MVT::i64 || IndexVT == MVT::nxv2i64)
-    return false;
-
-  // Try to iteratively fold parts of the index into the base pointer to
-  // simplify the index as much as possible.
-  SDValue NewBasePtr = BasePtr, NewIndex = Index;
-  while (foldIndexIntoBase(NewBasePtr, NewIndex, N->getScale(), SDLoc(N), DAG))
-    ;
+    return Changed;
 
   // Match:
   //   Index = step(const)
   int64_t Stride = 0;
-  if (NewIndex.getOpcode() == ISD::STEP_VECTOR)
-    Stride = cast<ConstantSDNode>(NewIndex.getOperand(0))->getSExtValue();
+  if (Index.getOpcode() == ISD::STEP_VECTOR)
+    Stride = cast<ConstantSDNode>(Index.getOperand(0))->getSExtValue();
 
   // Match:
   //   Index = step(const) << shift(const)
-  else if (NewIndex.getOpcode() == ISD::SHL &&
-           NewIndex.getOperand(0).getOpcode() == ISD::STEP_VECTOR) {
-    SDValue RHS = NewIndex.getOperand(1);
+  else if (Index.getOpcode() == ISD::SHL &&
+           Index.getOperand(0).getOpcode() == ISD::STEP_VECTOR) {
+    SDValue RHS = Index.getOperand(1);
     if (auto *Shift =
             dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(RHS))) {
-      int64_t Step = (int64_t)NewIndex.getOperand(0).getConstantOperandVal(1);
+      int64_t Step = (int64_t)Index.getOperand(0).getConstantOperandVal(1);
       Stride = Step << Shift->getZExtValue();
     }
   }
 
   // Return early because no supported pattern is found.
   if (Stride == 0)
-    return false;
+    return Changed;
 
   if (Stride < std::numeric_limits<int32_t>::min() ||
       Stride > std::numeric_limits<int32_t>::max())
-    return false;
+    return Changed;
 
   const auto &Subtarget =
       static_cast<const AArch64Subtarget &>(DAG.getSubtarget());
@@ -17183,14 +17149,13 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
 
   if (LastElementOffset < std::numeric_limits<int32_t>::min() ||
       LastElementOffset > std::numeric_limits<int32_t>::max())
-    return false;
+    return Changed;
 
   EVT NewIndexVT = IndexVT.changeVectorElementType(MVT::i32);
   // Stride does not scale explicitly by 'Scale', because it happens in
   // the gather/scatter addressing mode.
   Index = DAG.getNode(ISD::STEP_VECTOR, SDLoc(N), NewIndexVT,
                       DAG.getTargetConstant(Stride, SDLoc(N), MVT::i32));
-  BasePtr = NewBasePtr;
   return true;
 }
 

@@ -2543,7 +2543,7 @@ private:
   /// Maps a specific scalar to its tree entry.
   SmallDenseMap<Value*, TreeEntry *> ScalarToTreeEntry;
 
-  /// Maps a value to the proposed vectorizable size.
+  /// Maps a value to the proposed vectorizable size.
   SmallDenseMap<Value *, unsigned> InstrElementSize;
 
   /// A list of scalars that we found that we need to keep as scalars.
@@ -5093,7 +5093,7 @@ computeExtractCost(ArrayRef<Value *> VL, FixedVectorType *VecTy,
 
     // If we have a series of extracts which are not consecutive and hence
     // cannot re-use the source vector register directly, compute the shuffle
-    // cost to extract the a vector with EltsPerVector elements.
+    // cost to extract the vector with EltsPerVector elements.
     Cost += TTI.getShuffleCost(
         TargetTransformInfo::SK_PermuteSingleSrc,
         FixedVectorType::get(VecTy->getElementType(), EltsPerVector), RegMask);

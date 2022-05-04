@@ -6,10 +6,14 @@ declare void @some_func()
 define i32 @need_freeze_of_individual_or_conditions1(i1 %cond1, i1 %cond2, i1 %cond3, i1 %cond4) {
 ; CHECK-LABEL: @need_freeze_of_individual_or_conditions1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND4:%.*]], [[COND1:%.*]]
+; CHECK-NEXT:    [[COND4_FR:%.*]] = freeze i1 [[COND4:%.*]]
+; CHECK-NEXT:    [[COND1_FR:%.*]] = freeze i1 [[COND1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND4_FR]], [[COND1_FR]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
 ; CHECK:       entry.split:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[COND2:%.*]], [[COND3:%.*]]
+; CHECK-NEXT:    [[COND2_FR:%.*]] = freeze i1 [[COND2:%.*]]
+; CHECK-NEXT:    [[COND3_FR:%.*]] = freeze i1 [[COND3:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[COND2_FR]], [[COND3_FR]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_SPLIT:%.*]], label [[EXIT_SPLIT1:%.*]]
 ; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -48,10 +52,13 @@ exit:
 define i32 @need_freeze_of_individual_or_conditions2(i1 noundef %cond1, i1 %cond2, i1 %cond3, i1 %cond4) {
 ; CHECK-LABEL: @need_freeze_of_individual_or_conditions2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND4:%.*]], [[COND1:%.*]]
+; CHECK-NEXT:    [[COND4_FR:%.*]] = freeze i1 [[COND4:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND4_FR]], [[COND1:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
 ; CHECK:       entry.split:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[COND2:%.*]], [[COND3:%.*]]
+; CHECK-NEXT:    [[COND2_FR:%.*]] = freeze i1 [[COND2:%.*]]
+; CHECK-NEXT:    [[COND3_FR:%.*]] = freeze i1 [[COND3:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[COND2_FR]], [[COND3_FR]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_SPLIT:%.*]], label [[EXIT_SPLIT1:%.*]]
 ; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -90,10 +97,13 @@ exit:
 define i32 @need_freeze_of_individual_or_conditions3(i1 %cond1, i1 %cond2, i1 %cond3, i1 noundef %cond4) {
 ; CHECK-LABEL: @need_freeze_of_individual_or_conditions3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND4:%.*]], [[COND1:%.*]]
+; CHECK-NEXT:    [[COND1_FR:%.*]] = freeze i1 [[COND1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND4:%.*]], [[COND1_FR]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
 ; CHECK:       entry.split:
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[COND2:%.*]], [[COND3:%.*]]
+; CHECK-NEXT:    [[COND2_FR:%.*]] = freeze i1 [[COND2:%.*]]
+; CHECK-NEXT:    [[COND3_FR:%.*]] = freeze i1 [[COND3:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[COND2_FR]], [[COND3_FR]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_SPLIT:%.*]], label [[EXIT_SPLIT1:%.*]]
 ; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -132,7 +142,9 @@ exit:
 define i32 @need_freeze_of_individual_and_conditions1(i1 %cond1, i1 %cond4) {
 ; CHECK-LABEL: @need_freeze_of_individual_and_conditions1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4:%.*]], [[COND1:%.*]]
+; CHECK-NEXT:    [[COND4_FR:%.*]] = freeze i1 [[COND4:%.*]]
+; CHECK-NEXT:    [[COND1_FR:%.*]] = freeze i1 [[COND1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4_FR]], [[COND1_FR]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -165,7 +177,8 @@ exit:
 define i32 @need_freeze_of_individual_and_conditions2(i1 noundef %cond1, i1 %cond4) {
 ; CHECK-LABEL: @need_freeze_of_individual_and_conditions2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4:%.*]], [[COND1:%.*]]
+; CHECK-NEXT:    [[COND4_FR:%.*]] = freeze i1 [[COND4:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4_FR]], [[COND1:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
@@ -198,7 +211,8 @@ exit:
 define i32 @need_freeze_of_individual_and_conditions3(i1 %cond1, i1 noundef %cond4) {
 ; CHECK-LABEL: @need_freeze_of_individual_and_conditions3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4:%.*]], [[COND1:%.*]]
+; CHECK-NEXT:    [[COND1_FR:%.*]] = freeze i1 [[COND1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4:%.*]], [[COND1_FR]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]

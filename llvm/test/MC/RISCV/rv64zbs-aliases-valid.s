@@ -37,12 +37,6 @@ bext x5, x6, 8
 # CHECK-S-OBJ-NEXT: bseti t0, t0, 31
 li x5, 2147485013
 
-# CHECK-S-OBJ-NOALIAS: addi t0, zero, -1365
-# CHECK-S-OBJ-NOALIAS-NEXT: bclri t0, t0, 31
-# CHECK-S-OBJ: li t0, -1365
-# CHECK-S-OBJ-NEXT: bclri t0, t0, 31
-li x5, -2147485013
-
 # CHECK-S-OBJ-NOALIAS: lui t1, 572348
 # CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, -1093
 # CHECK-S-OBJ-NOALIAS-NEXT: bclri t1, t1, 44
