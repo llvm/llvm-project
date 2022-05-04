@@ -5637,9 +5637,12 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       // them here.
       break;
 
-    case SUBMODULE_TOPHEADER:
-      CurrentModule->addTopHeaderFilename(Blob);
+    case SUBMODULE_TOPHEADER: {
+      std::string HeaderName(Blob);
+      ResolveImportedPath(F, HeaderName);
+      CurrentModule->addTopHeaderFilename(HeaderName);
       break;
+    }
 
     case SUBMODULE_UMBRELLA_DIR: {
       // See comments in SUBMODULE_UMBRELLA_HEADER
