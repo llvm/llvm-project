@@ -441,17 +441,13 @@ bool MCPlusBuilder::hasUseOfPhysReg(const MCInst &MI, unsigned Reg) const {
 
 const BitVector &MCPlusBuilder::getAliases(MCPhysReg Reg,
                                            bool OnlySmaller) const {
-  // AliasMap caches a mapping of registers to the set of registers that
-  // alias (are sub or superregs of itself, including itself).
-  static std::vector<BitVector> AliasMap;
-  static std::vector<BitVector> SmallerAliasMap;
+  if (OnlySmaller)
+    return SmallerAliasMap[Reg];
+  return AliasMap[Reg];
+}
 
-  if (AliasMap.size() > 0) {
-    if (OnlySmaller)
-      return SmallerAliasMap[Reg];
-    return AliasMap[Reg];
-  }
-
+void MCPlusBuilder::initAliases() {
+  assert(AliasMap.size() == 0 && SmallerAliasMap.size() == 0);
   // Build alias map
   for (MCPhysReg I = 0, E = RegInfo->getNumRegs(); I != E; ++I) {
     BitVector BV(RegInfo->getNumRegs(), false);
@@ -492,10 +488,6 @@ const BitVector &MCPlusBuilder::getAliases(MCPhysReg Reg,
       dbgs() << "\n";
     }
   });
-
-  if (OnlySmaller)
-    return SmallerAliasMap[Reg];
-  return AliasMap[Reg];
 }
 
 uint8_t MCPlusBuilder::getRegSize(MCPhysReg Reg) const {

@@ -282,6 +282,8 @@ public:
     // Initialize the default annotation allocator with id 0
     AnnotationAllocators.emplace(0, AnnotationAllocator());
     MaxAllocatorId++;
+    // Build alias map
+    initAliases();
   }
 
   /// Initialize a new annotation allocator and return its id
@@ -1135,6 +1137,9 @@ public:
   virtual const BitVector &getAliases(MCPhysReg Reg,
                                       bool OnlySmaller = false) const;
 
+  /// Initialize aliases tables.
+  virtual void initAliases();
+
   /// Change \p Regs setting all registers used to pass parameters according
   /// to the host abi. Do nothing if not implemented.
   virtual BitVector getRegsUsedAsParams() const {
@@ -1904,6 +1909,11 @@ public:
     llvm_unreachable("not implemented");
     return BlocksVectorTy();
   }
+
+  // AliasMap caches a mapping of registers to the set of registers that
+  // alias (are sub or superregs of itself, including itself).
+  std::vector<BitVector> AliasMap;
+  std::vector<BitVector> SmallerAliasMap;
 };
 
 MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,
