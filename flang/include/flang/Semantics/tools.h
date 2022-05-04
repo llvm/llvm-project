@@ -96,7 +96,6 @@ bool IsStmtFunctionResult(const Symbol &);
 bool IsPointerDummy(const Symbol &);
 bool IsBindCProcedure(const Symbol &);
 bool IsBindCProcedure(const Scope &);
-bool IsProcName(const Symbol &); // proc-name
 // Returns a pointer to the function's symbol when true, else null
 const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsOrContainsEventOrLockComponent(const Symbol &);

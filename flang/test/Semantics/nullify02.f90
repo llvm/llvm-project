@@ -22,10 +22,10 @@ Nullify(x(2)%p)
 !ERROR: name in NULLIFY statement must have the POINTER attribute
 Nullify(pi)
 
-!ERROR: name in NULLIFY statement must have the POINTER attribute
+!ERROR: name in NULLIFY statement must be a variable or procedure pointer
 Nullify(prp)
 
-!ERROR: name in NULLIFY statement must be a variable or procedure pointer name
+!ERROR: name in NULLIFY statement must be a variable or procedure pointer
 Nullify(maxvalue)
 
 End Program

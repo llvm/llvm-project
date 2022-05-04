@@ -3592,6 +3592,9 @@ void SubprogramVisitor::CheckExtantProc(
     const parser::Name &name, Symbol::Flag subpFlag) {
   if (auto *prev{FindSymbol(name)}) {
     if (IsDummy(*prev)) {
+    } else if (auto *entity{prev->detailsIf<EntityDetails>()};
+               IsPointer(*prev) && !entity->type()) {
+      // POINTER attribute set before interface
     } else if (inInterfaceBlock() && currScope() != prev->owner()) {
       // Procedures in an INTERFACE block do not resolve to symbols
       // in scopes between the global scope and the current scope.
@@ -3619,8 +3622,8 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
   symbol->ReplaceName(name.source);
   symbol->set(subpFlag);
   PushScope(Scope::Kind::Subprogram, symbol);
-  auto &details{symbol->get<SubprogramDetails>()};
   if (inInterfaceBlock()) {
+    auto &details{symbol->get<SubprogramDetails>()};
     details.set_isInterface();
     if (isAbstract()) {
       symbol->attrs().set(Attr::ABSTRACT);
