@@ -28,16 +28,18 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
-static cl::opt<unsigned> RVVVectorBitsMax(
+static cl::opt<int> RVVVectorBitsMax(
     "riscv-v-vector-bits-max",
     cl::desc("Assume V extension vector registers are at most this big, "
              "with zero meaning no maximum size is assumed."),
     cl::init(0), cl::Hidden);
 
-static cl::opt<unsigned> RVVVectorBitsMin(
+static cl::opt<int> RVVVectorBitsMin(
     "riscv-v-vector-bits-min",
     cl::desc("Assume V extension vector registers are at least this big, "
-             "with zero meaning no minimum size is assumed."),
+             "with zero meaning no minimum size is assumed. A value of -1 "
+             "means use Zvl*b extension. This is primarily used to enable "
+             "autovectorization with fixed width vectors."),
     cl::init(0), cl::Hidden);
 
 static cl::opt<unsigned> RVVVectorLMULMax(
@@ -136,7 +138,7 @@ unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
 
   // ZvlLen specifies the minimum required vlen. The upper bound provided by
   // riscv-v-vector-bits-max should be no less than it.
-  if (RVVVectorBitsMax < ZvlLen)
+  if (RVVVectorBitsMax < (int)ZvlLen)
     report_fatal_error("riscv-v-vector-bits-max specified is lower "
                        "than the Zvl*b limitation");
 
@@ -154,14 +156,18 @@ unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
 }
 
 unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
+  assert(hasVInstructions() &&
+         "Tried to get vector length without Zve or V extension support!");
+
+  if (RVVVectorBitsMin == -1)
+    return ZvlLen;
+
   // ZvlLen specifies the minimum required vlen. The lower bound provided by
   // riscv-v-vector-bits-min should be no less than it.
-  if (RVVVectorBitsMin != 0 && RVVVectorBitsMin < ZvlLen)
+  if (RVVVectorBitsMin != 0 && RVVVectorBitsMin < (int)ZvlLen)
     report_fatal_error("riscv-v-vector-bits-min specified is lower "
                        "than the Zvl*b limitation");
 
-  assert(hasVInstructions() &&
-         "Tried to get vector length without Zve or V extension support!");
   // FIXME: Change to >= 32 when VLEN = 32 is supported
   assert(
       (RVVVectorBitsMin == 0 ||
