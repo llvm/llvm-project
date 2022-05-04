@@ -28,6 +28,8 @@ public:
   ArgumentPromotionPass(unsigned MaxElements = 2u) : MaxElements(MaxElements) {}
 
   /// Checks if a type could have padding bytes.
+  // TODO the function aren't used in the ArgumentPromotionPass anymore and
+  // should be moved into AttributorAttributes.cpp as the single known user.
   static bool isDenselyPacked(Type *Ty, const DataLayout &DL);
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
