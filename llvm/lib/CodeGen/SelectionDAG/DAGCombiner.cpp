@@ -6814,11 +6814,14 @@ static SDValue visitORCommutative(
   EVT VT = N0.getValueType();
   if (N0.getOpcode() == ISD::AND) {
     // fold (or (and X, (xor Y, -1)), Y) -> (or X, Y)
-    if (isBitwiseNot(N0.getOperand(1)) && N0.getOperand(1).getOperand(0) == N1)
+    // TODO: Set AllowUndefs = true.
+    if (getBitwiseNotOperand(N0.getOperand(1), N0.getOperand(0),
+                             /* AllowUndefs */ false) == N1)
       return DAG.getNode(ISD::OR, SDLoc(N), VT, N0.getOperand(0), N1);
 
     // fold (or (and (xor Y, -1), X), Y) -> (or X, Y)
-    if (isBitwiseNot(N0.getOperand(0)) && N0.getOperand(0).getOperand(0) == N1)
+    if (getBitwiseNotOperand(N0.getOperand(0), N0.getOperand(1),
+                             /* AllowUndefs */ false) == N1)
       return DAG.getNode(ISD::OR, SDLoc(N), VT, N0.getOperand(1), N1);
   }
 
