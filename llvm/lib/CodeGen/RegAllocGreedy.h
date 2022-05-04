@@ -322,6 +322,10 @@ private:
   /// Function
   ArrayRef<uint8_t> RegCosts;
 
+  /// Flags for the live range priority calculation, determined once per
+  /// machine function.
+  bool RegClassPriorityTrumpsGlobalness;
+
 public:
   RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);
 
