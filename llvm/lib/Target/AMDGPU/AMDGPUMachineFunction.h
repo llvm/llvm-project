@@ -102,7 +102,7 @@ public:
   }
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV);
-  void allocateModuleLDSGlobal(const Module *M);
+  void allocateModuleLDSGlobal(const Function &F);
 
   Align getDynLDSAlign() const { return DynLDSAlign; }
 
