@@ -6918,7 +6918,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Overflow;
     if (IsAdd && isOneConstant(RHS)) {
       // Special case uaddo X, 1 overflowed if the addition result is 0.
-      // FIXME: We can do this for any constant RHS by using (X + C) < C.
+      // The general case (X + C) < C is not necessarily beneficial. Although we
+      // reduce the live range of X, we may introduce the materialization of
+      // constant C, especially when the setcc result is used by branch. We have
+      // no compare with constant and branch instructions.
       Overflow = DAG.getSetCC(DL, N->getValueType(1), Res,
                               DAG.getConstant(0, DL, MVT::i64), ISD::SETEQ);
     } else {

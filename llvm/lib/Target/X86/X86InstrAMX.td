@@ -48,14 +48,18 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
                      VEX, T8XD;
 
     // Pseduo instruction for RA.
+    let mayLoad = 1 in
     def PLDTILECFGV : PseudoI<(outs), (ins opaquemem:$src),
                               [(int_x86_ldtilecfg_internal addr:$src)]>;
+    let mayLoad = 1 in
     def PTILELOADDV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
                                                      GR16:$src2,
                                                      opaquemem:$src3), []>;
+    let mayLoad = 1 in
     def PTILELOADDT1V : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
                                                        GR16:$src2,
                                                        opaquemem:$src3), []>;
+    let mayStore = 1 in
     def PTILESTOREDV : PseudoI<(outs), (ins GR16:$src1,
                                             GR16:$src2, opaquemem:$src3,
                                             TILE:$src4), []>;
@@ -67,9 +71,12 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
     let usesCustomInserter = 1 in {
       // Pseudo instructions, using immediates instead of tile registers.
       // To be translated to the actual instructions in X86ISelLowering.cpp
+      let mayLoad = 1 in
       def PTILELOADD : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
+      let mayLoad = 1 in
       def PTILELOADDT1 : PseudoI<(outs), (ins u8imm:$src1,
                                           sibmem:$src2), []>;
+      let mayStore = 1 in
       def PTILESTORED : PseudoI<(outs), (ins i8mem:$dst, u8imm:$src), []>;
       def PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
                               [(int_x86_tilezero timm:$src)]>;

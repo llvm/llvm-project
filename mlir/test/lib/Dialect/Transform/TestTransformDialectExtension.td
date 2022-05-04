@@ -56,4 +56,41 @@ def TestPrintRemarkAtOperandOp
   let cppNamespace = "::mlir::test";
 }
 
+def TestAddTestExtensionOp
+  : Op<Transform_Dialect, "test_add_test_extension",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        NoSideEffect]> {
+  let arguments = (ins StrAttr:$message);
+  let assemblyFormat = "$message attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestCheckIfTestExtensionPresentOp
+  : Op<Transform_Dialect, "test_check_if_test_extension_present",
+       [DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins
+    Arg<PDL_Operation, "", [TransformMappingRead, PayloadIRRead]>:$operand);
+  let assemblyFormat = "$operand attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestRemapOperandPayloadToSelfOp
+  : Op<Transform_Dialect, "test_remap_operand_to_self",
+       [DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins
+    Arg<PDL_Operation, "",
+        [TransformMappingRead, TransformMappingWrite, PayloadIRRead]>:$operand);
+  let assemblyFormat = "$operand attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestRemoveTestExtensionOp
+  : Op<Transform_Dialect, "test_remove_test_extension",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        NoSideEffect]> {
+  let assemblyFormat = "attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD
