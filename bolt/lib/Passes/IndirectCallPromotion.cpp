@@ -546,7 +546,7 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
     }
     uint64_t RemainingMemAccesses = TotalMemAccesses;
     const size_t TopN =
-        opts::ICPJumpTablesTopN != 0 ? opts::ICPTopN : opts::ICPTopN;
+        opts::ICPJumpTablesTopN ? opts::ICPJumpTablesTopN : opts::ICPTopN;
     size_t I = 0;
     for (; I < HotTargets.size(); ++I) {
       const uint64_t MemAccesses = HotTargets[I].first;
@@ -942,12 +942,11 @@ size_t IndirectCallPromotion::canPromoteCallsite(
   }
 
   size_t TopN = opts::ICPTopN;
-  if (IsJumpTable) {
-    if (opts::ICPJumpTablesTopN != 0)
-      TopN = opts::ICPJumpTablesTopN;
-  } else if (opts::ICPCallsTopN != 0) {
-    TopN = opts::ICPCallsTopN;
-  }
+  if (IsJumpTable)
+    TopN = opts::ICPJumpTablesTopN ? opts::ICPJumpTablesTopN : TopN;
+  else
+    TopN = opts::ICPCallsTopN ? opts::ICPCallsTopN : TopN;
+
   const size_t TrialN = TopN ? std::min(TopN, Targets.size()) : Targets.size();
 
   if (opts::ICPTopCallsites > 0) {
