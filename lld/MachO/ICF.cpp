@@ -8,11 +8,14 @@
 
 #include "ICF.h"
 #include "ConcatOutputSection.h"
+#include "Config.h"
 #include "InputSection.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "UnwindInfoSection.h"
 
 #include "lld/Common/CommonLinkerContext.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -363,6 +366,39 @@ void ICF::segregate(size_t begin, size_t end, EqualsFn equals) {
   }
 }
 
+void macho::markSymAsAddrSig(Symbol *s) {
+  if (auto *d = dyn_cast_or_null<Defined>(s))
+    if (d->isec)
+      d->isec->keepUnique = true;
+}
+
+void macho::markAddrSigSymbols() {
+  for (InputFile *file : inputFiles) {
+    ObjFile *obj = dyn_cast<ObjFile>(file);
+    if (!obj)
+      continue;
+
+    Section *addrSigSection = obj->addrSigSection;
+    if (!addrSigSection)
+      continue;
+    assert(addrSigSection->subsections.size() == 1);
+
+    Subsection *subSection = &addrSigSection->subsections[0];
+    ArrayRef<unsigned char> &contents = subSection->isec->data;
+
+    const uint8_t *pData = contents.begin();
+    while (pData != contents.end()) {
+      unsigned size;
+      const char *err;
+      uint32_t symIndex = decodeULEB128(pData, &size, contents.end(), &err);
+      if (err)
+        fatal(toString(file) + ": could not decode addrsig section: " + err);
+      markSymAsAddrSig(obj->symbols[symIndex]);
+      pData += size;
+    }
+  }
+}
+
 void macho::foldIdenticalSections() {
   TimeTraceScope timeScope("Fold Identical Code Sections");
   // The ICF equivalence-class segregation algorithm relies on pre-computed
@@ -385,7 +421,7 @@ void macho::foldIdenticalSections() {
     // FIXME: consider non-code __text sections as hashable?
     bool isHashable = (isCodeSection(isec) || isCfStringSection(isec) ||
                        isClassRefsSection(isec)) &&
-                      !isec->shouldOmitFromOutput() &&
+                      !isec->keepUnique && !isec->shouldOmitFromOutput() &&
                       sectionType(isec->getFlags()) == MachO::S_REGULAR;
     if (isHashable) {
       hashable.push_back(isec);

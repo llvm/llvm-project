@@ -354,6 +354,9 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       // spurious duplicate symbol errors, we do not parse these sections.
       // TODO: Evaluate whether the bitcode metadata is needed.
     } else {
+      if (name == section_names::addrSig)
+        addrSigSection = sections.back();
+
       auto *isec = make<ConcatInputSection>(section, data, align);
       if (isDebugSection(isec->getFlags()) &&
           isec->getSegName() == segment_names::dwarf) {
