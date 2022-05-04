@@ -69,15 +69,9 @@ public:
 
   /// Try to emit the initiaizer of the given declaration as an abstract
   /// constant.  If this succeeds, the emission must be finalized.
-  mlir::Value tryEmitForInitializer(const clang::VarDecl &D);
-  mlir::Value tryEmitForInitializer(const clang::Expr *E,
-                                    clang::LangAS destAddrSpace,
-                                    clang::QualType destType);
-  // llvm::Constant *emitForInitializer(const APValue &value, LangAS
-  // destAddrSpace,
-  //                                    QualType destType);
+  mlir::Attribute tryEmitForInitializer(const VarDecl &D);
 
-  // void finalize(llvm::GlobalVariable *global);
+  void finalize(mlir::cir::GlobalOp global);
 
   // All of the "abstract" emission methods below permit the emission to
   // be immediately discarded without finalizing anything.  Therefore, they
@@ -92,67 +86,24 @@ public:
   //     initializer or to propagate to another context; for example,
   //     side effects, or emitting an initialization that requires a
   //     reference to its current location.
-
-  /// Try to emit the initializer of the given declaration as an abstract
-  /// constant.
-  // llvm::Constant *tryEmitAbstractForInitializer(const VarDecl &D);
-
-  /// Emit the result of the given expression as an abstract constant,
-  /// asserting that it succeeded.  This is only safe to do when the
-  /// expression is known to be a constant expression with either a fairly
-  /// simple type or a known simple form.
-  // llvm::Constant *emitAbstract(const Expr *E, QualType T);
-  // llvm::Constant *emitAbstract(SourceLocation loc, const APValue &value,
-  //                              QualType T);
-
-  /// Try to emit the result of the given expression as an abstract constant.
-  // llvm::Constant *tryEmitAbstract(const Expr *E, QualType T);
-  // llvm::Constant *tryEmitAbstractForMemory(const Expr *E, QualType T);
-
-  // llvm::Constant *tryEmitAbstract(const APValue &value, QualType T);
-  // llvm::Constant *tryEmitAbstractForMemory(const APValue &value, QualType T);
-
-  // llvm::Constant *tryEmitConstantExpr(const ConstantExpr *CE);
-
-  // llvm::Constant *emitNullForMemory(QualType T) {
-  //   return emitNullForMemory(CGM, T);
-  // }
-  mlir::Value emitForMemory(mlir::Value C, clang::QualType T) {
+  mlir::Attribute emitForMemory(mlir::TypedAttr C, QualType T) {
     return emitForMemory(CGM, C, T);
   }
 
   // static llvm::Constant *emitNullForMemory(CodeGenModule &CGM, QualType T);
-  static mlir::Value emitForMemory(CIRGenModule &CGM, mlir::Value C,
-                                   clang::QualType T);
+  static mlir::Attribute emitForMemory(CIRGenModule &CGM, mlir::TypedAttr C,
+                                       clang::QualType T);
 
   // These are private helper routines of the constant emitter that
   // can't actually be private because things are split out into helper
   // functions and classes.
 
-  mlir::Value tryEmitPrivateForVarInit(const clang::VarDecl &D);
-  mlir::Value tryEmitPrivate(const clang::Expr *E, clang::QualType T);
-  mlir::Value tryEmitPrivateForMemory(const clang::Expr *E, clang::QualType T);
+  mlir::TypedAttr tryEmitPrivateForVarInit(const VarDecl &D);
+  mlir::TypedAttr tryEmitPrivate(const Expr *E, QualType T);
+  mlir::TypedAttr tryEmitPrivateForMemory(const Expr *E, QualType T);
 
-  mlir::Value tryEmitPrivate(const clang::APValue &value, clang::QualType T);
-  mlir::Value tryEmitPrivateForMemory(const clang::APValue &value,
-                                      clang::QualType T);
-
-  /// Get the address of the current location.  This is a constant
-  /// that will resolve, after finalization, to the address of the
-  /// 'signal' value that is registered with the emitter later.
-  // llvm::GlobalValue *getCurrentAddrPrivate();
-
-  /// Register a 'signal' value with the emitter to inform it where to
-  /// resolve a placeholder.  The signal value must be unique in the
-  /// initializer; it might, for example, be the address of a global that
-  /// refers to the current-address value in its own initializer.
-  ///
-  /// Uses of the placeholder must be properly anchored before finalizing
-  /// the emitter, e.g. by being installed as the initializer of a global
-  /// variable.  That is, it must be possible to replaceAllUsesWith
-  /// the placeholder with the proper address of the signal.
-  // void registerCurrentAddrPrivate(llvm::Constant *signal,
-  //                                 llvm::GlobalValue *placeholder);
+  mlir::TypedAttr tryEmitPrivate(const APValue &value, QualType T);
+  mlir::TypedAttr tryEmitPrivateForMemory(const APValue &value, QualType T);
 
 private:
   void initializeNonAbstract(clang::LangAS destAS) {
@@ -160,7 +111,7 @@ private:
     InitializedNonAbstract = true;
     DestAddressSpace = destAS;
   }
-  mlir::Value markIfFailed(mlir::Value init) {
+  mlir::Attribute markIfFailed(mlir::Attribute init) {
     if (!init)
       Failed = true;
     return init;
@@ -175,8 +126,6 @@ private:
     Abstract = true;
     return saved;
   }
-  // llvm::Constant *validateAndPopAbstract(llvm::Constant *C, AbstractState
-  // save);
 };
 
 } // namespace cir

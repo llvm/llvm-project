@@ -130,6 +130,40 @@ public:
 
   CIRGenCXXABI &getCXXABI() const { return *ABI; }
 
+  /// -------
+  /// Handling globals
+  /// -------
+
+  /// If the declaration has internal linkage but is inside an
+  /// extern "C" linkage specification, prepare to emit an alias for it
+  /// to the expected name.
+  template <typename SomeDecl>
+  void maybeHandleStaticInExternC(const SomeDecl *D, mlir::cir::GlobalOp GV);
+
+  llvm::DenseMap<StringRef, mlir::Value> Globals;
+  mlir::cir::GlobalOp getGlobalValue(StringRef Ref);
+
+  /// If the specified mangled name is not in the module, create and return an
+  /// mlir::GlobalOp value
+  mlir::cir::GlobalOp
+  getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty, LangAS AddrSpace,
+                       const VarDecl *D,
+                       ForDefinition_t IsForDefinition = NotForDefinition);
+
+  mlir::cir::GlobalOp buildGlobal(const VarDecl *D,
+                                  std::optional<mlir::Type> Ty,
+                                  ForDefinition_t IsForDefinition);
+
+  /// Return the mlir::Value for the address of the given global variable.
+  /// If Ty is non-null and if the global doesn't exist, then it will be created
+  /// with the specified type instead of whatever the normal requested type
+  /// would be. If IsForDefinition is true, it is guaranteed that an actual
+  /// global with type Ty will be returned, not conversion of a variable with
+  /// the same mangled name but some other type.
+  mlir::Value
+  getAddrOfGlobalVar(const VarDecl *D, std::optional<mlir::Type> Ty,
+                     ForDefinition_t IsForDefinition = NotForDefinition);
+
   // TODO: this obviously overlaps with
   const TargetCIRGenInfo &getTargetCIRGenInfo();
 

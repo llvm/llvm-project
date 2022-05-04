@@ -40,7 +40,7 @@ namespace {
 // In CIR codegen, instead of folding things here, we should defer that work
 // to MLIR: do not attempt to do much here.
 class ConstExprEmitter
-    : public StmtVisitor<ConstExprEmitter, mlir::Value, QualType> {
+    : public StmtVisitor<ConstExprEmitter, mlir::Attribute, QualType> {
   CIRGenModule &CGM;
   LLVM_ATTRIBUTE_UNUSED ConstantEmitter &Emitter;
 
@@ -52,39 +52,37 @@ public:
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
 
-  mlir::Value VisitStmt(Stmt *S, QualType T) { return nullptr; }
+  mlir::Attribute VisitStmt(Stmt *S, QualType T) { return nullptr; }
 
-  mlir::Value VisitConstantExpr(ConstantExpr *CE, QualType T) {
+  mlir::Attribute VisitConstantExpr(ConstantExpr *CE, QualType T) {
     assert(0 && "unimplemented");
-    // if (mlir::Value Result = Emitter.tryEmitConstantExpr(CE))
-    //   return Result;
-    // return Visit(CE->getSubExpr(), T);
     return {};
   }
 
-  mlir::Value VisitParenExpr(ParenExpr *PE, QualType T) {
+  mlir::Attribute VisitParenExpr(ParenExpr *PE, QualType T) {
     return Visit(PE->getSubExpr(), T);
   }
 
-  mlir::Value
+  mlir::Attribute
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *PE,
                                     QualType T) {
     return Visit(PE->getReplacement(), T);
   }
 
-  mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *GE, QualType T) {
+  mlir::Attribute VisitGenericSelectionExpr(GenericSelectionExpr *GE,
+                                            QualType T) {
     return Visit(GE->getResultExpr(), T);
   }
 
-  mlir::Value VisitChooseExpr(ChooseExpr *CE, QualType T) {
+  mlir::Attribute VisitChooseExpr(ChooseExpr *CE, QualType T) {
     return Visit(CE->getChosenSubExpr(), T);
   }
 
-  mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *E, QualType T) {
+  mlir::Attribute VisitCompoundLiteralExpr(CompoundLiteralExpr *E, QualType T) {
     return Visit(E->getInitializer(), T);
   }
 
-  mlir::Value VisitCastExpr(CastExpr *E, QualType destType) {
+  mlir::Attribute VisitCastExpr(CastExpr *E, QualType destType) {
     if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
       assert(0 && "not implemented");
     Expr *subExpr = E->getSubExpr();
@@ -184,38 +182,39 @@ public:
     llvm_unreachable("Invalid CastKind");
   }
 
-  mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE, QualType T) {
+  mlir::Attribute VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE, QualType T) {
     // TODO(cir): figure out CIR story here...
     // No need for a DefaultInitExprScope: we don't handle 'this' in a
     // constant expression.
     return Visit(DIE->getExpr(), T);
   }
 
-  mlir::Value VisitExprWithCleanups(ExprWithCleanups *E, QualType T) {
+  mlir::Attribute VisitExprWithCleanups(ExprWithCleanups *E, QualType T) {
     return Visit(E->getSubExpr(), T);
   }
 
-  mlir::Value VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E,
-                                            QualType T) {
+  mlir::Attribute VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E,
+                                                QualType T) {
     return Visit(E->getSubExpr(), T);
   }
 
-  mlir::Value EmitArrayInitialization(InitListExpr *ILE, QualType T) {
+  mlir::Attribute EmitArrayInitialization(InitListExpr *ILE, QualType T) {
     assert(0 && "not implemented");
     return {};
   }
 
-  mlir::Value EmitRecordInitialization(InitListExpr *ILE, QualType T) {
+  mlir::Attribute EmitRecordInitialization(InitListExpr *ILE, QualType T) {
     assert(0 && "not implemented");
     return {};
   }
 
-  mlir::Value VisitImplicitValueInitExpr(ImplicitValueInitExpr *E, QualType T) {
+  mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *E,
+                                             QualType T) {
     assert(0 && "not implemented");
     return {};
   }
 
-  mlir::Value VisitInitListExpr(InitListExpr *ILE, QualType T) {
+  mlir::Attribute VisitInitListExpr(InitListExpr *ILE, QualType T) {
     if (ILE->isTransparent())
       return Visit(ILE->getInit(0), T);
 
@@ -228,8 +227,8 @@ public:
     return nullptr;
   }
 
-  mlir::Value VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *E,
-                                            QualType destType) {
+  mlir::Attribute VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *E,
+                                                QualType destType) {
     auto C = Visit(E->getBase(), destType);
     if (!C)
       return nullptr;
@@ -238,7 +237,7 @@ public:
     return {};
   }
 
-  mlir::Value VisitCXXConstructExpr(CXXConstructExpr *E, QualType Ty) {
+  mlir::Attribute VisitCXXConstructExpr(CXXConstructExpr *E, QualType Ty) {
     if (!E->getConstructor()->isTrivial())
       return nullptr;
 
@@ -259,18 +258,18 @@ public:
     return {};
   }
 
-  mlir::Value VisitStringLiteral(StringLiteral *E, QualType T) {
+  mlir::Attribute VisitStringLiteral(StringLiteral *E, QualType T) {
     // This is a string literal initializing an array in an initializer.
     assert(0 && "not implemented");
     return {};
   }
 
-  mlir::Value VisitObjCEncodeExpr(ObjCEncodeExpr *E, QualType T) {
+  mlir::Attribute VisitObjCEncodeExpr(ObjCEncodeExpr *E, QualType T) {
     assert(0 && "not implemented");
     return {};
   }
 
-  mlir::Value VisitUnaryExtension(const UnaryOperator *E, QualType T) {
+  mlir::Attribute VisitUnaryExtension(const UnaryOperator *E, QualType T) {
     return Visit(E->getSubExpr(), T);
   }
 
@@ -284,40 +283,24 @@ public:
 //                             ConstantEmitter
 //===----------------------------------------------------------------------===//
 
-mlir::Value ConstantEmitter::tryEmitForInitializer(const VarDecl &D) {
+mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &D) {
   initializeNonAbstract(D.getType().getAddressSpace());
   return markIfFailed(tryEmitPrivateForVarInit(D));
 }
 
-mlir::Value ConstantEmitter::tryEmitForInitializer(const Expr *E,
-                                                   LangAS destAddrSpace,
-                                                   QualType destType) {
-  initializeNonAbstract(destAddrSpace);
-  return markIfFailed(tryEmitPrivateForMemory(E, destType));
+void ConstantEmitter::finalize(mlir::cir::GlobalOp global) {
+  assert(InitializedNonAbstract &&
+         "finalizing emitter that was used for abstract emission?");
+  assert(!Finalized && "finalizing emitter multiple times");
+  assert(!global.isDeclaration());
+
+  // Note that we might also be Failed.
+  Finalized = true;
+
+  if (!PlaceholderAddresses.empty()) {
+    assert(0 && "not implemented");
+  }
 }
-
-// mlir::Value ConstantEmitter::emitForInitializer(const APValue &value,
-//                                                 LangAS destAddrSpace,
-//                                                 QualType destType) {
-//   initializeNonAbstract(destAddrSpace);
-//   auto C = tryEmitPrivateForMemory(value, destType);
-//   assert(C && "couldn't emit constant value non-abstractly?");
-//   return C;
-// }
-
-// void ConstantEmitter::finalize(llvm::GlobalVariable *global) {
-//   assert(InitializedNonAbstract &&
-//          "finalizing emitter that was used for abstract emission?");
-//   assert(!Finalized && "finalizing emitter multiple times");
-//   assert(global->getInitializer());
-
-//   // Note that we might also be Failed.
-//   Finalized = true;
-
-//   if (!PlaceholderAddresses.empty()) {
-//     assert(0 && "not implemented");
-//   }
-// }
 
 ConstantEmitter::~ConstantEmitter() {
   assert((!InitializedNonAbstract || Finalized || Failed) &&
@@ -334,7 +317,7 @@ static QualType getNonMemoryType(CIRGenModule &CGM, QualType type) {
   return type;
 }
 
-mlir::Value ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
+mlir::TypedAttr ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
   // Make a quick check if variable can be default NULL initialized
   // and avoid going through rest of code which may do, for c++11,
   // initialization of memory to all NULLs.
@@ -362,20 +345,24 @@ mlir::Value ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
   return {};
 }
 
-mlir::Value ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
-                                                     QualType destType) {
+mlir::TypedAttr ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
+                                                         QualType destType) {
   auto nonMemoryDestType = getNonMemoryType(CGM, destType);
   auto C = tryEmitPrivate(value, nonMemoryDestType);
-  return (C ? emitForMemory(C, destType) : nullptr);
+  if (C) {
+    auto attr = emitForMemory(C, destType);
+    auto typedAttr = llvm::dyn_cast<mlir::TypedAttr>(attr);
+    if (!typedAttr)
+      llvm_unreachable("this should always be typed");
+    return typedAttr;
+  }
+
+  return nullptr;
 }
 
-mlir::Value ConstantEmitter::tryEmitPrivateForMemory(const clang::Expr *E,
-                                                     clang::QualType T) {
-  llvm_unreachable("NYI");
-}
-
-mlir::Value ConstantEmitter::emitForMemory(CIRGenModule &CGM, mlir::Value C,
-                                           QualType destType) {
+mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &CGM,
+                                               mlir::TypedAttr C,
+                                               QualType destType) {
   // For an _Atomic-qualified constant, we may need to add tail padding.
   if (auto AT = destType->getAs<AtomicType>()) {
     assert(0 && "not implemented");
@@ -389,16 +376,18 @@ mlir::Value ConstantEmitter::emitForMemory(CIRGenModule &CGM, mlir::Value C,
   return C;
 }
 
-mlir::Value ConstantEmitter::tryEmitPrivate(const APValue &Value,
-                                            QualType DestType) {
+mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const APValue &Value,
+                                                QualType DestType) {
   switch (Value.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
     // TODO(cir): LLVM models out-of-lifetime and indeterminate values as
     // 'undef'. Find out what's better for CIR.
     assert(0 && "not implemented");
-  case APValue::Int:
-    assert(0 && "not implemented");
+  case APValue::Int: {
+    mlir::Type ty = CGM.getCIRType(DestType);
+    return CGM.getBuilder().getIntegerAttr(ty, Value.getInt());
+  }
   case APValue::LValue:
   case APValue::FixedPoint:
   case APValue::ComplexInt:
