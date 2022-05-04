@@ -837,3 +837,20 @@ define <2 x i31> @fsh_unary_shuffle_ops_uses(<2 x i31> %x, <2 x i31> %y, <2 x i3
   %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %a, <2 x i31> %b, <2 x i31> %c)
   ret <2 x i31> %r
 }
+
+; negative test - all source ops must have the same type
+
+define <2 x i32> @fsh_unary_shuffle_ops_partial_widening(<3 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
+; CHECK-LABEL: @fsh_unary_shuffle_ops_partial_widening(
+; CHECK-NEXT:    [[A:%.*]] = shufflevector <3 x i32> [[X:%.*]], <3 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x i32> [[Y:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i32> [[Z:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> [[C]])
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = shufflevector <3 x i32> %x, <3 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %b = shufflevector <2 x i32> %y, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %c = shufflevector <2 x i32> %z, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
+  ret <2 x i32> %r
+}
