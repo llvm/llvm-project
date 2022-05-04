@@ -1470,8 +1470,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
 
     SmallString<128> OutputPath(OutputFile);
-
-    SM.getFileManager().makeAbsolutePath(OutputPath);
+    PreparePathForOutput(OutputPath);
     StringRef origDir = llvm::sys::path::parent_path(OutputPath);
 
     RecordData::value_type Record[] = {ORIGINAL_PCH_DIR};
