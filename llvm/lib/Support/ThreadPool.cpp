@@ -100,6 +100,10 @@ void ThreadPool::processTasks(ThreadPoolTaskGroup *WaitingForGroup) {
 
 #ifndef NDEBUG
     CurrentThreadTaskGroups->pop_back();
+    if (CurrentThreadTaskGroups->empty()) {
+      delete CurrentThreadTaskGroups;
+      CurrentThreadTaskGroups = nullptr;
+    }
 #endif
 
     bool Notify;
