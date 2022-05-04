@@ -73,6 +73,10 @@ std::unique_ptr<Pass> createLinalgComprehensiveModuleBufferizePass();
 std::unique_ptr<Pass> createLinalgComprehensiveModuleBufferizePass(
     const bufferization::OneShotBufferizationOptions &options);
 
+/// Create a pass that tries to eliminate init_tensor ops that are anchored on
+/// insert_slice ops.
+std::unique_ptr<Pass> createLinalgInitTensorEliminationPass();
+
 /// Create a pass to convert Linalg operations which work on tensors to use
 /// buffers instead.
 std::unique_ptr<OperationPass<func::FuncOp>> createLinalgBufferizePass();
