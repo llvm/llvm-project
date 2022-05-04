@@ -1,0 +1,10 @@
+// RUN: cir-tool %s | FileCheck %s
+
+module {
+  cir.global @a : i32 = 3
+  func.func @use_global() {
+    cir.return
+  }
+}
+
+// CHECK: cir.global @a : i32 = 3
