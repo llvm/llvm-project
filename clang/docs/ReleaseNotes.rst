@@ -128,6 +128,10 @@ Bug Fixes
   the functions were different. It now diagnoses this case correctly as an
   ambiguous call and an error. Fixes
   `Issue 53640 <https://github.com/llvm/llvm-project/issues/53640>`_.
+- No longer crash when trying to determine whether the controlling expression
+  argument to a generic selection expression has side effects in the case where
+  the expression is result dependent. This fixes
+  `Issue 50227 <https://github.com/llvm/llvm-project/issues/50227>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
