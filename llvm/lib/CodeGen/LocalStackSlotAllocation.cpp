@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"

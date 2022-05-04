@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"

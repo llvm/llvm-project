@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
