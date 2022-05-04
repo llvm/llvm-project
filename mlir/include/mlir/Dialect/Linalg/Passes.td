@@ -24,51 +24,6 @@ def ConvertElementwiseToLinalg : Pass<"convert-elementwise-to-linalg", ""> {
   let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect"];
 }
 
-def LinalgComprehensiveModuleBufferize :
-    Pass<"linalg-comprehensive-module-bufferize", "ModuleOp"> {
-  let summary = "Bufferize (tensor into memref) for a Module.";
-  let description = [{
-    This pass implements a cross-dialect bufferization approach and performs an
-    analysis to determine which op operands and results may be bufferized in the
-    same buffers. The analysis is performed on topologically sorted CallOp and
-    FuncOp within a module. It provides analyses and bufferization across
-    function boundaries. Within a function boundary, the analysis is performed
-    on SSA use-def chains starting from function operands that are annotated
-    with the 'inplaceable' attribute.
-  }];
-  let options = [
-    Option<"testAnalysisOnly", "test-analysis-only", "bool",
-            /*default=*/"false",
-           "Only runs inplaceability analysis (for testing purposes only)">,
-    Option<"printConflicts", "print-conflicts", "bool",
-            /*default=*/"false",
-           "Annotates IR with RaW conflicts. Requires test-analysis-only.">,
-    Option<"allowReturnAllocs", "allow-return-allocs", "bool",
-            /*default=*/"false",
-           "Allows returning/yielding new allocations from a block.">,
-    Option<"allowUnknownOps", "allow-unknown-ops", "bool",
-           /*default=*/"false",
-           "Allows unknown (not bufferizable) ops in the input IR.">,
-    Option<"alwaysAliasingWithDest", "always-aliasing-with-dest", "bool",
-            /*default=*/"true",
-            "Tensor OpResult cannot bufferize inplace OpOperands other than "
-            "out or dest OpOperands (if the op has a notion of such operands)">,
-    Option<"useAlloca", "use-alloca", "bool",
-           /*default=*/"false",
-           "Use stack allocations for memrefs (for testing purposes only)">,
-    Option<"fullyDynamicLayoutMaps", "fully-dynamic-layout-maps", "bool",
-           /*default=*/"true",
-           "Generate MemRef types with dynamic offset+strides by default.">,
-    Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
-           /*default=*/"0",
-           "Analyze ops in random order with a given seed (fuzzer)">,
-    Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
-           "Specify if buffers should be deallocated. For compatibility with "
-           "core bufferization passes.">,
-  ];
-  let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
-}
-
 def LinalgInitTensorElimination : Pass<"linalg-eliminate-init-tensors"> {
   let summary = "Try to eliminate all init_tensor ops.";
   let description = [{

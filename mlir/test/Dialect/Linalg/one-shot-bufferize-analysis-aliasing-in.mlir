@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="test-analysis-only allow-return-allocs always-aliasing-with-dest=0" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only allow-return-allocs always-aliasing-with-dest=0" -split-input-file | FileCheck %s
 
 // This is a test case for alwaysAliasingWithDest = 0. In that case, an OpResult
 // may bufferize in-place with an "in" OpOperand or any non-"out" OpOperand.
