@@ -230,15 +230,13 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @ext_add_ashr_trunc_i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: ext_add_ashr_trunc_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmovlb.u16 q2, q1
-; CHECK-NEXT:    vmovlb.s16 q3, q0
-; CHECK-NEXT:    vmovlt.u16 q1, q1
-; CHECK-NEXT:    vmovlt.s16 q0, q0
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vadd.i32 q2, q3, q2
-; CHECK-NEXT:    vshr.u32 q1, q0, #1
-; CHECK-NEXT:    vshr.u32 q0, q2, #1
-; CHECK-NEXT:    vmovnt.i32 q0, q1
+; CHECK-NEXT:    vmovlt.u16 q2, q1
+; CHECK-NEXT:    vmovlt.s16 q3, q0
+; CHECK-NEXT:    vmovlb.u16 q1, q1
+; CHECK-NEXT:    vmovlb.s16 q0, q0
+; CHECK-NEXT:    vhadd.s32 q2, q3, q2
+; CHECK-NEXT:    vhadd.s32 q0, q0, q1
+; CHECK-NEXT:    vmovnt.i32 q0, q2
 ; CHECK-NEXT:    bx lr
 entry:
   %sa = sext <8 x i16> %a to <8 x i32>
