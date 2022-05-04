@@ -27,17 +27,16 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-cl::opt<IndirectCallPromotionType>
-IndirectCallPromotion("indirect-call-promotion",
-  cl::init(ICP_NONE),
-  cl::desc("indirect call promotion"),
-  cl::values(
-    clEnumValN(ICP_NONE, "none", "do not perform indirect call promotion"),
-    clEnumValN(ICP_CALLS, "calls", "perform ICP on indirect calls"),
-    clEnumValN(ICP_JUMP_TABLES, "jump-tables", "perform ICP on jump tables"),
-    clEnumValN(ICP_ALL, "all", "perform ICP on calls and jump tables")),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<IndirectCallPromotionType> ICP(
+    "indirect-call-promotion", cl::init(ICP_NONE),
+    cl::desc("indirect call promotion"),
+    cl::values(
+        clEnumValN(ICP_NONE, "none", "do not perform indirect call promotion"),
+        clEnumValN(ICP_CALLS, "calls", "perform ICP on indirect calls"),
+        clEnumValN(ICP_JUMP_TABLES, "jump-tables",
+                   "perform ICP on jump tables"),
+        clEnumValN(ICP_ALL, "all", "perform ICP on calls and jump tables")),
+    cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
 extern cl::opt<JumpTableSupportLevel> JumpTables;
 
@@ -173,8 +172,7 @@ void BinaryFunction::postProcessProfile() {
     }
     JT->Count += TotalBranchCount;
 
-    if (opts::IndirectCallPromotion < ICP_JUMP_TABLES &&
-        opts::JumpTables < JTS_AGGRESSIVE)
+    if (opts::ICP < ICP_JUMP_TABLES && opts::JumpTables < JTS_AGGRESSIVE)
       continue;
 
     if (JT->Counts.empty())
