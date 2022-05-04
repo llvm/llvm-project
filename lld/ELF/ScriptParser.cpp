@@ -135,6 +135,9 @@ private:
   // True if a script being read is in the --sysroot directory.
   bool isUnderSysroot = false;
 
+  bool seenDataAlign = false;
+  bool seenRelroEnd = false;
+
   // A set to detect an INCLUDE() cycle.
   StringSet<> seen;
 };
@@ -583,6 +586,14 @@ void ScriptParser::readSections() {
     else
       v.push_back(readOutputSectionDescription(tok));
   }
+
+  // If DATA_SEGMENT_RELRO_END is absent, for sections after DATA_SEGMENT_ALIGN,
+  // the relro fields should be cleared.
+  if (!seenRelroEnd)
+    for (SectionCommand *cmd : v)
+      if (auto *osd = dyn_cast<OutputDesc>(cmd))
+        osd->osec.relro = false;
+
   script->sectionCommands.insert(script->sectionCommands.end(), v.begin(),
                                  v.end());
 
@@ -887,6 +898,8 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
 OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   OutputDesc *cmd = script->createOutputSection(outSec, getCurrentLocation());
   OutputSection *osec = &cmd->osec;
+  // Maybe relro. Will reset to false if DATA_SEGMENT_RELRO_END is absent.
+  osec->relro = seenDataAlign && !seenRelroEnd;
 
   size_t symbolsReferenced = script->referencedSymbols.size();
 
@@ -1358,6 +1371,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
+    seenDataAlign = true;
     return [=] {
       return alignTo(script->getDot(), std::max((uint64_t)1, e().getValue()));
     };
@@ -1377,6 +1391,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
+    seenRelroEnd = true;
     Expr e = getPageSize();
     return [=] { return alignTo(script->getDot(), e().getValue()); };
   }

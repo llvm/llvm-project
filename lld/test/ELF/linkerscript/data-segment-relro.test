@@ -15,10 +15,12 @@
 
 # CHECK:      Name           Type     Address          Off      Size ES Flg
 # CHECK-NEXT:                NULL     {{.*}}
-# CHECK:      .dynamic       DYNAMIC  0000000000001000 001000 0000f0 10  WA
-# CHECK-NEXT: .got           PROGBITS 00000000000010f0 0010f0 000008 00  WA
-# CHECK-NEXT: __libc_atexit  PROGBITS 0000000000002000 002000 000008 00  WA
-# CHECK-NEXT: .got.plt       PROGBITS 0000000000002008 002008 000020 00  WA
+# CHECK:      .orphan.ro     PROGBITS {{.*}}                              A
+# CHECK:      .dynamic       DYNAMIC  {{.*}}                             WA
+# CHECK-NEXT: __libc_atexit  PROGBITS {{.*}}                             WA
+# CHECK-NEXT: .got           PROGBITS {{.*}}                             WA
+# CHECK-NEXT: .got.plt       PROGBITS {{.*}}                             WA
+# CHECK:      .orphan.rw     PROGBITS {{.*}}                             WA
 
 # CHECK1:      Program Headers:
 # CHECK1-NOT:  GNU_RELRO
@@ -35,10 +37,12 @@
 # CHECK2-NEXT:   GNU_STACK
 
 # CHECK2:      Section to Segment mapping:
-# CHECK2:        06     .dynamic .got {{$}}
+# CHECK2:        06     .dynamic __libc_atexit .got {{$}}
 
 # RUN: sed '/DATA_SEGMENT_RELRO_END/d' %t/1.t > %t/2.t
-# RUN: ld.lld %t/a.o %t/b.so -T %t/2.t -o /dev/null
+# RUN: not ld.lld %t/a.o %t/b.so -T %t/2.t -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: section: .got is not contiguous with other relro sections
 
 #--- a.s
 .global _start
@@ -56,6 +60,12 @@ _start:
 .section __libc_atexit,"aw",@progbits
 .dc.a __libc_atexit
 
+.section .orphan.ro,"a",@progbits
+.dc.a 0
+
+.section .orphan.rw,"aw",@progbits
+.dc.a .orphan.rw
+
 #--- 1.t
 SECTIONS {
   . = SIZEOF_HEADERS;
@@ -66,11 +76,12 @@ SECTIONS {
   . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE));
 
   .dynamic : { *(.dynamic) }
+  ## The custom section __libc_atexit is made relro.
+  __libc_atexit : { *(__libc_atexit) }
   .got : { *(.got) }
 
   . = DATA_SEGMENT_RELRO_END (1 ? 24 : 0, .);
 
-  __libc_atexit : { *(__libc_atexit) }
   .got.plt : { *(.got.plt) }
   .data : { *(.data) }
   .bss : { *(.bss) }
