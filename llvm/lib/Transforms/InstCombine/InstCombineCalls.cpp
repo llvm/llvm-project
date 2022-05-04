@@ -1114,9 +1114,11 @@ foldShuffledIntrinsicOperands(IntrinsicInst *II,
   // See if all arguments are shuffled with the same mask.
   SmallVector<Value *, 4> NewArgs(II->arg_size());
   NewArgs[0] = X;
+  Type *SrcTy = X->getType();
   for (unsigned i = 1, e = II->arg_size(); i != e; ++i) {
     if (!match(II->getArgOperand(i),
-               m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))))
+               m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))) ||
+        X->getType() != SrcTy)
       return nullptr;
     NewArgs[i] = X;
   }
@@ -1124,7 +1126,7 @@ foldShuffledIntrinsicOperands(IntrinsicInst *II,
   // intrinsic (shuf X, M), (shuf Y, M), ... --> shuf (intrinsic X, Y, ...), M
   Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
   Value *NewIntrinsic =
-      Builder.CreateIntrinsic(II->getIntrinsicID(), X->getType(), NewArgs, FPI);
+      Builder.CreateIntrinsic(II->getIntrinsicID(), SrcTy, NewArgs, FPI);
   return new ShuffleVectorInst(NewIntrinsic, Mask);
 }
 
