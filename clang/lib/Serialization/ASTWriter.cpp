@@ -1224,15 +1224,24 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   }
 
   if (WritingModule && WritingModule->Directory) {
-    SmallString<128> BaseDir(WritingModule->Directory->getName());
+    SmallString<128> BaseDir;
+    if (PP.getHeaderSearchInfo().getHeaderSearchOpts().ModuleFileHomeIsCwd) {
+      // Use the current working directory as the base path for all inputs.
+      auto *CWD =
+          Context.getSourceManager().getFileManager().getDirectory(".").get();
+      BaseDir.assign(CWD->getName());
+    } else {
+      BaseDir.assign(WritingModule->Directory->getName());
+    }
     cleanPathForOutput(Context.getSourceManager().getFileManager(), BaseDir);
 
     // If the home of the module is the current working directory, then we
     // want to pick up the cwd of the build process loading the module, not
     // our cwd, when we load this module.
-    if (!PP.getHeaderSearchInfo()
-             .getHeaderSearchOpts()
-             .ModuleMapFileHomeIsCwd ||
+    if (!(PP.getHeaderSearchInfo()
+              .getHeaderSearchOpts()
+              .ModuleMapFileHomeIsCwd ||
+          PP.getHeaderSearchInfo().getHeaderSearchOpts().ModuleFileHomeIsCwd) ||
         WritingModule->Directory->getName() != StringRef(".")) {
       // Module directory.
       auto Abbrev = std::make_shared<BitCodeAbbrev>();

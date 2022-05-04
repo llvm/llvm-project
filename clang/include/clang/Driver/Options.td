@@ -5619,6 +5619,10 @@ def fmodule_map_file_home_is_cwd : Flag<["-"], "fmodule-map-file-home-is-cwd">,
   HelpText<"Use the current working directory as the home directory of "
            "module maps specified by -fmodule-map-file=<FILE>">,
   MarshallingInfoFlag<HeaderSearchOpts<"ModuleMapFileHomeIsCwd">>;
+def fmodule_file_home_is_cwd : Flag<["-"], "fmodule-file-home-is-cwd">,
+  HelpText<"Use the current working directory as the base directory of "
+           "compiled module files.">,
+  MarshallingInfoFlag<HeaderSearchOpts<"ModuleFileHomeIsCwd">>;
 def fmodule_feature : Separate<["-"], "fmodule-feature">,
   MetaVarName<"<feature>">,
   HelpText<"Enable <feature> in module map requires declarations">,
