@@ -50,8 +50,6 @@ class StepAvoidsNoDebugTestCase(TestBase):
         archs=["i386"],
         oslist=no_match(["freebsd"]),
         bugnumber="llvm.org/pr28549")
-    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd", "linux"],
-                        bugnumber="llvm.org/pr44057")
     def test_step_in_with_python(self):
         """Test stepping in using avoid-no-debug with dwarf."""
         self.build()
