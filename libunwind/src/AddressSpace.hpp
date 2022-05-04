@@ -551,6 +551,7 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
     DWORD err = GetLastError();
     _LIBUNWIND_TRACE_UNWINDING("findUnwindSections: EnumProcessModules failed, "
                                "returned error %d", (int)err);
+    (void)err;
     return false;
   }
 
