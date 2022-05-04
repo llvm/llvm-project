@@ -18,22 +18,24 @@
 namespace llvm {
 namespace bolt {
 
+enum InliningType : char {
+  INL_NONE = 0, /// Cannot inline
+  INL_TAILCALL, /// Can inline at tail call site
+  INL_ANY       /// Can inline at any call site
+};
+
+struct InliningInfo {
+  InliningType Type{INL_NONE};
+  uint64_t SizeAfterInlining{0};
+  uint64_t SizeAfterTailCallInlining{0};
+
+  InliningInfo(InliningType Type = INL_NONE) : Type(Type) {}
+};
+
+/// Check if the inliner can handle inlining of \p BF.
+InliningInfo getInliningInfo(const BinaryFunction &BF);
+
 class Inliner : public BinaryFunctionPass {
-private:
-  enum InliningType : char {
-    INL_NONE = 0, /// Cannot inline
-    INL_TAILCALL, /// Can inline at tail call site
-    INL_ANY       /// Can inline at any call site
-  };
-
-  struct InliningInfo {
-    InliningType Type{INL_NONE};
-    uint64_t SizeAfterInlining{0};
-    uint64_t SizeAfterTailCallInlining{0};
-
-    InliningInfo(InliningType Type = INL_NONE) : Type(Type) {}
-  };
-
   std::unordered_map<const BinaryFunction *, InliningInfo> InliningCandidates;
 
   /// Count total amount of bytes inlined for all instances of Inliner.
@@ -73,9 +75,6 @@ private:
   std::pair<BinaryBasicBlock *, BinaryBasicBlock::iterator>
   inlineCall(BinaryBasicBlock &CallerBB, BinaryBasicBlock::iterator CallInst,
              const BinaryFunction &Callee);
-
-  /// Check if the inliner can handle inlining of \p BF.
-  InliningInfo getInliningInfo(const BinaryFunction &BF) const;
 
 public:
   explicit Inliner(const cl::opt<bool> &PrintPass)
