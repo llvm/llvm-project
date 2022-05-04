@@ -33,6 +33,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Value.h"
 
+using namespace clang;
 namespace cir {
 
 class CIRGenFunction;
@@ -97,6 +98,16 @@ private:
   // used to remove the weak of the reference if we ever see a direct reference
   // or a definition.
   llvm::SmallPtrSet<mlir::Operation *, 10> WeakRefReferences;
+
+  // TODO(cir): does this really need to be a state for CIR emission?
+  GlobalDecl initializedGlobalDecl;
+
+  /// When a C++ decl with an initializer is deferred, null is
+  /// appended to CXXGlobalInits, and the index of that null is placed
+  /// here so that the initializer will be performed in the correct
+  /// order. Once the decl is emitted, the index is replaced with ~0U to ensure
+  /// that we don't re-emit the initializer.
+  llvm::DenseMap<const Decl *, unsigned> DelayedCXXInitPosition;
 
   /// -------
   /// Declaring variables
