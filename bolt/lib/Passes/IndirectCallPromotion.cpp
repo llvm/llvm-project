@@ -502,108 +502,107 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
   const JumpTable *JT = BB.getFunction()->getJumpTable(CallInst);
   SymTargetsType SymTargets;
 
-  if (JT) {
-    JumpTableInfoType HotTargets =
-        maybeGetHotJumpTableTargets(BB, CallInst, TargetFetchInst, JT);
-
-    if (!HotTargets.empty()) {
-      auto findTargetsIndex = [&](uint64_t JTIndex) {
-        for (size_t I = 0; I < Targets.size(); ++I) {
-          std::vector<uint64_t> &JTIs = Targets[I].JTIndices;
-          if (std::find(JTIs.begin(), JTIs.end(), JTIndex) != JTIs.end())
-            return I;
-        }
-        LLVM_DEBUG(
-            dbgs() << "BOLT-ERROR: Unable to find target index for hot jump "
-                   << " table entry in " << *BB.getFunction() << "\n");
-        llvm_unreachable("Hot indices must be referred to by at least one "
-                         "callsite");
-      };
-
-      if (opts::Verbosity >= 1)
-        for (size_t I = 0; I < HotTargets.size(); ++I)
-          outs() << "BOLT-INFO: HotTarget[" << I << "] = ("
-                 << HotTargets[I].first << ", " << HotTargets[I].second
-                 << ")\n";
-
-      // Recompute hottest targets, now discriminating which index is hot
-      // NOTE: This is a tradeoff. On one hand, we get index information. On the
-      // other hand, info coming from the memory profile is much less accurate
-      // than LBRs. So we may actually end up working with more coarse
-      // profile granularity in exchange for information about indices.
-      std::vector<Callsite> NewTargets;
-      std::map<const MCSymbol *, uint32_t> IndicesPerTarget;
-      uint64_t TotalMemAccesses = 0;
-      for (size_t I = 0; I < HotTargets.size(); ++I) {
-        const uint64_t TargetIndex = findTargetsIndex(HotTargets[I].second);
-        ++IndicesPerTarget[Targets[TargetIndex].To.Sym];
-        TotalMemAccesses += HotTargets[I].first;
-      }
-      uint64_t RemainingMemAccesses = TotalMemAccesses;
-      const size_t TopN = opts::IndirectCallPromotionJumpTablesTopN != 0
-                              ? opts::IndirectCallPromotionTopN
-                              : opts::IndirectCallPromotionTopN;
-      size_t I = 0;
-      for (; I < HotTargets.size(); ++I) {
-        const uint64_t MemAccesses = HotTargets[I].first;
-        if (100 * MemAccesses <
-            TotalMemAccesses * opts::ICPJTTotalPercentThreshold)
-          break;
-        if (100 * MemAccesses <
-            RemainingMemAccesses * opts::ICPJTRemainingPercentThreshold)
-          break;
-        if (TopN && I >= TopN)
-          break;
-        RemainingMemAccesses -= MemAccesses;
-
-        const uint64_t JTIndex = HotTargets[I].second;
-        Callsite &Target = Targets[findTargetsIndex(JTIndex)];
-
-        NewTargets.push_back(Target);
-        std::vector<uint64_t>({JTIndex}).swap(NewTargets.back().JTIndices);
-        Target.JTIndices.erase(std::remove(Target.JTIndices.begin(),
-                                           Target.JTIndices.end(), JTIndex),
-                               Target.JTIndices.end());
-
-        // Keep fixCFG counts sane if more indices use this same target later
-        assert(IndicesPerTarget[Target.To.Sym] > 0 && "wrong map");
-        NewTargets.back().Branches =
-            Target.Branches / IndicesPerTarget[Target.To.Sym];
-        NewTargets.back().Mispreds =
-            Target.Mispreds / IndicesPerTarget[Target.To.Sym];
-        assert(Target.Branches >= NewTargets.back().Branches);
-        assert(Target.Mispreds >= NewTargets.back().Mispreds);
-        Target.Branches -= NewTargets.back().Branches;
-        Target.Mispreds -= NewTargets.back().Mispreds;
-      }
-      std::copy(Targets.begin(), Targets.end(), std::back_inserter(NewTargets));
-      std::swap(NewTargets, Targets);
-      N = I;
-
-      if (N == 0 && opts::Verbosity >= 1) {
-        outs() << "BOLT-INFO: ICP failed in " << *BB.getFunction() << " in "
-               << BB.getName()
-               << ": failed to meet thresholds after memory profile data was "
-                  "loaded.\n";
-        return SymTargets;
-      }
-    }
-
-    for (size_t I = 0, TgtIdx = 0; I < N; ++TgtIdx) {
-      Callsite &Target = Targets[TgtIdx];
-      assert(Target.To.Sym && "All ICP targets must be to known symbols");
-      assert(!Target.JTIndices.empty() && "Jump tables must have indices");
-      for (uint64_t Idx : Target.JTIndices) {
-        SymTargets.emplace_back(Target.To.Sym, Idx);
-        ++I;
-      }
-    }
-  } else {
+  if (!JT) {
     for (size_t I = 0; I < N; ++I) {
       assert(Targets[I].To.Sym && "All ICP targets must be to known symbols");
       assert(Targets[I].JTIndices.empty() &&
              "Can't have jump table indices for non-jump tables");
       SymTargets.emplace_back(Targets[I].To.Sym, 0);
+    }
+    return SymTargets;
+  }
+
+  JumpTableInfoType HotTargets =
+      maybeGetHotJumpTableTargets(BB, CallInst, TargetFetchInst, JT);
+
+  if (!HotTargets.empty()) {
+    auto findTargetsIndex = [&](uint64_t JTIndex) {
+      for (size_t I = 0; I < Targets.size(); ++I) {
+        std::vector<uint64_t> &JTIs = Targets[I].JTIndices;
+        if (std::find(JTIs.begin(), JTIs.end(), JTIndex) != JTIs.end())
+          return I;
+      }
+      LLVM_DEBUG(
+          dbgs() << "BOLT-ERROR: Unable to find target index for hot jump "
+                 << " table entry in " << *BB.getFunction() << "\n");
+      llvm_unreachable("Hot indices must be referred to by at least one "
+                       "callsite");
+    };
+
+    if (opts::Verbosity >= 1)
+      for (size_t I = 0; I < HotTargets.size(); ++I)
+        outs() << "BOLT-INFO: HotTarget[" << I << "] = (" << HotTargets[I].first
+               << ", " << HotTargets[I].second << ")\n";
+
+    // Recompute hottest targets, now discriminating which index is hot
+    // NOTE: This is a tradeoff. On one hand, we get index information. On the
+    // other hand, info coming from the memory profile is much less accurate
+    // than LBRs. So we may actually end up working with more coarse
+    // profile granularity in exchange for information about indices.
+    std::vector<Callsite> NewTargets;
+    std::map<const MCSymbol *, uint32_t> IndicesPerTarget;
+    uint64_t TotalMemAccesses = 0;
+    for (size_t I = 0; I < HotTargets.size(); ++I) {
+      const uint64_t TargetIndex = findTargetsIndex(HotTargets[I].second);
+      ++IndicesPerTarget[Targets[TargetIndex].To.Sym];
+      TotalMemAccesses += HotTargets[I].first;
+    }
+    uint64_t RemainingMemAccesses = TotalMemAccesses;
+    const size_t TopN = opts::IndirectCallPromotionJumpTablesTopN != 0
+                            ? opts::IndirectCallPromotionTopN
+                            : opts::IndirectCallPromotionTopN;
+    size_t I = 0;
+    for (; I < HotTargets.size(); ++I) {
+      const uint64_t MemAccesses = HotTargets[I].first;
+      if (100 * MemAccesses <
+          TotalMemAccesses * opts::ICPJTTotalPercentThreshold)
+        break;
+      if (100 * MemAccesses <
+          RemainingMemAccesses * opts::ICPJTRemainingPercentThreshold)
+        break;
+      if (TopN && I >= TopN)
+        break;
+      RemainingMemAccesses -= MemAccesses;
+
+      const uint64_t JTIndex = HotTargets[I].second;
+      Callsite &Target = Targets[findTargetsIndex(JTIndex)];
+
+      NewTargets.push_back(Target);
+      std::vector<uint64_t>({JTIndex}).swap(NewTargets.back().JTIndices);
+      Target.JTIndices.erase(std::remove(Target.JTIndices.begin(),
+                                         Target.JTIndices.end(), JTIndex),
+                             Target.JTIndices.end());
+
+      // Keep fixCFG counts sane if more indices use this same target later
+      assert(IndicesPerTarget[Target.To.Sym] > 0 && "wrong map");
+      NewTargets.back().Branches =
+          Target.Branches / IndicesPerTarget[Target.To.Sym];
+      NewTargets.back().Mispreds =
+          Target.Mispreds / IndicesPerTarget[Target.To.Sym];
+      assert(Target.Branches >= NewTargets.back().Branches);
+      assert(Target.Mispreds >= NewTargets.back().Mispreds);
+      Target.Branches -= NewTargets.back().Branches;
+      Target.Mispreds -= NewTargets.back().Mispreds;
+    }
+    std::copy(Targets.begin(), Targets.end(), std::back_inserter(NewTargets));
+    std::swap(NewTargets, Targets);
+    N = I;
+
+    if (N == 0 && opts::Verbosity >= 1) {
+      outs() << "BOLT-INFO: ICP failed in " << *BB.getFunction() << " in "
+             << BB.getName() << ": failed to meet thresholds after memory "
+             << "profile data was loaded.\n";
+      return SymTargets;
+    }
+  }
+
+  for (size_t I = 0, TgtIdx = 0; I < N; ++TgtIdx) {
+    Callsite &Target = Targets[TgtIdx];
+    assert(Target.To.Sym && "All ICP targets must be to known symbols");
+    assert(!Target.JTIndices.empty() && "Jump tables must have indices");
+    for (uint64_t Idx : Target.JTIndices) {
+      SymTargets.emplace_back(Target.To.Sym, Idx);
+      ++I;
     }
   }
 
