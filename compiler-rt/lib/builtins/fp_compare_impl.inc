@@ -18,6 +18,9 @@ typedef int CMP_RESULT;
 #elif __SIZEOF_POINTER__ == 8 && __SIZEOF_LONG__ == 4
 // LLP64 ABIs use long long instead of long.
 typedef long long CMP_RESULT;
+#elif __AVR__
+// AVR uses a single byte for the return value.
+typedef char CMP_RESULT;
 #else
 // Otherwise the comparison functions return long.
 typedef long CMP_RESULT;
