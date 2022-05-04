@@ -27,6 +27,33 @@ static void verifyRule(const RewriteRuleWith<std::string> &Rule) {
          " explicitly provide an empty explanation if none is desired");
 }
 
+// If a string unintentionally containing '%' is passed as a diagnostic, Clang
+// will claim the string is ill-formed and assert-fail. This function escapes
+// such strings so they can be safely used in diagnostics.
+std::string escapeForDiagnostic(std::string ToEscape) {
+  // Optimize for the common case that the string does not contain `%` at the
+  // cost of an extra scan over the string in the slow case.
+  auto Pos = ToEscape.find('%');
+  if (Pos == ToEscape.npos)
+    return ToEscape;
+
+  std::string Result;
+  Result.reserve(ToEscape.size());
+  // Convert position to a count.
+  ++Pos;
+  Result.append(ToEscape, 0, Pos);
+  Result += '%';
+
+  for (auto N = ToEscape.size(); Pos < N; ++Pos) {
+    const char C = ToEscape.at(Pos);
+    Result += C;
+    if (C == '%')
+      Result += '%';
+  }
+
+  return Result;
+}
+
 TransformerClangTidyCheck::TransformerClangTidyCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -99,7 +126,8 @@ void TransformerClangTidyCheck::check(
   }
 
   // Associate the diagnostic with the location of the first change.
-  DiagnosticBuilder Diag = diag((*Edits)[0].Range.getBegin(), *Explanation);
+  DiagnosticBuilder Diag =
+      diag((*Edits)[0].Range.getBegin(), escapeForDiagnostic(*Explanation));
   for (const auto &T : *Edits)
     switch (T.Kind) {
     case transformer::EditKind::Range:
