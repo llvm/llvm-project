@@ -275,6 +275,7 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
   EXPECT_TRUE(FI);
   EXPECT_TRUE(FI->IsValid);
   EXPECT_EQ(FI->Framework.str(), "Foo");
+  EXPECT_EQ(Search.getIncludeNameForHeader(FE), "Foo/Foo.h");
 }
 
 } // namespace

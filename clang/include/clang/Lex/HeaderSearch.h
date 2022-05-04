@@ -325,6 +325,9 @@ class HeaderSearch {
   /// whether they were valid or not.
   llvm::DenseMap<const FileEntry *, bool> LoadedModuleMaps;
 
+  // A map of discovered headers with their associated include file name.
+  llvm::DenseMap<const FileEntry *, llvm::SmallString<64>> IncludeNames;
+
   /// Uniqued set of framework names, which is used to track which
   /// headers were included as framework headers.
   llvm::StringSet<llvm::BumpPtrAllocator> FrameworkNames;
@@ -837,6 +840,13 @@ public:
 
   /// Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);
+
+  /// Retrieve the include name for the header.
+  ///
+  /// \param File The entry for a given header.
+  /// \returns The name of how the file was included when the header's location
+  /// was resolved.
+  StringRef getIncludeNameForHeader(const FileEntry *File) const;
 
   /// Suggest a path by which the specified file could be found, for use in
   /// diagnostics to suggest a #include. Returned path will only contain forward
