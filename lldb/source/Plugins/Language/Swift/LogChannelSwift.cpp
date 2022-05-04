@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LogChannelSwift.h"
+#include "lldb/Version/Version.h"
 
 using namespace lldb_private;
 
@@ -37,7 +38,7 @@ void LogChannelSwift::Initialize() {
         "This file contains the configuration of LLDB's embedded Swift "
         "compiler to help diagnosing module import and search path issues. "
         "The swift-healthcheck command is meant to be run *after* an error "
-        "has occurred.\n");
+        "has occurred.\n%s", lldb_private::GetVersion());
 }
 
 void LogChannelSwift::Terminate() { Log::Unregister("swift"); }
