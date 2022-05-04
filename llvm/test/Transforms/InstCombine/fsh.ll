@@ -740,10 +740,8 @@ define <2 x i31> @fshr_mask_args_same_vector3_different_but_still_prunable(<2 x 
 
 define <2 x i32> @fsh_unary_shuffle_ops(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
 ; CHECK-LABEL: @fsh_unary_shuffle_ops(
-; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x i32> [[Y:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i32> [[Z:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[A]], <2 x i32> [[B]], <2 x i32> [[C]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[Z:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = shufflevector <2 x i32> %x, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
@@ -757,9 +755,8 @@ define <3 x i16> @fsh_unary_shuffle_ops_widening(<2 x i16> %x, <2 x i16> %y, <2 
 ; CHECK-LABEL: @fsh_unary_shuffle_ops_widening(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i16> [[X:%.*]], <2 x i16> poison, <3 x i32> <i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    call void @use_v3(<3 x i16> [[A]])
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x i16> [[Y:%.*]], <2 x i16> poison, <3 x i32> <i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i16> [[Z:%.*]], <2 x i16> poison, <3 x i32> <i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i16> @llvm.fshl.v3i16(<3 x i16> [[A]], <3 x i16> [[B]], <3 x i16> [[C]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X]], <2 x i16> [[Y:%.*]], <2 x i16> [[Z:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <3 x i32> <i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %a = shufflevector <2 x i16> %x, <2 x i16> poison, <3 x i32> <i32 1, i32 0, i32 1>
@@ -772,11 +769,10 @@ define <3 x i16> @fsh_unary_shuffle_ops_widening(<2 x i16> %x, <2 x i16> %y, <2 
 
 define <2 x i31> @fsh_unary_shuffle_ops_narrowing(<3 x i31> %x, <3 x i31> %y, <3 x i31> %z) {
 ; CHECK-LABEL: @fsh_unary_shuffle_ops_narrowing(
-; CHECK-NEXT:    [[A:%.*]] = shufflevector <3 x i31> [[X:%.*]], <3 x i31> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[B:%.*]] = shufflevector <3 x i31> [[Y:%.*]], <3 x i31> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    call void @use_v2(<2 x i31> [[B]])
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <3 x i31> [[Z:%.*]], <3 x i31> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[A]], <2 x i31> [[B]], <2 x i31> [[C]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i31> @llvm.fshl.v3i31(<3 x i31> [[X:%.*]], <3 x i31> [[Y]], <3 x i31> [[Z:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i31> [[TMP1]], <3 x i31> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
   %a = shufflevector <3 x i31> %x, <3 x i31> poison, <2 x i32> <i32 1, i32 0>
