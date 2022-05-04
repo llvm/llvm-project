@@ -1653,17 +1653,17 @@ Sema::CreateGenericSelectionExpr(SourceLocation KeyLoc,
     ControllingExpr = R.get();
   }
 
-  // The controlling expression is an unevaluated operand, so side effects are
-  // likely unintended.
-  if (!inTemplateInstantiation() &&
-      ControllingExpr->HasSideEffects(Context, false))
-    Diag(ControllingExpr->getExprLoc(),
-         diag::warn_side_effects_unevaluated_context);
-
   bool TypeErrorFound = false,
        IsResultDependent = ControllingExpr->isTypeDependent(),
        ContainsUnexpandedParameterPack
          = ControllingExpr->containsUnexpandedParameterPack();
+
+  // The controlling expression is an unevaluated operand, so side effects are
+  // likely unintended.
+  if (!inTemplateInstantiation() && !IsResultDependent &&
+      ControllingExpr->HasSideEffects(Context, false))
+    Diag(ControllingExpr->getExprLoc(),
+         diag::warn_side_effects_unevaluated_context);
 
   for (unsigned i = 0; i < NumAssocs; ++i) {
     if (Exprs[i]->containsUnexpandedParameterPack())

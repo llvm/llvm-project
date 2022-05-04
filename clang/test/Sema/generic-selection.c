@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c11 -fsyntax-only -Wno-strict-prototypes -verify %s
-// RUN: %clang_cc1 -std=c99 -pedantic -fsyntax-only -Wno-strict-prototypes -verify=expected,ext %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -Wno-strict-prototypes -Wno-implicit-function-declaration -verify %s
+// RUN: %clang_cc1 -std=c99 -pedantic -fsyntax-only -Wno-strict-prototypes -Wno-implicit-function-declaration -verify=expected,ext %s
 
 void g(void);
 
@@ -46,4 +46,14 @@ char testc(char);
 
 void PR30201(void) {
   _Generic(4, char:testc, default:test)(4); // ext-warning {{'_Generic' is a C11 extension}}
+}
+
+void GH50227(void) {
+  // Previously, the controlling expression for the outer _Generic makes it
+  // result dependent, and testing whether that controlling expression has side
+  // effects would cause a crash.
+  _Generic( // ext-warning {{'_Generic' is a C11 extension}}
+    n(
+      _Generic(n++, int : 0) // expected-error {{cannot increment value of type 'int ()'}} ext-warning {{'_Generic' is a C11 extension}}
+    ), int : 0);
 }
