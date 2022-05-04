@@ -132,6 +132,10 @@ Bug Fixes
   argument to a generic selection expression has side effects in the case where
   the expression is result dependent. This fixes
   `Issue 50227 <https://github.com/llvm/llvm-project/issues/50227>`_.
+- Fixed an assertion when constant evaluating an initializer for a GCC/Clang
+  floating-point vector type when the width of the initialization is exactly
+  the same as the elements of the vector being initialized.
+  Fixes `Issue 50216 <https://github.com/llvm/llvm-project/issues/50216>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

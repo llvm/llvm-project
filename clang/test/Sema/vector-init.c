@@ -42,3 +42,11 @@ void test3(void) {
   longlong2 arr1[2] = { test3_helper(), test3_helper() };
   short4 arr2[2] = { test3_helper(), test3_helper() }; // expected-error 2 {{initializing 'short4' (vector of 4 'short' values) with an expression of incompatible type 'short8' (vector of 8 'short' values)}}
 }
+
+// GH50216
+// These would previously crash when constant evaluating the initializers.
+typedef double float64x1_t __attribute__((vector_size(8)));
+float64x1_t arg1 = (float64x1_t)0x3fedf9d4343c7c80; // okay
+
+typedef float float32x1_t __attribute__((vector_size(4)));
+float32x1_t arg2 = (float32x1_t)0x3fedf9d4; // okay
