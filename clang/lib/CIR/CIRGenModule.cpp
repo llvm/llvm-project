@@ -13,6 +13,7 @@
 #include "CIRGenModule.h"
 
 #include "CIRGenCXXABI.h"
+#include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
@@ -324,8 +325,8 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
 
   // Get or create the prototype for the function.
   // if (!V || (V.getValueType() != Ty))
-  // TODO: Figure out what to do here? llvm uses a GlobalValue for the FuncOp in
-  // mlir
+  // TODO(cir): Figure out what to do here? llvm uses a GlobalValue for the
+  // FuncOp in mlir
   Op = GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/true,
                          ForDefinition);
 
@@ -334,11 +335,11 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   if (!Fn.isDeclaration())
     return;
 
-  // TODO: setFunctionLinkage
-  // TODO: setGVProperties
-  // TODO: MaubeHandleStaticInExternC
-  // TODO: maybeSetTrivialComdat
-  // TODO: setLLVMFunctionFEnvAttributes
+  // TODO(cir): setFunctionLinkage
+  // TODO(cir): setGVProperties
+  // TODO(cir): MaubeHandleStaticInExternC
+  // TODO(cir): maybeSetTrivialComdat
+  // TODO(cir): setLLVMFunctionFEnvAttributes
 
   CIRGenFunction CGF{*this, builder};
   CurCGF = &CGF;
@@ -353,9 +354,424 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   assert(!D->getAttr<AnnotateAttr>() && "NYI");
 }
 
+/// FIXME: implement
+mlir::cir::GlobalOp CIRGenModule::getGlobalValue(StringRef Name) { return {}; }
+
+/// If the specified mangled name is not in the module,
+/// create and return an mlir GlobalOp with the specified type (TODO(cir):
+/// address space).
+///
+/// TODO(cir):
+/// 1. If there is something in the module with the specified name, return
+/// it potentially bitcasted to the right type.
+///
+/// 2. If D is non-null, it specifies a decl that correspond to this.  This is
+/// used to set the attributes on the global when it is first created.
+///
+/// 3. If IsForDefinition is true, it is guaranteed that an actual global with
+/// type Ty will be returned, not conversion of a variable with the same
+/// mangled name but some other type.
+mlir::cir::GlobalOp
+CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
+                                   LangAS AddrSpace, const VarDecl *D,
+                                   ForDefinition_t IsForDefinition) {
+  // Lookup the entry, lazily creating it if necessary.
+  mlir::cir::GlobalOp Entry = getGlobalValue(MangledName);
+
+  // unsigned TargetAS = astCtx.getTargetAddressSpace(AddrSpace);
+  if (Entry) {
+    if (WeakRefReferences.erase(Entry)) {
+      assert(0 && "not implemented");
+      // if (D && !D->hasAttr<WeakAttr>())
+      //   Entry->setLinkage(llvm::Function::ExternalLinkage);
+    }
+
+    // Handle dropped DLL attributes.
+    // FIXME: Entry->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
+    if (D && !D->hasAttr<clang::DLLImportAttr>() &&
+        !D->hasAttr<clang::DLLExportAttr>())
+      assert(0 && "not implemented");
+
+    if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd && D)
+      assert(0 && "not implemented");
+
+    // TODO(cir): check address space matches
+    if (Entry.getSymType() == Ty)
+      return Entry;
+
+    // If there are two attempts to define the same mangled name, issue an
+    // error.
+    //
+    // TODO(cir): look at mlir::GlobalValue::isDeclaration for all aspects of
+    // recognizing the global as a declaration, for now only check if
+    // initializer is present.
+    if (IsForDefinition && !Entry.isDeclaration()) {
+      GlobalDecl OtherGD;
+      const VarDecl *OtherD;
+
+      // Check that D is not yet in DiagnosedConflictingDefinitions is required
+      // to make sure that we issue an error only once.
+      if (D && lookupRepresentativeDecl(MangledName, OtherGD) &&
+          (D->getCanonicalDecl() != OtherGD.getCanonicalDecl().getDecl()) &&
+          (OtherD = dyn_cast<VarDecl>(OtherGD.getDecl())) &&
+          OtherD->hasInit() &&
+          DiagnosedConflictingDefinitions.insert(D).second) {
+        getDiags().Report(D->getLocation(), diag::err_duplicate_mangled_name)
+            << MangledName;
+        getDiags().Report(OtherGD.getDecl()->getLocation(),
+                          diag::note_previous_definition);
+      }
+    }
+
+    // TODO(cir): LLVM codegen makes sure the result is of the correct type
+    // by issuing a address space cast.
+
+    // TODO(cir):
+    // (In LLVM codgen, if global is requested for a definition, we always need
+    // to create a new global, otherwise return a bitcast.)
+    if (!IsForDefinition)
+      assert(0 && "not implemented");
+  }
+
+  // TODO(cir): auto DAddrSpace = GetGlobalVarAddressSpace(D);
+  // TODO(cir): do we need to strip pointer casts for Entry?
+
+  auto loc = getLoc(D->getSourceRange());
+
+  // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
+  // mark it as such.
+  auto GV = builder.create<mlir::cir::GlobalOp>(loc, MangledName, Ty);
+  theModule.push_back(GV);
+
+  // If we already created a global with the same mangled name (but different
+  // type) before, take its name and remove it from its parent.
+  assert(!Entry && "not implemented");
+
+  // This is the first use or definition of a mangled name.  If there is a
+  // deferred decl with this name, remember that we need to emit it at the end
+  // of the file.
+  auto DDI = DeferredDecls.find(MangledName);
+  if (DDI != DeferredDecls.end()) {
+    // Move the potentially referenced deferred decl to the DeferredDeclsToEmit
+    // list, and remove it from DeferredDecls (since we don't need it anymore).
+    addDeferredDeclToEmit(DDI->second);
+    DeferredDecls.erase(DDI);
+  }
+
+  // Handle things which are present even on external declarations.
+  auto &LangOpts = getLangOpts();
+  if (D) {
+    if (LangOpts.OpenMP && !LangOpts.OpenMPSimd)
+      assert(0 && "not implemented");
+
+    // FIXME: This code is overly simple and should be merged with other global
+    // handling.
+
+    // TODO(cir):
+    //   GV->setConstant(isTypeConstant(D->getType(), false));
+    //   GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
+    //   setLinkageForGV(GV, D);
+
+    if (D->getTLSKind()) {
+      assert(0 && "not implemented");
+    }
+
+    // TODO(cir):
+    //   setGVProperties(GV, D);
+
+    // If required by the ABI, treat declarations of static data members with
+    // inline initializers as definitions.
+    if (astCtx.isMSStaticDataMemberInlineDefinition(D)) {
+      assert(0 && "not implemented");
+    }
+
+    // Emit section information for extern variables.
+    if (D->hasExternalStorage())
+      assert(0 && "not implemented");
+
+    // Handle XCore specific ABI requirements.
+    if (getTriple().getArch() == llvm::Triple::xcore)
+      assert(0 && "not implemented");
+
+    // Check if we a have a const declaration with an initializer, we maybe
+    // able to emit it as available_externally to expose it's value to the
+    // optimizer.
+    if (getLangOpts().CPlusPlus && GV.isPublic() &&
+        D->getType().isConstQualified() && GV.isDeclaration() &&
+        !D->hasDefinition() && D->hasInit() && !D->hasAttr<DLLImportAttr>()) {
+      assert(0 && "not implemented");
+    }
+  }
+
+  // TODO(cir): if this method is used to handle functions we must have
+  // something closer to GlobalValue::isDeclaration instead of checking for
+  // initializer.
+  if (GV.isDeclaration()) {
+    // TODO(cir): set target attributes
+
+    // External HIP managed variables needed to be recorded for transformation
+    // in both device and host compilations.
+    if (getLangOpts().CUDA)
+      assert(0 && "not implemented");
+  }
+
+  // TODO(cir): address space cast when needed for DAddrSpace.
+  return GV;
+}
+
+mlir::cir::GlobalOp CIRGenModule::buildGlobal(const VarDecl *D,
+                                              std::optional<mlir::Type> Ty,
+                                              ForDefinition_t IsForDefinition) {
+  assert(D->hasGlobalStorage() && "Not a global variable");
+  QualType ASTTy = D->getType();
+  if (!Ty)
+    Ty = getTypes().convertTypeForMem(ASTTy);
+
+  StringRef MangledName = getMangledName(D);
+  return getOrCreateCIRGlobal(MangledName, *Ty, ASTTy.getAddressSpace(), D,
+                              IsForDefinition);
+}
+
+/// Return the mlir::Value for the address of the given global variable. If Ty
+/// is non-null and if the global doesn't exist, then it will be created with
+/// the specified type instead of whatever the normal requested type would be.
+/// If IsForDefinition is true, it is guaranteed that an actual global with type
+/// Ty will be returned, not conversion of a variable with the same mangled name
+/// but some other type.
+mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *D,
+                                             std::optional<mlir::Type> Ty,
+                                             ForDefinition_t IsForDefinition) {
+  auto g = buildGlobal(D, Ty, IsForDefinition);
+  (void)g;
+  // FIXME: create an operation to get the address of the global.
+  assert(0 && "not implemented");
+  return {};
+}
+
+/// TODO(cir): looks like part of this code can be part of a common AST
+/// helper betweem CIR and LLVM codegen.
+template <typename SomeDecl>
+void CIRGenModule::maybeHandleStaticInExternC(const SomeDecl *D,
+                                              mlir::cir::GlobalOp GV) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
+  // Must have 'used' attribute, or else inline assembly can't rely on
+  // the name existing.
+  if (!D->template hasAttr<UsedAttr>())
+    return;
+
+  // Must have internal linkage and an ordinary name.
+  if (!D->getIdentifier() || D->getFormalLinkage() != Linkage::Internal)
+    return;
+
+  // Must be in an extern "C" context. Entities declared directly within
+  // a record are not extern "C" even if the record is in such a context.
+  const SomeDecl *First = D->getFirstDecl();
+  if (First->getDeclContext()->isRecord() || !First->isInExternCContext())
+    return;
+
+  // TODO(cir):
+  // OK, this is an internal linkage entity inside an extern "C" linkage
+  // specification. Make a note of that so we can give it the "expected"
+  // mangled name if nothing else is using that name.
+  //
+  // If we have multiple internal linkage entities with the same name
+  // in extern "C" regions, none of them gets that name.
+  assert(0 && "not implemented");
+}
+
 void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
                                             bool IsTentative) {
-  assert(0 && "not implemented");
+  // TODO(cir):
+  // OpenCL global variables of sampler type are translated to function calls,
+  // therefore no need to be translated.
+  // If this is OpenMP device, check if it is legal to emit this global
+  // normally.
+  QualType ASTTy = D->getType();
+  assert(!(getLangOpts().OpenCL || getLangOpts().OpenMP) && "not implemented");
+
+  // TODO(cir): LLVM's codegen uses a llvm::TrackingVH here. Is that
+  // necessary here for CIR gen?
+  mlir::Attribute Init;
+  [[maybe_unused]] bool NeedsGlobalCtor = false;
+  bool NeedsGlobalDtor =
+      D->needsDestruction(astCtx) == QualType::DK_cxx_destructor;
+
+  const VarDecl *InitDecl;
+  const Expr *InitExpr = D->getAnyInitializer(InitDecl);
+
+  std::optional<ConstantEmitter> emitter;
+
+  // CUDA E.2.4.1 "__shared__ variables cannot have an initialization
+  // as part of their declaration."  Sema has already checked for
+  // error cases, so we just need to set Init to UndefValue.
+  bool IsCUDASharedVar =
+      getLangOpts().CUDAIsDevice && D->hasAttr<CUDASharedAttr>();
+  // Shadows of initialized device-side global variables are also left
+  // undefined.
+  // Managed Variables should be initialized on both host side and device side.
+  bool IsCUDAShadowVar =
+      !getLangOpts().CUDAIsDevice && !D->hasAttr<HIPManagedAttr>() &&
+      (D->hasAttr<CUDAConstantAttr>() || D->hasAttr<CUDADeviceAttr>() ||
+       D->hasAttr<CUDASharedAttr>());
+  bool IsCUDADeviceShadowVar =
+      getLangOpts().CUDAIsDevice && !D->hasAttr<HIPManagedAttr>() &&
+      (D->getType()->isCUDADeviceBuiltinSurfaceType() ||
+       D->getType()->isCUDADeviceBuiltinTextureType());
+  if (getLangOpts().CUDA &&
+      (IsCUDASharedVar || IsCUDAShadowVar || IsCUDADeviceShadowVar))
+    assert(0 && "not implemented");
+  else if (D->hasAttr<LoaderUninitializedAttr>())
+    assert(0 && "not implemented");
+  else if (!InitExpr) {
+    // This is a tentative definition; tentative definitions are
+    // implicitly initialized with { 0 }.
+    //
+    // Note that tentative definitions are only emitted at the end of
+    // a translation unit, so they should never have incomplete
+    // type. In addition, EmitTentativeDefinition makes sure that we
+    // never attempt to emit a tentative definition if a real one
+    // exists. A use may still exists, however, so we still may need
+    // to do a RAUW.
+    assert(!ASTTy->isIncompleteType() && "Unexpected incomplete type");
+    assert(0 && "not implemented");
+  } else {
+    initializedGlobalDecl = GlobalDecl(D);
+    emitter.emplace(*this);
+    auto Initializer = emitter->tryEmitForInitializer(*InitDecl);
+    if (!Initializer) {
+      assert(0 && "not implemented");
+    } else {
+      Init = Initializer;
+      // We don't need an initializer, so remove the entry for the delayed
+      // initializer position (just in case this entry was delayed) if we
+      // also don't need to register a destructor.
+      if (getLangOpts().CPlusPlus && !NeedsGlobalDtor)
+        DelayedCXXInitPosition.erase(D);
+    }
+  }
+
+  assert(Init.isa<mlir::TypedAttr>() && "This should have a type");
+  auto TypedInitAttr = Init.cast<mlir::TypedAttr>();
+  auto InitType = TypedInitAttr.getType();
+  auto Entry = buildGlobal(D, InitType, ForDefinition_t(!IsTentative));
+  // TODO(cir): Strip off pointer casts from Entry if we get them?
+
+  // TODO(cir): LLVM codegen used GlobalValue to handle both Function or
+  // GlobalVariable here. We currently only support GlobalOp, should this be
+  // used for FuncOp?
+  assert(dyn_cast<GlobalOp>(&Entry) && "FuncOp not supported here");
+  auto GV = Entry;
+
+  // We have a definition after a declaration with the wrong type.
+  // We must make a new GlobalVariable* and update everything that used OldGV
+  // (a declaration or tentative definition) with the new GlobalVariable*
+  // (which will be a definition).
+  //
+  // This happens if there is a prototype for a global (e.g.
+  // "extern int x[];") and then a definition of a different type (e.g.
+  // "int x[10];"). This also happens when an initializer has a different type
+  // from the type of the global (this happens with unions).
+  if (!GV || GV.getSymType() != InitType) {
+    // TODO(cir): this should include an address space check as well.
+    assert(0 && "not implemented");
+  }
+
+  maybeHandleStaticInExternC(D, GV);
+
+  if (D->hasAttr<AnnotateAttr>())
+    assert(0 && "not implemented");
+
+  // TODO(cir):
+  // Set the llvm linkage type as appropriate.
+  // llvm::GlobalValue::LinkageTypes Linkage =
+  //     getLLVMLinkageVarDefinition(D, GV->isConstant());
+
+  // TODO(cir):
+  // CUDA B.2.1 "The __device__ qualifier declares a variable that resides on
+  // the device. [...]"
+  // CUDA B.2.2 "The __constant__ qualifier, optionally used together with
+  // __device__, declares a variable that: [...]
+  if (GV && getLangOpts().CUDA) {
+    assert(0 && "not implemented");
+  }
+
+  // Set initializer and finalize emission
+  GV.setInitialValueAttr(Init);
+  if (emitter)
+    emitter->finalize(GV);
+
+  // TODO(cir): If it is safe to mark the global 'constant', do so now.
+  // GV->setConstant(!NeedsGlobalCtor && !NeedsGlobalDtor &&
+  //                 isTypeConstant(D->getType(), true));
+
+  // If it is in a read-only section, mark it 'constant'.
+  if (const SectionAttr *SA = D->getAttr<SectionAttr>()) {
+    assert(0 && "not implemented");
+  }
+
+  // TODO(cir):
+  // GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
+
+  // On Darwin, unlike other Itanium C++ ABI platforms, the thread-wrapper
+  // function is only defined alongside the variable, not also alongside
+  // callers. Normally, all accesses to a thread_local go through the
+  // thread-wrapper in order to ensure initialization has occurred, underlying
+  // variable will never be used other than the thread-wrapper, so it can be
+  // converted to internal linkage.
+  //
+  // However, if the variable has the 'constinit' attribute, it _can_ be
+  // referenced directly, without calling the thread-wrapper, so the linkage
+  // must not be changed.
+  //
+  // Additionally, if the variable isn't plain external linkage, e.g. if it's
+  // weak or linkonce, the de-duplication semantics are important to preserve,
+  // so we don't change the linkage.
+  if (D->getTLSKind() == VarDecl::TLS_Dynamic && GV.isPublic() &&
+      astCtx.getTargetInfo().getTriple().isOSDarwin() &&
+      !D->hasAttr<ConstInitAttr>()) {
+    // TODO(cir): set to mlir::SymbolTable::Visibility::Private once we have
+    // testcases.
+    assert(0 && "not implemented");
+  }
+
+  // TODO(cir): set linkage, dll stuff and common linkage
+  // GV->setLinkage(Linkage);
+  // if (D->hasAttr<DLLImportAttr>())
+  //   GV->setDLLStorageClass(llvm::GlobalVariable::DLLImportStorageClass);
+  // else if (D->hasAttr<DLLExportAttr>())
+  //   GV->setDLLStorageClass(llvm::GlobalVariable::DLLExportStorageClass);
+  // else
+  //   GV->setDLLStorageClass(llvm::GlobalVariable::DefaultStorageClass);
+  //
+  // if (Linkage == llvm::GlobalVariable::CommonLinkage) {
+  //   // common vars aren't constant even if declared const.
+  //   GV->setConstant(false);
+  //   // Tentative definition of global variables may be initialized with
+  //   // non-zero null pointers. In this case they should have weak linkage
+  //   // since common linkage must have zero initializer and must not have
+  //   // explicit section therefore cannot have non-zero initial value.
+  //   if (!GV->getInitializer()->isNullValue())
+  //     GV->setLinkage(llvm::GlobalVariable::WeakAnyLinkage);
+  // }
+
+  // TODO(cir): setNonAliasAttributes(D, GV);
+
+  // TODO(cir): handle TLSKind if GV is not thread local
+  if (D->getTLSKind()) { // && !GV->isThreadLocal())
+    assert(0 && "not implemented");
+  }
+
+  // TODO(cir): maybeSetTrivialComdat(*D, *GV);
+
+  // TODO(cir):
+  // Emit the initializer function if necessary.
+  // if (NeedsGlobalCtor || NeedsGlobalDtor)
+  //   EmitCXXGlobalVarDeclInitFunc(D, GV, NeedsGlobalCtor);
+
+  // TODO(cir): sanitizers (reportGlobalToASan) and global variable debug
+  // information.
 }
 
 void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
@@ -537,13 +953,16 @@ static std::string getMangledNameImpl(CIRGenModule &CGM, GlobalDecl GD,
     assert(II && "Attempt to mangle unnamed decl.");
 
     const auto *FD = dyn_cast<FunctionDecl>(ND);
-    assert(FD && "Only FunctionDecl supported");
-    assert(FD->getType()->castAs<FunctionType>()->getCallConv() !=
-               CC_X86RegCall &&
-           "NYI");
-    assert(!FD->hasAttr<CUDAGlobalAttr>() && "NYI");
 
-    Out << II->getName();
+    if (FD &&
+        FD->getType()->castAs<FunctionType>()->getCallConv() == CC_X86RegCall) {
+      assert(0 && "NYI");
+    } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
+               GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      assert(0 && "NYI");
+    } else {
+      Out << II->getName();
+    }
   }
 
   // Check if the module name hash should be appended for internal linkage
