@@ -47,6 +47,10 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// Specifies whether returning newly allocated memrefs should be allowed.
   /// Otherwise, a pass failure is triggered.
   bool allowReturnAllocs = false;
+
+  /// Specifies whether buffer return values that are equivalent to a FuncOp
+  /// bbArg should be dropped.
+  bool dropEquivalentFuncResults = true;
 };
 
 /// The BufferizationAliasInfo class maintains a list of buffer aliases and
