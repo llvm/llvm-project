@@ -398,6 +398,8 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                 Changes[OuterScopeStart - 1].Tok->is(TT_LambdaLBrace))
               return false;
           }
+          if (Changes[ScopeStart].NewlinesBefore > 0)
+            return false;
           return true;
         }
 
