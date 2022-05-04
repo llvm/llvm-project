@@ -14,16 +14,14 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import argparse
 import glob
+import mmap
 import os
 import re
-import sys
-import string
-import subprocess
-import argparse
-import mmap
 import struct
-import os
+import subprocess
+import sys
 
 if sys.version_info.major < 3:
   # Simulate Python 3.x behaviour of defaulting to UTF-8 for print. This is
