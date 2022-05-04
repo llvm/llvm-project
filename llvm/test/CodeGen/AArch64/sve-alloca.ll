@@ -66,6 +66,7 @@ define void @foo(<vscale x 4 x i64> %dst, i1 %cond) {
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    bl bar
+; CHECK-NEXT:    addvl sp, x29, #-18
 ; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
@@ -94,7 +95,6 @@ define void @foo(<vscale x 4 x i64> %dst, i1 %cond) {
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x28, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
