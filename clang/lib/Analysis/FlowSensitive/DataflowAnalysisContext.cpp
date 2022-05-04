@@ -117,6 +117,19 @@ bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
   return S->solve(std::move(Constraints)) == Solver::Result::Unsatisfiable;
 }
 
+bool DataflowAnalysisContext::flowConditionIsTautology(AtomicBoolValue &Token) {
+  // Returns true if and only if we cannot prove that the flow condition can
+  // ever be false.
+  llvm::DenseSet<BoolValue *> Constraints = {
+      &getBoolLiteralValue(true),
+      &getOrCreateNegationValue(getBoolLiteralValue(false)),
+      &getOrCreateNegationValue(Token),
+  };
+  llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
+  addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
+  return S->solve(std::move(Constraints)) == Solver::Result::Unsatisfiable;
+}
+
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
     AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
     llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) const {

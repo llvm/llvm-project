@@ -140,4 +140,33 @@ TEST_F(DataflowAnalysisContextTest, JoinFlowConditions) {
   EXPECT_TRUE(Context.flowConditionImplies(FC3, C3));
 }
 
+TEST_F(DataflowAnalysisContextTest, FlowConditionTautologies) {
+  // Fresh flow condition with empty/no constraints is always true.
+  auto &FC1 = Context.makeFlowConditionToken();
+  EXPECT_TRUE(Context.flowConditionIsTautology(FC1));
+
+  // Literal `true` is always true.
+  auto &FC2 = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC2, Context.getBoolLiteralValue(true));
+  EXPECT_TRUE(Context.flowConditionIsTautology(FC2));
+
+  // Literal `false` is never true.
+  auto &FC3 = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC3, Context.getBoolLiteralValue(false));
+  EXPECT_FALSE(Context.flowConditionIsTautology(FC3));
+
+  // We can't prove that an arbitrary bool A is always true...
+  auto &C1 = Context.createAtomicBoolValue();
+  auto &FC4 = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC4, C1);
+  EXPECT_FALSE(Context.flowConditionIsTautology(FC4));
+
+  // ... but we can prove A || !A is true.
+  auto &FC5 = Context.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(
+      FC5, Context.getOrCreateDisjunctionValue(
+               C1, Context.getOrCreateNegationValue(C1)));
+  EXPECT_TRUE(Context.flowConditionIsTautology(FC5));
+}
+
 } // namespace
