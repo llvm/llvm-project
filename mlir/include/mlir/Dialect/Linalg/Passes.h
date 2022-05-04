@@ -62,16 +62,9 @@ createConvertLinalgToParallelLoopsPass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createConvertLinalgToAffineLoopsPass();
 
-/// This pass implements a cross-dialect bufferization approach and performs an
-/// analysis to determine which op operands and results may be bufferized in the
-/// same buffers. The analysis is performed on topologically sorted CallOp and
-/// FuncOp within a module. It provides analyses and bufferization across
-/// function boundaries. Within a function boundary, the analysis is performed
-/// on SSA use-def chains starting from function operands that are annotated
-/// with the 'inplaceable' attribute.
-std::unique_ptr<Pass> createLinalgComprehensiveModuleBufferizePass();
-std::unique_ptr<Pass> createLinalgComprehensiveModuleBufferizePass(
-    const bufferization::OneShotBufferizationOptions &options);
+/// Create a pass that tries to eliminate init_tensor ops that are anchored on
+/// insert_slice ops.
+std::unique_ptr<Pass> createLinalgInitTensorEliminationPass();
 
 /// Create a pass to convert Linalg operations which work on tensors to use
 /// buffers instead.

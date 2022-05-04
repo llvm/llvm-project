@@ -684,53 +684,68 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
   }
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
+  auto checkActualArgForLabel = [&](evaluate::ActualArgument &arg) {
+    if (arg.isAlternateReturn()) {
+      messages.Say(
+          "Alternate return label '%d' cannot be associated with %s"_err_en_US,
+          arg.GetLabel(), dummyName);
+      return true;
+    } else {
+      return false;
+    }
+  };
   common::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &object) {
-            ConvertBOZLiteralArg(arg, object.type.type());
-            if (auto *expr{arg.UnwrapExpr()}) {
-              if (auto type{characteristics::TypeAndShape::Characterize(
-                      *expr, context)}) {
-                arg.set_dummyIntent(object.intent);
-                bool isElemental{object.type.Rank() == 0 && proc.IsElemental()};
-                CheckExplicitDataArg(object, dummyName, *expr, *type,
-                    isElemental, context, scope, intrinsic,
-                    allowIntegerConversions);
-              } else if (object.type.type().IsTypelessIntrinsicArgument() &&
-                  IsBOZLiteral(*expr)) {
-                // ok
-              } else if (object.type.type().IsTypelessIntrinsicArgument() &&
-                  evaluate::IsNullPointer(*expr)) {
-                // ok, ASSOCIATED(NULL())
-              } else if ((object.attrs.test(characteristics::DummyDataObject::
-                                  Attr::Pointer) ||
-                             object.attrs.test(characteristics::
-                                     DummyDataObject::Attr::Optional)) &&
-                  evaluate::IsNullPointer(*expr)) {
-                // ok, FOO(NULL())
+            if (!checkActualArgForLabel(arg)) {
+              ConvertBOZLiteralArg(arg, object.type.type());
+              if (auto *expr{arg.UnwrapExpr()}) {
+                if (auto type{characteristics::TypeAndShape::Characterize(
+                        *expr, context)}) {
+                  arg.set_dummyIntent(object.intent);
+                  bool isElemental{
+                      object.type.Rank() == 0 && proc.IsElemental()};
+                  CheckExplicitDataArg(object, dummyName, *expr, *type,
+                      isElemental, context, scope, intrinsic,
+                      allowIntegerConversions);
+                } else if (object.type.type().IsTypelessIntrinsicArgument() &&
+                    IsBOZLiteral(*expr)) {
+                  // ok
+                } else if (object.type.type().IsTypelessIntrinsicArgument() &&
+                    evaluate::IsNullPointer(*expr)) {
+                  // ok, ASSOCIATED(NULL())
+                } else if ((object.attrs.test(characteristics::DummyDataObject::
+                                    Attr::Pointer) ||
+                               object.attrs.test(characteristics::
+                                       DummyDataObject::Attr::Optional)) &&
+                    evaluate::IsNullPointer(*expr)) {
+                  // ok, FOO(NULL())
+                } else {
+                  messages.Say(
+                      "Actual argument '%s' associated with %s is not a variable or typed expression"_err_en_US,
+                      expr->AsFortran(), dummyName);
+                }
               } else {
-                messages.Say(
-                    "Actual argument '%s' associated with %s is not a variable or typed expression"_err_en_US,
-                    expr->AsFortran(), dummyName);
-              }
-            } else {
-              const Symbol &assumed{DEREF(arg.GetAssumedTypeDummy())};
-              if (!object.type.type().IsAssumedType()) {
-                messages.Say(
-                    "Assumed-type '%s' may be associated only with an assumed-type %s"_err_en_US,
-                    assumed.name(), dummyName);
-              } else if (object.type.attrs().test(evaluate::characteristics::
-                                 TypeAndShape::Attr::AssumedRank) &&
-                  !IsAssumedShape(assumed) &&
-                  !evaluate::IsAssumedRank(assumed)) {
-                messages.Say( // C711
-                    "Assumed-type '%s' must be either assumed shape or assumed rank to be associated with assumed rank %s"_err_en_US,
-                    assumed.name(), dummyName);
+                const Symbol &assumed{DEREF(arg.GetAssumedTypeDummy())};
+                if (!object.type.type().IsAssumedType()) {
+                  messages.Say(
+                      "Assumed-type '%s' may be associated only with an assumed-type %s"_err_en_US,
+                      assumed.name(), dummyName);
+                } else if (object.type.attrs().test(evaluate::characteristics::
+                                   TypeAndShape::Attr::AssumedRank) &&
+                    !IsAssumedShape(assumed) &&
+                    !evaluate::IsAssumedRank(assumed)) {
+                  messages.Say( // C711
+                      "Assumed-type '%s' must be either assumed shape or assumed rank to be associated with assumed rank %s"_err_en_US,
+                      assumed.name(), dummyName);
+                }
               }
             }
           },
           [&](const characteristics::DummyProcedure &dummy) {
-            CheckProcedureArg(arg, proc, dummy, dummyName, context);
+            if (!checkActualArgForLabel(arg)) {
+              CheckProcedureArg(arg, proc, dummy, dummyName, context);
+            }
           },
           [&](const characteristics::AlternateReturn &) {
             // All semantic checking is done elsewhere
