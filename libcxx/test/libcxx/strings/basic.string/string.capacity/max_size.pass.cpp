@@ -80,6 +80,8 @@ bool test() {
 #   endif
 # elif defined(__powerpc__) || defined(__powerpc64__)
   half_size();
+# elif defined(_WIN32)
+  full_size();
 # else
 #   error "Your target system seems to be unsupported."
 # endif
