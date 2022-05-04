@@ -567,6 +567,7 @@ include "AArch64Schedule.td"
 include "AArch64InstrInfo.td"
 include "AArch64SchedPredicates.td"
 include "AArch64SchedPredExynos.td"
+include "AArch64SchedPredAmpere.td"
 include "AArch64Combine.td"
 
 def AArch64InstrInfo : InstrInfo;
@@ -636,6 +637,7 @@ include "AArch64SchedThunderX2T99.td"
 include "AArch64SchedA64FX.td"
 include "AArch64SchedThunderX3T110.td"
 include "AArch64SchedTSV110.td"
+include "AArch64SchedAmpere1.td"
 
 def TuneA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                 "Cortex-A35 ARM processors">;
@@ -956,6 +958,16 @@ def TuneTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
                                   FeatureFuseAES,
                                   FeaturePostRAScheduler]>;
 
+def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
+                                   "Ampere Computing Ampere-1 processors", [
+                                   FeaturePostRAScheduler,
+                                   FeatureFuseAES,
+                                   FeatureLSLFast,
+                                   FeatureAggressiveFMA,
+                                   FeatureArithmeticBccFusion,
+                                   FeatureCmpBccFusion,
+                                   FeatureFuseAddress,
+                                   FeatureFuseLiterals]>;
 
 def ProcessorFeatures {
   list<SubtargetFeature> A53  = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
@@ -1067,6 +1079,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> TSV110 = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                    FeatureNEON, FeaturePerfMon, FeatureSPE,
                                    FeatureFullFP16, FeatureFP16FML, FeatureDotProd];
+  list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
+                                    FeatureMTE, FeatureSSBS];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -1204,6 +1218,10 @@ def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,
 // Nvidia Carmel
 def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,
                      [TuneCarmel]>;
+
+// Ampere Computing
+def : ProcessorModel<"ampere1", Ampere1Model, ProcessorFeatures.Ampere1,
+                     [TuneAmpere1]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

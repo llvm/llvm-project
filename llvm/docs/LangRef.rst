@@ -14945,7 +14945,7 @@ Semantics:
 """"""""""
 
 The ``llvm.bitreverse.iN`` intrinsic returns an iN value that has bit
-``M`` in the input moved to bit ``N-M`` in the output. The vector
+``M`` in the input moved to bit ``N-M-1`` in the output. The vector
 intrinsics, such as ``llvm.bitreverse.v4i32``, operate on a per-element
 basis and the element order is not affected.
 
@@ -23310,8 +23310,8 @@ The first argument to the '``llvm.is.fpclass``' intrinsic must be
 :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
 of floating-point values.
 
-The second argument specifies, which tests to perform. It is an integer value,
-each bit in which specifies floating-point class:
+The second argument specifies, which tests to perform. It must be a compile-time
+integer constant, each bit in which specifies floating-point class:
 
 +-------+----------------------+
 | Bit # | floating-point class |

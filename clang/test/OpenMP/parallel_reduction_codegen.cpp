@@ -605,11 +605,9 @@ int main() {
 // CHECK1-NEXT:    [[T_VAR15:%.*]] = alloca float, align 4
 // CHECK1-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [4 x i8*], align 8
 // CHECK1-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S]], align 4
+// CHECK1-NEXT:    [[REF_TMP12:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK1-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca float, align 4
-// CHECK1-NEXT:    [[REF_TMP13:%.*]] = alloca [[STRUCT_S]], align 4
-// CHECK1-NEXT:    [[ATOMIC_TEMP23:%.*]] = alloca float, align 4
-// CHECK1-NEXT:    [[_TMP24:%.*]] = alloca float, align 4
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store [2 x i32]* [[VEC]], [2 x i32]** [[VEC_ADDR]], align 8
@@ -697,77 +695,59 @@ int main() {
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP32:%.*]] = load float, float* [[T_VAR2]], align 4
-// CHECK1-NEXT:    [[TMP33:%.*]] = bitcast float* [[TMP1]] to i32*
-// CHECK1-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i32, i32* [[TMP33]] monotonic, align 4
+// CHECK1-NEXT:    [[TMP33:%.*]] = atomicrmw fadd float* [[TMP1]], float [[TMP32]] monotonic, align 4
+// CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// CHECK1-NEXT:    [[CALL11:%.*]] = call noundef nonnull align 4 dereferenceable(4) %struct.S* @_ZN1SIfEanERKS0_(%struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP3]], %struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR3]])
+// CHECK1-NEXT:    [[TMP34:%.*]] = bitcast %struct.S* [[TMP3]] to i8*
+// CHECK1-NEXT:    [[TMP35:%.*]] = bitcast %struct.S* [[CALL11]] to i8*
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP34]], i8* align 4 [[TMP35]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// CHECK1-NEXT:    [[CALL13:%.*]] = call noundef float @_ZN1SIfEcvfEv(%struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP4]])
+// CHECK1-NEXT:    [[TOBOOL14:%.*]] = fcmp une float [[CALL13]], 0.000000e+00
+// CHECK1-NEXT:    br i1 [[TOBOOL14]], label [[LAND_RHS15:%.*]], label [[LAND_END18:%.*]]
+// CHECK1:       land.rhs15:
+// CHECK1-NEXT:    [[CALL16:%.*]] = call noundef float @_ZN1SIfEcvfEv(%struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR14]])
+// CHECK1-NEXT:    [[TOBOOL17:%.*]] = fcmp une float [[CALL16]], 0.000000e+00
+// CHECK1-NEXT:    br label [[LAND_END18]]
+// CHECK1:       land.end18:
+// CHECK1-NEXT:    [[TMP36:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE2]] ], [ [[TOBOOL17]], [[LAND_RHS15]] ]
+// CHECK1-NEXT:    [[CONV19:%.*]] = uitofp i1 [[TMP36]] to float
+// CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(%struct.S* noundef nonnull align 4 dereferenceable(4) [[REF_TMP12]], float noundef [[CONV19]])
+// CHECK1-NEXT:    [[TMP37:%.*]] = bitcast %struct.S* [[TMP4]] to i8*
+// CHECK1-NEXT:    [[TMP38:%.*]] = bitcast %struct.S* [[REF_TMP12]] to i8*
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP37]], i8* align 4 [[TMP38]], i64 4, i1 false)
+// CHECK1-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* noundef nonnull align 4 dereferenceable(4) [[REF_TMP12]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// CHECK1-NEXT:    [[TMP39:%.*]] = load float, float* [[T_VAR15]], align 4
+// CHECK1-NEXT:    [[TMP40:%.*]] = bitcast float* [[TMP5]] to i32*
+// CHECK1-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i32, i32* [[TMP40]] monotonic, align 4
 // CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK1:       atomic_cont:
-// CHECK1-NEXT:    [[TMP34:%.*]] = phi i32 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP42:%.*]], [[ATOMIC_CONT]] ]
-// CHECK1-NEXT:    [[TMP35:%.*]] = bitcast float* [[ATOMIC_TEMP]] to i32*
-// CHECK1-NEXT:    [[TMP36:%.*]] = bitcast i32 [[TMP34]] to float
-// CHECK1-NEXT:    store float [[TMP36]], float* [[TMP]], align 4
-// CHECK1-NEXT:    [[TMP37:%.*]] = load float, float* [[TMP]], align 4
-// CHECK1-NEXT:    [[TMP38:%.*]] = load float, float* [[T_VAR2]], align 4
-// CHECK1-NEXT:    [[ADD11:%.*]] = fadd float [[TMP37]], [[TMP38]]
-// CHECK1-NEXT:    store float [[ADD11]], float* [[ATOMIC_TEMP]], align 4
-// CHECK1-NEXT:    [[TMP39:%.*]] = load i32, i32* [[TMP35]], align 4
-// CHECK1-NEXT:    [[TMP40:%.*]] = bitcast float* [[TMP1]] to i32*
-// CHECK1-NEXT:    [[TMP41:%.*]] = cmpxchg i32* [[TMP40]], i32 [[TMP34]], i32 [[TMP39]] monotonic monotonic, align 4
-// CHECK1-NEXT:    [[TMP42]] = extractvalue { i32, i1 } [[TMP41]], 0
-// CHECK1-NEXT:    [[TMP43:%.*]] = extractvalue { i32, i1 } [[TMP41]], 1
-// CHECK1-NEXT:    br i1 [[TMP43]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
+// CHECK1-NEXT:    [[TMP41:%.*]] = phi i32 [ [[ATOMIC_LOAD]], [[LAND_END18]] ], [ [[TMP51:%.*]], [[COND_END23:%.*]] ]
+// CHECK1-NEXT:    [[TMP42:%.*]] = bitcast float* [[ATOMIC_TEMP]] to i32*
+// CHECK1-NEXT:    [[TMP43:%.*]] = bitcast i32 [[TMP41]] to float
+// CHECK1-NEXT:    store float [[TMP43]], float* [[TMP]], align 4
+// CHECK1-NEXT:    [[TMP44:%.*]] = load float, float* [[TMP]], align 4
+// CHECK1-NEXT:    [[TMP45:%.*]] = load float, float* [[T_VAR15]], align 4
+// CHECK1-NEXT:    [[CMP20:%.*]] = fcmp olt float [[TMP44]], [[TMP45]]
+// CHECK1-NEXT:    br i1 [[CMP20]], label [[COND_TRUE21:%.*]], label [[COND_FALSE22:%.*]]
+// CHECK1:       cond.true21:
+// CHECK1-NEXT:    [[TMP46:%.*]] = load float, float* [[TMP]], align 4
+// CHECK1-NEXT:    br label [[COND_END23]]
+// CHECK1:       cond.false22:
+// CHECK1-NEXT:    [[TMP47:%.*]] = load float, float* [[T_VAR15]], align 4
+// CHECK1-NEXT:    br label [[COND_END23]]
+// CHECK1:       cond.end23:
+// CHECK1-NEXT:    [[COND24:%.*]] = phi float [ [[TMP46]], [[COND_TRUE21]] ], [ [[TMP47]], [[COND_FALSE22]] ]
+// CHECK1-NEXT:    store float [[COND24]], float* [[ATOMIC_TEMP]], align 4
+// CHECK1-NEXT:    [[TMP48:%.*]] = load i32, i32* [[TMP42]], align 4
+// CHECK1-NEXT:    [[TMP49:%.*]] = bitcast float* [[TMP5]] to i32*
+// CHECK1-NEXT:    [[TMP50:%.*]] = cmpxchg i32* [[TMP49]], i32 [[TMP41]], i32 [[TMP48]] monotonic monotonic, align 4
+// CHECK1-NEXT:    [[TMP51]] = extractvalue { i32, i1 } [[TMP50]], 0
+// CHECK1-NEXT:    [[TMP52:%.*]] = extractvalue { i32, i1 } [[TMP50]], 1
+// CHECK1-NEXT:    br i1 [[TMP52]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK1:       atomic_exit:
-// CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[CALL12:%.*]] = call noundef nonnull align 4 dereferenceable(4) %struct.S* @_ZN1SIfEanERKS0_(%struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP3]], %struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR3]])
-// CHECK1-NEXT:    [[TMP44:%.*]] = bitcast %struct.S* [[TMP3]] to i8*
-// CHECK1-NEXT:    [[TMP45:%.*]] = bitcast %struct.S* [[CALL12]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP44]], i8* align 4 [[TMP45]], i64 4, i1 false)
-// CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[CALL14:%.*]] = call noundef float @_ZN1SIfEcvfEv(%struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP4]])
-// CHECK1-NEXT:    [[TOBOOL15:%.*]] = fcmp une float [[CALL14]], 0.000000e+00
-// CHECK1-NEXT:    br i1 [[TOBOOL15]], label [[LAND_RHS16:%.*]], label [[LAND_END19:%.*]]
-// CHECK1:       land.rhs16:
-// CHECK1-NEXT:    [[CALL17:%.*]] = call noundef float @_ZN1SIfEcvfEv(%struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR14]])
-// CHECK1-NEXT:    [[TOBOOL18:%.*]] = fcmp une float [[CALL17]], 0.000000e+00
-// CHECK1-NEXT:    br label [[LAND_END19]]
-// CHECK1:       land.end19:
-// CHECK1-NEXT:    [[TMP46:%.*]] = phi i1 [ false, [[ATOMIC_EXIT]] ], [ [[TOBOOL18]], [[LAND_RHS16]] ]
-// CHECK1-NEXT:    [[CONV20:%.*]] = uitofp i1 [[TMP46]] to float
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(%struct.S* noundef nonnull align 4 dereferenceable(4) [[REF_TMP13]], float noundef [[CONV20]])
-// CHECK1-NEXT:    [[TMP47:%.*]] = bitcast %struct.S* [[TMP4]] to i8*
-// CHECK1-NEXT:    [[TMP48:%.*]] = bitcast %struct.S* [[REF_TMP13]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP47]], i8* align 4 [[TMP48]], i64 4, i1 false)
-// CHECK1-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* noundef nonnull align 4 dereferenceable(4) [[REF_TMP13]]) #[[ATTR5]]
-// CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[TMP49:%.*]] = load float, float* [[T_VAR15]], align 4
-// CHECK1-NEXT:    [[TMP50:%.*]] = bitcast float* [[TMP5]] to i32*
-// CHECK1-NEXT:    [[ATOMIC_LOAD21:%.*]] = load atomic i32, i32* [[TMP50]] monotonic, align 4
-// CHECK1-NEXT:    br label [[ATOMIC_CONT22:%.*]]
-// CHECK1:       atomic_cont22:
-// CHECK1-NEXT:    [[TMP51:%.*]] = phi i32 [ [[ATOMIC_LOAD21]], [[LAND_END19]] ], [ [[TMP61:%.*]], [[COND_END28:%.*]] ]
-// CHECK1-NEXT:    [[TMP52:%.*]] = bitcast float* [[ATOMIC_TEMP23]] to i32*
-// CHECK1-NEXT:    [[TMP53:%.*]] = bitcast i32 [[TMP51]] to float
-// CHECK1-NEXT:    store float [[TMP53]], float* [[_TMP24]], align 4
-// CHECK1-NEXT:    [[TMP54:%.*]] = load float, float* [[_TMP24]], align 4
-// CHECK1-NEXT:    [[TMP55:%.*]] = load float, float* [[T_VAR15]], align 4
-// CHECK1-NEXT:    [[CMP25:%.*]] = fcmp olt float [[TMP54]], [[TMP55]]
-// CHECK1-NEXT:    br i1 [[CMP25]], label [[COND_TRUE26:%.*]], label [[COND_FALSE27:%.*]]
-// CHECK1:       cond.true26:
-// CHECK1-NEXT:    [[TMP56:%.*]] = load float, float* [[_TMP24]], align 4
-// CHECK1-NEXT:    br label [[COND_END28]]
-// CHECK1:       cond.false27:
-// CHECK1-NEXT:    [[TMP57:%.*]] = load float, float* [[T_VAR15]], align 4
-// CHECK1-NEXT:    br label [[COND_END28]]
-// CHECK1:       cond.end28:
-// CHECK1-NEXT:    [[COND29:%.*]] = phi float [ [[TMP56]], [[COND_TRUE26]] ], [ [[TMP57]], [[COND_FALSE27]] ]
-// CHECK1-NEXT:    store float [[COND29]], float* [[ATOMIC_TEMP23]], align 4
-// CHECK1-NEXT:    [[TMP58:%.*]] = load i32, i32* [[TMP52]], align 4
-// CHECK1-NEXT:    [[TMP59:%.*]] = bitcast float* [[TMP5]] to i32*
-// CHECK1-NEXT:    [[TMP60:%.*]] = cmpxchg i32* [[TMP59]], i32 [[TMP51]], i32 [[TMP58]] monotonic monotonic, align 4
-// CHECK1-NEXT:    [[TMP61]] = extractvalue { i32, i1 } [[TMP60]], 0
-// CHECK1-NEXT:    [[TMP62:%.*]] = extractvalue { i32, i1 } [[TMP60]], 1
-// CHECK1-NEXT:    br i1 [[TMP62]], label [[ATOMIC_EXIT30:%.*]], label [[ATOMIC_CONT22]]
-// CHECK1:       atomic_exit30:
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR14]]) #[[ATTR5]]
@@ -2005,11 +1985,9 @@ int main() {
 // CHECK2-NEXT:    [[T_VAR15:%.*]] = alloca float, align 4
 // CHECK2-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [4 x i8*], align 8
 // CHECK2-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_S]], align 4
+// CHECK2-NEXT:    [[REF_TMP12:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK2-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca float, align 4
-// CHECK2-NEXT:    [[REF_TMP13:%.*]] = alloca [[STRUCT_S]], align 4
-// CHECK2-NEXT:    [[ATOMIC_TEMP23:%.*]] = alloca float, align 4
-// CHECK2-NEXT:    [[_TMP24:%.*]] = alloca float, align 4
 // CHECK2-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK2-NEXT:    store [2 x i32]* [[VEC]], [2 x i32]** [[VEC_ADDR]], align 8
@@ -2097,77 +2075,59 @@ int main() {
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.case2:
 // CHECK2-NEXT:    [[TMP32:%.*]] = load float, float* [[T_VAR2]], align 4
-// CHECK2-NEXT:    [[TMP33:%.*]] = bitcast float* [[TMP1]] to i32*
-// CHECK2-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i32, i32* [[TMP33]] monotonic, align 4
+// CHECK2-NEXT:    [[TMP33:%.*]] = atomicrmw fadd float* [[TMP1]], float [[TMP32]] monotonic, align 4
+// CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// CHECK2-NEXT:    [[CALL11:%.*]] = call noundef nonnull align 4 dereferenceable(4) %struct.S* @_ZN1SIfEanERKS0_(%struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP3]], %struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR3]])
+// CHECK2-NEXT:    [[TMP34:%.*]] = bitcast %struct.S* [[TMP3]] to i8*
+// CHECK2-NEXT:    [[TMP35:%.*]] = bitcast %struct.S* [[CALL11]] to i8*
+// CHECK2-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP34]], i8* align 4 [[TMP35]], i64 4, i1 false)
+// CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// CHECK2-NEXT:    [[CALL13:%.*]] = call noundef float @_ZN1SIfEcvfEv(%struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP4]])
+// CHECK2-NEXT:    [[TOBOOL14:%.*]] = fcmp une float [[CALL13]], 0.000000e+00
+// CHECK2-NEXT:    br i1 [[TOBOOL14]], label [[LAND_RHS15:%.*]], label [[LAND_END18:%.*]]
+// CHECK2:       land.rhs15:
+// CHECK2-NEXT:    [[CALL16:%.*]] = call noundef float @_ZN1SIfEcvfEv(%struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR14]])
+// CHECK2-NEXT:    [[TOBOOL17:%.*]] = fcmp une float [[CALL16]], 0.000000e+00
+// CHECK2-NEXT:    br label [[LAND_END18]]
+// CHECK2:       land.end18:
+// CHECK2-NEXT:    [[TMP36:%.*]] = phi i1 [ false, [[DOTOMP_REDUCTION_CASE2]] ], [ [[TOBOOL17]], [[LAND_RHS15]] ]
+// CHECK2-NEXT:    [[CONV19:%.*]] = uitofp i1 [[TMP36]] to float
+// CHECK2-NEXT:    call void @_ZN1SIfEC1Ef(%struct.S* noundef nonnull align 4 dereferenceable(4) [[REF_TMP12]], float noundef [[CONV19]])
+// CHECK2-NEXT:    [[TMP37:%.*]] = bitcast %struct.S* [[TMP4]] to i8*
+// CHECK2-NEXT:    [[TMP38:%.*]] = bitcast %struct.S* [[REF_TMP12]] to i8*
+// CHECK2-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP37]], i8* align 4 [[TMP38]], i64 4, i1 false)
+// CHECK2-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* noundef nonnull align 4 dereferenceable(4) [[REF_TMP12]]) #[[ATTR5]]
+// CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// CHECK2-NEXT:    [[TMP39:%.*]] = load float, float* [[T_VAR15]], align 4
+// CHECK2-NEXT:    [[TMP40:%.*]] = bitcast float* [[TMP5]] to i32*
+// CHECK2-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i32, i32* [[TMP40]] monotonic, align 4
 // CHECK2-NEXT:    br label [[ATOMIC_CONT:%.*]]
 // CHECK2:       atomic_cont:
-// CHECK2-NEXT:    [[TMP34:%.*]] = phi i32 [ [[ATOMIC_LOAD]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP42:%.*]], [[ATOMIC_CONT]] ]
-// CHECK2-NEXT:    [[TMP35:%.*]] = bitcast float* [[ATOMIC_TEMP]] to i32*
-// CHECK2-NEXT:    [[TMP36:%.*]] = bitcast i32 [[TMP34]] to float
-// CHECK2-NEXT:    store float [[TMP36]], float* [[TMP]], align 4
-// CHECK2-NEXT:    [[TMP37:%.*]] = load float, float* [[TMP]], align 4
-// CHECK2-NEXT:    [[TMP38:%.*]] = load float, float* [[T_VAR2]], align 4
-// CHECK2-NEXT:    [[ADD11:%.*]] = fadd float [[TMP37]], [[TMP38]]
-// CHECK2-NEXT:    store float [[ADD11]], float* [[ATOMIC_TEMP]], align 4
-// CHECK2-NEXT:    [[TMP39:%.*]] = load i32, i32* [[TMP35]], align 4
-// CHECK2-NEXT:    [[TMP40:%.*]] = bitcast float* [[TMP1]] to i32*
-// CHECK2-NEXT:    [[TMP41:%.*]] = cmpxchg i32* [[TMP40]], i32 [[TMP34]], i32 [[TMP39]] monotonic monotonic, align 4
-// CHECK2-NEXT:    [[TMP42]] = extractvalue { i32, i1 } [[TMP41]], 0
-// CHECK2-NEXT:    [[TMP43:%.*]] = extractvalue { i32, i1 } [[TMP41]], 1
-// CHECK2-NEXT:    br i1 [[TMP43]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
+// CHECK2-NEXT:    [[TMP41:%.*]] = phi i32 [ [[ATOMIC_LOAD]], [[LAND_END18]] ], [ [[TMP51:%.*]], [[COND_END23:%.*]] ]
+// CHECK2-NEXT:    [[TMP42:%.*]] = bitcast float* [[ATOMIC_TEMP]] to i32*
+// CHECK2-NEXT:    [[TMP43:%.*]] = bitcast i32 [[TMP41]] to float
+// CHECK2-NEXT:    store float [[TMP43]], float* [[TMP]], align 4
+// CHECK2-NEXT:    [[TMP44:%.*]] = load float, float* [[TMP]], align 4
+// CHECK2-NEXT:    [[TMP45:%.*]] = load float, float* [[T_VAR15]], align 4
+// CHECK2-NEXT:    [[CMP20:%.*]] = fcmp olt float [[TMP44]], [[TMP45]]
+// CHECK2-NEXT:    br i1 [[CMP20]], label [[COND_TRUE21:%.*]], label [[COND_FALSE22:%.*]]
+// CHECK2:       cond.true21:
+// CHECK2-NEXT:    [[TMP46:%.*]] = load float, float* [[TMP]], align 4
+// CHECK2-NEXT:    br label [[COND_END23]]
+// CHECK2:       cond.false22:
+// CHECK2-NEXT:    [[TMP47:%.*]] = load float, float* [[T_VAR15]], align 4
+// CHECK2-NEXT:    br label [[COND_END23]]
+// CHECK2:       cond.end23:
+// CHECK2-NEXT:    [[COND24:%.*]] = phi float [ [[TMP46]], [[COND_TRUE21]] ], [ [[TMP47]], [[COND_FALSE22]] ]
+// CHECK2-NEXT:    store float [[COND24]], float* [[ATOMIC_TEMP]], align 4
+// CHECK2-NEXT:    [[TMP48:%.*]] = load i32, i32* [[TMP42]], align 4
+// CHECK2-NEXT:    [[TMP49:%.*]] = bitcast float* [[TMP5]] to i32*
+// CHECK2-NEXT:    [[TMP50:%.*]] = cmpxchg i32* [[TMP49]], i32 [[TMP41]], i32 [[TMP48]] monotonic monotonic, align 4
+// CHECK2-NEXT:    [[TMP51]] = extractvalue { i32, i1 } [[TMP50]], 0
+// CHECK2-NEXT:    [[TMP52:%.*]] = extractvalue { i32, i1 } [[TMP50]], 1
+// CHECK2-NEXT:    br i1 [[TMP52]], label [[ATOMIC_EXIT:%.*]], label [[ATOMIC_CONT]]
 // CHECK2:       atomic_exit:
-// CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[CALL12:%.*]] = call noundef nonnull align 4 dereferenceable(4) %struct.S* @_ZN1SIfEanERKS0_(%struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP3]], %struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR3]])
-// CHECK2-NEXT:    [[TMP44:%.*]] = bitcast %struct.S* [[TMP3]] to i8*
-// CHECK2-NEXT:    [[TMP45:%.*]] = bitcast %struct.S* [[CALL12]] to i8*
-// CHECK2-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP44]], i8* align 4 [[TMP45]], i64 4, i1 false)
-// CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[CALL14:%.*]] = call noundef float @_ZN1SIfEcvfEv(%struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP4]])
-// CHECK2-NEXT:    [[TOBOOL15:%.*]] = fcmp une float [[CALL14]], 0.000000e+00
-// CHECK2-NEXT:    br i1 [[TOBOOL15]], label [[LAND_RHS16:%.*]], label [[LAND_END19:%.*]]
-// CHECK2:       land.rhs16:
-// CHECK2-NEXT:    [[CALL17:%.*]] = call noundef float @_ZN1SIfEcvfEv(%struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR14]])
-// CHECK2-NEXT:    [[TOBOOL18:%.*]] = fcmp une float [[CALL17]], 0.000000e+00
-// CHECK2-NEXT:    br label [[LAND_END19]]
-// CHECK2:       land.end19:
-// CHECK2-NEXT:    [[TMP46:%.*]] = phi i1 [ false, [[ATOMIC_EXIT]] ], [ [[TOBOOL18]], [[LAND_RHS16]] ]
-// CHECK2-NEXT:    [[CONV20:%.*]] = uitofp i1 [[TMP46]] to float
-// CHECK2-NEXT:    call void @_ZN1SIfEC1Ef(%struct.S* noundef nonnull align 4 dereferenceable(4) [[REF_TMP13]], float noundef [[CONV20]])
-// CHECK2-NEXT:    [[TMP47:%.*]] = bitcast %struct.S* [[TMP4]] to i8*
-// CHECK2-NEXT:    [[TMP48:%.*]] = bitcast %struct.S* [[REF_TMP13]] to i8*
-// CHECK2-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP47]], i8* align 4 [[TMP48]], i64 4, i1 false)
-// CHECK2-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* noundef nonnull align 4 dereferenceable(4) [[REF_TMP13]]) #[[ATTR5]]
-// CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB2]], i32 [[TMP18]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[TMP49:%.*]] = load float, float* [[T_VAR15]], align 4
-// CHECK2-NEXT:    [[TMP50:%.*]] = bitcast float* [[TMP5]] to i32*
-// CHECK2-NEXT:    [[ATOMIC_LOAD21:%.*]] = load atomic i32, i32* [[TMP50]] monotonic, align 4
-// CHECK2-NEXT:    br label [[ATOMIC_CONT22:%.*]]
-// CHECK2:       atomic_cont22:
-// CHECK2-NEXT:    [[TMP51:%.*]] = phi i32 [ [[ATOMIC_LOAD21]], [[LAND_END19]] ], [ [[TMP61:%.*]], [[COND_END28:%.*]] ]
-// CHECK2-NEXT:    [[TMP52:%.*]] = bitcast float* [[ATOMIC_TEMP23]] to i32*
-// CHECK2-NEXT:    [[TMP53:%.*]] = bitcast i32 [[TMP51]] to float
-// CHECK2-NEXT:    store float [[TMP53]], float* [[_TMP24]], align 4
-// CHECK2-NEXT:    [[TMP54:%.*]] = load float, float* [[_TMP24]], align 4
-// CHECK2-NEXT:    [[TMP55:%.*]] = load float, float* [[T_VAR15]], align 4
-// CHECK2-NEXT:    [[CMP25:%.*]] = fcmp olt float [[TMP54]], [[TMP55]]
-// CHECK2-NEXT:    br i1 [[CMP25]], label [[COND_TRUE26:%.*]], label [[COND_FALSE27:%.*]]
-// CHECK2:       cond.true26:
-// CHECK2-NEXT:    [[TMP56:%.*]] = load float, float* [[_TMP24]], align 4
-// CHECK2-NEXT:    br label [[COND_END28]]
-// CHECK2:       cond.false27:
-// CHECK2-NEXT:    [[TMP57:%.*]] = load float, float* [[T_VAR15]], align 4
-// CHECK2-NEXT:    br label [[COND_END28]]
-// CHECK2:       cond.end28:
-// CHECK2-NEXT:    [[COND29:%.*]] = phi float [ [[TMP56]], [[COND_TRUE26]] ], [ [[TMP57]], [[COND_FALSE27]] ]
-// CHECK2-NEXT:    store float [[COND29]], float* [[ATOMIC_TEMP23]], align 4
-// CHECK2-NEXT:    [[TMP58:%.*]] = load i32, i32* [[TMP52]], align 4
-// CHECK2-NEXT:    [[TMP59:%.*]] = bitcast float* [[TMP5]] to i32*
-// CHECK2-NEXT:    [[TMP60:%.*]] = cmpxchg i32* [[TMP59]], i32 [[TMP51]], i32 [[TMP58]] monotonic monotonic, align 4
-// CHECK2-NEXT:    [[TMP61]] = extractvalue { i32, i1 } [[TMP60]], 0
-// CHECK2-NEXT:    [[TMP62:%.*]] = extractvalue { i32, i1 } [[TMP60]], 1
-// CHECK2-NEXT:    br i1 [[TMP62]], label [[ATOMIC_EXIT30:%.*]], label [[ATOMIC_CONT22]]
-// CHECK2:       atomic_exit30:
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.default:
 // CHECK2-NEXT:    call void @_ZN1SIfED1Ev(%struct.S* noundef nonnull align 4 dereferenceable(4) [[VAR14]]) #[[ATTR5]]
