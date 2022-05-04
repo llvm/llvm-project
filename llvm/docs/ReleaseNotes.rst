@@ -192,6 +192,10 @@ During this release ...
 Changes to the LLVM tools
 ---------------------------------
 
+* (Experimental) :manpage:`llvm-symbolizer(1)` now has ``--filter-markup`` to
+  filter :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` into human-readable
+  form.
+
 Changes to LLDB
 ---------------------------------
 
