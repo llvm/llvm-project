@@ -579,7 +579,7 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-    - label: "MinGW (DLL)"
+    - label: "MinGW (DLL, x86_64)"
       command: "bash libcxx/utils/ci/run-buildbot mingw-dll"
       artifact_paths:
         - "**/test-results.xml"
@@ -592,8 +592,21 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-    - label: "MinGW (Static)"
+    - label: "MinGW (Static, x86_64)"
       command: "bash libcxx/utils/ci/run-buildbot mingw-static"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "windows"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
+    - label: "MinGW (DLL, i686)"
+      command: "bash libcxx/utils/ci/run-buildbot mingw-dll-i686"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"

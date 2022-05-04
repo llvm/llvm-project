@@ -579,6 +579,15 @@ mingw-static)
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
+mingw-dll-i686)
+    clean
+    generate-cmake \
+          -DCMAKE_C_COMPILER=i686-w64-mingw32-clang \
+          -DCMAKE_CXX_COMPILER=i686-w64-mingw32-clang++ \
+          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
 aix)
     export CC=ibm-clang
     export CXX=ibm-clang++_r
