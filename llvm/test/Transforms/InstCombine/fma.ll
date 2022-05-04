@@ -751,7 +751,7 @@ define <3 x float> @fma_unary_shuffle_ops_widening(<2 x float> %x, <2 x float> %
 ; CHECK-LABEL: @fma_unary_shuffle_ops_widening(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <3 x i32> <i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    call void @use_vec3(<3 x float> [[A]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[X]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x float> @llvm.fma.v2f32(<2 x float> [[X]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <3 x i32> <i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
@@ -767,7 +767,7 @@ define <2 x float> @fma_unary_shuffle_ops_narrowing(<3 x float> %x, <3 x float> 
 ; CHECK-LABEL: @fma_unary_shuffle_ops_narrowing(
 ; CHECK-NEXT:    [[B:%.*]] = shufflevector <3 x float> [[Y:%.*]], <3 x float> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[B]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x float> @llvm.fma.v3f32(<3 x float> [[X:%.*]], <3 x float> [[Y]], <3 x float> [[Z:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <3 x float> @llvm.fma.v3f32(<3 x float> [[X:%.*]], <3 x float> [[Y]], <3 x float> [[Z:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
