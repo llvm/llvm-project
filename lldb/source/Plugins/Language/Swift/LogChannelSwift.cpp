@@ -31,6 +31,13 @@ void LogChannelSwift::Initialize() {
   Log::EnableLogChannel(
       std::make_shared<llvm::raw_string_ostream>(g_swift_log_buffer),
       LLDB_LOG_OPTION_THREADSAFE, "swift", {"health"}, error_stream);
+  if (Log *log = GetSwiftHealthLog())
+    log->Printf(
+        "==== LLDB swift-healthcheck log. ===\n"
+        "This file contains the configuration of LLDB's embedded Swift "
+        "compiler to help diagnosing module import and search path issues. "
+        "The swift-healthcheck command is meant to be run *after* an error "
+        "has occurred.\n");
 }
 
 void LogChannelSwift::Terminate() { Log::Unregister("swift"); }
