@@ -2,16 +2,13 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
 // RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang -extract-api -target arm64-apple-macosx \
-// RUN: %t/input.h -o %t/output.json | FileCheck -allow-empty %s
+// RUN: %clang_cc1 -extract-api -triple arm64-apple-macosx \
+// RUN:   -x c-header %t/input.h -o %t/output.json -verify
 
 // Generator version is not consistent across test runs, normalize it.
 // RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
 // RUN: %t/output.json >> %t/output-normalized.json
 // RUN: diff %t/reference.output.json %t/output-normalized.json
-
-// CHECK-NOT: error:
-// CHECK-NOT: warning:
 
 //--- input.h
 /// Kinds of vehicles
@@ -37,6 +34,7 @@ enum {
 enum {
   OtherConstant = 2
 };
+// expected-no-diagnostics
 
 //--- reference.output.json.in
 {

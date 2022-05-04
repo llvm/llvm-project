@@ -62,25 +62,21 @@ static StringRef ToolName;
 // The basename of this program.
 static StringRef Stem;
 
-const char RanlibHelp[] = R"(OVERVIEW: LLVM Ranlib (llvm-ranlib)
+static void printRanLibHelp(StringRef ToolName) {
+  outs() << "OVERVIEW: LLVM Ranlib\n\n"
+         << "This program generates an index to speed access to archives\n\n"
+         << "USAGE: " + ToolName + " <archive-file>\n\n"
+         << "OPTIONS:\n"
+         << "  -h --help             - Display available options\n"
+         << "  -v --version          - Display the version of this program\n"
+         << "  -D                    - Use zero for timestamps and uids/gids "
+            "(default)\n"
+         << "  -U                    - Use actual timestamps and uids/gids\n";
+}
 
-  This program generates an index to speed access to archives
-
-USAGE: llvm-ranlib <archive-file>
-
-OPTIONS:
-  -h --help             - Display available options
-  -v --version          - Display the version of this program
-  -D                    - Use zero for timestamps and uids/gids (default)
-  -U                    - Use actual timestamps and uids/gids
-)";
-
-const char ArHelp[] = R"(OVERVIEW: LLVM Archiver
-
-USAGE: llvm-ar [options] [-]<operation>[modifiers] [relpos] [count] <archive> [files]
-       llvm-ar -M [<mri-script]
-
-OPTIONS:
+static void printArHelp(StringRef ToolName) {
+  const char ArOptions[] =
+      R"(OPTIONS:
   --format              - archive format to create
     =default            -   default
     =gnu                -   gnu
@@ -127,11 +123,20 @@ MODIFIERS:
   [V] - display the version and exit
 )";
 
+  outs() << "OVERVIEW: LLVM Archiver\n\n"
+         << "USAGE: " + ToolName +
+                " [options] [-]<operation>[modifiers] [relpos] "
+                "[count] <archive> [files]\n"
+         << "       " + ToolName + " -M [<mri-script]\n\n";
+
+  outs() << ArOptions;
+}
+
 static void printHelpMessage() {
   if (Stem.contains_insensitive("ranlib"))
-    outs() << RanlibHelp;
+    printRanLibHelp(Stem);
   else if (Stem.contains_insensitive("ar"))
-    outs() << ArHelp;
+    printArHelp(Stem);
 }
 
 static unsigned MRILineNumber;

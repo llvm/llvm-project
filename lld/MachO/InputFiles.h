@@ -149,6 +149,7 @@ public:
   const uint32_t modTime;
   std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
+  Section *addrSigSection = nullptr;
 
 private:
   template <class LP> void parseLazy();

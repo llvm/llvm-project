@@ -328,6 +328,29 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
         return err;
       }
     }
+
+    // We failed to find the module in our shared cache. Let's see if we have a
+    // copy in our device support directory.
+    FileSpec device_support_spec(GetDeviceSupportDirectoryForOSVersion());
+    device_support_spec.AppendPathComponent("Symbols");
+    device_support_spec.AppendPathComponent(
+        module_spec.GetFileSpec().GetPath());
+    FileSystem::Instance().Resolve(device_support_spec);
+    if (FileSystem::Instance().Exists(device_support_spec)) {
+      ModuleSpec local_spec(device_support_spec, module_spec.GetUUID());
+      err = ModuleList::GetSharedModule(local_spec, module_sp,
+                                        module_search_paths_ptr, old_modules,
+                                        did_create_ptr);
+      if (module_sp) {
+        LLDB_LOGF(log,
+                  "[%s] module %s was found in Device Support "
+                  "directory: %s",
+                  (IsHost() ? "host" : "remote"),
+                  module_spec.GetFileSpec().GetPath().c_str(),
+                  local_spec.GetFileSpec().GetPath().c_str());
+        return err;
+      }
+    }
   }
 
   err = ModuleList::GetSharedModule(module_spec, module_sp,

@@ -392,7 +392,6 @@ void DataReader::readProfile(BinaryFunction &BF) {
     }
   }
 
-  uint64_t MismatchedBranches = 0;
   for (const BranchInfo &BI : FBD->Data) {
     if (BI.From.Name != BI.To.Name)
       continue;
@@ -401,7 +400,6 @@ void DataReader::readProfile(BinaryFunction &BF) {
                       BI.Mispreds)) {
       LLVM_DEBUG(dbgs() << "bad branch : " << BI.From.Offset << " -> "
                         << BI.To.Offset << '\n');
-      ++MismatchedBranches;
     }
   }
 

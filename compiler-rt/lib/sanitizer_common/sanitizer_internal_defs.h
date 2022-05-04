@@ -261,6 +261,8 @@ typedef u64 tid_t;
 
 #if __has_cpp_attribute(clang::fallthrough)
 #  define FALLTHROUGH [[clang::fallthrough]]
+#elif __has_cpp_attribute(fallthrough)
+#  define FALLTHROUGH [[fallthrough]]
 #else
 #  define FALLTHROUGH
 #endif
