@@ -72,6 +72,9 @@ let Definition = "target" in {
   def MaxChildrenCount: Property<"max-children-count", "SInt64">,
     DefaultUnsignedValue<256>,
     Desc<"Maximum number of children to expand in any level of depth.">;
+  def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
+    DefaultUnsignedValue<0xFFFFFFFF>,
+    Desc<"Maximum depth to expand children.">;
   def MaxSummaryLength: Property<"max-string-summary-length", "SInt64">,
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of characters to show when using %s in summary strings.">;

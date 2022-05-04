@@ -15,7 +15,7 @@
 
 namespace __tsan {
 
-TEST(ThreadSanitizer, Memcpy) {
+TEST_F(ThreadSanitizer, Memcpy) {
   char data0[7] = {1, 2, 3, 4, 5, 6, 7};
   char data[7] = {42, 42, 42, 42, 42, 42, 42};
   MainThread().Memcpy(data+1, data0+1, 5);
@@ -36,7 +36,7 @@ TEST(ThreadSanitizer, Memcpy) {
   EXPECT_EQ(data[6], 42);
 }
 
-TEST(ThreadSanitizer, MemcpyRace1) {
+TEST_F(ThreadSanitizer, MemcpyRace1) {
   char *data = new char[10];
   char *data1 = new char[10];
   char *data2 = new char[10];
@@ -45,7 +45,7 @@ TEST(ThreadSanitizer, MemcpyRace1) {
   t2.Memcpy(data, data2, 10, true);
 }
 
-TEST(ThreadSanitizer, MemcpyRace2) {
+TEST_F(ThreadSanitizer, MemcpyRace2) {
   char *data = new char[10];
   char *data1 = new char[10];
   char *data2 = new char[10];
@@ -54,7 +54,7 @@ TEST(ThreadSanitizer, MemcpyRace2) {
   t2.Memcpy(data+3, data2, 4, true);
 }
 
-TEST(ThreadSanitizer, MemcpyRace3) {
+TEST_F(ThreadSanitizer, MemcpyRace3) {
   char *data = new char[10];
   char *data1 = new char[10];
   char *data2 = new char[10];
@@ -63,7 +63,7 @@ TEST(ThreadSanitizer, MemcpyRace3) {
   t2.Memcpy(data1, data2, 10, true);
 }
 
-TEST(ThreadSanitizer, MemcpyStack) {
+TEST_F(ThreadSanitizer, MemcpyStack) {
   char *data = new char[10];
   char *data1 = new char[10];
   ScopedThread t1, t2;
@@ -71,7 +71,7 @@ TEST(ThreadSanitizer, MemcpyStack) {
   t2.Memcpy(data, data1, 10, true);
 }
 
-TEST(ThreadSanitizer, MemsetRace1) {
+TEST_F(ThreadSanitizer, MemsetRace1) {
   char *data = new char[10];
   ScopedThread t1, t2;
   t1.Memset(data, 1, 10);

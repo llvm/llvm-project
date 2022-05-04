@@ -16,7 +16,7 @@
 static void foo() {}
 static void bar() {}
 
-TEST(ThreadSanitizer, FuncCall) {
+TEST_F(ThreadSanitizer, FuncCall) {
   ScopedThread t1, t2;
   MemLoc l;
   t1.Write1(l);

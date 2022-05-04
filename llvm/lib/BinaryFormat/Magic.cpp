@@ -227,7 +227,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
     break;
   
   case 'D': // DirectX container file - DXBC
-    if (startswith(Magic, "DXBC") && Magic.size() == 4)
+    if (startswith(Magic, "DXBC"))
       return file_magic::dxcontainer_object;
     break;
 

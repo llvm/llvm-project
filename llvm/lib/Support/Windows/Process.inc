@@ -247,13 +247,16 @@ windows::GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
 
   SmallVector<const char *, 20> TmpArgs;
   StringSaver Saver(Alloc);
-  cl::TokenizeWindowsCommandLine(Cmd, Saver, TmpArgs, /*MarkEOLs=*/false);
+  cl::TokenizeWindowsCommandLineFull(Cmd, Saver, TmpArgs, /*MarkEOLs=*/false);
 
   for (const char *Arg : TmpArgs) {
     EC = WildcardExpand(Arg, Args, Saver);
     if (EC)
       return EC;
   }
+
+  if (Args.size() == 0)
+    return std::make_error_code(std::errc::invalid_argument);
 
   SmallVector<char, MAX_PATH> Arg0(Args[0], Args[0] + strlen(Args[0]));
   SmallVector<char, MAX_PATH> Filename;
