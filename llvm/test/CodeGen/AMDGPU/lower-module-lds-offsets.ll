@@ -4,7 +4,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; Check that module LDS is allocated at address 0 and kernel starts its
-; allocation past module LDS.
+; allocation past module LDS when a call is present.
 
 @lds.size.1.align.1 = internal unnamed_addr addrspace(3) global [1 x i8] undef, align 1
 @lds.size.16.align.16 = internal unnamed_addr addrspace(3) global [16 x i8] undef, align 16
@@ -22,12 +22,14 @@ define amdgpu_kernel void @k0() {
 ; OPT-NEXT:    store i8 1, i8 addrspace(3)* [[LDS_SIZE_1_ALIGN_1_BC]], align 1
 ; OPT-NEXT:    [[LDS_SIZE_16_ALIGN_16_BC:%.*]] = bitcast [16 x i8] addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_LDS_T:%.*]], [[LLVM_AMDGCN_KERNEL_K0_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 0) to i8 addrspace(3)*
 ; OPT-NEXT:    store i8 2, i8 addrspace(3)* [[LDS_SIZE_16_ALIGN_16_BC]], align 16
+; OPT-NEXT:    call void @f0()
 ; OPT-NEXT:    ret void
 ;
   %lds.size.1.align.1.bc = bitcast [1 x i8] addrspace(3)* @lds.size.1.align.1 to i8 addrspace(3)*
   store i8 1, i8 addrspace(3)* %lds.size.1.align.1.bc, align 1
   %lds.size.16.align.16.bc = bitcast [16 x i8] addrspace(3)* @lds.size.16.align.16 to i8 addrspace(3)*
   store i8 2, i8 addrspace(3)* %lds.size.16.align.16.bc, align 16
+  call void @f0()
   ret void
 }
 
@@ -36,7 +38,7 @@ define amdgpu_kernel void @k0() {
 ; GCN-DAG: v_mov_b32_e32 [[TREE:v[0-9]+]], 3
 ; GCN:     ds_write_b8 [[NULL]], [[TREE]]
 define void @f0() {
-; OPT-LABEL: @f0(
+; OPT-LABEL: @f0() {
 ; OPT-NEXT:    [[LDS_SIZE_1_ALIGN_1_BC:%.*]] = bitcast [1 x i8] addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0) to i8 addrspace(3)*
 ; OPT-NEXT:    store i8 3, i8 addrspace(3)* [[LDS_SIZE_1_ALIGN_1_BC]], align 1
 ; OPT-NEXT:    ret void
@@ -45,3 +47,6 @@ define void @f0() {
   store i8 3, i8 addrspace(3)* %lds.size.1.align.1.bc, align 1
   ret void
 }
+
+attributes #0 = { "amdgpu-elide-module-lds" }
+; CHECK: attributes #0 = { "amdgpu-elide-module-lds" }
