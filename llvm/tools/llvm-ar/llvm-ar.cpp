@@ -880,48 +880,6 @@ computeNewArchiveMembers(ArchiveOperation Operation,
   return Ret;
 }
 
-static object::Archive::Kind getDefaultForHost() {
-  Triple HostTriple(sys::getProcessTriple());
-  return HostTriple.isOSDarwin()
-             ? object::Archive::K_DARWIN
-             : (HostTriple.isOSAIX() ? object::Archive::K_AIXBIG
-                                     : object::Archive::K_GNU);
-}
-
-static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
-  auto MemBufferRef = Member.Buf->getMemBufferRef();
-  Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
-      object::ObjectFile::createObjectFile(MemBufferRef);
-
-  if (OptionalObject)
-    return isa<object::MachOObjectFile>(**OptionalObject)
-               ? object::Archive::K_DARWIN
-               : (isa<object::XCOFFObjectFile>(**OptionalObject)
-                      ? object::Archive::K_AIXBIG
-                      : object::Archive::K_GNU);
-
-  // squelch the error in case we had a non-object file
-  consumeError(OptionalObject.takeError());
-
-  // If we're adding a bitcode file to the archive, detect the Archive kind
-  // based on the target triple.
-  LLVMContext Context;
-  if (identify_magic(MemBufferRef.getBuffer()) == file_magic::bitcode) {
-    if (auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
-            MemBufferRef, file_magic::bitcode, &Context)) {
-      auto &IRObject = cast<object::IRObjectFile>(**ObjOrErr);
-      return Triple(IRObject.getTargetTriple()).isOSDarwin()
-                 ? object::Archive::K_DARWIN
-                 : object::Archive::K_GNU;
-    } else {
-      // Squelch the error in case this was not a SymbolicFile.
-      consumeError(ObjOrErr.takeError());
-    }
-  }
-
-  return getDefaultForHost();
-}
-
 static void performWriteOperation(ArchiveOperation Operation,
                                   object::Archive *OldArchive,
                                   std::unique_ptr<MemoryBuffer> OldArchiveBuf,
@@ -943,14 +901,23 @@ static void performWriteOperation(ArchiveOperation Operation,
   case Default:
     if (Thin)
       Kind = object::Archive::K_GNU;
-    else if (OldArchive)
+    else if (OldArchive) {
       Kind = OldArchive->kind();
-    else if (NewMembersP)
-      Kind = !NewMembersP->empty() ? getKindFromMember(NewMembersP->front())
-                                   : getDefaultForHost();
+      if (Kind == object::Archive::K_BSD) {
+        auto InferredKind = object::Archive::K_BSD;
+        if (NewMembersP && !NewMembersP->empty())
+          InferredKind = NewMembersP->front().detectKindFromObject();
+        else if (!NewMembers.empty())
+          InferredKind = NewMembers.front().detectKindFromObject();
+        if (InferredKind == object::Archive::K_DARWIN)
+          Kind = object::Archive::K_DARWIN;
+      }
+    } else if (NewMembersP)
+      Kind = !NewMembersP->empty() ? NewMembersP->front().detectKindFromObject()
+                                   : object::Archive::getDefaultKindForHost();
     else
-      Kind = !NewMembers.empty() ? getKindFromMember(NewMembers.front())
-                                 : getDefaultForHost();
+      Kind = !NewMembers.empty() ? NewMembers.front().detectKindFromObject()
+                                 : object::Archive::getDefaultKindForHost();
     break;
   case GNU:
     Kind = object::Archive::K_GNU;

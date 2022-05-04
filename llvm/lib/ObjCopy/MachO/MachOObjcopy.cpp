@@ -484,9 +484,12 @@ Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
           createNewArchiveMembers(Config, **ArOrErr);
       if (!NewArchiveMembersOrErr)
         return NewArchiveMembersOrErr.takeError();
+      auto Kind = (*ArOrErr)->kind();
+      if (Kind == object::Archive::K_BSD)
+        Kind = object::Archive::K_DARWIN;
       Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
           writeArchiveToBuffer(*NewArchiveMembersOrErr,
-                               (*ArOrErr)->hasSymbolTable(), (*ArOrErr)->kind(),
+                               (*ArOrErr)->hasSymbolTable(), Kind,
                                Config.getCommonConfig().DeterministicArchives,
                                (*ArOrErr)->isThin());
       if (!OutputBufferOrErr)

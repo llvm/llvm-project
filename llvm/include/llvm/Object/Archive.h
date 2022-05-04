@@ -340,6 +340,7 @@ public:
 
   Kind kind() const { return (Kind)Format; }
   bool isThin() const { return IsThin; }
+  static object::Archive::Kind getDefaultKindForHost();
 
   child_iterator child_begin(Error &Err, bool SkipInternal = true) const;
   child_iterator child_end() const;

@@ -11,6 +11,7 @@
 #include "llvm/ObjCopy/MultiFormatConfig.h"
 #include "llvm/ObjCopy/ObjCopy.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
@@ -61,6 +62,10 @@ static Error deepWriteArchive(StringRef ArcName,
                               ArrayRef<NewArchiveMember> NewMembers,
                               bool WriteSymtab, object::Archive::Kind Kind,
                               bool Deterministic, bool Thin) {
+  if (Kind == object::Archive::K_BSD && !NewMembers.empty() &&
+      NewMembers.front().detectKindFromObject() == object::Archive::K_DARWIN)
+    Kind = object::Archive::K_DARWIN;
+
   if (Error E = writeArchive(ArcName, NewMembers, WriteSymtab, Kind,
                              Deterministic, Thin))
     return createFileError(ArcName, std::move(E));
