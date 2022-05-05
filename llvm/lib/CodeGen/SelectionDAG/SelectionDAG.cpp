@@ -4685,8 +4685,8 @@ bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
 }
 
 // Only bits set in Mask must be negated, other bits may be arbitrary.
-static SDValue getBitwiseNotOperand(SDValue V, SDValue Mask) {
-  if (isBitwiseNot(V, true))
+SDValue llvm::getBitwiseNotOperand(SDValue V, SDValue Mask, bool AllowUndefs) {
+  if (isBitwiseNot(V, AllowUndefs))
     return V.getOperand(0);
 
   // Handle any_extend (not (truncate X)) pattern, where Mask only sets
@@ -4697,7 +4697,7 @@ static SDValue getBitwiseNotOperand(SDValue V, SDValue Mask) {
   SDValue ExtArg = V.getOperand(0);
   if (ExtArg.getScalarValueSizeInBits() >=
           MaskC->getAPIntValue().getActiveBits() &&
-      isBitwiseNot(ExtArg, true) &&
+      isBitwiseNot(ExtArg, AllowUndefs) &&
       ExtArg.getOperand(0).getOpcode() == ISD::TRUNCATE &&
       ExtArg.getOperand(0).getOperand(0).getValueType() == V.getValueType())
     return ExtArg.getOperand(0).getOperand(0);
@@ -4709,7 +4709,8 @@ static bool haveNoCommonBitsSetCommutative(SDValue A, SDValue B) {
   // Including degenerate case (X & ~M) op M
   auto MatchNoCommonBitsPattern = [&](SDValue Not, SDValue Mask,
                                       SDValue Other) {
-    if (SDValue NotOperand = getBitwiseNotOperand(Not, Mask)) {
+    if (SDValue NotOperand =
+            getBitwiseNotOperand(Not, Mask, /* AllowUndefs */ true)) {
       if (Other == NotOperand)
         return true;
       if (Other->getOpcode() == ISD::AND)
