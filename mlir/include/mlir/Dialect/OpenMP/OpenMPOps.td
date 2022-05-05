@@ -99,8 +99,8 @@ def ParallelOp : OpenMP_Op<"parallel", [
     of the parallel region.
   }];
 
-  let arguments = (ins Optional<AnyType>:$if_expr_var,
-             Optional<AnyType>:$num_threads_var,
+  let arguments = (ins Optional<I1>:$if_expr_var,
+             Optional<IntLikeType>:$num_threads_var,
              Variadic<AnyType>:$allocate_vars,
              Variadic<AnyType>:$allocators_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
@@ -996,6 +996,40 @@ def ThreadprivateOp : OpenMP_Op<"threadprivate"> {
   let assemblyFormat = [{
     $sym_addr `:` type($sym_addr) `->` type($tls_addr) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// 2.18.1 Cancel Construct
+//===----------------------------------------------------------------------===//
+def CancelOp : OpenMP_Op<"cancel"> {
+  let summary = "cancel directive";
+  let description = [{
+    The cancel construct activates cancellation of the innermost enclosing
+    region of the type specified.
+  }];
+  let arguments = (ins CancellationConstructTypeAttr:$cancellation_construct_type_val,
+                       Optional<I1>:$if_expr);
+  let assemblyFormat = [{ `cancellation_construct_type` `(`
+                          custom<ClauseAttr>($cancellation_construct_type_val) `)`
+                          ( `if` `(` $if_expr^ `)` )? attr-dict}];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.18.2 Cancellation Point Construct
+//===----------------------------------------------------------------------===//
+def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
+  let summary = "cancellation point directive";
+  let description = [{
+    The cancellation point construct introduces a user-defined cancellation
+    point at which implicit or explicit tasks check if cancellation of the
+    innermost enclosing region of the type specified has been activated.
+  }];
+  let arguments = (ins CancellationConstructTypeAttr:$cancellation_construct_type_val);
+  let assemblyFormat = [{ `cancellation_construct_type` `(`
+                           custom<ClauseAttr>($cancellation_construct_type_val) `)`
+                           attr-dict}];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

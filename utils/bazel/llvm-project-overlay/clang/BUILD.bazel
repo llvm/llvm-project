@@ -781,6 +781,8 @@ cc_library(
 cc_library(
     name = "analysis",
     srcs = glob([
+        "lib/Analysis/FlowSensitive/Models/*.cpp",
+        "lib/Analysis/FlowSensitive/*.cpp",
         "lib/Analysis/*.cpp",
         "lib/Analysis/*.h",
     ]),

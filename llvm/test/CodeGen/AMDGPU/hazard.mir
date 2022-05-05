@@ -171,3 +171,27 @@ body: |
     S_SENDMSG 3, implicit $exec, implicit $m0
     S_ENDPGM 0
 ...
+
+# GCN-LABEL: name: buffer_store_lds_dword
+# GCN:       $m0 = S_MOV_B32 0
+# GFX9-NEXT: S_NOP 0
+# GCN-NEXT:  BUFFER_STORE_LDS_DWORD
+---
+name: buffer_store_lds_dword
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_STORE_LDS_DWORD $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec, implicit $m0
+...
+
+# GCN-LABEL: name: lds_direct_read_m0
+# GCN:       $m0 = S_MOV_B32 0
+# GFX9-NEXT: S_NOP 0
+# GCN-NEXT:  V_MOV_B32
+---
+name: lds_direct_read_m0
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    $vgpr0 = V_MOV_B32_e32 $lds_direct, implicit $exec, implicit $m0
+...

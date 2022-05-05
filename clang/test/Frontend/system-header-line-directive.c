@@ -3,7 +3,7 @@
 #include <noline.h>
 #include <line-directive-in-system.h>
 
-// expected-warning@line-directive.h:* {{type specifier missing, defaults to 'int'}}
+// expected-error@line-directive.h:* {{type specifier missing, defaults to 'int'}}
 #include "line-directive.h"
 
 // This tests that "#line" directives in system headers preserve system

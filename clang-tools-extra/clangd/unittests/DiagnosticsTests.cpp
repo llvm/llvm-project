@@ -1490,8 +1490,8 @@ TEST(DiagsInHeaders, DiagInsideHeader) {
   TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
               UnorderedElementsAre(AllOf(
-                  Diag(Main.range(), "in included file: C++ requires a "
-                                     "type specifier for all declarations"),
+                  Diag(Main.range(), "in included file: a type specifier is "
+                                     "required for all declarations"),
                   withNote(Diag(Header.range(), "error occurred here")))));
 }
 
@@ -1504,8 +1504,8 @@ TEST(DiagsInHeaders, DiagInTransitiveInclude) {
                         {"b.h", "no_type_spec; // error-ok"}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
               UnorderedElementsAre(
-                  Diag(Main.range(), "in included file: C++ requires a "
-                                     "type specifier for all declarations")));
+                  Diag(Main.range(), "in included file: a type specifier is "
+                                     "required for all declarations")));
 }
 
 TEST(DiagsInHeaders, DiagInMultipleHeaders) {
@@ -1518,10 +1518,10 @@ TEST(DiagsInHeaders, DiagInMultipleHeaders) {
                         {"b.h", "no_type_spec; // error-ok"}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
               UnorderedElementsAre(
-                  Diag(Main.range("a"), "in included file: C++ requires a type "
-                                        "specifier for all declarations"),
-                  Diag(Main.range("b"), "in included file: C++ requires a type "
-                                        "specifier for all declarations")));
+                  Diag(Main.range("a"), "in included file: a type specifier is "
+                                        "required for all declarations"),
+                  Diag(Main.range("b"), "in included file: a type specifier is "
+                                        "required for all declarations")));
 }
 
 TEST(DiagsInHeaders, PreferExpansionLocation) {
@@ -1535,8 +1535,8 @@ TEST(DiagsInHeaders, PreferExpansionLocation) {
       {"b.h", "#ifndef X\n#define X\nno_type_spec; // error-ok\n#endif"}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
               UnorderedElementsAre(Diag(Main.range(),
-                                        "in included file: C++ requires a type "
-                                        "specifier for all declarations")));
+                                        "in included file: a type specifier is "
+                                        "required for all declarations")));
 }
 
 TEST(DiagsInHeaders, PreferExpansionLocationMacros) {
@@ -1553,8 +1553,8 @@ TEST(DiagsInHeaders, PreferExpansionLocationMacros) {
       {"c.h", "#ifndef X\n#define X\nno_type_spec; // error-ok\n#endif"}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
               UnorderedElementsAre(
-                  Diag(Main.range(), "in included file: C++ requires a "
-                                     "type specifier for all declarations")));
+                  Diag(Main.range(), "in included file: a type specifier is "
+                                     "required for all declarations")));
 }
 
 TEST(DiagsInHeaders, LimitDiagsOutsideMainFile) {
@@ -1582,8 +1582,8 @@ TEST(DiagsInHeaders, LimitDiagsOutsideMainFile) {
       #endif)cpp"}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
               UnorderedElementsAre(
-                  Diag(Main.range(), "in included file: C++ requires a "
-                                     "type specifier for all declarations")));
+                  Diag(Main.range(), "in included file: a type specifier is "
+                                     "required for all declarations")));
 }
 
 TEST(DiagsInHeaders, OnlyErrorOrFatal) {
@@ -1597,8 +1597,8 @@ TEST(DiagsInHeaders, OnlyErrorOrFatal) {
   TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
               UnorderedElementsAre(AllOf(
-                  Diag(Main.range(), "in included file: C++ requires "
-                                     "a type specifier for all declarations"),
+                  Diag(Main.range(), "in included file: a type specifier is "
+                                     "required for all declarations"),
                   withNote(Diag(Header.range(), "error occurred here")))));
 }
 

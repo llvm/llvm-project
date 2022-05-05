@@ -1983,15 +1983,9 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   if (const Optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
-  // Is the field declared constant and has an in-class initializer?
+  // If the containing record was initialized, try to get its constant value.
   const FieldDecl *FD = R->getDecl();
   QualType Ty = FD->getType();
-  if (Ty.isConstQualified())
-    if (const Expr *Init = FD->getInClassInitializer())
-      if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
-        return *V;
-
-  // If the containing record was initialized, try to get its constant value.
   const MemRegion* superR = R->getSuperRegion();
   if (const auto *VR = dyn_cast<VarRegion>(superR)) {
     const VarDecl *VD = VR->getDecl();
@@ -2153,8 +2147,13 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
       return UnknownVal();
 
     // Additionally allow introspection of a block's internal layout.
-    if (!hasPartialLazyBinding && !isa<BlockDataRegion>(R->getBaseRegion()))
+    // Try to get direct binding if all other attempts failed thus far.
+    // Else, return UndefinedVal()
+    if (!hasPartialLazyBinding && !isa<BlockDataRegion>(R->getBaseRegion())) {
+      if (const Optional<SVal> &V = B.getDefaultBinding(R))
+        return *V;
       return UndefinedVal();
+    }
   }
 
   // All other values are symbolic.

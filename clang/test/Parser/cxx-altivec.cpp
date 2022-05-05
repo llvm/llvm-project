@@ -112,7 +112,8 @@ vector __bool long long v_bll4;      // expected-error {{use of 'long long' with
 #endif
 __vector long double  vv_ld3;        // expected-error {{cannot use 'long double' with '__vector'}}
 vector long double  v_ld4;           // expected-error {{cannot use 'long double' with '__vector'}}
-vector bool v_b;                     // expected-error {{C++ requires a type specifier for all declarations}}
+// FIXME: why is this diagnostic different from the others?
+vector bool v_b;                     // expected-error {{a type specifier is required for all declarations}}
 vector bool float v_bf;              // expected-error {{cannot use 'float' with '__vector bool'}}
 vector bool double v_bd;             // expected-error {{cannot use 'double' with '__vector bool'}}
 vector bool pixel v_bp;              // expected-error {{cannot use '__pixel' with '__vector bool'}}

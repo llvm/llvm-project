@@ -42,9 +42,12 @@ static __inline__ unsigned int __DEFAULT_FN_ATTRS _rdsspd(unsigned int __a) {
   return __builtin_ia32_rdsspd(__a);
 }
 
-static __inline__ unsigned int __DEFAULT_FN_ATTRS _rdsspd_i32() {
+static __inline__ unsigned int __DEFAULT_FN_ATTRS _rdsspd_i32(void) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wuninitialized"
   unsigned int t;
   return __builtin_ia32_rdsspd(t);
+#pragma clang diagnostic pop
 }
 
 #ifdef __x86_64__
@@ -52,9 +55,12 @@ static __inline__ unsigned long long __DEFAULT_FN_ATTRS _rdsspq(unsigned long lo
   return __builtin_ia32_rdsspq(__a);
 }
 
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS _rdsspq_i64() {
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS _rdsspq_i64(void) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wuninitialized"
   unsigned long long t;
   return __builtin_ia32_rdsspq(t);
+#pragma clang diagnostic pop
 }
 #endif /* __x86_64__ */
 
@@ -68,7 +74,7 @@ static __inline__ unsigned int __DEFAULT_FN_ATTRS _get_ssp(void) {
 }
 #endif /* __x86_64__ */
 
-static __inline__ void __DEFAULT_FN_ATTRS _saveprevssp() {
+static __inline__ void __DEFAULT_FN_ATTRS _saveprevssp(void) {
   __builtin_ia32_saveprevssp();
 }
 
@@ -96,7 +102,7 @@ static __inline__ void __DEFAULT_FN_ATTRS _wrussq(unsigned long long __a, void *
 }
 #endif /* __x86_64__ */
 
-static __inline__ void __DEFAULT_FN_ATTRS _setssbsy() {
+static __inline__ void __DEFAULT_FN_ATTRS _setssbsy(void) {
   __builtin_ia32_setssbsy();
 }
 

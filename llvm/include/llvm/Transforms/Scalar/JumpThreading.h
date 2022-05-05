@@ -21,7 +21,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/ValueHandle.h"
-#include <memory>
 #include <utility>
 
 namespace llvm {

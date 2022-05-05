@@ -774,12 +774,9 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
 
   unsigned NumOrigPreds = Preds.size();
   // We can only sink instructions through unconditional branches.
-  for (auto I = Preds.begin(); I != Preds.end();) {
-    if ((*I)->getTerminator()->getNumSuccessors() != 1)
-      I = Preds.erase(I);
-    else
-      ++I;
-  }
+  llvm::erase_if(Preds, [](BasicBlock *BB) {
+    return BB->getTerminator()->getNumSuccessors() != 1;
+  });
 
   LockstepReverseIterator LRI(Preds);
   SmallVector<SinkingInstructionCandidate, 4> Candidates;

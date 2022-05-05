@@ -281,6 +281,62 @@ define void @FPArithmetic(float %a, float %b, double %c, double %d) {
   ret void
 }
 
+; CHECK-LABEL: llvm.func @FPComparison(%arg0: f32, %arg1: f32)
+define void @FPComparison(float %a, float %b) {
+  ; CHECK: llvm.fcmp "_false" %arg0, %arg1
+  %1 = fcmp false float %a, %b
+  ; CHECK: llvm.fcmp "oeq" %arg0, %arg1
+  %2 = fcmp oeq float %a, %b
+  ; CHECK: llvm.fcmp "ogt" %arg0, %arg1
+  %3 = fcmp ogt float %a, %b
+  ; CHECK: llvm.fcmp "oge" %arg0, %arg1
+  %4 = fcmp oge float %a, %b
+  ; CHECK: llvm.fcmp "olt" %arg0, %arg1
+  %5 = fcmp olt float %a, %b
+  ; CHECK: llvm.fcmp "ole" %arg0, %arg1
+  %6 = fcmp ole float %a, %b
+  ; CHECK: llvm.fcmp "one" %arg0, %arg1
+  %7 = fcmp one float %a, %b
+  ; CHECK: llvm.fcmp "ord" %arg0, %arg1
+  %8 = fcmp ord float %a, %b
+  ; CHECK: llvm.fcmp "ueq" %arg0, %arg1
+  %9 = fcmp ueq float %a, %b
+  ; CHECK: llvm.fcmp "ugt" %arg0, %arg1
+  %10 = fcmp ugt float %a, %b
+  ; CHECK: llvm.fcmp "uge" %arg0, %arg1
+  %11 = fcmp uge float %a, %b
+  ; CHECK: llvm.fcmp "ult" %arg0, %arg1
+  %12 = fcmp ult float %a, %b
+  ; CHECK: llvm.fcmp "ule" %arg0, %arg1
+  %13 = fcmp ule float %a, %b
+  ; CHECK: llvm.fcmp "une" %arg0, %arg1
+  %14 = fcmp une float %a, %b
+  ; CHECK: llvm.fcmp "uno" %arg0, %arg1
+  %15 = fcmp uno float %a, %b
+  ; CHECK: llvm.fcmp "_true" %arg0, %arg1
+  %16 = fcmp true float %a, %b
+  ret void
+}
+
+; Testing rest of the floating point constant kinds.
+; CHECK-LABEL: llvm.func @FPConstant(%arg0: f16, %arg1: bf16, %arg2: f128, %arg3: f80)
+define void @FPConstant(half %a, bfloat %b, fp128 %c, x86_fp80 %d) {
+  ; CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(7.000000e+00 : f80) : f80
+  ; CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(0.000000e+00 : f128) : f128
+  ; CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(1.000000e+00 : bf16) : bf16
+  ; CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(1.000000e+00 : f16) : f16
+
+  ; CHECK: llvm.fadd %[[C3]], %arg0  : f16
+  %1 = fadd half 1.0, %a
+  ; CHECK: llvm.fadd %[[C2]], %arg1  : bf16
+  %2 = fadd bfloat 1.0, %b
+  ; CHECK: llvm.fadd %[[C1]], %arg2  : f128
+  %3 = fadd fp128 0xL00000000000000000000000000000000, %c
+  ; CHECK: llvm.fadd %[[C0]], %arg3  : f80
+  %4 = fadd x86_fp80 0xK4001E000000000000000, %d
+  ret void
+}
+
 ;
 ; Functions as constants.
 ;
@@ -378,4 +434,110 @@ define i32 @useFenceInst() {
   ;CHECK: llvm.fence seq_cst
   fence syncscope("") seq_cst
   ret i32 0
+}
+
+; Switch instruction
+declare void @g(i32)
+
+; CHECK-LABEL: llvm.func @simple_switch(%arg0: i32) {
+define void @simple_switch(i32 %val) {
+; CHECK: %[[C0:.+]] = llvm.mlir.constant(11 : i32) : i32
+; CHECK: %[[C1:.+]] = llvm.mlir.constant(87 : i32) : i32
+; CHECK: %[[C2:.+]] = llvm.mlir.constant(78 : i32) : i32
+; CHECK: %[[C3:.+]] = llvm.mlir.constant(94 : i32) : i32
+; CHECK: %[[C4:.+]] = llvm.mlir.constant(1 : i32) : i32
+; CHECK: llvm.switch %arg0 : i32, ^[[BB5:.+]] [
+; CHECK:   0: ^[[BB1:.+]],
+; CHECK:   9: ^[[BB2:.+]],
+; CHECK:   994: ^[[BB3:.+]],
+; CHECK:   1154: ^[[BB4:.+]]
+; CHECK: ]
+  switch i32 %val, label %def [
+    i32 0, label %one
+    i32 9, label %two
+    i32 994, label %three
+    i32 1154, label %four
+  ]
+
+; CHECK: ^[[BB1]]:
+; CHECK: llvm.call @g(%[[C4]]) : (i32) -> ()
+; CHECK: llvm.return
+one:
+  call void @g(i32 1)
+  ret void
+; CHECK: ^[[BB2]]:
+; CHECK: llvm.call @g(%[[C3]]) : (i32) -> ()
+; CHECK: llvm.return
+two:
+  call void @g(i32 94)
+  ret void
+; CHECK: ^[[BB3]]:
+; CHECK: llvm.call @g(%[[C2]]) : (i32) -> ()
+; CHECK: llvm.return
+three:
+  call void @g(i32 78)
+  ret void
+; CHECK: ^[[BB4]]:
+; CHECK: llvm.call @g(%[[C1]]) : (i32) -> ()
+; CHECK: llvm.return
+four:
+  call void @g(i32 87)
+  ret void
+; CHECK: ^[[BB5]]:
+; CHECK: llvm.call @g(%[[C0]]) : (i32) -> ()
+; CHECK: llvm.return
+def:
+  call void @g(i32 11)
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @switch_args(%arg0: i32) {
+define void @switch_args(i32 %val) {
+  ; CHECK: %[[C0:.+]] = llvm.mlir.constant(44 : i32) : i32
+  ; CHECK: %[[C1:.+]] = llvm.mlir.constant(34 : i32) : i32
+  ; CHECK: %[[C2:.+]] = llvm.mlir.constant(33 : i32) : i32
+  %pred = icmp ult i32 %val, 87
+  br i1 %pred, label %bbs, label %bb1
+
+bb1:
+  %vx = add i32 %val, 22
+  %pred2 = icmp ult i32 %val, 94
+  br i1 %pred2, label %bb2, label %bb3
+
+bb2:
+  %vx0 = add i32 %val, 23
+  br label %one
+
+bb3:
+  br label %def
+
+; CHECK: %[[V1:.+]] = llvm.add %arg0, %[[C2]] : i32
+; CHECK: %[[V2:.+]] = llvm.add %arg0, %[[C1]] : i32
+; CHECK: %[[V3:.+]] = llvm.add %arg0, %[[C0]] : i32
+; CHECK: llvm.switch %arg0 : i32, ^[[BBD:.+]](%[[V3]] : i32) [
+; CHECK:   0: ^[[BB1:.+]](%[[V1]], %[[V2]] : i32, i32)
+; CHECK: ]
+bbs:
+  %vy = add i32 %val, 33
+  %vy0 = add i32 %val, 34
+  %vz = add i32 %val, 44
+  switch i32 %val, label %def [
+    i32 0, label %one
+  ]
+
+; CHECK: ^[[BB1]](%[[BA0:.+]]: i32, %[[BA1:.+]]: i32):
+one: ; pred: bb2, bbs
+  %v0 = phi i32 [%vx, %bb2], [%vy, %bbs]
+  %v1 = phi i32 [%vx0, %bb2], [%vy0, %bbs]
+  ; CHECK: llvm.add %[[BA0]], %[[BA1]]  : i32
+  %vf = add i32 %v0, %v1
+  call void @g(i32 %vf)
+  ret void
+
+; CHECK: ^[[BBD]](%[[BA2:.+]]: i32):
+def: ; pred: bb3, bbs
+  %v2 = phi i32 [%vx, %bb3], [%vz, %bbs]
+  ; CHECK: llvm.call @g(%[[BA2]])
+  call void @g(i32 %v2)
+  ret void
 }

@@ -500,7 +500,7 @@ bool ValueObjectPrinter::ShouldPrintChildren(
   if (m_options.m_use_objc)
     return false;
 
-  if (is_failed_description || m_curr_depth < m_options.m_max_depth) {
+  if (is_failed_description || !HasReachedMaximumDepth()) {
     // We will show children for all concrete types. We won't show pointer
     // contents unless a pointer depth has been specified. We won't reference
     // contents unless the reference is the root object (depth of zero).
@@ -786,9 +786,22 @@ void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
       m_stream->EOL();
     } else
       PrintChildren(value_printed, summary_printed, curr_ptr_depth);
-  } else if (m_curr_depth >= m_options.m_max_depth && IsAggregate() &&
+  } else if (HasReachedMaximumDepth() && IsAggregate() &&
              ShouldPrintValueObject()) {
     m_stream->PutCString("{...}\n");
+    // The maximum child depth has been reached. If `m_max_depth` is the default
+    // (i.e. the user has _not_ customized it), then lldb presents a warning to
+    // the user. The warning tells the user that the limit has been reached, but
+    // more importantly tells them how to expand the limit if desired.
+    if (m_options.m_max_depth_is_default)
+      m_valobj->GetTargetSP()
+          ->GetDebugger()
+          .GetCommandInterpreter()
+          .SetReachedMaximumDepth();
   } else
     m_stream->EOL();
+}
+
+bool ValueObjectPrinter::HasReachedMaximumDepth() {
+  return m_curr_depth >= m_options.m_max_depth;
 }

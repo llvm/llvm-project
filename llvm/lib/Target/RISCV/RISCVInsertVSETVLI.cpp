@@ -386,7 +386,46 @@ public:
     // Otherwise just use whatever is in this block.
     return Other;
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Support for debugging, callable in GDB: V->dump()
+  LLVM_DUMP_METHOD void dump() const {
+    print(dbgs());
+    dbgs() << "\n";
+  }
+
+  /// Implement operator<<.
+  /// @{
+  void print(raw_ostream &OS) const {
+    OS << "{";
+    if (!isValid())
+      OS << "Uninitialized";
+    if (isUnknown())
+      OS << "unknown";;
+    if (hasAVLReg())
+      OS << "AVLReg=" << (unsigned)AVLReg;
+    if (hasAVLImm())
+      OS << "AVLImm=" << (unsigned)AVLImm;
+    OS << ", "
+       << "VLMul=" << (unsigned)VLMul << ", "
+       << "SEW=" << (unsigned)SEW << ", "
+       << "TailAgnostic=" << (bool)TailAgnostic << ", "
+       << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
+       << "MaskRegOp=" << (bool)MaskRegOp << ", "
+       << "StoreOp=" << (bool)StoreOp << ", "
+       << "ScalarMovOp=" << (bool)ScalarMovOp << ", "
+       << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << "}";
+  }
+#endif
 };
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_ATTRIBUTE_USED
+inline raw_ostream &operator<<(raw_ostream &OS, const VSETVLIInfo &V) {
+  V.print(OS);
+  return OS;
+}
+#endif
 
 struct BlockData {
   // The VSETVLIInfo that represents the net changes to the VL/VTYPE registers
@@ -433,6 +472,9 @@ private:
   bool needVSETVLI(const VSETVLIInfo &Require, const VSETVLIInfo &CurInfo);
   bool needVSETVLIPHI(const VSETVLIInfo &Require, const MachineBasicBlock &MBB);
   void insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
+                     const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
+  void insertVSETVLI(MachineBasicBlock &MBB,
+                     MachineBasicBlock::iterator InsertPt, DebugLoc DL,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
 
   bool computeVLVTYPEChanges(const MachineBasicBlock &MBB);
@@ -588,12 +630,18 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
                                        const VSETVLIInfo &Info,
                                        const VSETVLIInfo &PrevInfo) {
   DebugLoc DL = MI.getDebugLoc();
+  insertVSETVLI(MBB, MachineBasicBlock::iterator(&MI), DL, Info, PrevInfo);
+}
+
+void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
+                     MachineBasicBlock::iterator InsertPt, DebugLoc DL,
+                     const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo) {
 
   // Use X0, X0 form if the AVL is the same and the SEW+LMUL gives the same
   // VLMAX.
   if (PrevInfo.isValid() && !PrevInfo.isUnknown() &&
       Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo)) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETVLIX0))
+    BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
         .addReg(RISCV::X0, RegState::Define | RegState::Dead)
         .addReg(RISCV::X0, RegState::Kill)
         .addImm(Info.encodeVTYPE())
@@ -602,7 +650,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
   }
 
   if (Info.hasAVLImm()) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETIVLI))
+    BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
         .addReg(RISCV::X0, RegState::Define | RegState::Dead)
         .addImm(Info.getAVLImm())
         .addImm(Info.encodeVTYPE());
@@ -615,7 +663,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
     // the previous vl to become invalid.
     if (PrevInfo.isValid() && !PrevInfo.isUnknown() &&
         Info.hasSameVLMAX(PrevInfo)) {
-      BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETVLIX0))
+      BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
           .addReg(RISCV::X0, RegState::Define | RegState::Dead)
           .addReg(RISCV::X0, RegState::Kill)
           .addImm(Info.encodeVTYPE())
@@ -623,7 +671,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
       return;
     }
     // Otherwise use an AVL of 0 to avoid depending on previous vl.
-    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETIVLI))
+    BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
         .addReg(RISCV::X0, RegState::Define | RegState::Dead)
         .addImm(0)
         .addImm(Info.encodeVTYPE());
@@ -642,7 +690,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
     DestReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     Opcode = RISCV::PseudoVSETVLIX0;
   }
-  BuildMI(MBB, MI, DL, TII->get(Opcode))
+  BuildMI(MBB, InsertPt, DL, TII->get(Opcode))
       .addReg(DestReg, RegState::Define | RegState::Dead)
       .addReg(AVLReg)
       .addImm(Info.encodeVTYPE());

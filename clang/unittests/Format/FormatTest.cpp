@@ -3336,6 +3336,14 @@ TEST_F(FormatTest, UnderstandsAccessSpecifiers) {
   verifyFormat("if (public == private)\n");
   verifyFormat("void foo(public, private)");
   verifyFormat("public::foo();");
+
+  verifyFormat("class A {\n"
+               "public:\n"
+               "  std::unique_ptr<int *[]> b() { return nullptr; }\n"
+               "\n"
+               "private:\n"
+               "  int c;\n"
+               "};");
 }
 
 TEST_F(FormatTest, SeparatesLogicalBlocks) {
@@ -16022,6 +16030,10 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "#define ccc  (5)",
                Style);
 
+  verifyFormat("#define true  1\n"
+               "#define false 0",
+               Style);
+
   verifyFormat("#define f(x)         (x * x)\n"
                "#define fff(x, y, z) (x * y + z)\n"
                "#define ffff(x, y)   (x - y)",
@@ -17998,10 +18010,20 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                Style);
   // clang-format on
 
-  Style = getLLVMStyleWithColumns(120);
+  Style = getLLVMStyleWithColumns(20);
   Style.AlignConsecutiveAssignments.Enabled = true;
-  Style.ContinuationIndentWidth = 4;
   Style.IndentWidth = 4;
+
+  verifyFormat("void foo() {\n"
+               "    int i1 = 1;\n"
+               "    int j  = 0;\n"
+               "    int k  = bar(\n"
+               "        argument1,\n"
+               "        argument2);\n"
+               "}",
+               Style);
+
+  Style.ColumnLimit = 120;
 
   // clang-format off
   verifyFormat("void SomeFunc() {\n"
@@ -21487,6 +21509,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  bar([]() {} // Did not respect SpacesBeforeTrailingComments\n"
                "  );\n"
                "}");
+  verifyFormat("auto k = *[](int *j) { return j; }(&i);");
 
   // Lambdas created through weird macros.
   verifyFormat("void f() {\n"

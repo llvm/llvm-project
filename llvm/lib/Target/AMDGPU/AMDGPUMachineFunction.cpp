@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMachineFunction.h"
+#include "AMDGPU.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -82,10 +83,16 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   return Offset;
 }
 
-void AMDGPUMachineFunction::allocateModuleLDSGlobal(const Module *M) {
+// This kernel calls no functions that require the module lds struct
+static bool canElideModuleLDS(const Function &F) {
+  return F.hasFnAttribute("amdgpu-elide-module-lds");
+}
+
+void AMDGPUMachineFunction::allocateModuleLDSGlobal(const Function &F) {
+  const Module *M = F.getParent();
   if (isModuleEntryFunction()) {
     const GlobalVariable *GV = M->getNamedGlobal("llvm.amdgcn.module.lds");
-    if (GV) {
+    if (GV && !canElideModuleLDS(F)) {
       unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *GV);
       (void)Offset;
       assert(Offset == 0 &&

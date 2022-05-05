@@ -5,5 +5,5 @@
 // RUN: not clang-check -p "%t/abc/def" "%t/test.cpp" 2>&1|FileCheck %s
 // FIXME: Make the above easier.
 
-// CHECK: C++ requires
+// CHECK: a type specifier is required
 invalid;

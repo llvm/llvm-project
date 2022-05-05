@@ -30,7 +30,7 @@ double test_amdgcn_target_atomic_hints() {
     #pragma omp atomic hint(amd_fast_fp_atomics)
     a+=(double)i;
 
-    // CHECK-HINTS: {{.*}} = cmpxchg
+    // CHECK-HINTS: {{.*}} = atomicrmw
     #pragma omp atomic hint(amd_safe_fp_atomics)
     b+=(double)i;
   }
@@ -57,7 +57,7 @@ double test_amdgcn_target_atomic_unsafe_opt() {
     #pragma omp atomic hint(amd_fast_fp_atomics)
     b+=(double)i;
 
-    // CHECK-FLAG-UNSAFE: {{.*}} = cmpxchg
+    // CHECK-FLAG-UNSAFE: {{.*}} = atomicrmw
     #pragma omp atomic hint(amd_safe_fp_atomics)
     c+=(double)i;
   }

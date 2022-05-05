@@ -519,7 +519,9 @@ namespace {
 
     SDValue XformToShuffleWithZero(SDNode *N);
     bool reassociationCanBreakAddressingModePattern(unsigned Opc,
-                                                    const SDLoc &DL, SDValue N0,
+                                                    const SDLoc &DL,
+                                                    SDNode *N,
+                                                    SDValue N0,
                                                     SDValue N1);
     SDValue reassociateOpsCommutative(unsigned Opc, const SDLoc &DL, SDValue N0,
                                       SDValue N1);
@@ -996,6 +998,7 @@ static bool canSplitIdx(LoadSDNode *LD) {
 
 bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
                                                              const SDLoc &DL,
+                                                             SDNode *N,
                                                              SDValue N0,
                                                              SDValue N1) {
   // Currently this only tries to ensure we don't undo the GEP splits done by
@@ -1025,7 +1028,7 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
     return false;
   const int64_t CombinedValue = CombinedValueIntVal.getSExtValue();
 
-  for (SDNode *Node : N0->uses()) {
+  for (SDNode *Node : N->uses()) {
     auto LoadStore = dyn_cast<MemSDNode>(Node);
     if (LoadStore) {
       // Is x[offset2] already not a legal addressing mode? If so then
@@ -2447,7 +2450,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     return NewSel;
 
   // reassociate add
-  if (!reassociationCanBreakAddressingModePattern(ISD::ADD, DL, N0, N1)) {
+  if (!reassociationCanBreakAddressingModePattern(ISD::ADD, DL, N, N0, N1)) {
     if (SDValue RADD = reassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
       return RADD;
 
@@ -6811,11 +6814,14 @@ static SDValue visitORCommutative(
   EVT VT = N0.getValueType();
   if (N0.getOpcode() == ISD::AND) {
     // fold (or (and X, (xor Y, -1)), Y) -> (or X, Y)
-    if (isBitwiseNot(N0.getOperand(1)) && N0.getOperand(1).getOperand(0) == N1)
+    // TODO: Set AllowUndefs = true.
+    if (getBitwiseNotOperand(N0.getOperand(1), N0.getOperand(0),
+                             /* AllowUndefs */ false) == N1)
       return DAG.getNode(ISD::OR, SDLoc(N), VT, N0.getOperand(0), N1);
 
     // fold (or (and (xor Y, -1), X), Y) -> (or X, Y)
-    if (isBitwiseNot(N0.getOperand(0)) && N0.getOperand(0).getOperand(0) == N1)
+    if (getBitwiseNotOperand(N0.getOperand(0), N0.getOperand(1),
+                             /* AllowUndefs */ false) == N1)
       return DAG.getNode(ISD::OR, SDLoc(N), VT, N0.getOperand(1), N1);
   }
 
@@ -8743,7 +8749,9 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
   }
 
   unsigned NextOp = N0.getOpcode();
-  // fold (rot* (rot* x, c2), c1) -> (rot* x, c1 +- c2 % bitsize)
+
+  // fold (rot* (rot* x, c2), c1)
+  //   -> (rot* x, ((c1 % bitsize) +- (c2 % bitsize)) % bitsize)
   if (NextOp == ISD::ROTL || NextOp == ISD::ROTR) {
     SDNode *C1 = DAG.isConstantIntBuildVectorOrConstantInt(N1);
     SDNode *C2 = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1));
@@ -8751,14 +8759,19 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
       EVT ShiftVT = C1->getValueType(0);
       bool SameSide = (N->getOpcode() == NextOp);
       unsigned CombineOp = SameSide ? ISD::ADD : ISD::SUB;
-      if (SDValue CombinedShift = DAG.FoldConstantArithmetic(
-              CombineOp, dl, ShiftVT, {N1, N0.getOperand(1)})) {
-        SDValue BitsizeC = DAG.getConstant(Bitsize, dl, ShiftVT);
-        SDValue CombinedShiftNorm = DAG.FoldConstantArithmetic(
-            ISD::SREM, dl, ShiftVT, {CombinedShift, BitsizeC});
-        return DAG.getNode(N->getOpcode(), dl, VT, N0->getOperand(0),
-                           CombinedShiftNorm);
-      }
+      SDValue BitsizeC = DAG.getConstant(Bitsize, dl, ShiftVT);
+      SDValue Norm1 = DAG.FoldConstantArithmetic(ISD::UREM, dl, ShiftVT, 
+                                                 {N1, BitsizeC});
+      SDValue Norm2 = DAG.FoldConstantArithmetic(ISD::UREM, dl, ShiftVT,
+                                                 {N0.getOperand(1), BitsizeC});
+      if (Norm1 && Norm2)
+        if (SDValue CombinedShift = DAG.FoldConstantArithmetic(
+                CombineOp, dl, ShiftVT, {Norm1, Norm2})) {
+          SDValue CombinedShiftNorm = DAG.FoldConstantArithmetic(
+              ISD::UREM, dl, ShiftVT, {CombinedShift, BitsizeC});
+          return DAG.getNode(N->getOpcode(), dl, VT, N0->getOperand(0),
+                             CombinedShiftNorm);
+        }
     }
   }
   return SDValue();
@@ -15527,7 +15540,7 @@ static SDValue FoldIntToFPToInt(SDNode *N, SelectionDAG &DAG) {
   // This means this is also safe for a signed input and unsigned output, since
   // a negative input would lead to undefined behavior.
   unsigned InputSize = (int)SrcVT.getScalarSizeInBits() - IsInputSigned;
-  unsigned OutputSize = (int)VT.getScalarSizeInBits() - IsOutputSigned;
+  unsigned OutputSize = (int)VT.getScalarSizeInBits();
   unsigned ActualSize = std::min(InputSize, OutputSize);
   const fltSemantics &sem = DAG.EVTToAPFloatSemantics(N0.getValueType());
 

@@ -13,6 +13,7 @@
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
 #include "lldb/Core/DataFileCache.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -94,7 +95,7 @@ void ManualDWARFIndex::Index() {
 
   // Share one thread pool across operations to avoid the overhead of
   // recreating the threads.
-  llvm::ThreadPool pool(llvm::optimal_concurrency(units_to_index.size()));
+  llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
 
   // Create a task runner that extracts dies for each DWARF unit in a
   // separate thread.
@@ -105,14 +106,14 @@ void ManualDWARFIndex::Index() {
   // to wait until all units have been indexed in case a DIE in one
   // unit refers to another and the indexes accesses those DIEs.
   for (size_t i = 0; i < units_to_index.size(); ++i)
-    pool.async(extract_fn, i);
-  pool.wait();
+    task_group.async(extract_fn, i);
+  task_group.wait();
 
   // Now create a task runner that can index each DWARF unit in a
   // separate thread so we can index quickly.
   for (size_t i = 0; i < units_to_index.size(); ++i)
-    pool.async(parser_fn, i);
-  pool.wait();
+    task_group.async(parser_fn, i);
+  task_group.wait();
 
   auto finalize_fn = [this, &sets, &progress](NameToDIE(IndexSet::*index)) {
     NameToDIE &result = m_set.*index;
@@ -122,15 +123,15 @@ void ManualDWARFIndex::Index() {
     progress.Increment();
   };
 
-  pool.async(finalize_fn, &IndexSet::function_basenames);
-  pool.async(finalize_fn, &IndexSet::function_fullnames);
-  pool.async(finalize_fn, &IndexSet::function_methods);
-  pool.async(finalize_fn, &IndexSet::function_selectors);
-  pool.async(finalize_fn, &IndexSet::objc_class_selectors);
-  pool.async(finalize_fn, &IndexSet::globals);
-  pool.async(finalize_fn, &IndexSet::types);
-  pool.async(finalize_fn, &IndexSet::namespaces);
-  pool.wait();
+  task_group.async(finalize_fn, &IndexSet::function_basenames);
+  task_group.async(finalize_fn, &IndexSet::function_fullnames);
+  task_group.async(finalize_fn, &IndexSet::function_methods);
+  task_group.async(finalize_fn, &IndexSet::function_selectors);
+  task_group.async(finalize_fn, &IndexSet::objc_class_selectors);
+  task_group.async(finalize_fn, &IndexSet::globals);
+  task_group.async(finalize_fn, &IndexSet::types);
+  task_group.async(finalize_fn, &IndexSet::namespaces);
+  task_group.wait();
 
   SaveToCache();
 }

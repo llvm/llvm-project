@@ -35,19 +35,9 @@ cleanup:
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [8 x i8], align 4
-; CHECK-NEXT:    [[DOTSUB:%.*]] = getelementptr inbounds [8 x i8], [8 x i8]* [[TMP0]], i64 0, i64 0
-; CHECK-NEXT:    [[N_VAL_SPILL_ADDR_I:%.*]] = bitcast [8 x i8]* [[TMP0]] to i32*
-; CHECK-NEXT:    store i32 4, i32* [[N_VAL_SPILL_ADDR_I]], align 4
 ; CHECK-NEXT:    call void @print(i32 4)
-; CHECK-NEXT:    [[N_VAL_RELOAD_I:%.*]] = load i32, i32* [[N_VAL_SPILL_ADDR_I]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[INC_I:%.*]] = add i32 [[N_VAL_RELOAD_I]], 1
-; CHECK-NEXT:    store i32 [[INC_I]], i32* [[N_VAL_SPILL_ADDR_I]], align 4, !alias.scope !0
-; CHECK-NEXT:    call void @print(i32 [[INC_I]])
-; CHECK-NEXT:    [[N_VAL_RELOAD_I3:%.*]] = load i32, i32* [[N_VAL_SPILL_ADDR_I]], align 4, !alias.scope !3
-; CHECK-NEXT:    [[INC_I4:%.*]] = add i32 [[N_VAL_RELOAD_I3]], 1
-; CHECK-NEXT:    store i32 [[INC_I4]], i32* [[N_VAL_SPILL_ADDR_I]], align 4, !alias.scope !3
-; CHECK-NEXT:    call void @print(i32 [[INC_I4]])
+; CHECK-NEXT:    call void @print(i32 5)
+; CHECK-NEXT:    call void @print(i32 6)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

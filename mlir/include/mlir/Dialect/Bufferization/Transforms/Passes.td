@@ -230,12 +230,19 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     `test-analysis-only`.
   }];
   let options = [
+    Option<"dropEquivalentFuncResults", "drop-equivalent-func-results", "bool",
+           /*default=*/"true",
+           "Drop buffer return values that are equivalent to a FuncOp arg.">,
     Option<"allowReturnAllocs", "allow-return-allocs", "bool",
             /*default=*/"false",
            "Allows returning/yielding new allocations from a block.">,
     Option<"allowUnknownOps", "allow-unknown-ops", "bool",
            /*default=*/"false",
            "Allows unknown (not bufferizable) ops in the input IR.">,
+    Option<"alwaysAliasingWithDest", "always-aliasing-with-dest", "bool",
+            /*default=*/"true",
+            "Tensor OpResult cannot bufferize inplace OpOperands other than "
+            "out/dest OpOperands (if the op has such operands; experimental)">,
     Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
            /*default=*/"0",
            "Test only: Analyze ops in random order with a given seed (fuzzer)">,

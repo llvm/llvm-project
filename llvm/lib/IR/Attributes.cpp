@@ -2029,3 +2029,14 @@ void AttributeFuncs::mergeAttributesForOutlining(Function &Base,
   // that aspect in the merged function.
   mergeFnAttrs(Base, ToMerge);
 }
+
+void AttributeFuncs::updateMinLegalVectorWidthAttr(Function &Fn,
+                                                   uint64_t Width) {
+  Attribute Attr = Fn.getFnAttribute("min-legal-vector-width");
+  if (Attr.isValid()) {
+    uint64_t OldWidth;
+    Attr.getValueAsString().getAsInteger(0, OldWidth);
+    if (Width > OldWidth)
+      Fn.addFnAttr("min-legal-vector-width", llvm::utostr(Width));
+  }
+}
