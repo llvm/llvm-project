@@ -3444,12 +3444,10 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // such nodes must have a chain, it suffices to check ChainNodesMatched.
       // We need to perform this check before potentially modifying one of the
       // nodes via MorphNode.
-      bool MayRaiseFPException = false;
-      for (auto *N : ChainNodesMatched)
-        if (mayRaiseFPException(N) && !N->getFlags().hasNoFPExcept()) {
-          MayRaiseFPException = true;
-          break;
-        }
+      bool MayRaiseFPException =
+          llvm::any_of(ChainNodesMatched, [this](SDNode *N) {
+            return mayRaiseFPException(N) && !N->getFlags().hasNoFPExcept();
+          });
 
       // Create the node.
       MachineSDNode *Res = nullptr;
