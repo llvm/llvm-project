@@ -310,9 +310,19 @@ static uint32_t riscvVariantFromElfFlags(const elf::ELFHeader &header) {
   }
 }
 
+static uint32_t ppc64VariantFromElfFlags(const elf::ELFHeader &header) {
+  uint32_t endian = header.e_ident[EI_DATA];
+  if (endian == ELFDATA2LSB)
+    return ArchSpec::eCore_ppc64le_generic;
+  else
+    return ArchSpec::eCore_ppc64_generic;
+}
+
 static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
   if (header.e_machine == llvm::ELF::EM_MIPS)
     return mipsVariantFromElfFlags(header);
+  else if (header.e_machine == llvm::ELF::EM_PPC64)
+    return ppc64VariantFromElfFlags(header);
   else if (header.e_machine == llvm::ELF::EM_RISCV)
     return riscvVariantFromElfFlags(header);
 
