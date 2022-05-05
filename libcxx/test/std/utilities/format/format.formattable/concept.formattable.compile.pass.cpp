@@ -211,14 +211,14 @@ void test_P2286() {
   assert_is_formattable<std::list<int>, CharT>();
 
   assert_is_not_formattable<std::set<int>, CharT>();
-  assert_is_not_formattable<std::map<int, int>, CharT>();
+  assert_is_formattable<std::map<int, int>, CharT>();
   assert_is_not_formattable<std::multiset<int>, CharT>();
-  assert_is_not_formattable<std::multimap<int, int>, CharT>();
+  assert_is_formattable<std::multimap<int, int>, CharT>();
 
   assert_is_not_formattable<std::unordered_set<int>, CharT>();
-  assert_is_not_formattable<std::unordered_map<int, int>, CharT>();
+  assert_is_formattable<std::unordered_map<int, int>, CharT>();
   assert_is_not_formattable<std::unordered_multiset<int>, CharT>();
-  assert_is_not_formattable<std::unordered_multimap<int, int>, CharT>();
+  assert_is_formattable<std::unordered_multimap<int, int>, CharT>();
 
   assert_is_formattable<std::stack<int>, CharT>();
   assert_is_formattable<std::queue<int>, CharT>();

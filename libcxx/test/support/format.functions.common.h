@@ -14,6 +14,9 @@
 #include <charconv>
 #include <format>
 #include <ranges>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "make_string.h"
 

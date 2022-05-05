@@ -17,21 +17,20 @@
 
 // <format>
 
-// template<class charT, formattable<charT>... Ts>
-//   struct formatter<pair-or-tuple<Ts...>, charT>
+// template<ranges::input_range R, class charT>
+//   struct range-default-formatter<range_format::map, R, charT>
 
 // template<class FormatContext>
 //   typename FormatContext::iterator
-//     format(see below& elems, FormatContext& ctx) const;
+//     format(const T& ref, FormatContext& ctx) const;
 
 // Note this tests the basics of this function. It's tested in more detail in
-// the format functions tests.
+// the format.functions test.
 
 #include <cassert>
 #include <concepts>
 #include <format>
-#include <tuple>
-#include <utility>
+#include <map>
 
 #include "test_format_context.h"
 #include "test_macros.h"
@@ -39,14 +38,14 @@
 
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
 
-template <class StringViewT, class Arg>
-void test(StringViewT expected, Arg arg) {
+template <class StringViewT>
+void test_format(StringViewT expected, std::map<int, int> arg) {
   using CharT      = typename StringViewT::value_type;
   using String     = std::basic_string<CharT>;
   using OutIt      = std::back_insert_iterator<String>;
   using FormatCtxT = std::basic_format_context<OutIt, CharT>;
 
-  const std::formatter<Arg, CharT> formatter;
+  std::formatter<std::map<int, int>, CharT> formatter;
 
   String result;
   OutIt out             = std::back_inserter(result);
@@ -56,17 +55,15 @@ void test(StringViewT expected, Arg arg) {
 }
 
 template <class CharT>
-void test() {
-  test(SV("(1)"), std::tuple<int>{1});
-  test(SV("(1, 1)"), std::tuple<int, CharT>{1, CharT('1')});
-  test(SV("(1, 1)"), std::pair<int, CharT>{1, CharT('1')});
-  test(SV("(1, 1, 1)"), std::tuple<int, CharT, double>{1, CharT('1'), 1.0});
+void test_fmt() {
+  test_format(SV("{1: 42}"), std::map<int, int>{{1, 42}});
+  test_format(SV("{0: 99}"), std::map<int, int>{{0, 99}});
 }
 
 void test() {
-  test<char>();
+  test_fmt<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
+  test_fmt<wchar_t>();
 #endif
 }
 
