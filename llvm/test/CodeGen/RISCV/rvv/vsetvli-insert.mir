@@ -349,7 +349,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr = COPY $v9
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vr = COPY $v8
-    ; CHECK-NEXT: [[PseudoVSETVLI:%[0-9]+]]:gprnox0 = PseudoVSETVLI [[COPY]], 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: $x0 = PseudoVSETVLI [[COPY]], 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 [[COPY2]], [[COPY1]], $noreg, 6 /* e64 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v8 = COPY [[PseudoVADD_VV_M1_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
