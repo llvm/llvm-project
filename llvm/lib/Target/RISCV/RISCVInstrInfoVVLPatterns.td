@@ -691,19 +691,19 @@ multiclass VPatBinarySDNodeExt_V_WV_WX<SDNode op, PatFrags extop, string instruc
         (riscv_trunc_vector_vl
           (op (wti.Vector wti.RegClass:$rs2),
               (wti.Vector (extop (vti.Vector vti.RegClass:$rs1)))),
-          (riscv_vmset_vl VLOpFrag),
+          (vti.Mask true_mask),
           VLOpFrag)),
       (!cast<Instruction>(instruction_name#"_WV_"#vti.LMul.MX)
-        wti.RegClass:$rs2, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+        wti.RegClass:$rs2, vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
     def : Pat<
       (vti.Vector
         (riscv_trunc_vector_vl
           (op (wti.Vector wti.RegClass:$rs2),
               (wti.Vector (extop (vti.Vector (SplatPat GPR:$rs1))))),
-          (riscv_vmset_vl VLOpFrag),
+          (vti.Mask true_mask),
           VLOpFrag)),
       (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)
-        wti.RegClass:$rs2, GPR:$rs1, vti.AVL, vti.Log2SEW)>;
+        wti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.Log2SEW)>;
   }
 }
 
@@ -717,11 +717,10 @@ multiclass VPatBinarySDNode_V_WV_WX_WI<SDNode op, string instruction_name> {
       (vti.Vector
         (riscv_trunc_vector_vl
           (op (wti.Vector wti.RegClass:$rs2),
-              (wti.Vector (SplatPat_uimm5 uimm5:$rs1))),
-          (riscv_vmset_vl VLOpFrag),
+              (wti.Vector (SplatPat_uimm5 uimm5:$rs1))), (vti.Mask true_mask),
           VLOpFrag)),
       (!cast<Instruction>(instruction_name#"_WI_"#vti.LMul.MX)
-        wti.RegClass:$rs2, uimm5:$rs1, vti.AVL, vti.Log2SEW)>;
+        wti.RegClass:$rs2, uimm5:$rs1, GPR:$vl, vti.Log2SEW)>;
   }
 }
 
