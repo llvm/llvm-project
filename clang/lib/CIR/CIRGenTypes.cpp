@@ -621,3 +621,23 @@ void CIRGenTypes::UpdateCompletedType(const TagDecl *TD) {
   if (CGM.getModuleDebugInfo())
     llvm_unreachable("NYI");
 }
+
+/// getCIRGenRecordLayout - Return record layout info for the given record decl.
+const CIRGenRecordLayout &
+CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *RD) {
+  const auto *Key = Context.getTagDeclType(RD).getTypePtr();
+
+  auto I = CIRGenRecordLayouts.find(Key);
+  if (I != CIRGenRecordLayouts.end())
+    return *I->second;
+
+  // Compute the type information.
+  convertRecordDeclType(RD);
+
+  // Now try again.
+  I = CIRGenRecordLayouts.find(Key);
+
+  assert(I != CIRGenRecordLayouts.end() &&
+         "Unable to find record layout information for type");
+  return *I->second;
+}
