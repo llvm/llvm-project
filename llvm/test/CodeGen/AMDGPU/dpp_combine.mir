@@ -434,9 +434,8 @@ body: |
     SI_END_CF %8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 ...
 
-# old reg def is in diff BB - cannot combine
 # GCN-LABEL: name: old_in_diff_bb
-# GCN: %3:vgpr_32 = V_MOV_B32_dpp %2, %1, 1, 1, 1, 0, implicit $exec
+# GCN: %4:vgpr_32 = V_ADD_U32_dpp %0, %1, %0, 1, 1, 1, 0, implicit $exec
 
 name: old_in_diff_bb
 tracksRegLiveness: true
