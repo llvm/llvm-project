@@ -162,7 +162,8 @@ enum class _LIBCPP_ENUM_VIS __type : uint8_t {
   __fixed_lower_case,
   __fixed_upper_case,
   __general_lower_case,
-  __general_upper_case
+  __general_upper_case,
+  __debug
 };
 
 struct __std {
@@ -533,6 +534,11 @@ private:
     case 'x':
       __type_ = __type::__hexadecimal_lower_case;
       break;
+#  if _LIBCPP_STD_VER > 20
+    case '?':
+      __type_ = __type::__debug;
+      break;
+#  endif
     default:
       return;
     }
@@ -566,6 +572,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_string(__format_spec
   switch (__type) {
   case __format_spec::__type::__default:
   case __format_spec::__type::__string:
+  case __format_spec::__type::__debug:
     break;
 
   default:
@@ -619,6 +626,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_char(__parser<_CharT>& __p
   switch (__parser.__type_) {
   case __format_spec::__type::__default:
   case __format_spec::__type::__char:
+  case __format_spec::__type::__debug:
     __format_spec::__process_display_type_char(__parser);
     break;
 
