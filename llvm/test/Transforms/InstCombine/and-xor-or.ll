@@ -168,7 +168,7 @@ define i64 @or2(i64 %x, i64 %y) {
   ret i64 %3
 }
 
-; ((x & y) + z) | y -> (z | y)
+; ((x & y) ^ z) | y -> (z | y)
 
 define i64 @and_xor_or1(i64 %px, i64 %py, i64 %pz) {
 ; CHECK-LABEL: @and_xor_or1(
