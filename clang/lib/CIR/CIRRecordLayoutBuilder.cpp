@@ -15,6 +15,9 @@ using namespace cir;
 using namespace clang;
 
 namespace {
+/// The CIRRecordLowering is responsible for lowering an ASTRecordLayout to a
+/// mlir::Type. Some of the lowering is straightforward, some is not. Here we
+/// detail some of the complexities and weirdnesses here.
 struct CIRRecordLowering final {
 
   // MemberInfo is a helper structure that contains information about a record
@@ -28,12 +31,15 @@ struct CIRRecordLowering final {
     MemberInfo(CharUnits offset, InfoKind kind, mlir::Type data,
                const FieldDecl *fieldDecl = nullptr)
         : offset{offset}, kind{kind}, data{data}, fieldDecl{fieldDecl} {};
+    // MemberInfos are sorted so we define a < operator.
     bool operator<(const MemberInfo &other) const {
       return offset < other.offset;
     }
   };
+  // The constructor.
   CIRRecordLowering(CIRGenTypes &cirGenTypes, const RecordDecl *recordDecl,
                     bool isPacked);
+  // Short helper routines.
 
   void lower(bool nonVirtualBaseType);
 
