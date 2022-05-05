@@ -444,9 +444,12 @@ struct ForOpInterface
   }
 
   /// Assert that yielded values of an scf.for op are equivalent to their
-  /// corresponding bbArgs. Otherwise, an alloc+copy are inserted and yielded
-  /// from the loop. This could be a performance problem, so it must be
-  /// explicitly activated with `alloc-return-allocs`.
+  /// corresponding bbArgs. In that case, the buffer relations of the
+  /// corresponding OpResults are "Equivalent".
+  ///
+  /// If this is not the case, an allocs+copies are inserted and yielded from
+  /// the loop. This could be a performance problem, so it must be explicitly
+  /// activated with `alloc-return-allocs`.
   LogicalResult verifyAnalysis(Operation *op,
                                const AnalysisState &state) const {
     const auto &options =
@@ -457,22 +460,19 @@ struct ForOpInterface
     auto forOp = cast<scf::ForOp>(op);
     auto yieldOp =
         cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
-    for (OpOperand &operand : yieldOp->getOpOperands()) {
-      auto tensorType = operand.get().getType().dyn_cast<TensorType>();
-      if (!tensorType)
+    for (OpResult opResult : op->getOpResults()) {
+      if (!opResult.getType().isa<TensorType>())
         continue;
 
-      OpOperand &forOperand = forOp.getOpOperandForResult(
-          forOp->getResult(operand.getOperandNumber()));
-      auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
       // Note: This is overly strict. We should check for aliasing bufferized
       // values. But we don't have a "must-alias" analysis yet.
-      if (!state.areEquivalentBufferizedValues(operand.get(), bbArg))
+      if (bufferRelation(op, opResult, state) != BufferRelation::Equivalent)
         return yieldOp->emitError()
-               << "Yield operand #" << operand.getOperandNumber()
+               << "Yield operand #" << opResult.getResultNumber()
                << " does not bufferize to a buffer that is aliasing the "
                   "matching enclosing scf::for operand";
     }
+
     return success();
   }
 };
