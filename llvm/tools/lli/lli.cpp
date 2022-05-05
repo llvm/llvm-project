@@ -881,7 +881,7 @@ int runOrcJIT(const char *ProgName) {
   }
 
   Builder.setLazyCompileFailureAddr(
-      pointerToJITTargetAddress(exitOnLazyCallThroughFailure));
+      orc::ExecutorAddr::fromPtr(exitOnLazyCallThroughFailure));
   Builder.setNumCompileThreads(LazyJITCompileThreads);
 
   // If the object cache is enabled then set a custom compile function
@@ -1049,23 +1049,21 @@ int runOrcJIT(const char *ProgName) {
   for (auto &ThreadEntryPoint : ThreadEntryPoints) {
     auto EntryPointSym = ExitOnErr(J->lookup(ThreadEntryPoint));
     typedef void (*EntryPointPtr)();
-    auto EntryPoint =
-      reinterpret_cast<EntryPointPtr>(static_cast<uintptr_t>(EntryPointSym.getAddress()));
+    auto EntryPoint = EntryPointSym.toPtr<EntryPointPtr>();
     AltEntryThreads.push_back(std::thread([EntryPoint]() { EntryPoint(); }));
   }
 
   // Resolve and run the main function.
-  JITEvaluatedSymbol MainSym = ExitOnErr(J->lookup(EntryFunc));
+  auto MainAddr = ExitOnErr(J->lookup(EntryFunc));
   int Result;
 
   if (EPC) {
     // ExecutorProcessControl-based execution with JITLink.
-    Result = ExitOnErr(
-        EPC->runAsMain(orc::ExecutorAddr(MainSym.getAddress()), InputArgv));
+    Result = ExitOnErr(EPC->runAsMain(MainAddr, InputArgv));
   } else {
     // Manual in-process execution with RuntimeDyld.
     using MainFnTy = int(int, char *[]);
-    auto MainFn = jitTargetAddressToFunction<MainFnTy *>(MainSym.getAddress());
+    auto MainFn = MainAddr.toPtr<MainFnTy *>();
     Result = orc::runAsMain(MainFn, InputArgv, StringRef(InputFile));
   }
 
