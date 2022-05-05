@@ -8308,6 +8308,19 @@ bool SwiftASTContext::GetImplicitImports(
   return true;
 }
 
+void SwiftASTContext::LoadImplicitModules(TargetSP target,
+                                                 ProcessSP process) {
+  auto load_module = [&](ConstString module_name) {
+    SourceModule module_info;
+    module_info.path.push_back(module_name);
+    Status err;
+    LoadOneModule(module_info, *this, process, true, err);
+  };
+
+  load_module(ConstString(swift::SWIFT_STRING_PROCESSING_NAME));
+  load_module(ConstString(swift::SWIFT_CONCURRENCY_NAME));
+}
+
 bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
                                        SymbolContext &sc,
                                        ExecutionContextScope &exe_scope,
