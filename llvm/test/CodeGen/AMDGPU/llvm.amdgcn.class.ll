@@ -495,11 +495,11 @@ define amdgpu_kernel void @test_class_0_f64(i32 addrspace(1)* %out, double %a) #
   ret void
 }
 
-; FIXME: Why is the extension still here?
 ; SI-LABEL: {{^}}test_class_undef_f32:
 ; SI-NOT: v_cmp_class
-; SI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, -1,
-; SI: buffer_store_dword
+; SI: v_mov_b32_e32 [[RESULT:v[0-9]+]], 0
+; SI: buffer_store_dword [[RESULT]]
+; SI: s_endpgm
 define amdgpu_kernel void @test_class_undef_f32(i32 addrspace(1)* %out, float %a, i32 %b) #0 {
   %result = call i1 @llvm.amdgcn.class.f32(float undef, i32 %b) #1
   %sext = sext i1 %result to i32

@@ -531,52 +531,91 @@ define signext i32 @umax_same_op_i32(i32 signext %a) {
 }
 
 ; Tests with undef operands. These should fold to undef for RV32 or 0 for RV64.
-; FIXME: The RV64 cases are hitting pr55178.
 
 define signext i32 @smin_undef_i32() {
-; NOZBB-LABEL: smin_undef_i32:
-; NOZBB:       # %bb.0:
-; NOZBB-NEXT:    ret
+; RV32I-LABEL: smin_undef_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    ret
 ;
-; ZBB-LABEL: smin_undef_i32:
-; ZBB:       # %bb.0:
-; ZBB-NEXT:    ret
+; RV64I-LABEL: smin_undef_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: smin_undef_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: smin_undef_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    li a0, 0
+; RV64ZBB-NEXT:    ret
   %c = call i32 @llvm.smin.i32(i32 undef, i32 undef)
   ret i32 %c
 }
 
 define signext i32 @smax_undef_i32() {
-; NOZBB-LABEL: smax_undef_i32:
-; NOZBB:       # %bb.0:
-; NOZBB-NEXT:    ret
+; RV32I-LABEL: smax_undef_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    ret
 ;
-; ZBB-LABEL: smax_undef_i32:
-; ZBB:       # %bb.0:
-; ZBB-NEXT:    ret
+; RV64I-LABEL: smax_undef_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: smax_undef_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: smax_undef_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    li a0, 0
+; RV64ZBB-NEXT:    ret
   %c = call i32 @llvm.smax.i32(i32 undef, i32 undef)
   ret i32 %c
 }
 
 define signext i32 @umin_undef_i32() {
-; NOZBB-LABEL: umin_undef_i32:
-; NOZBB:       # %bb.0:
-; NOZBB-NEXT:    ret
+; RV32I-LABEL: umin_undef_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    ret
 ;
-; ZBB-LABEL: umin_undef_i32:
-; ZBB:       # %bb.0:
-; ZBB-NEXT:    ret
+; RV64I-LABEL: umin_undef_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: umin_undef_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: umin_undef_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    li a0, 0
+; RV64ZBB-NEXT:    ret
   %c = call i32 @llvm.umin.i32(i32 undef, i32 undef)
   ret i32 %c
 }
 
 define signext i32 @umax_undef_i32() {
-; NOZBB-LABEL: umax_undef_i32:
-; NOZBB:       # %bb.0:
-; NOZBB-NEXT:    ret
+; RV32I-LABEL: umax_undef_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    ret
 ;
-; ZBB-LABEL: umax_undef_i32:
-; ZBB:       # %bb.0:
-; ZBB-NEXT:    ret
+; RV64I-LABEL: umax_undef_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: umax_undef_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: umax_undef_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    li a0, 0
+; RV64ZBB-NEXT:    ret
   %c = call i32 @llvm.umax.i32(i32 undef, i32 undef)
   ret i32 %c
 }
