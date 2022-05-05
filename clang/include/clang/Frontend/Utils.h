@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Option/OptSpecifier.h"
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
@@ -190,18 +189,47 @@ IntrusiveRefCntPtr<ExternalSemaSource>
 createChainedIncludesSource(CompilerInstance &CI,
                             IntrusiveRefCntPtr<ExternalSemaSource> &Reader);
 
-/// createInvocationFromCommandLine - Construct a compiler invocation object for
-/// a command line argument vector.
+/// Optional inputs to createInvocation.
+struct CreateInvocationOptions {
+  /// Receives diagnostics encountered while parsing command-line flags.
+  /// If not provided, these are printed to stderr.
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags = nullptr;
+  /// Used e.g. to probe for system headers locations.
+  /// If not provided, the real filesystem is used.
+  /// FIXME: the driver does perform some non-virtualized IO.
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr;
+  /// Whether to attempt to produce a non-null (possibly incorrect) invocation
+  /// if any errors were encountered.
+  /// By default, always return null on errors.
+  bool RecoverOnError = false;
+  /// If set, the target is populated with the cc1 args produced by the driver.
+  /// This may be populated even if createInvocation returns nullptr.
+  std::vector<std::string> *CC1Args = nullptr;
+};
+
+/// Interpret clang arguments in preparation to parse a file.
 ///
-/// \param ShouldRecoverOnErrors - whether we should attempt to return a
-/// non-null (and possibly incorrect) CompilerInvocation if any errors were
-/// encountered. When this flag is false, always return null on errors.
+/// This simulates a number of steps Clang takes when its driver is invoked:
+/// - choosing actions (e.g compile + link) to run
+/// - probing the system for settings like standard library locations
+/// - spawning a cc1 subprocess to compile code, with more explicit arguments
+/// - in the cc1 process, assembling those arguments into a CompilerInvocation
+///   which is used to configure the parser
 ///
-/// \param CC1Args - if non-null, will be populated with the args to cc1
-/// expanded from \p Args. May be set even if nullptr is returned.
+/// This simulation is lossy, e.g. in some situations one driver run would
+/// result in multiple parses. (Multi-arch, CUDA, ...).
+/// This function tries to select a reasonable invocation that tools should use.
 ///
-/// \return A CompilerInvocation, or nullptr if none was built for the given
-/// argument vector.
+/// Args[0] should be the driver name, such as "clang" or "/usr/bin/g++".
+/// Absolute path is preferred - this affects searching for system headers.
+///
+/// May return nullptr if an invocation could not be determined.
+/// See CreateInvocationOptions::ShouldRecoverOnErrors to try harder!
+std::unique_ptr<CompilerInvocation>
+createInvocation(ArrayRef<const char *> Args,
+                 CreateInvocationOptions Opts = {});
+
+/// Deprecated version of createInvocation with individual optional args.
 std::unique_ptr<CompilerInvocation> createInvocationFromCommandLine(
     ArrayRef<const char *> Args,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
@@ -209,8 +237,6 @@ std::unique_ptr<CompilerInvocation> createInvocationFromCommandLine(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr,
     bool ShouldRecoverOnErrors = false,
     std::vector<std::string> *CC1Args = nullptr);
-
-// Frontend timing utils
 
 } // namespace clang
 

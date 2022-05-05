@@ -26,16 +26,13 @@
 using namespace clang;
 using namespace llvm::opt;
 
-std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
-    ArrayRef<const char *> ArgList, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool ShouldRecoverOnErorrs,
-    std::vector<std::string> *CC1Args) {
+std::unique_ptr<CompilerInvocation>
+clang::createInvocation(ArrayRef<const char *> ArgList,
+                        CreateInvocationOptions Opts) {
   assert(!ArgList.empty());
-  if (!Diags.get()) {
-    // No diagnostics engine was provided, so create our own diagnostics object
-    // with the default options.
-    Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions);
-  }
+  auto Diags = Opts.Diags
+                   ? std::move(Opts.Diags)
+                   : CompilerInstance::createDiagnostics(new DiagnosticOptions);
 
   SmallVector<const char *, 16> Args(ArgList.begin(), ArgList.end());
 
@@ -47,7 +44,7 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
 
   // FIXME: We shouldn't have to pass in the path info.
   driver::Driver TheDriver(Args[0], llvm::sys::getDefaultTargetTriple(), *Diags,
-                           "clang LLVM compiler", VFS);
+                           "clang LLVM compiler", Opts.VFS);
 
   // Don't check that inputs exist, they may have been remapped.
   TheDriver.setCheckInputsExist(false);
@@ -81,7 +78,7 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
     }
   }
 
-  bool PickFirstOfMany = OffloadCompilation || ShouldRecoverOnErorrs;
+  bool PickFirstOfMany = OffloadCompilation || Opts.RecoverOnError;
   if (Jobs.size() == 0 || (Jobs.size() > 1 && !PickFirstOfMany)) {
     SmallString<256> Msg;
     llvm::raw_svector_ostream OS(Msg);
@@ -98,11 +95,20 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
   }
 
   const ArgStringList &CCArgs = Cmd->getArguments();
-  if (CC1Args)
-    *CC1Args = {CCArgs.begin(), CCArgs.end()};
+  if (Opts.CC1Args)
+    *Opts.CC1Args = {CCArgs.begin(), CCArgs.end()};
   auto CI = std::make_unique<CompilerInvocation>();
   if (!CompilerInvocation::CreateFromArgs(*CI, CCArgs, *Diags, Args[0]) &&
-      !ShouldRecoverOnErorrs)
+      !Opts.RecoverOnError)
     return nullptr;
   return CI;
+}
+
+std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
+    ArrayRef<const char *> Args, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool ShouldRecoverOnErrors,
+    std::vector<std::string> *CC1Args) {
+  return createInvocation(
+      Args,
+      CreateInvocationOptions{Diags, VFS, ShouldRecoverOnErrors, CC1Args});
 }

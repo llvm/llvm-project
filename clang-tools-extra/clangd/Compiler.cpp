@@ -91,12 +91,13 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   for (const auto &S : Inputs.CompileCommand.CommandLine)
     ArgStrs.push_back(S.c_str());
 
-  auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
-  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
+  CreateInvocationOptions CIOpts;
+  CIOpts.VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
+  CIOpts.CC1Args = CC1Args;
+  CIOpts.RecoverOnError = true;
+  CIOpts.Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions, &D, false);
-  std::unique_ptr<CompilerInvocation> CI = createInvocationFromCommandLine(
-      ArgStrs, CommandLineDiagsEngine, std::move(VFS),
-      /*ShouldRecoverOnErrors=*/true, CC1Args);
+  std::unique_ptr<CompilerInvocation> CI = createInvocation(ArgStrs, CIOpts);
   if (!CI)
     return nullptr;
   // createInvocationFromCommandLine sets DisableFree.
