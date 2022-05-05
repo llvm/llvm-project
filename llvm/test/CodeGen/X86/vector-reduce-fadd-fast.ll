@@ -914,8 +914,8 @@ define double @test_v16f64(double %a0, <16 x double> %a1) {
 ; SSE-NEXT:    addpd %xmm6, %xmm2
 ; SSE-NEXT:    addpd %xmm7, %xmm3
 ; SSE-NEXT:    addpd %xmm5, %xmm1
-; SSE-NEXT:    addpd %xmm3, %xmm1
 ; SSE-NEXT:    addpd {{[0-9]+}}(%rsp), %xmm4
+; SSE-NEXT:    addpd %xmm3, %xmm1
 ; SSE-NEXT:    addpd %xmm2, %xmm4
 ; SSE-NEXT:    addpd %xmm1, %xmm4
 ; SSE-NEXT:    movapd %xmm4, %xmm1
