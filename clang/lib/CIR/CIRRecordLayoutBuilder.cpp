@@ -193,14 +193,18 @@ void CIRRecordLowering::accumulateFields() {
   }
 }
 
-mlir::cir::StructType
-CIRGenTypes::computeRecordLayout(const RecordDecl *recordDecl) {
+std::unique_ptr<CIRGenRecordLayout>
+CIRGenTypes::computeRecordLayout(const RecordDecl *recordDecl,
+                                 mlir::cir::StructType &Ty) {
   CIRRecordLowering builder(*this, recordDecl, /*packed=*/false);
+
   builder.lower(/*nonVirtualBaseType=*/false);
 
   // If we're in C++, compute the base subobject type.
+  mlir::cir::StructType BaseTy = nullptr;
   if (llvm::isa<CXXRecordDecl>(recordDecl) && !recordDecl->isUnion() &&
       !recordDecl->hasAttr<FinalAttr>()) {
+    BaseTy = Ty;
     if (builder.astRecordLayout.getNonVirtualSize() !=
         builder.astRecordLayout.getSize()) {
       llvm_unreachable("NYI");
@@ -211,13 +215,31 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *recordDecl) {
 
   auto name = getRecordTypeName(recordDecl, "");
   auto identifier = mlir::StringAttr::get(&getMLIRContext(), name);
-  auto structType = mlir::cir::StructType::get(&getMLIRContext(),
-                                               builder.fieldTypes, identifier);
 
-  assert(!getContext().getLangOpts().DumpRecordLayouts &&
-         "RecordLayouts dumping NYI");
+  Ty = mlir::cir::StructType::get(&getMLIRContext(), builder.fieldTypes,
+                                  identifier);
+
+  auto RL = std::make_unique<CIRGenRecordLayout>(
+      Ty, BaseTy, (bool)builder.IsZeroInitializable,
+      (bool)builder.IsZeroInitializableAsBase);
+
+  RL->NonVirtualBases.swap(builder.nonVirtualBases);
+  RL->CompleteObjectVirtualBases.swap(builder.virtualBases);
+
+  // Add all the field numbers.
+  RL->FieldInfo.swap(builder.fields);
+
+  // Add bitfield info.
+  RL->BitFields.swap(builder.bitFields);
+
+  // Dump the layout, if requested.
+  if (getContext().getLangOpts().DumpRecordLayouts) {
+    llvm_unreachable("NYI");
+  }
 
   // TODO: implement verification
 
-  return structType;
+  assert(!builder.isPacked && "Packed structs NYI");
+
+  return RL;
 }

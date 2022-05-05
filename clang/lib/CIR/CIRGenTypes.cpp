@@ -107,7 +107,11 @@ CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
     }
   }
 
-  entry = computeRecordLayout(recordDecl);
+  // Layout fields.
+  std::unique_ptr<CIRGenRecordLayout> Layout =
+      computeRecordLayout(recordDecl, entry);
+  CIRGenRecordLayouts[key] = std::move(Layout);
+
   // We're done laying out this struct.
   bool EraseResult = RecordsBeingLaidOut.erase(key);
   (void)EraseResult;
