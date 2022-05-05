@@ -258,8 +258,10 @@ public:
   bool VisitFunctionDecl(FunctionDecl *D) {
     if (auto *FPT =
             llvm::dyn_cast<FunctionProtoType>(D->getType().getTypePtr())) {
-      if (!FPT->hasTrailingReturn())
-        addReturnTypeHint(D, D->getFunctionTypeLoc().getRParenLoc());
+      if (!FPT->hasTrailingReturn()) {
+        if (auto FTL = D->getFunctionTypeLoc())
+          addReturnTypeHint(D, FTL.getRParenLoc());
+      }
     }
     return true;
   }
