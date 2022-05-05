@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "spirv-isel"
@@ -139,6 +140,16 @@ private:
                      MachineInstr &I) const;
   bool selectIntrinsic(Register ResVReg, const SPIRVType *ResType,
                        MachineInstr &I) const;
+  bool selectExtractVal(Register ResVReg, const SPIRVType *ResType,
+                        MachineInstr &I) const;
+  bool selectInsertVal(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I) const;
+  bool selectExtractElt(Register ResVReg, const SPIRVType *ResType,
+                        MachineInstr &I) const;
+  bool selectInsertElt(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I) const;
+  bool selectGEP(Register ResVReg, const SPIRVType *ResType,
+                 MachineInstr &I) const;
 
   bool selectFrameIndex(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I) const;
@@ -968,10 +979,179 @@ bool SPIRVInstructionSelector::selectOpUndef(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
+static bool isImm(const MachineOperand &MO, MachineRegisterInfo *MRI) {
+  assert(MO.isReg());
+  const SPIRVType *TypeInst = MRI->getVRegDef(MO.getReg());
+  if (TypeInst->getOpcode() != SPIRV::ASSIGN_TYPE)
+    return false;
+  assert(TypeInst->getOperand(1).isReg());
+  MachineInstr *ImmInst = MRI->getVRegDef(TypeInst->getOperand(1).getReg());
+  return ImmInst->getOpcode() == TargetOpcode::G_CONSTANT;
+}
+
+static int64_t foldImm(const MachineOperand &MO, MachineRegisterInfo *MRI) {
+  const SPIRVType *TypeInst = MRI->getVRegDef(MO.getReg());
+  MachineInstr *ImmInst = MRI->getVRegDef(TypeInst->getOperand(1).getReg());
+  assert(ImmInst->getOpcode() == TargetOpcode::G_CONSTANT);
+  return ImmInst->getOperand(1).getCImm()->getZExtValue();
+}
+
+bool SPIRVInstructionSelector::selectInsertVal(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I) const {
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeInsert))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      // object to insert
+      .addUse(I.getOperand(3).getReg())
+      // composite to insert into
+      .addUse(I.getOperand(2).getReg())
+      // TODO: support arbitrary number of indices
+      .addImm(foldImm(I.getOperand(4), MRI))
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectExtractVal(Register ResVReg,
+                                                const SPIRVType *ResType,
+                                                MachineInstr &I) const {
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      // TODO: support arbitrary number of indices
+      .addImm(foldImm(I.getOperand(3), MRI))
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectInsertElt(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I) const {
+  if (isImm(I.getOperand(4), MRI))
+    return selectInsertVal(ResVReg, ResType, I);
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpVectorInsertDynamic))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg())
+      .addUse(I.getOperand(4).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectExtractElt(Register ResVReg,
+                                                const SPIRVType *ResType,
+                                                MachineInstr &I) const {
+  if (isImm(I.getOperand(3), MRI))
+    return selectExtractVal(ResVReg, ResType, I);
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpVectorExtractDynamic))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
+                                         const SPIRVType *ResType,
+                                         MachineInstr &I) const {
+  // In general we should also support OpAccessChain instrs here (i.e. not
+  // PtrAccessChain) but SPIRV-LLVM Translator doesn't emit them at all and so
+  // do we to stay compliant with its test and more importantly consumers.
+  unsigned Opcode = I.getOperand(2).getImm() ? SPIRV::OpInBoundsPtrAccessChain
+                                             : SPIRV::OpPtrAccessChain;
+  auto Res = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 // Object to get a pointer to.
+                 .addUse(I.getOperand(3).getReg());
+  // Adding indices.
+  for (unsigned i = 4; i < I.getNumExplicitOperands(); ++i)
+    Res.addUse(I.getOperand(i).getReg());
+  return Res.constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                                                const SPIRVType *ResType,
                                                MachineInstr &I) const {
-  llvm_unreachable("Intrinsic selection not implemented");
+  MachineBasicBlock &BB = *I.getParent();
+  switch (I.getIntrinsicID()) {
+  case Intrinsic::spv_load:
+    return selectLoad(ResVReg, ResType, I);
+    break;
+  case Intrinsic::spv_store:
+    return selectStore(I);
+    break;
+  case Intrinsic::spv_extractv:
+    return selectExtractVal(ResVReg, ResType, I);
+    break;
+  case Intrinsic::spv_insertv:
+    return selectInsertVal(ResVReg, ResType, I);
+    break;
+  case Intrinsic::spv_extractelt:
+    return selectExtractElt(ResVReg, ResType, I);
+    break;
+  case Intrinsic::spv_insertelt:
+    return selectInsertElt(ResVReg, ResType, I);
+    break;
+  case Intrinsic::spv_gep:
+    return selectGEP(ResVReg, ResType, I);
+    break;
+  case Intrinsic::spv_unref_global:
+  case Intrinsic::spv_init_global: {
+    MachineInstr *MI = MRI->getVRegDef(I.getOperand(1).getReg());
+    MachineInstr *Init = I.getNumExplicitOperands() > 2
+                             ? MRI->getVRegDef(I.getOperand(2).getReg())
+                             : nullptr;
+    assert(MI);
+    return selectGlobalValue(MI->getOperand(0).getReg(), *MI, Init);
+  } break;
+  case Intrinsic::spv_const_composite: {
+    // If no values are attached, the composite is null constant.
+    bool IsNull = I.getNumExplicitDefs() + 1 == I.getNumExplicitOperands();
+    unsigned Opcode =
+        IsNull ? SPIRV::OpConstantNull : SPIRV::OpConstantComposite;
+    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+                   .addDef(ResVReg)
+                   .addUse(GR.getSPIRVTypeID(ResType));
+    // skip type MD node we already used when generated assign.type for this
+    if (!IsNull) {
+      for (unsigned i = I.getNumExplicitDefs() + 1;
+           i < I.getNumExplicitOperands(); ++i) {
+        MIB.addUse(I.getOperand(i).getReg());
+      }
+    }
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  } break;
+  case Intrinsic::spv_assign_name: {
+    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpName));
+    MIB.addUse(I.getOperand(I.getNumExplicitDefs() + 1).getReg());
+    for (unsigned i = I.getNumExplicitDefs() + 2;
+         i < I.getNumExplicitOperands(); ++i) {
+      MIB.addImm(I.getOperand(i).getImm());
+    }
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  } break;
+  case Intrinsic::spv_switch: {
+    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSwitch));
+    for (unsigned i = 1; i < I.getNumExplicitOperands(); ++i) {
+      if (I.getOperand(i).isReg())
+        MIB.addReg(I.getOperand(i).getReg());
+      else if (I.getOperand(i).isCImm())
+        addNumImm(I.getOperand(i).getCImm()->getValue(), MIB);
+      else if (I.getOperand(i).isMBB())
+        MIB.addMBB(I.getOperand(i).getMBB());
+      else
+        llvm_unreachable("Unexpected OpSwitch operand");
+    }
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  } break;
+  default:
+    llvm_unreachable("Intrinsic selection not implemented");
+  }
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,

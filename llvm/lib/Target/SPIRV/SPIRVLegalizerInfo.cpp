@@ -264,7 +264,7 @@ static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpirvType,
                                 MachineRegisterInfo &MRI,
                                 SPIRVGlobalRegistry *GR) {
   Register ConvReg = MRI.createGenericVirtualRegister(ConvTy);
-  GR->assignSPIRVTypeToVReg(SpirvType, ConvReg, Helper.MIRBuilder);
+  GR->assignSPIRVTypeToVReg(SpirvType, ConvReg, Helper.MIRBuilder.getMF());
   Helper.MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT)
       .addDef(ConvReg)
       .addUse(Reg);

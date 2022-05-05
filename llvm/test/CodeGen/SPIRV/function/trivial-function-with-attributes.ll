@@ -13,8 +13,6 @@ target triple = "spirv32-unknown-unknown"
 ; CHECK-DAG: OpName [[FN6:%.+]] "fn6"
 ; CHECK-DAG: OpName [[FN7:%.+]] "fn7"
 
-; CHECK-NOT: DAG-FENCE
-
 ; Types:
 ; CHECK: [[VOID:%.+]] = OpTypeVoid
 ; CHECK: [[FN:%.+]] = OpTypeFunction [[VOID]]

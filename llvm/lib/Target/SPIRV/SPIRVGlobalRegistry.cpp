@@ -30,14 +30,14 @@ SPIRVType *SPIRVGlobalRegistry::assignTypeToVReg(
 
   SPIRVType *SpirvType =
       getOrCreateSPIRVType(Type, MIRBuilder, AccessQual, EmitIR);
-  assignSPIRVTypeToVReg(SpirvType, VReg, MIRBuilder);
+  assignSPIRVTypeToVReg(SpirvType, VReg, MIRBuilder.getMF());
   return SpirvType;
 }
 
 void SPIRVGlobalRegistry::assignSPIRVTypeToVReg(SPIRVType *SpirvType,
                                                 Register VReg,
-                                                MachineIRBuilder &MIRBuilder) {
-  VRegToTypeMap[&MIRBuilder.getMF()][VReg] = SpirvType;
+                                                MachineFunction &MF) {
+  VRegToTypeMap[&MF][VReg] = SpirvType;
 }
 
 static Register createTypeVReg(MachineIRBuilder &MIRBuilder) {
@@ -191,7 +191,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   if (Reg != ResVReg) {
     LLT RegLLTy = LLT::pointer(MRI->getType(ResVReg).getAddressSpace(), 32);
     MRI->setType(Reg, RegLLTy);
-    assignSPIRVTypeToVReg(BaseType, Reg, MIRBuilder);
+    assignSPIRVTypeToVReg(BaseType, Reg, MIRBuilder.getMF());
   }
 
   // If it's a global variable with name, output OpName for it.
@@ -283,16 +283,23 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(const Type *Ty,
     return getOpTypeFunction(RetTy, ParamTypes, MIRBuilder);
   }
   if (auto PType = dyn_cast<PointerType>(Ty)) {
-    Type *ElemType = PType->getPointerElementType();
+    SPIRVType *SpvElementType;
+    // At the moment, all opaque pointers correspond to i8 element type.
+    // TODO: change the implementation once opaque pointers are supported
+    // in the SPIR-V specification.
+    if (PType->isOpaque()) {
+      SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+    } else {
+      Type *ElemType = PType->getNonOpaquePointerElementType();
+      // TODO: support OpenCL and SPIRV builtins like image2d_t that are passed
+      // as pointers, but should be treated as custom types like OpTypeImage.
+      assert(!isa<StructType>(ElemType) && "Unsupported StructType pointer");
 
-    // Some OpenCL and SPIRV builtins like image2d_t are passed in as pointers,
-    // but should be treated as custom types like OpTypeImage.
-    assert(!isa<StructType>(ElemType) && "Unsupported StructType pointer");
-
-    // Otherwise, treat it as a regular pointer type.
+      // Otherwise, treat it as a regular pointer type.
+      SpvElementType = getOrCreateSPIRVType(
+          ElemType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, EmitIR);
+    }
     auto SC = addressSpaceToStorageClass(PType->getAddressSpace());
-    SPIRVType *SpvElementType = getOrCreateSPIRVType(
-        ElemType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, EmitIR);
     return getOpTypePointer(SC, SpvElementType, MIRBuilder);
   }
   llvm_unreachable("Unable to convert LLVM type to SPIRVType");

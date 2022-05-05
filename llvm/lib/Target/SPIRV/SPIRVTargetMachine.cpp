@@ -44,14 +44,12 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
 }
 
 static std::string computeDataLayout(const Triple &TT) {
-  std::string DataLayout = "e-m:e";
-
   const auto Arch = TT.getArch();
   if (Arch == Triple::spirv32)
-    DataLayout += "-p:32:32";
-  else if (Arch == Triple::spirv64)
-    DataLayout += "-p:64:64";
-  return DataLayout;
+    return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
+           "v96:128-v192:256-v256:256-v512:512-v1024:1024";
+  return "e-i64:64-v16:16-v24:32-v32:32-v48:64-"
+         "v96:128-v192:256-v256:256-v512:512-v1024:1024";
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
@@ -95,6 +93,7 @@ public:
   void addISelPrepare() override;
 
   bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
@@ -143,11 +142,18 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void SPIRVPassConfig::addIRPasses() { TargetPassConfig::addIRPasses(); }
 
-void SPIRVPassConfig::addISelPrepare() { TargetPassConfig::addISelPrepare(); }
+void SPIRVPassConfig::addISelPrepare() {
+  addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  TargetPassConfig::addISelPrepare();
+}
 
 bool SPIRVPassConfig::addIRTranslator() {
   addPass(new IRTranslator(getOptLevel()));
   return false;
+}
+
+void SPIRVPassConfig::addPreLegalizeMachineIR() {
+  addPass(createSPIRVPreLegalizerPass());
 }
 
 // Use a default legalizer.
