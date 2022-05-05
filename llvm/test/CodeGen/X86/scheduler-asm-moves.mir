@@ -122,6 +122,8 @@ body:             |
     ; CHECK-LABEL: name: synproxy_send_tcp_ipv6
     ; CHECK: liveins: $eax, $edx
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edx
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32_abcd = COPY $eax
     ; CHECK-NEXT: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm $noreg, 1, $noreg, @csum_ipv6_magic_saddr, $noreg :: (dereferenceable load (s8) from `i8* getelementptr inbounds (%struct.in6_addr, %struct.in6_addr* @csum_ipv6_magic_saddr, i32 0, i32 0, i32 0)`)
     ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_daddr, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_daddr, !tbaa !4)
     ; CHECK-NEXT: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_proto, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_proto, !tbaa !4)
@@ -130,11 +132,9 @@ body:             |
     ; CHECK-NEXT: MOV32mr $noreg, 1, $noreg, @csum_ipv6_magic_sum, $noreg, %2 :: (store (s32) into @csum_ipv6_magic_sum, !tbaa !4)
     ; CHECK-NEXT: [[MOV32rm2:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_nskb, $noreg :: (dereferenceable load (s32) from `i8** bitcast (%struct.sk_buff** @synproxy_send_tcp_ipv6_nskb to i8**)`, !tbaa !9)
     ; CHECK-NEXT: OR8mi [[MOV32rm2]], 1, $noreg, 0, $noreg, 3, implicit-def dead $eflags :: (store (s8) into %ir.4), (load (s8) from %ir.4)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32_abcd = COPY $eax
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edx
-    ; CHECK-NEXT: [[MOV8rm1:%[0-9]+]]:gr8 = MOV8rm [[COPY1]], 1, $noreg, 0, $noreg :: (load (s8) from %ir.5, !tbaa !11)
+    ; CHECK-NEXT: [[MOV8rm1:%[0-9]+]]:gr8 = MOV8rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s8) from %ir.5, !tbaa !11)
     ; CHECK-NEXT: MOV8mr $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_fl6, $noreg, [[MOV8rm1]] :: (store (s8) into `i8* getelementptr inbounds (%struct.in6_addr, %struct.in6_addr* @synproxy_send_tcp_ipv6_fl6, i32 0, i32 0, i32 0)`, !tbaa !11)
-    ; CHECK-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY]].sub_8bit
+    ; CHECK-NEXT: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[COPY1]].sub_8bit
     ; CHECK-NEXT: $eax = COPY [[MOVZX32rr8_]]
     ; CHECK-NEXT: TCRETURNdi @fl6nthsecurity_skb_classify_flow, 0, csr_32, implicit $esp, implicit $ssp, implicit $eax
     %1:gr32 = COPY $edx

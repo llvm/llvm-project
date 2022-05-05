@@ -3253,9 +3253,9 @@ define void @PR45604(<32 x i16>* %dst, <8 x i16>* %src) {
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1],zero,zero,zero,zero,zero,zero,xmm1[2,3],zero,zero,zero,zero,zero,zero
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,0,0,11,0,0,0,0,0,0,0,11,0,0,0]
+; SSSE3-NEXT:    por %xmm2, %xmm1
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm3
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm3 = xmm3[4,5],zero,zero,zero,zero,zero,zero,xmm3[6,7],zero,zero,zero,zero,zero,zero
-; SSSE3-NEXT:    por %xmm2, %xmm1
 ; SSSE3-NEXT:    por %xmm2, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm4
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm4 = xmm4[8,9],zero,zero,zero,zero,zero,zero,xmm4[10,11],zero,zero,zero,zero,zero,zero
