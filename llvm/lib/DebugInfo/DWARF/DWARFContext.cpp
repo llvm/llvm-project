@@ -769,6 +769,10 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
   DWARFVerifier verifier(OS, *this, DumpOpts);
 
   Success &= verifier.handleDebugAbbrev();
+  if (DumpOpts.DumpType & DIDT_DebugCUIndex)
+    Success &= verifier.handleDebugCUIndex();
+  if (DumpOpts.DumpType & DIDT_DebugTUIndex)
+    Success &= verifier.handleDebugTUIndex();
   if (DumpOpts.DumpType & DIDT_DebugInfo)
     Success &= verifier.handleDebugInfo();
   if (DumpOpts.DumpType & DIDT_DebugLine)
