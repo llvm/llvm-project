@@ -7006,20 +7006,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // For all the host OpenMP offloading compile jobs we need to pass the targets
   // information using -fopenmp-targets= option.
   if (JA.isHostOffloading(Action::OFK_OpenMP)) {
-    SmallString<128> TargetInfo("-fopenmp-targets=");
+    SmallString<128> Targets("-fopenmp-targets=");
 
-    Arg *Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);
-    assert(Tgts && Tgts->getNumValues() &&
-           "OpenMP offloading has to have targets specified.");
-    for (unsigned i = 0; i < Tgts->getNumValues(); ++i) {
-      if (i)
-        TargetInfo += ',';
-      // We need to get the string from the triple because it may be not exactly
-      // the same as the one we get directly from the arguments.
-      llvm::Triple T(Tgts->getValue(i));
-      TargetInfo += T.getTriple();
-    }
-    CmdArgs.push_back(Args.MakeArgString(TargetInfo.str()));
+    SmallVector<std::string, 4> Triples;
+    auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
+    std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
+                   [](auto TC) { return TC.second->getTripleString(); });
+    CmdArgs.push_back(Args.MakeArgString(Targets + llvm::join(Triples, ",")));
   }
 
   bool VirtualFunctionElimination =
