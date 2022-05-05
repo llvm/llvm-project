@@ -90,12 +90,23 @@ TokenStream cook(const TokenStream &Code, const LangOptions &LangOpts) {
         assert(CharSize != 0 && "no progress!");
         Pos += CharSize;
       }
-      // Remove universal character names (UCN).
+      llvm::StringRef Text = CleanBuffer;
       llvm::SmallString<64> UCNBuffer;
-      clang::expandUCNs(UCNBuffer, CleanBuffer);
+      // A surface reading of the standard suggests UCNs might appear anywhere.
+      // But we need only decode them in raw_identifiers.
+      //  - they cannot appear in punctuation/keyword tokens, because UCNs
+      //    cannot encode basic characters outside of literals [lex.charset]
+      //  - they can appear in literals, but we need not unescape them now.
+      //    We treat them as escape sequences when evaluating the literal.
+      //  - comments are handled similarly to literals
+      // This is good fortune, because expandUCNs requires its input to be a
+      // reasonably valid identifier (e.g. without stray backslashes).
+      if (Tok.Kind == tok::raw_identifier) {
+        clang::expandUCNs(UCNBuffer, CleanBuffer);
+        Text = UCNBuffer;
+      }
 
-      llvm::StringRef Text = llvm::StringRef(UCNBuffer).copy(*CleanedStorage);
-      Tok.Data = Text.data();
+      Tok.Data = Text.copy(*CleanedStorage).data();
       Tok.Length = Text.size();
       Tok.Flags &= ~static_cast<decltype(Tok.Flags)>(LexFlags::NeedsCleaning);
     }
