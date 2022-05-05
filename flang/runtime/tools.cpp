@@ -98,7 +98,7 @@ void CheckConformability(const Descriptor &to, const Descriptor &x,
       if (xExtent != toExtent) {
         terminator.Crash("Incompatible array arguments to %s: dimension %d of "
                          "%s has extent %" PRId64 " but %s has extent %" PRId64,
-            funcName, j, toName, toExtent, xName, xExtent);
+            funcName, j + 1, toName, toExtent, xName, xExtent);
       }
     }
   }
