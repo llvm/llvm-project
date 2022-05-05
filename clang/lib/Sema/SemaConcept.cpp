@@ -317,10 +317,8 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction.IsSatisfied = true;
     return false;
   }
-
-  bool ShouldCache = LangOpts.ConceptSatisfactionCaching && Template;
-  if (!ShouldCache) {
-    return ::CheckConstraintSatisfaction(*this, Template, ConstraintExprs,
+  if (!Template) {
+    return ::CheckConstraintSatisfaction(*this, nullptr, ConstraintExprs,
                                          TemplateArgs, TemplateIDRange,
                                          OutSatisfaction);
   }

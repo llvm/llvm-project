@@ -222,6 +222,10 @@ Modified Compiler Flags
 
 Removed Compiler Flags
 -------------------------
+- Removed the ``-fno-concept-satisfaction-caching`` flag. The flag was added
+  at the time when the draft of C++20 standard did not permit caching of
+  atomic constraints. The final standard permits such caching, see
+  `WG21 P2104R0<http://wg21.link/p2104r0>`_.
 
 New Pragmas in Clang
 --------------------
