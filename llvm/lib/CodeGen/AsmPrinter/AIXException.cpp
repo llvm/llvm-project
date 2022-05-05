@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -37,8 +38,19 @@ void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
   //   unsigned long personality;  /* Pointer to the personality routine */
   //   }
 
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getCompactUnwindSection());
+  auto *EHInfo =
+      cast<MCSectionXCOFF>(Asm->getObjFileLowering().getCompactUnwindSection());
+  if (Asm->TM.getFunctionSections()) {
+    // If option -ffunction-sections is on, append the function name to the
+    // name of EH Info Table csect so that each function has its own EH Info
+    // Table csect. This helps the linker to garbage-collect EH info of unused
+    // functions.
+    SmallString<128> NameStr = EHInfo->getName();
+    raw_svector_ostream(NameStr) << '.' << Asm->MF->getFunction().getName();
+    EHInfo = Asm->OutContext.getXCOFFSection(NameStr, EHInfo->getKind(),
+                                             EHInfo->getCsectProp());
+  }
+  Asm->OutStreamer->SwitchSection(EHInfo);
   MCSymbol *EHInfoLabel =
       TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(Asm->MF);
   Asm->OutStreamer->emitLabel(EHInfoLabel);
