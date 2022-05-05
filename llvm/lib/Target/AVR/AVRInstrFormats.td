@@ -179,7 +179,8 @@ class FSTDLDD<bit type, dag outs, dag ins, string asmstr, list<dag> pattern>
 // r = src/dst register
 //
 // Note that the bit labelled 'i' above does not follow a simple pattern,
-// so there exists a post encoder method to set it manually.
+// so there exists a post encoder method to set it manually. Also a specified
+// decoder method is needed.
 //===---------------------------------------------------------------------===//
 class FSTLD<bit type, bits<2> mode, dag outs, dag ins, string asmstr,
             list<dag> pattern> : AVRInst16<outs, ins, asmstr, pattern> {
@@ -200,6 +201,7 @@ class FSTLD<bit type, bits<2> mode, dag outs, dag ins, string asmstr,
   let Inst{3 - 2} = ptrreg{1 - 0};
   let Inst{1 - 0} = mode{1 - 0};
 
+  let DecoderMethod = "decodeLoadStore";
   let PostEncoderMethod = "loadStorePostEncoder";
 }
 

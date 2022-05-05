@@ -1,5 +1,6 @@
 ; RUN: llvm-mc -triple avr -mattr=sram -show-encoding < %s | FileCheck %s
-
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=sram < %s \
+; RUN:     | llvm-objdump -d --mattr=sram - | FileCheck --check-prefix=INST %s
 
 foo:
   ldd r2, Y+2
@@ -18,3 +19,8 @@ foo:
 
 ; CHECK: ldd r9, Z+foo                ; encoding: [0x90'A',0x80'A']
 ; CHECK:                              ;   fixup A - offset: 0, value: +foo, kind: fixup_6
+
+; INST: ldd r2, Y+2
+; INST: ldd r0, Y+0
+; INST: ldd r9, Z+12
+; INST: ldd r7, Z+30
