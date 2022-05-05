@@ -230,7 +230,6 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
       FolderFactory<F, F{std::log}>::Create("log"),
       FolderFactory<F, F{std::log10}>::Create("log10"),
       FolderFactory<F, F{std::lgamma}>::Create("log_gamma"),
-      FolderFactory<F2, F2{std::fmod}>::Create("mod"),
       FolderFactory<F2, F2{std::pow}>::Create("pow"),
       FolderFactory<F, F{std::sin}>::Create("sin"),
       FolderFactory<F, F{std::sinh}>::Create("sinh"),

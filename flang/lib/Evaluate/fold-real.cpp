@@ -72,7 +72,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "amax0" || name == "amin0" || name == "amin1" ||
       name == "amax1" || name == "dmin1" || name == "dmax1") {
     return RewriteSpecificMINorMAX(context, std::move(funcRef));
-  } else if (name == "atan" || name == "atan2" || name == "mod") {
+  } else if (name == "atan" || name == "atan2") {
     std::string localName{name == "atan" ? "atan2" : name};
     CHECK(args.size() == 2);
     if (auto callable{GetHostRuntimeWrapper<T, T, T>(localName)}) {
@@ -159,6 +159,35 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
         RelationalOperator::GT, T::Scalar::HUGE().Negate());
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "min") {
+    return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
+  } else if (name == "minval") {
+    return FoldMaxvalMinval<T>(
+        context, std::move(funcRef), RelationalOperator::LT, T::Scalar::HUGE());
+  } else if (name == "mod") {
+    CHECK(args.size() == 2);
+    return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T, T>(
+            [&context](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
+              auto result{x.MOD(y)};
+              if (result.flags.test(RealFlag::DivideByZero)) {
+                context.messages().Say(
+                    "second argument to MOD must not be zero"_warn_en_US);
+              }
+              return result.value;
+            }));
+  } else if (name == "modulo") {
+    CHECK(args.size() == 2);
+    return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T, T>(
+            [&context](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
+              auto result{x.MODULO(y)};
+              if (result.flags.test(RealFlag::DivideByZero)) {
+                context.messages().Say(
+                    "second argument to MODULO must not be zero"_warn_en_US);
+              }
+              return result.value;
+            }));
   } else if (name == "nearest") {
     if (const auto *sExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
       return common::visit(
@@ -184,11 +213,6 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           },
           sExpr->u);
     }
-  } else if (name == "min") {
-    return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
-  } else if (name == "minval") {
-    return FoldMaxvalMinval<T>(
-        context, std::move(funcRef), RelationalOperator::LT, T::Scalar::HUGE());
   } else if (name == "product") {
     auto one{Scalar<T>::FromInteger(value::Integer<8>{1}).value};
     return FoldProduct<T>(context, std::move(funcRef), one);

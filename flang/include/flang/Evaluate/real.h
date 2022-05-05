@@ -119,13 +119,20 @@ public:
       const Real &, Rounding rounding = defaultRounding) const;
 
   ValueWithRealFlags<Real> SQRT(Rounding rounding = defaultRounding) const;
-
   // NEAREST(), IEEE_NEXT_AFTER(), IEEE_NEXT_UP(), and IEEE_NEXT_DOWN()
   ValueWithRealFlags<Real> NEAREST(bool upward) const;
-
   // HYPOT(x,y)=SQRT(x**2 + y**2) computed so as to avoid spurious
   // intermediate overflows.
   ValueWithRealFlags<Real> HYPOT(
+      const Real &, Rounding rounding = defaultRounding) const;
+  // DIM(X,Y) = MAX(X-Y, 0)
+  ValueWithRealFlags<Real> DIM(
+      const Real &, Rounding rounding = defaultRounding) const;
+  // MOD(x,y) = x - AINT(x/y)*y
+  // MODULO(x,y) = x - FLOOR(x/y)*y
+  ValueWithRealFlags<Real> MOD(
+      const Real &, Rounding rounding = defaultRounding) const;
+  ValueWithRealFlags<Real> MODULO(
       const Real &, Rounding rounding = defaultRounding) const;
 
   // DIM(X,Y) = MAX(X-Y, 0)
