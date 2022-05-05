@@ -774,9 +774,7 @@ public:
   bool isAbstract() const;
 
 protected:
-  Symbol &GetGenericSymbol() {
-    return DEREF(genericInfo_.top().symbol);
-  }
+  Symbol &GetGenericSymbol() { return DEREF(genericInfo_.top().symbol); }
   // Add to generic the symbol for the subprogram with the same name
   void CheckGenericProcedures(Symbol &);
 
@@ -4895,7 +4893,7 @@ bool DeclarationVisitor::Pre(const parser::StructureDef &def) {
 }
 
 bool DeclarationVisitor::Pre(const parser::Union::UnionStmt &) {
-  Say("not yet implemented: support for UNION"_err_en_US); // TODO
+  Say("support for UNION"_todo_en_US); // TODO
   return true;
 }
 
