@@ -217,7 +217,7 @@ def AArch64PostLegalizerLoweringHelper
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombinerHelper
     : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",
-                       [copy_prop, erase_undef_store, combines_for_extload,
+                       [copy_prop, combines_for_extload,
                         sext_trunc_sextload, mutate_anyext_to_zext,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
@@ -228,6 +228,6 @@ def AArch64PostLegalizerCombinerHelper
                         select_combines, fold_merge_to_zext,
                         constant_fold, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
-                        split_store_zero_128]> {
+                        split_store_zero_128, undef_combines]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

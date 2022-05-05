@@ -15,11 +15,32 @@ body:             |
 
     ; CHECK-LABEL: name: delete_store_undef
     ; CHECK: liveins: $x0
-    ; CHECK-NOT: G_STORE
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_IMPLICIT_DEF
     G_STORE %1(s32), %0(p0) :: (store (s32))
+    RET_ReallyLR
+
+...
+---
+name:            delete_add_undef
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: delete_add_undef
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY [[DEF]](s64)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = G_IMPLICIT_DEF
+    %add:_(s64) = G_ADD %0(s64), %1(s64)
+    $x0 = COPY %add
     RET_ReallyLR
 
 ...
