@@ -15,10 +15,8 @@ add_libc_unittest(
     libc.include.stdio
     libc.include.stdlib
     libc.src.__support.File.file
-)
-
-target_link_libraries(
-  libc.test.src.__support.File.file_test PRIVATE LibcMemoryHelpers
+  LINK_LIBRARIES
+    LibcMemoryHelpers
 )
 
 if (TARGET libc.src.__support.File.platform_file)
