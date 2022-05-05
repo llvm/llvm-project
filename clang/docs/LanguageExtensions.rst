@@ -2373,44 +2373,82 @@ controlled state.
 
 .. code-block:: c++
 
-     __builtin_dump_struct(&some_struct, &some_printf_func);
+    __builtin_dump_struct(&some_struct, some_printf_func, args...);
 
 **Examples**:
 
 .. code-block:: c++
 
-     struct S {
-       int x, y;
-       float f;
-       struct T {
-         int i;
-       } t;
-     };
+    struct S {
+      int x, y;
+      float f;
+      struct T {
+        int i;
+      } t;
+    };
 
-     void func(struct S *s) {
-       __builtin_dump_struct(s, &printf);
-     }
+    void func(struct S *s) {
+      __builtin_dump_struct(s, printf);
+    }
 
 Example output:
 
 .. code-block:: none
 
-     struct S {
-     int i : 100
-     int j : 42
-     float f : 3.14159
-     struct T t : struct T {
-         int i : 1997
-         }
-     }
+    struct S {
+      int x = 100
+      int y = 42
+      float f = 3.141593
+      struct T t = {
+        int i = 1997
+      }
+    }
+
+.. code-block:: c++
+
+    #include <string>
+    struct T { int a, b; };
+    constexpr void constexpr_sprintf(std::string &out, const char *format,
+                                     auto ...args) {
+      // ...
+    }
+    constexpr std::string dump_struct(auto &x) {
+      std::string s;
+      __builtin_dump_struct(&x, constexpr_sprintf, s);
+      return s;
+    }
+    static_assert(dump_struct(T{1, 2}) == R"(struct T {
+      int a = 1
+      int b = 2
+    }
+    )");
 
 **Description**:
 
-The '``__builtin_dump_struct``' function is used to print the fields of a simple
-structure and their values for debugging purposes. The builtin accepts a pointer
-to a structure to dump the fields of, and a pointer to a formatted output
-function whose signature must be: ``int (*)(const char *, ...)`` and must
-support the format specifiers used by ``printf()``.
+The ``__builtin_dump_struct`` function is used to print the fields of a simple
+structure and their values for debugging purposes. The first argument of the
+builtin should be a pointer to the struct to dump. The second argument ``f``
+should be some callable expression, and can be a function object or an overload
+set. The builtin calls ``f``, passing any further arguments ``args...``
+followed by a ``printf``-compatible format string and the corresponding
+arguments. ``f`` may be called more than once, and ``f`` and ``args`` will be
+evaluated once per call. In C++, ``f`` may be a template or overload set and
+resolve to different functions for each call.
+
+In the format string, a suitable format specifier will be used for builtin
+types that Clang knows how to format. This includes standard builtin types, as
+well as aggregate structures, ``void*`` (printed with ``%p``), and ``const
+char*`` (printed with ``%s``). A ``*%p`` specifier will be used for a field
+that Clang doesn't know how to format, and the corresopnding argument will be a
+pointer to the field. This allows a C++ templated formatting function to detect
+this case and implement custom formatting. A ``*`` will otherwise not precede a
+format specifier.
+
+This builtin does not return a value.
+
+This builtin can be used in constant expressions.
+
+Query for this feature with ``__has_builtin(__builtin_dump_struct)``
 
 .. _langext-__builtin_shufflevector:
 

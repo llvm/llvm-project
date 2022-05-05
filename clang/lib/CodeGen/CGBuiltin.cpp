@@ -24,7 +24,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
-#include "clang/AST/FormatString.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -2044,117 +2043,6 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
   return RValue::get(Overflow);
 }
 
-static std::string getPrintfSpecifier(CodeGenFunction &CGF, QualType QT) {
-  analyze_printf::PrintfSpecifier spec;
-  if (!spec.fixType(QT, CGF.getLangOpts(), CGF.getContext(), false)) {
-    // If this type is a boolean type, we should use '%d' to dump its value.
-    if (QT->isBooleanType())
-      return "%d";
-
-    // Otherwise, in order to keep the same behavior as before, use '%p' for
-    // unknown types
-    return "%p";
-  }
-  std::string str;
-  llvm::raw_string_ostream ss(str);
-  spec.toString(ss);
-  return str;
-}
-
-static llvm::Value *dumpValue(CodeGenFunction &CGF, QualType RType,
-                              LValue RecordLV, CharUnits Align,
-                              llvm::FunctionCallee Func, PrintingPolicy Policy,
-                              int Lvl) {
-  RecordDecl *RD = RType->castAs<RecordType>()->getDecl()->getDefinition();
-  std::string Pad = std::string(Lvl * 4, ' ');
-  std::string ElementPad = std::string((Lvl + 1) * 4, ' ');
-
-  Value *GString = CGF.Builder.CreateGlobalStringPtr("{\n");
-  Value *Res = CGF.Builder.CreateCall(Func, {GString});
-
-  for (const auto *FD : RD->fields()) {
-    Value *TmpRes = nullptr;
-
-    std::string Format = llvm::Twine(ElementPad)
-                             .concat(FD->getType().getAsString(Policy))
-                             .concat(llvm::Twine(' '))
-                             .concat(FD->getNameAsString())
-                             .str();
-
-    if (FD->isBitField()) {
-      unsigned BitfieldWidth = FD->getBitWidthValue(CGF.getContext());
-
-      // If current field is a unnamed bitfield, we should dump only one ' '
-      // between type-name and ':'
-      if (!FD->getDeclName().isEmpty())
-        Format += ' ';
-      Format += llvm::Twine(": ").concat(llvm::Twine(BitfieldWidth)).str();
-
-      // If current field is a zero-width bitfield, we just dump a string like
-      // 'type-name : 0'
-      if (FD->isZeroSize(CGF.getContext())) {
-        Format += "\n";
-        GString = CGF.Builder.CreateGlobalStringPtr(Format);
-        TmpRes = CGF.Builder.CreateCall(Func, {GString});
-        Res = CGF.Builder.CreateAdd(Res, TmpRes);
-        continue;
-      }
-    }
-
-    GString = CGF.Builder.CreateGlobalStringPtr(
-        llvm::Twine(Format).concat(" = ").str());
-    TmpRes = CGF.Builder.CreateCall(Func, {GString});
-    Res = CGF.Builder.CreateAdd(TmpRes, Res);
-
-    LValue FieldLV = CGF.EmitLValueForField(RecordLV, FD);
-    QualType CanonicalType =
-        FD->getType().getUnqualifiedType().getCanonicalType();
-
-    // We check whether we are in a recursive type
-    if (CanonicalType->isRecordType()) {
-
-      // If current field is a record type, we should not dump the type name in
-      // recursive dumpRecord call, and we only dump the things between {...}
-      TmpRes =
-          dumpValue(CGF, CanonicalType, FieldLV, Align, Func, Policy, Lvl + 1);
-      Res = CGF.Builder.CreateAdd(TmpRes, Res);
-      continue;
-    }
-
-    // We try to determine the best format to print the current field
-    std::string PrintFormatSpec = getPrintfSpecifier(CGF, FD->getType());
-    GString = CGF.Builder.CreateGlobalStringPtr(
-        llvm::Twine(PrintFormatSpec).concat(llvm::Twine('\n')).str());
-
-    RValue RV = FD->isBitField()
-                    ? CGF.EmitLoadOfBitfieldLValue(FieldLV, FD->getLocation())
-                    : CGF.EmitLoadOfLValue(FieldLV, FD->getLocation());
-
-    /// FIXME: This place needs type promotion.
-    TmpRes = CGF.Builder.CreateCall(Func, {GString, RV.getScalarVal()});
-    Res = CGF.Builder.CreateAdd(Res, TmpRes);
-  }
-
-  GString = CGF.Builder.CreateGlobalStringPtr(Pad + "}\n");
-  Value *TmpRes = CGF.Builder.CreateCall(Func, {GString});
-  Res = CGF.Builder.CreateAdd(Res, TmpRes);
-  return Res;
-}
-
-static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
-                               LValue RecordLV, CharUnits Align,
-                               llvm::FunctionCallee Func) {
-  ASTContext &Context = CGF.getContext();
-  PrintingPolicy Policy(Context.getLangOpts());
-  Policy.AnonymousTagLocations = false;
-  std::string Name = llvm::Twine(RType.getAsString(Policy)).concat(" ").str();
-  Value *GString = CGF.Builder.CreateGlobalStringPtr(Name);
-  Value *Res = CGF.Builder.CreateCall(Func, {GString});
-  Value *TmpRes = dumpValue(CGF, RType, RecordLV, Align, Func, Policy, 0);
-  Res = CGF.Builder.CreateAdd(Res, TmpRes);
-  return Res;
-}
-
 static bool
 TypeRequiresBuiltinLaunderImp(const ASTContext &Ctx, QualType Ty,
                               llvm::SmallPtrSetImpl<const Decl *> &Seen) {
@@ -2679,24 +2567,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIcreall: {
     ComplexPairTy ComplexVal = EmitComplexExpr(E->getArg(0));
     return RValue::get(ComplexVal.first);
-  }
-
-  case Builtin::BI__builtin_dump_struct: {
-    llvm::Type *LLVMIntTy = getTypes().ConvertType(getContext().IntTy);
-    llvm::FunctionType *LLVMFuncType = llvm::FunctionType::get(
-        LLVMIntTy, {llvm::Type::getInt8PtrTy(getLLVMContext())}, true);
-
-    Value *Func = EmitScalarExpr(E->getArg(1)->IgnoreImpCasts());
-    CharUnits Arg0Align = EmitPointerWithAlignment(E->getArg(0)).getAlignment();
-
-    const Expr *Arg0 = E->getArg(0)->IgnoreImpCasts();
-    QualType Arg0Type = Arg0->getType()->getPointeeType();
-
-    Value *RecordPtr = EmitScalarExpr(Arg0);
-    LValue RecordLV = MakeAddrLValue(RecordPtr, Arg0Type, Arg0Align);
-    Value *Res = dumpRecord(*this, Arg0Type, RecordLV, Arg0Align,
-                            {LLVMFuncType, Func});
-    return RValue::get(Res);
   }
 
   case Builtin::BI__builtin_preserve_access_index: {

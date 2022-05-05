@@ -211,8 +211,15 @@ Non-comprehensive list of changes in this release
 - Improve __builtin_dump_struct:
   - Support bitfields in struct and union.
   - Improve the dump format, dump both bitwidth(if its a bitfield) and field value.
-  - Remove anonymous tag locations.
-  - Beautify dump format, add indent for nested struct and struct members.
+  - Remove anonymous tag locations and flatten anonymous struct members.
+  - Beautify dump format, add indent for struct members.
+  - Support passing additional arguments to the formatting function, allowing
+    use with ``fprintf`` and similar formatting functions.
+  - Support use within constant evaluation in C++, if a ``constexpr``
+    formatting function is provided.
+  - Support formatting of base classes in C++.
+  - Support calling a formatting function template in C++, which can provide
+    custom formatting for non-aggregate types.
 - Previously disabled sanitizer options now enabled by default:
   - ASAN_OPTIONS=detect_stack_use_after_return=1 (only on Linux).
   - MSAN_OPTIONS=poison_in_dtor=1.

@@ -1603,7 +1603,7 @@ BUILTIN(__builtin_function_start, "v*v&", "nct")
 BUILTIN(__builtin_operator_new, "v*z", "tc")
 BUILTIN(__builtin_operator_delete, "vv*", "tn")
 BUILTIN(__builtin_char_memchr, "c*cC*iz", "n")
-BUILTIN(__builtin_dump_struct, "ivC*v*", "tn")
+BUILTIN(__builtin_dump_struct, "v.", "t")
 BUILTIN(__builtin_preserve_access_index, "v.", "t")
 
 // Alignment builtins (uses custom parsing to support pointers and integers)
