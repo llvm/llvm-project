@@ -319,15 +319,14 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
         // large blocks on targets with many physical registers.
         Prio = Indexes->getZeroIndex().getInstrDistance(LI->endIndex());
       }
-      Prio |= RC.AllocationPriority << 24;
     } else {
       // Allocate global and split ranges in long->short order. Long ranges that
       // don't fit should be spilled (or split) ASAP so they don't create
       // interference.  Mark a bit to prioritize global above local ranges.
       Prio = (1u << 29) + Size;
-
-      Prio |= RC.AllocationPriority << 24;
     }
+    Prio |= RC.AllocationPriority << 24;
+
     // Mark a higher bit to prioritize global and local above RS_Split.
     Prio |= (1u << 31);
 
