@@ -708,6 +708,25 @@ define <2 x i64> @bitcast_vec_cond(<16 x i1> %cond, <2 x i64> %c, <2 x i64> %d) 
   ret <2 x i64> %r
 }
 
+define <vscale x 2 x i64> @bitcast_vec_condi_scalable(<vscale x 16 x i1> %cond, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d) {
+; CHECK-LABEL: @bitcast_vec_condi_scalable(
+; CHECK-NEXT:    [[S:%.*]] = sext <vscale x 16 x i1> [[COND:%.*]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[T9:%.*]] = bitcast <vscale x 16 x i8> [[S]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[NOTT9:%.*]] = xor <vscale x 2 x i64> [[T9]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[T11:%.*]] = and <vscale x 2 x i64> [[NOTT9]], [[C:%.*]]
+; CHECK-NEXT:    [[T12:%.*]] = and <vscale x 2 x i64> [[T9]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or <vscale x 2 x i64> [[T11]], [[T12]]
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[R]]
+;
+  %s = sext <vscale x 16 x i1> %cond to <vscale x 16 x i8>
+  %t9 = bitcast <vscale x 16 x i8> %s to <vscale x 2 x i64>
+  %nott9 = xor <vscale x 2 x i64> %t9, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %t11 = and <vscale x 2 x i64> %nott9, %c
+  %t12 = and <vscale x 2 x i64> %t9, %d
+  %r = or <vscale x 2 x i64> %t11, %t12
+  ret <vscale x 2 x i64> %r
+}
+
 ; Negative test - bitcast of condition from wide source element type cannot be converted to select.
 
 define <8 x i3> @bitcast_vec_cond_commute1(<3 x i1> %cond, <8 x i3> %pc, <8 x i3> %d) {
