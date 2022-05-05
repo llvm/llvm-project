@@ -94,7 +94,10 @@ CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
     llvm_unreachable("NYI");
   }
 
-  // TODO: handle whether or not layout was skipped and recursive record layout
+  // Okay, this is a definition of a type. Compile the implementation now.
+  bool InsertResult = RecordsBeingLaidOut.insert(key).second;
+  (void)InsertResult;
+  assert(InsertResult && "Recursively compiling a struct?");
 
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(recordDecl)) {
     assert(cxxRecordDecl->bases().begin() == cxxRecordDecl->bases().end() &&
@@ -102,6 +105,22 @@ CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
   }
 
   entry = computeRecordLayout(recordDecl);
+  // We're done laying out this struct.
+  bool EraseResult = RecordsBeingLaidOut.erase(key);
+  (void)EraseResult;
+  assert(EraseResult && "struct not in RecordsBeingLaidOut set?");
+
+  // If this struct blocked a FunctionType conversion, then recompute whatever
+  // was derived from that.
+  // FIXME: This is hugely overconservative.
+  if (SkippedLayout)
+    TypeCache.clear();
+
+  // If we're done converting the outer-most record, then convert any deferred
+  // structs as well.
+  if (RecordsBeingLaidOut.empty())
+    while (!DeferredRecords.empty())
+      convertRecordDeclType(DeferredRecords.pop_back_val());
 
   return entry;
 }
