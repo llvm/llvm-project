@@ -388,10 +388,20 @@ mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const APValue &Value,
     mlir::Type ty = CGM.getCIRType(DestType);
     return CGM.getBuilder().getIntegerAttr(ty, Value.getInt());
   }
+  case APValue::Float: {
+    const llvm::APFloat &Init = Value.getFloat();
+    if (&Init.getSemantics() == &llvm::APFloat::IEEEhalf() &&
+        !CGM.getASTContext().getLangOpts().NativeHalfType &&
+        CGM.getASTContext().getTargetInfo().useFP16ConversionIntrinsics())
+      assert(0 && "not implemented");
+    else {
+      mlir::Type ty = CGM.getCIRType(DestType);
+      return CGM.getBuilder().getFloatAttr(ty, Init);
+    }
+  }
   case APValue::LValue:
   case APValue::FixedPoint:
   case APValue::ComplexInt:
-  case APValue::Float:
   case APValue::ComplexFloat:
   case APValue::Vector:
   case APValue::AddrLabelDiff:
