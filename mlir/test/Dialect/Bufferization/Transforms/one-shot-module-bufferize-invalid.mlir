@@ -99,7 +99,7 @@ func.func @scf_for(%A : tensor<?xf32>,
     // Throw a wrench in the system by swapping yielded values: this result in a
     // ping-pong of values at each iteration on which we currently want to fail.
 
-    // expected-error @+1 {{Yield operand #0 does not bufferize to a buffer that is aliasing}}
+    // expected-error @+1 {{Yield operand #0 is not equivalent to the corresponding iter bbArg}}
     scf.yield %ttB, %ttA : tensor<?xf32>, tensor<?xf32>
   }
 
@@ -122,7 +122,7 @@ func.func @scf_yield_needs_copy(%A : tensor<?xf32> {bufferization.writable = tru
   %c1 = arith.constant 1 : index
   %res = scf.for %arg0 = %c0 to %iters step %c1 iter_args(%bbarg = %A) -> (tensor<?xf32>) {
     %r = func.call @foo(%A) : (tensor<?xf32>) -> (tensor<?xf32>)
-    // expected-error @+1 {{Yield operand #0 does not bufferize to a buffer that is aliasing}}
+    // expected-error @+1 {{Yield operand #0 is not equivalent to the corresponding iter bbArg}}
     scf.yield %r : tensor<?xf32>
   }
   call @fun_with_side_effects(%res) : (tensor<?xf32>) -> ()
