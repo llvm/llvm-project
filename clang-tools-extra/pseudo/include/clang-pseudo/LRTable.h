@@ -132,6 +132,17 @@ public:
   // Returns empty if no available actions in the table.
   llvm::ArrayRef<Action> find(StateID State, SymbolID Symbol) const;
 
+  // Returns the state from which the LR parser should start to parse the input
+  // tokens as the given StartSymbol.
+  //
+  // In LR parsing, the start state of `translation-unit` corresponds to
+  // `_ := • translation-unit`.
+  //
+  // Each start state responds to **a** single grammar rule like `_ := start`.
+  // REQUIRE: The given StartSymbol must exist in the grammar (in a form of
+  //          `_ := start`).
+  StateID getStartState(SymbolID StartSymbol) const;
+
   size_t bytes() const {
     return sizeof(*this) + Actions.capacity() * sizeof(Action) +
            States.capacity() * sizeof(StateID) +
@@ -171,6 +182,8 @@ private:
   std::vector<StateID> States;
   // A flat list of available actions, sorted by (SymbolID, State).
   std::vector<Action> Actions;
+  // A sorted table, storing the start state for each target parsing symbol.
+  std::vector<std::pair<SymbolID, StateID>> StartStates;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LRTable::Action &);
 

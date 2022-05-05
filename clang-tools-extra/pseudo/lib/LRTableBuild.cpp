@@ -40,6 +40,9 @@ namespace pseudo {
 
 class LRTable::Builder {
 public:
+  Builder(llvm::ArrayRef<std::pair<SymbolID, StateID>> StartStates)
+      : StartStates(StartStates) {}
+
   bool insert(Entry E) { return Entries.insert(std::move(E)).second; }
   LRTable build(const GrammarTable &GT) && {
     // E.g. given the following parsing table with 3 states and 3 terminals:
@@ -92,24 +95,26 @@ public:
                  tokenSymbol(static_cast<tok::TokenKind>(Terminal)))
         ++SortedIndex;
     }
+    Table.StartStates = std::move(StartStates);
     return Table;
   }
 
 private:
   llvm::DenseSet<Entry> Entries;
+  std::vector<std::pair<SymbolID, StateID>> StartStates;
 };
 
 LRTable LRTable::buildForTests(const GrammarTable &GT,
                                llvm::ArrayRef<Entry> Entries) {
-  Builder Build;
+  Builder Build({});
   for (const Entry &E : Entries)
     Build.insert(E);
   return std::move(Build).build(GT);
 }
 
 LRTable LRTable::buildSLR(const Grammar &G) {
-  Builder Build;
   auto Graph = LRGraph::buildLR0(G);
+  Builder Build(Graph.startStates());
   for (const auto &T : Graph.edges()) {
     Action Act = isToken(T.Label) ? Action::shift(T.Dst) : Action::goTo(T.Dst);
     Build.insert({T.Src, T.Label, Act});
@@ -120,7 +125,7 @@ LRTable LRTable::buildSLR(const Grammar &G) {
   for (StateID SID = 0; SID < Graph.states().size(); ++SID) {
     for (const Item &I : Graph.states()[SID].Items) {
       // If we've just parsed the start symbol, we can accept the input.
-      if (G.lookupRule(I.rule()).Target == G.startSymbol() && !I.hasNext()) {
+      if (G.lookupRule(I.rule()).Target == G.underscore() && !I.hasNext()) {
         Build.insert({SID, tokenSymbol(tok::eof), Action::accept(I.rule())});
         continue;
       }

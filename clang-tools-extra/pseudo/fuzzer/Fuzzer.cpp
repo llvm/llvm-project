@@ -58,8 +58,9 @@ public:
 
     clang::pseudo::ForestArena Arena;
     clang::pseudo::GSS GSS;
-    auto &Root = glrParse(ParseableStream,
-                          clang::pseudo::ParseParams{*G, T, Arena, GSS});
+    auto &Root =
+        glrParse(ParseableStream, clang::pseudo::ParseParams{*G, T, Arena, GSS},
+                 *G->findNonterminal("translation-unit"));
     if (Print)
       llvm::outs() << Root.dumpRecursive(*G);
   }

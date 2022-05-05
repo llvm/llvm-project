@@ -43,6 +43,9 @@ static opt<bool>
                     desc("Strip directives and select conditional sections"));
 static opt<bool> PrintStatistics("print-statistics", desc("Print GLR parser statistics"));
 static opt<bool> PrintForest("print-forest", desc("Print parse forest"));
+static opt<std::string> StartSymbol("start-symbol",
+                                    desc("specify the start symbol to parse"),
+                                    init("translation-unit"));
 
 static std::string readOrDie(llvm::StringRef Path) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
@@ -110,9 +113,16 @@ int main(int argc, char *argv[]) {
     if (ParseableStream) {
       clang::pseudo::ForestArena Arena;
       clang::pseudo::GSS GSS;
-      auto &Root =
-          glrParse(*ParseableStream,
-                   clang::pseudo::ParseParams{*G, LRTable, Arena, GSS});
+      llvm::Optional<clang::pseudo::SymbolID> StartSymID =
+          G->findNonterminal(StartSymbol);
+      if (!StartSymID) {
+        llvm::errs() << llvm::formatv(
+            "The start symbol {0} doesn't exit in the grammar!\n", Grammar);
+        return 2;
+      }
+      auto &Root = glrParse(*ParseableStream,
+                            clang::pseudo::ParseParams{*G, LRTable, Arena, GSS},
+                            *StartSymID);
       if (PrintForest)
         llvm::outs() << Root.dumpRecursive(*G, /*Abbreviated=*/true);
 

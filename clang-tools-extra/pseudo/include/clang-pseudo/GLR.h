@@ -122,13 +122,14 @@ struct ParseParams {
   ForestArena &Forest;  // Storage for the output forest.
   GSS &GSStack;         // Storage for parsing stacks.
 };
-// Parse the given token stream with the GLR algorithm, and return a forest node
-// of the start symbol.
+// Parses the given token stream as the start symbol with the GLR algorithm,
+// and returns a forest node of the start symbol.
+//
+// A rule `_ := StartSymbol` must exit for the chosen start symbol.
 //
 // If the parsing fails, we model it as an opaque node in the forest.
-//
-// FIXME: add support for variant start symbols.
-const ForestNode &glrParse(const TokenStream &Code, const ParseParams &Params);
+const ForestNode &glrParse(const TokenStream &Code, const ParseParams &Params,
+                           SymbolID StartSymbol);
 
 // An active stack head can have multiple available actions (reduce/reduce
 // actions, reduce/shift actions).

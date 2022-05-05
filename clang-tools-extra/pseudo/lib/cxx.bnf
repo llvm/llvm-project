@@ -23,10 +23,15 @@
 #   - optional symbols are supported, with a _opt suffix;
 #
 # [1] https://isocpp.org/files/papers/N4860.pdf
+
+# _ lists all the start-symbols which we support parsing.
 #
-#
-# _ serves as a "fake" start symbol, coming with real grammar symbols.
+# We list important nonterminals as start symbols, rather than doing it for all
+# nonterminals by default, this reduces the number of states by 30% and LRTable
+# actions by 16%.
 _ := translation-unit
+_ := statement-seq
+_ := declaration-seq
 
 # gram.key
 typedef-name := IDENTIFIER
