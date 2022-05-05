@@ -1209,6 +1209,42 @@ bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
+bool AVRExpandPseudo::expand<AVR::STDSPQRr>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  const MachineFunction &MF = *MBB.getParent();
+  const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
+
+  assert(MI.getOperand(0).getReg() == AVR::SP &&
+         "SP is expected as base pointer");
+
+  assert(STI.getFrameLowering()->hasReservedCallFrame(MF) &&
+         "unexpected STDSPQRr pseudo instruction");
+
+  MI.setDesc(TII->get(AVR::STDPtrQRr));
+  MI.getOperand(0).setReg(AVR::R29R28);
+
+  return true;
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::STDWSPQRr>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  const MachineFunction &MF = *MBB.getParent();
+  const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
+
+  assert(MI.getOperand(0).getReg() == AVR::SP &&
+         "SP is expected as base pointer");
+
+  assert(STI.getFrameLowering()->hasReservedCallFrame(MF) &&
+         "unexpected STDWSPQRr pseudo instruction");
+
+  MI.setDesc(TII->get(AVR::STDWPtrQRr));
+  MI.getOperand(0).setReg(AVR::R29R28);
+
+  return true;
+}
+
+template <>
 bool AVRExpandPseudo::expand<AVR::INWRdA>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
@@ -2428,6 +2464,8 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::STWPtrPiRr);
     EXPAND(AVR::STWPtrPdRr);
     EXPAND(AVR::STDWPtrQRr);
+    EXPAND(AVR::STDSPQRr);
+    EXPAND(AVR::STDWSPQRr);
     EXPAND(AVR::INWRdA);
     EXPAND(AVR::OUTWARr);
     EXPAND(AVR::PUSHWRr);
