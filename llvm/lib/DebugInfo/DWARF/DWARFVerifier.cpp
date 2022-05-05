@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
@@ -393,6 +394,57 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S) {
   if (!isHeaderChainValid)
     ++NumDebugInfoErrors;
   return NumDebugInfoErrors;
+}
+
+unsigned DWARFVerifier::verifyIndex(StringRef Name,
+                                    DWARFSectionKind InfoColumnKind,
+                                    StringRef IndexStr) {
+  if (IndexStr.empty())
+    return 0;
+  OS << "Verifying " << Name << "...\n";
+  DWARFUnitIndex Index(InfoColumnKind);
+  DataExtractor D(IndexStr, DCtx.isLittleEndian(), 0);
+  if (!Index.parse(D))
+    return 1;
+  IntervalMap<uint32_t, uint64_t>::Allocator Alloc;
+  std::vector<IntervalMap<uint32_t, uint64_t>> Sections(
+      Index.getColumnKinds().size(), IntervalMap<uint32_t, uint64_t>(Alloc));
+  for (const DWARFUnitIndex::Entry &E : Index.getRows()) {
+    uint64_t Sig = E.getSignature();
+    if (!E.getContributions())
+      continue;
+    for (auto E : enumerate(InfoColumnKind == DW_SECT_INFO
+                                ? makeArrayRef(E.getContributions(),
+                                               Index.getColumnKinds().size())
+                                : makeArrayRef(E.getContribution(), 1))) {
+      const DWARFUnitIndex::Entry::SectionContribution &SC = E.value();
+      int Col = E.index();
+      if (SC.Length == 0)
+        continue;
+      auto &M = Sections[Col];
+      auto I = M.find(SC.Offset);
+      if (I != M.end() && I.start() < (SC.Offset + SC.Length)) {
+        error() << llvm::formatv(
+            "overlapping index entries for entries {0:x16} "
+            "and {1:x16} for column {2}\n",
+            *I, Sig, toString(Index.getColumnKinds()[Col]));
+        return 1;
+      }
+      M.insert(SC.Offset, SC.Offset + SC.Length - 1, Sig);
+    }
+  }
+
+  return 0;
+}
+
+bool DWARFVerifier::handleDebugCUIndex() {
+  return verifyIndex(".debug_cu_index", DWARFSectionKind::DW_SECT_INFO,
+                     DCtx.getDWARFObj().getCUIndexSection()) == 0;
+}
+
+bool DWARFVerifier::handleDebugTUIndex() {
+  return verifyIndex(".debug_tu_index", DWARFSectionKind::DW_SECT_EXT_TYPES,
+                     DCtx.getDWARFObj().getTUIndexSection()) == 0;
 }
 
 bool DWARFVerifier::handleDebugInfo() {
