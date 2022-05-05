@@ -173,6 +173,10 @@ public:
   /// identified by `Token` imply that `Val` is true.
   bool flowConditionImplies(AtomicBoolValue &Token, BoolValue &Val);
 
+  /// Returns true if and only if the constraints of the flow condition
+  /// identified by `Token` are always true.
+  bool flowConditionIsTautology(AtomicBoolValue &Token);
+
 private:
   /// Adds all constraints of the flow condition identified by `Token` and all
   /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
