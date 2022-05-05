@@ -168,6 +168,189 @@ define i64 @or2(i64 %x, i64 %y) {
   ret i64 %3
 }
 
+; ((x & y) + z) | y -> (z | y)
+
+define i64 @and_xor_or1(i64 %px, i64 %py, i64 %pz) {
+; CHECK-LABEL: @and_xor_or1(
+; CHECK-NEXT:    [[X:%.*]] = udiv i64 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i64 42, [[PY:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = udiv i64 42, [[PZ:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], [[Y]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %x = udiv i64 42, %px ; thwart complexity-based canonicalization
+  %y = udiv i64 42, %py ; thwart complexity-based canonicalization
+  %z = udiv i64 42, %pz ; thwart complexity-based canonicalization
+  %1 = and i64 %x, %y
+  %2 = xor i64 %1, %z
+  %3 = or i64 %2, %y
+  ret i64 %3
+}
+
+; ((y & x) ^ z) | y -> (z | y)
+
+define i64 @and_xor_or2(i64 %px, i64 %py, i64 %pz) {
+; CHECK-LABEL: @and_xor_or2(
+; CHECK-NEXT:    [[X:%.*]] = udiv i64 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i64 42, [[PY:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = udiv i64 42, [[PZ:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], [[Y]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %x = udiv i64 42, %px ; thwart complexity-based canonicalization
+  %y = udiv i64 42, %py ; thwart complexity-based canonicalization
+  %z = udiv i64 42, %pz ; thwart complexity-based canonicalization
+  %1 = and i64 %y, %x
+  %2 = xor i64 %1, %z
+  %3 = or i64 %2, %y
+  ret i64 %3
+}
+
+; (z ^ (x & y)) | y -> (z | y)
+
+define i64 @and_xor_or3(i64 %px, i64 %py, i64 %pz) {
+; CHECK-LABEL: @and_xor_or3(
+; CHECK-NEXT:    [[X:%.*]] = udiv i64 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i64 42, [[PY:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = udiv i64 42, [[PZ:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], [[Y]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %x = udiv i64 42, %px ; thwart complexity-based canonicalization
+  %y = udiv i64 42, %py ; thwart complexity-based canonicalization
+  %z = udiv i64 42, %pz ; thwart complexity-based canonicalization
+  %1 = and i64 %x, %y
+  %2 = xor i64 %z, %1
+  %3 = or i64 %2, %y
+  ret i64 %3
+}
+
+; (z ^ (y & x)) | y -> (z | y)
+
+define i64 @and_xor_or4(i64 %px, i64 %py, i64 %pz) {
+; CHECK-LABEL: @and_xor_or4(
+; CHECK-NEXT:    [[X:%.*]] = udiv i64 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i64 42, [[PY:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = udiv i64 42, [[PZ:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], [[Y]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %x = udiv i64 42, %px ; thwart complexity-based canonicalization
+  %y = udiv i64 42, %py ; thwart complexity-based canonicalization
+  %z = udiv i64 42, %pz ; thwart complexity-based canonicalization
+  %1 = and i64 %y, %x
+  %2 = xor i64 %z, %1
+  %3 = or i64 %2, %y
+  ret i64 %3
+}
+
+; y | ((x & y) ^ z) -> (y | z)
+
+define i64 @and_xor_or5(i64 %px, i64 %py, i64 %pz) {
+; CHECK-LABEL: @and_xor_or5(
+; CHECK-NEXT:    [[X:%.*]] = udiv i64 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i64 42, [[PY:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = udiv i64 42, [[PZ:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[Y]], [[TMP2]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %x = udiv i64 42, %px ; thwart complexity-based canonicalization
+  %y = udiv i64 42, %py ; thwart complexity-based canonicalization
+  %z = udiv i64 42, %pz ; thwart complexity-based canonicalization
+  %1 = and i64 %x, %y
+  %2 = xor i64 %1, %z
+  %3 = or i64 %y, %2
+  ret i64 %3
+}
+
+; y | ((y & x) ^ z) -> (y | z)
+
+define i64 @and_xor_or6(i64 %px, i64 %py, i64 %pz) {
+; CHECK-LABEL: @and_xor_or6(
+; CHECK-NEXT:    [[X:%.*]] = udiv i64 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i64 42, [[PY:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = udiv i64 42, [[PZ:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[Y]], [[TMP2]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %x = udiv i64 42, %px ; thwart complexity-based canonicalization
+  %y = udiv i64 42, %py ; thwart complexity-based canonicalization
+  %z = udiv i64 42, %pz ; thwart complexity-based canonicalization
+  %1 = and i64 %y, %x
+  %2 = xor i64 %1, %z
+  %3 = or i64 %y, %2
+  ret i64 %3
+}
+
+; y | (z ^ (x & y)) -> (y | z)
+
+define i64 @and_xor_or7(i64 %px, i64 %py, i64 %pz) {
+; CHECK-LABEL: @and_xor_or7(
+; CHECK-NEXT:    [[X:%.*]] = udiv i64 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i64 42, [[PY:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = udiv i64 42, [[PZ:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[Y]], [[TMP2]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %x = udiv i64 42, %px ; thwart complexity-based canonicalization
+  %y = udiv i64 42, %py ; thwart complexity-based canonicalization
+  %z = udiv i64 42, %pz ; thwart complexity-based canonicalization
+  %1 = and i64 %x, %y
+  %2 = xor i64 %z, %1
+  %3 = or i64 %y, %2
+  ret i64 %3
+}
+
+; y | (z ^ (y & x)) -> (y | z)
+
+define i64 @and_xor_or8(i64 %px, i64 %py, i64 %pz) {
+; CHECK-LABEL: @and_xor_or8(
+; CHECK-NEXT:    [[X:%.*]] = udiv i64 42, [[PX:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i64 42, [[PY:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = udiv i64 42, [[PZ:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[Y]], [[TMP2]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %x = udiv i64 42, %px ; thwart complexity-based canonicalization
+  %y = udiv i64 42, %py ; thwart complexity-based canonicalization
+  %z = udiv i64 42, %pz ; thwart complexity-based canonicalization
+  %1 = and i64 %y, %x
+  %2 = xor i64 %z, %1
+  %3 = or i64 %y, %2
+  ret i64 %3
+}
+
+; w | (z ^ (y & x))
+
+define i64 @and_xor_or_negative(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @and_xor_or_negative(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], [[Z:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %1 = and i64 %y, %x
+  %2 = xor i64 %z, %1
+  %3 = or i64 %w, %2
+  ret i64 %3
+}
+
 ; PR37098 - https://bugs.llvm.org/show_bug.cgi?id=37098
 ; Reassociate bitwise logic to eliminate a shift.
 ; There are 4 commuted * 3 shift ops * 3 logic ops = 36 potential variations of this fold.
