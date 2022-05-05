@@ -26,4 +26,3 @@
 #include "mlir/Dialect/CIR/IR/CIROpsAttributes.h.inc"
 
 #endif // MLIR_DIALECT_CIR_IR_CIRATTRS_H_
-
