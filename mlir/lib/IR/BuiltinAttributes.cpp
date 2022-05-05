@@ -696,8 +696,8 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   size_t storageBitWidth = getDenseElementStorageWidth(bitWidth);
 
   // Compress the attribute values into a character buffer.
-  SmallVector<char, 8> data(llvm::divideCeil(storageBitWidth, CHAR_BIT) *
-                            values.size());
+  SmallVector<char, 8> data(
+      llvm::divideCeil(storageBitWidth * values.size(), CHAR_BIT));
   APInt intVal;
   for (unsigned i = 0, e = values.size(); i < e; ++i) {
     assert(eltType == values[i].getType() &&
@@ -1027,7 +1027,7 @@ int64_t DenseElementsAttr::getNumElements() const {
 template <typename APRangeT>
 static void writeAPIntsToBuffer(size_t storageWidth, std::vector<char> &data,
                                 APRangeT &&values) {
-  data.resize(llvm::divideCeil(storageWidth, CHAR_BIT) * llvm::size(values));
+  data.resize(llvm::divideCeil(storageWidth * llvm::size(values), CHAR_BIT));
   size_t offset = 0;
   for (auto it = values.begin(), e = values.end(); it != e;
        ++it, offset += storageWidth) {
@@ -1184,7 +1184,7 @@ static ShapedType mappingHelper(Fn mapping, Attr &attr, ShapedType inType,
     assert(newArrayType && "Unhandled tensor type");
 
   size_t numRawElements = attr.isSplat() ? 1 : newArrayType.getNumElements();
-  data.resize(llvm::divideCeil(storageBitWidth, CHAR_BIT) * numRawElements);
+  data.resize(llvm::divideCeil(storageBitWidth * numRawElements, CHAR_BIT));
 
   // Functor used to process a single element value of the attribute.
   auto processElt = [&](decltype(*attr.begin()) value, size_t index) {

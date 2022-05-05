@@ -159,7 +159,7 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @bool_vector_const() -> () "None" {
     // CHECK: spv.Constant dense<false> : vector<2xi1>
     %0 = spv.Constant dense<false> : vector<2xi1>
-    // CHECK: spv.Constant dense<[true, true, true]> : vector<3xi1>
+    // CHECK: spv.Constant dense<true> : vector<3xi1>
     %1 = spv.Constant dense<true> : vector<3xi1>
     // CHECK: spv.Constant dense<[false, true]> : vector<2xi1>
     %2 = spv.Constant dense<[false, true]> : vector<2xi1>
