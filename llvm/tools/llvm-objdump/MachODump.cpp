@@ -9163,14 +9163,20 @@ static void PrintNoteLoadCommand(MachO::note_command Nt) {
   outs() << "      size " << Nt.size << "\n";
 }
 
-static void PrintBuildToolVersion(MachO::build_tool_version bv) {
-  outs() << "      tool " << MachOObjectFile::getBuildTool(bv.tool) << "\n";
+static void PrintBuildToolVersion(MachO::build_tool_version bv, bool verbose) {
+  outs() << "      tool ";
+  if (verbose)
+    outs() << MachOObjectFile::getBuildTool(bv.tool);
+  else
+    outs() << bv.tool;
+  outs() << "\n";
   outs() << "   version " << MachOObjectFile::getVersionString(bv.version)
          << "\n";
 }
 
 static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
-                                         MachO::build_version_command bd) {
+                                         MachO::build_version_command bd,
+                                         bool verbose) {
   outs() << "       cmd LC_BUILD_VERSION\n";
   outs() << "   cmdsize " << bd.cmdsize;
   if (bd.cmdsize !=
@@ -9179,8 +9185,12 @@ static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
     outs() << " Incorrect size\n";
   else
     outs() << "\n";
-  outs() << "  platform " << MachOObjectFile::getBuildPlatform(bd.platform)
-         << "\n";
+  outs() << "  platform ";
+  if (verbose)
+    outs() << MachOObjectFile::getBuildPlatform(bd.platform);
+  else
+    outs() << bd.platform;
+  outs() << "\n";
   if (bd.sdk)
     outs() << "       sdk " << MachOObjectFile::getVersionString(bd.sdk)
            << "\n";
@@ -9191,7 +9201,7 @@ static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
   outs() << "    ntools " << bd.ntools << "\n";
   for (unsigned i = 0; i < bd.ntools; ++i) {
     MachO::build_tool_version bv = obj->getBuildToolVersion(i);
-    PrintBuildToolVersion(bv);
+    PrintBuildToolVersion(bv, verbose);
   }
 }
 
@@ -10168,7 +10178,7 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
     } else if (Command.C.cmd == MachO::LC_BUILD_VERSION) {
       MachO::build_version_command Bv =
           Obj->getBuildVersionLoadCommand(Command);
-      PrintBuildVersionLoadCommand(Obj, Bv);
+      PrintBuildVersionLoadCommand(Obj, Bv, verbose);
     } else if (Command.C.cmd == MachO::LC_SOURCE_VERSION) {
       MachO::source_version_command Sd = Obj->getSourceVersionCommand(Command);
       PrintSourceVersionCommand(Sd);
