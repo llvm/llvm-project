@@ -533,9 +533,9 @@ static void GenerateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
                                               BackendActionTy act,
                                               llvm::Module &llvmModule,
                                               llvm::raw_pwrite_stream &os) {
-  assert((act == BackendActionTy::Backend_EmitObj) ||
-         (act == BackendActionTy::Backend_EmitAssembly) &&
-             "Unsupported action");
+  assert(((act == BackendActionTy::Backend_EmitObj) ||
+          (act == BackendActionTy::Backend_EmitAssembly)) &&
+         "Unsupported action");
 
   // Set-up the pass manager, i.e create an LLVM code-gen pass pipeline.
   // Currently only the legacy pass manager is supported.
