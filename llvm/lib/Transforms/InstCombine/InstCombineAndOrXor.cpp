@@ -2688,6 +2688,14 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (match(Op1, m_Xor(m_Specific(B), m_Specific(A))))
       return BinaryOperator::CreateOr(Op1, C);
 
+  // ((A & B) ^ C) | B -> C | B
+  if (match(Op0, m_c_Xor(m_c_And(m_Value(A), m_Specific(Op1)), m_Value(C))))
+    return BinaryOperator::CreateOr(C, Op1);
+
+  // B | ((A & B) ^ C) -> B | C
+  if (match(Op1, m_c_Xor(m_c_And(m_Value(A), m_Specific(Op0)), m_Value(C))))
+    return BinaryOperator::CreateOr(Op0, C);
+
   // ((B | C) & A) | B -> B | (A & C)
   if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
