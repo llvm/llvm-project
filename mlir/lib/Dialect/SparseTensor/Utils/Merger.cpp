@@ -572,15 +572,13 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
       if (absentRegion.empty()) {
         // Simple mapping over existing values.
         return mapSet(kind, child0, Value(), unop);
-      } else {
-        // Use a disjunction with `unop` on the left and the absent value as an
-        // invariant on the right.
-        Block &absentBlock = absentRegion.front();
-        YieldOp absentYield = cast<YieldOp>(absentBlock.getTerminator());
-        Value absentVal = absentYield.result();
-        unsigned rhs = addExp(kInvariant, absentVal);
-        return takeDisj(kind, child0, buildLattices(rhs, i), unop);
-      }
+      } // Use a disjunction with `unop` on the left and the absent value as an
+      // invariant on the right.
+      Block &absentBlock = absentRegion.front();
+      YieldOp absentYield = cast<YieldOp>(absentBlock.getTerminator());
+      Value absentVal = absentYield.result();
+      unsigned rhs = addExp(kInvariant, absentVal);
+      return takeDisj(kind, child0, buildLattices(rhs, i), unop);
     }
   case kMulF:
   case kMulI:
