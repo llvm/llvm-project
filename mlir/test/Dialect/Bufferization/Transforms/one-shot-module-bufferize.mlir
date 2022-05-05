@@ -423,8 +423,8 @@ func.func @main() {
   // CHECK-NEXT:   %[[dC:.*]] = memref.cast %[[C]] : memref<f32> to memref<*xf32>
   %res2 = tensor.cast %res: tensor<f32> to tensor<*xf32>
 
-  // CHECK-NEXT:   call @print_memref_f32(%[[dC]]) : (memref<*xf32>) -> ()
-  call @print_memref_f32(%res2) : (tensor<*xf32>) -> ()
+  // CHECK-NEXT:   call @printMemrefF32(%[[dC]]) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%res2) : (tensor<*xf32>) -> ()
 
   // CHECK-DAG:   memref.dealloc %[[A]] : memref<64xf32>
   // CHECK-DAG:   memref.dealloc %[[B]] : memref<64xf32>
@@ -433,8 +433,8 @@ func.func @main() {
   return
 }
 
-//     CHECK:   func private @print_memref_f32(memref<*xf32>)
-func.func private @print_memref_f32(tensor<*xf32>)
+//     CHECK:   func private @printMemrefF32(memref<*xf32>)
+func.func private @printMemrefF32(tensor<*xf32>)
 
 // -----
 

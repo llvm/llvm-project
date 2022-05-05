@@ -9,7 +9,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)
 
 // Creates and returns a 2-D buffer of size (%s1, %s2) filled with the value %f
 func.func @alloc_2d_filled_f32(%s1 : index, %s2 : index, %f : f32) -> memref<?x?xf32> {
@@ -41,7 +41,7 @@ func.func @main() {
   memref.store %f10, %in2D[%c0, %c3] : memref<?x?xf32>
   call @conv_2d(%in2D, %filter2D, %out2D) : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
   %out2D_ = memref.cast %out2D : memref<?x?xf32> to memref<*xf32>
-  call @print_memref_f32(%out2D_): (memref<*xf32>) -> ()
+  call @printMemrefF32(%out2D_): (memref<*xf32>) -> ()
 
   memref.dealloc %filter2D : memref<?x?xf32>
   memref.dealloc %in2D : memref<?x?xf32>

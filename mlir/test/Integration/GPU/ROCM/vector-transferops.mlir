@@ -81,13 +81,13 @@ func.func @main() {
 
   // CHECK: [1.23, 2.46, 2.46, 1.23]
   call @vectransferx2(%24, %26) : (memref<?xf32>,  memref<?xf32>) -> ()
-  call @print_memref_f32(%cast1) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%cast1) : (memref<*xf32>) -> ()
 
   // CHECK: [2.46, 2.46, 2.46, 2.46]
   call @vectransferx4(%24, %26) : (memref<?xf32>,  memref<?xf32>) -> ()
-  call @print_memref_f32(%cast1) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%cast1) : (memref<*xf32>) -> ()
   return
 }
 
 func.func private @mgpuMemGetDeviceMemRef1dFloat(%ptr : memref<?xf32>) -> (memref<?xf32>)
-func.func private @print_memref_f32(%ptr : memref<*xf32>)
+func.func private @printMemrefF32(%ptr : memref<*xf32>)

@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -pass-pipeline="func.func(convert-arith-to-llvm),convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
-func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
-func.func private @print_memref_i32(memref<*xi32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefI32(memref<*xi32>) attributes { llvm.emit_c_interface }
 func.func private @printNewline() -> ()
 
 memref.global "private" @gv0 : memref<4xf32> = dense<[0.0, 1.0, 2.0, 3.0]>
@@ -13,7 +13,7 @@ func.func @test1DMemref() {
   // CHECK: sizes = [4]
   // CHECK: strides = [1]
   // CHECK: [0,  1,  2,  3]
-  call @print_memref_f32(%U) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%U) : (memref<*xf32>) -> ()
   call @printNewline() : () -> ()
 
   // Overwrite some of the elements.
@@ -28,7 +28,7 @@ func.func @test1DMemref() {
   // CHECK: sizes = [4]
   // CHECK: strides = [1]
   // CHECK: [4,  1,  5,  3]
-  call @print_memref_f32(%U) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%U) : (memref<*xf32>) -> ()
   call @printNewline() : () -> ()
   return
 }
@@ -44,7 +44,7 @@ func.func @testConstantMemref() {
   // CHECK: [0,   1]
   // CHECK: [2,   3]
   // CHECK: [4,   5]
-  call @print_memref_i32(%U) : (memref<*xi32>) -> ()
+  call @printMemrefI32(%U) : (memref<*xi32>) -> ()
   call @printNewline() : () -> ()
   return
 }
@@ -61,7 +61,7 @@ func.func @test2DMemref() {
   // CHECK: [2,   3]
   // CHECK: [4,   5]
   // CHECK: [6,   7]
-  call @print_memref_f32(%U) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%U) : (memref<*xf32>) -> ()
   call @printNewline() : () -> ()
 
   // Overwrite the 1.0 (at index [0, 1]) with 10.0
@@ -77,7 +77,7 @@ func.func @test2DMemref() {
   // CHECK: [2,   3]
   // CHECK: [4,   5]
   // CHECK: [6,   7]
-  call @print_memref_f32(%U) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%U) : (memref<*xf32>) -> ()
   call @printNewline() : () -> ()
   return
 }
@@ -91,7 +91,7 @@ func.func @testScalarMemref() {
   // CHECK: sizes = []
   // CHECK: strides = []
   // CHECK: [11]
-  call @print_memref_i32(%U) : (memref<*xi32>) -> ()
+  call @printMemrefI32(%U) : (memref<*xi32>) -> ()
   call @printNewline() : () -> ()
   return
 }

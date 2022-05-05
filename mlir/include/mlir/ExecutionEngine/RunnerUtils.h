@@ -341,49 +341,54 @@ int64_t verifyMemRef(UnrankedMemRefType<T> &actual,
 // Currently exposed C API.
 ////////////////////////////////////////////////////////////////////////////////
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemrefShapeI8(UnrankedMemRefType<int8_t> *m);
+_mlir_ciface_printMemrefShapeI8(UnrankedMemRefType<int8_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemrefShapeI32(UnrankedMemRefType<int32_t> *m);
+_mlir_ciface_printMemrefShapeI32(UnrankedMemRefType<int32_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemrefShapeI64(UnrankedMemRefType<int64_t> *m);
+_mlir_ciface_printMemrefShapeI64(UnrankedMemRefType<int64_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemrefShapeF32(UnrankedMemRefType<float> *m);
+_mlir_ciface_printMemrefShapeF32(UnrankedMemRefType<float> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemrefShapeF64(UnrankedMemRefType<double> *m);
+_mlir_ciface_printMemrefShapeF64(UnrankedMemRefType<double> *m);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemrefI8(UnrankedMemRefType<int8_t> *m);
+_mlir_ciface_printMemrefI8(UnrankedMemRefType<int8_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemrefI32(UnrankedMemRefType<int32_t> *m);
+_mlir_ciface_printMemrefI32(UnrankedMemRefType<int32_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemrefF32(UnrankedMemRefType<float> *m);
+_mlir_ciface_printMemrefI64(UnrankedMemRefType<int64_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemrefF64(UnrankedMemRefType<double> *m);
+_mlir_ciface_printMemrefF32(UnrankedMemRefType<float> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemrefF64(UnrankedMemRefType<double> *m);
+
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t _mlir_ciface_nanoTime();
 
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefI32(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefI64(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefF32(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefF64(int64_t rank, void *ptr);
+extern "C" MLIR_RUNNERUTILS_EXPORT void printCString(char *str);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemref0dF32(StridedMemRefType<float, 0> *m);
+_mlir_ciface_printMemref0dF32(StridedMemRefType<float, 0> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemref1dF32(StridedMemRefType<float, 1> *m);
+_mlir_ciface_printMemref1dF32(StridedMemRefType<float, 1> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemref2dF32(StridedMemRefType<float, 2> *m);
+_mlir_ciface_printMemref2dF32(StridedMemRefType<float, 2> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemref3dF32(StridedMemRefType<float, 3> *m);
+_mlir_ciface_printMemref3dF32(StridedMemRefType<float, 3> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-mlirCifacePrintMemref4dF32(StridedMemRefType<float, 4> *m);
+_mlir_ciface_printMemref4dF32(StridedMemRefType<float, 4> *m);
 
-extern "C" MLIR_RUNNERUTILS_EXPORT void mlirCifacePrintMemrefVector4x4xf32(
+extern "C" MLIR_RUNNERUTILS_EXPORT void _mlir_ciface_printMemrefVector4x4xf32(
     StridedMemRefType<Vector2D<4, 4, float>, 2> *m);
 
-extern "C" MLIR_RUNNERUTILS_EXPORT int64_t mlirCifaceVerifyMemRefI32(
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t _mlir_ciface_verifyMemRefI32(
     UnrankedMemRefType<int32_t> *actual, UnrankedMemRefType<int32_t> *expected);
-extern "C" MLIR_RUNNERUTILS_EXPORT int64_t mlirCifaceVerifyMemRefF32(
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t _mlir_ciface_verifyMemRefF32(
     UnrankedMemRefType<float> *actual, UnrankedMemRefType<float> *expected);
-extern "C" MLIR_RUNNERUTILS_EXPORT int64_t mlirCifaceVerifyMemRefF64(
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t _mlir_ciface_verifyMemRefF64(
     UnrankedMemRefType<double> *actual, UnrankedMemRefType<double> *expected);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT int64_t verifyMemRefI32(int64_t rank,

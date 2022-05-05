@@ -51,6 +51,6 @@ module attributes {
     return
   }
   func.func private @fillResource1DFloat(%0 : memref<?xf32>, %1 : f32)
-  func.func private @print_memref_f32(%ptr : memref<*xf32>)
+  func.func private @printMemrefF32(%ptr : memref<*xf32>)
 }
 

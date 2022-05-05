@@ -80,7 +80,7 @@ func.func @entry() {
 
   // CHECK: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
   %U = memref.cast %DST10 :  memref<1x10xf32> to memref<*xf32>
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   memref.dealloc %LHS10: memref<1x10xf32>
   memref.dealloc %RHS10: memref<1x10xf32>
@@ -130,5 +130,5 @@ func.func @entry() {
 
 func.func private @rtclock() -> f64
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)
   attributes { llvm.emit_c_interface }

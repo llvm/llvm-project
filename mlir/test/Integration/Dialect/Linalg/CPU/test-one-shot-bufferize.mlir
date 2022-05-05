@@ -30,7 +30,7 @@ func.func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: ten
   }
 
   // %B = tensor.cast %3 : tensor<?x2xf32> to tensor<*xf32>
-  // call @print_memref_f32(%B) : (tensor<*xf32>) -> ()
+  // call @printMemrefF32(%B) : (tensor<*xf32>) -> ()
 
   %4 = affine.apply #map0(%c0, %c64)[%c2]
   %5 = linalg.init_tensor [%4, 2] : tensor<?x2xf32>
@@ -47,10 +47,10 @@ func.func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: ten
   }
 
   // %A = tensor.cast %6 : tensor<?x2xf32> to tensor<*xf32>
-  // call @print_memref_f32(%A) : (tensor<*xf32>) -> ()
+  // call @printMemrefF32(%A) : (tensor<*xf32>) -> ()
 
   // %C = tensor.cast %0 : tensor<f32> to tensor<*xf32>
-  // call @print_memref_f32(%C) : (tensor<*xf32>) -> ()
+  // call @printMemrefF32(%C) : (tensor<*xf32>) -> ()
 
   %7 = scf.for %arg3 = %c0 to %c64 step %c2 iter_args(%arg4 = %0) -> (tensor<f32>) {
     %8 = tensor.extract_slice %arg0[%arg3] [2] [1] : tensor<64xf32> to tensor<2xf32>
@@ -64,11 +64,11 @@ func.func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: ten
     %16 = linalg.dot ins(%13, %15 : tensor<2xf32>, tensor<2xf32>) outs(%arg4 : tensor<f32>) -> tensor<f32>
 
     // %AA = tensor.cast %13 : tensor<2xf32> to tensor<*xf32>
-    // call @print_memref_f32(%AA) : (tensor<*xf32>) -> ()
+    // call @printMemrefF32(%AA) : (tensor<*xf32>) -> ()
     // %BB = tensor.cast %15 : tensor<2xf32> to tensor<*xf32>
-    // call @print_memref_f32(%BB) : (tensor<*xf32>) -> ()
+    // call @printMemrefF32(%BB) : (tensor<*xf32>) -> ()
     // %CC = tensor.cast %16 : tensor<f32> to tensor<*xf32>
-    // call @print_memref_f32(%CC) : (tensor<*xf32>) -> ()
+    // call @printMemrefF32(%CC) : (tensor<*xf32>) -> ()
 
     scf.yield %16 : tensor<f32>
   }
@@ -94,9 +94,9 @@ func.func @main() {
 
 //      CHECK: Unranked Memref base@ = {{.*}} rank = 0 offset = 0 sizes = [] strides = [] data =
 // CHECK-NEXT: [128]
-  call @print_memref_f32(%res2) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%res2) : (tensor<*xf32>) -> ()
 
   return
 }
 
-func.func private @print_memref_f32(tensor<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefF32(tensor<*xf32>) attributes { llvm.emit_c_interface }

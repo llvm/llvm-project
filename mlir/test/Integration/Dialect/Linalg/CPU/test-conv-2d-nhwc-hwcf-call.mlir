@@ -9,7 +9,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)
 
 // Creates and returns 4-D buffer of size (%s1, %s2, %s3, %s4) filled with the value %f
 func.func @alloc_4d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %f : f32) -> memref<?x?x?x?xf32> {
@@ -43,7 +43,7 @@ func.func @main() {
   memref.store %f10, %in2D_nhwc[%c0, %c0, %c3, %c0] : memref<?x?x?x?xf32>
   call @conv_2d_nhwc_hwcf(%in2D_nhwc, %filter2D_nhwc, %out2D_nhwc) : (memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>) -> ()
   %out2D_nhwc_ = memref.cast %out2D_nhwc : memref<?x?x?x?xf32> to memref<*xf32>
-  call @print_memref_f32(%out2D_nhwc_): (memref<*xf32>) -> ()
+  call @printMemrefF32(%out2D_nhwc_): (memref<*xf32>) -> ()
 
   memref.dealloc %filter2D_nhwc : memref<?x?x?x?xf32>
   memref.dealloc %in2D_nhwc : memref<?x?x?x?xf32>

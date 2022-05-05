@@ -40,7 +40,7 @@ func.func @main() {
   %num_flops_i = arith.index_cast %num_flops : index to i16
   %num_flops_f = arith.sitofp %num_flops_i : i16 to f64
   %flops = arith.divf %num_flops_f, %t : f64
-  call @print_flops(%flops) : (f64) -> ()
+  call @printFlops(%flops) : (f64) -> ()
 
   memref.dealloc %A : memref<16x16xf32>
   memref.dealloc %B : memref<16x16xf32>
@@ -72,5 +72,5 @@ func.func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2
   return
 }
 
-func.func private @print_flops(f64)
+func.func private @printFlops(f64)
 func.func private @rtclock() -> f64

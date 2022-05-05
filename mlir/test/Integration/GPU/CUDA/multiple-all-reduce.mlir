@@ -65,13 +65,13 @@ func.func @main() {
     gpu.terminator
   }
 
-  call @print_memref_f32(%cast_sum) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%cast_sum) : (memref<*xf32>) -> ()
   // CHECK: [31, 39]
 
-  call @print_memref_f32(%cast_mul) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%cast_mul) : (memref<*xf32>) -> ()
   // CHECK: [0, 27720]
 
   return
 }
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)

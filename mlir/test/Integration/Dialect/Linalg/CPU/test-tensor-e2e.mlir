@@ -14,13 +14,13 @@ func.func @main() {
   %0 = call @foo() : () -> tensor<4xf32>
 
   // Instead of relying on tensor_store which introduces aliasing, we rely on
-  // the conversion of print_memref_f32(tensor<*xf32>) to
-  // print_memref_f32(memref<*xf32>).
+  // the conversion of printMemrefF32(tensor<*xf32>) to
+  // printMemrefF32(memref<*xf32>).
   // Note that this is skipping a step and we would need at least some function
   // attribute to declare that this conversion is valid (e.g. when we statically
   // know that things will play nicely at the C ABI boundary).
   %unranked = tensor.cast %0 : tensor<4xf32> to tensor<*xf32>
-  call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%unranked) : (tensor<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 1 offset = 0 sizes = [4] strides = [1] data =
@@ -33,4 +33,4 @@ func.func @main() {
 // Note that this is skipping a step and we would need at least some function
 // attribute to declare that this conversion is valid (e.g. when we statically
 // know that things will play nicely at the C ABI boundary).
-func.func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)

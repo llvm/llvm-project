@@ -51,9 +51,9 @@ func.func @main() {
   %11 = call @mgpuMemGetDeviceMemRef1dFloat(%5) : (memref<?xf32>) -> (memref<?xf32>)
 
   call @vecadd(%9, %10, %11) : (memref<?xf32>, memref<?xf32>, memref<?xf32>) -> ()
-  call @print_memref_f32(%8) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%8) : (memref<*xf32>) -> ()
   return
 }
 
 func.func private @mgpuMemGetDeviceMemRef1dFloat(%ptr : memref<?xf32>) -> (memref<?xf32>)
-func.func private @print_memref_f32(%ptr : memref<*xf32>)
+func.func private @printMemrefF32(%ptr : memref<*xf32>)

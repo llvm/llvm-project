@@ -58,10 +58,10 @@ module attributes {
         blocks in (%one, %one, %one) threads in (%one, %one, %one)
         args(%input : memref<6xi32>, %output : memref<6xi32>)
     %result = memref.cast %output : memref<6xi32> to memref<*xi32>
-    call @print_memref_i32(%result) : (memref<*xi32>) -> ()
+    call @printMemrefI32(%result) : (memref<*xi32>) -> ()
     return
   }
 
   func.func private @fillI32Buffer(%arg0 : memref<?xi32>, %arg1 : i32)
-  func.func private @print_memref_i32(%ptr : memref<*xi32>)
+  func.func private @printMemrefI32(%ptr : memref<*xi32>)
 }

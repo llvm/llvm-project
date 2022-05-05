@@ -63,7 +63,7 @@ func.func @main() {
   }
 
   // Print the memref after computation.
-  call @print_memref_f32(%3) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%3) : (memref<*xf32>) -> ()
   // CHECK: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
   // CHECK-NEXT: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
   // CHECK-NEXT: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
@@ -83,4 +83,4 @@ func.func @main() {
   return
 }
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)

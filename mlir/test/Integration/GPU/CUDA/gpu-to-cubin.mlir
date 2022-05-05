@@ -31,13 +31,13 @@ func.func @main() {
   %22 = memref.cast %arg0 : memref<5xf32> to memref<?xf32>
   %23 = memref.cast %22 : memref<?xf32> to memref<*xf32>
   gpu.host_register %23 : memref<*xf32>
-  call @print_memref_f32(%23) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%23) : (memref<*xf32>) -> ()
   %24 = arith.constant 1.0 : f32
   call @other_func(%24, %22) : (f32, memref<?xf32>) -> ()
-  call @print_memref_f32(%23) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%23) : (memref<*xf32>) -> ()
   %val1 = vector.transfer_read %arg0[%c0], %v0: memref<5xf32>, vector<2xf32>
   vector.print %val1: vector<2xf32>
   return
 }
 
-func.func private @print_memref_f32(%ptr : memref<*xf32>)
+func.func private @printMemrefF32(%ptr : memref<*xf32>)

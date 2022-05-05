@@ -51,11 +51,11 @@ module attributes {
         blocks in (%one, %one, %one) threads in (%one, %one, %one)
         args(%input1 : memref<3xf32>, %input2 : memref<3x3xf32>, %output : memref<3x3x3xf32>)
     %result = memref.cast %output : memref<3x3x3xf32> to memref<*xf32>
-    call @print_memref_f32(%result) : (memref<*xf32>) -> ()
+    call @printMemrefF32(%result) : (memref<*xf32>) -> ()
     return
   }
   func.func private @fillF32Buffer1D(%arg0 : memref<?xf32>, %arg1 : f32)
   func.func private @fillF32Buffer2D(%arg0 : memref<?x?xf32>, %arg1 : f32)
   func.func private @fillF32Buffer3D(%arg0 : memref<?x?x?xf32>, %arg1 : f32)
-  func.func private @print_memref_f32(%arg0 : memref<*xf32>)
+  func.func private @printMemrefF32(%arg0 : memref<*xf32>)
 }

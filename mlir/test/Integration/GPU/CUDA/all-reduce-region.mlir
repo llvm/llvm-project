@@ -29,8 +29,8 @@ func.func @main() {
     memref.store %res, %dst[%tx] : memref<?xf32>
     gpu.terminator
   }
-  call @print_memref_f32(%cast_dst) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%cast_dst) : (memref<*xf32>) -> ()
   return
 }
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)
