@@ -1,4 +1,5 @@
-; RUN: opt < %s -O0 -S | FileCheck --check-prefixes=CHECK %s
+; RUN: opt < %s -enable-coroutines -O0 -S | FileCheck --check-prefixes=CHECK %s
+; RUN: opt < %s -enable-coroutines -passes='default<O0>' -S | FileCheck --check-prefixes=CHECK %s
 
 %swift.async_func_pointer = type <{ i32, i32 }>
 %swift.context = type { %swift.context*, void (%swift.context*)*, i64 }
