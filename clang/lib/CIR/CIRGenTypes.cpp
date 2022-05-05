@@ -99,9 +99,12 @@ CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
   (void)InsertResult;
   assert(InsertResult && "Recursively compiling a struct?");
 
+  // Force conversion of non-virtual base classes recursively.
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(recordDecl)) {
-    assert(cxxRecordDecl->bases().begin() == cxxRecordDecl->bases().end() &&
-           "Base clases NYI");
+    for (const auto &I : cxxRecordDecl->bases()) {
+      (void)I;
+      llvm_unreachable("NYI");
+    }
   }
 
   entry = computeRecordLayout(recordDecl);
