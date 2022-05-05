@@ -86,14 +86,6 @@ static DecodeStatus DecodeLD8RegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodePTRREGSRegisterClass(MCInst &Inst, unsigned RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  // Note: this function must be defined but does not seem to be called.
-  assert(false && "unimplemented: PTRREGS register class");
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn, uint64_t Address,
                                  const MCDisassembler *Decoder);
 
