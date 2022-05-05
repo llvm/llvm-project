@@ -313,6 +313,7 @@ set(files
   __format/formatter_output.h
   __format/formatter_pointer.h
   __format/formatter_string.h
+  __format/formatter_tuple.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
   __format/unicode.h

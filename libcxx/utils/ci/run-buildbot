@@ -194,6 +194,7 @@ check-generated-output)
            --exclude '*.dat' \
            --exclude 'escaped_output.*.pass.cpp' \
            --exclude 'format_tests.h' \
+           --exclude 'format.functions.tests.h' \
            --exclude 'formatter.*.pass.cpp' \
            --exclude 'grep.pass.cpp' \
            --exclude 'locale-specific_form.pass.cpp' \
