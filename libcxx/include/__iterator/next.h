@@ -58,16 +58,14 @@ struct __fn {
   }
 
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr _Ip operator()(_Ip __x, _Sp __bound) const {
-    ranges::advance(__x, __bound);
+  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, _Sp __bound_sentinel) const {
+    ranges::advance(__x, __bound_sentinel);
     return __x;
   }
 
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n, _Sp __bound) const {
-    ranges::advance(__x, __n, __bound);
+  _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n, _Sp __bound_sentinel) const {
+    ranges::advance(__x, __n, __bound_sentinel);
     return __x;
   }
 };

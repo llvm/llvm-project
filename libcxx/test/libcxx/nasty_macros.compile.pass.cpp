@@ -78,6 +78,7 @@
 // Obviously we can only define these on non-Windows platforms.
 #ifndef _WIN32
 # define __allocator NASTY_MACRO
+# define __bound NASTY_MACRO
 # define __deallocate NASTY_MACRO
 # define __deref NASTY_MACRO
 # define __full NASTY_MACRO
