@@ -4307,6 +4307,15 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
         }
       }
 
+      if (getLangOpts().MSVCCompat && !getLangOpts().CPlusPlus20) {
+        auto UnqualifiedBase = R.getAsSingle<ClassTemplateDecl>();
+        if (UnqualifiedBase) {
+          Diag(IdLoc, diag::ext_unqualified_base_class)
+              << SourceRange(IdLoc, Init->getSourceRange().getEnd());
+          BaseType = UnqualifiedBase->getInjectedClassNameSpecialization();
+        }
+      }
+
       // If no results were found, try to correct typos.
       TypoCorrection Corr;
       MemInitializerValidatorCCC CCC(ClassDecl);
