@@ -65,9 +65,21 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   return std::string(typeName);
 }
 
+// isSafeToConvert - Return true if it is safe to convert the specified record
+// decl to CIR and lay it out, false if doing so would cause us to get into a
+// recursive compilation mess.
+static bool isSafeToConvert(const RecordDecl *RD, CIRGenTypes &CGT) {
+  // If no structs are being laid out, we can certainly do this one.
+  if (CGT.noRecordsBeingLaidOut())
+    return true;
+
+  llvm_unreachable("NYI");
+}
+
 mlir::Type
 CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
   const auto *key = Context.getTagDeclType(recordDecl).getTypePtr();
+
   mlir::cir::StructType &entry = recordDeclTypes[key];
 
   recordDecl = recordDecl->getDefinition();
@@ -77,7 +89,10 @@ CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
   if (!recordDecl || !recordDecl->isCompleteDefinition() || entry)
     return entry;
 
-  // TODO: Implement checking for whether or not this type is safe to convert.
+  // If converting this type would cause us to infinitely loop, don't do it!
+  if (!isSafeToConvert(recordDecl, *this)) {
+    llvm_unreachable("NYI");
+  }
 
   // TODO: handle whether or not layout was skipped and recursive record layout
 
