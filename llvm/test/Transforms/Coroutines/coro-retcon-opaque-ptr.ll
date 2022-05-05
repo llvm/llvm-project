@@ -33,18 +33,9 @@ cleanup:                                          ; preds = %loop
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [8 x i8], align 4
-; CHECK-NEXT:    store i32 4, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    call void @print(i32 4)
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
-; CHECK-NEXT:    [[N_VAL_RELOAD_I:%.*]] = load i32, ptr [[TMP0]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[INC_I:%.*]] = add i32 [[N_VAL_RELOAD_I]], 1
-; CHECK-NEXT:    store i32 [[INC_I]], ptr [[TMP0]], align 4, !alias.scope !0
-; CHECK-NEXT:    call void @print(i32 [[INC_I]]), !noalias !0
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
-; CHECK-NEXT:    [[N_VAL_RELOAD_I1:%.*]] = load i32, ptr [[TMP0]], align 4, !alias.scope !3
-; CHECK-NEXT:    [[INC_I2:%.*]] = add i32 [[N_VAL_RELOAD_I1]], 1
-; CHECK-NEXT:    call void @print(i32 [[INC_I2]]), !noalias !3
+; CHECK-NEXT:    call void @print(i32 5), !noalias !0
+; CHECK-NEXT:    call void @print(i32 6), !noalias !3
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
