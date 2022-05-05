@@ -320,10 +320,8 @@ static void appendCodePoint(unsigned Codepoint,
                             llvm::SmallVectorImpl<char> &Str) {
   char ResultBuf[4];
   char *ResultPtr = ResultBuf;
-  bool Res = llvm::ConvertCodePointToUTF8(Codepoint, ResultPtr);
-  (void)Res;
-  assert(Res && "Unexpected conversion failure");
-  Str.append(ResultBuf, ResultPtr);
+  if (llvm::ConvertCodePointToUTF8(Codepoint, ResultPtr))
+    Str.append(ResultBuf, ResultPtr);
 }
 
 void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
