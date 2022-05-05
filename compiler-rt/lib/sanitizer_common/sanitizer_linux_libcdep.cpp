@@ -462,7 +462,11 @@ static void GetTls(uptr *addr, uptr *size) {
 #elif SANITIZER_GLIBC && defined(__x86_64__)
   // For aarch64 and x86-64, use an O(1) approach which requires relatively
   // precise ThreadDescriptorSize. g_tls_size was initialized in InitTlsSize.
+#  if SANITIZER_X32
+  asm("mov %%fs:8,%0" : "=r"(*addr));
+#  else
   asm("mov %%fs:16,%0" : "=r"(*addr));
+#  endif
   *size = g_tls_size;
   *addr -= *size;
   *addr += ThreadDescriptorSize();
