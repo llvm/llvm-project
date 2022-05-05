@@ -708,8 +708,8 @@ define <2 x i64> @bitcast_vec_cond(<16 x i1> %cond, <2 x i64> %c, <2 x i64> %d) 
   ret <2 x i64> %r
 }
 
-define <vscale x 2 x i64> @bitcast_vec_condi_scalable(<vscale x 16 x i1> %cond, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d) {
-; CHECK-LABEL: @bitcast_vec_condi_scalable(
+define <vscale x 2 x i64> @bitcast_vec_cond_scalable(<vscale x 16 x i1> %cond, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d) {
+; CHECK-LABEL: @bitcast_vec_cond_scalable(
 ; CHECK-NEXT:    [[S:%.*]] = sext <vscale x 16 x i1> [[COND:%.*]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    [[T9:%.*]] = bitcast <vscale x 16 x i8> [[S]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[NOTT9:%.*]] = xor <vscale x 2 x i64> [[T9]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
