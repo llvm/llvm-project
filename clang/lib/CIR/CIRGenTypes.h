@@ -151,9 +151,9 @@ public:
                                clang::CXXCtorType Type);
 
   /// convertTypeForMem - Convert type T into an mlir::Type. This differs from
-  /// convertType in that it is used to convert to the memory representation for
-  /// a type. For example, the scalar representation for _Bool is i1, but the
-  /// memory representation is usually i8 or i32, depending on the target.
+  /// convertType in that it is used to convert to the memory representation
+  /// for a type. For example, the scalar representation for _Bool is i1, but
+  /// the memory representation is usually i8 or i32, depending on the target.
   // TODO: convert this comment to account for MLIR's equivalence
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 
@@ -174,7 +174,8 @@ public:
   // Key points:
   // - The CIRGenFunctionInfo for emitting a specific call site must include
   //   entries for the optional arguments.
-  // - The function type used at the call site must reflect the formal signature
+  // - The function type used at the call site must reflect the formal
+  // signature
   //   of the declaration being called, or else the call will go away.
   // - For the most part, unprototyped functions are called by casting to a
   //   formal signature inferred from the specific argument types used at the
