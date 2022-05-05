@@ -992,6 +992,82 @@ static bool checkArgPlaceholdersForOverload(Sema &S, MultiExprArg Args,
   return false;
 }
 
+static bool FriendMembersDifferByConstraints(Sema &S, DeclContext *CurContext,
+                                             FunctionDecl *Old,
+                                             FunctionDecl *New) {
+  // Only necessary/valid if we're instantiating a
+  // ClassTemplateSpecializationDecl.
+  if (CurContext->getDeclKind() != Decl::ClassTemplateSpecialization)
+    return false;
+
+  // Only when we're dealing with a friend function.
+  if (!Old->getFriendObjectKind() || !New->getFriendObjectKind())
+    return false;
+
+  // If the the two functions share lexical declaration context, they are not in
+  // separate instantations.
+  if (New->getLexicalDeclContext() == Old->getLexicalDeclContext())
+    return false;
+
+  auto *OldLexCtx =
+      dyn_cast<ClassTemplateSpecializationDecl>(Old->getLexicalDeclContext());
+  auto *NewLexCtx =
+      dyn_cast<ClassTemplateSpecializationDecl>(New->getLexicalDeclContext());
+
+  if (!OldLexCtx || !NewLexCtx)
+    return false;
+
+  auto InitAssocConstrs = [](FunctionDecl *FD,
+                             SmallVectorImpl<const Expr *> &AC) {
+    if (const auto *FT = FD->getDescribedFunctionTemplate())
+      FT->getAssociatedConstraints(AC);
+    else
+      FD->getAssociatedConstraints(AC);
+  };
+  SmallVector<const Expr *, 3> OldAC;
+  SmallVector<const Expr *, 3> NewAC;
+  InitAssocConstrs(Old, OldAC);
+  InitAssocConstrs(New, NewAC);
+
+  assert(OldAC.size() == NewAC.size() &&
+         "Should not have been identical unless constraints were the same?");
+
+  // At this point, we know the constraints lists should be the same.
+  auto *OldBegin = OldAC.begin();
+  auto *NewBegin = NewAC.begin();
+
+  auto SubstConstraint = [](Sema &S, ClassTemplateSpecializationDecl *LexCtx,
+                            const Expr *Constraint) {
+    Sema::ContextRAII SavedContext(S, LexCtx);
+    LocalInstantiationScope Scope(S);
+    EnterExpressionEvaluationContext EvalCtx(
+        S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+    Sema::SFINAETrap Trap(S);
+    return S.SubstConstraintExpr(const_cast<Expr *>(Constraint),
+                                 S.getTemplateInstantiationArgs(LexCtx));
+  };
+
+  for (; OldBegin != OldAC.end(); ++OldBegin, ++NewBegin) {
+    ExprResult OldConverted = SubstConstraint(S, OldLexCtx, *OldBegin);
+    ExprResult NewConverted = SubstConstraint(S, NewLexCtx, *NewBegin);
+
+    // We can consider these different, since they depend on the instantiation,
+    // and cannot prove they are identical.
+    if (OldConverted.isInvalid() || NewConverted.isInvalid())
+      return true;
+
+    // profile & compare. If they are now different, they aren't equal.
+    llvm::FoldingSetNodeID NewID, OldID;
+    NewConverted.get()->Profile(NewID, S.getASTContext(), /*Canonical=*/true);
+    OldConverted.get()->Profile(OldID, S.getASTContext(), /*Canonical=*/true);
+    if (NewID != OldID)
+      return true;
+  }
+
+  // If we haven't found a differing constraint, these are the same.
+  return false;
+}
+
 /// Determine whether the given New declaration is an overload of the
 /// declarations in Old. This routine returns Ovl_Match or Ovl_NonFunction if
 /// New and Old cannot be overloaded, e.g., if New has the same signature as
@@ -1066,6 +1142,20 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
 
         if (!isa<FunctionTemplateDecl>(OldD) &&
             !shouldLinkPossiblyHiddenDecl(*I, New))
+          continue;
+
+        // If this is a friend function currently being instantiated as a part
+        // of a ClassTemplateSpecializationDecl, it could have
+        // otherwise-identical-looking constraints that depend on the current
+        // instantiation. In this case, if the otherwise apparent 'match' and
+        // the new declaration differ by lexical declaration context (meaning
+        // different Class Template Specializations), AND one of the collected
+        // constraints seems to 'depend' on the current instantiation in some
+        // way, than these are not matches and are likely instead overloads.
+        // Note that an 'error' case might still be valid later (as it could be
+        // something that would be 'changed' at 'checking' time), but is proof
+        // we depend on the Class Template Specialization.
+        if (FriendMembersDifferByConstraints(*this, CurContext, OldF, New))
           continue;
 
         Match = *I;
