@@ -3669,11 +3669,16 @@ static int __kmp_expand_threads(int nNeed) {
              __kmp_threads_capacity * sizeof(kmp_info_t *));
   KMP_MEMCPY(newRoot, __kmp_root,
              __kmp_threads_capacity * sizeof(kmp_root_t *));
+  // Put old __kmp_threads array on a list. Any ongoing references to the old
+  // list will be valid. This list is cleaned up at library shutdown.
+  kmp_old_threads_list_t *node =
+      (kmp_old_threads_list_t *)__kmp_allocate(sizeof(kmp_old_threads_list_t));
+  node->threads = __kmp_threads;
+  node->next = __kmp_old_threads_list;
+  __kmp_old_threads_list = node;
 
-  kmp_info_t **temp_threads = __kmp_threads;
   *(kmp_info_t * *volatile *)&__kmp_threads = newThreads;
   *(kmp_root_t * *volatile *)&__kmp_root = newRoot;
-  __kmp_free(temp_threads);
   added += newCapacity - __kmp_threads_capacity;
   *(volatile int *)&__kmp_threads_capacity = newCapacity;
 
@@ -8100,6 +8105,15 @@ void __kmp_cleanup(void) {
   __kmp_threads = NULL;
   __kmp_root = NULL;
   __kmp_threads_capacity = 0;
+
+  // Free old __kmp_threads arrays if they exist.
+  kmp_old_threads_list_t *ptr = __kmp_old_threads_list;
+  while (ptr) {
+    kmp_old_threads_list_t *next = ptr->next;
+    __kmp_free(ptr->threads);
+    __kmp_free(ptr);
+    ptr = next;
+  }
 
 #if KMP_USE_DYNAMIC_LOCK
   __kmp_cleanup_indirect_user_locks();
