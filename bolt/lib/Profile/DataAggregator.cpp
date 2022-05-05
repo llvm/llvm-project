@@ -116,6 +116,22 @@ namespace {
 const char TimerGroupName[] = "aggregator";
 const char TimerGroupDesc[] = "Aggregator";
 
+std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
+  std::vector<SectionNameAndRange> sections;
+  for (BinarySection &Section : BC->sections()) {
+    if (!Section.isText())
+      continue;
+    if (Section.getSize() == 0)
+      continue;
+    sections.push_back(
+        {Section.getName(), Section.getAddress(), Section.getEndAddress()});
+  }
+  std::sort(sections.begin(), sections.end(),
+            [](const SectionNameAndRange &A, const SectionNameAndRange &B) {
+              return A.BeginAddress < B.BeginAddress;
+            });
+  return sections;
+}
 }
 
 constexpr uint64_t DataAggregator::KernelBaseAddr;
@@ -1292,7 +1308,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
     opts::HeatmapMinAddress = KernelBaseAddr;
   }
   Heatmap HM(opts::HeatmapBlock, opts::HeatmapMinAddress,
-             opts::HeatmapMaxAddress);
+             opts::HeatmapMaxAddress, getTextSections(BC));
   uint64_t NumTotalSamples = 0;
 
   if (opts::BasicAggregation) {
@@ -1374,6 +1390,10 @@ std::error_code DataAggregator::printLBRHeatMap() {
     HM.printCDF(opts::OutputFilename);
   else
     HM.printCDF(opts::OutputFilename + ".csv");
+  if (opts::OutputFilename == "-")
+    HM.printSectionHotness(opts::OutputFilename);
+  else
+    HM.printSectionHotness(opts::OutputFilename + "-section-hotness.csv");
 
   return std::error_code();
 }
