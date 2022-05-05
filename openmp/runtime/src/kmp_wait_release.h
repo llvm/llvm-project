@@ -625,10 +625,6 @@ final_spin=FALSE)
     if (!Sleepable)
       continue;
 
-    if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
-        __kmp_pause_status != kmp_soft_paused)
-      continue;
-
 #if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
     if (__kmp_mwait_enabled || __kmp_umwait_enabled) {
       KF_TRACE(50, ("__kmp_wait_sleep: T#%d using monitor/mwait\n", th_gtid));
