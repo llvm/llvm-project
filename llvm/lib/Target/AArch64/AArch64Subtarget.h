@@ -210,9 +210,7 @@ public:
   }
 
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
-  unsigned getVectorInsertExtractBaseCost() const {
-    return VectorInsertExtractBaseCost;
-  }
+  unsigned getVectorInsertExtractBaseCost() const;
   unsigned getCacheLineSize() const override { return CacheLineSize; }
   unsigned getPrefetchDistance() const override { return PrefetchDistance; }
   unsigned getMinPrefetchStride(unsigned NumMemAccesses,

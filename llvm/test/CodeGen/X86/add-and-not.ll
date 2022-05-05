@@ -118,10 +118,8 @@ define i8 @add_and_xor_extra_use(i8 %x, i8 %y) nounwind {
 define i64 @add_and_xor_const(i64 %x) {
 ; CHECK-LABEL: add_and_xor_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    orq $1, %rax
 ; CHECK-NEXT:    retq
   %xor = xor i64 %x, -1
   %and = and i64 %xor, 1
@@ -145,10 +143,8 @@ define i64 @add_and_xor_const_wrong_op(i64 %x, i64 %y) {
 define i64 @add_and_xor_const_explicit_trunc(i64 %x) {
 ; CHECK-LABEL: add_and_xor_const_explicit_trunc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    orq $1, %rax
 ; CHECK-NEXT:    retq
   %trunc = trunc i64 %x to i32
   %xor = xor i32 %trunc, -1
@@ -192,10 +188,8 @@ define i8* @gep_and_xor(i8* %a, i64 %m) {
 define i8* @gep_and_xor_const(i8* %a) {
 ; CHECK-LABEL: gep_and_xor_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    orq $1, %rax
 ; CHECK-NEXT:    retq
   %old = ptrtoint i8* %a to i64
   %old.not = and i64 %old, 1

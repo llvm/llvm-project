@@ -23,7 +23,7 @@ namespace {
 struct Lowerer : coro::LowererBase {
   IRBuilder<> Builder;
   Lowerer(Module &M) : LowererBase(M), Builder(Context) {}
-  bool lowerRemainingCoroIntrinsics(Function &F);
+  void lower(Function &F);
 };
 }
 
@@ -53,9 +53,7 @@ static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   SubFn->replaceAllUsesWith(Load);
 }
 
-bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
-  bool Changed = false;
-
+void Lowerer::lower(Function &F) {
   bool IsPrivateAndUnprocessed =
       F.hasFnAttribute(CORO_PRESPLIT_ATTR) && F.hasLocalLinkage();
 
@@ -112,16 +110,11 @@ bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
         break;
       }
       II->eraseFromParent();
-      Changed = true;
     }
   }
 
-  if (Changed) {
-    // After replacement were made we can cleanup the function body a little.
-    simplifyCFG(F);
-  }
-
-  return Changed;
+  // After replacement were made we can cleanup the function body a little.
+  simplifyCFG(F);
 }
 
 static bool declaresCoroCleanupIntrinsics(const Module &M) {
@@ -132,12 +125,14 @@ static bool declaresCoroCleanupIntrinsics(const Module &M) {
           "llvm.coro.async.resume"});
 }
 
-PreservedAnalyses CoroCleanupPass::run(Function &F,
-                                       FunctionAnalysisManager &AM) {
-  auto &M = *F.getParent();
-  if (!declaresCoroCleanupIntrinsics(M) ||
-      !Lowerer(M).lowerRemainingCoroIntrinsics(F))
+PreservedAnalyses CoroCleanupPass::run(Module &M,
+                                       ModuleAnalysisManager &MAM) {
+  if (!declaresCoroCleanupIntrinsics(M))
     return PreservedAnalyses::all();
+
+  Lowerer L(M);
+  for (auto &F : M)
+    L.lower(F);
 
   return PreservedAnalyses::none();
 }
