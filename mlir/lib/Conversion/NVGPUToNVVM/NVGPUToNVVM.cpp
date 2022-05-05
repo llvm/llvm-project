@@ -25,6 +25,8 @@ static Type inferIntrinsicResultType(Type vectorResultType) {
   auto i32x2Ty = LLVM::getFixedVectorType(i32Ty, 2);
   Type f64Ty = Float64Type::get(ctx);
   Type f64x2Ty = LLVM::getFixedVectorType(f64Ty, 2);
+  Type f32Ty = Float32Type::get(ctx);
+  Type f32x2Ty = LLVM::getFixedVectorType(f32Ty, 2);
   if (a.getElementType() == f16x2Ty) {
     return LLVM::LLVMStructType::getLiteral(
         ctx, SmallVector<Type>(a.getNumElements(), f16x2Ty));
@@ -36,6 +38,15 @@ static Type inferIntrinsicResultType(Type vectorResultType) {
   }
   if (a.getElementType() == f64x2Ty) {
     return LLVM::LLVMStructType::getLiteral(ctx, {f64Ty, f64Ty});
+  }
+  if (a.getElementType() == f32x2Ty) {
+    return LLVM::LLVMStructType::getLiteral(
+        ctx,
+        SmallVector<Type>(static_cast<size_t>(a.getNumElements()) * 2, f32Ty));
+  }
+  if (a.getElementType() == LLVM::getFixedVectorType(f32Ty, 1)) {
+    return LLVM::LLVMStructType::getLiteral(
+        ctx, SmallVector<Type>(static_cast<size_t>(a.getNumElements()), f32Ty));
   }
   return vectorResultType;
 }
@@ -52,10 +63,13 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
   auto structType = intrinsicResultType.dyn_cast<LLVM::LLVMStructType>();
   auto arrayType = resultType.dyn_cast<LLVM::LLVMArrayType>();
   Type i32Ty = rewriter.getI32Type();
+  Type f32Ty = rewriter.getF32Type();
   Type f64Ty = rewriter.getF64Type();
   Type f16x2Ty = LLVM::getFixedVectorType(rewriter.getF16Type(), 2);
   Type i32x2Ty = LLVM::getFixedVectorType(i32Ty, 2);
   Type f64x2Ty = LLVM::getFixedVectorType(f64Ty, 2);
+  Type f32x2Ty = LLVM::getFixedVectorType(f32Ty, 2);
+  Type f32x1Ty = LLVM::getFixedVectorType(f32Ty, 1);
 
   auto makeConst = [&](int32_t index) -> Value {
     return rewriter.create<LLVM::ConstantOp>(loc, IntegerType::get(ctx, 32),
@@ -65,21 +79,31 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
   if (arrayType) {
     SmallVector<Value, 4> elements;
 
-    if (arrayType.getElementType() == f16x2Ty) {
+    // The intrinsic returns 32-bit wide elements in a form which can be
+    // directly bitcasted and inserted into the result vector.
+    if (arrayType.getElementType() == f16x2Ty ||
+        arrayType.getElementType() == f32x1Ty) {
       for (unsigned i = 0; i < structType.getBody().size(); i++) {
-        elements.push_back(rewriter.create<LLVM::ExtractValueOp>(
+        Value el = rewriter.create<LLVM::ExtractValueOp>(
             loc, structType.getBody()[i], intrinsicResult,
-            rewriter.getI64ArrayAttr(i)));
+            rewriter.getI64ArrayAttr(i));
+        el = rewriter.createOrFold<LLVM::BitcastOp>(
+            loc, arrayType.getElementType(), el);
+        elements.push_back(el);
       }
     }
 
-    // The intrinsic returns i32 and f64 values as individual scalars. We need
-    // to extract them from the struct and pack them into vectors.
+    // The intrinsic returns i32, f64, and f32 values as individual scalars,
+    // even when the result is notionally a 64-bit wide element (e.g. f32x2). We
+    // need to extract them from the struct and pack them into the 64-bit wide
+    // rows of the vector result.
     if (arrayType.getElementType() == i32x2Ty ||
-        arrayType.getElementType() == f64x2Ty) {
-      Value vec =
-          rewriter.create<LLVM::UndefOp>(loc, arrayType.getElementType());
+        arrayType.getElementType() == f64x2Ty ||
+        arrayType.getElementType() == f32x2Ty) {
+
       for (unsigned i = 0, e = structType.getBody().size() / 2; i < e; i++) {
+        Value vec =
+            rewriter.create<LLVM::UndefOp>(loc, arrayType.getElementType());
         Value x1 = rewriter.create<LLVM::ExtractValueOp>(
             loc, structType.getBody()[i * 2], intrinsicResult,
             rewriter.getI64ArrayAttr(i * 2));
@@ -90,8 +114,8 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
                                                      x1, makeConst(0));
         vec = rewriter.create<LLVM::InsertElementOp>(loc, vec.getType(), vec,
                                                      x2, makeConst(1));
+        elements.push_back(vec);
       }
-      elements.push_back(vec);
     }
 
     // Create the final vectorized result.
@@ -113,12 +137,15 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
 /// scalars of certain types. This function helps unpack the `vector` arguments
 /// and cast them to the types expected by `nvvm.mma.sync`.
 static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
-                                              Location loc, Value operand) {
+                                              Location loc, Value operand,
+                                              NVVM::MMATypes operandPtxType) {
   SmallVector<Value> result;
   Type i32Ty = rewriter.getI32Type();
   Type f64Ty = rewriter.getF64Type();
+  Type f32Ty = rewriter.getF32Type();
   Type i8Ty = rewriter.getI8Type();
   Type i8x4Ty = LLVM::getFixedVectorType(i8Ty, 4);
+  Type f32x1Ty = LLVM::getFixedVectorType(f32Ty, 1);
   auto arrayTy = operand.getType().cast<LLVM::LLVMArrayType>();
 
   for (unsigned i = 0, e = arrayTy.getNumElements(); i < e; ++i) {
@@ -127,18 +154,21 @@ static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
 
     // For 4xi8 vectors, the intrinsic expects these to be provided as i32
     // scalar types.
-    if (arrayTy.getElementType() == i8x4Ty) {
+    if (arrayTy.getElementType() == i8x4Ty ||
+        (arrayTy.getElementType() == f32x1Ty &&
+         operandPtxType == NVVM::MMATypes::tf32)) {
       result.push_back(
           rewriter.create<LLVM::BitcastOp>(loc, rewriter.getI32Type(), toUse));
       continue;
     }
 
-    // For some element types (i32, f64), we need to unpack the inner
+    // For some element types (i32, f32, f64), we need to unpack the inner
     // vector/array type as well because the intrinsic expects individual
     // scalars to be provided.
     VectorType innerArrayTy = arrayTy.getElementType().dyn_cast<VectorType>();
     if (innerArrayTy && (innerArrayTy.getElementType() == i32Ty ||
-                         innerArrayTy.getElementType() == f64Ty)) {
+                         innerArrayTy.getElementType() == f64Ty ||
+                         innerArrayTy.getElementType() == f32Ty)) {
       for (unsigned idx = 0, innerSize = innerArrayTy.getNumElements();
            idx < innerSize; idx++) {
         result.push_back(rewriter.create<LLVM::ExtractElementOp>(
@@ -229,36 +259,46 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     // Get the shapes of the MMAMatrix type being used. The shapes will
     // choose which intrinsic this op will be lowered to.
     auto aType = op.matrixA().getType().cast<VectorType>();
+    auto cType = op.matrixC().getType().cast<VectorType>();
 
     int64_t m = op.mmaShape()[0].cast<IntegerAttr>().getInt();
     int64_t n = op.mmaShape()[1].cast<IntegerAttr>().getInt();
     int64_t k = op.mmaShape()[2].cast<IntegerAttr>().getInt();
     std::array<int64_t, 3> gemmShape{m, n, k};
 
-    SmallVector<Value> matA =
-        unpackOperandVector(rewriter, loc, adaptor.matrixA());
-    SmallVector<Value> matB =
-        unpackOperandVector(rewriter, loc, adaptor.matrixB());
-    SmallVector<Value> matC =
-        unpackOperandVector(rewriter, loc, adaptor.matrixC());
-
     NVVM::MMATypes ptxTypeA;
     NVVM::MMATypes ptxTypeB;
+    Optional<NVVM::MMATypes> ptxTypeC = NVVM::MmaOp::inferOperandMMAType(
+        cType.getElementType(), /*isAccumulator=*/true);
+    if (!ptxTypeC) {
+      return op->emitError(
+          "could not infer the PTX type for the accumulator/result");
+    }
+
     Optional<NVVM::MMAIntOverflow> overflow(llvm::None);
     if (aType.getElementType().isInteger(8)) {
       ptxTypeA = NVVM::MMATypes::s8;
       ptxTypeB = NVVM::MMATypes::s8;
       overflow = NVVM::MMAIntOverflow::satfinite;
-
     } else if (aType.getElementType().isF16()) {
       ptxTypeA = NVVM::MMATypes::f16;
       ptxTypeB = NVVM::MMATypes::f16;
     } else if (aType.getElementType().isF64()) {
       ptxTypeA = NVVM::MMATypes::f64;
       ptxTypeB = NVVM::MMATypes::f64;
+    } else if (aType.getElementType().isF32()) {
+      ptxTypeA = NVVM::MMATypes::tf32;
+      ptxTypeB = NVVM::MMATypes::tf32;
     } else {
       return op->emitError("could not deduce operand PTX types");
     }
+
+    SmallVector<Value> matA =
+        unpackOperandVector(rewriter, loc, adaptor.matrixA(), ptxTypeA);
+    SmallVector<Value> matB =
+        unpackOperandVector(rewriter, loc, adaptor.matrixB(), ptxTypeB);
+    SmallVector<Value> matC =
+        unpackOperandVector(rewriter, loc, adaptor.matrixC(), *ptxTypeC);
 
     Type desiredRetTy = typeConverter->convertType(op->getResultTypes()[0]);
     Type intrinsicResTy = inferIntrinsicResultType(
