@@ -821,6 +821,85 @@ entry:
   ret <2 x i64> %1
 }
 
+define <2 x i64> @testSplati64_0(<1 x i64>* nocapture readonly %ptr) #0 {
+; CHECK-P8-LABEL: testSplati64_0:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    lxvdsx v2, 0, r3
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P9-LABEL: testSplati64_0:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    lxvdsx v2, 0, r3
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testSplati64_0:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    lxvdsx v2, 0, r3
+; CHECK-P9-BE-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testSplati64_0:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
+; CHECK-NOVSX-NEXT:    addi r4, r1, -16
+; CHECK-NOVSX-NEXT:    std r3, -8(r1)
+; CHECK-NOVSX-NEXT:    std r3, -16(r1)
+; CHECK-NOVSX-NEXT:    lvx v2, 0, r4
+; CHECK-NOVSX-NEXT:    blr
+;
+; CHECK-P7-LABEL: testSplati64_0:
+; CHECK-P7:       # %bb.0: # %entry
+; CHECK-P7-NEXT:    lxvdsx v2, 0, r3
+; CHECK-P7-NEXT:    blr
+entry:
+  %0 = load <1 x i64>, <1 x i64>* %ptr, align 8
+  %1 = shufflevector <1 x i64> %0, <1 x i64> undef, <2 x i32> <i32 0, i32 0>
+  ret <2 x i64> %1
+}
+
+define <2 x i64> @testSplati64_1(<2 x i64>* nocapture readonly %ptr) #0 {
+; CHECK-P8-LABEL: testSplati64_1:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxspltd v2, vs0, 1
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P9-LABEL: testSplati64_1:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    lxv v2, 0(r3)
+; CHECK-P9-NEXT:    xxspltd v2, v2, 0
+; CHECK-P9-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: testSplati64_1:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    lxv v2, 0(r3)
+; CHECK-P9-BE-NEXT:    xxspltd v2, v2, 1
+; CHECK-P9-BE-NEXT:    blr
+;
+; CHECK-NOVSX-LABEL: testSplati64_1:
+; CHECK-NOVSX:       # %bb.0: # %entry
+; CHECK-NOVSX-NEXT:    ld r4, 8(r3)
+; CHECK-NOVSX-NEXT:    std r4, -8(r1)
+; CHECK-NOVSX-NEXT:    addis r4, r2, .LCPI21_0@toc@ha
+; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
+; CHECK-NOVSX-NEXT:    addi r4, r4, .LCPI21_0@toc@l
+; CHECK-NOVSX-NEXT:    lvx v2, 0, r4
+; CHECK-NOVSX-NEXT:    std r3, -16(r1)
+; CHECK-NOVSX-NEXT:    addi r3, r1, -16
+; CHECK-NOVSX-NEXT:    lvx v3, 0, r3
+; CHECK-NOVSX-NEXT:    vperm v2, v3, v3, v2
+; CHECK-NOVSX-NEXT:    blr
+;
+; CHECK-P7-LABEL: testSplati64_1:
+; CHECK-P7:       # %bb.0: # %entry
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxspltd v2, vs0, 1
+; CHECK-P7-NEXT:    blr
+entry:
+  %0 = load <2 x i64>, <2 x i64>* %ptr, align 8
+  %1 = shufflevector <2 x i64> %0, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
+  ret <2 x i64> %1
+}
+
 define dso_local void @testByteSplat() #0 {
 ; CHECK-P8-LABEL: testByteSplat:
 ; CHECK-P8:       # %bb.0: # %entry
