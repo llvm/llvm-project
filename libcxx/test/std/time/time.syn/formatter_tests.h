@@ -10,6 +10,8 @@
 
 #include "make_string.h"
 #include "string_literal.h"
+#include "test_format_string.h"
+#include "test_macros.h"
 
 #include <algorithm>
 #include <cassert>
@@ -28,50 +30,52 @@ template <class CharT>
 using format_context = std::format_context;
 #endif
 
-inline constexpr auto check = []<string_literal fmt, class CharT, class... Args>(
-    std::basic_string_view<CharT> expected, const Args&... args) constexpr {
-  std::basic_string<CharT> out = std::format(fmt.template sv<CharT>(), args...);
+template <class CharT, class... Args>
+void check(std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) {
+  std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
   if constexpr (std::same_as<CharT, char>)
     if (out != expected)
-      std::cerr << "\nFormat string   " << fmt.template sv<CharT>() << "\nExpected output " << expected
-                << "\nActual output   " << out << '\n';
+      std::cerr << "\nFormat string   " << fmt.get() << "\nExpected output " << expected << "\nActual output   " << out
+                << '\n';
   assert(out == expected);
-};
+}
 
-inline constexpr auto lcheck = []<string_literal fmt, class CharT, class... Args>(
-    const std::locale& loc, std::basic_string_view<CharT> expected, const Args&... args) constexpr {
-  std::basic_string<CharT> out = std::format(loc, fmt.template sv<CharT>(), args...);
+template <class CharT, class... Args>
+void check(const std::locale& loc,
+           std::basic_string_view<CharT> expected,
+           test_format_string<CharT, Args...> fmt,
+           Args&&... args) {
+  std::basic_string<CharT> out = std::format(loc, fmt, std::forward<Args>(args)...);
   if constexpr (std::same_as<CharT, char>)
     if (out != expected)
-      std::cerr << "\nFormat string   " << fmt.template sv<CharT>() << "\nExpected output " << expected
-                << "\nActual output   " << out << '\n';
+      std::cerr << "\nFormat string   " << fmt.get() << "\nExpected output " << expected << "\nActual output   " << out
+                << '\n';
   assert(out == expected);
-};
+}
 
-inline constexpr auto check_exception =
-    []<class CharT, class... Args>(
-        [[maybe_unused]] std::string_view what,
-        [[maybe_unused]] std::basic_string_view<CharT> fmt,
-        [[maybe_unused]] const Args&... args) {
+template <class CharT, class... Args>
+void check_exception([[maybe_unused]] std::string_view what,
+                     [[maybe_unused]] std::basic_string_view<CharT> fmt,
+                     [[maybe_unused]] const Args&... args) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-      try {
-        TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<format_context<CharT>>(args...));
-        if constexpr (std::same_as<CharT, char>)
-          std::cerr << "\nFormat string   " << fmt << "\nDidn't throw an exception.\n";
-        assert(false);
-      } catch (const std::format_error& e) {
+  try {
+    TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<format_context<CharT>>(args...));
+    if constexpr (std::same_as<CharT, char>)
+      std::cerr << "\nFormat string   " << fmt << "\nDidn't throw an exception.\n";
+    assert(false);
+  } catch (const std::format_error& e) {
 #  if defined(_LIBCPP_VERSION)
-        if constexpr (std::same_as<CharT, char>)
-          if (e.what() != what)
-            std::cerr << "\nFormat string   " << fmt << "\nExpected exception " << what << "\nActual exception   "
-                      << e.what() << '\n';
-        assert(e.what() == what);
+    if constexpr (std::same_as<CharT, char>)
+      if (e.what() != what)
+        std::cerr << "\nFormat string   " << fmt << "\nExpected exception " << what << "\nActual exception   "
+                  << e.what() << '\n';
+    assert(e.what() == what);
 #  endif
-        return;
-      }
-      assert(false);
+    return;
+  }
+  assert(false);
 #endif
-    };
+}
 
 template <class CharT, class T>
 void check_invalid_type(const std::set<std::basic_string_view<CharT>>& valid_types,
