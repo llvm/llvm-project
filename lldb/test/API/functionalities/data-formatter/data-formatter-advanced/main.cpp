@@ -124,6 +124,31 @@ struct VeryLong
     int z_2;
 };
 
+struct QuiteNested {
+  struct One {
+    struct Two {
+      struct Three {
+        struct Four {
+          struct Five {
+            struct Six {
+              struct Seven {
+                int leaf = 41;
+              };
+              Seven seven;
+            };
+            Six six;
+          };
+          Five five;
+        };
+        Four four;
+      };
+      Three three;
+    };
+    Two two;
+  };
+  One one;
+};
+
 int main (int argc, const char * argv[])
 {
     
@@ -165,5 +190,7 @@ int main (int argc, const char * argv[])
     
     VeryLong a_long_guy;
     
+    QuiteNested quite_nested;
+
     return 0; // Set break point at this line.
 }
