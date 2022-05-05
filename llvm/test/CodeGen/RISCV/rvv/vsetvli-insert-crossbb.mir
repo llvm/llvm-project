@@ -428,7 +428,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v9
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v8
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK-NEXT:   [[PseudoVSETVLI:%[0-9]+]]:gprnox0 = PseudoVSETVLI [[COPY]], 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   $x0 = PseudoVSETVLI [[COPY]], 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
   ; CHECK-NEXT:   BEQ [[COPY3]], [[COPY4]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
