@@ -159,3 +159,16 @@ struct EnumRedeclStruct {
     PR15071_One // expected-error {{redefinition of enumerator 'PR15071_One'}}
   } e;
 };
+
+enum struct GH42372_1 { // expected-error {{expected identifier or '{'}} expected-warning {{declaration does not declare anything}}
+  One
+};
+
+// Because class is not a keyword in C, this looks like a forward declaration.
+// expected-error@+4 {{expected ';' after top level declarator}}
+// expected-error@+3 {{tentative definition has type 'enum class' that is never completed}}
+// expected-warning@+2 {{ISO C forbids forward references to 'enum' types}}
+// expected-note@+1 {{forward declaration of 'enum class'}}
+enum class GH42372_2 {
+  One
+};
