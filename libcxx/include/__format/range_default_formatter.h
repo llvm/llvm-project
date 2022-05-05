@@ -15,6 +15,7 @@
 #endif
 
 #include <__availability>
+#include <__chrono/statically_widen.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
@@ -132,7 +133,30 @@ public:
 
 template <ranges::input_range _Rp, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatter<range_format::map, _Rp, _CharT> {
-  __range_default_formatter() = delete; // TODO FMT Implement
+private:
+  using __maybe_const_map = __fmt_maybe_const<_Rp, _CharT>;
+  using __element_type    = remove_cvref_t<ranges::range_reference_t<__maybe_const_map>>;
+  range_formatter<__element_type, _CharT> __underlying_;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI constexpr __range_default_formatter()
+    requires(__fmt_pair_like<__element_type>)
+  {
+    __underlying_.set_brackets(_LIBCPP_STATICALLY_WIDEN(_CharT, "{"), _LIBCPP_STATICALLY_WIDEN(_CharT, "}"));
+    __underlying_.underlying().set_brackets({}, {});
+    __underlying_.underlying().set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
+  }
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return __underlying_.parse(__ctx);
+  }
+
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  format(__maybe_const_map& __range, _FormatContext& __ctx) const {
+    return __underlying_.format(__range, __ctx);
+  }
 };
 
 template <ranges::input_range _Rp, class _CharT>
