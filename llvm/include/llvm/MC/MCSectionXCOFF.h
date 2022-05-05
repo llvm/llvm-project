@@ -116,6 +116,7 @@ public:
   Optional<XCOFF::DwarfSectionSubtypeFlags> getDwarfSubtypeFlags() const {
     return DwarfSubtypeFlags;
   }
+  Optional<XCOFF::CsectProperties> getCsectProp() const { return CsectProp; }
 };
 
 } // end namespace llvm
