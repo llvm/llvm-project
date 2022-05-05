@@ -26,6 +26,10 @@ using namespace mlir;
 
 namespace {
 
+bool isStaticStrideOrOffset(int64_t strideOrOffset) {
+  return !ShapedType::isDynamicStrideOrOffset(strideOrOffset);
+}
+
 struct AllocOpLowering : public AllocLikeOpLLVMLowering {
   AllocOpLowering(LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::AllocOp::getOperationName(),
@@ -1091,11 +1095,52 @@ private:
                                   Type srcType, memref::ReshapeOp reshapeOp,
                                   memref::ReshapeOp::Adaptor adaptor,
                                   Value *descriptor) const {
-    // Conversion for statically-known shape args is performed via
-    // `memref_reinterpret_cast`.
     auto shapeMemRefType = reshapeOp.shape().getType().cast<MemRefType>();
-    if (shapeMemRefType.hasStaticShape())
-      return failure();
+    if (shapeMemRefType.hasStaticShape()) {
+      MemRefType targetMemRefType =
+          reshapeOp.getResult().getType().cast<MemRefType>();
+      auto llvmTargetDescriptorTy =
+          typeConverter->convertType(targetMemRefType)
+              .dyn_cast_or_null<LLVM::LLVMStructType>();
+      if (!llvmTargetDescriptorTy)
+        return failure();
+
+      // Create descriptor.
+      Location loc = reshapeOp.getLoc();
+      auto desc =
+          MemRefDescriptor::undef(rewriter, loc, llvmTargetDescriptorTy);
+
+      // Set allocated and aligned pointers.
+      Value allocatedPtr, alignedPtr;
+      extractPointersAndOffset(loc, rewriter, *getTypeConverter(),
+                               reshapeOp.source(), adaptor.source(),
+                               &allocatedPtr, &alignedPtr);
+      desc.setAllocatedPtr(rewriter, loc, allocatedPtr);
+      desc.setAlignedPtr(rewriter, loc, alignedPtr);
+
+      // Extract the offset and strides from the type.
+      int64_t offset;
+      SmallVector<int64_t> strides;
+      if (failed(getStridesAndOffset(targetMemRefType, strides, offset)))
+        return rewriter.notifyMatchFailure(
+            reshapeOp, "failed to get stride and offset exprs");
+
+      if (!isStaticStrideOrOffset(offset))
+        return rewriter.notifyMatchFailure(reshapeOp,
+                                           "dynamic offset is unsupported");
+      if (!llvm::all_of(strides, isStaticStrideOrOffset))
+        return rewriter.notifyMatchFailure(reshapeOp,
+                                           "dynamic strides are unsupported");
+
+      desc.setConstantOffset(rewriter, loc, offset);
+      for (unsigned i = 0, e = targetMemRefType.getRank(); i < e; ++i) {
+        desc.setConstantSize(rewriter, loc, i, targetMemRefType.getDimSize(i));
+        desc.setConstantStride(rewriter, loc, i, strides[i]);
+      }
+
+      *descriptor = desc;
+      return success();
+    }
 
     // The shape is a rank-1 tensor with unknown length.
     Location loc = reshapeOp.getLoc();
@@ -1499,10 +1544,7 @@ public:
     for (auto &en : llvm::enumerate(dstShape))
       dstDesc.setSize(rewriter, loc, en.index(), en.value());
 
-    auto isStaticStride = [](int64_t stride) {
-      return !ShapedType::isDynamicStrideOrOffset(stride);
-    };
-    if (llvm::all_of(strides, isStaticStride)) {
+    if (llvm::all_of(strides, isStaticStrideOrOffset)) {
       for (auto &en : llvm::enumerate(strides))
         dstDesc.setConstantStride(rewriter, loc, en.index(), en.value());
     } else if (srcType.getLayout().isIdentity() &&
