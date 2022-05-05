@@ -458,9 +458,11 @@ public:
     auto *c = reinterpret_cast<build_version_command *>(buf);
     c->cmd = LC_BUILD_VERSION;
     c->cmdsize = getSize();
+
     c->platform = static_cast<uint32_t>(platformInfo.target.Platform);
     c->minos = encodeVersion(platformInfo.minimum);
     c->sdk = encodeVersion(platformInfo.sdk);
+
     c->ntools = ntools;
     auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
     t->tool = TOOL_LD;
@@ -767,6 +769,11 @@ template <class LP> void Writer::createLoadCommands() {
     in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
   else
     in.header->addLoadCommand(make<LCMinVersion>(config->platformInfo));
+
+  if (config->secondaryPlatformInfo) {
+    in.header->addLoadCommand(
+        make<LCBuildVersion>(*config->secondaryPlatformInfo));
+  }
 
   // This is down here to match ld64's load command order.
   if (config->outputType == MH_EXECUTE)
