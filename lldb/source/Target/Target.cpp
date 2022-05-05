@@ -4311,6 +4311,17 @@ bool TargetProperties::GetSwiftDiscoverImplicitSearchPaths() const {
   return true;
 }
 
+bool TargetProperties::GetSwiftEnableBareSlashRegex() const {
+  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
+      nullptr, false, ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values->GetPropertyAtIndexAsBoolean(
+        nullptr, ePropertySwiftEnableBareSlashRegex, true);
+
+  return true;
+}
 bool TargetProperties::GetSwiftAutoImportFrameworks() const {
   const uint32_t idx = ePropertySwiftAutoImportFrameworks;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(

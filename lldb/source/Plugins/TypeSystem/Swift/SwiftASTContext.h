@@ -840,6 +840,7 @@ protected:
   std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;
   std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
   llvm::once_flag m_ir_gen_module_once;
+  llvm::once_flag m_load_string_processing_lib_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;
   /// A collection of (not necessarily fatal) error messages that

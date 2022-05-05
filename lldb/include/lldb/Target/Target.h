@@ -179,6 +179,8 @@ public:
 
   bool GetSwiftDiscoverImplicitSearchPaths() const;
 
+  bool GetSwiftEnableBareSlashRegex() const;
+
   bool GetSwiftAutoImportFrameworks() const;
 
   bool GetEnableAutoImportClangModules() const;

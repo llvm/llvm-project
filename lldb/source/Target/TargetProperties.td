@@ -19,6 +19,9 @@ let Definition = "target_experimental" in {
   def SwiftDiscoverImplicitSearchPaths: Property<"swift-discover-implicit-search-paths", "Boolean">,
     DefaultTrue,
     Desc<"Discover implicit search paths from all implicitly imported Swift modules and make them available to the expression context. A Swift module built with -serialize-debugging-options can contain additional search paths which are discovered as the module is imported. This optiondoes an eager import of all modules first to make sure all implicit search paths are availableto the expression evaluator. If the build system registers all Swift modules with the linker (Darwin: via -add_ast_path, Other platforms: -module-wrap), turning this on is not necessary.">;
+  def SwiftEnableBareSlashRegex: Property<"swift-enable-bare-slash-regex", "Boolean">,
+    DefaultFalse,
+    Desc<"Passes the -enable-bare-slash-regex compiler flag to the swift compiler.">;
 }
 
 let Definition = "target" in {

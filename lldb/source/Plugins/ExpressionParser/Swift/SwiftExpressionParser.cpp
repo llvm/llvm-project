@@ -1361,6 +1361,11 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   invocation.getFrontendOptions().ModuleName = expr_name_buf;
   invocation.getIRGenOptions().ModuleName = expr_name_buf;
 
+  invocation.getLangOptions().EnableBareSlashRegexLiterals =
+      sc.target_sp->GetSwiftEnableBareSlashRegex();
+  invocation.getLangOptions().EnableExperimentalStringProcessing =
+      sc.target_sp->GetSwiftEnableBareSlashRegex();
+
   auto should_use_prestable_abi = [&]() {
     lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
     if (!this_frame_sp)
