@@ -76,21 +76,27 @@ static bool isSafeToConvert(const RecordDecl *RD, CIRGenTypes &CGT) {
   llvm_unreachable("NYI");
 }
 
-mlir::Type
-CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
-  const auto *key = Context.getTagDeclType(recordDecl).getTypePtr();
+/// convertRecordDeclType - Lay out a tagged decl type like struct or union.
+mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
+  // TagDecl's are not necessarily unique, instead use the (clang) type
+  // connected to the decl.
+  const auto *key = Context.getTagDeclType(RD).getTypePtr();
 
   mlir::cir::StructType &entry = recordDeclTypes[key];
 
-  recordDecl = recordDecl->getDefinition();
-  // TODO: clang checks here whether the type is known to be opaque. This is
-  // equivalent to a forward decl. Is checking for a non-null entry close enough
-  // of a match?
-  if (!recordDecl || !recordDecl->isCompleteDefinition() || entry)
+  RD = RD->getDefinition();
+
+  // TODO(CIR): clang checks here whether the type is known to be opaque. This
+  // is equivalent to a forward decl. So far we don't need to support
+  // opaque/forward-declared record decls. If/when we do we might need to have
+  // temporary cir::StructType with no members as stand-ins.
+  if (!RD || !RD->isCompleteDefinition())
+    llvm_unreachable("NYI");
+  if (entry)
     return entry;
 
   // If converting this type would cause us to infinitely loop, don't do it!
-  if (!isSafeToConvert(recordDecl, *this)) {
+  if (!isSafeToConvert(RD, *this)) {
     llvm_unreachable("NYI");
   }
 
@@ -100,7 +106,7 @@ CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
   assert(InsertResult && "Recursively compiling a struct?");
 
   // Force conversion of non-virtual base classes recursively.
-  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(recordDecl)) {
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &I : cxxRecordDecl->bases()) {
       (void)I;
       llvm_unreachable("NYI");
@@ -108,8 +114,7 @@ CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *recordDecl) {
   }
 
   // Layout fields.
-  std::unique_ptr<CIRGenRecordLayout> Layout =
-      computeRecordLayout(recordDecl, entry);
+  std::unique_ptr<CIRGenRecordLayout> Layout = computeRecordLayout(RD, entry);
   CIRGenRecordLayouts[key] = std::move(Layout);
 
   // We're done laying out this struct.
