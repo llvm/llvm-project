@@ -142,6 +142,11 @@ Bug Fixes
 - Fixed a false positive diagnostic about an unevaluated expression having no
   side effects when the expression is of VLA type and is an operand of the
   ``sizeof`` operator. Fixes `Issue 48010 <https://github.com/llvm/llvm-project/issues/48010>`_.
+- Fixed a false positive diagnostic about scoped enumerations being a C++11
+  extension in C mode. A scoped enumeration's enumerators cannot be named in C
+  because there is no way to fully qualify the enumerator name, so this
+  "extension" was unintentional and useless. This fixes
+  `Issue 42372 <https://github.com/llvm/llvm-project/issues/42372>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
