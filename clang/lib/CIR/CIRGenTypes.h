@@ -15,6 +15,7 @@
 
 #include "ABIInfo.h"
 #include "CIRGenFunctionInfo.h"
+#include "CIRGenRecordLayout.h"
 
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
@@ -83,6 +84,10 @@ class CIRGenTypes {
   // This should not be moved earlier, since its initialization depends on some
   // of the previous reference members being already initialized
   const ABIInfo &TheABIInfo;
+
+  /// Contains the CIR type for any converted RecordDecl.
+  llvm::DenseMap<const clang::Type *, std::unique_ptr<CIRGenRecordLayout>>
+      CIRGenRecordLayouts;
 
   /// Contains the CIR type for any converted RecordDecl
   llvm::DenseMap<const clang::Type *, mlir::cir::StructType> recordDeclTypes;
