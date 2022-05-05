@@ -102,6 +102,11 @@ struct CIRRecordLowering final {
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
   llvm::DenseMap<const FieldDecl *, unsigned> fields;
+  llvm::DenseMap<const FieldDecl *, int> bitFields;
+  llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
+  llvm::DenseMap<const CXXRecordDecl *, unsigned> virtualBases;
+  bool IsZeroInitializable : 1;
+  bool IsZeroInitializableAsBase : 1;
   bool isPacked : 1;
 
 private:
@@ -117,7 +122,8 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       recordDecl{recordDecl}, cxxRecordDecl{llvm::dyn_cast<CXXRecordDecl>(
                                   recordDecl)},
       astRecordLayout{cirGenTypes.getContext().getASTRecordLayout(recordDecl)},
-      isPacked{isPacked} {}
+      IsZeroInitializable(true),
+      IsZeroInitializableAsBase(true), isPacked{isPacked} {}
 
 void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   if (recordDecl->isUnion()) {
