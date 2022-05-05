@@ -23,12 +23,12 @@ TEST(BuildCompilerInvocationTest, RecoverMultipleJobs) {
   std::vector<const char *> Args = {"clang", "--target=macho", "-arch",  "i386",
                                     "-arch", "x86_64",         "foo.cpp"};
   clang::IgnoringDiagConsumer D;
-  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
-      clang::CompilerInstance::createDiagnostics(new DiagnosticOptions, &D,
-                                                 false);
-  std::unique_ptr<CompilerInvocation> CI = createInvocationFromCommandLine(
-      Args, CommandLineDiagsEngine, new llvm::vfs::InMemoryFileSystem(),
-      /*ShouldRecoverOnErrors=*/true);
+  CreateInvocationOptions Opts;
+  Opts.RecoverOnError = true;
+  Opts.Diags = clang::CompilerInstance::createDiagnostics(new DiagnosticOptions,
+                                                          &D, false);
+  Opts.VFS = new llvm::vfs::InMemoryFileSystem();
+  std::unique_ptr<CompilerInvocation> CI = createInvocation(Args, Opts);
   ASSERT_TRUE(CI);
   EXPECT_THAT(CI->TargetOpts->Triple, testing::StartsWith("i386-"));
 }
