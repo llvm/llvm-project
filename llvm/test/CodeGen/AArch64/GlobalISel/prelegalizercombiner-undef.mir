@@ -226,3 +226,96 @@ body:             |
     %0:_(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2(<2 x s32>), shufflemask(0, 1)
     $d0 = COPY %0(<2 x s32>)
     RET_ReallyLR implicit $d0
+
+...
+---
+name:            shl_undef_rhs
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: shl_undef_rhs
+    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY [[DEF]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = G_CONSTANT i64 10
+    %1:_(s64) = G_IMPLICIT_DEF
+    %2:_(s64) = G_SHL %0, %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            lshr_undef_rhs
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: lshr_undef_rhs
+    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY [[DEF]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = G_CONSTANT i64 10
+    %1:_(s64) = G_IMPLICIT_DEF
+    %2:_(s64) = G_LSHR %0, %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            ashr_undef_rhs
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: ashr_undef_rhs
+    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY [[DEF]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = G_CONSTANT i64 10
+    %1:_(s64) = G_IMPLICIT_DEF
+    %2:_(s64) = G_ASHR %0, %1
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            lshr_undef_lhs
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; Optimize these to zero?
+    ; CHECK-LABEL: name: lshr_undef_lhs
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[DEF]], [[C]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[LSHR]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = G_CONSTANT i64 10
+    %1:_(s64) = G_IMPLICIT_DEF
+    %2:_(s64) = G_LSHR %1, %0
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            ashr_undef_lhs
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; Optimize these to zero?
+    ; CHECK-LABEL: name: ashr_undef_lhs
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[DEF]], [[C]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[ASHR]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(s64) = G_CONSTANT i64 10
+    %1:_(s64) = G_IMPLICIT_DEF
+    %2:_(s64) = G_ASHR %1, %0
+    $x0 = COPY %2(s64)
+    RET_ReallyLR implicit $x0
+
+...
