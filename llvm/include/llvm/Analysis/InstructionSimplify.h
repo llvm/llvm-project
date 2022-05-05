@@ -299,6 +299,10 @@ Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS, FastMathFlags FMF,
                      const SimplifyQuery &Q);
 
 /// Given a callsite, fold the result or return null.
+///
+/// \note A call with declared side effect may be simplified into a value
+/// without such. It happens if simplification code deduces that side effect
+/// is actually absent.
 Value *SimplifyCall(CallBase *Call, const SimplifyQuery &Q);
 
 /// Given an operand for a Freeze, see if we can fold the result.
