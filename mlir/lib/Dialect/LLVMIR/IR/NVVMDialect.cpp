@@ -81,8 +81,10 @@ Optional<mlir::NVVM::MMATypes> MmaOp::inferOperandMMAType(Type operandElType,
     return NVVM::MMATypes::f64;
   if (operandElType.isF16() || operandElType == half2Type)
     return NVVM::MMATypes::f16;
-  if (operandElType.isF32())
+  if (operandElType.isF32() && isAccumulator)
     return NVVM::MMATypes::f32;
+  if (operandElType.isF32() && !isAccumulator)
+    return NVVM::MMATypes::tf32;
   if (operandElType.isa<IntegerType>()) {
     if (isAccumulator)
       return NVVM::MMATypes::s32;
@@ -291,7 +293,7 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
           parser.getNameLoc(),
           "expected one type for each operand segment but got " +
               Twine(operandTypes.size()) + " types");
-  for (const auto& iter : llvm::enumerate(operandTypes)) {
+  for (const auto &iter : llvm::enumerate(operandTypes)) {
     auto &frag = frags[iter.index()];
     frag.regTypes.resize(frag.regs.size(), iter.value());
     if (failed(parser.resolveOperands(frag.regs, frag.regTypes,
@@ -376,8 +378,9 @@ LogicalResult MmaOp::verify() {
     switch (multiplicandAPtxType().getValue()) {
     case MMATypes::tf32:
       kFactor = 4;
+      multiplicandFragType = i32Ty;
       expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
-          context, {i32Ty, i32Ty, i32Ty, i32Ty}));
+          context, {f32Ty, f32Ty, f32Ty, f32Ty}));
       break;
     case MMATypes::f16:
     case MMATypes::bf16:
