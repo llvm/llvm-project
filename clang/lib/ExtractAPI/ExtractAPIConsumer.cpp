@@ -927,7 +927,8 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
         HeaderContents += "\"\n";
       else
         HeaderContents += ">\n";
-      KnownInputFiles.emplace_back(*RelativeName, IsQuoted);
+      KnownInputFiles.emplace_back(static_cast<SmallString<32>>(*RelativeName),
+                                   IsQuoted);
     } else {
       HeaderContents += " \"";
       HeaderContents += FilePath;
