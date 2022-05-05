@@ -382,6 +382,8 @@ public:
         swap(c, __q.c);
     }
 
+    _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
+
     template <class _T1, class _C1>
     friend
     _LIBCPP_INLINE_VISIBILITY
@@ -633,6 +635,8 @@ public:
     void swap(priority_queue& __q)
         _NOEXCEPT_(__is_nothrow_swappable<container_type>::value &&
                    __is_nothrow_swappable<value_compare>::value);
+
+    _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
 };
 
 #if _LIBCPP_STD_VER >= 17

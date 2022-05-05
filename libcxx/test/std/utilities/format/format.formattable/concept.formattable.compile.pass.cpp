@@ -195,9 +195,6 @@ void test_P1636() {
 }
 
 // Tests for P2286 Formatting ranges
-//
-// The paper hasn't been voted in so currently all formatters are disabled.
-// TODO validate whether the test is correct after the paper has been accepted.
 template <class CharT>
 void test_P2286() {
   assert_is_formattable<std::array<int, 42>, CharT>();
@@ -216,9 +213,9 @@ void test_P2286() {
   assert_is_not_formattable<std::unordered_multiset<int>, CharT>();
   assert_is_not_formattable<std::unordered_multimap<int, int>, CharT>();
 
-  assert_is_not_formattable<std::stack<int>, CharT>();
-  assert_is_not_formattable<std::queue<int>, CharT>();
-  assert_is_not_formattable<std::priority_queue<int>, CharT>();
+  assert_is_formattable<std::stack<int>, CharT>();
+  assert_is_formattable<std::queue<int>, CharT>();
+  assert_is_formattable<std::priority_queue<int>, CharT>();
 
   assert_is_formattable<std::span<int>, CharT>();
 

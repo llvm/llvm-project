@@ -839,6 +839,7 @@ module std [system] {
     module __format {
       module buffer                          { private header "__format/buffer.h" }
       module concepts                        { private header "__format/concepts.h" }
+      module container_adaptor               { private header "__format/container_adaptor.h" }
       module enable_insertable               { private header "__format/enable_insertable.h" }
       module escaped_output_table            { private header "__format/escaped_output_table.h" }
       module extended_grapheme_cluster_table { private header "__format/extended_grapheme_cluster_table.h" }
