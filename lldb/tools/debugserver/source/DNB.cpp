@@ -477,6 +477,10 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
     }
   }
 
+  if (DNBDebugserverIsTranslated()) {
+    return INVALID_NUB_PROCESS_ARCH;
+  }
+
   pid_t pid = INVALID_NUB_PROCESS;
   MachProcessSP processSP(new MachProcess);
   if (processSP.get()) {
