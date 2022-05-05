@@ -6,16 +6,17 @@
 define i32 @fcmpu(double %a, double %b) {
   ; CHECK-LABEL: name: fcmpu
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $f1, $f2
-  ; CHECK:   [[COPY:%[0-9]+]]:f8rc = COPY $f2
-  ; CHECK:   [[COPY1:%[0-9]+]]:f8rc = COPY $f1
-  ; CHECK:   %2:crrc = nofpexcept FCMPUD [[COPY1]], [[COPY]]
-  ; CHECK:   [[COPY2:%[0-9]+]]:crbitrc = COPY %2.sub_gt
-  ; CHECK:   [[LI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = LI8 0
-  ; CHECK:   [[LI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LI8 1
-  ; CHECK:   [[ISEL8_:%[0-9]+]]:g8rc = ISEL8 [[LI8_1]], [[LI8_]], [[COPY2]]
-  ; CHECK:   $x3 = COPY [[ISEL8_]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
+  ; CHECK-NEXT:   liveins: $f1, $f2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:f8rc = COPY $f2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:f8rc = COPY $f1
+  ; CHECK-NEXT:   %2:crrc = nofpexcept FCMPUD [[COPY1]], [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:crbitrc = COPY %2.sub_gt
+  ; CHECK-NEXT:   [[LI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = LI8 0
+  ; CHECK-NEXT:   [[LI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LI8 1
+  ; CHECK-NEXT:   [[ISEL8_:%[0-9]+]]:g8rc = ISEL8 [[LI8_1]], [[LI8_]], [[COPY2]]
+  ; CHECK-NEXT:   $x3 = COPY [[ISEL8_]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
   %r = fcmp ogt double %a, %b
   %g = zext i1 %r to i32
@@ -25,12 +26,13 @@ entry:
 define double @max_typec(double %a, double %b) {
   ; CHECK-LABEL: name: max_typec
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $f1, $f2
-  ; CHECK:   [[COPY:%[0-9]+]]:vsfrc = COPY $f2
-  ; CHECK:   [[COPY1:%[0-9]+]]:vsfrc = COPY $f1
-  ; CHECK:   %2:vsfrc = nofpexcept XSMAXCDP [[COPY1]], [[COPY]]
-  ; CHECK:   $f1 = COPY %2
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $f1
+  ; CHECK-NEXT:   liveins: $f1, $f2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vsfrc = COPY $f2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vsfrc = COPY $f1
+  ; CHECK-NEXT:   %2:vsfrc = nofpexcept XSMAXCDP [[COPY1]], [[COPY]]
+  ; CHECK-NEXT:   $f1 = COPY %2
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $f1
 entry:
   %cmp = fcmp ogt double %a, %b
   %sel = select i1 %cmp, double %a, double %b
@@ -41,11 +43,12 @@ entry:
 define double @fneg(double %a) {
   ; CHECK-LABEL: name: fneg
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $f1
-  ; CHECK:   [[COPY:%[0-9]+]]:vsfrc = COPY $f1
-  ; CHECK:   [[XSNEGDP:%[0-9]+]]:vsfrc = XSNEGDP [[COPY]], implicit $rm
-  ; CHECK:   $f1 = COPY [[XSNEGDP]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $f1
+  ; CHECK-NEXT:   liveins: $f1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vsfrc = COPY $f1
+  ; CHECK-NEXT:   [[XSNEGDP:%[0-9]+]]:vsfrc = XSNEGDP [[COPY]], implicit $rm
+  ; CHECK-NEXT:   $f1 = COPY [[XSNEGDP]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $f1
 entry:
   %neg = fneg double %a
   ret double %neg
@@ -54,11 +57,12 @@ entry:
 define double @fabs(double %a) {
   ; CHECK-LABEL: name: fabs
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $f1
-  ; CHECK:   [[COPY:%[0-9]+]]:vsfrc = COPY $f1
-  ; CHECK:   [[XSABSDP:%[0-9]+]]:vsfrc = XSABSDP [[COPY]], implicit $rm
-  ; CHECK:   $f1 = COPY [[XSABSDP]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $f1
+  ; CHECK-NEXT:   liveins: $f1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vsfrc = COPY $f1
+  ; CHECK-NEXT:   [[XSABSDP:%[0-9]+]]:vsfrc = XSABSDP [[COPY]], implicit $rm
+  ; CHECK-NEXT:   $f1 = COPY [[XSABSDP]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $f1
 entry:
   %abs = call double @llvm.fabs.f64(double %a)
   ret double %abs
@@ -68,77 +72,81 @@ entry:
 define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, i32* %addr1, i64* %addr2) {
   ; CHECK-LABEL: name: fptoint_nofpexcept
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $f1, $f2, $v2, $x7, $x8
-  ; CHECK:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x8
-  ; CHECK:   [[COPY1:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x7
-  ; CHECK:   [[COPY2:%[0-9]+]]:vrrc = COPY $v2
-  ; CHECK:   [[COPY3:%[0-9]+]]:f8rc = COPY $f2
-  ; CHECK:   [[COPY4:%[0-9]+]]:f8rc = COPY $f1
-  ; CHECK:   %5:vrrc = nofpexcept XSCVQPSWZ [[COPY2]]
-  ; CHECK:   [[COPY5:%[0-9]+]]:vslrc = COPY %5
-  ; CHECK:   [[COPY6:%[0-9]+]]:vfrc = COPY [[COPY5]].sub_64
-  ; CHECK:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY6]]
-  ; CHECK:   STW killed [[MFVSRWZ]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
-  ; CHECK:   %8:vrrc = nofpexcept XSCVQPUWZ [[COPY2]]
-  ; CHECK:   [[COPY7:%[0-9]+]]:vslrc = COPY %8
-  ; CHECK:   [[COPY8:%[0-9]+]]:vfrc = COPY [[COPY7]].sub_64
-  ; CHECK:   [[MFVSRWZ1:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY8]]
-  ; CHECK:   STW killed [[MFVSRWZ1]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
-  ; CHECK:   %11:vrrc = nofpexcept XSCVQPSDZ [[COPY2]]
-  ; CHECK:   %12:g8rc = nofpexcept MFVRD killed %11
-  ; CHECK:   STD killed %12, 0, [[COPY]] :: (volatile store (s64) into %ir.addr2)
-  ; CHECK:   %13:vrrc = nofpexcept XSCVQPUDZ [[COPY2]]
-  ; CHECK:   %14:g8rc = nofpexcept MFVRD killed %13
-  ; CHECK:   STD killed %14, 0, [[COPY]] :: (volatile store (s64) into %ir.addr2)
-  ; CHECK:   [[MFFS:%[0-9]+]]:f8rc = MFFS implicit $rm
-  ; CHECK:   MTFSB1 31, implicit-def $rm
-  ; CHECK:   MTFSB0 30, implicit-def $rm
-  ; CHECK:   %15:f8rc = nofpexcept FADD [[COPY3]], [[COPY4]], implicit $rm
-  ; CHECK:   MTFSFb 1, [[MFFS]], implicit-def $rm
-  ; CHECK:   %16:vsfrc = nofpexcept XSCVDPSXWS killed %15, implicit $rm
-  ; CHECK:   [[MFVSRWZ2:%[0-9]+]]:gprc = MFVSRWZ killed %16
-  ; CHECK:   STW killed [[MFVSRWZ2]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
-  ; CHECK:   [[ADDIStocHA8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
-  ; CHECK:   [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
-  ; CHECK:   [[COPY9:%[0-9]+]]:f8rc = COPY [[DFLOADf32_]]
-  ; CHECK:   [[FCMPOD:%[0-9]+]]:crrc = FCMPOD [[COPY4]], [[COPY9]]
-  ; CHECK:   [[COPY10:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_eq
-  ; CHECK:   [[XXLXORdpz:%[0-9]+]]:f8rc = XXLXORdpz
-  ; CHECK:   [[FCMPOD1:%[0-9]+]]:crrc = FCMPOD [[COPY3]], [[XXLXORdpz]]
-  ; CHECK:   [[COPY11:%[0-9]+]]:crbitrc = COPY [[FCMPOD1]].sub_lt
-  ; CHECK:   [[CRAND:%[0-9]+]]:crbitrc = CRAND killed [[COPY10]], killed [[COPY11]]
-  ; CHECK:   [[COPY12:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_eq
-  ; CHECK:   [[COPY13:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_lt
-  ; CHECK:   [[CRANDC:%[0-9]+]]:crbitrc = CRANDC killed [[COPY13]], killed [[COPY12]]
-  ; CHECK:   [[CROR:%[0-9]+]]:crbitrc = CROR killed [[CRANDC]], killed [[CRAND]]
-  ; CHECK:   [[LIS:%[0-9]+]]:gprc_and_gprc_nor0 = LIS 32768
-  ; CHECK:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 0
-  ; CHECK:   [[ISEL:%[0-9]+]]:gprc = ISEL [[LI]], [[LIS]], [[CROR]]
-  ; CHECK:   BC [[CROR]], %bb.2
-  ; CHECK: bb.1.entry:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK: bb.2.entry:
-  ; CHECK:   [[PHI:%[0-9]+]]:f8rc = PHI [[COPY9]], %bb.1, [[XXLXORdpz]], %bb.0
-  ; CHECK:   ADJCALLSTACKDOWN 32, 0, implicit-def dead $r1, implicit $r1
-  ; CHECK:   $f1 = COPY [[COPY4]]
-  ; CHECK:   $f2 = COPY [[COPY3]]
-  ; CHECK:   $f3 = COPY [[PHI]]
-  ; CHECK:   $f4 = COPY [[XXLXORdpz]]
-  ; CHECK:   BL8_NOP &__gcc_qsub, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $x2, implicit-def $r1, implicit-def $f1, implicit-def $f2
-  ; CHECK:   ADJCALLSTACKUP 32, 0, implicit-def dead $r1, implicit $r1
-  ; CHECK:   [[COPY14:%[0-9]+]]:f8rc = COPY $f1
-  ; CHECK:   [[COPY15:%[0-9]+]]:f8rc = COPY $f2
-  ; CHECK:   [[MFFS1:%[0-9]+]]:f8rc = MFFS implicit $rm
-  ; CHECK:   MTFSB1 31, implicit-def $rm
-  ; CHECK:   MTFSB0 30, implicit-def $rm
-  ; CHECK:   %37:f8rc = nofpexcept FADD [[COPY15]], [[COPY14]], implicit $rm
-  ; CHECK:   MTFSFb 1, [[MFFS1]], implicit-def $rm
-  ; CHECK:   %38:vsfrc = nofpexcept XSCVDPSXWS killed %37, implicit $rm
-  ; CHECK:   [[MFVSRWZ3:%[0-9]+]]:gprc = MFVSRWZ killed %38
-  ; CHECK:   [[XOR:%[0-9]+]]:gprc = XOR killed [[MFVSRWZ3]], killed [[ISEL]]
-  ; CHECK:   STW killed [[XOR]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $f1, $f2, $v2, $x7, $x8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x8
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x7
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vrrc = COPY $v2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:f8rc = COPY $f2
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:f8rc = COPY $f1
+  ; CHECK-NEXT:   %5:vrrc = nofpexcept XSCVQPSWZ [[COPY2]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vslrc = COPY %5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vfrc = COPY [[COPY5]].sub_64
+  ; CHECK-NEXT:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY6]]
+  ; CHECK-NEXT:   STW killed [[MFVSRWZ]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
+  ; CHECK-NEXT:   %8:vrrc = nofpexcept XSCVQPUWZ [[COPY2]]
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vslrc = COPY %8
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vfrc = COPY [[COPY7]].sub_64
+  ; CHECK-NEXT:   [[MFVSRWZ1:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY8]]
+  ; CHECK-NEXT:   STW killed [[MFVSRWZ1]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
+  ; CHECK-NEXT:   %11:vrrc = nofpexcept XSCVQPSDZ [[COPY2]]
+  ; CHECK-NEXT:   %12:g8rc = nofpexcept MFVRD killed %11
+  ; CHECK-NEXT:   STD killed %12, 0, [[COPY]] :: (volatile store (s64) into %ir.addr2)
+  ; CHECK-NEXT:   %13:vrrc = nofpexcept XSCVQPUDZ [[COPY2]]
+  ; CHECK-NEXT:   %14:g8rc = nofpexcept MFVRD killed %13
+  ; CHECK-NEXT:   STD killed %14, 0, [[COPY]] :: (volatile store (s64) into %ir.addr2)
+  ; CHECK-NEXT:   [[MFFS:%[0-9]+]]:f8rc = MFFS implicit $rm
+  ; CHECK-NEXT:   MTFSB1 31, implicit-def $rm, implicit-def $rm
+  ; CHECK-NEXT:   MTFSB0 30, implicit-def $rm, implicit-def $rm
+  ; CHECK-NEXT:   %15:f8rc = nofpexcept FADD [[COPY3]], [[COPY4]], implicit $rm
+  ; CHECK-NEXT:   MTFSFb 1, [[MFFS]], implicit-def $rm
+  ; CHECK-NEXT:   %16:vsfrc = nofpexcept XSCVDPSXWS killed %15, implicit $rm
+  ; CHECK-NEXT:   [[MFVSRWZ2:%[0-9]+]]:gprc = MFVSRWZ killed %16
+  ; CHECK-NEXT:   STW killed [[MFVSRWZ2]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
+  ; CHECK-NEXT:   [[ADDIStocHA8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
+  ; CHECK-NEXT:   [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:f8rc = COPY [[DFLOADf32_]]
+  ; CHECK-NEXT:   [[FCMPOD:%[0-9]+]]:crrc = FCMPOD [[COPY4]], [[COPY9]]
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_eq
+  ; CHECK-NEXT:   [[XXLXORdpz:%[0-9]+]]:f8rc = XXLXORdpz
+  ; CHECK-NEXT:   [[FCMPOD1:%[0-9]+]]:crrc = FCMPOD [[COPY3]], [[XXLXORdpz]]
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:crbitrc = COPY [[FCMPOD1]].sub_lt
+  ; CHECK-NEXT:   [[CRAND:%[0-9]+]]:crbitrc = CRAND killed [[COPY10]], killed [[COPY11]]
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_eq
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_lt
+  ; CHECK-NEXT:   [[CRANDC:%[0-9]+]]:crbitrc = CRANDC killed [[COPY13]], killed [[COPY12]]
+  ; CHECK-NEXT:   [[CROR:%[0-9]+]]:crbitrc = CROR killed [[CRANDC]], killed [[CRAND]]
+  ; CHECK-NEXT:   [[LIS:%[0-9]+]]:gprc_and_gprc_nor0 = LIS 32768
+  ; CHECK-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 0
+  ; CHECK-NEXT:   [[ISEL:%[0-9]+]]:gprc = ISEL [[LI]], [[LIS]], [[CROR]]
+  ; CHECK-NEXT:   BC [[CROR]], %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.entry:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.entry:
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:f8rc = PHI [[COPY9]], %bb.1, [[XXLXORdpz]], %bb.0
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 32, 0, implicit-def dead $r1, implicit $r1
+  ; CHECK-NEXT:   $f1 = COPY [[COPY4]]
+  ; CHECK-NEXT:   $f2 = COPY [[COPY3]]
+  ; CHECK-NEXT:   $f3 = COPY [[PHI]]
+  ; CHECK-NEXT:   $f4 = COPY [[XXLXORdpz]]
+  ; CHECK-NEXT:   BL8_NOP &__gcc_qsub, csr_ppc64_altivec, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $x2, implicit-def $r1, implicit-def $f1, implicit-def $f2
+  ; CHECK-NEXT:   ADJCALLSTACKUP 32, 0, implicit-def dead $r1, implicit $r1
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:f8rc = COPY $f1
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:f8rc = COPY $f2
+  ; CHECK-NEXT:   [[MFFS1:%[0-9]+]]:f8rc = MFFS implicit $rm
+  ; CHECK-NEXT:   MTFSB1 31, implicit-def $rm, implicit-def $rm
+  ; CHECK-NEXT:   MTFSB0 30, implicit-def $rm, implicit-def $rm
+  ; CHECK-NEXT:   %37:f8rc = nofpexcept FADD [[COPY15]], [[COPY14]], implicit $rm
+  ; CHECK-NEXT:   MTFSFb 1, [[MFFS1]], implicit-def $rm
+  ; CHECK-NEXT:   %38:vsfrc = nofpexcept XSCVDPSXWS killed %37, implicit $rm
+  ; CHECK-NEXT:   [[MFVSRWZ3:%[0-9]+]]:gprc = MFVSRWZ killed %38
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:gprc = XOR killed [[MFVSRWZ3]], killed [[ISEL]]
+  ; CHECK-NEXT:   STW killed [[XOR]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
   %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0
   store volatile i32 %conv1, i32* %addr1, align 4
@@ -160,15 +168,16 @@ entry:
 define signext i32 @q_to_i32(fp128 %m) #0 {
   ; CHECK-LABEL: name: q_to_i32
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $v2
-  ; CHECK:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
-  ; CHECK:   [[XSCVQPSWZ:%[0-9]+]]:vrrc = XSCVQPSWZ [[COPY]]
-  ; CHECK:   [[COPY1:%[0-9]+]]:vslrc = COPY [[XSCVQPSWZ]]
-  ; CHECK:   [[COPY2:%[0-9]+]]:vfrc = COPY [[COPY1]].sub_64
-  ; CHECK:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY2]]
-  ; CHECK:   [[EXTSW_32_64_:%[0-9]+]]:g8rc = EXTSW_32_64 killed [[MFVSRWZ]]
-  ; CHECK:   $x3 = COPY [[EXTSW_32_64_]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
+  ; CHECK-NEXT:   liveins: $v2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
+  ; CHECK-NEXT:   [[XSCVQPSWZ:%[0-9]+]]:vrrc = XSCVQPSWZ [[COPY]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vslrc = COPY [[XSCVQPSWZ]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vfrc = COPY [[COPY1]].sub_64
+  ; CHECK-NEXT:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY2]]
+  ; CHECK-NEXT:   [[EXTSW_32_64_:%[0-9]+]]:g8rc = EXTSW_32_64 killed [[MFVSRWZ]]
+  ; CHECK-NEXT:   $x3 = COPY [[EXTSW_32_64_]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
   %conv = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.strict") #0
   ret i32 %conv
@@ -177,12 +186,13 @@ entry:
 define i64 @q_to_i64(fp128 %m) #0 {
   ; CHECK-LABEL: name: q_to_i64
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $v2
-  ; CHECK:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
-  ; CHECK:   [[XSCVQPSDZ:%[0-9]+]]:vrrc = XSCVQPSDZ [[COPY]]
-  ; CHECK:   [[MFVRD:%[0-9]+]]:g8rc = MFVRD killed [[XSCVQPSDZ]]
-  ; CHECK:   $x3 = COPY [[MFVRD]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
+  ; CHECK-NEXT:   liveins: $v2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
+  ; CHECK-NEXT:   [[XSCVQPSDZ:%[0-9]+]]:vrrc = XSCVQPSDZ [[COPY]]
+  ; CHECK-NEXT:   [[MFVRD:%[0-9]+]]:g8rc = MFVRD killed [[XSCVQPSDZ]]
+  ; CHECK-NEXT:   $x3 = COPY [[MFVRD]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
   %conv = tail call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %m, metadata !"fpexcept.strict") #0
   ret i64 %conv
@@ -191,12 +201,13 @@ entry:
 define i64 @q_to_u64(fp128 %m) #0 {
   ; CHECK-LABEL: name: q_to_u64
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $v2
-  ; CHECK:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
-  ; CHECK:   [[XSCVQPUDZ:%[0-9]+]]:vrrc = XSCVQPUDZ [[COPY]]
-  ; CHECK:   [[MFVRD:%[0-9]+]]:g8rc = MFVRD killed [[XSCVQPUDZ]]
-  ; CHECK:   $x3 = COPY [[MFVRD]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
+  ; CHECK-NEXT:   liveins: $v2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
+  ; CHECK-NEXT:   [[XSCVQPUDZ:%[0-9]+]]:vrrc = XSCVQPUDZ [[COPY]]
+  ; CHECK-NEXT:   [[MFVRD:%[0-9]+]]:g8rc = MFVRD killed [[XSCVQPUDZ]]
+  ; CHECK-NEXT:   $x3 = COPY [[MFVRD]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
   %conv = tail call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %m, metadata !"fpexcept.strict") #0
   ret i64 %conv
@@ -205,17 +216,18 @@ entry:
 define zeroext i32 @q_to_u32(fp128 %m) #0 {
   ; CHECK-LABEL: name: q_to_u32
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $v2
-  ; CHECK:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
-  ; CHECK:   [[XSCVQPUWZ:%[0-9]+]]:vrrc = XSCVQPUWZ [[COPY]]
-  ; CHECK:   [[COPY1:%[0-9]+]]:vslrc = COPY [[XSCVQPUWZ]]
-  ; CHECK:   [[COPY2:%[0-9]+]]:vfrc = COPY [[COPY1]].sub_64
-  ; CHECK:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY2]]
-  ; CHECK:   [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
-  ; CHECK:   [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], killed [[MFVSRWZ]], %subreg.sub_32
-  ; CHECK:   [[RLDICL:%[0-9]+]]:g8rc = RLDICL killed [[INSERT_SUBREG]], 0, 32
-  ; CHECK:   $x3 = COPY [[RLDICL]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
+  ; CHECK-NEXT:   liveins: $v2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrrc = COPY $v2
+  ; CHECK-NEXT:   [[XSCVQPUWZ:%[0-9]+]]:vrrc = XSCVQPUWZ [[COPY]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vslrc = COPY [[XSCVQPUWZ]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vfrc = COPY [[COPY1]].sub_64
+  ; CHECK-NEXT:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[COPY2]]
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], killed [[MFVSRWZ]], %subreg.sub_32
+  ; CHECK-NEXT:   [[RLDICL:%[0-9]+]]:g8rc = RLDICL killed [[INSERT_SUBREG]], 0, 32
+  ; CHECK-NEXT:   $x3 = COPY [[RLDICL]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
   %conv = tail call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %m, metadata !"fpexcept.strict") #0
   ret i32 %conv
