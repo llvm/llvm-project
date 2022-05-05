@@ -245,7 +245,7 @@ function(compileDeviceRTLLibrary target_cpu target_name)
     # Add amdgcn-specific bc files to link command
     list(APPEND bc_files ${ocml_bc_file} ${ockl_bc_file} ${oclc_wf_bc_file} ${oclc_isa_bc_file})
     # Add touch_file_name to local_depend_files so all $bc_files will exist or be created.
-    list(APPEND ${local_depend_files} ${touch_file_name})
+    list(APPEND local_depend_files ${touch_file_name})
   endif()
 
   # Link to a bitcode library.
