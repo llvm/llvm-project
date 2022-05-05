@@ -24,8 +24,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: sitofp_to_zero
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK: $s0 = COPY [[C]](s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: $s0 = COPY [[C]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_SITOFP %0(s32)
     $s0 = COPY %1(s32)
@@ -40,8 +40,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: and_to_zero
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: $w0 = COPY [[C]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: $w0 = COPY [[C]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = G_CONSTANT i32 10
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s32) = G_AND %0, %1
@@ -57,8 +57,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: mul_to_zero
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: $w0 = COPY [[C]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: $w0 = COPY [[C]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = G_CONSTANT i32 10
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s32) = G_MUL %0, %1
@@ -74,8 +74,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: or_to_negative_one
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: $w0 = COPY [[C]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: $w0 = COPY [[C]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = G_CONSTANT i32 10
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s32) = G_OR %0, %1
@@ -91,8 +91,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: xor_to_undef
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: $w0 = COPY [[DEF]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = G_CONSTANT i32 10
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s32) = G_XOR %0, %1
@@ -108,8 +108,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: add_to_undef
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: $w0 = COPY [[DEF]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = G_CONSTANT i32 10
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s32) = G_ADD %0, %1
@@ -125,8 +125,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: sub_to_undef
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: $w0 = COPY [[DEF]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = G_CONSTANT i32 10
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s32) = G_SUB %0, %1
@@ -142,8 +142,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fptoui_to_undef
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: $w0 = COPY [[DEF]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_FPTOUI %0(s32)
     $w0 = COPY %1(s32)
@@ -158,8 +158,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fptosi_to_undef
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: $w0 = COPY [[DEF]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_FPTOSI %0(s32)
     $w0 = COPY %1(s32)
@@ -174,8 +174,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: shufflevector_undef_ops_to_undef
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: $d0 = COPY [[DEF]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: $d0 = COPY [[DEF]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %1:_(<2 x s32>) = G_IMPLICIT_DEF
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
     %0:_(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2(<2 x s32>), shufflemask(0, 1)
@@ -192,9 +192,10 @@ body:             |
     liveins: $d0, $d1
     ; CHECK-LABEL: name: shufflevector_undef_mask_to_undef
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: $d0 = COPY [[DEF]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $d0 = COPY [[DEF]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s32>) = G_SHUFFLE_VECTOR %0(<2 x s32>), %1, shufflemask(undef, undef)
@@ -214,11 +215,12 @@ body:             |
     ;
     ; CHECK-LABEL: name: shufflevector_not_all_ops_undef
     ; CHECK: liveins: $d0
-    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[SHUF:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<2 x s32>), [[COPY]], shufflemask(0, 1)
-    ; CHECK: $d0 = COPY [[SHUF]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<2 x s32>), [[COPY]], shufflemask(0, 1)
+    ; CHECK-NEXT: $d0 = COPY [[SHUF]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %1:_(<2 x s32>) = G_IMPLICIT_DEF
     %2:_(<2 x s32>) = COPY $d0
     %0:_(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2(<2 x s32>), shufflemask(0, 1)
