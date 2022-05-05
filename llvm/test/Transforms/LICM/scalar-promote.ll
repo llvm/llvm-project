@@ -599,6 +599,44 @@ Out:
 
 }
 
+define i8 @test_hoistable_existing_load_sinkable_store_writeonly(i8* dereferenceable(8) %ptr, i8 %start) writeonly {
+; CHECK: Function Attrs: writeonly
+; CHECK-LABEL: @test_hoistable_existing_load_sinkable_store_writeonly(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i8, i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[INC1:%.*]] = phi i8 [ [[PTR_PROMOTED]], [[ENTRY:%.*]] ], [ [[INC1]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ [[START:%.*]], [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[I]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    store i8 [[INC1]], i8* [[PTR]], align 1
+; CHECK-NEXT:    [[ADD]] = add i8 [[I]], [[INC1]]
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i8 [ [[I]], [[LOOP_HEADER]] ]
+; CHECK-NEXT:    ret i8 [[I_LCSSA]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %i = phi i8 [ %start, %entry ], [ %add, %loop.latch ]
+  %cmp = icmp ult i8 %i, 4
+  br i1 %cmp, label %loop.latch, label %exit
+
+loop.latch:
+  %div = sdiv i8 %i, 3
+  %inc = load i8, i8* %ptr
+  store i8 %inc, i8* %ptr
+  %add = add i8 %i, %inc
+  br label %loop.header
+
+exit:
+  ret i8 %i
+}
+
 @glb = external global i8, align 1
 
 ; Test case for PR51248.
