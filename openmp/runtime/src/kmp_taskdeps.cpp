@@ -45,6 +45,9 @@ static void __kmp_init_node(kmp_depnode_t *node) {
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
   node->dn.id = KMP_ATOMIC_INC(&kmp_node_id_seed);
 #endif
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+  __itt_sync_create(node, "OMP task dep node", NULL, 0);
+#endif
 }
 
 static inline kmp_depnode_t *__kmp_node_ref(kmp_depnode_t *node) {
