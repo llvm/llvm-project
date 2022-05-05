@@ -8580,37 +8580,28 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
       return toVPRecipeResult(Recipe);
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
-    if (Legal->isReductionVariable(Phi) || Legal->isFirstOrderRecurrence(Phi)) {
-      VPValue *StartV = Operands[0];
-      if (Legal->isReductionVariable(Phi)) {
-        const RecurrenceDescriptor &RdxDesc =
-            Legal->getReductionVars().find(Phi)->second;
-        assert(RdxDesc.getRecurrenceStartValue() ==
-               Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
-        PhiRecipe = new VPReductionPHIRecipe(Phi, RdxDesc, *StartV,
-                                             CM.isInLoopReduction(Phi),
-                                             CM.useOrderedReductions(RdxDesc));
-      } else {
-        PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
-      }
+    assert((Legal->isReductionVariable(Phi) ||
+            Legal->isFirstOrderRecurrence(Phi)) &&
+           "can only widen reductions and first-order recurrences here");
+    VPValue *StartV = Operands[0];
+    if (Legal->isReductionVariable(Phi)) {
+      const RecurrenceDescriptor &RdxDesc =
+          Legal->getReductionVars().find(Phi)->second;
+      assert(RdxDesc.getRecurrenceStartValue() ==
+             Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
+      PhiRecipe = new VPReductionPHIRecipe(Phi, RdxDesc, *StartV,
+                                           CM.isInLoopReduction(Phi),
+                                           CM.useOrderedReductions(RdxDesc));
+    } else {
+      PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
+    }
 
       // Record the incoming value from the backedge, so we can add the incoming
       // value from the backedge after all recipes have been created.
       recordRecipeOf(cast<Instruction>(
           Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
       PhisToFix.push_back(PhiRecipe);
-    } else {
-      // TODO: record backedge value for remaining pointer induction phis.
-      assert(Phi->getType()->isPointerTy() &&
-             "only pointer phis should be handled here");
-      assert(Legal->getInductionVars().count(Phi) &&
-             "Not an induction variable");
-      InductionDescriptor II = Legal->getInductionVars().lookup(Phi);
-      VPValue *Start = Plan->getOrAddVPValue(II.getStartValue());
-      PhiRecipe = new VPWidenPHIRecipe(Phi, Start);
-    }
-
-    return toVPRecipeResult(PhiRecipe);
+      return toVPRecipeResult(PhiRecipe);
   }
 
   if (isa<TruncInst>(Instr) &&
