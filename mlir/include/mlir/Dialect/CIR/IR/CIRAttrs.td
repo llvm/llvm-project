@@ -37,4 +37,13 @@ def NullAttr : CIR_Attr<"Null", "null", [TypedAttrInterface]> {
   let assemblyFormat = [{}];
 }
 
+def CstArrayAttr : CIR_Attr<"CstArray", "cst_array"> {
+  let summary = "An Attribute containing a mlir::ArrayAttr";
+  let description = [{
+    An CIR array attribute is an array of literals of the specified attr types.
+  }];
+
+  let assemblyFormat = "`<` `>`";
+}
+
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS

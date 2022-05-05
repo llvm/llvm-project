@@ -1,4 +1,4 @@
-//===- CIRTypes.h - MLIR SPIR-V Types -------------------------*- C++ -*-===//
+//===- CIRTypes.h - MLIR CIR Types ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the types in the SPIR-V dialect.
+// This file declares the types in the CIR dialect.
 //
 //===----------------------------------------------------------------------===//
 
