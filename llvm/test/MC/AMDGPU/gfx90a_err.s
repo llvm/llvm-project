@@ -284,3 +284,9 @@ ds_ordered_count v5, v1 offset:65535 gds
 
 exp pos0 v3, v2, v1, v0
 // GFX90A: error: instruction not supported on this GPU
+
+global_load_lds_dword v[2:3], off
+// GFX90A: error: instruction not supported on this GPU
+
+scratch_load_lds_dword v2, off
+// GFX90A: error: instruction not supported on this GPU

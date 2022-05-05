@@ -1624,6 +1624,8 @@ private:
   bool validateDivScale(const MCInst &Inst);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
+  bool validateFlatLdsDMA(const MCInst &Inst, const OperandVector &Operands,
+                          const SMLoc &IDLoc);
   Optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
@@ -4417,6 +4419,31 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateFlatLdsDMA(const MCInst &Inst,
+                                         const OperandVector &Operands,
+                                         const SMLoc &IDLoc) {
+  if (isGFX940())
+    return true;
+
+  uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
+  if ((TSFlags & (SIInstrFlags::VALU | SIInstrFlags::FLAT)) !=
+      (SIInstrFlags::VALU | SIInstrFlags::FLAT))
+    return true;
+  // This is FLAT LDS DMA.
+
+  SMLoc S = getImmLoc(AMDGPUOperand::ImmTyLDS, Operands);
+  StringRef CStr(S.getPointer());
+  if (!CStr.startswith("lds")) {
+    // This is incorrectly selected LDS DMA version of a FLAT load opcode.
+    // And LDS version should have 'lds' modifier, but it follows optional
+    // operands so its absense is ignored by the matcher.
+    Error(IDLoc, "invalid operands for instruction");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
@@ -4529,6 +4556,10 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
+    return false;
+  }
+
+  if (!validateFlatLdsDMA(Inst, Operands, IDLoc)) {
     return false;
   }
 
