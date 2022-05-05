@@ -1,19 +1,18 @@
-; Verify that the driver can consume LLVM BC files. The expected assembly is
-; fairly generic (tested on AArch64 and X86_64), but we may need to tweak when
-; testing on other platforms. Note that the actual output doesn't matter as
-; long as it's in Assembly format.
+; Verify that the driver can consume LLVM BC files.
+
+; REQUIRES: aarch64-registered-target
 
 ;-------------
 ; RUN COMMANDS
 ;-------------
 ; RUN: rm -f %t.bc
-; RUN: %flang_fc1 -emit-llvm-bc %s -o %t.bc
-; RUN: %flang_fc1 -S -o - %t.bc | FileCheck %s
+; RUN: %flang_fc1 -triple aarch64-unknown-linux-gnu -emit-llvm-bc %s -o %t.bc
+; RUN: %flang_fc1 -S -triple aarch64-unknown-linux-gnu -o - %t.bc | FileCheck %s
 ; RUN: rm -f %t.bc
 
 ; RUN: rm -f %t.bc
-; RUN: %flang -c -emit-llvm %s -o %t.bc
-; RUN: %flang -S -o - %t.bc | FileCheck %s
+; RUN: %flang -c -target aarch64-unknown-linux-gnu -emit-llvm %s -o %t.bc
+; RUN: %flang -S -target aarch64-unknown-linux-gnu -o - %t.bc | FileCheck %s
 ; RUN: rm -f %t.bc
 
 ;----------------
