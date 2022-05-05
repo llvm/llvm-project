@@ -5135,6 +5135,10 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(Opcode, DL, VT, {N0, N1}))
     return C;
 
+  // If the operands are the same, this is a no-op.
+  if (N0 == N1)
+    return N0;
+
   // canonicalize constant to RHS
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
