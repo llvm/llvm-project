@@ -1688,6 +1688,11 @@ SDValue peekThroughExtractSubvectors(SDValue V);
 /// constant is canonicalized to be operand 1.
 bool isBitwiseNot(SDValue V, bool AllowUndefs = false);
 
+/// If \p V is a bitwise not, returns the inverted operand. Otherwise returns
+/// an empty SDValue. Only bits set in \p Mask are required to be inverted,
+/// other bits may be arbitrary.
+SDValue getBitwiseNotOperand(SDValue V, SDValue Mask, bool AllowUndefs);
+
 /// Returns the SDNode if it is a constant splat BuildVector or constant int.
 ConstantSDNode *isConstOrConstSplat(SDValue N, bool AllowUndefs = false,
                                     bool AllowTruncation = false);
