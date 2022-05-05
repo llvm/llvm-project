@@ -177,6 +177,7 @@ def memri : Operand<iPTR> {
 
   let PrintMethod = "printMemri";
   let EncoderMethod = "encodeMemri";
+  let DecoderMethod = "decodeMemri";
 
   let ParserMatchClass = MemriAsmOperand;
 }
