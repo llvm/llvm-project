@@ -1,4 +1,6 @@
 # RUN: yaml2obj %s | llvm-objdump --macho --private-headers - | FileCheck %s
+# RUN: yaml2obj %s | llvm-otool -lv - | FileCheck %s
+# RUN: yaml2obj %s | llvm-otool -l - | FileCheck --check-prefix=SHORT %s
 
 --- !mach-o
 FileHeader:
@@ -55,3 +57,13 @@ CHECK-NEXT:     minos 8.0
 CHECK-NEXT:    ntools 1
 CHECK-NEXT:      tool clang
 CHECK-NEXT:   version 0.0
+
+SHORT: Load command 1
+SHORT-NEXT:       cmd LC_BUILD_VERSION
+SHORT-NEXT:   cmdsize 32
+SHORT-NEXT:  platform 2
+SHORT-NEXT:       sdk 9.0
+SHORT-NEXT:     minos 8.0
+SHORT-NEXT:    ntools 1
+SHORT-NEXT:      tool 1
+SHORT-NEXT:   version 0.0
