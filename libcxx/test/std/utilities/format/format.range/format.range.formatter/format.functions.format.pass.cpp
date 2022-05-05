@@ -17,15 +17,14 @@
 
 // <format>
 
-// template<class charT, formattable<charT>... Ts>
-//   struct formatter<pair-or-tuple<Ts...>, charT>
-//
-// tested in the format functions
-//
+//  template<class T, class charT = char>
+//    requires same_as<remove_cvref_t<T>, T> && formattable<T, charT>
+//  class range_formatter;
+
 // template<class... Args>
-//   string format(format-string<Args...> fmt, const Args&... args);
+//   string format(format_string<Args...> fmt, Args&&... args);
 // template<class... Args>
-//   wstring format(wformat-string<Args...> fmt, const Args&... args);
+//   wstring format(wformat_string<Args...> fmt, Args&&... args);
 
 #include <format>
 #include <cassert>
@@ -46,15 +45,13 @@ auto test = []<class CharT, class... Args>(
 auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, Args&&...) {
   // After P2216 most exceptions thrown by std::format become ill-formed.
   // Therefore this tests does nothing.
-  // A basic ill-formed test is done in format.verify.cpp
-  // The exceptions are tested by other functions that don't use the basic-format-string as fmt argument.
 };
 
 int main(int, char**) {
-  run_tests<char>(test, test_exception);
+  format_tests<char>(test, test_exception);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  run_tests<wchar_t>(test, test_exception);
+  format_tests<wchar_t>(test, test_exception);
 #endif
 
   return 0;

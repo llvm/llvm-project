@@ -327,6 +327,7 @@ set(files
   __format/formatter_tuple.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
+  __format/range_formatter.h
   __format/unicode.h
   __functional/binary_function.h
   __functional/binary_negate.h

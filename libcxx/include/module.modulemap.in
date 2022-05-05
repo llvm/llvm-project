@@ -871,6 +871,7 @@ module std [system] {
       module formatter_tuple                 { private header "__format/formatter_tuple.h" }
       module parser_std_format_spec          { private header "__format/parser_std_format_spec.h" }
       module range_default_formatter         { private header "__format/range_default_formatter.h" }
+      module range_formatter                 { private header "__format/range_formatter.h" }
       module unicode                         { private header "__format/unicode.h" }
     }
   }

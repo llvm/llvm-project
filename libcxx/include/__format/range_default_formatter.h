@@ -19,9 +19,11 @@
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/formatter.h>
+#include <__format/range_formatter.h>
 #include <__ranges/concepts.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/pair.h>
+#include <string_view>
 #include <tuple>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -104,7 +106,28 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatte
 
 template <ranges::input_range _Rp, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatter<range_format::sequence, _Rp, _CharT> {
-  __range_default_formatter() = delete; // TODO FMT Implement
+private:
+  using __maybe_const_r = __fmt_maybe_const<_Rp, _CharT>;
+  range_formatter<remove_cvref_t<ranges::range_reference_t<__maybe_const_r>>, _CharT> __underlying_;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) {
+    __underlying_.set_separator(__separator);
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr void
+  set_brackets(basic_string_view<_CharT> __opening_bracket, basic_string_view<_CharT> __closing_bracket) {
+    __underlying_.set_brackets(__opening_bracket, __closing_bracket);
+  }
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return __underlying_.parse(__ctx);
+  }
+
+  template <class FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename FormatContext::iterator format(__maybe_const_r& __range, FormatContext& __ctx) const {
+    return __underlying_.format(__range, __ctx);
+  }
 };
 
 template <ranges::input_range _Rp, class _CharT>
