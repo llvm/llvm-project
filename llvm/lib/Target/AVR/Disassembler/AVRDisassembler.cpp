@@ -276,9 +276,11 @@ static DecodeStatus decodeMemri(MCInst &Inst, unsigned Insn, uint64_t Address,
 static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
+  // Get the register will be loaded or stored.
+  unsigned RegVal = GPRDecoderTable[(Insn >> 4) & 0x1f];
+
   // Decode LDD/STD with offset less than 8.
   if ((Insn & 0xf000) == 0x8000) {
-    unsigned RegVal = GPRDecoderTable[(Insn >> 4) & 0x1f];
     unsigned RegBase = (Insn & 0x8) ? AVR::R29R28 : AVR::R31R30;
     unsigned Offset = Insn & 7; // We need not consider offset > 7.
     if ((Insn & 0x200) == 0) { // Decode LDD.
@@ -295,8 +297,85 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
     return MCDisassembler::Success;
   }
 
-  // TODO: Decode ST/LD with postinc/predec properly.
-  return MCDisassembler::Fail;
+  // Decode the following 14 instructions. Bit 9 indicates load(0) or store(1),
+  // bits 8~4 indicate the value register, bits 3-2 indicate the base address
+  // register (11-X, 10-Y, 00-Z), bits 1~0 indicate the mode (00-basic,
+  // 01-postinc, 10-predec).
+  // ST X,  Rr : 1001 001r rrrr 1100
+  // ST X+, Rr : 1001 001r rrrr 1101
+  // ST -X, Rr : 1001 001r rrrr 1110
+  // ST Y+, Rr : 1001 001r rrrr 1001
+  // ST -Y, Rr : 1001 001r rrrr 1010
+  // ST Z+, Rr : 1001 001r rrrr 0001
+  // ST -Z, Rr : 1001 001r rrrr 0010
+  // LD Rd, X  : 1001 000d dddd 1100
+  // LD Rd, X+ : 1001 000d dddd 1101
+  // LD Rd, -X : 1001 000d dddd 1110
+  // LD Rd, Y+ : 1001 000d dddd 1001
+  // LD Rd, -Y : 1001 000d dddd 1010
+  // LD Rd, Z+ : 1001 000d dddd 0001
+  // LD Rd, -Z : 1001 000d dddd 0010
+  if ((Insn & 0xfc00) != 0x9000 || (Insn & 0xf) == 0)
+    return MCDisassembler::Fail;
+
+  // Get the base address register.
+  unsigned RegBase;
+  switch (Insn & 0xc) {
+  case 0xc:
+    RegBase = AVR::R27R26;
+    break;
+  case 0x8:
+    RegBase = AVR::R29R28;
+    break;
+  case 0x0:
+    RegBase = AVR::R31R30;
+    break;
+  default:
+    return MCDisassembler::Fail;
+  }
+
+  // Set the opcode.
+  switch (Insn & 0x203) {
+  case 0x200:
+    Inst.setOpcode(AVR::STPtrRr);
+    Inst.addOperand(MCOperand::createReg(RegBase));
+    Inst.addOperand(MCOperand::createReg(RegVal));
+    return MCDisassembler::Success;
+  case 0x201:
+    Inst.setOpcode(AVR::STPtrPiRr);
+    break;
+  case 0x202:
+    Inst.setOpcode(AVR::STPtrPdRr);
+    break;
+  case 0:
+    Inst.setOpcode(AVR::LDRdPtr);
+    Inst.addOperand(MCOperand::createReg(RegVal));
+    Inst.addOperand(MCOperand::createReg(RegBase));
+    return MCDisassembler::Success;
+  case 1:
+    Inst.setOpcode(AVR::LDRdPtrPi);
+    break;
+  case 2:
+    Inst.setOpcode(AVR::LDRdPtrPd);
+    break;
+  default:
+    return MCDisassembler::Fail;
+  }
+
+  // Build postinc/predec machine instructions.
+  if ((Insn & 0x200) == 0) { // This is a load instruction.
+    Inst.addOperand(MCOperand::createReg(RegVal));
+    Inst.addOperand(MCOperand::createReg(RegBase));
+    Inst.addOperand(MCOperand::createReg(RegBase));
+  } else { // This is a store instruction.
+    Inst.addOperand(MCOperand::createReg(RegBase));
+    Inst.addOperand(MCOperand::createReg(RegBase));
+    Inst.addOperand(MCOperand::createReg(RegVal));
+    // STPtrPiRr and STPtrPdRr have an extra immediate operand.
+    Inst.addOperand(MCOperand::createImm(1));
+  }
+
+  return MCDisassembler::Success;
 }
 
 static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -357,7 +436,12 @@ DecodeStatus AVRDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     // Try to auto-decode a 16-bit instruction.
     Result = decodeInstruction(getDecoderTable(Size), Instr, Insn, Address,
                                this, STI);
+    if (Result != MCDisassembler::Fail)
+      return Result;
 
+    // Try to decode to a load/store instruction. ST/LD need a specified
+    // DecoderMethod, as they already have a specified PostEncoderMethod.
+    Result = decodeLoadStore(Instr, Insn, Address, this);
     if (Result != MCDisassembler::Fail)
       return Result;
   }
