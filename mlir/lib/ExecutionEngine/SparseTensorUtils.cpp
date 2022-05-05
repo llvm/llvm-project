@@ -126,11 +126,11 @@ public:
     // only happens if we did not set the initial capacity right, and then only
     // for every internal vector reallocation (which with the doubling rule
     // should only incur an amortized linear overhead).
-    uint64_t *new_base = indices.data();
-    if (new_base != base) {
+    uint64_t *newBase = indices.data();
+    if (newBase != base) {
       for (uint64_t i = 0, n = elements.size(); i < n; i++)
-        elements[i].indices = new_base + (elements[i].indices - base);
-      base = new_base;
+        elements[i].indices = newBase + (elements[i].indices - base);
+      base = newBase;
     }
     // Add element as (pointer into shared index pool, value) pair.
     elements.emplace_back(base + size, val);
