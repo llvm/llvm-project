@@ -230,6 +230,8 @@ public:
       clang::FunctionType::ExtInfo info,
       llvm::ArrayRef<clang::FunctionProtoType::ExtParameterInfo> paramInfos,
       RequiredArgs args);
+
+  bool noRecordsBeingLaidOut() const { return RecordsBeingLaidOut.empty(); }
 };
 } // namespace cir
 
