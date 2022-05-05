@@ -352,26 +352,14 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::IntegerTyID:
     return ConstantInt::get(Ty, 0);
   case Type::HalfTyID:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat::getZero(APFloat::IEEEhalf()));
   case Type::BFloatTyID:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat::getZero(APFloat::BFloat()));
   case Type::FloatTyID:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat::getZero(APFloat::IEEEsingle()));
   case Type::DoubleTyID:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat::getZero(APFloat::IEEEdouble()));
   case Type::X86_FP80TyID:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat::getZero(APFloat::x87DoubleExtended()));
   case Type::FP128TyID:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat::getZero(APFloat::IEEEquad()));
   case Type::PPC_FP128TyID:
-    return ConstantFP::get(Ty->getContext(), APFloat(APFloat::PPCDoubleDouble(),
-                                                     APInt::getZero(128)));
+    return ConstantFP::get(Ty->getContext(),
+                           APFloat::getZero(Ty->getFltSemantics()));
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::StructTyID:
