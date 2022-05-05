@@ -995,7 +995,7 @@ static int merge_main(int argc, const char *argv[]) {
       "zero-counter-threshold", cl::init(0.7), cl::Hidden,
       cl::desc("For the function which is cold in instr profile but hot in "
                "sample profile, if the ratio of the number of zero counters "
-               "divided by the the total number of counters is above the "
+               "divided by the total number of counters is above the "
                "threshold, the profile of the function will be regarded as "
                "being harmful for performance and will be dropped."));
   cl::opt<unsigned> SupplMinSizeThreshold(

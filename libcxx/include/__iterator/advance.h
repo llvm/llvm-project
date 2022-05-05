@@ -141,7 +141,7 @@ public:
   //   * If `n > 0`, [i, bound) denotes a range.
   //   * If `n == 0`, [i, bound) or [bound, i) denotes a range.
   //   * If `n < 0`, [bound, i) denotes a range, `I` models `bidirectional_iterator`, and `I` and `S` model `same_as<I, S>`.
-  // Returns: `n - M`, where `M` is the difference between the the ending and starting position.
+  // Returns: `n - M`, where `M` is the difference between the ending and starting position.
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
   _LIBCPP_HIDE_FROM_ABI
   constexpr iter_difference_t<_Ip> operator()(_Ip& __i, iter_difference_t<_Ip> __n, _Sp __bound) const {

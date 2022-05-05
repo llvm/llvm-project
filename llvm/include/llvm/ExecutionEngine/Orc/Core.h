@@ -1331,7 +1331,7 @@ public:
   lookupInitSymbols(ExecutionSession &ES,
                     const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms);
 
-  /// Performs an async lookup for the the given symbols in each of the given
+  /// Performs an async lookup for the given symbols in each of the given
   /// JITDylibs, calling the given handler once all lookups have completed.
   static void
   lookupInitSymbolsAsync(unique_function<void(Error)> OnComplete,

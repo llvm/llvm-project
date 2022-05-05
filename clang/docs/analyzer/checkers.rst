@@ -2466,7 +2466,7 @@ Here, ``ptr`` is the buffer, and its minimum size is ``size * nmemb``
 
     // Below we receive a warning because the 3rd parameter should be the
     // number of elements to read, not the size in bytes. This case is a known
-    // vulnerability described by the the ARR38-C SEI-CERT rule.
+    // vulnerability described by the ARR38-C SEI-CERT rule.
     fread(wbuf, size, nitems, file);
   }
 

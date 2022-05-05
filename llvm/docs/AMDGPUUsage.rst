@@ -3627,17 +3627,17 @@ Code object V5 metadata is the same as
                                                        is 1 or 2, then must be 1.
 
                                                      "hidden_remainder_x"
-                                                       The grid dispatch work group size of the the partial work group
+                                                       The grid dispatch work group size of the partial work group
                                                        of the X dimension, if it exists. Must be zero if a partial
                                                        work group does not exist in the X dimension.
 
                                                      "hidden_remainder_y"
-                                                       The grid dispatch work group size of the the partial work group
+                                                       The grid dispatch work group size of the partial work group
                                                        of the Y dimension, if it exists. Must be zero if a partial
                                                        work group does not exist in the Y dimension.
 
                                                      "hidden_remainder_z"
-                                                       The grid dispatch work group size of the the partial work group
+                                                       The grid dispatch work group size of the partial work group
                                                        of the Z dimension, if it exists. Must be zero if a partial
                                                        work group does not exist in the Z dimension.
 
