@@ -132,7 +132,7 @@ void InvalidPtrChecker::postPreviousReturnInvalidatingCall(
         return;
       Out << '\'';
       FD->getNameForDiagnostic(Out, FD->getASTContext().getLangOpts(), true);
-      Out << "' call may invalidate the the result of the previous " << '\'';
+      Out << "' call may invalidate the result of the previous " << '\'';
       FD->getNameForDiagnostic(Out, FD->getASTContext().getLangOpts(), true);
       Out << '\'';
     });
