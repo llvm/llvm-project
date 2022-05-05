@@ -38,6 +38,11 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
   case kAbsF:
   case kCeilF:
   case kFloorF:
+  case kSqrtF:
+  case kExpm1F:
+  case kLog1pF:
+  case kSinF:
+  case kTanhF:
   case kNegF:
   case kNegI:
     assert(x != -1u && y == -1u && !v && !o);
@@ -268,6 +273,11 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   case kAbsF:
   case kCeilF:
   case kFloorF:
+  case kSqrtF:
+  case kExpm1F:
+  case kLog1pF:
+  case kSinF:
+  case kTanhF:
   case kNegF:
   case kNegI:
   case kTruncF:
@@ -330,6 +340,16 @@ static const char *kindToOpSymbol(Kind kind) {
     return "ceil";
   case kFloorF:
     return "floor";
+  case kSqrtF:
+    return "sqrt";
+  case kExpm1F:
+    return "expm1";
+  case kLog1pF:
+    return "log1p";
+  case kSinF:
+    return "sin";
+  case kTanhF:
+    return "tanh";
   case kNegF:
     return "-";
   case kNegI:
@@ -404,6 +424,11 @@ void Merger::dumpExp(unsigned e) const {
   case kAbsF:
   case kCeilF:
   case kFloorF:
+  case kSqrtF:
+  case kExpm1F:
+  case kLog1pF:
+  case kSinF:
+  case kTanhF:
   case kNegF:
   case kNegI:
   case kTruncF:
@@ -502,6 +527,11 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   case kAbsF:
   case kCeilF:
   case kFloorF:
+  case kSqrtF:
+  case kExpm1F:
+  case kLog1pF:
+  case kSinF:
+  case kTanhF:
   case kNegF:
   case kNegI:
   case kTruncF:
@@ -712,6 +742,16 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kCeilF, e);
       if (isa<math::FloorOp>(def))
         return addExp(kFloorF, e);
+      if (isa<math::SqrtOp>(def))
+        return addExp(kSqrtF, e);
+      if (isa<math::ExpM1Op>(def))
+        return addExp(kExpm1F, e);
+      if (isa<math::Log1pOp>(def))
+        return addExp(kLog1pF, e);
+      if (isa<math::SinOp>(def))
+        return addExp(kSinF, e);
+      if (isa<math::TanhOp>(def))
+        return addExp(kTanhF, e);
       if (isa<arith::NegFOp>(def))
         return addExp(kNegF, e); // no negi in std
       if (isa<arith::TruncFOp>(def))
@@ -846,6 +886,16 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
     return rewriter.create<math::CeilOp>(loc, v0);
   case kFloorF:
     return rewriter.create<math::FloorOp>(loc, v0);
+  case kSqrtF:
+    return rewriter.create<math::SqrtOp>(loc, v0);
+  case kExpm1F:
+    return rewriter.create<math::ExpM1Op>(loc, v0);
+  case kLog1pF:
+    return rewriter.create<math::Log1pOp>(loc, v0);
+  case kSinF:
+    return rewriter.create<math::SinOp>(loc, v0);
+  case kTanhF:
+    return rewriter.create<math::TanhOp>(loc, v0);
   case kNegF:
     return rewriter.create<arith::NegFOp>(loc, v0);
   case kNegI: // no negi in std
