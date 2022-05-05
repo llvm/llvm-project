@@ -760,6 +760,13 @@ public:
           &modules,
       Status &error);
 
+  // FIXME: the correct thing to do would be to get the modules by calling
+  // CompilerInstance::getImplicitImportInfo, instead of loading these
+  // modules manually. However, we currently don't have  access to a
+  // CompilerInstance, which is why this function is needed.
+  void LoadImplicitModules(lldb::TargetSP target,
+                                          lldb::ProcessSP process);
+
   /// Cache the user's imports from a SourceFile in a given execution scope such
   /// that they are carried over into future expression evaluations.
   static bool CacheUserImports(SwiftASTContext &swift_ast_context,
@@ -840,7 +847,6 @@ protected:
   std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;
   std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
   llvm::once_flag m_ir_gen_module_once;
-  llvm::once_flag m_load_string_processing_lib_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;
   /// A collection of (not necessarily fatal) error messages that
