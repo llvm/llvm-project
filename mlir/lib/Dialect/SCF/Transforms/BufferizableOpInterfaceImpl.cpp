@@ -539,8 +539,7 @@ struct ForOpInterface
       if (bufferRelation(op, opResult, state) != BufferRelation::Equivalent)
         return yieldOp->emitError()
                << "Yield operand #" << opResult.getResultNumber()
-               << " does not bufferize to a buffer that is aliasing the "
-                  "matching enclosing scf::for operand";
+               << " is not equivalent to the corresponding iter bbArg";
     }
 
     return success();
