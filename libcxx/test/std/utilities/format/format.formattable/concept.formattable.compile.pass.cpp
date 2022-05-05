@@ -200,11 +200,11 @@ void test_P1636() {
 // TODO validate whether the test is correct after the paper has been accepted.
 template <class CharT>
 void test_P2286() {
-  assert_is_not_formattable<std::array<int, 42>, CharT>();
-  assert_is_not_formattable<std::vector<int>, CharT>();
-  assert_is_not_formattable<std::deque<int>, CharT>();
-  assert_is_not_formattable<std::forward_list<int>, CharT>();
-  assert_is_not_formattable<std::list<int>, CharT>();
+  assert_is_formattable<std::array<int, 42>, CharT>();
+  assert_is_formattable<std::vector<int>, CharT>();
+  assert_is_formattable<std::deque<int>, CharT>();
+  assert_is_formattable<std::forward_list<int>, CharT>();
+  assert_is_formattable<std::list<int>, CharT>();
 
   assert_is_not_formattable<std::set<int>, CharT>();
   assert_is_not_formattable<std::map<int, int>, CharT>();
@@ -220,9 +220,9 @@ void test_P2286() {
   assert_is_not_formattable<std::queue<int>, CharT>();
   assert_is_not_formattable<std::priority_queue<int>, CharT>();
 
-  assert_is_not_formattable<std::span<int>, CharT>();
+  assert_is_formattable<std::span<int>, CharT>();
 
-  assert_is_not_formattable<std::valarray<int>, CharT>();
+  assert_is_formattable<std::valarray<int>, CharT>();
 
   assert_is_formattable<std::pair<int, int>, CharT>();
   assert_is_formattable<std::tuple<int>, CharT>();

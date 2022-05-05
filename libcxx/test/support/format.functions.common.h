@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <charconv>
 #include <format>
+#include <ranges>
 
 #include "make_string.h"
 
@@ -128,5 +129,58 @@ private:
 #endif
   }
 };
+
+// Creates format string for the invalid types.
+//
+// valid contains a list of types that are valid.
+// - The type ?s is the only type requiring 2 characters, use S for that type.
+// - Whether n is a type or not depends on the context, is is always used.
+//
+// The return value is a collection of basic_strings, instead of
+// basic_string_views since the values are temporaries.
+namespace detail {
+template <class CharT, size_t N>
+std::basic_string<CharT> get_colons() {
+  static std::basic_string<CharT> result(N, CharT(':'));
+  return result;
+}
+
+constexpr std::string_view get_format_types() {
+  return "aAbBcdeEfFgGopsxX"
+#if TEST_STD_VER > 20
+         "?"
+#endif
+      ;
+}
+
+template <class CharT, /*format_types types,*/ size_t N>
+std::vector<std::basic_string<CharT>> fmt_invalid_types(std::string_view valid) {
+  // std::ranges::to is not available in C++20.
+  std::vector<std::basic_string<CharT>> result;
+  std::ranges::copy(
+      get_format_types() | std::views::filter([&](char type) { return valid.find(type) == std::string_view::npos; }) |
+          std::views::transform([&](char type) { return std::format(SV("{{{}{}}}"), get_colons<CharT, N>(), type); }),
+      std::back_inserter(result));
+  return result;
+}
+
+} // namespace detail
+
+// Creates format string for the invalid types.
+//
+// valid contains a list of types that are valid.
+//
+// The return value is a collection of basic_strings, instead of
+// basic_string_views since the values are temporaries.
+template <class CharT>
+std::vector<std::basic_string<CharT>> fmt_invalid_types(std::string_view valid) {
+  return detail::fmt_invalid_types<CharT, 1>(valid);
+}
+
+// Like fmt_invalid_types but when the format spec is for an underlying formatter.
+template <class CharT>
+std::vector<std::basic_string<CharT>> fmt_invalid_nested_types(std::string_view valid) {
+  return detail::fmt_invalid_types<CharT, 2>(valid);
+}
 
 #endif // TEST_SUPPORT_FORMAT_FUNCTIONS_COMMON_H
