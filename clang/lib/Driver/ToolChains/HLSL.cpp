@@ -169,6 +169,15 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
         continue;
     }
+    if (A->getOption().getID() == options::OPT_emit_pristine_llvm) {
+      // Translate fcgl into -S -emit-llvm and -disable-llvm-passes.
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_S));
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_emit_llvm));
+      DAL->AddFlagArg(nullptr,
+                      Opts.getOption(options::OPT_disable_llvm_passes));
+      A->claim();
+      continue;
+    }
     DAL->append(A);
   }
   // Add default validator version if not set.
