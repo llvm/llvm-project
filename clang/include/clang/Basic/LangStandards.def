@@ -46,7 +46,7 @@ LANGSTANDARD(c94, "iso9899:199409",
 
 LANGSTANDARD(gnu89, "gnu89",
              C, "ISO C 1990 with GNU extensions",
-             Digraphs | GNUMode)
+             LineComment | Digraphs | GNUMode)
 LANGSTANDARD_ALIAS(gnu89, "gnu90")
 
 // C99-ish modes
