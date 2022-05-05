@@ -99,16 +99,6 @@ private:
   // or a definition.
   llvm::SmallPtrSet<mlir::Operation *, 10> WeakRefReferences;
 
-  // TODO(cir): does this really need to be a state for CIR emission?
-  GlobalDecl initializedGlobalDecl;
-
-  /// When a C++ decl with an initializer is deferred, null is
-  /// appended to CXXGlobalInits, and the index of that null is placed
-  /// here so that the initializer will be performed in the correct
-  /// order. Once the decl is emitted, the index is replaced with ~0U to ensure
-  /// that we don't re-emit the initializer.
-  llvm::DenseMap<const Decl *, unsigned> DelayedCXXInitPosition;
-
   /// -------
   /// Declaring variables
   /// -------
@@ -133,6 +123,25 @@ public:
   /// -------
   /// Handling globals
   /// -------
+
+  // TODO(cir): does this really need to be a state for CIR emission?
+  GlobalDecl initializedGlobalDecl;
+
+  /// Global variables with initializers that need to run before main.
+  /// TODO(cir): for now track a generation operation, this is so far only
+  /// used to sync with DelayedCXXInitPosition. Improve it when we actually
+  /// use function calls for initialization
+  std::vector<mlir::Operation *> CXXGlobalInits;
+
+  /// Emit the function that initializes C++ globals.
+  void buildCXXGlobalInitFunc();
+
+  /// When a C++ decl with an initializer is deferred, null is
+  /// appended to CXXGlobalInits, and the index of that null is placed
+  /// here so that the initializer will be performed in the correct
+  /// order. Once the decl is emitted, the index is replaced with ~0U to ensure
+  /// that we don't re-emit the initializer.
+  llvm::DenseMap<const Decl *, unsigned> DelayedCXXInitPosition;
 
   /// If the declaration has internal linkage but is inside an
   /// extern "C" linkage specification, prepare to emit an alias for it

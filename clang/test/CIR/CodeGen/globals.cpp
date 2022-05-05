@@ -2,6 +2,8 @@
 // RUN: FileCheck --input-file=%t.cir %s
 
 int a = 3;
+const int b = 4; // unless used wont be generated
 
 // CHECK: module  {
 // CHECK-NEXT:   cir.global @a : i32 = 3
+// CHECK-NOT:  cir.global @b
