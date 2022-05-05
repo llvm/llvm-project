@@ -811,6 +811,16 @@ TEST(TypeHints, SinglyInstantiatedTemplate) {
                   ExpectedHint{": void *", "a"});
 }
 
+TEST(TypeHints, Aliased) {
+  // Check that we don't crash for functions without a FunctionTypeLoc.
+  // https://github.com/clangd/clangd/issues/1140
+  TestTU TU = TestTU::withCode("void foo(void){} extern typeof(foo) foo;");
+  TU.ExtraArgs.push_back("-xc");
+  auto AST = TU.build();
+
+  EXPECT_THAT(hintsOfKind(AST, InlayHintKind::TypeHint), IsEmpty());
+}
+
 TEST(DesignatorHints, Basic) {
   assertDesignatorHints(R"cpp(
     struct S { int x, y, z; };
