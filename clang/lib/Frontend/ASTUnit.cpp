@@ -1729,8 +1729,11 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     CaptureDroppedDiagnostics Capture(CaptureDiagnostics, *Diags,
                                       &StoredDiagnostics, nullptr);
 
-    CI = createInvocationFromCommandLine(
-        llvm::makeArrayRef(ArgBegin, ArgEnd), Diags, VFS);
+    CreateInvocationOptions CIOpts;
+    CIOpts.VFS = VFS;
+    CIOpts.Diags = Diags;
+    CI = createInvocation(llvm::makeArrayRef(ArgBegin, ArgEnd),
+                          std::move(CIOpts));
     if (!CI)
       return nullptr;
   }
