@@ -12,6 +12,7 @@
 #include "Perf.h"
 
 #include "IntelPTMultiCoreTrace.h"
+#include "IntelPTPerThreadProcessTrace.h"
 #include "IntelPTSingleBufferTrace.h"
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
@@ -26,76 +27,6 @@
 namespace lldb_private {
 
 namespace process_linux {
-
-/// Manages a list of thread traces.
-class IntelPTThreadTraceCollection {
-public:
-  IntelPTThreadTraceCollection() {}
-
-  /// Dispose of all traces
-  void Clear();
-
-  bool TracesThread(lldb::tid_t tid) const;
-
-  size_t GetTotalBufferSize() const;
-
-  std::vector<TraceThreadState> GetThreadStates() const;
-
-  llvm::Expected<IntelPTSingleBufferTrace &> GetTracedThread(lldb::tid_t tid);
-
-  llvm::Error TraceStart(lldb::tid_t tid,
-                         const TraceIntelPTStartRequest &request);
-
-  llvm::Error TraceStop(lldb::tid_t tid);
-
-  size_t GetTracedThreadsCount() const;
-
-private:
-  llvm::DenseMap<lldb::tid_t, IntelPTSingleBufferTraceUP> m_thread_traces;
-  /// Total actual thread buffer size in bytes
-  size_t m_total_buffer_size = 0;
-};
-
-class IntelPTPerThreadProcessTrace;
-using IntelPTPerThreadProcessTraceUP =
-    std::unique_ptr<IntelPTPerThreadProcessTrace>;
-
-/// Manages a "process trace" instance by tracing each thread individually.
-class IntelPTPerThreadProcessTrace {
-public:
-  /// Start tracing the current process by tracing each of its tids
-  /// individually.
-  ///
-  /// \param[in] request
-  ///   Intel PT configuration parameters.
-  ///
-  /// \param[in] current_tids
-  ///   List of tids currently alive. In the future, whenever a new thread is
-  ///   spawned, they should be traced by calling the \a TraceStart(tid) method.
-  ///
-  /// \return
-  ///   An \a IntelPTMultiCoreTrace instance if tracing was successful, or
-  ///   an \a llvm::Error otherwise.
-  static llvm::Expected<IntelPTPerThreadProcessTraceUP>
-  Start(const TraceIntelPTStartRequest &request,
-        llvm::ArrayRef<lldb::tid_t> current_tids);
-
-  bool TracesThread(lldb::tid_t tid) const;
-
-  IntelPTThreadTraceCollection &GetThreadTraces();
-
-  llvm::Error TraceStart(lldb::tid_t tid);
-
-  llvm::Error TraceStop(lldb::tid_t tid);
-
-private:
-  IntelPTPerThreadProcessTrace(const TraceIntelPTStartRequest &request)
-      : m_tracing_params(request) {}
-
-  IntelPTThreadTraceCollection m_thread_traces;
-  /// Params used to trace threads when the user started "process tracing".
-  TraceIntelPTStartRequest m_tracing_params;
-};
 
 /// Main class that manages intel-pt process and thread tracing.
 class IntelPTCollector {
@@ -122,7 +53,7 @@ public:
   llvm::Error TraceStart(const TraceIntelPTStartRequest &request);
 
   /// Implementation of the jLLDBTraceGetState packet
-  llvm::Expected<llvm::json::Value> GetState() const;
+  llvm::Expected<llvm::json::Value> GetState();
 
   /// Implementation of the jLLDBTraceGetBinaryData packet
   llvm::Expected<std::vector<uint8_t>>
