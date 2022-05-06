@@ -277,6 +277,10 @@ New Compiler Flags
 
 Deprecated Compiler Flags
 -------------------------
+- ``-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang``
+  has been deprecated. The flag will be removed in Clang 18.
+  ``-ftrivial-auto-var-init=zero`` is now available unconditionally, to be
+  compatible with GCC.
 
 Modified Compiler Flags
 -----------------------
