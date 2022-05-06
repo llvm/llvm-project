@@ -130,9 +130,7 @@ public:
     llvm_unreachable("NYI");
   }
   void VisitCXXTypeidExpr(CXXTypeidExpr *E) { llvm_unreachable("NYI"); }
-  void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
-    llvm_unreachable("NYI");
-  }
+  void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E);
   void VisitOpaqueValueExpr(OpaqueValueExpr *E) { llvm_unreachable("NYI"); }
 
   void VisitPseudoObjectExpr(PseudoObjectExpr *E) { llvm_unreachable("NYI"); }
@@ -150,6 +148,15 @@ public:
   void VisitAtomicExpr(AtomicExpr *E) { llvm_unreachable("NYI"); }
 };
 } // namespace
+
+//===----------------------------------------------------------------------===//
+//                             Visitor Methods
+//===----------------------------------------------------------------------===//
+
+void AggExprEmitter::VisitMaterializeTemporaryExpr(
+    MaterializeTemporaryExpr *E) {
+  Visit(E->getSubExpr());
+}
 
 void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   AggValueSlot Slot = EnsureSlot(E->getType());
