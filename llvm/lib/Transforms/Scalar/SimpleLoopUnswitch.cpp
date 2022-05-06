@@ -116,13 +116,23 @@ static cl::opt<bool> FreezeLoopUnswitchCond(
     cl::desc("If enabled, the freeze instruction will be added to condition "
              "of loop unswitch to prevent miscompilation."));
 
+// Helper to skip (select x, true, false), which matches both a logical AND and
+// OR and can confuse code that tries to determine if \p Cond is either a
+// logical AND or OR but not both.
+static Value *skipTrivialSelect(Value *Cond) {
+  Value *CondNext;
+  while (match(Cond, m_Select(m_Value(CondNext), m_One(), m_Zero())))
+    Cond = CondNext;
+  return Cond;
+}
+
 /// Collect all of the loop invariant input values transitively used by the
 /// homogeneous instruction graph from a given root.
 ///
 /// This essentially walks from a root recursively through loop variant operands
-/// which have the exact same opcode and finds all inputs which are loop
-/// invariant. For some operations these can be re-associated and unswitched out
-/// of the loop entirely.
+/// which have perform the same logical operation (AND or OR) and finds all
+/// inputs which are loop invariant. For some operations these can be
+/// re-associated and unswitched out of the loop entirely.
 static TinyPtrVector<Value *>
 collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
                                          LoopInfo &LI) {
@@ -152,7 +162,7 @@ collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
       }
 
       // If not an instruction with the same opcode, nothing we can do.
-      Instruction *OpI = dyn_cast<Instruction>(OpV);
+      Instruction *OpI = dyn_cast<Instruction>(skipTrivialSelect(OpV));
 
       if (OpI && ((IsRootAnd && match(OpI, m_LogicalAnd())) ||
                   (IsRootOr  && match(OpI, m_LogicalOr())))) {
@@ -454,7 +464,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     Invariants.push_back(BI.getCondition());
     FullUnswitch = true;
   } else {
-    if (auto *CondInst = dyn_cast<Instruction>(BI.getCondition()))
+    if (auto *CondInst =
+            dyn_cast<Instruction>(skipTrivialSelect(BI.getCondition())))
       Invariants = collectHomogenousInstGraphLoopInvariants(L, *CondInst, LI);
     if (Invariants.empty()) {
       LLVM_DEBUG(dbgs() << "   Couldn't find invariant inputs!\n");
@@ -488,8 +499,9 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // is a graph of `or` operations, or the exit block is along the false edge
   // and the condition is a graph of `and` operations.
   if (!FullUnswitch) {
-    if (ExitDirection ? !match(BI.getCondition(), m_LogicalOr())
-                      : !match(BI.getCondition(), m_LogicalAnd())) {
+    Value *Cond = skipTrivialSelect(BI.getCondition());
+    if (ExitDirection ? !match(Cond, m_LogicalOr())
+                      : !match(Cond, m_LogicalAnd())) {
       LLVM_DEBUG(dbgs() << "   Branch condition is in improper form for "
                            "non-full unswitch!\n");
       return false;
@@ -569,11 +581,11 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     // Only unswitching a subset of inputs to the condition, so we will need to
     // build a new branch that merges the invariant inputs.
     if (ExitDirection)
-      assert(match(BI.getCondition(), m_LogicalOr()) &&
+      assert(match(skipTrivialSelect(BI.getCondition()), m_LogicalOr()) &&
              "Must have an `or` of `i1`s or `select i1 X, true, Y`s for the "
              "condition!");
     else
-      assert(match(BI.getCondition(), m_LogicalAnd()) &&
+      assert(match(skipTrivialSelect(BI.getCondition()), m_LogicalAnd()) &&
              "Must have an `and` of `i1`s or `select i1 X, Y, false`s for the"
              " condition!");
     buildPartialUnswitchConditionalBranch(
@@ -2071,14 +2083,14 @@ static void unswitchNontrivialInvariants(
   bool Direction = true;
   int ClonedSucc = 0;
   if (!FullUnswitch) {
-    Value *Cond = BI->getCondition();
+    Value *Cond = skipTrivialSelect(BI->getCondition());
     (void)Cond;
     assert(((match(Cond, m_LogicalAnd()) ^ match(Cond, m_LogicalOr())) ||
             PartiallyInvariant) &&
            "Only `or`, `and`, an `select`, partially invariant instructions "
            "can combine invariants being unswitched.");
-    if (!match(BI->getCondition(), m_LogicalOr())) {
-      if (match(BI->getCondition(), m_LogicalAnd()) ||
+    if (!match(Cond, m_LogicalOr())) {
+      if (match(Cond, m_LogicalAnd()) ||
           (PartiallyInvariant && !PartialIVInfo.KnownValue->isOneValue())) {
         Direction = false;
         ClonedSucc = 1;
@@ -2756,22 +2768,16 @@ static bool unswitchBestCondition(
         BI->getSuccessor(0) == BI->getSuccessor(1))
       continue;
 
-    // If BI's condition is 'select _, true, false', simplify it to confuse
-    // matchers
-    Value *Cond = BI->getCondition(), *CondNext;
-    while (match(Cond, m_Select(m_Value(CondNext), m_One(), m_Zero())))
-      Cond = CondNext;
-    BI->setCondition(Cond);
-
+    Value *Cond = skipTrivialSelect(BI->getCondition());
     if (isa<Constant>(Cond))
       continue;
 
-    if (L.isLoopInvariant(BI->getCondition())) {
-      UnswitchCandidates.push_back({BI, {BI->getCondition()}});
+    if (L.isLoopInvariant(Cond)) {
+      UnswitchCandidates.push_back({BI, {Cond}});
       continue;
     }
 
-    Instruction &CondI = *cast<Instruction>(BI->getCondition());
+    Instruction &CondI = *cast<Instruction>(Cond);
     if (match(&CondI, m_CombineOr(m_LogicalAnd(), m_LogicalOr()))) {
       TinyPtrVector<Value *> Invariants =
           collectHomogenousInstGraphLoopInvariants(L, CondI, LI);
@@ -2913,10 +2919,11 @@ static bool unswitchBestCondition(
       // its cost.
       if (!FullUnswitch) {
         auto &BI = cast<BranchInst>(TI);
-        if (match(BI.getCondition(), m_LogicalAnd())) {
+        Value *Cond = skipTrivialSelect(BI.getCondition());
+        if (match(Cond, m_LogicalAnd())) {
           if (SuccBB == BI.getSuccessor(1))
             continue;
-        } else if (match(BI.getCondition(), m_LogicalOr())) {
+        } else if (match(Cond, m_LogicalOr())) {
           if (SuccBB == BI.getSuccessor(0))
             continue;
         } else if ((PartialIVInfo.KnownValue->isOneValue() &&
