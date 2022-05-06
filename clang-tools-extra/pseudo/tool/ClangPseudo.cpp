@@ -20,6 +20,7 @@
 #include "llvm/Support/Signals.h"
 
 using clang::pseudo::Grammar;
+using clang::pseudo::TokenStream;
 using llvm::cl::desc;
 using llvm::cl::init;
 using llvm::cl::opt;
@@ -37,6 +38,9 @@ static opt<bool> PrintTokens("print-tokens", desc("Print detailed token info"));
 static opt<bool>
     PrintDirectiveTree("print-directive-tree",
                       desc("Print directive structure of source code"));
+static opt<bool>
+    StripDirectives("strip-directives",
+                    desc("Strip directives and select conditional sections"));
 static opt<bool> PrintStatistics("print-statistics", desc("Print GLR parser statistics"));
 static opt<bool> PrintForest("print-forest", desc("Print parse forest"));
 
@@ -58,22 +62,30 @@ int main(int argc, char *argv[]) {
   clang::LangOptions LangOpts = clang::pseudo::genericLangOpts();
   std::string SourceText;
   llvm::Optional<clang::pseudo::TokenStream> RawStream;
-  llvm::Optional<clang::pseudo::DirectiveTree> DirectiveStructure;
+  llvm::Optional<TokenStream> PreprocessedStream;
   llvm::Optional<clang::pseudo::TokenStream> ParseableStream;
   if (Source.getNumOccurrences()) {
     SourceText = readOrDie(Source);
     RawStream = clang::pseudo::lex(SourceText, LangOpts);
-    DirectiveStructure = clang::pseudo::DirectiveTree::parse(*RawStream);
-    clang::pseudo::chooseConditionalBranches(*DirectiveStructure, *RawStream);
+    TokenStream *Stream = RawStream.getPointer();
 
+    auto DirectiveStructure = clang::pseudo::DirectiveTree::parse(*RawStream);
+    clang::pseudo::chooseConditionalBranches(DirectiveStructure, *RawStream);
+
+    llvm::Optional<TokenStream> Preprocessed;
+    if (StripDirectives) {
+      Preprocessed = DirectiveStructure.stripDirectives(*Stream);
+      Stream = Preprocessed.getPointer();
+    }
+
+    if (PrintSource)
+      Stream->print(llvm::outs());
+    if (PrintTokens)
+      llvm::outs() << *Stream;
     if (PrintDirectiveTree)
       llvm::outs() << DirectiveStructure;
-    if (PrintSource)
-      RawStream->print(llvm::outs());
-    if (PrintTokens)
-      llvm::outs() << RawStream;
 
-    ParseableStream = clang::pseudo::stripComments(cook(*RawStream, LangOpts));
+    ParseableStream = clang::pseudo::stripComments(cook(*Stream, LangOpts));
   }
 
   if (Grammar.getNumOccurrences()) {
