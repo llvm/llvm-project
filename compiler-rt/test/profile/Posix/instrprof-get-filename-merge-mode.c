@@ -1,3 +1,4 @@
+// XFAIL: aix
 // Test __llvm_profile_get_filename when the on-line merging mode is enabled.
 //
 // RUN: echo get_filename_from_DSO > shr.exp

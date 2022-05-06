@@ -1,3 +1,4 @@
+// XFAIL: aix
 /// Test we close file handle on flush, so the .gcda file can be deleted on
 /// Windows while the process is still running. In addition, test we create
 /// a new .gcda on flush, so there is a file when the process exists.
