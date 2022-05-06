@@ -148,11 +148,11 @@ define i32 @test_select() {
 
 define i32 @test_select_fp() {
 ; SSE2-LABEL: 'test_select_fp'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = select i1 undef, double undef, double undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = select i1 undef, double undef, double undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = select <2 x i1> undef, <2 x double> undef, <2 x double> undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = select <4 x i1> undef, <4 x double> undef, <4 x double> undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = select <8 x i1> undef, <8 x double> undef, <8 x double> undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = select i1 undef, float undef, float undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = select i1 undef, float undef, float undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F32 = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
