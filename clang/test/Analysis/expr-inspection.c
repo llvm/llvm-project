@@ -11,7 +11,7 @@ void clang_analyzer_numTimesReached(void);
 
 void foo(int x) {
   clang_analyzer_dump(x); // expected-warning{{reg_$0<int x>}}
-  clang_analyzer_dump(x + (-1)); // expected-warning{{(reg_$0<int x>) - 1}}
+  clang_analyzer_dump(x + (-1)); // expected-warning{{(reg_$0<int x>) + -1}}
   int y = 1;
   for (; y < 3; ++y) {
     clang_analyzer_numTimesReached(); // expected-warning{{2}}
