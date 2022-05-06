@@ -68,7 +68,7 @@ createDiagnostics(unsigned int argc, char **argv) {
   CIOpts.Diags =
       new DiagnosticsEngine(DiagIDs, new DiagnosticOptions(), DiagsBuffer);
   std::unique_ptr<CompilerInvocation> Invocation =
-      createInvocation(Args, std::move(CIOpts));
+      createInvocation(Args, CIOpts);
   if (!Invocation)
     return nullptr;
 
