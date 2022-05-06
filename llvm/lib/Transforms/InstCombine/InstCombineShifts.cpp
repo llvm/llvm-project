@@ -1232,19 +1232,25 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
-    // Try to narrow a bswap:
-    // (bswap (zext X)) >> C --> zext (bswap X >> C')
+    // Try to narrow bswap.
     // In the case where the shift amount equals the bitwidth difference, the
     // shift is eliminated.
     if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::bswap>(
                        m_OneUse(m_ZExt(m_Value(X))))))) {
-      // TODO: If the shift amount is less than the zext, we could shift left.
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
       unsigned WidthDiff = BitWidth - SrcWidth;
-      if (SrcWidth % 16 == 0 && ShAmtC >= WidthDiff) {
+      if (SrcWidth % 16 == 0) {
         Value *NarrowSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
-        Value *NewShift = Builder.CreateLShr(NarrowSwap, ShAmtC - WidthDiff);
-        return new ZExtInst(NewShift, Ty);
+        if (ShAmtC >= WidthDiff) {
+          // (bswap (zext X)) >> C --> zext (bswap X >> C')
+          Value *NewShift = Builder.CreateLShr(NarrowSwap, ShAmtC - WidthDiff);
+          return new ZExtInst(NewShift, Ty);
+        } else {
+          // (bswap (zext X)) >> C --> (zext (bswap X)) << C'
+          Value *NewZExt = Builder.CreateZExt(NarrowSwap, Ty);
+          Constant *ShiftDiff = ConstantInt::get(Ty, WidthDiff - ShAmtC);
+          return BinaryOperator::CreateShl(NewZExt, ShiftDiff);
+        }
       }
     }
 
