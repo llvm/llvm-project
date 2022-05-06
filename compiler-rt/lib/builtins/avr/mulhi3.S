@@ -19,40 +19,53 @@
 //   return S;
 // }
 //
+// __mulhi3 has special ABI, as the implementation of libgcc, R25:R24 is used
+// to return result, while Rtmp/R21/R22/R23 are clobbered.
+//
 //===----------------------------------------------------------------------===//
 
 	.text
 	.align 2
 
+#ifdef __AVR_TINY__
+	.set __tmp_reg__, 16
+	.set __zero_reg__, 17
+#else
+	.set __tmp_reg__, 0
+	.set __zero_reg__, 1
+#endif
+
 	.globl __mulhi3
 	.type  __mulhi3, @function
 
 __mulhi3:
-	eor    r28, r28
-	eor    r20, r20
-	eor    r21, r21         ; Initialize the result to 0: `S = 0;`.
+	; Use Rzero:Rtmp to store the result.
+	clr   __tmp_reg__
+	clr   __zero_reg__                 ; S = 0;
 
 __mulhi3_loop:
-	cp     r24, r28
-	cpc    r25, r28         ; `while (A != 0) { ... }`
-	breq   __mulhi3_end     ; End the loop if A is 0.
+	clr   r21
+	cp    r24, r21
+	cpc   r25, r21
+	breq  __mulhi3_end                 ; while (A != 0) {
 
-	mov    r29, r24
-	andi   r29, 1           ; `if (A & 1) { ... }`
-	breq   __mulhi3_loop_a  ; Omit the accumulation (`S += B;`) if  A's LSB is 0.
-
-	add    r20, r22
-	adc    r21, r23         ; Do the accumulation: `S += B;`.
+	mov   r21, r24
+	andi  r21, 1
+	breq  __mulhi3_loop_a              ;   if (A & 1)
+	add   __tmp_reg__, r22
+	adc   __zero_reg__, r23            ;     S += B;
 
 __mulhi3_loop_a:
-	lsr    r25
-	ror    r24              ; `A = ((unsigned int) A) >> 1;`.
-	lsl    r22
-	rol    r23              ; `B <<= 1;`
-
-	rjmp   __mulhi3_loop
+	lsr   r25
+	ror   r24                          ;   A = ((unsigned int) A) >> 1;
+	lsl   r22
+	rol   r23                          ;   B <<= 1;
+	rjmp  __mulhi3_loop                ; }
 
 __mulhi3_end:
-	mov    r24, r20
-	mov    r25, r21
-	ret
+	; Return the result via R25:R24.
+	mov   r24, __tmp_reg__
+	mov   r25, __zero_reg__
+	; Restore __zero_reg__ to 0.
+	clr   __zero_reg__
+	ret                                ; return S;
