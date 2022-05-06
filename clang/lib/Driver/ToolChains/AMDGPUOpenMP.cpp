@@ -307,9 +307,10 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
       if (!llvm::is_contained(*DAL, A))
         DAL->append(A);
 
-    std::string Arch = DAL->getLastArgValue(options::OPT_march_EQ).str();
-    if (Arch.empty()) {
-      checkSystemForAMDGPU(Args, *this, Arch);
+    if (!DAL->hasArg(options::OPT_march_EQ)) {
+      std::string Arch = BoundArch.str();
+      if (BoundArch.empty())
+        checkSystemForAMDGPU(Args, *this, Arch);
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
     }
 
