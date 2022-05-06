@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -test-scf-for-utils -mlir-disable-threading %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -test-scf-for-utils=test-clone-with-new-yields -mlir-disable-threading %s | FileCheck %s
 
 // CHECK-LABEL: @hoist
 //  CHECK-SAME: %[[lb:[a-zA-Z0-9]*]]: index,
