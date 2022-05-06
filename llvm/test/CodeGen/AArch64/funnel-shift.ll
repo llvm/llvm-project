@@ -69,13 +69,14 @@ declare i37 @llvm.fshl.i37(i37, i37, i37)
 define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LABEL: fshl_i37:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #31883
-; CHECK-NEXT:    mov w9, #37
-; CHECK-NEXT:    movk x8, #3542, lsl #16
+; CHECK-NEXT:    mov x9, #31883
+; CHECK-NEXT:    and x8, x2, #0x1fffffffff
+; CHECK-NEXT:    movk x9, #3542, lsl #16
 ; CHECK-NEXT:    ubfiz x10, x1, #26, #37
-; CHECK-NEXT:    movk x8, #51366, lsl #32
-; CHECK-NEXT:    movk x8, #56679, lsl #48
-; CHECK-NEXT:    umulh x8, x2, x8
+; CHECK-NEXT:    movk x9, #51366, lsl #32
+; CHECK-NEXT:    movk x9, #56679, lsl #48
+; CHECK-NEXT:    umulh x8, x8, x9
+; CHECK-NEXT:    mov w9, #37
 ; CHECK-NEXT:    ubfx x8, x8, #5, #27
 ; CHECK-NEXT:    msub w8, w8, w9, w2
 ; CHECK-NEXT:    mvn w9, w8
@@ -206,14 +207,15 @@ declare i37 @llvm.fshr.i37(i37, i37, i37)
 define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LABEL: fshr_i37:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #31883
-; CHECK-NEXT:    mov w9, #37
-; CHECK-NEXT:    movk x8, #3542, lsl #16
+; CHECK-NEXT:    mov x9, #31883
+; CHECK-NEXT:    and x8, x2, #0x1fffffffff
+; CHECK-NEXT:    movk x9, #3542, lsl #16
 ; CHECK-NEXT:    lsl x10, x1, #27
-; CHECK-NEXT:    movk x8, #51366, lsl #32
+; CHECK-NEXT:    movk x9, #51366, lsl #32
 ; CHECK-NEXT:    lsl x11, x0, #1
-; CHECK-NEXT:    movk x8, #56679, lsl #48
-; CHECK-NEXT:    umulh x8, x2, x8
+; CHECK-NEXT:    movk x9, #56679, lsl #48
+; CHECK-NEXT:    umulh x8, x8, x9
+; CHECK-NEXT:    mov w9, #37
 ; CHECK-NEXT:    lsr x8, x8, #5
 ; CHECK-NEXT:    msub w8, w8, w9, w2
 ; CHECK-NEXT:    add w8, w8, #27

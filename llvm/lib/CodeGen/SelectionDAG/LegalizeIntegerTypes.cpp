@@ -1277,7 +1277,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Rotate(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   SDValue Hi = GetPromotedInteger(N->getOperand(0));
   SDValue Lo = GetPromotedInteger(N->getOperand(1));
-  SDValue Amt = GetPromotedInteger(N->getOperand(2));
+  SDValue Amt = ZExtPromotedInteger(N->getOperand(2));
 
   SDLoc DL(N);
   EVT OldVT = N->getOperand(0).getValueType();
