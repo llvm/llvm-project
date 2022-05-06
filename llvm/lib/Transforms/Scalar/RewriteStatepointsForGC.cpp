@@ -632,7 +632,7 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
   // derived pointers (each with it's own base potentially).  It's the job of
   // the caller to resolve these.
   assert((isa<SelectInst>(I) || isa<PHINode>(I)) &&
-         "missing instruction case in findBaseDefiningValing");
+         "missing instruction case in findBaseDefiningValue");
   return BaseDefiningValueResult(I, IsKnownBase);
 }
 
