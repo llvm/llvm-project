@@ -95,6 +95,7 @@ private:
   bool parseLevel(bool HasOpeningBrace, bool CanContainBracedList,
                   IfStmtKind *IfKind = nullptr,
                   TokenType NextLBracesType = TT_Unknown);
+  bool mightFitOnOneLine(UnwrappedLine &Line) const;
   IfStmtKind parseBlock(bool MustBeDeclaration = false, unsigned AddLevels = 1u,
                         bool MunchSemi = true,
                         bool UnindentWhitesmithsBraces = false,
