@@ -3422,64 +3422,6 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
         return NV;
     break;
-  case Instruction::Select: {
-    // If either operand of the select is a constant, we can fold the
-    // comparison into the select arms, which will cause one to be
-    // constant folded and the select turned into a bitwise or.
-    Value *Op1 = nullptr, *Op2 = nullptr;
-    ConstantInt *CI = nullptr;
-
-    auto SimplifyOp = [&](Value *V) {
-      Value *Op = nullptr;
-      if (Constant *C = dyn_cast<Constant>(V)) {
-        Op = ConstantExpr::getICmp(I.getPredicate(), C, RHSC);
-      } else if (RHSC->isNullValue()) {
-        // If null is being compared, check if it can be further simplified.
-        Op = SimplifyICmpInst(I.getPredicate(), V, RHSC, SQ);
-      }
-      return Op;
-    };
-    Op1 = SimplifyOp(LHSI->getOperand(1));
-    if (Op1)
-      CI = dyn_cast<ConstantInt>(Op1);
-
-    Op2 = SimplifyOp(LHSI->getOperand(2));
-    if (Op2)
-      CI = dyn_cast<ConstantInt>(Op2);
-
-    // We only want to perform this transformation if it will not lead to
-    // additional code. This is true if either both sides of the select
-    // fold to a constant (in which case the icmp is replaced with a select
-    // which will usually simplify) or this is the only user of the
-    // select (in which case we are trading a select+icmp for a simpler
-    // select+icmp) or all uses of the select can be replaced based on
-    // dominance information ("Global cases").
-    bool Transform = false;
-    if (Op1 && Op2)
-      Transform = true;
-    else if (Op1 || Op2) {
-      // Local case
-      if (LHSI->hasOneUse())
-        Transform = true;
-      // Global cases
-      else if (CI && !CI->isZero())
-        // When Op1 is constant try replacing select with second operand.
-        // Otherwise Op2 is constant and try replacing select with first
-        // operand.
-        Transform =
-            replacedSelectWithOperand(cast<SelectInst>(LHSI), &I, Op1 ? 2 : 1);
-    }
-    if (Transform) {
-      if (!Op1)
-        Op1 = Builder.CreateICmp(I.getPredicate(), LHSI->getOperand(1), RHSC,
-                                 I.getName());
-      if (!Op2)
-        Op2 = Builder.CreateICmp(I.getPredicate(), LHSI->getOperand(2), RHSC,
-                                 I.getName());
-      return SelectInst::Create(LHSI->getOperand(0), Op1, Op2);
-    }
-    break;
-  }
   case Instruction::IntToPtr:
     // icmp pred inttoptr(X), null -> icmp pred X, 0
     if (RHSC->isNullValue() &&
@@ -3498,6 +3440,68 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
                 foldCmpLoadFromIndexedGlobal(cast<LoadInst>(LHSI), GEP, GV, I))
           return Res;
     break;
+  }
+
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
+                                              SelectInst *SI, Value *RHS,
+                                              const ICmpInst &I) {
+  // If either operand of the select is a constant, we can fold the
+  // comparison into the select arms, which will cause one to be
+  // constant folded and the select turned into a bitwise or.
+  auto *RHSC = dyn_cast<Constant>(RHS);
+  if (!RHSC)
+    return nullptr;
+
+  auto SimplifyOp = [&](Value *V) {
+    Value *Op = nullptr;
+    if (Constant *C = dyn_cast<Constant>(V)) {
+      Op = ConstantExpr::getICmp(Pred, C, RHSC);
+    } else if (RHSC->isNullValue()) {
+      // If null is being compared, check if it can be further simplified.
+      Op = SimplifyICmpInst(Pred, V, RHSC, SQ);
+    }
+    return Op;
+  };
+
+  ConstantInt *CI = nullptr;
+  Value *Op1 = SimplifyOp(SI->getOperand(1));
+  if (Op1)
+    CI = dyn_cast<ConstantInt>(Op1);
+
+  Value *Op2 = SimplifyOp(SI->getOperand(2));
+  if (Op2)
+    CI = dyn_cast<ConstantInt>(Op2);
+
+  // We only want to perform this transformation if it will not lead to
+  // additional code. This is true if either both sides of the select
+  // fold to a constant (in which case the icmp is replaced with a select
+  // which will usually simplify) or this is the only user of the
+  // select (in which case we are trading a select+icmp for a simpler
+  // select+icmp) or all uses of the select can be replaced based on
+  // dominance information ("Global cases").
+  bool Transform = false;
+  if (Op1 && Op2)
+    Transform = true;
+  else if (Op1 || Op2) {
+    // Local case
+    if (SI->hasOneUse())
+      Transform = true;
+    // Global cases
+    else if (CI && !CI->isZero())
+      // When Op1 is constant try replacing select with second operand.
+      // Otherwise Op2 is constant and try replacing select with first
+      // operand.
+      Transform = replacedSelectWithOperand(SI, &I, Op1 ? 2 : 1);
+  }
+  if (Transform) {
+    if (!Op1)
+      Op1 = Builder.CreateICmp(Pred, SI->getOperand(1), RHSC, I.getName());
+    if (!Op2)
+      Op2 = Builder.CreateICmp(Pred, SI->getOperand(2), RHSC, I.getName());
+    return SelectInst::Create(SI->getOperand(0), Op1, Op2);
   }
 
   return nullptr;
@@ -6107,6 +6111,10 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       return NI;
   if (auto *GEP = dyn_cast<GEPOperator>(Op1))
     if (Instruction *NI = foldGEPICmp(GEP, Op0, I.getSwappedPredicate(), I))
+      return NI;
+
+  if (auto *SI = dyn_cast<SelectInst>(Op0))
+    if (Instruction *NI = foldSelectICmp(I.getPredicate(), SI, Op1, I))
       return NI;
 
   // Try to optimize equality comparisons against alloca-based pointers.
