@@ -31,6 +31,9 @@ if sys.version_info.major < 3:
   import codecs
   sys.stdout = codecs.getwriter("utf-8")(sys.stdout)
 
+last_access_address = None
+last_access_tag = None
+
 # Below, a parser for a subset of ELF. It only supports 64 bit, little-endian,
 # and only parses what is necessary to find the build ids. It uses a memoryview
 # into an mmap to avoid copying.
@@ -107,8 +110,6 @@ class Symbolizer:
     self.__index = {}
     self.__link_prefixes = []
     self.__html = False
-    self.__last_access_address = None
-    self.__last_access_tag = None
 
   def enable_html(self, enable):
     self.__html = enable
@@ -267,81 +268,147 @@ class Symbolizer:
           if bid is not None:
             self.__index[bid] = filename
 
-  def symbolize_line(self, line):
-    #0 0x7f6e35cf2e45  (/blah/foo.so+0x11fe45) (BuildId: 4abce4cd41ea5c2f34753297b7e774d9)
-    match = re.match(r'^(.*?)#([0-9]+)( *)(0x[0-9a-f]*) *\((.*)\+(0x[0-9a-f]+)\)'
-                    r'(?:\s*\(BuildId: ([0-9a-f]+)\))?', line, re.UNICODE)
-    if match:
-      frameno = match.group(2)
-      binary = match.group(5)
-      addr = int(match.group(6), 16)
-      buildid = match.group(7)
+def symbolize_line(line, symbolizer_path):
+  #0 0x7f6e35cf2e45  (/blah/foo.so+0x11fe45) (BuildId: 4abce4cd41ea5c2f34753297b7e774d9)
+  match = re.match(r'^(.*?)#([0-9]+)( *)(0x[0-9a-f]*) *\((.*)\+(0x[0-9a-f]+)\)'
+                   r'(?:\s*\(BuildId: ([0-9a-f]+)\))?', line, re.UNICODE)
+  if match:
+    frameno = match.group(2)
+    binary = match.group(5)
+    addr = int(match.group(6), 16)
+    buildid = match.group(7)
 
-      frames = list(self.iter_call_stack(binary, buildid, addr))
+    frames = list(symbolizer.iter_call_stack(binary, buildid, addr))
 
-      if len(frames) > 0:
-        self.print(
-          self.maybe_escape(
-            "%s#%s%s%s in " % (match.group(1), match.group(2), match.group(3),
-                              frames[0][0])
-          ) + self.maybe_linkify(frames[0][1]),
-          escape=False)
-        for i in range(1, len(frames)):
-          space1 = ' ' * match.end(1)
-          space2 = ' ' * (match.start(4) - match.end(1) - 2)
-          self.print(
-            self.maybe_escape("%s->%s%s in " % (space1, space2, frames[i][0]))
-              + self.maybe_linkify(frames[i][1]), escape=False)
-      else:
-        self.print(line.rstrip())
+    if len(frames) > 0:
+      symbolizer.print(
+        symbolizer.maybe_escape(
+          "%s#%s%s%s in " % (match.group(1), match.group(2), match.group(3),
+                            frames[0][0])
+        ) + symbolizer.maybe_linkify(frames[0][1]),
+        escape=False)
+      for i in range(1, len(frames)):
+        space1 = ' ' * match.end(1)
+        space2 = ' ' * (match.start(4) - match.end(1) - 2)
+        symbolizer.print(
+          symbolizer.maybe_escape("%s->%s%s in " % (space1, space2, frames[i][0]))
+            + symbolizer.maybe_linkify(frames[i][1]), escape=False)
     else:
-      self.print(line.rstrip())
+      symbolizer.print(line.rstrip())
+  else:
+    symbolizer.print(line.rstrip())
 
-  def save_access_address(self, line):
-    match = re.match(r'^(.*?)HWAddressSanitizer: tag-mismatch on address (0x[0-9a-f]+) ', line, re.UNICODE)
-    if match:
-      self.__last_access_address = int(match.group(2), 16)
-    match = re.match(r'^(.*?) of size [0-9]+ at 0x[0-9a-f]* tags: ([0-9a-f]+)/[0-9a-f]+ \(ptr/mem\)', line, re.UNICODE)
-    if match:
-      self.__last_access_tag = int(match.group(2), 16)
+def save_access_address(line):
+  global last_access_address, last_access_tag
+  match = re.match(r'^(.*?)HWAddressSanitizer: tag-mismatch on address (0x[0-9a-f]+) ', line, re.UNICODE)
+  if match:
+    last_access_address = int(match.group(2), 16)
+  match = re.match(r'^(.*?) of size [0-9]+ at 0x[0-9a-f]* tags: ([0-9a-f]+)/[0-9a-f]+ \(ptr/mem\)', line, re.UNICODE)
+  if match:
+    last_access_tag = int(match.group(2), 16)
 
-  def process_stack_history(self, line, ignore_tags=False):
-    if self.__last_access_address is None or self.__last_access_tag is None:
-      return
-    if re.match(r'Previously allocated frames:', line, re.UNICODE):
-      return True
-    pc_mask = (1 << 48) - 1
-    fp_mask = (1 << 20) - 1
-    # record_addr:0x1234ABCD record:0x1234ABCD (/path/to/binary+0x1234ABCD) (BuildId: 4abce4cd41ea5c2f34753297b7e774d9)
-    match = re.match(r'^(.*?)record_addr:(0x[0-9a-f]+) +record:(0x[0-9a-f]+) +\((.*)\+(0x[0-9a-f]+)\)'
-                    r'(?:\s*\(BuildId: ([0-9a-f]+)\))?', line, re.UNICODE)
-    if match:
-      record_addr = int(match.group(2), 16)
-      record = int(match.group(3), 16)
-      binary = match.group(4)
-      addr = int(match.group(5), 16)
-      buildid = match.group(6)
-      base_tag = (record_addr >> 3) & 0xFF
-      fp = (record >> 48) << 4
-      pc = record & pc_mask
+def process_stack_history(line, symbolizer, ignore_tags=False):
+  if last_access_address is None or last_access_tag is None:
+    return
+  if re.match(r'Previously allocated frames:', line, re.UNICODE):
+    return True
+  pc_mask = (1 << 48) - 1
+  fp_mask = (1 << 20) - 1
+  # record_addr:0x1234ABCD record:0x1234ABCD (/path/to/binary+0x1234ABCD) (BuildId: 4abce4cd41ea5c2f34753297b7e774d9)
+  match = re.match(r'^(.*?)record_addr:(0x[0-9a-f]+) +record:(0x[0-9a-f]+) +\((.*)\+(0x[0-9a-f]+)\)'
+                   r'(?:\s*\(BuildId: ([0-9a-f]+)\))?', line, re.UNICODE)
+  if match:
+    record_addr = int(match.group(2), 16)
+    record = int(match.group(3), 16)
+    binary = match.group(4)
+    addr = int(match.group(5), 16)
+    buildid = match.group(6)
+    base_tag = (record_addr >> 3) & 0xFF
+    fp = (record >> 48) << 4
+    pc = record & pc_mask
 
-      for local in self.iter_locals(binary, addr, buildid):
-        frame_offset = local[3]
-        size = local[4]
-        if frame_offset is None or size is None:
-          continue
-        obj_offset = (self.__last_access_address - fp - frame_offset) & fp_mask
-        if obj_offset >= size:
-          continue
-        tag_offset = local[5]
-        if not ignore_tags and (tag_offset is None or base_tag ^ tag_offset != self.__last_access_tag):
-          continue
-        self.print('')
-        self.print('Potentially referenced stack object:')
-        self.print('  %d bytes inside variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0]))
-        self.print('  at %s' % (local[1],))
-      return True
-    return False
+    for local in symbolizer.iter_locals(binary, addr, buildid):
+      frame_offset = local[3]
+      size = local[4]
+      if frame_offset is None or size is None:
+        continue
+      obj_offset = (last_access_address - fp - frame_offset) & fp_mask
+      if obj_offset >= size:
+        continue
+      tag_offset = local[5]
+      if not ignore_tags and (tag_offset is None or base_tag ^ tag_offset != last_access_tag):
+        continue
+      symbolizer.print('')
+      symbolizer.print('Potentially referenced stack object:')
+      symbolizer.print('  %d bytes inside variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0]))
+      symbolizer.print('  at %s' % (local[1],))
+    return True
+  return False
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', action='store_true')
+parser.add_argument('-v', action='store_true')
+parser.add_argument('--ignore-tags', action='store_true')
+parser.add_argument('--symbols', action='append')
+parser.add_argument('--source', action='append')
+parser.add_argument('--index', action='store_true')
+parser.add_argument('--symbolizer')
+parser.add_argument('--linkify', type=str)
+parser.add_argument('--html', action='store_true')
+parser.add_argument('args', nargs=argparse.REMAINDER)
+args = parser.parse_args()
+
+# Unstripped binaries location.
+binary_prefixes = args.symbols or []
+if not binary_prefixes:
+  if 'ANDROID_PRODUCT_OUT' in os.environ:
+    product_out = os.path.join(os.environ['ANDROID_PRODUCT_OUT'], 'symbols')
+    binary_prefixes.append(product_out)
+  binary_prefixes.append('/')
+
+for p in binary_prefixes:
+  if not os.path.isdir(p):
+    print("Symbols path does not exist or is not a directory:", p, file=sys.stderr)
+    sys.exit(1)
+
+# Source location.
+paths_to_cut = args.source or []
+if not paths_to_cut:
+  paths_to_cut.append(os.getcwd() + '/')
+  if 'ANDROID_BUILD_TOP' in os.environ:
+    paths_to_cut.append(os.environ['ANDROID_BUILD_TOP'] + '/')
+
+# llvm-symbolizer binary.
+# 1. --symbolizer flag
+# 2. environment variable
+# 3. unsuffixed binary in the current directory
+# 4. if inside Android platform, prebuilt binary at a known path
+# 5. first "llvm-symbolizer", then "llvm-symbolizer-$VER" with the
+#    highest available version in $PATH
+symbolizer_path = args.symbolizer
+if not symbolizer_path:
+  if 'LLVM_SYMBOLIZER_PATH' in os.environ:
+    symbolizer_path = os.environ['LLVM_SYMBOLIZER_PATH']
+  elif 'HWASAN_SYMBOLIZER_PATH' in os.environ:
+    symbolizer_path = os.environ['HWASAN_SYMBOLIZER_PATH']
+
+if not symbolizer_path:
+  s = os.path.join(os.path.dirname(sys.argv[0]), 'llvm-symbolizer')
+  if os.path.exists(s):
+    symbolizer_path = s
+
+if not symbolizer_path:
+  if 'ANDROID_BUILD_TOP' in os.environ:
+    s = os.path.join(os.environ['ANDROID_BUILD_TOP'], 'prebuilts/clang/host/linux-x86/llvm-binutils-stable/llvm-symbolizer')
+    if os.path.exists(s):
+      symbolizer_path = s
+
+if not symbolizer_path:
+  for path in os.environ["PATH"].split(os.pathsep):
+    p = os.path.join(path, 'llvm-symbolizer')
+    if os.path.exists(p):
+      symbolizer_path = p
+      break
 
 def extract_version(s):
   idx = s.rfind('-')
@@ -350,114 +417,44 @@ def extract_version(s):
   x = float(s[idx + 1:])
   return x
 
-def main():
-  parser = argparse.ArgumentParser()
-  parser.add_argument('-d', action='store_true')
-  parser.add_argument('-v', action='store_true')
-  parser.add_argument('--ignore-tags', action='store_true')
-  parser.add_argument('--symbols', action='append')
-  parser.add_argument('--source', action='append')
-  parser.add_argument('--index', action='store_true')
-  parser.add_argument('--symbolizer')
-  parser.add_argument('--linkify', type=str)
-  parser.add_argument('--html', action='store_true')
-  parser.add_argument('args', nargs=argparse.REMAINDER)
-  args = parser.parse_args()
+if not symbolizer_path:
+  for path in os.environ["PATH"].split(os.pathsep):
+    candidates = glob.glob(os.path.join(path, 'llvm-symbolizer-*'))
+    if len(candidates) > 0:
+      candidates.sort(key = extract_version, reverse = True)
+      symbolizer_path = candidates[0]
+      break
 
-  # Unstripped binaries location.
-  binary_prefixes = args.symbols or []
-  if not binary_prefixes:
-    if 'ANDROID_PRODUCT_OUT' in os.environ:
-      product_out = os.path.join(os.environ['ANDROID_PRODUCT_OUT'], 'symbols')
-      binary_prefixes.append(product_out)
-    binary_prefixes.append('/')
+if not os.path.exists(symbolizer_path):
+  print("Symbolizer path does not exist:", symbolizer_path, file=sys.stderr)
+  sys.exit(1)
 
-  for p in binary_prefixes:
-    if not os.path.isdir(p):
-      print("Symbols path does not exist or is not a directory:", p, file=sys.stderr)
-      sys.exit(1)
+if args.v:
+  print("Looking for symbols in:")
+  for s in binary_prefixes:
+    print("  %s" % (s,))
+  print("Stripping source path prefixes:")
+  for s in paths_to_cut:
+    print("  %s" % (s,))
+  print("Using llvm-symbolizer binary in:\n  %s" % (symbolizer_path,))
+  print()
 
-  # Source location.
-  paths_to_cut = args.source or []
-  if not paths_to_cut:
-    paths_to_cut.append(os.getcwd() + '/')
-    if 'ANDROID_BUILD_TOP' in os.environ:
-      paths_to_cut.append(os.environ['ANDROID_BUILD_TOP'] + '/')
+symbolizer = Symbolizer(symbolizer_path, binary_prefixes, paths_to_cut)
+symbolizer.enable_html(args.html)
+symbolizer.enable_logging(args.d)
+if args.index:
+  symbolizer.build_index()
 
-  # llvm-symbolizer binary.
-  # 1. --symbolizer flag
-  # 2. environment variable
-  # 3. unsuffixed binary in the current directory
-  # 4. if inside Android platform, prebuilt binary at a known path
-  # 5. first "llvm-symbolizer", then "llvm-symbolizer-$VER" with the
-  #    highest available version in $PATH
-  symbolizer_path = args.symbolizer
-  if not symbolizer_path:
-    if 'LLVM_SYMBOLIZER_PATH' in os.environ:
-      symbolizer_path = os.environ['LLVM_SYMBOLIZER_PATH']
-    elif 'HWASAN_SYMBOLIZER_PATH' in os.environ:
-      symbolizer_path = os.environ['HWASAN_SYMBOLIZER_PATH']
-
-  if not symbolizer_path:
-    s = os.path.join(os.path.dirname(sys.argv[0]), 'llvm-symbolizer')
-    if os.path.exists(s):
-      symbolizer_path = s
-
-  if not symbolizer_path:
-    if 'ANDROID_BUILD_TOP' in os.environ:
-      s = os.path.join(os.environ['ANDROID_BUILD_TOP'], 'prebuilts/clang/host/linux-x86/llvm-binutils-stable/llvm-symbolizer')
-      if os.path.exists(s):
-        symbolizer_path = s
-
-  if not symbolizer_path:
-    for path in os.environ["PATH"].split(os.pathsep):
-      p = os.path.join(path, 'llvm-symbolizer')
-      if os.path.exists(p):
-        symbolizer_path = p
-        break
-
-  if not symbolizer_path:
-    for path in os.environ["PATH"].split(os.pathsep):
-      candidates = glob.glob(os.path.join(path, 'llvm-symbolizer-*'))
-      if len(candidates) > 0:
-        candidates.sort(key = extract_version, reverse = True)
-        symbolizer_path = candidates[0]
-        break
-
-  if not os.path.exists(symbolizer_path):
-    print("Symbolizer path does not exist:", symbolizer_path, file=sys.stderr)
+if args.linkify:
+  if not args.html:
+    print('Need --html to --linkify', file=sys.stderr)
     sys.exit(1)
+  symbolizer.read_linkify(args.linkify)
 
-  if args.v:
-    print("Looking for symbols in:")
-    for s in binary_prefixes:
-      print("  %s" % (s,))
-    print("Stripping source path prefixes:")
-    for s in paths_to_cut:
-      print("  %s" % (s,))
-    print("Using llvm-symbolizer binary in:\n  %s" % (symbolizer_path,))
-    print()
-
-  symbolizer = Symbolizer(symbolizer_path, binary_prefixes, paths_to_cut)
-  symbolizer.enable_html(args.html)
-  symbolizer.enable_logging(args.d)
-  if args.index:
-    symbolizer.build_index()
-
-  if args.linkify:
-    if not args.html:
-      print('Need --html to --linkify', file=sys.stderr)
-      sys.exit(1)
-    symbolizer.read_linkify(args.linkify)
-
-  for line in sys.stdin:
-    if sys.version_info.major < 3:
-      line = line.decode('utf-8')
-    symbolizer.save_access_address(line)
-    if symbolizer.process_stack_history(line, ignore_tags=args.ignore_tags):
-      continue
-    symbolizer.symbolize_line(line)
-
-
-if __name__ == '__main__':
-  main()
+for line in sys.stdin:
+  if sys.version_info.major < 3:
+    line = line.decode('utf-8')
+  save_access_address(line)
+  if process_stack_history(line, symbolizer, ignore_tags=args.ignore_tags):
+    continue
+  symbolize_line(line, symbolizer_path)
