@@ -2346,7 +2346,7 @@ define i32 @test_partial_unswitch_all_conds_guaranteed_non_poison(i1 noundef %c.
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @a()
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 true, i1 true, i1 false
-; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 [[SEL]], label [[LOOP]], label [[EXIT_SPLIT:%.*]]
 ; CHECK:       exit.split:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
