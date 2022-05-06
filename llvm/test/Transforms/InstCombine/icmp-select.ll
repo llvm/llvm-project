@@ -166,8 +166,8 @@ define i1 @icmp_select_var_pred_uge_commuted(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_select_implied_cond(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_select_implied_cond(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 0, i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SEL]], [[X]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp eq i8 %x, 0
@@ -178,9 +178,9 @@ define i1 @icmp_select_implied_cond(i8 %x, i8 %y) {
 
 define i1 @icmp_select_implied_cond_ne(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_select_implied_cond_ne(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 0, i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[SEL]], [[X]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ne i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 [[CMP21]], i1 false
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp eq i8 %x, 0
@@ -192,8 +192,8 @@ define i1 @icmp_select_implied_cond_ne(i8 %x, i8 %y) {
 define i1 @icmp_select_implied_cond_swapped_select(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_select_implied_cond_swapped_select(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 [[Y:%.*]], i8 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SEL]], [[X]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i8 [[Y:%.*]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 [[CMP21]], i1 false
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp eq i8 %x, 0
@@ -206,8 +206,9 @@ define i1 @icmp_select_implied_cond_swapped_select_with_inv_cond(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_select_implied_cond_swapped_select_with_inv_cond(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP1]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 [[Y:%.*]], i8 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SEL]], [[X]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[NOT_CMP1:%.*]] = xor i1 [[CMP1]], true
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[NOT_CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp ne i8 %x, 0
@@ -220,8 +221,8 @@ define i1 @icmp_select_implied_cond_swapped_select_with_inv_cond(i8 %x, i8 %y) {
 define i1 @icmp_select_implied_cond_relational(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_select_implied_cond_relational(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 10, i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[SEL]], [[X]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ult i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp ugt i8 %x, 10
@@ -247,10 +248,9 @@ define i1 @icmp_select_implied_cond_relational_off_by_one(i8 %x, i8 %y) {
 
 define i1 @umin_seq_comparison(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_seq_comparison(
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 0, i8 [[MIN]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SEL]], [[X]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %min = call i8 @llvm.umin.i8(i8 %x, i8 %y)

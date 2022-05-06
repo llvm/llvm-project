@@ -3450,12 +3450,21 @@ Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
                                               const ICmpInst &I) {
   // Try to fold the comparison into the select arms, which will cause the
   // select to be converted into a logical and/or.
+  auto SimplifyOp = [&](Value *Op, bool SelectCondIsTrue) -> Value * {
+    if (Value *Res = SimplifyICmpInst(Pred, Op, RHS, SQ))
+      return Res;
+    if (Optional<bool> Impl = isImpliedCondition(SI->getCondition(), Pred, Op,
+                                                 RHS, DL, SelectCondIsTrue))
+      return ConstantInt::get(I.getType(), *Impl);
+    return nullptr;
+  };
+
   ConstantInt *CI = nullptr;
-  Value *Op1 = SimplifyICmpInst(Pred, SI->getOperand(1), RHS, SQ);
+  Value *Op1 = SimplifyOp(SI->getOperand(1), true);
   if (Op1)
     CI = dyn_cast<ConstantInt>(Op1);
 
-  Value *Op2 = SimplifyICmpInst(Pred, SI->getOperand(2), RHS, SQ);
+  Value *Op2 = SimplifyOp(SI->getOperand(2), false);
   if (Op2)
     CI = dyn_cast<ConstantInt>(Op2);
 
