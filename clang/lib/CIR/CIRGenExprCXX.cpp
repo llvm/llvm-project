@@ -208,3 +208,36 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
       CalleeDecl, Callee, ReturnValue, This.getPointer(),
       /*ImplicitParam=*/nullptr, QualType(), CE, RtlArgs);
 }
+
+void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
+                                           AggValueSlot Dest) {
+  assert(!Dest.isIgnored() && "Must have a destination!");
+  const auto *CD = E->getConstructor();
+
+  assert(!E->requiresZeroInitialization() && "zero initialization NYI");
+
+  // If this is a call to a trivial default constructor, do nothing.
+  if (CD->isTrivial() && CD->isDefaultConstructor())
+    assert(!CD->isTrivial() && "trivial constructors NYI");
+
+  assert(!E->isElidable() && "elidable constructors NYI");
+
+  assert(!CGM.getASTContext().getAsArrayType(E->getType()) &&
+         "array types NYI");
+
+  clang::CXXCtorType Type = Ctor_Complete;
+  bool ForVirtualBase = false;
+  bool Delegating = false;
+
+  switch (E->getConstructionKind()) {
+  case CXXConstructionKind::Complete:
+    Type = Ctor_Complete;
+    break;
+  case CXXConstructionKind::Delegating:
+  case CXXConstructionKind::VirtualBase:
+  case CXXConstructionKind::NonVirtualBase:
+    assert(false && "Delegating, Virtualbae and NonVirtualBase ctorkind NYI");
+  }
+
+  buildCXXConstructorCall(CD, Type, ForVirtualBase, Delegating, Dest, E);
+}
