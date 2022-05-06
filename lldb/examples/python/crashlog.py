@@ -516,6 +516,23 @@ class JSONCrashLogParser:
             image_addr = self.get_used_image(image_id)['base']
             pc = image_addr + frame_offset
             thread.frames.append(self.crashlog.Frame(idx, pc, frame_offset))
+
+            # on arm64 systems, if it jump through a null function pointer,
+            # we end up at address 0 and the crash reporter unwinder 
+            # misses the frame that actually faulted.  
+            # But $lr can tell us where the last BL/BLR instruction used 
+            # was at, so insert that address as the caller stack frame.  
+            if idx == 0 and pc == 0 and "lr" in thread.registers:
+                pc = thread.registers["lr"]
+                for image in self.data['usedImages']:
+                    text_lo = image['base']
+                    text_hi = text_lo + image['size']
+                    if text_lo <= pc < text_hi:
+                      idx += 1
+                      frame_offset = pc - text_lo
+                      thread.frames.append(self.crashlog.Frame(idx, pc, frame_offset))
+                      break
+
             idx += 1
 
     def parse_threads(self, json_threads):
@@ -551,7 +568,7 @@ class JSONCrashLogParser:
                 continue
             try:
                 value = int(state['value'])
-                registers["{}{}".format(prefix,key)] = value
+                registers["{}{}".format(prefix or '',key)] = value
             except (KeyError, ValueError, TypeError):
                 pass
         return registers
