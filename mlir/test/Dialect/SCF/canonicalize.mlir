@@ -137,7 +137,7 @@ func.func @nested_parallel(%0: memref<?x?x?xf64>) -> memref<?x?x?xf64> {
 func.func private @side_effect()
 func.func @one_unused(%cond: i1) -> (index) {
   %0, %1 = scf.if %cond -> (index, index) {
-    call @side_effect() : () -> ()
+    func.call @side_effect() : () -> ()
     %c0 = "test.value0"() : () -> (index)
     %c1 = "test.value1"() : () -> (index)
     scf.yield %c0, %c1 : index, index
@@ -166,7 +166,7 @@ func.func private @side_effect()
 func.func @nested_unused(%cond1: i1, %cond2: i1) -> (index) {
   %0, %1 = scf.if %cond1 -> (index, index) {
     %2, %3 = scf.if %cond2 -> (index, index) {
-      call @side_effect() : () -> ()
+      func.call @side_effect() : () -> ()
       %c0 = "test.value0"() : () -> (index)
       %c1 = "test.value1"() : () -> (index)
       scf.yield %c0, %c1 : index, index
@@ -208,10 +208,10 @@ func.func @all_unused(%cond: i1) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0, %1 = scf.if %cond -> (index, index) {
-    call @side_effect() : () -> ()
+    func.call @side_effect() : () -> ()
     scf.yield %c0, %c1 : index, index
   } else {
-    call @side_effect() : () -> ()
+    func.call @side_effect() : () -> ()
     scf.yield %c0, %c1 : index, index
   }
   return
@@ -370,7 +370,7 @@ func.func @for_yields_3(%lb : index, %ub : index, %step : index) -> (i32, i32, i
   %a = call @make_i32() : () -> (i32)
   %b = call @make_i32() : () -> (i32)
   %r:3 = scf.for %i = %lb to %ub step %step iter_args(%0 = %a, %1 = %a, %2 = %b) -> (i32, i32, i32) {
-    %c = call @make_i32() : () -> (i32)
+    %c = func.call @make_i32() : () -> (i32)
     scf.yield %0, %c, %2 : i32, i32, i32
   }
   return %r#0, %r#1, %r#2 : i32, i32, i32
@@ -380,7 +380,7 @@ func.func @for_yields_3(%lb : index, %ub : index, %step : index) -> (i32, i32, i
 //  CHECK-NEXT:     %[[a:.*]] = call @make_i32() : () -> i32
 //  CHECK-NEXT:     %[[b:.*]] = call @make_i32() : () -> i32
 //  CHECK-NEXT:     %[[r1:.*]] = scf.for {{.*}} iter_args(%arg4 = %[[a]]) -> (i32) {
-//  CHECK-NEXT:       %[[c:.*]] = call @make_i32() : () -> i32
+//  CHECK-NEXT:       %[[c:.*]] = func.call @make_i32() : () -> i32
 //  CHECK-NEXT:       scf.yield %[[c]] : i32
 //  CHECK-NEXT:     }
 //  CHECK-NEXT:     return %[[a]], %[[r1]], %[[b]] : i32, i32, i32
@@ -765,15 +765,15 @@ func.func @last_value(%t0: tensor<128x128xf32>, %t1: tensor<128x128xf32>,
     %m1 = bufferization.to_memref %arg2 : memref<128x128xf32>
 
     // CHECK-NEXT:   call @process(%[[M0]]) : (memref<128x128xf32>) -> ()
-    call @process(%m0) : (memref<128x128xf32>) -> ()
+    func.call @process(%m0) : (memref<128x128xf32>) -> ()
 
     // CHECK-NEXT:   call @process(%[[M1]]) : (memref<128x128xf32>) -> ()
-    call @process(%m1) : (memref<128x128xf32>) -> ()
+    func.call @process(%m1) : (memref<128x128xf32>) -> ()
 
     // This does not hoist (fails the bbArg has at most a single check).
-    // CHECK-NEXT:   %[[T:.*]] = call @process_tensor(%[[BBARG_T2]]) : (tensor<128x128xf32>) -> memref<128x128xf32>
+    // CHECK-NEXT:   %[[T:.*]] = func.call @process_tensor(%[[BBARG_T2]]) : (tensor<128x128xf32>) -> memref<128x128xf32>
     // CHECK-NEXT:   %[[YIELD_T:.*]] = bufferization.to_tensor %[[T:.*]]
-    %m2 = call @process_tensor(%arg3): (tensor<128x128xf32>) -> memref<128x128xf32>
+    %m2 = func.call @process_tensor(%arg3): (tensor<128x128xf32>) -> memref<128x128xf32>
     %3 = bufferization.to_tensor %m2 : memref<128x128xf32>
 
     // All this stuff goes away, incrementally
@@ -843,12 +843,12 @@ func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>, %t1: tensor<1024x1024xf32
 //   CHECK-NOT: tensor.cast
 //       CHECK: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[ITER_T0:.*]] = %[[T0]]) -> (tensor<32x1024xf32>) {
 //       CHECK:   %[[CAST:.*]] = tensor.cast %[[ITER_T0]] : tensor<32x1024xf32> to tensor<?x?xf32>
-//       CHECK:   %[[DONE:.*]] = call @do(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+//       CHECK:   %[[DONE:.*]] = func.call @do(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<?x?xf32>
 //       CHECK:   %[[UNCAST:.*]] = tensor.cast %[[DONE]] : tensor<?x?xf32> to tensor<32x1024xf32>
 //       CHECK:   scf.yield %[[UNCAST]] : tensor<32x1024xf32>
   %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
   %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
-    %2 = call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+    %2 = func.call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
     scf.yield %2 : tensor<?x?xf32>
   }
 //   CHECK-NOT: tensor.cast

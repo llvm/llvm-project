@@ -11,7 +11,7 @@
 // CHECK: fir.do_loop
 // CHECK: fir.do_loop
 // CHECK: fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<100xf32>>
-func @maybe_overlap(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
+func.func @maybe_overlap(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
   %c100 = arith.constant 100 : index
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
@@ -38,7 +38,7 @@ func @maybe_overlap(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.a
 // CHECK:       fir.array_coor
 // CHECK:       fir.array_coor
 // CHECK:       fir.store
-func @no_overlap(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
+func.func @no_overlap(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
   %c100 = arith.constant 100 : index
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
@@ -65,7 +65,7 @@ func @no_overlap(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.arra
 // CHECK: fir.do_loop
 // CHECK: fir.do_loop
 // CHECK: fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<100xf32>>
-func @maybe_overlap_2(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
+func.func @maybe_overlap_2(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
   %c100 = arith.constant 100 : index
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
@@ -92,7 +92,7 @@ func @maybe_overlap_2(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir
 // CHECK: fir.do_loop
 // CHECK: fir.do_loop
 // CHECK: fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<100xf32>>
-func @maybe_overlap_3(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ptr<!fir.array<100xf32>>) {
+func.func @maybe_overlap_3(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ptr<!fir.array<100xf32>>) {
   %c100 = arith.constant 100 : index
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
@@ -118,7 +118,7 @@ func @maybe_overlap_3(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ptr<!fir
 // CHECK: %[[ALLOC:.*]] = fir.allocmem !fir.array<4x!fir.type<some_type{i:i32}>>
 // CHECK-COUNT-3: fir.do_loop
 // CHECK: fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<4x!fir.type<some_type{i:i32}>>>
-func @derived_whose_component_may_be_aliased(%arg0: !fir.box<!fir.array<4x!fir.type<some_type{i:i32}>>> {fir.target}, %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) {
+func.func @derived_whose_component_may_be_aliased(%arg0: !fir.box<!fir.array<4x!fir.type<some_type{i:i32}>>> {fir.target}, %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) {
   %c4 = arith.constant 4 : index
   %0 = fir.field_index i, !fir.type<some_type{i:i32}>
   %c1 = arith.constant 1 : index
@@ -147,7 +147,7 @@ func @derived_whose_component_may_be_aliased(%arg0: !fir.box<!fir.array<4x!fir.t
 // CHECK: %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>
 // CHECK-COUNT-3: fir.do_loop
 // CHECK: fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<?xf32>>
-func @complex_real_aliasing(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %arg1: !fir.ref<!fir.array<4x!fir.complex<4>>> {fir.target}) {
+func.func @complex_real_aliasing(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %arg1: !fir.ref<!fir.array<4x!fir.complex<4>>> {fir.target}) {
   %c4 = arith.constant 4 : index
   %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   %c0 = arith.constant 0 : index

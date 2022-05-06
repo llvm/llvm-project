@@ -8,15 +8,15 @@
 
 // CHECK-LABEL:  func private @arrayfunc(!fir.ref<!fir.array<?xf32>>, i32)
 // CHECK-BOX-LABEL:  func private @arrayfunc(!fir.box<!fir.array<?xf32>>, i32)
-func private @arrayfunc(i32) -> !fir.array<?xf32>
+func.func private @arrayfunc(i32) -> !fir.array<?xf32>
 
 // CHECK-LABEL:  func private @derivedfunc(!fir.ref<!fir.type<t{x:f32}>>, f32)
 // CHECK-BOX-LABEL:  func private @derivedfunc(!fir.box<!fir.type<t{x:f32}>>, f32)
-func private @derivedfunc(f32) -> !fir.type<t{x:f32}>
+func.func private @derivedfunc(f32) -> !fir.type<t{x:f32}>
 
 // CHECK-LABEL:  func private @boxfunc(!fir.ref<!fir.box<!fir.heap<f64>>>, i64)
 // CHECK-BOX-LABEL:  func private @boxfunc(!fir.ref<!fir.box<!fir.heap<f64>>>, i64)
-func private @boxfunc(i64) -> !fir.box<!fir.heap<f64>>
+func.func private @boxfunc(i64) -> !fir.box<!fir.heap<f64>>
 
 
 // ------------------------ Test callee rewrite --------------------------------
@@ -25,7 +25,7 @@ func private @boxfunc(i64) -> !fir.box<!fir.heap<f64>>
 // CHECK-SAME: %[[buffer:.*]]: !fir.ref<!fir.array<?xf32>>, %[[n:.*]]: index) {
 // CHECK-BOX-LABEL:  func private @arrayfunc_callee(
 // CHECK-BOX-SAME: %[[box:.*]]: !fir.box<!fir.array<?xf32>>, %[[n:.*]]: index) {
-func private @arrayfunc_callee(%n : index) -> !fir.array<?xf32> {
+func.func private @arrayfunc_callee(%n : index) -> !fir.array<?xf32> {
   %buffer = fir.alloca !fir.array<?xf32>, %n
   // Do something with result (res(4) = 42.)
   %c4 = arith.constant 4 : i64
@@ -50,7 +50,7 @@ func private @arrayfunc_callee(%n : index) -> !fir.array<?xf32> {
 // CHECK-SAME: %[[buffer:.*]]: !fir.ref<!fir.type<t{x:f32}>>, %[[v:.*]]: f32) {
 // CHECK-BOX-LABEL: func @derivedfunc_callee(
 // CHECK-BOX-SAME: %[[box:.*]]: !fir.box<!fir.type<t{x:f32}>>, %[[v:.*]]: f32) {
-func @derivedfunc_callee(%v: f32) -> !fir.type<t{x:f32}> {
+func.func @derivedfunc_callee(%v: f32) -> !fir.type<t{x:f32}> {
   %buffer = fir.alloca !fir.type<t{x:f32}>
   %0 = fir.field_index x, !fir.type<t{x:f32}>
   %1 = fir.coordinate_of %buffer, %0 : (!fir.ref<!fir.type<t{x:f32}>>, !fir.field) -> !fir.ref<f32>
@@ -72,7 +72,7 @@ func @derivedfunc_callee(%v: f32) -> !fir.type<t{x:f32}> {
 // CHECK-SAME: %[[buffer:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>>) {
 // CHECK-BOX-LABEL: func @boxfunc_callee(
 // CHECK-BOX-SAME: %[[buffer:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>>) {
-func @boxfunc_callee() -> !fir.box<!fir.heap<f64>> {
+func.func @boxfunc_callee() -> !fir.box<!fir.heap<f64>> {
   %alloc = fir.allocmem f64
   %res = fir.embox %alloc : (!fir.heap<f64>) -> !fir.box<!fir.heap<f64>>
   return %res : !fir.box<!fir.heap<f64>>
@@ -89,7 +89,7 @@ func @boxfunc_callee() -> !fir.box<!fir.heap<f64>> {
 
 // CHECK-LABEL: func @call_arrayfunc() {
 // CHECK-BOX-LABEL: func @call_arrayfunc() {
-func @call_arrayfunc() {
+func.func @call_arrayfunc() {
   %c100 = arith.constant 100 : index
   %buffer = fir.alloca !fir.array<?xf32>, %c100
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>
@@ -112,7 +112,7 @@ func @call_arrayfunc() {
 
 // CHECK-LABEL: func @call_derivedfunc() {
 // CHECK-BOX-LABEL: func @call_derivedfunc() {
-func @call_derivedfunc() {
+func.func @call_derivedfunc() {
   %buffer = fir.alloca !fir.type<t{x:f32}>
   %cst = arith.constant 4.200000e+01 : f32
   %res = fir.call @derivedfunc_callee(%cst) : (f32) -> !fir.type<t{x:f32}>
@@ -130,13 +130,13 @@ func @call_derivedfunc() {
   // CHECK-BOX-NOT: fir.save_result
 }
 
-func private @derived_lparams_func() -> !fir.type<t2(l1:i32,l2:i32){x:f32}>
+func.func private @derived_lparams_func() -> !fir.type<t2(l1:i32,l2:i32){x:f32}>
 
 // CHECK-LABEL: func @call_derived_lparams_func(
 // CHECK-SAME: %[[buffer:.*]]: !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>
 // CHECK-BOX-LABEL: func @call_derived_lparams_func(
 // CHECK-BOX-SAME: %[[buffer:.*]]: !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>
-func @call_derived_lparams_func(%buffer: !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>) {
+func.func @call_derived_lparams_func(%buffer: !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>) {
   %l1 = arith.constant 3 : i32
   %l2 = arith.constant 5 : i32
   %res = fir.call @derived_lparams_func() : () -> !fir.type<t2(l1:i32,l2:i32){x:f32}>
@@ -157,7 +157,7 @@ func @call_derived_lparams_func(%buffer: !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:
 
 // CHECK-LABEL: func @call_boxfunc() {
 // CHECK-BOX-LABEL: func @call_boxfunc() {
-func @call_boxfunc() {
+func.func @call_boxfunc() {
   %buffer = fir.alloca !fir.box<!fir.heap<f64>>
   %res = fir.call @boxfunc_callee() : () -> !fir.box<!fir.heap<f64>>
   fir.save_result %res to %buffer: !fir.box<!fir.heap<f64>>, !fir.ref<!fir.box<!fir.heap<f64>>>
@@ -172,11 +172,11 @@ func @call_boxfunc() {
   // CHECK-BOX-NOT: fir.save_result
 }
 
-func private @chararrayfunc(index, index) -> !fir.array<?x!fir.char<1,?>>
+func.func private @chararrayfunc(index, index) -> !fir.array<?x!fir.char<1,?>>
 
 // CHECK-LABEL: func @call_chararrayfunc() {
 // CHECK-BOX-LABEL: func @call_chararrayfunc() {
-func @call_chararrayfunc() {
+func.func @call_chararrayfunc() {
   %c100 = arith.constant 100 : index
   %c50 = arith.constant 50 : index
   %buffer = fir.alloca !fir.array<?x!fir.char<1,?>>(%c100 : index), %c50
@@ -202,11 +202,11 @@ func @call_chararrayfunc() {
 
 // ------------------------ Test fir.address_of rewrite ------------------------
 
-func private @takesfuncarray((i32) -> !fir.array<?xf32>)
+func.func private @takesfuncarray((i32) -> !fir.array<?xf32>)
 
 // CHECK-LABEL: func @test_address_of() {
 // CHECK-BOX-LABEL: func @test_address_of() {
-func @test_address_of() {
+func.func @test_address_of() {
   %0 = fir.address_of(@arrayfunc) : (i32) -> !fir.array<?xf32>
   fir.call @takesfuncarray(%0) : ((i32) -> !fir.array<?xf32>) -> ()
   return
@@ -227,7 +227,7 @@ func @test_address_of() {
 // CHECK-SAME: %[[arg0:.*]]: () -> ()) {
 // CHECK-BOX-LABEL: func @test_indirect_calls(
 // CHECK-BOX-SAME: %[[arg0:.*]]: () -> ()) {
-func @test_indirect_calls(%arg0: () -> ()) {
+func.func @test_indirect_calls(%arg0: () -> ()) {
   %c100 = arith.constant 100 : index
   %buffer = fir.alloca !fir.array<?xf32>, %c100
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>

@@ -75,7 +75,7 @@ def testTraverseOpRegionBlockIterators():
   # CHECK:       REGION 0:
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
-  # CHECK:           OP 1: return
+  # CHECK:           OP 1: func.return
   walk_operations("", op)
 
 
@@ -114,7 +114,7 @@ def testTraverseOpRegionBlockIndices():
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
   # CHECK:           OP 0: parent func.func
-  # CHECK:           OP 1: return
+  # CHECK:           OP 1: func.return
   # CHECK:           OP 1: parent func.func
   walk_operations("", module.operation)
 
@@ -803,7 +803,7 @@ def testOperationLoc():
 @run
 def testModuleMerge():
   with Context():
-    m1 = Module.parse("func private @foo()")
+    m1 = Module.parse("func.func private @foo()")
     m2 = Module.parse("""
       func.func private @bar()
       func.func private @qux()
@@ -829,8 +829,8 @@ def testModuleMerge():
 @run
 def testAppendMoveFromAnotherBlock():
   with Context():
-    m1 = Module.parse("func private @foo()")
-    m2 = Module.parse("func private @bar()")
+    m1 = Module.parse("func.func private @foo()")
+    m2 = Module.parse("func.func private @bar()")
     func = m1.body.operations[0]
     m2.body.append(func)
 
@@ -848,7 +848,7 @@ def testAppendMoveFromAnotherBlock():
 @run
 def testDetachFromParent():
   with Context():
-    m1 = Module.parse("func private @foo()")
+    m1 = Module.parse("func.func private @foo()")
     func = m1.body.operations[0].detach_from_parent()
 
     try:

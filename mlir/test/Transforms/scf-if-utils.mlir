@@ -11,10 +11,10 @@
 // CHECK-NEXT: }
 //      CHECK: func @outline_if_else(
 // CHECK-NEXT:   %{{.*}} = scf.if %{{.*}} -> (i8) {
-// CHECK-NEXT:     %{{.*}} = call @outlined_then0(%{{.*}}, %{{.*}}) : (i1, memref<?xf32>) -> i8
+// CHECK-NEXT:     %{{.*}} = func.call @outlined_then0(%{{.*}}, %{{.*}}) : (i1, memref<?xf32>) -> i8
 // CHECK-NEXT:     scf.yield %{{.*}} : i8
 // CHECK-NEXT:   } else {
-// CHECK-NEXT:     %{{.*}} = call @outlined_else0(%{{.*}}) : (i8) -> i8
+// CHECK-NEXT:     %{{.*}} = func.call @outlined_else0(%{{.*}}) : (i8) -> i8
 // CHECK-NEXT:     scf.yield %{{.*}} : i8
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
@@ -37,7 +37,7 @@ func.func @outline_if_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
 // CHECK-NEXT: }
 //      CHECK: func @outline_if(
 // CHECK-NEXT:   scf.if %{{.*}} {
-// CHECK-NEXT:     call @outlined_then0(%{{.*}}, %{{.*}}) : (i1, memref<?xf32>) -> ()
+// CHECK-NEXT:     func.call @outlined_then0(%{{.*}}, %{{.*}}) : (i1, memref<?xf32>) -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
@@ -60,9 +60,9 @@ func.func @outline_if(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
 // CHECK-NEXT: }
 //      CHECK: func @outline_empty_if_else(
 // CHECK-NEXT:   scf.if %{{.*}} {
-// CHECK-NEXT:     call @outlined_then0() : () -> ()
+// CHECK-NEXT:     func.call @outlined_then0() : () -> ()
 // CHECK-NEXT:   } else {
-// CHECK-NEXT:     call @outlined_else0(%{{.*}}, %{{.*}}) : (i1, memref<?xf32>) -> ()
+// CHECK-NEXT:     func.call @outlined_else0(%{{.*}}, %{{.*}}) : (i1, memref<?xf32>) -> ()
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }

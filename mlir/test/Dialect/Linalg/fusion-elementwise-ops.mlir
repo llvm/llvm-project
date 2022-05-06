@@ -658,14 +658,14 @@ func.func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> 
     iterator_types = ["parallel", "parallel"]}
   outs(%arg0 : tensor<1x8xf64>) {
   ^bb0(%a: f64):
-    %r = call @compute1(%a) : (f64) -> f64
+    %r = func.call @compute1(%a) : (f64) -> f64
     linalg.yield %r : f64
   } -> tensor<1x8xf64>
 
   // CHECK-NEXT:   %[[R:.*]] = linalg.generic
   //      CHECK:     bb0(%[[BBA:[0-9a-z]*]]: f64, %[[BBB:[0-9a-z]*]]: i32):
-  // CHECK-NEXT:       %[[A:.*]] = call @compute1(%[[BBA]]) : (f64) -> f64
-  // CHECK-NEXT:       %[[B:.*]] = call @compute2(%[[A]], %[[BBB]]) : (f64, i32) -> i32
+  // CHECK-NEXT:       %[[A:.*]] = func.call @compute1(%[[BBA]]) : (f64) -> f64
+  // CHECK-NEXT:       %[[B:.*]] = func.call @compute2(%[[A]], %[[BBB]]) : (f64, i32) -> i32
   // CHECK-NEXT:       linalg.yield %[[B]] : i32
   // CHECK-NEXT:   } -> tensor<1x8xi32>
   %1 = linalg.generic {
@@ -674,7 +674,7 @@ func.func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> 
   ins(%0 : tensor<1x8xf64>)
   outs(%arg1 : tensor<1x8xi32>) {
   ^bb0(%a: f64, %b: i32):
-    %r = call @compute2(%a, %b) : (f64, i32) -> i32
+    %r = func.call @compute2(%a, %b) : (f64, i32) -> i32
     linalg.yield %r : i32
   } -> tensor<1x8xi32>
 

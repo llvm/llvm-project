@@ -8,7 +8,7 @@
 // CHECK: fir.freemem %[[mem]]
 // CHECK-NEXT: return
 
-func @_QPs1() {
+func.func @_QPs1() {
   %0 = fir.alloca !fir.array<1000123xi32> {bindc_name = "array", uniq_name = "_QFs1Earray"}
   fir.call @_QPs3(%0) : (!fir.ref<!fir.array<1000123xi32>>) -> ()
   return
@@ -22,7 +22,7 @@ func @_QPs1() {
 // CHECK: fir.freemem %[[mem]]
 // CHECK-NEXT: return
 
-func @_QPs2(%arg0: !fir.ref<i32>) {
+func.func @_QPs2(%arg0: !fir.ref<i32>) {
   %0 = fir.load %arg0 : !fir.ref<i32>
   %1 = fir.convert %0 : (i32) -> index
   %2 = fir.alloca !fir.array<?xi32>, %1 {bindc_name = "array", uniq_name = "_QFs2Earray"}
@@ -30,5 +30,5 @@ func @_QPs2(%arg0: !fir.ref<i32>) {
   fir.call @_QPs3(%3) : (!fir.ref<!fir.array<1000123xi32>>) -> ()
   return
 }
-func private @_QPs3(!fir.ref<!fir.array<1000123xi32>>)
+func.func private @_QPs3(!fir.ref<!fir.array<1000123xi32>>)
 

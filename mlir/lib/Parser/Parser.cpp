@@ -1602,11 +1602,6 @@ FailureOr<OperationName> OperationParser::parseCustomOperationName() {
       // default dialect (set through OpAsmOpInterface).
       opInfo = RegisteredOperationName::lookup(
           Twine(defaultDialect + "." + opName).str(), getContext());
-      // FIXME: Remove this in favor of using default dialects.
-      if (!opInfo && getContext()->getOrLoadDialect("func")) {
-        opInfo = RegisteredOperationName::lookup(Twine("func." + opName).str(),
-                                                 getContext());
-      }
       if (opInfo) {
         dialect = &opInfo->getDialect();
         opName = opInfo->getStringRef().str();

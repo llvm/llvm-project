@@ -1277,7 +1277,7 @@ func.func @omp_threadprivate() {
 
 llvm.mlir.global internal @_QFsubEx() : i32
 
-func @omp_cancel_parallel(%if_cond : i1) -> () {
+func.func @omp_cancel_parallel(%if_cond : i1) -> () {
   // Test with optional operand; if_expr.
   omp.parallel {
     // CHECK: omp.cancel cancellation_construct_type(parallel) if(%{{.*}})
@@ -1288,7 +1288,7 @@ func @omp_cancel_parallel(%if_cond : i1) -> () {
   return
 }
 
-func @omp_cancel_wsloop(%lb : index, %ub : index, %step : index) {
+func.func @omp_cancel_wsloop(%lb : index, %ub : index, %step : index) {
   omp.wsloop
   for (%iv) : index = (%lb) to (%ub) step (%step) {
     // CHECK: omp.cancel cancellation_construct_type(loop)
@@ -1299,7 +1299,7 @@ func @omp_cancel_wsloop(%lb : index, %ub : index, %step : index) {
   return
 }
 
-func @omp_cancel_sections() -> () {
+func.func @omp_cancel_sections() -> () {
   omp.sections {
     omp.section {
       // CHECK: omp.cancel cancellation_construct_type(sections)
@@ -1312,7 +1312,7 @@ func @omp_cancel_sections() -> () {
   return
 }
 
-func @omp_cancellationpoint_parallel() -> () {
+func.func @omp_cancellationpoint_parallel() -> () {
   omp.parallel {
     // CHECK: omp.cancellationpoint cancellation_construct_type(parallel)
     omp.cancellationpoint cancellation_construct_type(parallel)
@@ -1323,7 +1323,7 @@ func @omp_cancellationpoint_parallel() -> () {
   return
 }
 
-func @omp_cancellationpoint_wsloop(%lb : index, %ub : index, %step : index) {
+func.func @omp_cancellationpoint_wsloop(%lb : index, %ub : index, %step : index) {
   omp.wsloop
   for (%iv) : index = (%lb) to (%ub) step (%step) {
     // CHECK: omp.cancellationpoint cancellation_construct_type(loop)
@@ -1336,7 +1336,7 @@ func @omp_cancellationpoint_wsloop(%lb : index, %ub : index, %step : index) {
   return
 }
 
-func @omp_cancellationpoint_sections() -> () {
+func.func @omp_cancellationpoint_sections() -> () {
   omp.sections {
     omp.section {
       // CHECK: omp.cancellationpoint cancellation_construct_type(sections)

@@ -55,7 +55,7 @@ fir.global linkonce @w_i86 (86:i32) : i32
 
 // Test conversion of fir.address_of with fir.global
 
-func @f1() {
+func.func @f1() {
   %0 = fir.address_of(@symbol) : !fir.ref<i64>
   return
 }
@@ -115,7 +115,7 @@ fir.global internal @_QEmultiarray : !fir.array<32xi32> {
 
 // Test fir.zero_bits operation with LLVM ptr type
 
-func @zero_test_ptr() {
+func.func @zero_test_ptr() {
   %z = fir.zero_bits !llvm.ptr<f32>
   return
 }
@@ -127,7 +127,7 @@ func @zero_test_ptr() {
 
 // Test fir.zero_bits operation with integer type.
 
-func @zero_test_integer() {
+func.func @zero_test_integer() {
   %z0 = fir.zero_bits i8
   %z1 = fir.zero_bits i16
   %z2 = fir.zero_bits i32
@@ -145,7 +145,7 @@ func @zero_test_integer() {
 
 // Test fir.zero_bits operation with floating points types.
 
-func @zero_test_float() {
+func.func @zero_test_float() {
   %z0 = fir.zero_bits f16
   %z1 = fir.zero_bits bf16
   %z2 = fir.zero_bits f32
@@ -169,7 +169,7 @@ func @zero_test_float() {
 // and that fir.freemem is transformed to a call to free
 // Single item case
 
-func @test_alloc_and_freemem_one() {
+func.func @test_alloc_and_freemem_one() {
   %z0 = fir.allocmem i32
   fir.freemem %z0 : !fir.heap<i32>
   return
@@ -186,7 +186,7 @@ func @test_alloc_and_freemem_one() {
 // and that fir.freemem is transformed to a call to free
 // Several item case
 
-func @test_alloc_and_freemem_several() {
+func.func @test_alloc_and_freemem_several() {
   %z0 = fir.allocmem !fir.array<100xf32>
   fir.freemem %z0 : !fir.heap<!fir.array<100xf32>>
   return
@@ -203,7 +203,7 @@ func @test_alloc_and_freemem_several() {
 // CHECK:              llvm.return
 
 
-func @test_with_shape(%ncols: index, %nrows: index) {
+func.func @test_with_shape(%ncols: index, %nrows: index) {
   %1 = fir.allocmem !fir.array<?x?xf32>, %ncols, %nrows
   fir.freemem %1 : !fir.heap<!fir.array<?x?xf32>>
   return
@@ -221,7 +221,7 @@ func @test_with_shape(%ncols: index, %nrows: index) {
 // CHECK:   llvm.return
 // CHECK: }
 
-func @test_string_with_shape(%len: index, %nelems: index) {
+func.func @test_string_with_shape(%len: index, %nelems: index) {
   %1 = fir.allocmem !fir.array<?x!fir.char<1,?>>(%len : index), %nelems
   fir.freemem %1 : !fir.heap<!fir.array<?x!fir.char<1,?>>>
   return
@@ -243,7 +243,7 @@ func @test_string_with_shape(%len: index, %nelems: index) {
 
 // Verify that fir.unreachable is transformed to llvm.unreachable
 
-func @test_unreachable() {
+func.func @test_unreachable() {
   fir.unreachable
 }
 
@@ -257,7 +257,7 @@ func @test_unreachable() {
 // Check that the if-then-else ladder is correctly constructed and that we
 // branch to the correct block.
 
-func @select(%arg : index, %arg2 : i32) -> i32 {
+func.func @select(%arg : index, %arg2 : i32) -> i32 {
   %0 = arith.constant 1 : i32
   %1 = arith.constant 2 : i32
   %2 = arith.constant 3 : i32
@@ -304,7 +304,7 @@ func @select(%arg : index, %arg2 : i32) -> i32 {
 // Check that the if-then-else ladder is correctly constructed and that we
 // branch to the correct block.
 
-func @select_rank(%arg : i32, %arg2 : i32) -> i32 {
+func.func @select_rank(%arg : i32, %arg2 : i32) -> i32 {
   %0 = arith.constant 1 : i32
   %1 = arith.constant 2 : i32
   %2 = arith.constant 3 : i32
@@ -347,7 +347,7 @@ func @select_rank(%arg : i32, %arg2 : i32) -> i32 {
 
 // Test fir.extract_value operation conversion with derived type.
 
-func @extract_derived_type() -> f32 {
+func.func @extract_derived_type() -> f32 {
   %0 = fir.undefined !fir.type<derived{f:f32}>
   %1 = fir.extract_value %0, ["f", !fir.type<derived{f:f32}>] : (!fir.type<derived{f:f32}>) -> f32
   return %1 : f32
@@ -363,7 +363,7 @@ func @extract_derived_type() -> f32 {
 // Test fir.extract_value operation conversion with a multi-dimensional array
 // of tuple.
 
-func @extract_array(%a : !fir.array<10x10xtuple<i32, f32>>) -> f32 {
+func.func @extract_array(%a : !fir.array<10x10xtuple<i32, f32>>) -> f32 {
   %0 = fir.extract_value %a, [5 : index, 4 : index, 1 : index] : (!fir.array<10x10xtuple<i32, f32>>) -> f32
   return %0 : f32
 }
@@ -378,7 +378,7 @@ func @extract_array(%a : !fir.array<10x10xtuple<i32, f32>>) -> f32 {
 // Test fir.insert_value operation conversion with a multi-dimensional array
 // of tuple.
 
-func @extract_array(%a : !fir.array<10x10xtuple<i32, f32>>) {
+func.func @extract_array(%a : !fir.array<10x10xtuple<i32, f32>>) {
   %f = arith.constant 2.0 : f32
   %i = arith.constant 1 : i32
   %0 = fir.insert_value %a, %i, [5 : index, 4 : index, 0 : index] : (!fir.array<10x10xtuple<i32, f32>>, i32) -> !fir.array<10x10xtuple<i32, f32>>
@@ -396,7 +396,7 @@ func @extract_array(%a : !fir.array<10x10xtuple<i32, f32>>) {
 
 // Test fir.insert_value operation conversion with derived type.
 
-func @insert_tuple(%a : tuple<i32, f32>) {
+func.func @insert_tuple(%a : tuple<i32, f32>) {
   %f = arith.constant 2.0 : f32
   %1 = fir.insert_value %a, %f, [1 : index] : (tuple<i32, f32>, f32) -> tuple<i32, f32>
   return
@@ -412,11 +412,11 @@ func @insert_tuple(%a : tuple<i32, f32>) {
 // Test `fir.call` -> `llvm.call` conversion for functions that take no arguments
 // and return nothing
 
-func @dummy_basic() {
+func.func @dummy_basic() {
   return
 }
 
-func @test_call_basic() {
+func.func @test_call_basic() {
   fir.call @dummy_basic() : () -> ()
   return
 }
@@ -429,11 +429,11 @@ func @test_call_basic() {
 // Test `fir.call` -> `llvm.call` conversion for functions that take one
 // argument and return nothing
 
-func @dummy_with_arg(%arg0 : i32) {
+func.func @dummy_with_arg(%arg0 : i32) {
   return
 }
 
-func @test_call_with_arg(%arg0 : i32) {
+func.func @test_call_with_arg(%arg0 : i32) {
   fir.call @dummy_with_arg(%arg0) : (i32) -> ()
   return
 }
@@ -446,12 +446,12 @@ func @test_call_with_arg(%arg0 : i32) {
 // Test `fir.call` -> `llvm.call` conversion for functions that take no
 // arguments, but return a value
 
-func @dummy_return_val() -> i32 {
+func.func @dummy_return_val() -> i32 {
   %1 = arith.constant 123 : i32
   return %1 : i32
 }
 
-func @test_call_return_val() -> i32 {
+func.func @test_call_return_val() -> i32 {
   %1 = fir.call @dummy_return_val() : () -> (i32)
   return %1 : i32
 }
@@ -467,7 +467,7 @@ func @test_call_return_val() -> i32 {
 // given: (x + iy) + (x' + iy')
 // result: (x + x') + i(y + y')
 
-func @fir_complex_add(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
+func.func @fir_complex_add(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
   %c = fir.addc %a, %b : !fir.complex<16>
   return %c : !fir.complex<16>
 }
@@ -492,7 +492,7 @@ func @fir_complex_add(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.comple
 // given: (x + iy) - (x' + iy')
 // result: (x - x') + i(y - y')
 
-func @fir_complex_sub(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
+func.func @fir_complex_sub(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
   %c = fir.subc %a, %b : !fir.complex<16>
   return %c : !fir.complex<16>
 }
@@ -517,7 +517,7 @@ func @fir_complex_sub(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.comple
 // given: (x + iy) * (x' + iy')
 // result: (xx'-yy')+i(xy'+yx')
 
-func @fir_complex_mul(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
+func.func @fir_complex_mul(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
   %c = fir.mulc %a, %b : !fir.complex<16>
   return %c : !fir.complex<16>
 }
@@ -546,7 +546,7 @@ func @fir_complex_mul(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.comple
 // given: (x + iy) / (x' + iy')
 // result: ((xx'+yy')/d) + i((yx'-xy')/d) where d = x'x' + y'y'
 
-func @fir_complex_div(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
+func.func @fir_complex_div(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.complex<16> {
   %c = fir.divc %a, %b : !fir.complex<16>
   return %c : !fir.complex<16>
 }
@@ -580,7 +580,7 @@ func @fir_complex_div(%a: !fir.complex<16>, %b: !fir.complex<16>) -> !fir.comple
 // given: -(x + iy)
 // result: -x - iy
 
-func @fir_complex_neg(%a: !fir.complex<16>) -> !fir.complex<16> {
+func.func @fir_complex_neg(%a: !fir.complex<16>) -> !fir.complex<16> {
   %c = fir.negc %a : !fir.complex<16>
   return %c : !fir.complex<16>
 }
@@ -599,7 +599,7 @@ func @fir_complex_neg(%a: !fir.complex<16>) -> !fir.complex<16> {
 
 // Test FIR complex compare conversion
 
-func @compare_complex_eq(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
+func.func @compare_complex_eq(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
   %r = fir.cmpc "oeq", %a, %b : !fir.complex<8>
   return %r : i1
 }
@@ -616,7 +616,7 @@ func @compare_complex_eq(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
 // CHECK: [[RES:%.*]] = llvm.and [[RESR]], [[RESI]] : i1
 // CHECK: return [[RES]] : i1
 
-func @compare_complex_ne(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
+func.func @compare_complex_ne(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
   %r = fir.cmpc "une", %a, %b : !fir.complex<8>
   return %r : i1
 }
@@ -633,7 +633,7 @@ func @compare_complex_ne(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
 // CHECK: [[RES:%.*]] = llvm.or [[RESR]], [[RESI]] : i1
 // CHECK: return [[RES]] : i1
 
-func @compare_complex_other(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
+func.func @compare_complex_other(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
   %r = fir.cmpc "ogt", %a, %b : !fir.complex<8>
   return %r : i1
 }
@@ -650,7 +650,7 @@ func @compare_complex_other(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
 
 // Test `fir.convert` operation conversion from Float type.
 
-func @convert_from_float(%arg0 : f32) {
+func.func @convert_from_float(%arg0 : f32) {
   %0 = fir.convert %arg0 : (f32) -> f16
   %1 = fir.convert %arg0 : (f32) -> f32
   %2 = fir.convert %arg0 : (f32) -> f64
@@ -681,7 +681,7 @@ func @convert_from_float(%arg0 : f32) {
 
 // Test `fir.convert` operation conversion from Integer type.
 
-func @convert_from_int(%arg0 : i32) {
+func.func @convert_from_int(%arg0 : i32) {
   %0 = fir.convert %arg0 : (i32) -> f16
   %1 = fir.convert %arg0 : (i32) -> f32
   %2 = fir.convert %arg0 : (i32) -> f64
@@ -715,7 +715,7 @@ func @convert_from_int(%arg0 : i32) {
 
 // Test `fir.convert` operation conversion from !fir.ref<> type.
 
-func @convert_from_ref(%arg0 : !fir.ref<i32>) {
+func.func @convert_from_ref(%arg0 : !fir.ref<i32>) {
   %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<i8>
   %1 = fir.convert %arg0 : (!fir.ref<i32>) -> i32
   return
@@ -730,7 +730,7 @@ func @convert_from_ref(%arg0 : !fir.ref<i32>) {
 
 // Test `fir.convert` operation conversion between fir.complex types.
 
-func @convert_complex4(%arg0 : !fir.complex<4>) -> !fir.complex<8> {
+func.func @convert_complex4(%arg0 : !fir.complex<4>) -> !fir.complex<8> {
   %0 = fir.convert %arg0 : (!fir.complex<4>) -> !fir.complex<8>
   return %0 : !fir.complex<8>
 }
@@ -748,7 +748,7 @@ func @convert_complex4(%arg0 : !fir.complex<4>) -> !fir.complex<8> {
 
 // Test `fir.convert` operation conversion between fir.complex types.
 
-func @convert_complex16(%arg0 : !fir.complex<16>) -> !fir.complex<2> {
+func.func @convert_complex16(%arg0 : !fir.complex<16>) -> !fir.complex<2> {
   %0 = fir.convert %arg0 : (!fir.complex<16>) -> !fir.complex<2>
   return %0 : !fir.complex<2>
 }
@@ -768,7 +768,7 @@ func @convert_complex16(%arg0 : !fir.complex<16>) -> !fir.complex<2> {
 
 // Test constc.
 
-func @test_constc4() -> !fir.complex<4> {
+func.func @test_constc4() -> !fir.complex<4> {
   %0 = fir.constc (#fir.real<4, 1.4>, #fir.real<4, 2.3>) : !fir.complex<4>
   return %0 : !fir.complex<4>
 }
@@ -782,7 +782,7 @@ func @test_constc4() -> !fir.complex<4> {
 // CHECK: [[full:%.*]] = llvm.insertvalue [[ip]], [[withr]][1 : i32] : !llvm.struct<(f32, f32)>
 // CHECK: return [[full]] : !llvm.struct<(f32, f32)>
 
-func @test_constc8() -> !fir.complex<8> {
+func.func @test_constc8() -> !fir.complex<8> {
   %0 = fir.constc (#fir.real<8, 1.8>, #fir.real<8, 2.3>) : !fir.complex<8>
   return %0 : !fir.complex<8>
 }
@@ -800,7 +800,7 @@ func @test_constc8() -> !fir.complex<8> {
 
 // Test `fir.store` --> `llvm.store` conversion
 
-func @test_store_index(%val_to_store : index, %addr : !fir.ref<index>) {
+func.func @test_store_index(%val_to_store : index, %addr : !fir.ref<index>) {
   fir.store %val_to_store to %addr : !fir.ref<index>
   return
 }
@@ -811,7 +811,7 @@ func @test_store_index(%val_to_store : index, %addr : !fir.ref<index>) {
 // CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }
 
-func @test_store_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>, %box : !fir.box<!fir.array<?x?xf32>>) {
+func.func @test_store_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>, %box : !fir.box<!fir.array<?x?xf32>>) {
   fir.store %box to %array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
   return
 }
@@ -828,7 +828,7 @@ func @test_store_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>, %box : !f
 
 // Test `fir.load` --> `llvm.load` conversion
 
-func @test_load_index(%addr : !fir.ref<index>) {
+func.func @test_load_index(%addr : !fir.ref<index>) {
   %0 = fir.load %addr : !fir.ref<index>
   return
 }
@@ -839,7 +839,7 @@ func @test_load_index(%addr : !fir.ref<index>) {
 // CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }
 
-func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
+func.func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
   %0 = fir.load %addr : !fir.ref<!fir.box<!fir.array<10xf32>>>
   return
 }
@@ -854,7 +854,7 @@ func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
 
 // Test `fir.box_rank` conversion.
 
-func @extract_rank(%arg0: !fir.box<!fir.array<*:f64>>) -> i32 {
+func.func @extract_rank(%arg0: !fir.box<!fir.array<*:f64>>) -> i32 {
   %0 = fir.box_rank %arg0 : (!fir.box<!fir.array<*:f64>>) -> i32
   return %0 : i32
 }
@@ -870,7 +870,7 @@ func @extract_rank(%arg0: !fir.box<!fir.array<*:f64>>) -> i32 {
 
 // Test `fir.box_addr` conversion.
 
-func @extract_addr(%arg0: !fir.box<!fir.array<*:f64>>) -> !fir.ref<f64> {
+func.func @extract_addr(%arg0: !fir.box<!fir.array<*:f64>>) -> !fir.ref<f64> {
   %0 = fir.box_addr %arg0 : (!fir.box<!fir.array<*:f64>>) -> !fir.ref<f64>
   return %0 : !fir.ref<f64>
 }
@@ -886,7 +886,7 @@ func @extract_addr(%arg0: !fir.box<!fir.array<*:f64>>) -> !fir.ref<f64> {
 
 // Test `fir.box_dims` conversion.
 
-func @extract_dims(%arg0: !fir.box<!fir.array<*:f64>>) -> index {
+func.func @extract_dims(%arg0: !fir.box<!fir.array<*:f64>>) -> index {
   %c1 = arith.constant 0 : i32
   %cast = fir.convert %arg0 : (!fir.box<!fir.array<*:f64>>) -> !fir.box<!fir.array<?xf64>> 
   %0:3 = fir.box_dims %cast, %c1 : (!fir.box<!fir.array<?xf64>>, i32) -> (index, index, index)
@@ -913,7 +913,7 @@ func @extract_dims(%arg0: !fir.box<!fir.array<*:f64>>) -> index {
 
 // Test `fir.box_elesize` conversion.
 
-func @extract_elesize(%arg0: !fir.box<f32>) -> i32 {
+func.func @extract_elesize(%arg0: !fir.box<f32>) -> i32 {
   %0 = fir.box_elesize %arg0 : (!fir.box<f32>) -> i32
   return %0 : i32
 }
@@ -930,7 +930,7 @@ func @extract_elesize(%arg0: !fir.box<f32>) -> i32 {
 // Test `fir.box_isarray` conversion.
 // `rank` is extracted from `fir.box` and compare to 0.
 
-func @box_isarray(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
+func.func @box_isarray(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
   %0 = fir.box_isarray %arg0 : (!fir.box<!fir.array<*:f64>>) -> i1
   return %0 : i1
 }
@@ -950,7 +950,7 @@ func @box_isarray(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 // `attribute` is extracted from `fir.box` and checked against a mask equal to
 // the value of `CFI_attribute_allocatable`.
 
-func @box_isalloc(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
+func.func @box_isalloc(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
   %0 = fir.box_isalloc %arg0 : (!fir.box<!fir.array<*:f64>>) -> i1
   return %0 : i1
 }
@@ -972,7 +972,7 @@ func @box_isalloc(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 // `attribute` is extracted from `fir.box` and checked against a mask equal to
 // the value of `CFI_attribute_pointer`.
 
-func @box_isptr(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
+func.func @box_isptr(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
   %0 = fir.box_isptr %arg0 : (!fir.box<!fir.array<*:f64>>) -> i1
   return %0 : i1
 }
@@ -992,7 +992,7 @@ func @box_isptr(%arg0: !fir.box<!fir.array<*:f64>>) -> i1 {
 
 // Test fir.alloca of one element
 
-func @alloca_one() -> !fir.ref<i32> {
+func.func @alloca_one() -> !fir.ref<i32> {
   %1 = fir.alloca i32
   return %1 : !fir.ref<i32>
 }
@@ -1006,7 +1006,7 @@ func @alloca_one() -> !fir.ref<i32> {
 
 // Test fir.alloca of several elements
 
-func @alloca_several() -> !fir.ref<i32> {
+func.func @alloca_several() -> !fir.ref<i32> {
   %0 = arith.constant 100 : index
   %1 = fir.alloca i32, %0
   return %1 : !fir.ref<i32>
@@ -1023,7 +1023,7 @@ func @alloca_several() -> !fir.ref<i32> {
 
 // Test fir.alloca of pointer to array
 
-func @alloca_ptr_to_array() -> !fir.ref<!fir.ptr<!fir.array<?xi32>>> {
+func.func @alloca_ptr_to_array() -> !fir.ref<!fir.ptr<!fir.array<?xi32>>> {
   %1 = fir.alloca !fir.ptr<!fir.array<?xi32>>
   return %1 : !fir.ref<!fir.ptr<!fir.array<?xi32>>>
 }
@@ -1037,7 +1037,7 @@ func @alloca_ptr_to_array() -> !fir.ref<!fir.ptr<!fir.array<?xi32>>> {
 
 // Test fir.alloca of array of unknown-length chars
 
-func @alloca_char_array(%l: i32, %e : index) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>> {
+func.func @alloca_char_array(%l: i32, %e : index) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>> {
   %a = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%l : i32), %e, %e
   return %a :  !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 }
@@ -1055,7 +1055,7 @@ func @alloca_char_array(%l: i32, %e : index) -> !fir.ref<!fir.array<?x?x!fir.cha
 
 // Test fir.alloca of array of known-length chars
 
-func @alloca_fixed_char_array(%e : index) -> !fir.ref<!fir.array<?x?x!fir.char<1,8>>> {
+func.func @alloca_fixed_char_array(%e : index) -> !fir.ref<!fir.array<?x?x!fir.char<1,8>>> {
   %a = fir.alloca !fir.array<?x?x!fir.char<1,8>>, %e, %e
   return %a :  !fir.ref<!fir.array<?x?x!fir.char<1,8>>>
 }
@@ -1078,9 +1078,9 @@ func @alloca_fixed_char_array(%e : index) -> !fir.ref<!fir.array<?x?x!fir.char<1
 //      real f2
 //   end type t
 
-func private @_QTtP.mem.size(%0 : i32, %1 : i16) -> index
+func.func private @_QTtP.mem.size(%0 : i32, %1 : i16) -> index
 
-func @alloca_record(%arg0 : i32, %arg1 : i16) -> !fir.ref<!fir.type<_QTt(p1:i32,p2:i16){f1:i32,f2:f32}>> {
+func.func @alloca_record(%arg0 : i32, %arg1 : i16) -> !fir.ref<!fir.type<_QTt(p1:i32,p2:i16){f1:i32,f2:f32}>> {
   %0 = fir.alloca !fir.type<_QTt(p1:i32,p2:i16){f1:i32,f2:f32}>(%arg0, %arg1 : i32, i16) {name = "_QEvar"}
   return %0 : !fir.ref<!fir.type<_QTt(p1:i32,p2:i16){f1:i32,f2:f32}>>
 }
@@ -1097,7 +1097,7 @@ func @alloca_record(%arg0 : i32, %arg1 : i16) -> !fir.ref<!fir.type<_QTt(p1:i32,
 
 // Test fir.alloca of a multidimensional array, with operands
 
-func @alloca_multidim_array(%0 : index) -> !fir.ref<!fir.array<8x16x32xf32>> {
+func.func @alloca_multidim_array(%0 : index) -> !fir.ref<!fir.array<8x16x32xf32>> {
   %1 = arith.constant 24 : index
   %2 = fir.alloca !fir.array<8x16x32xf32>, %0, %1
   return %2 : !fir.ref<!fir.array<8x16x32xf32>>
@@ -1116,7 +1116,7 @@ func @alloca_multidim_array(%0 : index) -> !fir.ref<!fir.array<8x16x32xf32>> {
 
 // Test fir.alloca of a multidimensional array with constant interior
 
-func @alloca_const_interior_array(%0 : index) -> !fir.ref<!fir.array<8x9x?x?xf32>> {
+func.func @alloca_const_interior_array(%0 : index) -> !fir.ref<!fir.array<8x9x?x?xf32>> {
   %1 = arith.constant 64 : index
   %2 = fir.alloca !fir.array<8x9x?x?xf32>, %0, %1
   return %2 : !fir.ref<!fir.array<8x9x?x?xf32>>
@@ -1136,7 +1136,7 @@ func @alloca_const_interior_array(%0 : index) -> !fir.ref<!fir.array<8x9x?x?xf32
 // Test alloca with an array with holes.
 // Constant factor of 60 (4*3*5) must be included.
 
-func @alloca_array_with_holes(%0 : index, %1 : index) -> !fir.ref<!fir.array<4x?x3x?x5xi32>> {
+func.func @alloca_array_with_holes(%0 : index, %1 : index) -> !fir.ref<!fir.array<4x?x3x?x5xi32>> {
   %a = fir.alloca !fir.array<4x?x3x?x5xi32>, %0, %1
   return %a : !fir.ref<!fir.array<4x?x3x?x5xi32>>
 }
@@ -1155,7 +1155,7 @@ func @alloca_array_with_holes(%0 : index, %1 : index) -> !fir.ref<!fir.array<4x?
 
 // Test `fir.select_case` operation conversion with INTEGER.
 
-func @select_case_integer(%arg0: !fir.ref<i32>) -> i32 {
+func.func @select_case_integer(%arg0: !fir.ref<i32>) -> i32 {
   %2 = fir.load %arg0 : !fir.ref<i32>
   %c1_i32 = arith.constant 1 : i32
   %c2_i32 = arith.constant 2 : i32
@@ -1265,7 +1265,7 @@ func @select_case_integer(%arg0: !fir.ref<i32>) -> i32 {
 
 // Test `fir.select_case` operation conversion with LOGICAL.
 
-func @select_case_logical(%arg0: !fir.ref<!fir.logical<4>>) {
+func.func @select_case_logical(%arg0: !fir.ref<!fir.logical<4>>) {
   %1 = fir.load %arg0 : !fir.ref<!fir.logical<4>>
   %2 = fir.convert %1 : (!fir.logical<4>) -> i1
   %false = arith.constant false
@@ -1308,7 +1308,7 @@ func @select_case_logical(%arg0: !fir.ref<!fir.logical<4>>) {
 
 // Test `fir.is_present`
 
-func @test_is_present_i64(%arg0: !fir.ref<i64>) -> () {
+func.func @test_is_present_i64(%arg0: !fir.ref<i64>) -> () {
   %0 = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
   return
 }
@@ -1321,7 +1321,7 @@ func @test_is_present_i64(%arg0: !fir.ref<i64>) -> () {
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT: }
 
-func @test_is_present_box(%arg0: !fir.box<!fir.ref<i64>>) -> () {
+func.func @test_is_present_box(%arg0: !fir.box<!fir.ref<i64>>) -> () {
   %0 = fir.is_present %arg0 : (!fir.box<!fir.ref<i64>>) -> i1
   return
 }
@@ -1339,7 +1339,7 @@ func @test_is_present_box(%arg0: !fir.box<!fir.ref<i64>>) -> () {
 
 // Test `fir.absent`
 
-func @test_absent_i64() -> () {
+func.func @test_absent_i64() -> () {
   %0 = fir.absent !fir.ref<i64>
   return
 }
@@ -1349,7 +1349,7 @@ func @test_absent_i64() -> () {
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT:  }
 
-func @test_absent_box() -> () {
+func.func @test_absent_box() -> () {
   %0 = fir.absent !fir.box<!fir.array<?xf32>>
   return
 }
@@ -1363,7 +1363,7 @@ func @test_absent_box() -> () {
 // This is a bit more comprehensive test for `fir.is_present` and `fir.absent`
 // when used together
 
-func @is_present(%arg0: !fir.ref<i64>) -> i1 {
+func.func @is_present(%arg0: !fir.ref<i64>) -> i1 {
   %0 = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
   return %0 : i1
 }
@@ -1376,7 +1376,7 @@ func @is_present(%arg0: !fir.ref<i64>) -> i1 {
 // CHECK-NEXT:  llvm.return %[[ret_val]] : i1
 // CHECK-NEXT: }
 
-func @absent() -> i1 {
+func.func @absent() -> i1 {
   %0 = fir.absent !fir.ref<i64>
   %1 = fir.call @is_present(%0) : (!fir.ref<i64>) -> i1
   return %1 : i1
@@ -1392,7 +1392,7 @@ func @absent() -> i1 {
 
 // Test `fir.string_lit` conversion.
 
-func @string_lit0() {
+func.func @string_lit0() {
   %1 = fir.string_lit "Hello, World!"(13) : !fir.char<1>
   return
 }
@@ -1400,7 +1400,7 @@ func @string_lit0() {
 // CHECK-LABEL: llvm.func @string_lit0
 // CHECK: %{{.*}} = llvm.mlir.constant("Hello, World!") : !llvm.array<13 x i8>
 
-func @string_lit1() {
+func.func @string_lit1() {
   %2 = fir.string_lit [158, 2345](2) : !fir.char<2>
   return
 }
@@ -1412,7 +1412,7 @@ func @string_lit1() {
 
 // Test must be dead conversion.
 
-func @dead_shift() {
+func.func @dead_shift() {
   %c0 = arith.constant 0 : index
   %0 = fir.shift %c0 : (index) -> !fir.shift<1>
   return
@@ -1423,7 +1423,7 @@ func @dead_shift() {
 // CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
 // CHECK-NEXT: llvm.return
 
-func @dead_shape() {
+func.func @dead_shape() {
   %c0 = arith.constant 0 : index
   %0 = fir.shape %c0 : (index) -> !fir.shape<1>
   return
@@ -1434,7 +1434,7 @@ func @dead_shape() {
 // CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
 // CHECK-NEXT: llvm.return
 
-func @dead_shapeshift() {
+func.func @dead_shapeshift() {
   %c0 = arith.constant 0 : index
   %0 = fir.shape_shift %c0, %c0 : (index, index) -> !fir.shapeshift<1>
   return
@@ -1445,7 +1445,7 @@ func @dead_shapeshift() {
 // CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
 // CHECK-NEXT: llvm.return
 
-func @dead_slice() {
+func.func @dead_slice() {
   %c0 = arith.constant 0 : index
   %0 = fir.slice %c0, %c0, %c0 : (index, index, index) -> !fir.slice<1>
   return
@@ -1460,7 +1460,7 @@ func @dead_slice() {
 
 // Test `fir.box_tdesc` conversion.
 
-func @box_tdesc(%arg0: !fir.box<f64>) {
+func.func @box_tdesc(%arg0: !fir.box<f64>) {
   %0 = fir.box_tdesc %arg0 : (!fir.box<f64>) -> !fir.tdesc<f64>
   return
 }
@@ -1481,7 +1481,7 @@ func @box_tdesc(%arg0: !fir.box<f64>) {
 // position of the fields in the descriptor as defined in `CFI_cdesc_t` in
 // flang/ISO_Fortran_binding.h.
 
-func @embox0(%arg0: !fir.ref<!fir.array<100xi32>>) {
+func.func @embox0(%arg0: !fir.ref<!fir.array<100xi32>>) {
   %0 = fir.embox %arg0() : (!fir.ref<!fir.array<100xi32>>) -> !fir.box<!fir.array<100xi32>>
   return
 }
@@ -1530,7 +1530,7 @@ fir.global @box_global : !fir.ref<!fir.array<?xi32>> {
 // attribute in the descriptor is set to 1 (value of CFI_attribute_pointer
 // in flang/ISO_Fortran_binding.h).
 
-func @embox_pointer(%arg0: !fir.ref<i32>) {
+func.func @embox_pointer(%arg0: !fir.ref<i32>) {
   %0 = fir.embox %arg0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
   return
 }
@@ -1546,7 +1546,7 @@ func @embox_pointer(%arg0: !fir.ref<i32>) {
 // attribute in the descriptor is set to 2 (value of CFI_attribute_allocatable
 // in flang/ISO_Fortran_binding.h).
 
-func @embox_allocatable(%arg0: !fir.heap<!fir.array<?x!fir.char<1,10>>>) {
+func.func @embox_allocatable(%arg0: !fir.heap<!fir.array<?x!fir.char<1,10>>>) {
   %0 = fir.embox %arg0 : (!fir.heap<!fir.array<?x!fir.char<1,10>>>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>
   return
 }
@@ -1558,7 +1558,7 @@ func @embox_allocatable(%arg0: !fir.heap<!fir.array<?x!fir.char<1,10>>>) {
 
 // Check `fir.embox` conversion of a type code.
 
-func @embox_typecode0(%arg0: !fir.ref<i64>) {
+func.func @embox_typecode0(%arg0: !fir.ref<i64>) {
   %0 = fir.embox %arg0 : (!fir.ref<i64>) -> !fir.box<!fir.ptr<i64>>
   return
 }
@@ -1568,7 +1568,7 @@ func @embox_typecode0(%arg0: !fir.ref<i64>) {
 // CHECK: %[[TYPE_CODE_I64_I8:.*]] = llvm.trunc %[[TYPE_CODE_I64]] : i32 to i8
 // CHECK: %{{.*}} = llvm.insertvalue %[[TYPE_CODE_I64_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<i64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 
-func @embox_typecode1(%arg0: !fir.ref<f32>) {
+func.func @embox_typecode1(%arg0: !fir.ref<f32>) {
   %0 = fir.embox %arg0 : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
   return
 }
@@ -1578,7 +1578,7 @@ func @embox_typecode1(%arg0: !fir.ref<f32>) {
 // CHECK: %[[TYPE_CODE_F32_I8:.*]] = llvm.trunc %[[TYPE_CODE_I64]] : i32 to i8
 // CHECK: %{{.*}} = llvm.insertvalue %[[TYPE_CODE_F32_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<f32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 
-func @embox_typecode2(%arg0: !fir.ref<f128>) {
+func.func @embox_typecode2(%arg0: !fir.ref<f128>) {
   %0 = fir.embox %arg0 : (!fir.ref<f128>) -> !fir.box<!fir.ptr<f128>>
   return
 }
@@ -1588,7 +1588,7 @@ func @embox_typecode2(%arg0: !fir.ref<f128>) {
 // CHECK: %[[TYPE_CODE_F128_I8:.*]] = llvm.trunc %[[TYPE_CODE_F128]] : i32 to i8
 // CHECK: %{{.*}} = llvm.insertvalue %[[TYPE_CODE_F128_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<f128>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 
-func @embox_typecode3(%arg0: !fir.ref<!fir.complex<4>>) {
+func.func @embox_typecode3(%arg0: !fir.ref<!fir.complex<4>>) {
   %0 = fir.embox %arg0 : (!fir.ref<!fir.complex<4>>) -> !fir.box<!fir.ptr<!fir.complex<4>>>
   return
 }
@@ -1598,7 +1598,7 @@ func @embox_typecode3(%arg0: !fir.ref<!fir.complex<4>>) {
 // CHECK: %[[TYPE_CODE_CPLX4_I8:.*]] = llvm.trunc %[[TYPE_CODE_F128]] : i32 to i8
 // CHECK: %{{.*}} = llvm.insertvalue %[[TYPE_CODE_CPLX4_I8]], %{{.*}}[4 : i32] : !llvm.struct<(ptr<struct<(f32, f32)>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>
 
-func @embox_typecode4(%arg0: !fir.ref<!fir.logical<1>>) {
+func.func @embox_typecode4(%arg0: !fir.ref<!fir.logical<1>>) {
   %0 = fir.embox %arg0 : (!fir.ref<!fir.logical<1>>) -> !fir.box<!fir.ptr<!fir.logical<1>>>
   return
 }
@@ -1619,7 +1619,7 @@ func @embox_typecode4(%arg0: !fir.ref<!fir.logical<1>>) {
 
 fir.global linkonce @_QMtest_dinitE.dt.tseq constant : i8
 
-func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
+func.func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
   %0 = fir.embox %arg0() : (!fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) -> !fir.box<!fir.type<_QMtest_dinitTtseq{i:i32}>>
   return
 }
@@ -1640,7 +1640,7 @@ func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
 
 // Test `fir.field_index`
 
-func @field_index_static_size_1_elem() -> () {
+func.func @field_index_static_size_1_elem() -> () {
   %1 = fir.field_index i, !fir.type<t1{i:i32}>
   return
 }
@@ -1649,7 +1649,7 @@ func @field_index_static_size_1_elem() -> () {
 // CHECK-NEXT:  %{{.*}} = llvm.mlir.constant(0 : i32) : i32
 // CHECK-NEXT:  llvm.return
 
-func @field_index_static_size_3_elems() -> () {
+func.func @field_index_static_size_3_elems() -> () {
   %1 = fir.field_index k, !fir.type<t2{i:i32, j:f32, k:i8}>
   return
 }
@@ -1661,10 +1661,10 @@ func @field_index_static_size_3_elems() -> () {
 //  When converting `fir.field_index` for a dynamically sized record, the
 //  offset will be calculated at runtime by calling methods like the ones
 //  below. Note that these methods would normally be generated by the compiler.
-func private @custom_typeP.field_1.offset() -> i32
-func private @custom_typeP.field_2.offset() -> i32
+func.func private @custom_typeP.field_1.offset() -> i32
+func.func private @custom_typeP.field_2.offset() -> i32
 
-func @field_index_dynamic_size() -> () {
+func.func @field_index_dynamic_size() -> () {
   %1 = fir.field_index field_1, !fir.type<custom_type{field_1:i32, field_2:!fir.array<?xf32>}>
   %2 = fir.field_index field_2, !fir.type<custom_type{field_1:i32, field_2:!fir.array<?xf32>}>
   return
@@ -1679,7 +1679,7 @@ func @field_index_dynamic_size() -> () {
 
 // Check `fir.no_reassoc` conversion to LLVM IR dialect
 
-func @no_reassoc(%arg0: !fir.ref<i32>) {
+func.func @no_reassoc(%arg0: !fir.ref<i32>) {
   %0 = fir.alloca i32
   %1 = fir.load %arg0 : !fir.ref<i32>
   %2 = fir.no_reassoc %1 : i32
@@ -1701,7 +1701,7 @@ func @no_reassoc(%arg0: !fir.ref<i32>) {
 
 // Check complete `fircg.ext_embox`.
 
-func @xembox0(%arg0: !fir.ref<!fir.array<?xi32>>) {
+func.func @xembox0(%arg0: !fir.ref<!fir.array<?xi32>>) {
   %c0 = arith.constant 0 : i64
   %0 = fircg.ext_embox %arg0(%c0) origin %c0[%c0, %c0, %c0] : (!fir.ref<!fir.array<?xi32>>, i64, i64, i64, i64, i64) -> !fir.box<!fir.array<?xi32>>
   return
@@ -1754,7 +1754,7 @@ func @xembox0(%arg0: !fir.ref<!fir.array<?xi32>>) {
 
 // Check adjustment of element scaling factor.
 
-func @xembox1(%arg0: !fir.ref<!fir.array<?x!fir.char<1, 10>>>) {
+func.func @xembox1(%arg0: !fir.ref<!fir.array<?x!fir.char<1, 10>>>) {
   %c0 = arith.constant 0 : i64
   %0 = fircg.ext_embox %arg0(%c0) origin %c0[%c0, %c0, %c0] : (!fir.ref<!fir.array<?x!fir.char<1, 10>>>, i64, i64, i64, i64, i64) -> !fir.box<!fir.array<?x!fir.char<1, 10>>>
   return
@@ -1779,7 +1779,7 @@ func @xembox1(%arg0: !fir.ref<!fir.array<?x!fir.char<1, 10>>>) {
 // ```
 
 // N is the upperbound, sh1 and sh2 are the shifts or lowerbounds
-func @_QPsb(%N: index, %sh1: index, %sh2: index) {
+func.func @_QPsb(%N: index, %sh1: index, %sh2: index) {
   %c4 = arith.constant 4 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -1794,7 +1794,7 @@ func @_QPsb(%N: index, %sh1: index, %sh2: index) {
   fir.call @_QPxb(%box) : (!fir.box<!fir.array<?x?xf64>>) -> ()
   return
 }      
-func private @_QPxb(!fir.box<!fir.array<?x?xf64>>)
+func.func private @_QPxb(!fir.box<!fir.array<?x?xf64>>)
 
 // CHECK-LABEL: llvm.func @_QPsb(
 // CHECK-SAME:                   %[[N:.*]]: i64, %[[SH1:.*]]: i64, %[[SH2:.*]]: i64) {
@@ -1865,7 +1865,7 @@ func private @_QPxb(!fir.box<!fir.array<?x?xf64>>)
 
 // Conversion with a subcomponent.
 
-func @_QPtest_dt_slice() {
+func.func @_QPtest_dt_slice() {
   %c20 = arith.constant 20 : index
   %c1_i64 = arith.constant 1 : i64
   %c10_i64 = arith.constant 10 : i64
@@ -1877,7 +1877,7 @@ func @_QPtest_dt_slice() {
   fir.call @_QPtest_dt_callee(%5) : (!fir.box<!fir.array<?xi32>>) -> ()
   return
 }
-func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
+func.func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 
 // CHECK-LABEL: llvm.func @_QPtest_dt_slice
 // CHECK:         %[[ALLOCA_SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
@@ -1937,7 +1937,7 @@ func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 
 // Conversion with only shape and indice.
 
-func @ext_array_coor0(%arg0: !fir.ref<!fir.array<?xi32>>) {
+func.func @ext_array_coor0(%arg0: !fir.ref<!fir.array<?xi32>>) {
   %c0 = arith.constant 0 : i64
   %1 = fircg.ext_array_coor %arg0(%c0) <%c0> : (!fir.ref<!fir.array<?xi32>>, i64, i64) -> !fir.ref<i32>
   return
@@ -1957,7 +1957,7 @@ func @ext_array_coor0(%arg0: !fir.ref<!fir.array<?xi32>>) {
 
 // Conversion with shift and slice.
 
-func @ext_array_coor1(%arg0: !fir.ref<!fir.array<?xi32>>) {
+func.func @ext_array_coor1(%arg0: !fir.ref<!fir.array<?xi32>>) {
   %c0 = arith.constant 0 : i64
   %1 = fircg.ext_array_coor %arg0(%c0) origin %c0[%c0, %c0, %c0]<%c0> : (!fir.ref<!fir.array<?xi32>>, i64, i64, i64, i64, i64, i64) -> !fir.ref<i32>
   return
@@ -1979,7 +1979,7 @@ func @ext_array_coor1(%arg0: !fir.ref<!fir.array<?xi32>>) {
 
 // Conversion for a dynamic length char.
 
-func @ext_array_coor2(%arg0: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
+func.func @ext_array_coor2(%arg0: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
   %c0 = arith.constant 0 : i64
   %1 = fircg.ext_array_coor %arg0(%c0) <%c0> : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, i64, i64) -> !fir.ref<i32>
   return
@@ -1999,7 +1999,7 @@ func @ext_array_coor2(%arg0: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
 
 // Conversion for a `fir.box`.
 
-func @ext_array_coor3(%arg0: !fir.box<!fir.array<?xi32>>) {
+func.func @ext_array_coor3(%arg0: !fir.box<!fir.array<?xi32>>) {
   %c0 = arith.constant 0 : i64
   %1 = fircg.ext_array_coor %arg0(%c0) <%c0> : (!fir.box<!fir.array<?xi32>>, i64, i64) -> !fir.ref<i32>
   return
@@ -2028,7 +2028,7 @@ func @ext_array_coor3(%arg0: !fir.box<!fir.array<?xi32>>) {
 
 // Conversion with non zero shift and slice.
 
-func @ext_array_coor4(%arg0: !fir.ref<!fir.array<100xi32>>) {
+func.func @ext_array_coor4(%arg0: !fir.ref<!fir.array<100xi32>>) {
   %c0 = arith.constant 0 : i64
   %c10 = arith.constant 10 : i64
   %c20 = arith.constant 20 : i64
@@ -2064,8 +2064,8 @@ func @ext_array_coor4(%arg0: !fir.ref<!fir.array<100xi32>>) {
 //     call bar(x(5, 6:80:3))
 //   end subroutine
 
-func private @bar1(!fir.box<!fir.array<?xf32>>)
-func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
+func.func private @bar1(!fir.box<!fir.array<?xf32>>)
+func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
@@ -2143,8 +2143,8 @@ func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 
 
 // Test a rebox of an array section like x(3:60:9)%c(2:8) with both a triplet, a component and a substring where x is a fir.box.
-func private @bar(!fir.box<!fir.array<?x!fir.char<1,?>>>)
-func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}>>>) {
+func.func private @bar(!fir.box<!fir.array<?x!fir.char<1,?>>>)
+func.func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}>>>) {
   %c3_i64 = arith.constant 3 : i64
   %c60_i64 = arith.constant 60 : i64
   %c9_i64 = arith.constant 9 : i64
@@ -2218,7 +2218,7 @@ func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}>>>) 
 
 // 1. COMPLEX TYPE (`fir.complex` is a special case)
 // Complex type wrapped in `fir.ref`
-func @coordinate_ref_complex(%arg0: !fir.ref<!fir.complex<16>>) {
+func.func @coordinate_ref_complex(%arg0: !fir.ref<!fir.complex<16>>) {
   %arg1 = llvm.mlir.constant(0 : i32) : i32
   %p = fir.coordinate_of %arg0, %arg1 : (!fir.ref<!fir.complex<16>>, i32) -> !fir.ref<f32>
   return
@@ -2232,7 +2232,7 @@ func @coordinate_ref_complex(%arg0: !fir.ref<!fir.complex<16>>) {
 // -----
 
 // Complex type wrapped in `fir.box`
-func @coordinate_box_complex(%arg0: !fir.box<!fir.complex<16>>) {
+func.func @coordinate_box_complex(%arg0: !fir.box<!fir.complex<16>>) {
   %arg1 = llvm.mlir.constant(0 : i32) : i32
   %p = fir.coordinate_of %arg0, %arg1 : (!fir.box<!fir.complex<16>>, i32) -> !fir.ref<f32>
   return
@@ -2249,7 +2249,7 @@ func @coordinate_box_complex(%arg0: !fir.box<!fir.complex<16>>) {
 
 // 2. BOX TYPE (objects wrapped in `fir.box`)
 // Derived type - basic case (1 index)
-func @coordinate_box_derived_1(%arg0: !fir.box<!fir.type<derived_1{field_1:i32, field_2:i32}>>) {
+func.func @coordinate_box_derived_1(%arg0: !fir.box<!fir.type<derived_1{field_1:i32, field_2:i32}>>) {
   %idx = fir.field_index field_2, !fir.type<derived_1{field_1:i32, field_2:i32}>
   %q = fir.coordinate_of %arg0, %idx : (!fir.box<!fir.type<derived_1{field_1:i32, field_2:i32}>>, !fir.field) -> !fir.ref<i32>
   return
@@ -2268,7 +2268,7 @@ func @coordinate_box_derived_1(%arg0: !fir.box<!fir.type<derived_1{field_1:i32, 
 // CHECK-NEXT:    llvm.return
 
 // Derived type - basic case (2 indices)
-func @coordinate_box_derived_2(%arg0: !fir.box<!fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) {
+func.func @coordinate_box_derived_2(%arg0: !fir.box<!fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) {
   %idx0 = fir.field_index field_1, !fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>
   %idx1 = fir.field_index inner2, !fir.type<another_derived{inner1:i32, inner2:f32}>
   %q = fir.coordinate_of %arg0, %idx0, %idx1 : (!fir.box<!fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
@@ -2300,7 +2300,7 @@ func @coordinate_box_derived_2(%arg0: !fir.box<!fir.type<derived_2{field_1:!fir.
 
 // 3. BOX TYPE - `fir.array` wrapped in `fir.box`
 // `fir.array` inside a `fir.box` (1d)
-func @coordinate_box_array_1d(%arg0: !fir.box<!fir.array<10 x f32>>, %arg1: index) {
+func.func @coordinate_box_array_1d(%arg0: !fir.box<!fir.array<10 x f32>>, %arg1: index) {
   %p = fir.coordinate_of %arg0, %arg1 : (!fir.box<!fir.array<10 x f32>>, index) -> !fir.ref<f32>
   return
 }
@@ -2331,7 +2331,7 @@ func @coordinate_box_array_1d(%arg0: !fir.box<!fir.array<10 x f32>>, %arg1: inde
 // CHECK-NEXT:  llvm.return
 
 // `fir.array` inside a `fir.box` (1d) - dynamic size
-func @coordinate_of_box_dynamic_array_1d(%arg0: !fir.box<!fir.array<? x f32>>, %arg1: index) {
+func.func @coordinate_of_box_dynamic_array_1d(%arg0: !fir.box<!fir.array<? x f32>>, %arg1: index) {
   %p = fir.coordinate_of %arg0, %arg1 : (!fir.box<!fir.array<? x f32>>, index) -> !fir.ref<f32>
   return
 }
@@ -2365,7 +2365,7 @@ func @coordinate_of_box_dynamic_array_1d(%arg0: !fir.box<!fir.array<? x f32>>, %
 // -----
 
 // `fir.array` inside a `fir.box` (2d)
-func @coordinate_box_array_2d(%arg0: !fir.box<!fir.array<10 x 10 x f32>>, %arg1: index, %arg2: index) {
+func.func @coordinate_box_array_2d(%arg0: !fir.box<!fir.array<10 x 10 x f32>>, %arg1: index, %arg2: index) {
   %p = fir.coordinate_of %arg0, %arg1, %arg2 : (!fir.box<!fir.array<10 x 10 x f32>>, index, index) -> !fir.ref<f32>
   return
 }
@@ -2413,7 +2413,7 @@ func @coordinate_box_array_2d(%arg0: !fir.box<!fir.array<10 x 10 x f32>>, %arg1:
 // Test `fir.coordinate_of` conversion (items inside `!fir.box`)
 
 // 4. BOX TYPE - `fir.derived` inside `fir.array`
-func @coordinate_box_derived_inside_array(%arg0: !fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, %arg1 : index) {
+func.func @coordinate_box_derived_inside_array(%arg0: !fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, %arg1 : index) {
    %idx0 = fir.field_index field_2, !fir.type<derived_3{field_1:f32, field_2:f32}>
    %q = fir.coordinate_of %arg0, %arg1, %idx0 : (!fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, index, !fir.field) -> !fir.ref<f32>
    return
@@ -2447,7 +2447,7 @@ func @coordinate_box_derived_inside_array(%arg0: !fir.box<!fir.array<10 x !fir.t
 // Test `fir.coordinate_of` conversion (items inside `!fir.ref`)
 
 // 5.1. `fir.array`
-func @coordinate_array_unknown_size_1d(%arg0: !fir.ref<!fir.array<? x i32>>, %arg1 : index) {
+func.func @coordinate_array_unknown_size_1d(%arg0: !fir.ref<!fir.array<? x i32>>, %arg1 : index) {
    %q = fir.coordinate_of %arg0, %arg1 : (!fir.ref<!fir.array<? x i32>>, index) -> !fir.ref<i32>
    return
 }
@@ -2460,7 +2460,7 @@ func @coordinate_array_unknown_size_1d(%arg0: !fir.ref<!fir.array<? x i32>>, %ar
 
 // -----
 
-func @coordinate_array_known_size_1d(%arg0: !fir.ref<!fir.array<10 x i32>>, %arg1 : index) {
+func.func @coordinate_array_known_size_1d(%arg0: !fir.ref<!fir.array<10 x i32>>, %arg1 : index) {
    %q = fir.coordinate_of %arg0, %arg1 : (!fir.ref<!fir.array<10 x i32>>, index) -> !fir.ref<i32>
    return
 }
@@ -2474,7 +2474,7 @@ func @coordinate_array_known_size_1d(%arg0: !fir.ref<!fir.array<10 x i32>>, %arg
 
 // -----
 
-func @coordinate_array_known_size_2d_get_i32(%arg0: !fir.ref<!fir.array<10 x 10 x i32>>, %arg1 : index, %arg2 : index) {
+func.func @coordinate_array_known_size_2d_get_i32(%arg0: !fir.ref<!fir.array<10 x 10 x i32>>, %arg1 : index, %arg2 : index) {
    %q = fir.coordinate_of %arg0, %arg1, %arg2 : (!fir.ref<!fir.array<10 x 10 x i32>>, index, index) -> !fir.ref<i32>
    return
 }
@@ -2489,7 +2489,7 @@ func @coordinate_array_known_size_2d_get_i32(%arg0: !fir.ref<!fir.array<10 x 10 
 
 // -----
 
-func @coordinate_array_known_size_2d_get_array(%arg0: !fir.ref<!fir.array<10 x 10 x i32>>, %arg1 : index) {
+func.func @coordinate_array_known_size_2d_get_array(%arg0: !fir.ref<!fir.array<10 x 10 x i32>>, %arg1 : index) {
    %q = fir.coordinate_of %arg0, %arg1 : (!fir.ref<!fir.array<10 x 10 x i32>>, index) -> !fir.ref<!fir.array<10 x i32>>
    return
 }
@@ -2504,7 +2504,7 @@ func @coordinate_array_known_size_2d_get_array(%arg0: !fir.ref<!fir.array<10 x 1
 // -----
 
 // 5.2. `fir.derived`
-func @coordinate_ref_derived(%arg0: !fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>) {
+func.func @coordinate_ref_derived(%arg0: !fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>) {
   %idx = fir.field_index field_2, !fir.type<dervied_4{field_1:i32, field_2:i32}>
   %q = fir.coordinate_of %arg0, %idx : (!fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>, !fir.field) -> !fir.ref<i32>
   return
@@ -2518,7 +2518,7 @@ func @coordinate_ref_derived(%arg0: !fir.ref<!fir.type<dervied_4{field_1:i32, fi
 
 // -----
 
-func @coordinate_ref_derived_nested(%arg0: !fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) {
+func.func @coordinate_ref_derived_nested(%arg0: !fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) {
   %idx0 = fir.field_index field_1, !fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>
   %idx1 = fir.field_index inner2, !fir.type<nested_derived{inner1:i32, inner2:f32}>
   %q = fir.coordinate_of %arg0, %idx0, %idx1 : (!fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
@@ -2534,7 +2534,7 @@ func @coordinate_ref_derived_nested(%arg0: !fir.ref<!fir.type<derived_5{field_1:
 // -----
 
 // 5.3 `fir.char`
-func @test_coordinate_of_char(%arr : !fir.ref<!fir.char<10, 2>>) {
+func.func @test_coordinate_of_char(%arr : !fir.ref<!fir.char<10, 2>>) {
   %1 = arith.constant 10 : i32
   %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 2>>, i32) -> !fir.ref<i80>
   return
@@ -2549,7 +2549,7 @@ func @test_coordinate_of_char(%arr : !fir.ref<!fir.char<10, 2>>) {
 // -----
 
 // 5.4 `mlir.tuple`
-func @test_coordinate_of_tuple(%tup : !fir.ref<tuple<!fir.ref<i32>>>) {
+func.func @test_coordinate_of_tuple(%tup : !fir.ref<tuple<!fir.ref<i32>>>) {
   %1 = arith.constant 0 : i32
   %2 = fir.coordinate_of %tup, %1 : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.ref<i32>
   return
@@ -2568,7 +2568,7 @@ func @test_coordinate_of_tuple(%tup : !fir.ref<tuple<!fir.ref<i32>>>) {
 // gen). Instead of duplicating the tests, only one for sanity-checking is added.
 
 // 6.1. `fir.array`
-func @coordinate_array_unknown_size_1d(%arg0: !fir.ptr<!fir.array<? x i32>>, %arg1 : index) {
+func.func @coordinate_array_unknown_size_1d(%arg0: !fir.ptr<!fir.array<? x i32>>, %arg1 : index) {
    %q = fir.coordinate_of %arg0, %arg1 : (!fir.ptr<!fir.array<? x i32>>, index) -> !fir.ref<i32>
    return
 }

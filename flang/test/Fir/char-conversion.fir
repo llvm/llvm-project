@@ -1,6 +1,6 @@
 // RUN: fir-opt --character-conversion %s | FileCheck %s
 
-func @char_convert() {
+func.func @char_convert() {
   %1 = fir.undefined i32
   %2 = fir.undefined !fir.ref<!fir.char<1>>
   %3 = fir.undefined !fir.ref<!fir.array<?x!fir.char<2,?>>>
