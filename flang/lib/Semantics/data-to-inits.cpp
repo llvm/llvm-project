@@ -43,7 +43,12 @@ public:
   bool hasFatalError() const { return hasFatalError_; }
   bool IsAtEnd() const { return at_ == end_; }
   const SomeExpr *operator*() const { return GetExpr(context_, GetConstant()); }
-  parser::CharBlock LocateSource() const { return GetConstant().source; }
+  std::optional<parser::CharBlock> LocateSource() const {
+    if (!hasFatalError_) {
+      return GetConstant().source;
+    }
+    return {};
+  }
   ValueListIterator &operator++() {
     if (repetitionsRemaining_ > 0) {
       --repetitionsRemaining_;
@@ -312,7 +317,9 @@ bool DataInitializationCompiler<DSV>::InitElement(
   bool isPointer{lastSymbol && IsPointer(*lastSymbol)};
   bool isProcPointer{lastSymbol && IsProcedurePointer(*lastSymbol)};
   evaluate::FoldingContext &context{exprAnalyzer_.GetFoldingContext()};
-  auto restorer{context.messages().SetLocation(values_.LocateSource())};
+  auto &messages{context.messages()};
+  auto restorer{
+      messages.SetLocation(values_.LocateSource().value_or(messages.at()))};
 
   const auto DescribeElement{[&]() {
     if (auto badDesignator{
