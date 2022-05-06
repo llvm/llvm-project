@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, windows, libcxx-no-debug-mode
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
+// REQUIRES: has-unix-headers
+// UNSUPPORTED: c++03, c++11, c++14, c++17, libcxx-no-debug-mode, libcpp-has-no-incomplete-ranges
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 // <ranges>
