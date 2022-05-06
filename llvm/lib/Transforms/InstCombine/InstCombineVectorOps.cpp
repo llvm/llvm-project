@@ -2242,6 +2242,39 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
   return SelectInst::Create(NarrowCond, NarrowX, NarrowY);
 }
 
+/// Canonicalize FP negate after shuffle.
+static Instruction *foldFNegShuffle(ShuffleVectorInst &Shuf,
+                                    InstCombiner::BuilderTy &Builder) {
+  Instruction *FNeg0;
+  Value *X;
+  if (!match(Shuf.getOperand(0), m_CombineAnd(m_Instruction(FNeg0),
+                                              m_FNeg(m_Value(X)))))
+    return nullptr;
+
+  // shuffle (fneg X), Mask --> fneg (shuffle X, Mask)
+  if (FNeg0->hasOneUse() && match(Shuf.getOperand(1), m_Undef())) {
+    Value *NewShuf = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
+    return UnaryOperator::CreateFNegFMF(NewShuf, FNeg0);
+  }
+
+  Instruction *FNeg1;
+  Value *Y;
+  if (!match(Shuf.getOperand(1), m_CombineAnd(m_Instruction(FNeg1),
+                                              m_FNeg(m_Value(Y)))))
+    return nullptr;
+
+  // shuffle (fneg X), (fneg Y), Mask --> fneg (shuffle X, Y, Mask)
+  if (FNeg0->hasOneUse() || FNeg1->hasOneUse()) {
+    Value *NewShuf = Builder.CreateShuffleVector(X, Y, Shuf.getShuffleMask());
+    Instruction *NewFNeg = UnaryOperator::CreateFNeg(NewShuf);
+    NewFNeg->copyIRFlags(FNeg0);
+    NewFNeg->andIRFlags(FNeg1);
+    return NewFNeg;
+  }
+
+  return nullptr;
+}
+
 /// Try to fold an extract subvector operation.
 static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
@@ -2535,6 +2568,9 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
 
   if (Instruction *I = narrowVectorSelect(SVI, Builder))
+    return I;
+
+  if (Instruction *I = foldFNegShuffle(SVI, Builder))
     return I;
 
   APInt UndefElts(VWidth, 0);
