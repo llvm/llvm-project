@@ -12,11 +12,19 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <map>
+#include <vector>
 
 namespace llvm {
 class raw_ostream;
 
 namespace bolt {
+
+/// Struct representing a section name and its address range in the binary.
+struct SectionNameAndRange {
+  StringRef Name;
+  uint64_t BeginAddress;
+  uint64_t EndAddress;
+};
 
 class Heatmap {
   /// Number of bytes per entry in the heat map.
@@ -34,11 +42,15 @@ class Heatmap {
   /// Map buckets to the number of samples.
   std::map<uint64_t, uint64_t> Map;
 
+  /// Map section names to their address range.
+  const std::vector<SectionNameAndRange> TextSections;
+
 public:
   explicit Heatmap(uint64_t BucketSize = 4096, uint64_t MinAddress = 0,
-                   uint64_t MaxAddress = std::numeric_limits<uint64_t>::max())
-      : BucketSize(BucketSize), MinAddress(MinAddress),
-        MaxAddress(MaxAddress){};
+                   uint64_t MaxAddress = std::numeric_limits<uint64_t>::max(),
+                   std::vector<SectionNameAndRange> TextSections = {})
+      : BucketSize(BucketSize), MinAddress(MinAddress), MaxAddress(MaxAddress),
+        TextSections(TextSections) {}
 
   inline bool ignoreAddress(uint64_t Address) const {
     return (Address > MaxAddress) || (Address < MinAddress);
@@ -64,6 +76,10 @@ public:
   void printCDF(StringRef FileName) const;
 
   void printCDF(raw_ostream &OS) const;
+
+  void printSectionHotness(StringRef Filename) const;
+
+  void printSectionHotness(raw_ostream &OS) const;
 
   size_t size() const { return Map.size(); }
 };
