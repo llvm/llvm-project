@@ -105,6 +105,7 @@ TEST(AllocatorTest, TestAlignment) {
 // we end up creating a slab for it.
 TEST(AllocatorTest, TestZero) {
   BumpPtrAllocator Alloc;
+  Alloc.setRedZoneSize(0); // else our arithmetic is all off
   EXPECT_EQ(0u, Alloc.GetNumSlabs());
   EXPECT_EQ(0u, Alloc.getBytesAllocated());
 
