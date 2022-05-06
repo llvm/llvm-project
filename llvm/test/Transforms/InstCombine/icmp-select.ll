@@ -19,8 +19,8 @@ define i1 @icmp_select_const(i8 %x, i8 %y) {
 define i1 @icmp_select_var(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 [[Z:%.*]], i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SEL]], [[Z]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp eq i8 %x, 0
@@ -33,8 +33,8 @@ define i1 @icmp_select_var_commuted(i8 %x, i8 %y, i8 %_z) {
 ; CHECK-LABEL: @icmp_select_var_commuted(
 ; CHECK-NEXT:    [[Z:%.*]] = udiv i8 42, [[_Z:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 [[Z]], i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[Z]], [[SEL]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i8 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %z = udiv i8 42, %_z ; thwart complexity-based canonicalization
@@ -46,10 +46,11 @@ define i1 @icmp_select_var_commuted(i8 %x, i8 %y, i8 %_z) {
 
 define i1 @icmp_select_var_select(i8 %x, i8 %y, i1 %c) {
 ; CHECK-LABEL: @icmp_select_var_select(
-; CHECK-NEXT:    [[Z:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 [[Z]], i8 [[Y]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[Z]], [[SEL]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP212:%.*]] = icmp eq i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP1]], i1 true, i1 [[NOT_C]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 [[CMP212]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %z = select i1 %c, i8 %x, i8 %y
@@ -104,9 +105,9 @@ define i1 @icmp_select_var_both_fold_extra_use(i8 %x, i8 %y, i8 %_z) {
 
 define i1 @icmp_select_var_pred_ne(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_ne(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 [[Z:%.*]], i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[SEL]], [[Z]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ne i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 [[CMP21]], i1 false
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp eq i8 %x, 0
@@ -119,8 +120,8 @@ define i1 @icmp_select_var_pred_ult(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_ult(
 ; CHECK-NEXT:    [[Z1:%.*]] = add nuw i8 [[Z:%.*]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 [[Z]], i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[SEL]], [[Z1]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ugt i8 [[Z1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %z1 = add nuw i8 %z, 2
@@ -133,9 +134,9 @@ define i1 @icmp_select_var_pred_ult(i8 %x, i8 %y, i8 %z) {
 define i1 @icmp_select_var_pred_uge(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_uge(
 ; CHECK-NEXT:    [[Z1:%.*]] = add nuw i8 [[Z:%.*]], 2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 [[Z]], i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i8 [[SEL]], [[Z1]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[Z1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 [[CMP21]], i1 false
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %z1 = add nuw i8 %z, 2
@@ -149,8 +150,8 @@ define i1 @icmp_select_var_pred_uge_commuted(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_uge_commuted(
 ; CHECK-NEXT:    [[Z1:%.*]] = add nuw i8 [[Z:%.*]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i8 [[Z]], i8 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i8 [[Z1]], [[SEL]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp uge i8 [[Z1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %z1 = add nuw i8 %z, 2
