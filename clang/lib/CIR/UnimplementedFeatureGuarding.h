@@ -21,6 +21,7 @@ struct UnimplementedFeature {
   // sanitizer related type check features
   static bool buildTypeCheck() { return false; }
   static bool tbaa() { return false; }
+  static bool cleanups() { return false; }
 };
 } // namespace cir
 
