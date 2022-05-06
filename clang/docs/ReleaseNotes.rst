@@ -69,7 +69,7 @@ Major New Features
       Randomizing structure layout is a C-only feature.
 
 Bug Fixes
-------------------
+---------
 - ``CXXNewExpr::getArraySize()`` previously returned a ``llvm::Optional``
   wrapping a ``nullptr`` when the ``CXXNewExpr`` did not have an array
   size expression. This was fixed and ``::getArraySize()`` will now always
