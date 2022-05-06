@@ -572,6 +572,10 @@ set(avr_SOURCES
   avr/mulqi3.S
   avr/mulhi3.S
   avr/exit.S
+  avr/divmodhi4.S
+  avr/udivmodhi4.S
+  avr/divmodqi4.S
+  avr/udivmodqi4.S
   ${GENERIC_SOURCES}
 )
 
