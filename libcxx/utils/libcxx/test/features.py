@@ -116,6 +116,15 @@ DEFAULT_FEATURES = [
             }
           """)),
 
+  Feature(name='has-unix-headers',
+          when=lambda cfg: sourceBuilds(cfg, """
+            #include <unistd.h>
+            #include <sys/wait.h>
+            int main(int, char**) {
+              return 0;
+            }
+          """)),
+
   # Whether Bash can run on the executor.
   # This is not always the case, for example when running on embedded systems.
   #
