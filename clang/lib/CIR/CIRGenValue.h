@@ -271,6 +271,11 @@ class AggValueSlot {
   // Qualifiers
   clang::Qualifiers Quals;
 
+  /// ZeroedFlag - This is set to true if the memory in the slot is known to be
+  /// zero before the assignment into it. This means that zero field don't need
+  /// to be set.
+  bool ZeroedFlag : 1;
+
   /// This is set to true if the tail padding of this slot might overlap another
   /// object that may have already been initialized (and whose value must be
   /// preserved by this initialization). If so, we may only store up to the
@@ -348,6 +353,8 @@ public:
 
   clang::Qualifiers getQualifiers() const { return Quals; }
 
+  bool isVolatile() const { return Quals.hasVolatile(); }
+
   Address getAddress() const { return Addr; }
 
   bool isIgnored() const { return !Addr.isValid(); }
@@ -355,6 +362,8 @@ public:
   Overlap_t mayOverlap() const { return Overlap_t(OverlapFlag); }
 
   bool isSanitizerChecked() const { return SanitizerCheckedFlag; }
+
+  IsZeroed_t isZeroed() const { return IsZeroed_t(ZeroedFlag); }
 };
 
 } // namespace cir
