@@ -2782,6 +2782,12 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       { TTI::SK_Reverse, MVT::v2f32, 1 }, // mov.
       { TTI::SK_Reverse, MVT::v4f32, 2 }, // REV64; EXT
       { TTI::SK_Reverse, MVT::v2f64, 1 }, // mov.
+      { TTI::SK_Reverse, MVT::v8f16, 2 }, // REV64; EXT
+      { TTI::SK_Reverse, MVT::v8i16, 2 }, // REV64; EXT
+      { TTI::SK_Reverse, MVT::v16i8, 2 }, // REV64; EXT
+      { TTI::SK_Reverse, MVT::v4f16, 1 }, // REV64
+      { TTI::SK_Reverse, MVT::v4i16, 1 }, // REV64
+      { TTI::SK_Reverse, MVT::v8i8, 1 }, // REV64
       // Broadcast shuffle kinds for scalable vectors
       { TTI::SK_Broadcast, MVT::nxv16i8,  1 },
       { TTI::SK_Broadcast, MVT::nxv8i16,  1 },

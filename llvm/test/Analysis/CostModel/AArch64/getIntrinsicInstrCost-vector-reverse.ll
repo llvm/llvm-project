@@ -5,16 +5,16 @@
 
 define void @vector_reverse() #0{
 ; CHECK-LABEL: 'vector_reverse'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %1 = call <16 x i8> @llvm.experimental.vector.reverse.v16i8(<16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %2 = call <32 x i8> @llvm.experimental.vector.reverse.v32i8(<32 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %3 = call <8 x i16> @llvm.experimental.vector.reverse.v8i16(<8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %4 = call <16 x i16> @llvm.experimental.vector.reverse.v16i16(<16 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call <16 x i8> @llvm.experimental.vector.reverse.v16i8(<16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = call <32 x i8> @llvm.experimental.vector.reverse.v32i8(<32 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = call <8 x i16> @llvm.experimental.vector.reverse.v8i16(<8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %4 = call <16 x i16> @llvm.experimental.vector.reverse.v16i16(<16 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = call <4 x i32> @llvm.experimental.vector.reverse.v4i32(<4 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %6 = call <8 x i32> @llvm.experimental.vector.reverse.v8i32(<8 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = call <2 x i64> @llvm.experimental.vector.reverse.v2i64(<2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %8 = call <4 x i64> @llvm.experimental.vector.reverse.v4i64(<4 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %9 = call <8 x half> @llvm.experimental.vector.reverse.v8f16(<8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %10 = call <16 x half> @llvm.experimental.vector.reverse.v16f16(<16 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %9 = call <8 x half> @llvm.experimental.vector.reverse.v8f16(<8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = call <16 x half> @llvm.experimental.vector.reverse.v16f16(<16 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = call <4 x float> @llvm.experimental.vector.reverse.v4f32(<4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %12 = call <8 x float> @llvm.experimental.vector.reverse.v8f32(<8 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = call <2 x double> @llvm.experimental.vector.reverse.v2f64(<2 x double> undef)
