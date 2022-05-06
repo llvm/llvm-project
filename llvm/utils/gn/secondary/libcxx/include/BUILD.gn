@@ -133,6 +133,7 @@ if (current_toolchain == default_toolchain) {
       "__algorithm/ranges_find_if_not.h",
       "__algorithm/ranges_for_each.h",
       "__algorithm/ranges_for_each_n.h",
+      "__algorithm/ranges_is_partitioned.h",
       "__algorithm/ranges_max.h",
       "__algorithm/ranges_max_element.h",
       "__algorithm/ranges_min.h",
