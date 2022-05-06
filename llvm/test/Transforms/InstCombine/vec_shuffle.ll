@@ -403,6 +403,7 @@ define <4 x i32> @shuffle_17and(<4 x i32> %v1, <4 x i32> %v2) {
 }
 
 declare void @use(<2 x float>)
+declare void @use4(<4 x float>)
 
 ; One extra use is ok to transform.
 
@@ -749,8 +750,8 @@ define <8 x i8> @pr19730(<16 x i8> %in0) {
 
 define i32 @pr19737(<4 x i32> %in0) {
 ; CHECK-LABEL: @pr19737(
-; CHECK-NEXT:    [[RV:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i64 0
-; CHECK-NEXT:    ret i32 [[RV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i64 0
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %shuffle.i = shufflevector <4 x i32> zeroinitializer, <4 x i32> %in0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %neg.i = xor <4 x i32> %shuffle.i, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -1788,3 +1789,108 @@ define <4 x i32> @PR46872(<4 x i32> %x) {
   ret <4 x i32> %a
 }
 
+define <2 x float> @fneg_unary_shuf(<2 x float> %x) {
+; CHECK-LABEL: @fneg_unary_shuf(
+; CHECK-NEXT:    [[NX:%.*]] = fneg nnan nsz <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[NX]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %nx = fneg nsz nnan <2 x float> %x
+  %r = shufflevector <2 x float> %nx, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  ret <2 x float> %r
+}
+
+define <4 x half> @fneg_unary_shuf_widen(<2 x half> %x) {
+; CHECK-LABEL: @fneg_unary_shuf_widen(
+; CHECK-NEXT:    [[NX:%.*]] = fneg ninf <2 x half> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x half> [[NX]], <2 x half> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 undef>
+; CHECK-NEXT:    ret <4 x half> [[R]]
+;
+  %nx = fneg ninf <2 x half> %x
+  %r = shufflevector <2 x half> %nx, <2 x half> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 poison>
+  ret <4 x half> %r
+}
+
+define <2 x double> @fneg_unary_shuf_narrow(<4 x double> %x) {
+; CHECK-LABEL: @fneg_unary_shuf_narrow(
+; CHECK-NEXT:    [[NX:%.*]] = fneg nsz <4 x double> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x double> [[NX]], <4 x double> poison, <2 x i32> <i32 3, i32 0>
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %nx = fneg nsz <4 x double> %x
+  %r = shufflevector <4 x double> %nx, <4 x double> poison, <2 x i32> <i32 3, i32 0>
+  ret <2 x double> %r
+}
+
+define <2 x float> @fneg_unary_shuf_use(<2 x float> %x) {
+; CHECK-LABEL: @fneg_unary_shuf_use(
+; CHECK-NEXT:    [[NX:%.*]] = fneg nsz <2 x float> [[X:%.*]]
+; CHECK-NEXT:    call void @use(<2 x float> [[NX]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[NX]], <2 x float> poison, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %nx = fneg nsz <2 x float> %x
+  call void @use(<2 x float> %nx)
+  %r = shufflevector <2 x float> %nx, <2 x float> poison, <2 x i32> <i32 3, i32 0>
+  ret <2 x float> %r
+}
+
+define <4 x float> @fneg_shuf(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @fneg_shuf(
+; CHECK-NEXT:    [[NX:%.*]] = fneg ninf nsz <4 x float> [[X:%.*]]
+; CHECK-NEXT:    [[NY:%.*]] = fneg nnan ninf <4 x float> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[NX]], <4 x float> [[NY]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %nx = fneg nsz ninf <4 x float> %x
+  %ny = fneg nnan ninf <4 x float> %y
+  %r = shufflevector <4 x float> %nx, <4 x float> %ny, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  ret <4 x float> %r
+}
+
+define <4 x float> @fneg_shuf_widen_use1(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fneg_shuf_widen_use1(
+; CHECK-NEXT:    [[NX:%.*]] = fneg nnan <2 x float> [[X:%.*]]
+; CHECK-NEXT:    call void @use(<2 x float> [[NX]])
+; CHECK-NEXT:    [[NY:%.*]] = fneg nnan <2 x float> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[NX]], <2 x float> [[NY]], <4 x i32> <i32 undef, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %nx = fneg nnan <2 x float> %x
+  call void @use(<2 x float> %nx)
+  %ny = fneg nnan <2 x float> %y
+  %r = shufflevector <2 x float> %nx, <2 x float> %ny, <4 x i32> <i32 poison, i32 1, i32 2, i32 3>
+  ret <4 x float> %r
+}
+
+define <2 x float> @fneg_shuf_narrow_use2(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @fneg_shuf_narrow_use2(
+; CHECK-NEXT:    [[NX:%.*]] = fneg nnan nsz <4 x float> [[X:%.*]]
+; CHECK-NEXT:    [[NY:%.*]] = fneg nnan nsz <4 x float> [[Y:%.*]]
+; CHECK-NEXT:    call void @use4(<4 x float> [[NY]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[NX]], <4 x float> [[NY]], <2 x i32> <i32 3, i32 5>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %nx = fneg nsz nnan <4 x float> %x
+  %ny = fneg nsz nnan <4 x float> %y
+  call void @use4(<4 x float> %ny)
+  %r = shufflevector <4 x float> %nx, <4 x float> %ny, <2 x i32> <i32 3, i32 5>
+  ret <2 x float> %r
+}
+
+define <2 x float> @fneg_shuf_use3(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fneg_shuf_use3(
+; CHECK-NEXT:    [[NX:%.*]] = fneg nnan <2 x float> [[X:%.*]]
+; CHECK-NEXT:    call void @use(<2 x float> [[NX]])
+; CHECK-NEXT:    [[NY:%.*]] = fneg nnan <2 x float> [[Y:%.*]]
+; CHECK-NEXT:    call void @use(<2 x float> [[NY]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[NX]], <2 x float> [[NY]], <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %nx = fneg nnan <2 x float> %x
+  call void @use(<2 x float> %nx)
+  %ny = fneg nnan <2 x float> %y
+  call void @use(<2 x float> %ny)
+  %r = shufflevector <2 x float> %nx, <2 x float> %ny, <2 x i32> <i32 1, i32 2>
+  ret <2 x float> %r
+}
