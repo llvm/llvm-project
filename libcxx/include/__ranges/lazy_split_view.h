@@ -87,8 +87,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   constexpr lazy_split_view(_Range&& __r, range_value_t<_Range> __e)
     : __base_(views::all(std::forward<_Range>(__r)))
-    // TODO(varconst): use `views::single` once it's implemented.
-    , __pattern_(ranges::single_view(std::move(__e))) {}
+    , __pattern_(views::single(std::move(__e))) {}
 
   _LIBCPP_HIDE_FROM_ABI
   constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
