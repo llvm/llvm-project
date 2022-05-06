@@ -247,28 +247,31 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
 }
 
 TEST_F(TUSchedulerTests, Debounce) {
-  std::atomic<int> CallbackCount(0);
-  {
-    auto Opts = optsForTest();
-    Opts.UpdateDebounce = DebouncePolicy::fixed(std::chrono::seconds(1));
-    TUScheduler S(CDB, Opts, captureDiags());
-    // FIXME: we could probably use timeouts lower than 1 second here.
-    auto Path = testPath("foo.cpp");
-    updateWithDiags(S, Path, "auto (debounced)", WantDiagnostics::Auto,
-                    [&](std::vector<Diag>) {
-                      ADD_FAILURE()
-                          << "auto should have been debounced and canceled";
-                    });
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    updateWithDiags(S, Path, "auto (timed out)", WantDiagnostics::Auto,
-                    [&](std::vector<Diag>) { ++CallbackCount; });
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    updateWithDiags(S, Path, "auto (shut down)", WantDiagnostics::Auto,
-                    [&](std::vector<Diag>) { ++CallbackCount; });
+  auto Opts = optsForTest();
+  Opts.UpdateDebounce = DebouncePolicy::fixed(std::chrono::milliseconds(500));
+  TUScheduler S(CDB, Opts, captureDiags());
+  auto Path = testPath("foo.cpp");
+  // Issue a write that's going to be debounced away.
+  updateWithDiags(S, Path, "auto (debounced)", WantDiagnostics::Auto,
+                  [&](std::vector<Diag>) {
+                    ADD_FAILURE()
+                        << "auto should have been debounced and canceled";
+                  });
+  // Sleep a bit to verify that it's really debounce that's holding diagnostics.
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
-  }
-  EXPECT_EQ(2, CallbackCount);
+  // Issue another write, this time we'll wait for its diagnostics.
+  Notification N;
+  updateWithDiags(S, Path, "auto (timed out)", WantDiagnostics::Auto,
+                  [&](std::vector<Diag>) { N.notify(); });
+  EXPECT_TRUE(N.wait(timeoutSeconds(1)));
+
+  // Once we start shutting down the TUScheduler, this one becomes a dead write.
+  updateWithDiags(S, Path, "auto (discarded)", WantDiagnostics::Auto,
+                  [&](std::vector<Diag>) {
+                    ADD_FAILURE()
+                        << "auto should have been discarded (dead write)";
+                  });
 }
 
 TEST_F(TUSchedulerTests, Cancellation) {
