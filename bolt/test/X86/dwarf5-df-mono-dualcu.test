@@ -1,0 +1,130 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llc -split-dwarf-file=main.dwo -split-dwarf-output=main.dwo -O0 -mtriple=x86_64-unknown-linux-gnu \
+; RUN: -filetype=obj %p/Inputs/dwarf5-df-mono-main.ll -o=main.o
+; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj %p/Inputs/dwarf5-df-mono-helper.ll -o=helper.o
+; RUN: %clang %cflags -gdwarf-5 main.o helper.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe | FileCheck -check-prefix=PRE-BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-addr main.exe.bolt &> %t/foo.txt
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo.txt
+; RUN: cat %t/foo.txt | FileCheck -check-prefix=BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo | FileCheck -check-prefix=PRE-BOLT-DWO-MAIN %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-MAIN %s
+
+; Testing dwarf5 mix of split dwarf and monolithic CUs.
+
+; PRE-BOLT: version = 0x0005
+; PRE-BOLT: DW_TAG_skeleton_unit
+; PRE-BOLT: DW_AT_low_pc [DW_FORM_addrx]
+; PRE-BOLT-NEXT: DW_AT_high_pc [DW_FORM_data4]
+; PRE-BOLT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000008)
+; PRE-BOLT: version = 0x0005
+; PRE-BOLT: DW_TAG_compile_unit
+; PRE-BOLT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000002)
+; PRE-BOLT-NEXT: DW_AT_high_pc [DW_FORM_data4] (0x0000003d)
+; PRE-BOLT-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000030)
+
+; BOLT: Addrs: [
+; BOLT-NEXT: 0x
+; BOLT-NEXT: 0x
+; BOLT-NEXT: 0x[[#%.16x,ADDR:]]
+; BOLT-NEXT: 0x
+; BOLT-NEXT: 0x[[#%.16x,ADDR2:]]
+; BOLT: Addrs: [
+; BOLT-NEXT: 0x[[#%.16x,ADDR3:]]
+; BOLT: DW_TAG_skeleton_unit
+; BOLT: DW_AT_dwo_name [DW_FORM_strx1]  (indexed (00000001) string = "main.dwo.dwo")
+; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003) address = 0x0000000000000000)
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000010
+; BOLT-NEXT: [0x[[#ADDR]]
+; BOLT-SAME: 0x[[#ADDR + 0x24]]
+; BOLT-NEXT: [0x[[#ADDR2]]
+; BOLT-SAME: 0x[[#ADDR2 + 0x59]]
+; BOLT-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000008)
+; BOLT-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
+; BOLT: DW_TAG_compile_unit
+; BOLT: DW_AT_name [DW_FORM_strx1]  (indexed (00000001) string = "helper.cpp")
+; BOLT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000001) address = 0x0000000000000000)
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x0000002b
+; BOLT-NEXT: [0x[[#ADDR3]]
+; BOLT-SAME: 0x[[#ADDR3 + 0x3D]]
+; BOLT-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000038)
+; BOLT-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x00000023)
+; BOLT: DW_TAG_variable
+; BOLT-NEXT: DW_AT_name [DW_FORM_strx1]  (indexed (00000003) string = "z")
+; BOLT-NEXT: DW_AT_type
+; BOLT-NEXT: DW_AT_external
+; BOLT-NEXT: DW_AT_decl_file
+; BOLT-NEXT: DW_AT_decl_line
+; BOLT-NEXT: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x2)
+; BOLT: DW_TAG_variable
+; BOLT-NEXT: DW_AT_name [DW_FORM_strx1]  (indexed (00000005) string = "d")
+; BOLT-NEXT: DW_AT_type
+; BOLT-NEXT: DW_AT_external
+; BOLT-NEXT: DW_AT_decl_file
+; BOLT-NEXT: DW_AT_decl_line
+; BOLT-NEXT: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x3)
+; BOLT: DW_TAG_subprogram
+; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001) address = 0x0000000000000000)
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x0000002f
+; BOLT-NEXT: [0x[[#ADDR3]]
+; BOLT-SAME: 0x[[#ADDR3 + 0x3D]]
+
+; PRE-BOLT-DWO-MAIN: version = 0x0005
+; PRE-BOLT-DWO-MAIN: DW_TAG_compile_unit
+; PRE-BOLT-DWO-MAIN: DW_TAG_variable [2]
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_strx1]	(indexed (00000000) string = "x")
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_type
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_external
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_decl_file
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx 0x0)
+; PRE-BOLT-DWO-MAIN: DW_TAG_variable [2]
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_strx1]	(indexed (00000002) string = "y")
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_type
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_external
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_decl_file
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx 0x1)
+; PRE-BOLT-DWO-MAIN: DW_TAG_subprogram
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000002)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x00000024)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_frame_base
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_linkage_name [DW_FORM_strx1]	(indexed (00000003) string = "_Z3usePiS_")
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_strx1]	(indexed (00000004) string = "use")
+; PRE-BOLT-DWO-MAIN: DW_TAG_subprogram
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x0000005f)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_frame_base
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_strx1]	(indexed (00000005) string = "main")
+
+; BOLT-DWO-MAIN: DW_TAG_compile_unit
+; BOLT-DWO-MAIN: DW_TAG_variable [2]
+; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_strx1]	(indexed (00000000) string = "x")
+; BOLT-DWO-MAIN-NEXT: DW_AT_type
+; BOLT-DWO-MAIN-NEXT: DW_AT_external
+; BOLT-DWO-MAIN-NEXT: DW_AT_decl_file
+; BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
+; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx 0x0)
+; BOLT-DWO-MAIN: DW_TAG_variable [2]
+; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_strx1]	(indexed (00000002) string = "y")
+; BOLT-DWO-MAIN-NEXT: DW_AT_type
+; BOLT-DWO-MAIN-NEXT: DW_AT_external
+; BOLT-DWO-MAIN-NEXT: DW_AT_decl_file
+; BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
+; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx 0x1)
+; BOLT-DWO-MAIN: DW_TAG_subprogram [4]
+; BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003)
+; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_rnglistx]	(indexed (0x0) rangelist = 0x00000014
+; BOLT-DWO-MAIN-NEXT: [0x0000000000000000, 0x0000000000000024))
+; BOLT-DWO-MAIN-NEXT: DW_AT_frame_base
+; BOLT-DWO-MAIN-NEXT: DW_AT_linkage_name [DW_FORM_strx1]	(indexed (00000003) string = "_Z3usePiS_")
+; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_strx1]	(indexed (00000004) string = "use")
+; BOLT-DWO-MAIN: DW_TAG_subprogram [6]
+; BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_addrx]	(indexed (00000003)
+; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_rnglistx]	(indexed (0x1) rangelist = 0x00000018
+; BOLT-DWO-MAIN-NEXT: [0x0000000000000000, 0x0000000000000059))
+; BOLT-DWO-MAIN-NEXT: DW_AT_frame_base [DW_FORM_exprloc]	(DW_OP_reg6 RBP)
+; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_strx1]	(indexed (00000005) string = "main")
