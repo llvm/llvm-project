@@ -359,3 +359,19 @@ func.func @depthwise_conv_1d_nwc_wc(%arg0: index, %arg1: index, %arg2: tensor<8x
   return %3 : tensor<?x1x6x8xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @do_not_copy_init_tensors(
+func.func @do_not_copy_init_tensors(%f1: f32, %f2: f32, %idx: index)
+  -> (tensor<5xf32>, tensor<5xf32>)
+{
+  // CHECK: memref.alloc
+  // CHECK: memref.alloc
+  // CHECK-NOT: copy
+  // CHECK: memref.store
+  // CHECK: memref.store
+  %0 = linalg.init_tensor [5] : tensor<5xf32>
+  %1 = tensor.insert %f1 into %0[%idx] : tensor<5xf32>
+  %2 = tensor.insert %f2 into %0[%idx] : tensor<5xf32>
+  return %1, %2 : tensor<5xf32>, tensor<5xf32>
+}
