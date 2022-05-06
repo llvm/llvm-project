@@ -1,3 +1,4 @@
+XFAIL: aix
 UNSUPPORTED: windows
 
 RUN: mkdir -p %t.d

@@ -1,3 +1,4 @@
+// XFAIL: aix
 // This test checks that the cycle detection algorithm in llvm-cov is able to
 // handle complex block graphs by skipping zero count cycles.
 //
