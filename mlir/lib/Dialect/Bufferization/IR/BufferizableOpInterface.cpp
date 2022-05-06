@@ -303,18 +303,8 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
       rewriter, loc, operandBuffer, dealloc && getOptions().createDeallocs);
   if (failed(resultBuffer))
     return failure();
-  // Do not copy if the last preceding writes of `operand` are ops that do
-  // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
-  // Note: If `findLastPrecedingWrite` reaches the end of the reverse SSA
-  // use-def chain, it returns that value, regardless of whether it is a
-  // memory write or not.
-  SetVector<Value> lastWrites = analysisState.findLastPrecedingWrite(operand);
-  if (llvm::none_of(lastWrites, [&](Value lastWrite) {
-        if (auto bufferizableOp = options.dynCastBufferizableOp(lastWrite))
-          return bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>(),
-                                              analysisState);
-        return true;
-      }))
+  // Do not copy the buffer if its contents are undefined.
+  if (analysisState.hasUndefinedContents(&opOperand))
     return resultBuffer;
   // Do not copy if the copied data is never read.
   if (!aliasingOpResults.empty() &&
@@ -404,6 +394,12 @@ bool AlwaysCopyAnalysisState::areEquivalentBufferizedValues(Value v1,
                                                             Value v2) const {
   // There is no analysis, so we do not know if the values are equivalent. The
   // conservative answer is "false".
+  return false;
+}
+
+/// Return `true` if the given tensor has undefined contents.
+bool AlwaysCopyAnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
+  // There is no analysis, so the conservative answer is "false".
   return false;
 }
 
