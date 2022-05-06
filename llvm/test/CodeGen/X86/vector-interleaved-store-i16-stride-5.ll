@@ -177,10 +177,10 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <4 x i16>* %in.
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; AVX1-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm1[3,1,2,3]
@@ -206,10 +206,10 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <4 x i16>* %in.
 ; AVX2-SLOW:       # %bb.0:
 ; AVX2-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-SLOW-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX2-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-SLOW-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-SLOW-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX2-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm2
 ; AVX2-SLOW-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
 ; AVX2-SLOW-NEXT:    vpbroadcastq %xmm3, %ymm3
@@ -233,10 +233,10 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <4 x i16>* %in.
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX2-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-FAST-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX2-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm2
 ; AVX2-FAST-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
 ; AVX2-FAST-NEXT:    vpbroadcastq %xmm3, %ymm3
@@ -259,10 +259,10 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <4 x i16>* %in.
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0

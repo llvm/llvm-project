@@ -16,20 +16,20 @@ define void @store_i32_stride6_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm5 = mem[0],zero
-; SSE-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm5[0]
-; SSE-NEXT:    movaps %xmm0, %xmm5
-; SSE-NEXT:    movlhps {{.*#+}} xmm5 = xmm5[0],xmm1[0]
-; SSE-NEXT:    movaps %xmm2, %xmm6
-; SSE-NEXT:    movlhps {{.*#+}} xmm6 = xmm6[0],xmm3[0]
+; SSE-NEXT:    movaps %xmm0, %xmm4
+; SSE-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm1[0]
+; SSE-NEXT:    movaps %xmm2, %xmm5
+; SSE-NEXT:    movlhps {{.*#+}} xmm5 = xmm5[0],xmm3[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm6 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm7 = mem[0],zero
+; SSE-NEXT:    movlhps {{.*#+}} xmm7 = xmm7[0],xmm6[0]
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[1,3],xmm4[1,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,2],xmm5[1,3]
-; SSE-NEXT:    movaps %xmm6, 32(%rax)
-; SSE-NEXT:    movaps %xmm4, 16(%rax)
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,3],xmm7[1,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,2],xmm4[1,3]
+; SSE-NEXT:    movaps %xmm5, 32(%rax)
+; SSE-NEXT:    movaps %xmm7, 16(%rax)
 ; SSE-NEXT:    movaps %xmm0, (%rax)
 ; SSE-NEXT:    retq
 ;
@@ -38,21 +38,21 @@ define void @store_i32_stride6_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX1-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm3 = xmm3[0],xmm4[0]
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm4 = xmm0[0],xmm1[0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm4
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm4 = ymm4[u,u,0,2,u,u,5,7]
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm4[2,3,4,5,6,7]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm3[0,2,2,3]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm3 = xmm4[0],xmm3[0]
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm4 = xmm5[0],xmm4[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; AVX1-NEXT:    vpermilps {{.*#+}} ymm2 = ymm2[u,u,0,2,u,u,5,7]
+; AVX1-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3,4,5,6,7]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm4[0,2,2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[1,3],xmm3[1,3]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm3[1,3],xmm4[1,3]
 ; AVX1-NEXT:    vmovaps %xmm1, 32(%rax)
 ; AVX1-NEXT:    vmovaps %ymm0, (%rax)
 ; AVX1-NEXT:    vzeroupper
@@ -63,14 +63,14 @@ define void @store_i32_stride6_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX2-SLOW-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,1]
 ; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm3 = xmm2[0,2,2,3]
@@ -87,23 +87,23 @@ define void @store_i32_stride6_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX2-FAST-ALL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX2-FAST-ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm3[0]
-; AVX2-FAST-ALL-NEXT:    vshufps {{.*#+}} ymm1 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
-; AVX2-FAST-ALL-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,1,2,3]
+; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm3 = xmm2[0],xmm1[0]
+; AVX2-FAST-ALL-NEXT:    vshufps {{.*#+}} ymm3 = ymm0[1,3],ymm3[1,3],ymm0[5,7],ymm3[5,7]
+; AVX2-FAST-ALL-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[2,1,2,3]
 ; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm4 = <0,2,4,6,u,u,1,3>
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm4, %ymm0
-; AVX2-FAST-ALL-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; AVX2-FAST-ALL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
-; AVX2-FAST-ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5],ymm0[6,7]
+; AVX2-FAST-ALL-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; AVX2-FAST-ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
+; AVX2-FAST-ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
 ; AVX2-FAST-ALL-NEXT:    vmovaps %ymm0, (%rax)
-; AVX2-FAST-ALL-NEXT:    vmovaps %xmm1, 32(%rax)
+; AVX2-FAST-ALL-NEXT:    vmovaps %xmm3, 32(%rax)
 ; AVX2-FAST-ALL-NEXT:    vzeroupper
 ; AVX2-FAST-ALL-NEXT:    retq
 ;
@@ -112,14 +112,14 @@ define void @store_i32_stride6_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX2-FAST-PERLANE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX2-FAST-PERLANE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX2-FAST-PERLANE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX2-FAST-PERLANE-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; AVX2-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,1]
 ; AVX2-FAST-PERLANE-NEXT:    vpermilps {{.*#+}} xmm3 = xmm2[0,2,2,3]
@@ -136,13 +136,13 @@ define void @store_i32_stride6_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX512-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = <0,2,4,6,8,10,1,3,5,7,9,11,u,u,u,u>

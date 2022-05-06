@@ -45,15 +45,15 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <8 x i16>* %out
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSE-NEXT:    movdqa %xmm0, (%rdx)
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE-NEXT:    movdqa %xmm1, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: vf4:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX-NEXT:    retq
 ;
@@ -61,7 +61,7 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <8 x i16>* %out
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX512-NEXT:    retq
   %in.vec0 = load <4 x i16>, <4 x i16>* %in.vecptr0, align 32

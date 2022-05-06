@@ -977,8 +977,7 @@ define <8 x i16> @broadcast_x86_mmx(x86_mmx %tmp) nounwind {
 ; X86:       ## %bb.0: ## %bb
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 ;

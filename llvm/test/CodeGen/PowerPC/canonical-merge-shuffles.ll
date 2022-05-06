@@ -865,14 +865,14 @@ define <2 x i64> @testSplati64_1(<2 x i64>* nocapture readonly %ptr) #0 {
 ;
 ; CHECK-P9-LABEL: testSplati64_1:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lxv v2, 0(r3)
-; CHECK-P9-NEXT:    xxspltd v2, v2, 0
+; CHECK-P9-NEXT:    addi r3, r3, 8
+; CHECK-P9-NEXT:    lxvdsx v2, 0, r3
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P9-BE-LABEL: testSplati64_1:
 ; CHECK-P9-BE:       # %bb.0: # %entry
-; CHECK-P9-BE-NEXT:    lxv v2, 0(r3)
-; CHECK-P9-BE-NEXT:    xxspltd v2, v2, 1
+; CHECK-P9-BE-NEXT:    addi r3, r3, 8
+; CHECK-P9-BE-NEXT:    lxvdsx v2, 0, r3
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testSplati64_1:

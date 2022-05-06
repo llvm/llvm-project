@@ -68,22 +68,18 @@ define <4 x i64> *@vld2_v2i64(<4 x i64> *%src, <2 x i64> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
+; CHECK-NEXT:    vmov r2, r12, d1
+; CHECK-NEXT:    vmov r3, lr, d0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #32
-; CHECK-NEXT:    vmov.f32 s8, s2
-; CHECK-NEXT:    vmov.f32 s9, s3
-; CHECK-NEXT:    vmov.f32 s2, s4
-; CHECK-NEXT:    vmov.f32 s3, s5
-; CHECK-NEXT:    vmov lr, r12, d3
-; CHECK-NEXT:    vmov r2, r5, d0
-; CHECK-NEXT:    vmov r4, r7, d4
-; CHECK-NEXT:    vmov r3, r6, d1
-; CHECK-NEXT:    adds.w r3, r3, lr
-; CHECK-NEXT:    adc.w r6, r6, r12
-; CHECK-NEXT:    adds r2, r2, r4
-; CHECK-NEXT:    adcs r7, r5
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r3
-; CHECK-NEXT:    vmov q0[3], q0[1], r7, r6
+; CHECK-NEXT:    vmov r4, r7, d1
+; CHECK-NEXT:    adds r2, r2, r3
+; CHECK-NEXT:    vmov r3, r6, d0
+; CHECK-NEXT:    adc.w r5, lr, r12
+; CHECK-NEXT:    adds r3, r3, r4
+; CHECK-NEXT:    adcs r7, r6
+; CHECK-NEXT:    vmov q0[2], q0[0], r3, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r7, r5
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:

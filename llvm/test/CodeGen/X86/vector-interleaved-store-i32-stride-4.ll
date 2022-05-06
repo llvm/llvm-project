@@ -28,10 +28,10 @@ define void @store_i32_stride4_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX1-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,3,0,2,5,7,4,6]
@@ -45,10 +45,10 @@ define void @store_i32_stride4_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX2-SLOW:       # %bb.0:
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
@@ -60,10 +60,10 @@ define void @store_i32_stride4_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX2-FAST-ALL:       # %bb.0:
 ; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-FAST-ALL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-FAST-ALL-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX2-FAST-ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,1,3,5,7]
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
@@ -75,10 +75,10 @@ define void @store_i32_stride4_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX2-FAST-PERLANE:       # %bb.0:
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-FAST-PERLANE-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX2-FAST-PERLANE-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX2-FAST-PERLANE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-FAST-PERLANE-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; AVX2-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
@@ -90,10 +90,10 @@ define void @store_i32_stride4_vf2(<2 x i32>* %in.vecptr0, <2 x i32>* %in.vecptr
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX512-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]

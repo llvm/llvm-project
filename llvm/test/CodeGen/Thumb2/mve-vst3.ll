@@ -1202,14 +1202,16 @@ entry:
 define void @vst3_v2f16(<2 x half> *%src, <6 x half> *%dst) {
 ; CHECK-LABEL: vst3_v2f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldmia r0, {s0, s1}
+; CHECK-NEXT:    ldrd r2, r3, [r0]
 ; CHECK-NEXT:    ldr r0, [r0, #8]
-; CHECK-NEXT:    vmovx.f16 s2, s0
-; CHECK-NEXT:    vins.f16 s0, s1
+; CHECK-NEXT:    vmov.32 q0[0], r2
+; CHECK-NEXT:    vmov.32 q0[1], r3
 ; CHECK-NEXT:    vmov.32 q1[0], r0
+; CHECK-NEXT:    vmovx.f16 s2, s0
 ; CHECK-NEXT:    vmovx.f16 s6, s4
 ; CHECK-NEXT:    vins.f16 s4, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s1
+; CHECK-NEXT:    vins.f16 s0, s1
 ; CHECK-NEXT:    vmov.f32 s1, s4
 ; CHECK-NEXT:    vins.f16 s2, s6
 ; CHECK-NEXT:    vmov r3, s2

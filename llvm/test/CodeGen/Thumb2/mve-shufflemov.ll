@@ -8,8 +8,8 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle_i16_45670123(<8 x i16> %s1, <8 x i16> 
 ; CHECK-LABEL: shuffle_i16_45670123:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s2
-; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
@@ -279,8 +279,8 @@ define arm_aapcs_vfpcc <8 x half> @shuffle_f16_45670123(<8 x half> %s1, <8 x hal
 ; CHECK-LABEL: shuffle_f16_45670123:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s2
-; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s5, s3
 ; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
