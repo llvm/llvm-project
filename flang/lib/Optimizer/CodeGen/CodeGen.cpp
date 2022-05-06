@@ -302,6 +302,33 @@ getDependentTypeMemSizeFn(fir::RecordType recTy, fir::AllocaOp op,
   return module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(name);
 }
 
+// Compute the alloc scale size (constant factors encoded in the array type).
+// We do this for arrays without a constant interior or arrays of character with
+// dynamic length arrays, since those are the only ones that get decayed to a
+// pointer to the element type.
+template <typename OP>
+static mlir::Value
+genAllocationScaleSize(OP op, mlir::Type ity,
+                       mlir::ConversionPatternRewriter &rewriter) {
+  mlir::Location loc = op.getLoc();
+  mlir::Type dataTy = op.getInType();
+  mlir::Type scalarType = fir::unwrapSequenceType(dataTy);
+  auto seqTy = dataTy.dyn_cast<fir::SequenceType>();
+  if ((op.hasShapeOperands() && seqTy && !seqTy.hasConstantInterior()) ||
+      (seqTy && fir::characterWithDynamicLen(scalarType))) {
+    fir::SequenceType::Extent constSize = 1;
+    for (auto extent : seqTy.getShape())
+      if (extent != fir::SequenceType::getUnknownExtent())
+        constSize *= extent;
+    if (constSize != 1) {
+      mlir::Value constVal{
+          genConstantIndex(loc, ity, rewriter, constSize).getResult()};
+      return constVal;
+    }
+  }
+  return nullptr;
+}
+
 namespace {
 /// convert to LLVM IR dialect `alloca`
 struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
@@ -346,23 +373,9 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
                << scalarType << " with type parameters";
       }
     }
+    if (auto scaleSize = genAllocationScaleSize(alloc, ity, rewriter))
+      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
     if (alloc.hasShapeOperands()) {
-      mlir::Type allocEleTy = fir::unwrapRefType(alloc.getType());
-      // Scale the size by constant factors encoded in the array type.
-      // We only do this for arrays that don't have a constant interior, since
-      // those are the only ones that get decayed to a pointer to the element
-      // type.
-      if (auto seqTy = allocEleTy.dyn_cast<fir::SequenceType>()) {
-        if (!seqTy.hasConstantInterior()) {
-          fir::SequenceType::Extent constSize = 1;
-          for (auto extent : seqTy.getShape())
-            if (extent != fir::SequenceType::getUnknownExtent())
-              constSize *= extent;
-          mlir::Value constVal{
-              genConstantIndex(loc, ity, rewriter, constSize).getResult()};
-          size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, constVal);
-        }
-      }
       unsigned end = operands.size();
       for (; i < end; ++i)
         size = rewriter.create<mlir::LLVM::MulOp>(
@@ -1001,18 +1014,8 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
     if (fir::isRecordWithTypeParameters(fir::unwrapSequenceType(dataTy)))
       TODO(loc, "fir.allocmem codegen of derived type with length parameters");
     mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, ty);
-    // !fir.array<NxMx!fir.char<K,?>> sets `size` to the width of !fir.char<K>.
-    // So multiply the constant dimensions here.
-    if (fir::hasDynamicSize(dataTy))
-      if (auto seqTy = dataTy.dyn_cast<fir::SequenceType>())
-        if (fir::characterWithDynamicLen(seqTy.getEleTy())) {
-          fir::SequenceType::Extent arrSize = 1;
-          for (auto d : seqTy.getShape())
-            if (d != fir::SequenceType::getUnknownExtent())
-              arrSize *= d;
-          size = rewriter.create<mlir::LLVM::MulOp>(
-              loc, ity, size, genConstantIndex(loc, ity, rewriter, arrSize));
-        }
+    if (auto scaleSize = genAllocationScaleSize(heap, ity, rewriter))
+      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands())
       size = rewriter.create<mlir::LLVM::MulOp>(
           loc, ity, size, integerCast(loc, rewriter, ity, opnd));
