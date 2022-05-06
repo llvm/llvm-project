@@ -23,7 +23,7 @@
 #endif
 
 
-void test_emplaceable_concept() {
+void test() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -64,26 +64,22 @@ void test_emplaceable_concept() {
     }
   }
 #endif
+
+  // Test with a number of elements in the source range that is greater than capacity
+  {
+    typedef forward_iterator<int*> It;
+
+    std::vector<int> dst(10);
+
+    size_t n = dst.capacity() * 2;
+    std::vector<int> src(n);
+
+    dst.assign(It(src.data()), It(src.data() + src.size()));
+    assert(dst == src);
+  }
 }
 
-// Test with a number of elements in the source range
-// that is greater than capacity
-void test_assign_bigger() {
-  typedef forward_iterator<int*> It;
-
-  std::vector<int> dst(10);
-
-  size_t n = dst.capacity() * 2;
-  std::vector<int> src(n);
-
-  dst.assign(It(src.data()), It(src.data() + src.size()));
-  assert(dst == src);
-}
-
-int main(int, char**)
-{
-    test_emplaceable_concept();
-    test_assign_bigger();
-
+int main(int, char**) {
+  test();
   return 0;
 }
