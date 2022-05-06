@@ -89,8 +89,8 @@ define i32 @smax(i32 %arg) {
 ; AVX1-LABEL: 'smax'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = call i64 @llvm.smax.i64(i64 undef, i64 undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> undef, <2 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = call i32 @llvm.smax.i32(i32 undef, i32 undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> undef, <8 x i32> undef)
@@ -108,8 +108,8 @@ define i32 @smax(i32 %arg) {
 ; AVX2-LABEL: 'smax'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = call i64 @llvm.smax.i64(i64 undef, i64 undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> undef, <2 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.smax.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = call i32 @llvm.smax.i32(i32 undef, i32 undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> undef, <8 x i32> undef)
@@ -285,8 +285,8 @@ define i32 @smin(i32 %arg) {
 ; AVX1-LABEL: 'smin'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = call i64 @llvm.smin.i64(i64 undef, i64 undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> undef, <2 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = call i32 @llvm.smin.i32(i32 undef, i32 undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = call <8 x i32> @llvm.smin.v8i32(<8 x i32> undef, <8 x i32> undef)
@@ -304,8 +304,8 @@ define i32 @smin(i32 %arg) {
 ; AVX2-LABEL: 'smin'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = call i64 @llvm.smin.i64(i64 undef, i64 undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> undef, <2 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.smin.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = call i32 @llvm.smin.i32(i32 undef, i32 undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = call <8 x i32> @llvm.smin.v8i32(<8 x i32> undef, <8 x i32> undef)

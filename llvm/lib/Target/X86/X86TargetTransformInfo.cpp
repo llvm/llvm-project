@@ -2697,15 +2697,21 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SETCC,   MVT::v16f32,  1 },
 
     { ISD::SELECT,  MVT::v8i64,   1 },
+    { ISD::SELECT,  MVT::v4i64,   1 },
     { ISD::SELECT,  MVT::v16i32,  1 },
+    { ISD::SELECT,  MVT::v8i32,   1 },
     { ISD::SELECT,  MVT::v8f64,   1 },
+    { ISD::SELECT,  MVT::v4f64,   1 },
     { ISD::SELECT,  MVT::v16f32,  1 },
+    { ISD::SELECT,  MVT::v8f32 ,  1 },
 
     { ISD::SETCC,   MVT::v32i16,  2 }, // FIXME: should probably be 4
     { ISD::SETCC,   MVT::v64i8,   2 }, // FIXME: should probably be 4
 
     { ISD::SELECT,  MVT::v32i16,  2 },
+    { ISD::SELECT,  MVT::v16i16,  1 },
     { ISD::SELECT,  MVT::v64i8,   2 },
+    { ISD::SELECT,  MVT::v32i8,   1 },
   };
 
   static const CostTblEntry AVX2CostTbl[] = {
@@ -2714,10 +2720,12 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SETCC,   MVT::v16i16,  1 },
     { ISD::SETCC,   MVT::v32i8,   1 },
 
-    { ISD::SELECT,  MVT::v4i64,   1 }, // pblendvb
-    { ISD::SELECT,  MVT::v8i32,   1 }, // pblendvb
-    { ISD::SELECT,  MVT::v16i16,  1 }, // pblendvb
-    { ISD::SELECT,  MVT::v32i8,   1 }, // pblendvb
+    { ISD::SELECT,  MVT::v4f64,   2 }, // vblendvpd
+    { ISD::SELECT,  MVT::v8f32,   2 }, // vblendvps
+    { ISD::SELECT,  MVT::v4i64,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v8i32,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v16i16,  2 }, // pblendvb
+    { ISD::SELECT,  MVT::v32i8,   2 }, // pblendvb
   };
 
   static const CostTblEntry AVX1CostTbl[] = {
@@ -2729,12 +2737,12 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SETCC,   MVT::v16i16,  4 },
     { ISD::SETCC,   MVT::v32i8,   4 },
 
-    { ISD::SELECT,  MVT::v4f64,   1 }, // vblendvpd
-    { ISD::SELECT,  MVT::v8f32,   1 }, // vblendvps
-    { ISD::SELECT,  MVT::v4i64,   1 }, // vblendvpd
-    { ISD::SELECT,  MVT::v8i32,   1 }, // vblendvps
-    { ISD::SELECT,  MVT::v16i16,  2 }, // vandps + vandnps + vorps
-    { ISD::SELECT,  MVT::v32i8,   2 }, // vandps + vandnps + vorps
+    { ISD::SELECT,  MVT::v4f64,   3 }, // vblendvpd
+    { ISD::SELECT,  MVT::v8f32,   3 }, // vblendvps
+    { ISD::SELECT,  MVT::v4i64,   3 }, // vblendvpd
+    { ISD::SELECT,  MVT::v8i32,   3 }, // vblendvps
+    { ISD::SELECT,  MVT::v16i16,  3 }, // vandps + vandnps + vorps
+    { ISD::SELECT,  MVT::v32i8,   3 }, // vandps + vandnps + vorps
   };
 
   static const CostTblEntry SSE42CostTbl[] = {
