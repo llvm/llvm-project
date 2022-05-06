@@ -66,7 +66,7 @@ if (llvm_build_AArch64 && android_ndk_path != "") {
 }
 
 group("hwasan") {
-  deps = []
+  deps = [ "//compiler-rt/lib/hwasan/scripts:hwasan_symbolize" ]
   foreach(toolchain, supported_toolchains) {
     deps += [ ":hwasan_toolchain($toolchain)" ]
   }
