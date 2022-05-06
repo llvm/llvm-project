@@ -426,14 +426,14 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   ];
 
   let extraClassDeclaration = [{
-    /// The number of operands passed to the kernel function.
-    unsigned getNumKernelOperands();
-
     /// The name of the kernel's containing module.
     StringAttr getKernelModuleName();
 
     /// The name of the kernel.
     StringAttr getKernelName();
+
+    /// The number of operands passed to the kernel function.
+    unsigned getNumKernelOperands();
 
     /// The i-th operand passed to the kernel function.
     Value getKernelOperand(unsigned i);
@@ -443,10 +443,6 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
 
     /// Get the SSA values passed as operands to specify the block size.
     KernelDim3 getBlockSizeOperandValues();
-
-    /// The number of launch configuration operands, placed at the leading
-    /// positions of the operand list.
-    static constexpr unsigned kNumConfigOperands = 6;
 
     // This needs to quietly verify if attributes with names defined below are
     // present since it is run before the verifier of this op.

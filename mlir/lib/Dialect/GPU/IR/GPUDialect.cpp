@@ -711,21 +711,15 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                       builder.getI32VectorAttr(segmentSizes));
 }
 
-unsigned LaunchFuncOp::getNumKernelOperands() {
-  return getNumOperands() - asyncDependencies().size() - kNumConfigOperands -
-         (dynamicSharedMemorySize() ? 1 : 0);
-}
-
 StringAttr LaunchFuncOp::getKernelModuleName() {
   return kernel().getRootReference();
 }
 
 StringAttr LaunchFuncOp::getKernelName() { return kernel().getLeafReference(); }
 
-Value LaunchFuncOp::getKernelOperand(unsigned i) {
-  return getOperand(asyncDependencies().size() + kNumConfigOperands +
-                    (dynamicSharedMemorySize() ? 1 : 0) + i);
-}
+unsigned LaunchFuncOp::getNumKernelOperands() { return operands().size(); }
+
+Value LaunchFuncOp::getKernelOperand(unsigned i) { return operands()[i]; }
 
 KernelDim3 LaunchFuncOp::getGridSizeOperandValues() {
   auto operands = getOperands().drop_front(asyncDependencies().size());
