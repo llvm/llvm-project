@@ -220,7 +220,20 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
   if (CD->isTrivial() && CD->isDefaultConstructor())
     assert(!CD->isTrivial() && "trivial constructors NYI");
 
-  assert(!E->isElidable() && "elidable constructors NYI");
+  // Elide the constructor if we're constructing from a temporary
+  if (getLangOpts().ElideConstructors && E->isElidable()) {
+    // FIXME: This only handles the simplest case, where the source object is
+    //        passed directly as the first argument to the constructor. This
+    //        should also handle stepping through implicit casts and conversion
+    //        sequences which involve two steps, with a conversion operator
+    //        follwed by a converting constructor.
+    const auto *SrcObj = E->getArg(0);
+    assert(SrcObj->isTemporaryObject(getContext(), CD->getParent()));
+    assert(
+        getContext().hasSameUnqualifiedType(E->getType(), SrcObj->getType()));
+    buildAggExpr(SrcObj, Dest);
+    return;
+  }
 
   assert(!CGM.getASTContext().getAsArrayType(E->getType()) &&
          "array types NYI");
