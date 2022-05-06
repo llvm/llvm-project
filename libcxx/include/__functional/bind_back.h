@@ -31,15 +31,11 @@ struct __bind_back_op;
 
 template <size_t _NBound, size_t ..._Ip>
 struct __bind_back_op<_NBound, index_sequence<_Ip...>> {
-  template <class _Fn, class _BoundArgs, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Fn&& __f, _BoundArgs&& __bound_args, _Args&&... __args) const
-      noexcept(noexcept(_VSTD::invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...,
-                                      _VSTD::get<_Ip>(_VSTD::forward<_BoundArgs>(__bound_args))...)))
-          -> decltype(_VSTD::invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...,
-                                    _VSTD::get<_Ip>(_VSTD::forward<_BoundArgs>(__bound_args))...)) {
-    return _VSTD::invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...,
-                         _VSTD::get<_Ip>(_VSTD::forward<_BoundArgs>(__bound_args))...);
-  }
+    template <class _Fn, class _BoundArgs, class... _Args>
+    _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Fn&& __f, _BoundArgs&& __bound_args, _Args&&... __args) const
+        noexcept(noexcept(_VSTD::invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)..., _VSTD::get<_Ip>(_VSTD::forward<_BoundArgs>(__bound_args))...)))
+        -> decltype(      _VSTD::invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)..., _VSTD::get<_Ip>(_VSTD::forward<_BoundArgs>(__bound_args))...))
+        { return          _VSTD::invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)..., _VSTD::get<_Ip>(_VSTD::forward<_BoundArgs>(__bound_args))...); }
 };
 
 template <class _Fn, class _BoundArgs>
