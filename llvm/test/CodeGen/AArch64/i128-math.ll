@@ -92,7 +92,7 @@ define { i128, i8 } @u128_checked_sub(i128 %x, i128 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
 ; CHECK-NEXT:    sbcs x1, x1, x3
-; CHECK-NEXT:    cset w8, hs
+; CHECK-NEXT:    cset w8, lo
 ; CHECK-NEXT:    eor w2, w8, #0x1
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.usub.with.overflow.i128(i128 %x, i128 %y)
@@ -110,7 +110,7 @@ define { i128, i8 } @u128_overflowing_sub(i128 %x, i128 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
 ; CHECK-NEXT:    sbcs x1, x1, x3
-; CHECK-NEXT:    cset w2, hs
+; CHECK-NEXT:    cset w2, lo
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.usub.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0
@@ -126,7 +126,7 @@ define i128 @u128_saturating_sub(i128 %x, i128 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbcs x9, x1, x3
-; CHECK-NEXT:    cset w10, hs
+; CHECK-NEXT:    cset w10, lo
 ; CHECK-NEXT:    cmp w10, #0
 ; CHECK-NEXT:    csel x0, xzr, x8, ne
 ; CHECK-NEXT:    csel x1, xzr, x9, ne
