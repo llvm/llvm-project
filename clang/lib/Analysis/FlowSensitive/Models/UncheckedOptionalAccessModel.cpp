@@ -13,6 +13,7 @@
 
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
@@ -32,10 +33,9 @@ namespace dataflow {
 namespace {
 
 using namespace ::clang::ast_matchers;
-
 using LatticeTransferState = TransferState<SourceLocationsLattice>;
 
-auto optionalClass() {
+DeclarationMatcher optionalClass() {
   return classTemplateSpecializationDecl(
       anyOf(hasName("std::optional"), hasName("std::__optional_storage_base"),
             hasName("__optional_destruct_base"), hasName("absl::optional"),
@@ -230,6 +230,8 @@ void transferUnwrapCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
   }
 
   // Record that this unwrap is *not* provably safe.
+  // FIXME: include either the name of the optional (if applicable) or a source
+  // range of the access for easier interpretation of the result.
   State.Lattice.getSourceLocations().insert(ObjectExpr->getBeginLoc());
 }
 
@@ -549,6 +551,11 @@ auto buildTransferMatchSwitch(
 }
 
 } // namespace
+
+ast_matchers::DeclarationMatcher
+UncheckedOptionalAccessModel::optionalClassDecl() {
+  return optionalClass();
+}
 
 UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(
     ASTContext &Ctx, UncheckedOptionalAccessModelOptions Options)

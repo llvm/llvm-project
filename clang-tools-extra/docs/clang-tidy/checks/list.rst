@@ -105,6 +105,7 @@ Clang-Tidy Checks
    `bugprone-terminating-continue <bugprone-terminating-continue.html>`_, "Yes"
    `bugprone-throw-keyword-missing <bugprone-throw-keyword-missing.html>`_,
    `bugprone-too-small-loop-variable <bugprone-too-small-loop-variable.html>`_,
+   `bugprone-unchecked-optional-access <bugprone-unchecked-optional-access.html>`_, "Yes"
    `bugprone-undefined-memory-manipulation <bugprone-undefined-memory-manipulation.html>`_,
    `bugprone-undelegated-constructor <bugprone-undelegated-constructor.html>`_,
    `bugprone-unhandled-exception-at-new <bugprone-unhandled-exception-at-new.html>`_,
