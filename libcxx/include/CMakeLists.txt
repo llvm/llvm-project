@@ -254,6 +254,8 @@ set(files
   __functional/unary_negate.h
   __functional/unwrap_ref.h
   __functional/weak_result_type.h
+  __fwd/span.h
+  __fwd/string_view.h
   __hash_table
   __ios/fpos.h
   __iterator/access.h

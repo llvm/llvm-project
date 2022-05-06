@@ -919,6 +919,7 @@ module std [system] {
     header "span"
     export ranges.__ranges.enable_borrowed_range
     export version
+    module span_fwd { private header "__fwd/span.h" }
   }
   module sstream {
     header "sstream"
@@ -950,6 +951,7 @@ module std [system] {
     export initializer_list
     export __string
     export *
+    module string_view_fwd { private header "__fwd/string_view.h" }
   }
   module strstream {
     header "strstream"
