@@ -37,6 +37,10 @@ static cl::opt<bool> DisableInsertVSETVLPHIOpt(
     "riscv-disable-insert-vsetvl-phi-opt", cl::init(false), cl::Hidden,
     cl::desc("Disable looking through phis when inserting vsetvlis."));
 
+static cl::opt<bool> UseStrictAsserts(
+    "riscv-insert-vsetvl-strict-asserts", cl::init(false), cl::Hidden,
+    cl::desc("Enable strict assertion checking for the dataflow algorithm"));
+
 namespace {
 
 class VSETVLIInfo {
@@ -1168,7 +1172,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 
     // If we reach the end of the block and our current info doesn't match the
     // expected info, insert a vsetvli to correct.
-    if (MI.isTerminator()) {
+    if (!UseStrictAsserts && MI.isTerminator()) {
       const VSETVLIInfo &ExitInfo = BlockInfo[MBB.getNumber()].Exit;
       if (CurInfo.isValid() && ExitInfo.isValid() && !ExitInfo.isUnknown() &&
           CurInfo != ExitInfo) {
@@ -1176,6 +1180,18 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         CurInfo = ExitInfo;
       }
     }
+  }
+
+  if (UseStrictAsserts && CurInfo.isValid()) {
+    const auto &Info = BlockInfo[MBB.getNumber()];
+    if (CurInfo != Info.Exit) {
+      LLVM_DEBUG(dbgs() << "in block " << printMBBReference(MBB) << "\n");
+      LLVM_DEBUG(dbgs() << "  begin        state: " << Info.Pred << "\n");
+      LLVM_DEBUG(dbgs() << "  expected end state: " << Info.Exit << "\n");
+      LLVM_DEBUG(dbgs() << "  actual   end state: " << CurInfo << "\n");
+    }
+    assert(CurInfo == Info.Exit &&
+           "InsertVSETVLI dataflow invariant violated");
   }
 }
 
