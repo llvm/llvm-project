@@ -114,6 +114,7 @@ END-SCRIPT
 #include <__algorithm/ranges_find_if_not.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find_if_not.h'}}
 #include <__algorithm/ranges_for_each.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_for_each.h'}}
 #include <__algorithm/ranges_for_each_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_for_each_n.h'}}
+#include <__algorithm/ranges_is_partitioned.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_partitioned.h'}}
 #include <__algorithm/ranges_max.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max.h'}}
 #include <__algorithm/ranges_max_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max_element.h'}}
 #include <__algorithm/ranges_min.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_min.h'}}
