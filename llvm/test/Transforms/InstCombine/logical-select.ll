@@ -471,6 +471,18 @@ define <4 x i1> @vec_of_bools(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c) {
   ret <4 x i1> %or
 }
 
+define <vscale x 1 x i1> @vec_of_bools_scalable(<vscale x 1 x i1> %a, <vscale x 1 x i1> %c, <vscale x 1 x i1> %d) {
+; CHECK-LABEL: @vec_of_bools_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 1 x i1> [[A:%.*]], <vscale x 1 x i1> [[C:%.*]], <vscale x 1 x i1> [[D:%.*]]
+; CHECK-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+;
+  %b = xor <vscale x 1 x i1> %a, shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer)
+  %t11 = and <vscale x 1 x i1> %a, %c
+  %t12 = and <vscale x 1 x i1> %b, %d
+  %r = or <vscale x 1 x i1> %t11, %t12
+  ret <vscale x 1 x i1> %r
+}
+
 define i4 @vec_of_casted_bools(i4 %a, i4 %b, <4 x i1> %c) {
 ; CHECK-LABEL: @vec_of_casted_bools(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i4 [[B:%.*]] to <4 x i1>
@@ -486,6 +498,25 @@ define i4 @vec_of_casted_bools(i4 %a, i4 %b, <4 x i1> %c) {
   %and2 = and i4 %bc2, %b
   %or = or i4 %and1, %and2
   ret i4 %or
+}
+
+define <vscale x 1 x i64> @vec_of_casted_bools_scalable(<vscale x 1 x i64> %a, <vscale x 1 x i64> %b, <vscale x 8 x i1> %cond) {
+; CHECK-LABEL: @vec_of_casted_bools_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 1 x i64> [[A:%.*]] to <vscale x 8 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 1 x i64> [[B:%.*]] to <vscale x 8 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <vscale x 8 x i1> [[COND:%.*]], <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <vscale x 8 x i8> [[TMP3]] to <vscale x 1 x i64>
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP4]]
+;
+  %scond = sext <vscale x 8 x i1> %cond to <vscale x 8 x i8>
+  %notcond = xor <vscale x 8 x i1> %cond, shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer)
+  %snotcond = sext <vscale x 8 x i1> %notcond to <vscale x 8 x i8>
+  %bc1 = bitcast <vscale x 8 x i8> %scond to <vscale x 1 x i64>
+  %bc2 = bitcast <vscale x 8 x i8> %snotcond to <vscale x 1 x i64>
+  %and1 = and <vscale x 1 x i64> %a, %bc1
+  %and2 = and <vscale x 1 x i64> %bc2, %b
+  %or = or <vscale x 1 x i64> %and1, %and2
+  ret <vscale x 1 x i64> %or
 }
 
 ; Inverted 'and' constants mean this is a select which is canonicalized to a shuffle.
