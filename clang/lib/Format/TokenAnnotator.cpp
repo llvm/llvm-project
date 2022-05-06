@@ -2523,7 +2523,7 @@ private:
 } // end anonymous namespace
 
 void TokenAnnotator::setCommentLineLevels(
-    SmallVectorImpl<AnnotatedLine *> &Lines) {
+    SmallVectorImpl<AnnotatedLine *> &Lines) const {
   const AnnotatedLine *NextNonCommentLine = nullptr;
   for (AnnotatedLine *Line : llvm::reverse(Lines)) {
     assert(Line->First);
@@ -2558,7 +2558,7 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
   return Result;
 }
 
-void TokenAnnotator::annotate(AnnotatedLine &Line) {
+void TokenAnnotator::annotate(AnnotatedLine &Line) const {
   for (auto &Child : Line.Children)
     annotate(*Child);
 
@@ -2725,7 +2725,7 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
   return false;
 }
 
-void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
+void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   for (AnnotatedLine *ChildLine : Line.Children)
     calculateFormattingInformation(*ChildLine);
 
@@ -2845,7 +2845,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
   LLVM_DEBUG({ printDebugInfo(Line); });
 }
 
-void TokenAnnotator::calculateUnbreakableTailLengths(AnnotatedLine &Line) {
+void TokenAnnotator::calculateUnbreakableTailLengths(
+    AnnotatedLine &Line) const {
   unsigned UnbreakableTailLength = 0;
   FormatToken *Current = Line.Last;
   while (Current) {
@@ -2861,7 +2862,8 @@ void TokenAnnotator::calculateUnbreakableTailLengths(AnnotatedLine &Line) {
   }
 }
 
-void TokenAnnotator::calculateArrayInitializerColumnList(AnnotatedLine &Line) {
+void TokenAnnotator::calculateArrayInitializerColumnList(
+    AnnotatedLine &Line) const {
   if (Line.First == Line.Last)
     return;
   auto *CurrentToken = Line.First;
@@ -2881,7 +2883,7 @@ void TokenAnnotator::calculateArrayInitializerColumnList(AnnotatedLine &Line) {
 }
 
 FormatToken *TokenAnnotator::calculateInitializerColumnList(
-    AnnotatedLine &Line, FormatToken *CurrentToken, unsigned Depth) {
+    AnnotatedLine &Line, FormatToken *CurrentToken, unsigned Depth) const {
   while (CurrentToken != nullptr && CurrentToken != Line.Last) {
     if (CurrentToken->is(tok::l_brace))
       ++Depth;
@@ -2901,7 +2903,7 @@ FormatToken *TokenAnnotator::calculateInitializerColumnList(
 
 unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
                                       const FormatToken &Tok,
-                                      bool InFunctionDecl) {
+                                      bool InFunctionDecl) const {
   const FormatToken &Left = *Tok.Previous;
   const FormatToken &Right = Tok;
 
@@ -3113,7 +3115,7 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
 
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Left,
-                                          const FormatToken &Right) {
+                                          const FormatToken &Right) const {
   if (Left.is(tok::kw_return) &&
       !Right.isOneOf(tok::semi, tok::r_paren, tok::hashhash))
     return true;
@@ -3491,7 +3493,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
 }
 
 bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
-                                         const FormatToken &Right) {
+                                         const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
 
   // If the token is finalized don't touch it (as it could be in a
@@ -3930,7 +3932,7 @@ static const FormatToken *getFirstNonComment(const AnnotatedLine &Line) {
 }
 
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
-                                     const FormatToken &Right) {
+                                     const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0)
     return true;
@@ -4310,7 +4312,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
 }
 
 bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
-                                    const FormatToken &Right) {
+                                    const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
   // Language-specific stuff.
   if (Style.isCSharp()) {
@@ -4622,7 +4624,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
          (Left.is(TT_TemplateOpener) && !Right.is(TT_TemplateCloser));
 }
 
-void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
+void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
   llvm::errs() << "AnnotatedTokens(L=" << Line.Level << "):\n";
   const FormatToken *Tok = Line.First;
   while (Tok) {
@@ -4647,7 +4649,7 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
 }
 
 FormatStyle::PointerAlignmentStyle
-TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) {
+TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
   assert(Reference.isOneOf(tok::amp, tok::ampamp));
   switch (Style.ReferenceAlignment) {
   case FormatStyle::RAS_Pointer:
@@ -4665,7 +4667,7 @@ TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) {
 
 FormatStyle::PointerAlignmentStyle
 TokenAnnotator::getTokenPointerOrReferenceAlignment(
-    const FormatToken &PointerOrReference) {
+    const FormatToken &PointerOrReference) const {
   if (PointerOrReference.isOneOf(tok::amp, tok::ampamp)) {
     switch (Style.ReferenceAlignment) {
     case FormatStyle::RAS_Pointer:
