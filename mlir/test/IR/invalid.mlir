@@ -261,7 +261,7 @@ func.func @reference_to_iv_in_bound() {
 // -----
 
 func.func @nonconstant_step(%1 : i32) {
-  affine.for %2 = 1 to 5 step %1 { // expected-error {{expected non-function type}}
+  affine.for %2 = 1 to 5 step %1 { // expected-error {{expected attribute value}}
 
 // -----
 
@@ -618,7 +618,7 @@ func.func @large_bound() {
 // -----
 
 func.func @max_in_upper_bound(%N : index) {
-  affine.for %i = 1 to max affine_map<(i)->(N, 100)> { //expected-error {{expected non-function type}}
+  affine.for %i = 1 to max affine_map<(i)->(N, 100)> { //expected-error {{expected attribute value}}
   }
   return
 }
