@@ -42,8 +42,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   void Visit(Expr *E) {
-    // TODO: CodeGen does ApplyDebugLocation here
-    assert(cast<CXXConstructExpr>(E) && "Only CXXConstructExpr implemented");
+    if (CGF.getDebugInfo()) {
+      llvm_unreachable("NYI");
+    }
     StmtVisitor<AggExprEmitter>::Visit(E);
   }
 
