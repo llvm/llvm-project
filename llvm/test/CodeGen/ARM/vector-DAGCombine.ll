@@ -56,7 +56,6 @@ define <4 x i32> @test_vmovrrd_combine() nounwind {
 ; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  @ %bb.1: @ %bb1.preheader
 ; CHECK-NEXT:    vmov.i32 q8, #0x0
-; CHECK-NEXT:    vext.8 q8, q8, q8, #4
 ; CHECK-NEXT:  .LBB3_2: @ %bb2
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17

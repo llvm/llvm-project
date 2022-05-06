@@ -18,8 +18,7 @@ define <2 x double> @test00(<2 x double>* %p1, <2 x double>* %p2) {
 ;
 ; CHECK-P9-LABEL: test00:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    xxspltd 34, 0, 1
+; CHECK-P9-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, <2 x double>* %p1
   %v2 = load <2 x double>, <2 x double>* %p2
@@ -113,8 +112,8 @@ define <2 x double> @test11(<2 x double>* %p1, <2 x double>* %p2) {
 ;
 ; CHECK-P9-LABEL: test11:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    xxspltd 34, 0, 0
+; CHECK-P9-NEXT:    addi 3, 3, 8
+; CHECK-P9-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, <2 x double>* %p1
   %v2 = load <2 x double>, <2 x double>* %p2
@@ -219,8 +218,7 @@ define <2 x double> @test22(<2 x double>* %p1, <2 x double>* %p2) {
 ;
 ; CHECK-P9-LABEL: test22:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(4)
-; CHECK-P9-NEXT:    xxspltd 34, 0, 1
+; CHECK-P9-NEXT:    lxvdsx 34, 0, 4
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, <2 x double>* %p1
   %v2 = load <2 x double>, <2 x double>* %p2
@@ -314,8 +312,8 @@ define <2 x double> @test33(<2 x double>* %p1, <2 x double>* %p2) {
 ;
 ; CHECK-P9-LABEL: test33:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(4)
-; CHECK-P9-NEXT:    xxspltd 34, 0, 0
+; CHECK-P9-NEXT:    addi 3, 4, 8
+; CHECK-P9-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, <2 x double>* %p1
   %v2 = load <2 x double>, <2 x double>* %p2

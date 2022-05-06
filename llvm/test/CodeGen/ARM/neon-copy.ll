@@ -1741,8 +1741,7 @@ entry:
 define <4 x i32> @test_concat_v4i32_v4i32_v4i32(<4 x i32> %x, <4 x i32> %y) #0 {
 ; CHECK-LABEL: test_concat_v4i32_v4i32_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vext.32 q8, q0, q0, #2
-; CHECK-NEXT:    vext.32 q0, q8, q1, #2
+; CHECK-NEXT:    vmov.f64 d1, d2
 ; CHECK-NEXT:    bx lr
 entry:
   %vecinit6 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -1753,8 +1752,7 @@ define <4 x i32> @test_concat_v4i32_v2i32_v4i32(<2 x i32> %x, <4 x i32> %y) #0 {
 ; CHECK-LABEL: test_concat_v4i32_v2i32_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    vext.32 q8, q0, q0, #2
-; CHECK-NEXT:    vext.32 q0, q8, q1, #2
+; CHECK-NEXT:    vmov.f64 d1, d2
 ; CHECK-NEXT:    bx lr
 entry:
   %vecext = extractelement <2 x i32> %x, i32 0

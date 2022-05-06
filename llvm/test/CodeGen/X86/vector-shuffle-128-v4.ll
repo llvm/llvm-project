@@ -2460,18 +2460,18 @@ define <4 x float> @shuffle_mem_pmovzx_v4f32(<2 x float>* %p0, <4 x float>* %p1)
 ;
 ; AVX1-LABEL: shuffle_mem_pmovzx_v4f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX1-NEXT:    vunpckhps {{.*#+}} xmm1 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: shuffle_mem_pmovzx_v4f32:
 ; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX2OR512VL-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX2OR512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2OR512VL-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX2OR512VL-NEXT:    vunpckhps {{.*#+}} xmm1 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX2OR512VL-NEXT:    vbroadcastss %xmm0, %xmm0
 ; AVX2OR512VL-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX2OR512VL-NEXT:    retq

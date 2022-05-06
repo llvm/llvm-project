@@ -13,33 +13,23 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-AIX-NEXT:  # %bb.1: # %bb3
 ; CHECK-AIX-NEXT:    srwi 4, 4, 16
 ; CHECK-AIX-NEXT:    srwi 5, 5, 16
-; CHECK-AIX-NEXT:    mullw 4, 5, 4
-; CHECK-AIX-NEXT:    lwz 5, 0(3)
 ; CHECK-AIX-NEXT:    slwi 3, 3, 8
+; CHECK-AIX-NEXT:    mullw 4, 5, 4
 ; CHECK-AIX-NEXT:    neg 3, 3
+; CHECK-AIX-NEXT:    lwz 5, 0(3)
+; CHECK-AIX-NEXT:    sth 3, -16(1)
+; CHECK-AIX-NEXT:    addi 3, 1, -16
+; CHECK-AIX-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-AIX-NEXT:    srwi 5, 5, 1
+; CHECK-AIX-NEXT:    mullw 3, 4, 5
+; CHECK-AIX-NEXT:    li 4, 0
+; CHECK-AIX-NEXT:    vsplth 2, 2, 0
+; CHECK-AIX-NEXT:    neg 3, 3
+; CHECK-AIX-NEXT:    stxvw4x 34, 0, 4
 ; CHECK-AIX-NEXT:    sth 3, -32(1)
 ; CHECK-AIX-NEXT:    addi 3, 1, -32
-; CHECK-AIX-NEXT:    mullw 4, 4, 5
-; CHECK-AIX-NEXT:    li 5, 0
-; CHECK-AIX-NEXT:    sth 5, -48(1)
-; CHECK-AIX-NEXT:    neg 4, 4
-; CHECK-AIX-NEXT:    sth 4, -16(1)
-; CHECK-AIX-NEXT:    addi 4, 1, -48
-; CHECK-AIX-NEXT:    lxvw4x 34, 0, 4
-; CHECK-AIX-NEXT:    lxvw4x 35, 0, 3
-; CHECK-AIX-NEXT:    addi 3, 1, -16
-; CHECK-AIX-NEXT:    lxvw4x 36, 0, 3
-; CHECK-AIX-NEXT:    ld 3, L..C0(2) # %const.0
-; CHECK-AIX-NEXT:    vmrghh 3, 2, 3
-; CHECK-AIX-NEXT:    vmrghh 4, 4, 2
+; CHECK-AIX-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-AIX-NEXT:    vsplth 2, 2, 0
-; CHECK-AIX-NEXT:    xxmrghw 34, 35, 34
-; CHECK-AIX-NEXT:    lxvw4x 35, 0, 3
-; CHECK-AIX-NEXT:    vperm 2, 2, 4, 3
-; CHECK-AIX-NEXT:    vsplth 3, 2, 1
-; CHECK-AIX-NEXT:    vsplth 2, 2, 4
-; CHECK-AIX-NEXT:    stxvw4x 35, 0, 5
 ; CHECK-AIX-NEXT:    stxvw4x 34, 0, 3
 ;
 ; CHECK-LABEL: test_aix_splatimm:
@@ -53,25 +43,15 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    slwi 3, 3, 8
 ; CHECK-NEXT:    neg 3, 3
 ; CHECK-NEXT:    srwi 5, 5, 1
-; CHECK-NEXT:    mtvsrd 35, 3
-; CHECK-NEXT:    mullw 4, 4, 5
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    mtvsrd 34, 5
-; CHECK-NEXT:    vmrghh 3, 3, 2
-; CHECK-NEXT:    neg 3, 4
-; CHECK-NEXT:    mtvsrd 36, 3
-; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; CHECK-NEXT:    vmrghh 4, 2, 4
-; CHECK-NEXT:    vsplth 2, 2, 3
-; CHECK-NEXT:    xxmrglw 34, 34, 35
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    mtvsrd 34, 3
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    vperm 2, 4, 2, 3
-; CHECK-NEXT:    vsplth 3, 2, 6
+; CHECK-NEXT:    mullw 4, 4, 5
 ; CHECK-NEXT:    vsplth 2, 2, 3
-; CHECK-NEXT:    stvx 3, 0, 3
 ; CHECK-NEXT:    stvx 2, 0, 3
+; CHECK-NEXT:    neg 4, 4
+; CHECK-NEXT:    mtvsrd 35, 4
+; CHECK-NEXT:    vsplth 3, 3, 3
+; CHECK-NEXT:    stvx 3, 0, 3
 bb:
   br i1 undef, label %bb22, label %bb3
 
