@@ -1569,6 +1569,14 @@ example:
     epilogue, the backend should forcibly align the stack pointer.
     Specify the desired alignment, which must be a power of two, in
     parentheses.
+``"alloc-family"="FAMILY"``
+    This indicates which "family" an allocator function is part of. To avoid 
+    collisions, the family name should match the mangled name of the primary 
+    allocator function, that is "malloc" for malloc/calloc/realloc/free, 
+    "_Znwm" for ``::operator::new`` and ``::operator::delete``, and
+    "_ZnwmSt11align_val_t" for aligned ``::operator::new`` and
+    ``::operator::delete``. Matching malloc/realloc/free calls within a family
+    can be optimized, but mismatched ones will be left alone.
 ``allocsize(<EltSizeParam>[, <NumEltsParam>])``
     This attribute indicates that the annotated function will always return at
     least a given number of bytes (or null). Its arguments are zero-indexed
@@ -2188,6 +2196,14 @@ example:
     unbounded. If the optional max value is omitted then max is set to the
     value of min. If the attribute is not present, no assumptions are made
     about the range of vscale.
+``"min-legal-vector-width"="<size>"``
+    This attribute indicates the minimum legal vector width required by the
+    calling conversion. It is the maximum width of vector arguments and
+    returnings in the function and functions called by this function. Because
+    all the vectors are supposed to be legal type for compatibility.
+    Backends are free to ignore the attribute if they don't need to support
+    different maximum legal vector types or such information can be inferred by
+    other attributes.
 
 Call Site Attributes
 ----------------------
@@ -23294,8 +23310,8 @@ The first argument to the '``llvm.is.fpclass``' intrinsic must be
 :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
 of floating-point values.
 
-The second argument specifies, which tests to perform. It is an integer value,
-each bit in which specifies floating-point class:
+The second argument specifies, which tests to perform. It must be a compile-time
+integer constant, each bit in which specifies floating-point class:
 
 +-------+----------------------+
 | Bit # | floating-point class |

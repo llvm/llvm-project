@@ -1179,6 +1179,49 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 
   li     a0, 0  // return UNW_ESUCCESS
   ret           // jump to ra
+
+#elif defined(__s390x__)
+
+//
+// extern int __unw_getcontext(unw_context_t* thread_state)
+//
+// On entry:
+//  thread_state pointer is in r2
+//
+DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+
+  // Save GPRs
+  stmg %r0, %r15, 16(%r2)
+
+  // Save PSWM
+  epsw %r0, %r1
+  stm %r0, %r1, 0(%r2)
+
+  // Store return address as PSWA
+  stg %r14, 8(%r2)
+
+  // Save FPRs
+  std %f0, 144(%r2)
+  std %f1, 152(%r2)
+  std %f2, 160(%r2)
+  std %f3, 168(%r2)
+  std %f4, 176(%r2)
+  std %f5, 184(%r2)
+  std %f6, 192(%r2)
+  std %f7, 200(%r2)
+  std %f8, 208(%r2)
+  std %f9, 216(%r2)
+  std %f10, 224(%r2)
+  std %f11, 232(%r2)
+  std %f12, 240(%r2)
+  std %f13, 248(%r2)
+  std %f14, 256(%r2)
+  std %f15, 264(%r2)
+
+  // Return UNW_ESUCCESS
+  lghi %r2, 0
+  br %r14
+
 #endif
 
   WEAK_ALIAS(__unw_getcontext, unw_getcontext)

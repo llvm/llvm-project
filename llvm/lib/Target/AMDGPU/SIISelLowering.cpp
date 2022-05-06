@@ -737,7 +737,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BUILD_VECTOR, Vec16, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec16, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, Vec16, Expand);
-      setOperationAction(ISD::SCALAR_TO_VECTOR, Vec16, Expand);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, Vec16, Custom);
     }
   }
 
@@ -4772,6 +4772,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::SCALAR_TO_VECTOR:
+    return lowerSCALAR_TO_VECTOR(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::FP_ROUND:
@@ -5768,14 +5770,11 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   EVT EltVT = VecVT.getVectorElementType();
   unsigned VecSize = VecVT.getSizeInBits();
   unsigned EltSize = EltVT.getSizeInBits();
-
-
-  assert(VecSize <= 64);
-
-  unsigned NumElts = VecVT.getVectorNumElements();
   SDLoc SL(Op);
-  auto KIdx = dyn_cast<ConstantSDNode>(Idx);
 
+  // Specially handle the case of v4i16 with static indexing.
+  unsigned NumElts = VecVT.getVectorNumElements();
+  auto KIdx = dyn_cast<ConstantSDNode>(Idx);
   if (NumElts == 4 && EltSize == 16 && KIdx) {
     SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Vec);
 
@@ -5803,35 +5802,41 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     return DAG.getNode(ISD::BITCAST, SL, VecVT, Concat);
   }
 
+  // Static indexing does not lower to stack access, and hence there is no need
+  // for special custom lowering to avoid stack access.
   if (isa<ConstantSDNode>(Idx))
     return SDValue();
 
-  MVT IntVT = MVT::getIntegerVT(VecSize);
-
-  // Avoid stack access for dynamic indexing.
+  // Avoid stack access for dynamic indexing by custom lowering to
   // v_bfi_b32 (v_bfm_b32 16, (shl idx, 16)), val, vec
 
-  // Create a congruent vector with the target value in each element so that
-  // the required element can be masked and ORed into the target vector.
-  SDValue ExtVal = DAG.getNode(ISD::BITCAST, SL, IntVT,
-                               DAG.getSplatBuildVector(VecVT, SL, InsVal));
+  assert(VecSize <= 64 && "Expected target vector size to be <= 64 bits");
 
+  MVT IntVT = MVT::getIntegerVT(VecSize);
+
+  // Convert vector index to bit-index and get the required bit mask.
   assert(isPowerOf2_32(EltSize));
   SDValue ScaleFactor = DAG.getConstant(Log2_32(EltSize), SL, MVT::i32);
-
-  // Convert vector index to bit-index.
   SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx, ScaleFactor);
-
-  SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, IntVT, Vec);
   SDValue BFM = DAG.getNode(ISD::SHL, SL, IntVT,
                             DAG.getConstant(0xffff, SL, IntVT),
                             ScaledIdx);
 
+  // 1. Create a congruent vector with the target value in each element.
+  SDValue ExtVal = DAG.getNode(ISD::BITCAST, SL, IntVT,
+                               DAG.getSplatBuildVector(VecVT, SL, InsVal));
+
+  // 2. Mask off all other indicies except the required index within (1).
   SDValue LHS = DAG.getNode(ISD::AND, SL, IntVT, BFM, ExtVal);
+
+  // 3. Mask off the required index within the target vector.
+  SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, IntVT, Vec);
   SDValue RHS = DAG.getNode(ISD::AND, SL, IntVT,
                             DAG.getNOT(SL, BFM, IntVT), BCVec);
 
+  // 4. Get (2) and (3) ORed into the target vector.
   SDValue BFI = DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS);
+
   return DAG.getNode(ISD::BITCAST, SL, VecVT, BFI);
 }
 
@@ -5952,6 +5957,22 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   }
 
   return DAG.getNode(ISD::CONCAT_VECTORS, SL, ResultVT, Pieces);
+}
+
+SDValue SITargetLowering::lowerSCALAR_TO_VECTOR(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDValue SVal = Op.getOperand(0);
+  EVT ResultVT = Op.getValueType();
+  EVT SValVT = SVal.getValueType();
+  SDValue UndefVal = DAG.getUNDEF(SValVT);
+  SDLoc SL(Op);
+
+  SmallVector<SDValue, 8> VElts;
+  VElts.push_back(SVal);
+  for (int I = 1, E = ResultVT.getVectorNumElements(); I < E; ++I)
+    VElts.push_back(UndefVal);
+
+  return DAG.getBuildVector(ResultVT, SL, VElts);
 }
 
 SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
@@ -10661,6 +10682,52 @@ static SDValue getMad64_32(SelectionDAG &DAG, const SDLoc &SL,
   return DAG.getNode(ISD::TRUNCATE, SL, VT, Mad);
 }
 
+// Fold (add (mul x, y), z) --> (mad_[iu]64_[iu]32 x, y, z).
+SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
+                                            DAGCombinerInfo &DCI) const {
+  assert(N->getOpcode() == ISD::ADD);
+
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  SDLoc SL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  if (VT.isVector())
+    return SDValue();
+
+  unsigned NumBits = VT.getScalarSizeInBits();
+  if (NumBits <= 32 || NumBits > 64)
+    return SDValue();
+
+  if (LHS.getOpcode() != ISD::MUL) {
+    assert(RHS.getOpcode() == ISD::MUL);
+    std::swap(LHS, RHS);
+  }
+
+  SDValue MulLHS = LHS.getOperand(0);
+  SDValue MulRHS = LHS.getOperand(1);
+  SDValue AddRHS = RHS;
+
+  // TODO: Maybe restrict if SGPR inputs.
+  if (numBitsUnsigned(MulLHS, DAG) <= 32 &&
+      numBitsUnsigned(MulRHS, DAG) <= 32) {
+    MulLHS = DAG.getZExtOrTrunc(MulLHS, SL, MVT::i32);
+    MulRHS = DAG.getZExtOrTrunc(MulRHS, SL, MVT::i32);
+    AddRHS = DAG.getZExtOrTrunc(AddRHS, SL, MVT::i64);
+    return getMad64_32(DAG, SL, VT, MulLHS, MulRHS, AddRHS, false);
+  }
+
+  if (numBitsSigned(MulLHS, DAG) <= 32 && numBitsSigned(MulRHS, DAG) <= 32) {
+    MulLHS = DAG.getSExtOrTrunc(MulLHS, SL, MVT::i32);
+    MulRHS = DAG.getSExtOrTrunc(MulRHS, SL, MVT::i32);
+    AddRHS = DAG.getSExtOrTrunc(AddRHS, SL, MVT::i64);
+    return getMad64_32(DAG, SL, VT, MulLHS, MulRHS, AddRHS, true);
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performAddCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -10669,31 +10736,10 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  if ((LHS.getOpcode() == ISD::MUL || RHS.getOpcode() == ISD::MUL)
-      && Subtarget->hasMad64_32() &&
-      !VT.isVector() && VT.getScalarSizeInBits() > 32 &&
-      VT.getScalarSizeInBits() <= 64) {
-    if (LHS.getOpcode() != ISD::MUL)
-      std::swap(LHS, RHS);
-
-    SDValue MulLHS = LHS.getOperand(0);
-    SDValue MulRHS = LHS.getOperand(1);
-    SDValue AddRHS = RHS;
-
-    // TODO: Maybe restrict if SGPR inputs.
-    if (numBitsUnsigned(MulLHS, DAG) <= 32 &&
-        numBitsUnsigned(MulRHS, DAG) <= 32) {
-      MulLHS = DAG.getZExtOrTrunc(MulLHS, SL, MVT::i32);
-      MulRHS = DAG.getZExtOrTrunc(MulRHS, SL, MVT::i32);
-      AddRHS = DAG.getZExtOrTrunc(AddRHS, SL, MVT::i64);
-      return getMad64_32(DAG, SL, VT, MulLHS, MulRHS, AddRHS, false);
-    }
-
-    if (numBitsSigned(MulLHS, DAG) <= 32 && numBitsSigned(MulRHS, DAG) <= 32) {
-      MulLHS = DAG.getSExtOrTrunc(MulLHS, SL, MVT::i32);
-      MulRHS = DAG.getSExtOrTrunc(MulRHS, SL, MVT::i32);
-      AddRHS = DAG.getSExtOrTrunc(AddRHS, SL, MVT::i64);
-      return getMad64_32(DAG, SL, VT, MulLHS, MulRHS, AddRHS, true);
+  if (LHS.getOpcode() == ISD::MUL || RHS.getOpcode() == ISD::MUL) {
+    if (Subtarget->hasMad64_32()) {
+      if (SDValue Folded = tryFoldToMad64_32(N, DCI))
+        return Folded;
     }
 
     return SDValue();

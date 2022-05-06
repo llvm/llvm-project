@@ -133,6 +133,10 @@ TEST(getLinuxHostCPUName, AArch64) {
                                               "CPU part        : 0xc01"),
             "saphira");
 
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
+                                              "CPU part        : 0xac3"),
+            "ampere1");
+
   // MSM8992/4 weirdness
   StringRef MSM8992ProcCpuInfo = R"(
 Processor       : AArch64 Processor rev 3 (aarch64)

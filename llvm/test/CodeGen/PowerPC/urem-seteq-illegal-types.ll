@@ -227,7 +227,7 @@ define i1 @test_urem_oversized(i66 %X) nounwind {
 ; PPC-NEXT:    slwi 5, 5, 1
 ; PPC-NEXT:    add 6, 6, 9
 ; PPC-NEXT:    add 3, 5, 3
-; PPC-NEXT:    rotlwi  8, 11, 31
+; PPC-NEXT:    rotlwi 8, 11, 31
 ; PPC-NEXT:    sub 4, 6, 4
 ; PPC-NEXT:    lis 5, -5526
 ; PPC-NEXT:    rlwimi 8, 7, 31, 0, 0
@@ -235,7 +235,7 @@ define i1 @test_urem_oversized(i66 %X) nounwind {
 ; PPC-NEXT:    add 3, 4, 3
 ; PPC-NEXT:    ori 5, 5, 61135
 ; PPC-NEXT:    rlwimi 7, 3, 31, 0, 0
-; PPC-NEXT:    cmplw   8, 5
+; PPC-NEXT:    cmplw 8, 5
 ; PPC-NEXT:    cmplwi 1, 7, 13
 ; PPC-NEXT:    rlwinm 3, 3, 31, 31, 31
 ; PPC-NEXT:    crand 20, 6, 0

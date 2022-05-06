@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMObject
   COFFModuleDefinition.cpp
   COFFObjectFile.cpp
   Decompressor.cpp
+  DXContainer.cpp
   ELF.cpp
   ELFObjectFile.cpp
   Error.cpp
