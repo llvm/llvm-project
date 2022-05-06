@@ -167,13 +167,15 @@ static constexpr unsigned FatbinaryOffset = 0x50;
 /// Information for a device offloading file extracted from the host.
 struct DeviceFile {
   DeviceFile(StringRef Kind, StringRef TheTriple, StringRef Arch,
-             StringRef Filename)
-      : Kind(Kind), TheTriple(TheTriple), Arch(Arch), Filename(Filename) {}
+             StringRef Filename, bool IsLibrary = false)
+      : Kind(Kind), TheTriple(TheTriple), Arch(Arch), Filename(Filename),
+        IsLibrary(IsLibrary) {}
 
   std::string Kind;
   std::string TheTriple;
   std::string Arch;
   std::string Filename;
+  bool IsLibrary;
 };
 
 namespace llvm {
@@ -208,7 +210,8 @@ namespace {
 
 Expected<Optional<std::string>>
 extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                  SmallVectorImpl<DeviceFile> &DeviceFiles);
+                  SmallVectorImpl<DeviceFile> &DeviceFiles,
+                  bool IsLibrary = false);
 
 void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
@@ -324,7 +327,8 @@ void removeFromCompilerUsed(Module &M, GlobalValue &Value) {
 /// buffer \p Contents. The buffer is expected to contain a valid offloading
 /// binary format.
 Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
-                          SmallVectorImpl<DeviceFile> &DeviceFiles) {
+                          SmallVectorImpl<DeviceFile> &DeviceFiles,
+                          bool IsLibrary = false) {
   uint64_t Offset = 0;
   // There could be multiple offloading binaries stored at this section.
   while (Offset < Contents.size()) {
@@ -361,7 +365,7 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
       return E;
 
     DeviceFiles.emplace_back(Kind, Binary.getTriple(), Binary.getArch(),
-                             TempFile);
+                             TempFile, IsLibrary);
 
     Offset += Binary.getSize();
   }
@@ -371,7 +375,8 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
 
 Expected<Optional<std::string>>
 extractFromBinary(const ObjectFile &Obj,
-                  SmallVectorImpl<DeviceFile> &DeviceFiles) {
+                  SmallVectorImpl<DeviceFile> &DeviceFiles,
+                  bool IsLibrary = false) {
   StringRef Extension = sys::path::extension(Obj.getFileName()).drop_front();
   StringRef Prefix = sys::path::stem(Obj.getFileName());
   SmallVector<StringRef, 4> ToBeStripped;
@@ -386,7 +391,8 @@ extractFromBinary(const ObjectFile &Obj,
     if (!Contents)
       return Contents.takeError();
 
-    if (Error Err = extractOffloadFiles(*Contents, Prefix, DeviceFiles))
+    if (Error Err =
+            extractOffloadFiles(*Contents, Prefix, DeviceFiles, IsLibrary))
       return std::move(Err);
 
     ToBeStripped.push_back(*Name);
@@ -447,7 +453,8 @@ extractFromBinary(const ObjectFile &Obj,
 
 Expected<Optional<std::string>>
 extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
-                   SmallVectorImpl<DeviceFile> &DeviceFiles) {
+                   SmallVectorImpl<DeviceFile> &DeviceFiles,
+                   bool IsLibrary = false) {
   LLVMContext Context;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = getLazyIRModule(std::move(Buffer), Err, Context);
@@ -473,7 +480,8 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
 
     StringRef Contents = CDS->getAsString();
 
-    if (Error Err = extractOffloadFiles(Contents, Prefix, DeviceFiles))
+    if (Error Err =
+            extractOffloadFiles(Contents, Prefix, DeviceFiles, IsLibrary))
       return std::move(Err);
 
     ToBeDeleted.push_back(&GV);
@@ -521,7 +529,8 @@ extractFromArchive(const Archive &Library,
     std::unique_ptr<MemoryBuffer> ChildBuffer =
         MemoryBuffer::getMemBuffer(*ChildBufferRefOrErr, false);
 
-    auto FileOrErr = extractFromBuffer(std::move(ChildBuffer), DeviceFiles);
+    auto FileOrErr = extractFromBuffer(std::move(ChildBuffer), DeviceFiles,
+                                       /*IsLibrary*/ true);
     if (!FileOrErr)
       return FileOrErr.takeError();
 
@@ -573,11 +582,11 @@ extractFromArchive(const Archive &Library,
 /// device code stripped from the buffer will be returned.
 Expected<Optional<std::string>>
 extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                  SmallVectorImpl<DeviceFile> &DeviceFiles) {
+                  SmallVectorImpl<DeviceFile> &DeviceFiles, bool IsLibrary) {
   file_magic Type = identify_magic(Buffer->getBuffer());
   switch (Type) {
   case file_magic::bitcode:
-    return extractFromBitcode(std::move(Buffer), DeviceFiles);
+    return extractFromBitcode(std::move(Buffer), DeviceFiles, IsLibrary);
   case file_magic::elf_relocatable:
   case file_magic::macho_object:
   case file_magic::coff_object: {
@@ -585,7 +594,7 @@ extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
         ObjectFile::createObjectFile(*Buffer, Type);
     if (!ObjFile)
       return ObjFile.takeError();
-    return extractFromBinary(*ObjFile->get(), DeviceFiles);
+    return extractFromBinary(*ObjFile->get(), DeviceFiles, IsLibrary);
   }
   case file_magic::archive: {
     Expected<std::unique_ptr<llvm::object::Archive>> LibFile =
@@ -1127,8 +1136,22 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
                       SmallVectorImpl<std::string> &LinkedImages) {
   // Get the list of inputs for a specific device.
   DenseMap<DeviceFile, SmallVector<std::string, 4>> LinkerInputMap;
-  for (auto &File : DeviceFiles)
-    LinkerInputMap[File].push_back(File.Filename);
+  SmallVector<DeviceFile, 4> LibraryFiles;
+  for (auto &File : DeviceFiles) {
+    if (File.IsLibrary)
+      LibraryFiles.push_back(File);
+    else
+      LinkerInputMap[File].push_back(File.Filename);
+  }
+
+  // Static libraries are loaded lazily as-needed, only add them if other files
+  // are present.
+  // TODO: We need to check the symbols as well, static libraries are only
+  //       loaded if they contain symbols that are currently undefined or common
+  //       in the symbol table.
+  for (auto &File : LibraryFiles)
+    if (LinkerInputMap.count(File))
+      LinkerInputMap[File].push_back(File.Filename);
 
   // Try to link each device toolchain.
   for (auto &LinkerInput : LinkerInputMap) {

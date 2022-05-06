@@ -48,3 +48,15 @@
 // RUN:   /usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CUDA_OMP_LINK
 
 // CUDA_OMP_LINK: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_70 {{.*}}.o {{.*}}.o
+
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-lib.o \
+// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,nvptx64-nvida-cuda,sm_70 \
+// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,nvptx64-nvida-cuda,sm_52
+// RUN: llvm-ar rcs %t.a %t-lib.o
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-obj.o \
+// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,nvptx64-nvida-cuda,sm_70
+// RUN: clang-linker-wrapper --host-triple x86_64-unknown-linux-gnu --dry-run -linker-path \
+// RUN:   /usr/bin/ld -- %t.a %t-obj.o -o a.out 2>&1 | FileCheck %s --check-prefix=STATIC-LIBRARY
+
+// STATIC-LIBRARY: nvlink{{.*}} -arch sm_70
+// STATIC-LIBRARY-NOT: nvlink{{.*}} -arch sm_50
