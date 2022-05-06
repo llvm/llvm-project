@@ -990,15 +990,11 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     // if we aren't splitting the block, it's nice for allocas to be before
     // calls.
     IP = PrepareToSplitEntryBlock(BB, IP);
-  } else {
-    EntryLoc = IP->getDebugLoc();
-    if (!EntryLoc)
-      if (auto *SP = F.getSubprogram())
-        EntryLoc = DILocation::get(SP->getContext(), 0, 0, SP);
   }
 
-  IRBuilder<> IRB(&*IP);
-  IRB.SetCurrentDebugLocation(EntryLoc);
+  InstrumentationIRBuilder IRB(&*IP);
+  if (EntryLoc)
+    IRB.SetCurrentDebugLocation(EntryLoc);
   if (Options.TracePC) {
     IRB.CreateCall(SanCovTracePC)
         ->setCannotMerge(); // gets the PC using GET_CALLER_PC.

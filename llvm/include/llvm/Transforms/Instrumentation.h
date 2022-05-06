@@ -15,6 +15,10 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -179,6 +183,26 @@ static inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
   assert(Scaled <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
   return Scaled;
 }
+
+// Use to ensure the inserted instrumentation has a DebugLocation; if none is
+// attached to the source instruction, try to use a DILocation with offset 0
+// scoped to surrounding function (if it has a DebugLocation).
+//
+// Some non-call instructions may be missing debug info, but when inserting
+// instrumentation calls, some builds (e.g. LTO) want calls to have debug info
+// if the enclosing function does.
+struct InstrumentationIRBuilder : IRBuilder<> {
+  static void ensureDebugInfo(IRBuilder<> &IRB, const Function &F) {
+    if (IRB.getCurrentDebugLocation())
+      return;
+    if (DISubprogram *SP = F.getSubprogram())
+      IRB.SetCurrentDebugLocation(DILocation::get(SP->getContext(), 0, 0, SP));
+  }
+
+  explicit InstrumentationIRBuilder(Instruction *IP) : IRBuilder<>(IP) {
+    ensureDebugInfo(*this, *IP->getFunction());
+  }
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_INSTRUMENTATION_H
