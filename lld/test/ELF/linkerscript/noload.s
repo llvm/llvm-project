@@ -24,7 +24,7 @@
 
 # WARN:   warning: section type mismatch for .data_noload_a
 # CHECK2:      Name                 Type     Address          Off               Size
-# CHECK2:      .data_noload_a       PROGBITS 0000000000000000 [[OFF:[0-9a-f]+]] 001001
+# CHECK2:      .data_noload_a       NOBITS   0000000000000000 [[OFF:[0-9a-f]+]] 001001
 
 #--- asm
 .section .text,"ax",@progbits
