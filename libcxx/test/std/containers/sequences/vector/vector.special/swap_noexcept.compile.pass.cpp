@@ -55,7 +55,7 @@ struct some_alloc2
     typedef std::true_type is_always_equal;
 };
 
-int main(int, char**)
+void test()
 {
     {
         typedef std::vector<MoveOnly> C;
@@ -66,7 +66,7 @@ int main(int, char**)
         typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
         static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
-#endif // _LIBCPP_VERSION
+#endif
     {
         typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
         static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
@@ -74,7 +74,7 @@ int main(int, char**)
     {
         typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
 #if TEST_STD_VER >= 14
-    //  In C++14, if POCS is set, swapping the allocator is required not to throw
+        //  In C++14, if POCS is set, swapping the allocator is required not to throw
         static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #else
         static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
@@ -83,10 +83,8 @@ int main(int, char**)
 #if TEST_STD_VER >= 14
     {
         typedef std::vector<MoveOnly, some_alloc2<MoveOnly>> C;
-    //  if the allocators are always equal, then the swap can be noexcept
+        // If the allocators are always equal, then the swap can be noexcept
         static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 #endif
-
-  return 0;
 }
