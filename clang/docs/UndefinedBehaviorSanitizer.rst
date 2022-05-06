@@ -114,7 +114,7 @@ Available checks are:
      Issues caught by these sanitizers are not undefined behavior,
      but are often unintentional.
   -  ``-fsanitize=implicit-integer-sign-change``: Implicit conversion between
-     integer types, if that changes the sign of the value. That is, if the the
+     integer types, if that changes the sign of the value. That is, if the
      original value was negative and the new value is positive (or zero),
      or the original value was positive, and the new value is negative.
      Issues caught by this sanitizer are not undefined behavior,

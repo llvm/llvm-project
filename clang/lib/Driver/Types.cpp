@@ -145,7 +145,6 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_PP_Fortran:
   case TY_F_FixedForm:
   case TY_PP_F_FixedForm:
-
   case TY_CL: case TY_CLCXX:
   case TY_CUDA: case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
@@ -172,15 +171,20 @@ bool types::isAcceptedByClang(ID Id) {
   }
 }
 
-bool types::isFortran(ID Id) {
+bool types::isAcceptedByFlang(ID Id) {
   switch (Id) {
   default:
     return false;
+
   case TY_Fortran:
   case TY_PP_Fortran:
   case TY_F_FixedForm:
   case TY_PP_F_FixedForm:
     return true;
+  // FIXME: Causes a crash in flang_runtime
+  case TY_LLVM_IR:
+  case TY_LLVM_BC:
+    return false;
   }
 }
 
@@ -223,14 +227,14 @@ bool types::isDerivedFromC(ID Id) {
 }
 
 bool types::isFreeFormFortran(ID Id) {
-  if (!isFortran(Id))
+  if (!isAcceptedByFlang(Id))
     return false;
 
   return (Id == TY_Fortran || Id == TY_PP_Fortran);
 }
 
 bool types::isFixedFormFortran(ID Id) {
-  if (!isFortran(Id))
+  if (!isAcceptedByFlang(Id))
     return false;
 
   return (Id == TY_F_FixedForm || Id == TY_PP_F_FixedForm);
@@ -312,7 +316,7 @@ bool types::isHIP(ID Id) {
 
 bool types::isSrcFile(ID Id) {
   return Id != TY_Object &&
-         ((getPreprocessedType(Id) != TY_INVALID) || isFortran(Id));
+         ((getPreprocessedType(Id) != TY_INVALID) || isAcceptedByFlang(Id));
 }
 
 types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
@@ -402,10 +406,10 @@ types::ID types::lookupTypeForTypeSpecifier(const char *Name) {
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(ID Id, phases::ID LastPhase) {
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> P;
-  if (isFortran(Id)) {
+  if (isAcceptedByFlang(Id)) {
     // Delegate preprocessing to the "upper" part of Fortran compiler,
     // preprocess for other preprocessable inputs
-    if (getPreprocessedType(Id) != TY_INVALID && !isFortran(Id)) {
+    if (getPreprocessedType(Id) != TY_INVALID && !isAcceptedByFlang(Id)) {
       P.push_back(phases::Preprocess);
     }
 
@@ -415,7 +419,7 @@ types::getCompilationPhases(ID Id, phases::ID LastPhase) {
 
     if (!onlyPrecompileType(Id)) {
       if (!onlyAssembleType(Id)) {
-        if (isFortran(Id)) {
+        if (isAcceptedByFlang(Id)) {
           P.push_back(phases::FortranFrontend);
           P.push_back(phases::Compile);
           P.push_back(phases::Backend);

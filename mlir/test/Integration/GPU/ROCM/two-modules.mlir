@@ -30,9 +30,9 @@ func.func @main() {
     memref.store %t0, %dst_device[%tx] : memref<?xi32>
     gpu.terminator
   }
-  call @print_memref_i32(%cast_dst) : (memref<*xi32>) -> ()
+  call @printMemrefI32(%cast_dst) : (memref<*xi32>) -> ()
   return
 }
 
 func.func private @mgpuMemGetDeviceMemRef1dInt32(%ptr : memref<?xi32>) -> (memref<?xi32>)
-func.func private @print_memref_i32(%ptr : memref<*xi32>)
+func.func private @printMemrefI32(%ptr : memref<*xi32>)

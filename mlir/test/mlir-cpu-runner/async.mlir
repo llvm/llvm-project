@@ -23,20 +23,20 @@ func.func @main() {
 
   // CHECK: [0, 0, 0, 0]
   %U = memref.cast %A :  memref<4xf32> to memref<*xf32>
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   // CHECK: Current thread id: [[MAIN:.*]]
   // CHECK: [1, 0, 0, 0]
   memref.store %c1, %A[%i0]: memref<4xf32>
   call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   %outer = async.execute {
     // CHECK: Current thread id: [[THREAD0:.*]]
     // CHECK: [1, 2, 0, 0]
     memref.store %c2, %A[%i1]: memref<4xf32>
     func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-    func.call @print_memref_f32(%U): (memref<*xf32>) -> ()
+    func.call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
     // No op async region to create a token for testing async dependency.
     %noop = async.execute {
@@ -50,7 +50,7 @@ func.func @main() {
       // CHECK: [1, 2, 3, 0]
       memref.store %c3, %A[%i2]: memref<4xf32>
       func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-      func.call @print_memref_f32(%U): (memref<*xf32>) -> ()
+      func.call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
       async.yield
     }
@@ -60,7 +60,7 @@ func.func @main() {
     // CHECK: [1, 2, 3, 4]
     memref.store %c4, %A[%i3]: memref<4xf32>
     func.call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-    func.call @print_memref_f32(%U): (memref<*xf32>) -> ()
+    func.call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
     async.yield
   }
@@ -69,7 +69,7 @@ func.func @main() {
   // CHECK: Current thread id: [[MAIN]]
   // CHECK: [1, 2, 3, 4]
   call @mlirAsyncRuntimePrintCurrentThreadId(): () -> ()
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   memref.dealloc %A : memref<4xf32>
 
@@ -78,4 +78,4 @@ func.func @main() {
 
 func.func private @mlirAsyncRuntimePrintCurrentThreadId() -> ()
 
-func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }

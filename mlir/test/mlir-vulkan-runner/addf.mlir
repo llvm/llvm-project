@@ -41,10 +41,10 @@ module attributes {
         blocks in (%cst8, %cst1, %cst1) threads in (%cst1, %cst1, %cst1)
         args(%arg0 : memref<8xf32>, %arg1 : memref<8xf32>, %arg2 : memref<8xf32>)
     %arg6 = memref.cast %arg5 : memref<?xf32> to memref<*xf32>
-    call @print_memref_f32(%arg6) : (memref<*xf32>) -> ()
+    call @printMemrefF32(%arg6) : (memref<*xf32>) -> ()
     return
   }
   func.func private @fillResource1DFloat(%0 : memref<?xf32>, %1 : f32)
-  func.func private @print_memref_f32(%ptr : memref<*xf32>)
+  func.func private @printMemrefF32(%ptr : memref<*xf32>)
 }
 

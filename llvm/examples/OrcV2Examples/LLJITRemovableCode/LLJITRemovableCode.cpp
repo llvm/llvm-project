@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
   auto PrintSymbol = [&](StringRef Name) {
     dbgs() << Name << " = ";
     if (auto Sym = J->lookup(JD, Name))
-      dbgs() << formatv("{0:x}\n", Sym->getAddress());
+      dbgs() << *Sym;
     else
       dbgs() << "error: " << toString(Sym.takeError()) << "\n";
   };
