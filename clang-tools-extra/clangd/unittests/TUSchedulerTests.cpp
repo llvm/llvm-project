@@ -250,19 +250,18 @@ TEST_F(TUSchedulerTests, Debounce) {
   std::atomic<int> CallbackCount(0);
   {
     auto Opts = optsForTest();
-    Opts.UpdateDebounce = DebouncePolicy::fixed(std::chrono::seconds(1));
+    Opts.UpdateDebounce = DebouncePolicy::fixed(std::chrono::milliseconds(100));
     TUScheduler S(CDB, Opts, captureDiags());
-    // FIXME: we could probably use timeouts lower than 1 second here.
     auto Path = testPath("foo.cpp");
     updateWithDiags(S, Path, "auto (debounced)", WantDiagnostics::Auto,
                     [&](std::vector<Diag>) {
                       ADD_FAILURE()
                           << "auto should have been debounced and canceled";
                     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
     updateWithDiags(S, Path, "auto (timed out)", WantDiagnostics::Auto,
                     [&](std::vector<Diag>) { ++CallbackCount; });
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     updateWithDiags(S, Path, "auto (shut down)", WantDiagnostics::Auto,
                     [&](std::vector<Diag>) { ++CallbackCount; });
 
