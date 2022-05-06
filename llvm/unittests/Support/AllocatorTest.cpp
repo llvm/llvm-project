@@ -99,6 +99,31 @@ TEST(AllocatorTest, TestAlignment) {
   EXPECT_EQ(0U, a & 127);
 }
 
+// Test zero-sized allocations.
+// In general we don't need to allocate memory for these.
+// However Allocate never returns null, so if the first allocation is zero-sized
+// we end up creating a slab for it.
+TEST(AllocatorTest, TestZero) {
+  BumpPtrAllocator Alloc;
+  EXPECT_EQ(0u, Alloc.GetNumSlabs());
+  EXPECT_EQ(0u, Alloc.getBytesAllocated());
+
+  void *Empty = Alloc.Allocate(0, 1);
+  EXPECT_NE(Empty, nullptr) << "Allocate is __attribute__((returns_nonnull))";
+  EXPECT_EQ(1u, Alloc.GetNumSlabs()) << "Allocated a slab to point to";
+  EXPECT_EQ(0u, Alloc.getBytesAllocated());
+
+  void *Large = Alloc.Allocate(4096, 1);
+  EXPECT_EQ(1u, Alloc.GetNumSlabs());
+  EXPECT_EQ(4096u, Alloc.getBytesAllocated());
+  EXPECT_EQ(Empty, Large);
+
+  void *Empty2 = Alloc.Allocate(0, 1);
+  EXPECT_NE(Empty2, nullptr);
+  EXPECT_EQ(1u, Alloc.GetNumSlabs());
+  EXPECT_EQ(4096u, Alloc.getBytesAllocated());
+}
+
 // Test allocating just over the slab size.  This tests a bug where before the
 // allocator incorrectly calculated the buffer end pointer.
 TEST(AllocatorTest, TestOverflow) {
