@@ -1219,6 +1219,7 @@ bool AVRExpandPseudo::expand<AVR::STDSPQRr>(Block &MBB, BlockIt MBBI) {
 
   assert(STI.getFrameLowering()->hasReservedCallFrame(MF) &&
          "unexpected STDSPQRr pseudo instruction");
+  (void)STI;
 
   MI.setDesc(TII->get(AVR::STDPtrQRr));
   MI.getOperand(0).setReg(AVR::R29R28);
@@ -1237,6 +1238,7 @@ bool AVRExpandPseudo::expand<AVR::STDWSPQRr>(Block &MBB, BlockIt MBBI) {
 
   assert(STI.getFrameLowering()->hasReservedCallFrame(MF) &&
          "unexpected STDWSPQRr pseudo instruction");
+  (void)STI;
 
   MI.setDesc(TII->get(AVR::STDWPtrQRr));
   MI.getOperand(0).setReg(AVR::R29R28);
