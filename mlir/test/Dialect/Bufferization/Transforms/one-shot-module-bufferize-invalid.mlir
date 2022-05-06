@@ -110,6 +110,54 @@ func.func @scf_for(%A : tensor<?xf32>,
 
 // -----
 
+func.func @scf_while_non_equiv_condition(%arg0: tensor<5xi1>,
+                                         %arg1: tensor<5xi1>,
+                                         %idx: index) -> (i1, i1)
+{
+  %r0, %r1 = scf.while (%w0 = %arg0, %w1 = %arg1)
+      : (tensor<5xi1>, tensor<5xi1>) -> (tensor<5xi1>, tensor<5xi1>) {
+    %condition = tensor.extract %w0[%idx] : tensor<5xi1>
+    // expected-error @+1 {{Condition arg #0 is not equivalent to the corresponding iter bbArg}}
+    scf.condition(%condition) %w1, %w0 : tensor<5xi1>, tensor<5xi1>
+  } do {
+  ^bb0(%b0: tensor<5xi1>, %b1: tensor<5xi1>):
+    %pos = "dummy.some_op"() : () -> (index)
+    %val = "dummy.another_op"() : () -> (i1)
+    %1 = tensor.insert %val into %b0[%pos] : tensor<5xi1>
+    scf.yield %1, %b1 : tensor<5xi1>, tensor<5xi1>
+  }
+
+  %v0 = tensor.extract %r0[%idx] : tensor<5xi1>
+  %v1 = tensor.extract %r1[%idx] : tensor<5xi1>
+  return %v0, %v1 : i1, i1
+}
+
+// -----
+
+func.func @scf_while_non_equiv_yield(%arg0: tensor<5xi1>,
+                                     %arg1: tensor<5xi1>,
+                                     %idx: index) -> (i1, i1)
+{
+  %r0, %r1 = scf.while (%w0 = %arg0, %w1 = %arg1)
+      : (tensor<5xi1>, tensor<5xi1>) -> (tensor<5xi1>, tensor<5xi1>) {
+    %condition = tensor.extract %w0[%idx] : tensor<5xi1>
+    scf.condition(%condition) %w0, %w1 : tensor<5xi1>, tensor<5xi1>
+  } do {
+  ^bb0(%b0: tensor<5xi1>, %b1: tensor<5xi1>):
+    %pos = "dummy.some_op"() : () -> (index)
+    %val = "dummy.another_op"() : () -> (i1)
+    %1 = tensor.insert %val into %b0[%pos] : tensor<5xi1>
+    // expected-error @+1 {{Yield operand #0 is not equivalent to the corresponding iter bbArg}}
+    scf.yield %b1, %1 : tensor<5xi1>, tensor<5xi1>
+  }
+
+  %v0 = tensor.extract %r0[%idx] : tensor<5xi1>
+  %v1 = tensor.extract %r1[%idx] : tensor<5xi1>
+  return %v0, %v1 : i1, i1
+}
+
+// -----
+
 func.func private @fun_with_side_effects(%A: tensor<?xf32> {bufferization.writable = true})
 
 func.func @foo(%A: tensor<?xf32> {bufferization.writable = true}) -> (tensor<?xf32>) {
