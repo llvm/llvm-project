@@ -1224,46 +1224,48 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
     HaveVectorOp |= computeVLVTYPEChanges(MBB);
 
   // If we didn't find any instructions that need VSETVLI, we're done.
-  if (HaveVectorOp) {
-    // Phase 2 - determine the exit VL/VTYPE from each block. We add all
-    // blocks to the list here, but will also add any that need to be revisited
-    // during Phase 2 processing.
-    for (const MachineBasicBlock &MBB : MF) {
-      WorkList.push(&MBB);
-      BlockInfo[MBB.getNumber()].InQueue = true;
-    }
-    while (!WorkList.empty()) {
-      const MachineBasicBlock &MBB = *WorkList.front();
-      WorkList.pop();
-      computeIncomingVLVTYPE(MBB);
-    }
+  if (!HaveVectorOp) {
+    BlockInfo.clear();
+    return false;
+  }
 
-    // Phase 3 - add any vsetvli instructions needed in the block. Use the
-    // Phase 2 information to avoid adding vsetvlis before the first vector
-    // instruction in the block if the VL/VTYPE is satisfied by its
-    // predecessors.
-    for (MachineBasicBlock &MBB : MF)
-      emitVSETVLIs(MBB);
+  // Phase 2 - determine the exit VL/VTYPE from each block. We add all
+  // blocks to the list here, but will also add any that need to be revisited
+  // during Phase 2 processing.
+  for (const MachineBasicBlock &MBB : MF) {
+    WorkList.push(&MBB);
+    BlockInfo[MBB.getNumber()].InQueue = true;
+  }
+  while (!WorkList.empty()) {
+    const MachineBasicBlock &MBB = *WorkList.front();
+    WorkList.pop();
+    computeIncomingVLVTYPE(MBB);
+  }
 
-    // Once we're fully done rewriting all the instructions, do a final pass
-    // through to check for VSETVLIs which write to an unused destination.
-    // For the non X0, X0 variant, we can replace the destination register
-    // with X0 to reduce register pressure.  This is really a generic
-    // optimization which can be applied to any dead def (TODO: generalize).
-    for (MachineBasicBlock &MBB : MF) {
-      for (MachineInstr &MI : MBB) {
-        if (MI.getOpcode() == RISCV::PseudoVSETVLI ||
-            MI.getOpcode() == RISCV::PseudoVSETIVLI) {
-          Register VRegDef = MI.getOperand(0).getReg();
-          if (VRegDef != RISCV::X0 && MRI->use_nodbg_empty(VRegDef))
-            MI.getOperand(0).setReg(RISCV::X0);
-        }
+  // Phase 3 - add any vsetvli instructions needed in the block. Use the
+  // Phase 2 information to avoid adding vsetvlis before the first vector
+  // instruction in the block if the VL/VTYPE is satisfied by its
+  // predecessors.
+  for (MachineBasicBlock &MBB : MF)
+    emitVSETVLIs(MBB);
+
+  // Once we're fully done rewriting all the instructions, do a final pass
+  // through to check for VSETVLIs which write to an unused destination.
+  // For the non X0, X0 variant, we can replace the destination register
+  // with X0 to reduce register pressure.  This is really a generic
+  // optimization which can be applied to any dead def (TODO: generalize).
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (MI.getOpcode() == RISCV::PseudoVSETVLI ||
+          MI.getOpcode() == RISCV::PseudoVSETIVLI) {
+        Register VRegDef = MI.getOperand(0).getReg();
+        if (VRegDef != RISCV::X0 && MRI->use_nodbg_empty(VRegDef))
+          MI.getOperand(0).setReg(RISCV::X0);
       }
     }
   }
 
   BlockInfo.clear();
-
   return HaveVectorOp;
 }
 
