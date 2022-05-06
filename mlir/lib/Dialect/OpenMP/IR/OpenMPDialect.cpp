@@ -986,7 +986,7 @@ LogicalResult CancelOp::verify() {
       return emitOpError() << "cancel sections must appear "
                            << "inside a sections region";
     }
-    if (parentOp->getParentOp() && isa<SectionsOp>(parentOp->getParentOp()) &&
+    if (isa_and_nonnull<SectionsOp>(parentOp->getParentOp()) &&
         cast<SectionsOp>(parentOp->getParentOp()).nowaitAttr()) {
       return emitError() << "A sections construct that is canceled "
                          << "must not have a nowait clause";
