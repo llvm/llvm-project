@@ -1005,7 +1005,13 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
   if (!InInfo.isValid())
     return;
 
+  // If no change, no need to rerun block
+  if (InInfo == BBInfo.Pred)
+    return;
+
   BBInfo.Pred = InInfo;
+  LLVM_DEBUG(dbgs() << "Entry state of " << printMBBReference(MBB)
+                    << " changed to " << BBInfo.Pred << "\n");
 
   VSETVLIInfo TmpStatus = BBInfo.Pred.merge(BBInfo.Change);
 
