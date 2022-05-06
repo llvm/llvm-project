@@ -371,6 +371,18 @@ define <4 x i32> @combine_vec_srem_by_pow2b_neg(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+; FIXME: PR55271 - srem(undef, 3) != undef
+; Use PSLLI intrinsic to postpone the undef creation until after urem-by-constant expansion
+define <4 x i32> @combine_vec_srem_undef_by_3(<4 x i32> %in) {
+; CHECK-LABEL: combine_vec_srem_undef_by_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %x = call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> undef, i32 0)
+  %y = srem <4 x i32> %x, <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %y
+}
+declare <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32>, i32)
+
 ; OSS-Fuzz #6883
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6883
 define i32 @ossfuzz6883() {
