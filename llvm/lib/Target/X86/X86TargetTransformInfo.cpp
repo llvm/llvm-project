@@ -2753,7 +2753,9 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
   static const CostTblEntry SSE41CostTbl[] = {
     { ISD::SELECT,  MVT::v2f64,   1 }, // blendvpd
+    { ISD::SELECT,  MVT::f64,     1 }, // blendvpd
     { ISD::SELECT,  MVT::v4f32,   1 }, // blendvps
+    { ISD::SELECT,  MVT::f32  ,   1 }, // blendvps
     { ISD::SELECT,  MVT::v2i64,   1 }, // pblendvb
     { ISD::SELECT,  MVT::v4i32,   1 }, // pblendvb
     { ISD::SELECT,  MVT::v8i16,   1 }, // pblendvb
@@ -2769,6 +2771,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SETCC,   MVT::v16i8,   1 },
 
     { ISD::SELECT,  MVT::v2f64,   2 }, // andpd + andnpd + orpd
+    { ISD::SELECT,  MVT::f64,     2 }, // andpd + andnpd + orpd
     { ISD::SELECT,  MVT::v2i64,   2 }, // pand + pandn + por
     { ISD::SELECT,  MVT::v4i32,   2 }, // pand + pandn + por
     { ISD::SELECT,  MVT::v8i16,   2 }, // pand + pandn + por
@@ -2780,6 +2783,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     { ISD::SETCC,   MVT::f32,     1 },
 
     { ISD::SELECT,  MVT::v4f32,   2 }, // andps + andnps + orps
+    { ISD::SELECT,  MVT::f32,     2 }, // andps + andnps + orps
   };
 
   if (ST->useSLMArithCosts())
