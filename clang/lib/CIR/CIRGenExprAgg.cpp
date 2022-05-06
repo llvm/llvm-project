@@ -14,6 +14,7 @@
 #include "CIRGenModule.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
+#include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/StmtVisitor.h"
 
@@ -124,7 +125,7 @@ public:
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
     llvm_unreachable("NYI");
   }
-  void VisitExprWithCleanups(ExprWithCleanups *E) { llvm_unreachable("NYI"); }
+  void VisitExprWithCleanups(ExprWithCleanups *E);
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E) {
     llvm_unreachable("NYI");
   }
@@ -153,6 +154,12 @@ public:
 void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   AggValueSlot Slot = EnsureSlot(E->getType());
   CGF.buildCXXConstructExpr(E, Slot);
+}
+
+void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
+  if (UnimplementedFeature::cleanups())
+    llvm_unreachable("NYI");
+  Visit(E->getSubExpr());
 }
 
 /// CheckAggExprForMemSetUse - If the initializer is large and has a lot of
