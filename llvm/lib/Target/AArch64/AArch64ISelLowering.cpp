@@ -3308,23 +3308,29 @@ static SDValue LowerADDC_ADDE_SUBC_SUBE(SDValue Op, SelectionDAG &DAG) {
                      Op.getOperand(2));
 }
 
-// Sets 'C' bit of NZCV to 0 if value is 0, else sets 'C' bit to 1
-static SDValue valueToCarryFlag(SDValue Value, SelectionDAG &DAG) {
+// If Invert is false, sets 'C' bit of NZCV to 0 if value is 0, else sets 'C'
+// bit to 1. If Invert is true, sets 'C' bit of NZCV to 1 if value is 0, else
+// sets 'C' bit to 0.
+static SDValue valueToCarryFlag(SDValue Value, SelectionDAG &DAG, bool Invert) {
   SDLoc DL(Value);
-  SDValue One = DAG.getConstant(1, DL, Value.getValueType());
+  EVT VT = Value.getValueType();
+  SDValue Op0 = Invert ? DAG.getConstant(0, DL, VT) : Value;
+  SDValue Op1 = Invert ? Value : DAG.getConstant(1, DL, VT);
   SDValue Cmp =
-      DAG.getNode(AArch64ISD::SUBS, DL,
-                  DAG.getVTList(Value.getValueType(), MVT::Glue), Value, One);
+      DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, MVT::Glue), Op0, Op1);
   return Cmp.getValue(1);
 }
 
-// Value is 1 if 'C' bit of NZCV is 1, else 0
-static SDValue carryFlagToValue(SDValue Flag, EVT VT, SelectionDAG &DAG) {
+// If Invert is false, value is 1 if 'C' bit of NZCV is 1, else 0.
+// If Invert is true, value is 0 if 'C' bit of NZCV is 1, else 1.
+static SDValue carryFlagToValue(SDValue Flag, EVT VT, SelectionDAG &DAG,
+                                bool Invert) {
   assert(Flag.getResNo() == 1);
   SDLoc DL(Flag);
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue CC = DAG.getConstant(AArch64CC::HS, DL, MVT::i32);
+  unsigned Cond = Invert ? AArch64CC::LO : AArch64CC::HS;
+  SDValue CC = DAG.getConstant(Cond, DL, MVT::i32);
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, One, Zero, CC, Flag);
 }
 
@@ -3348,9 +3354,10 @@ static SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG, unsigned Opcode,
   if (VT0 != MVT::i32 && VT0 != MVT::i64)
     return SDValue();
 
+  bool InvertCarry = Opcode == AArch64ISD::SBCS;
   SDValue OpLHS = Op.getOperand(0);
   SDValue OpRHS = Op.getOperand(1);
-  SDValue OpCarryIn = valueToCarryFlag(Op.getOperand(2), DAG);
+  SDValue OpCarryIn = valueToCarryFlag(Op.getOperand(2), DAG, InvertCarry);
 
   SDLoc DL(Op);
   SDVTList VTs = DAG.getVTList(VT0, VT1);
@@ -3358,8 +3365,9 @@ static SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG, unsigned Opcode,
   SDValue Sum = DAG.getNode(Opcode, DL, DAG.getVTList(VT0, MVT::Glue), OpLHS,
                             OpRHS, OpCarryIn);
 
-  SDValue OutFlag = IsSigned ? overflowFlagToValue(Sum.getValue(1), VT1, DAG)
-                             : carryFlagToValue(Sum.getValue(1), VT1, DAG);
+  SDValue OutFlag =
+      IsSigned ? overflowFlagToValue(Sum.getValue(1), VT1, DAG)
+               : carryFlagToValue(Sum.getValue(1), VT1, DAG, InvertCarry);
 
   return DAG.getNode(ISD::MERGE_VALUES, DL, VTs, Sum, OutFlag);
 }
@@ -15517,13 +15525,21 @@ static Optional<AArch64CC::CondCode> getCSETCondCode(SDValue Op) {
 }
 
 // (ADC{S} l r (CMP (CSET HS carry) 1)) => (ADC{S} l r carry)
-// (SBC{S} l r (CMP (CSET LO carry) 1)) => (SBC{S} l r carry)
+// (SBC{S} l r (CMP 0 (CSET LO carry))) => (SBC{S} l r carry)
 static SDValue foldOverflowCheck(SDNode *Op, SelectionDAG &DAG, bool IsAdd) {
   SDValue CmpOp = Op->getOperand(2);
-  if (!(isCMP(CmpOp) && isOneConstant(CmpOp.getOperand(1))))
+  if (!isCMP(CmpOp))
     return SDValue();
 
-  SDValue CsetOp = CmpOp->getOperand(0);
+  if (IsAdd) {
+    if (!isOneConstant(CmpOp.getOperand(1)))
+      return SDValue();
+  } else {
+    if (!isNullConstant(CmpOp.getOperand(0)))
+      return SDValue();
+  }
+
+  SDValue CsetOp = CmpOp->getOperand(IsAdd ? 0 : 1);
   auto CC = getCSETCondCode(CsetOp);
   if (CC != (IsAdd ? AArch64CC::HS : AArch64CC::LO))
     return SDValue();
