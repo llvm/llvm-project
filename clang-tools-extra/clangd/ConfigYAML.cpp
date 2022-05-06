@@ -128,6 +128,7 @@ private:
     Dict.handle("UnusedIncludes", [&](Node &N) {
       F.UnusedIncludes = scalarValue(N, "UnusedIncludes");
     });
+    Dict.handle("Includes", [&](Node &N) { parse(F.Includes, N); });
     Dict.handle("ClangTidy", [&](Node &N) { parse(F.ClangTidy, N); });
     Dict.parse(N);
   }
@@ -150,6 +151,15 @@ private:
         return false; // Don't emit a warning
       });
       CheckOptDict.parse(N);
+    });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::DiagnosticsBlock::IncludesBlock &F, Node &N) {
+    DictParser Dict("Includes", this);
+    Dict.handle("IgnoreHeader", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.IgnoreHeader = std::move(*Values);
     });
     Dict.parse(N);
   }
