@@ -155,20 +155,36 @@ void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   CGF.buildCXXConstructExpr(E, Slot);
 }
 
+/// CheckAggExprForMemSetUse - If the initializer is large and has a lot of
+/// zeros in it, emit a memset and avoid storing the individual zeros.
+static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
+                                     CIRGenFunction &CGF) {
+  // If the slot is arleady known to be zeroed, nothing to do. Don't mess with
+  // volatile stores.
+  if (Slot.isZeroed() || Slot.isVolatile() || !Slot.getAddress().isValid())
+    return;
+
+  // C++ objects with a user-declared constructor don't need zero'ing.
+  if (CGF.getLangOpts().CPlusPlus)
+    if (const auto *RT = CGF.getContext()
+                             .getBaseElementType(E->getType())
+                             ->getAs<RecordType>()) {
+      const auto *RD = cast<CXXRecordDecl>(RT->getDecl());
+      if (RD->hasUserDeclaredConstructor())
+        return;
+    }
+
+  llvm_unreachable("NYI");
+}
+
 void CIRGenFunction::buildAggExpr(const Expr *E, AggValueSlot Slot) {
   assert(E && CIRGenFunction::hasAggregateEvaluationKind(E->getType()) &&
          "Invalid aggregate expression to emit");
   assert((Slot.getAddress().isValid() || Slot.isIgnored()) &&
          "slot has bits but no address");
 
-  // TODO: assert(false && "Figure out how to assert we're in c++");
-  if (const RecordType *RT = CGM.getASTContext()
-                                 .getBaseElementType(E->getType())
-                                 ->getAs<RecordType>()) {
-    auto *RD = cast<CXXRecordDecl>(RT->getDecl());
-    assert(RD->hasUserDeclaredConstructor() &&
-           "default constructors aren't expected here YET");
-  }
+  // Optimize the slot if possible.
+  CheckAggExprForMemSetUse(Slot, E, *this);
 
   AggExprEmitter(*this, Slot, Slot.isIgnored()).Visit(const_cast<Expr *>(E));
 }
