@@ -22033,9 +22033,6 @@ static SDValue combineShuffleOfBitcast(ShuffleVectorSDNode *SVN,
                                        SelectionDAG &DAG,
                                        const TargetLowering &TLI,
                                        bool LegalOperations) {
-  // For now, we only support little endian
-  if (!DAG.getDataLayout().isLittleEndian())
-    return SDValue();
   SDValue Op0 = SVN->getOperand(0);
   SDValue Op1 = SVN->getOperand(1);
   EVT VT = SVN->getValueType(0);
