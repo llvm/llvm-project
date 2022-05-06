@@ -560,6 +560,9 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
     // The base of this GEP is the base
     return findBaseDefiningValue(GEP->getPointerOperand());
 
+  if (auto *Freeze = dyn_cast<FreezeInst>(I))
+    return findBaseDefiningValue(Freeze->getOperand(0));
+
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     default:
