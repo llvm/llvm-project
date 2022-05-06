@@ -108,9 +108,8 @@ int main(int argc, char *argv[]) {
 
   // Look up the entry point, cast it to a C main function pointer, then use
   // runAsMain to call it.
-  auto EntrySym = ExitOnErr(J->lookup(EntryPointName));
-  auto EntryFn =
-      jitTargetAddressToFunction<int (*)(int, char *[])>(EntrySym.getAddress());
+  auto EntryAddr = ExitOnErr(J->lookup(EntryPointName));
+  auto EntryFn = EntryAddr.toPtr<int(int, char *[])>();
 
   return runAsMain(EntryFn, InputArgv, StringRef(InputFiles.front()));
 }
