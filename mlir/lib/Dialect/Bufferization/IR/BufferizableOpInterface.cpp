@@ -78,9 +78,12 @@ bool BufferizationOptions::isOpAllowed(Operation *op) const {
 
 BufferizableOpInterface
 BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
-  if (isOpAllowed(op))
-    return dyn_cast<BufferizableOpInterface>(op);
-  return nullptr;
+  auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
+  if (!bufferizableOp)
+    return nullptr;
+  if (!isOpAllowed(op))
+    return nullptr;
+  return bufferizableOp;
 }
 
 BufferizableOpInterface
