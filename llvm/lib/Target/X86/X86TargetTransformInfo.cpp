@@ -2754,12 +2754,13 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   };
 
   static const CostTblEntry SSE42CostTbl[] = {
-    { ISD::SETCC,   MVT::v2f64,   1 },
-    { ISD::SETCC,   MVT::v4f32,   1 },
     { ISD::SETCC,   MVT::v2i64,   1 },
   };
 
   static const CostTblEntry SSE41CostTbl[] = {
+    { ISD::SETCC,   MVT::v2f64,   1 },
+    { ISD::SETCC,   MVT::v4f32,   1 },
+
     { ISD::SELECT,  MVT::v2f64,   2 }, // blendvpd
     { ISD::SELECT,  MVT::f64,     2 }, // blendvpd
     { ISD::SELECT,  MVT::v4f32,   2 }, // blendvps
