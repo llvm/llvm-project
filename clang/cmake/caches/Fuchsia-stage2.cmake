@@ -257,6 +257,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-bolt
   llvm-cov
   llvm-cxxfilt
+  llvm-debuginfod-find
   llvm-dlltool
   llvm-dwarfdump
   llvm-dwp
