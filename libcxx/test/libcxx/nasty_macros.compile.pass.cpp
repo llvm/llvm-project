@@ -280,6 +280,9 @@ END-SCRIPT
 #   include <sstream>
 #endif
 #include <stack>
+#if __cplusplus > 202002L && !defined(_LIBCPP_HAS_NO_THREADS)
+#   include <stdatomic.h>
+#endif
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdexcept>

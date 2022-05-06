@@ -14,6 +14,7 @@ header_restrictions = {
     "mutex": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "semaphore": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "shared_mutex": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "stdatomic.h": "__cplusplus > 202002L && !defined(_LIBCPP_HAS_NO_THREADS)",
     "thread": "!defined(_LIBCPP_HAS_NO_THREADS)",
 
     "filesystem": "!defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)",
