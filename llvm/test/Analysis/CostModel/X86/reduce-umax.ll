@@ -46,16 +46,16 @@ define i32 @reduce_i64(i32 %arg) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call i64 @llvm.vector.reduce.umax.v1i64(<1 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2 = call i64 @llvm.vector.reduce.umax.v2i64(<2 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4 = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8 = call i64 @llvm.vector.reduce.umax.v8i64(<8 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V16 = call i64 @llvm.vector.reduce.umax.v16i64(<16 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V8 = call i64 @llvm.vector.reduce.umax.v8i64(<8 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %V16 = call i64 @llvm.vector.reduce.umax.v16i64(<16 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'reduce_i64'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call i64 @llvm.vector.reduce.umax.v1i64(<1 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2 = call i64 @llvm.vector.reduce.umax.v2i64(<2 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4 = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8 = call i64 @llvm.vector.reduce.umax.v8i64(<8 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V16 = call i64 @llvm.vector.reduce.umax.v16i64(<16 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V8 = call i64 @llvm.vector.reduce.umax.v8i64(<8 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V16 = call i64 @llvm.vector.reduce.umax.v16i64(<16 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'reduce_i64'
