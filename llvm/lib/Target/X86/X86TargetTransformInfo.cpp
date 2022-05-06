@@ -2698,20 +2698,28 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
     { ISD::SELECT,  MVT::v8i64,   1 },
     { ISD::SELECT,  MVT::v4i64,   1 },
+    { ISD::SELECT,  MVT::v2i64,   1 },
     { ISD::SELECT,  MVT::v16i32,  1 },
     { ISD::SELECT,  MVT::v8i32,   1 },
+    { ISD::SELECT,  MVT::v4i32,   1 },
     { ISD::SELECT,  MVT::v8f64,   1 },
     { ISD::SELECT,  MVT::v4f64,   1 },
+    { ISD::SELECT,  MVT::v2f64,   1 },
+    { ISD::SELECT,  MVT::f64,     1 },
     { ISD::SELECT,  MVT::v16f32,  1 },
     { ISD::SELECT,  MVT::v8f32 ,  1 },
+    { ISD::SELECT,  MVT::v4f32,   1 },
+    { ISD::SELECT,  MVT::f32  ,   1 },
 
     { ISD::SETCC,   MVT::v32i16,  2 }, // FIXME: should probably be 4
     { ISD::SETCC,   MVT::v64i8,   2 }, // FIXME: should probably be 4
 
     { ISD::SELECT,  MVT::v32i16,  2 },
     { ISD::SELECT,  MVT::v16i16,  1 },
+    { ISD::SELECT,  MVT::v8i16,   1 },
     { ISD::SELECT,  MVT::v64i8,   2 },
     { ISD::SELECT,  MVT::v32i8,   1 },
+    { ISD::SELECT,  MVT::v16i8,   1 },
   };
 
   static const CostTblEntry AVX2CostTbl[] = {
@@ -2752,14 +2760,14 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   };
 
   static const CostTblEntry SSE41CostTbl[] = {
-    { ISD::SELECT,  MVT::v2f64,   1 }, // blendvpd
-    { ISD::SELECT,  MVT::f64,     1 }, // blendvpd
-    { ISD::SELECT,  MVT::v4f32,   1 }, // blendvps
-    { ISD::SELECT,  MVT::f32  ,   1 }, // blendvps
-    { ISD::SELECT,  MVT::v2i64,   1 }, // pblendvb
-    { ISD::SELECT,  MVT::v4i32,   1 }, // pblendvb
-    { ISD::SELECT,  MVT::v8i16,   1 }, // pblendvb
-    { ISD::SELECT,  MVT::v16i8,   1 }, // pblendvb
+    { ISD::SELECT,  MVT::v2f64,   2 }, // blendvpd
+    { ISD::SELECT,  MVT::f64,     2 }, // blendvpd
+    { ISD::SELECT,  MVT::v4f32,   2 }, // blendvps
+    { ISD::SELECT,  MVT::f32  ,   2 }, // blendvps
+    { ISD::SELECT,  MVT::v2i64,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v4i32,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v8i16,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v16i8,   2 }, // pblendvb
   };
 
   static const CostTblEntry SSE2CostTbl[] = {
