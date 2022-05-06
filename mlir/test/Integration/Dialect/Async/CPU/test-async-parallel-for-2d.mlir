@@ -84,7 +84,7 @@ func.func @entry() {
   // CHECK-NEXT: [40, 41, 42, 43, 44, 45, 46, 47]
   // CHECK-NEXT: [48, 49, 50, 51, 52, 53, 54, 55]
   // CHECK-NEXT: [56, 57, 58, 59, 60, 61, 62, 63]
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   scf.parallel (%i, %j) = (%lb, %lb) to (%ub, %ub) step (%c1, %c1) {
     memref.store %c0, %A[%i, %j] : memref<8x8xf32>
@@ -109,7 +109,7 @@ func.func @entry() {
   // CHECK-NEXT: [0, 0, 0, 0, 0, 0, 0, 0]
   // CHECK-NEXT: [48, 49, 50, 51, 52, 53, 54, 55]
   // CHECK-NEXT: [0, 0, 0, 0, 0, 0, 0, 0]
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   scf.parallel (%i, %j) = (%lb, %lb) to (%ub, %ub) step (%c1, %c1) {
     memref.store %c0, %A[%i, %j] : memref<8x8xf32>
@@ -134,11 +134,11 @@ func.func @entry() {
   // CHECK-NEXT: [40, 0, 42, 0, 44, 0, 46, 0]
   // CHECK-NEXT: [48, 0, 50, 0, 52, 0, 54, 0]
   // CHECK-NEXT: [56, 0, 58, 0, 60, 0, 62, 0]
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   memref.dealloc %A : memref<8x8xf32>
 
   return
 }
 
-func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }

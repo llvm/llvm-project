@@ -18,7 +18,7 @@ func.func @main() {
     tensor.yield %cst : f32
   } : tensor<1x?x3xf32> to tensor<1x?x?xf32>
   %unranked = tensor.cast %out: tensor<1x?x?xf32> to tensor<*xf32>
-  call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%unranked) : (tensor<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 3 offset = 0 sizes = [1, 4, 5] strides = [20, 5, 1] data =
@@ -30,4 +30,4 @@ func.func @main() {
   return
 }
 
-func.func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)

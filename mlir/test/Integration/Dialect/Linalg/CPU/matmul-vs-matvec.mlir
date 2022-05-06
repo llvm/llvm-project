@@ -3,7 +3,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)
 
 func.func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
@@ -60,7 +60,7 @@ func.func @main() {
     }
   }
   %C2_ = memref.cast %C2 : memref<?x?xf32> to memref<*xf32>
-  call @print_memref_f32(%C2_) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%C2_) : (memref<*xf32>) -> ()
   memref.dealloc %C1 : memref<?x?xf32>
   memref.dealloc %C2 : memref<?x?xf32>
   return

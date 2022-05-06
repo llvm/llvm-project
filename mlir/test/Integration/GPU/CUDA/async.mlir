@@ -66,8 +66,8 @@ func.func @main() {
 
   async.await %t3 : !async.token
   // CHECK: [84, 84]
-  call @print_memref_i32(%h0_unranked) : (memref<*xi32>) -> ()
+  call @printMemrefI32(%h0_unranked) : (memref<*xi32>) -> ()
   return
 }
 
-func.func private @print_memref_i32(memref<*xi32>)
+func.func private @printMemrefI32(memref<*xi32>)

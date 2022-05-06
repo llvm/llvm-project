@@ -12,7 +12,7 @@ func.func @main() {
   %dynamic = tensor.cast %const: tensor<2x6x2xf32> to tensor<2x?x?xf32>
   %expanded = call @expand_dynamic_shape(%dynamic) : (tensor<2x?x?xf32>) -> (tensor<2x2x?x1x?xf32>)
   %unranked = tensor.cast %expanded: tensor<2x2x?x1x?xf32> to tensor<*xf32>
-  call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%unranked) : (tensor<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 5 offset = 0 sizes = [2, 2, 3, 1, 2] strides = [12, 6, 2, 2, 1] data =
@@ -31,7 +31,7 @@ func.func @main() {
   return
 }
 
-func.func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)
 
 func.func @expand_dynamic_shape(%arg0 : tensor<2x?x?xf32>) -> tensor<2x2x?x1x?xf32> {
   %0 = tensor.expand_shape %arg0 [[0], [1, 2, 3], [4]]: tensor<2x?x?xf32> into tensor<2x2x?x1x?xf32>

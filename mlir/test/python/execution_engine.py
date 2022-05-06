@@ -335,10 +335,10 @@ def testSharedLibLoad():
         %cst42 = arith.constant 42.0 : f32
         memref.store %cst42, %arg0[%c0] : memref<1xf32>
         %u_memref = memref.cast %arg0 : memref<1xf32> to memref<*xf32>
-        call @print_memref_f32(%u_memref) : (memref<*xf32>) -> ()
+        call @printMemrefF32(%u_memref) : (memref<*xf32>) -> ()
         return
       }
-      func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+      func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
      } """)
     arg0 = np.array([0.0]).astype(np.float32)
 
@@ -367,16 +367,16 @@ def testNanoTime():
     module = Module.parse("""
       module {
       func.func @main() attributes { llvm.emit_c_interface } {
-        %now = call @nano_time() : () -> i64
+        %now = call @nanoTime() : () -> i64
         %memref = memref.alloca() : memref<1xi64>
         %c0 = arith.constant 0 : index
         memref.store %now, %memref[%c0] : memref<1xi64>
         %u_memref = memref.cast %memref : memref<1xi64> to memref<*xi64>
-        call @print_memref_i64(%u_memref) : (memref<*xi64>) -> ()
+        call @printMemrefI64(%u_memref) : (memref<*xi64>) -> ()
         return
       }
-      func.func private @nano_time() -> i64 attributes { llvm.emit_c_interface }
-      func.func private @print_memref_i64(memref<*xi64>) attributes { llvm.emit_c_interface }
+      func.func private @nanoTime() -> i64 attributes { llvm.emit_c_interface }
+      func.func private @printMemrefI64(memref<*xi64>) attributes { llvm.emit_c_interface }
     }""")
 
     execution_engine = ExecutionEngine(

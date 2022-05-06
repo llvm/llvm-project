@@ -11,7 +11,7 @@
 #map0 = affine_map<(d0, d1) -> (d1, d0)>
 #map1 = affine_map<(d0, d1) -> (d1)>
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)
 
 func.func @alloc_2d_filled_f32(%arg0: index, %arg1: index) -> memref<?x?xf32> {
   %c0 = arith.constant 0 : index
@@ -40,7 +40,7 @@ func.func @main() {
   %cst = arith.constant -4.2e+01 : f32
   %0 = call @alloc_2d_filled_f32(%c6, %c6) : (index, index) -> memref<?x?xf32>
   %converted = memref.cast %0 : memref<?x?xf32> to memref<*xf32>
-  call @print_memref_f32(%converted): (memref<*xf32>) -> ()
+  call @printMemrefF32(%converted): (memref<*xf32>) -> ()
   // CHECK:      Unranked{{.*}}data =
   // CHECK:      [
   // CHECK-SAME:  [0,   100,   200,   300,   400,   500],

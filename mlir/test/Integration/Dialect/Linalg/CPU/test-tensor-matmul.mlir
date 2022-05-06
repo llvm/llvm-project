@@ -26,7 +26,7 @@ func.func @main() {
                      outs(%C: tensor<2x4xf32>) -> tensor<2x4xf32>
 
   %unranked = tensor.cast %D : tensor<2x4xf32> to tensor<*xf32>
-  call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%unranked) : (tensor<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 2 offset = 0 sizes = [2, 4] strides = [4, 1] data =
@@ -36,4 +36,4 @@ func.func @main() {
   return
 }
 
-func.func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)

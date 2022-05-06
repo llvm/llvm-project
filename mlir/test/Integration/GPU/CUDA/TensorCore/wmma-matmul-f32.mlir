@@ -51,7 +51,7 @@ func.func @main() {
     gpu.terminator
   }
   // Print the memref after computation.
-  call @print_memref_f32(%33) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%33) : (memref<*xf32>) -> ()
   // CHECK: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
   // CHECK-NEXT: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
   // CHECK-NEXT: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
@@ -71,4 +71,4 @@ func.func @main() {
   return
 }
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)

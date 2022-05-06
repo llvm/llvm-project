@@ -8,7 +8,7 @@ func.func @print_0d() {
   %A = memref.alloc() : memref<f32>
   memref.store %f, %A[]: memref<f32>
   %U = memref.cast %A :  memref<f32> to memref<*xf32>
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
   memref.dealloc %A : memref<f32>
   return
 }
@@ -21,7 +21,7 @@ func.func @print_1d() {
   %B = memref.cast %A: memref<16xf32> to memref<?xf32>
   linalg.fill ins(%f : f32) outs(%B : memref<?xf32>)
   %U = memref.cast %B :  memref<?xf32> to memref<*xf32>
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
   memref.dealloc %A : memref<16xf32>
   return
 }
@@ -38,7 +38,7 @@ func.func @print_3d() {
   %c2 = arith.constant 2 : index
   memref.store %f4, %B[%c2, %c2, %c2]: memref<?x?x?xf32>
   %U = memref.cast %B : memref<?x?x?xf32> to memref<*xf32>
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
   memref.dealloc %A : memref<3x4x5xf32>
   return
 }
@@ -49,7 +49,7 @@ func.func @print_3d() {
 //    PRINT-3D-NEXT: 2,    2,    4,    2,    2
 //    PRINT-3D-NEXT: 2,    2,    2,    2,    2
 
-func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 !vector_type_C = type vector<4x4xf32>
 !matrix_type_CC = type memref<1x1x!vector_type_C>
@@ -61,7 +61,7 @@ func.func @vector_splat_2d() {
   memref.store %vf10, %C[%c0, %c0]: !matrix_type_CC
 
   %CC = memref.cast %C: !matrix_type_CC to memref<?x?x!vector_type_C>
-  call @print_memref_vector_4x4xf32(%CC): (memref<?x?x!vector_type_C>) -> ()
+  call @printMemrefVector4x4xf32(%CC): (memref<?x?x!vector_type_C>) -> ()
 
   memref.dealloc %C : !matrix_type_CC
   return
@@ -70,4 +70,4 @@ func.func @vector_splat_2d() {
 // PRINT-VECTOR-SPLAT-2D: Memref base@ = {{.*}} rank = 2 offset = 0 sizes = [1, 1] strides = [1, 1] data =
 // PRINT-VECTOR-SPLAT-2D-NEXT: [((10, 10, 10, 10),   (10, 10, 10, 10),   (10, 10, 10, 10),   (10, 10, 10, 10))]
 
-func.func private @print_memref_vector_4x4xf32(memref<?x?x!vector_type_C>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefVector4x4xf32(memref<?x?x!vector_type_C>) attributes { llvm.emit_c_interface }
