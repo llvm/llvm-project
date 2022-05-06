@@ -1550,7 +1550,7 @@ unsigned AffineForOp::getNumIterOperands() {
 
 void AffineForOp::print(OpAsmPrinter &p) {
   p << ' ';
-  p.printRegionArgument(getBody()->getArgument(0), /*argAtrs=*/{},
+  p.printRegionArgument(getBody()->getArgument(0), /*argAttrs=*/{},
                         /*omitType=*/true);
   p << " = ";
   printBound(getLowerBoundMapAttr(), getLowerBoundOperands(), "max", p);
