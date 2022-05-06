@@ -45,6 +45,8 @@ const char *Action::getClassName(ActionClass AC) {
     return "clang-offload-unbundler";
   case OffloadWrapperJobClass:
     return "clang-offload-wrapper";
+  case OffloadPackagerJobClass:
+    return "clang-offload-packager";
   case LinkerWrapperJobClass:
     return "clang-linker-wrapper";
   case StaticLibJobClass:
@@ -431,6 +433,12 @@ void OffloadWrapperJobAction::anchor() {}
 OffloadWrapperJobAction::OffloadWrapperJobAction(ActionList &Inputs,
                                                  types::ID Type)
   : JobAction(OffloadWrapperJobClass, Inputs, Type) {}
+
+void OffloadPackagerJobAction::anchor() {}
+
+OffloadPackagerJobAction::OffloadPackagerJobAction(ActionList &Inputs,
+                                                   types::ID Type)
+    : JobAction(OffloadPackagerJobClass, Inputs, Type) {}
 
 void LinkerWrapperJobAction::anchor() {}
 

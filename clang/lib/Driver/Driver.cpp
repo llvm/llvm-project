@@ -4382,6 +4382,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
                     getFinalPhase(Args) == phases::Preprocess))
     return HostAction;
 
+  ActionList OffloadActions;
   OffloadAction::DeviceDependences DDeps;
 
   const Action::OffloadKind OffloadKinds[] = {
@@ -4457,6 +4458,9 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     auto TCAndArch = TCAndArchs.begin();
     for (Action *A : DeviceActions) {
       DDeps.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
+      OffloadAction::DeviceDependences DDep;
+      DDep.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
+      OffloadActions.push_back(C.MakeAction<OffloadAction>(DDep, A->getType()));
       ++TCAndArch;
     }
   }
@@ -4464,10 +4468,16 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   if (DeviceOnly)
     return C.MakeAction<OffloadAction>(DDeps, types::TY_Nothing);
 
+  Action *OffloadPackager =
+      C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
+  OffloadAction::DeviceDependences DDep;
+  DDep.add(*OffloadPackager, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
+           nullptr, Action::OFK_None);
   OffloadAction::HostDependence HDep(
       *HostAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
-      /*BoundArch=*/nullptr, DDeps);
-  return C.MakeAction<OffloadAction>(HDep, DDeps);
+      /*BoundArch=*/nullptr, isa<CompileJobAction>(HostAction) ? DDep : DDeps);
+  return C.MakeAction<OffloadAction>(
+      HDep, isa<CompileJobAction>(HostAction) ? DDep : DDeps);
 }
 
 Action *Driver::ConstructPhaseAction(

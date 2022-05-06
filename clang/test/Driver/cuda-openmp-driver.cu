@@ -11,7 +11,8 @@
 // BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]"], output: "[[PTX_SM_70:.+]]"
 // BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[PTX_SM_70:.+]]"], output: "[[CUBIN_SM_70:.+]]"
 // BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Linker", inputs: ["[[CUBIN_SM_70]]", "[[PTX_SM_70:.+]]"], output: "[[FATBIN_SM_70:.+]]"
-// BINDINGS-NEXT: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT]]", "[[FATBIN_SM_35]]", "[[FATBIN_SM_70]]"], output: "[[HOST_OBJ:.+]]"
+// BINDINGS-NEXT: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[FATBIN_SM_35]]", "[[FATBIN_SM_70]]"], output: "[[BINARY:.+]]"
+// BINDINGS-NEXT: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT]]", "[[BINARY]]"], output: "[[HOST_OBJ:.+]]"
 // BINDINGS-NEXT: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 
 // RUN: %clang -### -nocudalib --offload-new-driver %s 2>&1 | FileCheck -check-prefix RDC %s

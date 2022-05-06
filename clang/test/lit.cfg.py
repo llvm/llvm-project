@@ -63,7 +63,7 @@ config.substitutions.append(('%PATH%', config.environment['PATH']))
 tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 
 tools = [
-    'apinotes-test', 'c-index-test', 'clang-diff', 'clang-format', 'clang-repl',
+    'apinotes-test', 'c-index-test', 'clang-diff', 'clang-format', 'clang-repl', 'clang-offload-packager',
     'clang-tblgen', 'clang-scan-deps', 'opt', 'llvm-ifs', 'yaml2obj', 'clang-linker-wrapper',
     ToolSubst('%clang_extdef_map', command=FindTool(
         'clang-extdef-mapping'), unresolved='ignore'),

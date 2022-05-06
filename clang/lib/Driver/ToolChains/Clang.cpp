@@ -6985,22 +6985,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Host-side offloading recieves the device object files and embeds it in a
   // named section including the associated target triple and architecture.
-  for (const InputInfo Input : HostOffloadingInputs) {
-    const Action *OffloadAction = Input.getAction();
-    const ToolChain *TC = OffloadAction->getOffloadingToolChain();
-    const ArgList &TCArgs =
-        C.getArgsForToolChain(TC, OffloadAction->getOffloadingArch(),
-                              OffloadAction->getOffloadingDeviceKind());
-    StringRef File = C.getArgs().MakeArgString(TC->getInputFilename(Input));
-    StringRef Arch = (OffloadAction->getOffloadingArch())
-                         ? OffloadAction->getOffloadingArch()
-                         : TCArgs.getLastArgValue(options::OPT_march_EQ);
-
-    CmdArgs.push_back(Args.MakeArgString(
-        "-fembed-offload-object=" + File + "," +
-        Action::GetOffloadKindName(OffloadAction->getOffloadingDeviceKind()) +
-        "," + TC->getTripleString() + "," + Arch));
-  }
+  for (const InputInfo Input : HostOffloadingInputs)
+    CmdArgs.push_back(Args.MakeArgString("-fembed-offload-object=" +
+                                         TC.getInputFilename(Input)));
 
   if (Triple.isAMDGPU()) {
     handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
@@ -8229,6 +8216,42 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   for (const InputInfo &I : Inputs) {
     assert(I.isFilename() && "Invalid input.");
     CmdArgs.push_back(I.getFilename());
+  }
+
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::None(),
+      Args.MakeArgString(getToolChain().GetProgramPath(getShortName())),
+      CmdArgs, Inputs, Output));
+}
+
+void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
+                                   const InputInfo &Output,
+                                   const InputInfoList &Inputs,
+                                   const llvm::opt::ArgList &Args,
+                                   const char *LinkingOutput) const {
+  ArgStringList CmdArgs;
+
+  // Add the output file name.
+  assert(Output.isFilename() && "Invalid output.");
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+
+  // Create the inputs to bundle the needed metadata.
+  for (const InputInfo &Input : Inputs) {
+    const Action *OffloadAction = Input.getAction();
+    const ToolChain *TC = OffloadAction->getOffloadingToolChain();
+    const ArgList &TCArgs =
+        C.getArgsForToolChain(TC, OffloadAction->getOffloadingArch(),
+                              OffloadAction->getOffloadingDeviceKind());
+    StringRef File = C.getArgs().MakeArgString(TC->getInputFilename(Input));
+    StringRef Arch = (OffloadAction->getOffloadingArch())
+                         ? OffloadAction->getOffloadingArch()
+                         : TCArgs.getLastArgValue(options::OPT_march_EQ);
+
+    CmdArgs.push_back(Args.MakeArgString(
+        "--image=file=" + File + "," + "triple=" + TC->getTripleString() + "," +
+        "arch=" + Arch + "," + "kind=" +
+        Action::GetOffloadKindName(OffloadAction->getOffloadingDeviceKind())));
   }
 
   C.addCommand(std::make_unique<Command>(

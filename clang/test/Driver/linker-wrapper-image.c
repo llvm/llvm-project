@@ -2,8 +2,9 @@
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
 
+// RUN: clang-offload-packager -o %t.out --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
-// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,openmp,nvptx64-nvida-cuda,sm_70
+// RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple x86_64-unknown-linux-gnu \
 // RUN:   -linker-path /usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OPENMP
 
@@ -28,8 +29,9 @@
 // OPENMP-NEXT:   ret void
 // OPENMP-NEXT: }
 
+// RUN: clang-offload-packager -o %t.out --image=file=%S/Inputs/dummy-elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
-// RUN:   -fembed-offload-object=%S/Inputs/dummy-elf.o,cuda,nvptx64-nvida-cuda,sm_70
+// RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple x86_64-unknown-linux-gnu \
 // RUN:   -linker-path /usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CUDA
 

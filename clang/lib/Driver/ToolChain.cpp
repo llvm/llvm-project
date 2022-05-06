@@ -328,6 +328,12 @@ Tool *ToolChain::getOffloadWrapper() const {
   return OffloadWrapper.get();
 }
 
+Tool *ToolChain::getOffloadPackager() const {
+  if (!OffloadPackager)
+    OffloadPackager.reset(new tools::OffloadPackager(*this));
+  return OffloadPackager.get();
+}
+
 Tool *ToolChain::getLinkerWrapper() const {
   if (!LinkerWrapper)
     LinkerWrapper.reset(new tools::LinkerWrapper(*this, getLink()));
@@ -373,6 +379,8 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
 
   case Action::OffloadWrapperJobClass:
     return getOffloadWrapper();
+  case Action::OffloadPackagerJobClass:
+    return getOffloadPackager();
   case Action::LinkerWrapperJobClass:
     return getLinkerWrapper();
   }
