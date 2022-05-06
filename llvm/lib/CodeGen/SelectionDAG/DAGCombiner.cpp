@@ -4579,10 +4579,10 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   if (DAG.isKnownNeverZero(N1) && !TLI.isIntDivCheap(VT, Attr)) {
     if (isSigned) {
       // check if we can build faster implementation for srem
-      SDValue OptimizedRem = buildOptimizedSREM(N0, N1, N);
-      if (OptimizedRem.getNode())
+      if (SDValue OptimizedRem = buildOptimizedSREM(N0, N1, N))
         return OptimizedRem;
     }
+
     SDValue OptimizedDiv =
         isSigned ? visitSDIVLike(N0, N1, N) : visitUDIVLike(N0, N1, N);
     if (OptimizedDiv.getNode() && OptimizedDiv.getNode() != N) {
