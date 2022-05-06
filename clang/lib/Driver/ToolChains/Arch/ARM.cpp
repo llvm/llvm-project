@@ -718,6 +718,15 @@ fp16_fml_fallthrough:
     }
   }
 
+  // Propagate frame-chain model selection
+  if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
+    StringRef FrameChainOption = A->getValue();
+    if (FrameChainOption.startswith("aapcs"))
+      Features.push_back("+aapcs-frame-chain");
+    if (FrameChainOption == "aapcs+leaf")
+      Features.push_back("+aapcs-frame-chain-leaf");
+  }
+
   // CMSE: Check for target 8M (for -mcmse to be applicable) is performed later.
   if (Args.getLastArg(options::OPT_mcmse))
     Features.push_back("+8msecext");
