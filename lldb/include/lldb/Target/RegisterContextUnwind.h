@@ -203,8 +203,7 @@ private:
   void UnwindLogMsgVerbose(const char *fmt, ...)
       __attribute__((format(printf, 2, 3)));
 
-  bool IsUnwindPlanValidForCurrentPC(lldb::UnwindPlanSP unwind_plan_sp,
-                                     int &valid_pc_offset);
+  bool IsUnwindPlanValidForCurrentPC(lldb::UnwindPlanSP unwind_plan_sp);
 
   lldb::addr_t GetReturnAddressHint(int32_t plan_offset);
 
