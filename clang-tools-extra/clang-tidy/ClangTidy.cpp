@@ -402,11 +402,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
     Context.setCurrentBuildDirectory(WorkingDir.get());
 
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
-      CheckFactories->createChecks(&Context);
-
-  llvm::erase_if(Checks, [&](std::unique_ptr<ClangTidyCheck> &Check) {
-    return !Check->isLanguageVersionSupported(Context.getLangOpts());
-  });
+      CheckFactories->createChecksForLanguage(&Context);
 
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
 

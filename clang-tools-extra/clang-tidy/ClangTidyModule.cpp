@@ -31,6 +31,21 @@ ClangTidyCheckFactories::createChecks(ClangTidyContext *Context) {
   return Checks;
 }
 
+std::vector<std::unique_ptr<ClangTidyCheck>>
+ClangTidyCheckFactories::createChecksForLanguage(ClangTidyContext *Context) {
+  std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
+  const LangOptions &LO = Context->getLangOpts();
+  for (const auto &Factory : Factories) {
+    if (!Context->isCheckEnabled(Factory.getKey()))
+      continue;
+    std::unique_ptr<ClangTidyCheck> Check =
+        Factory.getValue()(Factory.getKey(), Context);
+    if (Check->isLanguageVersionSupported(LO))
+      Checks.push_back(std::move(Check));
+  }
+  return Checks;
+}
+
 ClangTidyOptions ClangTidyModule::getModuleOptions() {
   return ClangTidyOptions();
 }
