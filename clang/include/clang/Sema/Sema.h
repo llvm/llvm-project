@@ -9782,6 +9782,9 @@ public:
                       SmallVectorImpl<QualType> &ParamTypes,
                       SmallVectorImpl<ParmVarDecl *> *OutParams,
                       ExtParameterInfoBuilder &ParamInfos);
+  bool SubstDefaultArgument(SourceLocation Loc, ParmVarDecl *Param,
+                            const MultiLevelTemplateArgumentList &TemplateArgs,
+                            bool ForCallExpr = false);
   ExprResult SubstExpr(Expr *E,
                        const MultiLevelTemplateArgumentList &TemplateArgs);
 
