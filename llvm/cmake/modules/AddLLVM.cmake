@@ -1824,17 +1824,62 @@ function(add_lit_target target comment)
   set_target_properties(${target} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
 endfunction()
 
+# Convert a target name like check-clang to a variable name like CLANG.
+function(umbrella_lit_testsuite_var target outvar)
+  if (NOT target MATCHES "^check-")
+    message(FATAL_ERROR "umbrella lit suites must be check-*, not '${target}'")
+  endif()
+  string(SUBSTRING "${target}" 6 -1 var)
+  string(REPLACE "-" "_" var ${var})
+  string(TOUPPER "${var}" var)
+  set(${outvar} "${var}" PARENT_SCOPE)
+endfunction()
+
+# Start recording all lit test suites for a combined 'check-foo' target.
+# The recording continues until umbrella_lit_testsuite_end() creates the target.
+function(umbrella_lit_testsuite_begin target)
+  umbrella_lit_testsuite_var(${target} name)
+  set_property(GLOBAL APPEND PROPERTY LLVM_LIT_UMBRELLAS ${name})
+endfunction()
+
+# Create a combined 'check-foo' target for a set of related test suites.
+# It runs all suites added since the matching umbrella_lit_testsuite_end() call.
+# Tests marked EXCLUDE_FROM_CHECK_ALL are not gathered.
+function(umbrella_lit_testsuite_end target)
+  umbrella_lit_testsuite_var(${target} name)
+
+  get_property(testsuites GLOBAL PROPERTY LLVM_${name}_LIT_TESTSUITES)
+  get_property(params GLOBAL PROPERTY LLVM_${name}_LIT_PARAMS)
+  get_property(depends GLOBAL PROPERTY LLVM_${name}_LIT_DEPENDS)
+  get_property(extra_args GLOBAL PROPERTY LLVM_${name}_LIT_EXTRA_ARGS)
+  # Additional test targets are not gathered, but may be set externally.
+  get_property(additional_test_targets
+               GLOBAL PROPERTY LLVM_${name}_ADDITIONAL_TEST_TARGETS)
+
+  string(TOLOWER ${name} name)
+  add_lit_target(${target}
+    "Running ${name} regression tests"
+    ${testsuites}
+    PARAMS ${params}
+    DEPENDS ${depends} ${additional_test_targets}
+    ARGS ${extra_args}
+    )
+endfunction()
+
 # A function to add a set of lit test suites to be driven through 'check-*' targets.
 function(add_lit_testsuite target comment)
   cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
 
   # EXCLUDE_FROM_ALL excludes the test ${target} out of check-all.
   if(NOT ARG_EXCLUDE_FROM_CHECK_ALL)
-    # Register the testsuites, params and depends for the global check rule.
-    set_property(GLOBAL APPEND PROPERTY LLVM_LIT_TESTSUITES ${ARG_UNPARSED_ARGUMENTS})
-    set_property(GLOBAL APPEND PROPERTY LLVM_LIT_PARAMS ${ARG_PARAMS})
-    set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS ${ARG_DEPENDS})
-    set_property(GLOBAL APPEND PROPERTY LLVM_LIT_EXTRA_ARGS ${ARG_ARGS})
+    get_property(gather_names GLOBAL PROPERTY LLVM_LIT_UMBRELLAS)
+    foreach(name ${gather_names})
+    # Register the testsuites, params and depends for the umbrella check rule.
+      set_property(GLOBAL APPEND PROPERTY LLVM_${name}_LIT_TESTSUITES ${ARG_UNPARSED_ARGUMENTS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_${name}_LIT_PARAMS ${ARG_PARAMS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_${name}_LIT_DEPENDS ${ARG_DEPENDS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_${name}_LIT_EXTRA_ARGS ${ARG_ARGS})
+    endforeach()
   endif()
 
   # Produce a specific suffixed check rule.
