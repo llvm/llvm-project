@@ -125,6 +125,10 @@
     ret void
   }
 
+  define void @if_in_loop() {
+    ret void
+  }
+
   ; Function Attrs: nofree nosync nounwind readnone willreturn
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
@@ -819,6 +823,108 @@ body:             |
     %stval:vr = PHI %t4, %bb.1, %ldval, %bb.2
     $v0 = COPY %mask
     PseudoVSOXEI64_V_M1_MF8_MASK killed %stval, killed %b, %idxs, $v0, -1, 3
+    PseudoRET
+
+...
+---
+name:            if_in_loop
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: if_in_loop
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %dst:gpr = COPY $x10
+  ; CHECK-NEXT:   %src:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   %tc:gpr = COPY $x13
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x14
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x15
+  ; CHECK-NEXT:   %vlenb:gpr = PseudoReadVLENB
+  ; CHECK-NEXT:   %inc:gpr = SRLI killed %vlenb, 3
+  ; CHECK-NEXT:   dead %21:gpr = PseudoVSETVLIX0 $x0, 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[PseudoVID_V_M1_:%[0-9]+]]:vr = PseudoVID_V_M1 -1, 6 /* e64 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[COPY3]], %bb.0, %11, %bb.3
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:gpr = ADD [[COPY2]], [[PHI]]
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   [[PseudoVADD_VX_M1_:%[0-9]+]]:vr = PseudoVADD_VX_M1 [[PseudoVID_V_M1_]], killed [[ADD]], -1, 6 /* e64 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[PseudoVMSLTU_VX_M1_:%[0-9]+]]:vr = PseudoVMSLTU_VX_M1 [[PseudoVADD_VX_M1_]], [[COPY1]], -1, 6 /* e64 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 [[PseudoVMSLTU_VX_M1_]], -1, 0 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT:   BEQ killed [[PseudoVCPOP_M_B1_]], [[COPY4]], %bb.3
+  ; CHECK-NEXT:   PseudoBR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:gpr = ADD %src, [[PHI]]
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   [[PseudoVLE8_V_MF8_:%[0-9]+]]:vrnov0 = PseudoVLE8_V_MF8 killed [[ADD1]], -1, 3 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[PseudoVADD_VI_MF8_:%[0-9]+]]:vrnov0 = PseudoVADD_VI_MF8 [[PseudoVLE8_V_MF8_]], 4, -1, 3 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:gpr = ADD %dst, [[PHI]]
+  ; CHECK-NEXT:   PseudoVSE8_V_MF8 killed [[PseudoVADD_VI_MF8_]], killed [[ADD2]], -1, 3 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.4(0x04000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADD3:%[0-9]+]]:gpr = ADD [[PHI]], %inc
+  ; CHECK-NEXT:   BLTU [[ADD3]], %tc, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $x10, $x11, $x12, $x13, $x14, $x15
+
+    %dst:gpr = COPY $x10
+    %src:gpr = COPY $x11
+    %48:gpr = COPY $x12
+    %tc:gpr = COPY $x13
+    %11:gpr = COPY $x14
+    %12:gpr = COPY $x15
+    %vlenb:gpr = PseudoReadVLENB
+    %inc:gpr = SRLI killed %vlenb, 3
+    %10:vr = PseudoVID_V_M1 -1, 6
+    %59:gpr = COPY $x0
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+
+    %26:gpr = PHI %59, %bb.0, %28, %bb.3
+    %61:gpr = ADD %12, %26
+    %27:vr = PseudoVADD_VX_M1 %10, killed %61, -1, 6
+    %62:vr = PseudoVMSLTU_VX_M1 %27, %11, -1, 6
+    %63:gpr = PseudoVCPOP_M_B1 %62, -1, 0
+    %64:gpr = COPY $x0
+    BEQ killed %63, %64, %bb.3
+    PseudoBR %bb.2
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %66:gpr = ADD %src, %26
+    %67:vrnov0 = PseudoVLE8_V_MF8 killed %66, -1, 3
+    %76:vrnov0 = PseudoVADD_VI_MF8 %67, 4, -1, 3
+    %77:gpr = ADD %dst, %26
+    PseudoVSE8_V_MF8 killed %76, killed %77, -1, 3
+
+  bb.3:
+    successors: %bb.1(0x7c000000), %bb.4(0x04000000)
+
+    %28:gpr = ADD %26, %inc
+    BLTU %28, %tc, %bb.1
+    PseudoBR %bb.4
+
+  bb.4:
     PseudoRET
 
 ...
