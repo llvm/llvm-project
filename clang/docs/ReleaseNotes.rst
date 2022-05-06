@@ -147,9 +147,6 @@ Bug Fixes
   because there is no way to fully qualify the enumerator name, so this
   "extension" was unintentional and useless. This fixes
   `Issue 42372 <https://github.com/llvm/llvm-project/issues/42372>`_.
-- Now correctly diagnose use of ``//`` comments in ``gnu89`` mode (which
-  matches the behavior of GCC) in addition to ``c89`` mode. This fixes
-  `Issue 18427 <https://github.com/llvm/llvm-project/issues/18427>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
