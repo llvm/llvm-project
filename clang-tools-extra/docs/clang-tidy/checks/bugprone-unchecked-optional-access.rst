@@ -81,6 +81,8 @@ Rely on invariants of uncommon APIs
 
 The check is unaware of invariants of uncommon APIs. For example:
 
+.. code-block:: c++
+
    void f(Foo foo) {
      if (foo.HasProperty("bar")) {
        use(*foo.GetProperty("bar")); // unsafe: it is unclear whether `foo.GetProperty("bar")` has a value.
