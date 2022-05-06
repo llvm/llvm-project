@@ -3436,9 +3436,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         return (Style.SpaceBeforeParens != FormatStyle::SBPO_Never) ||
                spaceRequiredBeforeParens(Right);
     }
+    // Handle builtins like identifiers.
     if (Line.Type != LT_PreprocessorDirective &&
-        (Left.is(tok::identifier) || Left.isFunctionLikeKeyword() ||
-         Left.is(tok::r_paren) || Left.isSimpleTypeSpecifier()))
+        (Left.Tok.getIdentifierInfo() || Left.is(tok::r_paren)))
       return spaceRequiredBeforeParens(Right);
     return false;
   }
