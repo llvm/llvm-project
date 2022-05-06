@@ -104,12 +104,3 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
     return nullptr;
   return CI;
 }
-
-std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
-    ArrayRef<const char *> Args, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool ShouldRecoverOnErrors,
-    std::vector<std::string> *CC1Args, bool ProbePrecompiled) {
-  return createInvocation(
-      Args, CreateInvocationOptions{Diags, VFS, ShouldRecoverOnErrors,
-                                    ProbePrecompiled, CC1Args});
-}
