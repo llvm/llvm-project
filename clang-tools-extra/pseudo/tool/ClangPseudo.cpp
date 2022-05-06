@@ -17,6 +17,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Signals.h"
 
 using clang::pseudo::Grammar;
 using llvm::cl::desc;
@@ -52,6 +53,7 @@ static std::string readOrDie(llvm::StringRef Path) {
 
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "");
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   clang::LangOptions LangOpts = clang::pseudo::genericLangOpts();
   std::string SourceText;
