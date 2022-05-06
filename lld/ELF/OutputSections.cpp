@@ -123,7 +123,8 @@ void OutputSection::commitSection(InputSection *isec) {
                  "\n>>> output section " + name + ": " +
                  getELFSectionTypeName(config->emachine, type));
       }
-      type = SHT_PROGBITS;
+      if (!typeIsSet)
+        type = SHT_PROGBITS;
     } else {
       type = isec->type;
     }
