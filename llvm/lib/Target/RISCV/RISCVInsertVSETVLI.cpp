@@ -1015,6 +1015,8 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
     return;
 
   BBInfo.Exit = TmpStatus;
+  LLVM_DEBUG(dbgs() << "Exit state of " << printMBBReference(MBB)
+                    << " changed to " << BBInfo.Exit << "\n");
 
   // Add the successors to the work list so we can propagate the changed exit
   // status.
@@ -1200,6 +1202,8 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
     return false;
+
+  LLVM_DEBUG(dbgs() << "Entering InsertVSETVLI for " << MF.getName() << "\n");
 
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
