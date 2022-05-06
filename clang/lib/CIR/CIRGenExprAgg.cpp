@@ -121,7 +121,7 @@ public:
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {
     llvm_unreachable("NYI");
   }
-  void VisitLambdaExpr(LambdaExpr *E) { llvm_unreachable("NYI"); }
+  void VisitLambdaExpr(LambdaExpr *E);
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
     llvm_unreachable("NYI");
   }
@@ -167,6 +167,30 @@ void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
   if (UnimplementedFeature::cleanups())
     llvm_unreachable("NYI");
   Visit(E->getSubExpr());
+}
+
+void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
+  // We'll need to enter cleanup scopes in case any of the element initializers
+  // throws an exception.
+  if (UnimplementedFeature::cleanups())
+    llvm_unreachable("NYI");
+  mlir::Operation *CleanupDominator = nullptr;
+
+  CXXRecordDecl::field_iterator CurField = E->getLambdaClass()->field_begin();
+  for (LambdaExpr::const_capture_init_iterator i = E->capture_init_begin(),
+                                               e = E->capture_init_end();
+       i != e; ++i, ++CurField) {
+    llvm_unreachable("NYI");
+  }
+
+  // Deactivate all the partial cleanups in reverse order, which generally means
+  // popping them.
+  if (UnimplementedFeature::cleanups())
+    llvm_unreachable("NYI");
+
+  // Destroy the placeholder if we made one.
+  if (CleanupDominator)
+    CleanupDominator->erase();
 }
 
 /// CheckAggExprForMemSetUse - If the initializer is large and has a lot of
