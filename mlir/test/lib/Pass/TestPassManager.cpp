@@ -115,7 +115,7 @@ struct TestInvalidIRPass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestInvalidIRPass)
 
   TestInvalidIRPass() = default;
-  TestInvalidIRPass(const TestInvalidIRPass &other) {}
+  TestInvalidIRPass(const TestInvalidIRPass &other) : PassWrapper(other) {}
 
   StringRef getArgument() const final { return "test-pass-create-invalid-ir"; }
   StringRef getDescription() const final {
