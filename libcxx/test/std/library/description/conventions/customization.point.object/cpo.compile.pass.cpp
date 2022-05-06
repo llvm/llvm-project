@@ -80,7 +80,7 @@ static_assert(test(std::ranges::ssize, a));
 static_assert(test(std::views::iota, 1));
 static_assert(test(std::views::iota, 1, 10));
 //static_assert(test(std::views::istream<int>, 1);
-//static_assert(test(std::views::single, 4));
+static_assert(test(std::views::single, 4));
 
 // [range.adaptors]
 static_assert(test(std::views::all, a));
