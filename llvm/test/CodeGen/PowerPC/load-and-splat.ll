@@ -604,22 +604,31 @@ define <16 x i8> @adjusted_lxvwsx(i64* %s, i64* %t) {
 ;
 ; P9-AIX32-LABEL: adjusted_lxvwsx:
 ; P9-AIX32:       # %bb.0: # %entry
-; P9-AIX32-NEXT:    addi r3, r3, 4
-; P9-AIX32-NEXT:    lxvwsx v2, 0, r3
+; P9-AIX32-NEXT:    lwz r3, 4(r3)
+; P9-AIX32-NEXT:    stw r3, -16(r1)
+; P9-AIX32-NEXT:    lxv vs0, -16(r1)
+; P9-AIX32-NEXT:    xxmrghw v2, vs0, vs0
+; P9-AIX32-NEXT:    xxspltw v2, v2, 1
 ; P9-AIX32-NEXT:    blr
 ;
 ; P8-AIX32-LABEL: adjusted_lxvwsx:
 ; P8-AIX32:       # %bb.0: # %entry
-; P8-AIX32-NEXT:    addi r3, r3, 4
-; P8-AIX32-NEXT:    lfiwzx f0, 0, r3
-; P8-AIX32-NEXT:    xxspltw v2, vs0, 1
+; P8-AIX32-NEXT:    lwz r3, 4(r3)
+; P8-AIX32-NEXT:    addi r4, r1, -16
+; P8-AIX32-NEXT:    stw r3, -16(r1)
+; P8-AIX32-NEXT:    lxvw4x vs0, 0, r4
+; P8-AIX32-NEXT:    xxmrghw v2, vs0, vs0
+; P8-AIX32-NEXT:    xxspltw v2, v2, 1
 ; P8-AIX32-NEXT:    blr
 ;
 ; P7-AIX32-LABEL: adjusted_lxvwsx:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    addi r3, r3, 4
-; P7-AIX32-NEXT:    lfiwzx f0, 0, r3
-; P7-AIX32-NEXT:    xxspltw v2, vs0, 1
+; P7-AIX32-NEXT:    lwz r3, 4(r3)
+; P7-AIX32-NEXT:    addi r4, r1, -16
+; P7-AIX32-NEXT:    stw r3, -16(r1)
+; P7-AIX32-NEXT:    lxvw4x vs0, 0, r4
+; P7-AIX32-NEXT:    xxmrghw v2, vs0, vs0
+; P7-AIX32-NEXT:    xxspltw v2, v2, 1
 ; P7-AIX32-NEXT:    blr
   entry:
     %0 = bitcast i64* %s to <8 x i8>*
