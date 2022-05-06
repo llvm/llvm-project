@@ -104,6 +104,7 @@ private:
   bool scalarizeLoadExtract(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
+  bool foldSelectShuffle(Instruction &I);
 
   void replaceValue(Value &Old, Value &New) {
     Old.replaceAllUsesWith(&New);
@@ -1225,6 +1226,219 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   return false;
 }
 
+/// This method looks for groups of shuffles acting on binops, of the form:
+///  %x = shuffle ...
+///  %y = shuffle ...
+///  %a = binop %x, %y
+///  %b = binop %x, %y
+///  shuffle %a, %b, selectmask
+/// We may, especially if the shuffle is wider than legal, be able to convert
+/// the shuffle to a form where only parts of a and b need to be computed. On
+/// architectures with no obvious "select" shuffle, this can reduce the total
+/// number of operations if the target reports them as cheaper.
+bool VectorCombine::foldSelectShuffle(Instruction &I) {
+  auto *SVI = dyn_cast<ShuffleVectorInst>(&I);
+  auto *VT = dyn_cast<FixedVectorType>(I.getType());
+  if (!SVI || !VT)
+    return false;
+  auto *Op0 = dyn_cast<Instruction>(SVI->getOperand(0));
+  auto *Op1 = dyn_cast<Instruction>(SVI->getOperand(1));
+  if (!Op0 || !Op1 || Op0 == Op1 || !Op0->isBinaryOp() || !Op1->isBinaryOp() ||
+      VT != Op0->getType())
+    return false;
+  auto *SVI0A = dyn_cast<ShuffleVectorInst>(Op0->getOperand(0));
+  auto *SVI0B = dyn_cast<ShuffleVectorInst>(Op0->getOperand(1));
+  auto *SVI1A = dyn_cast<ShuffleVectorInst>(Op1->getOperand(0));
+  auto *SVI1B = dyn_cast<ShuffleVectorInst>(Op1->getOperand(1));
+  auto checkSVNonOpUses = [&](Instruction *I) {
+    if (!I || I->getOperand(0)->getType() != VT)
+      return true;
+    return any_of(I->users(), [&](User *U) { return U != Op0 && U != Op1; });
+  };
+  if (checkSVNonOpUses(SVI0A) || checkSVNonOpUses(SVI0B) ||
+      checkSVNonOpUses(SVI1A) || checkSVNonOpUses(SVI1B))
+    return false;
+
+  // Collect all the uses that are shuffles that we can transform together. We
+  // may not have a single shuffle, but a group that can all be transformed
+  // together profitably.
+  SmallVector<ShuffleVectorInst *> Shuffles;
+  auto collectShuffles = [&](Instruction *I) {
+    for (auto *U : I->users()) {
+      auto *SV = dyn_cast<ShuffleVectorInst>(U);
+      if (!SV || SV->getType() != VT)
+        return false;
+      if (find(Shuffles, SV) == Shuffles.end())
+        Shuffles.push_back(SV);
+    }
+    return true;
+  };
+  if (!collectShuffles(Op0) || !collectShuffles(Op1))
+    return false;
+
+  // For each of the output shuffles, we try to sort all the first vector
+  // elements to the beginning, followed by the second array elements at the
+  // end. If the binops are legalized to smaller vectors, this may reduce total
+  // number of binops. We compute the ReconstructMask mask needed to convert
+  // back to the original lane order.
+  SmallVector<int> V1, V2;
+  SmallVector<SmallVector<int>> ReconstructMasks;
+  int MaxV1Elt = 0, MaxV2Elt = 0;
+  unsigned NumElts = VT->getNumElements();
+  for (ShuffleVectorInst *SVN : Shuffles) {
+    SmallVector<int> Mask;
+    SVN->getShuffleMask(Mask);
+
+    // Check the operands are the same as the original, or reversed (in which
+    // case we need to commute the mask).
+    Value *SVOp0 = SVN->getOperand(0);
+    Value *SVOp1 = SVN->getOperand(1);
+    if (SVOp0 == Op1 && SVOp1 == Op0) {
+      std::swap(SVOp0, SVOp1);
+      ShuffleVectorInst::commuteShuffleMask(Mask, NumElts);
+    }
+    if (SVOp0 != Op0 || SVOp1 != Op1)
+      return false;
+
+    // Calculate the reconstruction mask for this shuffle, as the mask needed to
+    // take the packed values from Op0/Op1 and reconstructing to the original
+    // order.
+    SmallVector<int> ReconstructMask;
+    for (unsigned I = 0; I < Mask.size(); I++) {
+      if (Mask[I] < 0) {
+        ReconstructMask.push_back(-1);
+      } else if (Mask[I] < static_cast<int>(NumElts)) {
+        MaxV1Elt = std::max(MaxV1Elt, Mask[I]);
+        auto It = find(V1, Mask[I]);
+        if (It != V1.end())
+          ReconstructMask.push_back(It - V1.begin());
+        else {
+          ReconstructMask.push_back(V1.size());
+          V1.push_back(Mask[I]);
+        }
+      } else {
+        MaxV2Elt = std::max<int>(MaxV2Elt, Mask[I] - NumElts);
+        auto It = find(V2, Mask[I] - NumElts);
+        if (It != V2.end())
+          ReconstructMask.push_back(NumElts + It - V2.begin());
+        else {
+          ReconstructMask.push_back(NumElts + V2.size());
+          V2.push_back(Mask[I] - NumElts);
+        }
+      }
+    }
+
+    ReconstructMasks.push_back(ReconstructMask);
+  }
+
+  // If the Maximum element used from V1 and V2 are not larger than the new
+  // vectors, the vectors are already packes and performing the optimization
+  // again will likely not help any further. This also prevents us from getting
+  // stuck in a cycle in case the costs do not also rule it out.
+  if (V1.empty() || V2.empty() ||
+      (MaxV1Elt == static_cast<int>(V1.size()) - 1 &&
+       MaxV2Elt == static_cast<int>(V2.size()) - 1))
+    return false;
+
+  // Calculate the masks needed for the new input shuffles, which get padded
+  // with undef
+  SmallVector<int> V1A, V1B, V2A, V2B;
+  for (unsigned I = 0; I < V1.size(); I++) {
+    V1A.push_back(SVI0A->getMaskValue(V1[I]));
+    V1B.push_back(SVI0B->getMaskValue(V1[I]));
+  }
+  for (unsigned I = 0; I < V2.size(); I++) {
+    V2A.push_back(SVI1A->getMaskValue(V2[I]));
+    V2B.push_back(SVI1B->getMaskValue(V2[I]));
+  }
+  while (V1A.size() < NumElts) {
+    V1A.push_back(UndefMaskElem);
+    V1B.push_back(UndefMaskElem);
+  }
+  while (V2A.size() < NumElts) {
+    V2A.push_back(UndefMaskElem);
+    V2B.push_back(UndefMaskElem);
+  }
+
+  auto AddShuffleCost = [&](InstructionCost C, ShuffleVectorInst *SV) {
+    return C +
+           TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, SV->getShuffleMask());
+  };
+  auto AddShuffleMaskCost = [&](InstructionCost C, ArrayRef<int> Mask) {
+    return C + TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, Mask);
+  };
+
+  // Get the costs of the shuffles + binops before and after with the new
+  // shuffle masks.
+  InstructionCost CostBefore =
+      TTI.getArithmeticInstrCost(Op0->getOpcode(), VT) +
+      TTI.getArithmeticInstrCost(Op1->getOpcode(), VT);
+  CostBefore += std::accumulate(Shuffles.begin(), Shuffles.end(),
+                                InstructionCost(0), AddShuffleCost);
+  // This set helps us only cost each unique shuffle once.
+  SmallPtrSet<ShuffleVectorInst *, 4> InputShuffles(
+      {SVI0A, SVI0B, SVI1A, SVI1B});
+  CostBefore += std::accumulate(InputShuffles.begin(), InputShuffles.end(),
+                                InstructionCost(0), AddShuffleCost);
+
+  // The new binops will be unused for lanes past the used shuffle lengths.
+  // These types attempt to get the correct cost for that from the target.
+  FixedVectorType *Op0SmallVT =
+      FixedVectorType::get(VT->getScalarType(), V1.size());
+  FixedVectorType *Op1SmallVT =
+      FixedVectorType::get(VT->getScalarType(), V2.size());
+  InstructionCost CostAfter =
+      TTI.getArithmeticInstrCost(Op0->getOpcode(), Op0SmallVT) +
+      TTI.getArithmeticInstrCost(Op1->getOpcode(), Op1SmallVT);
+  CostAfter += std::accumulate(ReconstructMasks.begin(), ReconstructMasks.end(),
+                               InstructionCost(0), AddShuffleMaskCost);
+  std::set<SmallVector<int>> OutputShuffleMasks({V1A, V1B, V2A, V2B});
+  CostAfter +=
+      std::accumulate(OutputShuffleMasks.begin(), OutputShuffleMasks.end(),
+                      InstructionCost(0), AddShuffleMaskCost);
+
+  if (CostBefore <= CostAfter)
+    return false;
+
+  // The cost model has passed, create the new instructions.
+  Builder.SetInsertPoint(SVI0A);
+  Value *NSV0A = Builder.CreateShuffleVector(SVI0A->getOperand(0),
+                                             SVI0A->getOperand(1), V1A);
+  Builder.SetInsertPoint(SVI0B);
+  Value *NSV0B = Builder.CreateShuffleVector(SVI0B->getOperand(0),
+                                             SVI0B->getOperand(1), V1B);
+  Builder.SetInsertPoint(SVI1A);
+  Value *NSV1A = Builder.CreateShuffleVector(SVI1A->getOperand(0),
+                                             SVI1A->getOperand(1), V2A);
+  Builder.SetInsertPoint(SVI1B);
+  Value *NSV1B = Builder.CreateShuffleVector(SVI1B->getOperand(0),
+                                             SVI1B->getOperand(1), V2B);
+  Builder.SetInsertPoint(Op0);
+  Value *NOp0 = Builder.CreateBinOp((Instruction::BinaryOps)Op0->getOpcode(),
+                                    NSV0A, NSV0B);
+  if (auto *I = dyn_cast<Instruction>(NOp0))
+    I->copyIRFlags(Op0, true);
+  Builder.SetInsertPoint(Op1);
+  Value *NOp1 = Builder.CreateBinOp((Instruction::BinaryOps)Op1->getOpcode(),
+                                    NSV1A, NSV1B);
+  if (auto *I = dyn_cast<Instruction>(NOp1))
+    I->copyIRFlags(Op1, true);
+
+  for (int S = 0, E = ReconstructMasks.size(); S != E; S++) {
+    Builder.SetInsertPoint(Shuffles[S]);
+    Value *NSV = Builder.CreateShuffleVector(NOp0, NOp1, ReconstructMasks[S]);
+    replaceValue(*Shuffles[S], *NSV);
+  }
+
+  Worklist.pushValue(NSV0A);
+  Worklist.pushValue(NSV0B);
+  Worklist.pushValue(NSV1A);
+  Worklist.pushValue(NSV1B);
+  for (auto *S : Shuffles)
+    Worklist.add(S);
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -1245,6 +1459,7 @@ bool VectorCombine::run() {
       MadeChange |= foldExtractedCmps(I);
       MadeChange |= foldShuffleOfBinops(I);
       MadeChange |= foldShuffleFromReductions(I);
+      MadeChange |= foldSelectShuffle(I);
     }
     MadeChange |= scalarizeBinopOrCmp(I);
     MadeChange |= scalarizeLoadExtract(I);
