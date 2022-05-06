@@ -194,27 +194,35 @@ void CIRRecordLowering::accumulateFields() {
 }
 
 std::unique_ptr<CIRGenRecordLayout>
-CIRGenTypes::computeRecordLayout(const RecordDecl *recordDecl,
+CIRGenTypes::computeRecordLayout(const RecordDecl *D,
                                  mlir::cir::StructType &Ty) {
-  CIRRecordLowering builder(*this, recordDecl, /*packed=*/false);
+  CIRRecordLowering builder(*this, D, /*packed=*/false);
 
   builder.lower(/*nonVirtualBaseType=*/false);
 
+  auto name = getRecordTypeName(D, "");
+  auto identifier = mlir::StringAttr::get(&getMLIRContext(), name);
+
   // If we're in C++, compute the base subobject type.
   mlir::cir::StructType BaseTy = nullptr;
-  if (llvm::isa<CXXRecordDecl>(recordDecl) && !recordDecl->isUnion() &&
-      !recordDecl->hasAttr<FinalAttr>()) {
+  if (llvm::isa<CXXRecordDecl>(D) && !D->isUnion() &&
+      !D->hasAttr<FinalAttr>()) {
     BaseTy = Ty;
     if (builder.astRecordLayout.getNonVirtualSize() !=
         builder.astRecordLayout.getSize()) {
-      llvm_unreachable("NYI");
+      CIRRecordLowering baseBuilder(*this, D, /*Packed=*/builder.isPacked);
+      auto baseIdentifier =
+          mlir::StringAttr::get(&getMLIRContext(), name + ".base");
+      BaseTy = mlir::cir::StructType::get(
+          &getMLIRContext(), baseBuilder.fieldTypes, baseIdentifier);
+      // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
+      // on both of them with the same index.
+      assert(builder.isPacked == baseBuilder.isPacked &&
+             "Non-virtual and complete types must agree on packedness");
     }
   }
 
   assert(!builder.isPacked && "Packed structs NYI");
-
-  auto name = getRecordTypeName(recordDecl, "");
-  auto identifier = mlir::StringAttr::get(&getMLIRContext(), name);
 
   Ty = mlir::cir::StructType::get(&getMLIRContext(), builder.fieldTypes,
                                   identifier);
