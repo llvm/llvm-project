@@ -3448,30 +3448,14 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
 Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
                                               SelectInst *SI, Value *RHS,
                                               const ICmpInst &I) {
-  // If either operand of the select is a constant, we can fold the
-  // comparison into the select arms, which will cause one to be
-  // constant folded and the select turned into a bitwise or.
-  auto *RHSC = dyn_cast<Constant>(RHS);
-  if (!RHSC)
-    return nullptr;
-
-  auto SimplifyOp = [&](Value *V) {
-    Value *Op = nullptr;
-    if (Constant *C = dyn_cast<Constant>(V)) {
-      Op = ConstantExpr::getICmp(Pred, C, RHSC);
-    } else if (RHSC->isNullValue()) {
-      // If null is being compared, check if it can be further simplified.
-      Op = SimplifyICmpInst(Pred, V, RHSC, SQ);
-    }
-    return Op;
-  };
-
+  // Try to fold the comparison into the select arms, which will cause the
+  // select to be converted into a logical and/or.
   ConstantInt *CI = nullptr;
-  Value *Op1 = SimplifyOp(SI->getOperand(1));
+  Value *Op1 = SimplifyICmpInst(Pred, SI->getOperand(1), RHS, SQ);
   if (Op1)
     CI = dyn_cast<ConstantInt>(Op1);
 
-  Value *Op2 = SimplifyOp(SI->getOperand(2));
+  Value *Op2 = SimplifyICmpInst(Pred, SI->getOperand(2), RHS, SQ);
   if (Op2)
     CI = dyn_cast<ConstantInt>(Op2);
 
@@ -3498,9 +3482,9 @@ Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
   }
   if (Transform) {
     if (!Op1)
-      Op1 = Builder.CreateICmp(Pred, SI->getOperand(1), RHSC, I.getName());
+      Op1 = Builder.CreateICmp(Pred, SI->getOperand(1), RHS, I.getName());
     if (!Op2)
-      Op2 = Builder.CreateICmp(Pred, SI->getOperand(2), RHSC, I.getName());
+      Op2 = Builder.CreateICmp(Pred, SI->getOperand(2), RHS, I.getName());
     return SelectInst::Create(SI->getOperand(0), Op1, Op2);
   }
 
@@ -6115,6 +6099,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
 
   if (auto *SI = dyn_cast<SelectInst>(Op0))
     if (Instruction *NI = foldSelectICmp(I.getPredicate(), SI, Op1, I))
+      return NI;
+  if (auto *SI = dyn_cast<SelectInst>(Op1))
+    if (Instruction *NI = foldSelectICmp(I.getSwappedPredicate(), SI, Op0, I))
       return NI;
 
   // Try to optimize equality comparisons against alloca-based pointers.
