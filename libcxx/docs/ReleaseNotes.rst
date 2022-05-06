@@ -42,7 +42,9 @@ New Features
 
 - Implemented P1165R1 (Make stateful allocator propagation more consistent for ``operator+(basic_string)``)
 
-- Implemented P0674R1 (Support arrays in make_shared and allocate_shared)
+- Implemented P0674R1 (Support arrays in ``make_shared`` and ``allocate_shared``)
+
+- Implemented P0980R1 (Making ``std::string`` constexpr)
 
 - `pop_heap` now uses an algorithm known as "bottom-up heapsort" or
   "heapsort with bounce" to reduce the number of comparisons, and rearranges
