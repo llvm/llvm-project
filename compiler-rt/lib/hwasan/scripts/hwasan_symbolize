@@ -16,6 +16,8 @@ from __future__ import unicode_literals
 
 import argparse
 import glob
+import html
+import json
 import mmap
 import os
 import re
@@ -106,9 +108,39 @@ class Symbolizer:
     self.__log = False
     self.__warnings = set()
     self.__index = {}
+    self.__link_prefixes = []
+    self.__html = False
+
+  def enable_html(self, enable):
+    self.__html = enable
 
   def enable_logging(self, enable):
     self.__log = enable
+
+  def maybe_escape(self, text):
+    if self.__html:
+      # We need to manually use &nbsp; for leading spaces, html.escape does
+      # not do that, and HTML ignores them.
+      spaces = 0
+      for i, c in enumerate(text):
+        spaces = i
+        if c != ' ':
+          break
+      text = text[spaces:]
+      return spaces * '&nbsp;' + html.escape(text)
+    return text
+
+  def print(self, line, escape=True):
+    if escape:
+      line = self.maybe_escape(line)
+    if self.__html:
+      line += '<br/>'
+    print(line)
+
+  def read_linkify(self, filename):
+    with open(filename, 'r') as fd:
+      data = json.load(fd)
+    self.__link_prefixes = [(e["prefix"], e["link"]) for e in data]
 
   def __open_pipe(self):
     if not self.__pipe:
@@ -207,6 +239,26 @@ class Symbolizer:
     except Symbolizer.__EOF:
       pass
 
+  def maybe_linkify(self, file_line):
+    if not self.__html or not self.__link_prefixes:
+      return file_line
+    filename, line_col = file_line.split(':', 1)
+    if not line_col:
+      line = '0' # simplify the link generation
+    else:
+      line = line_col.split(':')[0]
+    longest_prefix = max((
+      (prefix, link) for prefix, link in self.__link_prefixes
+      if filename.startswith(prefix)),
+      key=lambda x: len(x[0]), default=None)
+    if longest_prefix is None:
+      return file_line
+    else:
+      prefix, link = longest_prefix
+      return '<a href="{}">{}</a>'.format(
+        html.escape(link.format(file=filename[len(prefix):], line=line,
+                                file_line=file_line, prefix=prefix)), file_line)
+
   def build_index(self):
     for p in self.__binary_prefixes:
       for dname, _, fnames in os.walk(p):
@@ -229,16 +281,22 @@ def symbolize_line(line, symbolizer_path):
     frames = list(symbolizer.iter_call_stack(binary, buildid, addr))
 
     if len(frames) > 0:
-      print("%s#%s%s%s in %s" % (match.group(1), match.group(2),
-                                 match.group(3), frames[0][0], frames[0][1]))
+      symbolizer.print(
+        symbolizer.maybe_escape(
+          "%s#%s%s%s in " % (match.group(1), match.group(2), match.group(3),
+                            frames[0][0])
+        ) + symbolizer.maybe_linkify(frames[0][1]),
+        escape=False)
       for i in range(1, len(frames)):
         space1 = ' ' * match.end(1)
         space2 = ' ' * (match.start(4) - match.end(1) - 2)
-        print("%s->%s%s in %s" % (space1, space2, frames[i][0], frames[i][1]))
+        symbolizer.print(
+          symbolizer.maybe_escape("%s->%s%s in " % (space1, space2, frames[i][0]))
+            + symbolizer.maybe_linkify(frames[i][1]), escape=False)
     else:
-      print(line.rstrip())
+      symbolizer.print(line.rstrip())
   else:
-    print(line.rstrip())
+    symbolizer.print(line.rstrip())
 
 def save_access_address(line):
   global last_access_address, last_access_tag
@@ -280,10 +338,10 @@ def process_stack_history(line, symbolizer, ignore_tags=False):
       tag_offset = local[5]
       if not ignore_tags and (tag_offset is None or base_tag ^ tag_offset != last_access_tag):
         continue
-      print('')
-      print('Potentially referenced stack object:')
-      print('  %d bytes inside variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0]))
-      print('  at %s' % (local[1],))
+      symbolizer.print('')
+      symbolizer.print('Potentially referenced stack object:')
+      symbolizer.print('  %d bytes inside variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0]))
+      symbolizer.print('  at %s' % (local[1],))
     return True
   return False
 
@@ -295,6 +353,8 @@ parser.add_argument('--symbols', action='append')
 parser.add_argument('--source', action='append')
 parser.add_argument('--index', action='store_true')
 parser.add_argument('--symbolizer')
+parser.add_argument('--linkify', type=str)
+parser.add_argument('--html', action='store_true')
 parser.add_argument('args', nargs=argparse.REMAINDER)
 args = parser.parse_args()
 
@@ -380,9 +440,16 @@ if args.v:
   print()
 
 symbolizer = Symbolizer(symbolizer_path, binary_prefixes, paths_to_cut)
+symbolizer.enable_html(args.html)
 symbolizer.enable_logging(args.d)
 if args.index:
   symbolizer.build_index()
+
+if args.linkify:
+  if not args.html:
+    print('Need --html to --linkify', file=sys.stderr)
+    sys.exit(1)
+  symbolizer.read_linkify(args.linkify)
 
 for line in sys.stdin:
   if sys.version_info.major < 3:
