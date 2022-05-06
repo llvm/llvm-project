@@ -170,7 +170,7 @@
 // RUN: %clang -target i386-linux-gnu -mlvi-hardening %s -### -o %t.o 2>&1 | FileCheck -check-prefix=LVIHARDENING %s
 // RUN: %clang -target i386-linux-gnu -mno-lvi-hardening %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-LVIHARDENING %s
 // LVIHARDENING: "-target-feature" "+lvi-load-hardening" "-target-feature" "+lvi-cfi"
-// NO-LVIHARDENING-NOT: lvi
+// NO-LVIHARDENING-NOT: "+lvi-
 
 // RUN: %clang -target i386-linux-gnu -mlvi-hardening -mspeculative-load-hardening %s -### -o %t.o 2>&1 | FileCheck -check-prefix=LVIHARDENING-SLH %s
 // LVIHARDENING-SLH: error: invalid argument 'mspeculative-load-hardening' not allowed with 'mlvi-hardening'
