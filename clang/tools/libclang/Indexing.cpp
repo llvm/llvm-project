@@ -510,6 +510,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
+  CIOpts.ProbePrecompiled = true; // FIXME: historical default. Needed?
   std::shared_ptr<CompilerInvocation> CInvok =
       createInvocation(*Args, std::move(CIOpts));
 
