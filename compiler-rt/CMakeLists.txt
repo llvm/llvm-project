@@ -506,11 +506,6 @@ list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
 
 macro(append_libcxx_libs var)
   if (${var}_INTREE)
-    # If we're linking directly against the libunwind that we're building
-    # in the same invocation, don't try to link in the toolchain's
-    # default libunwind (which may be missing still).
-    append_list_if(CXX_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none SANITIZER_COMMON_LINK_FLAGS)
-
     if (SANITIZER_USE_STATIC_LLVM_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
       list(APPEND ${var}_LIBRARIES unwind_static)
     elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
