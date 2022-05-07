@@ -1277,7 +1277,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Rotate(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   SDValue Hi = GetPromotedInteger(N->getOperand(0));
   SDValue Lo = GetPromotedInteger(N->getOperand(1));
-  SDValue Amt = ZExtPromotedInteger(N->getOperand(2));
+  SDValue Amt = N->getOperand(2);
+  if (getTypeAction(Amt.getValueType()) == TargetLowering::TypePromoteInteger)
+    Amt = ZExtPromotedInteger(Amt);
+  EVT AmtVT = Amt.getValueType();
 
   SDLoc DL(N);
   EVT OldVT = N->getOperand(0).getValueType();
@@ -1288,7 +1291,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   unsigned NewBits = VT.getScalarSizeInBits();
 
   // Amount has to be interpreted modulo the old bit width.
-  Amt = DAG.getNode(ISD::UREM, DL, VT, Amt, DAG.getConstant(OldBits, DL, VT));
+  Amt = DAG.getNode(ISD::UREM, DL, AmtVT, Amt,
+                    DAG.getConstant(OldBits, DL, AmtVT));
 
   // If the promoted type is twice the size (or more), then we use the
   // traditional funnel 'double' shift codegen. This isn't necessary if the
@@ -1308,13 +1312,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   }
 
   // Shift Lo up to occupy the upper bits of the promoted type.
-  SDValue ShiftOffset = DAG.getConstant(NewBits - OldBits, DL, VT);
+  SDValue ShiftOffset = DAG.getConstant(NewBits - OldBits, DL, AmtVT);
   Lo = DAG.getNode(ISD::SHL, DL, VT, Lo, ShiftOffset);
 
   // Increase Amount to shift the result into the lower bits of the promoted
   // type.
   if (IsFSHR)
-    Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, ShiftOffset);
+    Amt = DAG.getNode(ISD::ADD, DL, AmtVT, Amt, ShiftOffset);
 
   return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amt);
 }
@@ -1639,6 +1643,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::ROTL:
   case ISD::ROTR: Res = PromoteIntOp_Shift(N); break;
 
+  case ISD::FSHL:
+  case ISD::FSHR: Res = PromoteIntOp_FunnelShift(N); break;
+
   case ISD::SADDO_CARRY:
   case ISD::SSUBO_CARRY:
   case ISD::ADDCARRY:
@@ -1931,6 +1938,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SETCC(SDNode *N, unsigned OpNo) {
 SDValue DAGTypeLegalizer::PromoteIntOp_Shift(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0),
                                 ZExtPromotedInteger(N->getOperand(1))), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_FunnelShift(SDNode *N) {
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), N->getOperand(1),
+                                ZExtPromotedInteger(N->getOperand(2))), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_SIGN_EXTEND(SDNode *N) {
