@@ -144,26 +144,30 @@ void genCharacterCopy(mlir::Value src, mlir::Value srcLen, mlir::Value dst,
 
 /// Get extents from fir.shape/fir.shape_shift op. Empty result if
 /// \p shapeVal is empty or is a fir.shift.
-inline std::vector<mlir::Value> getExtents(mlir::Value shapeVal) {
+inline llvm::SmallVector<mlir::Value> getExtents(mlir::Value shapeVal) {
   if (shapeVal)
     if (auto *shapeOp = shapeVal.getDefiningOp()) {
       if (auto shOp = mlir::dyn_cast<fir::ShapeOp>(shapeOp)) {
         auto operands = shOp.getExtents();
         return {operands.begin(), operands.end()};
       }
-      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp))
-        return shOp.getExtents();
+      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
+        auto operands = shOp.getExtents();
+        return {operands.begin(), operands.end()};
+      }
     }
   return {};
 }
 
 /// Get origins from fir.shape_shift/fir.shift op. Empty result if
 /// \p shapeVal is empty or is a fir.shape.
-inline std::vector<mlir::Value> getOrigins(mlir::Value shapeVal) {
+inline llvm::SmallVector<mlir::Value> getOrigins(mlir::Value shapeVal) {
   if (shapeVal)
     if (auto *shapeOp = shapeVal.getDefiningOp()) {
-      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp))
-        return shOp.getOrigins();
+      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
+        auto operands = shOp.getOrigins();
+        return {operands.begin(), operands.end()};
+      }
       if (auto shOp = mlir::dyn_cast<fir::ShiftOp>(shapeOp)) {
         auto operands = shOp.getOrigins();
         return {operands.begin(), operands.end()};
