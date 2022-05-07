@@ -109,6 +109,7 @@ endif()
 
 add_clang_subdirectory(handle-cxx)
 add_clang_subdirectory(handle-llvm)
+add_clang_subdirectory(dictionary)
 
 add_clang_executable(clang-fuzzer
   EXCLUDE_FROM_ALL
