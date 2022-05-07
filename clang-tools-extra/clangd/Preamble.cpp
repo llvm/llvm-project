@@ -302,6 +302,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
     return error("compiler instance had no inputs");
   // We are only interested in main file includes.
   Clang->getPreprocessorOpts().SingleFileParseMode = true;
+  Clang->getPreprocessorOpts().UsePredefines = false;
   PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return error("failed BeginSourceFile");
