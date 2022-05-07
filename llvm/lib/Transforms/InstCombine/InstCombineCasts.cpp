@@ -1592,14 +1592,20 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
 
   // Splatting a bit of constant-index across a value:
   // sext (ashr (trunc iN X to iM), M-1) to iN --> ashr (shl X, N-M), N-1
-  // TODO: If the dest type is different, use a cast (adjust use check).
+  // If the dest type is different, use a cast (adjust use check).
   if (match(Src, m_OneUse(m_AShr(m_Trunc(m_Value(X)),
-                                 m_SpecificInt(SrcBitSize - 1)))) &&
-      X->getType() == DestTy) {
-    Constant *ShlAmtC = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
-    Constant *AshrAmtC = ConstantInt::get(DestTy, DestBitSize - 1);
-    Value *Shl = Builder.CreateShl(X, ShlAmtC);
-    return BinaryOperator::CreateAShr(Shl, AshrAmtC);
+                                 m_SpecificInt(SrcBitSize - 1))))) {
+    Type *XTy = X->getType();
+    unsigned XBitSize = XTy->getScalarSizeInBits();
+    Constant *ShlAmtC = ConstantInt::get(XTy, XBitSize - SrcBitSize);
+    Constant *AshrAmtC = ConstantInt::get(XTy, XBitSize - 1);
+    if (XTy == DestTy)
+      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShlAmtC),
+                                        AshrAmtC);
+    if (cast<BinaryOperator>(Src)->getOperand(0)->hasOneUse()) {
+      Value *Ashr = Builder.CreateAShr(Builder.CreateShl(X, ShlAmtC), AshrAmtC);
+      return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
+    }
   }
 
   if (match(Src, m_VScale(DL))) {

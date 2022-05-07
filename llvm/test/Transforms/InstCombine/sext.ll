@@ -381,13 +381,11 @@ define i32 @smear_set_bit_wrong_shift_amount(i32 %x) {
   ret i32 %s
 }
 
-; TODO: this could be mask+compare+sext or shifts+trunc
-
 define i16 @smear_set_bit_different_dest_type(i32 %x) {
 ; CHECK-LABEL: @smear_set_bit_different_dest_type(
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[T]], 7
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP1]], 31
+; CHECK-NEXT:    [[S:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[S]]
 ;
   %t = trunc i32 %x to i8
@@ -415,9 +413,9 @@ define i16 @smear_set_bit_different_dest_type_extra_use(i32 %x) {
 
 define i64 @smear_set_bit_different_dest_type_wider_dst(i32 %x) {
 ; CHECK-LABEL: @smear_set_bit_different_dest_type_wider_dst(
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[T]], 7
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP1]], 31
+; CHECK-NEXT:    [[S:%.*]] = sext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[S]]
 ;
   %t = trunc i32 %x to i8
