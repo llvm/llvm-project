@@ -92,17 +92,6 @@ include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
-# CMake omits default compiler include paths, but in runtimes build, we use
-# -nostdinc and -nostdinc++ and control include paths manually so this behavior
-# is undesirable. Resetting CMAKE_{LANG}_IMPLICIT_INCLUDE_DIRECTORIES disables
-# this behavior. See https://gitlab.kitware.com/cmake/cmake/-/issues/19227 for
-# further details no this topic.
-#
-# TODO: We may want to consider filtering out only the paths that are within
-# the toolchain installation and leaving the system paths.
-set(CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES "")
-set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "")
-set(CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES "")
 
 check_c_compiler_flag("" LLVM_RUNTIMES_LINKING_WORKS)
 if (NOT LLVM_RUNTIMES_LINKING_WORKS)
