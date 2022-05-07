@@ -190,11 +190,13 @@ define i32 @test17(i26 %A) {
   ret i32 %C
 }
 
-; This can fold because the 54-bit output is signed and we discard the sign bit.
+; This can't fold because the 54-bit output is big enough to hold an input
+; that was rounded when converted to double.
 
 define i54 @test18(i64 %A) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[C:%.*]] = trunc i64 [[A:%.*]] to i54
+; CHECK-NEXT:    [[B:%.*]] = sitofp i64 [[A:%.*]] to double
+; CHECK-NEXT:    [[C:%.*]] = fptosi double [[B]] to i54
 ; CHECK-NEXT:    ret i54 [[C]]
 ;
   %B = sitofp i64 %A to double
@@ -246,6 +248,8 @@ define i25 @low_masked_input(i25 %A) {
   ret i25 %C
 }
 
+; Output is small enough to ensure exact cast (overflow produces poison).
+
 define i11 @s32_half_s11(i32 %x) {
 ; CHECK-LABEL: @s32_half_s11(
 ; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i11
@@ -255,6 +259,8 @@ define i11 @s32_half_s11(i32 %x) {
   %r = fptosi half %h to i11
   ret i11 %r
 }
+
+; Output is small enough to ensure exact cast (overflow produces poison).
 
 define i11 @s32_half_u11(i32 %x) {
 ; CHECK-LABEL: @s32_half_u11(
@@ -266,6 +272,8 @@ define i11 @s32_half_u11(i32 %x) {
   ret i11 %r
 }
 
+; Output is small enough to ensure exact cast (overflow produces poison).
+
 define i11 @u32_half_s11(i32 %x) {
 ; CHECK-LABEL: @u32_half_s11(
 ; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i11
@@ -275,6 +283,8 @@ define i11 @u32_half_s11(i32 %x) {
   %r = fptosi half %h to i11
   ret i11 %r
 }
+
+; Output is small enough to ensure exact cast (overflow produces poison).
 
 define i11 @u32_half_u11(i32 %x) {
 ; CHECK-LABEL: @u32_half_u11(
@@ -286,15 +296,20 @@ define i11 @u32_half_u11(i32 %x) {
   ret i11 %r
 }
 
+; Too many bits in output to ensure exact cast.
+
 define i12 @s32_half_s12(i32 %x) {
 ; CHECK-LABEL: @s32_half_s12(
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i12
+; CHECK-NEXT:    [[H:%.*]] = sitofp i32 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fptosi half [[H]] to i12
 ; CHECK-NEXT:    ret i12 [[R]]
 ;
   %h = sitofp i32 %x to half
   %r = fptosi half %h to i12
   ret i12 %r
 }
+
+; Too many bits in output to ensure exact cast.
 
 define i12 @s32_half_u12(i32 %x) {
 ; CHECK-LABEL: @s32_half_u12(
@@ -307,15 +322,20 @@ define i12 @s32_half_u12(i32 %x) {
   ret i12 %r
 }
 
+; TODO: This is safe to convert to trunc.
+
 define i12 @u32_half_s12(i32 %x) {
 ; CHECK-LABEL: @u32_half_s12(
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X:%.*]] to i12
+; CHECK-NEXT:    [[H:%.*]] = uitofp i32 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fptosi half [[H]] to i12
 ; CHECK-NEXT:    ret i12 [[R]]
 ;
   %h = uitofp i32 %x to half
   %r = fptosi half %h to i12
   ret i12 %r
 }
+
+; Too many bits in output to ensure exact cast.
 
 define i12 @u32_half_u12(i32 %x) {
 ; CHECK-LABEL: @u32_half_u12(
