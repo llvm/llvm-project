@@ -386,9 +386,9 @@ TEST(IncludeCleaner, VirtualBuffers) {
 
     using flags::FLAGS_FOO;
 
-    // CLI will come from a define, __llvm__ is a built-in. In both cases, they
+    // CLI will come from a define, __cplusplus is a built-in. In both cases, they
     // come from non-existent files.
-    int y = CLI + __llvm__;
+    int y = CLI + __cplusplus;
 
     int concat(a, b) = 42;
     )cpp";

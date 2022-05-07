@@ -40,7 +40,9 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   ParseInputs Inputs;
   Inputs.FeatureModules = FeatureModules;
   auto &Argv = Inputs.CompileCommand.CommandLine;
-  Argv = {"clang"};
+  // In tests, omit predefined macros (__GNUC__ etc) for a 25% speedup.
+  // There are hundreds, and we'd generate, parse, serialize, and re-parse them!
+  Argv = {"clang", "-Xclang", "-undef"};
   // FIXME: this shouldn't need to be conditional, but it breaks a
   // GoToDefinition test for some reason (getMacroArgExpandedLocation fails).
   if (!HeaderCode.empty()) {
