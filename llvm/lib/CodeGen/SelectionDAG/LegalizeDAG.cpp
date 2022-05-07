@@ -4098,12 +4098,25 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
     if (!TLI.getLibcallName(LC)) {
       // Some targets don't have a powi libcall; use pow instead.
-      SDValue Exponent = DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node),
-                                     Node->getValueType(0),
-                                     Node->getOperand(1));
-      Results.push_back(DAG.getNode(ISD::FPOW, SDLoc(Node),
-                                    Node->getValueType(0), Node->getOperand(0),
-                                    Exponent));
+      if (Node->isStrictFPOpcode()) {
+        SDValue Exponent =
+            DAG.getNode(ISD::STRICT_SINT_TO_FP, SDLoc(Node),
+                        {Node->getValueType(0), Node->getValueType(1)},
+                        {Node->getOperand(0), Node->getOperand(2)});
+        SDValue FPOW =
+            DAG.getNode(ISD::STRICT_FPOW, SDLoc(Node),
+                        {Node->getValueType(0), Node->getValueType(1)},
+                        {Exponent.getValue(1), Node->getOperand(1), Exponent});
+        Results.push_back(FPOW);
+        Results.push_back(FPOW.getValue(1));
+      } else {
+        SDValue Exponent =
+            DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), Node->getValueType(0),
+                        Node->getOperand(1));
+        Results.push_back(DAG.getNode(ISD::FPOW, SDLoc(Node),
+                                      Node->getValueType(0),
+                                      Node->getOperand(0), Exponent));
+      }
       break;
     }
     unsigned Offset = Node->isStrictFPOpcode() ? 1 : 0;
