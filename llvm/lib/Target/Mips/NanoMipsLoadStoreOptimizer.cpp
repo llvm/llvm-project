@@ -690,6 +690,9 @@ bool NMLoadStoreOpt::generatePCRelative(MachineBasicBlock &MBB) {
     assert(Address.isGlobal());
 
     if (Use->getOpcode() == Mips::ADDiu_NM) {
+      // Move LA to its use to avoid extending the lifetime of Dst
+      MBB.insert(MBBIter(Use),
+                 MBB.remove(LA));
       Address.setOffset(Offset);
       LA->getOperand(0).setReg(Dst);
       MBB.erase(Use);
