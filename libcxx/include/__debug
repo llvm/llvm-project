@@ -226,6 +226,37 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_inser
 #endif
 }
 
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_erase_c(_Tp* __c) {
+#if _LIBCPP_DEBUG_LEVEL == 2
+    if (!__libcpp_is_constant_evaluated())
+        __get_db()->__erase_c(__c);
+#else
+    (void)(__c);
+#endif
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_swap(_Tp* __lhs, _Tp* __rhs) {
+#if _LIBCPP_DEBUG_LEVEL == 2
+    if (!__libcpp_is_constant_evaluated())
+        __get_db()->swap(__lhs, __rhs);
+#else
+    (void)(__lhs);
+    (void)(__rhs);
+#endif
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_invalidate_all(_Tp* __c) {
+#if _LIBCPP_DEBUG_LEVEL == 2
+    if (!__libcpp_is_constant_evaluated())
+        __get_db()->__invalidate_all(__c);
+#else
+    (void)(__c);
+#endif
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___DEBUG
