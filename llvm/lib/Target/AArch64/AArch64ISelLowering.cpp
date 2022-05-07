@@ -466,16 +466,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // BlockAddress
   setOperationAction(ISD::BlockAddress, MVT::i64, Custom);
 
-  // Add/Sub overflow ops with MVT::Glues are lowered to NZCV dependences.
-  setOperationAction(ISD::ADDC, MVT::i32, Custom);
-  setOperationAction(ISD::ADDE, MVT::i32, Custom);
-  setOperationAction(ISD::SUBC, MVT::i32, Custom);
-  setOperationAction(ISD::SUBE, MVT::i32, Custom);
-  setOperationAction(ISD::ADDC, MVT::i64, Custom);
-  setOperationAction(ISD::ADDE, MVT::i64, Custom);
-  setOperationAction(ISD::SUBC, MVT::i64, Custom);
-  setOperationAction(ISD::SUBE, MVT::i64, Custom);
-
   // AArch64 lacks both left-rotate and popcount instructions.
   setOperationAction(ISD::ROTL, MVT::i32, Expand);
   setOperationAction(ISD::ROTL, MVT::i64, Expand);
@@ -3272,42 +3262,6 @@ SDValue AArch64TargetLowering::LowerXOR(SDValue Op, SelectionDAG &DAG) const {
   return Op;
 }
 
-static SDValue LowerADDC_ADDE_SUBC_SUBE(SDValue Op, SelectionDAG &DAG) {
-  EVT VT = Op.getValueType();
-
-  // Let legalize expand this if it isn't a legal type yet.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
-
-  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
-
-  unsigned Opc;
-  bool ExtraOp = false;
-  switch (Op.getOpcode()) {
-  default:
-    llvm_unreachable("Invalid code");
-  case ISD::ADDC:
-    Opc = AArch64ISD::ADDS;
-    break;
-  case ISD::SUBC:
-    Opc = AArch64ISD::SUBS;
-    break;
-  case ISD::ADDE:
-    Opc = AArch64ISD::ADCS;
-    ExtraOp = true;
-    break;
-  case ISD::SUBE:
-    Opc = AArch64ISD::SBCS;
-    ExtraOp = true;
-    break;
-  }
-
-  if (!ExtraOp)
-    return DAG.getNode(Opc, SDLoc(Op), VTs, Op.getOperand(0), Op.getOperand(1));
-  return DAG.getNode(Opc, SDLoc(Op), VTs, Op.getOperand(0), Op.getOperand(1),
-                     Op.getOperand(2));
-}
-
 // If Invert is false, sets 'C' bit of NZCV to 0 if value is 0, else sets 'C'
 // bit to 1. If Invert is true, sets 'C' bit of NZCV to 1 if value is 0, else
 // sets 'C' bit to 0.
@@ -5197,11 +5151,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVACOPY(Op, DAG);
   case ISD::VAARG:
     return LowerVAARG(Op, DAG);
-  case ISD::ADDC:
-  case ISD::ADDE:
-  case ISD::SUBC:
-  case ISD::SUBE:
-    return LowerADDC_ADDE_SUBC_SUBE(Op, DAG);
   case ISD::ADDCARRY:
     return lowerADDSUBCARRY(Op, DAG, AArch64ISD::ADCS, false /*unsigned*/);
   case ISD::SUBCARRY:
