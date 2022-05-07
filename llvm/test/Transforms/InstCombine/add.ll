@@ -1690,3 +1690,55 @@ define i8 @add_xor_and_var_extra_use(i8 %x, i8 %y) {
   %add = add i8 %xor, %x
   ret i8 %add
 }
+
+define i32 @add_add_add(i32 %A, i32 %B, i32 %C, i32 %D) {
+; CHECK-LABEL: @add_add_add(
+; CHECK-NEXT:    [[E:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[F:%.*]] = add i32 [[E]], [[C:%.*]]
+; CHECK-NEXT:    [[G:%.*]] = add i32 [[F]], [[D:%.*]]
+; CHECK-NEXT:    ret i32 [[G]]
+;
+  %E = add i32 %A, %B
+  %F = add i32 %E, %C
+  %G = add i32 %F, %D
+  ret i32 %G
+}
+
+define i32 @add_add_add_commute1(i32 %A, i32 %B, i32 %C, i32 %D) {
+; CHECK-LABEL: @add_add_add_commute1(
+; CHECK-NEXT:    [[E:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[F:%.*]] = add i32 [[E]], [[C:%.*]]
+; CHECK-NEXT:    [[G:%.*]] = add i32 [[F]], [[D:%.*]]
+; CHECK-NEXT:    ret i32 [[G]]
+;
+  %E = add i32 %B, %A
+  %F = add i32 %E, %C
+  %G = add i32 %F, %D
+  ret i32 %G
+}
+
+define i32 @add_add_add_commute2(i32 %A, i32 %B, i32 %C, i32 %D) {
+; CHECK-LABEL: @add_add_add_commute2(
+; CHECK-NEXT:    [[E:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[F:%.*]] = add i32 [[E]], [[C:%.*]]
+; CHECK-NEXT:    [[G:%.*]] = add i32 [[F]], [[D:%.*]]
+; CHECK-NEXT:    ret i32 [[G]]
+;
+  %E = add i32 %B, %A
+  %F = add i32 %C, %E
+  %G = add i32 %F, %D
+  ret i32 %G
+}
+
+define i32 @add_add_add_commute3(i32 %A, i32 %B, i32 %C, i32 %D) {
+; CHECK-LABEL: @add_add_add_commute3(
+; CHECK-NEXT:    [[E:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[F:%.*]] = add i32 [[E]], [[C:%.*]]
+; CHECK-NEXT:    [[G:%.*]] = add i32 [[F]], [[D:%.*]]
+; CHECK-NEXT:    ret i32 [[G]]
+;
+  %E = add i32 %B, %A
+  %F = add i32 %C, %E
+  %G = add i32 %D, %F
+  ret i32 %G
+}
