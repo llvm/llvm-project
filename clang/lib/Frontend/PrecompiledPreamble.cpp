@@ -765,6 +765,10 @@ void PrecompiledPreamble::configurePreamble(
   PreprocessorOpts.DisablePCHOrModuleValidation =
       DisableValidationForModuleKind::PCH;
 
+  // Don't bother generating the long version of the predefines buffer.
+  // The preamble is going to overwrite it anyway.
+  PreprocessorOpts.UsePredefines = false;
+
   setupPreambleStorage(*Storage, PreprocessorOpts, VFS);
 }
 
