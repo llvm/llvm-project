@@ -14,7 +14,6 @@ set(LLVM_LINK_COMPONENTS
   AggressiveInstCombine
   InstCombine
   Instrumentation
-  FuzzerCLI
   FuzzMutate
   MC
   ObjCARCOpts
