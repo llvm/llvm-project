@@ -76,3 +76,15 @@ entry:
   store <1 x double> <double 0x3F8000003F800000>, <1 x double>* %a13, align 8
   ret void
 }
+
+define <4 x float> @testv4i16(<2 x float> %l1) {
+; CHECK-LABEL: testv4i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    movi.4h v1, #16
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov.d v1[1], v0[0]
+; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:    ret
+  %l2 = shufflevector <2 x float> <float 0x37E0001000000000, float 0x37E0001000000000>, <2 x float> %l1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %l2
+}
