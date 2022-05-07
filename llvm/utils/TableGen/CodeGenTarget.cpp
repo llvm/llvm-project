@@ -552,7 +552,7 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
       NewBits[middle] = BI->getBit(middle);
     }
 
-    BitsInit *NewBI = BitsInit::get(NewBits);
+    BitsInit *NewBI = BitsInit::get(Records, NewBits);
 
     // Update the bits in reversed order so that emitInstrOpBits will get the
     // correct endianness.

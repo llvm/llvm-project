@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TableGen/Parser.h"
-#include "RecordContext.h"
 #include "TGParser.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TableGen/Error.h"
@@ -33,7 +32,6 @@ bool llvm::TableGenParseFile(std::unique_ptr<MemoryBuffer> Buffer,
     return true;
 
   // After parsing, reset the tablegen data.
-  detail::resetTablegenRecordContext();
   SrcMgr = SourceMgr();
   return false;
 }

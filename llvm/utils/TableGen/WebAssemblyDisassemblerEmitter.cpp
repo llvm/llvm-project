@@ -37,8 +37,9 @@ void emitWebAssemblyDisassemblerTables(
     if (!Def.getValue("Inst"))
       continue;
     auto &Inst = *Def.getValueAsBitsInit("Inst");
-    auto Opc = static_cast<unsigned>(
-        reinterpret_cast<IntInit *>(Inst.convertInitializerTo(IntRecTy::get()))
+    RecordKeeper &RK = Inst.getRecordKeeper();
+    unsigned Opc = static_cast<unsigned>(
+        cast<IntInit>(Inst.convertInitializerTo(IntRecTy::get(RK)))
             ->getValue());
     if (Opc == 0xFFFFFFFF)
       continue; // No opcode defined.
@@ -55,7 +56,7 @@ void emitWebAssemblyDisassemblerTables(
     // All wasm instructions have a StackBased field of type string, we only
     // want the instructions for which this is "true".
     auto StackString =
-        Def.getValue("StackBased")->getValue()->getCastTo(StringRecTy::get());
+        Def.getValue("StackBased")->getValue()->getCastTo(StringRecTy::get(RK));
     auto IsStackBased =
         StackString &&
         reinterpret_cast<const StringInit *>(StackString)->getValue() == "true";

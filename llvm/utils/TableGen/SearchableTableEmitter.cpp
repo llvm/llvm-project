@@ -30,7 +30,9 @@ using namespace llvm;
 namespace {
 
 int getAsInt(Init *B) {
-  return cast<IntInit>(B->convertInitializerTo(IntRecTy::get()))->getValue();
+  return cast<IntInit>(
+             B->convertInitializerTo(IntRecTy::get(B->getRecordKeeper())))
+      ->getValue();
 }
 int getInt(Record *R, StringRef Field) {
   return getAsInt(R->getValueInit(Field));

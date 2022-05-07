@@ -236,11 +236,11 @@ static BitsInit &getBitsField(const Record &def, StringRef str) {
       Bits.push_back(const_cast<BitInit *>(BI));
     } else {
       for (unsigned Idx = 0U; Idx < SI.BitWidth; ++Idx)
-        Bits.push_back(UnsetInit::get());
+        Bits.push_back(UnsetInit::get(def.getRecords()));
     }
   }
 
-  return *BitsInit::get(Bits);
+  return *BitsInit::get(def.getRecords(), Bits);
 }
 
 // Representation of the instruction to work on.
