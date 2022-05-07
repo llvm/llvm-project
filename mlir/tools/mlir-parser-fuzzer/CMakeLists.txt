@@ -1,5 +1,5 @@
 set(LLVM_LINK_COMPONENTS
-  FuzzerCLI
+  FuzzMutate
   Support
 )
 add_llvm_fuzzer(mlir-parser-fuzzer
