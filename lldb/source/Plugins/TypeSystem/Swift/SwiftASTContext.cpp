@@ -156,8 +156,11 @@ std::recursive_mutex g_log_mutex;
   } while (0)
 
 #define HEALTH_LOG_PRINTF(FMT, ...)                                            \
-  LOG_PRINTF(GetLog(LLDBLog::Types), FMT, ##__VA_ARGS__);                      \
-  LOG_PRINTF_IMPL(lldb_private::GetSwiftHealthLog(), false, FMT, ##__VA_ARGS__)
+  do {                                                                         \
+    LOG_PRINTF(GetLog(LLDBLog::Types), FMT, ##__VA_ARGS__);                    \
+    LOG_PRINTF_IMPL(lldb_private::GetSwiftHealthLog(), false, FMT,             \
+                    ##__VA_ARGS__);                                            \
+  } while (0)
 
 #define VALID_OR_RETURN(value)                                                 \
   do {                                                                         \
