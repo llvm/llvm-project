@@ -174,12 +174,11 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi(<2 x i16> addrspace(1)*
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_lshr_b32 s0, s4, 16
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_and_b32 s1, s2, 0xffff0000
-; VI-NEXT:    s_or_b32 s0, s0, s1
-; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    s_lshr_b32 s0, s2, 16
+; VI-NEXT:    v_alignbit_b32 v2, s0, v2, 16
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
@@ -230,13 +229,13 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_multi_use_1(<2 x i16> a
 ; VI-NEXT:    s_load_dword s4, s[4:5], 0x10
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s4
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_lshr_b32 s0, s4, 16
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_and_b32 s1, s2, 0xffff0000
-; VI-NEXT:    s_or_b32 s1, s0, s1
-; VI-NEXT:    v_mov_b32_e32 v2, s1
+; VI-NEXT:    s_lshr_b32 s1, s2, 16
+; VI-NEXT:    v_alignbit_b32 v2, s1, v2, 16
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    ;;#ASMSTART
 ; VI-NEXT:    ; use s0
@@ -299,14 +298,13 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_both_multi_use_1(<2 x i
 ; VI-NEXT:    s_load_dword s4, s[4:5], 0x10
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s4
+; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_lshr_b32 s0, s4, 16
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s1, s2, 16
-; VI-NEXT:    s_and_b32 s2, s2, 0xffff0000
-; VI-NEXT:    s_or_b32 s2, s0, s2
-; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    v_alignbit_b32 v2, s1, v2, 16
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    ;;#ASMSTART
 ; VI-NEXT:    ; use s0
@@ -585,11 +583,10 @@ define amdgpu_kernel void @v_insertelement_v2i16_0_reghi(<2 x i16> addrspace(1)*
 ; VI-NEXT:    flat_load_dword v3, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
-; VI-NEXT:    s_lshr_b32 s0, s4, 16
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v3
-; VI-NEXT:    v_or_b32_e32 v2, s0, v2
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
+; VI-NEXT:    v_alignbit_b32 v2, v2, s4, 16
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;

@@ -5882,10 +5882,19 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 
   assert(VecSize <= 64);
 
+  MVT IntVT = MVT::getIntegerVT(VecSize);
+
+  // If Vec is just a SCALAR_TO_VECTOR, then use the scalar integer directly.
+  SDValue VecBC = peekThroughBitcasts(Vec);
+  if (VecBC.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+    SDValue Src = VecBC.getOperand(0);
+    Src = DAG.getBitcast(Src.getValueType().changeTypeToInteger(), Src);
+    Vec = DAG.getAnyExtOrTrunc(Src, SL, IntVT);
+  }
+
   unsigned EltSize = EltVT.getSizeInBits();
   assert(isPowerOf2_32(EltSize));
 
-  MVT IntVT = MVT::getIntegerVT(VecSize);
   SDValue ScaleFactor = DAG.getConstant(Log2_32(EltSize), SL, MVT::i32);
 
   // Convert vector index to bit-index (* EltSize)
