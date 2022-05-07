@@ -8613,14 +8613,9 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
 ISD::MemIndexType
 TargetLowering::getCanonicalIndexType(ISD::MemIndexType IndexType, EVT MemVT,
                                       SDValue Offsets) const {
-  bool IsScaledIndex =
-      (IndexType == ISD::SIGNED_SCALED) || (IndexType == ISD::UNSIGNED_SCALED);
-  bool IsSignedIndex =
-      (IndexType == ISD::SIGNED_SCALED) || (IndexType == ISD::SIGNED_UNSCALED);
-
   // Scaling is unimportant for bytes, canonicalize to unscaled.
-  if (IsScaledIndex && MemVT.getScalarType() == MVT::i8)
-    return IsSignedIndex ? ISD::SIGNED_UNSCALED : ISD::UNSIGNED_UNSCALED;
+  if (ISD::isIndexTypeScaled(IndexType) && MemVT.getScalarType() == MVT::i8)
+    return ISD::getUnscaledIndexType(IndexType);
 
   return IndexType;
 }
