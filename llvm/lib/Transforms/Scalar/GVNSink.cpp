@@ -381,6 +381,8 @@ public:
   }
 };
 
+using BasicBlocksSet = SmallPtrSet<const BasicBlock *, 32>;
+
 class ValueTable {
   DenseMap<Value *, uint32_t> ValueNumbering;
   DenseMap<GVNExpression::Expression *, uint32_t> ExpressionNumbering;
@@ -388,6 +390,7 @@ class ValueTable {
   BumpPtrAllocator Allocator;
   ArrayRecycler<Value *> Recycler;
   uint32_t nextValueNumber = 1;
+  BasicBlocksSet ReachableBBs;
 
   /// Create an expression for I based on its opcode and its uses. If I
   /// touches or reads memory, the expression is also based upon its memory
@@ -419,6 +422,11 @@ class ValueTable {
 public:
   ValueTable() = default;
 
+  /// Set basic blocks reachable from entry block.
+  void setReachableBBs(const BasicBlocksSet &ReachableBBs) {
+    this->ReachableBBs = ReachableBBs;
+  }
+
   /// Returns the value number for the specified value, assigning
   /// it a new number if it did not have one before.
   uint32_t lookupOrAdd(Value *V) {
@@ -432,6 +440,9 @@ public:
     }
 
     Instruction *I = cast<Instruction>(V);
+    if (!ReachableBBs.contains(I->getParent()))
+      return ~0U;
+
     InstructionUseExpr *exp = nullptr;
     switch (I->getOpcode()) {
     case Instruction::Load:
@@ -568,6 +579,7 @@ public:
 
     unsigned NumSunk = 0;
     ReversePostOrderTraversal<Function*> RPOT(&F);
+    VN.setReachableBBs(BasicBlocksSet(RPOT.begin(), RPOT.end()));
     for (auto *N : RPOT)
       NumSunk += sinkBB(N);
 
