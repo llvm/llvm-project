@@ -149,6 +149,7 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&);
 
 Expr<SomeReal> GetComplexPart(
     const Expr<SomeComplex> &, bool isImaginary = false);
+Expr<SomeReal> GetComplexPart(Expr<SomeComplex> &&, bool isImaginary = false);
 
 template <int KIND>
 Expr<SomeComplex> MakeComplex(Expr<Type<TypeCategory::Real, KIND>> &&re,

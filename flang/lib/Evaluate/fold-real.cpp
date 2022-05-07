@@ -112,8 +112,9 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       common::die(" unexpected argument type inside abs");
     }
   } else if (name == "aimag") {
-    return FoldElementalIntrinsic<T, ComplexT>(
-        context, std::move(funcRef), &Scalar<ComplexT>::AIMAG);
+    if (auto *zExpr{UnwrapExpr<Expr<ComplexT>>(args[0])}) {
+      return Fold(context, Expr<T>{ComplexComponent{true, std::move(*zExpr)}});
+    }
   } else if (name == "aint" || name == "anint") {
     // ANINT rounds ties away from zero, not to even
     common::RoundingMode mode{name == "aint"
@@ -316,31 +317,6 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   }
   // TODO: dot_product, fraction, matmul, norm2, set_exponent, transfer
   return Expr<T>{std::move(funcRef)};
-}
-
-template <int KIND>
-Expr<Type<TypeCategory::Real, KIND>> FoldOperation(
-    FoldingContext &context, ComplexComponent<KIND> &&x) {
-  using Operand = Type<TypeCategory::Complex, KIND>;
-  using Result = Type<TypeCategory::Real, KIND>;
-  if (auto array{ApplyElementwise(context, x,
-          std::function<Expr<Result>(Expr<Operand> &&)>{
-              [=](Expr<Operand> &&operand) {
-                return Expr<Result>{ComplexComponent<KIND>{
-                    x.isImaginaryPart, std::move(operand)}};
-              }})}) {
-    return *array;
-  }
-  using Part = Type<TypeCategory::Real, KIND>;
-  auto &operand{x.left()};
-  if (auto value{GetScalarConstantValue<Operand>(operand)}) {
-    if (x.isImaginaryPart) {
-      return Expr<Part>{Constant<Part>{value->AIMAG()}};
-    } else {
-      return Expr<Part>{Constant<Part>{value->REAL()}};
-    }
-  }
-  return Expr<Part>{std::move(x)};
 }
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions
