@@ -68,7 +68,7 @@ func.func @init_input(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
 func.func @fill_input_1(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
                    %m_C : memref<?xi64>, %m_D : memref<?xf64>)
     -> (index, index){
-  call @init_input(%m_A, %m_B, %m_C, %m_D)
+  func.call @init_input(%m_A, %m_B, %m_C, %m_D)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>) -> ()
 
   %c0 = arith.constant 0 : index
@@ -98,7 +98,7 @@ func.func @fill_input_1(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
 func.func @fill_input_2(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
                    %m_C : memref<?xi64>, %m_D : memref<?xf64>)
     -> (index, index){
-  call @init_input(%m_A, %m_B, %m_C, %m_D)
+  func.call @init_input(%m_A, %m_B, %m_C, %m_D)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>) -> ()
 
   %c0 = arith.constant 0 : index
@@ -158,7 +158,7 @@ func.func @memref_dot_simple(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
       %v_D = vector.transfer_read %m_D[%b], %data_zero
           : memref<?xf64>, vector<8xf64>
 
-      %subresult = call @vector_dot(%v_A, %v_B, %v_C, %v_D)
+      %subresult = func.call @vector_dot(%v_A, %v_B, %v_C, %v_D)
           : (vector<8xi64>, vector<8xf64>, vector<8xi64>, vector<8xf64>) -> f64
       %r2 = arith.addf %sum1, %subresult : f64
       scf.yield %r2 : f64
@@ -215,7 +215,7 @@ func.func @memref_dot_optimized(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
         %v_D = vector.transfer_read %m_D[%b], %data_zero
             : memref<?xf64>, vector<8xf64>
 
-        %subresult = call @vector_dot(%v_A, %v_B, %v_C, %v_D)
+        %subresult = func.call @vector_dot(%v_A, %v_B, %v_C, %v_D)
             : (vector<8xi64>, vector<8xf64>, vector<8xi64>, vector<8xf64>)
                 -> f64
         %r3 = arith.addf %sum1, %subresult : f64
@@ -293,7 +293,7 @@ func.func @memref_dot_while(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
         %v_D = vector.transfer_read %m_D[%b1], %data_zero
             : memref<?xf64>, vector<8xf64>
 
-        %subresult = call @vector_dot(%v_A, %v_B, %v_C, %v_D)
+        %subresult = func.call @vector_dot(%v_A, %v_B, %v_C, %v_D)
             : (vector<8xi64>, vector<8xf64>, vector<8xi64>, vector<8xf64>)
                 -> f64
         %r6 = arith.addf %r1, %subresult : f64
@@ -365,7 +365,7 @@ func.func @memref_dot_while_branchless(%m_A : memref<?xi64>, %m_B : memref<?xf64
     %v_D = vector.transfer_read %m_D[%b1], %data_zero
         : memref<?xf64>, vector<8xf64>
 
-    %subresult = call @vector_dot(%v_A, %v_B, %v_C, %v_D)
+    %subresult = func.call @vector_dot(%v_A, %v_B, %v_C, %v_D)
         : (vector<8xi64>, vector<8xf64>, vector<8xi64>, vector<8xf64>)
             -> f64
     %r2 = arith.addf %r1, %subresult : f64
@@ -407,29 +407,29 @@ func.func @entry() -> i32 {
   // --- Test case 1 ---.
   // M and N must be a multiple of 8 if smaller than 128.
   // (Because padding kicks in only for out-of-bounds accesses.)
-  %M1, %N1 = call @fill_input_1(%m_A, %m_B, %m_C, %m_D)
+  %M1, %N1 = func.call @fill_input_1(%m_A, %m_B, %m_C, %m_D)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>)
           -> (index, index)
 
-  %r0 = call @memref_dot_simple(%m_A, %m_B, %m_C, %m_D, %M1, %N1)
+  %r0 = func.call @memref_dot_simple(%m_A, %m_B, %m_C, %m_D, %M1, %N1)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>,
          index, index) -> f64
   vector.print %r0 : f64
   // CHECK: 86
 
-  %r1 = call @memref_dot_optimized(%m_A, %m_B, %m_C, %m_D, %M1, %N1)
+  %r1 = func.call @memref_dot_optimized(%m_A, %m_B, %m_C, %m_D, %M1, %N1)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>,
          index, index) -> f64
   vector.print %r1 : f64
   // CHECK: 86
 
-  %r2 = call @memref_dot_while(%m_A, %m_B, %m_C, %m_D, %M1, %N1)
+  %r2 = func.call @memref_dot_while(%m_A, %m_B, %m_C, %m_D, %M1, %N1)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>,
          index, index) -> f64
   vector.print %r2 : f64
   // CHECK: 86
 
-  %r6 = call @memref_dot_while_branchless(%m_A, %m_B, %m_C, %m_D, %M1, %N1)
+  %r6 = func.call @memref_dot_while_branchless(%m_A, %m_B, %m_C, %m_D, %M1, %N1)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>,
          index, index) -> f64
   vector.print %r6 : f64
@@ -438,29 +438,29 @@ func.func @entry() -> i32 {
   // --- Test case 2 ---.
   // M and N must be a multiple of 8 if smaller than 128.
   // (Because padding kicks in only for out-of-bounds accesses.)
-  %M2, %N2 = call @fill_input_2(%m_A, %m_B, %m_C, %m_D)
+  %M2, %N2 = func.call @fill_input_2(%m_A, %m_B, %m_C, %m_D)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>)
           -> (index, index)
 
-  %r3 = call @memref_dot_simple(%m_A, %m_B, %m_C, %m_D, %M2, %N2)
+  %r3 = func.call @memref_dot_simple(%m_A, %m_B, %m_C, %m_D, %M2, %N2)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>,
          index, index) -> f64
   vector.print %r3 : f64
   // CHECK: 111
 
-  %r4 = call @memref_dot_optimized(%m_A, %m_B, %m_C, %m_D, %M2, %N2)
+  %r4 = func.call @memref_dot_optimized(%m_A, %m_B, %m_C, %m_D, %M2, %N2)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>,
          index, index) -> f64
   vector.print %r4 : f64
   // CHECK: 111
 
-  %r5 = call @memref_dot_while(%m_A, %m_B, %m_C, %m_D, %M2, %N2)
+  %r5 = func.call @memref_dot_while(%m_A, %m_B, %m_C, %m_D, %M2, %N2)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>,
          index, index) -> f64
   vector.print %r5 : f64
   // CHECK: 111
 
-  %r7 = call @memref_dot_while_branchless(%m_A, %m_B, %m_C, %m_D, %M2, %N2)
+  %r7 = func.call @memref_dot_while_branchless(%m_A, %m_B, %m_C, %m_D, %M2, %N2)
       : (memref<?xi64>, memref<?xf64>, memref<?xi64>, memref<?xf64>,
          index, index) -> f64
   vector.print %r7 : f64
