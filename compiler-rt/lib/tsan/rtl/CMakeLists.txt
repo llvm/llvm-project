@@ -7,9 +7,6 @@ append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=530
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                TSAN_RTL_CFLAGS)
 
-set(TSAN_RTL_DYNAMIC_CFLAGS ${TSAN_RTL_CFLAGS})
-list(REMOVE_ITEM TSAN_RTL_DYNAMIC_CFLAGS -fPIE)
-
 set(TSAN_DYNAMIC_LINK_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl TSAN_DYNAMIC_LINK_LIBS)
@@ -251,6 +248,9 @@ else()
       PARENT_TARGET tsan)
     list(APPEND TSAN_RUNTIME_LIBRARIES clang_rt.tsan-${arch}
                                        clang_rt.tsan_cxx-${arch})
+
+    set(TSAN_RTL_DYNAMIC_CFLAGS ${TSAN_RTL_CFLAGS})
+    list(REMOVE_ITEM TSAN_RTL_DYNAMIC_CFLAGS -fPIE)
     add_compiler_rt_runtime(clang_rt.tsan
       SHARED
       ARCHS ${arch}
