@@ -211,7 +211,7 @@ instead, check explicitly that the optional object has a value. For example:
 instead of the `HasProperty`, `GetProperty` pairing we saw above.
 
 Do not rely on caller-performed checks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you know that all of a function's callers have checked that an optional
 argument has a value, either change the function to take the value directly or
