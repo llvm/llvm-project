@@ -4545,21 +4545,25 @@ define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
 ; SSE-LABEL: PR39665_c_ray:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm1
-; SSE-NEXT:    movmskpd %xmm1, %eax
-; SSE-NEXT:    cmpb $3, %al
-; SSE-NEXT:    movl $42, %ecx
-; SSE-NEXT:    movl $99, %eax
-; SSE-NEXT:    cmovel %ecx, %eax
+; SSE-NEXT:    movmskpd %xmm1, %ecx
+; SSE-NEXT:    testb $2, %cl
+; SSE-NEXT:    movl $42, %eax
+; SSE-NEXT:    movl $99, %edx
+; SSE-NEXT:    cmovel %edx, %eax
+; SSE-NEXT:    testb $1, %cl
+; SSE-NEXT:    cmovel %edx, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: PR39665_c_ray:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
-; AVX1OR2-NEXT:    vmovmskpd %xmm0, %eax
-; AVX1OR2-NEXT:    cmpb $3, %al
-; AVX1OR2-NEXT:    movl $42, %ecx
-; AVX1OR2-NEXT:    movl $99, %eax
-; AVX1OR2-NEXT:    cmovel %ecx, %eax
+; AVX1OR2-NEXT:    vmovmskpd %xmm0, %ecx
+; AVX1OR2-NEXT:    testb $2, %cl
+; AVX1OR2-NEXT:    movl $42, %eax
+; AVX1OR2-NEXT:    movl $99, %edx
+; AVX1OR2-NEXT:    cmovel %edx, %eax
+; AVX1OR2-NEXT:    testb $1, %cl
+; AVX1OR2-NEXT:    cmovel %edx, %eax
 ; AVX1OR2-NEXT:    retq
 ;
 ; KNL-LABEL: PR39665_c_ray:
