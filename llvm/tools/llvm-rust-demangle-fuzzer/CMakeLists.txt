@@ -1,6 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Demangle
-  FuzzMutate
+  FuzzerCLI
   Support
 )
 
