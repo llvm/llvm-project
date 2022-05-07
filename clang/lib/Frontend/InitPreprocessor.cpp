@@ -1388,5 +1388,5 @@ void clang::InitializePreprocessor(
                              InitOpts.PrecompiledPreambleBytes.second);
 
   // Copy PredefinedBuffer into the Preprocessor.
-  PP.setPredefines(Predefines.str());
+  PP.setPredefines(std::move(PredefineBuffer));
 }
