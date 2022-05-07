@@ -111,9 +111,17 @@ def : WriteRes<WriteStore,   [SBPort23, SBPort4]>;
 def : WriteRes<WriteStoreNT, [SBPort23, SBPort4]>;
 def : WriteRes<WriteLoad,    [SBPort23]> { let Latency = 5; }
 def : WriteRes<WriteMove,    [SBPort015]>;
+
+// Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
+
+// Idioms that clear a register, like xorps %xmm0, %xmm0.
+// These can often bypass execution ports completely.
 def : WriteRes<WriteZero,    []>;
-def : WriteRes<WriteVecMaskedGatherWriteback, []> { let Latency = 5; let NumMicroOps = 0; }
+
+// Model the effect of clobbering the read-write mask operand of the GATHER operation.
+// Does not cost anything by itself, only has latency, matching that of the WriteLoad,
+defm : X86WriteRes<WriteVecMaskedGatherWriteback, [], 5, [], 0>;
 
 // Arithmetic.
 defm : SBWriteResPair<WriteALU,    [SBPort015], 1>;
