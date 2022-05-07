@@ -439,10 +439,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
       // interesting bits will end up at the wrong place.
       if (DAG.getDataLayout().isBigEndian()) {
         unsigned ShiftAmt = NInVT.getSizeInBits() - InVT.getSizeInBits();
-        EVT ShiftAmtTy = TLI.getShiftAmountTy(NOutVT, DAG.getDataLayout());
         assert(ShiftAmt < NOutVT.getSizeInBits() && "Too large shift amount!");
         Res = DAG.getNode(ISD::SRL, dl, NOutVT, Res,
-                          DAG.getConstant(ShiftAmt, dl, ShiftAmtTy));
+                          DAG.getShiftAmountConstant(ShiftAmt, NOutVT, dl));
       }
       return Res;
     }
@@ -494,9 +493,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BSWAP(SDNode *N) {
   }
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  EVT ShiftVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   return DAG.getNode(ISD::SRL, dl, NVT, DAG.getNode(ISD::BSWAP, dl, NVT, Op),
-                     DAG.getConstant(DiffBits, dl, ShiftVT));
+                     DAG.getShiftAmountConstant(DiffBits, NVT, dl));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
@@ -516,10 +514,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
   }
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  EVT ShiftVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   return DAG.getNode(ISD::SRL, dl, NVT,
                      DAG.getNode(ISD::BITREVERSE, dl, NVT, Op),
-                     DAG.getConstant(DiffBits, dl, ShiftVT));
+                     DAG.getShiftAmountConstant(DiffBits, NVT, dl));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_BUILD_PAIR(SDNode *N) {
@@ -893,8 +890,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
     }
 
     unsigned SHLAmount = NewBits - OldBits;
-    EVT SHVT = TLI.getShiftAmountTy(PromotedType, DAG.getDataLayout());
-    SDValue ShiftAmount = DAG.getConstant(SHLAmount, dl, SHVT);
+    SDValue ShiftAmount =
+        DAG.getShiftAmountConstant(SHLAmount, PromotedType, dl);
     Op1Promoted =
         DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted, ShiftAmount);
     if (!IsShift)
@@ -943,14 +940,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MULFIX(SDNode *N) {
     // which is extends the values that we clamp to on saturation. This could be
     // resolved by shifting one of the operands the same amount, which would
     // also shift the result we compare against, then shifting back.
-    EVT ShiftTy = TLI.getShiftAmountTy(PromotedType, DAG.getDataLayout());
-    Op1Promoted = DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted,
-                              DAG.getConstant(DiffSize, dl, ShiftTy));
+    Op1Promoted =
+        DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted,
+                    DAG.getShiftAmountConstant(DiffSize, PromotedType, dl));
     SDValue Result = DAG.getNode(N->getOpcode(), dl, PromotedType, Op1Promoted,
                                  Op2Promoted, N->getOperand(2));
     unsigned ShiftOp = Signed ? ISD::SRA : ISD::SRL;
     return DAG.getNode(ShiftOp, dl, PromotedType, Result,
-                       DAG.getConstant(DiffSize, dl, ShiftTy));
+                       DAG.getShiftAmountConstant(DiffSize, PromotedType, dl));
   }
   return DAG.getNode(N->getOpcode(), dl, PromotedType, Op1Promoted, Op2Promoted,
                      N->getOperand(2));
@@ -1047,17 +1044,17 @@ SDValue DAGTypeLegalizer::PromoteIntRes_DIVFIX(SDNode *N) {
     TargetLowering::LegalizeAction Action =
         TLI.getFixedPointOperationAction(N->getOpcode(), PromotedType, Scale);
     if (Action == TargetLowering::Legal || Action == TargetLowering::Custom) {
-      EVT ShiftTy = TLI.getShiftAmountTy(PromotedType, DAG.getDataLayout());
       unsigned Diff = PromotedType.getScalarSizeInBits() -
                       N->getValueType(0).getScalarSizeInBits();
       if (Saturating)
-        Op1Promoted = DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted,
-                                  DAG.getConstant(Diff, dl, ShiftTy));
+        Op1Promoted =
+            DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted,
+                        DAG.getShiftAmountConstant(Diff, PromotedType, dl));
       SDValue Res = DAG.getNode(N->getOpcode(), dl, PromotedType, Op1Promoted,
                                 Op2Promoted, N->getOperand(2));
       if (Saturating)
         Res = DAG.getNode(Signed ? ISD::SRA : ISD::SRL, dl, PromotedType, Res,
-                          DAG.getConstant(Diff, dl, ShiftTy));
+                          DAG.getShiftAmountConstant(Diff, PromotedType, dl));
       return Res;
     }
   }
@@ -1495,9 +1492,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {
   if (N->getOpcode() == ISD::UMULO) {
     // Unsigned overflow occurred if the high part is non-zero.
     unsigned Shift = SmallVT.getScalarSizeInBits();
-    EVT ShiftTy = TLI.getShiftAmountTy(Mul.getValueType(), DAG.getDataLayout());
-    SDValue Hi = DAG.getNode(ISD::SRL, DL, Mul.getValueType(), Mul,
-                             DAG.getConstant(Shift, DL, ShiftTy));
+    SDValue Hi =
+        DAG.getNode(ISD::SRL, DL, Mul.getValueType(), Mul,
+                    DAG.getShiftAmountConstant(Shift, Mul.getValueType(), DL));
     Overflow = DAG.getSetCC(DL, N->getValueType(1), Hi,
                             DAG.getConstant(0, DL, Hi.getValueType()),
                             ISD::SETNE);
@@ -3176,10 +3173,9 @@ void DAGTypeLegalizer::ExpandIntRes_ABS(SDNode *N, SDValue &Lo, SDValue &Hi) {
   bool HasSubCarry = TLI.isOperationLegalOrCustom(
       ISD::SUBCARRY, TLI.getTypeToExpandTo(*DAG.getContext(), NVT));
   if (HasSubCarry) {
-    EVT ShiftAmtTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
-    SDValue Sign =
-        DAG.getNode(ISD::SRA, dl, NVT, Hi,
-                    DAG.getConstant(NVT.getSizeInBits() - 1, dl, ShiftAmtTy));
+    SDValue Sign = DAG.getNode(
+        ISD::SRA, dl, NVT, Hi,
+        DAG.getShiftAmountConstant(NVT.getSizeInBits() - 1, NVT, dl));
     SDVTList VTList = DAG.getVTList(NVT, getSetCCResultType(NVT));
     Lo = DAG.getNode(ISD::XOR, dl, NVT, Lo, Sign);
     Hi = DAG.getNode(ISD::XOR, dl, NVT, Hi, Sign);
@@ -3258,12 +3254,11 @@ void DAGTypeLegalizer::ExpandIntRes_FLT_ROUNDS(SDNode *N, SDValue &Lo,
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   unsigned NBitWidth = NVT.getSizeInBits();
 
-  EVT ShiftAmtTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   Lo = DAG.getNode(ISD::FLT_ROUNDS_, dl, {NVT, MVT::Other}, N->getOperand(0));
   SDValue Chain = Lo.getValue(1);
   // The high part is the sign of Lo, as -1 is a valid value for FLT_ROUNDS
   Hi = DAG.getNode(ISD::SRA, dl, NVT, Lo,
-                   DAG.getConstant(NBitWidth - 1, dl, ShiftAmtTy));
+                   DAG.getShiftAmountConstant(NBitWidth - 1, NVT, dl));
 
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
@@ -3570,8 +3565,7 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
     SDValue T = DAG.getNode(ISD::MUL, dl, NVT, LLL, RLL);
     SDValue TL = DAG.getNode(ISD::AND, dl, NVT, T, Mask);
 
-    EVT ShiftAmtTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
-    SDValue Shift = DAG.getConstant(HalfBits, dl, ShiftAmtTy);
+    SDValue Shift = DAG.getShiftAmountConstant(HalfBits, NVT, dl);
     SDValue TH = DAG.getNode(ISD::SRL, dl, NVT, T, Shift);
     SDValue LLH = DAG.getNode(ISD::SRL, dl, NVT, LL, Shift);
     SDValue RLH = DAG.getNode(ISD::SRL, dl, NVT, RL, Shift);
@@ -3702,7 +3696,6 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
   unsigned NVTSize = NVT.getScalarSizeInBits();
   assert((VTSize == NVTSize * 2) && "Expected the new value type to be half "
                                     "the size of the current value type");
-  EVT ShiftTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
 
   // After getting the multiplication result in 4 parts, we need to perform a
   // shift right by the amount of the scale to get the result in that scale.
@@ -3725,7 +3718,7 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
   // shifting.
   uint64_t Part0 = Scale / NVTSize; // Part holding lowest bit needed.
   if (Scale % NVTSize) {
-    SDValue ShiftAmount = DAG.getConstant(Scale % NVTSize, dl, ShiftTy);
+    SDValue ShiftAmount = DAG.getShiftAmountConstant(Scale % NVTSize, NVT, dl);
     Lo = DAG.getNode(ISD::FSHR, dl, NVT, Result[Part0 + 1], Result[Part0],
                      ShiftAmount);
     Hi = DAG.getNode(ISD::FSHR, dl, NVT, Result[Part0 + 2], Result[Part0 + 1],
@@ -3766,8 +3759,9 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
   if (!Signed) {
     if (Scale < NVTSize) {
       // Overflow happened if ((HH | (HL >> Scale)) != 0).
-      SDValue HLAdjusted = DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
-                                       DAG.getConstant(Scale, dl, ShiftTy));
+      SDValue HLAdjusted =
+          DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
+                      DAG.getShiftAmountConstant(Scale, NVT, dl));
       SDValue Tmp = DAG.getNode(ISD::OR, dl, NVT, HLAdjusted, ResultHH);
       SatMax = DAG.getSetCC(dl, BoolNVT, Tmp, NVTZero, ISD::SETNE);
     } else if (Scale == NVTSize) {
@@ -3775,9 +3769,9 @@ void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
       SatMax = DAG.getSetCC(dl, BoolNVT, ResultHH, NVTZero, ISD::SETNE);
     } else if (Scale < VTSize) {
       // Overflow happened if ((HH >> (Scale - NVTSize)) != 0).
-      SDValue HLAdjusted = DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
-                                       DAG.getConstant(Scale - NVTSize, dl,
-                                                       ShiftTy));
+      SDValue HLAdjusted =
+          DAG.getNode(ISD::SRL, dl, NVT, ResultHL,
+                      DAG.getShiftAmountConstant(Scale - NVTSize, NVT, dl));
       SatMax = DAG.getSetCC(dl, BoolNVT, HLAdjusted, NVTZero, ISD::SETNE);
     } else
       llvm_unreachable("Scale must be less or equal to VTSize for UMULFIXSAT"
