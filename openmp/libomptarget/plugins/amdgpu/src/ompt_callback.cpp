@@ -22,18 +22,13 @@
 #include <string.h>
 
 //****************************************************************************
-// debug macro needed by include files
-//****************************************************************************
-
-#ifndef DEBUG_PREFIX
-#define DEBUG_PREFIX "Target AMDGPU RTL"
-#endif
-
-//****************************************************************************
 // local includes
 //****************************************************************************
 
+#include <hsa_ext_amd.h>
+
 #include <Debug.h>
+#include <internal.h>
 #include <ompt-connector.h>
 #include <ompt_device_callbacks.h>
 
@@ -87,6 +82,9 @@ libomptarget_ompt_stop_trace_t ompt_stop_trace_fn = nullptr;
 libomptarget_ompt_advance_buffer_cursor_t ompt_advance_buffer_cursor_fn =
     nullptr;
 
+/// Global function to enable/disable queue profiling for all devices
+extern void ompt_enable_queue_profiling(int enable);
+
 // Runtime entry-points for device tracing
 
 OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *device,
@@ -125,8 +123,17 @@ ompt_start_trace(ompt_device_t *device, ompt_callback_buffer_request_t request,
     // plugin specific
     ompt_device_callbacks.set_buffer_request(request);
     ompt_device_callbacks.set_buffer_complete(complete);
-    if (request && complete)
+    if (request && complete) {
       ompt_device_callbacks.set_tracing_enabled(true);
+      // Enable asynchronous memory copy profiling
+      hsa_status_t err = hsa_amd_profiling_async_copy_enable(true /* enable */);
+      if (err != HSA_STATUS_SUCCESS) {
+        DP("Enabling profiling_async_copy returned %s, continuing\n",
+           get_error_string(err));
+      }
+      // Enable queue dispatch profiling
+      ompt_enable_queue_profiling(true /* enable */);
+    }
 
     // libomptarget specific
     if (!ompt_start_trace_fn) {
@@ -165,6 +172,14 @@ OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *device) {
     // Protect the function pointer
     std::unique_lock<std::mutex> lck(stop_trace_mutex);
     ompt_device_callbacks.set_tracing_enabled(false);
+    // Disable asynchronous memory copy profiling
+    hsa_status_t err = hsa_amd_profiling_async_copy_enable(false /* enable */);
+    if (err != HSA_STATUS_SUCCESS) {
+      DP("Disabling profiling_async_copy returned %s, continuing\n",
+         get_error_string(err));
+    }
+    // Disable queue dispatch profiling
+    ompt_enable_queue_profiling(false /* enable */);
 
     if (!ompt_stop_trace_fn) {
       void *vptr = dlsym(NULL, "libomptarget_ompt_stop_trace");

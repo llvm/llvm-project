@@ -104,7 +104,13 @@ static thread_local ompt_data_t ompt_target_data = ompt_data_none;
 static thread_local ompt_data_t *ompt_task_data = 0;
 static thread_local ompt_data_t *ompt_target_task_data = 0;
 static thread_local ompt_id_t host_op_id = 0;
+
+// Thread local variables used by the plugin to communicate OMPT information
+// that are then used to populate trace records. This method assumes a
+// synchronous implementation, otherwise it won't work.
 static thread_local uint32_t ompt_num_granted_teams = 0;
+static thread_local uint64_t ompt_tr_start_time = 0;
+static thread_local uint64_t ompt_tr_end_time = 0;
 
 /*****************************************************************************
  * OMPT callbacks
@@ -270,7 +276,7 @@ void OmptInterface::target_data_retrieve_end(int64_t device_id,
 
 ompt_record_ompt_t *OmptInterface::target_data_submit_trace_record_gen(
     int64_t device_id, ompt_target_data_op_t data_op, void *src_ptr,
-    void *dest_ptr, size_t bytes, uint64_t start_time) {
+    void *dest_ptr, size_t bytes) {
   if (!ompt_device_callbacks.is_tracing_enabled() ||
       (!ompt_device_callbacks.is_tracing_type_enabled(
            ompt_callback_target_data_op) &&
@@ -284,7 +290,7 @@ ompt_record_ompt_t *OmptInterface::target_data_submit_trace_record_gen(
 
   // Logically, this record is now private
 
-  set_trace_record_common(data_ptr, ompt_callback_target_data_op, start_time);
+  set_trace_record_common(data_ptr, ompt_callback_target_data_op);
 
   set_trace_record_target_data_op(&data_ptr->record.target_data_op, device_id,
                                   data_op, src_ptr, dest_ptr, bytes);
@@ -308,7 +314,7 @@ void OmptInterface::set_trace_record_target_data_op(
   rec->dest_addr = dest_ptr;
   rec->dest_device_num = device_id;
   rec->bytes = bytes;
-  rec->end_time = get_ns_duration_since_epoch();
+  rec->end_time = ompt_tr_end_time;
   rec->codeptr_ra = _codeptr_ra;
 }
 
@@ -325,8 +331,7 @@ void OmptInterface::target_submit_end(unsigned int num_teams) {
 }
 
 ompt_record_ompt_t *
-OmptInterface::target_submit_trace_record_gen(uint64_t start_time,
-                                              unsigned int num_teams) {
+OmptInterface::target_submit_trace_record_gen(unsigned int num_teams) {
   if (!ompt_device_callbacks.is_tracing_enabled() ||
       (!ompt_device_callbacks.is_tracing_type_enabled(
            ompt_callback_target_submit) &&
@@ -340,7 +345,7 @@ OmptInterface::target_submit_trace_record_gen(uint64_t start_time,
 
   // Logically, this record is now private
 
-  set_trace_record_common(data_ptr, ompt_callback_target_submit, start_time);
+  set_trace_record_common(data_ptr, ompt_callback_target_submit);
 
   set_trace_record_target_kernel(&data_ptr->record.target_kernel, num_teams);
 
@@ -357,7 +362,7 @@ void OmptInterface::set_trace_record_target_kernel(
   rec->host_op_id = ompt_target_region_opid;
   rec->requested_num_teams = num_teams;
   rec->granted_num_teams = ompt_num_granted_teams;
-  rec->end_time = get_ns_duration_since_epoch();
+  rec->end_time = ompt_tr_end_time;
 }
 
 void OmptInterface::target_data_enter_begin(int64_t device_id, void *codeptr) {
@@ -429,15 +434,13 @@ OmptInterface::target_trace_record_gen(int64_t device_id, ompt_target_t kind,
            ompt_callback_target_emi)))
     return nullptr;
 
-  uint64_t start_time = ompt_interface.get_ns_duration_since_epoch();
-
   ompt_record_ompt_t *data_ptr =
       (ompt_record_ompt_t *)ompt_trace_record_buffer_mgr.assignCursor(
           ompt_callback_target);
 
   // Logically, this record is now private
 
-  set_trace_record_common(data_ptr, ompt_callback_target, start_time);
+  set_trace_record_common(data_ptr, ompt_callback_target);
   set_trace_record_target(&data_ptr->record.target, device_id, kind, endpoint,
                           code);
 
@@ -465,10 +468,12 @@ void OmptInterface::set_trace_record_target(ompt_record_target_t *rec,
 }
 
 void OmptInterface::set_trace_record_common(ompt_record_ompt_t *data_ptr,
-                                            ompt_callbacks_t cbt,
-                                            uint64_t start_time) {
+                                            ompt_callbacks_t cbt) {
   data_ptr->type = cbt;
-  data_ptr->time = start_time;
+  if (cbt == ompt_callback_target)
+    data_ptr->time = 0; // Currently, no consumer, so no need to set it
+  else
+    data_ptr->time = ompt_tr_start_time;
   data_ptr->thread_id = 0; // TODO
   data_ptr->target_id = ompt_target_data.value;
 }
@@ -629,5 +634,13 @@ int libomptarget_ompt_advance_buffer_cursor(ompt_device_t *device,
 // ompt_num_granted_teams is already updated
 void libomptarget_ompt_set_granted_teams(uint32_t num_teams) {
   ompt_num_granted_teams = num_teams;
+}
+
+// Assume a synchronous implementation and set thread local variables to track
+// timestamps. The thread local variables can then be used to populate trace
+// records.
+void libomptarget_ompt_set_timestamp(uint64_t start, uint64_t end) {
+  ompt_tr_start_time = start;
+  ompt_tr_end_time = end;
 }
 }

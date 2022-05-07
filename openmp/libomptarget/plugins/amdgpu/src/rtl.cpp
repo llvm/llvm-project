@@ -50,13 +50,26 @@
       stmts                                                                    \
     }                                                                          \
   } while (0)
+#define OMPT_IF_TRACING_ENABLED(stmts)                                         \
+  do {                                                                         \
+    if (ompt_device_callbacks.is_tracing_enabled()) {                          \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
 #else
 #define OMPT_IF_ENABLED(stmts)
+#define OMPT_IF_TRACING_ENABLED(stmts)
 #endif
 
+/// Libomptarget function that will be used to set num_teams in trace records.
 typedef void (*libomptarget_ompt_set_granted_teams_t)(uint32_t);
 libomptarget_ompt_set_granted_teams_t ompt_set_granted_teams_fn = nullptr;
 std::mutex granted_teams_mtx;
+
+/// Libomptarget function that will be used to set timestamps in trace records.
+typedef void (*libomptarget_ompt_set_timestamp_t)(uint64_t start, uint64_t end);
+libomptarget_ompt_set_timestamp_t ompt_set_timestamp_fn = nullptr;
+std::mutex ompt_set_timestamp_mtx;
 
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
@@ -435,6 +448,16 @@ public:
                      NUM_QUEUES_PER_DEVICE];
   }
 
+  /// Enable/disable queue profiling for OMPT trace records
+  void enableQueueProfiling(int enable) {
+    for (uint8_t i = 0; i < NUM_QUEUES_PER_DEVICE; ++i) {
+      hsa_status_t err =
+          hsa_amd_profiling_set_profiler_enabled(HSAQueues[i], enable);
+      if (err != HSA_STATUS_SUCCESS)
+        DP("Error enabling queue profiling\n");
+    }
+  }
+
 private:
   // Number of queues per device
   enum : uint8_t { NUM_QUEUES_PER_DEVICE = 4 };
@@ -522,6 +545,9 @@ public:
   static const unsigned HardTeamLimit =
       (1 << 16) - 1; // 64K needed to fit in uint16
   static const int DefaultNumTeams = 128;
+
+  /// HSA system clock frequency. Modeled after ROCclr Timestamp functionality
+  double TicksToTime = 0;
 
   // These need to be per-device since different devices can have different
   // wave sizes, but are currently the same number for each so that refactor
@@ -732,6 +758,13 @@ public:
     return res;
   }
 
+  // Enable/disable queue profiling for all devices, consumed by OMPT trace
+  // records
+  void enableQueueProfiling(int enable) {
+    for (int i = 0; i < NumberOfDevices; ++i)
+      HSAQueueSchedulers[i].enableQueueProfiling(enable);
+  }
+
   /// Tracker of memory allocation types.
   // tgt_rtl_data_free is not passed memory type (host or device)
   // but it is saved in this data structure
@@ -813,6 +846,17 @@ public:
     if (!HSAInitSuccess()) {
       DP("Error when initializing HSA in " GETNAME(TARGET_NAME) "\n");
       return;
+    }
+
+    // Initialize system timestamp conversion factor, modeled after ROCclr
+    uint64_t ticks_frequency;
+    hsa_status_t freq_err = hsa_system_get_info(
+        HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &ticks_frequency);
+    if (freq_err == HSA_STATUS_SUCCESS)
+      TicksToTime = (double)1e9 / double(ticks_frequency);
+    else {
+      DP("Error calling hsa_system_get_info for timestamp frequency: %s\n",
+         get_error_string(freq_err));
     }
 
     if (char *envStr = getenv("LIBOMPTARGET_KERNEL_TRACE"))
@@ -964,7 +1008,87 @@ pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static RTLDeviceInfoTy DeviceInfo;
 
+/// Global function for enabling/disabling queue profiling, used for OMPT trace
+/// records.
+void ompt_enable_queue_profiling(int enable) {
+  DeviceInfo.enableQueueProfiling(enable);
+}
+
 namespace {
+
+/// Retrieve the libomptarget function for setting timestamps in trace records
+static void ensureTimestampFn() {
+  std::unique_lock<std::mutex> timestamp_fn_lck(ompt_set_timestamp_mtx);
+  if (ompt_set_timestamp_fn)
+    return;
+  void *vptr = dlsym(NULL, "libomptarget_ompt_set_timestamp");
+  assert(vptr && "OMPT set timestamp entry point not found");
+  ompt_set_timestamp_fn =
+      reinterpret_cast<libomptarget_ompt_set_timestamp_t>(vptr);
+}
+
+/// Get the HSA system timestamps for the input signal associated with an
+/// async copy and pass the information to libomptarget
+static void recordCopyTimingInNs(hsa_signal_t signal) {
+  hsa_amd_profiling_async_copy_time_t time_rec;
+  hsa_status_t err = hsa_amd_profiling_get_async_copy_time(signal, &time_rec);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Getting profiling_async_copy_time returned %s, continuing\n",
+       get_error_string(err));
+    return;
+  }
+  // Retrieve the libomptarget function pointer if required
+  ensureTimestampFn();
+  // No need to hold a lock
+  // Factor in the frequency
+  ompt_set_timestamp_fn(time_rec.start * DeviceInfo.TicksToTime,
+                        time_rec.end * DeviceInfo.TicksToTime);
+}
+
+/// Get the HSA system timestamps for the input agent and signal associated
+/// with a kernel dispatch and pass the information to libomptarget
+static void recordKernelTimingInNs(hsa_signal_t signal, hsa_agent_t agent) {
+  hsa_amd_profiling_dispatch_time_t time_rec;
+  hsa_status_t err =
+      hsa_amd_profiling_get_dispatch_time(agent, signal, &time_rec);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Getting profiling_dispatch_time returned %s, continuing\n",
+       get_error_string(err));
+    return;
+  }
+  // Retrieve the libomptarget function pointer if required
+  ensureTimestampFn();
+  // No need to hold a lock
+  // Factor in the frequency
+  ompt_set_timestamp_fn(time_rec.start * DeviceInfo.TicksToTime,
+                        time_rec.end * DeviceInfo.TicksToTime);
+}
+
+/// Get the current HSA system timestamp
+static uint64_t getSystemTimestampInNs() {
+  uint64_t timestamp = 0;
+  hsa_status_t err = hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &timestamp);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error while getting system timestamp: %s\n", get_error_string(err));
+  }
+  return timestamp * DeviceInfo.TicksToTime;
+}
+
+/// RAII used for timing certain plugin functionality and transferring the
+/// information to libomptarget
+struct OmptTimestampRAII {
+  OmptTimestampRAII() { OMPT_IF_TRACING_ENABLED(setStart();); }
+  ~OmptTimestampRAII() { OMPT_IF_ENABLED(setTimestamp();); }
+
+private:
+  uint64_t StartTime = 0;
+  void setStart() { StartTime = getSystemTimestampInNs(); }
+  void setTimestamp() {
+    uint64_t EndTime = getSystemTimestampInNs();
+    ensureTimestampFn();
+    ompt_set_timestamp_fn(StartTime, EndTime);
+  }
+};
 
 uint16_t create_BarrierAND_header() {
   uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
@@ -1011,6 +1135,7 @@ public:
     hsa_signal_value_t init = 1;
     hsa_signal_value_t success = 0;
     hsa_status_t err = wait_for_signal(signal, init, success);
+    OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(signal););
     DeviceInfo.FreeSignalPool.push(signal);
     alreadyCompleted = true;
     return err;
@@ -1036,10 +1161,10 @@ class AMDGPUAsyncInfoComputeTy {
 public:
   AMDGPUAsyncInfoComputeTy()
       : kernelExecutionCompleted(false), ArgPool(nullptr), kernarg(nullptr) {}
-  AMDGPUAsyncInfoComputeTy(hsa_signal_t signal, KernelArgPool *ArgPool,
-                           void *kernarg)
-      : kernelExecutionCompleted(false), signal(signal), ArgPool(ArgPool),
-        kernarg(kernarg) {}
+  AMDGPUAsyncInfoComputeTy(hsa_signal_t signal, hsa_agent_t agt,
+                           KernelArgPool *ArgPool, void *kernarg)
+      : kernelExecutionCompleted(false), signal(signal), agent(agt),
+        ArgPool(ArgPool), kernarg(kernarg) {}
 
   ~AMDGPUAsyncInfoComputeTy() {}
   AMDGPUAsyncInfoComputeTy(const AMDGPUAsyncInfoComputeTy &) = delete;
@@ -1049,6 +1174,7 @@ public:
   AMDGPUAsyncInfoComputeTy &operator=(const AMDGPUAsyncInfoComputeTy &&tmp) {
     kernelExecutionCompleted = tmp.kernelExecutionCompleted;
     signal = tmp.signal;
+    agent = tmp.agent;
     ArgPool = tmp.ArgPool;
     kernarg = tmp.kernarg;
     return *this;
@@ -1060,6 +1186,7 @@ public:
     hsa_signal_value_t init = 1;
     hsa_signal_value_t success = 0;
     hsa_status_t err = wait_for_signal(signal, init, success);
+    OMPT_IF_TRACING_ENABLED(recordKernelTimingInNs(signal, agent););
     DeviceInfo.FreeSignalPool.push(signal);
     assert(ArgPool);
     ArgPool->deallocate(kernarg);
@@ -1073,6 +1200,7 @@ private:
   bool kernelExecutionCompleted;
 
   hsa_signal_t signal;
+  hsa_agent_t agent;
   KernelArgPool *ArgPool; // needed for deallocation of kernarg
   void *kernarg;          // kernarg ptr used by kernel launch
 };
@@ -1742,8 +1870,8 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
     // wait for completion, then free signal and kernarg
-    AsyncInfo.addKernelLaunchInfo(
-        AMDGPUAsyncInfoComputeTy(s, ArgPool, kernarg));
+    AsyncInfo.addKernelLaunchInfo(AMDGPUAsyncInfoComputeTy(
+        s, DeviceInfo.HSAAgents[device_id], ArgPool, kernarg));
   }
 
   DP("Kernel completed\n");
@@ -2697,8 +2825,13 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
   void *ptr = nullptr;
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
 
-  ptr = DeviceInfo.DeviceAllocators[device_id].allocate(size, nullptr,
-                                                        (TargetAllocTy)kind);
+  {
+    // We don't have HSA-profiling timestamps for device allocation, so just get
+    // the start and end system timestamps for OMPT
+    OmptTimestampRAII AllocTimestamp;
+    ptr = DeviceInfo.DeviceAllocators[device_id].allocate(size, nullptr,
+                                                          (TargetAllocTy)kind);
+  }
   if (kind == TARGET_ALLOC_SHARED) {
     __tgt_rtl_set_coarse_grain_mem_region(ptr, size);
   }
@@ -2808,6 +2941,9 @@ int32_t __tgt_rtl_data_retrieve_async(int device_id, void *hst_ptr,
 
 int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
+  // We don't have HSA-profiling timestamps for device delete, so just get the
+  // start and end system timestamps for OMPT
+  OmptTimestampRAII DeleteTimestamp;
   return DeviceInfo.DeviceAllocators[device_id].dev_free(tgt_ptr);
 }
 
