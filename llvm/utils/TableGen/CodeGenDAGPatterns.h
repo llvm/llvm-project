@@ -541,6 +541,9 @@ public:
   // Predicate code uses the PatFrag's captured operands.
   bool usesOperands() const;
 
+  // Check if the HasNoUse predicate is set.
+  bool hasNoUse() const;
+
   // Is the desired predefined predicate for a load?
   bool isLoad() const;
   // Is the desired predefined predicate for a store?

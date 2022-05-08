@@ -331,6 +331,9 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
     if (Predicate.isImmediatePattern())
       continue;
 
+    if (Predicate.hasNoUse())
+      continue;
+
     if (Predicate.isNonExtLoad() || Predicate.isAnyExtLoad() ||
         Predicate.isSignExtLoad() || Predicate.isZeroExtLoad())
       continue;
@@ -1119,6 +1122,7 @@ public:
     IPM_MemoryAddressSpace,
     IPM_MemoryAlignment,
     IPM_VectorSplatImm,
+    IPM_NoUse,
     IPM_GenericPredicate,
     OPM_SameOperand,
     OPM_ComplexPattern,
@@ -2234,6 +2238,29 @@ public:
           << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
           << MatchTable::Comment("FnId")
           << MatchTable::NamedValue(getEnumNameForPredicate(Predicate))
+          << MatchTable::LineBreak;
+  }
+};
+
+/// Generates code to check for the absence of use of the result.
+// TODO? Generalize this to support checking for one use.
+class NoUsePredicateMatcher : public InstructionPredicateMatcher {
+public:
+  NoUsePredicateMatcher(unsigned InsnVarID)
+      : InstructionPredicateMatcher(IPM_NoUse, InsnVarID) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == IPM_NoUse;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return InstructionPredicateMatcher::isIdentical(B);
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIM_CheckHasNoUse")
+          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
           << MatchTable::LineBreak;
   }
 };
@@ -4000,6 +4027,17 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     if (auto Error = InsnMatcherOrError.takeError())
       return std::move(Error);
 
+    // FIXME: This should be part of addBuiltinPredicates(). If we add this at
+    // the start of addBuiltinPredicates() without returning, then there might
+    // be cases where we hit the last return before which the
+    // HasAddedBuiltinMatcher will be set to false. The predicate could be
+    // missed if we add it in the middle or at the end due to return statements
+    // after the addPredicate<>() calls.
+    if (Predicate.hasNoUse()) {
+      InsnMatcher.addPredicate<NoUsePredicateMatcher>();
+      HasAddedBuiltinMatcher = true;
+    }
+
     if (Predicate.hasGISelPredicateCode()) {
       if (Predicate.usesOperands()) {
         assert(WaitingForNamedOperands == 0 &&
@@ -5206,16 +5244,31 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   auto &DstI = Target.getInstruction(DstOp);
   StringRef DstIName = DstI.TheDef->getName();
 
-  if (DstI.Operands.NumDefs < Src->getExtTypes().size())
-    return failedImport("Src pattern result has more defs than dst MI (" +
-                        to_string(Src->getExtTypes().size()) + " def(s) vs " +
-                        to_string(DstI.Operands.NumDefs) + " def(s))");
+  unsigned DstNumDefs = DstI.Operands.NumDefs,
+           SrcNumDefs = Src->getExtTypes().size();
+  if (DstNumDefs < SrcNumDefs) {
+    if (DstNumDefs != 0)
+      return failedImport("Src pattern result has more defs than dst MI (" +
+                          to_string(SrcNumDefs) + " def(s) vs " +
+                          to_string(DstNumDefs) + " def(s))");
+
+    bool FoundNoUsePred = false;
+    for (const auto &Pred : InsnMatcher.predicates()) {
+      if ((FoundNoUsePred = isa<NoUsePredicateMatcher>(Pred.get())))
+        break;
+    }
+    if (!FoundNoUsePred)
+      return failedImport("Src pattern result has " + to_string(SrcNumDefs) +
+                          " def(s) without the HasNoUse predicate set to true "
+                          "but Dst MI has no def");
+  }
 
   // The root of the match also has constraints on the register bank so that it
   // matches the result instruction.
   unsigned OpIdx = 0;
-  for (const TypeSetByHwMode &VTy : Src->getExtTypes()) {
-    (void)VTy;
+  unsigned N = std::min(DstNumDefs, SrcNumDefs);
+  for (unsigned I = 0; I < N; ++I) {
+    const TypeSetByHwMode &VTy = Src->getExtType(I);
 
     const auto &DstIOperand = DstI.Operands[OpIdx];
     Record *DstIOpRec = DstIOperand.Rec;
