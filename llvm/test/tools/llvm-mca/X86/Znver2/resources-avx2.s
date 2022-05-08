@@ -577,17 +577,17 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      100   0.25    *                   vpgatherqq	%xmm0, (%rax,%xmm1,2), %xmm2
 # CHECK-NEXT:  1      100   0.25    *                   vpgatherqq	%ymm0, (%rax,%ymm1,2), %ymm2
 # CHECK-NEXT:  1      3     0.25                        vphaddd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      7     0.33    *                   vphaddd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    0.33    *                   vphaddd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     0.25                        vphaddsw	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      7     0.33    *                   vphaddsw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    0.33    *                   vphaddsw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     0.25                        vphaddw	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      7     0.33    *                   vphaddw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    0.33    *                   vphaddw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     0.25                        vphsubd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      7     0.33    *                   vphsubd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    0.33    *                   vphsubd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     0.25                        vphsubsw	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      7     0.33    *                   vphsubsw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    0.33    *                   vphsubsw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     0.25                        vphsubw	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      7     0.33    *                   vphsubw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    0.33    *                   vphsubw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      4     1.00                        vpmaddubsw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      11    1.00    *                   vpmaddubsw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      4     1.00                        vpmaddwd	%ymm0, %ymm1, %ymm2
