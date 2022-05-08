@@ -19,7 +19,7 @@
   __attribute__((__always_inline__, __nodebug__, __target__("shstk")))
 
 static __inline__ void __DEFAULT_FN_ATTRS _incsspd(int __a) {
-  __builtin_ia32_incsspd(__a);
+  __builtin_ia32_incsspd((unsigned int)__a);
 }
 
 #ifdef __x86_64__
@@ -34,7 +34,7 @@ static __inline__ void __DEFAULT_FN_ATTRS _inc_ssp(unsigned int __a) {
 }
 #else /* __x86_64__ */
 static __inline__ void __DEFAULT_FN_ATTRS _inc_ssp(unsigned int __a) {
-  __builtin_ia32_incsspd((int)__a);
+  __builtin_ia32_incsspd(__a);
 }
 #endif /* __x86_64__ */
 
