@@ -224,7 +224,7 @@ define <4 x i32> @combine_vec_add_sub_sub(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
   ret <4 x i32> %3
 }
 
-; FIXME: missing oneuse limit on fold
+; Check for oneuse limit on fold
 define void @PR52039(<8 x i32>* %pa, <8 x i32>* %pb) {
 ; SSE-LABEL: PR52039:
 ; SSE:       # %bb.0:
@@ -245,22 +245,17 @@ define void @PR52039(<8 x i32>* %pa, <8 x i32>* %pb) {
 ;
 ; AVX1-LABEL: PR52039:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [10,10,10,10]
-; AVX1-NEXT:    vpsubd %xmm0, %xmm2, %xmm3
-; AVX1-NEXT:    vpsubd %xmm1, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm1, %xmm1, %xmm4
-; AVX1-NEXT:    vpaddd %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm4
-; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [30,30,30,30]
-; AVX1-NEXT:    vpsubd %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpsubd %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vmovdqu %xmm2, 16(%rsi)
-; AVX1-NEXT:    vmovdqu %xmm3, (%rsi)
-; AVX1-NEXT:    vmovdqu %xmm1, 16(%rdi)
-; AVX1-NEXT:    vmovdqu %xmm0, (%rdi)
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = [10,10,10,10]
+; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
+; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm1, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm3
+; AVX1-NEXT:    vmovdqu %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX1-NEXT:    vmovdqu %xmm3, 16(%rdi)
+; AVX1-NEXT:    vmovdqu %xmm2, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR52039:
