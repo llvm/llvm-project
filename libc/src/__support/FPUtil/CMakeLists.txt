@@ -48,6 +48,8 @@ add_header_library(
   DEPENDS
     .fputil
     libc.src.__support.FPUtil.generic.fma
+  FLAGS
+    FMA_OPT
 )
 
 add_header_library(

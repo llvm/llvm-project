@@ -51,7 +51,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fma
   COMPILE_OPTIONS
     -O3
-    -mfma
 )
 
 add_entrypoint_object(
@@ -65,7 +64,8 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fma
   COMPILE_OPTIONS
     -O3
-    -mfma
+  FLAGS
+    FMA_OPT__ONLY
 )
 
 add_math_entrypoint_object(ceil)
