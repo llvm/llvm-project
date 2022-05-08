@@ -210,6 +210,16 @@ bool llvm::lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
   if (lowerRISCVVMachineInstrToMCInst(MI, OutMI))
     return false;
 
+  // Only need the output operand when lower PseudoReadVL from MI to MCInst.
+  if (MI->getOpcode() == RISCV::PseudoReadVL) {
+    OutMI.setOpcode(RISCV::CSRRS);
+    OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+    OutMI.addOperand(
+        MCOperand::createImm(RISCVSysReg::lookupSysRegByName("VL")->Encoding));
+    OutMI.addOperand(MCOperand::createReg(RISCV::X0));
+    return false;
+  }
+
   OutMI.setOpcode(MI->getOpcode());
 
   for (const MachineOperand &MO : MI->operands()) {
@@ -236,12 +246,6 @@ bool llvm::lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
     OutMI.setOpcode(RISCV::CSRRS);
     OutMI.addOperand(MCOperand::createImm(
         RISCVSysReg::lookupSysRegByName("VLENB")->Encoding));
-    OutMI.addOperand(MCOperand::createReg(RISCV::X0));
-    break;
-  case RISCV::PseudoReadVL:
-    OutMI.setOpcode(RISCV::CSRRS);
-    OutMI.addOperand(
-        MCOperand::createImm(RISCVSysReg::lookupSysRegByName("VL")->Encoding));
     OutMI.addOperand(MCOperand::createReg(RISCV::X0));
     break;
   }
