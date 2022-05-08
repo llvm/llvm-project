@@ -292,8 +292,7 @@ AARCH64_CPU_NAME("a64fx", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
 AARCH64_CPU_NAME("carmel", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  AArch64::AEK_FP16)
 AARCH64_CPU_NAME("ampere1", ARMV8_6A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                 (AArch64::AEK_FP16 | AArch64::AEK_MTE | AArch64::AEK_SB |
-                  AArch64::AEK_SSBS))
+                 (AArch64::AEK_FP16 | AArch64::AEK_SB | AArch64::AEK_SSBS))
 // Invalid CPU
 AARCH64_CPU_NAME("invalid", INVALID, FK_INVALID, true, AArch64::AEK_INVALID)
 #undef AARCH64_CPU_NAME

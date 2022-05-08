@@ -1201,7 +1201,7 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_RDM  | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
                              AArch64::AEK_SM4  | AArch64::AEK_SHA3 | AArch64::AEK_BF16    |
                              AArch64::AEK_SHA2 | AArch64::AEK_AES  | AArch64::AEK_I8MM    |
-                             AArch64::AEK_MTE  | AArch64::AEK_SSBS | AArch64::AEK_SB,
+                             AArch64::AEK_SSBS | AArch64::AEK_SB,
                          "8.6-A"),
         ARMCPUTestParams(
             "neoverse-512tvb", "armv8.4-a", "crypto-neon-fp-armv8",
