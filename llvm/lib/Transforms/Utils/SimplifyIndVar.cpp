@@ -159,11 +159,12 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
       D = ConstantInt::get(UseInst->getContext(),
                            APInt::getOneBitSet(BitWidth, D->getZExtValue()));
     }
-    FoldedExpr = SE->getUDivExpr(SE->getSCEV(IVSrc), SE->getSCEV(D));
+    const auto *LHS = SE->getSCEV(IVSrc);
+    const auto *RHS = SE->getSCEV(D);
+    FoldedExpr = SE->getUDivExpr(LHS, RHS);
     // We might have 'exact' flag set at this point which will no longer be
     // correct after we make the replacement.
-    if (UseInst->isExact() &&
-        SE->getSCEV(IVSrc) != SE->getMulExpr(FoldedExpr, SE->getSCEV(D)))
+    if (UseInst->isExact() && LHS != SE->getMulExpr(FoldedExpr, RHS))
       MustDropExactFlag = true;
   }
   // We have something that might fold it's operand. Compare SCEVs.
