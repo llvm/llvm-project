@@ -104,7 +104,7 @@ private:
   bool scalarizeLoadExtract(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
-  bool foldSelectShuffle(Instruction &I);
+  bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
 
   void replaceValue(Value &Old, Value &New) {
     Old.replaceAllUsesWith(&New);
@@ -1223,7 +1223,9 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
     replaceValue(*Shuffle, *NewShuffle);
   }
 
-  return false;
+  // See if we can re-use foldSelectShuffle, getting it to reduce the size of
+  // the shuffle into a nicer order, as it can ignore the order of the shuffles.
+  return foldSelectShuffle(*Shuffle, true);
 }
 
 /// This method looks for groups of shuffles acting on binops, of the form:
@@ -1236,7 +1238,7 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
 /// the shuffle to a form where only parts of a and b need to be computed. On
 /// architectures with no obvious "select" shuffle, this can reduce the total
 /// number of operations if the target reports them as cheaper.
-bool VectorCombine::foldSelectShuffle(Instruction &I) {
+bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   auto *SVI = dyn_cast<ShuffleVectorInst>(&I);
   auto *VT = dyn_cast<FixedVectorType>(I.getType());
   if (!SVI || !VT)
@@ -1274,6 +1276,10 @@ bool VectorCombine::foldSelectShuffle(Instruction &I) {
     return true;
   };
   if (!collectShuffles(Op0) || !collectShuffles(Op1))
+    return false;
+  // From a reduction, we need to be processing a single shuffle, otherwise the
+  // other uses will not be lane-invariant.
+  if (FromReduction && Shuffles.size() > 1)
     return false;
 
   // For each of the output shuffles, we try to sort all the first vector
@@ -1328,6 +1334,10 @@ bool VectorCombine::foldSelectShuffle(Instruction &I) {
       }
     }
 
+    // For reductions, we know that the lane ordering out doesn't alter the
+    // result. In-order can help simplify the shuffle away.
+    if (FromReduction)
+      sort(ReconstructMask);
     ReconstructMasks.push_back(ReconstructMask);
   }
 
