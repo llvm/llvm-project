@@ -2671,13 +2671,6 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
           for (User *U : I.users())
             if (Checker.isDefinitionAcrossSuspend(I, U))
               Spills[&I].push_back(cast<Instruction>(U));
-
-          // Manually add dbg.value metadata uses of I.
-          SmallVector<DbgValueInst *, 16> DVIs;
-          findDbgValues(DVIs, &I);
-          for (auto *DVI : DVIs)
-            if (Checker.isDefinitionAcrossSuspend(I, DVI))
-              Spills[&I].push_back(DVI);
         }
 
       if (Spills.empty())

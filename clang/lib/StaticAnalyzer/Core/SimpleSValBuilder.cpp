@@ -197,8 +197,27 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
       if (RHS.isSigned() && !SymbolType->isSignedIntegerOrEnumerationType())
         ConvertedRHS = &BasicVals.Convert(SymbolType, RHS);
     }
-  } else
+  } else if (BinaryOperator::isAdditiveOp(op) && RHS.isNegative()) {
+    // Change a+(-N) into a-N, and a-(-N) into a+N
+    // Adjust addition/subtraction of negative value, to
+    // subtraction/addition of the negated value.
+    APSIntType resultIntTy = BasicVals.getAPSIntType(resultTy);
+    assert(resultIntTy.getBitWidth() >= RHS.getBitWidth() &&
+           "The result operation type must have at least the same "
+           "number of bits as its operands.");
+
+    llvm::APSInt ConvertedRHSValue = resultIntTy.convert(RHS);
+    // Check if the negation of the RHS is representable:
+    // * if resultIntTy is unsigned, then negation is always representable
+    // * if resultIntTy is signed, and RHS is not the lowest representable
+    //   signed value
+    if (resultIntTy.isUnsigned() || !ConvertedRHSValue.isMinSignedValue()) {
+      ConvertedRHS = &BasicVals.getValue(-ConvertedRHSValue);
+      op = (op == BO_Add) ? BO_Sub : BO_Add;
+    }
+  } else {
     ConvertedRHS = &BasicVals.Convert(resultTy, RHS);
+  }
 
   return makeNonLoc(LHS, op, *ConvertedRHS, resultTy);
 }
@@ -636,16 +655,27 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
               const llvm::APSInt &first = IntType.convert(symIntExpr->getRHS());
               const llvm::APSInt &second = IntType.convert(*RHSValue);
 
+              // If the op and lop agrees, then we just need to
+              // sum the constants. Otherwise, we change to operation
+              // type if substraction would produce negative value
+              // (and cause overflow for unsigned integers),
+              // as consequence x+1U-10 produces x-9U, instead
+              // of x+4294967287U, that would be produced without this
+              // additional check.
               const llvm::APSInt *newRHS;
-              if (lop == op)
+              if (lop == op) {
                 newRHS = BasicVals.evalAPSInt(BO_Add, first, second);
-              else
+              } else if (first >= second) {
                 newRHS = BasicVals.evalAPSInt(BO_Sub, first, second);
+                op = lop;
+              } else {
+                newRHS = BasicVals.evalAPSInt(BO_Sub, second, first);
+              }
 
               assert(newRHS && "Invalid operation despite common type!");
               rhs = nonloc::ConcreteInt(*newRHS);
               lhs = nonloc::SymbolVal(symIntExpr->getLHS());
-              op = lop;
+
               continue;
             }
           }

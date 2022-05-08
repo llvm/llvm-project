@@ -86,7 +86,7 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
   // Check file type sanity
-  assert(types::isFortran(InputType) && "Can only accept Fortran");
+  assert(types::isAcceptedByFlang(InputType) && "Can only accept Fortran");
 
   if (Args.hasArg(options::OPT_fsyntax_only)) {
     // For -fsyntax-only produce temp files only

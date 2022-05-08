@@ -116,7 +116,7 @@ func.func @composite_extract_invalid_index_type_1() -> () {
   %0 = spv.Constant 10 : i32
   %1 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
   %2 = spv.Load "Function" %1 ["Volatile"] : !spv.array<4x!spv.array<4xf32>>
-  // expected-error @+1 {{expected non-function type}}
+  // expected-error @+1 {{expected attribute value}}
   %3 = spv.CompositeExtract %2[%0] : !spv.array<4x!spv.array<4xf32>>
   return
 }
@@ -132,7 +132,7 @@ func.func @composite_extract_invalid_index_type_2(%arg0 : !spv.array<4x!spv.arra
 // -----
 
 func.func @composite_extract_invalid_index_identifier(%arg0 : !spv.array<4x!spv.array<4xf32>>) -> () {
-  // expected-error @+1 {{expected non-function type}}
+  // expected-error @+1 {{expected attribute value}}
   %0 = spv.CompositeExtract %arg0 ]1 : i32) : !spv.array<4x!spv.array<4xf32>>
   return
 }

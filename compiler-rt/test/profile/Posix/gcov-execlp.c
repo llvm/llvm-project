@@ -1,3 +1,4 @@
+// XFAIL: aix
 /// A basic block with fork/exec* is split. .gcda is flushed immediately before
 /// fork/exec* so the lines before exec* are counted once while succeeding
 /// lines are not counted.

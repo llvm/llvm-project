@@ -6225,9 +6225,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       std::swap(N1, N2);
     } else {
       switch (Opcode) {
-      case ISD::SIGN_EXTEND_INREG:
       case ISD::SUB:
         return getUNDEF(VT);     // fold op(undef, arg2) -> undef
+      case ISD::SIGN_EXTEND_INREG:
       case ISD::UDIV:
       case ISD::SDIV:
       case ISD::UREM:
@@ -8861,6 +8861,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // If it is VP_MUL mask operation then turn it to VP_AND
     if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
       Opcode = ISD::VP_AND;
+    break;
+  case ISD::VP_REDUCE_ADD:
+    // If it is VP_REDUCE_ADD mask operation then turn it to VP_REDUCE_XOR
+    if (VT == MVT::i1)
+      Opcode = ISD::VP_REDUCE_XOR;
     break;
   }
 

@@ -272,6 +272,9 @@ private:
   /// Whether to check that input files exist when constructing compilation
   /// jobs.
   unsigned CheckInputsExist : 1;
+  /// Whether to probe for PCH files on disk, in order to upgrade
+  /// -include foo.h to -include-pch foo.h.pch.
+  unsigned ProbePrecompiled : 1;
 
 public:
   /// Force clang to emit reproducer for driver invocation. This is enabled
@@ -360,6 +363,9 @@ public:
   bool getCheckInputsExist() const { return CheckInputsExist; }
 
   void setCheckInputsExist(bool Value) { CheckInputsExist = Value; }
+
+  bool getProbePrecompiled() const { return ProbePrecompiled; }
+  void setProbePrecompiled(bool Value) { ProbePrecompiled = Value; }
 
   void setTargetAndMode(const ParsedClangName &TM) { ClangNameParts = TM; }
 
