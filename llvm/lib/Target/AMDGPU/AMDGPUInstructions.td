@@ -542,16 +542,10 @@ def atomic_store_64_#as : PatFrag<(ops node:$ptr, node:$val),
 }
 } // End foreach as
 
-// TODO: Add GISelPredicateCode for the ret and noret PatFrags once
-// GlobalISelEmitter allows pattern matches where src and dst def count
-// mismatch.
-
 multiclass noret_op {
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
-      GISelPredicateCode = [{ return false; }] in {
-    def "_noret" : PatFrag<(ops node:$ptr, node:$data),
-      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
-  }
+  let HasNoUse = true in
+  def "_noret" : PatFrag<(ops node:$ptr, node:$data),
+    (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
 }
 
 defm int_amdgcn_flat_atomic_fadd : noret_op;
@@ -565,17 +559,13 @@ defm int_amdgcn_global_atomic_fmax : noret_op;
 defm int_amdgcn_ds_fadd_v2bf16 : noret_op;
 
 multiclass noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
-      GISelPredicateCode = [{ return false; }] in {
-    defm "_noret" : binary_atomic_op<atomic_op, IsInt>;
-  }
+  let HasNoUse = true in
+  defm "_noret" : binary_atomic_op<atomic_op, IsInt>;
 }
 
 multiclass noret_ternary_atomic_op<SDNode atomic_op> {
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
-      GISelPredicateCode = [{ return false; }] in {
-    defm "_noret" : ternary_atomic_op<atomic_op>;
-  }
+  let HasNoUse = true in
+  defm "_noret" : ternary_atomic_op<atomic_op>;
 }
 
 multiclass binary_atomic_op_all_as<SDNode atomic_op, bit IsInt = 1> {
