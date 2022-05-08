@@ -216,6 +216,34 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b) {
   ret <4 x double> %r03
 }
 
+; PR50392
+define <4 x double> @test_v4f64_partial_swizzle(<4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: @test_v4f64_partial_swizzle(
+; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x double> [[B:%.*]], i64 2
+; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x double> [[B]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B]], <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 5>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R3:%.*]] = fadd double [[B2]], [[B3]]
+; CHECK-NEXT:    [[R021:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>
+; CHECK-NEXT:    [[R03:%.*]] = insertelement <4 x double> [[R021]], double [[R3]], i64 3
+; CHECK-NEXT:    ret <4 x double> [[R03]]
+;
+  %a0 = extractelement <4 x double> %a, i64 0
+  %a1 = extractelement <4 x double> %a, i64 1
+  %b0 = extractelement <4 x double> %b, i64 0
+  %b1 = extractelement <4 x double> %b, i64 1
+  %b2 = extractelement <4 x double> %b, i32 2
+  %b3 = extractelement <4 x double> %b, i32 3
+  %r0 = fadd double %a0, %a1
+  %r2 = fadd double %b0, %b1
+  %r3 = fadd double %b2, %b3
+  %r00 = insertelement <4 x double> poison, double %r0, i32 0
+  %r02 = insertelement <4 x double>  %r00, double %r2, i32 2
+  %r03 = insertelement <4 x double>  %r02, double %r3, i32 3
+  ret <4 x double> %r03
+}
+
 define <8 x float> @test_v8f32(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: @test_v8f32(
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
