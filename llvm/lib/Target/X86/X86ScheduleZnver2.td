@@ -1104,11 +1104,11 @@ def : InstRW<[WriteMicrocoded], (instregex "VPGATHER(Q|D)(Q|D)(Y?)rm")>;
 
 // HADD, HSUB PS/PD
 // PHADD|PHSUB (S) W/D.
-defm : Zn2WriteResPair<WriteFHAdd, [], 7>;
-defm : Zn2WriteResPair<WriteFHAddY, [], 7>;
-defm : Zn2WriteResPair<WritePHAdd, [], 3>;
-defm : Zn2WriteResPair<WritePHAddX, [], 3>;
-defm : Zn2WriteResPair<WritePHAddY, [], 3>;
+defm : Zn2WriteResFpuPair<WriteFHAdd, [], 7>;
+defm : Zn2WriteResFpuPair<WriteFHAddY, [], 7>;
+defm : Zn2WriteResFpuPair<WritePHAdd, [], 3>;
+defm : Zn2WriteResFpuPair<WritePHAddX, [], 3>;
+defm : Zn2WriteResFpuPair<WritePHAddY, [], 3>;
 
 // PCMPGTQ.
 def Zn2WritePCMPGTQr : SchedWriteRes<[Zn2FPU03]>;
