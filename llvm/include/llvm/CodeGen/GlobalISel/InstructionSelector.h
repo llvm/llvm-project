@@ -196,6 +196,10 @@ enum {
   /// - PredicateID - The ID of the predicate function to call
   GIM_CheckCxxInsnPredicate,
 
+  /// Check if there's no use of the first result.
+  /// - InsnID - Instruction ID
+  GIM_CheckHasNoUse,
+
   /// Check the type for the specified operand
   /// - InsnID - Instruction ID
   /// - OpIdx - Operand index
