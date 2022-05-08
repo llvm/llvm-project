@@ -1000,6 +1000,11 @@ DWARFRewriter::finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher) {
           findAttributeInfo(DIE, dwarf::DW_AT_GNU_addr_base);
       Optional<AttrInfo> AttrVal =
           findAttributeInfo(DIE, dwarf::DW_AT_addr_base);
+
+      // For cases where Skeleton CU does not have DW_AT_GNU_addr_base
+      if (!AttrValGnu && CU->getVersion() < 5)
+        continue;
+
       Offset = AddrWriter->getOffset(*CU);
 
       if (AttrValGnu) {
@@ -1023,9 +1028,7 @@ DWARFRewriter::finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher) {
         AbbrevWriter->addAttribute(*CU, Abbrev, dwarf::DW_AT_addr_base,
                                    dwarf::DW_FORM_sec_offset);
         DebugInfoPatcher.insertNewEntry(DIE, static_cast<int32_t>(Offset));
-      } else
-        llvm_unreachable(
-            "DWO CU uses .debug_address, but DW_AT_GNU_addr_base is missing.");
+      }
     }
   }
 
