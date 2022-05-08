@@ -60,3 +60,117 @@ define i32 @foo(i8* noalias nocapture %A, float* noalias nocapture %B, float %T)
   ret i32 undef
 }
 
+; PR41892
+define void @test_v4f32_v2f32_store(<4 x float> %f, float* %p){
+; CHECK-LABEL: @test_v4f32_v2f32_store(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[F]], i64 1
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; CHECK-NEXT:    store float [[X0]], float* [[P]], align 4
+; CHECK-NEXT:    store float [[X1]], float* [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <4 x float> %f, i64 0
+  %x1 = extractelement <4 x float> %f, i64 1
+  %p1 = getelementptr inbounds float, float* %p, i64 1
+  store float %x0, float* %p, align 4
+  store float %x1, float* %p1, align 4
+  ret void
+}
+
+define void @test_v4f32_v2f32_splat_store(<4 x float> %f, float* %p){
+; CHECK-LABEL: @test_v4f32_v2f32_splat_store(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; CHECK-NEXT:    store float [[X0]], float* [[P]], align 4
+; CHECK-NEXT:    store float [[X0]], float* [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <4 x float> %f, i64 0
+  %p1 = getelementptr inbounds float, float* %p, i64 1
+  store float %x0, float* %p, align 4
+  store float %x0, float* %p1, align 4
+  ret void
+}
+
+define void @test_v4f32_v3f32_store(<4 x float> %f, float* %p){
+; CHECK-LABEL: @test_v4f32_v3f32_store(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[F]], i64 1
+; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x float> [[F]], i64 2
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; CHECK-NEXT:    store float [[X0]], float* [[P]], align 4
+; CHECK-NEXT:    store float [[X1]], float* [[P1]], align 4
+; CHECK-NEXT:    store float [[X2]], float* [[P2]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <4 x float> %f, i64 0
+  %x1 = extractelement <4 x float> %f, i64 1
+  %x2 = extractelement <4 x float> %f, i64 2
+  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p2 = getelementptr inbounds float, float* %p, i64 2
+  store float %x0, float* %p, align 4
+  store float %x1, float* %p1, align 4
+  store float %x2, float* %p2, align 4
+  ret void
+}
+
+define void @test_v4f32_v3f32_splat_store(<4 x float> %f, float* %p){
+; CHECK-LABEL: @test_v4f32_v3f32_splat_store(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; CHECK-NEXT:    store float [[X0]], float* [[P]], align 4
+; CHECK-NEXT:    store float [[X0]], float* [[P1]], align 4
+; CHECK-NEXT:    store float [[X0]], float* [[P2]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <4 x float> %f, i64 0
+  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p2 = getelementptr inbounds float, float* %p, i64 2
+  store float %x0, float* %p, align 4
+  store float %x0, float* %p1, align 4
+  store float %x0, float* %p2, align 4
+  ret void
+}
+
+define void @test_v4f32_v4f32_store(<4 x float> %f, float* %p){
+; CHECK-LABEL: @test_v4f32_v4f32_store(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[F:%.*]], <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <4 x float> %f, i64 0
+  %x1 = extractelement <4 x float> %f, i64 1
+  %x2 = extractelement <4 x float> %f, i64 2
+  %x3 = extractelement <4 x float> %f, i64 3
+  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p2 = getelementptr inbounds float, float* %p, i64 2
+  %p3 = getelementptr inbounds float, float* %p, i64 3
+  store float %x0, float* %p, align 4
+  store float %x1, float* %p1, align 4
+  store float %x2, float* %p2, align 4
+  store float %x3, float* %p3, align 4
+  ret void
+}
+
+define void @test_v4f32_v4f32_splat_store(<4 x float> %f, float* %p){
+; CHECK-LABEL: @test_v4f32_v4f32_splat_store(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x float> [[F:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[X0]], i32 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
+; CHECK-NEXT:    store <4 x float> [[SHUFFLE]], <4 x float>* [[TMP2]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <4 x float> %f, i64 0
+  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p2 = getelementptr inbounds float, float* %p, i64 2
+  %p3 = getelementptr inbounds float, float* %p, i64 3
+  store float %x0, float* %p, align 4
+  store float %x0, float* %p1, align 4
+  store float %x0, float* %p2, align 4
+  store float %x0, float* %p3, align 4
+  ret void
+}
