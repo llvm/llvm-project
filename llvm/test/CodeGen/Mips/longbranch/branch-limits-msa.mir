@@ -263,12 +263,12 @@ body:             |
   ; MSA:   renamable $w0 = SHF_B killed renamable $w0, 27
   ; MSA:   renamable $w0 = SHF_W killed renamable $w0, 177
   ; MSA:   BNZ_B $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -288,7 +288,7 @@ body:             |
   ; PIC:   renamable $w0 = SHF_B killed renamable $w0, 27
   ; PIC:   renamable $w0 = SHF_W killed renamable $w0, 177
   ; PIC:   BNZ_B $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -379,12 +379,12 @@ body:             |
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; MSA:   renamable $w0 = SHF_H killed renamable $w0, 27
   ; MSA:   BNZ_H $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -403,7 +403,7 @@ body:             |
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; PIC:   renamable $w0 = SHF_H killed renamable $w0, 27
   ; PIC:   BNZ_H $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -493,12 +493,12 @@ body:             |
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; MSA:   renamable $w0 = SHF_W killed renamable $w0, 177
   ; MSA:   BNZ_W $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -517,7 +517,7 @@ body:             |
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; PIC:   renamable $w0 = SHF_W killed renamable $w0, 177
   ; PIC:   BNZ_W $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -606,12 +606,12 @@ body:             |
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a0_64, 0
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; MSA:   BNZ_D $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -629,7 +629,7 @@ body:             |
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a0_64, 0
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; PIC:   BNZ_D $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -717,12 +717,12 @@ body:             |
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a0_64, 0
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; MSA:   BNZ_V $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -740,7 +740,7 @@ body:             |
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a0_64, 0
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; PIC:   BNZ_V $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -830,12 +830,12 @@ body:             |
   ; MSA:   renamable $w0 = SHF_B killed renamable $w0, 27
   ; MSA:   renamable $w0 = SHF_W killed renamable $w0, 177
   ; MSA:   BZ_B $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -855,7 +855,7 @@ body:             |
   ; PIC:   renamable $w0 = SHF_B killed renamable $w0, 27
   ; PIC:   renamable $w0 = SHF_W killed renamable $w0, 177
   ; PIC:   BZ_B $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -946,12 +946,12 @@ body:             |
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; MSA:   renamable $w0 = SHF_H killed renamable $w0, 27
   ; MSA:   BZ_H $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -970,7 +970,7 @@ body:             |
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; PIC:   renamable $w0 = SHF_H killed renamable $w0, 27
   ; PIC:   BZ_H $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -1060,12 +1060,12 @@ body:             |
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; MSA:   renamable $w0 = SHF_W killed renamable $w0, 177
   ; MSA:   BZ_W $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -1084,7 +1084,7 @@ body:             |
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; PIC:   renamable $w0 = SHF_W killed renamable $w0, 177
   ; PIC:   BZ_W $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -1173,12 +1173,12 @@ body:             |
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a0_64, 0
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; MSA:   BZ_D $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -1196,7 +1196,7 @@ body:             |
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a0_64, 0
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; PIC:   BZ_D $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -1284,12 +1284,12 @@ body:             |
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a0_64, 0
   ; MSA:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; MSA:   BZ_V $w0, %bb.2, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.1.entry:
   ; MSA:   successors: %bb.3(0x80000000)
   ; MSA:   J %bb.3, implicit-def $at {
-  ; MSA:     NOP
+  ; MSA:     $zero = SLL $zero, 0
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -1307,7 +1307,7 @@ body:             |
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a0_64, 0
   ; PIC:   renamable $w0 = INSERT_D killed renamable $w0, killed renamable $a1_64, 1
   ; PIC:   BZ_V $w0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)

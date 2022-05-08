@@ -346,7 +346,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1
@@ -444,7 +444,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1
@@ -542,7 +542,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1
@@ -640,7 +640,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1
@@ -738,7 +738,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1
@@ -836,7 +836,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1
@@ -934,7 +934,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1
@@ -1032,7 +1032,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1
@@ -1130,7 +1130,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1
@@ -1228,7 +1228,7 @@ body:             |
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", 1

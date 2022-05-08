@@ -137,7 +137,7 @@ body:             |
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
@@ -225,12 +225,12 @@ body:             |
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MM:   renamable $at = ANDi killed renamable $a0, 1
   ; MM:   BLTZ_MM $at, %bb.2, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
@@ -242,7 +242,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   renamable $at = ANDi killed renamable $a0, 1
   ; PIC:   BLTZ_MM $at, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL_MM $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -320,12 +320,12 @@ body:             |
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MM:   renamable $at = ANDi killed renamable $a0, 1
   ; MM:   BLEZ_MM $at, %bb.2, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
@@ -337,7 +337,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   renamable $at = ANDi killed renamable $a0, 1
   ; PIC:   BLEZ_MM $at, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL_MM $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -415,12 +415,12 @@ body:             |
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MM:   renamable $at = ANDi killed renamable $a0, 1
   ; MM:   BGTZ_MM $at, %bb.2, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
@@ -432,7 +432,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   renamable $at = ANDi killed renamable $a0, 1
   ; PIC:   BGTZ_MM $at, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL_MM $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -510,12 +510,12 @@ body:             |
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MM:   renamable $at = ANDi killed renamable $a0, 1
   ; MM:   BGEZ_MM $at, %bb.2, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
@@ -527,7 +527,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   renamable $at = ANDi killed renamable $a0, 1
   ; PIC:   BGEZ_MM $at, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL_MM $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -608,7 +608,7 @@ body:             |
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
@@ -696,12 +696,12 @@ body:             |
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MM:   renamable $v0 = ANDi killed renamable $a0, 1
   ; MM:   BNEZ16_MM $v0, %bb.2, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
@@ -713,7 +713,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   renamable $v0 = ANDi killed renamable $a0, 1
   ; PIC:   BNEZ16_MM $v0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL_MM $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -791,12 +791,12 @@ body:             |
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MM:   renamable $v0 = ANDi killed renamable $a0, 1
   ; MM:   BEQZ16_MM $v0, %bb.2, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   J %bb.3, implicit-def $at {
-  ; MM:     NOP
+  ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.2.iftrue:
   ; MM:   successors: %bb.3(0x80000000)
@@ -808,7 +808,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   renamable $v0 = ANDi killed renamable $a0, 1
   ; PIC:   BEQZ16_MM $v0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL_MM $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)

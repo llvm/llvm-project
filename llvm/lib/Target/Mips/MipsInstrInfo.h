@@ -113,6 +113,12 @@ public:
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
 
+  /// Insert an ISA appropriate `nop`.
+  // FIXME: Add support for MIPS16e.
+  MachineInstrBuilder insertNop(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI,
+                                DebugLoc DL) const;
+
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).

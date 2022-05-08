@@ -72,12 +72,12 @@ body:             |
   ; MIPS:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
   ; MIPS:   FCMP_D32 killed renamable $d6, killed renamable $d7, 2, implicit-def $fcc0
   ; MIPS:   BC1F $fcc0, %bb.2, implicit-def $at {
-  ; MIPS:     NOP
+  ; MIPS:     $zero = SLL $zero, 0
   ; MIPS:   }
   ; MIPS: bb.1.entry:
   ; MIPS:   successors: %bb.3(0x80000000)
   ; MIPS:   J %bb.3, implicit-def $at {
-  ; MIPS:     NOP
+  ; MIPS:     $zero = SLL $zero, 0
   ; MIPS:   }
   ; MIPS: bb.2.if.then:
   ; MIPS:   INLINEASM &".space 310680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -93,7 +93,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
   ; PIC:   FCMP_D32 killed renamable $d6, killed renamable $d7, 2, implicit-def $fcc0
   ; PIC:   BC1F $fcc0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -176,12 +176,12 @@ body:             |
   ; MIPS:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
   ; MIPS:   FCMP_D32 killed renamable $d6, killed renamable $d7, 2, implicit-def $fcc0
   ; MIPS:   BC1T $fcc0, %bb.2, implicit-def $at {
-  ; MIPS:     NOP
+  ; MIPS:     $zero = SLL $zero, 0
   ; MIPS:   }
   ; MIPS: bb.1.entry:
   ; MIPS:   successors: %bb.3(0x80000000)
   ; MIPS:   J %bb.3, implicit-def $at {
-  ; MIPS:     NOP
+  ; MIPS:     $zero = SLL $zero, 0
   ; MIPS:   }
   ; MIPS: bb.2.if.then:
   ; MIPS:   INLINEASM &".space 310680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
@@ -197,7 +197,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
   ; PIC:   FCMP_D32 killed renamable $d6, killed renamable $d7, 2, implicit-def $fcc0
   ; PIC:   BC1T $fcc0, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
