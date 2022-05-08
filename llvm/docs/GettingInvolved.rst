@@ -249,6 +249,11 @@ don't find anyone present, chances are they happen to be off that day.
       `ics <https://calendar.google.com/calendar/ical/co0h4ndpvtfe64opn7eraiq3ac%40group.calendar.google.com/public/basic.ics>`__
     - `Jitsi <https://meet.jit.si/KristofBeylsLLVMOfficeHour>`__
     - English, Flemish, Dutch
+  * - Tobias Grosser
+    - General questions on how to contribute to LLVM/MLIR, Polly, Loop Optimization, FPL, Research in LLVM, PhD in CS, Summer of Code. 
+    - Monthly, last Monday of the month at 18:00 London time (typically 9am PT), for 30 minutes.
+    - `Video Call <https://meet.grosser.science/LLVMOfficeHours>`__
+    - English, German, Spanish, French
   * - Alina Sbirlea
     - General questions on how to contribute to LLVM; women in compilers;
       MemorySSA, BatchAA, various loop passes, new pass manager.
