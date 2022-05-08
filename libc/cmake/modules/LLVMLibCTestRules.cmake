@@ -147,7 +147,7 @@ function(add_libc_unittest target_name)
   endif()
 
   # Test object files will depend on LINK_LIBRARIES passed down from `add_fp_unittest`
-  list(PREPEND LIBC_UNITTEST_LINK_LIBRARIES ${link_object_files})
+  set(link_libraries ${link_object_files} ${LIBC_UNITTEST_LINK_LIBRARIES})
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -159,12 +159,12 @@ function(add_libc_unittest target_name)
 
   # LibcUnitTest and libc_test_utils should not depend on anything in LINK_LIBRARIES.
   if(NO_LIBC_UNITTEST_TEST_MAIN)
-    list(APPEND LIBC_UNITTEST_LINK_LIBRARIES LibcUnitTest libc_test_utils)
+    list(APPEND link_libraries LibcUnitTest libc_test_utils)
   else()
-    list(APPEND LIBC_UNITTEST_LINK_LIBRARIES LibcUnitTest LibcUnitTestMain libc_test_utils)
+    list(APPEND link_libraries LibcUnitTest LibcUnitTestMain libc_test_utils)
   endif()
 
-  target_link_libraries(${fq_target_name} PRIVATE ${LIBC_UNITTEST_LINK_LIBRARIES})
+  target_link_libraries(${fq_target_name} PRIVATE ${link_libraries})
 
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
     add_custom_command(
