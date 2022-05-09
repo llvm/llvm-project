@@ -3815,7 +3815,7 @@ public:
 
     default:
       m_options.GenerateOptionUsage(
-          result.GetErrorStream(), this,
+          result.GetErrorStream(), *this,
           GetCommandInterpreter().GetDebugger().GetTerminalWidth());
       syntax_error = true;
       break;

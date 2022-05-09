@@ -348,7 +348,7 @@ protected:
             "too many arguments; expected frame-index, saw '%s'.\n",
             command[0].c_str());
         m_options.GenerateOptionUsage(
-            result.GetErrorStream(), this,
+            result.GetErrorStream(), *this,
             GetCommandInterpreter().GetDebugger().GetTerminalWidth());
         return false;
       }
