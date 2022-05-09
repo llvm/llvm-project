@@ -293,16 +293,6 @@ const DeclContext *Decl::getParentFunctionOrMethod() const {
   return nullptr;
 }
 
-const DeclContext *Decl::getLexicalParentFunctionOrMethod() const {
-  for (const DeclContext *DC = getLexicalDeclContext();
-       DC && !DC->isTranslationUnit() && !DC->isNamespace();
-       DC = DC->getParent())
-    if (DC->isFunctionOrMethod())
-      return DC;
-
-  return nullptr;
-}
-
 //===----------------------------------------------------------------------===//
 // PrettyStackTraceDecl Implementation
 //===----------------------------------------------------------------------===//
