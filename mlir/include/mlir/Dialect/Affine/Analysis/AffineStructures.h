@@ -166,8 +166,25 @@ public:
   /// bound map is expected to have exactly one result. In case of a LB/UB, the
   /// bound map may have more than one result, for each of which an inequality
   /// is added.
+  ///
+  /// The bound can be added as open or closed by specifying isClosedBound. In
+  /// case of a LB/UB, isClosedBound = false means the bound is added internally
+  /// as a closed bound by +1/-1 respectively. In case of an EQ bound, it can
+  /// only be added as a closed bound.
+  ///
   /// Note: The dimensions/symbols of this FlatAffineConstraints must match the
   /// dimensions/symbols of the affine map.
+  LogicalResult addBound(BoundType type, unsigned pos, AffineMap boundMap,
+                         bool isClosedBound);
+
+  /// Adds a bound for the identifier at the specified position with constraints
+  /// being drawn from the specified bound map. In case of an EQ bound, the
+  /// bound map is expected to have exactly one result. In case of a LB/UB, the
+  /// bound map may have more than one result, for each of which an inequality
+  /// is added.
+  /// Note: The dimensions/symbols of this FlatAffineConstraints must match the
+  /// dimensions/symbols of the affine map. By default the lower bound is closed
+  /// and the upper bound is open.
   LogicalResult addBound(BoundType type, unsigned pos, AffineMap boundMap);
 
   /// Adds a bound for the identifier at the specified position with constraints
@@ -197,9 +214,13 @@ public:
   /// identifiers as floordiv's and mod's of affine expressions of other
   /// identifiers with respect to (positive) constants. Sets bound map to a
   /// null AffineMap if such a bound can't be found (or yet unimplemented).
+  ///
+  /// By default the returned lower bounds are closed and upper bounds are open.
+  /// This can be changed by getClosedUB.
   void getSliceBounds(unsigned offset, unsigned num, MLIRContext *context,
                       SmallVectorImpl<AffineMap> *lbMaps,
-                      SmallVectorImpl<AffineMap> *ubMaps);
+                      SmallVectorImpl<AffineMap> *ubMaps,
+                      bool getClosedUB = false);
 
   /// Composes an affine map whose dimensions and symbols match one to one with
   /// the dimensions and symbols of this FlatAffineConstraints. The results of

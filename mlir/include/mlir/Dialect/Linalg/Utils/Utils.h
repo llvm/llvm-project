@@ -50,6 +50,9 @@ SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
 /// values. The method sets `boundMap` to an affine map that given
 /// `boundOperands` evaluates to an upper bound for the index computation.
 ///
+/// If constantRequired is true, only returns the constant bounds (potentially
+/// over-approximating) and fails when not possible.
+///
 /// Example:
 /// ```
 /// %dim0 = dim %tensor, %c0
@@ -62,7 +65,8 @@ SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
 /// - boundMap = affine.map<(d0) -> (d0 + 40)>
 /// - boundOperands = [%dim1]
 void getUpperBoundForIndex(Value value, AffineMap &boundMap,
-                           SmallVectorImpl<Value> &boundOperands);
+                           SmallVectorImpl<Value> &boundOperands,
+                           bool constantRequired = false);
 
 /// Returns a constant upper bound for the result `value` of an index
 /// computation. Calls `getUpperBoundForIndex` and returns a constant upper
