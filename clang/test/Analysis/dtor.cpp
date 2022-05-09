@@ -570,3 +570,32 @@ void testAutoDtor() {
   // no-crash
 }
 } // namespace dtor_over_loc_concrete_int
+
+// Test overriden new/delete operators
+struct CustomOperators {
+  void *operator new(size_t count) {
+    return malloc(count);
+  }
+
+  void operator delete(void *addr) {
+    free(addr);
+  }
+
+private:
+  int i;
+};
+
+void compliant() {
+  auto *a = new CustomOperators();
+  delete a;
+}
+
+void overrideLeak() {
+  auto *a = new CustomOperators();
+} // expected-warning{{Potential leak of memory pointed to by 'a'}}
+
+void overrideDoubleDelete() {
+  auto *a = new CustomOperators();
+  delete a;
+  delete a; // expected-warning@581 {{Attempt to free released memory}}
+}

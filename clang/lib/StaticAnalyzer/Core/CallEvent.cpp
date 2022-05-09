@@ -1408,6 +1408,8 @@ CallEventRef<> CallEventManager::getCall(const Stmt *S, ProgramStateRef State,
     return getSimpleCall(CE, State, LC);
   } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)) {
     return getCXXAllocatorCall(NE, State, LC);
+  } else if (const auto *DE = dyn_cast<CXXDeleteExpr>(S)) {
+    return getCXXDeallocatorCall(DE, State, LC);
   } else if (const auto *ME = dyn_cast<ObjCMessageExpr>(S)) {
     return getObjCMethodCall(ME, State, LC);
   } else {
