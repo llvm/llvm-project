@@ -30,7 +30,7 @@ void testRunPassOnModule() {
       ctx,
       // clang-format off
                             mlirStringRefCreateFromCString(
-"func @foo(%arg0 : i32) -> i32 {                                            \n"
+"func.func @foo(%arg0 : i32) -> i32 {                                   \n"
 "  %res = arith.addi %arg0, %arg0 : i32                                     \n"
 "  return %res : i32                                                        \n"
 "}"));
@@ -64,17 +64,17 @@ void testRunPassOnNestedModule() {
   MlirContext ctx = mlirContextCreate();
   mlirRegisterAllDialects(ctx);
 
-  MlirModule module =
-      mlirModuleCreateParse(ctx,
-                            // clang-format off
+  MlirModule module = mlirModuleCreateParse(
+      ctx,
+      // clang-format off
                             mlirStringRefCreateFromCString(
-"func @foo(%arg0 : i32) -> i32 {                                            \n"
+"func.func @foo(%arg0 : i32) -> i32 {                                   \n"
 "  %res = arith.addi %arg0, %arg0 : i32                                     \n"
 "  return %res : i32                                                        \n"
 "}                                                                          \n"
 "module {                                                                   \n"
-"  func @bar(%arg0 : f32) -> f32 {                                          \n"
-"    %res = arith.addf %arg0, %arg0 : f32                                         \n"
+"  func.func @bar(%arg0 : f32) -> f32 {                                     \n"
+"    %res = arith.addf %arg0, %arg0 : f32                                   \n"
 "    return %res : f32                                                      \n"
 "  }                                                                        \n"
 "}"));
@@ -268,7 +268,7 @@ void testExternalPass() {
       ctx,
       // clang-format off
       mlirStringRefCreateFromCString(
-"func @foo(%arg0 : i32) -> i32 {                                            \n"
+"func.func @foo(%arg0 : i32) -> i32 {                                   \n"
 "  %res = arith.addi %arg0, %arg0 : i32                                     \n"
 "  return %res : i32                                                        \n"
 "}"));

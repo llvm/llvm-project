@@ -1,4 +1,5 @@
 ; RUN: llc -march=nvptx < %s | FileCheck %s
+; RUN: %if ptxas %{ llc -march=nvptx < %s | %ptxas-verify %}
 
 ; Test that %c works with immediates
 ; CHECK-LABEL: test_inlineasm_c_output_template0

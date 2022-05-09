@@ -180,15 +180,6 @@ include(HandleLibunwindFlags)
 # Setup Compiler Flags
 #===============================================================================
 
-# Compiler tests may be failing if the compiler implicitly links in libunwind,
-# which doesn't exist yet. This gets waived by --unwindlib=none
-# later in config-ix below, but the tests for --target etc before that may
-# be failing due to it. Only test compilation, not linking, for these
-# tests here now.
-set(CMAKE_TRY_COMPILE_TARGET_TYPE_ORIG ${CMAKE_TRY_COMPILE_TARGET_TYPE})
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-set(CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE_ORIG})
-
 # Configure compiler.
 include(config-ix)
 
@@ -276,7 +267,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 add_compile_flags_if_supported(-funwind-tables)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
 
-if (LIBUNWIND_USES_ARM_EHABI AND NOT LIBUNWIND_SUPPORTS_FUNWIND_TABLES_FLAG)
+if (LIBUNWIND_USES_ARM_EHABI AND NOT CXX_SUPPORTS_FUNWIND_TABLES_FLAG)
   message(SEND_ERROR "The -funwind-tables flag must be supported "
                      "because this target uses ARM Exception Handling ABI")
 endif()
@@ -285,7 +276,7 @@ add_cxx_compile_flags_if_supported(-fno-exceptions)
 add_cxx_compile_flags_if_supported(-fno-rtti)
 
 # Ensure that we don't depend on C++ standard library.
-if (LIBUNWIND_HAS_NOSTDINCXX_FLAG)
+if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   list(APPEND LIBUNWIND_COMPILE_FLAGS -nostdinc++)
   # Remove -stdlib flags to prevent them from causing an unused flag warning.
   string(REPLACE "--stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -304,11 +295,11 @@ if (LIBUNWIND_ENABLE_ASSERTIONS)
 
   # On Release builds cmake automatically defines NDEBUG, so we
   # explicitly undefine it:
-  if (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+  if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     add_compile_flags(-UNDEBUG)
   endif()
 else()
-  if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+  if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     add_compile_flags(-DNDEBUG)
   endif()
 endif()
@@ -354,7 +345,7 @@ if (WIN32 AND LIBUNWIND_ENABLE_STATIC AND NOT LIBUNWIND_ENABLE_SHARED)
   add_definitions(-D_LIBUNWIND_HIDE_SYMBOLS)
 endif()
 
-if (LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
+if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
   if (LIBUNWIND_HAS_DL_LIB)
     add_definitions(-D_LIBUNWIND_LINK_DL_LIB)
   endif()

@@ -155,7 +155,7 @@ turned into zero:
 
 ```mlir
   // RUN: mlir-opt %s -canonicalize | FileCheck %s
-  func @test_subi_zero_cfg(%arg0: i32) -> i32 {
+  func.func @test_subi_zero_cfg(%arg0: i32) -> i32 {
     %y = arith.subi %arg0, %arg0 : i32
     return %y: i32
   }
@@ -209,7 +209,7 @@ write tests like this:
 
 ```mlir
   // RUN: mlir-opt %s -memref-dependence-check -verify-diagnostics
-  func @different_memrefs() {
+  func.func @different_memrefs() {
     %m.a = memref.alloc() : memref<100xf32>
     %m.b = memref.alloc() : memref<100xf32>
     %c0 = arith.constant 0 : index

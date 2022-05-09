@@ -78,3 +78,9 @@ s_getreg_b32 s1, hwreg(HW_REG_HW_ID2)
 
 s_getreg_b32 s1, hwreg(HW_REG_POPS_PACKER)
 // GFX940: error: specified hardware register is not supported on this GPU
+
+ds_ordered_count v5, v1 offset:65535 gds
+// GFX940: error: instruction not supported on this GPU
+
+exp pos0 v3, v2, v1, v0
+// GFX940: error: instruction not supported on this GPU

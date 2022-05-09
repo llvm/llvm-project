@@ -182,7 +182,7 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
 struct SCFForLoopCanonicalization
     : public SCFForLoopCanonicalizationBase<SCFForLoopCanonicalization> {
   void runOnOperation() override {
-    FuncOp funcOp = getOperation();
+    func::FuncOp funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
     RewritePatternSet patterns(ctx);
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);

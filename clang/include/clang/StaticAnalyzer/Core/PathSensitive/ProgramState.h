@@ -306,10 +306,6 @@ public:
   Loc getLValue(const CXXRecordDecl *BaseClass, const SubRegion *Super,
                 bool IsVirtual) const;
 
-  /// Get the lvalue for a parameter.
-  Loc getLValue(const Expr *Call, unsigned Index,
-                const LocationContext *LC) const;
-
   /// Get the lvalue for a variable reference.
   Loc getLValue(const VarDecl *D, const LocationContext *LC) const;
 

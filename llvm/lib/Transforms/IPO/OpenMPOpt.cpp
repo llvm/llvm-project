@@ -935,8 +935,7 @@ private:
     SmallDenseMap<BasicBlock *, SmallPtrSet<Instruction *, 4>> BB2PRMap;
 
     BasicBlock *StartBB = nullptr, *EndBB = nullptr;
-    auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                         BasicBlock &ContinuationIP) {
+    auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
       BasicBlock *CGStartBB = CodeGenIP.getBlock();
       BasicBlock *CGEndBB =
           SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -975,8 +974,7 @@ private:
       const DebugLoc DL = ParentBB->getTerminator()->getDebugLoc();
       ParentBB->getTerminator()->eraseFromParent();
 
-      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                           BasicBlock &ContinuationIP) {
+      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
         BasicBlock *CGStartBB = CodeGenIP.getBlock();
         BasicBlock *CGEndBB =
             SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -4276,10 +4274,10 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       unsigned ScheduleTypeVal =
           ScheduleTypeCI ? ScheduleTypeCI->getZExtValue() : 0;
       switch (OMPScheduleType(ScheduleTypeVal)) {
-      case OMPScheduleType::Static:
-      case OMPScheduleType::StaticChunked:
-      case OMPScheduleType::Distribute:
-      case OMPScheduleType::DistributeChunked:
+      case OMPScheduleType::UnorderedStatic:
+      case OMPScheduleType::UnorderedStaticChunked:
+      case OMPScheduleType::OrderedDistribute:
+      case OMPScheduleType::OrderedDistributeChunked:
         break;
       default:
         SPMDCompatibilityTracker.indicatePessimisticFixpoint();

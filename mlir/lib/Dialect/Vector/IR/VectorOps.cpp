@@ -488,6 +488,45 @@ Optional<SmallVector<int64_t, 4>> ReductionOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
+namespace {
+struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ReductionOp reductionOp,
+                                PatternRewriter &rewriter) const override {
+    if (reductionOp.getVectorType().getDimSize(0) != 1)
+      return failure();
+
+    Location loc = reductionOp.getLoc();
+    Value result = rewriter.create<ExtractOp>(loc, reductionOp.getType(),
+                                              reductionOp.getVector(),
+                                              rewriter.getI64ArrayAttr(0));
+
+    if (Value acc = reductionOp.getAcc()) {
+      assert(reductionOp.getType().isa<FloatType>());
+      switch (reductionOp.getKind()) {
+      case CombiningKind::ADD:
+        result = rewriter.create<arith::AddFOp>(loc, result, acc);
+        break;
+      case CombiningKind::MUL:
+        result = rewriter.create<arith::MulFOp>(loc, result, acc);
+        break;
+      default:
+        assert(false && "invalid op!");
+      }
+    }
+
+    rewriter.replaceOp(reductionOp, result);
+    return success();
+  }
+};
+} // namespace
+
+void ReductionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<ElideSingleElementReduction>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // ContractionOp
 //===----------------------------------------------------------------------===//
@@ -4088,7 +4127,7 @@ LogicalResult ShapeCastOp::verify() {
 }
 
 OpFoldResult ShapeCastOp::fold(ArrayRef<Attribute> operands) {
-  // Nop shape cast.
+  // No-op shape cast.
   if (getSource().getType() == getResult().getType())
     return getSource();
 
@@ -4113,6 +4152,13 @@ OpFoldResult ShapeCastOp::fold(ArrayRef<Attribute> operands) {
     setOperand(otherOp.getSource());
     return getResult();
   }
+
+  // Cancelling broadcast and shape cast ops.
+  if (auto bcastOp = getSource().getDefiningOp<BroadcastOp>()) {
+    if (bcastOp.getSourceType() == getType())
+      return bcastOp.getSource();
+  }
+
   return {};
 }
 
@@ -4397,11 +4443,30 @@ struct FoldTransposedScalarBroadcast final
   }
 };
 
+// Folds transpose(splat x : src_type) : res_type into splat x : res_type.
+class FoldTransposeSplat final : public OpRewritePattern<TransposeOp> {
+public:
+  using OpRewritePattern<TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    auto splatOp = transposeOp.getVector().getDefiningOp<vector::SplatOp>();
+    if (!splatOp)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<vector::SplatOp>(
+        transposeOp, transposeOp.getResultType(), splatOp.getInput());
+    return success();
+  }
+};
+
 } // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<FoldTransposedScalarBroadcast, TransposeFolder>(context);
+  results
+      .add<FoldTransposedScalarBroadcast, TransposeFolder, FoldTransposeSplat>(
+          context);
 }
 
 void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
@@ -4569,6 +4634,13 @@ LogicalResult ScanOp::verify() {
     return emitOpError("incompatible input/initial value shapes");
   }
 
+  // Verify supported reduction kind.
+  Type eltType = getDestType().getElementType();
+  if (!isSupportedCombiningKind(getKind(), eltType))
+    return emitOpError("unsupported reduction type ")
+           << eltType << " for kind '" << stringifyCombiningKind(getKind())
+           << "'";
+
   return success();
 }
 
@@ -4626,7 +4698,8 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
   OpAsmParser::UnresolvedOperand laneId;
 
   // Parse predicate operand.
-  if (parser.parseLParen() || parser.parseRegionArgument(laneId) ||
+  if (parser.parseLParen() ||
+      parser.parseOperand(laneId, /*allowResultNumber=*/false) ||
       parser.parseRParen())
     return failure();
 

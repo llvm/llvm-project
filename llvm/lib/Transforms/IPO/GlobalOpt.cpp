@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -904,7 +905,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
     }
   }
 
-  SmallPtrSet<Constant *, 1> RepValues;
+  SmallSetVector<Constant *, 1> RepValues;
   RepValues.insert(NewGV);
 
   // If there is a comparison against null, we will insert a global bool to
@@ -1781,7 +1782,7 @@ hasOnlyColdCalls(Function &F,
           return false;
         if (!CalledFn->hasLocalLinkage())
           return false;
-        // Skip over instrinsics since they won't remain as function calls.
+        // Skip over intrinsics since they won't remain as function calls.
         if (CalledFn->getIntrinsicID() != Intrinsic::not_intrinsic)
           continue;
         // Check if it's valid to use coldcc calling convention.

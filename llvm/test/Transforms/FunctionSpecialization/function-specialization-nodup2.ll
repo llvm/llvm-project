@@ -1,6 +1,6 @@
 ; RUN: opt -function-specialization -force-function-specialization -S < %s | FileCheck %s
 
-; Check that function foo does not gets specialised as it contains an instrinsic
+; Check that function foo does not gets specialised as it contains an intrinsic
 ; that is marked as NoDuplicate.
 ; Please note that the use of the hardwareloop intrinsic is arbitrary; it's
 ; just an easy to use intrinsic that has NoDuplicate.

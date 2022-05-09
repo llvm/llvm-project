@@ -136,11 +136,11 @@ entry:
 define <8 x i16> @shuffle_widen_faili1(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: shuffle_widen_faili1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev32 v2.4h, v0.4h
-; CHECK-NEXT:    rev32 v3.4h, v1.4h
-; CHECK-NEXT:    ext v1.8b, v2.8b, v1.8b, #4
-; CHECK-NEXT:    ext v0.8b, v3.8b, v0.8b, #4
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    adrp x8, .LCPI12_0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI12_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %res = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 7, i32 6, i32 0, i32 1,
@@ -151,11 +151,11 @@ entry:
 define <8 x i16> @shuffle_widen_fail2(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: shuffle_widen_fail2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v2.4h, v0.4h, v0.4h
-; CHECK-NEXT:    trn1 v3.4h, v1.4h, v1.4h
-; CHECK-NEXT:    ext v1.8b, v2.8b, v1.8b, #4
-; CHECK-NEXT:    ext v0.8b, v3.8b, v0.8b, #4
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    adrp x8, .LCPI13_0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %res = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 6, i32 6, i32 0, i32 1,

@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMMACOSX_H
 
-#include "PlatformDarwin.h"
+#include "PlatformDarwinDevice.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
@@ -28,7 +28,7 @@ class ModuleSpec;
 class Process;
 class Target;
 
-class PlatformMacOSX : public PlatformDarwin {
+class PlatformMacOSX : public PlatformDarwinDevice {
 public:
   PlatformMacOSX();
 
@@ -69,6 +69,10 @@ public:
     return PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
         target, options, XcodeSDK::Type::MacOSX);
   }
+
+protected:
+  llvm::StringRef GetDeviceSupportDirectoryName() override;
+  llvm::StringRef GetPlatformName() override;
 };
 
 } // namespace lldb_private

@@ -3,18 +3,18 @@
 # DW_TAG_compile_unit->DW_AT_stmt_list where the DW_AT_decl_file is located (and
 # not where the DW_AT_abstract_origin is located).
 # DW_TAG_variable in CU 1 is using DW_AT_decl_file 3.
-# CU 1 has files: 
+# CU 1 has files:
 # file_names[  1]: name: "inlinevarother.h"
 # file_names[  2]: name: "inlinevar1.c"
 # file_names[  3]: name: "inlinevar.h"
-# CU 2 has files: 
+# CU 2 has files:
 # file_names[  1]: name: "inlinevar2.c"
 # file_names[  2]: name: "inlinevar.h"
 
 # UNSUPPORTED: system-darwin, system-windows
 # REQUIRES: target-x86_64
 
-# RUN: %clang_host -o %t %s \
+# RUN: %clang_host -gdwarf-4 -o %t %s \
 # RUN:   %S/Inputs/DW_TAG_variable-DW_AT_decl_file-DW_AT_abstract_origin-crosscu2.s
 
 # RUN: %lldb %t \
@@ -36,7 +36,7 @@ main:                                   # @main
 .Ltmp2:
 	.file	3 "" "./inlinevar.h"
 	.loc	3 2 16 prologue_end             # ./inlinevar.h:2:16
-	movl	$42, %eax 
+	movl	$42, %eax
 	pushq	%rax
 	.loc	3 3 10                          # ./inlinevar.h:3:10
 .Ltmp3:

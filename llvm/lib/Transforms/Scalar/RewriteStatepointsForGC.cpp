@@ -560,6 +560,9 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
     // The base of this GEP is the base
     return findBaseDefiningValue(GEP->getPointerOperand());
 
+  if (auto *Freeze = dyn_cast<FreezeInst>(I))
+    return findBaseDefiningValue(Freeze->getOperand(0));
+
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     default:
@@ -632,7 +635,7 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
   // derived pointers (each with it's own base potentially).  It's the job of
   // the caller to resolve these.
   assert((isa<SelectInst>(I) || isa<PHINode>(I)) &&
-         "missing instruction case in findBaseDefiningValing");
+         "missing instruction case in findBaseDefiningValue");
   return BaseDefiningValueResult(I, IsKnownBase);
 }
 
@@ -934,12 +937,16 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     for (auto Pair : States) {
       Value *BDV = Pair.first;
       auto canPruneInput = [&](Value *V) {
-        Value *BDV = findBaseOrBDV(V, Cache);
-        if (V->stripPointerCasts() != BDV)
+        // If the input of the BDV is the BDV itself we can prune it. This is
+        // only possible if the BDV is a PHI node.
+        if (V->stripPointerCasts() == BDV)
+          return true;
+        Value *VBDV = findBaseOrBDV(V, Cache);
+        if (V->stripPointerCasts() != VBDV)
           return false;
         // The assumption is that anything not in the state list is
         // propagates a base pointer.
-        return States.count(BDV) == 0;
+        return States.count(VBDV) == 0;
       };
 
       bool CanPrune = true;

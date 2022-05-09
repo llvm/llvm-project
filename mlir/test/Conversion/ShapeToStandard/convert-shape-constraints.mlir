@@ -9,7 +9,7 @@
 // CHECK:           cf.assert %[[BROADCAST_IS_VALID]], "required broadcastable shapes"
 // CHECK:           return %[[RET]] : !shape.witness
 // CHECK:         }
-func @cstr_broadcastable(%arg0: tensor<?xindex>, %arg1: tensor<?xindex>) -> !shape.witness {
+func.func @cstr_broadcastable(%arg0: tensor<?xindex>, %arg1: tensor<?xindex>) -> !shape.witness {
   %witness = shape.cstr_broadcastable %arg0, %arg1 : tensor<?xindex>, tensor<?xindex>
   return %witness : !shape.witness
 }
@@ -22,13 +22,13 @@ func @cstr_broadcastable(%arg0: tensor<?xindex>, %arg1: tensor<?xindex>) -> !sha
 // CHECK:           cf.assert %[[EQUAL_IS_VALID]], "required equal shapes"
 // CHECK:           return %[[RET]] : !shape.witness
 // CHECK:         }
-func @cstr_eq(%arg0: tensor<?xindex>, %arg1: tensor<?xindex>) -> !shape.witness {
+func.func @cstr_eq(%arg0: tensor<?xindex>, %arg1: tensor<?xindex>) -> !shape.witness {
   %witness = shape.cstr_eq %arg0, %arg1 : tensor<?xindex>, tensor<?xindex>
   return %witness : !shape.witness
 }
 
 // CHECK-LABEL: func @cstr_require
-func @cstr_require(%arg0: i1) -> !shape.witness {
+func.func @cstr_require(%arg0: i1) -> !shape.witness {
   // CHECK: %[[RET:.*]] = shape.const_witness true
   // CHECK: cf.assert %arg0, "msg"
   // CHECK: return %[[RET]]

@@ -11,12 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 #include "CrashHandlerFixture.h"
+#include "tools.h"
 #include "../../runtime/terminator.h"
 #include "flang/Runtime/io-api.h"
+#include "flang/Runtime/transformational.h"
 #include <gtest/gtest.h>
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
+using Fortran::common::TypeCategory;
 
 //------------------------------------------------------------------------------
 /// Test crashes through direct calls to terminator methods
@@ -154,4 +157,24 @@ TEST(TestIOCrash, OverwriteBufferIntegerTest) {
   IONAME(OutputInteger64)(cookie, 0xdeadbeef);
   ASSERT_DEATH(IONAME(OutputInteger64)(cookie, 0xdeadbeef),
       "Internal write overran available records");
+}
+
+//------------------------------------------------------------------------------
+/// Test conformity issue reports in transformational intrinsics
+//------------------------------------------------------------------------------
+struct TestIntrinsicCrash : CrashHandlerFixture {};
+
+TEST(TestIntrinsicCrash, ConformityErrors) {
+  // ARRAY(2,3) and MASK(2,4) should trigger a runtime error.
+  auto array{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{2, 3}, std::vector<std::int32_t>{1, 2, 3, 4, 5, 6})};
+  auto mask{MakeArray<TypeCategory::Logical, 1>(std::vector<int>{2, 4},
+      std::vector<std::uint8_t>{
+          false, true, true, false, false, true, true, true})};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &result{statDesc.descriptor()};
+
+  ASSERT_DEATH(RTNAME(Pack)(result, *array, *mask, nullptr, __FILE__, __LINE__),
+      "Incompatible array arguments to PACK: dimension 2 of ARRAY= has extent "
+      "3 but MASK= has extent 4");
 }

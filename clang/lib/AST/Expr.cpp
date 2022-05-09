@@ -1478,8 +1478,7 @@ Decl *Expr::getReferencedDeclOfCallee() {
 
 /// If this is a call to a builtin, return the builtin ID. If not, return 0.
 unsigned CallExpr::getBuiltinCallee() const {
-  auto *FDecl =
-      dyn_cast_or_null<FunctionDecl>(getCallee()->getReferencedDeclOfCallee());
+  auto *FDecl = getDirectCallee();
   return FDecl ? FDecl->getBuiltinID() : 0;
 }
 
@@ -2458,8 +2457,12 @@ bool Expr::isReadIfDiscardedInCPlusPlus11() const {
   }
 
   // Objective-C++ extensions to the rule.
-  if (isa<PseudoObjectExpr>(E) || isa<ObjCIvarRefExpr>(E))
+  if (isa<ObjCIvarRefExpr>(E))
     return true;
+  if (const auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+    if (isa<ObjCPropertyRefExpr, ObjCSubscriptRefExpr>(POE->getSyntacticForm()))
+      return true;
+  }
 
   return false;
 }
@@ -2709,23 +2712,35 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   }
 
   case ObjCPropertyRefExprClass:
+  case ObjCSubscriptRefExprClass:
     WarnE = this;
     Loc = getExprLoc();
     R1 = getSourceRange();
     return true;
 
   case PseudoObjectExprClass: {
-    const PseudoObjectExpr *PO = cast<PseudoObjectExpr>(this);
+    const auto *POE = cast<PseudoObjectExpr>(this);
 
-    // Only complain about things that have the form of a getter.
-    if (isa<UnaryOperator>(PO->getSyntacticForm()) ||
-        isa<BinaryOperator>(PO->getSyntacticForm()))
-      return false;
+    // For some syntactic forms, we should always warn.
+    if (isa<ObjCPropertyRefExpr, ObjCSubscriptRefExpr>(
+            POE->getSyntacticForm())) {
+      WarnE = this;
+      Loc = getExprLoc();
+      R1 = getSourceRange();
+      return true;
+    }
 
-    WarnE = this;
-    Loc = getExprLoc();
-    R1 = getSourceRange();
-    return true;
+    // For others, we should never warn.
+    if (auto *BO = dyn_cast<BinaryOperator>(POE->getSyntacticForm()))
+      if (BO->isAssignmentOp())
+        return false;
+    if (auto *UO = dyn_cast<UnaryOperator>(POE->getSyntacticForm()))
+      if (UO->isIncrementDecrementOp())
+        return false;
+
+    // Otherwise, warn if the result expression would warn.
+    const Expr *Result = POE->getResultExpr();
+    return Result && Result->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   }
 
   case StmtExprClass: {
@@ -3337,15 +3352,19 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 }
 
 bool CallExpr::isBuiltinAssumeFalse(const ASTContext &Ctx) const {
-  const FunctionDecl* FD = getDirectCallee();
-  if (!FD || (FD->getBuiltinID() != Builtin::BI__assume &&
-              FD->getBuiltinID() != Builtin::BI__builtin_assume))
+  unsigned BuiltinID = getBuiltinCallee();
+  if (BuiltinID != Builtin::BI__assume &&
+      BuiltinID != Builtin::BI__builtin_assume)
     return false;
 
   const Expr* Arg = getArg(0);
   bool ArgVal;
   return !Arg->isValueDependent() &&
          Arg->EvaluateAsBooleanCondition(ArgVal, Ctx) && !ArgVal;
+}
+
+bool CallExpr::isCallToStdMove() const {
+  return getBuiltinCallee() == Builtin::BImove;
 }
 
 namespace {

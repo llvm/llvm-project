@@ -45,8 +45,10 @@ class EXP_Real<bit done, string pseudo, int subtarget>
 
 // Split EXP instruction into EXP and EXP_DONE so we can set
 // mayLoad for done=1.
+let SubtargetPredicate = isNotGFX90APlus in {
 def EXP : EXP_Pseudo<0>;
 def EXP_DONE : EXP_Pseudo<1>;
+} // let SubtargetPredicate = isNotGFX90APlus
 
 //===----------------------------------------------------------------------===//
 // SI
@@ -69,6 +71,7 @@ def EXP_DONE_si : EXP_Real_si<1, "EXP_DONE">;
 class EXP_Real_vi<bit _done, string pseudo>
   : EXP_Real<_done, pseudo, SIEncodingFamily.VI>, EXPe_vi {
   let AssemblerPredicate = isGFX8GFX9;
+  let SubtargetPredicate = isNotGFX90APlus;
   let DecoderNamespace = "GFX8";
   let done = _done;
 }

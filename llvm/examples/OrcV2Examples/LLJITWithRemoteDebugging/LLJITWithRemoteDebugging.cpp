@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
   // The example uses a non-lazy JIT for simplicity. Thus, looking up the main
   // function will materialize all reachable code. It also triggers debug
   // registration in the remote target process.
-  JITEvaluatedSymbol MainFn = ExitOnErr(J->lookup("main"));
+  auto MainAddr = ExitOnErr(J->lookup("main"));
 
   outs() << "Running: main(";
   int Pos = 0;
@@ -238,10 +238,9 @@ int main(int argc, char *argv[]) {
   // the debugger attached to the target, it should be possible to inspect the
   // JITed code as if it was compiled statically.
   {
-    JITTargetAddress MainFnAddr = MainFn.getAddress();
     ExecutorProcessControl &EPC =
         J->getExecutionSession().getExecutorProcessControl();
-    int Result = ExitOnErr(EPC.runAsMain(ExecutorAddr(MainFnAddr), ActualArgv));
+    int Result = ExitOnErr(EPC.runAsMain(MainAddr, ActualArgv));
     outs() << "Exit code: " << Result << "\n";
   }
 

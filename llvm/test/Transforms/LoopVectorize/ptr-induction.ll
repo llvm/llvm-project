@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 

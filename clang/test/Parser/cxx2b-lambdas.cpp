@@ -28,7 +28,7 @@ auto XL1 = [] constexpr mutable constexpr {};  // expected-error{{cannot appear 
 auto XL2 = []) constexpr mutable constexpr {}; // expected-error{{expected body of lambda expression}}
 auto XL3 = []( constexpr mutable constexpr {}; // expected-error{{invalid storage class specifier}} \
                                                // expected-error{{function parameter cannot be constexpr}} \
-                                               // expected-error{{C++ requires}} \
+                                               // expected-error{{a type specifier is required}} \
                                                // expected-error{{expected ')'}} \
                                                // expected-note{{to match this '('}} \
                                                // expected-error{{expected body}} \

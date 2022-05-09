@@ -26,7 +26,7 @@ using namespace mlir;
 
 namespace {
 struct TestSCFForUtilsPass
-    : public PassWrapper<TestSCFForUtilsPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestSCFForUtilsPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSCFForUtilsPass)
 
   StringRef getArgument() const final { return "test-scf-for-utils"; }
@@ -34,7 +34,7 @@ struct TestSCFForUtilsPass
   explicit TestSCFForUtilsPass() = default;
 
   void runOnOperation() override {
-    FuncOp func = getOperation();
+    func::FuncOp func = getOperation();
     SmallVector<scf::ForOp, 4> toErase;
 
     func.walk([&](Operation *fakeRead) {
@@ -70,7 +70,7 @@ struct TestSCFIfUtilsPass
     int count = 0;
     getOperation().walk([&](scf::IfOp ifOp) {
       auto strCount = std::to_string(count++);
-      FuncOp thenFn, elseFn;
+      func::FuncOp thenFn, elseFn;
       OpBuilder b(ifOp);
       IRRewriter rewriter(b);
       if (failed(outlineIfOp(rewriter, ifOp, &thenFn,
@@ -98,7 +98,7 @@ static const StringLiteral kTestPipeliningAnnotationIteration =
     "__test_pipelining_iteration";
 
 struct TestSCFPipeliningPass
-    : public PassWrapper<TestSCFPipeliningPass, OperationPass<FuncOp>> {
+    : public PassWrapper<TestSCFPipeliningPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSCFPipeliningPass)
 
   TestSCFPipeliningPass() = default;

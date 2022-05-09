@@ -1120,6 +1120,187 @@ TEST_F(StructuralEquivalenceEnumConstantTest, EnumConstantsWithDifferentName) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+struct StructuralEquivalenceObjCCategoryTest : StructuralEquivalenceTest {};
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, MatchinCategoryNames) {
+  auto t = makeDecls<ObjCCategoryDecl>("@interface A @end @interface A(X) @end",
+                                       "@interface A @end @interface A(X) @end",
+                                       Lang_OBJC, objcCategoryDecl());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, CategoriesForDifferentClasses) {
+  auto t = makeDecls<ObjCCategoryDecl>("@interface A @end @interface A(X) @end",
+                                       "@interface B @end @interface B(X) @end",
+                                       Lang_OBJC, objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, CategoriesWithDifferentNames) {
+  auto t = makeDecls<ObjCCategoryDecl>("@interface A @end @interface A(X) @end",
+                                       "@interface A @end @interface A(Y) @end",
+                                       Lang_OBJC, objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, CategoryAndExtension) {
+  auto t = makeDecls<ObjCCategoryDecl>("@interface A @end @interface A(X) @end",
+                                       "@interface A @end @interface A() @end",
+                                       Lang_OBJC, objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, MatchingProtocols) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@protocol P @end @interface A @end @interface A(X)<P> @end",
+      "@protocol P @end @interface A @end @interface A(X)<P> @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentProtocols) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@protocol P @end @interface A @end @interface A(X)<P> @end",
+      "@protocol Q @end @interface A @end @interface A(X)<Q> @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentProtocolsOrder) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@protocol P @end @protocol Q @end @interface A @end @interface A(X)<P, "
+      "Q> @end",
+      "@protocol P @end @protocol Q @end @interface A @end @interface A(X)<Q, "
+      "P> @end",
+      Lang_OBJC, objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, MatchingIvars) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A() { int x; } @end",
+      "@interface A @end @interface A() { int x; } @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentIvarName) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A() { int x; } @end",
+      "@interface A @end @interface A() { int y; } @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentIvarType) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A() { int x; } @end",
+      "@interface A @end @interface A() { float x; } @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentIvarBitfieldWidth) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A() { int x: 1; } @end",
+      "@interface A @end @interface A() { int x: 2; } @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentIvarVisibility) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A() { @public int x; } @end",
+      "@interface A @end @interface A() { @protected int x; } @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentIvarNumber) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A() { int x; } @end",
+      "@interface A @end @interface A() {} @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentIvarOrder) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A() { int x; int y; } @end",
+      "@interface A @end @interface A() { int y; int x; } @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, MatchingMethods) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A(X) -(void)test; @end",
+      "@interface A @end @interface A(X) -(void)test; @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentMethodName) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A(X) -(void)test; @end",
+      "@interface A @end @interface A(X) -(void)wasd; @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+
+  auto t2 = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A(X) -(void)test:(int)x more:(int)y; @end",
+      "@interface A @end @interface A(X) -(void)test:(int)x :(int)y; @end",
+      Lang_OBJC, objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t2));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentMethodClassInstance) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A(X) -(void)test; @end",
+      "@interface A @end @interface A(X) +(void)test; @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentMethodReturnType) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A(X) -(void)test; @end",
+      "@interface A @end @interface A(X) -(int)test; @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentMethodParameterType) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A(X) -(void)test:(int)x; @end",
+      "@interface A @end @interface A(X) -(void)test:(float)x; @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentMethodParameterName) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A(X) -(void)test:(int)x; @end",
+      "@interface A @end @interface A(X) -(void)test:(int)y; @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentMethodNumber) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A(X) -(void)test; @end",
+      "@interface A @end @interface A(X) @end", Lang_OBJC, objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, DifferentMethodOrder) {
+  auto t = makeDecls<ObjCCategoryDecl>(
+      "@interface A @end @interface A(X) -(void)u; -(void)v; @end",
+      "@interface A @end @interface A(X) -(void)v; -(void)u; @end", Lang_OBJC,
+      objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 struct StructuralEquivalenceTemplateTest : StructuralEquivalenceTest {};
 
 TEST_F(StructuralEquivalenceTemplateTest, ExactlySameTemplates) {

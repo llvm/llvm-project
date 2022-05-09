@@ -1,23 +1,23 @@
 // RUN: mlir-opt %s -async-runtime-ref-counting | FileCheck %s
 
 // CHECK-LABEL: @token
-func private @token() -> !async.token
+func.func private @token() -> !async.token
 
 // CHECK-LABEL: @cond
-func private @cond() -> i1
+func.func private @cond() -> i1
 
 // CHECK-LABEL: @take_token
-func private @take_token(%arg0: !async.token)
+func.func private @take_token(%arg0: !async.token)
 
 // CHECK-LABEL: @token_arg_no_uses
 // CHECK: %[[TOKEN:.*]]: !async.token
-func @token_arg_no_uses(%arg0: !async.token) {
+func.func @token_arg_no_uses(%arg0: !async.token) {
   // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
   return
 }
 
 // CHECK-LABEL: @token_value_no_uses
-func @token_value_no_uses() {
+func.func @token_value_no_uses() {
   // CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
   // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
   %0 = async.runtime.create : !async.token
@@ -25,7 +25,7 @@ func @token_value_no_uses() {
 }
 
 // CHECK-LABEL: @token_returned_no_uses
-func @token_returned_no_uses() {
+func.func @token_returned_no_uses() {
   // CHECK: %[[TOKEN:.*]] = call @token
   // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64}
   %0 = call @token() : () -> !async.token
@@ -34,7 +34,7 @@ func @token_returned_no_uses() {
 
 // CHECK-LABEL: @token_arg_to_func
 // CHECK: %[[TOKEN:.*]]: !async.token
-func @token_arg_to_func(%arg0: !async.token) {
+func.func @token_arg_to_func(%arg0: !async.token) {
   // CHECK: async.runtime.add_ref %[[TOKEN]] {count = 1 : i64} : !async.token
   call @take_token(%arg0): (!async.token) -> ()
   // CHECK: async.runtime.drop_ref %[[TOKEN]] {count = 1 : i64} : !async.token
@@ -42,7 +42,7 @@ func @token_arg_to_func(%arg0: !async.token) {
 }
 
 // CHECK-LABEL: @token_value_to_func
-func @token_value_to_func() {
+func.func @token_value_to_func() {
   // CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
   %0 = async.runtime.create : !async.token
   // CHECK: async.runtime.add_ref %[[TOKEN]] {count = 1 : i64} : !async.token
@@ -53,7 +53,7 @@ func @token_value_to_func() {
 
 // CHECK-LABEL: @token_arg_cond_br_await_with_fallthough
 // CHECK: %[[TOKEN:.*]]: !async.token
-func @token_arg_cond_br_await_with_fallthough(%arg0: !async.token, %arg1: i1) {
+func.func @token_arg_cond_br_await_with_fallthough(%arg0: !async.token, %arg1: i1) {
   // CHECK: cf.cond_br
   // CHECK-SAME: ^[[BB1:.*]], ^[[BB2:.*]]
   cf.cond_br %arg1, ^bb1, ^bb2
@@ -70,7 +70,7 @@ func @token_arg_cond_br_await_with_fallthough(%arg0: !async.token, %arg1: i1) {
 }
 
 // CHECK-LABEL: @token_simple_return
-func @token_simple_return() -> !async.token {
+func.func @token_simple_return() -> !async.token {
   // CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
   %token = async.runtime.create : !async.token
   // CHECK: return %[[TOKEN]]
@@ -80,7 +80,7 @@ func @token_simple_return() -> !async.token {
 // CHECK-LABEL: @token_coro_return
 // CHECK-NOT: async.runtime.drop_ref
 // CHECK-NOT: async.runtime.add_ref
-func @token_coro_return() -> !async.token {
+func.func @token_coro_return() -> !async.token {
   %token = async.runtime.create : !async.token
   %id = async.coro.id
   %hdl = async.coro.begin %id
@@ -99,7 +99,7 @@ func @token_coro_return() -> !async.token {
 
 // CHECK-LABEL: @token_coro_await_and_resume
 // CHECK: %[[TOKEN:.*]]: !async.token
-func @token_coro_await_and_resume(%arg0: !async.token) -> !async.token {
+func.func @token_coro_await_and_resume(%arg0: !async.token) -> !async.token {
   %token = async.runtime.create : !async.token
   %id = async.coro.id
   %hdl = async.coro.begin %id
@@ -120,7 +120,7 @@ func @token_coro_await_and_resume(%arg0: !async.token) -> !async.token {
 
 // CHECK-LABEL: @value_coro_await_and_resume
 // CHECK: %[[VALUE:.*]]: !async.value<f32>
-func @value_coro_await_and_resume(%arg0: !async.value<f32>) -> !async.token {
+func.func @value_coro_await_and_resume(%arg0: !async.value<f32>) -> !async.token {
   %token = async.runtime.create : !async.token
   %id = async.coro.id
   %hdl = async.coro.begin %id
@@ -148,7 +148,7 @@ func @value_coro_await_and_resume(%arg0: !async.value<f32>) -> !async.token {
 
 // CHECK-LABEL: @outlined_async_execute
 // CHECK: %[[TOKEN:.*]]: !async.token
-func private @outlined_async_execute(%arg0: !async.token) -> !async.token {
+func.func private @outlined_async_execute(%arg0: !async.token) -> !async.token {
   %0 = async.runtime.create : !async.token
   %1 = async.coro.id
   %2 = async.coro.begin %1
@@ -182,7 +182,7 @@ func private @outlined_async_execute(%arg0: !async.token) -> !async.token {
 
 // CHECK-LABEL: @token_await_inside_nested_region
 // CHECK: %[[ARG:.*]]: i1
-func @token_await_inside_nested_region(%arg0: i1) {
+func.func @token_await_inside_nested_region(%arg0: i1) {
   // CHECK: %[[TOKEN:.*]] = call @token()
   %token = call @token() : () -> !async.token
   // CHECK: scf.if %[[ARG]] {
@@ -197,7 +197,7 @@ func @token_await_inside_nested_region(%arg0: i1) {
 }
 
 // CHECK-LABEL: @token_defined_in_the_loop
-func @token_defined_in_the_loop() {
+func.func @token_defined_in_the_loop() {
   cf.br ^bb1
 ^bb1:
   // CHECK: ^[[BB1:.*]]:
@@ -215,7 +215,7 @@ func @token_defined_in_the_loop() {
 }
 
 // CHECK-LABEL: @divergent_liveness_one_token
-func @divergent_liveness_one_token(%arg0 : i1) {
+func.func @divergent_liveness_one_token(%arg0 : i1) {
   // CHECK: %[[TOKEN:.*]] = call @token()
   %token = call @token() : () -> !async.token
   // CHECK: cf.cond_br %arg0, ^[[LIVE_IN:.*]], ^[[REF_COUNTING:.*]]
@@ -237,7 +237,7 @@ func @divergent_liveness_one_token(%arg0 : i1) {
 }
 
 // CHECK-LABEL: @divergent_liveness_unique_predecessor
-func @divergent_liveness_unique_predecessor(%arg0 : i1) {
+func.func @divergent_liveness_unique_predecessor(%arg0 : i1) {
   // CHECK: %[[TOKEN:.*]] = call @token()
   %token = call @token() : () -> !async.token
   // CHECK: cf.cond_br %arg0, ^[[LIVE_IN:.*]], ^[[NO_LIVE_IN:.*]]
@@ -261,7 +261,7 @@ func @divergent_liveness_unique_predecessor(%arg0 : i1) {
 }
 
 // CHECK-LABEL: @divergent_liveness_two_tokens
-func @divergent_liveness_two_tokens(%arg0 : i1) {
+func.func @divergent_liveness_two_tokens(%arg0 : i1) {
   // CHECK: %[[TOKEN0:.*]] = call @token()
   // CHECK: %[[TOKEN1:.*]] = call @token()
   %token0 = call @token() : () -> !async.token

@@ -260,9 +260,8 @@ private:
     } else if (OpeningParen.Previous &&
                (OpeningParen.Previous->isOneOf(tok::kw_static_assert,
                                                tok::kw_while, tok::l_paren,
-                                               tok::comma) ||
-                OpeningParen.Previous->isIf() ||
-                OpeningParen.Previous->is(TT_BinaryOperator))) {
+                                               tok::comma, TT_BinaryOperator) ||
+                OpeningParen.Previous->isIf())) {
       // static_assert, if and while usually contain expressions.
       Contexts.back().IsExpression = true;
     } else if (Style.isJavaScript() && OpeningParen.Previous &&
@@ -2147,6 +2146,42 @@ private:
     return true;
   }
 
+  /// Returns true if the token is used as a unary operator.
+  bool determineUnaryOperatorByUsage(const FormatToken &Tok) {
+    const FormatToken *PrevToken = Tok.getPreviousNonComment();
+    if (!PrevToken)
+      return true;
+
+    // These keywords are deliberately not included here because they may
+    // precede only one of unary star/amp and plus/minus but not both.  They are
+    // either included in determineStarAmpUsage or determinePlusMinusCaretUsage.
+    //
+    // @ - It may be followed by a unary `-` in Objective-C literals. We don't
+    //   know how they can be followed by a star or amp.
+    if (PrevToken->isOneOf(
+            TT_ConditionalExpr, tok::l_paren, tok::comma, tok::colon, tok::semi,
+            tok::equal, tok::question, tok::l_square, tok::l_brace,
+            tok::kw_case, tok::kw_co_await, tok::kw_co_return, tok::kw_co_yield,
+            tok::kw_delete, tok::kw_return, tok::kw_throw))
+      return true;
+
+    // We put sizeof here instead of only in determineStarAmpUsage. In the cases
+    // where the unary `+` operator is overloaded, it is reasonable to write
+    // things like `sizeof +x`. Like commit 446d6ec996c6c3.
+    if (PrevToken->is(tok::kw_sizeof))
+      return true;
+
+    // A sequence of leading unary operators.
+    if (PrevToken->isOneOf(TT_CastRParen, TT_UnaryOperator))
+      return true;
+
+    // There can't be two consecutive binary operators.
+    if (PrevToken->is(TT_BinaryOperator))
+      return true;
+
+    return false;
+  }
+
   /// Return the type of the given token assuming it is * or &.
   TokenType determineStarAmpUsage(const FormatToken &Tok, bool IsExpression,
                                   bool InTemplateArgument) {
@@ -2178,12 +2213,7 @@ private:
     if (PrevToken->is(tok::r_paren) && PrevToken->is(TT_TypeDeclarationParen))
       return TT_PointerOrReference;
 
-    if (PrevToken->isOneOf(tok::l_paren, tok::l_square, tok::l_brace,
-                           tok::comma, tok::semi, tok::kw_return, tok::colon,
-                           tok::kw_co_return, tok::kw_co_await,
-                           tok::kw_co_yield, tok::equal, tok::kw_delete,
-                           tok::kw_sizeof, tok::kw_throw, TT_BinaryOperator,
-                           TT_ConditionalExpr, TT_UnaryOperator, TT_CastRParen))
+    if (determineUnaryOperatorByUsage(Tok))
       return TT_UnaryOperator;
 
     if (NextToken->is(tok::l_square) && NextToken->isNot(TT_LambdaLSquare))
@@ -2233,23 +2263,14 @@ private:
   }
 
   TokenType determinePlusMinusCaretUsage(const FormatToken &Tok) {
+    if (determineUnaryOperatorByUsage(Tok))
+      return TT_UnaryOperator;
+
     const FormatToken *PrevToken = Tok.getPreviousNonComment();
     if (!PrevToken)
       return TT_UnaryOperator;
 
-    if (PrevToken->isOneOf(TT_CastRParen, TT_UnaryOperator))
-      // This must be a sequence of leading unary operators.
-      return TT_UnaryOperator;
-
-    // Use heuristics to recognize unary operators.
-    if (PrevToken->isOneOf(tok::equal, tok::l_paren, tok::comma, tok::l_square,
-                           tok::question, tok::colon, tok::kw_return,
-                           tok::kw_case, tok::at, tok::l_brace, tok::kw_throw,
-                           tok::kw_co_return, tok::kw_co_yield))
-      return TT_UnaryOperator;
-
-    // There can't be two consecutive binary operators.
-    if (PrevToken->is(TT_BinaryOperator))
+    if (PrevToken->is(tok::at))
       return TT_UnaryOperator;
 
     // Fall back to marking the token as binary operator.
@@ -2502,21 +2523,14 @@ private:
 } // end anonymous namespace
 
 void TokenAnnotator::setCommentLineLevels(
-    SmallVectorImpl<AnnotatedLine *> &Lines) {
+    SmallVectorImpl<AnnotatedLine *> &Lines) const {
   const AnnotatedLine *NextNonCommentLine = nullptr;
   for (AnnotatedLine *Line : llvm::reverse(Lines)) {
     assert(Line->First);
-    bool CommentLine = true;
-    for (const FormatToken *Tok = Line->First; Tok; Tok = Tok->Next) {
-      if (!Tok->is(tok::comment)) {
-        CommentLine = false;
-        break;
-      }
-    }
 
     // If the comment is currently aligned with the line immediately following
     // it, that's probably intentional and we should keep it.
-    if (NextNonCommentLine && CommentLine &&
+    if (NextNonCommentLine && Line->isComment() &&
         NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
             Line->First->OriginalColumn) {
@@ -2544,7 +2558,7 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
   return Result;
 }
 
-void TokenAnnotator::annotate(AnnotatedLine &Line) {
+void TokenAnnotator::annotate(AnnotatedLine &Line) const {
   for (auto &Child : Line.Children)
     annotate(*Child);
 
@@ -2711,7 +2725,7 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
   return false;
 }
 
-void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
+void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   for (AnnotatedLine *ChildLine : Line.Children)
     calculateFormattingInformation(*ChildLine);
 
@@ -2831,7 +2845,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
   LLVM_DEBUG({ printDebugInfo(Line); });
 }
 
-void TokenAnnotator::calculateUnbreakableTailLengths(AnnotatedLine &Line) {
+void TokenAnnotator::calculateUnbreakableTailLengths(
+    AnnotatedLine &Line) const {
   unsigned UnbreakableTailLength = 0;
   FormatToken *Current = Line.Last;
   while (Current) {
@@ -2847,7 +2862,8 @@ void TokenAnnotator::calculateUnbreakableTailLengths(AnnotatedLine &Line) {
   }
 }
 
-void TokenAnnotator::calculateArrayInitializerColumnList(AnnotatedLine &Line) {
+void TokenAnnotator::calculateArrayInitializerColumnList(
+    AnnotatedLine &Line) const {
   if (Line.First == Line.Last)
     return;
   auto *CurrentToken = Line.First;
@@ -2867,7 +2883,7 @@ void TokenAnnotator::calculateArrayInitializerColumnList(AnnotatedLine &Line) {
 }
 
 FormatToken *TokenAnnotator::calculateInitializerColumnList(
-    AnnotatedLine &Line, FormatToken *CurrentToken, unsigned Depth) {
+    AnnotatedLine &Line, FormatToken *CurrentToken, unsigned Depth) const {
   while (CurrentToken != nullptr && CurrentToken != Line.Last) {
     if (CurrentToken->is(tok::l_brace))
       ++Depth;
@@ -2887,7 +2903,7 @@ FormatToken *TokenAnnotator::calculateInitializerColumnList(
 
 unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
                                       const FormatToken &Tok,
-                                      bool InFunctionDecl) {
+                                      bool InFunctionDecl) const {
   const FormatToken &Left = *Tok.Previous;
   const FormatToken &Right = Tok;
 
@@ -3099,7 +3115,7 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
 
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Left,
-                                          const FormatToken &Right) {
+                                          const FormatToken &Right) const {
   if (Left.is(tok::kw_return) &&
       !Right.isOneOf(tok::semi, tok::r_paren, tok::hashhash))
     return true;
@@ -3119,12 +3135,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
        Right.is(tok::r_brace) && Right.isNot(BK_Block)))
     return Style.SpaceInEmptyParentheses;
   if (Style.SpacesInConditionalStatement) {
-    if (Left.is(tok::l_paren) && Left.Previous &&
-        isKeywordWithCondition(*Left.Previous))
-      return true;
-    if (Right.is(tok::r_paren) && Right.MatchingParen &&
-        Right.MatchingParen->Previous &&
-        isKeywordWithCondition(*Right.MatchingParen->Previous))
+    const FormatToken *LeftParen = nullptr;
+    if (Left.is(tok::l_paren))
+      LeftParen = &Left;
+    else if (Right.is(tok::r_paren) && Right.MatchingParen)
+      LeftParen = Right.MatchingParen;
+    if (LeftParen && LeftParen->Previous &&
+        isKeywordWithCondition(*LeftParen->Previous))
       return true;
   }
 
@@ -3381,10 +3398,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Left.is(tok::semi))
       return true;
     if (Left.isOneOf(tok::pp_elif, tok::kw_for, tok::kw_while, tok::kw_switch,
-                     tok::kw_case, TT_ForEachMacro, TT_ObjCForIn))
-      return Style.SpaceBeforeParensOptions.AfterControlStatements ||
-             spaceRequiredBeforeParens(Right);
-    if (Left.isIf(Line.Type != LT_PreprocessorDirective))
+                     tok::kw_case, TT_ForEachMacro, TT_ObjCForIn) ||
+        Left.isIf(Line.Type != LT_PreprocessorDirective))
       return Style.SpaceBeforeParensOptions.AfterControlStatements ||
              spaceRequiredBeforeParens(Right);
 
@@ -3478,7 +3493,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
 }
 
 bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
-                                         const FormatToken &Right) {
+                                         const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
 
   // If the token is finalized don't touch it (as it could be in a
@@ -3917,7 +3932,7 @@ static const FormatToken *getFirstNonComment(const AnnotatedLine &Line) {
 }
 
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
-                                     const FormatToken &Right) {
+                                     const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0)
     return true;
@@ -4297,7 +4312,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
 }
 
 bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
-                                    const FormatToken &Right) {
+                                    const FormatToken &Right) const {
   const FormatToken &Left = *Right.Previous;
   // Language-specific stuff.
   if (Style.isCSharp()) {
@@ -4537,13 +4552,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
 
   // We only break before r_paren if we're in a block indented context.
   if (Right.is(tok::r_paren)) {
-    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent)
-      return Right.MatchingParen &&
-             !(Right.MatchingParen->Previous &&
-               (Right.MatchingParen->Previous->is(tok::kw_for) ||
-                Right.MatchingParen->Previous->isIf()));
-
-    return false;
+    if (Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent ||
+        !Right.MatchingParen)
+      return false;
+    const FormatToken *Previous = Right.MatchingParen->Previous;
+    return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
   }
 
   // Allow breaking after a trailing annotation, e.g. after a method
@@ -4611,7 +4624,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
          (Left.is(TT_TemplateOpener) && !Right.is(TT_TemplateCloser));
 }
 
-void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
+void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
   llvm::errs() << "AnnotatedTokens(L=" << Line.Level << "):\n";
   const FormatToken *Tok = Line.First;
   while (Tok) {
@@ -4636,7 +4649,7 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
 }
 
 FormatStyle::PointerAlignmentStyle
-TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) {
+TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
   assert(Reference.isOneOf(tok::amp, tok::ampamp));
   switch (Style.ReferenceAlignment) {
   case FormatStyle::RAS_Pointer:
@@ -4654,7 +4667,7 @@ TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) {
 
 FormatStyle::PointerAlignmentStyle
 TokenAnnotator::getTokenPointerOrReferenceAlignment(
-    const FormatToken &PointerOrReference) {
+    const FormatToken &PointerOrReference) const {
   if (PointerOrReference.isOneOf(tok::amp, tok::ampamp)) {
     switch (Style.ReferenceAlignment) {
     case FormatStyle::RAS_Pointer:

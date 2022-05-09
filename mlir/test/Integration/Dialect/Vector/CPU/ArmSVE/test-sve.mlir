@@ -6,7 +6,7 @@
 // Note: To run this test, your CPU must support SVE
 
 // VLA memcopy
-func @kernel_copy(%src : memref<?xi64>, %dst : memref<?xi64>, %size : index) {
+func.func @kernel_copy(%src : memref<?xi64>, %dst : memref<?xi64>, %size : index) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %vs = vector.vscale
@@ -20,7 +20,7 @@ func @kernel_copy(%src : memref<?xi64>, %dst : memref<?xi64>, %size : index) {
 }
 
 // VLA multiply and add
-func @kernel_muladd(%a : memref<?xi64>,
+func.func @kernel_muladd(%a : memref<?xi64>,
                     %b : memref<?xi64>,
                     %c : memref<?xi64>,
                     %size : index) {
@@ -40,7 +40,7 @@ func @kernel_muladd(%a : memref<?xi64>,
 }
 
 // SVE-based absolute difference
-func @kernel_absdiff(%a : memref<?xi64>,
+func.func @kernel_absdiff(%a : memref<?xi64>,
                      %b : memref<?xi64>,
                      %c : memref<?xi64>,
                      %size : index) {
@@ -68,7 +68,7 @@ func @kernel_absdiff(%a : memref<?xi64>,
 }
 
 // VLA unknown bounds vector addition
-func @kernel_addition(%a : memref<?xf32>,
+func.func @kernel_addition(%a : memref<?xf32>,
                       %b : memref<?xf32>,
                       %c : memref<?xf32>,
                       %N : index) {
@@ -88,7 +88,7 @@ func @kernel_addition(%a : memref<?xf32>,
   return
 }
 
-func @entry() -> i32 {
+func.func @entry() -> i32 {
   %i0 = arith.constant 0: i64
   %i1 = arith.constant 1: i64
   %r0 = arith.constant 0: i32

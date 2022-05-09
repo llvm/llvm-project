@@ -12,6 +12,8 @@
 // RUN:   -analyzer-config deadcode.DeadStores:ShowFixIts=true \
 // RUN:   -verify=non-nested,nested
 
+extern int printf(const char *, ...);
+
 void f1(void) {
   int k, y; // non-nested-warning {{unused variable 'k'}}
             // non-nested-warning@-1 {{unused variable 'y'}}
@@ -30,8 +32,6 @@ void f2(void *b) {
   // CHECK-FIXES-NEXT: char *d;
 
   printf("%s", c);
-  // non-nested-warning@-1 {{implicitly declaring library function 'printf' with type 'int (const char *, ...)'}}
-  // non-nested-note@-2 {{include the header <stdio.h> or explicitly provide a declaration for 'printf'}}
 }
 
 int f(void);

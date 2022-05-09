@@ -423,7 +423,7 @@ body:             |
     %2:sreg_64_xexec = V_CMP_NE_U32_e64 %1, 1, implicit $exec
 
   bb.1:
-    $vcc = S_AND_B64 $exec, killed %2, implicit-def dead $scc
+    $vcc = S_AND_B64 $exec, %2, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.3, implicit killed $vcc
     S_BRANCH %bb.2
 
@@ -475,7 +475,7 @@ body:             |
     %0.sub0_sub1:sgpr_128 = IMPLICIT_DEF
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0.sub0_sub1, implicit $exec
     %2.sub0_sub1:sgpr_128 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
-    $vcc = S_AND_B64 $exec, killed %2.sub0_sub1:sgpr_128, implicit-def dead $scc
+    $vcc = S_AND_B64 $exec, %2.sub0_sub1:sgpr_128, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
     S_BRANCH %bb.1
 

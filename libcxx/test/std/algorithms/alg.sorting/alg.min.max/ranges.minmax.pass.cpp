@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <functional>
 #include <ranges>
 
 #include "test_iterators.h"

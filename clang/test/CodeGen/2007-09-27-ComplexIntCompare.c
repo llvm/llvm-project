@@ -2,6 +2,7 @@
 // PR1708
 
 void __attribute__((noreturn)) abort(void);
+void __attribute__((noreturn)) exit(int);
 
 struct s { _Complex unsigned short x; };
 struct s gs = { 100 + 200i };

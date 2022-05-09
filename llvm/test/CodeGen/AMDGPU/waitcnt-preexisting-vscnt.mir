@@ -35,7 +35,7 @@ body:             |
     ; GFX10: S_WAITCNT 0
     ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 1
+    ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10: S_BARRIER
     ; GFX10: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX10: S_WAITCNT 112
@@ -112,7 +112,7 @@ body:             |
     ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX10: S_WAITCNT 0
-    ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 1
+    ; GFX10: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10: S_BARRIER
     ; GFX10: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX10: S_WAITCNT 112

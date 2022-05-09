@@ -8,8 +8,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // UNSUPPORTED: libcpp-has-no-wide-characters
-// TODO FMT Evaluate gcc-11 status
-// UNSUPPORTED: gcc-11
 
 // Validate it works regardless of the signedness of `char`.
 // RUN: %{cxx} %{flags} %{compile_flags} -fsigned-char -fsyntax-only %s

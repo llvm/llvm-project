@@ -20,6 +20,7 @@
 #include <vector>
 
 namespace clang {
+class CompilerInstance;
 namespace clangd {
 struct Diag;
 class LSPBinder;
@@ -104,6 +105,11 @@ public:
   struct ASTListener {
     /// Listeners are destroyed once the AST is built.
     virtual ~ASTListener() = default;
+
+    /// Called before every AST build, both for main file and preamble. The call
+    /// happens immediately before FrontendAction::Execute(), with Preprocessor
+    /// set up already and after BeginSourceFile() on main file was called.
+    virtual void beforeExecute(CompilerInstance &CI) {}
 
     /// Called everytime a diagnostic is encountered. Modules can use this
     /// modify the final diagnostic, or store some information to surface code

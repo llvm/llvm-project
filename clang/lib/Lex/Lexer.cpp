@@ -2902,11 +2902,11 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
     ConditionalStack.pop_back();
   }
 
-  SourceLocation EndLoc = getSourceLocation(BufferEnd);
   // C99 5.1.1.2p2: If the file is non-empty and didn't end in a newline, issue
   // a pedwarn.
   if (CurPtr != BufferStart && (CurPtr[-1] != '\n' && CurPtr[-1] != '\r')) {
     DiagnosticsEngine &Diags = PP->getDiagnostics();
+    SourceLocation EndLoc = getSourceLocation(BufferEnd);
     unsigned DiagID;
 
     if (LangOpts.CPlusPlus11) {
@@ -2929,7 +2929,7 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
   BufferPtr = CurPtr;
 
   // Finally, let the preprocessor handle this.
-  return PP->HandleEndOfFile(Result, EndLoc, isPragmaLexer());
+  return PP->HandleEndOfFile(Result, isPragmaLexer());
 }
 
 /// isNextPPTokenLParen - Return 1 if the next unexpanded token lexed from
@@ -3459,7 +3459,10 @@ LexNextToken:
     MIOpt.ReadToken();
     return LexNumericConstant(Result, CurPtr);
 
-  case 'u':   // Identifier (uber) or C11/C++11 UTF-8 or UTF-16 string literal
+  // Identifier (e.g., uber), or
+  // UTF-8 (C2x/C++17) or UTF-16 (C11/C++11) character literal, or
+  // UTF-8 or UTF-16 string literal (C11/C++11).
+  case 'u':
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
 
@@ -3493,7 +3496,7 @@ LexNextToken:
                                ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
                                            SizeTmp2, Result),
                                tok::utf8_string_literal);
-        if (Char2 == '\'' && LangOpts.CPlusPlus17)
+        if (Char2 == '\'' && (LangOpts.CPlusPlus17 || LangOpts.C2x))
           return LexCharConstant(
               Result, ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
                                   SizeTmp2, Result),
@@ -3517,7 +3520,7 @@ LexNextToken:
     // treat u like the start of an identifier.
     return LexIdentifierContinue(Result, CurPtr);
 
-  case 'U':   // Identifier (Uber) or C11/C++11 UTF-32 string literal
+  case 'U': // Identifier (e.g. Uber) or C11/C++11 UTF-32 string literal
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
 

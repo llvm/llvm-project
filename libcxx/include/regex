@@ -763,6 +763,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 */
 
 #include <__algorithm/find.h>
+#include <__algorithm/search.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__iterator/wrap_iter.h>

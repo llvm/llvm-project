@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// const_reference at(size_type pos) const;
-//       reference at(size_type pos);
+// const_reference at(size_type pos) const; // constexpr since C++20
+//       reference at(size_type pos); // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -30,7 +32,7 @@ test(S s, typename S::size_type pos)
         assert(cs.at(pos) == cs[pos]);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -54,7 +56,7 @@ test(S s, typename S::size_type pos)
 #endif
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S(), 0);
@@ -81,7 +83,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

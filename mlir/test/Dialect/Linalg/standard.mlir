@@ -4,7 +4,7 @@
 // CHECK-DAG: #[[$map6:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 // CHECK-DAG: #[[$map7:.*]] = affine_map<()[s0] -> (s0)>
 
-func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>,
+func.func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>,
           %arg1: memref<?xf32, offset: ?, strides: [1]>,
           %arg2: memref<f32>) {
   linalg.dot ins(%arg0, %arg1: memref<?xf32, offset: ?, strides: [1]>,
@@ -45,7 +45,7 @@ func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>,
 !matrix_type_B = type memref<?x?x!vector_type_B>
 !matrix_type_C = type memref<?x?x!vector_type_C>
 
-func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C) {
+func.func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C) {
   linalg.generic #matmul_trait
       ins(%A, %B : !matrix_type_A, !matrix_type_B)
      outs(%C : !matrix_type_C) {

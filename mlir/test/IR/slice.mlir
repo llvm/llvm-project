@@ -1,6 +1,6 @@
 // RUN: mlir-opt -slice-analysis-test %s | FileCheck %s
 
-func @slicing_linalg_op(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @slicing_linalg_op(%arg0 : index, %arg1 : index, %arg2 : index) {
   %a = memref.alloc(%arg0, %arg2) : memref<?x?xf32>
   %b = memref.alloc(%arg2, %arg1) : memref<?x?xf32>
   %c = memref.alloc(%arg0, %arg1) : memref<?x?xf32>

@@ -102,7 +102,7 @@ layout, and the second one is a `memref` of 4-element vectors with a 2-strided,
 // memory layouts
 #identity = affine_map<(d0) -> (d0)>
 
-func @example(%A: memref<?xf32, #identity>,
+func.func @example(%A: memref<?xf32, #identity>,
               %B: memref<?xvector<4xf32>, offset: 1, strides: [2]>) {
   linalg.generic #attrs
   ins(%A: memref<?xf32, #identity>)
@@ -124,7 +124,7 @@ materialized by a lowering into a form that will resemble:
 // It's syntax can be found here: https://mlir.llvm.org/docs/Dialects/SCFDialect/
 #map0 = affine_map<(d0) -> (d0 * 2 + 1)>
 
-func @example(%arg0: memref<?xf32>, %arg1: memref<?xvector<4xf32>, #map0>) {
+func.func @example(%arg0: memref<?xf32>, %arg1: memref<?xvector<4xf32>, #map0>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0 = memref.dim %arg0, %c0 : memref<?xf32>
@@ -186,7 +186,7 @@ uses an identity layout.
   iterator_types = ["parallel", "parallel"]
 }
 
-func @example(%A: memref<8x?xf32, offset: 0, strides: [2, 2]>,
+func.func @example(%A: memref<8x?xf32, offset: 0, strides: [2, 2]>,
               %B: memref<?xvector<4xf32>>) {
   linalg.generic #attrs
   ins(%A: memref<8x?xf32, offset: 0, strides: [2, 2]>)
@@ -206,7 +206,7 @@ materialized by a lowering into a form that will resemble:
 // Run: mlir-opt example2.mlir -allow-unregistered-dialect -convert-linalg-to-loops
 #map0 = affine_map<(d0, d1) -> (d0 * 2 + d1 * 2)>
 
-func @example(%arg0: memref<8x?xf32, #map0>, %arg1: memref<?xvector<4xf32>>) {
+func.func @example(%arg0: memref<8x?xf32, #map0>, %arg1: memref<?xvector<4xf32>>) {
   %c8 = arith.constant 8 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -309,7 +309,7 @@ be when using a concrete operation `addf`:
   iterator_types = ["parallel", "parallel"]
 }
 
-func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
+func.func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
   linalg.generic #attrs
   ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
   outs(%C: memref<?x?xf32>) {
@@ -329,7 +329,7 @@ The property "*The Compute Payload is Specified With a Region*" is materialized
 by a lowering into a form that will resemble:
 
 ```mlir
-func @example(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+func.func @example(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
@@ -382,7 +382,7 @@ call we intend to use:
   library_call = "pointwise_add"
 }
 
-func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
+func.func @example(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
   linalg.generic #attrs
   ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
   outs(%C: memref<?x?xf32>) {
@@ -402,14 +402,14 @@ into a form that will resemble:
 
 #map0 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
-func @example(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+func.func @example(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %0 = memref.cast %arg0 : memref<?x?xf32> to memref<?x?xf32, #map0>
   %1 = memref.cast %arg1 : memref<?x?xf32> to memref<?x?xf32, #map0>
   %2 = memref.cast %arg2 : memref<?x?xf32> to memref<?x?xf32, #map0>
   call @pointwise_add(%0, %1, %2) : (memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf32, #map0>) -> ()
   return
 }
-func @pointwise_add(memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf32, #map0>) attributes {llvm.emit_c_interface}
+func.func @pointwise_add(memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf32, #map0>) attributes {llvm.emit_c_interface}
 ```
 
 Which, after lowering to LLVM resembles:
@@ -417,7 +417,7 @@ Which, after lowering to LLVM resembles:
 ```mlir
 // Run: mlir-opt example4.mlir -convert-linalg-to-std | mlir-opt -convert-func-to-llvm
 // Some generated code are omitted here.
-func @example(%arg0: !llvm<"float*">, ...) {
+func.func @example(%arg0: !llvm<"float*">, ...) {
   ...
   llvm.call @pointwise_add(...) : (!llvm<"float*">, ...) -> ()
   return

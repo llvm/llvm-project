@@ -24,11 +24,10 @@
 
 namespace Fortran::frontend {
 
-static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
+static std::unique_ptr<FrontendAction> CreateFrontendAction(
     CompilerInstance &ci) {
 
-  ActionKind ak = ci.frontendOpts().programAction;
-  switch (ak) {
+  switch (ci.frontendOpts().programAction) {
   case InputOutputTest:
     return std::make_unique<InputOutputTestAction>();
   case PrintPreprocessedInput:
@@ -42,11 +41,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   case EmitLLVMBitcode:
     return std::make_unique<EmitLLVMBitcodeAction>();
   case EmitObj:
-    return std::make_unique<BackendAction>(
-        BackendAction::BackendActionTy::Backend_EmitObj);
+    return std::make_unique<EmitObjAction>();
   case EmitAssembly:
-    return std::make_unique<BackendAction>(
-        BackendAction::BackendActionTy::Backend_EmitAssembly);
+    return std::make_unique<EmitAssemblyAction>();
   case DebugUnparse:
     return std::make_unique<DebugUnparseAction>();
   case DebugUnparseNoSema:
@@ -90,25 +87,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
     ci.diagnostics().Report(diagID) << ci.frontendOpts().ActionName;
     return nullptr;
   }
-  default:
-    break;
-    // TODO:
-    // case ParserSyntaxOnly:
-    // case EmitLLVM:
-    // case EmitLLVMOnly:
-    // case EmitCodeGenOnly:
-    // (...)
   }
-  return 0;
-}
 
-std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &ci) {
-  // Create the underlying action.
-  std::unique_ptr<FrontendAction> act = CreateFrontendBaseAction(ci);
-  if (!act)
-    return nullptr;
-
-  return act;
+  llvm_unreachable("Invalid program action!");
 }
 
 bool ExecuteCompilerInvocation(CompilerInstance *flang) {

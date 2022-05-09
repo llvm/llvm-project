@@ -94,7 +94,7 @@ private:
               return value;
             } else {
               context_.Say(expr.source,
-                  "CASE value (%s) overflows type (%s) of SELECT CASE expression"_err_en_US,
+                  "CASE value (%s) overflows type (%s) of SELECT CASE expression"_warn_en_US,
                   folded.AsFortran(), caseExprType_.AsFortran());
               hasErrors_ = true;
               return std::nullopt;

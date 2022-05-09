@@ -39,7 +39,7 @@ writes needs to dominate all buffer reads.
 Example for breaking the invariant:
 
 ```mlir
-func @condBranch(%arg0: i1, %arg1: memref<2xf32>) {
+func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
@@ -71,7 +71,7 @@ BufferDeallocation is fully compatible with “hybrid” setups in which tracked
 untracked allocations are mixed:
 
 ```mlir
-func @mixedAllocation(%arg0: i1) {
+func.func @mixedAllocation(%arg0: i1) {
    %0 = memref.alloca() : memref<2xf32>  // aliases: %2
    %1 = memref.alloc() : memref<2xf32>  // aliases: %2
    cf.cond_br %arg0, ^bb1, ^bb2
@@ -128,7 +128,7 @@ BufferHoisting pass:
 ![branch_example_pre_move](/includes/img/branch_example_pre_move.svg)
 
 ```mlir
-func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -148,7 +148,7 @@ of code:
 ![branch_example_post_move](/includes/img/branch_example_post_move.svg)
 
 ```mlir
-func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>  // moved to bb0
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
@@ -170,7 +170,7 @@ Due to the data dependency of the allocation to %0, we cannot move the
 allocation out of bb2 in this case:
 
 ```mlir
-func @condBranchDynamicType(
+func.func @condBranchDynamicType(
   %arg0: i1,
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
@@ -199,7 +199,7 @@ copies to eliminate them. Consider the following example in which the
 allocations have already been placed:
 
 ```mlir
-func @branch(%arg0: i1) {
+func.func @branch(%arg0: i1) {
   %0 = memref.alloc() : memref<2xf32>  // aliases: %2
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
@@ -231,7 +231,7 @@ Applying the BufferDeallocation pass to the program above yields the following
 result:
 
 ```mlir
-func @branch(%arg0: i1) {
+func.func @branch(%arg0: i1) {
   %0 = memref.alloc() : memref<2xf32>
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
@@ -268,7 +268,7 @@ and non-critical aliases:
 ![nested_branch_example_pre_move](/includes/img/nested_branch_example_pre_move.svg)
 
 ```mlir
-func @condBranchDynamicTypeNested(
+func.func @condBranchDynamicTypeNested(
   %arg0: i1,
   %arg1: memref<?xf32>,  // aliases: %3, %4
   %arg2: memref<?xf32>,
@@ -301,7 +301,7 @@ Applying BufferDeallocation yields the following output:
 ![nested_branch_example_post_move](/includes/img/nested_branch_example_post_move.svg)
 
 ```mlir
-func @condBranchDynamicTypeNested(
+func.func @condBranchDynamicTypeNested(
   %arg0: i1,
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
@@ -379,7 +379,7 @@ the `RegionBranchOpInterface` to determine predecessors in order to infer the
 high-level control flow:
 
 ```mlir
-func @inner_region_control_flow(
+func.func @inner_region_control_flow(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
@@ -403,7 +403,7 @@ dialect-specific operations. BufferDeallocation supports this behavior via the
 operation to determine the value of %2 at runtime which creates an alias:
 
 ```mlir
-func @nested_region_control_flow(%arg0 : index, %arg1 : index) -> memref<?x?xf32> {
+func.func @nested_region_control_flow(%arg0 : index, %arg1 : index) -> memref<?x?xf32> {
   %0 = arith.cmpi "eq", %arg0, %arg1 : index
   %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
@@ -424,7 +424,7 @@ block since it cannot be accessed by the remainder of the program. Accessing the
 %1 which does not need to be tracked.
 
 ```mlir
-func @nested_region_control_flow(%arg0: index, %arg1: index) -> memref<?x?xf32> {
+func.func @nested_region_control_flow(%arg0: index, %arg1: index) -> memref<?x?xf32> {
     %0 = arith.cmpi "eq", %arg0, %arg1 : index
     %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
     %2 = scf.if %0 -> (memref<?x?xf32>) {
@@ -448,7 +448,7 @@ Reconsider a slightly adapted version of the “custom.region_if” example from
 above that uses a nested allocation:
 
 ```mlir
-func @inner_region_control_flow_div(
+func.func @inner_region_control_flow_div(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
@@ -471,7 +471,7 @@ Furthermore, %arg4 is returned to its parent operation and has an alias %1. This
 causes BufferDeallocation to introduce additional copies:
 
 ```mlir
-func @inner_region_control_flow_div(
+func.func @inner_region_control_flow_div(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
@@ -509,7 +509,7 @@ Consider the following “scf.for” use case containing a nested structured
 control-flow if:
 
 ```mlir
-func @loop_nested_if(
+func.func @loop_nested_if(
   %lb: index,
   %ub: index,
   %step: index,
@@ -547,7 +547,7 @@ buffer, we have to free the buffer from the previous iteration to avoid memory
 leaks:
 
 ```mlir
-func @loop_nested_if(
+func.func @loop_nested_if(
   %lb: index,
   %ub: index,
   %step: index,
@@ -624,7 +624,7 @@ analysis of this sample reveals that the highlighted operations are redundant
 and can be removed.
 
 ```mlir
-func @dynamic_allocation(%arg0: index, %arg1: index) -> memref<?x?xf32> {
+func.func @dynamic_allocation(%arg0: index, %arg1: index) -> memref<?x?xf32> {
   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   %2 = bufferization.clone %1 : (memref<?x?xf32>) -> (memref<?x?xf32>)
   memref.dealloc %1 : memref<?x?xf32>
@@ -635,7 +635,7 @@ func @dynamic_allocation(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 Will be transformed to:
 
 ```mlir
-func @dynamic_allocation(%arg0: index, %arg1: index) -> memref<?x?xf32> {
+func.func @dynamic_allocation(%arg0: index, %arg1: index) -> memref<?x?xf32> {
   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   return %1 : memref<?x?xf32>
 }
@@ -656,7 +656,7 @@ merged into a single step. Canonicalization removes the clone operation and
 %temp, and replaces the uses of %temp with %result:
 
 ```mlir
-func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
+func.func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
   %temp = memref.alloc() : memref<2xf32>
   test.generic {
     args_in = 1 : i64,
@@ -676,7 +676,7 @@ func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
 Will be transformed to:
 
 ```mlir
-func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
+func.func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
   test.generic {
     args_in = 1 : i64,
     args_out = 1 : i64,

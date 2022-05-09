@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   replace(const_iterator i1, const_iterator i2, basic_string_view<charT,traits> sv);
+//   replace(const_iterator i1, const_iterator i2, basic_string_view<charT,traits> sv); // constexpr since C++20
 
 #include <string>
 #include <algorithm>
@@ -264,7 +266,7 @@ TEST_CONSTEXPR_CXX20 void test2()
     test(S("abcdefghijklmnopqrst"), 20, 0, SV("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     typedef std::string_view SV;
@@ -289,7 +291,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

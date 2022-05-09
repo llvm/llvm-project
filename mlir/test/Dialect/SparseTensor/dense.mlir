@@ -56,7 +56,7 @@
 // CHECK:           %[[VAL_16:.*]] = bufferization.to_tensor %[[VAL_9]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_16]] : tensor<32x16xf32>
 // CHECK:         }
-func @dense1(%arga: tensor<32x16xf32, #DenseMatrix>,
+func.func @dense1(%arga: tensor<32x16xf32, #DenseMatrix>,
              %argx: tensor<32x16xf32> {linalg.inplaceable = false})
 	     -> tensor<32x16xf32> {
   %c = arith.constant 1.0 : f32
@@ -97,7 +97,7 @@ func @dense1(%arga: tensor<32x16xf32, #DenseMatrix>,
 // CHECK:           %[[VAL_15:.*]] = bufferization.to_tensor %[[VAL_8]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_15]] : tensor<32x16xf32>
 // CHECK:         }
-func @dense2(%arga: tensor<32x16xf32, #DenseMatrix>,
+func.func @dense2(%arga: tensor<32x16xf32, #DenseMatrix>,
              %argx: tensor<32x16xf32> {linalg.inplaceable = true})
 	     -> tensor<32x16xf32> {
   %c = arith.constant 1.0 : f32
@@ -138,7 +138,7 @@ func @dense2(%arga: tensor<32x16xf32, #DenseMatrix>,
 // CHECK:           %[[VAL_15:.*]] = sparse_tensor.load %[[VAL_1]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_15]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func @dense3(%arga: tensor<32x16xf32>,
+func.func @dense3(%arga: tensor<32x16xf32>,
              %argx: tensor<32x16xf32, #DenseMatrix> {linalg.inplaceable = true})
 	     -> tensor<32x16xf32, #DenseMatrix> {
   %c = arith.constant 1.0 : f32
@@ -186,7 +186,7 @@ func @dense3(%arga: tensor<32x16xf32>,
 // CHECK:           %[[VAL_20:.*]] = sparse_tensor.load %[[VAL_1]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_20]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func @dense4(%arga: tensor<32x16x8xf32>,
+func.func @dense4(%arga: tensor<32x16x8xf32>,
              %argx: tensor<32x16xf32, #DenseMatrix> {linalg.inplaceable = true})
 	     -> tensor<32x16xf32, #DenseMatrix> {
   %0 = linalg.generic #trait_3d

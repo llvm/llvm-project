@@ -673,8 +673,8 @@ entry:
 define i32 @test40(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: @test40(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], 2
-; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    [[DIV1:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DIV1]]
 ;
   %shl1 = shl i32 1, %b
   %shl2 = shl i32 %shl1, 2
@@ -717,8 +717,8 @@ define <2 x i32> @test42vec(<2 x i32> %a, <2 x i32> %b) {
 define i32 @test43(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: @test43(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], 12
-; CHECK-NEXT:    [[DIV2:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret i32 [[DIV2]]
+; CHECK-NEXT:    [[DIV21:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DIV21]]
 ;
   %div = shl i32 4096, %b    ; must be exact otherwise we'd divide by zero
   %div2 = udiv i32 %a, %div
@@ -1716,8 +1716,8 @@ define void @ashr_out_of_range(i177* %A) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 -1, i64 -2
 ; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, i177* [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[L7:%.*]] = load i177, i177* [[G11]], align 4
-; CHECK-NEXT:    [[B36:%.*]] = select i1 [[TMP1]], i177 0, i177 [[L7]]
-; CHECK-NEXT:    [[C17:%.*]] = icmp sgt i177 [[B36]], [[L7]]
+; CHECK-NEXT:    [[C171:%.*]] = icmp slt i177 [[L7]], 0
+; CHECK-NEXT:    [[C17:%.*]] = select i1 [[TMP1]], i1 [[C171]], i1 false
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C17]] to i64
 ; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, i177* [[G11]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i177 [[L7]], -1

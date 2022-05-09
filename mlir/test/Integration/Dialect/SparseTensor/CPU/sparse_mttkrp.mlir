@@ -41,7 +41,7 @@ module {
   // Computes Matricized Tensor Times Khatri-Rao Product (MTTKRP) kernel. See
   // http://tensor-compiler.org/docs/data_analytics/index.html.
   //
-  func @kernel_mttkrp(%argb: tensor<?x?x?xf64, #SparseTensor>,
+  func.func @kernel_mttkrp(%argb: tensor<?x?x?xf64, #SparseTensor>,
                       %argc: tensor<?x?xf64>,
                       %argd: tensor<?x?xf64>,
                       %arga: tensor<?x?xf64> {linalg.inplaceable = true})
@@ -59,12 +59,12 @@ module {
     return %0 : tensor<?x?xf64>
   }
 
-  func private @getTensorFilename(index) -> (!Filename)
+  func.func private @getTensorFilename(index) -> (!Filename)
 
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
-  func @entry() {
+  func.func @entry() {
     %f0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index

@@ -1313,8 +1313,9 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
       return std::move(E);
 
   if (!InputArgs.hasArg(STRIP_no_strip_all) && !Config.StripDebug &&
-      !Config.StripUnneeded && Config.DiscardMode == DiscardType::None &&
-      !Config.StripAllGNU && Config.SymbolsToRemove.empty())
+      !Config.OnlyKeepDebug && !Config.StripUnneeded &&
+      Config.DiscardMode == DiscardType::None && !Config.StripAllGNU &&
+      Config.SymbolsToRemove.empty())
     Config.StripAll = true;
 
   if (Config.DiscardMode == DiscardType::All) {

@@ -319,4 +319,49 @@ TEST(LowLevelTypeTest, Divide) {
             LLT::fixed_vector(4, LLT::pointer(1, 64)).divide(2));
 }
 
+TEST(LowLevelTypeTest, MultiplyElements) {
+  // Basic scalar->vector cases
+  EXPECT_EQ(LLT::fixed_vector(2, 16), LLT::scalar(16).multiplyElements(2));
+  EXPECT_EQ(LLT::fixed_vector(3, 16), LLT::scalar(16).multiplyElements(3));
+  EXPECT_EQ(LLT::fixed_vector(4, 32), LLT::scalar(32).multiplyElements(4));
+  EXPECT_EQ(LLT::fixed_vector(4, 7), LLT::scalar(7).multiplyElements(4));
+
+  // Basic vector to vector cases
+  EXPECT_EQ(LLT::fixed_vector(4, 32),
+            LLT::fixed_vector(2, 32).multiplyElements(2));
+  EXPECT_EQ(LLT::fixed_vector(9, 32),
+            LLT::fixed_vector(3, 32).multiplyElements(3));
+
+  // Pointer to vector of pointers
+  EXPECT_EQ(LLT::fixed_vector(2, LLT::pointer(0, 32)),
+            LLT::pointer(0, 32).multiplyElements(2));
+  EXPECT_EQ(LLT::fixed_vector(3, LLT::pointer(1, 32)),
+            LLT::pointer(1, 32).multiplyElements(3));
+  EXPECT_EQ(LLT::fixed_vector(4, LLT::pointer(1, 64)),
+            LLT::pointer(1, 64).multiplyElements(4));
+
+  // Vector of pointers to vector of pointers
+  EXPECT_EQ(LLT::fixed_vector(8, LLT::pointer(1, 64)),
+            LLT::fixed_vector(2, LLT::pointer(1, 64)).multiplyElements(4));
+  EXPECT_EQ(LLT::fixed_vector(9, LLT::pointer(1, 32)),
+            LLT::fixed_vector(3, LLT::pointer(1, 32)).multiplyElements(3));
+
+  // Scalable vectors
+  EXPECT_EQ(LLT::scalable_vector(4, 16),
+            LLT::scalable_vector(2, 16).multiplyElements(2));
+  EXPECT_EQ(LLT::scalable_vector(6, 16),
+            LLT::scalable_vector(2, 16).multiplyElements(3));
+  EXPECT_EQ(LLT::scalable_vector(9, 16),
+            LLT::scalable_vector(3, 16).multiplyElements(3));
+  EXPECT_EQ(LLT::scalable_vector(4, 32),
+            LLT::scalable_vector(2, 32).multiplyElements(2));
+  EXPECT_EQ(LLT::scalable_vector(256, 32),
+            LLT::scalable_vector(8, 32).multiplyElements(32));
+
+  // Scalable vectors of pointers
+  EXPECT_EQ(LLT::scalable_vector(4, LLT::pointer(0, 32)),
+            LLT::scalable_vector(2, LLT::pointer(0, 32)).multiplyElements(2));
+  EXPECT_EQ(LLT::scalable_vector(32, LLT::pointer(1, 64)),
+            LLT::scalable_vector(8, LLT::pointer(1, 64)).multiplyElements(4));
+}
 }

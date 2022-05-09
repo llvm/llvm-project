@@ -7,7 +7,7 @@
 // Test folding conversion casts feeding into other casts.
 // CHECK-LABEL: func @multiple_conversion_casts
 // CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]:
-func @multiple_conversion_casts(%arg0: i32, %arg1: i32) -> (i32, i32) {
+func.func @multiple_conversion_casts(%arg0: i32, %arg1: i32) -> (i32, i32) {
   // CHECK-NOT: unrealized_conversion_cast
   // CHECK: return %[[ARG0]], %[[ARG1]]
   %inputs:2 = builtin.unrealized_conversion_cast %arg0, %arg1 : i32, i32 to i64, i64
@@ -16,7 +16,7 @@ func @multiple_conversion_casts(%arg0: i32, %arg1: i32) -> (i32, i32) {
 }
 
 // CHECK-LABEL: func @multiple_conversion_casts
-func @multiple_conversion_casts_failure(%arg0: i32, %arg1: i32, %arg2: i64) -> (i32, i32) {
+func.func @multiple_conversion_casts_failure(%arg0: i32, %arg1: i32, %arg2: i64) -> (i32, i32) {
   // CHECK: unrealized_conversion_cast
   // CHECK: unrealized_conversion_cast
   %inputs:2 = builtin.unrealized_conversion_cast %arg0, %arg1 : i32, i32 to i64, i64

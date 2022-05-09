@@ -42,7 +42,7 @@
 // CHECK:           %[[VAL_18:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_18]] : tensor<32x16xf32>
 // CHECK:         }
-func @add_dd(%arga: tensor<32x16xf32, #Tdd>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @add_dd(%arga: tensor<32x16xf32, #Tdd>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tdd>, tensor<32x16xf32>)
     outs(%argx: tensor<32x16xf32>) {
@@ -79,7 +79,7 @@ func @add_dd(%arga: tensor<32x16xf32, #Tdd>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK:           %[[VAL_18:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_18]] : tensor<32x16xf32>
 // CHECK:         }
-func @mul_dd(%arga: tensor<32x16xf32, #Tdd>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @mul_dd(%arga: tensor<32x16xf32, #Tdd>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tdd>, tensor<32x16xf32>)
     outs(%argx: tensor<32x16xf32>) {
@@ -143,7 +143,7 @@ func @mul_dd(%arga: tensor<32x16xf32, #Tdd>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK:           %[[VAL_37:.*]] = bufferization.to_tensor %[[VAL_13]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_37]] : tensor<32x16xf32>
 // CHECK:         }
-func @add_ds(%arga: tensor<32x16xf32, #Tds>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @add_ds(%arga: tensor<32x16xf32, #Tds>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tds>, tensor<32x16xf32>)
     outs(%argx: tensor<32x16xf32>) {
@@ -183,7 +183,7 @@ func @add_ds(%arga: tensor<32x16xf32, #Tds>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK:           %[[VAL_21:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_21]] : tensor<32x16xf32>
 // CHECK:         }
-func @mul_ds(%arga: tensor<32x16xf32, #Tds>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @mul_ds(%arga: tensor<32x16xf32, #Tds>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tds>, tensor<32x16xf32>)
     outs(%argx: tensor<32x16xf32>) {
@@ -252,7 +252,7 @@ func @mul_ds(%arga: tensor<32x16xf32, #Tds>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK:           %[[VAL_40:.*]] = bufferization.to_tensor %[[VAL_13]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_40]] : tensor<32x16xf32>
 // CHECK:         }
-func @add_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @add_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tsd>, tensor<32x16xf32>)
     outs(%argx: tensor<32x16xf32>) {
@@ -293,7 +293,7 @@ func @add_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK:           %[[VAL_22:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_22]] : tensor<32x16xf32>
 // CHECK:         }
-func @mul_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @mul_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tsd>, tensor<32x16xf32>)
     outs(%argx: tensor<32x16xf32>) {
@@ -388,7 +388,7 @@ func @mul_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK:           %[[VAL_58:.*]] = bufferization.to_tensor %[[VAL_15]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_58]] : tensor<32x16xf32>
 // CHECK:         }
-func @add_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @add_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tss>, tensor<32x16xf32>)
     outs(%argx: tensor<32x16xf32>) {
@@ -432,7 +432,7 @@ func @add_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK:           %[[VAL_25:.*]] = bufferization.to_tensor %[[VAL_12]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_25]] : tensor<32x16xf32>
 // CHECK:         }
-func @mul_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @mul_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tss>, tensor<32x16xf32>)
     outs(%argx: tensor<32x16xf32>) {
@@ -597,7 +597,7 @@ func @mul_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32>, %argx: te
 // CHECK:           %[[VAL_116:.*]] = bufferization.to_tensor %[[VAL_16]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_116]] : tensor<32x16xf32>
 // CHECK:         }
-func @add_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #Tss>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @add_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #Tss>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tss>, tensor<32x16xf32, #Tss>)
     outs(%argx: tensor<32x16xf32>) {
@@ -694,7 +694,7 @@ func @add_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #Tss>, 
 // CHECK:           %[[VAL_72:.*]] = bufferization.to_tensor %[[VAL_16]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_72]] : tensor<32x16xf32>
 // CHECK:         }
-func @mul_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #Tss>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @mul_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #Tss>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tss>, tensor<32x16xf32, #Tss>)
     outs(%argx: tensor<32x16xf32>) {
@@ -801,7 +801,7 @@ func @mul_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #Tss>, 
 // CHECK:           %[[VAL_70:.*]] = bufferization.to_tensor %[[VAL_15]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_70]] : tensor<32x16xf32>
 // CHECK:         }
-func @add_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @add_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tsd>, tensor<32x16xf32, #Tds>)
     outs(%argx: tensor<32x16xf32>) {
@@ -848,7 +848,7 @@ func @add_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, 
 // CHECK:           %[[VAL_28:.*]] = bufferization.to_tensor %[[VAL_13]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_28]] : tensor<32x16xf32>
 // CHECK:         }
-func @mul_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
+func.func @mul_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, %argx: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait2
      ins(%arga, %argb: tensor<32x16xf32, #Tsd>, tensor<32x16xf32, #Tds>)
     outs(%argx: tensor<32x16xf32>) {
@@ -901,7 +901,7 @@ func @mul_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #Tds>, 
 // CHECK:           %[[VAL_26:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<16xf32>
 // CHECK:           return %[[VAL_26]] : tensor<16xf32>
 // CHECK:         }
-func @matvec(%argA: tensor<16x32xf32, #Tds>, %argb: tensor<32xf32>, %argx: tensor<16xf32>) -> tensor<16xf32> {
+func.func @matvec(%argA: tensor<16x32xf32, #Tds>, %argb: tensor<32xf32>, %argx: tensor<16xf32>) -> tensor<16xf32> {
   %0 = linalg.generic #trait_matvec
        ins(%argA, %argb: tensor<16x32xf32, #Tds>, tensor<32xf32>)
       outs(%argx: tensor<16xf32>) {
@@ -949,7 +949,7 @@ func @matvec(%argA: tensor<16x32xf32, #Tds>, %argb: tensor<32xf32>, %argx: tenso
 // CHECK:           %[[VAL_23:.*]] = bufferization.to_tensor %[[VAL_8]] : memref<f32>
 // CHECK:           return %[[VAL_23]] : tensor<f32>
 // CHECK:         }
-func @sum_reduction(%arga: tensor<10x20xf32, #Tds>, %argx: tensor<f32>) -> tensor<f32> {
+func.func @sum_reduction(%arga: tensor<10x20xf32, #Tds>, %argx: tensor<f32>) -> tensor<f32> {
   %0 = linalg.generic #trait_sum_reduction
      ins(%arga: tensor<10x20xf32, #Tds>)
     outs(%argx: tensor<f32>) {
@@ -997,7 +997,7 @@ func @sum_reduction(%arga: tensor<10x20xf32, #Tds>, %argx: tensor<f32>) -> tenso
 // CHECK:           %[[VAL_20:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<?x?xf64>
 // CHECK:           return %[[VAL_20]] : tensor<?x?xf64>
 // CHECK:         }
-func @scale(%arga: tensor<?x?xf64, #Tds>, %argx: tensor<?x?xf64>) -> tensor<?x?xf64> {
+func.func @scale(%arga: tensor<?x?xf64, #Tds>, %argx: tensor<?x?xf64>) -> tensor<?x?xf64> {
   %0 = arith.constant 2.0 : f64
   %1 = linalg.generic #trait_scale
      ins(%arga: tensor<?x?xf64, #Tds>)
@@ -1065,7 +1065,7 @@ func @scale(%arga: tensor<?x?xf64, #Tds>, %argx: tensor<?x?xf64>) -> tensor<?x?x
 // CHECK:           %[[VAL_38:.*]] = bufferization.to_tensor %[[VAL_17]] : memref<?x?xf32>
 // CHECK:           return %[[VAL_38]] : tensor<?x?xf32>
 // CHECK:         }
-func @sampled_dense_dense(%args: tensor<?x?xf32, #Tss>,
+func.func @sampled_dense_dense(%args: tensor<?x?xf32, #Tss>,
                           %arga: tensor<?x?xf32>,
                           %argb: tensor<?x?xf32>,
                           %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
@@ -1285,7 +1285,7 @@ func @sampled_dense_dense(%args: tensor<?x?xf32, #Tss>,
 // CHECK:           %[[VAL_174:.*]] = bufferization.to_tensor %[[VAL_24]] : memref<?xf32>
 // CHECK:           return %[[VAL_174]] : tensor<?xf32>
 // CHECK:         }
-func @sum_kernel_with_inv(%arga: tensor<?x?xf32, #Tss>,
+func.func @sum_kernel_with_inv(%arga: tensor<?x?xf32, #Tss>,
                           %argb: tensor<?x?xf32, #Tds>,
                           %argc: tensor<?x?xf32, #Tds>,
                           %argd: tensor<?xf32>,

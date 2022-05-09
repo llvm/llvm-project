@@ -284,17 +284,13 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
     }
 
     TemplateDecl *TD = cast<TemplateDecl>(D);
-
+    Template =
+        FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
+    assert(!FoundUsingShadow || FoundUsingShadow->getTargetDecl() == TD);
     if (SS.isSet() && !SS.isInvalid()) {
       NestedNameSpecifier *Qualifier = SS.getScopeRep();
-      // FIXME: store the using TemplateName in QualifiedTemplateName if
-      // the TD is referred via a using-declaration.
-      Template =
-          Context.getQualifiedTemplateName(Qualifier, hasTemplateKeyword, TD);
-    } else {
-      Template =
-          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
-      assert(!FoundUsingShadow || FoundUsingShadow->getTargetDecl() == TD);
+      Template = Context.getQualifiedTemplateName(Qualifier, hasTemplateKeyword,
+                                                  Template);
     }
 
     if (isa<FunctionTemplateDecl>(TD)) {
@@ -1005,8 +1001,8 @@ ParsedTemplateArgument Sema::ActOnTemplateTypeArgument(TypeResult ParsedType) {
       TemplateName Name = DTST.getTypePtr()->getTemplateName();
       if (SS.isSet())
         Name = Context.getQualifiedTemplateName(SS.getScopeRep(),
-                                                /*HasTemplateKeyword*/ false,
-                                                Name.getAsTemplateDecl());
+                                                /*HasTemplateKeyword=*/false,
+                                                Name);
       ParsedTemplateArgument Result(SS, TemplateTy::make(Name),
                                     DTST.getTemplateNameLoc());
       if (EllipsisLoc.isValid())

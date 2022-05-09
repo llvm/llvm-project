@@ -4,7 +4,7 @@
 
 
 // UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-newDriver
+// UNSUPPORTED: x86_64-pc-linux-gnu-oldDriver
 
 #include <algorithm>
 #include <cstdlib>

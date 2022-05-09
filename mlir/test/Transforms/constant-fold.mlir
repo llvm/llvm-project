@@ -4,7 +4,7 @@
 
 // CHECK-LABEL: @affine_for
 // CHECK-SAME: [[ARG:%[a-zA-Z0-9]+]]
-func @affine_for(%p : memref<f32>) {
+func.func @affine_for(%p : memref<f32>) {
   // CHECK: [[C:%.+]] = arith.constant 6.{{0*}}e+00 : f32
   affine.for %arg1 = 0 to 128 {
     affine.for %arg2 = 0 to 8 { // CHECK: affine.for %{{.*}} = 0 to 8 {
@@ -23,7 +23,7 @@ func @affine_for(%p : memref<f32>) {
 // -----
 
 // CHECK-LABEL: func @simple_addf
-func @simple_addf() -> f32 {
+func.func @simple_addf() -> f32 {
   %0 = arith.constant 4.5 : f32
   %1 = arith.constant 1.5 : f32
 
@@ -37,7 +37,7 @@ func @simple_addf() -> f32 {
 // -----
 
 // CHECK-LABEL: func @addf_splat_tensor
-func @addf_splat_tensor() -> tensor<4xf32> {
+func.func @addf_splat_tensor() -> tensor<4xf32> {
   %0 = arith.constant dense<4.5> : tensor<4xf32>
   %1 = arith.constant dense<1.5> : tensor<4xf32>
 
@@ -51,7 +51,7 @@ func @addf_splat_tensor() -> tensor<4xf32> {
 // -----
 
 // CHECK-LABEL: func @addf_dense_tensor
-func @addf_dense_tensor() -> tensor<4xf32> {
+func.func @addf_dense_tensor() -> tensor<4xf32> {
   %0 = arith.constant dense<[1.5, 2.5, 3.5, 4.5]> : tensor<4xf32>
   %1 = arith.constant dense<[1.5, 2.5, 3.5, 4.5]> : tensor<4xf32>
 
@@ -65,7 +65,7 @@ func @addf_dense_tensor() -> tensor<4xf32> {
 // -----
 
 // CHECK-LABEL: func @addf_dense_and_splat_tensors
-func @addf_dense_and_splat_tensors() -> tensor<4xf32> {
+func.func @addf_dense_and_splat_tensors() -> tensor<4xf32> {
   %0 = arith.constant dense<[1.5, 2.5, 3.5, 4.5]> : tensor<4xf32>
   %1 = arith.constant dense<1.5> : tensor<4xf32>
 
@@ -79,7 +79,7 @@ func @addf_dense_and_splat_tensors() -> tensor<4xf32> {
 // -----
 
 // CHECK-LABEL: func @simple_addi
-func @simple_addi() -> i32 {
+func.func @simple_addi() -> i32 {
   %0 = arith.constant 1 : i32
   %1 = arith.constant 5 : i32
 
@@ -95,7 +95,7 @@ func @simple_addi() -> i32 {
 // CHECK: func @simple_and
 // CHECK-SAME: [[ARG0:%[a-zA-Z0-9]+]]: i1
 // CHECK-SAME: [[ARG1:%[a-zA-Z0-9]+]]: i32)
-func @simple_and(%arg0 : i1, %arg1 : i32) -> (i1, i32) {
+func.func @simple_and(%arg0 : i1, %arg1 : i32) -> (i1, i32) {
   %c1 = arith.constant 1 : i1
   %cAllOnes_32 = arith.constant 4294967295 : i32
 
@@ -115,7 +115,7 @@ func @simple_and(%arg0 : i1, %arg1 : i32) -> (i1, i32) {
 
 // CHECK-LABEL: func @and_index
 //  CHECK-SAME:   [[ARG:%[a-zA-Z0-9]+]]
-func @and_index(%arg0 : index) -> (index) {
+func.func @and_index(%arg0 : index) -> (index) {
   // CHECK: [[C31:%.*]] = arith.constant 31 : index
   %c31 = arith.constant 31 : index
   %c_AllOnes = arith.constant -1 : index
@@ -130,7 +130,7 @@ func @and_index(%arg0 : index) -> (index) {
 
 // CHECK: func @tensor_and
 // CHECK-SAME: [[ARG0:%[a-zA-Z0-9]+]]: tensor<2xi32>
-func @tensor_and(%arg0 : tensor<2xi32>) -> tensor<2xi32> {
+func.func @tensor_and(%arg0 : tensor<2xi32>) -> tensor<2xi32> {
   %cAllOnes_32 = arith.constant dense<4294967295> : tensor<2xi32>
 
   // CHECK: [[C31:%.*]] = arith.constant dense<31> : tensor<2xi32>
@@ -155,7 +155,7 @@ func @tensor_and(%arg0 : tensor<2xi32>) -> tensor<2xi32> {
 
 // CHECK: func @vector_and
 // CHECK-SAME: [[ARG0:%[a-zA-Z0-9]+]]: vector<2xi32>
-func @vector_and(%arg0 : vector<2xi32>) -> vector<2xi32> {
+func.func @vector_and(%arg0 : vector<2xi32>) -> vector<2xi32> {
   %cAllOnes_32 = arith.constant dense<4294967295> : vector<2xi32>
 
   // CHECK: [[C31:%.*]] = arith.constant dense<31> : vector<2xi32>
@@ -179,7 +179,7 @@ func @vector_and(%arg0 : vector<2xi32>) -> vector<2xi32> {
 // -----
 
 // CHECK-LABEL: func @addi_splat_vector
-func @addi_splat_vector() -> vector<8xi32> {
+func.func @addi_splat_vector() -> vector<8xi32> {
   %0 = arith.constant dense<1> : vector<8xi32>
   %1 = arith.constant dense<5> : vector<8xi32>
 
@@ -193,7 +193,7 @@ func @addi_splat_vector() -> vector<8xi32> {
 // -----
 
 // CHECK-LABEL: func @simple_subf
-func @simple_subf() -> f32 {
+func.func @simple_subf() -> f32 {
   %0 = arith.constant 4.5 : f32
   %1 = arith.constant 1.5 : f32
 
@@ -207,7 +207,7 @@ func @simple_subf() -> f32 {
 // -----
 
 // CHECK-LABEL: func @subf_splat_vector
-func @subf_splat_vector() -> vector<4xf32> {
+func.func @subf_splat_vector() -> vector<4xf32> {
   %0 = arith.constant dense<4.5> : vector<4xf32>
   %1 = arith.constant dense<1.5> : vector<4xf32>
 
@@ -222,7 +222,7 @@ func @subf_splat_vector() -> vector<4xf32> {
 
 //      CHECK: func @simple_subi
 // CHECK-SAME:   [[ARG0:%[a-zA-Z0-9]+]]
-func @simple_subi(%arg0 : i32) -> (i32, i32) {
+func.func @simple_subi(%arg0 : i32) -> (i32, i32) {
   %0 = arith.constant 4 : i32
   %1 = arith.constant 1 : i32
   %2 = arith.constant 0 : i32
@@ -238,7 +238,7 @@ func @simple_subi(%arg0 : i32) -> (i32, i32) {
 // -----
 
 // CHECK-LABEL: func @subi_splat_tensor
-func @subi_splat_tensor() -> tensor<4xi32> {
+func.func @subi_splat_tensor() -> tensor<4xi32> {
   %0 = arith.constant dense<4> : tensor<4xi32>
   %1 = arith.constant dense<1> : tensor<4xi32>
 
@@ -252,7 +252,7 @@ func @subi_splat_tensor() -> tensor<4xi32> {
 // -----
 
 // CHECK-LABEL: func @affine_apply
-func @affine_apply(%variable : index) -> (index, index, index) {
+func.func @affine_apply(%variable : index) -> (index, index, index) {
   %c177 = arith.constant 177 : index
   %c211 = arith.constant 211 : index
   %N = arith.constant 1075 : index
@@ -274,7 +274,7 @@ func @affine_apply(%variable : index) -> (index, index, index) {
 // -----
 
 // CHECK-LABEL: func @simple_mulf
-func @simple_mulf() -> f32 {
+func.func @simple_mulf() -> f32 {
   %0 = arith.constant 4.5 : f32
   %1 = arith.constant 1.5 : f32
 
@@ -288,7 +288,7 @@ func @simple_mulf() -> f32 {
 // -----
 
 // CHECK-LABEL: func @mulf_splat_tensor
-func @mulf_splat_tensor() -> tensor<4xf32> {
+func.func @mulf_splat_tensor() -> tensor<4xf32> {
   %0 = arith.constant dense<4.5> : tensor<4xf32>
   %1 = arith.constant dense<1.5> : tensor<4xf32>
 
@@ -302,7 +302,7 @@ func @mulf_splat_tensor() -> tensor<4xf32> {
 // -----
 
 // CHECK-LABEL: func @simple_divi_signed
-func @simple_divi_signed() -> (i32, i32, i32) {
+func.func @simple_divi_signed() -> (i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
   %z = arith.constant 0 : i32
   // CHECK-DAG: [[C6:%.+]] = arith.constant 6
@@ -327,7 +327,7 @@ func @simple_divi_signed() -> (i32, i32, i32) {
 // -----
 
 // CHECK-LABEL: func @divi_signed_splat_tensor
-func @divi_signed_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
+func.func @divi_signed_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant dense<0>
   %z = arith.constant dense<0> : tensor<4xi32>
   // CHECK-DAG: [[C6:%.+]] = arith.constant dense<6>
@@ -352,7 +352,7 @@ func @divi_signed_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>
 // -----
 
 // CHECK-LABEL: func @simple_divi_unsigned
-func @simple_divi_unsigned() -> (i32, i32, i32) {
+func.func @simple_divi_unsigned() -> (i32, i32, i32) {
   %z = arith.constant 0 : i32
   // CHECK-DAG: [[C6:%.+]] = arith.constant 6
   %0 = arith.constant 6 : i32
@@ -378,7 +378,7 @@ func @simple_divi_unsigned() -> (i32, i32, i32) {
 // -----
 
 // CHECK-LABEL: func @divi_unsigned_splat_tensor
-func @divi_unsigned_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
+func.func @divi_unsigned_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi32>) {
   %z = arith.constant dense<0> : tensor<4xi32>
   // CHECK-DAG: [[C6:%.+]] = arith.constant dense<6>
   %0 = arith.constant dense<6> : tensor<4xi32>
@@ -403,7 +403,7 @@ func @divi_unsigned_splat_tensor() -> (tensor<4xi32>, tensor<4xi32>, tensor<4xi3
 // -----
 
 // CHECK-LABEL: func @simple_arith.floordivsi
-func @simple_arith.floordivsi() -> (i32, i32, i32, i32, i32) {
+func.func @simple_arith.floordivsi() -> (i32, i32, i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
   %z = arith.constant 0 : i32
   // CHECK-DAG: [[C6:%.+]] = arith.constant 7
@@ -441,7 +441,7 @@ func @simple_arith.floordivsi() -> (i32, i32, i32, i32, i32) {
 // -----
 
 // CHECK-LABEL: func @simple_arith.ceildivsi
-func @simple_arith.ceildivsi() -> (i32, i32, i32, i32, i32) {
+func.func @simple_arith.ceildivsi() -> (i32, i32, i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
   %z = arith.constant 0 : i32
   // CHECK-DAG: [[C6:%.+]] = arith.constant 7
@@ -479,7 +479,7 @@ func @simple_arith.ceildivsi() -> (i32, i32, i32, i32, i32) {
 // -----
 
 // CHECK-LABEL: func @simple_arith.ceildivui
-func @simple_arith.ceildivui() -> (i32, i32, i32, i32, i32) {
+func.func @simple_arith.ceildivui() -> (i32, i32, i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
   %z = arith.constant 0 : i32
   // CHECK-DAG: [[C6:%.+]] = arith.constant 7
@@ -517,7 +517,7 @@ func @simple_arith.ceildivui() -> (i32, i32, i32, i32, i32) {
 // -----
 
 // CHECK-LABEL: func @simple_arith.remsi
-func @simple_arith.remsi(%a : i32) -> (i32, i32, i32) {
+func.func @simple_arith.remsi(%a : i32) -> (i32, i32, i32) {
   %0 = arith.constant 5 : i32
   %1 = arith.constant 2 : i32
   %2 = arith.constant 1 : i32
@@ -536,7 +536,7 @@ func @simple_arith.remsi(%a : i32) -> (i32, i32, i32) {
 // -----
 
 // CHECK-LABEL: func @simple_arith.remui
-func @simple_arith.remui(%a : i32) -> (i32, i32, i32) {
+func.func @simple_arith.remui(%a : i32) -> (i32, i32, i32) {
   %0 = arith.constant 5 : i32
   %1 = arith.constant 2 : i32
   %2 = arith.constant 1 : i32
@@ -556,7 +556,7 @@ func @simple_arith.remui(%a : i32) -> (i32, i32, i32) {
 // -----
 
 // CHECK-LABEL: func @muli
-func @muli() -> i32 {
+func.func @muli() -> i32 {
   %0 = arith.constant 4 : i32
   %1 = arith.constant 2 : i32
 
@@ -570,7 +570,7 @@ func @muli() -> i32 {
 // -----
 
 // CHECK-LABEL: func @muli_splat_vector
-func @muli_splat_vector() -> vector<4xi32> {
+func.func @muli_splat_vector() -> vector<4xi32> {
   %0 = arith.constant dense<4> : vector<4xi32>
   %1 = arith.constant dense<2> : vector<4xi32>
 
@@ -582,7 +582,7 @@ func @muli_splat_vector() -> vector<4xi32> {
 }
 
 // CHECK-LABEL: func @dim
-func @dim(%x : tensor<8x4xf32>) -> index {
+func.func @dim(%x : tensor<8x4xf32>) -> index {
 
   // CHECK:[[C4:%.+]] = arith.constant 4 : index
   %c1 = arith.constant 1 : index
@@ -595,7 +595,7 @@ func @dim(%x : tensor<8x4xf32>) -> index {
 // -----
 
 // CHECK-LABEL: func @cmpi
-func @cmpi() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
+func.func @cmpi() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   %c42 = arith.constant 42 : i32
   %cm1 = arith.constant -1 : i32
   // CHECK-DAG: [[F:%.+]] = arith.constant false
@@ -626,7 +626,7 @@ func @cmpi() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
 // -----
 
 // CHECK-LABEL: func @cmpf_normal_numbers
-func @cmpf_normal_numbers() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
+func.func @cmpf_normal_numbers() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   %c42 = arith.constant 42. : f32
   %cm1 = arith.constant -1. : f32
   // CHECK-DAG: [[F:%.+]] = arith.constant false
@@ -669,7 +669,7 @@ func @cmpf_normal_numbers() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, 
 // -----
 
 // CHECK-LABEL: func @cmpf_nan
-func @cmpf_nan() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
+func.func @cmpf_nan() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   %c42 = arith.constant 42. : f32
   %cqnan = arith.constant 0xFFFFFFFF : f32
   // CHECK-DAG: [[F:%.+]] = arith.constant false
@@ -712,7 +712,7 @@ func @cmpf_nan() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1,
 // -----
 
 // CHECK-LABEL: func @cmpf_inf
-func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
+func.func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   %c42 = arith.constant 42. : f32
   %cpinf = arith.constant 0x7F800000 : f32
   // CHECK-DAG: [[F:%.+]] = arith.constant false
@@ -755,7 +755,7 @@ func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1,
 // -----
 
 // CHECK-LABEL: func @nested_isolated_region
-func @nested_isolated_region() {
+func.func @nested_isolated_region() {
   // CHECK-NEXT: func @isolated_op
   // CHECK-NEXT: arith.constant 2
   func.func @isolated_op() {
@@ -777,7 +777,7 @@ func @nested_isolated_region() {
 // -----
 
 // CHECK-LABEL: func @custom_insertion_position
-func @custom_insertion_position() {
+func.func @custom_insertion_position() {
   // CHECK: test.one_region_op
   // CHECK-NEXT: arith.constant 2
   "test.one_region_op"() ({
@@ -792,7 +792,7 @@ func @custom_insertion_position() {
 // -----
 
 // CHECK-LABEL: func @subview_scalar_fold
-func @subview_scalar_fold(%arg0: memref<f32>) -> memref<f32> {
+func.func @subview_scalar_fold(%arg0: memref<f32>) -> memref<f32> {
   // CHECK-NOT: memref.subview
   %c = memref.subview %arg0[] [] [] : memref<f32> to memref<f32>
   return %c : memref<f32>

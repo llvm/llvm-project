@@ -3,7 +3,7 @@
 // Test ceil divide with signed integer
 // CHECK-LABEL:       func @ceildivi
 // CHECK-SAME:     ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> i32 {
-func @ceildivi(%arg0: i32, %arg1: i32) -> (i32) {
+func.func @ceildivi(%arg0: i32, %arg1: i32) -> (i32) {
   %res = arith.ceildivsi %arg0, %arg1 : i32
   return %res : i32
 
@@ -33,7 +33,7 @@ func @ceildivi(%arg0: i32, %arg1: i32) -> (i32) {
 // Test ceil divide with index type
 // CHECK-LABEL:       func @ceildivi_index
 // CHECK-SAME:     ([[ARG0:%.+]]: index, [[ARG1:%.+]]: index) -> index {
-func @ceildivi_index(%arg0: index, %arg1: index) -> (index) {
+func.func @ceildivi_index(%arg0: index, %arg1: index) -> (index) {
   %res = arith.ceildivsi %arg0, %arg1 : index
   return %res : index
 
@@ -63,7 +63,7 @@ func @ceildivi_index(%arg0: index, %arg1: index) -> (index) {
 // Test floor divide with signed integer
 // CHECK-LABEL:       func @floordivi
 // CHECK-SAME:     ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> i32 {
-func @floordivi(%arg0: i32, %arg1: i32) -> (i32) {
+func.func @floordivi(%arg0: i32, %arg1: i32) -> (i32) {
   %res = arith.floordivsi %arg0, %arg1 : i32
   return %res : i32
 // CHECK:           [[ONE:%.+]] = arith.constant 1 : i32
@@ -90,7 +90,7 @@ func @floordivi(%arg0: i32, %arg1: i32) -> (i32) {
 // Test floor divide with index type
 // CHECK-LABEL:       func @floordivi_index
 // CHECK-SAME:     ([[ARG0:%.+]]: index, [[ARG1:%.+]]: index) -> index {
-func @floordivi_index(%arg0: index, %arg1: index) -> (index) {
+func.func @floordivi_index(%arg0: index, %arg1: index) -> (index) {
   %res = arith.floordivsi %arg0, %arg1 : index
   return %res : index
 // CHECK:           [[ONE:%.+]] = arith.constant 1 : index
@@ -117,7 +117,7 @@ func @floordivi_index(%arg0: index, %arg1: index) -> (index) {
 // Test ceil divide with unsigned integer
 // CHECK-LABEL:       func @ceildivui
 // CHECK-SAME:     ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> i32 {
-func @ceildivui(%arg0: i32, %arg1: i32) -> (i32) {
+func.func @ceildivui(%arg0: i32, %arg1: i32) -> (i32) {
   %res = arith.ceildivui %arg0, %arg1 : i32
   return %res : i32
 // CHECK:           [[ZERO:%.+]] = arith.constant 0 : i32
@@ -134,7 +134,7 @@ func @ceildivui(%arg0: i32, %arg1: i32) -> (i32) {
 // Test unsigned ceil divide with index
 // CHECK-LABEL:       func @ceildivui_index
 // CHECK-SAME:     ([[ARG0:%.+]]: index, [[ARG1:%.+]]: index) -> index {
-func @ceildivui_index(%arg0: index, %arg1: index) -> (index) {
+func.func @ceildivui_index(%arg0: index, %arg1: index) -> (index) {
   %res = arith.ceildivui %arg0, %arg1 : index
   return %res : index
 // CHECK:           [[ZERO:%.+]] = arith.constant 0 : index
@@ -149,7 +149,7 @@ func @ceildivui_index(%arg0: index, %arg1: index) -> (index) {
 // -----
 
 // CHECK-LABEL: func @maxf
-func @maxf(%a: f32, %b: f32) -> f32 {
+func.func @maxf(%a: f32, %b: f32) -> f32 {
   %result = arith.maxf %a, %b : f32
   return %result : f32
 }
@@ -163,7 +163,7 @@ func @maxf(%a: f32, %b: f32) -> f32 {
 // -----
 
 // CHECK-LABEL: func @maxf_vector
-func @maxf_vector(%a: vector<4xf16>, %b: vector<4xf16>) -> vector<4xf16> {
+func.func @maxf_vector(%a: vector<4xf16>, %b: vector<4xf16>) -> vector<4xf16> {
   %result = arith.maxf %a, %b : vector<4xf16>
   return %result : vector<4xf16>
 }
@@ -177,7 +177,7 @@ func @maxf_vector(%a: vector<4xf16>, %b: vector<4xf16>) -> vector<4xf16> {
 // -----
 
 // CHECK-LABEL: func @minf
-func @minf(%a: f32, %b: f32) -> f32 {
+func.func @minf(%a: f32, %b: f32) -> f32 {
   %result = arith.minf %a, %b : f32
   return %result : f32
 }
@@ -192,7 +192,7 @@ func @minf(%a: f32, %b: f32) -> f32 {
 // -----
 
 // CHECK-LABEL: func @maxsi
-func @maxsi(%a: i32, %b: i32) -> i32 {
+func.func @maxsi(%a: i32, %b: i32) -> i32 {
   %result = arith.maxsi %a, %b : i32
   return %result : i32
 }
@@ -202,7 +202,7 @@ func @maxsi(%a: i32, %b: i32) -> i32 {
 // -----
 
 // CHECK-LABEL: func @minsi
-func @minsi(%a: i32, %b: i32) -> i32 {
+func.func @minsi(%a: i32, %b: i32) -> i32 {
   %result = arith.minsi %a, %b : i32
   return %result : i32
 }
@@ -213,7 +213,7 @@ func @minsi(%a: i32, %b: i32) -> i32 {
 // -----
 
 // CHECK-LABEL: func @maxui
-func @maxui(%a: i32, %b: i32) -> i32 {
+func.func @maxui(%a: i32, %b: i32) -> i32 {
   %result = arith.maxui %a, %b : i32
   return %result : i32
 }
@@ -224,7 +224,7 @@ func @maxui(%a: i32, %b: i32) -> i32 {
 // -----
 
 // CHECK-LABEL: func @minui
-func @minui(%a: i32, %b: i32) -> i32 {
+func.func @minui(%a: i32, %b: i32) -> i32 {
   %result = arith.minui %a, %b : i32
   return %result : i32
 }

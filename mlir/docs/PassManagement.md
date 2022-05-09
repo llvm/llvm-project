@@ -71,10 +71,10 @@ namespace {
 /// in C++. Passes defined declaratively use a cleaner mechanism for providing
 /// these utilities.
 struct MyFunctionPass : public PassWrapper<MyFunctionPass,
-                                           OperationPass<FuncOp>> {
+                                           OperationPass<func::FuncOp>> {
   void runOnOperation() override {
-    // Get the current FuncOp operation being operated on.
-    FuncOp f = getOperation();
+    // Get the current func::FuncOp operation being operated on.
+    func::FuncOp f = getOperation();
 
     // Walk the operations within the function.
     f.walk([](Operation *inst) {
@@ -356,7 +356,7 @@ nestedModulePM.addPass(std::make_unique<MySPIRVModulePass>());
 
 // Nest a pass manager that operates on functions within the nested SPIRV
 // module.
-OpPassManager &nestedFunctionPM = nestedModulePM.nest<FuncOp>();
+OpPassManager &nestedFunctionPM = nestedModulePM.nest<func::FuncOp>();
 nestedFunctionPM.addPass(std::make_unique<MyFunctionPass>());
 
 // Run the pass manager on the top-level module.
@@ -372,12 +372,12 @@ OpPassManager<ModuleOp>
   MyModulePass
   OpPassManager<spirv::ModuleOp>
     MySPIRVModulePass
-    OpPassManager<FuncOp>
+    OpPassManager<func::FuncOp>
       MyFunctionPass
 ```
 
 These pipelines are then run over a single operation at a time. This means that,
-for example, given a series of consecutive passes on FuncOp, it will execute all
+for example, given a series of consecutive passes on func::FuncOp, it will execute all
 on the first function, then all on the second function, etc. until the entire
 program has been run through the passes. This provides several benefits:
 
@@ -1091,7 +1091,7 @@ this instrumentation:
 $ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -mlir-print-ir-before=cse
 
 *** IR Dump Before CSE ***
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   %c1_i32_0 = arith.constant 1 : i32
   return %c1_i32, %c1_i32_0 : i32, i32
@@ -1107,7 +1107,7 @@ func @simple_constant() -> (i32, i32) {
 $ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -mlir-print-ir-after=cse
 
 *** IR Dump After CSE ***
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
@@ -1128,7 +1128,7 @@ func @simple_constant() -> (i32, i32) {
 $ mlir-opt foo.mlir -pass-pipeline='func.func(cse,cse)' -mlir-print-ir-after=cse -mlir-print-ir-after-change
 
 *** IR Dump After CSE ***
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
@@ -1143,7 +1143,7 @@ func @simple_constant() -> (i32, i32) {
 $ mlir-opt foo.mlir -pass-pipeline='func.func(cse,bad-pass)' -mlir-print-ir-after-failure
 
 *** IR Dump After BadPass Failed ***
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
@@ -1159,22 +1159,22 @@ func @simple_constant() -> (i32, i32) {
 $ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func.func(cse)' -mlir-print-ir-after=cse -mlir-print-ir-module-scope
 
 *** IR Dump After CSE ***  ('func.func' operation: @bar)
-func @bar(%arg0: f32, %arg1: f32) -> f32 {
+func.func @bar(%arg0: f32, %arg1: f32) -> f32 {
   ...
 }
 
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   %c1_i32_0 = arith.constant 1 : i32
   return %c1_i32, %c1_i32_0 : i32, i32
 }
 
 *** IR Dump After CSE ***  ('func.func' operation: @simple_constant)
-func @bar(%arg0: f32, %arg1: f32) -> f32 {
+func.func @bar(%arg0: f32, %arg1: f32) -> f32 {
   ...
 }
 
-func @simple_constant() -> (i32, i32) {
+func.func @simple_constant() -> (i32, i32) {
   %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
@@ -1196,7 +1196,7 @@ reproducible may have the form:
 // configuration: -pass-pipeline='func.func(cse,canonicalize),inline' -verify-each
 
 module {
-  func @foo() {
+  func.func @foo() {
     ...
   }
 }
@@ -1231,7 +1231,7 @@ the following reproducer will be generated:
 // configuration: -pass-pipeline='func.func(canonicalize)' -verify-each -mlir-disable-threading
 
 module {
-  func @foo() {
+  func.func @foo() {
     ...
   }
 }

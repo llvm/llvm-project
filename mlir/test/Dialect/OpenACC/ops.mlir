@@ -4,7 +4,7 @@
 // Verify the generic form can be parsed.
 // RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt -split-input-file | FileCheck %s
 
-func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf32>) -> memref<10x10xf32> {
+func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf32>) -> memref<10x10xf32> {
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
@@ -60,7 +60,7 @@ func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
 
 // -----
 
-func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf32>) -> memref<10x10xf32> {
+func.func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf32>) -> memref<10x10xf32> {
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
@@ -114,7 +114,7 @@ func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
 
 // -----
 
-func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>, %d: memref<10xf32>) -> memref<10xf32> {
+func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>, %d: memref<10xf32>) -> memref<10xf32> {
   %lb = arith.constant 0 : index
   %st = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -197,7 +197,7 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
 
 // -----
 
-func @testloopop() -> () {
+func.func @testloopop() -> () {
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 128 : i32
   %idxValue = arith.constant 8 : index
@@ -323,7 +323,7 @@ func @testloopop() -> () {
 
 // -----
 
-func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %i64value = arith.constant 1 : i64
   %i32value = arith.constant 1 : i32
   %idxValue = arith.constant 1 : index
@@ -453,7 +453,7 @@ func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf3
 
 // -----
 
-func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+func.func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %ifCond = arith.constant true
   acc.data if(%ifCond) present(%a : memref<10xf32>) {
   }
@@ -527,7 +527,7 @@ func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) 
 
 // -----
 
-func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 1 : i32
   %idxValue = arith.constant 1 : index
@@ -657,7 +657,7 @@ acc.shutdown if(%ifCond)
 
 // -----
 
-func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %ifCond = arith.constant true
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 1 : i32
@@ -693,7 +693,7 @@ func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf3
 // -----
 
 
-func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %ifCond = arith.constant true
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 1 : i32

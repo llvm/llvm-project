@@ -444,34 +444,28 @@ def load_#as : PatFrag<(ops node:$ptr), (unindexedload node:$ptr)> {
   let IsNonExtLoad = 1;
 }
 
-def extloadi8_#as  : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
+def extloadi8_#as  : PatFrag<(ops node:$ptr), (extloadi8 node:$ptr)> {
   let IsLoad = 1;
-  let MemoryVT = i8;
 }
 
-def extloadi16_#as : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
+def extloadi16_#as : PatFrag<(ops node:$ptr), (extloadi16 node:$ptr)> {
   let IsLoad = 1;
-  let MemoryVT = i16;
 }
 
-def sextloadi8_#as  : PatFrag<(ops node:$ptr), (sextload node:$ptr)> {
+def sextloadi8_#as  : PatFrag<(ops node:$ptr), (sextloadi8 node:$ptr)> {
   let IsLoad = 1;
-  let MemoryVT = i8;
 }
 
-def sextloadi16_#as : PatFrag<(ops node:$ptr), (sextload node:$ptr)> {
+def sextloadi16_#as : PatFrag<(ops node:$ptr), (sextloadi16 node:$ptr)> {
   let IsLoad = 1;
-  let MemoryVT = i16;
 }
 
-def zextloadi8_#as  : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
+def zextloadi8_#as  : PatFrag<(ops node:$ptr), (zextloadi8 node:$ptr)> {
   let IsLoad = 1;
-  let MemoryVT = i8;
 }
 
-def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
+def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextloadi16 node:$ptr)> {
   let IsLoad = 1;
-  let MemoryVT = i16;
 }
 
 def atomic_load_8_#as : PatFrag<(ops node:$ptr), (atomic_load_8 node:$ptr)> {
@@ -498,17 +492,15 @@ def atomic_load_64_#as : PatFrag<(ops node:$ptr), (atomic_load_64 node:$ptr)> {
 
 
 foreach as = [ "global", "flat", "local", "private", "region" ] in {
-let AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
+let IsStore = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
 def store_#as : PatFrag<(ops node:$val, node:$ptr),
                     (unindexedstore node:$val, node:$ptr)> {
-  let IsStore = 1;
   let IsTruncStore = 0;
 }
 
 // truncstore fragments.
 def truncstore_#as : PatFrag<(ops node:$val, node:$ptr),
                              (unindexedstore node:$val, node:$ptr)> {
-  let IsStore = 1;
   let IsTruncStore = 1;
 }
 
@@ -517,45 +509,76 @@ def truncstore_#as : PatFrag<(ops node:$val, node:$ptr),
 // unnecessary check that the memory size is less than the value type
 // in the generated matcher table.
 def truncstorei8_#as : PatFrag<(ops node:$val, node:$ptr),
-                               (truncstore node:$val, node:$ptr)> {
-  let IsStore = 1;
-  let MemoryVT = i8;
-}
-
+                               (truncstorei8 node:$val, node:$ptr)>;
 def truncstorei16_#as : PatFrag<(ops node:$val, node:$ptr),
-                                (truncstore node:$val, node:$ptr)> {
-  let IsStore = 1;
-  let MemoryVT = i16;
-}
+                                (truncstorei16 node:$val, node:$ptr)>;
 
 def store_hi16_#as : StoreHi16 <truncstorei16, i16>;
 def truncstorei8_hi16_#as : StoreHi16<truncstorei8, i8>;
 def truncstorei16_hi16_#as : StoreHi16<truncstorei16, i16>;
 
-defm atomic_store_#as : binary_atomic_op<atomic_store>;
+} // End let IsStore = 1, AddressSpaces = ...
 
-} // End let AddressSpaces
+let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
+def atomic_store_8_#as : PatFrag<(ops node:$ptr, node:$val),
+                                 (atomic_store_8 node:$ptr, node:$val)>;
+def atomic_store_16_#as : PatFrag<(ops node:$ptr, node:$val),
+                                  (atomic_store_16 node:$ptr, node:$val)>;
+def atomic_store_32_#as : PatFrag<(ops node:$ptr, node:$val),
+                                  (atomic_store_32 node:$ptr, node:$val)>;
+def atomic_store_64_#as : PatFrag<(ops node:$ptr, node:$val),
+                                  (atomic_store_64 node:$ptr, node:$val)>;
+}
 } // End foreach as
 
 // TODO: Add GISelPredicateCode for the ret and noret PatFrags once
 // GlobalISelEmitter allows pattern matches where src and dst def count
 // mismatch.
+
+multiclass ret_noret_op {
+  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return true; }] in {
+    def "_ret" : PatFrag<(ops node:$ptr, node:$data),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
+  }
+
+  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return false; }] in {
+    def "_noret" : PatFrag<(ops node:$ptr, node:$data),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
+  }
+}
+
+defm int_amdgcn_flat_atomic_fadd : ret_noret_op;
+defm int_amdgcn_flat_atomic_fadd_v2bf16 : ret_noret_op;
+defm int_amdgcn_flat_atomic_fmin : ret_noret_op;
+defm int_amdgcn_flat_atomic_fmax : ret_noret_op;
+defm int_amdgcn_global_atomic_fadd : ret_noret_op;
+defm int_amdgcn_global_atomic_fadd_v2bf16 : ret_noret_op;
+defm int_amdgcn_global_atomic_fmin : ret_noret_op;
+defm int_amdgcn_global_atomic_fmax : ret_noret_op;
+defm int_amdgcn_ds_fadd_v2bf16 : ret_noret_op;
+
 multiclass ret_noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }] in {
+  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return false; }] in {
     defm "_noret" : binary_atomic_op<atomic_op, IsInt>;
   }
 
-  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }] in {
+  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return true; }] in {
     defm "_ret" : binary_atomic_op<atomic_op, IsInt>;
   }
 }
 
 multiclass ret_noret_ternary_atomic_op<SDNode atomic_op> {
-  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }] in {
+  let PredicateCode = [{ return (SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return false; }] in {
     defm "_noret" : ternary_atomic_op<atomic_op>;
   }
 
-  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }] in {
+  let PredicateCode = [{ return !(SDValue(N, 0).use_empty()); }],
+      GISelPredicateCode = [{ return true; }] in {
     defm "_ret" : ternary_atomic_op<atomic_op>;
   }
 }
@@ -585,27 +608,23 @@ defm atomic_load_fadd_v2f16 : binary_atomic_op_all_as<atomic_load_fadd, 0>;
 defm AMDGPUatomic_cmp_swap : binary_atomic_op_all_as<AMDGPUatomic_cmp_swap>;
 
 def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,
-                        Aligned<8> {
+                       Aligned<8> {
   let IsLoad = 1;
-  let IsNonExtLoad = 1;
 }
 
 def load_align16_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,
                         Aligned<16> {
   let IsLoad = 1;
-  let IsNonExtLoad = 1;
 }
 
 def store_align8_local: PatFrag<(ops node:$val, node:$ptr),
                                 (store_local node:$val, node:$ptr)>, Aligned<8> {
   let IsStore = 1;
-  let IsTruncStore = 0;
 }
 
 def store_align16_local: PatFrag<(ops node:$val, node:$ptr),
                                 (store_local node:$val, node:$ptr)>, Aligned<16> {
   let IsStore = 1;
-  let IsTruncStore = 0;
 }
 
 let AddressSpaces = StoreAddress_local.AddrSpaces in {

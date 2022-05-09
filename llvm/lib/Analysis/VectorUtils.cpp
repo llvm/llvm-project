@@ -40,7 +40,7 @@ static cl::opt<unsigned> MaxInterleaveGroupFactor(
 /// Return true if all of the intrinsic's arguments and return type are scalars
 /// for the scalar form of the intrinsic, and vectors for the vector form of the
 /// intrinsic (except operands that are marked as always being scalar by
-/// hasVectorInstrinsicScalarOpd).
+/// isVectorIntrinsicWithScalarOpAtArg).
 bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::abs:   // Begin integer bit-manipulation.
@@ -89,6 +89,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::fmuladd:
   case Intrinsic::powi:
   case Intrinsic::canonicalize:
+  case Intrinsic::fptosi_sat:
+  case Intrinsic::fptoui_sat:
     return true;
   default:
     return false;
@@ -96,8 +98,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
 }
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
-bool llvm::hasVectorInstrinsicScalarOpd(Intrinsic::ID ID,
-                                        unsigned ScalarOpdIdx) {
+bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                              unsigned ScalarOpdIdx) {
   switch (ID) {
   case Intrinsic::abs:
   case Intrinsic::ctlz:
@@ -114,11 +116,14 @@ bool llvm::hasVectorInstrinsicScalarOpd(Intrinsic::ID ID,
   }
 }
 
-bool llvm::hasVectorInstrinsicOverloadedScalarOpd(Intrinsic::ID ID,
-                                                  unsigned ScalarOpdIdx) {
+bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                                  unsigned OpdIdx) {
   switch (ID) {
+  case Intrinsic::fptosi_sat:
+  case Intrinsic::fptoui_sat:
+    return OpdIdx == 0;
   case Intrinsic::powi:
-    return (ScalarOpdIdx == 1);
+    return OpdIdx == 1;
   default:
     return false;
   }
@@ -494,6 +499,116 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
   // All elements of the original mask can be scaled down to map to the elements
   // of a mask with wider elements.
   return true;
+}
+
+void llvm::processShuffleMasks(
+    ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
+    unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
+    function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
+    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction) {
+  SmallVector<SmallVector<SmallVector<int>>> Res(NumOfDestRegs);
+  // Try to perform better estimation of the permutation.
+  // 1. Split the source/destination vectors into real registers.
+  // 2. Do the mask analysis to identify which real registers are
+  // permuted.
+  int Sz = Mask.size();
+  unsigned SzDest = Sz / NumOfDestRegs;
+  unsigned SzSrc = Sz / NumOfSrcRegs;
+  for (unsigned I = 0; I < NumOfDestRegs; ++I) {
+    auto &RegMasks = Res[I];
+    RegMasks.assign(NumOfSrcRegs, {});
+    // Check that the values in dest registers are in the one src
+    // register.
+    for (unsigned K = 0; K < SzDest; ++K) {
+      int Idx = I * SzDest + K;
+      if (Idx == Sz)
+        break;
+      if (Mask[Idx] >= Sz || Mask[Idx] == UndefMaskElem)
+        continue;
+      int SrcRegIdx = Mask[Idx] / SzSrc;
+      // Add a cost of PermuteTwoSrc for each new source register permute,
+      // if we have more than one source registers.
+      if (RegMasks[SrcRegIdx].empty())
+        RegMasks[SrcRegIdx].assign(SzDest, UndefMaskElem);
+      RegMasks[SrcRegIdx][K] = Mask[Idx] % SzSrc;
+    }
+  }
+  // Process split mask.
+  for (unsigned I = 0; I < NumOfUsedRegs; ++I) {
+    auto &Dest = Res[I];
+    int NumSrcRegs =
+        count_if(Dest, [](ArrayRef<int> Mask) { return !Mask.empty(); });
+    switch (NumSrcRegs) {
+    case 0:
+      // No input vectors were used!
+      NoInputAction();
+      break;
+    case 1: {
+      // Find the only mask with at least single undef mask elem.
+      auto *It =
+          find_if(Dest, [](ArrayRef<int> Mask) { return !Mask.empty(); });
+      unsigned SrcReg = std::distance(Dest.begin(), It);
+      SingleInputAction(*It, SrcReg, I);
+      break;
+    }
+    default: {
+      // The first mask is a permutation of a single register. Since we have >2
+      // input registers to shuffle, we merge the masks for 2 first registers
+      // and generate a shuffle of 2 registers rather than the reordering of the
+      // first register and then shuffle with the second register. Next,
+      // generate the shuffles of the resulting register + the remaining
+      // registers from the list.
+      auto &&CombineMasks = [](MutableArrayRef<int> FirstMask,
+                               ArrayRef<int> SecondMask) {
+        for (int Idx = 0, VF = FirstMask.size(); Idx < VF; ++Idx) {
+          if (SecondMask[Idx] != UndefMaskElem) {
+            assert(FirstMask[Idx] == UndefMaskElem &&
+                   "Expected undefined mask element.");
+            FirstMask[Idx] = SecondMask[Idx] + VF;
+          }
+        }
+      };
+      auto &&NormalizeMask = [](MutableArrayRef<int> Mask) {
+        for (int Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
+          if (Mask[Idx] != UndefMaskElem)
+            Mask[Idx] = Idx;
+        }
+      };
+      int SecondIdx;
+      do {
+        int FirstIdx = -1;
+        SecondIdx = -1;
+        MutableArrayRef<int> FirstMask, SecondMask;
+        for (unsigned I = 0; I < NumOfDestRegs; ++I) {
+          SmallVectorImpl<int> &RegMask = Dest[I];
+          if (RegMask.empty())
+            continue;
+
+          if (FirstIdx == SecondIdx) {
+            FirstIdx = I;
+            FirstMask = RegMask;
+            continue;
+          }
+          SecondIdx = I;
+          SecondMask = RegMask;
+          CombineMasks(FirstMask, SecondMask);
+          ManyInputsAction(FirstMask, FirstIdx, SecondIdx);
+          NormalizeMask(FirstMask);
+          RegMask.clear();
+          SecondMask = FirstMask;
+          SecondIdx = FirstIdx;
+        }
+        if (FirstIdx != SecondIdx && SecondIdx >= 0) {
+          CombineMasks(SecondMask, FirstMask);
+          ManyInputsAction(SecondMask, SecondIdx, FirstIdx);
+          Dest[FirstIdx].clear();
+          NormalizeMask(SecondMask);
+        }
+      } while (SecondIdx >= 0);
+      break;
+    }
+    }
+  }
 }
 
 MapVector<Instruction *, uint64_t>

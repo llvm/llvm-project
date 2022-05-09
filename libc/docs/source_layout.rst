@@ -14,7 +14,6 @@ directories::
         - src
         - test
         - utils
-        - www
 
 Each of these directories is explained in detail below.
 
@@ -91,9 +90,3 @@ The `utils` directory
 This directory contains utilities used by other parts of the llvm-libc system.
 See the `README` files, in the sub-directories within this directory, to learn
 about the various utilities.
-
-The ``www`` directory
----------------------
-
-The ``www`` directory contains the HTML content of libc.llvm.org
-

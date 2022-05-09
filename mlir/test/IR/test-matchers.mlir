@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline="func.func(test-matchers)" -o /dev/null 2>&1 | FileCheck %s
 
-func @test1(%a: f32, %b: f32, %c: f32) {
+func.func @test1(%a: f32, %b: f32, %c: f32) {
   %0 = arith.addf %a, %b: f32
   %1 = arith.addf %a, %c: f32
   %2 = arith.addf %c, %b: f32
@@ -31,7 +31,7 @@ func @test1(%a: f32, %b: f32, %c: f32) {
 //       CHECK:   Pattern mul(mul(a, *), add(a, c)) matched 1 times
 //       CHECK:   Pattern mul(mul(a, *), add(c, b)) matched 0 times
 
-func @test2(%a: f32) -> f32 {
+func.func @test2(%a: f32) -> f32 {
   %0 = arith.constant 1.0: f32
   %1 = arith.addf %a, %0: f32
   %2 = arith.mulf %a, %1: f32

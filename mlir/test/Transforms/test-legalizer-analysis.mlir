@@ -2,7 +2,7 @@
 // expected-remark@-2 {{op 'builtin.module' is legalizable}}
 
 // expected-remark@+1 {{op 'func.func' is legalizable}}
-func @test(%arg0: f32) {
+func.func @test(%arg0: f32) {
   // expected-remark@+1 {{op 'test.illegal_op_a' is legalizable}}
   %result = "test.illegal_op_a"() : () -> (i32)
   "foo.region"() ({

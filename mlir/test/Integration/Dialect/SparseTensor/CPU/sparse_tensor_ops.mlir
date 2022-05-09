@@ -21,7 +21,7 @@
 
 module {
   // Scales a sparse tensor into a new sparse tensor.
-  func @tensor_scale(%arga: tensor<?x?x?xf64, #ST1>) -> tensor<?x?x?xf64, #ST2> {
+  func.func @tensor_scale(%arga: tensor<?x?x?xf64, #ST1>) -> tensor<?x?x?xf64, #ST2> {
     %s = arith.constant 2.0 : f64
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -41,7 +41,7 @@ module {
   }
 
   // Driver method to call and verify tensor kernel.
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %d1 = arith.constant -1.0 : f64
 

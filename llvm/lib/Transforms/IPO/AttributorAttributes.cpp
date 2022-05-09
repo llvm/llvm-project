@@ -3346,6 +3346,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
         Follow = true;
         return true;
       }
+      llvm_unreachable("unknown UseCaptureKind");
     };
 
     if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned()) {

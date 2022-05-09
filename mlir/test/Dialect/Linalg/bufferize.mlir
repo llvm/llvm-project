@@ -23,7 +23,7 @@
 // CHECK:           }
 // CHECK:           %[[RESULT:.*]] = bufferization.to_tensor %[[RESULT_MEMREF]] : memref<4xf32>
 // CHECK:           return %[[RESULT]] : tensor<4xf32>
-func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+func.func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
     %0 = linalg.generic {
       indexing_maps = [#map0, #map0],
       iterator_types = ["parallel"]
@@ -51,7 +51,7 @@ func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
 // CHECK:         linalg.generic
 // CHECK-SAME:    ins(%[[MEMREF]] : memref<?xf32>)
 // CHECK-SAME:    outs(%[[OUT_BUF]] : memref<?xf32>) {
-func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
+func.func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
   %init = linalg.init_tensor [%size] : tensor<?xf32>
   %0 = linalg.generic {
     indexing_maps = [#map0, #map0],
@@ -77,7 +77,7 @@ func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
 // CHECK-SAME:      ins(%{{.*}} : memref<4xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<4xf32>, memref<4xf32>)
 // CHECK-NEXT: ^bb0(%{{.*}}: f32, %{{.*}}: f32, %{{.*}}: f32):
-func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+func.func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
     %0, %1 = linalg.generic {
       indexing_maps = [#map0, #map0, #map0],
       iterator_types = ["parallel"]
@@ -109,7 +109,7 @@ func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%[[MEMREF_ARG]] : memref<?x?xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<?x?xf32>, memref<?x?xf32>)
-func @dynamic_results(%arg0: tensor<?x?xf32>)
+func.func @dynamic_results(%arg0: tensor<?x?xf32>)
          -> (tensor<?x?xf32>, tensor<?x?xf32>) {
     %0, %1 = linalg.generic {
       indexing_maps = [#map_2d, #map_2d, #map_2d],
@@ -147,7 +147,7 @@ func @dynamic_results(%arg0: tensor<?x?xf32>)
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%[[ARG0_MEMREF]] : memref<2x3x4xvector<3x4xi4>>)
 // CHECK-SAME:      outs(%[[INIT_BUFFER]] : memref<3x2xf32>) {
-func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
+func.func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
   %arg1: tensor<3x2xf32>) -> (tensor<3x2xf32>) {
 
   %0 = linalg.generic #trait
@@ -164,7 +164,7 @@ func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
 
 // CHECK-LABEL: func @bufferize_fill(
 // CHECK-SAME:    %[[IN:.*]]: tensor<?xf32>
-func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+func.func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
   %c0 = arith.constant 0.0 : f32
   // CHECK: %[[ALLOC:.*]] = memref.alloc
   // CHECK: linalg.fill ins(%cst : f32) outs(%[[ALLOC]] : memref<?xf32>)
@@ -177,7 +177,7 @@ func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
 // -----
 
 // CHECK-LABEL:   func @bufferize_dot
-func @bufferize_dot(%in: tensor<4xf32>, %out: tensor<f32>) -> tensor<f32> {
+func.func @bufferize_dot(%in: tensor<4xf32>, %out: tensor<f32>) -> tensor<f32> {
   %dot = linalg.dot ins(%in, %in : tensor<4xf32>, tensor<4xf32>)
                     outs(%out : tensor<f32>) -> tensor<f32>
   return %dot : tensor<f32>

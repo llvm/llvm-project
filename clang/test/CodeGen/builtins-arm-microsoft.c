@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple thumbv7-windows -fms-compatibility -emit-llvm -o - %s \
 // RUN:     | FileCheck %s -check-prefix CHECK-MSVC
-// RUN: %clang_cc1 -triple armv7-eabi -emit-llvm %s -o - \
+// RUN: %clang_cc1 -Wno-implicit-function-declaration -triple armv7-eabi -emit-llvm %s -o - \
 // RUN:     | FileCheck %s -check-prefix CHECK-EABI
 // REQUIRES: arm-registered-target
 

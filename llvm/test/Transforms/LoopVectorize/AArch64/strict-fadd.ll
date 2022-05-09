@@ -1139,10 +1139,10 @@ define float @fmuladd_scalar_vf(float* %a, float* %b, i64 %n) {
 ; CHECK-UNORDERED: [[LOAD5:%.*]] = load float, float*
 ; CHECK-UNORDERED: [[LOAD6:%.*]] = load float, float*
 ; CHECK-UNORDERED: [[LOAD7:%.*]] = load float, float*
-; CHECK-UNORDERED: [[FMULADD]] = call float @llvm.fmuladd.f32(float [[LOAD]], float [[LOAD4]], float [[VEC_PHI]])
-; CHECK-UNORDERED: [[FMULADD1]] = call float @llvm.fmuladd.f32(float [[LOAD1]], float [[LOAD5]], float [[VEC_PHI1]])
-; CHECK-UNORDERED: [[FMULADD2]] = call float @llvm.fmuladd.f32(float [[LOAD2]], float [[LOAD6]], float [[VEC_PHI2]])
-; CHECK-UNORDERED: [[FMULADD3]] = call float @llvm.fmuladd.f32(float [[LOAD3]], float [[LOAD7]], float [[VEC_PHI3]])
+; CHECK-UNORDERED: [[FMULADD]] = tail call float @llvm.fmuladd.f32(float [[LOAD]], float [[LOAD4]], float [[VEC_PHI]])
+; CHECK-UNORDERED: [[FMULADD1]] = tail call float @llvm.fmuladd.f32(float [[LOAD1]], float [[LOAD5]], float [[VEC_PHI1]])
+; CHECK-UNORDERED: [[FMULADD2]] = tail call float @llvm.fmuladd.f32(float [[LOAD2]], float [[LOAD6]], float [[VEC_PHI2]])
+; CHECK-UNORDERED: [[FMULADD3]] = tail call float @llvm.fmuladd.f32(float [[LOAD3]], float [[LOAD7]], float [[VEC_PHI3]])
 ; CHECK-UNORDERED-NOT: llvm.vector.reduce.fadd
 ; CHECK-UNORDERED: middle.block:
 ; CHECK-UNORDERED: [[BIN_RDX:%.*]] = fadd float [[FMULADD1]], [[FMULADD]]

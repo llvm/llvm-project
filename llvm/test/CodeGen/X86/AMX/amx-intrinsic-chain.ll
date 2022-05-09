@@ -4,8 +4,8 @@
 define dso_local void @test_chain(i8* %A_mem, i8* %B_mem, i8* %C_mem) {
 ; CHECK-LABEL: test_chain:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $16, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $64, -{{[0-9]+}}(%rsp)

@@ -91,7 +91,7 @@ public:
     return CodeAction::REFACTOR_KIND;
   }
   std::string title() const override {
-    return llvm::formatv("declare implicit {0} members",
+    return llvm::formatv("Declare implicit {0} members",
                          NeedCopy ? NeedMove ? "copy/move" : "copy" : "move");
   }
 

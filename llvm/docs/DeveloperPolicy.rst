@@ -180,6 +180,30 @@ etc) should be added to the ``llvm-test`` test suite.  The llvm-test suite is
 for coverage (correctness, performance, etc) testing, not feature or regression
 testing.
 
+Release Notes
+-------------
+
+Many projects in LLVM communicate important changes to users through release
+notes, typically found in ``docs/ReleaseNotes.rst`` for the project. Changes to
+a project that are user-facing, or that users may wish to know about, should be
+added to the project's release notes at the author's or code reviewer's
+discretion, preferably as part of the commit landing the changes. Examples of
+changes that would typically warrant adding a release note (this list is not
+exhaustive):
+
+* Adding, removing, or modifying command-line options.
+* Adding, removing, or regrouping a diagnostic.
+* Fixing a bug that potentially has significant user-facing impact (please link
+  to the issue fixed in the bug database).
+* Adding or removing optimizations that have widespread impact or enables new
+  programming paradigms.
+* Modifying a C stable API.
+* Notifying users about a potentially disruptive change expected to be made in
+  a future release, such as removal of a deprecated feature.
+
+Code reviewers are encouraged to request a release note if they think one is
+warranted when performing a code review.
+
 Quality
 -------
 
@@ -381,7 +405,11 @@ Obtaining Commit Access
 We grant commit access to contributors with a track record of submitting high
 quality patches.  If you would like commit access, please send an email to
 `Chris <mailto:clattner@llvm.org>`_ with your GitHub username.  This is true
-for former contributors with SVN access as well as new contributors.
+for former contributors with SVN access as well as new contributors. If
+approved, a GitHub invitation will be sent to your GitHub account. In case you
+don't get notification from GitHub, go to
+`Invitation Link <https://github.com/orgs/llvm/invitation>`_ directly. Once
+accept the invitation, you'll get commit access.
 
 Prior to obtaining commit access, it is common practice to request that
 someone with commit access commits on your behalf. When doing so, please

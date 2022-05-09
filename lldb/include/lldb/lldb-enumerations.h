@@ -1147,6 +1147,15 @@ enum TraceCounter {
   eTraceCounterTSC,
 };
 
+// Events that might happen during a trace session.
+FLAGS_ENUM(TraceEvents){
+    // Tracing was paused. If instructions were executed after pausing
+    // and before resuming, the TraceCursor used to traverse the trace
+    // should provide an error signalinig this data loss.
+    eTraceEventPaused = (1u << 0),
+};
+LLDB_MARK_AS_BITMASK_ENUM(TraceEvents)
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H

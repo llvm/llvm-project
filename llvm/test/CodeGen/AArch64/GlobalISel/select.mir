@@ -1,5 +1,5 @@
-# RUN: llc -O0 -mtriple=aarch64-apple-ios -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=IOS
-# RUN: llc -O0 -mtriple=aarch64-linux-gnu -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-PIC
+# RUN: llc -O0 -mtriple=aarch64-apple-ios -run-pass=instruction-select -global-isel-abort=1 -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=IOS
+# RUN: llc -O0 -mtriple=aarch64-linux-gnu -relocation-model=pic -run-pass=instruction-select -global-isel-abort=1 -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LINUX-PIC
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"

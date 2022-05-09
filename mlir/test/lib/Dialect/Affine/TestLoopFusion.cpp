@@ -41,7 +41,7 @@ static llvm::cl::opt<bool> clTestLoopFusionTransformation(
 namespace {
 
 struct TestLoopFusion
-    : public PassWrapper<TestLoopFusion, OperationPass<FuncOp>> {
+    : public PassWrapper<TestLoopFusion, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLoopFusion)
 
   StringRef getArgument() const final { return "test-loop-fusion"; }

@@ -25,11 +25,143 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  clearerr
+  SRCS
+    clearerr.cpp
+  HDRS
+    clearerr.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  clearerr_unlocked
+  SRCS
+    clearerr_unlocked.cpp
+  HDRS
+    clearerr_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  feof
+  SRCS
+    feof.cpp
+  HDRS
+    feof.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  feof_unlocked
+  SRCS
+    feof_unlocked.cpp
+  HDRS
+    feof_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  ferror
+  SRCS
+    ferror.cpp
+  HDRS
+    ferror.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  ferror_unlocked
+  SRCS
+    ferror_unlocked.cpp
+  HDRS
+    ferror_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fflush
+  SRCS
+    fflush.cpp
+  HDRS
+    fflush.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  flockfile
+  SRCS
+    flockfile.cpp
+  HDRS
+    flockfile.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  funlockfile
+  SRCS
+    funlockfile.cpp
+  HDRS
+    funlockfile.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fread_unlocked
+  SRCS
+    fread_unlocked.cpp
+  HDRS
+    fread_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fread
   SRCS
     fread.cpp
   HDRS
     fread.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fwrite_unlocked
+  SRCS
+    fwrite_unlocked.cpp
+  HDRS
+    fwrite_unlocked.h
   DEPENDS
     libc.include.stdio
     libc.src.__support.File.file
@@ -58,4 +190,15 @@ add_entrypoint_object(
     libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fopencookie
+  SRCS
+    fopencookie.cpp
+  HDRS
+    fopencookie.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
 )

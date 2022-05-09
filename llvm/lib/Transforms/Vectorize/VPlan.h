@@ -1066,27 +1066,21 @@ class VPWidenIntOrFpInductionRecipe : public VPRecipeBase, public VPValue {
   bool NeedsScalarIV;
   bool NeedsVectorIV;
 
-  /// SCEV used to expand step.
-  /// FIXME: move expansion of step to the pre-header, once it is modeled
-  /// explicitly.
-  ScalarEvolution &SE;
-
 public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc,
-                                bool NeedsScalarIV, bool NeedsVectorIV,
-                                ScalarEvolution &SE)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), VPValue(IV, this),
-        IV(IV), IndDesc(IndDesc), NeedsScalarIV(NeedsScalarIV),
-        NeedsVectorIV(NeedsVectorIV), SE(SE) {}
+                                bool NeedsScalarIV, bool NeedsVectorIV)
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start, Step}),
+        VPValue(IV, this), IV(IV), IndDesc(IndDesc),
+        NeedsScalarIV(NeedsScalarIV), NeedsVectorIV(NeedsVectorIV) {}
 
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc,
                                 TruncInst *Trunc, bool NeedsScalarIV,
-                                bool NeedsVectorIV, ScalarEvolution &SE)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start}), VPValue(Trunc, this),
-        IV(IV), IndDesc(IndDesc), NeedsScalarIV(NeedsScalarIV),
-        NeedsVectorIV(NeedsVectorIV), SE(SE) {}
+                                bool NeedsVectorIV)
+      : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start, Step}),
+        VPValue(Trunc, this), IV(IV), IndDesc(IndDesc),
+        NeedsScalarIV(NeedsScalarIV), NeedsVectorIV(NeedsVectorIV) {}
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
@@ -1108,6 +1102,10 @@ public:
   /// Returns the start value of the induction.
   VPValue *getStartValue() { return getOperand(0); }
   const VPValue *getStartValue() const { return getOperand(0); }
+
+  /// Returns the step value of the induction.
+  VPValue *getStepValue() { return getOperand(1); }
+  const VPValue *getStepValue() const { return getOperand(1); }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
@@ -1831,6 +1829,8 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  const SCEV *getSCEV() const { return Expr; }
 };
 
 /// Canonical scalar induction phi of the vector loop. Starting at the specified
@@ -3038,6 +3038,14 @@ namespace vputils {
 
 /// Returns true if only the first lane of \p Def is used.
 bool onlyFirstLaneUsed(VPValue *Def);
+
+/// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
+/// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
+/// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
+/// pre-header already contains a recipe expanding \p Expr, return it. If not,
+/// create a new one.
+VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
+                                       ScalarEvolution &SE);
 
 } // end namespace vputils
 

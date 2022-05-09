@@ -1786,6 +1786,9 @@ void CheckHelper::CheckGenericOps(const Scope &scope) {
   auto addSpecifics{[&](const Symbol &generic) {
     const auto *details{generic.GetUltimate().detailsIf<GenericDetails>()};
     if (!details) {
+      if (generic.test(Symbol::Flag::Function)) {
+        Characterize(generic);
+      }
       return;
     }
     GenericKind kind{details->kind()};

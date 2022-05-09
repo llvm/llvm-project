@@ -23,6 +23,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
@@ -1279,13 +1280,10 @@ public:
   StringRef getLastMacroWithSpelling(SourceLocation Loc,
                                      ArrayRef<TokenValue> Tokens) const;
 
-  const std::string &getPredefines() const { return Predefines; }
-
   /// Set the predefines for this Preprocessor.
   ///
   /// These predefines are automatically injected when parsing the main file.
-  void setPredefines(const char *P) { Predefines = P; }
-  void setPredefines(StringRef P) { Predefines = std::string(P); }
+  void setPredefines(std::string P) { Predefines = std::move(P); }
 
   /// Return information about the specified preprocessor
   /// identifier token.
@@ -2054,8 +2052,7 @@ public:
   /// This either returns the EOF token and returns true, or
   /// pops a level off the include stack and returns false, at which point the
   /// client should call lex again.
-  bool HandleEndOfFile(Token &Result, SourceLocation Loc,
-                       bool isEndOfMacro = false);
+  bool HandleEndOfFile(Token &Result, bool isEndOfMacro = false);
 
   /// Callback invoked when the current TokenLexer hits the end of its
   /// token stream.
@@ -2512,14 +2509,12 @@ private:
 
   // Pragmas.
   void HandlePragmaDirective(PragmaIntroducer Introducer);
-  void ResolvePragmaIncludeInstead(SourceLocation Location) const;
 
 public:
   void HandlePragmaOnce(Token &OnceTok);
   void HandlePragmaMark(Token &MarkTok);
   void HandlePragmaPoison();
   void HandlePragmaSystemHeader(Token &SysHeaderTok);
-  void HandlePragmaIncludeInstead(Token &Tok);
   void HandlePragmaDependency(Token &DependencyTok);
   void HandlePragmaPushMacro(Token &Tok);
   void HandlePragmaPopMacro(Token &Tok);

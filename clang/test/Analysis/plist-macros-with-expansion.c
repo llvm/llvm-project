@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core %s  \
+// RUN: %clang_analyze_cc1 -Wno-error=implicit-function-declaration -analyzer-checker=core %s  \
 // RUN:   -analyzer-output=plist -o %t.plist \
 // RUN:   -analyzer-config expand-macros=true -verify
 //
@@ -8,7 +8,7 @@
 void test_strange_macro_expansion(void) {
   char *path;
   STRANGE_FN(path); // no-crash
-  // expected-warning@-1 {{implicit declaration of function}}
+  // expected-warning@-1 {{call to undeclared function}}
   // expected-warning@-2 {{1st function call argument is an uninitialized value}}
 }
 

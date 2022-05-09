@@ -1016,6 +1016,29 @@ TEST(IntegerPolyhedronTest, mergeDivisionsConstants) {
   }
 }
 
+TEST(IntegerPolyhedronTest, mergeDivisionsDuplicateInSameSet) {
+  // (x) : (exists y = [x + 1 / 3], z = [x + 1 / 3]: y + z >= x).
+  IntegerPolyhedron poly1(PresburgerSpace::getSetSpace(1));
+  poly1.addLocalFloorDiv({1, 1}, 3);    // y = [x + 1 / 2].
+  poly1.addLocalFloorDiv({1, 0, 1}, 3); // z = [x + 1 / 3].
+  poly1.addInequality({-1, 1, 1, 0});   // y + z >= x.
+
+  // (x) : (exists y = [x + 1 / 3], z = [x + 2 / 3]: y + z <= x).
+  IntegerPolyhedron poly2(PresburgerSpace::getSetSpace(1));
+  poly2.addLocalFloorDiv({1, 1}, 3);    // y = [x + 1 / 3].
+  poly2.addLocalFloorDiv({1, 0, 2}, 3); // z = [x + 2 / 3].
+  poly2.addInequality({1, -1, -1, 0});  // y + z <= x.
+
+  poly1.mergeLocalIds(poly2);
+
+  // Local space should be same.
+  EXPECT_EQ(poly1.getNumLocalIds(), poly2.getNumLocalIds());
+
+  // 1 divisions should be matched.
+  EXPECT_EQ(poly1.getNumLocalIds(), 3u);
+  EXPECT_EQ(poly2.getNumLocalIds(), 3u);
+}
+
 TEST(IntegerPolyhedronTest, negativeDividends) {
   // (x) : (exists y = [-x + 1 / 2], z = [-x - 2 / 3]: y + z >= x).
   IntegerPolyhedron poly1(PresburgerSpace::getSetSpace(1));

@@ -95,6 +95,9 @@ public:
   XCOFF::StorageClass getStorageClass() const {
     return QualName->getStorageClass();
   }
+  XCOFF::VisibilityType getVisibilityType() const {
+    return QualName->getVisibilityType();
+  }
   XCOFF::SymbolType getCSectType() const {
     assert(isCsect() && "Only csect section has symbol type property!");
     return CsectProp->Type;
@@ -113,6 +116,7 @@ public:
   Optional<XCOFF::DwarfSectionSubtypeFlags> getDwarfSubtypeFlags() const {
     return DwarfSubtypeFlags;
   }
+  Optional<XCOFF::CsectProperties> getCsectProp() const { return CsectProp; }
 };
 
 } // end namespace llvm

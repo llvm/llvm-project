@@ -11,7 +11,7 @@
 // CHECK: MyLocation: 1: 'arith.constant' op
 
 // CHECK-LABEL: func @inline_notation
-func @inline_notation() -> i32 {
+func.func @inline_notation() -> i32 {
   // CHECK: -> i32 loc("foo")
   // CHECK: -> i32 loc("foo")
   // CHECK: -> i32 loc(unknown)

@@ -3,7 +3,7 @@
 
 // Wrong results on amdgpu
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-newDriver
+// XFAIL: amdgcn-amd-amdhsa-oldDriver
 
 #include <omp.h>
 #include <stdio.h>

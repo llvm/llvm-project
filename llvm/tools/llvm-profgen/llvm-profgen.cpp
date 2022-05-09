@@ -60,6 +60,11 @@ static cl::opt<std::string>
                cl::desc("Path of profiled executable binary."),
                cl::cat(ProfGenCategory));
 
+static cl::opt<uint32_t>
+    ProcessId("pid", cl::value_desc("process Id"), cl::ZeroOrMore, cl::init(0),
+              cl::desc("Process Id for the profiled executable binary."),
+              cl::cat(ProfGenCategory));
+
 static cl::opt<std::string> DebugBinPath(
     "debug-binary", cl::value_desc("debug-binary"), cl::ZeroOrMore,
     cl::desc("Path of debug info binary, llvm-profgen will load the DWARF info "
@@ -164,13 +169,16 @@ int main(int argc, const char *argv[]) {
     std::unique_ptr<ProfileGeneratorBase> Generator =
         ProfileGeneratorBase::create(Binary.get(),
                                      std::move(Reader->getProfiles()),
-                                     Reader->profileIsCSFlat());
+                                     Reader->profileIsCS());
     Generator->generateProfile();
     Generator->write();
   } else {
+    Optional<uint32_t> PIDFilter;
+    if (ProcessId.getNumOccurrences())
+      PIDFilter = ProcessId;
     PerfInputFile PerfFile = getPerfInputFile();
     std::unique_ptr<PerfReaderBase> Reader =
-        PerfReaderBase::create(Binary.get(), PerfFile);
+        PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
     // Parse perf events and samples
     Reader->parsePerfTraces();
 
@@ -179,7 +187,7 @@ int main(int argc, const char *argv[]) {
 
     std::unique_ptr<ProfileGeneratorBase> Generator =
         ProfileGeneratorBase::create(Binary.get(), &Reader->getSampleCounters(),
-                                     Reader->profileIsCSFlat());
+                                     Reader->profileIsCS());
     Generator->generateProfile();
     Generator->write();
   }

@@ -701,9 +701,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, MFI->getVGPRForAGPRCopy());
   }
 
-  for (auto Reg : MFI->WWMReservedRegs) {
-    reserveRegisterTuples(Reserved, Reg.first);
-  }
+  for (Register Reg : MFI->WWMReservedRegs)
+    reserveRegisterTuples(Reserved, Reg);
 
   // FIXME: Stop using reserved registers for this.
   for (MCPhysReg Reg : MFI->getAGPRSpillVGPRs())

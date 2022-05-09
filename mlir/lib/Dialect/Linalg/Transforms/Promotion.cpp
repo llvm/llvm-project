@@ -414,10 +414,10 @@ struct LinalgPromotionPass : public LinalgPromotionBase<LinalgPromotionPass> {
 } // namespace
 
 // TODO: support more transformation options in the pass.
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createLinalgPromotionPass(bool dynamicBuffers, bool useAlloca) {
   return std::make_unique<LinalgPromotionPass>(dynamicBuffers, useAlloca);
 }
-std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgPromotionPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLinalgPromotionPass() {
   return std::make_unique<LinalgPromotionPass>();
 }

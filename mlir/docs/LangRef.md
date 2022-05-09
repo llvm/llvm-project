@@ -71,7 +71,7 @@ Here's an example of an MLIR module:
 // Compute A*B using an implementation of multiply kernel and print the
 // result using a TensorFlow op. The dimensions of A and B are partially
 // known. The shapes are assumed to match.
-func @mul(%A: tensor<100x?xf32>, %B: tensor<?x50xf32>) -> (tensor<100x50xf32>) {
+func.func @mul(%A: tensor<100x?xf32>, %B: tensor<?x50xf32>) -> (tensor<100x50xf32>) {
   // Compute the inner dimension of %A using the dim operation.
   %n = memref.dim %A, 1 : tensor<100x?xf32>
 
@@ -102,7 +102,7 @@ func @mul(%A: tensor<100x?xf32>, %B: tensor<?x50xf32>) -> (tensor<100x50xf32>) {
 }
 
 // A function that multiplies two memrefs and returns the result.
-func @multiply(%A: memref<100x?xf32>, %B: memref<?x50xf32>)
+func.func @multiply(%A: memref<100x?xf32>, %B: memref<?x50xf32>)
           -> (memref<100x50xf32>)  {
   // Compute the inner dimension of %A.
   %n = memref.dim %A, 1 : memref<100x?xf32>
@@ -201,6 +201,7 @@ Syntax:
 bare-id ::= (letter|[_]) (letter|digit|[_$.])*
 bare-id-list ::= bare-id (`,` bare-id)*
 value-id ::= `%` suffix-id
+alias-name :: = bare-id
 suffix-id ::= (digit+ | ((letter|id-punct) (letter|id-punct|digit)*))
 
 symbol-ref-id ::= `@` (suffix-id | string-literal) (`::` symbol-ref-id)?
@@ -295,7 +296,7 @@ custom-operation     ::= bare-id custom-operation-format
 op-result-list       ::= op-result (`,` op-result)* `=`
 op-result            ::= value-id (`:` integer-literal)
 successor-list       ::= `[` successor (`,` successor)* `]`
-successor            ::= caret-id (`:` bb-arg-list)?
+successor            ::= caret-id (`:` block-arg-list)?
 region-list          ::= `(` region (`,` region)* `)`
 dictionary-attribute ::= `{` (attribute-entry (`,` attribute-entry)*)? `}`
 trailing-location    ::= (`loc` `(` location `)`)?
@@ -366,11 +367,11 @@ compiler [basic block](https://en.wikipedia.org/wiki/Basic_block) where
 instructions inside the block are executed in order and terminator operations
 implement control flow branches between basic blocks.
 
-A region with a single block may not include a
-[terminator operation](#terminator-operations). The enclosing op can opt-out of
-this requirement with the `NoTerminator` trait. The top-level `ModuleOp` is an
-example of such operation which defined this trait and whose block body does not
-have a terminator.
+The last operation in a block must be a
+[terminator operation](#control-flow-and-ssacfg-regions). A region with a single
+block may opt out of this requirement by attaching the `NoTerminator` on the
+enclosing op. The top-level `ModuleOp` is an example of such an operation which
+defines this trait and whose block body does not have a terminator.
 
 Blocks in MLIR take a list of block arguments, notated in a function-like way.
 Block arguments are bound to values specified by the semantics of individual
@@ -389,7 +390,7 @@ Here is a simple example function showing branches, returns, and block
 arguments:
 
 ```mlir
-func @simple(i64, i1) -> i64 {
+func.func @simple(i64, i1) -> i64 {
 ^bb0(%a: i64, %cond: i1): // Code dominated by ^bb0 may refer to %a
   cf.cond_br %cond, ^bb1, ^bb2
 
@@ -529,7 +530,7 @@ region, for example if a function call does not return.
 Example:
 
 ```mlir
-func @accelerator_compute(i64, i1) -> i64 { // An SSACFG region
+func.func @accelerator_compute(i64, i1) -> i64 { // An SSACFG region
 ^bb0(%a: i64, %cond: i1): // Code dominated by ^bb0 may refer to %a
   cf.cond_br %cond, ^bb1, ^bb2
 
@@ -645,9 +646,12 @@ type-list-parens ::= `(` `)`
 
 // This is a common way to refer to a value with a specified type.
 ssa-use-and-type ::= ssa-use `:` type
+ssa-use ::= value-use
 
 // Non-empty list of names and types.
 ssa-use-and-type-list ::= ssa-use-and-type (`,` ssa-use-and-type)*
+
+function-type ::= (type | type-list-parens) `->` (type | type-list-parens)
 ```
 
 ### Type Aliases
@@ -693,10 +697,9 @@ pretty-dialect-item-contents ::= pretty-dialect-item-body
                               | '(' pretty-dialect-item-contents+ ')'
                               | '[' pretty-dialect-item-contents+ ']'
                               | '{' pretty-dialect-item-contents+ '}'
-                              | '[^[<({>\])}\0]+'
+                              | '[^\[<({\]>)}\0]+'
 
-dialect-type ::= '!' opaque-dialect-item
-dialect-type ::= '!' pretty-dialect-item
+dialect-type ::= '!' (opaque-dialect-item | pretty-dialect-item)
 ```
 
 Dialect types can be specified in a verbose form, e.g. like this:

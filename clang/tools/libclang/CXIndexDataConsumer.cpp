@@ -1249,6 +1249,7 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage 
   case SymbolKind::TemplateTypeParm:
   case SymbolKind::TemplateTemplateParm:
   case SymbolKind::NonTypeTemplateParm:
+  case SymbolKind::Concept:
     return CXIdxEntity_Unexposed;
 
   case SymbolKind::Enum: return CXIdxEntity_Enum;

@@ -2239,7 +2239,7 @@ private:
   /// Namespace definitions that we will export when they finish.
   llvm::SmallPtrSet<const NamespaceDecl*, 8> DeferredExportedNamespaces;
 
-  /// Get the module whose scope we are currently within.
+  /// Get the module unit whose scope we are currently within.
   Module *getCurrentModule() const {
     return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
   }
@@ -2256,6 +2256,11 @@ private:
   void PopGlobalModuleFragment();
 
   VisibleModuleSet VisibleModules;
+
+  /// Cache for module units which is usable for current module.
+  llvm::DenseSet<const Module *> UsableModuleUnitsCache;
+
+  bool isUsableModule(const Module *M);
 
 public:
   /// Get the module owning an entity.
@@ -3280,7 +3285,7 @@ public:
   /// Invoked when we enter a tag definition that we're skipping.
   SkippedDefinitionContext ActOnTagStartSkippedDefinition(Scope *S, Decl *TD);
 
-  Decl *ActOnObjCContainerStartDefinition(Decl *IDecl);
+  void ActOnObjCContainerStartDefinition(ObjCContainerDecl *IDecl);
 
   /// ActOnStartCXXMemberDeclarations - Invoked when we have parsed a
   /// C++ record definition's base-specifiers clause and are starting its
@@ -3304,8 +3309,8 @@ public:
   /// scope for parsing/looking-up C constructs.
   ///
   /// Must be followed by a call to \see ActOnObjCReenterContainerContext
-  void ActOnObjCTemporaryExitContainerContext(DeclContext *DC);
-  void ActOnObjCReenterContainerContext(DeclContext *DC);
+  void ActOnObjCTemporaryExitContainerContext(ObjCContainerDecl *ObjCCtx);
+  void ActOnObjCReenterContainerContext(ObjCContainerDecl *ObjCCtx);
 
   /// ActOnTagDefinitionError - Invoked when there was an unrecoverable
   /// error parsing the definition of a tag.
@@ -3489,6 +3494,8 @@ public:
   HLSLNumThreadsAttr *mergeHLSLNumThreadsAttr(Decl *D,
                                               const AttributeCommonInfo &AL,
                                               int X, int Y, int Z);
+  HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
+                                      HLSLShaderAttr::ShaderType ShaderType);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
@@ -3573,7 +3580,8 @@ public:
                                 QualType& ConvertedType);
   bool FunctionParamTypesAreEqual(const FunctionProtoType *OldType,
                                   const FunctionProtoType *NewType,
-                                  unsigned *ArgPos = nullptr);
+                                  unsigned *ArgPos = nullptr,
+                                  bool Reversed = false);
   void HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
                                   QualType FromType, QualType ToType);
 
@@ -4235,8 +4243,8 @@ public:
                                 = NotForRedeclaration);
   bool LookupBuiltin(LookupResult &R);
   void LookupNecessaryTypesForBuiltin(Scope *S, unsigned ID);
-  bool LookupName(LookupResult &R, Scope *S,
-                  bool AllowBuiltinCreation = false);
+  bool LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation = false,
+                  bool ForceNoCPlusPlus = false);
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
                            bool InUnqualifiedLookup = false);
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
@@ -6852,9 +6860,11 @@ public:
   ///
   ///  CodeGen handles emission of lambda captures, ignoring these dummy
   ///  variables appropriately.
-  VarDecl *createLambdaInitCaptureVarDecl(
-      SourceLocation Loc, QualType InitCaptureType, SourceLocation EllipsisLoc,
-      IdentifierInfo *Id, unsigned InitStyle, Expr *Init, DeclContext *DeclCtx);
+  VarDecl *createLambdaInitCaptureVarDecl(SourceLocation Loc,
+                                          QualType InitCaptureType,
+                                          SourceLocation EllipsisLoc,
+                                          IdentifierInfo *Id,
+                                          unsigned InitStyle, Expr *Init);
 
   /// Add an init-capture to a lambda scope.
   void addInitCapture(sema::LambdaScopeInfo *LSI, VarDecl *Var);
@@ -6863,29 +6873,21 @@ public:
   /// given lambda.
   void finishLambdaExplicitCaptures(sema::LambdaScopeInfo *LSI);
 
-  /// Deduce a block or lambda's return type based on the return
-  /// statements present in the body.
-  void deduceClosureReturnType(sema::CapturingScopeInfo &CSI);
-
-  /// Once the Lambdas capture are known, we can
-  /// start to create the closure, call operator method,
-  /// and keep track of the captures.
-  /// We do the capture lookup here, but they are not actually captured
-  /// until after we know what the qualifiers of the call operator are.
-  void ActOnLambdaIntroducer(LambdaIntroducer &Intro, Scope *CurContext);
-
-  /// This is called after parsing the explicit template parameter list
+  /// \brief This is called after parsing the explicit template parameter list
   /// on a lambda (if it exists) in C++2a.
-  void ActOnLambdaExplicitTemplateParameterList(LambdaIntroducer &Intro,
-                                                SourceLocation LAngleLoc,
+  void ActOnLambdaExplicitTemplateParameterList(SourceLocation LAngleLoc,
                                                 ArrayRef<NamedDecl *> TParams,
                                                 SourceLocation RAngleLoc,
                                                 ExprResult RequiresClause);
 
-  void ActOnLambdaClosureQualifiers(
-      LambdaIntroducer &Intro, SourceLocation MutableLoc, SourceLocation EndLoc,
-      MutableArrayRef<DeclaratorChunk::ParamInfo> ParamInfo,
-      const DeclSpec &DS);
+  /// Introduce the lambda parameters into scope.
+  void addLambdaParameters(
+      ArrayRef<LambdaIntroducer::LambdaCapture> Captures,
+      CXXMethodDecl *CallOperator, Scope *CurScope);
+
+  /// Deduce a block or lambda's return type based on the return
+  /// statements present in the body.
+  void deduceClosureReturnType(sema::CapturingScopeInfo &CSI);
 
   /// ActOnStartOfLambdaDefinition - This is called just before we start
   /// parsing the body of a lambda; it analyzes the explicit captures and
@@ -8748,7 +8750,8 @@ public:
   FunctionTemplateDecl *getMoreSpecializedTemplate(
       FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
       TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
-      unsigned NumCallArguments2, bool Reversed = false);
+      unsigned NumCallArguments2, bool Reversed = false,
+      bool AllowOrderingByConstraints = true);
   UnresolvedSetIterator
   getMostSpecialized(UnresolvedSetIterator SBegin, UnresolvedSetIterator SEnd,
                      TemplateSpecCandidateSet &FailedCandidates,
@@ -8894,6 +8897,10 @@ public:
       /// We are marking a class as __dllexport.
       MarkingClassDllexported,
 
+      /// We are building an implied call from __builtin_dump_struct. The
+      /// arguments are in CallArgs.
+      BuildingBuiltinDumpStructCall,
+
       /// Added for Template instantiation observation.
       /// Memoization means we are _not_ instantiating a template because
       /// it is already instantiated (but we entered a context where we
@@ -8915,15 +8922,23 @@ public:
     /// arguments.
     NamedDecl *Template;
 
-    /// The list of template arguments we are substituting, if they
-    /// are not part of the entity.
-    const TemplateArgument *TemplateArgs;
+    union {
+      /// The list of template arguments we are substituting, if they
+      /// are not part of the entity.
+      const TemplateArgument *TemplateArgs;
+
+      /// The list of argument expressions in a synthesized call.
+      const Expr *const *CallArgs;
+    };
 
     // FIXME: Wrap this union around more members, or perhaps store the
     // kind-specific members in the RAII object owning the context.
     union {
       /// The number of template arguments in TemplateArgs.
       unsigned NumTemplateArgs;
+
+      /// The number of expressions in CallArgs.
+      unsigned NumCallArgs;
 
       /// The special member being declared or defined.
       CXXSpecialMember SpecialMember;
@@ -9723,7 +9738,7 @@ public:
                                             SourceLocation rAngleLoc);
   void popObjCTypeParamList(Scope *S, ObjCTypeParamList *typeParamList);
 
-  Decl *ActOnStartClassInterface(
+  ObjCInterfaceDecl *ActOnStartClassInterface(
       Scope *S, SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
       SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
       IdentifierInfo *SuperName, SourceLocation SuperLoc,
@@ -9757,13 +9772,13 @@ public:
     SourceLocation &PLoc, SourceLocation PrevLoc,
     const ObjCList<ObjCProtocolDecl> &PList);
 
-  Decl *ActOnStartProtocolInterface(
+  ObjCProtocolDecl *ActOnStartProtocolInterface(
       SourceLocation AtProtoInterfaceLoc, IdentifierInfo *ProtocolName,
       SourceLocation ProtocolLoc, Decl *const *ProtoRefNames,
       unsigned NumProtoRefs, const SourceLocation *ProtoLocs,
       SourceLocation EndProtoLoc, const ParsedAttributesView &AttrList);
 
-  Decl *ActOnStartCategoryInterface(
+  ObjCCategoryDecl *ActOnStartCategoryInterface(
       SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
       SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
       IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
@@ -9771,19 +9786,15 @@ public:
       const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
       const ParsedAttributesView &AttrList);
 
-  Decl *ActOnStartClassImplementation(SourceLocation AtClassImplLoc,
-                                      IdentifierInfo *ClassName,
-                                      SourceLocation ClassLoc,
-                                      IdentifierInfo *SuperClassname,
-                                      SourceLocation SuperClassLoc,
-                                      const ParsedAttributesView &AttrList);
+  ObjCImplementationDecl *ActOnStartClassImplementation(
+      SourceLocation AtClassImplLoc, IdentifierInfo *ClassName,
+      SourceLocation ClassLoc, IdentifierInfo *SuperClassname,
+      SourceLocation SuperClassLoc, const ParsedAttributesView &AttrList);
 
-  Decl *ActOnStartCategoryImplementation(SourceLocation AtCatImplLoc,
-                                         IdentifierInfo *ClassName,
-                                         SourceLocation ClassLoc,
-                                         IdentifierInfo *CatName,
-                                         SourceLocation CatLoc,
-                                         const ParsedAttributesView &AttrList);
+  ObjCCategoryImplDecl *ActOnStartCategoryImplementation(
+      SourceLocation AtCatImplLoc, IdentifierInfo *ClassName,
+      SourceLocation ClassLoc, IdentifierInfo *CatName, SourceLocation CatLoc,
+      const ParsedAttributesView &AttrList);
 
   DeclGroupPtrTy ActOnFinishObjCImplementation(Decl *ObjCImpDecl,
                                                ArrayRef<Decl *> Decls);
@@ -11971,6 +11982,10 @@ public:
   QualType CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
                                        ExprResult &RHS,
                                        SourceLocation QuestionLoc);
+
+  QualType CheckSizelessVectorConditionalTypes(ExprResult &Cond,
+                                               ExprResult &LHS, ExprResult &RHS,
+                                               SourceLocation QuestionLoc);
   QualType FindCompositePointerType(SourceLocation Loc, Expr *&E1, Expr *&E2,
                                     bool ConvertArgs = true);
   QualType FindCompositePointerType(SourceLocation Loc,
@@ -13128,7 +13143,7 @@ public:
   IdentifierInfo *getSuperIdentifier() const;
   IdentifierInfo *getFloat128Identifier() const;
 
-  Decl *getObjCDeclContext() const;
+  ObjCContainerDecl *getObjCDeclContext() const;
 
   DeclContext *getCurLexicalContext() const {
     return OriginalLexicalContext ? OriginalLexicalContext : CurContext;

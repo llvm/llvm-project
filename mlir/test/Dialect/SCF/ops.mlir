@@ -4,7 +4,7 @@
 // Verify the generic form can be parsed.
 // RUN: mlir-opt -mlir-print-op-generic %s | mlir-opt | FileCheck %s
 
-func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
     scf.for %i1 = %arg0 to %arg1 step %arg2 {
       %min_cmp = arith.cmpi slt, %i0, %i1 : index
@@ -26,7 +26,7 @@ func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 //  CHECK-NEXT:       %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 
-func @std_if(%arg0: i1, %arg1: f32) {
+func.func @std_if(%arg0: i1, %arg1: f32) {
   scf.if %arg0 {
     %0 = arith.addf %arg1, %arg1 : f32
   }
@@ -36,7 +36,7 @@ func @std_if(%arg0: i1, %arg1: f32) {
 //  CHECK-NEXT:   scf.if %{{.*}} {
 //  CHECK-NEXT:     %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 
-func @std_if_else(%arg0: i1, %arg1: f32) {
+func.func @std_if_else(%arg0: i1, %arg1: f32) {
   scf.if %arg0 {
     %0 = arith.addf %arg1, %arg1 : f32
   } else {
@@ -50,7 +50,7 @@ func @std_if_else(%arg0: i1, %arg1: f32) {
 //  CHECK-NEXT:   } else {
 //  CHECK-NEXT:     %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 
-func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
                         %arg3 : index, %arg4 : index) {
   %step = arith.constant 1 : index
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
@@ -113,7 +113,7 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //  CHECK-NEXT:     }
 //  CHECK-NEXT:     scf.yield
 
-func @parallel_explicit_yield(
+func.func @parallel_explicit_yield(
     %arg0: index, %arg1: index, %arg2: index) {
   scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
     scf.yield
@@ -131,7 +131,7 @@ func @parallel_explicit_yield(
 //  CHECK-NEXT: return
 //  CHECK-NEXT: }
 
-func @std_if_yield(%arg0: i1, %arg1: f32)
+func.func @std_if_yield(%arg0: i1, %arg1: f32)
 {
   %x, %y = scf.if %arg0 -> (f32, f32) {
     %0 = arith.addf %arg1, %arg1 : f32
@@ -157,7 +157,7 @@ func @std_if_yield(%arg0: i1, %arg1: f32)
 //  CHECK-NEXT: scf.yield %[[T3]], %[[T4]] : f32, f32
 //  CHECK-NEXT: }
 
-func @std_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @std_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = arith.constant 0.0 : f32
   %result = scf.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0) -> (f32) {
     %sn = arith.addf %si, %si : f32
@@ -177,7 +177,7 @@ func @std_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-NEXT: }
 
 
-func @std_for_yield_multi(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @std_for_yield_multi(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = arith.constant 0.0 : f32
   %t0 = arith.constant 1 : i32
   %u0 = arith.constant 1.0 : f32
@@ -204,7 +204,7 @@ func @std_for_yield_multi(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-NEXT: scf.yield %[[NEXT1]], %[[NEXT2]], %[[NEXT3]] : f32, i32, f32
 
 
-func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
+func.func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
   %sum_0 = arith.constant 0.0 : f32
   %c0 = arith.constant 0.0 : f32
   %sum = scf.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
@@ -242,7 +242,7 @@ func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %ste
 //  CHECK-NEXT: return %[[RESULT]]
 
 // CHECK-LABEL: @while
-func @while() {
+func.func @while() {
   %0 = "test.get_some_value"() : () -> i32
   %1 = "test.get_some_value"() : () -> f32
 
@@ -265,7 +265,7 @@ func @while() {
 }
 
 // CHECK-LABEL: @infinite_while
-func @infinite_while() {
+func.func @infinite_while() {
   %true = arith.constant true
 
   // CHECK: scf.while  : () -> () {
@@ -281,7 +281,7 @@ func @infinite_while() {
 }
 
 // CHECK-LABEL: func @execute_region
-func @execute_region() -> i64 {
+func.func @execute_region() -> i64 {
   // CHECK:      scf.execute_region -> i64 {
   // CHECK-NEXT:   arith.constant
   // CHECK-NEXT:   scf.yield

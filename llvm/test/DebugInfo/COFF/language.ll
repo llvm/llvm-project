@@ -64,7 +64,7 @@ target triple = "x86_64-pc-windows-msvc19.0.24215"
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}
 
-!0 = distinct !DICompileUnit(language: <LANG1>, file: !1, producer: "clang")
+!0 = distinct !DICompileUnit(language: <LANG1>, file: !1, producer: "clang", emissionKind: FullDebug)
 !1 = !DIFile(filename: "empty", directory: "path/to")
 !2 = !{i32 2, !"CodeView", i32 1}
 !3 = !{i32 2, !"Debug Info Version", i32 3}

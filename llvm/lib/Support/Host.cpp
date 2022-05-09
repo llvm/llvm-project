@@ -296,6 +296,12 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0xc0") { // Ampere Computing
+    return StringSwitch<const char *>(Part)
+        .Case("0xac3", "ampere1")
+        .Default("generic");
+  }
+
   return "generic";
 }
 
@@ -330,7 +336,7 @@ StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
     case 3931:
     case 3932:
     default:
-      return HaveVectorSupport? "arch14" : "zEC12";
+      return HaveVectorSupport? "z16" : "zEC12";
   }
 }
 } // end anonymous namespace

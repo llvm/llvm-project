@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// size_type find_last_of(const charT* s, size_type pos = npos) const;
+// size_type find_last_of(const charT* s, size_type pos = npos) const; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -143,7 +145,7 @@ TEST_CONSTEXPR_CXX20 void test1()
     test(S("pniotcfrhqsmgdkjbael"), "htaobedqikfplcgjsmrn", 19);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test0<S>();
@@ -164,7 +166,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

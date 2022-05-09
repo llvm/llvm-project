@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -O3 -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -O3 -triple=i386-apple-darwin -target-feature +avx -emit-llvm -o - | FileCheck %s
 // FIXME: The shufflevector instructions in test_cmpgt_sd are relying on O3 here.
 
 

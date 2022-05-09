@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
 
-func @rocdl_special_regs() -> i32 {
+func.func @rocdl_special_regs() -> i32 {
   // CHECK-LABEL: rocdl_special_regs
   // CHECK: rocdl.workitem.id.x : i32
   %0 = rocdl.workitem.id.x : i32
@@ -29,13 +29,13 @@ func @rocdl_special_regs() -> i32 {
   llvm.return %0 : i32
 }
 
-func @rocdl.barrier() {
+func.func @rocdl.barrier() {
   // CHECK: rocdl.barrier
   rocdl.barrier
   llvm.return
 }
 
-func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
+func.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                    %arg2 : vector<32xf32>, %arg3 : i32,
                    %arg4 : vector<16xf32>, %arg5 : vector<4xf32>,
                    %arg6 : vector<4xf16>, %arg7 : vector<32xi32>,
@@ -170,4 +170,4 @@ llvm.func @rocdl.mubuf(%rsrc : vector<4xi32>, %vindex : i32,
 // -----
 
 // expected-error@below {{attribute attached to unexpected op}}
-func private @expected_llvm_func() attributes { rocdl.kernel }
+func.func private @expected_llvm_func() attributes { rocdl.kernel }

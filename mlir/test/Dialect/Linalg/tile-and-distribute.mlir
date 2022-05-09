@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns=test-tile-and-distribute-options -split-input-file | FileCheck %s
 
-func @gemm1(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
+func.func @gemm1(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 {
   linalg.matmul {__internal_linalg_transform__ = "distribute1"}
     ins(%a, %b: memref<?x?xf32>, memref<?x?xf32>)
@@ -26,7 +26,7 @@ func @gemm1(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 
 // -----
 
-func @gemm2(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
+func.func @gemm2(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 {
   linalg.matmul  {__internal_linalg_transform__ = "distribute2"}
     ins(%a, %b: memref<?x?xf32>, memref<?x?xf32>)
@@ -58,7 +58,7 @@ func @gemm2(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 
 // -----
 
-func @gemm3(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
+func.func @gemm3(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 {
   linalg.matmul {__internal_linalg_transform__ = "distribute3"}
     ins(%a, %b: memref<?x?xf32>, memref<?x?xf32>)
@@ -87,7 +87,7 @@ func @gemm3(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 
 // -----
 
-func @gemm4(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
+func.func @gemm4(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 {
   linalg.matmul {__internal_linalg_transform__ = "distribute4"}
     ins(%a, %b: memref<?x?xf32>, memref<?x?xf32>)
@@ -116,7 +116,7 @@ func @gemm4(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 
 // -----
 
-func @gemm5(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
+func.func @gemm5(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 {
   linalg.matmul {__internal_linalg_transform__ = "distribute5"}
     ins(%a, %b: memref<?x?xf32>, memref<?x?xf32>)
@@ -147,7 +147,7 @@ func @gemm5(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 
 // -----
 
-func @gemm6(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
+func.func @gemm6(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 {
   linalg.matmul {__internal_linalg_transform__ = "distribute6"}
     ins(%a, %b: memref<?x?xf32>, memref<?x?xf32>)
@@ -181,7 +181,7 @@ func @gemm6(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 // CHECK-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x?xf32>
 // CHECK-SAME:    %[[TB:[0-9a-z]+]]: tensor<?x?xf32>
 // CHECK-SAME:    %[[TC:[0-9a-z]+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
-func @matmul_tensors(
+func.func @matmul_tensors(
   %arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
     -> tensor<?x?xf32> {
 //  CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index

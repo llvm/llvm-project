@@ -15,7 +15,7 @@ module @patterns {
     %rxact = pdl.operand : %in_type
     %weight = pdl.operand : %weight_type
 
-    %attr0 = pdl.attribute false
+    %attr0 = pdl.attribute = false
     %op0 = pdl.operation "tf.MatMul" (%rxact, %weight : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr0} -> (%out_type : !pdl.type)
 
     pdl.rewrite %op0 {
@@ -35,8 +35,8 @@ module @patterns {
     %rxdelta = pdl.operand : %out_type
     %weight = pdl.operand : %weight_type
 
-    %attr0 = pdl.attribute true
-    %attr1 = pdl.attribute false
+    %attr0 = pdl.attribute = true
+    %attr1 = pdl.attribute = false
     %op0 = pdl.operation "tf.MatMul" (%rxact, %rxdelta : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr1} -> (%weight_type : !pdl.type)
     %val0 = pdl.result 0 of %op0
     %op1 = pdl.operation "tf.Const" -> (%const_type : !pdl.type)
@@ -99,7 +99,7 @@ module @patterns {
 // CHECK: %[[BWD:.*]] = "kernel.FcBwd"(%arg0, %[[SM]]#1, %arg2) : (tensor<2x20xf32>, tensor<2x10xf32>, tensor<20x10xf32>) -> tensor<20x10xf32>
 // CHECK: return %[[SM:.*]]#0, %[[BWD]] : tensor<f32>, tensor<20x10xf32>
 module @ir attributes { test.mlp_split } {
-  func @main(%arg0: tensor<2x20xf32>, %arg1: tensor<2xi32>, %arg2: tensor<20x10xf32>) -> (tensor<f32>, tensor<20x10xf32>) {
+  func.func @main(%arg0: tensor<2x20xf32>, %arg1: tensor<2xi32>, %arg2: tensor<20x10xf32>) -> (tensor<f32>, tensor<20x10xf32>) {
     %0 = "tf.Const"() {value = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
     %1 = "tf.Const"() {value = dense<1.000000e-01> : tensor<f32>} : () -> tensor<f32>
     %2 = "tf.Const"() {value = dense<5.000000e-01> : tensor<2x1xf32>} : () -> tensor<2x1xf32>
@@ -156,7 +156,7 @@ module @patterns {
     %weight = pdl.operand : %weight_type
     %bias = pdl.operand : %bias_type
 
-    %attr0 = pdl.attribute false
+    %attr0 = pdl.attribute = false
     %op0 = pdl.operation "tf.MatMul" (%rxact, %weight : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr0} -> (%out_type : !pdl.type)
     %val0 = pdl.result 0 of %op0
     %op1 = pdl.operation "tf.BiasAdd" (%val0, %bias : !pdl.value, !pdl.value) -> (%out_type : !pdl.type)
@@ -165,7 +165,7 @@ module @patterns {
     %val2 = pdl.result 0 of %op2
     %op3 = pdl.operation "tf.ReluGrad" (%rxdelta, %val2 : !pdl.value, !pdl.value) -> (%out_type : !pdl.type)
     %val3 = pdl.result 0 of %op3
-    %attr1 = pdl.attribute true
+    %attr1 = pdl.attribute = true
     %op4 = pdl.operation "tf.MatMul" (%rxact, %val3 : !pdl.value, !pdl.value) {"transpose_a" = %attr1, "transpose_b" = %attr0} -> (%weight_type : !pdl.type)
     %val4 = pdl.result 0 of %op4
     %op5 = pdl.operation "kernel.GD" (%weight, %val4 : !pdl.value, !pdl.value) -> (%weight_type : !pdl.type)
@@ -198,9 +198,9 @@ module @patterns {
     %rxdelta = pdl.operand : %out_type
     %weight = pdl.operand : %weight_type
 
-    %attr0 = pdl.attribute false
+    %attr0 = pdl.attribute = false
     %op0 = pdl.operation "tf.MatMul" (%rxact, %weight : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr0} -> (%out_type : !pdl.type)
-    %attr1 = pdl.attribute true
+    %attr1 = pdl.attribute = true
     %op1 = pdl.operation "tf.MatMul" (%rxdelta, %weight : !pdl.value, !pdl.value) {"transpose_a" = %attr0, "transpose_b" = %attr1} -> (%in_type : !pdl.type)
     %op2 = pdl.operation "tf.MatMul" (%rxact, %rxdelta : !pdl.value, !pdl.value) {"transpose_a" = %attr1, "transpose_b" = %attr0} -> (%weight_type : !pdl.type)
     %val2 = pdl.result 0 of %op2
@@ -261,7 +261,7 @@ module @patterns {
 // CHECK: %[[SM]]:2 = "kernel.SoftmaxCrossEntropy"(%[[FC2]]#0, %arg1) : (tensor<2x10xf32>, tensor<2xi32>) -> (tensor<f32>, tensor<2x10xf32>)
 // CHECK: %[[FC1]]:3 = "kernel.FcWithBias"(%arg0, %[[FC2]]#1, %arg3, %arg2) : (tensor<2x20xf32>, tensor<2x256xf32>, tensor<20x256xf32>, tensor<256xf32>) -> (tensor<2x256xf32>, tensor<20x256xf32>, tensor<256xf32>)
 module @ir attributes { test.mlp_fused } {
-  func @main(%arg0: tensor<2x20xf32>, %arg1: tensor<2xi32>, %arg2: tensor<256xf32>, %arg3: tensor<20x256xf32>, %arg4: tensor<256x10xf32>) -> () { // tensor<f32>, tensor<256xf32>, tensor<20x256xf32>, tensor<256x10xf32>) {
+  func.func @main(%arg0: tensor<2x20xf32>, %arg1: tensor<2xi32>, %arg2: tensor<256xf32>, %arg3: tensor<20x256xf32>, %arg4: tensor<256x10xf32>) -> () { // tensor<f32>, tensor<256xf32>, tensor<20x256xf32>, tensor<256x10xf32>) {
     // The replacement operations fuse forward and backward pass; therefore, the
     // resulting graph is not a DAG. To address this, we wrap the operations in
     // a graph region.

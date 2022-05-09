@@ -670,7 +670,7 @@ void ConvertShapeToStandardPass::runOnOperation() {
   ConversionTarget target(ctx);
   target.addLegalDialect<arith::ArithmeticDialect, SCFDialect,
                          tensor::TensorDialect>();
-  target.addLegalOp<CstrRequireOp, FuncOp, ModuleOp>();
+  target.addLegalOp<CstrRequireOp, func::FuncOp, ModuleOp>();
 
   // Setup conversion patterns.
   RewritePatternSet patterns(&ctx);

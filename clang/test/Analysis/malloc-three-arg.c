@@ -6,6 +6,7 @@
 #define NULL ((void *)0)
 
 void *malloc(size_t, void *, int);
+void free(void *);
 
 struct test {
 };

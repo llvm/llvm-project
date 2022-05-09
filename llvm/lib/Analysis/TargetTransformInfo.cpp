@@ -397,7 +397,7 @@ bool TargetTransformInfo::isLegalNTLoad(Type *DataType, Align Alignment) const {
 }
 
 bool TargetTransformInfo::isLegalBroadcastLoad(Type *ElementTy,
-                                               unsigned NumElements) const {
+                                               ElementCount NumElements) const {
   return TTIImpl->isLegalBroadcastLoad(ElementTy, NumElements);
 }
 
@@ -747,7 +747,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
 
 InstructionCost TargetTransformInfo::getShuffleCost(
     ShuffleKind Kind, VectorType *Ty, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<Value *> Args) const {
+    VectorType *SubTp, ArrayRef<const Value *> Args) const {
   InstructionCost Cost =
       TTIImpl->getShuffleCost(Kind, Ty, Mask, Index, SubTp, Args);
   assert(Cost >= 0 && "TTI should not produce negative costs!");

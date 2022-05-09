@@ -12,7 +12,7 @@
 // CHECK-LABEL: func @tanh_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
 // CHECK-SAME: %[[DOUBLE:.*]]: f64
-func @tanh_caller(%float: f32, %double: f64) -> (f32, f64)  {
+func.func @tanh_caller(%float: f32, %double: f64) -> (f32, f64)  {
   // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @tanhf(%[[FLOAT]]) : (f32) -> f32
   %float_result = math.tanh %float : f32
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @tanh(%[[DOUBLE]]) : (f64) -> f64
@@ -25,7 +25,7 @@ func @tanh_caller(%float: f32, %double: f64) -> (f32, f64)  {
 // CHECK-LABEL: func @atan2_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
 // CHECK-SAME: %[[DOUBLE:.*]]: f64
-func @atan2_caller(%float: f32, %double: f64) -> (f32, f64) {
+func.func @atan2_caller(%float: f32, %double: f64) -> (f32, f64) {
   // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @atan2f(%[[FLOAT]], %[[FLOAT]]) : (f32, f32) -> f32
   %float_result = math.atan2 %float, %float : f32
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @atan2(%[[DOUBLE]], %[[DOUBLE]]) : (f64, f64) -> f64
@@ -37,7 +37,7 @@ func @atan2_caller(%float: f32, %double: f64) -> (f32, f64) {
 // CHECK-LABEL: func @erf_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
 // CHECK-SAME: %[[DOUBLE:.*]]: f64
-func @erf_caller(%float: f32, %double: f64) -> (f32, f64)  {
+func.func @erf_caller(%float: f32, %double: f64) -> (f32, f64)  {
   // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @erff(%[[FLOAT]]) : (f32) -> f32
   %float_result = math.erf %float : f32
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @erf(%[[DOUBLE]]) : (f64) -> f64
@@ -49,7 +49,7 @@ func @erf_caller(%float: f32, %double: f64) -> (f32, f64)  {
 // CHECK-LABEL: func @expm1_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
 // CHECK-SAME: %[[DOUBLE:.*]]: f64
-func @expm1_caller(%float: f32, %double: f64) -> (f32, f64) {
+func.func @expm1_caller(%float: f32, %double: f64) -> (f32, f64) {
   // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @expm1f(%[[FLOAT]]) : (f32) -> f32
   %float_result = math.expm1 %float : f32
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @expm1(%[[DOUBLE]]) : (f64) -> f64
@@ -58,7 +58,7 @@ func @expm1_caller(%float: f32, %double: f64) -> (f32, f64) {
   return %float_result, %double_result : f32, f64
 }
 
-func @expm1_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
+func.func @expm1_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector<2xf32>, vector<2xf64>) {
   %float_result = math.expm1 %float : vector<2xf32>
   %double_result = math.expm1 %double : vector<2xf64>
   return %float_result, %double_result : vector<2xf32>, vector<2xf64>
@@ -83,7 +83,7 @@ func @expm1_vec_caller(%float: vector<2xf32>, %double: vector<2xf64>) -> (vector
 // CHECK:           return %[[VAL_11]], %[[VAL_17]] : vector<2xf32>, vector<2xf64>
 // CHECK:         }
 
-func @expm1_multidim_vec_caller(%float: vector<2x2xf32>) -> (vector<2x2xf32>) {
+func.func @expm1_multidim_vec_caller(%float: vector<2x2xf32>) -> (vector<2x2xf32>) {
   %result = math.expm1 %float : vector<2x2xf32>
   return %result : vector<2x2xf32>
 }

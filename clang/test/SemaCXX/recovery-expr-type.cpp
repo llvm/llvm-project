@@ -151,3 +151,13 @@ enum Circular {             // expected-note {{not complete until the closing '}
 // Enumerators can be evaluated (they evaluate as zero, but we don't care).
 static_assert(Circular_A == 0 && Circular_A != 0, ""); // expected-error {{static_assert failed}}
 }
+
+namespace test14 {
+extern "C" void *memset(void *, int b, unsigned long) {
+  int * const c(undef()); // expected-error {{undeclared identifier}}
+  // Verify we do not crash on evaluating *c whose initializer is a NULL-type ParenListExpr!
+  memset(c, 0, *c); // crash1
+
+  b = __builtin_object_size(c, 0); // crash2
+}
+}

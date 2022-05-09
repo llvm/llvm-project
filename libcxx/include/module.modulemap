@@ -50,6 +50,10 @@ module std [system] {
       header "setjmp.h"
       export *
     }
+    module stdatomic_h {
+      header "stdatomic.h"
+      export *
+    }
     // FIXME: <stdalign.h> is missing.
     // <signal.h> provided by C library.
     // <stdarg.h> provided by compiler.
@@ -303,6 +307,9 @@ module std [system] {
       module ranges_find              { private header "__algorithm/ranges_find.h" }
       module ranges_find_if           { private header "__algorithm/ranges_find_if.h" }
       module ranges_find_if_not       { private header "__algorithm/ranges_find_if_not.h" }
+      module ranges_for_each          { private header "__algorithm/ranges_for_each.h" }
+      module ranges_for_each_n        { private header "__algorithm/ranges_for_each_n.h" }
+      module ranges_is_partitioned    { private header "__algorithm/ranges_is_partitioned.h" }
       module ranges_max               { private header "__algorithm/ranges_max.h" }
       module ranges_max_element       { private header "__algorithm/ranges_max_element.h" }
       module ranges_min               { private header "__algorithm/ranges_min.h" }
@@ -878,6 +885,7 @@ module std [system] {
       }
       module view_interface         { private header "__ranges/view_interface.h" }
       module views                  { private header "__ranges/views.h" }
+      module zip_view               { private header "__ranges/zip_view.h" }
     }
   }
   module ratio {
@@ -911,6 +919,7 @@ module std [system] {
     header "span"
     export ranges.__ranges.enable_borrowed_range
     export version
+    module span_fwd { private header "__fwd/span.h" }
   }
   module sstream {
     header "sstream"
@@ -942,6 +951,7 @@ module std [system] {
     export initializer_list
     export __string
     export *
+    module string_view_fwd { private header "__fwd/string_view.h" }
   }
   module strstream {
     header "strstream"

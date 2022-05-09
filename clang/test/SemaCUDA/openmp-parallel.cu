@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fopenmp -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fopenmp -fexceptions -fsyntax-only -verify %s
 
 #include "Inputs/cuda.h"
 
@@ -7,13 +8,17 @@ __device__ void foo(int) {} // expected-note {{candidate function not viable: ca
 
 int main() {
   #pragma omp parallel
-  for (int i = 0; i < 100; i++)
+  for (int i = 0; i < 100; i++) {
     foo(1); // expected-error {{no matching function for call to 'foo'}}
-  
+    new int;
+  }
+
   auto Lambda = []() {
     #pragma omp parallel
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 100; i++) {
       foo(1); // expected-error {{reference to __device__ function 'foo' in __host__ __device__ function}}
-    };
+      new int;
+    }
+  };
   Lambda(); // expected-note {{called by 'main'}}
 }

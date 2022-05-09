@@ -332,7 +332,8 @@ static ParseResult parseSwitchOpCases(
     if (parser.parseColon() || parser.parseSuccessor(destination))
       return failure();
     if (!parser.parseOptionalLParen()) {
-      if (parser.parseRegionArgumentList(operands) ||
+      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
+                                  /*allowResultNumber=*/false) ||
           parser.parseColonTypeList(operandTypes) || parser.parseRParen())
         return failure();
     }
@@ -1654,14 +1655,19 @@ LogicalResult AddressOfOp::verify() {
     return emitOpError(
         "must reference a global defined by 'llvm.mlir.global' or 'llvm.func'");
 
-  if (global &&
-      LLVM::LLVMPointerType::get(global.getType(), global.getAddrSpace()) !=
-          getResult().getType())
+  LLVMPointerType type = getType();
+  if (global && global.getAddrSpace() != type.getAddressSpace())
+    return emitOpError("pointer address space must match address space of the "
+                       "referenced global");
+
+  if (type.isOpaque())
+    return success();
+
+  if (global && type.getElementType() != global.getType())
     return emitOpError(
         "the type must be a pointer to the type of the referenced global");
 
-  if (function && LLVM::LLVMPointerType::get(function.getFunctionType()) !=
-                      getResult().getType())
+  if (function && type.getElementType() != function.getFunctionType())
     return emitOpError(
         "the type must be a pointer to the type of the referenced function");
 
@@ -2146,22 +2152,22 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
                            parser, result, LLVM::Linkage::External)));
 
   StringAttr nameAttr;
-  SmallVector<OpAsmParser::UnresolvedOperand> entryArgs;
-  SmallVector<NamedAttrList> argAttrs;
-  SmallVector<NamedAttrList> resultAttrs;
-  SmallVector<Type> argTypes;
+  SmallVector<OpAsmParser::Argument> entryArgs;
+  SmallVector<DictionaryAttr> resultAttrs;
   SmallVector<Type> resultTypes;
-  SmallVector<Location> argLocations;
   bool isVariadic;
 
   auto signatureLocation = parser.getCurrentLocation();
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
                              result.attributes) ||
       function_interface_impl::parseFunctionSignature(
-          parser, /*allowVariadic=*/true, entryArgs, argTypes, argAttrs,
-          argLocations, isVariadic, resultTypes, resultAttrs))
+          parser, /*allowVariadic=*/true, entryArgs, isVariadic, resultTypes,
+          resultAttrs))
     return failure();
 
+  SmallVector<Type> argTypes;
+  for (auto &arg : entryArgs)
+    argTypes.push_back(arg.type);
   auto type =
       buildLLVMFunctionType(parser, signatureLocation, argTypes, resultTypes,
                             function_interface_impl::VariadicFlag(isVariadic));
@@ -2173,11 +2179,11 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
   function_interface_impl::addArgAndResultAttrs(parser.getBuilder(), result,
-                                                argAttrs, resultAttrs);
+                                                entryArgs, resultAttrs);
 
   auto *body = result.addRegion();
-  OptionalParseResult parseResult = parser.parseOptionalRegion(
-      *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes);
+  OptionalParseResult parseResult =
+      parser.parseOptionalRegion(*body, entryArgs);
   return failure(parseResult.hasValue() && failed(*parseResult));
 }
 

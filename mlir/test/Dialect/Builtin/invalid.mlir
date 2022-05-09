@@ -14,6 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 // expected-error@+1 {{missing ']' closing set of scalable dimensions}}
-func @scalable_vector_arg(%arg0: vector<[4xf32>) { }
+func.func @scalable_vector_arg(%arg0: vector<[4xf32>) { }
 
 // -----

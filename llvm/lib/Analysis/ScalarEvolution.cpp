@@ -4015,6 +4015,59 @@ public:
 
 } // namespace
 
+/// Return true if V is poison given that AssumedPoison is already poison.
+static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
+  // The only way poison may be introduced in a SCEV expression is from a
+  // poison SCEVUnknown (ConstantExprs are also represented as SCEVUnknown,
+  // not SCEVConstant). Notably, nowrap flags in SCEV nodes can *not*
+  // introduce poison -- they encode guaranteed, non-speculated knowledge.
+  //
+  // Additionally, all SCEV nodes propagate poison from inputs to outputs,
+  // with the notable exception of umin_seq, where only poison from the first
+  // operand is (unconditionally) propagated.
+  struct SCEVPoisonCollector {
+    bool LookThroughSeq;
+    SmallPtrSet<const SCEV *, 4> MaybePoison;
+    SCEVPoisonCollector(bool LookThroughSeq) : LookThroughSeq(LookThroughSeq) {}
+
+    bool follow(const SCEV *S) {
+      // TODO: We can always follow the first operand, but the SCEVTraversal
+      // API doesn't support this.
+      if (!LookThroughSeq && isa<SCEVSequentialMinMaxExpr>(S))
+        return false;
+
+      if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
+        if (!isGuaranteedNotToBePoison(SU->getValue()))
+          MaybePoison.insert(S);
+      }
+      return true;
+    }
+    bool isDone() const { return false; }
+  };
+
+  // First collect all SCEVs that might result in AssumedPoison to be poison.
+  // We need to look through umin_seq here, because we want to find all SCEVs
+  // that *might* result in poison, not only those that are *required* to.
+  SCEVPoisonCollector PC1(/* LookThroughSeq */ true);
+  visitAll(AssumedPoison, PC1);
+
+  // AssumedPoison is never poison. As the assumption is false, the implication
+  // is true. Don't bother walking the other SCEV in this case.
+  if (PC1.MaybePoison.empty())
+    return true;
+
+  // Collect all SCEVs in S that, if poison, *will* result in S being poison
+  // as well. We cannot look through umin_seq here, as its argument only *may*
+  // make the result poison.
+  SCEVPoisonCollector PC2(/* LookThroughSeq */ false);
+  visitAll(S, PC2);
+
+  // Make sure that no matter which SCEV in PC1.MaybePoison is actually poison,
+  // it will also make S poison by being part of PC2.MaybePoison.
+  return all_of(PC1.MaybePoison,
+                [&](const SCEV *S) { return PC2.MaybePoison.contains(S); });
+}
+
 const SCEV *
 ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
                                          SmallVectorImpl<const SCEV *> &Ops) {
@@ -4074,6 +4127,19 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
 
     if (DeletedAny)
       return getSequentialMinMaxExpr(Kind, Ops);
+  }
+
+  // In %x umin_seq %y, if %y being poison implies %x is also poison, we can
+  // use a non-sequential umin instead.
+  for (unsigned i = 1, e = Ops.size(); i != e; ++i) {
+    if (::impliesPoison(Ops[i], Ops[i - 1])) {
+      SmallVector<const SCEV *> SeqOps = {Ops[i - 1], Ops[i]};
+      Ops[i - 1] = getMinMaxExpr(
+          SCEVSequentialMinMaxExpr::getEquivalentNonSequentialSCEVType(Kind),
+          SeqOps);
+      Ops.erase(Ops.begin() + i);
+      return getSequentialMinMaxExpr(Kind, Ops);
+    }
   }
 
   // Okay, it looks like we really DO need an expr.  Check to see if we
@@ -5997,13 +6063,13 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
   return getUnknown(I);
 }
 
-const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
-    Value *V, Value *Cond, Value *TrueVal, Value *FalseVal) {
-  // For now, only deal with i1-typed `select`s.
-  if (!V->getType()->isIntegerTy(1) || !Cond->getType()->isIntegerTy(1) ||
-      !TrueVal->getType()->isIntegerTy(1) ||
-      !FalseVal->getType()->isIntegerTy(1))
-    return getUnknown(V);
+static Optional<const SCEV *>
+createNodeForSelectViaUMinSeq(ScalarEvolution *SE, const SCEV *CondExpr,
+                              const SCEV *TrueExpr, const SCEV *FalseExpr) {
+  assert(CondExpr->getType()->isIntegerTy(1) &&
+         TrueExpr->getType() == FalseExpr->getType() &&
+         TrueExpr->getType()->isIntegerTy(1) &&
+         "Unexpected operands of a select.");
 
   // i1 cond ? i1 x : i1 C  -->  C + (i1  cond ? (i1 x - i1 C) : i1 0)
   //                        -->  C + (umin_seq  cond, x - C)
@@ -6011,22 +6077,50 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
   // i1 cond ? i1 C : i1 x  -->  C + (i1  cond ? i1 0 : (i1 x - i1 C))
   //                        -->  C + (i1 ~cond ? (i1 x - i1 C) : i1 0)
   //                        -->  C + (umin_seq ~cond, x - C)
-  if (isa<ConstantInt>(TrueVal) || isa<ConstantInt>(FalseVal)) {
-    const SCEV *CondExpr = getSCEV(Cond);
-    const SCEV *TrueExpr = getSCEV(TrueVal);
-    const SCEV *FalseExpr = getSCEV(FalseVal);
-    const SCEV *X, *C;
-    if (isa<ConstantInt>(TrueVal)) {
-      CondExpr = getNotSCEV(CondExpr);
-      X = FalseExpr;
-      C = TrueExpr;
-    } else {
-      X = TrueExpr;
-      C = FalseExpr;
-    }
-    return getAddExpr(
-        C, getUMinExpr(CondExpr, getMinusSCEV(X, C), /*Sequential=*/true));
+
+  // FIXME: while we can't legally model the case where both of the hands
+  // are fully variable, we only require that the *difference* is constant.
+  if (!isa<SCEVConstant>(TrueExpr) && !isa<SCEVConstant>(FalseExpr))
+    return None;
+
+  const SCEV *X, *C;
+  if (isa<SCEVConstant>(TrueExpr)) {
+    CondExpr = SE->getNotSCEV(CondExpr);
+    X = FalseExpr;
+    C = TrueExpr;
+  } else {
+    X = TrueExpr;
+    C = FalseExpr;
   }
+  return SE->getAddExpr(C, SE->getUMinExpr(CondExpr, SE->getMinusSCEV(X, C),
+                                           /*Sequential=*/true));
+}
+
+static Optional<const SCEV *> createNodeForSelectViaUMinSeq(ScalarEvolution *SE,
+                                                            Value *Cond,
+                                                            Value *TrueVal,
+                                                            Value *FalseVal) {
+  if (!isa<ConstantInt>(TrueVal) && !isa<ConstantInt>(FalseVal))
+    return None;
+
+  return createNodeForSelectViaUMinSeq(
+      SE, SE->getSCEV(Cond), SE->getSCEV(TrueVal), SE->getSCEV(FalseVal));
+}
+
+const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
+    Value *V, Value *Cond, Value *TrueVal, Value *FalseVal) {
+  assert(Cond->getType()->isIntegerTy(1) && "Select condition is not an i1?");
+  assert(TrueVal->getType() == FalseVal->getType() &&
+         V->getType() == TrueVal->getType() &&
+         "Types of select hands and of the result must match.");
+
+  // For now, only deal with i1-typed `select`s.
+  if (!V->getType()->isIntegerTy(1))
+    return getUnknown(V);
+
+  if (Optional<const SCEV *> S =
+          createNodeForSelectViaUMinSeq(this, Cond, TrueVal, FalseVal))
+    return *S;
 
   return getUnknown(V);
 }
@@ -7331,9 +7425,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
             Flags = (SCEV::NoWrapFlags)(Flags | SCEV::FlagNUW);
         }
 
-        Constant *X = ConstantInt::get(
+        ConstantInt *X = ConstantInt::get(
             getContext(), APInt::getOneBitSet(BitWidth, SA->getZExtValue()));
-        return getMulExpr(getSCEV(BO->LHS), getSCEV(X), Flags);
+        return getMulExpr(getSCEV(BO->LHS), getConstant(X), Flags);
       }
       break;
 
@@ -8436,11 +8530,6 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
       BECount = getUMinFromMismatchedTypes(
           EL0.ExactNotTaken, EL1.ExactNotTaken,
           /*Sequential=*/!isa<BinaryOperator>(ExitCond));
-
-      // If EL0.ExactNotTaken was zero and ExitCond was a short-circuit form,
-      // it should have been simplified to zero (see the condition (3) above)
-      assert(!isa<BinaryOperator>(ExitCond) || !EL0.ExactNotTaken->isZero() ||
-             BECount->isZero());
     }
     if (EL0.MaxNotTaken == getCouldNotCompute())
       MaxBECount = EL1.MaxNotTaken;
@@ -12684,6 +12773,15 @@ bool ScalarEvolution::containsUndefs(const SCEV *S) const {
   return SCEVExprContains(S, [](const SCEV *S) {
     if (const auto *SU = dyn_cast<SCEVUnknown>(S))
       return isa<UndefValue>(SU->getValue());
+    return false;
+  });
+}
+
+// Return true when S contains a value that is a nullptr.
+bool ScalarEvolution::containsErasedValue(const SCEV *S) const {
+  return SCEVExprContains(S, [](const SCEV *S) {
+    if (const auto *SU = dyn_cast<SCEVUnknown>(S))
+      return SU->getValue() == nullptr;
     return false;
   });
 }

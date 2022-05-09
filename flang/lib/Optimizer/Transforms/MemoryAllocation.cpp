@@ -40,7 +40,7 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReturnAnalysis)
 
   ReturnAnalysis(mlir::Operation *op) {
-    if (auto func = mlir::dyn_cast<mlir::FuncOp>(op))
+    if (auto func = mlir::dyn_cast<mlir::func::FuncOp>(op))
       for (mlir::Block &block : func)
         for (mlir::Operation &i : block)
           if (mlir::isa<mlir::func::ReturnOp>(i)) {

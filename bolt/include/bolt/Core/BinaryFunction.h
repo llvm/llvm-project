@@ -1279,6 +1279,9 @@ public:
     case ELF::R_AARCH64_MOVW_UABS_G2:
     case ELF::R_AARCH64_MOVW_UABS_G2_NC:
     case ELF::R_AARCH64_MOVW_UABS_G3:
+    case ELF::R_AARCH64_PREL16:
+    case ELF::R_AARCH64_PREL32:
+    case ELF::R_AARCH64_PREL64:
       Rels[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
       return;
     case ELF::R_AARCH64_CALL26:

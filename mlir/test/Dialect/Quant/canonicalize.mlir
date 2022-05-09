@@ -2,7 +2,7 @@
 
 // -----
 // CHECK-LABEL: redundant_scast
-func @redundant_scast() -> tensor<4xi8> {
+func.func @redundant_scast() -> tensor<4xi8> {
   // CHECK-NEXT: arith.constant dense<10> : tensor<4xi8>
   // CHECK-NEXT: return
   %cst = arith.constant dense<5> : tensor<4xi8>
@@ -14,7 +14,7 @@ func @redundant_scast() -> tensor<4xi8> {
 
 // -----
 // CHECK-LABEL: non_redundant_scast
-func @non_redundant_scast() -> tensor<4x!quant.uniform<u8:f32, 7.812500e-03:128>> {
+func.func @non_redundant_scast() -> tensor<4x!quant.uniform<u8:f32, 7.812500e-03:128>> {
   // CHECK-NEXT: arith.constant dense<5> : tensor<4xi8>
   // CHECK-NEXT: scast
   // CHECK-NEXT: return

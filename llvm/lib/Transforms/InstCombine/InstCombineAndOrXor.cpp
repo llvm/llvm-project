@@ -706,47 +706,6 @@ Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return Builder.CreateICmp(NewPred, Input, RangeEnd);
 }
 
-static Value *
-foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
-                                     bool JoinedByAnd,
-                                     InstCombiner::BuilderTy &Builder) {
-  Value *X = LHS->getOperand(0);
-  if (X != RHS->getOperand(0))
-    return nullptr;
-
-  const APInt *C1, *C2;
-  if (!match(LHS->getOperand(1), m_APInt(C1)) ||
-      !match(RHS->getOperand(1), m_APInt(C2)))
-    return nullptr;
-
-  // We only handle (X != C1 && X != C2) and (X == C1 || X == C2).
-  ICmpInst::Predicate Pred = LHS->getPredicate();
-  if (Pred !=  RHS->getPredicate())
-    return nullptr;
-  if (JoinedByAnd && Pred != ICmpInst::ICMP_NE)
-    return nullptr;
-  if (!JoinedByAnd && Pred != ICmpInst::ICMP_EQ)
-    return nullptr;
-
-  // The larger unsigned constant goes on the right.
-  if (C1->ugt(*C2))
-    std::swap(C1, C2);
-
-  APInt Xor = *C1 ^ *C2;
-  if (Xor.isPowerOf2()) {
-    // If LHSC and RHSC differ by only one bit, then set that bit in X and
-    // compare against the larger constant:
-    // (X == C1 || X == C2) --> (X | (C1 ^ C2)) == C2
-    // (X != C1 && X != C2) --> (X | (C1 ^ C2)) != C2
-    // We choose an 'or' with a Pow2 constant rather than the inverse mask with
-    // 'and' because that may lead to smaller codegen from a smaller constant.
-    Value *Or = Builder.CreateOr(X, ConstantInt::get(X->getType(), Xor));
-    return Builder.CreateICmp(Pred, Or, ConstantInt::get(X->getType(), *C2));
-  }
-
-  return nullptr;
-}
-
 // Fold (iszero(A & K1) | iszero(A & K2)) -> (A & (K1 | K2)) != (K1 | K2)
 // Fold (!iszero(A & K1) & !iszero(A & K2)) -> (A & (K1 | K2)) == (K1 | K2)
 Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
@@ -991,22 +950,13 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
     };
 
     // Given  ZeroCmpOp = (A + B)
-    //   ZeroCmpOp <= A && ZeroCmpOp != 0  -->  (0-B) <  A
-    //   ZeroCmpOp >  A || ZeroCmpOp == 0  -->  (0-B) >= A
-    //
     //   ZeroCmpOp <  A && ZeroCmpOp != 0  -->  (0-X) <  Y  iff
     //   ZeroCmpOp >= A || ZeroCmpOp == 0  -->  (0-X) >= Y  iff
     //     with X being the value (A/B) that is known to be non-zero,
     //     and Y being remaining value.
-    if (UnsignedPred == ICmpInst::ICMP_ULE && EqPred == ICmpInst::ICMP_NE &&
-        IsAnd)
-      return Builder.CreateICmpULT(Builder.CreateNeg(B), A);
     if (UnsignedPred == ICmpInst::ICMP_ULT && EqPred == ICmpInst::ICMP_NE &&
         IsAnd && GetKnownNonZeroAndOther(B, A))
       return Builder.CreateICmpULT(Builder.CreateNeg(B), A);
-    if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
-        !IsAnd)
-      return Builder.CreateICmpUGE(Builder.CreateNeg(B), A);
     if (UnsignedPred == ICmpInst::ICMP_UGE && EqPred == ICmpInst::ICMP_EQ &&
         !IsAnd && GetKnownNonZeroAndOther(B, A))
       return Builder.CreateICmpUGE(Builder.CreateNeg(B), A);
@@ -1178,10 +1128,17 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
 /// Fold (icmp Pred1 V1, C1) & (icmp Pred2 V2, C2)
 /// or   (icmp Pred1 V1, C1) | (icmp Pred2 V2, C2)
 /// into a single comparison using range-based reasoning.
-static Value *foldAndOrOfICmpsUsingRanges(
-    ICmpInst::Predicate Pred1, Value *V1, const APInt &C1,
-    ICmpInst::Predicate Pred2, Value *V2, const APInt &C2,
-    IRBuilderBase &Builder, bool IsAnd) {
+/// NOTE: This is also used for logical and/or, must be poison-safe!
+Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
+                                                     ICmpInst *ICmp2,
+                                                     bool IsAnd) {
+  ICmpInst::Predicate Pred1, Pred2;
+  Value *V1, *V2;
+  const APInt *C1, *C2;
+  if (!match(ICmp1, m_ICmp(Pred1, m_Value(V1), m_APInt(C1))) ||
+      !match(ICmp2, m_ICmp(Pred2, m_Value(V2), m_APInt(C2))))
+    return nullptr;
+
   // Look through add of a constant offset on V1, V2, or both operands. This
   // allows us to interpret the V + C' < C'' range idiom into a proper range.
   const APInt *Offset1 = nullptr, *Offset2 = nullptr;
@@ -1196,154 +1153,47 @@ static Value *foldAndOrOfICmpsUsingRanges(
   if (V1 != V2)
     return nullptr;
 
-  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(Pred1, C1);
+  ConstantRange CR1 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred1) : Pred1, *C1);
   if (Offset1)
     CR1 = CR1.subtract(*Offset1);
 
-  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(Pred2, C2);
+  ConstantRange CR2 = ConstantRange::makeExactICmpRegion(
+      IsAnd ? ICmpInst::getInversePredicate(Pred2) : Pred2, *C2);
   if (Offset2)
     CR2 = CR2.subtract(*Offset2);
 
-  Optional<ConstantRange> CR =
-      IsAnd ? CR1.exactIntersectWith(CR2) : CR1.exactUnionWith(CR2);
-  if (!CR)
-    return nullptr;
+  Type *Ty = V1->getType();
+  Value *NewV = V1;
+  Optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
+  if (!CR) {
+    if (!(ICmp1->hasOneUse() && ICmp2->hasOneUse()) || CR1.isWrappedSet() ||
+        CR2.isWrappedSet())
+      return nullptr;
+
+    // Check whether we have equal-size ranges that only differ by one bit.
+    // In that case we can apply a mask to map one range onto the other.
+    APInt LowerDiff = CR1.getLower() ^ CR2.getLower();
+    APInt UpperDiff = (CR1.getUpper() - 1) ^ (CR2.getUpper() - 1);
+    APInt CR1Size = CR1.getUpper() - CR1.getLower();
+    if (!LowerDiff.isPowerOf2() || LowerDiff != UpperDiff ||
+        CR1Size != CR2.getUpper() - CR2.getLower())
+      return nullptr;
+
+    CR = CR1.getLower().ult(CR2.getLower()) ? CR1 : CR2;
+    NewV = Builder.CreateAnd(NewV, ConstantInt::get(Ty, ~LowerDiff));
+  }
+
+  if (IsAnd)
+    CR = CR->inverse();
 
   CmpInst::Predicate NewPred;
   APInt NewC, Offset;
   CR->getEquivalentICmp(NewPred, NewC, Offset);
 
-  Type *Ty = V1->getType();
-  Value *NewV = V1;
   if (Offset != 0)
     NewV = Builder.CreateAdd(NewV, ConstantInt::get(Ty, Offset));
   return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
-}
-
-/// Fold (icmp)&(icmp) if possible.
-Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
-                                        BinaryOperator &And) {
-  const SimplifyQuery Q = SQ.getWithInstruction(&And);
-
-  // Fold (!iszero(A & K1) & !iszero(A & K2)) ->  (A & (K1 | K2)) == (K1 | K2)
-  // if K1 and K2 are a one-bit mask.
-  if (Value *V = foldAndOrOfICmpsOfAndWithPow2(LHS, RHS, &And,
-                                               /* IsAnd */ true))
-    return V;
-
-  ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
-
-  // (icmp1 A, B) & (icmp2 A, B) --> (icmp3 A, B)
-  if (predicatesFoldable(PredL, PredR)) {
-    if (LHS->getOperand(0) == RHS->getOperand(1) &&
-        LHS->getOperand(1) == RHS->getOperand(0))
-      LHS->swapOperands();
-    if (LHS->getOperand(0) == RHS->getOperand(0) &&
-        LHS->getOperand(1) == RHS->getOperand(1)) {
-      Value *Op0 = LHS->getOperand(0), *Op1 = LHS->getOperand(1);
-      unsigned Code =
-          getICmpCode(LHS->getPredicate()) & getICmpCode(RHS->getPredicate());
-      bool IsSigned = LHS->isSigned() || RHS->isSigned();
-      return getNewICmpValue(Code, IsSigned, Op0, Op1, Builder);
-    }
-  }
-
-  // handle (roughly):  (icmp eq (A & B), C) & (icmp eq (A & D), E)
-  if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, true, Builder))
-    return V;
-
-  if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, And, Builder, Q))
-    return V;
-  if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, And, Builder, Q))
-    return V;
-
-  if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, /*IsAnd=*/true, Builder))
-    return V;
-  if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, /*IsAnd=*/true, Builder))
-    return V;
-
-  // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
-  if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/false))
-    return V;
-
-  // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
-  if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/false))
-    return V;
-
-  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, true, Builder))
-    return V;
-
-  if (Value *V = foldSignedTruncationCheck(LHS, RHS, And, Builder))
-    return V;
-
-  if (Value *V = foldIsPowerOf2(LHS, RHS, true /* JoinedByAnd */, Builder))
-    return V;
-
-  if (Value *X =
-          foldUnsignedUnderflowCheck(LHS, RHS, /*IsAnd=*/true, Q, Builder))
-    return X;
-  if (Value *X =
-          foldUnsignedUnderflowCheck(RHS, LHS, /*IsAnd=*/true, Q, Builder))
-    return X;
-
-  if (Value *X = foldEqOfParts(LHS, RHS, /*IsAnd=*/true))
-    return X;
-
-  // This only handles icmp of constants: (icmp1 A, C1) & (icmp2 B, C2).
-  Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
-
-  // (icmp eq A, 0) & (icmp eq B, 0) --> (icmp eq (A|B), 0)
-  // TODO: Remove this when foldLogOpOfMaskedICmps can handle undefs.
-  if (PredL == ICmpInst::ICMP_EQ && match(LHS->getOperand(1), m_ZeroInt()) &&
-      PredR == ICmpInst::ICMP_EQ && match(RHS->getOperand(1), m_ZeroInt()) &&
-      LHS0->getType() == RHS0->getType()) {
-    Value *NewOr = Builder.CreateOr(LHS0, RHS0);
-    return Builder.CreateICmp(PredL, NewOr,
-                              Constant::getNullValue(NewOr->getType()));
-  }
-
-  const APInt *LHSC, *RHSC;
-  if (!match(LHS->getOperand(1), m_APInt(LHSC)) ||
-      !match(RHS->getOperand(1), m_APInt(RHSC)))
-    return nullptr;
-
-  // (trunc x) == C1 & (and x, CA) == C2 -> (and x, CA|CMAX) == C1|C2
-  // where CMAX is the all ones value for the truncated type,
-  // iff the lower bits of C2 and CA are zero.
-  if (PredL == ICmpInst::ICMP_EQ && PredL == PredR && LHS->hasOneUse() &&
-      RHS->hasOneUse()) {
-    Value *V;
-    const APInt *AndC, *SmallC = nullptr, *BigC = nullptr;
-
-    // (trunc x) == C1 & (and x, CA) == C2
-    // (and x, CA) == C2 & (trunc x) == C1
-    if (match(RHS0, m_Trunc(m_Value(V))) &&
-        match(LHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
-      SmallC = RHSC;
-      BigC = LHSC;
-    } else if (match(LHS0, m_Trunc(m_Value(V))) &&
-               match(RHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
-      SmallC = LHSC;
-      BigC = RHSC;
-    }
-
-    if (SmallC && BigC) {
-      unsigned BigBitSize = BigC->getBitWidth();
-      unsigned SmallBitSize = SmallC->getBitWidth();
-
-      // Check that the low bits are zero.
-      APInt Low = APInt::getLowBitsSet(BigBitSize, SmallBitSize);
-      if ((Low & *AndC).isZero() && (Low & *BigC).isZero()) {
-        Value *NewAnd = Builder.CreateAnd(V, Low | *AndC);
-        APInt N = SmallC->zext(BigBitSize) | *BigC;
-        Value *NewVal = ConstantInt::get(NewAnd->getType(), N);
-        return Builder.CreateICmp(PredL, NewAnd, NewVal);
-      }
-    }
-  }
-
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, *LHSC, PredR, RHS0, *RHSC,
-                                     Builder, /* IsAnd */ true);
 }
 
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
@@ -1596,9 +1446,8 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
   ICmpInst *ICmp0 = dyn_cast<ICmpInst>(Cast0Src);
   ICmpInst *ICmp1 = dyn_cast<ICmpInst>(Cast1Src);
   if (ICmp0 && ICmp1) {
-    Value *Res = LogicOpc == Instruction::And ? foldAndOfICmps(ICmp0, ICmp1, I)
-                                              : foldOrOfICmps(ICmp0, ICmp1, I);
-    if (Res)
+    if (Value *Res =
+            foldAndOrOfICmps(ICmp0, ICmp1, I, LogicOpc == Instruction::And))
       return CastInst::Create(CastOpcode, Res, DestTy);
     return nullptr;
   }
@@ -2134,25 +1983,25 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     ICmpInst *LHS = dyn_cast<ICmpInst>(Op0);
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
     if (LHS && RHS)
-      if (Value *Res = foldAndOfICmps(LHS, RHS, I))
+      if (Value *Res = foldAndOrOfICmps(LHS, RHS, I, /* IsAnd */ true))
         return replaceInstUsesWith(I, Res);
 
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'and' instructions might have to be created.
     if (LHS && match(Op1, m_OneUse(m_And(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
-        if (Value *Res = foldAndOfICmps(LHS, Cmp, I))
+        if (Value *Res = foldAndOrOfICmps(LHS, Cmp, I, /* IsAnd */ true))
           return replaceInstUsesWith(I, Builder.CreateAnd(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
-        if (Value *Res = foldAndOfICmps(LHS, Cmp, I))
+        if (Value *Res = foldAndOrOfICmps(LHS, Cmp, I, /* IsAnd */ true))
           return replaceInstUsesWith(I, Builder.CreateAnd(Res, X));
     }
     if (RHS && match(Op0, m_OneUse(m_And(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
-        if (Value *Res = foldAndOfICmps(Cmp, RHS, I))
+        if (Value *Res = foldAndOrOfICmps(Cmp, RHS, I, /* IsAnd */ true))
           return replaceInstUsesWith(I, Builder.CreateAnd(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
-        if (Value *Res = foldAndOfICmps(Cmp, RHS, I))
+        if (Value *Res = foldAndOrOfICmps(Cmp, RHS, I, /* IsAnd */ true))
           return replaceInstUsesWith(I, Builder.CreateAnd(Res, X));
     }
   }
@@ -2495,8 +2344,12 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
     // not create unnecessary casts if the types already match.
     Type *SelTy = A->getType();
     if (auto *VecTy = dyn_cast<VectorType>(Cond->getType())) {
+      // For a fixed or scalable vector get N from <{vscale x} N x iM>
       unsigned Elts = VecTy->getElementCount().getKnownMinValue();
-      Type *EltTy = Builder.getIntNTy(SelTy->getPrimitiveSizeInBits() / Elts);
+      // For a fixed or scalable vector, get the size in bits of N x iM; for a
+      // scalar this is just M.
+      unsigned SelEltSize = SelTy->getPrimitiveSizeInBits().getKnownMinSize();
+      Type *EltTy = Builder.getIntNTy(SelEltSize / Elts);
       SelTy = VectorType::get(EltTy, VecTy->getElementCount());
     }
     Value *BitcastC = Builder.CreateBitCast(C, SelTy);
@@ -2508,15 +2361,43 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
   return nullptr;
 }
 
-/// Fold (icmp)|(icmp) if possible.
-Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
-                                       BinaryOperator &Or) {
-  const SimplifyQuery Q = SQ.getWithInstruction(&Or);
+// (icmp eq X, 0) | (icmp ult Other, X) -> (icmp ule Other, X-1)
+// (icmp ne X, 0) & (icmp uge Other, X) -> (icmp ugt Other, X-1)
+Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
+                                    IRBuilderBase &Builder) {
+  ICmpInst::Predicate LPred =
+      IsAnd ? LHS->getInversePredicate() : LHS->getPredicate();
+  ICmpInst::Predicate RPred =
+      IsAnd ? RHS->getInversePredicate() : RHS->getPredicate();
+  Value *LHS0 = LHS->getOperand(0);
+  if (LPred != ICmpInst::ICMP_EQ || !match(LHS->getOperand(1), m_Zero()) ||
+      !LHS0->getType()->isIntOrIntVectorTy() ||
+      !(LHS->hasOneUse() || RHS->hasOneUse()))
+    return nullptr;
+
+  Value *Other;
+  if (RPred == ICmpInst::ICMP_ULT && RHS->getOperand(1) == LHS0)
+    Other = RHS->getOperand(0);
+  else if (RPred == ICmpInst::ICMP_UGT && RHS->getOperand(0) == LHS0)
+    Other = RHS->getOperand(1);
+  else
+    return nullptr;
+
+  return Builder.CreateICmp(
+      IsAnd ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE,
+      Builder.CreateAdd(LHS0, Constant::getAllOnesValue(LHS0->getType())),
+      Other);
+}
+
+/// Fold (icmp)&(icmp) or (icmp)|(icmp) if possible.
+Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
+                                          BinaryOperator &BO, bool IsAnd) {
+  const SimplifyQuery Q = SQ.getWithInstruction(&BO);
 
   // Fold (iszero(A & K1) | iszero(A & K2)) ->  (A & (K1 | K2)) != (K1 | K2)
+  // Fold (!iszero(A & K1) & !iszero(A & K2)) ->  (A & (K1 | K2)) == (K1 | K2)
   // if K1 and K2 are a one-bit mask.
-  if (Value *V = foldAndOrOfICmpsOfAndWithPow2(LHS, RHS, &Or,
-                                               /* IsAnd */ false))
+  if (Value *V = foldAndOrOfICmpsOfAndWithPow2(LHS, RHS, &BO, IsAnd))
     return V;
 
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
@@ -2526,65 +2407,16 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   match(LHS1, m_APInt(LHSC));
   match(RHS1, m_APInt(RHSC));
 
-  // Fold (icmp ult/ule (A + C1), C3) | (icmp ult/ule (A + C2), C3)
-  //                   -->  (icmp ult/ule ((A & ~(C1 ^ C2)) + max(C1, C2)), C3)
-  // The original condition actually refers to the following two ranges:
-  // [MAX_UINT-C1+1, MAX_UINT-C1+1+C3] and [MAX_UINT-C2+1, MAX_UINT-C2+1+C3]
-  // We can fold these two ranges if:
-  // 1) C1 and C2 is unsigned greater than C3.
-  // 2) The two ranges are separated.
-  // 3) C1 ^ C2 is one-bit mask.
-  // 4) LowRange1 ^ LowRange2 and HighRange1 ^ HighRange2 are one-bit mask.
-  // This implies all values in the two ranges differ by exactly one bit.
-  if ((PredL == ICmpInst::ICMP_ULT || PredL == ICmpInst::ICMP_ULE) &&
-      PredL == PredR && LHSC && RHSC && LHS->hasOneUse() && RHS->hasOneUse() &&
-      LHSC->getBitWidth() == RHSC->getBitWidth() && *LHSC == *RHSC) {
-
-    Value *AddOpnd;
-    const APInt *LAddC, *RAddC;
-    if (match(LHS0, m_Add(m_Value(AddOpnd), m_APInt(LAddC))) &&
-        match(RHS0, m_Add(m_Specific(AddOpnd), m_APInt(RAddC))) &&
-        LAddC->ugt(*LHSC) && RAddC->ugt(*LHSC)) {
-
-      APInt DiffC = *LAddC ^ *RAddC;
-      if (DiffC.isPowerOf2()) {
-        const APInt *MaxAddC = nullptr;
-        if (LAddC->ult(*RAddC))
-          MaxAddC = RAddC;
-        else
-          MaxAddC = LAddC;
-
-        APInt RRangeLow = -*RAddC;
-        APInt RRangeHigh = RRangeLow + *LHSC;
-        APInt LRangeLow = -*LAddC;
-        APInt LRangeHigh = LRangeLow + *LHSC;
-        APInt LowRangeDiff = RRangeLow ^ LRangeLow;
-        APInt HighRangeDiff = RRangeHigh ^ LRangeHigh;
-        APInt RangeDiff = LRangeLow.sgt(RRangeLow) ? LRangeLow - RRangeLow
-                                                   : RRangeLow - LRangeLow;
-
-        if (LowRangeDiff.isPowerOf2() && LowRangeDiff == HighRangeDiff &&
-            RangeDiff.ugt(*LHSC)) {
-          Type *Ty = AddOpnd->getType();
-          Value *MaskC = ConstantInt::get(Ty, ~DiffC);
-
-          Value *NewAnd = Builder.CreateAnd(AddOpnd, MaskC);
-          Value *NewAdd = Builder.CreateAdd(NewAnd,
-                                            ConstantInt::get(Ty, *MaxAddC));
-          return Builder.CreateICmp(LHS->getPredicate(), NewAdd,
-                                    ConstantInt::get(Ty, *LHSC));
-        }
-      }
-    }
-  }
-
   // (icmp1 A, B) | (icmp2 A, B) --> (icmp3 A, B)
+  // (icmp1 A, B) & (icmp2 A, B) --> (icmp3 A, B)
   if (predicatesFoldable(PredL, PredR)) {
-    if (LHS0 == RHS1 && LHS1 == RHS0)
-      LHS->swapOperands();
+    if (LHS0 == RHS1 && LHS1 == RHS0) {
+      PredL = ICmpInst::getSwappedPredicate(PredL);
+      std::swap(LHS0, LHS1);
+    }
     if (LHS0 == RHS0 && LHS1 == RHS1) {
-      unsigned Code =
-          getICmpCode(LHS->getPredicate()) | getICmpCode(RHS->getPredicate());
+      unsigned Code = IsAnd ? getICmpCode(PredL) & getICmpCode(PredR)
+                            : getICmpCode(PredL) | getICmpCode(PredR);
       bool IsSigned = LHS->isSigned() || RHS->isSigned();
       return getNewICmpValue(Code, IsSigned, LHS0, LHS1, Builder);
     }
@@ -2592,73 +2424,55 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
   // handle (roughly):
   // (icmp ne (A & B), C) | (icmp ne (A & D), E)
-  if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, false, Builder))
+  // (icmp eq (A & B), C) & (icmp eq (A & D), E)
+  if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, Builder))
     return V;
 
-  if (LHS->hasOneUse() || RHS->hasOneUse()) {
-    // (icmp eq B, 0) | (icmp ult A, B) -> (icmp ule A, B-1)
-    // (icmp eq B, 0) | (icmp ugt B, A) -> (icmp ule A, B-1)
-    Value *A = nullptr, *B = nullptr;
-    if (PredL == ICmpInst::ICMP_EQ && match(LHS1, m_Zero())) {
-      B = LHS0;
-      if (PredR == ICmpInst::ICMP_ULT && LHS0 == RHS1)
-        A = RHS0;
-      else if (PredR == ICmpInst::ICMP_UGT && LHS0 == RHS0)
-        A = RHS1;
-    }
-    // (icmp ult A, B) | (icmp eq B, 0) -> (icmp ule A, B-1)
-    // (icmp ugt B, A) | (icmp eq B, 0) -> (icmp ule A, B-1)
-    else if (PredR == ICmpInst::ICMP_EQ && match(RHS1, m_Zero())) {
-      B = RHS0;
-      if (PredL == ICmpInst::ICMP_ULT && RHS0 == LHS1)
-        A = LHS0;
-      else if (PredL == ICmpInst::ICMP_UGT && RHS0 == LHS0)
-        A = LHS1;
-    }
-    if (A && B && B->getType()->isIntOrIntVectorTy())
-      return Builder.CreateICmp(
-          ICmpInst::ICMP_UGE,
-          Builder.CreateAdd(B, Constant::getAllOnesValue(B->getType())), A);
-  }
-
-  if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, Or, Builder, Q))
+  if (Value *V = foldAndOrOfICmpEqZeroAndICmp(LHS, RHS, IsAnd, Builder))
     return V;
-  if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, Or, Builder, Q))
+  if (Value *V = foldAndOrOfICmpEqZeroAndICmp(RHS, LHS, IsAnd, Builder))
     return V;
 
-  if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, /*IsAnd=*/false, Builder))
+  if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, BO, Builder, Q))
     return V;
-  if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, /*IsAnd=*/false, Builder))
+  if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, BO, Builder, Q))
+    return V;
+
+  if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder))
+    return V;
+  if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, IsAnd, Builder))
     return V;
 
   // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
-  if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/true))
+  // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
+  if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/!IsAnd))
     return V;
 
   // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
-  if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/true))
+  // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
+  if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd))
     return V;
 
-  if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, false, Builder))
+  if (IsAnd)
+    if (Value *V = foldSignedTruncationCheck(LHS, RHS, BO, Builder))
+      return V;
+
+  if (Value *V = foldIsPowerOf2(LHS, RHS, IsAnd, Builder))
     return V;
 
-  if (Value *V = foldIsPowerOf2(LHS, RHS, false /* JoinedByAnd */, Builder))
-    return V;
-
-  if (Value *X =
-          foldUnsignedUnderflowCheck(LHS, RHS, /*IsAnd=*/false, Q, Builder))
+  if (Value *X = foldUnsignedUnderflowCheck(LHS, RHS, IsAnd, Q, Builder))
     return X;
-  if (Value *X =
-          foldUnsignedUnderflowCheck(RHS, LHS, /*IsAnd=*/false, Q, Builder))
+  if (Value *X = foldUnsignedUnderflowCheck(RHS, LHS, IsAnd, Q, Builder))
     return X;
 
-  if (Value *X = foldEqOfParts(LHS, RHS, /*IsAnd=*/false))
+  if (Value *X = foldEqOfParts(LHS, RHS, IsAnd))
     return X;
 
   // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
+  // (icmp eq A, 0) & (icmp eq B, 0) --> (icmp eq (A|B), 0)
   // TODO: Remove this when foldLogOpOfMaskedICmps can handle undefs.
-  if (PredL == ICmpInst::ICMP_NE && match(LHS1, m_ZeroInt()) &&
-      PredR == ICmpInst::ICMP_NE && match(RHS1, m_ZeroInt()) &&
+  if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+      PredL == PredR && match(LHS1, m_ZeroInt()) && match(RHS1, m_ZeroInt()) &&
       LHS0->getType() == RHS0->getType()) {
     Value *NewOr = Builder.CreateOr(LHS0, RHS0);
     return Builder.CreateICmp(PredL, NewOr,
@@ -2669,8 +2483,43 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (!LHSC || !RHSC)
     return nullptr;
 
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, *LHSC, PredR, RHS0, *RHSC,
-                                     Builder, /* IsAnd */ false);
+  // (trunc x) == C1 & (and x, CA) == C2 -> (and x, CA|CMAX) == C1|C2
+  // (trunc x) != C1 | (and x, CA) != C2 -> (and x, CA|CMAX) != C1|C2
+  // where CMAX is the all ones value for the truncated type,
+  // iff the lower bits of C2 and CA are zero.
+  if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+      PredL == PredR && LHS->hasOneUse() && RHS->hasOneUse()) {
+    Value *V;
+    const APInt *AndC, *SmallC = nullptr, *BigC = nullptr;
+
+    // (trunc x) == C1 & (and x, CA) == C2
+    // (and x, CA) == C2 & (trunc x) == C1
+    if (match(RHS0, m_Trunc(m_Value(V))) &&
+        match(LHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
+      SmallC = RHSC;
+      BigC = LHSC;
+    } else if (match(LHS0, m_Trunc(m_Value(V))) &&
+               match(RHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
+      SmallC = LHSC;
+      BigC = RHSC;
+    }
+
+    if (SmallC && BigC) {
+      unsigned BigBitSize = BigC->getBitWidth();
+      unsigned SmallBitSize = SmallC->getBitWidth();
+
+      // Check that the low bits are zero.
+      APInt Low = APInt::getLowBitsSet(BigBitSize, SmallBitSize);
+      if ((Low & *AndC).isZero() && (Low & *BigC).isZero()) {
+        Value *NewAnd = Builder.CreateAnd(V, Low | *AndC);
+        APInt N = SmallC->zext(BigBitSize) | *BigC;
+        Value *NewVal = ConstantInt::get(NewAnd->getType(), N);
+        return Builder.CreateICmp(PredL, NewAnd, NewVal);
+      }
+    }
+  }
+
+  return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
@@ -2843,6 +2692,14 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (match(Op1, m_Xor(m_Specific(B), m_Specific(A))))
       return BinaryOperator::CreateOr(Op1, C);
 
+  // ((A & B) ^ C) | B -> C | B
+  if (match(Op0, m_c_Xor(m_c_And(m_Value(A), m_Specific(Op1)), m_Value(C))))
+    return BinaryOperator::CreateOr(C, Op1);
+
+  // B | ((A & B) ^ C) -> B | C
+  if (match(Op1, m_c_Xor(m_c_And(m_Value(A), m_Specific(Op0)), m_Value(C))))
+    return BinaryOperator::CreateOr(Op0, C);
+
   // ((B | C) & A) | B -> B | (A & C)
   if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
@@ -2904,7 +2761,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     ICmpInst *LHS = dyn_cast<ICmpInst>(Op0);
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
     if (LHS && RHS)
-      if (Value *Res = foldOrOfICmps(LHS, RHS, I))
+      if (Value *Res = foldAndOrOfICmps(LHS, RHS, I, /* IsAnd */ false))
         return replaceInstUsesWith(I, Res);
 
     // TODO: Make this recursive; it's a little tricky because an arbitrary
@@ -2912,18 +2769,18 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     Value *X, *Y;
     if (LHS && match(Op1, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
-        if (Value *Res = foldOrOfICmps(LHS, Cmp, I))
+        if (Value *Res = foldAndOrOfICmps(LHS, Cmp, I, /* IsAnd */ false))
           return replaceInstUsesWith(I, Builder.CreateOr(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
-        if (Value *Res = foldOrOfICmps(LHS, Cmp, I))
+        if (Value *Res = foldAndOrOfICmps(LHS, Cmp, I, /* IsAnd */ false))
           return replaceInstUsesWith(I, Builder.CreateOr(Res, X));
     }
     if (RHS && match(Op0, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
-        if (Value *Res = foldOrOfICmps(Cmp, RHS, I))
+        if (Value *Res = foldAndOrOfICmps(Cmp, RHS, I, /* IsAnd */ false))
           return replaceInstUsesWith(I, Builder.CreateOr(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
-        if (Value *Res = foldOrOfICmps(Cmp, RHS, I))
+        if (Value *Res = foldAndOrOfICmps(Cmp, RHS, I, /* IsAnd */ false))
           return replaceInstUsesWith(I, Builder.CreateOr(Res, X));
     }
   }

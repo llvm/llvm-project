@@ -1,7 +1,8 @@
 #include "derived.h"
 
 int main() {
-    Foo f; // break here
-    f.bar();
-    return f.baz();
+    foo1 = foo2; // break here
+
+    foo1.bar();
+    return foo1.baz();
 }

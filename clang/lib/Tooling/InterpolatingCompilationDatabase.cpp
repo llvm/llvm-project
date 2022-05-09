@@ -328,7 +328,7 @@ public:
       StringRef Path = Strings.save(StringRef(OriginalPaths[I]).lower());
 
       Paths.emplace_back(Path, I);
-      Types.push_back(foldType(guessType(Path)));
+      Types.push_back(foldType(guessType(OriginalPaths[I])));
       Stems.emplace_back(sys::path::stem(Path), I);
       auto Dir = ++sys::path::rbegin(Path), DirEnd = sys::path::rend(Path);
       for (int J = 0; J < DirectorySegmentsIndexed && Dir != DirEnd; ++J, ++Dir)

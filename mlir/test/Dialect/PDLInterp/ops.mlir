@@ -6,7 +6,11 @@
 
 // -----
 
-func @operations(%attribute: !pdl.attribute,
+// Unused operation to force loading the `arithmetic` dialect for the
+// test of type inferrence.
+arith.constant true
+
+func.func @operations(%attribute: !pdl.attribute,
                  %input: !pdl.value,
                  %type: !pdl.type) {
   // attributes, operands, and results
@@ -21,12 +25,15 @@ func @operations(%attribute: !pdl.attribute,
   // operands, and results
   %op3 = pdl_interp.create_operation "foo.op"(%input : !pdl.value) -> (%type : !pdl.type)
 
+  // inferred results
+  %op4 = pdl_interp.create_operation "arith.constant" -> <inferred>
+
   pdl_interp.finalize
 }
 
 // -----
 
-func @extract(%attrs : !pdl.range<attribute>, %ops : !pdl.range<operation>, %types : !pdl.range<type>, %vals: !pdl.range<value>) {
+func.func @extract(%attrs : !pdl.range<attribute>, %ops : !pdl.range<operation>, %types : !pdl.range<type>, %vals: !pdl.range<value>) {
   // attribute at index 0
   %attr = pdl_interp.extract 0 of %attrs : !pdl.attribute
 
@@ -44,7 +51,7 @@ func @extract(%attrs : !pdl.range<attribute>, %ops : !pdl.range<operation>, %typ
 
 // -----
 
-func @foreach(%ops: !pdl.range<operation>) {
+func.func @foreach(%ops: !pdl.range<operation>) {
   // iterate over a range of operations
   pdl_interp.foreach %op : !pdl.operation in %ops {
     %val = pdl_interp.get_result 0 of %op
@@ -57,7 +64,7 @@ func @foreach(%ops: !pdl.range<operation>) {
 
 // -----
 
-func @users(%value: !pdl.value, %values: !pdl.range<value>) {
+func.func @users(%value: !pdl.value, %values: !pdl.range<value>) {
   // all the users of a single value
   %ops1 = pdl_interp.get_users of %value : !pdl.value
 

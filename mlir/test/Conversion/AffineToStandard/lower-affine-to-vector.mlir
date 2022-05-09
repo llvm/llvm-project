@@ -1,7 +1,7 @@
 // RUN: mlir-opt -lower-affine --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @affine_vector_load
-func @affine_vector_load(%arg0 : index) {
+func.func @affine_vector_load(%arg0 : index) {
   %0 = memref.alloc() : memref<100xf32>
   affine.for %i0 = 0 to 16 {
     %1 = affine.vector_load %0[%i0 + symbol(%arg0) + 7] : memref<100xf32>, vector<8xf32>
@@ -17,7 +17,7 @@ func @affine_vector_load(%arg0 : index) {
 // -----
 
 // CHECK-LABEL: func @affine_vector_store
-func @affine_vector_store(%arg0 : index) {
+func.func @affine_vector_store(%arg0 : index) {
   %0 = memref.alloc() : memref<100xf32>
   %1 = arith.constant dense<11.0> : vector<4xf32>
   affine.for %i0 = 0 to 16 {
@@ -37,7 +37,7 @@ func @affine_vector_store(%arg0 : index) {
 // -----
 
 // CHECK-LABEL: func @vector_load_2d
-func @vector_load_2d() {
+func.func @vector_load_2d() {
   %0 = memref.alloc() : memref<100x100xf32>
   affine.for %i0 = 0 to 16 step 2{
     affine.for %i1 = 0 to 16 step 8 {
@@ -54,7 +54,7 @@ func @vector_load_2d() {
 // -----
 
 // CHECK-LABEL: func @vector_store_2d
-func @vector_store_2d() {
+func.func @vector_store_2d() {
   %0 = memref.alloc() : memref<100x100xf32>
   %1 = arith.constant dense<11.0> : vector<2x8xf32>
   affine.for %i0 = 0 to 16 step 2{

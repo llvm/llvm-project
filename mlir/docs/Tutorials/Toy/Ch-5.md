@@ -243,7 +243,7 @@ toy.func @main() {
 With affine lowering added to our pipeline, we can now generate:
 
 ```mlir
-func @main() {
+func.func @main() {
   %cst = arith.constant 1.000000e+00 : f64
   %cst_0 = arith.constant 2.000000e+00 : f64
   %cst_1 = arith.constant 3.000000e+00 : f64
@@ -301,7 +301,7 @@ help clean this up. Adding the `LoopFusion` and `MemRefDataFlowOpt` passes to
 the pipeline gives the following result:
 
 ```mlir
-func @main() {
+func.func @main() {
   %cst = arith.constant 1.000000e+00 : f64
   %cst_0 = arith.constant 2.000000e+00 : f64
   %cst_1 = arith.constant 3.000000e+00 : f64

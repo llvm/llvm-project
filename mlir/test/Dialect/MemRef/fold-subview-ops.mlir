@@ -1,6 +1,6 @@
 // RUN: mlir-opt -fold-memref-subview-ops -split-input-file %s -o - | FileCheck %s
 
-func @fold_static_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
+func.func @fold_static_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [64, 3]>
   %1 = memref.load %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [64, 3]>
   return %1 : f32
@@ -19,7 +19,7 @@ func @fold_static_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : in
 
 // -----
 
-func @fold_dynamic_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index) -> f32 {
+func.func @fold_dynamic_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index) -> f32 {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][%arg5, %arg6] :
     memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [?, ?]>
   %1 = memref.load %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [?, ?]>
@@ -40,7 +40,7 @@ func @fold_dynamic_stride_subview_with_load(%arg0 : memref<12x32xf32>, %arg1 : i
 
 // -----
 
-func @fold_static_stride_subview_with_store(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : f32) {
+func.func @fold_static_stride_subview_with_store(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : f32) {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] :
     memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [64, 3]>
   memref.store %arg5, %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [64, 3]>
@@ -60,7 +60,7 @@ func @fold_static_stride_subview_with_store(%arg0 : memref<12x32xf32>, %arg1 : i
 
 // -----
 
-func @fold_dynamic_stride_subview_with_store(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : f32) {
+func.func @fold_dynamic_stride_subview_with_store(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : f32) {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][%arg5, %arg6] :
     memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [?, ?]>
   memref.store %arg7, %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [?, ?]>
@@ -81,7 +81,7 @@ func @fold_dynamic_stride_subview_with_store(%arg0 : memref<12x32xf32>, %arg1 : 
 
 // -----
 
-func @fold_subview_with_transfer_read(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index) -> vector<4xf32> {
+func.func @fold_subview_with_transfer_read(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index) -> vector<4xf32> {
   %f1 = arith.constant 1.0 : f32
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][%arg5, %arg6] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [?, ?]>
   %1 = vector.transfer_read %0[%arg3, %arg4], %f1 {in_bounds = [true]} : memref<4x4xf32, offset:?, strides: [?, ?]>, vector<4xf32>
@@ -102,7 +102,7 @@ func @fold_subview_with_transfer_read(%arg0 : memref<12x32xf32>, %arg1 : index, 
 
 // -----
 
-func @fold_static_stride_subview_with_transfer_write(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5: index, %arg6 : index, %arg7 : vector<4xf32>) {
+func.func @fold_static_stride_subview_with_transfer_write(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index, %arg5: index, %arg6 : index, %arg7 : vector<4xf32>) {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][%arg5, %arg6] :
     memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [?, ?]>
   vector.transfer_write %arg7, %0[%arg3, %arg4] {in_bounds = [true]} : vector<4xf32>, memref<4x4xf32, offset:?, strides: [?, ?]>
@@ -123,7 +123,7 @@ func @fold_static_stride_subview_with_transfer_write(%arg0 : memref<12x32xf32>, 
 
 // -----
 
-func @fold_rank_reducing_subview_with_load
+func.func @fold_rank_reducing_subview_with_load
     (%arg0 : memref<?x?x?x?x?x?xf32>, %arg1 : index, %arg2 : index,
      %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index,
      %arg7 : index, %arg8 : index, %arg9 : index, %arg10: index,
@@ -163,7 +163,7 @@ func @fold_rank_reducing_subview_with_load
 
 // -----
 
-func @fold_vector_transfer_read_with_rank_reduced_subview(
+func.func @fold_vector_transfer_read_with_rank_reduced_subview(
     %arg0 : memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>,
     %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,
     %arg6 : index) -> vector<4xf32> {
@@ -192,7 +192,7 @@ func @fold_vector_transfer_read_with_rank_reduced_subview(
 
 // -----
 
-func @fold_vector_transfer_write_with_rank_reduced_subview(
+func.func @fold_vector_transfer_write_with_rank_reduced_subview(
     %arg0 : memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>,
     %arg1 : vector<4xf32>, %arg2: index, %arg3 : index, %arg4 : index,
     %arg5: index, %arg6 : index, %arg7 : index) {
@@ -222,7 +222,7 @@ func @fold_vector_transfer_write_with_rank_reduced_subview(
 
 // -----
 
-func @fold_vector_transfer_write_with_inner_rank_reduced_subview(
+func.func @fold_vector_transfer_write_with_inner_rank_reduced_subview(
     %arg0 : memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>,
     %arg1 : vector<4xf32>, %arg2: index, %arg3 : index, %arg4 : index,
     %arg5: index, %arg6 : index, %arg7 : index) {
@@ -259,7 +259,7 @@ func @fold_vector_transfer_write_with_inner_rank_reduced_subview(
 //  ops would be generated.
 
 // CHECK-LABEL: func @fold_static_stride_subview_with_affine_load_store
-func @fold_static_stride_subview_with_affine_load_store(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
+func.func @fold_static_stride_subview_with_affine_load_store(%arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
   %0 = memref.subview %arg0[%arg1, %arg2][4, 4][2, 3] : memref<12x32xf32> to memref<4x4xf32, offset:?, strides: [64, 3]>
   %1 = affine.load %0[%arg3, %arg4] : memref<4x4xf32, offset:?, strides: [64, 3]>
   // CHECK-NEXT: affine.apply

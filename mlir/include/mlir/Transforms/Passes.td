@@ -184,11 +184,11 @@ def SymbolDCE : Pass<"symbol-dce"> {
     For example, consider the following input:
 
     ```mlir
-    func private @dead_private_function()
-    func private @live_private_function()
+    func.func private @dead_private_function()
+    func.func private @live_private_function()
 
     // Note: The `public` isn't necessary here, as this is the default.
-    func public @public_function() {
+    func.func public @public_function() {
       "foo.return"() {uses = [@live_private_function]} : () -> ()
     }
     ```
@@ -200,9 +200,9 @@ def SymbolDCE : Pass<"symbol-dce"> {
     are no links to known-live operations. After running, we get the expected:
 
     ```mlir
-    func private @live_private_function()
+    func.func private @live_private_function()
 
-    func public @public_function() {
+    func.func public @public_function() {
       "foo.return"() {uses = [@live_private_function]} : () -> ()
     }
     ```

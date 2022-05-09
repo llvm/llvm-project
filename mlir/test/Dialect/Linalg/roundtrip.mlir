@@ -11,7 +11,7 @@
 // CHECK-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 // CHECK-DAG: #[[$strided3DT:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>
 
-func @views(%arg0: index) {
+func.func @views(%arg0: index) {
   %c0 = arith.constant 0 : index
   %0 = arith.muli %arg0, %arg0 : index
   %1 = memref.alloc (%0) : memref<?xi8>
@@ -31,7 +31,7 @@ func @views(%arg0: index) {
 
 // -----
 
-func @ops(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+func.func @ops(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
           %arg1: memref<?xf32, offset: ?, strides: [1]>,
           %arg2: memref<?xf32, offset: ?, strides: [1]>,
           %arg3: memref<f32>) {
@@ -62,7 +62,7 @@ func @ops(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 
 // -----
 
-func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
+func.func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
   linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?xf32, offset: ?, strides: [1]>)
   return
 }
@@ -72,7 +72,7 @@ func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
 
 // -----
 
-func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
+func.func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
   %0 = memref.transpose %arg0 (i, j, k) -> (k, j, i) : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]> to memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>>
   return
 }
@@ -83,7 +83,7 @@ func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
 // -----
 
 
-func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: f32) {
+func.func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: f32) {
   linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>)
   return
 }
@@ -105,7 +105,7 @@ func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1:
   library_call = "some_external_function_name_1"
 }
 
-func @generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,
+func.func @generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,
               %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
   %cst = arith.constant 0.0 : f32
   linalg.generic #trait_0
@@ -126,7 +126,7 @@ func @generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,
 //  CHECK-SAME:     outs({{.*}} : memref<?x?x?xf32, #[[$strided3D]]>)
 //  CHECK-SAME:     {foo = 1 : i64}
 
-func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>,
+func.func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>,
                                 %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
   %cst = arith.constant 0.0 : f32
   linalg.generic #trait_0
@@ -149,7 +149,7 @@ func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>,
 // -----
 
 #map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-func @generic_without_inputs(%arg0 : memref<?x?x?xf32>) {
+func.func @generic_without_inputs(%arg0 : memref<?x?x?xf32>) {
   linalg.generic  {indexing_maps = [#map0],
                    iterator_types = ["parallel", "parallel", "parallel"]}
                   outs(%arg0 : memref<?x?x?xf32>) {
@@ -178,7 +178,7 @@ func @generic_without_inputs(%arg0 : memref<?x?x?xf32>) {
   library_call = "some_external_function_name_1"
 }
 
-func @generic_with_tensor_input_and_output(
+func.func @generic_with_tensor_input_and_output(
     %arg0: tensor<?x?xvector<3x4xi4>>, %arg1: tensor<?x?x?xf32>)
     -> (tensor<?x?x?xf32>) {
   %0 = linalg.generic #trait_1
@@ -203,7 +203,7 @@ func @generic_with_tensor_input_and_output(
 
 // -----
 
-func @generic_with_multiple_tensor_outputs(
+func.func @generic_with_multiple_tensor_outputs(
     %arg0: tensor<?xi32>, %arg1: tensor<?xi32>, %arg2: i32)
     -> (tensor<i32>, tensor<i32>) {
   %c0 = arith.constant 0 : index
@@ -247,7 +247,7 @@ func @generic_with_multiple_tensor_outputs(
   library_call = "some_broadcast_external_fn"
 }
 
-func @generic_op_zero_rank(%arg0: tensor<f32>, %arg1 : tensor<3x4xf32>) -> (tensor<3x4xf32>)
+func.func @generic_op_zero_rank(%arg0: tensor<f32>, %arg1 : tensor<3x4xf32>) -> (tensor<3x4xf32>)
 {
   %0 = linalg.generic #trait_broadcast
        ins(%arg0 : tensor<f32>)
@@ -272,7 +272,7 @@ func @generic_op_zero_rank(%arg0: tensor<f32>, %arg1 : tensor<3x4xf32>) -> (tens
   library_call = "some_external_function_name_2"
 }
 
-func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,
+func.func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,
                      %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
   linalg.generic #trait_3
        ins(%arg0 : memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>)
@@ -303,7 +303,7 @@ func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1
 // -----
 
 
-func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x?xf32>,
+func.func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x?xf32>,
                 %ta3: tensor<?x?x?xf32>, %tb3: tensor<?x?x?xf32>, %tc3: tensor<?x?x?xf32>)
   -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
 {
@@ -330,7 +330,7 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x
 // -----
 
 #attr = {"foo"}
-func @init_tensor(%arg0 : index, %arg1 : index)
+func.func @init_tensor(%arg0 : index, %arg1 : index)
 {
   %0 = linalg.init_tensor [3, 42] : tensor<3x42xf32>
   %1 = linalg.init_tensor [4, %arg0, %arg1, 5] : tensor<4x?x?x5xf32>
@@ -344,7 +344,7 @@ func @init_tensor(%arg0 : index, %arg1 : index)
 
 // -----
 
-func @fill_tensor(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> {
+func.func @fill_tensor(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> {
   %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
   %1 = linalg.fill ins(%arg2 : f32) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>

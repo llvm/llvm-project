@@ -277,6 +277,10 @@ EnableDCEInRA("amdgpu-dce-in-ra",
     cl::init(true), cl::Hidden,
     cl::desc("Enable machine DCE inside regalloc"));
 
+static cl::opt<bool> EnableSetWavePriority("amdgpu-set-wave-priority",
+                                           cl::desc("Adjust wave priority"),
+                                           cl::init(false), cl::Hidden);
+
 static cl::opt<bool> EnableScalarIRPasses(
   "amdgpu-scalar-ir-passes",
   cl::desc("Enable scalar IR passes"),
@@ -1360,6 +1364,8 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(&SIInsertHardClausesID);
 
   addPass(&SILateBranchLoweringPassID);
+  if (isPassEnabled(EnableSetWavePriority, CodeGenOpt::Less))
+    addPass(createAMDGPUSetWavePriorityPass());
   if (getOptLevel() > CodeGenOpt::None)
     addPass(&SIPreEmitPeepholeID);
   // The hazard recognizer that runs as part of the post-ra scheduler does not
@@ -1417,6 +1423,14 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     return false;
   };
 
+  auto parseOptionalRegister = [&](const yaml::StringValue &RegName,
+                                   Register &RegVal) {
+    return !RegName.Value.empty() && parseRegister(RegName, RegVal);
+  };
+
+  if (parseOptionalRegister(YamlMFI.VGPRForAGPRCopy, MFI->VGPRForAGPRCopy))
+    return true;
+
   auto diagnoseRegisterClass = [&](const yaml::StringValue &RegName) {
     // Create a diagnostic for a the register string literal.
     const MemoryBuffer &Buffer =
@@ -1447,6 +1461,14 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   if (MFI->StackPtrOffsetReg != AMDGPU::SP_REG &&
       !AMDGPU::SGPR_32RegClass.contains(MFI->StackPtrOffsetReg)) {
     return diagnoseRegisterClass(YamlMFI.StackPtrOffsetReg);
+  }
+
+  for (const auto &YamlReg : YamlMFI.WWMReservedRegs) {
+    Register ParsedReg;
+    if (parseRegister(YamlReg, ParsedReg))
+      return true;
+
+    MFI->reserveWWMRegister(ParsedReg);
   }
 
   auto parseAndCheckArgument = [&](const Optional<yaml::SIArgument> &A,

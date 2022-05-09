@@ -303,7 +303,7 @@ struct LowerGpuOpsToNVVMOpsPass
 } // namespace
 
 void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
-  target.addIllegalOp<FuncOp>();
+  target.addIllegalOp<func::FuncOp>();
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();

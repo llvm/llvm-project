@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o %t %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o %t %s
 
+int printf(const char *, ...);
+
 @interface I0 {
 @public
   _Complex float iv0;

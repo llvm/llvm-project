@@ -121,6 +121,8 @@ struct FileState {
   SourceLocation LastMacroLocation;
 };
 
+} // namespace
+
 class MacroToEnumCallbacks : public PPCallbacks {
 public:
   MacroToEnumCallbacks(MacroToEnumCheck *Check, const LangOptions &LangOptions,
@@ -197,6 +199,8 @@ public:
   // After we've seen everything, issue warnings and fix-its.
   void EndOfMainFile() override;
 
+  void invalidateRange(SourceRange Range);
+
 private:
   void newEnum() {
     if (Enums.empty() || !Enums.back().empty())
@@ -222,6 +226,10 @@ private:
   void conditionStart(const SourceLocation &Loc);
   void checkCondition(SourceRange ConditionRange);
   void checkName(const Token &MacroNameTok);
+  void rememberExpressionName(const Token &Tok);
+  void rememberExpressionTokens(ArrayRef<Token> MacroTokens);
+  void invalidateExpressionNames();
+  void issueDiagnostics();
   void warnMacroEnum(const EnumMacro &Macro) const;
   void fixEnumMacro(const MacroList &MacroList) const;
 
@@ -230,6 +238,7 @@ private:
   const SourceManager &SM;
   SmallVector<MacroList> Enums;
   SmallVector<FileState> Files;
+  std::vector<std::string> ExpressionNames;
   FileState *CurrentFile = nullptr;
 };
 
@@ -284,13 +293,30 @@ void MacroToEnumCallbacks::checkCondition(SourceRange Range) {
 }
 
 void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
-  StringRef Id = getTokenName(MacroNameTok);
+  rememberExpressionName(MacroNameTok);
 
+  StringRef Id = getTokenName(MacroNameTok);
   llvm::erase_if(Enums, [&Id](const MacroList &MacroList) {
     return llvm::any_of(MacroList, [&Id](const EnumMacro &Macro) {
       return getTokenName(Macro.Name) == Id;
     });
   });
+}
+
+void MacroToEnumCallbacks::rememberExpressionName(const Token &Tok) {
+  std::string Id = getTokenName(Tok).str();
+  auto Pos = llvm::lower_bound(ExpressionNames, Id);
+  if (Pos == ExpressionNames.end() || *Pos != Id) {
+    ExpressionNames.insert(Pos, Id);
+  }
+}
+
+void MacroToEnumCallbacks::rememberExpressionTokens(
+    ArrayRef<Token> MacroTokens) {
+  for (Token Tok : MacroTokens) {
+    if (Tok.isAnyIdentifier())
+      rememberExpressionName(Tok);
+  }
 }
 
 void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
@@ -309,6 +335,8 @@ void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
   CurrentFile = &Files.back();
 }
 
+// Any defined but rejected macro is scanned for identifiers that
+// are to be excluded as enums.
 void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
                                         const MacroDirective *MD) {
   // Include guards are never candidates for becoming an enum.
@@ -325,8 +353,12 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
 
   const MacroInfo *Info = MD->getMacroInfo();
   ArrayRef<Token> MacroTokens = Info->tokens();
-  if (Info->isFunctionLike() || Info->isBuiltinMacro() || MacroTokens.empty())
+  if (Info->isBuiltinMacro() || MacroTokens.empty())
     return;
+  if (Info->isFunctionLike()) {
+    rememberExpressionTokens(MacroTokens);
+    return;
+  }
 
   // Return Lit when +Lit, -Lit or ~Lit; otherwise return Unknown.
   Token Unknown;
@@ -361,17 +393,22 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
     else if (Size == 2)
       // It can be +Lit, -Lit or ~Lit.
       Tok = GetUnopArg(MacroTokens[Begin], MacroTokens[End]);
-    else
+    else {
       // Zero or too many tokens after we stripped matching parens.
+      rememberExpressionTokens(MacroTokens);
       return;
+    }
   } else if (MacroTokens.size() == 2) {
     // It can be +Lit, -Lit, or ~Lit.
     Tok = GetUnopArg(MacroTokens.front(), MacroTokens.back());
   }
 
   if (!Tok.isLiteral() || isStringLiteral(Tok.getKind()) ||
-      !isIntegralConstant(Tok))
+      !isIntegralConstant(Tok)) {
+    if (Tok.isAnyIdentifier())
+      rememberExpressionName(Tok);
     return;
+  }
 
   if (!isConsecutiveMacro(MD))
     newEnum();
@@ -384,6 +421,8 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
 void MacroToEnumCallbacks::MacroUndefined(const Token &MacroNameTok,
                                           const MacroDefinition &MD,
                                           const MacroDirective *Undef) {
+  rememberExpressionName(MacroNameTok);
+
   auto MatchesToken = [&MacroNameTok](const EnumMacro &Macro) {
     return getTokenName(Macro.Name) == getTokenName(MacroNameTok);
   };
@@ -447,7 +486,31 @@ void MacroToEnumCallbacks::PragmaDirective(SourceLocation Loc,
     CurrentFile->GuardScanner = IncludeGuard::IfGuard;
 }
 
+void MacroToEnumCallbacks::invalidateExpressionNames() {
+  for (const std::string &Id : ExpressionNames) {
+    llvm::erase_if(Enums, [Id](const MacroList &MacroList) {
+      return llvm::any_of(MacroList, [&Id](const EnumMacro &Macro) {
+        return getTokenName(Macro.Name) == Id;
+      });
+    });
+  }
+}
+
 void MacroToEnumCallbacks::EndOfMainFile() {
+    invalidateExpressionNames();
+    issueDiagnostics();
+}
+
+void MacroToEnumCallbacks::invalidateRange(SourceRange Range) {
+  llvm::erase_if(Enums, [Range](const MacroList &MacroList) {
+    return llvm::any_of(MacroList, [Range](const EnumMacro &Macro) {
+      return Macro.Directive->getLocation() >= Range.getBegin() &&
+             Macro.Directive->getLocation() <= Range.getEnd();
+    });
+  });
+}
+
+void MacroToEnumCallbacks::issueDiagnostics() {
   for (const MacroList &MacroList : Enums) {
     if (MacroList.empty())
       continue;
@@ -504,13 +567,43 @@ void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {
   Diagnostic << FixItHint::CreateInsertion(End, "};\n");
 }
 
-} // namespace
-
 void MacroToEnumCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(
-      std::make_unique<MacroToEnumCallbacks>(this, getLangOpts(), SM));
+  auto Callback = std::make_unique<MacroToEnumCallbacks>(this, getLangOpts(), SM);
+  PPCallback = Callback.get();
+  PP->addPPCallbacks(std::move(Callback));
+}
+
+void MacroToEnumCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
+  using namespace ast_matchers;
+  auto TopLevelDecl = hasParent(translationUnitDecl());
+  Finder->addMatcher(decl(TopLevelDecl).bind("top"), this);
+}
+
+static bool isValid(SourceRange Range) {
+  return Range.getBegin().isValid() && Range.getEnd().isValid();
+}
+
+static bool empty(SourceRange Range) {
+  return Range.getBegin() == Range.getEnd();
+}
+
+void MacroToEnumCheck::check(
+    const ast_matchers::MatchFinder::MatchResult &Result) {
+  auto *TLDecl = Result.Nodes.getNodeAs<Decl>("top");
+  if (TLDecl == nullptr)
+      return;
+
+  SourceRange Range = TLDecl->getSourceRange();
+  if (auto *TemplateFn = Result.Nodes.getNodeAs<FunctionTemplateDecl>("top")) {
+    if (TemplateFn->isThisDeclarationADefinition() && TemplateFn->hasBody())
+      Range = SourceRange{TemplateFn->getBeginLoc(),
+                          TemplateFn->getUnderlyingDecl()->getBodyRBrace()};
+  }
+
+  if (isValid(Range) && !empty(Range))
+    PPCallback->invalidateRange(Range);
 }
 
 } // namespace modernize

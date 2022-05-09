@@ -84,22 +84,14 @@ static inline uint64_t checkedMul(uint64_t lhs, uint64_t rhs) {
 ///   ({i}, a[i])
 /// and a rank-5 tensor element like
 ///   ({i,j,k,l,m}, a[i,j,k,l,m])
+/// We use pointer to a shared index pool rather than e.g. a direct
+/// vector since that (1) reduces the per-element memory footprint, and
+/// (2) centralizes the memory reservation and (re)allocation to one place.
 template <typename V>
 struct Element {
-  Element(const std::vector<uint64_t> &ind, V val) : indices(ind), value(val){};
-  std::vector<uint64_t> indices;
+  Element(uint64_t *ind, V val) : indices(ind), value(val){};
+  uint64_t *indices; // pointer into shared index pool
   V value;
-  /// Returns true if indices of e1 < indices of e2.
-  static bool lexOrder(const Element<V> &e1, const Element<V> &e2) {
-    uint64_t rank = e1.indices.size();
-    assert(rank == e2.indices.size());
-    for (uint64_t r = 0; r < rank; r++) {
-      if (e1.indices[r] == e2.indices[r])
-        continue;
-      return e1.indices[r] < e2.indices[r];
-    }
-    return false;
-  }
 };
 
 /// A memory-resident sparse tensor in coordinate scheme (collection of
@@ -112,29 +104,61 @@ struct SparseTensorCOO {
 public:
   SparseTensorCOO(const std::vector<uint64_t> &szs, uint64_t capacity)
       : sizes(szs) {
-    if (capacity)
+    if (capacity) {
       elements.reserve(capacity);
+      indices.reserve(capacity * getRank());
+    }
   }
+
   /// Adds element as indices and value.
   void add(const std::vector<uint64_t> &ind, V val) {
     assert(!iteratorLocked && "Attempt to add() after startIterator()");
+    uint64_t *base = indices.data();
+    uint64_t size = indices.size();
     uint64_t rank = getRank();
     assert(rank == ind.size());
-    for (uint64_t r = 0; r < rank; r++)
+    for (uint64_t r = 0; r < rank; r++) {
       assert(ind[r] < sizes[r]); // within bounds
-    elements.emplace_back(ind, val);
+      indices.push_back(ind[r]);
+    }
+    // This base only changes if indices were reallocated. In that case, we
+    // need to correct all previous pointers into the vector. Note that this
+    // only happens if we did not set the initial capacity right, and then only
+    // for every internal vector reallocation (which with the doubling rule
+    // should only incur an amortized linear overhead).
+    uint64_t *newBase = indices.data();
+    if (newBase != base) {
+      for (uint64_t i = 0, n = elements.size(); i < n; i++)
+        elements[i].indices = newBase + (elements[i].indices - base);
+      base = newBase;
+    }
+    // Add element as (pointer into shared index pool, value) pair.
+    elements.emplace_back(base + size, val);
   }
+
   /// Sorts elements lexicographically by index.
   void sort() {
     assert(!iteratorLocked && "Attempt to sort() after startIterator()");
     // TODO: we may want to cache an `isSorted` bit, to avoid
     // unnecessary/redundant sorting.
-    std::sort(elements.begin(), elements.end(), Element<V>::lexOrder);
+    std::sort(elements.begin(), elements.end(),
+              [this](const Element<V> &e1, const Element<V> &e2) {
+                uint64_t rank = getRank();
+                for (uint64_t r = 0; r < rank; r++) {
+                  if (e1.indices[r] == e2.indices[r])
+                    continue;
+                  return e1.indices[r] < e2.indices[r];
+                }
+                return false;
+              });
   }
+
   /// Returns rank.
   uint64_t getRank() const { return sizes.size(); }
+
   /// Getter for sizes array.
   const std::vector<uint64_t> &getSizes() const { return sizes; }
+
   /// Getter for elements array.
   const std::vector<Element<V>> &getElements() const { return elements; }
 
@@ -143,6 +167,7 @@ public:
     iteratorLocked = true;
     iteratorPos = 0;
   }
+
   /// Get the next element.
   const Element<V> *getNext() {
     assert(iteratorLocked && "Attempt to getNext() before startIterator()");
@@ -172,7 +197,8 @@ public:
 
 private:
   const std::vector<uint64_t> sizes; // per-dimension sizes
-  std::vector<Element<V>> elements;
+  std::vector<Element<V>> elements;  // all COO elements
+  std::vector<uint64_t> indices;     // shared index pool
   bool iteratorLocked = false;
   unsigned iteratorPos = 0;
 };
@@ -639,7 +665,7 @@ static char *toLower(char *token) {
 
 /// Read the MME header of a general sparse matrix of type real.
 static void readMMEHeader(FILE *file, char *filename, char *line,
-                          uint64_t *idata, bool *isSymmetric) {
+                          uint64_t *idata, bool *isPattern, bool *isSymmetric) {
   char header[64];
   char object[64];
   char format[64];
@@ -651,15 +677,16 @@ static void readMMEHeader(FILE *file, char *filename, char *line,
     fprintf(stderr, "Corrupt header in %s\n", filename);
     exit(1);
   }
+  // Set properties
+  *isPattern = (strcmp(toLower(field), "pattern") == 0);
   *isSymmetric = (strcmp(toLower(symmetry), "symmetric") == 0);
   // Make sure this is a general sparse matrix.
   if (strcmp(toLower(header), "%%matrixmarket") ||
       strcmp(toLower(object), "matrix") ||
-      strcmp(toLower(format), "coordinate") || strcmp(toLower(field), "real") ||
+      strcmp(toLower(format), "coordinate") ||
+      (strcmp(toLower(field), "real") && !(*isPattern)) ||
       (strcmp(toLower(symmetry), "general") && !(*isSymmetric))) {
-    fprintf(stderr,
-            "Cannot find a general sparse matrix with type real in %s\n",
-            filename);
+    fprintf(stderr, "Cannot find a general sparse matrix in %s\n", filename);
     exit(1);
   }
   // Skip comments.
@@ -726,9 +753,10 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   // Perform some file format dependent set up.
   char line[kColWidth];
   uint64_t idata[512];
+  bool isPattern = false;
   bool isSymmetric = false;
   if (strstr(filename, ".mtx")) {
-    readMMEHeader(file, filename, line, idata, &isSymmetric);
+    readMMEHeader(file, filename, line, idata, &isPattern, &isSymmetric);
   } else if (strstr(filename, ".tns")) {
     readExtFROSTTHeader(file, filename, line, idata);
   } else {
@@ -759,7 +787,8 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
     }
     // The external formats always store the numerical values with the type
     // double, but we cast these values to the sparse tensor object type.
-    double value = strtod(linePtr, &linePtr);
+    // For a pattern tensor, we arbitrarily pick the value 1 for all entries.
+    double value = isPattern ? 1.0 : strtod(linePtr, &linePtr);
     tensor->add(indices, value);
     // We currently chose to deal with symmetric matrices by fully constructing
     // them. In the future, we may want to make symmetry implicit for storage
@@ -1310,6 +1339,30 @@ void *convertToMLIRSparseTensorF32(uint64_t rank, uint64_t nse, uint64_t *shape,
   return toMLIRSparseTensor<float>(rank, nse, shape, values, indices, perm,
                                    sparse);
 }
+void *convertToMLIRSparseTensorI64(uint64_t rank, uint64_t nse, uint64_t *shape,
+                                   int64_t *values, uint64_t *indices,
+                                   uint64_t *perm, uint8_t *sparse) {
+  return toMLIRSparseTensor<int64_t>(rank, nse, shape, values, indices, perm,
+                                     sparse);
+}
+void *convertToMLIRSparseTensorI32(uint64_t rank, uint64_t nse, uint64_t *shape,
+                                   int32_t *values, uint64_t *indices,
+                                   uint64_t *perm, uint8_t *sparse) {
+  return toMLIRSparseTensor<int32_t>(rank, nse, shape, values, indices, perm,
+                                     sparse);
+}
+void *convertToMLIRSparseTensorI16(uint64_t rank, uint64_t nse, uint64_t *shape,
+                                   int16_t *values, uint64_t *indices,
+                                   uint64_t *perm, uint8_t *sparse) {
+  return toMLIRSparseTensor<int16_t>(rank, nse, shape, values, indices, perm,
+                                     sparse);
+}
+void *convertToMLIRSparseTensorI8(uint64_t rank, uint64_t nse, uint64_t *shape,
+                                  int8_t *values, uint64_t *indices,
+                                  uint64_t *perm, uint8_t *sparse) {
+  return toMLIRSparseTensor<int8_t>(rank, nse, shape, values, indices, perm,
+                                    sparse);
+}
 
 /// Converts a sparse tensor to COO-flavored format expressed using C-style
 /// data structures. The expected output parameters are pointers for these
@@ -1340,6 +1393,26 @@ void convertFromMLIRSparseTensorF32(void *tensor, uint64_t *pRank,
                                     uint64_t *pNse, uint64_t **pShape,
                                     float **pValues, uint64_t **pIndices) {
   fromMLIRSparseTensor<float>(tensor, pRank, pNse, pShape, pValues, pIndices);
+}
+void convertFromMLIRSparseTensorI64(void *tensor, uint64_t *pRank,
+                                    uint64_t *pNse, uint64_t **pShape,
+                                    int64_t **pValues, uint64_t **pIndices) {
+  fromMLIRSparseTensor<int64_t>(tensor, pRank, pNse, pShape, pValues, pIndices);
+}
+void convertFromMLIRSparseTensorI32(void *tensor, uint64_t *pRank,
+                                    uint64_t *pNse, uint64_t **pShape,
+                                    int32_t **pValues, uint64_t **pIndices) {
+  fromMLIRSparseTensor<int32_t>(tensor, pRank, pNse, pShape, pValues, pIndices);
+}
+void convertFromMLIRSparseTensorI16(void *tensor, uint64_t *pRank,
+                                    uint64_t *pNse, uint64_t **pShape,
+                                    int16_t **pValues, uint64_t **pIndices) {
+  fromMLIRSparseTensor<int16_t>(tensor, pRank, pNse, pShape, pValues, pIndices);
+}
+void convertFromMLIRSparseTensorI8(void *tensor, uint64_t *pRank,
+                                   uint64_t *pNse, uint64_t **pShape,
+                                   int8_t **pValues, uint64_t **pIndices) {
+  fromMLIRSparseTensor<int8_t>(tensor, pRank, pNse, pShape, pValues, pIndices);
 }
 
 } // extern "C"

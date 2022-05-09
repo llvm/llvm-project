@@ -60,7 +60,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
 
     ```mlir
     #tile = affine_map<(i) -> (i floordiv 4, i mod 4)>
-    func @matmul(%A: memref<16xf64, #tile>,
+    func.func @matmul(%A: memref<16xf64, #tile>,
                  %B: index, %C: memref<16xf64>) -> (memref<16xf64, #tile>) {
       affine.for %arg3 = 0 to 16 {
             %a = affine.load %A[%arg3] : memref<16xf64, #tile>
@@ -76,7 +76,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
     Output
 
     ```mlir
-    func @matmul(%arg0: memref<4x4xf64>, %arg1: index, %arg2: memref<16xf64>)
+    func.func @matmul(%arg0: memref<4x4xf64>, %arg1: index, %arg2: memref<16xf64>)
       -> memref<4x4xf64> {
       affine.for %arg3 = 0 to 16 {
         %3 = affine.load %arg0[%arg3 floordiv 4, %arg3 mod 4]: memref<4x4xf64>
@@ -94,7 +94,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
 
     ```
     #linear8 = affine_map<(i, j) -> (i * 8 + j)>
-    func @linearize(%arg0: memref<8x8xi32, #linear8>,
+    func.func @linearize(%arg0: memref<8x8xi32, #linear8>,
                     %arg1: memref<8x8xi32, #linear8>,
                     %arg2: memref<8x8xi32, #linear8>) {
       %c8 = arith.constant 8 : index
@@ -119,7 +119,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
     Output
 
     ```mlir
-    func @linearize(%arg0: memref<64xi32>,
+    func.func @linearize(%arg0: memref<64xi32>,
                     %arg1: memref<64xi32>,
                     %arg2: memref<64xi32>) {
     %c8 = arith.constant 8 : index

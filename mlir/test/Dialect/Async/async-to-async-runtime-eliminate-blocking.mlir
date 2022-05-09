@@ -5,7 +5,7 @@
 // CHECK-LABEL: func @simple_callee
 // CHECK-SAME: (%[[ARG:.*]]: f32)
 // CHECK-SAME: -> (!async.token, !async.value<f32> {builtin.foo = "bar"})
-func @simple_callee(%arg0: f32) -> (f32 {builtin.foo = "bar"}) {
+func.func @simple_callee(%arg0: f32) -> (f32 {builtin.foo = "bar"}) {
 // CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
 // CHECK: %[[RETURNED_STORAGE:.*]] = async.runtime.create : !async.value<f32>
 // CHECK: %[[ID:.*]] = async.coro.id
@@ -58,7 +58,7 @@ func @simple_callee(%arg0: f32) -> (f32 {builtin.foo = "bar"}) {
 
 // CHECK-LABEL: func @simple_caller()
 // CHECK-SAME: -> (!async.token, !async.value<f32>)
-func @simple_caller() -> f32 {
+func.func @simple_caller() -> f32 {
 // CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
 // CHECK: %[[RETURNED_STORAGE:.*]] = async.runtime.create : !async.value<f32>
 // CHECK: %[[ID:.*]] = async.coro.id
@@ -107,7 +107,7 @@ func @simple_caller() -> f32 {
 
 // CHECK-LABEL: func @double_caller()
 // CHECK-SAME: -> (!async.token, !async.value<f32>)
-func @double_caller() -> f32 {
+func.func @double_caller() -> f32 {
 // CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
 // CHECK: %[[RETURNED_STORAGE:.*]] = async.runtime.create : !async.value<f32>
 // CHECK: %[[ID:.*]] = async.coro.id
@@ -172,7 +172,7 @@ func @double_caller() -> f32 {
 
 // CHECK-LABEL: func @recursive
 // CHECK-SAME: (%[[ARG:.*]]: !async.token) -> !async.token
-func @recursive(%arg: !async.token) {
+func.func @recursive(%arg: !async.token) {
 // CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
 // CHECK: %[[ID:.*]] = async.coro.id
 // CHECK: %[[HDL:.*]] = async.coro.begin %[[ID]]
@@ -218,7 +218,7 @@ return
 
 // CHECK-LABEL: func @corecursive1
 // CHECK-SAME: (%[[ARG:.*]]: !async.token) -> !async.token
-func @corecursive1(%arg: !async.token) {
+func.func @corecursive1(%arg: !async.token) {
 // CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
 // CHECK: %[[ID:.*]] = async.coro.id
 // CHECK: %[[HDL:.*]] = async.coro.begin %[[ID]]
@@ -264,7 +264,7 @@ return
 
 // CHECK-LABEL: func @corecursive2
 // CHECK-SAME: (%[[ARG:.*]]: !async.token) -> !async.token
-func @corecursive2(%arg: !async.token) {
+func.func @corecursive2(%arg: !async.token) {
 // CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
 // CHECK: %[[ID:.*]] = async.coro.id
 // CHECK: %[[HDL:.*]] = async.coro.begin %[[ID]]
@@ -310,7 +310,7 @@ return
 
 // CHECK-LABEL: func @caller_allowed_to_block
 // CHECK-SAME: () -> f32
-func @caller_allowed_to_block() -> f32 attributes { async.allowed_to_block } {
+func.func @caller_allowed_to_block() -> f32 attributes { async.allowed_to_block } {
 // CHECK: %[[CONSTANT:.*]] = arith.constant
   %c = arith.constant 1.0 : f32
 // CHECK: %[[RETURNED_TO_CALLER:.*]]:2 = call @simple_callee(%[[CONSTANT]]) : (f32) -> (!async.token, !async.value<f32>)

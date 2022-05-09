@@ -146,7 +146,7 @@ def StringAPI : PublicAPI<"string.h"> {
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {
-  let Types = ["size_t", "FILE"];
+  let Types = ["size_t", "FILE", "cookie_io_functions_t"];
 }
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {

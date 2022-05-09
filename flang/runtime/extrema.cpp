@@ -60,7 +60,7 @@ private:
 template <typename COMPARE> class ExtremumLocAccumulator {
 public:
   using Type = typename COMPARE::Type;
-  ExtremumLocAccumulator(const Descriptor &array, std::size_t chars = 0)
+  ExtremumLocAccumulator(const Descriptor &array)
       : array_{array}, argRank_{array.rank()}, compare_{array.ElementBytes()} {
     Reinitialize();
   }
@@ -132,7 +132,7 @@ template <TypeCategory CAT, bool IS_MAX> struct TypedMaxOrMinLocHelper {
     void operator()(const char *intrinsic, Descriptor &result,
         const Descriptor &x, int kind, const char *source, int line,
         const Descriptor *mask, bool back) const {
-      DoMaxOrMinLoc<TypeCategory::Integer, KIND, IS_MAX, NumericCompare>(
+      DoMaxOrMinLoc<CAT, KIND, IS_MAX, NumericCompare>(
           intrinsic, result, x, kind, source, line, mask, back);
     }
   };
@@ -241,24 +241,39 @@ inline void TypedPartialMaxOrMinLoc(const char *intrinsic, Descriptor &result,
   CheckIntegerKind(terminator, kind, intrinsic);
   auto catKind{x.type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator, catKind.has_value());
+  const Descriptor *maskToUse{mask};
+  SubscriptValue maskAt[maxRank]; // contents unused
+  if (mask && mask->rank() == 0) {
+    if (IsLogicalElementTrue(*mask, maskAt)) {
+      // A scalar MASK that's .TRUE.  In this case, just get rid of the MASK.
+      maskToUse = nullptr;
+    } else {
+      // For scalar MASK arguments that are .FALSE., return all zeroes
+      CreatePartialReductionResult(result, x, dim, terminator, intrinsic,
+          TypeCode{TypeCategory::Integer, kind});
+      std::memset(
+          result.OffsetElement(), 0, result.Elements() * result.ElementBytes());
+      return;
+    }
+  }
   switch (catKind->first) {
   case TypeCategory::Integer:
     ApplyIntegerKind<DoPartialMaxOrMinLocHelper<TypeCategory::Integer, IS_MAX,
                          NumericCompare>::template Functor,
         void>(catKind->second, terminator, intrinsic, result, x, kind, dim,
-        mask, back, terminator);
+        maskToUse, back, terminator);
     break;
   case TypeCategory::Real:
     ApplyFloatingPointKind<DoPartialMaxOrMinLocHelper<TypeCategory::Real,
                                IS_MAX, NumericCompare>::template Functor,
         void>(catKind->second, terminator, intrinsic, result, x, kind, dim,
-        mask, back, terminator);
+        maskToUse, back, terminator);
     break;
   case TypeCategory::Character:
     ApplyCharacterKind<DoPartialMaxOrMinLocHelper<TypeCategory::Character,
                            IS_MAX, CharacterCompare>::template Functor,
         void>(catKind->second, terminator, intrinsic, result, x, kind, dim,
-        mask, back, terminator);
+        maskToUse, back, terminator);
     break;
   default:
     terminator.Crash(

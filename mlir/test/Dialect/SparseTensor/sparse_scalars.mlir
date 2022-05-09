@@ -59,7 +59,7 @@
 // CHECK:           %[[VAL_34:.*]] = bufferization.to_tensor %[[VAL_15]] : memref<32x16xf32>
 // CHECK:           return %[[VAL_34]] : tensor<32x16xf32>
 // CHECK:         }
-func @mul(%arga: tensor<32x16xf32, #SparseMatrix>,
+func.func @mul(%arga: tensor<32x16xf32, #SparseMatrix>,
           %argp: tensor<f32>,
           %argq: f32,
           %argr: f32,

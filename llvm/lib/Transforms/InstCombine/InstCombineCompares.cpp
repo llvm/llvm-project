@@ -759,7 +759,7 @@ getAsConstantIndexedAddress(Type *ElemTy, Value *V, const DataLayout &DL) {
         V = GEP->getOperand(0);
         Constant *GEPIndex = static_cast<Constant *>(GEP->getOperand(1));
         Index = ConstantExpr::getAdd(
-            Index, ConstantExpr::getSExtOrBitCast(GEPIndex, IndexType));
+            Index, ConstantExpr::getSExtOrTrunc(GEPIndex, IndexType));
         continue;
       }
       break;
@@ -3422,64 +3422,6 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
         return NV;
     break;
-  case Instruction::Select: {
-    // If either operand of the select is a constant, we can fold the
-    // comparison into the select arms, which will cause one to be
-    // constant folded and the select turned into a bitwise or.
-    Value *Op1 = nullptr, *Op2 = nullptr;
-    ConstantInt *CI = nullptr;
-
-    auto SimplifyOp = [&](Value *V) {
-      Value *Op = nullptr;
-      if (Constant *C = dyn_cast<Constant>(V)) {
-        Op = ConstantExpr::getICmp(I.getPredicate(), C, RHSC);
-      } else if (RHSC->isNullValue()) {
-        // If null is being compared, check if it can be further simplified.
-        Op = SimplifyICmpInst(I.getPredicate(), V, RHSC, SQ);
-      }
-      return Op;
-    };
-    Op1 = SimplifyOp(LHSI->getOperand(1));
-    if (Op1)
-      CI = dyn_cast<ConstantInt>(Op1);
-
-    Op2 = SimplifyOp(LHSI->getOperand(2));
-    if (Op2)
-      CI = dyn_cast<ConstantInt>(Op2);
-
-    // We only want to perform this transformation if it will not lead to
-    // additional code. This is true if either both sides of the select
-    // fold to a constant (in which case the icmp is replaced with a select
-    // which will usually simplify) or this is the only user of the
-    // select (in which case we are trading a select+icmp for a simpler
-    // select+icmp) or all uses of the select can be replaced based on
-    // dominance information ("Global cases").
-    bool Transform = false;
-    if (Op1 && Op2)
-      Transform = true;
-    else if (Op1 || Op2) {
-      // Local case
-      if (LHSI->hasOneUse())
-        Transform = true;
-      // Global cases
-      else if (CI && !CI->isZero())
-        // When Op1 is constant try replacing select with second operand.
-        // Otherwise Op2 is constant and try replacing select with first
-        // operand.
-        Transform =
-            replacedSelectWithOperand(cast<SelectInst>(LHSI), &I, Op1 ? 2 : 1);
-    }
-    if (Transform) {
-      if (!Op1)
-        Op1 = Builder.CreateICmp(I.getPredicate(), LHSI->getOperand(1), RHSC,
-                                 I.getName());
-      if (!Op2)
-        Op2 = Builder.CreateICmp(I.getPredicate(), LHSI->getOperand(2), RHSC,
-                                 I.getName());
-      return SelectInst::Create(LHSI->getOperand(0), Op1, Op2);
-    }
-    break;
-  }
   case Instruction::IntToPtr:
     // icmp pred inttoptr(X), null -> icmp pred X, 0
     if (RHSC->isNullValue() &&
@@ -3498,6 +3440,61 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
                 foldCmpLoadFromIndexedGlobal(cast<LoadInst>(LHSI), GEP, GV, I))
           return Res;
     break;
+  }
+
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
+                                              SelectInst *SI, Value *RHS,
+                                              const ICmpInst &I) {
+  // Try to fold the comparison into the select arms, which will cause the
+  // select to be converted into a logical and/or.
+  auto SimplifyOp = [&](Value *Op, bool SelectCondIsTrue) -> Value * {
+    if (Value *Res = SimplifyICmpInst(Pred, Op, RHS, SQ))
+      return Res;
+    if (Optional<bool> Impl = isImpliedCondition(SI->getCondition(), Pred, Op,
+                                                 RHS, DL, SelectCondIsTrue))
+      return ConstantInt::get(I.getType(), *Impl);
+    return nullptr;
+  };
+
+  ConstantInt *CI = nullptr;
+  Value *Op1 = SimplifyOp(SI->getOperand(1), true);
+  if (Op1)
+    CI = dyn_cast<ConstantInt>(Op1);
+
+  Value *Op2 = SimplifyOp(SI->getOperand(2), false);
+  if (Op2)
+    CI = dyn_cast<ConstantInt>(Op2);
+
+  // We only want to perform this transformation if it will not lead to
+  // additional code. This is true if either both sides of the select
+  // fold to a constant (in which case the icmp is replaced with a select
+  // which will usually simplify) or this is the only user of the
+  // select (in which case we are trading a select+icmp for a simpler
+  // select+icmp) or all uses of the select can be replaced based on
+  // dominance information ("Global cases").
+  bool Transform = false;
+  if (Op1 && Op2)
+    Transform = true;
+  else if (Op1 || Op2) {
+    // Local case
+    if (SI->hasOneUse())
+      Transform = true;
+    // Global cases
+    else if (CI && !CI->isZero())
+      // When Op1 is constant try replacing select with second operand.
+      // Otherwise Op2 is constant and try replacing select with first
+      // operand.
+      Transform = replacedSelectWithOperand(SI, &I, Op1 ? 2 : 1);
+  }
+  if (Transform) {
+    if (!Op1)
+      Op1 = Builder.CreateICmp(Pred, SI->getOperand(1), RHS, I.getName());
+    if (!Op2)
+      Op2 = Builder.CreateICmp(Pred, SI->getOperand(2), RHS, I.getName());
+    return SelectInst::Create(SI->getOperand(0), Op1, Op2);
   }
 
   return nullptr;
@@ -3969,6 +3966,24 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   if (match(Op1, m_OneUse(m_c_Add(m_Specific(Op0), m_Value(X)))) &&
       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE))
     return new ICmpInst(Pred, X, Builder.CreateNot(Op0));
+
+  {
+    // (Op1 + X) + C u</u>= Op1 --> ~C - X u</u>= Op1
+    Constant *C;
+    if (match(Op0, m_OneUse(m_Add(m_c_Add(m_Specific(Op1), m_Value(X)),
+                                  m_ImmConstant(C)))) &&
+        (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE)) {
+      Constant *C2 = ConstantExpr::getNot(C);
+      return new ICmpInst(Pred, Builder.CreateSub(C2, X), Op1);
+    }
+    // Op0 u>/u<= (Op0 + X) + C --> Op0 u>/u<= ~C - X
+    if (match(Op1, m_OneUse(m_Add(m_c_Add(m_Specific(Op0), m_Value(X)),
+                                  m_ImmConstant(C)))) &&
+        (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE)) {
+      Constant *C2 = ConstantExpr::getNot(C);
+      return new ICmpInst(Pred, Op0, Builder.CreateSub(C2, X));
+    }
+  }
 
   {
     // Similar to above: an unsigned overflow comparison may use offset + mask:
@@ -4688,8 +4703,7 @@ static Instruction *foldICmpWithTrunc(ICmpInst &ICmp,
   return nullptr;
 }
 
-static Instruction *foldICmpWithZextOrSext(ICmpInst &ICmp,
-                                           InstCombiner::BuilderTy &Builder) {
+Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
   assert(isa<CastInst>(ICmp.getOperand(0)) && "Expected cast for operand 0");
   auto *CastOp0 = cast<CastInst>(ICmp.getOperand(0));
   Value *X;
@@ -4698,25 +4712,37 @@ static Instruction *foldICmpWithZextOrSext(ICmpInst &ICmp,
 
   bool IsSignedExt = CastOp0->getOpcode() == Instruction::SExt;
   bool IsSignedCmp = ICmp.isSigned();
-  if (auto *CastOp1 = dyn_cast<CastInst>(ICmp.getOperand(1))) {
-    // If the signedness of the two casts doesn't agree (i.e. one is a sext
-    // and the other is a zext), then we can't handle this.
-    // TODO: This is too strict. We can handle some predicates (equality?).
-    if (CastOp0->getOpcode() != CastOp1->getOpcode())
-      return nullptr;
+
+  // icmp Pred (ext X), (ext Y)
+  Value *Y;
+  if (match(ICmp.getOperand(1), m_ZExtOrSExt(m_Value(Y)))) {
+    bool IsZext0 = isa<ZExtOperator>(ICmp.getOperand(0));
+    bool IsZext1 = isa<ZExtOperator>(ICmp.getOperand(1));
+
+    // If we have mismatched casts, treat the zext of a non-negative source as
+    // a sext to simulate matching casts. Otherwise, we are done.
+    // TODO: Can we handle some predicates (equality) without non-negative?
+    if (IsZext0 != IsZext1) {
+      if ((IsZext0 && isKnownNonNegative(X, DL, 0, &AC, &ICmp, &DT)) ||
+          (IsZext1 && isKnownNonNegative(Y, DL, 0, &AC, &ICmp, &DT)))
+        IsSignedExt = true;
+      else
+        return nullptr;
+    }
 
     // Not an extension from the same type?
-    Value *Y = CastOp1->getOperand(0);
     Type *XTy = X->getType(), *YTy = Y->getType();
     if (XTy != YTy) {
       // One of the casts must have one use because we are creating a new cast.
-      if (!CastOp0->hasOneUse() && !CastOp1->hasOneUse())
+      if (!ICmp.getOperand(0)->hasOneUse() && !ICmp.getOperand(1)->hasOneUse())
         return nullptr;
       // Extend the narrower operand to the type of the wider operand.
+      CastInst::CastOps CastOpcode =
+          IsSignedExt ? Instruction::SExt : Instruction::ZExt;
       if (XTy->getScalarSizeInBits() < YTy->getScalarSizeInBits())
-        X = Builder.CreateCast(CastOp0->getOpcode(), X, YTy);
+        X = Builder.CreateCast(CastOpcode, X, YTy);
       else if (YTy->getScalarSizeInBits() < XTy->getScalarSizeInBits())
-        Y = Builder.CreateCast(CastOp0->getOpcode(), Y, XTy);
+        Y = Builder.CreateCast(CastOpcode, Y, XTy);
       else
         return nullptr;
     }
@@ -4834,7 +4860,7 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
   if (Instruction *R = foldICmpWithTrunc(ICmp, Builder))
     return R;
 
-  return foldICmpWithZextOrSext(ICmp, Builder);
+  return foldICmpWithZextOrSext(ICmp);
 }
 
 static bool isNeutralValue(Instruction::BinaryOps BinaryOp, Value *RHS) {
@@ -6078,6 +6104,13 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       return NI;
   if (auto *GEP = dyn_cast<GEPOperator>(Op1))
     if (Instruction *NI = foldGEPICmp(GEP, Op0, I.getSwappedPredicate(), I))
+      return NI;
+
+  if (auto *SI = dyn_cast<SelectInst>(Op0))
+    if (Instruction *NI = foldSelectICmp(I.getPredicate(), SI, Op1, I))
+      return NI;
+  if (auto *SI = dyn_cast<SelectInst>(Op1))
+    if (Instruction *NI = foldSelectICmp(I.getSwappedPredicate(), SI, Op0, I))
       return NI;
 
   // Try to optimize equality comparisons against alloca-based pointers.

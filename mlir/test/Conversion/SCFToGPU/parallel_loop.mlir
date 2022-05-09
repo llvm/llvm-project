@@ -2,7 +2,7 @@
 
 // 2-d parallel loop mapped to block.y and block.x
 
-func @parallel_loop_bidy_bidx(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_loop_bidy_bidx(%arg0 : index, %arg1 : index, %arg2 : index,
                               %arg3 : index, %arg4 : index,
                               %buf : memref<?x?xf32>,
                               %res : memref<?x?xf32>) {
@@ -40,7 +40,7 @@ func @parallel_loop_bidy_bidx(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // tiled 2-d parallel loop mapped to block.y and block.x and thread.y and thread.x.
 
-func @parallel_loop_tiled(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_loop_tiled(%arg0 : index, %arg1 : index, %arg2 : index,
                         %arg3 : index,
                         %buf : memref<?x?xf32>,
                         %res : memref<?x?xf32>) {
@@ -99,7 +99,7 @@ func @parallel_loop_tiled(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // 2-d parallel loop mapped to block.y and sequential
 
-func @parallel_loop_bidy_seq(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_loop_bidy_seq(%arg0 : index, %arg1 : index, %arg2 : index,
                              %arg3 : index, %arg4 : index,
                              %buf : memref<?x?xf32>,
                              %res : memref<?x?xf32>) {
@@ -140,7 +140,7 @@ func @parallel_loop_bidy_seq(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // tiled 2-d parallel loop mapped to block.y and seq. and thread.y and seq.
 
-func @parallel_loop_tiled_seq(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_loop_tiled_seq(%arg0 : index, %arg1 : index, %arg2 : index,
                               %arg3 : index,
                               %buf : memref<?x?xf32>,
                               %res : memref<?x?xf32>) {
@@ -203,7 +203,7 @@ func @parallel_loop_tiled_seq(%arg0 : index, %arg1 : index, %arg2 : index,
 #map3 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
 module {
-  func @sum(%arg0: memref<?x?xf32, #map0>, %arg1: memref<?x?xf32, #map0>, %arg2: memref<?x?xf32, #map0>) {
+  func.func @sum(%arg0: memref<?x?xf32, #map0>, %arg1: memref<?x?xf32, #map0>, %arg2: memref<?x?xf32, #map0>) {
     %c1 = arith.constant 1 : index
     %c0 = arith.constant 0 : index
     %c3 = arith.constant 3 : index
@@ -306,7 +306,7 @@ module {
 
 // Optional attribute lowering test
 
-func @parallel_loop_optional_attr() {
+func.func @parallel_loop_optional_attr() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   scf.parallel (%i0) = (%c0) to (%c1) step (%c1) {
@@ -319,7 +319,7 @@ func @parallel_loop_optional_attr() {
 
 // Mapping to the same processor twice. Cannot be mapped.
 
-func @parallel_double_map(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_double_map(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3 : index,
                           %buf : memref<?x?xf32>,
                           %res : memref<?x?xf32>) {
@@ -340,7 +340,7 @@ func @parallel_double_map(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // Loop with loop-variant upper bound. Cannot be mapped.
 
-func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : index,
                                        %arg3 : index,
                                        %buf : memref<?x?xf32>,
                                        %res : memref<?x?xf32>) {
@@ -374,7 +374,7 @@ func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : ind
 
 // Loop without annotations. Cannot be mapped.
 
-func @parallel_no_annotations(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @parallel_no_annotations(%arg0 : index, %arg1 : index, %arg2 : index,
                               %arg3 : index,
                               %buf : memref<?x?xf32>,
                               %res : memref<?x?xf32>) {

@@ -79,9 +79,30 @@ TEST(IncludeCleaner, ReferencedLocations) {
           "using namespace ns;",
       },
       {
+          // Refs from UsingTypeLoc and implicit constructor!
           "struct ^A {}; using B = A; using ^C = B;",
           "C a;",
       },
+      {"namespace ns { template<typename T> class A {}; } using ns::^A;",
+       "A<int>* a;"},
+      {"namespace ns { template<typename T> class A {}; } using ns::^A;",
+       R"cpp(
+          template <template <typename> class T> class X {};
+          X<A> x;
+        )cpp"},
+      {R"cpp(
+          namespace ns { template<typename T> class A {}; }
+          namespace absl {using ns::^A;}
+       )cpp",
+       R"cpp(
+          template <template <typename> class T> class X {};
+          X<absl::A> x;
+       )cpp"},
+      {R"cpp(
+          namespace ns { template<typename T> struct ^A { ^A(T); }; }
+          using ns::^A;
+       )cpp",
+       "A CATD(123);"},
       {
           "typedef bool ^Y; template <typename T> struct ^X {};",
           "X<Y> x;",
@@ -227,6 +248,7 @@ TEST(IncludeCleaner, ReferencedLocations) {
     TU.Code = T.MainCode;
     Annotations Header(T.HeaderCode);
     TU.HeaderCode = Header.code().str();
+    TU.ExtraArgs.push_back("-std=c++17");
     auto AST = TU.build();
 
     std::vector<Position> Points;
@@ -497,11 +519,13 @@ TEST(IncludeCleaner, IWYUPragmas) {
   TestTU TU;
   TU.Code = R"cpp(
     #include "behind_keep.h" // IWYU pragma: keep
+    #include "exported.h" // IWYU pragma: export
     #include "public.h"
 
     void bar() { foo(); }
     )cpp";
   TU.AdditionalFiles["behind_keep.h"] = guard("");
+  TU.AdditionalFiles["exported.h"] = guard("");
   TU.AdditionalFiles["public.h"] = guard("#include \"private.h\"");
   TU.AdditionalFiles["private.h"] = guard(R"cpp(
     // IWYU pragma: private, include "public.h"
@@ -519,6 +543,38 @@ TEST(IncludeCleaner, IWYUPragmas) {
       ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
   EXPECT_TRUE(
       ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
+  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
+  auto Unused = computeUnusedIncludes(AST);
+  EXPECT_THAT(Unused, IsEmpty());
+}
+
+TEST(IncludeCleaner, RecursiveInclusion) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "foo.h"
+
+    void baz() {
+      foo();
+    }
+    )cpp";
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+    #ifndef FOO_H
+    #define FOO_H
+
+    void foo() {}
+
+    #include "bar.h"
+
+    #endif
+  )cpp";
+  TU.AdditionalFiles["bar.h"] = guard(R"cpp(
+    #include "foo.h"
+  )cpp");
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles = findReferencedFiles(
+      findReferencedLocations(AST), AST.getIncludeStructure(),
+      AST.getCanonicalIncludes(), AST.getSourceManager());
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   auto Unused = computeUnusedIncludes(AST);
   EXPECT_THAT(Unused, IsEmpty());

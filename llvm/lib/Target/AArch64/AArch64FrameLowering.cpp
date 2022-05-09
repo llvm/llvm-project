@@ -1719,7 +1719,8 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
   // The AUTIASP instruction assembles to a hint instruction before v8.3a so
   // this instruction can safely used for any v8a architecture.
   // From v8.3a onwards there are optimised authenticate LR and return
-  // instructions, namely RETA{A,B}, that can be used instead.
+  // instructions, namely RETA{A,B}, that can be used instead. In this case the
+  // DW_CFA_AARCH64_negate_ra_state can't be emitted.
   if (Subtarget.hasPAuth() && MBBI != MBB.end() &&
       MBBI->getOpcode() == AArch64::RET_ReallyLR) {
     BuildMI(MBB, MBBI, DL,
@@ -1731,6 +1732,12 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
         MBB, MBBI, DL,
         TII->get(MFI.shouldSignWithBKey() ? AArch64::AUTIBSP : AArch64::AUTIASP))
         .setMIFlag(MachineInstr::FrameDestroy);
+
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
   }
 }
 
@@ -1946,7 +1953,10 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Deallocate the SVE area.
   if (SVEStackSize) {
-    if (AFI->isStackRealigned()) {
+    // If we have stack realignment or variable sized objects on the stack,
+    // restore the stack pointer from the frame pointer prior to SVE CSR
+    // restoration.
+    if (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) {
       if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
         // Set SP to start of SVE callee-save area from which they can
         // be reloaded. The code below will deallocate the stack space
@@ -2986,6 +2996,15 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   // stack slots for them.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+
+  bool UsesWinAAPCS = isTargetWindows(MF);
+  if (UsesWinAAPCS && hasFP(MF) && AFI->hasSwiftAsyncContext()) {
+    int FrameIdx = MFI.CreateStackObject(8, Align(16), true);
+    AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
+    if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;
+    if ((unsigned)FrameIdx > MaxCSFrameIndex) MaxCSFrameIndex = FrameIdx;
+  }
+
   for (auto &CS : CSI) {
     Register Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
@@ -2999,7 +3018,8 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     if ((unsigned)FrameIdx > MaxCSFrameIndex) MaxCSFrameIndex = FrameIdx;
 
     // Grab 8 bytes below FP for the extended asynchronous frame info.
-    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && Reg == AArch64::FP) {
+    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && !UsesWinAAPCS &&
+        Reg == AArch64::FP) {
       FrameIdx = MFI.CreateStackObject(8, Alignment, true);
       AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
       if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;

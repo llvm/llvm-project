@@ -29,7 +29,8 @@ using namespace mlir::vector;
 namespace {
 
 struct TestVectorToVectorLowering
-    : public PassWrapper<TestVectorToVectorLowering, OperationPass<FuncOp>> {
+    : public PassWrapper<TestVectorToVectorLowering,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorToVectorLowering)
 
   TestVectorToVectorLowering() = default;
@@ -104,7 +105,8 @@ private:
 };
 
 struct TestVectorContractionLowering
-    : public PassWrapper<TestVectorContractionLowering, OperationPass<FuncOp>> {
+    : public PassWrapper<TestVectorContractionLowering,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorContractionLowering)
 
   StringRef getArgument() const final {
@@ -179,7 +181,8 @@ struct TestVectorContractionLowering
 };
 
 struct TestVectorTransposeLowering
-    : public PassWrapper<TestVectorTransposeLowering, OperationPass<FuncOp>> {
+    : public PassWrapper<TestVectorTransposeLowering,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorTransposeLowering)
 
   StringRef getArgument() const final {
@@ -253,7 +256,8 @@ struct TestVectorTransposeLowering
 };
 
 struct TestVectorUnrollingPatterns
-    : public PassWrapper<TestVectorUnrollingPatterns, OperationPass<FuncOp>> {
+    : public PassWrapper<TestVectorUnrollingPatterns,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorUnrollingPatterns)
 
   StringRef getArgument() const final {
@@ -328,7 +332,8 @@ struct TestVectorUnrollingPatterns
 };
 
 struct TestVectorDistributePatterns
-    : public PassWrapper<TestVectorDistributePatterns, OperationPass<FuncOp>> {
+    : public PassWrapper<TestVectorDistributePatterns,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorDistributePatterns)
 
   StringRef getArgument() const final {
@@ -352,7 +357,7 @@ struct TestVectorDistributePatterns
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    FuncOp func = getOperation();
+    func::FuncOp func = getOperation();
     func.walk([&](arith::AddFOp op) {
       OpBuilder builder(op);
       if (auto vecType = op.getType().dyn_cast<VectorType>()) {
@@ -387,7 +392,8 @@ struct TestVectorDistributePatterns
 };
 
 struct TestVectorToLoopPatterns
-    : public PassWrapper<TestVectorToLoopPatterns, OperationPass<FuncOp>> {
+    : public PassWrapper<TestVectorToLoopPatterns,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorToLoopPatterns)
 
   StringRef getArgument() const final { return "test-vector-to-forloop"; }
@@ -408,7 +414,7 @@ struct TestVectorToLoopPatterns
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    FuncOp func = getOperation();
+    func::FuncOp func = getOperation();
     func.walk([&](arith::AddFOp op) {
       // Check that the operation type can be broken down into a loop.
       VectorType type = op.getType().dyn_cast<VectorType>();
@@ -447,7 +453,7 @@ struct TestVectorToLoopPatterns
 
 struct TestVectorTransferUnrollingPatterns
     : public PassWrapper<TestVectorTransferUnrollingPatterns,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestVectorTransferUnrollingPatterns)
 
@@ -479,7 +485,7 @@ struct TestVectorTransferUnrollingPatterns
 
 struct TestVectorTransferFullPartialSplitPatterns
     : public PassWrapper<TestVectorTransferFullPartialSplitPatterns,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestVectorTransferFullPartialSplitPatterns)
 
@@ -519,7 +525,7 @@ struct TestVectorTransferFullPartialSplitPatterns
 };
 
 struct TestVectorTransferOpt
-    : public PassWrapper<TestVectorTransferOpt, OperationPass<FuncOp>> {
+    : public PassWrapper<TestVectorTransferOpt, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorTransferOpt)
 
   StringRef getArgument() const final { return "test-vector-transferop-opt"; }
@@ -531,7 +537,7 @@ struct TestVectorTransferOpt
 
 struct TestVectorTransferLoweringPatterns
     : public PassWrapper<TestVectorTransferLoweringPatterns,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestVectorTransferLoweringPatterns)
 
@@ -554,7 +560,7 @@ struct TestVectorTransferLoweringPatterns
 
 struct TestVectorMultiReductionLoweringPatterns
     : public PassWrapper<TestVectorMultiReductionLoweringPatterns,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestVectorMultiReductionLoweringPatterns)
 
@@ -588,7 +594,7 @@ struct TestVectorMultiReductionLoweringPatterns
 
 struct TestVectorTransferCollapseInnerMostContiguousDims
     : public PassWrapper<TestVectorTransferCollapseInnerMostContiguousDims,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestVectorTransferCollapseInnerMostContiguousDims)
 
@@ -618,7 +624,7 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
 
 struct TestVectorReduceToContractPatternsPatterns
     : public PassWrapper<TestVectorReduceToContractPatternsPatterns,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestVectorReduceToContractPatternsPatterns)
 
@@ -638,7 +644,7 @@ struct TestVectorReduceToContractPatternsPatterns
 
 struct TestVectorTransferDropUnitDimsPatterns
     : public PassWrapper<TestVectorTransferDropUnitDimsPatterns,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestVectorTransferDropUnitDimsPatterns)
 
@@ -657,7 +663,7 @@ struct TestVectorTransferDropUnitDimsPatterns
 
 struct TestFlattenVectorTransferPatterns
     : public PassWrapper<TestFlattenVectorTransferPatterns,
-                         OperationPass<FuncOp>> {
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestFlattenVectorTransferPatterns)
 
@@ -679,7 +685,7 @@ struct TestFlattenVectorTransferPatterns
 };
 
 struct TestVectorScanLowering
-    : public PassWrapper<TestVectorScanLowering, OperationPass<FuncOp>> {
+    : public PassWrapper<TestVectorScanLowering, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorScanLowering)
 
   StringRef getArgument() const final { return "test-vector-scan-lowering"; }

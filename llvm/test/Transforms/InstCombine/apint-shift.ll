@@ -23,6 +23,21 @@ define i55 @test6a(i55 %A) {
   ret i55 %C
 }
 
+declare void @use(i55 %0)
+
+define i55 @test6a_negative_oneuse(i55 %A) {
+; CHECK-LABEL: @test6a_negative_oneuse(
+; CHECK-NEXT:    [[B:%.*]] = mul i55 [[A:%.*]], 3
+; CHECK-NEXT:    [[C:%.*]] = mul i55 [[A]], 6
+; CHECK-NEXT:    call void @use(i55 [[B]])
+; CHECK-NEXT:    ret i55 [[C]]
+;
+  %B = mul i55 %A, 3
+  %C = shl i55 %B, 1
+  call void @use(i55 %B)
+  ret i55 %C
+}
+
 ; (X * C2) << C1 --> X * (C2 << C1)
 
 define <2 x i55> @test6a_vec(<2 x i55> %A) {

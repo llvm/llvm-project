@@ -1,8 +1,5 @@
 def StdC : StandardSpec<"stdc"> {
 
-  NamedType FILE = NamedType<"FILE">;
-  PtrType FILEPtr = PtrType<FILE>;
-  RestrictedPtrType FILERestrictedPtr = RestrictedPtrType<FILE>;
   NamedType StructTmType = NamedType<"struct tm">;
   PtrType StructTmPtr = PtrType<StructTmType>;
   PtrType TimeTTypePtr = PtrType<TimeTType>;
@@ -482,7 +479,27 @@ def StdC : StandardSpec<"stdc"> {
       [], // Enumerations
       [
           FunctionSpec<
+              "clearerr",
+              RetValSpec<VoidType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
               "fclose",
+              RetValSpec<IntType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "feof",
+              RetValSpec<IntType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "ferror",
+              RetValSpec<IntType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "fflush",
               RetValSpec<IntType>,
               [ArgSpec<FILEPtr>]
           >,

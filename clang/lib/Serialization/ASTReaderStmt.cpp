@@ -107,8 +107,7 @@ namespace clang {
 
     /// The number of record fields required for the Expr class
     /// itself.
-    static const unsigned NumExprFields =
-        NumStmtFields + llvm::BitWidth<ExprDependence> + 3;
+    static const unsigned NumExprFields = NumStmtFields + 4;
 
     /// Read and initialize a ExplicitTemplateArgumentList structure.
     void ReadTemplateKWAndArgsInfo(ASTTemplateKWAndArgsInfo &Args,
@@ -521,26 +520,7 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
 void ASTStmtReader::VisitExpr(Expr *E) {
   VisitStmt(E);
   E->setType(Record.readType());
-
-  // FIXME: write and read all DependentFlags with a single call.
-  bool TypeDependent = Record.readInt();
-  bool ValueDependent = Record.readInt();
-  bool InstantiationDependent = Record.readInt();
-  bool ContainsUnexpandedTemplateParameters = Record.readInt();
-  bool ContainsErrors = Record.readInt();
-  auto Deps = ExprDependence::None;
-  if (TypeDependent)
-    Deps |= ExprDependence::Type;
-  if (ValueDependent)
-    Deps |= ExprDependence::Value;
-  if (InstantiationDependent)
-    Deps |= ExprDependence::Instantiation;
-  if (ContainsUnexpandedTemplateParameters)
-    Deps |= ExprDependence::UnexpandedPack;
-  if (ContainsErrors)
-    Deps |= ExprDependence::Error;
-  E->setDependence(Deps);
-
+  E->setDependence(static_cast<ExprDependence>(Record.readInt()));
   E->setValueKind(static_cast<ExprValueKind>(Record.readInt()));
   E->setObjectKind(static_cast<ExprObjectKind>(Record.readInt()));
   assert(Record.getIdx() == NumExprFields &&

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4a -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4a -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <x86intrin.h>

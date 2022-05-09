@@ -1,7 +1,7 @@
 // RUN: mlir-opt --pass-pipeline="func.func(test-patterns)" %s | FileCheck %s
 
 // CHECK-LABEL: func @test_reorder_constants_and_match
-func @test_reorder_constants_and_match(%arg0 : i32) -> (i32) {
+func.func @test_reorder_constants_and_match(%arg0 : i32) -> (i32) {
   // CHECK: %[[CST:.+]] = arith.constant 43
   %cst = arith.constant 43 : i32
   // CHECK: return %[[CST]]

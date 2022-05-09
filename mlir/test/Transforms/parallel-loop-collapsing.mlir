@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='func.func(scf-parallel-loop-collapsing{collapsed-indices-0=0,3 collapsed-indices-1=1,4 collapsed-indices-2=2}, canonicalize)' | FileCheck %s
 
 // CHECK-LABEL: func @parallel_many_dims() {
-func @parallel_many_dims() {
+func.func @parallel_many_dims() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

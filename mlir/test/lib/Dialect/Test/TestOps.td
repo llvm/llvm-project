@@ -312,12 +312,63 @@ def : Pat<(OpWithEnum ConstantAttr<TestEnumAttr,
                       ConstantAttr<I32Attr, "1">)>;
 
 //===----------------------------------------------------------------------===//
+// Test Bit Enum Attributes
+//===----------------------------------------------------------------------===//
+
+// Define the C++ enum.
+def TestBitEnum
+    : I32BitEnumAttr<"TestBitEnum", "a test bit enum", [
+        I32BitEnumAttrCaseBit<"Read", 0, "read">,
+        I32BitEnumAttrCaseBit<"Write", 1, "write">,
+        I32BitEnumAttrCaseBit<"Execute", 2, "execute">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "test";
+  let separator = ",";
+}
+
+// Define the enum attribute.
+def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// Define an op that contains the enum attribute.
+def OpWithBitEnum : TEST_Op<"op_with_bit_enum"> {
+  let arguments = (ins TestBitEnumAttr:$value, OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+}
+
+// Define an enum with a different separator
+def TestBitEnumVerticalBar
+    : I32BitEnumAttr<"TestBitEnumVerticalBar", "another test bit enum", [
+        I32BitEnumAttrCaseBit<"User", 0, "user">,
+        I32BitEnumAttrCaseBit<"Group", 1, "group">,
+        I32BitEnumAttrCaseBit<"Other", 2, "other">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "test";
+  let separator = "|";
+}
+
+def TestBitEnumVerticalBarAttr
+    : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// Define an op that contains the enum attribute.
+def OpWithBitEnumVerticalBar : TEST_Op<"op_with_bit_enum_vbar"> {
+  let arguments = (ins TestBitEnumVerticalBarAttr:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // Test Attribute Constraints
 //===----------------------------------------------------------------------===//
 
 def SymbolRefOp : TEST_Op<"symbol_ref_attr"> {
   let arguments = (ins
-    Confined<FlatSymbolRefAttr, [ReferToOp<"FuncOp">]>:$symbol
+    Confined<FlatSymbolRefAttr, [ReferToOp<"func::FuncOp">]>:$symbol
   );
 }
 
@@ -732,6 +783,19 @@ def StringAttrPrettyNameOp
   let hasCustomAssemblyFormat = 1;
 }
 
+
+// This is used to test encoding of a string attribute into an SSA name of a
+// pretty printed value name.
+def CustomResultsNameOp
+ : TEST_Op<"custom_result_name",
+           [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
+  let arguments = (ins 
+    Variadic<AnyInteger>:$optional,
+    StrArrayAttr:$names
+  );
+  let results = (outs Variadic<AnyInteger>:$r);
+}
+
 // This is used to test the OpAsmOpInterface::getDefaultDialect() feature:
 // operations nested in a region under this op will drop the "test." dialect
 // prefix.
@@ -903,7 +967,7 @@ def OpFuncRef : TEST_Op<"op_funcref"> {
   let description = [{
     The "test.op_funcref" is a test op with a reference to a function symbol.
   }];
-  let builders = [OpBuilder<(ins "::mlir::FuncOp":$function)>];
+  let builders = [OpBuilder<(ins "::mlir::func::FuncOp":$function)>];
 }
 
 // Pattern add the argument plus a increasing static number hidden in
@@ -2544,15 +2608,9 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
    }];
 }
 
-// Single variadic arg with SameOperandsAndResultType and InferTypeOpInterface.
-// Tests suppression of ambiguous build methods for operations with
-// SameOperandsAndResultType and InferTypeOpInterface.
-def TableGenBuildOp5 : TableGenBuildInferReturnTypeBaseOp<
-    "tblgen_build_5", [SameOperandsAndResultType]>;
-
 // Op with InferTypeOpInterface and regions.
-def TableGenBuildOp6 : TableGenBuildInferReturnTypeBaseOp<
-    "tblgen_build_6", [InferTypeOpInterface]> {
+def TableGenBuildOp5 : TableGenBuildInferReturnTypeBaseOp<
+    "tblgen_build_5", [InferTypeOpInterface]> {
   let regions = (region AnyRegion:$body);
 }
 

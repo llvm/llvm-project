@@ -19,7 +19,7 @@
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
-func @single_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
+func.func @single_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   scf.for %i = %c0 to %arg1 step %c1 {
@@ -58,7 +58,7 @@ func @single_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
-func @nested_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
+func.func @nested_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   scf.for %i = %c0 to %arg1 step %c1 {
@@ -88,7 +88,7 @@ func @nested_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: i32) {
 // CHECK:           }
 // CHECK:           return %[[VAL_14:.*]]#2 : f32
 // CHECK:         }
-func @for_iter_args(%arg0 : index, %arg1: index, %arg2: index) -> f32 {
+func.func @for_iter_args(%arg0 : index, %arg1: index, %arg2: index) -> f32 {
   %s0 = arith.constant 0.0 : f32
   %result:2 = scf.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%iarg0 = %s0, %iarg1 = %s0) -> (f32, f32) {
     %sn = arith.addf %iarg0, %iarg1 : f32
@@ -125,7 +125,7 @@ func @for_iter_args(%arg0 : index, %arg1: index, %arg2: index) -> f32 {
 // CHECK:           }
 // CHECK:           return %[[VAL_17:.*]]#1 : i32
 // CHECK:         }
-func @exec_region_multiple_yields(%arg0: i32, %arg1: index, %arg2: i32) -> i32 {
+func.func @exec_region_multiple_yields(%arg0: i32, %arg1: index, %arg2: i32) -> i32 {
   %c1_i32 = arith.constant 1 : i32
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index

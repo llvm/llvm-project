@@ -5,7 +5,7 @@
 // one. 'main' calls 'simple_add1_add2_test' with {1, 1} and {2, 2} so {2, 2}
 // and {4, 4} are the expected outputs.
 
-func @simple_add1_add2_test(%arg0: memref<2xf32>, %arg1: memref<2xf32>) {
+func.func @simple_add1_add2_test(%arg0: memref<2xf32>, %arg1: memref<2xf32>) {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -28,11 +28,11 @@ func @simple_add1_add2_test(%arg0: memref<2xf32>, %arg1: memref<2xf32>) {
 // External declarations.
 llvm.func @malloc(i64) -> !llvm.ptr<i8>
 llvm.func @free(!llvm.ptr<i8>)
-func private @printF32(%arg0: f32)
-func private @printComma()
-func private @printNewline()
+func.func private @printF32(%arg0: f32)
+func.func private @printComma()
+func.func private @printNewline()
 
-func @main()
+func.func @main()
 {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index

@@ -237,6 +237,29 @@ public:
     /// Complexity: O(N)
     ///             where N = size(What)
     RangeSet negate(RangeSet What);
+    /// Performs promotions, truncations and conversions of the given set.
+    ///
+    /// This function is optimized for each of the six cast cases:
+    /// - noop
+    /// - conversion
+    /// - truncation
+    /// - truncation-conversion
+    /// - promotion
+    /// - promotion-conversion
+    ///
+    /// NOTE: This function is NOT self-inverse for truncations, because of
+    ///       the higher bits loss:
+    ///     - castTo(castTo(OrigRangeOfInt, char), int) != OrigRangeOfInt.
+    ///     - castTo(castTo(OrigRangeOfChar, int), char) == OrigRangeOfChar.
+    ///       But it is self-inverse for all the rest casts.
+    ///
+    /// Complexity:
+    ///     - Noop                               O(1);
+    ///     - Truncation                         O(N^2);
+    ///     - Another case                       O(N);
+    ///     where N = size(What)
+    RangeSet castTo(RangeSet What, APSIntType Ty);
+    RangeSet castTo(RangeSet What, QualType T);
 
     /// Return associated value factory.
     BasicValueFactory &getValueFactory() const { return ValueFactory; }
@@ -251,6 +274,22 @@ public:
     /// NOTE: This function relies on the fact that all values in the
     /// containers are persistent (created via BasicValueFactory::getValue).
     ContainerType unite(const ContainerType &LHS, const ContainerType &RHS);
+
+    /// This is a helper function for `castTo` method. Implies not to be used
+    /// separately.
+    /// Performs a truncation case of a cast operation.
+    ContainerType truncateTo(RangeSet What, APSIntType Ty);
+
+    /// This is a helper function for `castTo` method. Implies not to be used
+    /// separately.
+    /// Performs a conversion case and a promotion-conversion case for signeds
+    /// of a cast operation.
+    ContainerType convertTo(RangeSet What, APSIntType Ty);
+
+    /// This is a helper function for `castTo` method. Implies not to be used
+    /// separately.
+    /// Performs a promotion for unsigneds only.
+    ContainerType promoteTo(RangeSet What, APSIntType Ty);
 
     // Many operations include producing new APSInt values and that's why
     // we need this factory.
@@ -302,6 +341,10 @@ public:
   ///
   /// Complexity: O(1)
   const llvm::APSInt &getMaxValue() const;
+
+  bool isUnsigned() const;
+  uint32_t getBitWidth() const;
+  APSIntType getAPSIntType() const;
 
   /// Test whether the given point is contained by any of the ranges.
   ///

@@ -458,6 +458,20 @@ TEST_F(SortIncludesTest, HandlesMultilineIncludes) {
                  "#include \"b.h\"\n"));
 }
 
+TEST_F(SortIncludesTest, HandlesTrailingCommentsWithAngleBrackets) {
+  // Regression test from the discussion at https://reviews.llvm.org/D121370.
+  EXPECT_EQ("#include <cstdint>\n"
+            "\n"
+            "#include \"util/bar.h\"\n"
+            "#include \"util/foo/foo.h\" // foo<T>\n",
+            sort("#include <cstdint>\n"
+                 "\n"
+                 "#include \"util/bar.h\"\n"
+                 "#include \"util/foo/foo.h\" // foo<T>\n",
+                 /*FileName=*/"input.cc",
+                 /*ExpectedNumRanges=*/0));
+}
+
 TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
   Style.IncludeIsMainRegex = "([-_](test|unittest))?$";
   EXPECT_EQ("#include \"llvm/a.h\"\n"
@@ -791,6 +805,21 @@ TEST_F(SortIncludesTest, CalculatesCorrectCursorPosition) {
   EXPECT_EQ(41u, newCursor(Code, 10));
   EXPECT_EQ(23u, newCursor(Code, 25));
   EXPECT_EQ(10u, newCursor(Code, 43));
+}
+
+TEST_F(SortIncludesTest, CalculatesCorrectCursorPositionWithRegrouping) {
+  Style.IncludeBlocks = Style.IBS_Regroup;
+  std::string Code = "#include \"b\"\n"      // Start of line: 0
+                     "\n"                    // Start of line: 13
+                     "#include \"aa\"\n"     // Start of line: 14
+                     "int i;";               // Start of line: 28
+  std::string Expected = "#include \"aa\"\n" // Start of line: 0
+                         "#include \"b\"\n"  // Start of line: 14
+                         "int i;";           // Start of line: 27
+  EXPECT_EQ(Expected, sort(Code));
+  EXPECT_EQ(12u, newCursor(Code, 26)); // Closing quote of "aa"
+  EXPECT_EQ(26u, newCursor(Code, 27)); // Newline after "aa"
+  EXPECT_EQ(27u, newCursor(Code, 28)); // Start of last line
 }
 
 TEST_F(SortIncludesTest, DeduplicateIncludes) {

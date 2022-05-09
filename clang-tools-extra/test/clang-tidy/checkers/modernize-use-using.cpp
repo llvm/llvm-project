@@ -302,3 +302,15 @@ struct InjectedClassNameWithUnnamedArgument {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
   // CHECK-FIXES: using b = InjectedClassNameWithUnnamedArgument;
 };
+
+typedef struct { int a; union { int b; }; } PR50990;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using PR50990 = struct { int a; union { int b; }; };
+
+typedef struct { struct { int a; struct { struct { int b; } c; int d; } e; } f; int g; } PR50990_nested;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using PR50990_nested = struct { struct { int a; struct { struct { int b; } c; int d; } e; } f; int g; };
+
+typedef struct { struct { int a; } b; union { int c; float d; struct { int e; }; }; struct { double f; } g; } PR50990_siblings;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using PR50990_siblings = struct { struct { int a; } b; union { int c; float d; struct { int e; }; }; struct { double f; } g; };

@@ -2,7 +2,7 @@
 
 // CHECK: func @f()
 // CHECK-NOT: attributes{{.*}}arg
-func @f(%arg0: f32 {test.erase_this_arg}) {
+func.func @f(%arg0: f32 {test.erase_this_arg}) {
   return
 }
 
@@ -10,7 +10,7 @@ func @f(%arg0: f32 {test.erase_this_arg}) {
 
 // CHECK: func @f(%arg0: f32 {test.A})
 // CHECK-NOT: attributes{{.*}}arg
-func @f(
+func.func @f(
   %arg0: f32 {test.erase_this_arg},
   %arg1: f32 {test.A}) {
   return
@@ -20,7 +20,7 @@ func @f(
 
 // CHECK: func @f(%arg0: f32 {test.A})
 // CHECK-NOT: attributes{{.*}}arg
-func @f(
+func.func @f(
   %arg0: f32 {test.A},
   %arg1: f32 {test.erase_this_arg}) {
   return
@@ -30,7 +30,7 @@ func @f(
 
 // CHECK: func @f(%arg0: f32 {test.A}, %arg1: f32 {test.B})
 // CHECK-NOT: attributes{{.*}}arg
-func @f(
+func.func @f(
   %arg0: f32 {test.A},
   %arg1: f32 {test.erase_this_arg},
   %arg2: f32 {test.B}) {
@@ -41,7 +41,7 @@ func @f(
 
 // CHECK: func @f(%arg0: f32 {test.A}, %arg1: f32 {test.B})
 // CHECK-NOT: attributes{{.*}}arg
-func @f(
+func.func @f(
   %arg0: f32 {test.A},
   %arg1: f32 {test.erase_this_arg},
   %arg2: f32 {test.erase_this_arg},
@@ -53,7 +53,7 @@ func @f(
 
 // CHECK: func @f(%arg0: f32 {test.A}, %arg1: f32 {test.B}, %arg2: f32 {test.C})
 // CHECK-NOT: attributes{{.*}}arg
-func @f(
+func.func @f(
   %arg0: f32 {test.A},
   %arg1: f32 {test.erase_this_arg},
   %arg2: f32 {test.B},
@@ -66,7 +66,7 @@ func @f(
 
 // CHECK: func @f(%arg0: tensor<1xf32>, %arg1: tensor<2xf32>, %arg2: tensor<3xf32>)
 // CHECK-NOT: attributes{{.*}}arg
-func @f(
+func.func @f(
   %arg0: tensor<1xf32>,
   %arg1: f32 {test.erase_this_arg},
   %arg2: tensor<2xf32>,

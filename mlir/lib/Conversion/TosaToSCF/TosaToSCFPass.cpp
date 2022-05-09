@@ -48,5 +48,5 @@ std::unique_ptr<Pass> mlir::tosa::createTosaToSCF() {
 }
 
 void mlir::tosa::addTosaToSCFPasses(OpPassManager &pm) {
-  pm.addNestedPass<FuncOp>(createTosaToSCF());
+  pm.addNestedPass<func::FuncOp>(createTosaToSCF());
 }

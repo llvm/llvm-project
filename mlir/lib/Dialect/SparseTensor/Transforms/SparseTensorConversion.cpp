@@ -57,10 +57,10 @@ static FlatSymbolRefAttr getFunc(Operation *op, StringRef name,
   MLIRContext *context = op->getContext();
   auto module = op->getParentOfType<ModuleOp>();
   auto result = SymbolRefAttr::get(context, name);
-  auto func = module.lookupSymbol<FuncOp>(result.getAttr());
+  auto func = module.lookupSymbol<func::FuncOp>(result.getAttr());
   if (!func) {
     OpBuilder moduleBuilder(module.getBodyRegion());
-    func = moduleBuilder.create<FuncOp>(
+    func = moduleBuilder.create<func::FuncOp>(
         op->getLoc(), name,
         FunctionType::get(context, operands.getTypes(), resultType));
     func.setPrivate();

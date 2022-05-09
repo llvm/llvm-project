@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   assign(const basic_string<charT,traits>& str, size_type pos, size_type n=npos);
+//   assign(const basic_string<charT,traits>& str, size_type pos, size_type n=npos); // constexpr since C++20
 // the =npos was added for C++14
 
 #include <string>
@@ -30,7 +32,7 @@ test(S s, S str, typename S::size_type pos, typename S::size_type n, S expected)
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -56,7 +58,7 @@ test_npos(S s, S str, typename S::size_type pos, S expected)
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -71,7 +73,7 @@ test_npos(S s, S str, typename S::size_type pos, S expected)
 #endif
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S(), S(), 0, 0, S());
@@ -140,7 +142,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

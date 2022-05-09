@@ -5,7 +5,7 @@
 ; create the debug_value for us, make sure that we propagate llvm.dbg.addr into
 ; the beginning coroutine and all other funclets.
 
-; RUN: opt %s -passes='function(coro-early),cgscc(coro-split,simplifycfg)' -S | FileCheck %s
+; RUN: opt %s -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -S | FileCheck %s
 
 ; CHECK-LABEL: define swifttailcc void @"$s10async_args14withGenericArgyyxnYalF"(%swift.context* swiftasync %0, %swift.opaque* noalias %1, %swift.type* %T){{.*}} {
 ; CHECK: call void @llvm.dbg.declare(metadata %swift.context** [[CORO_CTX:%[a-z0-9\.]+]],

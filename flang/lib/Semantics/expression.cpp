@@ -2186,24 +2186,23 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   }
   if (!resolution) {
     // Not generic, or no resolution; may be intrinsic
-    if (!symbol->attrs().test(semantics::Attr::EXTERNAL)) {
-      if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
-              CallCharacteristics{ultimate.name().ToString(), isSubroutine},
-              arguments, GetFoldingContext())}) {
-        CheckBadExplicitType(*specificCall, *symbol);
-        return CalleeAndArguments{
-            ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
-            std::move(specificCall->arguments)};
-      } else if (symbol->attrs().test(semantics::Attr::INTRINSIC)) {
-        return std::nullopt;
-      }
-    }
-    if (isGenericInterface) {
-      EmitGenericResolutionError(*symbol, dueToNullActual);
-      return std::nullopt;
-    } else {
-      // Neither a generic interface nor an intrinsic
+    bool isIntrinsic{symbol->attrs().test(semantics::Attr::INTRINSIC)};
+    if (!isIntrinsic && !isGenericInterface) {
       resolution = symbol;
+    } else if (std::optional<SpecificCall> specificCall{
+                   context_.intrinsics().Probe(
+                       CallCharacteristics{
+                           ultimate.name().ToString(), isSubroutine},
+                       arguments, GetFoldingContext())}) {
+      CheckBadExplicitType(*specificCall, *symbol);
+      return CalleeAndArguments{
+          ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
+          std::move(specificCall->arguments)};
+    } else {
+      if (isGenericInterface) {
+        EmitGenericResolutionError(*symbol, dueToNullActual);
+      }
+      return std::nullopt;
     }
   }
   if (resolution->GetUltimate().has<semantics::DerivedTypeDetails>()) {
@@ -3228,12 +3227,10 @@ void ArgumentAnalyzer::Analyze(
             actual = ActualArgument(label.v);
           },
           [&](const parser::ActualArg::PercentRef &) {
-            context_.Say(
-                "not yet implemented: %REF() intrinsic for arguments"_err_en_US);
+            context_.Say("%REF() intrinsic for arguments"_todo_en_US);
           },
           [&](const parser::ActualArg::PercentVal &) {
-            context_.Say(
-                "not yet implemetned: %VAL() intrinsic for arguments"_err_en_US);
+            context_.Say("%VAL() intrinsic for arguments"_todo_en_US);
           },
       },
       std::get<parser::ActualArg>(arg.t).u);

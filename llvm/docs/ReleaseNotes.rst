@@ -69,6 +69,14 @@ Changes to the LLVM IR
 Changes to building LLVM
 ------------------------
 
+* Omitting ``CMAKE_BUILD_TYPE`` when using a single configuration generator is now
+  an error. You now have to pass ``-DCMAKE_BUILD_TYPE=<type>`` in order to configure
+  LLVM. This is done to help new users of LLVM select the correct type: since building
+  LLVM in Debug mode is very resource intensive, we want to make sure that new users
+  make the choice that lines up with their usage. We have also improved documentation
+  around this setting that should help new users. You can find this documentation
+  `here <https://llvm.org/docs/CMake.html#cmake-build-type>`_.
+
 Changes to TableGen
 -------------------
 
@@ -134,6 +142,10 @@ Changes to the OCaml bindings
 Changes to the C API
 --------------------
 
+* Add ``LLVMGetCastOpcode`` function to aid users of ``LLVMBuildCast`` in
+  resolving the best cast operation given a source value and destination type.
+  This function is a direct wrapper of ``CastInst::getCastOpcode``.
+
 Changes to the Go bindings
 --------------------------
 
@@ -160,6 +172,14 @@ Changes to LLDB
 
 Changes to Sanitizers
 ---------------------
+
+
+Other Changes
+-------------
+* The code for the `LLVM Visual Studio integration
+  <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`_
+  has been removed. This had been obsolete and abandoned since Visual Studio
+  started including an integration by default in 2019.
 
 External Open Source Projects Using LLVM 15
 ===========================================

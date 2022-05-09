@@ -369,6 +369,8 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
           if (Changes[i].Tok->MatchingParen &&
               Changes[i].Tok->MatchingParen->is(TT_LambdaLBrace))
             return false;
+          if (Changes[ScopeStart].NewlinesBefore > 0)
+            return false;
           return Style.BinPackArguments;
         }
 
@@ -396,6 +398,8 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                 Changes[OuterScopeStart - 1].Tok->is(TT_LambdaLBrace))
               return false;
           }
+          if (Changes[ScopeStart].NewlinesBefore > 0)
+            return false;
           return true;
         }
 

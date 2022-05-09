@@ -373,11 +373,12 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   assert(Op0->getType() == Op1->getType());
+  Type *Ty = I.getType();
 
   // If the shift amount is a one-use `sext`, we can demote it to `zext`.
   Value *Y;
   if (match(Op1, m_OneUse(m_SExt(m_Value(Y))))) {
-    Value *NewExt = Builder.CreateZExt(Y, I.getType(), Op1->getName());
+    Value *NewExt = Builder.CreateZExt(Y, Ty, Op1->getName());
     return BinaryOperator::Create(I.getOpcode(), Op0, NewExt);
   }
 
@@ -399,15 +400,56 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
           reassociateShiftAmtsOfTwoSameDirectionShifts(&I, SQ)))
     return NewShift;
 
-  // (C1 shift (A add C2)) -> (C1 shift C2) shift A)
-  // iff A and C2 are both positive.
+  // Pre-shift a constant shifted by a variable amount with constant offset:
+  // C shift (A add nuw C1) --> (C shift C1) shift A
   Value *A;
-  Constant *C;
-  if (match(Op0, m_Constant()) && match(Op1, m_Add(m_Value(A), m_Constant(C))))
-    if (isKnownNonNegative(A, DL, 0, &AC, &I, &DT) &&
-        isKnownNonNegative(C, DL, 0, &AC, &I, &DT))
-      return BinaryOperator::Create(
-          I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), Op0, C), A);
+  Constant *C, *C1;
+  if (match(Op0, m_Constant(C)) &&
+      match(Op1, m_NUWAdd(m_Value(A), m_Constant(C1)))) {
+    Constant *NewC = ConstantExpr::get(I.getOpcode(), C, C1);
+    return BinaryOperator::Create(I.getOpcode(), NewC, A);
+  }
+
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+
+  const APInt *AC, *AddC;
+  // Try to pre-shift a constant shifted by a variable amount added with a
+  // negative number:
+  // C << (X - AddC) --> (C >> AddC) << X
+  // and
+  // C >> (X - AddC) --> (C << AddC) >> X
+  if (match(Op0, m_APInt(AC)) && match(Op1, m_Add(m_Value(A), m_APInt(AddC))) &&
+      AddC->isNegative() && (-*AddC).ult(BitWidth)) {
+    assert(!AC->isZero() && "Expected simplify of shifted zero");
+    unsigned PosOffset = (-*AddC).getZExtValue();
+
+    auto isSuitableForPreShift = [PosOffset, &I, AC]() {
+      switch (I.getOpcode()) {
+      default:
+        return false;
+      case Instruction::Shl:
+        return (I.hasNoSignedWrap() || I.hasNoUnsignedWrap()) &&
+               AC->eq(AC->lshr(PosOffset).shl(PosOffset));
+      case Instruction::LShr:
+        return I.isExact() && AC->eq(AC->shl(PosOffset).lshr(PosOffset));
+      case Instruction::AShr:
+        return I.isExact() && AC->eq(AC->shl(PosOffset).ashr(PosOffset));
+      }
+    };
+    if (isSuitableForPreShift()) {
+      Constant *NewC = ConstantInt::get(Ty, I.getOpcode() == Instruction::Shl
+                                                ? AC->lshr(PosOffset)
+                                                : AC->shl(PosOffset));
+      BinaryOperator *NewShiftOp =
+          BinaryOperator::Create(I.getOpcode(), NewC, A);
+      if (I.getOpcode() == Instruction::Shl) {
+        NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+      } else {
+        NewShiftOp->setIsExact();
+      }
+      return NewShiftOp;
+    }
+  }
 
   // X shift (A srem C) -> X shift (A and (C - 1)) iff C is a power of 2.
   // Because shifts by negative values (which could occur if A were negative)
@@ -416,7 +458,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
       match(C, m_Power2())) {
     // FIXME: Should this get moved into SimplifyDemandedBits by saying we don't
     // demand the sign bit (and many others) here??
-    Constant *Mask = ConstantExpr::getSub(C, ConstantInt::get(I.getType(), 1));
+    Constant *Mask = ConstantExpr::getSub(C, ConstantInt::get(Ty, 1));
     Value *Rem = Builder.CreateAnd(A, Mask, Op1->getName());
     return replaceOperand(I, 1, Rem);
   }
@@ -1163,29 +1205,52 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
-    // Look for a "splat" mul pattern - it replicates bits across each half of
-    // a value, so a right shift is just a mask of the low bits:
-    // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
-    // TODO: Generalize to allow more than just half-width shifts?
     const APInt *MulC;
-    if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC))) &&
-        BitWidth > 2 && ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
-        MulC->logBase2() == ShAmtC)
-      return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
+    if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC)))) {
+      // Look for a "splat" mul pattern - it replicates bits across each half of
+      // a value, so a right shift is just a mask of the low bits:
+      // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
+      // TODO: Generalize to allow more than just half-width shifts?
+      if (BitWidth > 2 && ShAmtC * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
+          MulC->logBase2() == ShAmtC)
+        return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
 
-    // Try to narrow a bswap:
-    // (bswap (zext X)) >> C --> zext (bswap X >> C')
+      // The one-use check is not strictly necessary, but codegen may not be
+      // able to invert the transform and perf may suffer with an extra mul
+      // instruction.
+      if (Op0->hasOneUse()) {
+        APInt NewMulC = MulC->lshr(ShAmtC);
+        // if c is divisible by (1 << ShAmtC):
+        // lshr (mul nuw x, MulC), ShAmtC -> mul nuw x, (MulC >> ShAmtC)
+        if (MulC->eq(NewMulC.shl(ShAmtC))) {
+          auto *NewMul =
+              BinaryOperator::CreateNUWMul(X, ConstantInt::get(Ty, NewMulC));
+          BinaryOperator *OrigMul = cast<BinaryOperator>(Op0);
+          NewMul->setHasNoSignedWrap(OrigMul->hasNoSignedWrap());
+          return NewMul;
+        }
+      }
+    }
+
+    // Try to narrow bswap.
     // In the case where the shift amount equals the bitwidth difference, the
     // shift is eliminated.
     if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::bswap>(
                        m_OneUse(m_ZExt(m_Value(X))))))) {
-      // TODO: If the shift amount is less than the zext, we could shift left.
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
       unsigned WidthDiff = BitWidth - SrcWidth;
-      if (SrcWidth % 16 == 0 && ShAmtC >= WidthDiff) {
+      if (SrcWidth % 16 == 0) {
         Value *NarrowSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
-        Value *NewShift = Builder.CreateLShr(NarrowSwap, ShAmtC - WidthDiff);
-        return new ZExtInst(NewShift, Ty);
+        if (ShAmtC >= WidthDiff) {
+          // (bswap (zext X)) >> C --> zext (bswap X >> C')
+          Value *NewShift = Builder.CreateLShr(NarrowSwap, ShAmtC - WidthDiff);
+          return new ZExtInst(NewShift, Ty);
+        } else {
+          // (bswap (zext X)) >> C --> (zext (bswap X)) << C'
+          Value *NewZExt = Builder.CreateZExt(NarrowSwap, Ty);
+          Constant *ShiftDiff = ConstantInt::get(Ty, WidthDiff - ShAmtC);
+          return BinaryOperator::CreateShl(NewZExt, ShiftDiff);
+        }
       }
     }
 

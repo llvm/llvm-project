@@ -133,7 +133,7 @@
   iterator_types = ["parallel", "parallel", "reduction"]
 }
 
-func @entry() {
+func.func @entry() {
   %f0 = arith.constant 0.0: f32
   %f1 = arith.constant 1.0: f32
   %f2 = arith.constant 2.0: f32

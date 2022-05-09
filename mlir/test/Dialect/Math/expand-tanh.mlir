@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -test-expand-tanh | FileCheck %s
 
 // CHECK-LABEL: func @tanh
-func @tanh(%arg: f32) -> f32 {
+func.func @tanh(%arg: f32) -> f32 {
   %res = math.tanh %arg : f32
   return %res : f32
 }

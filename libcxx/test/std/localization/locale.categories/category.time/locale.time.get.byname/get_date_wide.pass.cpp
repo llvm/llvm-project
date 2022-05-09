@@ -10,14 +10,12 @@
 // XFAIL: netbsd
 
 // XFAIL: libcpp-has-no-wide-characters
+// XFAIL: LIBCXX-AIX-FIXME
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ru_RU.UTF-8
 // REQUIRES: locale.zh_CN.UTF-8
-
-// GLIBC fails on the zh_CN test.
-// XFAIL: linux
 
 // <locale>
 
@@ -93,7 +91,12 @@ int main(int, char**)
     }
     {
         const my_facet f(LOCALE_zh_CN_UTF_8, 1);
+#ifdef TEST_HAS_GLIBC
+        // There's no separator between month and day.
+        const wchar_t in[] = L"2009\u5e740610";
+#else
         const wchar_t in[] = L"2009/06/10";
+#endif
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_date(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
@@ -103,6 +106,5 @@ int main(int, char**)
         assert(t.tm_year == 109);
         assert(err == std::ios_base::eofbit);
     }
-
   return 0;
 }

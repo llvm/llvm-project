@@ -1,7 +1,7 @@
 // RUN: mlir-opt -convert-openmp-to-llvm %s  -split-input-file | FileCheck %s
 
 // CHECK-LABEL: llvm.func @master_block_arg
-func @master_block_arg() {
+func.func @master_block_arg() {
   // CHECK: omp.master
   omp.master {
   // CHECK-NEXT: ^[[BB0:.*]](%[[ARG1:.*]]: i64, %[[ARG2:.*]]: i64):
@@ -16,7 +16,7 @@ func @master_block_arg() {
 }
 
 // CHECK-LABEL: llvm.func @branch_loop
-func @branch_loop() {
+func.func @branch_loop() {
   %start = arith.constant 0 : index
   %end = arith.constant 0 : index
   // CHECK: omp.parallel
@@ -46,7 +46,7 @@ func @branch_loop() {
 
 // CHECK-LABEL: @wsloop
 // CHECK: (%[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64, %[[ARG2:.*]]: i64, %[[ARG3:.*]]: i64, %[[ARG4:.*]]: i64, %[[ARG5:.*]]: i64)
-func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) {
+func.func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) {
   // CHECK: omp.parallel
   omp.parallel {
     // CHECK: omp.wsloop for (%[[ARG6:.*]], %[[ARG7:.*]]) : i64 = (%[[ARG0]], %[[ARG1]]) to (%[[ARG2]], %[[ARG3]]) step (%[[ARG4]], %[[ARG5]]) {

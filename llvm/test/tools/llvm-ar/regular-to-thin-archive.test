@@ -1,0 +1,29 @@
+# XFAIL: system-aix
+## Test regular archives do not convert to thin archives.
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-ar qc %t/archive.a %S/Inputs/a.txt
+# RUN: not llvm-ar q --thin %t/archive.a %s 2>&1 | FileCheck %s
+# RUN: not llvm-ar r --thin %t/archive.a %s 2>&1 | FileCheck %s
+
+# CHECK: error: cannot convert a regular archive to a thin one
+
+## Test that you can add a regular archive to a new thin archive with 'L'.
+# RUN: llvm-ar -qcL --thin %t/thin1.a %S/Inputs/b.txt %t/archive.a
+# RUN: FileCheck --check-prefixes=THIN --input-file=%t/thin1.a %s
+
+## Test that you can add a regular archive to an existing thin archive with 'L'.
+# RUN: llvm-ar -qc --thin %t/thin2.a %S/Inputs/b.txt
+# RUN: llvm-ar -qL --thin %t/thin2.a %t/archive.a
+# RUN: FileCheck --check-prefixes=THIN --input-file=%t/thin2.a %s
+
+# THIN: !<thin>
+# THIN: archive.a
+
+## Test archives do not convert to thin archives with use of 'L' and '--thin'.
+# RUN: not llvm-ar -qL --thin %t/archive.a %t/thin2.a 2>&1 | FileCheck %s
+
+## Test that a regular archive can be read despite use of --thin 
+# RUN: llvm-ar -t --thin %t/archive.a
+# RUN: FileCheck --check-prefixes=REGULAR --input-file=%t/archive.a %s
+# REGULAR: !<arch>

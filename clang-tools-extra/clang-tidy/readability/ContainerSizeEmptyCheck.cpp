@@ -191,10 +191,17 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   std::string ReplacementText = std::string(
       Lexer::getSourceText(CharSourceRange::getTokenRange(E->getSourceRange()),
                            *Result.SourceManager, getLangOpts()));
-  if (isBinaryOrTernary(E) || isa<UnaryOperator>(E)) {
+  const auto *OpCallExpr = dyn_cast<CXXOperatorCallExpr>(E);
+  if (isBinaryOrTernary(E) || isa<UnaryOperator>(E) ||
+      (OpCallExpr && (OpCallExpr->getOperator() == OO_Star))) {
     ReplacementText = "(" + ReplacementText + ")";
   }
-  if (E->getType()->isPointerType())
+  if (OpCallExpr &&
+      OpCallExpr->getOperator() == OverloadedOperatorKind::OO_Arrow) {
+    // This can happen if the object is a smart pointer. Don't add anything
+    // because a '->' is already there (PR#51776), just call the method.
+    ReplacementText += "empty()";
+  } else if (E->getType()->isPointerType())
     ReplacementText += "->empty()";
   else
     ReplacementText += ".empty()";

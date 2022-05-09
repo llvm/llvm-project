@@ -56,6 +56,7 @@ executable("clang") {
     "//clang/lib/Frontend",
     "//clang/lib/FrontendTool",
     "//clang/lib/Headers",
+    "//clang/tools/clang-linker-wrapper",
     "//clang/tools/clang-offload-bundler",
     "//clang/tools/clang-offload-wrapper",
     "//llvm/include/llvm/Config:llvm-config",

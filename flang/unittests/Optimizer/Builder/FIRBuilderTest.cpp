@@ -27,7 +27,7 @@ public:
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
     mlir::ModuleOp mod = builder.create<mlir::ModuleOp>(loc);
-    mlir::FuncOp func = mlir::FuncOp::create(
+    mlir::func::FuncOp func = mlir::func::FuncOp::create(
         loc, "func1", builder.getFunctionType(llvm::None, llvm::None));
     auto *entryBlock = func.addEntryBlock();
     mod.push_back(mod);
@@ -404,7 +404,7 @@ TEST_F(FIRBuilderTest, getExtents) {
   auto loc = builder.getUnknownLoc();
   llvm::StringRef strValue("length");
   auto strLit = fir::factory::createStringLiteral(builder, loc, strValue);
-  auto ext = fir::factory::getExtents(builder, loc, strLit);
+  auto ext = fir::factory::getExtents(loc, builder, strLit);
   EXPECT_EQ(0u, ext.size());
   auto c10 = builder.createIntegerConstant(loc, builder.getI64Type(), 10);
   auto c100 = builder.createIntegerConstant(loc, builder.getI64Type(), 100);
@@ -414,7 +414,7 @@ TEST_F(FIRBuilderTest, getExtents) {
   mlir::Value array = builder.create<fir::UndefOp>(loc, arrayTy);
   fir::ArrayBoxValue aab(array, extents, {});
   fir::ExtendedValue ex(aab);
-  auto readExtents = fir::factory::getExtents(builder, loc, ex);
+  auto readExtents = fir::factory::getExtents(loc, builder, ex);
   EXPECT_EQ(2u, readExtents.size());
 }
 
@@ -497,12 +497,12 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
   for (const auto &scalar : f32Scalars) {
     EXPECT_EQ(fir::getBaseTypeOf(scalar), f32Ty);
     EXPECT_EQ(fir::getElementTypeOf(scalar), f32Ty);
-    EXPECT_FALSE(fir::isDerivedWithLengthParameters(scalar));
+    EXPECT_FALSE(fir::isDerivedWithLenParameters(scalar));
   }
   for (const auto &array : f32Arrays) {
     EXPECT_EQ(fir::getBaseTypeOf(array), f32SeqTy);
     EXPECT_EQ(fir::getElementTypeOf(array), f32Ty);
-    EXPECT_FALSE(fir::isDerivedWithLengthParameters(array));
+    EXPECT_FALSE(fir::isDerivedWithLenParameters(array));
   }
 
   auto derivedWithLengthTy =
@@ -520,11 +520,11 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
   for (const auto &scalar : derivedWithLengthScalars) {
     EXPECT_EQ(fir::getBaseTypeOf(scalar), derivedWithLengthTy);
     EXPECT_EQ(fir::getElementTypeOf(scalar), derivedWithLengthTy);
-    EXPECT_TRUE(fir::isDerivedWithLengthParameters(scalar));
+    EXPECT_TRUE(fir::isDerivedWithLenParameters(scalar));
   }
   for (const auto &array : derivedWithLengthArrays) {
     EXPECT_EQ(fir::getBaseTypeOf(array), derivedWithLengthSeqTy);
     EXPECT_EQ(fir::getElementTypeOf(array), derivedWithLengthTy);
-    EXPECT_TRUE(fir::isDerivedWithLengthParameters(array));
+    EXPECT_TRUE(fir::isDerivedWithLenParameters(array));
   }
 }

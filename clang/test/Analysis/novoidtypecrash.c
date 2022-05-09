@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core %s
+// RUN: %clang_analyze_cc1 -std=c89 -analyzer-checker=core %s
 x;
 y(void **z) { // no-crash
   *z = x;

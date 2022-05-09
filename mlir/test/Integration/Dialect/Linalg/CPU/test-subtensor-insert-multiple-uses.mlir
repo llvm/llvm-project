@@ -6,7 +6,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext,%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %const = arith.constant dense<10.0> : tensor<2xf32>
   %insert_val = arith.constant dense<20.0> : tensor<1xf32>
 
@@ -18,14 +18,14 @@ func @main() {
   %inserted_at_position_1 = tensor.insert_slice %insert_val into %const[1][1][1] : tensor<1xf32> into tensor<2xf32>
 
   %unranked_at_position_0 = tensor.cast %inserted_at_position_0 : tensor<2xf32> to tensor<*xf32>
-  call @print_memref_f32(%unranked_at_position_0) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%unranked_at_position_0) : (tensor<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 1 offset = 0 sizes = [2] strides = [1] data =
   // CHECK-NEXT: [20, 10]
 
   %unranked_at_position_1 = tensor.cast %inserted_at_position_1 : tensor<2xf32> to tensor<*xf32>
-  call @print_memref_f32(%unranked_at_position_1) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%unranked_at_position_1) : (tensor<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 1 offset = 0 sizes = [2] strides = [1] data =
@@ -34,4 +34,4 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)

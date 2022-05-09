@@ -1170,6 +1170,22 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
     }
   }
 
+  // std::addressof and variants.
+  if (auto *Call = dyn_cast<CallExpr>(E)) {
+    switch (Call->getBuiltinCallee()) {
+    default:
+      break;
+    case Builtin::BIaddressof:
+    case Builtin::BI__addressof:
+    case Builtin::BI__builtin_addressof: {
+      LValue LV = EmitLValue(Call->getArg(0));
+      if (BaseInfo) *BaseInfo = LV.getBaseInfo();
+      if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
+      return LV.getAddress(*this);
+    }
+    }
+  }
+
   // TODO: conditional operators, comma.
 
   // Otherwise, use the alignment of the type.

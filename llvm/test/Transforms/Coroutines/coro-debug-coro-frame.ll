@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='function(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
+; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 
 ; Checks whether the dbg.declare for `__coro_frame` are created.
 

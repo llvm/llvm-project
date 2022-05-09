@@ -213,6 +213,7 @@ protected:
   MCSection *LazySymbolPointerSection = nullptr;
   MCSection *NonLazySymbolPointerSection = nullptr;
   MCSection *ThreadLocalPointerSection = nullptr;
+  MCSection *AddrSigSection = nullptr;
 
   /// COFF specific sections.
   MCSection *DrectveSection = nullptr;
@@ -410,6 +411,7 @@ public:
   MCSection *getThreadLocalPointerSection() const {
     return ThreadLocalPointerSection;
   }
+  MCSection *getAddrSigSection() const { return AddrSigSection; }
 
   // COFF specific sections.
   MCSection *getDrectveSection() const { return DrectveSection; }
@@ -448,6 +450,7 @@ private:
   void initELFMCObjectFileInfo(const Triple &T, bool Large);
   void initGOFFMCObjectFileInfo(const Triple &T);
   void initCOFFMCObjectFileInfo(const Triple &T);
+  void initSPIRVMCObjectFileInfo(const Triple &T);
   void initWasmMCObjectFileInfo(const Triple &T);
   void initXCOFFMCObjectFileInfo(const Triple &T);
   MCSection *getDwarfComdatSection(const char *Name, uint64_t Hash) const;

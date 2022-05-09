@@ -134,11 +134,7 @@ TypeCode::GetCategoryAndKind() const {
   case CFI_type_extended_double:
     return std::make_pair(TypeCategory::Real, 10);
   case CFI_type_long_double:
-#if __x86_64__
-    return std::make_pair(TypeCategory::Real, 10);
-#else
     return std::make_pair(TypeCategory::Real, 16);
-#endif
   case CFI_type_float128:
     return std::make_pair(TypeCategory::Real, 16);
   case CFI_type_half_float_Complex:
@@ -152,11 +148,7 @@ TypeCode::GetCategoryAndKind() const {
   case CFI_type_extended_double_Complex:
     return std::make_pair(TypeCategory::Complex, 10);
   case CFI_type_long_double_Complex:
-#if __x86_64__
-    return std::make_pair(TypeCategory::Complex, 10);
-#else
     return std::make_pair(TypeCategory::Complex, 16);
-#endif
   case CFI_type_float128_Complex:
     return std::make_pair(TypeCategory::Complex, 16);
   case CFI_type_char:

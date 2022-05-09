@@ -3,7 +3,7 @@
 // CHECK: #map = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
 
 // CHECK-LABEL: func @alloc() {
-func @alloc() {
+func.func @alloc() {
 ^bb0:
   // Test simple alloc.
   // CHECK: %0 = memref.alloc() : memref<1024x64xf32, 1>
@@ -34,7 +34,7 @@ func @alloc() {
 }
 
 // CHECK-LABEL: func @alloca() {
-func @alloca() {
+func.func @alloca() {
 ^bb0:
   // Test simple alloc.
   // CHECK: %0 = memref.alloca() : memref<1024x64xf32, 1>
@@ -63,7 +63,7 @@ func @alloca() {
 }
 
 // CHECK-LABEL: func @dealloc() {
-func @dealloc() {
+func.func @dealloc() {
 ^bb0:
   // CHECK: %0 = memref.alloc() : memref<1024x64xf32>
   %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 0>
@@ -74,7 +74,7 @@ func @dealloc() {
 }
 
 // CHECK-LABEL: func @load_store
-func @load_store() {
+func.func @load_store() {
 ^bb0:
   // CHECK: %0 = memref.alloc() : memref<1024x64xf32, 1>
   %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
@@ -92,7 +92,7 @@ func @load_store() {
 }
 
 // CHECK-LABEL: func @dma_ops()
-func @dma_ops() {
+func.func @dma_ops() {
   %c0 = arith.constant 0 : index
   %stride = arith.constant 32 : index
   %elt_per_stride = arith.constant 16 : index

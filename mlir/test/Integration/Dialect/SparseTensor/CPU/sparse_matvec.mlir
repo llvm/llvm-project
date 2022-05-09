@@ -43,7 +43,7 @@ module {
   // A kernel that multiplies a sparse matrix A with a dense vector b
   // into a dense vector x.
   //
-  func @kernel_matvec(%arga: tensor<?x?xi32, #SparseMatrix>,
+  func.func @kernel_matvec(%arga: tensor<?x?xi32, #SparseMatrix>,
                       %argb: tensor<?xi32>,
                       %argx: tensor<?xi32> {linalg.inplaceable = true})
 		      -> tensor<?xi32> {
@@ -58,12 +58,12 @@ module {
     return %0 : tensor<?xi32>
   }
 
-  func private @getTensorFilename(index) -> (!Filename)
+  func.func private @getTensorFilename(index) -> (!Filename)
 
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
-  func @entry() {
+  func.func @entry() {
     %i0 = arith.constant 0 : i32
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index

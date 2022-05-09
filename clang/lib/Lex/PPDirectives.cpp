@@ -905,7 +905,7 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
     if (SuggestedModule && !LangOpts.AsmPreprocessor)
       HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
           RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-          Filename, &FE->getFileEntry());
+          Filename, *FE);
     return FE;
   }
 
@@ -921,7 +921,7 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
         if (SuggestedModule && !LangOpts.AsmPreprocessor)
           HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
               RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-              Filename, &FE->getFileEntry());
+              Filename, *FE);
         return FE;
       }
     }
@@ -936,7 +936,7 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
           if (SuggestedModule && !LangOpts.AsmPreprocessor)
             HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
                 RequestingModule, RequestingModuleIsModuleInterface,
-                FilenameLoc, Filename, &FE->getFileEntry());
+                FilenameLoc, Filename, *FE);
           return FE;
         }
       }
@@ -2047,10 +2047,6 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       &CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
       IsFrameworkFound, IsImportDecl, IsMapped, LookupFrom, LookupFromFile,
       LookupFilename, RelativePath, SearchPath, SuggestedModule, isAngled);
-
-  // Record the header's filename for later use.
-  if (File)
-    CurLexer->addInclude(OriginalFilename, File->getFileEntry(), FilenameLoc);
 
   if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) {
     if (File && isPCHThroughHeader(&File->getFileEntry()))

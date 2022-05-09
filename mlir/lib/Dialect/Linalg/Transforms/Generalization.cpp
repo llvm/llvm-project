@@ -74,7 +74,7 @@ struct LinalgGeneralizationPass
 } // namespace
 
 void LinalgGeneralizationPass::runOnOperation() {
-  FuncOp func = getOperation();
+  func::FuncOp func = getOperation();
   RewritePatternSet patterns(&getContext());
   populateLinalgNamedOpsGeneralizationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(func.getBody(), std::move(patterns));
@@ -85,6 +85,7 @@ void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
   patterns.add<LinalgGeneralizationPattern>(patterns.getContext(), marker);
 }
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgGeneralizationPass() {
+std::unique_ptr<OperationPass<func::FuncOp>>
+mlir::createLinalgGeneralizationPass() {
   return std::make_unique<LinalgGeneralizationPass>();
 }

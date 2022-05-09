@@ -12,8 +12,8 @@
 
 # RUN: %lld -dylib -arch arm64 -platform_version macOS 10.14 10.15 -o %t/out.dylib %t/test.o
 
-# RUN: not %lld -dylib -arch arm64 -platform_version iOS 9.0 11.0 %t/out.dylib \
-# RUN:  -o /dev/null 2>&1 | FileCheck %s --check-prefix=DYLIB-PLAT
+# RUN: not %no-arg-lld -dylib -arch arm64 -platform_version iOS 9.0 11.0 \
+# RUN:  %t/out.dylib -o /dev/null 2>&1 | FileCheck %s --check-prefix=DYLIB-PLAT
 # DYLIB-PLAT: {{.*}}out.dylib has platform macOS, which is different from target platform iOS
 
 # RUN: %lld -lSystem -dylib -arch arm64 -platform_version macOS 10.14.0 10.15.0 %t/out.dylib -o /dev/null
@@ -24,7 +24,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos10.15.0 %s -o %t/test_x86.o
 
-# RUN: not %lld %t/test_x86.o -lSystem -arch x86_64 -platform_version iOS 10.0 15.0 \
+# RUN: not %no-arg-lld %t/test_x86.o -lSystem -arch x86_64 -platform_version iOS 10.0 15.0 \
 # RUN:  -o /dev/null 2>&1 | FileCheck %s --check-prefix=OBJ-PLAT
 # OBJ-PLAT: {{.*}}test_x86.o has platform macOS, which is different from target platform iOS
 
@@ -38,13 +38,13 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-ios14.0 %s -o %t/test_x86_ios.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-ios14.0-simulator %s -o %t/test_x86_ios_sim.o
 
-# RUN: %lld -dylib -platform_version ios-simulator 14.0.0 14.0.0 %t/test_x86_ios.o -o /dev/null
-# RUN: %lld -dylib -platform_version ios 14.0.0 14.0.0 %t/test_x86_ios_sim.o -o /dev/null
+# RUN: %no-arg-lld -dylib -arch x86_64 -platform_version ios-simulator 14.0.0 14.0.0 %t/test_x86_ios.o -o /dev/null
+# RUN: %no-arg-lld -dylib -arch x86_64 -platform_version ios 14.0.0 14.0.0 %t/test_x86_ios_sim.o -o /dev/null
 
-# RUN: not %lld -dylib  -platform_version watchos-simulator 14.0.0 14.0.0 %t/test_x86_ios.o \
+# RUN: not %no-arg-lld -dylib -arch x86_64 -platform_version watchos-simulator 14.0.0 14.0.0 %t/test_x86_ios.o \
 # RUN:	-o /dev/null 2>&1 | FileCheck %s --check-prefix=CROSS-SIM
 # CROSS-SIM: {{.*}}test_x86_ios.o has platform iOS, which is different from target platform watchOS Simulator
-# RUN: not %lld -dylib  -platform_version watchos-simulator 14.0.0 14.0.0 %t/test_x86_ios_sim.o \
+# RUN: not %no-arg-lld -dylib -arch x86_64 -platform_version watchos-simulator 14.0.0 14.0.0 %t/test_x86_ios_sim.o \
 # RUN:	-o /dev/null 2>&1 | FileCheck %s --check-prefix=CROSS-SIM2
 # CROSS-SIM2: {{.*}}test_x86_ios_sim.o has platform iOS Simulator, which is different from target platform watchOS Simulator
 

@@ -5,7 +5,7 @@
 //      CHECK: func @fill_matmul_tensors(
 // CHECK-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x?xf32>
 // CHECK-SAME:    %[[TB:[0-9a-z]+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
-func @fill_matmul_tensors(
+func.func @fill_matmul_tensors(
   %arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>)
     -> tensor<?x?xf32> {
 //  CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index

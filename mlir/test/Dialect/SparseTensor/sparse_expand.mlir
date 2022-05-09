@@ -46,7 +46,7 @@
 // CHECK-CONVERT: memref.dealloc %[[C]] : memref<?xindex>
 // CHECK-CONVERT: call @endInsert
 //
-func @kernel(%arga: tensor<?x?xf64, #DCSC>) -> tensor<?xf64, #SV> {
+func.func @kernel(%arga: tensor<?x?xf64, #DCSC>) -> tensor<?xf64, #SV> {
   %c0 = arith.constant 0 : index
   %n = tensor.dim %arga, %c0 : tensor<?x?xf64, #DCSC>
   %v = sparse_tensor.init [%n] : tensor<?xf64, #SV>

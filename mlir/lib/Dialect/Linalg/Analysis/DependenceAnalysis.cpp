@@ -94,7 +94,7 @@ StringRef LinalgDependenceGraph::getDependenceTypeStr(DependenceType depType) {
 }
 
 LinalgDependenceGraph
-LinalgDependenceGraph::buildDependenceGraph(Aliases &aliases, FuncOp f) {
+LinalgDependenceGraph::buildDependenceGraph(Aliases &aliases, func::FuncOp f) {
   SmallVector<LinalgOp, 8> linalgOps;
   f.walk([&](LinalgOp op) { linalgOps.push_back(op); });
   return LinalgDependenceGraph(aliases, linalgOps);

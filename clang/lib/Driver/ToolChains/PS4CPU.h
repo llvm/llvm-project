@@ -27,9 +27,9 @@ void addProfileRTArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 void addSanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
 
-class LLVM_LIBRARY_VISIBILITY Assemble : public Tool {
+class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:
-  Assemble(const ToolChain &TC) : Tool("PScpu::Assemble", "assembler", TC) {}
+  Assembler(const ToolChain &TC) : Tool("PScpu::Assembler", "assembler", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -39,9 +39,9 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Link : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Link(const ToolChain &TC) : Tool("PScpu::Link", "linker", TC) {}
+  Linker(const ToolChain &TC) : Tool("PScpu::Linker", "linker", TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }

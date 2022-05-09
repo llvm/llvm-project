@@ -16,7 +16,7 @@ declare i64 @strnlen(i8*, i64)
 define i64 @deref_strnlen_ecp_3() {
 ; CHECK-LABEL: @deref_strnlen_ecp_3(
 ; CHECK-NEXT:    [[PTR:%.*]] = load i8*, i8** @ecp, align 8
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 3)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* noundef nonnull dereferenceable(1) [[PTR]], i64 3)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %ptr = load i8*, i8** @ecp
@@ -32,7 +32,7 @@ define i64 @deref_strnlen_ecp_nz(i64 %n) {
 ; CHECK-LABEL: @deref_strnlen_ecp_nz(
 ; CHECK-NEXT:    [[NONZERO:%.*]] = or i64 [[N:%.*]], 1
 ; CHECK-NEXT:    [[PTR:%.*]] = load i8*, i8** @ecp, align 8
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 [[NONZERO]])
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* noundef nonnull dereferenceable(1) [[PTR]], i64 [[NONZERO]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %nonzero = or i64 %n, 1

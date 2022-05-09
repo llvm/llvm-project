@@ -439,6 +439,7 @@ class DataFlowSanitizer {
   FunctionType *DFSanUnionLoadFnTy;
   FunctionType *DFSanLoadLabelAndOriginFnTy;
   FunctionType *DFSanUnimplementedFnTy;
+  FunctionType *DFSanWrapperExternWeakNullFnTy;
   FunctionType *DFSanSetLabelFnTy;
   FunctionType *DFSanNonzeroLabelFnTy;
   FunctionType *DFSanVarargWrapperFnTy;
@@ -454,6 +455,7 @@ class DataFlowSanitizer {
   FunctionCallee DFSanUnionLoadFn;
   FunctionCallee DFSanLoadLabelAndOriginFn;
   FunctionCallee DFSanUnimplementedFn;
+  FunctionCallee DFSanWrapperExternWeakNullFn;
   FunctionCallee DFSanSetLabelFn;
   FunctionCallee DFSanNonzeroLabelFn;
   FunctionCallee DFSanVarargWrapperFn;
@@ -490,6 +492,7 @@ class DataFlowSanitizer {
   TransformedFunction getCustomFunctionType(FunctionType *T);
   WrapperKind getWrapperKind(Function *F);
   void addGlobalNameSuffix(GlobalValue *GV);
+  void buildExternWeakCheckIfNeeded(IRBuilder<> &IRB, Function *F);
   Function *buildWrapperFunction(Function *F, StringRef NewFName,
                                  GlobalValue::LinkageTypes NewFLink,
                                  FunctionType *NewFT);
@@ -1041,6 +1044,10 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
                         /*isVarArg=*/false);
   DFSanUnimplementedFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
+  Type *DFSanWrapperExternWeakNullArgs[2] = {Int8Ptr, Int8Ptr};
+  DFSanWrapperExternWeakNullFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanWrapperExternWeakNullArgs,
+                        /*isVarArg=*/false);
   Type *DFSanSetLabelArgs[4] = {PrimitiveShadowTy, OriginTy,
                                 Type::getInt8PtrTy(*Ctx), IntptrTy};
   DFSanSetLabelFnTy = FunctionType::get(Type::getVoidTy(*Ctx),
@@ -1132,6 +1139,23 @@ void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
   }
 }
 
+void DataFlowSanitizer::buildExternWeakCheckIfNeeded(IRBuilder<> &IRB,
+                                                     Function *F) {
+  // If the function we are wrapping was ExternWeak, it may be null.
+  // The original code before calling this wrapper may have checked for null,
+  // but replacing with a known-to-not-be-null wrapper can break this check.
+  // When replacing uses of the extern weak function with the wrapper we try
+  // to avoid replacing uses in conditionals, but this is not perfect.
+  // In the case where we fail, and accidentially optimize out a null check
+  // for a extern weak function, add a check here to help identify the issue.
+  if (GlobalValue::isExternalWeakLinkage(F->getLinkage())) {
+    std::vector<Value *> Args;
+    Args.push_back(IRB.CreatePointerCast(F, IRB.getInt8PtrTy()));
+    Args.push_back(IRB.CreateGlobalStringPtr(F->getName()));
+    IRB.CreateCall(DFSanWrapperExternWeakNullFn, Args);
+  }
+}
+
 Function *
 DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
                                         GlobalValue::LinkageTypes NewFLink,
@@ -1184,6 +1208,8 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
   }
   DFSanUnimplementedFn =
       Mod->getOrInsertFunction("__dfsan_unimplemented", DFSanUnimplementedFnTy);
+  DFSanWrapperExternWeakNullFn = Mod->getOrInsertFunction(
+      "__dfsan_wrapper_extern_weak_null", DFSanWrapperExternWeakNullFnTy);
   {
     AttributeList AL;
     AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
@@ -1227,6 +1253,8 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
       DFSanLoadLabelAndOriginFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
       DFSanUnimplementedFn.getCallee()->stripPointerCasts());
+  DFSanRuntimeFunctions.insert(
+      DFSanWrapperExternWeakNullFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
       DFSanSetLabelFn.getCallee()->stripPointerCasts());
   DFSanRuntimeFunctions.insert(
@@ -2860,16 +2888,19 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
     CB.setCalledFunction(&F);
     IRB.CreateCall(DFSF.DFS.DFSanUnimplementedFn,
                    IRB.CreateGlobalStringPtr(F.getName()));
+    DFSF.DFS.buildExternWeakCheckIfNeeded(IRB, &F);
     DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
     DFSF.setOrigin(&CB, DFSF.DFS.ZeroOrigin);
     return true;
   case DataFlowSanitizer::WK_Discard:
     CB.setCalledFunction(&F);
+    DFSF.DFS.buildExternWeakCheckIfNeeded(IRB, &F);
     DFSF.setShadow(&CB, DFSF.DFS.getZeroShadow(&CB));
     DFSF.setOrigin(&CB, DFSF.DFS.ZeroOrigin);
     return true;
   case DataFlowSanitizer::WK_Functional:
     CB.setCalledFunction(&F);
+    DFSF.DFS.buildExternWeakCheckIfNeeded(IRB, &F);
     visitInstOperands(CB);
     return true;
   case DataFlowSanitizer::WK_Custom:

@@ -16,6 +16,7 @@
 #include "CGCXXABI.h"
 #include "CGCall.h"
 #include "CGDebugInfo.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGOpenMPRuntime.h"
@@ -146,6 +147,8 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
     createOpenMPRuntime();
   if (LangOpts.CUDA)
     createCUDARuntime();
+  if (LangOpts.HLSL)
+    createHLSLRuntime();
 
   // Enable TBAA unless it's suppressed. ThreadSanitizer needs TBAA even at O0.
   if (LangOpts.Sanitize.has(SanitizerKind::Thread) ||
@@ -260,6 +263,10 @@ void CodeGenModule::createOpenMPRuntime() {
 
 void CodeGenModule::createCUDARuntime() {
   CUDARuntime.reset(CreateNVCUDARuntime(*this));
+}
+
+void CodeGenModule::createHLSLRuntime() {
+  HLSLRuntime.reset(new CGHLSLRuntime(*this));
 }
 
 void CodeGenModule::addReplacement(StringRef Name, llvm::Constant *C) {
@@ -598,8 +605,8 @@ void CodeGenModule::Release() {
     llvm::ArrayType *ATy = llvm::ArrayType::get(Int8PtrTy, UsedArray.size());
 
     auto *GV = new llvm::GlobalVariable(
-        getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
-        llvm::ConstantArray::get(ATy, UsedArray), "gpu.used.external");
+        getModule(), ATy, false, llvm::GlobalValue::InternalLinkage,
+        llvm::ConstantArray::get(ATy, UsedArray), "__clang_gpu_used_external");
     addCompilerUsedGlobal(GV);
   }
 
@@ -831,6 +838,10 @@ void CodeGenModule::Release() {
       SPIRVerMD->addOperand(llvm::MDNode::get(Ctx, SPIRVerElts));
     }
   }
+
+  // HLSL related end of code gen work items.
+  if (LangOpts.HLSL)
+    getHLSLRuntime().finishCodeGen();
 
   if (uint32_t PLevel = Context.getLangOpts().PICLevel) {
     assert(PLevel < 3 && "Invalid PIC Level");
@@ -5502,12 +5513,11 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   switch (Triple.getObjectFormat()) {
   case llvm::Triple::UnknownObjectFormat:
     llvm_unreachable("unknown file format");
-  case llvm::Triple::GOFF:
-    llvm_unreachable("GOFF is not yet implemented");
-  case llvm::Triple::XCOFF:
-    llvm_unreachable("XCOFF is not yet implemented");
   case llvm::Triple::DXContainer:
-    llvm_unreachable("DXContainer is not yet implemented");
+  case llvm::Triple::GOFF:
+  case llvm::Triple::SPIRV:
+  case llvm::Triple::XCOFF:
+    llvm_unreachable("unimplemented");
   case llvm::Triple::COFF:
   case llvm::Triple::ELF:
   case llvm::Triple::Wasm:
@@ -6810,6 +6820,12 @@ bool CodeGenModule::stopAutoInit() {
 
 void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                                     const Decl *D) const {
-  OS << (isa<VarDecl>(D) ? "__static__" : ".anon.")
-     << getContext().getCUIDHash();
+  StringRef Tag;
+  // ptxas does not allow '.' in symbol names. On the other hand, HIP prefers
+  // postfix beginning with '.' since the symbol name can be demangled.
+  if (LangOpts.HIP)
+    Tag = (isa<VarDecl>(D) ? ".static." : ".intern.");
+  else
+    Tag = (isa<VarDecl>(D) ? "__static__" : "__intern__");
+  OS << Tag << getContext().getCUIDHash();
 }

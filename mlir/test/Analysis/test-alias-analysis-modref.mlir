@@ -4,7 +4,7 @@
 // CHECK: alloc -> func.region0#0: NoModRef
 // CHECK: dealloc -> func.region0#0: NoModRef
 // CHECK: return -> func.region0#0: NoModRef
-func @no_side_effects(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
+func.func @no_side_effects(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
   %1 = memref.alloc() {test.ptr = "alloc"} : memref<8x64xf32>
   memref.dealloc %1 {test.ptr = "dealloc"} : memref<8x64xf32>
   return {test.ptr = "return"}
@@ -18,7 +18,7 @@ func @no_side_effects(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
 
 // CHECK-DAG: store -> func.region0#0: NoModRef
 // CHECK-DAG: load -> func.region0#0: NoModRef
-func @simple(%arg: memref<i32>, %value: i32) attributes {test.ptr = "func"} {
+func.func @simple(%arg: memref<i32>, %value: i32) attributes {test.ptr = "func"} {
   %1 = memref.alloca() {test.ptr = "alloc"} : memref<i32>
   memref.store %value, %1[] {test.ptr = "store"} : memref<i32>
   %2 = memref.load %1[] {test.ptr = "load"} : memref<i32>
@@ -33,7 +33,7 @@ func @simple(%arg: memref<i32>, %value: i32) attributes {test.ptr = "func"} {
 
 // CHECK-DAG: store -> func.region0#1: Mod
 // CHECK-DAG: load -> func.region0#1: Ref
-func @mayalias(%arg0: memref<i32>, %arg1: memref<i32>, %value: i32) attributes {test.ptr = "func"} {
+func.func @mayalias(%arg0: memref<i32>, %arg1: memref<i32>, %value: i32) attributes {test.ptr = "func"} {
   memref.store %value, %arg1[] {test.ptr = "store"} : memref<i32>
   %1 = memref.load %arg1[] {test.ptr = "load"} : memref<i32>
   return {test.ptr = "return"}
@@ -48,7 +48,7 @@ func @mayalias(%arg0: memref<i32>, %arg1: memref<i32>, %value: i32) attributes {
 // TODO: This is provably NoModRef, but requires handling recursive side
 // effects.
 // CHECK-DAG: if -> alloc#0: ModRef
-func @recursive(%arg0: memref<i32>, %arg1: memref<i32>, %cond: i1, %value: i32) attributes {test.ptr = "func"} {
+func.func @recursive(%arg0: memref<i32>, %arg1: memref<i32>, %cond: i1, %value: i32) attributes {test.ptr = "func"} {
   %0 = memref.alloca() {test.ptr = "alloc"} : memref<i32>
   scf.if %cond {
     memref.store %value, %arg0[] : memref<i32>
@@ -61,7 +61,7 @@ func @recursive(%arg0: memref<i32>, %arg1: memref<i32>, %cond: i1, %value: i32) 
 
 // CHECK-LABEL: Testing : "unknown"
 // CHECK-DAG: unknown -> func.region0#0: ModRef
-func @unknown(%arg0: memref<i32>) attributes {test.ptr = "func"} {
+func.func @unknown(%arg0: memref<i32>) attributes {test.ptr = "func"} {
   "foo.op"() {test.ptr = "unknown"} : () -> ()
   return
 }

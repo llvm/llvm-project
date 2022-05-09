@@ -69,7 +69,7 @@ public:
 
 private:
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
-  std::unique_ptr<ExcludedPreprocessorDirectiveSkipMapping> PPSkipMappings;
+  ExcludedPreprocessorDirectiveSkipMapping PPSkipMappings;
 
   /// The physical filesystem overlaid by `InMemoryFS`.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> RealFS;

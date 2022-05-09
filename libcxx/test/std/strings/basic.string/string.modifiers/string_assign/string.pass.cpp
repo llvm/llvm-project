@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   assign(const basic_string<charT,traits>& str);
+//   assign(const basic_string<charT,traits>& str); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -37,7 +39,7 @@ testAlloc(S s, S str, const typename S::allocator_type& a)
     assert(s.get_allocator() == a);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S(), S(), S());
@@ -120,7 +122,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

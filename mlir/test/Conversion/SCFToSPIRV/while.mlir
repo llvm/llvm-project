@@ -6,7 +6,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @while_loop1
-func @while_loop1(%arg0: i32, %arg1: i32) -> i32 {
+func.func @while_loop1(%arg0: i32, %arg1: i32) -> i32 {
   // CHECK-SAME: (%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
   // CHECK: %[[INITVAR:.*]] = spv.Constant 2 : i32
   // CHECK: %[[VAR1:.*]] = spv.Variable : !spv.ptr<i32, Function>
@@ -39,7 +39,7 @@ func @while_loop1(%arg0: i32, %arg1: i32) -> i32 {
 // -----
 
 // CHECK-LABEL: @while_loop2
-func @while_loop2(%arg0: f32) -> i64 {
+func.func @while_loop2(%arg0: f32) -> i64 {
   // CHECK-SAME: (%[[ARG:.*]]: f32)
   // CHECK: %[[VAR:.*]] = spv.Variable : !spv.ptr<i64, Function>
   // CHECK: spv.mlir.loop {

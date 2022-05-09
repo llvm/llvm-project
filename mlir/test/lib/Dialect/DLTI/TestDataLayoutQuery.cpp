@@ -20,13 +20,13 @@ namespace {
 /// attributes containing the results of data layout queries for operation
 /// result types.
 struct TestDataLayoutQuery
-    : public PassWrapper<TestDataLayoutQuery, OperationPass<FuncOp>> {
+    : public PassWrapper<TestDataLayoutQuery, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDataLayoutQuery)
 
   StringRef getArgument() const final { return "test-data-layout-query"; }
   StringRef getDescription() const final { return "Test data layout queries"; }
   void runOnOperation() override {
-    FuncOp func = getOperation();
+    func::FuncOp func = getOperation();
     Builder builder(func.getContext());
     const DataLayoutAnalysis &layouts = getAnalysis<DataLayoutAnalysis>();
 

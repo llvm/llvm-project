@@ -681,15 +681,16 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-NEXT:    bl _malloc
 ; CHECK-APPLE-NEXT:    mov r8, r0
 ; CHECK-APPLE-NEXT:    mov r0, #1
-; CHECK-APPLE-NEXT:    add r3, r7, #8
 ; CHECK-APPLE-NEXT:    strb r0, [r8, #8]
 ; CHECK-APPLE-NEXT:    add r0, r7, #8
-; CHECK-APPLE-NEXT:    ldm r3, {r1, r2, r3}
-; CHECK-APPLE-NEXT:    add r0, r0, #12
+; CHECK-APPLE-NEXT:    add r0, r0, #4
+; CHECK-APPLE-NEXT:    ldr r2, [r7, #8]
+; CHECK-APPLE-NEXT:    ldr r1, [r0], #4
+; CHECK-APPLE-NEXT:    ldr r3, [r0], #4
 ; CHECK-APPLE-NEXT:    str r0, [sp, #16]
 ; CHECK-APPLE-NEXT:    mov r0, #1065353216
-; CHECK-APPLE-NEXT:    str r1, [sp, #12]
-; CHECK-APPLE-NEXT:    str r2, [sp, #8]
+; CHECK-APPLE-NEXT:    str r2, [sp, #12]
+; CHECK-APPLE-NEXT:    str r1, [sp, #8]
 ; CHECK-APPLE-NEXT:    str r3, [sp, #4]
 ; CHECK-APPLE-NEXT:    mov sp, r7
 ; CHECK-APPLE-NEXT:    pop {r7, lr}
@@ -752,15 +753,16 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-ANDROID-NEXT:    bl malloc
 ; CHECK-ANDROID-NEXT:    mov r8, r0
 ; CHECK-ANDROID-NEXT:    mov r0, #1
-; CHECK-ANDROID-NEXT:    add r3, sp, #32
 ; CHECK-ANDROID-NEXT:    strb r0, [r8, #8]
 ; CHECK-ANDROID-NEXT:    add r0, sp, #32
-; CHECK-ANDROID-NEXT:    ldm r3, {r1, r2, r3}
-; CHECK-ANDROID-NEXT:    add r0, r0, #12
+; CHECK-ANDROID-NEXT:    orr r0, r0, #4
+; CHECK-ANDROID-NEXT:    ldr r2, [sp, #32]
+; CHECK-ANDROID-NEXT:    ldr r1, [r0], #4
+; CHECK-ANDROID-NEXT:    ldr r3, [r0], #4
 ; CHECK-ANDROID-NEXT:    str r0, [sp, #16]
 ; CHECK-ANDROID-NEXT:    mov r0, #1065353216
-; CHECK-ANDROID-NEXT:    str r1, [sp, #12]
-; CHECK-ANDROID-NEXT:    str r2, [sp, #8]
+; CHECK-ANDROID-NEXT:    str r2, [sp, #12]
+; CHECK-ANDROID-NEXT:    str r1, [sp, #8]
 ; CHECK-ANDROID-NEXT:    str r3, [sp, #4]
 ; CHECK-ANDROID-NEXT:    add sp, sp, #24
 ; CHECK-ANDROID-NEXT:    pop {r11, lr}

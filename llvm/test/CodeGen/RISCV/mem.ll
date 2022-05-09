@@ -198,3 +198,71 @@ define dso_local i32 @lw_sw_constant(i32 %a) nounwind {
   store i32 %a, i32* %1
   ret i32 %2
 }
+
+define i32 @lw_far_local(i32* %a)  {
+; RV32I-LABEL: lw_far_local:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 4
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    lw a0, -4(a0)
+; RV32I-NEXT:    ret
+  %1 = getelementptr inbounds i32, i32* %a, i64 4095
+  %2 = load volatile i32, i32* %1
+  ret i32 %2
+}
+
+define void @st_far_local(i32* %a, i32 %b)  {
+; RV32I-LABEL: st_far_local:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 4
+; RV32I-NEXT:    add a0, a0, a2
+; RV32I-NEXT:    sw a1, -4(a0)
+; RV32I-NEXT:    ret
+  %1 = getelementptr inbounds i32, i32* %a, i64 4095
+  store i32 %b, i32* %1
+  ret void
+}
+
+define i32 @lw_sw_far_local(i32* %a, i32 %b)  {
+; RV32I-LABEL: lw_sw_far_local:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 4
+; RV32I-NEXT:    addi a2, a2, -4
+; RV32I-NEXT:    add a2, a0, a2
+; RV32I-NEXT:    lw a0, 0(a2)
+; RV32I-NEXT:    sw a1, 0(a2)
+; RV32I-NEXT:    ret
+  %1 = getelementptr inbounds i32, i32* %a, i64 4095
+  %2 = load volatile i32, i32* %1
+  store i32 %b, i32* %1
+  ret i32 %2
+}
+
+%struct.quux = type { i32, [0 x i8] }
+
+; Make sure we don't remove the addi and fold the C from
+; (add (addi FrameIndex, C), X) into the store address.
+; FrameIndex cannot be the operand of an ADD. We must keep the ADDI.
+define void @addi_fold_crash(i32 %arg) nounwind {
+; RV32I-LABEL: addi_fold_crash:
+; RV32I:       # %bb.0: # %bb
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    addi a1, sp, 12
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    sb zero, 0(a0)
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    call snork@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+bb:
+  %tmp = alloca %struct.quux, align 4
+  %tmp1 = getelementptr inbounds %struct.quux, %struct.quux* %tmp, i32 0, i32 1
+  %tmp2 = getelementptr inbounds %struct.quux, %struct.quux* %tmp, i32 0, i32 1, i32 %arg
+  store i8 0, i8* %tmp2, align 1
+  call void @snork([0 x i8]* %tmp1)
+  ret void
+}
+
+declare void @snork([0 x i8]*)

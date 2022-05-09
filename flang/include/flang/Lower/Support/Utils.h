@@ -16,6 +16,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/StringRef.h"
@@ -76,6 +77,19 @@ inline Fortran::lower::SomeExpr
 ignoreEvConvert(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
                     Fortran::common::TypeCategory::Integer, 8>> &x) {
   return std::visit([](const auto &v) { return ignoreEvConvert(v); }, x.u);
+}
+
+/// Zip two containers of the same size together and flatten the pairs. `flatZip
+/// [1;2] [3;4]` yields `[1;3;2;4]`.
+template <typename A>
+A flatZip(const A &container1, const A &container2) {
+  assert(container1.size() == container2.size());
+  A result;
+  for (auto [e1, e2] : llvm::zip(container1, container2)) {
+    result.emplace_back(e1);
+    result.emplace_back(e2);
+  }
+  return result;
 }
 
 #endif // FORTRAN_LOWER_SUPPORT_UTILS_H

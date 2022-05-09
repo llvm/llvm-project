@@ -167,6 +167,17 @@ public:
     return impl->interfaceMap.contains(interfaceID);
   }
 
+  /// Returns true if the operation *might* have the provided interface. This
+  /// means that either the operation is unregistered, or it was registered with
+  /// the provide interface.
+  template <typename T>
+  bool mightHaveInterface() const {
+    return mightHaveInterface(TypeID::get<T>());
+  }
+  bool mightHaveInterface(TypeID interfaceID) const {
+    return !isRegistered() || hasInterface(interfaceID);
+  }
+
   /// Return the dialect this operation is registered to if the dialect is
   /// loaded in the context, or nullptr if the dialect isn't loaded.
   Dialect *getDialect() const {
@@ -752,6 +763,9 @@ public:
   /// the full module.
   OpPrintingFlags &useLocalScope();
 
+  /// Print users of values as comments.
+  OpPrintingFlags &printValueUsers();
+
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
@@ -773,6 +787,9 @@ public:
   /// Return if the printer should use local scope when dumping the IR.
   bool shouldUseLocalScope() const;
 
+  /// Return if the printer should print users of values.
+  bool shouldPrintValueUsers() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -790,6 +807,9 @@ private:
 
   /// Print operations with numberings local to the current operation.
   bool printLocalScope : 1;
+
+  /// Print users of values.
+  bool printValueUsersFlag : 1;
 };
 
 //===----------------------------------------------------------------------===//

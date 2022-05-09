@@ -327,7 +327,6 @@ void ExternalIoStatementState<DIR>::CompleteOperation() {
       }
       unit().leftTabLimit = unit().furthestPositionInRecord;
     } else {
-      unit().leftTabLimit.reset();
       unit().AdvanceRecord(*this);
     }
     unit().FlushIfTerminal(*this);
@@ -673,8 +672,16 @@ bool IoStatementState::CheckForEndOfRecord() {
       if (connection.positionInRecord >= *length) {
         IoErrorHandler &handler{GetIoErrorHandler()};
         if (mutableModes().nonAdvancing) {
-          handler.SignalEor();
-        } else if (connection.openRecl && !connection.modes.pad) {
+          if (connection.access == Access::Stream &&
+              connection.unterminatedRecord) {
+            // Reading final unterminated record left by a
+            // non-advancing WRITE on a stream file prior to
+            // positioning or ENDFILE.
+            handler.SignalEnd();
+          } else {
+            handler.SignalEor();
+          }
+        } else if (!connection.modes.pad) {
           handler.SignalError(IostatRecordReadOverrun);
         }
         return connection.modes.pad; // PAD='YES'

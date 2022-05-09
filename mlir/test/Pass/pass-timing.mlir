@@ -63,28 +63,28 @@
 // NESTED_PIPELINE-NEXT: Rest
 // NESTED_PIPELINE-NEXT: Total
 
-func @foo() {
+func.func @foo() {
   return
 }
 
-func @bar() {
+func.func @bar() {
   return
 }
 
-func @baz() {
+func.func @baz() {
   return
 }
 
-func @foobar() {
+func.func @foobar() {
   return
 }
 
 module {
-  func @baz() {
+  func.func @baz() {
     return
   }
 
-  func @foobar() {
+  func.func @foobar() {
     return
   }
 }

@@ -227,6 +227,11 @@ public:
   /// cloned blocks are appended to the back of dest. If the mapper
   /// contains entries for block arguments, these arguments are not included
   /// in the respective cloned block.
+  ///
+  /// Calling this method from multiple threads is generally safe if through the
+  /// process of cloning, no new uses of 'Value's from outside the region are
+  /// created. Using the mapper, it is possible to avoid adding uses to outside
+  /// operands by remapping them to 'Value's owned by the caller thread.
   void cloneInto(Region *dest, BlockAndValueMapping &mapper);
   /// Clone this region into 'dest' before the given position in 'dest'.
   void cloneInto(Region *dest, Region::iterator destPos,
@@ -235,6 +240,7 @@ public:
   /// Takes body of another region (that region will have no body after this
   /// operation completes).  The current body of this region is cleared.
   void takeBody(Region &other) {
+    dropAllReferences();
     blocks.clear();
     blocks.splice(blocks.end(), other.getBlocks());
   }

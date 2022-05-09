@@ -66,7 +66,20 @@ Check for null pointers passed as arguments to a function whose arguments are re
 
 core.NullDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""
-Check for dereferences of null pointers.
+Check for dereferences of null pointers. 
+
+This checker specifically does
+not report null pointer dereferences for x86 and x86-64 targets when the
+address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
+segment). See `X86/X86-64 Language Extensions
+<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
+for reference.
+
+The ``SuppressAddressSpaces`` option suppresses 
+warnings for null dereferences of all pointers with address spaces. You can
+disable this behavior with the option
+``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
+*Defaults to true*.
 
 .. code-block:: objc
 
@@ -2255,6 +2268,25 @@ Finds calls to the ``putenv`` function which pass a pointer to an automatic vari
     return putenv(env); // putenv function should not be called with auto variables
   }
 
+Limitations:
+
+   - Technically, one can pass automatic variables to ``putenv``,
+     but one needs to ensure that the given environment key stays
+     alive until it's removed or overwritten.
+     Since the analyzer cannot keep track of which envvars get overwritten
+     and when, it needs to be slightly more aggressive and warn for such
+     cases too, leading in some cases to false-positive reports like this:
+
+     .. code-block:: c
+
+        void baz() {
+          char env[] = "NAME=value";
+          putenv(env); // false-positive warning: putenv function should not be called...
+          // More code...
+          putenv((char *)"NAME=anothervalue");
+          // This putenv call overwrites the previous entry, thus that can no longer dangle.
+        } // 'env' array becomes dead only here.
+
 alpha.security.cert.env
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2434,7 +2466,7 @@ Here, ``ptr`` is the buffer, and its minimum size is ``size * nmemb``
 
     // Below we receive a warning because the 3rd parameter should be the
     // number of elements to read, not the size in bytes. This case is a known
-    // vulnerability described by the the ARR38-C SEI-CERT rule.
+    // vulnerability described by the ARR38-C SEI-CERT rule.
     fread(wbuf, size, nitems, file);
   }
 

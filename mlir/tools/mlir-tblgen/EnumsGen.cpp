@@ -204,12 +204,47 @@ static void emitSymToStrFnForBitEnum(const Record &enumDef, raw_ostream &os) {
                   allBitsUnsetCase->getSymbol());
   }
   os << "  ::llvm::SmallVector<::llvm::StringRef, 2> strs;\n";
-  for (const auto &enumerant : enumerants) {
-    // Skip the special enumerant for None.
-    if (int64_t val = enumerant.getValue())
-      os << formatv(
-          "  if ({0}u == ({0}u & val)) {{ strs.push_back(\"{1}\"); }\n ", val,
-          enumerant.getStr());
+
+  // Add case string if the value has all case bits, and remove them to avoid
+  // printing again. Used only for groups, when printBitEnumPrimaryGroups is 1.
+  const char *const formatCompareRemove = R"(
+  if ({0}u == ({0}u & val)) {{
+    strs.push_back("{1}");
+    val &= ~static_cast<{2}>({0});
+  }
+)";
+  // Add case string if the value has all case bits. Used for individual bit
+  // cases, and for groups when printBitEnumPrimaryGroups is 0.
+  const char *const formatCompare = R"(
+  if ({0}u == ({0}u & val))
+    strs.push_back("{1}");
+)";
+  // Optionally elide bits that are members of groups that will also be printed
+  // for more concise output.
+  if (enumAttr.printBitEnumPrimaryGroups()) {
+    os << "  // Print bit enum groups before individual bits\n";
+    // Emit comparisons for group bit cases in reverse tablegen declaration
+    // order, removing bits for groups with all bits present.
+    for (const auto &enumerant : llvm::reverse(enumerants)) {
+      if ((enumerant.getValue() != 0) &&
+          enumerant.getDef().isSubClassOf("BitEnumAttrCaseGroup")) {
+        os << formatv(formatCompareRemove, enumerant.getValue(),
+                      enumerant.getStr(), enumAttr.getUnderlyingType());
+      }
+    }
+    // Emit comparisons for individual bit cases in tablegen declaration order.
+    for (const auto &enumerant : enumerants) {
+      if ((enumerant.getValue() != 0) &&
+          enumerant.getDef().isSubClassOf("BitEnumAttrCaseBit"))
+        os << formatv(formatCompare, enumerant.getValue(), enumerant.getStr());
+    }
+  } else {
+    // Emit comparisons for ALL nonzero cases (individual bits and groups) in
+    // tablegen declaration order.
+    for (const auto &enumerant : enumerants) {
+      if (enumerant.getValue() != 0)
+        os << formatv(formatCompare, enumerant.getValue(), enumerant.getStr());
+    }
   }
   os << formatv("  return ::llvm::join(strs, \"{0}\");\n", separator);
 

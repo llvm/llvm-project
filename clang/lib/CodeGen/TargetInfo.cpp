@@ -7514,12 +7514,9 @@ QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
 
     // Check the fields.
     for (const auto *FD : RD->fields()) {
-      // For compatibility with GCC, ignore empty bitfields in C++ mode.
       // Unlike isSingleElementStruct(), empty structure and array fields
       // do count.  So do anonymous bitfields that aren't zero-sized.
-      if (getContext().getLangOpts().CPlusPlus &&
-          FD->isZeroLengthBitField(getContext()))
-        continue;
+
       // Like isSingleElementStruct(), ignore C++20 empty data members.
       if (FD->hasAttr<NoUniqueAddressAttr>() &&
           isEmptyRecord(getContext(), FD->getType(), true))

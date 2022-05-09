@@ -660,7 +660,7 @@ public:
 
   /// \Returns true if the target supports broadcasting a load to a vector of
   /// type <NumElements x ElementTy>.
-  bool isLegalBroadcastLoad(Type *ElementTy, unsigned NumElements) const;
+  bool isLegalBroadcastLoad(Type *ElementTy, ElementCount NumElements) const;
 
   /// Return true if the target supports masked scatter.
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const;
@@ -1055,7 +1055,7 @@ public:
   InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask = None, int Index = 0,
                                  VectorType *SubTp = nullptr,
-                                 ArrayRef<Value *> Args = None) const;
+                                 ArrayRef<const Value *> Args = None) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///
@@ -1560,7 +1560,7 @@ public:
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalNTLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalBroadcastLoad(Type *ElementTy,
-                                    unsigned NumElements) const = 0;
+                                    ElementCount NumElements) const = 0;
   virtual bool isLegalMaskedScatter(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedGather(Type *DataType, Align Alignment) = 0;
   virtual bool forceScalarizeMaskedGather(VectorType *DataType,
@@ -1672,7 +1672,7 @@ public:
   virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                                          ArrayRef<int> Mask, int Index,
                                          VectorType *SubTp,
-                                         ArrayRef<Value *> Args) = 0;
+                                         ArrayRef<const Value *> Args) = 0;
   virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
                                            Type *Src, CastContextHint CCH,
                                            TTI::TargetCostKind CostKind,
@@ -1968,7 +1968,7 @@ public:
     return Impl.isLegalNTLoad(DataType, Alignment);
   }
   bool isLegalBroadcastLoad(Type *ElementTy,
-                            unsigned NumElements) const override {
+                            ElementCount NumElements) const override {
     return Impl.isLegalBroadcastLoad(ElementTy, NumElements);
   }
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) override {
@@ -2199,7 +2199,7 @@ public:
   InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<Value *> Args) override {
+                                 ArrayRef<const Value *> Args) override {
     return Impl.getShuffleCost(Kind, Tp, Mask, Index, SubTp, Args);
   }
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,

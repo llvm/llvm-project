@@ -182,13 +182,13 @@ program test_overflow
   integer :: j
   select case(1_1)
   case (127)
-  !ERROR: CASE value (128_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  !WARN: CASE value (128_4) overflows type (INTEGER(1)) of SELECT CASE expression
   case (128)
-  !ERROR: CASE value (129_4) overflows type (INTEGER(1)) of SELECT CASE expression
-  !ERROR: CASE value (130_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  !WARN: CASE value (129_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  !WARN: CASE value (130_4) overflows type (INTEGER(1)) of SELECT CASE expression
   case (129:130)
-  !ERROR: CASE value (-130_4) overflows type (INTEGER(1)) of SELECT CASE expression
-  !ERROR: CASE value (-129_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  !WARN: CASE value (-130_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  !WARN: CASE value (-129_4) overflows type (INTEGER(1)) of SELECT CASE expression
   case (-130:-129)
   case (-128)
   !ERROR: Must be a scalar value, but is a rank-1 array

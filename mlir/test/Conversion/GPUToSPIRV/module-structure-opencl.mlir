@@ -9,7 +9,7 @@ module attributes {
     //       CHECK:   spv.func
     //  CHECK-SAME:     {{%.*}}: f32
     //   CHECK-NOT:     spv.interface_var_abi
-    //  CHECK-SAME:     {{%.*}}: !spv.ptr<!spv.struct<(!spv.array<12 x f32, stride=4>)>, CrossWorkgroup>
+    //  CHECK-SAME:     {{%.*}}: !spv.ptr<!spv.struct<(!spv.array<12 x f32>)>, CrossWorkgroup>
     //   CHECK-NOT:     spv.interface_var_abi
     //  CHECK-SAME:     spv.entry_point_abi = {local_size = dense<[32, 4, 1]> : vector<3xi32>}
     gpu.func @basic_module_structure(%arg0 : f32, %arg1 : memref<12xf32, 11>) kernel
@@ -18,7 +18,7 @@ module attributes {
     }
   }
 
-  func @main() {
+  func.func @main() {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32, 11>)
     %cst = arith.constant 1 : index

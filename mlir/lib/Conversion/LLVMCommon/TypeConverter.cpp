@@ -49,6 +49,8 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // LLVM container types may (recursively) contain other types that must be
   // converted even when the outer type is compatible.
   addConversion([&](LLVM::LLVMPointerType type) -> llvm::Optional<Type> {
+    if (type.isOpaque())
+      return type;
     if (auto pointee = convertType(type.getElementType()))
       return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
     return llvm::None;
@@ -387,10 +389,7 @@ bool LLVMTypeConverter::canConvertToBarePtr(BaseMemRefType type) {
     if (ShapedType::isDynamicStrideOrOffset(stride))
       return false;
 
-  if (ShapedType::isDynamicStrideOrOffset(offset))
-    return false;
-
-  return true;
+  return !ShapedType::isDynamicStrideOrOffset(offset);
 }
 
 /// Convert a memref type to a bare pointer to the memref element type.

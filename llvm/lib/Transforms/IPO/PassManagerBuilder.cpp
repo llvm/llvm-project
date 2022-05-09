@@ -18,12 +18,10 @@
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
 #include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Target/CGPassBuilderOption.h"
@@ -129,11 +127,6 @@ static cl::opt<bool>
     DisableLibCallsShrinkWrap("disable-libcalls-shrinkwrap", cl::init(false),
                               cl::Hidden,
                               cl::desc("Disable shrink-wrap library calls"));
-
-static cl::opt<bool> EnableSimpleLoopUnswitch(
-    "enable-simple-loop-unswitch", cl::init(false), cl::Hidden,
-    cl::desc("Enable the simple loop unswitch pass. Also enables independent "
-             "cleanup passes integrated into the loop pass manager pipeline."));
 
 cl::opt<bool>
     EnableGVNSink("enable-gvn-sink", cl::init(false), cl::ZeroOrMore,
@@ -382,13 +375,13 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createVectorCombinePass());
 
   // Begin the loop pass pipeline.
-  if (EnableSimpleLoopUnswitch) {
-    // The simple loop unswitch pass relies on separate cleanup passes. Schedule
-    // them first so when we re-process a loop they run before other loop
-    // passes.
-    MPM.add(createLoopInstSimplifyPass());
-    MPM.add(createLoopSimplifyCFGPass());
-  }
+
+  // The simple loop unswitch pass relies on separate cleanup passes. Schedule
+  // them first so when we re-process a loop they run before other loop
+  // passes.
+  MPM.add(createLoopInstSimplifyPass());
+  MPM.add(createLoopSimplifyCFGPass());
+
   // Try to remove as much code from the loop header as possible,
   // to reduce amount of IR that will have to be duplicated. However,
   // do not perform speculative hoisting the first time as LICM
@@ -402,10 +395,7 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   // TODO: Investigate promotion cap for O1.
   MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                          /*AllowSpeculation=*/true));
-  if (EnableSimpleLoopUnswitch)
-    MPM.add(createSimpleLoopUnswitchLegacyPass());
-  else
-    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  MPM.add(createSimpleLoopUnswitchLegacyPass(OptLevel == 3));
   // FIXME: We break the loop pass pipeline here in order to do full
   // simplifycfg. Eventually loop-simplifycfg should be enhanced to replace the
   // need for this.
@@ -528,7 +518,7 @@ void PassManagerBuilder::addVectorPasses(legacy::PassManagerBase &PM,
     PM.add(createInstructionCombiningPass());
     PM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                           /*AllowSpeculation=*/true));
-    PM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+    PM.add(createSimpleLoopUnswitchLegacyPass());
     PM.add(createCFGSimplificationPass(
         SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
     PM.add(createInstructionCombiningPass());
@@ -1092,80 +1082,6 @@ void PassManagerBuilder::addLateLTOOptimizationPasses(
     PM.add(createMergeFunctionsPass());
 }
 
-void PassManagerBuilder::populateThinLTOPassManager(
-    legacy::PassManagerBase &PM) {
-  PerformThinLTO = true;
-  if (LibraryInfo)
-    PM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
-
-  if (VerifyInput)
-    PM.add(createVerifierPass());
-
-  if (ImportSummary) {
-    // This pass imports type identifier resolutions for whole-program
-    // devirtualization and CFI. It must run early because other passes may
-    // disturb the specific instruction patterns that these passes look for,
-    // creating dependencies on resolutions that may not appear in the summary.
-    //
-    // For example, GVN may transform the pattern assume(type.test) appearing in
-    // two basic blocks into assume(phi(type.test, type.test)), which would
-    // transform a dependency on a WPD resolution into a dependency on a type
-    // identifier resolution for CFI.
-    //
-    // Also, WPD has access to more precise information than ICP and can
-    // devirtualize more effectively, so it should operate on the IR first.
-    PM.add(createWholeProgramDevirtPass(nullptr, ImportSummary));
-    PM.add(createLowerTypeTestsPass(nullptr, ImportSummary));
-  }
-
-  populateModulePassManager(PM);
-
-  if (VerifyOutput)
-    PM.add(createVerifierPass());
-  PerformThinLTO = false;
-}
-
-void PassManagerBuilder::populateLTOPassManager(legacy::PassManagerBase &PM) {
-  if (LibraryInfo)
-    PM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
-
-  if (VerifyInput)
-    PM.add(createVerifierPass());
-
-  addExtensionsToPM(EP_FullLinkTimeOptimizationEarly, PM);
-
-  if (OptLevel != 0)
-    addLTOOptimizationPasses(PM);
-  else {
-    // The whole-program-devirt pass needs to run at -O0 because only it knows
-    // about the llvm.type.checked.load intrinsic: it needs to both lower the
-    // intrinsic itself and handle it in the summary.
-    PM.add(createWholeProgramDevirtPass(ExportSummary, nullptr));
-  }
-
-  // Create a function that performs CFI checks for cross-DSO calls with targets
-  // in the current module.
-  PM.add(createCrossDSOCFIPass());
-
-  // Lower type metadata and the type.test intrinsic. This pass supports Clang's
-  // control flow integrity mechanisms (-fsanitize=cfi*) and needs to run at
-  // link time if CFI is enabled. The pass does nothing if CFI is disabled.
-  PM.add(createLowerTypeTestsPass(ExportSummary, nullptr));
-  // Run a second time to clean up any type tests left behind by WPD for use
-  // in ICP (which is performed earlier than this in the regular LTO pipeline).
-  PM.add(createLowerTypeTestsPass(nullptr, nullptr, true));
-
-  if (OptLevel != 0)
-    addLateLTOOptimizationPasses(PM);
-
-  addExtensionsToPM(EP_FullLinkTimeOptimizationLast, PM);
-
-  PM.add(createAnnotationRemarksLegacyPass());
-
-  if (VerifyOutput)
-    PM.add(createVerifierPass());
-}
-
 LLVMPassManagerBuilderRef LLVMPassManagerBuilderCreate() {
   PassManagerBuilder *PMB = new PassManagerBuilder();
   return wrap(PMB);
@@ -1230,19 +1146,4 @@ LLVMPassManagerBuilderPopulateModulePassManager(LLVMPassManagerBuilderRef PMB,
   PassManagerBuilder *Builder = unwrap(PMB);
   legacy::PassManagerBase *MPM = unwrap(PM);
   Builder->populateModulePassManager(*MPM);
-}
-
-void LLVMPassManagerBuilderPopulateLTOPassManager(LLVMPassManagerBuilderRef PMB,
-                                                  LLVMPassManagerRef PM,
-                                                  LLVMBool Internalize,
-                                                  LLVMBool RunInliner) {
-  PassManagerBuilder *Builder = unwrap(PMB);
-  legacy::PassManagerBase *LPM = unwrap(PM);
-
-  // A small backwards compatibility hack. populateLTOPassManager used to take
-  // an RunInliner option.
-  if (RunInliner && !Builder->Inliner)
-    Builder->Inliner = createFunctionInliningPass();
-
-  Builder->populateLTOPassManager(*LPM);
 }

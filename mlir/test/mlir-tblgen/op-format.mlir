@@ -310,7 +310,7 @@ test.format_qual_cpmd_nested_attr nested #test.cmpnd_nested_outer<i <42 <1, !tes
 
 // Check the `qualified` directive in the declarative assembly format.
 // CHECK: @qualifiedCompoundNestedExplicit(%arg0: !test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>)
-func @qualifiedCompoundNestedExplicit(%arg0: !test.cmpnd_nested_outer<i !test.cmpnd_inner<42 <1, !test.smpla, [5, 6]>>>) -> () {
+func.func @qualifiedCompoundNestedExplicit(%arg0: !test.cmpnd_nested_outer<i !test.cmpnd_inner<42 <1, !test.smpla, [5, 6]>>>) -> () {
   // Verify that the type prefix is not elided
   // CHECK: format_qual_cpmd_nested_type %arg0 nested !test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
   test.format_qual_cpmd_nested_type %arg0 nested !test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
@@ -377,7 +377,7 @@ test.format_custom_directive_with_optional_operand_ref %i64 : 1
 // CHECK: test.format_custom_directive_with_optional_operand_ref : 0
 test.format_custom_directive_with_optional_operand_ref : 0
 
-func @foo() {
+func.func @foo() {
   // CHECK: test.format_custom_directive_successors ^bb1, ^bb2
   test.format_custom_directive_successors ^bb1, ^bb2
 

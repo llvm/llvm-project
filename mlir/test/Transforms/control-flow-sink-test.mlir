@@ -2,7 +2,7 @@
 // RUN: mlir-opt -test-control-flow-sink %s | FileCheck %s
 
 // CHECK-LABEL: func @test_sink
-func @test_sink() {
+func.func @test_sink() {
   %0 = "test.sink_me"() : () -> i32
   // CHECK-NEXT: test.sink_target
   "test.sink_target"() ({
@@ -14,7 +14,7 @@ func @test_sink() {
 }
 
 // CHECK-LABEL: func @test_sink_first_region_only
-func @test_sink_first_region_only() {
+func.func @test_sink_first_region_only() {
   %0 = "test.sink_me"() {first} : () -> i32
   // CHECK-NEXT: %[[V1:.*]] = "test.sink_me"() {second}
   %1 = "test.sink_me"() {second} : () -> i32
@@ -30,7 +30,7 @@ func @test_sink_first_region_only() {
 }
 
 // CHECK-LABEL: func @test_sink_targeted_op_only
-func @test_sink_targeted_op_only() {
+func.func @test_sink_targeted_op_only() {
   %0 = "test.sink_me"() : () -> i32
   // CHECK-NEXT: %[[V1:.*]] = "test.dont_sink_me"
   %1 = "test.dont_sink_me"() : () -> i32

@@ -26,7 +26,7 @@ class ValueShapeRangeTest : public testing::Test {
 protected:
   void SetUp() override {
     const char *ir = R"MLIR(
-      func @map(%arg : tensor<1xi64>) {
+      func.func @map(%arg : tensor<1xi64>) {
         %0 = arith.constant dense<[10]> : tensor<1xi64>
         %1 = arith.addi %arg, %0 : tensor<1xi64>
         return
@@ -36,7 +36,7 @@ protected:
     registry.insert<func::FuncDialect, arith::ArithmeticDialect>();
     ctx.appendDialectRegistry(registry);
     module = parseSourceString<ModuleOp>(ir, &ctx);
-    mapFn = cast<FuncOp>(module->front());
+    mapFn = cast<func::FuncOp>(module->front());
   }
 
   // Create ValueShapeRange on the arith.addi operation.
@@ -48,7 +48,7 @@ protected:
   DialectRegistry registry;
   MLIRContext ctx;
   OwningOpRef<ModuleOp> module;
-  FuncOp mapFn;
+  func::FuncOp mapFn;
 };
 
 TEST_F(ValueShapeRangeTest, ShapesFromValues) {

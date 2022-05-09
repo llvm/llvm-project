@@ -14,6 +14,7 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -41,6 +42,9 @@ class LoongArchAsmParser : public MCTargetAsmParser {
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
+
+  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+                                      unsigned Kind) override;
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
                                   int64_t Lower, int64_t Upper, Twine Msg);
@@ -110,6 +114,7 @@ public:
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isMem() const override { return false; }
+  void setReg(MCRegister PhysReg) { Reg.RegNum = PhysReg; }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm) {
     if (auto CE = dyn_cast<MCConstantExpr>(Expr)) {
@@ -245,9 +250,22 @@ public:
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "LoongArchGenAsmMatcher.inc"
 
+static MCRegister convertFPR32ToFPR64(MCRegister Reg) {
+  assert(Reg >= LoongArch::F0 && Reg <= LoongArch::F31 && "Invalid register");
+  return Reg - LoongArch::F0 + LoongArch::F0_64;
+}
+
+// Attempts to match Name as a register (either using the default name or
+// alternative ABI names), setting RegNo to the matching register. Upon
+// failure, returns true and sets RegNo to 0.
 static bool matchRegisterNameHelper(MCRegister &RegNo, StringRef Name) {
   RegNo = MatchRegisterName(Name);
-
+  // The 32-bit and 64-bit FPRs have the same asm name. Check that the initial
+  // match always matches the 32-bit variant, and not the 64-bit one.
+  assert(!(RegNo >= LoongArch::F0_64 && RegNo <= LoongArch::F31_64));
+  // The default FPR register class is based on the tablegen enum ordering.
+  static_assert(LoongArch::F0 < LoongArch::F0_64,
+                "FPR matching must be updated");
   if (RegNo == LoongArch::NoRegister)
     RegNo = MatchRegisterAltName(Name);
 
@@ -349,6 +367,25 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   Inst.setLoc(IDLoc);
   Out.emitInstruction(Inst, getSTI());
   return false;
+}
+
+unsigned
+LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
+                                               unsigned Kind) {
+  LoongArchOperand &Op = static_cast<LoongArchOperand &>(AsmOp);
+  if (!Op.isReg())
+    return Match_InvalidOperand;
+
+  MCRegister Reg = Op.getReg();
+  // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
+  // register from FPR32 to FPR64 if necessary.
+  if (LoongArchMCRegisterClasses[LoongArch::FPR32RegClassID].contains(Reg) &&
+      Kind == MCK_FPR64) {
+    Op.setReg(convertFPR32ToFPR64(Reg));
+    return Match_Success;
+  }
+
+  return Match_InvalidOperand;
 }
 
 bool LoongArchAsmParser::generateImmOutOfRangeError(

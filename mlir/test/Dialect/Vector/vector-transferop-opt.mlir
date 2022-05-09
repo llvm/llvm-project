@@ -7,7 +7,7 @@
 //       CHECK:   }
 //       CHECK:   vector.transfer_write
 //       CHECK:   return
-func @forward_dead_store(%arg0: i1, %arg1 : memref<4x4xf32>,
+func.func @forward_dead_store(%arg0: i1, %arg1 : memref<4x4xf32>,
   %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -35,7 +35,7 @@ func @forward_dead_store(%arg0: i1, %arg1 : memref<4x4xf32>,
 //       CHECK:   }
 //       CHECK:   vector.transfer_write
 //       CHECK:   return
-func @forward_nested(%arg0: i1, %arg1 : memref<4x4xf32>, %v0 : vector<1x4xf32>,
+func.func @forward_nested(%arg0: i1, %arg1 : memref<4x4xf32>, %v0 : vector<1x4xf32>,
   %v1 : vector<1x4xf32>, %i : index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -68,7 +68,7 @@ func @forward_nested(%arg0: i1, %arg1 : memref<4x4xf32>, %v0 : vector<1x4xf32>,
 //       CHECK:   }
 //       CHECK:   vector.transfer_write
 //       CHECK:   return
-func @forward_nested_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
+func.func @forward_nested_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
   %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -102,7 +102,7 @@ func @forward_nested_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
 //   CHECK-NOT:   vector.transfer_write
 //       CHECK:   vector.transfer_read
 //       CHECK:   return
-func @dead_store_region(%arg0: i1, %arg1 : memref<4x4xf32>,
+func.func @dead_store_region(%arg0: i1, %arg1 : memref<4x4xf32>,
   %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index)
   -> (vector<1x4xf32>) {
   %c0 = arith.constant 0 : index
@@ -138,7 +138,7 @@ func @dead_store_region(%arg0: i1, %arg1 : memref<4x4xf32>,
 //       CHECK:   }
 //       CHECK:   vector.transfer_write
 //       CHECK:   return
-func @dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
+func.func @dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
   %v0 :vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -166,7 +166,7 @@ func @dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
 //       CHECK:     vector.transfer_write
 //       CHECK:   }
 //       CHECK:   return
-func @dead_store_nested_region(%arg0: i1, %arg1: i1, %arg2 : memref<4x4xf32>,
+func.func @dead_store_nested_region(%arg0: i1, %arg1: i1, %arg2 : memref<4x4xf32>,
   %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

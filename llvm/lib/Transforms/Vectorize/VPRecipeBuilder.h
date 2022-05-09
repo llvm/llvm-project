@@ -72,17 +72,17 @@ class VPRecipeBuilder {
   VPRecipeBase *tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range, VPlanPtr &Plan);
 
-  /// Check if an induction recipe should be constructed for \I. If so build and
-  /// return it. If not, return null.
+  /// Check if an induction recipe should be constructed for \p Phi. If so build
+  /// and return it. If not, return null.
   VPRecipeBase *tryToOptimizeInductionPHI(PHINode *Phi,
                                           ArrayRef<VPValue *> Operands,
-                                          VFRange &Range) const;
+                                          VPlan &Plan, VFRange &Range);
 
   /// Optimize the special case where the operand of \p I is a constant integer
   /// induction variable.
   VPWidenIntOrFpInductionRecipe *
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
-                                 VFRange &Range, VPlan &Plan) const;
+                                 VFRange &Range, VPlan &Plan);
 
   /// Handle non-loop phi nodes. Return a VPValue, if all incoming values match
   /// or a new VPBlendRecipe otherwise. Currently all such phi nodes are turned

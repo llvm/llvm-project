@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s | FileCheck %s
 
-func @testType(tensor<1x224x224x3xf32>) -> tensor<96xf32> {
+func.func @testType(tensor<1x224x224x3xf32>) -> tensor<96xf32> {
 ^bb0(%arg0: tensor<1x224x224x3xf32>):
   %1  = "arith.constant"() {value = dense<0.1> : tensor<1xf32>} : () -> (tensor<1xf32>)
   %2  = "arith.constant"() {value = dense<0.1> : tensor<2xf32>} : () -> (tensor<2xf32>)

@@ -520,8 +520,11 @@ if os.path.exists(sancovcc_path):
   config.available_features.add("has_sancovcc")
   config.substitutions.append( ("%sancovcc ", sancovcc_path) )
 
+def liblto_path():
+  return os.path.join(config.llvm_shlib_dir, 'libLTO.dylib')
+
 def is_darwin_lto_supported():
-  return os.path.exists(os.path.join(config.llvm_shlib_dir, 'libLTO.dylib'))
+  return os.path.exists(liblto_path())
 
 def is_binutils_lto_supported():
   if not os.path.exists(os.path.join(config.llvm_shlib_dir, 'LLVMgold.so')):
@@ -543,8 +546,7 @@ def is_windows_lto_supported():
 
 if config.host_os == 'Darwin' and is_darwin_lto_supported():
   config.lto_supported = True
-  config.lto_launch = ["env", "DYLD_LIBRARY_PATH=" + config.llvm_shlib_dir]
-  config.lto_flags = []
+  config.lto_flags = [ '-Wl,-lto_library,' + liblto_path() ]
 elif config.host_os in ['Linux', 'FreeBSD', 'NetBSD']:
   config.lto_supported = False
   if config.use_lld:
@@ -554,14 +556,12 @@ elif config.host_os in ['Linux', 'FreeBSD', 'NetBSD']:
     config.lto_supported = True
 
   if config.lto_supported:
-    config.lto_launch = []
     if config.use_lld:
       config.lto_flags = ["-fuse-ld=lld"]
     else:
       config.lto_flags = ["-fuse-ld=gold"]
 elif config.host_os == 'Windows' and is_windows_lto_supported():
   config.lto_supported = True
-  config.lto_launch = []
   config.lto_flags = ["-fuse-ld=lld"]
 else:
   config.lto_supported = False
@@ -692,7 +692,6 @@ target_cflags = [getattr(config, 'target_cflags', None)]
 extra_cflags = []
 
 if config.use_lto and config.lto_supported:
-  run_wrapper += config.lto_launch
   extra_cflags += config.lto_flags
 elif config.use_lto and (not config.lto_supported):
   config.unsupported = True

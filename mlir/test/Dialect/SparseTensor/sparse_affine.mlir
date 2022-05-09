@@ -42,7 +42,7 @@
 // CHECK:           %[[VAL_21:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<32xf32>
 // CHECK:           return %[[VAL_21]] : tensor<32xf32>
 // CHECK:         }
-func @mul_inv_dense1d(%arga: tensor<32xf32, #SpVec>,
+func.func @mul_inv_dense1d(%arga: tensor<32xf32, #SpVec>,
                       %argb: tensor<4xf32>,
                       %argx: tensor<32xf32>) -> tensor<32xf32> {
   %0 = linalg.generic #trait1
@@ -93,7 +93,7 @@ func @mul_inv_dense1d(%arga: tensor<32xf32, #SpVec>,
 // CHECK:           %[[VAL_20:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<32xi32>
 // CHECK:           return %[[VAL_20]] : tensor<32xi32>
 // CHECK:         }
-func @and_affine_dense1d(%arga: tensor<32xi32, #SpVec>,
+func.func @and_affine_dense1d(%arga: tensor<32xi32, #SpVec>,
                          %argb: tensor<34xi32>,
                          %argx: tensor<32xi32>) -> tensor<32xi32> {
   %0 = linalg.generic #trait2
@@ -151,7 +151,7 @@ func @and_affine_dense1d(%arga: tensor<32xi32, #SpVec>,
 // CHECK:           %[[VAL_27:.*]] = bufferization.to_tensor %[[VAL_13]] : memref<32x16xf64>
 // CHECK:           return %[[VAL_27]] : tensor<32x16xf64>
 // CHECK:         }
-func @mul_affine_dense2d(%arga: tensor<32x16xf64, #CSR>,
+func.func @mul_affine_dense2d(%arga: tensor<32x16xf64, #CSR>,
                          %argb: tensor<34x19xf64>,
                          %argx: tensor<32x16xf64>) -> tensor<32x16xf64> {
   %0 = linalg.generic #trait3

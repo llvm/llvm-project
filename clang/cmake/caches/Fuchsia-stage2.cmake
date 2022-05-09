@@ -257,6 +257,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-bolt
   llvm-cov
   llvm-cxxfilt
+  llvm-debuginfod-find
   llvm-dlltool
   llvm-dwarfdump
   llvm-dwp
@@ -298,6 +299,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   clang-scan-deps
   clang-tidy
   clangd
+  find-all-symbols
   builtins
   runtimes
   ${LLVM_TOOLCHAIN_TOOLS}

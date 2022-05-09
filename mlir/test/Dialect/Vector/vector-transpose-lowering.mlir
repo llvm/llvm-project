@@ -19,7 +19,7 @@
 // ELTWISE:      %[[T10:.*]] = vector.extract %[[A]][1, 2] : vector<2x3xf32>
 // ELTWISE:      %[[T11:.*]] = vector.insert %[[T10]], %[[T9]] [2, 1] : f32 into vector<3x2xf32>
 // ELTWISE:      return %[[T11]] : vector<3x2xf32>
-func @transpose23(%arg0: vector<2x3xf32>) -> vector<3x2xf32> {
+func.func @transpose23(%arg0: vector<2x3xf32>) -> vector<3x2xf32> {
   %0 = vector.transpose %arg0, [1, 0] : vector<2x3xf32> to vector<3x2xf32>
   return %0 : vector<3x2xf32>
 }
@@ -28,7 +28,7 @@ func @transpose23(%arg0: vector<2x3xf32>) -> vector<3x2xf32> {
 
 // SHUFFLE-LABEL: func @transpose
 // FLAT-LABEL: func @transpose(
-func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
+func.func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
   //      SHUFFLE: vector.shape_cast %{{.*}} : vector<2x4xf32> to vector<8xf32>
   //            0 4
   // 0 1 2 3    1 5
@@ -47,7 +47,7 @@ func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose4x8
-func @transpose4x8xf32(%arg0: vector<4x8xf32>) -> vector<8x4xf32> {
+func.func @transpose4x8xf32(%arg0: vector<4x8xf32>) -> vector<8x4xf32> {
   //      AVX2: vector.extract {{.*}}[0]
   // AVX2-NEXT: vector.extract {{.*}}[1]
   // AVX2-NEXT: vector.extract {{.*}}[2]
@@ -77,7 +77,7 @@ func @transpose4x8xf32(%arg0: vector<4x8xf32>) -> vector<8x4xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose021_1x4x8
-func @transpose021_1x4x8xf32(%arg0: vector<1x4x8xf32>) -> vector<1x8x4xf32> {
+func.func @transpose021_1x4x8xf32(%arg0: vector<1x4x8xf32>) -> vector<1x8x4xf32> {
   //      AVX2: vector.extract {{.*}}[0, 0]
   // AVX2-NEXT: vector.extract {{.*}}[0, 1]
   // AVX2-NEXT: vector.extract {{.*}}[0, 2]
@@ -107,7 +107,7 @@ func @transpose021_1x4x8xf32(%arg0: vector<1x4x8xf32>) -> vector<1x8x4xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose8x8
-func @transpose8x8xf32(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
+func.func @transpose8x8xf32(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
   //      AVX2: vector.extract {{.*}}[0]
   // AVX2-NEXT: vector.extract {{.*}}[1]
   // AVX2-NEXT: vector.extract {{.*}}[2]
@@ -150,7 +150,7 @@ func @transpose8x8xf32(%arg0: vector<8x8xf32>) -> vector<8x8xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose021_1x8x8
-func @transpose021_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<1x8x8xf32> {
+func.func @transpose021_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<1x8x8xf32> {
   //      AVX2: vector.extract {{.*}}[0, 0]
   // AVX2-NEXT: vector.extract {{.*}}[0, 1]
   // AVX2-NEXT: vector.extract {{.*}}[0, 2]
@@ -194,7 +194,7 @@ func @transpose021_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<1x8x8xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose120_8x1x8
-func @transpose120_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32> {
+func.func @transpose120_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32> {
   //      AVX2: vector.extract {{.*}}[0, 0]
   // AVX2-NEXT: vector.extract {{.*}}[1, 0]
   // AVX2-NEXT: vector.extract {{.*}}[2, 0]
@@ -238,7 +238,7 @@ func @transpose120_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose120_8x8x1
-func @transpose120_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x1x8xf32> {
+func.func @transpose120_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x1x8xf32> {
   //      AVX2: vector.shape_cast %{{.*}} : vector<8x8x1xf32> to vector<8x8xf32>
   // AVX2-NEXT: vector.extract {{.*}}[0]
   // AVX2-NEXT: vector.extract {{.*}}[1]
@@ -283,7 +283,7 @@ func @transpose120_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x1x8xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose102_8x8x1
-func @transpose102_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x8x1xf32> {
+func.func @transpose102_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x8x1xf32> {
   //      AVX2: vector.shape_cast %{{.*}} : vector<8x8x1xf32> to vector<8x8xf32>
   // AVX2-NEXT: vector.extract {{.*}}[0]
   // AVX2-NEXT: vector.extract {{.*}}[1]
@@ -328,7 +328,7 @@ func @transpose102_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x8x1xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose201_8x1x8
-func @transpose201_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x8x1xf32> {
+func.func @transpose201_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x8x1xf32> {
   //      AVX2: vector.extract {{.*}}[0, 0]
   // AVX2-NEXT: vector.extract {{.*}}[1, 0]
   // AVX2-NEXT: vector.extract {{.*}}[2, 0]
@@ -372,7 +372,7 @@ func @transpose201_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x8x1xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose201_1x8x8
-func @transpose201_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
+func.func @transpose201_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
   //      AVX2: vector.extract {{.*}}[0, 0]
   // AVX2-NEXT: vector.extract {{.*}}[0, 1]
   // AVX2-NEXT: vector.extract {{.*}}[0, 2]
@@ -416,7 +416,7 @@ func @transpose201_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose210_8x1x8
-func @transpose210_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x1x8xf32> {
+func.func @transpose210_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x1x8xf32> {
   //      AVX2: vector.extract {{.*}}[0, 0]
   // AVX2-NEXT: vector.extract {{.*}}[1, 0]
   // AVX2-NEXT: vector.extract {{.*}}[2, 0]
@@ -460,7 +460,7 @@ func @transpose210_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x1x8xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose210_8x8x1
-func @transpose210_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<1x8x8xf32> {
+func.func @transpose210_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<1x8x8xf32> {
   //      AVX2: vector.shape_cast %{{.*}} : vector<8x8x1xf32> to vector<8x8xf32>
   // AVX2-NEXT: vector.extract {{.*}}[0]
   // AVX2-NEXT: vector.extract {{.*}}[1]
@@ -505,7 +505,7 @@ func @transpose210_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<1x8x8xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose210_1x8x8
-func @transpose210_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32> {
+func.func @transpose210_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32> {
   //      AVX2: vector.extract {{.*}}[0, 0]
   // AVX2-NEXT: vector.extract {{.*}}[0, 1]
   // AVX2-NEXT: vector.extract {{.*}}[0, 2]
@@ -548,7 +548,7 @@ func @transpose210_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32> {
 
 // -----
 
-func @do_not_lower_nonf32_to_avx2(%arg0: vector<4x8xi32>) -> vector<8x4xi32> {
+func.func @do_not_lower_nonf32_to_avx2(%arg0: vector<4x8xi32>) -> vector<8x4xi32> {
   %0 = vector.transpose %arg0, [1, 0] : vector<4x8xi32> to vector<8x4xi32>
   return %0 : vector<8x4xi32>
 }
@@ -558,7 +558,7 @@ func @do_not_lower_nonf32_to_avx2(%arg0: vector<4x8xi32>) -> vector<8x4xi32> {
 // -----
 
 // AVX2-LABEL: func @transpose021_8x1x8
-func @transpose021_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x8x1xf32> {
+func.func @transpose021_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x8x1xf32> {
   %0 = vector.transpose %arg0, [0, 2, 1] : vector<8x1x8xf32> to vector<8x8x1xf32>
   return %0 : vector<8x8x1xf32>
 }
@@ -568,7 +568,7 @@ func @transpose021_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<8x8x1xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose021_8x8x1
-func @transpose021_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x1x8xf32> {
+func.func @transpose021_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x1x8xf32> {
   %0 = vector.transpose %arg0, [0, 2, 1] : vector<8x8x1xf32> to vector<8x1x8xf32>
   return %0 : vector<8x1x8xf32>
 }
@@ -579,7 +579,7 @@ func @transpose021_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<8x1x8xf32> {
 
 // ELTWISE-LABEL: func @transpose102_1x8x8xf32
 // AVX2-LABEL: func @transpose102_1x8x8
-func @transpose102_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
+func.func @transpose102_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
   //      ELTWISE: vector.extract {{.*}}[0, 0] : vector<1x8x8xf32>
   // ELTWISE-NEXT: vector.insert {{.*}} [0, 0] : vector<8xf32> into vector<8x1x8xf32>
   // ELTWISE-NEXT: vector.extract {{.*}}[0, 1] : vector<1x8x8xf32>
@@ -606,7 +606,7 @@ func @transpose102_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x1x8xf32> {
 
 // ELTWISE-LABEL: func @transpose102_8x1x8xf32
 // AVX2-LABEL: func @transpose102_8x1x8
-func @transpose102_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32> {
+func.func @transpose102_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32> {
   //      ELTWISE: vector.extract {{.*}}[0, 0] : vector<8x1x8xf32>
   // ELTWISE-NEXT: vector.insert {{.*}} [0, 0] : vector<8xf32> into vector<1x8x8xf32>
   // ELTWISE-NEXT: vector.extract {{.*}}[1, 0] : vector<8x1x8xf32>
@@ -633,7 +633,7 @@ func @transpose102_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32> {
 
 // ELTWISE-LABEL:   func @transpose1023_1x1x8x8xf32(
 // AVX2-LABEL: func @transpose1023_1x1x8x8
-func @transpose1023_1x1x8x8xf32(%arg0: vector<1x1x8x8xf32>) -> vector<1x1x8x8xf32> {
+func.func @transpose1023_1x1x8x8xf32(%arg0: vector<1x1x8x8xf32>) -> vector<1x1x8x8xf32> {
   // Note the single 2-D extract/insert pair since 2 and 3 are not transposed!
   //      ELTWISE: vector.extract {{.*}}[0, 0] : vector<1x1x8x8xf32>
   // ELTWISE-NEXT: vector.insert {{.*}} [0, 0] : vector<8x8xf32> into vector<1x1x8x8xf32>
@@ -646,7 +646,7 @@ func @transpose1023_1x1x8x8xf32(%arg0: vector<1x1x8x8xf32>) -> vector<1x1x8x8xf3
 // -----
 
 // AVX2-LABEL: func @transpose120_1x8x8
-func @transpose120_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32> {
+func.func @transpose120_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32> {
 
   %0 = vector.transpose %arg0, [1, 2, 0] : vector<1x8x8xf32> to vector<8x8x1xf32>
   return %0 : vector<8x8x1xf32>
@@ -657,7 +657,7 @@ func @transpose120_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32> {
 // -----
 
 // AVX2-LABEL: func @transpose201_8x8x1
-func @transpose201_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<1x8x8xf32> {
+func.func @transpose201_8x8x1xf32(%arg0: vector<8x8x1xf32>) -> vector<1x8x8xf32> {
   %0 = vector.transpose %arg0, [2, 0, 1] : vector<8x8x1xf32> to vector<1x8x8xf32>
   return %0 : vector<1x8x8xf32>
 }

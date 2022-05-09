@@ -44,6 +44,7 @@ intermediate LLVM representation.
    MemorySSA
    MergeFunctions
    MCJITDesignAndImplementation
+   MisExpect
    ORCv2
    OpaquePointers
    JITLink
@@ -52,6 +53,7 @@ intermediate LLVM representation.
    Phabricator
    Passes
    ReportingGuide
+   ResponseGuide
    Remarks
    SourceLevelDebugging
    StackSafetyAnalysis

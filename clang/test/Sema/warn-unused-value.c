@@ -99,10 +99,14 @@ void unevaluated_operands(void) {
   (void)_Generic(val++, default : 0); // expected-warning {{expression with side effects has no effect in an unevaluated context}}
   (void)_Alignof(val++);  // expected-warning {{expression with side effects has no effect in an unevaluated context}} expected-warning {{'_Alignof' applied to an expression is a GNU extension}}
 
-  // VLAs can have side effects so long as it's part of the type and not
-  // an expression.
+  // VLAs can have side effects so long as it's part of the type and not an
+  // expression, except for sizeof() where it can also have a side effect if
+  // the operand is of VLA type.
   (void)sizeof(int[++val]); // Ok
   (void)_Alignof(int[++val]); // Ok
+
+  int GH48010[val];
+  (void)sizeof(*(val = 1, &GH48010)); // Ok
 
   // Side effects as part of macro expansion are ok.
   GenTest(val++);

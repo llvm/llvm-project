@@ -581,7 +581,7 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
     HS.LookupFrameworkCache(Filename.substr(0, SlashPos));
 
   // If it is known and in some other directory, fail.
-  if (CacheEntry.Directory && CacheEntry.Directory != getFrameworkDir())
+  if (CacheEntry.Directory && CacheEntry.Directory != getFrameworkDirRef())
     return None;
 
   // Otherwise, construct the path to this framework dir.
@@ -610,7 +610,7 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
 
     // Otherwise, if it does, remember that this is the right direntry for this
     // framework.
-    CacheEntry.Directory = getFrameworkDir();
+    CacheEntry.Directory = getFrameworkDirRef();
 
     // If this is a user search directory, check if the framework has been
     // user-specified as a system framework.
@@ -625,7 +625,7 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
 
   // Set out flags.
   InUserSpecifiedSystemFramework = CacheEntry.IsUserSpecifiedSystemFramework;
-  IsFrameworkFound = CacheEntry.Directory;
+  IsFrameworkFound = CacheEntry.Directory.hasValue();
 
   if (RelativePath) {
     RelativePath->clear();
@@ -1030,8 +1030,11 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
 
     CurDir = It;
 
+    const auto FE = &File->getFileEntry();
+    IncludeNames[FE] = Filename;
+
     // This file is a system header or C++ unfriendly if the dir is.
-    HeaderFileInfo &HFI = getFileInfo(&File->getFileEntry());
+    HeaderFileInfo &HFI = getFileInfo(FE);
     HFI.DirInfo = CurDir->getDirCharacteristic();
 
     // If the directory characteristic is User but this framework was
@@ -1183,13 +1186,13 @@ Optional<FileEntryRef> HeaderSearch::LookupSubframeworkHeader(
     ++NumSubFrameworkLookups;
 
     // If the framework dir doesn't exist, we fail.
-    auto Dir = FileMgr.getDirectory(FrameworkName);
+    auto Dir = FileMgr.getOptionalDirectoryRef(FrameworkName);
     if (!Dir)
       return None;
 
     // Otherwise, if it does, remember that this is the right direntry for this
     // framework.
-    CacheLookup.second.Directory = *Dir;
+    CacheLookup.second.Directory = Dir;
   }
 
 
@@ -1458,6 +1461,13 @@ unsigned HeaderSearch::searchDirIdx(const DirectoryLookup &DL) const {
 
 StringRef HeaderSearch::getUniqueFrameworkName(StringRef Framework) {
   return FrameworkNames.insert(Framework).first->first();
+}
+
+StringRef HeaderSearch::getIncludeNameForHeader(const FileEntry *File) const {
+  auto It = IncludeNames.find(File);
+  if (It == IncludeNames.end())
+    return {};
+  return It->second;
 }
 
 bool HeaderSearch::hasModuleMap(StringRef FileName,

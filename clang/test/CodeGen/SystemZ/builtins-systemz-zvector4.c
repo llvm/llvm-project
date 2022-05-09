@@ -1,8 +1,8 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 -target-cpu arch14 -triple s390x-linux-gnu \
+// RUN: %clang_cc1 -target-cpu z16 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -target-cpu arch14 -triple s390x-linux-gnu \
+// RUN: %clang_cc1 -target-cpu z16 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -S %s -o - | FileCheck %s --check-prefix=CHECK-ASM
 

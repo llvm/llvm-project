@@ -15,6 +15,8 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
+class MacroToEnumCallbacks;
+
 /// Replaces groups of related macros with an unscoped anonymous enum.
 ///
 /// For the user-facing documentation see:
@@ -25,6 +27,11 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  MacroToEnumCallbacks *PPCallback{};
 };
 
 } // namespace modernize

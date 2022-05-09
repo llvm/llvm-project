@@ -386,6 +386,10 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (!PP.AllowPeeling)
     return;
 
+  // Check that we can peel at least one iteration.
+  if (2 * LoopSize > Threshold)
+    return;
+
   unsigned AlreadyPeeled = 0;
   if (auto Peeled = getOptionalIntLoopAttribute(L, PeeledCountMetaData))
     AlreadyPeeled = *Peeled;
@@ -398,47 +402,45 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // which every Phi is guaranteed to become an invariant, and try to peel the
   // maximum number of iterations among these values, thus turning all those
   // Phis into invariants.
-  // First, check that we can peel at least one iteration.
-  if (2 * LoopSize <= Threshold && UnrollPeelMaxCount > 0) {
-    // Store the pre-calculated values here.
-    SmallDenseMap<PHINode *, Optional<unsigned> > IterationsToInvariance;
-    // Now go through all Phis to calculate their the number of iterations they
-    // need to become invariants.
-    // Start the max computation with the PP.PeelCount value set by the target
-    // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
-    unsigned DesiredPeelCount = TargetPeelCount;
-    BasicBlock *BackEdge = L->getLoopLatch();
-    assert(BackEdge && "Loop is not in simplified form?");
-    for (auto BI = L->getHeader()->begin(); isa<PHINode>(&*BI); ++BI) {
-      PHINode *Phi = cast<PHINode>(&*BI);
-      auto ToInvariance = calculateIterationsToInvariance(
-          Phi, L, BackEdge, IterationsToInvariance);
-      if (ToInvariance)
-        DesiredPeelCount = std::max(DesiredPeelCount, *ToInvariance);
-    }
 
-    // Pay respect to limitations implied by loop size and the max peel count.
-    unsigned MaxPeelCount = UnrollPeelMaxCount;
-    MaxPeelCount = std::min(MaxPeelCount, Threshold / LoopSize - 1);
+  // Store the pre-calculated values here.
+  SmallDenseMap<PHINode *, Optional<unsigned>> IterationsToInvariance;
+  // Now go through all Phis to calculate their the number of iterations they
+  // need to become invariants.
+  // Start the max computation with the PP.PeelCount value set by the target
+  // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
+  unsigned DesiredPeelCount = TargetPeelCount;
+  BasicBlock *BackEdge = L->getLoopLatch();
+  assert(BackEdge && "Loop is not in simplified form?");
+  for (auto BI = L->getHeader()->begin(); isa<PHINode>(&*BI); ++BI) {
+    PHINode *Phi = cast<PHINode>(&*BI);
+    auto ToInvariance = calculateIterationsToInvariance(Phi, L, BackEdge,
+                                                        IterationsToInvariance);
+    if (ToInvariance)
+      DesiredPeelCount = std::max(DesiredPeelCount, *ToInvariance);
+  }
 
-    DesiredPeelCount = std::max(DesiredPeelCount,
-                                countToEliminateCompares(*L, MaxPeelCount, SE));
+  // Pay respect to limitations implied by loop size and the max peel count.
+  unsigned MaxPeelCount = UnrollPeelMaxCount;
+  MaxPeelCount = std::min(MaxPeelCount, Threshold / LoopSize - 1);
 
-    if (DesiredPeelCount == 0)
-      DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT);
+  DesiredPeelCount = std::max(DesiredPeelCount,
+                              countToEliminateCompares(*L, MaxPeelCount, SE));
 
-    if (DesiredPeelCount > 0) {
-      DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
-      // Consider max peel count limitation.
-      assert(DesiredPeelCount > 0 && "Wrong loop size estimation?");
-      if (DesiredPeelCount + AlreadyPeeled <= UnrollPeelMaxCount) {
-        LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
-                          << " iteration(s) to turn"
-                          << " some Phis into invariants.\n");
-        PP.PeelCount = DesiredPeelCount;
-        PP.PeelProfiledIterations = false;
-        return;
-      }
+  if (DesiredPeelCount == 0)
+    DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT);
+
+  if (DesiredPeelCount > 0) {
+    DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
+    // Consider max peel count limitation.
+    assert(DesiredPeelCount > 0 && "Wrong loop size estimation?");
+    if (DesiredPeelCount + AlreadyPeeled <= UnrollPeelMaxCount) {
+      LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
+                        << " iteration(s) to turn"
+                        << " some Phis into invariants.\n");
+      PP.PeelCount = DesiredPeelCount;
+      PP.PeelProfiledIterations = false;
+      return;
     }
   }
 
@@ -458,27 +460,26 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (L->getHeader()->getParent()->hasProfileData()) {
     if (violatesLegacyMultiExitLoopCheck(L))
       return;
-    Optional<unsigned> PeelCount = getLoopEstimatedTripCount(L);
-    if (!PeelCount)
+    Optional<unsigned> EstimatedTripCount = getLoopEstimatedTripCount(L);
+    if (!EstimatedTripCount)
       return;
 
-    LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is " << *PeelCount
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is "
+                      << *EstimatedTripCount << "\n");
 
-    if (*PeelCount) {
-      if ((*PeelCount + AlreadyPeeled <= UnrollPeelMaxCount) &&
-          (LoopSize * (*PeelCount + 1) <= Threshold)) {
-        LLVM_DEBUG(dbgs() << "Peeling first " << *PeelCount
-                          << " iterations.\n");
-        PP.PeelCount = *PeelCount;
+    if (*EstimatedTripCount) {
+      if (*EstimatedTripCount + AlreadyPeeled <= MaxPeelCount) {
+        unsigned PeelCount = *EstimatedTripCount;
+        LLVM_DEBUG(dbgs() << "Peeling first " << PeelCount << " iterations.\n");
+        PP.PeelCount = PeelCount;
         return;
       }
-      LLVM_DEBUG(dbgs() << "Requested peel count: " << *PeelCount << "\n");
       LLVM_DEBUG(dbgs() << "Already peel count: " << AlreadyPeeled << "\n");
       LLVM_DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
-      LLVM_DEBUG(dbgs() << "Peel cost: " << LoopSize * (*PeelCount + 1)
-                        << "\n");
+      LLVM_DEBUG(dbgs() << "Loop cost: " << LoopSize << "\n");
       LLVM_DEBUG(dbgs() << "Max peel cost: " << Threshold << "\n");
+      LLVM_DEBUG(dbgs() << "Max peel count by cost: "
+                        << (Threshold / LoopSize - 1) << "\n");
     }
   }
 }

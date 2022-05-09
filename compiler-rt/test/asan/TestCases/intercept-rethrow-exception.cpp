@@ -4,7 +4,7 @@
 // REQUIRES: shared_cxxabi
 
 // RUN: %clangxx_asan -fexceptions -O0 %s -o %t
-// RUN: %run %t
+// RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t
 
 // The current implementation of this functionality requires special
 // combination of libraries that are not used by default on NetBSD

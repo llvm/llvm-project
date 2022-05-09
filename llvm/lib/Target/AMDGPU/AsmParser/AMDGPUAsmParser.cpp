@@ -1594,7 +1594,7 @@ private:
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
   bool validateMovrels(const MCInst &Inst, const OperandVector &Operands);
-  bool validateMIMGDataSize(const MCInst &Inst);
+  Optional<StringRef> validateMIMGDataSize(const MCInst &Inst);
   bool validateMIMGAddrSize(const MCInst &Inst);
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst);
@@ -3490,13 +3490,13 @@ bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {
   return true;
 }
 
-bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
+Optional<StringRef> AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
 
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
   if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
-    return true;
+    return None;
 
   int VDataIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
   int DMaskIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dmask);
@@ -3505,7 +3505,7 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   assert(VDataIdx != -1);
 
   if (DMaskIdx == -1 || TFEIdx == -1) // intersect_ray
-    return true;
+    return None;
 
   unsigned VDataSize = AMDGPU::getRegOperandSize(getMRI(), Desc, VDataIdx);
   unsigned TFESize = (TFEIdx != -1 && Inst.getOperand(TFEIdx).getImm()) ? 1 : 0;
@@ -3513,15 +3513,22 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   if (DMask == 0)
     DMask = 1;
 
+  bool isPackedD16 = false;
   unsigned DataSize =
     (Desc.TSFlags & SIInstrFlags::Gather4) ? 4 : countPopulation(DMask);
   if (hasPackedD16()) {
     int D16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::d16);
-    if (D16Idx >= 0 && Inst.getOperand(D16Idx).getImm())
+    isPackedD16 = D16Idx >= 0;
+    if (isPackedD16 && Inst.getOperand(D16Idx).getImm())
       DataSize = (DataSize + 1) / 2;
   }
 
-  return (VDataSize / 4) == DataSize + TFESize;
+  if ((VDataSize / 4) == DataSize + TFESize)
+    return None;
+
+  return StringRef(isPackedD16
+                       ? "image data size does not match dmask, d16 and tfe"
+                       : "image data size does not match dmask and tfe");
 }
 
 bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
@@ -4387,7 +4394,8 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     if (CPol & CPol::GLC) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
-      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("glc")]);
+      S = SMLoc::getFromPointer(
+          &CStr.data()[CStr.find(isGFX940() ? "sc0" : "glc")]);
       Error(S, isGFX940() ? "instruction must not use sc0"
                           : "instruction must not use glc");
       return false;
@@ -4446,9 +4454,8 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
           "invalid dim; must be MSAA type");
     return false;
   }
-  if (!validateMIMGDataSize(Inst)) {
-    Error(IDLoc,
-      "image data size does not match dmask and tfe");
+  if (auto ErrMsg = validateMIMGDataSize(Inst)) {
+    Error(IDLoc, *ErrMsg);
     return false;
   }
   if (!validateMIMGAddrSize(Inst)) {
@@ -7351,8 +7358,6 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
                                    const OperandVector &Operands,
                                    bool IsAtomic,
                                    bool IsLds) {
-  bool IsLdsOpcode = IsLds;
-  bool HasLdsModifier = false;
   OptionalImmIndexMap OptionalIdx;
   unsigned FirstOperandIdx = 1;
   bool IsAtomicReturn = false;
@@ -7396,8 +7401,6 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
       continue;
     }
 
-    HasLdsModifier |= Op.isLDS();
-
     // Handle tokens like 'offen' which are sometimes hard-coded into the
     // asm string.  There are no MCInst operands for these.
     if (Op.isToken()) {
@@ -7409,25 +7412,10 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
     OptionalIdx[Op.getImmTy()] = i;
   }
 
-  // This is a workaround for an llvm quirk which may result in an
-  // incorrect instruction selection. Lds and non-lds versions of
-  // MUBUF instructions are identical except that lds versions
-  // have mandatory 'lds' modifier. However this modifier follows
-  // optional modifiers and llvm asm matcher regards this 'lds'
-  // modifier as an optional one. As a result, an lds version
-  // of opcode may be selected even if it has no 'lds' modifier.
-  if (IsLdsOpcode && !HasLdsModifier) {
-    int NoLdsOpcode = AMDGPU::getMUBUFNoLdsInst(Inst.getOpcode());
-    if (NoLdsOpcode != -1) { // Got lds version - correct it.
-      Inst.setOpcode(NoLdsOpcode);
-      IsLdsOpcode = false;
-    }
-  }
-
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol, 0);
 
-  if (!IsLdsOpcode) { // tfe is not legal with lds opcodes
+  if (!IsLds) { // tfe is not legal with lds opcodes
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   }
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySWZ);

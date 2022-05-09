@@ -1803,7 +1803,8 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
           .addAttribute(Attribute::ByVal)
           .addAttribute(Attribute::StructRet)
           .addAttribute(Attribute::ByRef)
-          .addAttribute(Attribute::ElementType);
+          .addAttribute(Attribute::ElementType)
+          .addAttribute(Attribute::AllocatedPointer);
   }
 
     // Attributes that only apply to pointers or vectors of pointers.
@@ -2027,4 +2028,15 @@ void AttributeFuncs::mergeAttributesForOutlining(Function &Base,
   // function, but not the other, we make sure that the function retains
   // that aspect in the merged function.
   mergeFnAttrs(Base, ToMerge);
+}
+
+void AttributeFuncs::updateMinLegalVectorWidthAttr(Function &Fn,
+                                                   uint64_t Width) {
+  Attribute Attr = Fn.getFnAttribute("min-legal-vector-width");
+  if (Attr.isValid()) {
+    uint64_t OldWidth;
+    Attr.getValueAsString().getAsInteger(0, OldWidth);
+    if (Width > OldWidth)
+      Fn.addFnAttr("min-legal-vector-width", llvm::utostr(Width));
+  }
 }

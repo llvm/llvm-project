@@ -204,6 +204,9 @@ class BinaryContext {
   using DWOIdToCUMapType = std::unordered_map<uint64_t, DWARFUnit *>;
   DWOIdToCUMapType DWOCUs;
 
+  bool ContainsDwarf5{false};
+  bool ContainsDwarfLegacy{false};
+
   /// Preprocess DWO debug information.
   void preprocessDWODebugInfo();
 
@@ -234,7 +237,13 @@ public:
   /// Get Number of DWOCUs in a map.
   uint32_t getNumDWOCUs() { return DWOCUs.size(); }
 
-  const std::map<unsigned, DwarfLineTable> &getDwarfLineTables() const {
+  /// Returns true if DWARF5 is used.
+  bool isDWARF5Used() const { return ContainsDwarf5; }
+
+  /// Returns true if DWARF4 or lower is used.
+  bool isDWARFLegacyUsed() const { return ContainsDwarfLegacy; }
+
+  std::map<unsigned, DwarfLineTable> &getDwarfLineTables() {
     return DwarfLineTablesCUMap;
   }
 
@@ -245,7 +254,8 @@ public:
   Expected<unsigned> getDwarfFile(StringRef Directory, StringRef FileName,
                                   unsigned FileNumber,
                                   Optional<MD5::MD5Result> Checksum,
-                                  Optional<StringRef> Source, unsigned CUID);
+                                  Optional<StringRef> Source, unsigned CUID,
+                                  unsigned DWARFVersion);
 
   /// [start memory address] -> [segment info] mapping.
   std::map<uint64_t, SegmentInfo> SegmentMapInfo;

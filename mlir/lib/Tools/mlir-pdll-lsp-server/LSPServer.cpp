@@ -52,6 +52,12 @@ struct LSPServer {
   void onReference(const ReferenceParams &params,
                    Callback<std::vector<Location>> reply);
 
+  //===----------------------------------------------------------------------===//
+  // DocumentLink
+
+  void onDocumentLink(const DocumentLinkParams &params,
+                      Callback<std::vector<DocumentLink>> reply);
+
   //===--------------------------------------------------------------------===//
   // Hover
 
@@ -113,7 +119,8 @@ void LSPServer::onInitialize(const InitializeParams &params,
              ">", ":",  ";", ",", "+", "-", "/",  "*", "%",
              "^", "&",  "#", "?", ".", "=", "\"", "'", "|"}},
            {"resolveProvider", false},
-           {"triggerCharacters", {".", ">", "(", "{", ",", "<", ":", "[", " "}},
+           {"triggerCharacters",
+            {".", ">", "(", "{", ",", "<", ":", "[", " ", "\"", "/"}},
        }},
       {"signatureHelpProvider",
        llvm::json::Object{
@@ -121,6 +128,10 @@ void LSPServer::onInitialize(const InitializeParams &params,
        }},
       {"definitionProvider", true},
       {"referencesProvider", true},
+      {"documentLinkProvider",
+       llvm::json::Object{
+           {"resolveProvider", false},
+       }},
       {"hoverProvider", true},
       {"documentSymbolProvider", true},
   };
@@ -194,6 +205,16 @@ void LSPServer::onReference(const ReferenceParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// DocumentLink
+
+void LSPServer::onDocumentLink(const DocumentLinkParams &params,
+                               Callback<std::vector<DocumentLink>> reply) {
+  std::vector<DocumentLink> links;
+  server.getDocumentLinks(params.textDocument.uri, links);
+  reply(std::move(links));
+}
+
+//===----------------------------------------------------------------------===//
 // Hover
 
 void LSPServer::onHover(const TextDocumentPositionParams &params,
@@ -255,6 +276,10 @@ LogicalResult mlir::lsp::runPdllLSPServer(PDLLServer &server,
                         &LSPServer::onGoToDefinition);
   messageHandler.method("textDocument/references", &lspServer,
                         &LSPServer::onReference);
+
+  // Document Link
+  messageHandler.method("textDocument/documentLink", &lspServer,
+                        &LSPServer::onDocumentLink);
 
   // Hover
   messageHandler.method("textDocument/hover", &lspServer, &LSPServer::onHover);

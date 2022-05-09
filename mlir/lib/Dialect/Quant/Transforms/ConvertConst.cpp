@@ -98,6 +98,7 @@ void ConvertConstPass::runOnOperation() {
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::quant::createConvertConstPass() {
+std::unique_ptr<OperationPass<func::FuncOp>>
+mlir::quant::createConvertConstPass() {
   return std::make_unique<ConvertConstPass>();
 }

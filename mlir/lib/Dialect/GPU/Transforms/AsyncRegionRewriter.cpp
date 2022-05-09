@@ -208,7 +208,9 @@ struct GpuAsyncRegionPass::DeferWaitCallback {
 
       // Add the async dependency to each user of the `async.execute` token.
       auto asyncTokens = executeOp.getResults().take_back(dependencies.size());
-      for (Operation *user : executeOp.token().getUsers())
+      SmallVector<Operation *, 4> users(executeOp.token().user_begin(),
+                                        executeOp.token().user_end());
+      for (Operation *user : users)
         addAsyncDependencyAfter(asyncTokens, user);
     }
   }
@@ -338,6 +340,6 @@ void GpuAsyncRegionPass::runOnOperation() {
   getOperation().getRegion().walk(SingleTokenUseCallback());
 }
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::createGpuAsyncRegionPass() {
+std::unique_ptr<OperationPass<func::FuncOp>> mlir::createGpuAsyncRegionPass() {
   return std::make_unique<GpuAsyncRegionPass>();
 }

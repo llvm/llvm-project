@@ -49,8 +49,10 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
         if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
           VPValue *Start = Plan->getOrAddVPValue(II->getStartValue());
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, *II, false,
-                                                        true, SE);
+          VPValue *Step =
+              vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II,
+                                                        false, true);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
@@ -419,35 +421,16 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       continue;
 
     const InductionDescriptor &ID = IV->getInductionDescriptor();
-    const SCEV *StepSCEV = ID.getStep();
-    VPValue *Step = nullptr;
-    if (auto *E = dyn_cast<SCEVConstant>(StepSCEV)) {
-      Step = Plan.getOrAddExternalDef(E->getValue());
-    } else if (auto *E = dyn_cast<SCEVUnknown>(StepSCEV)) {
-      Step = Plan.getOrAddExternalDef(E->getValue());
-    } else {
-      Step = new VPExpandSCEVRecipe(StepSCEV, SE);
-    }
-
+    VPValue *Step =
+        vputils::getOrCreateVPValueForSCEVExpr(Plan, ID.getStep(), SE);
     Instruction *TruncI = IV->getTruncInst();
     VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(
         IV->getPHINode()->getType(), ID, Plan.getCanonicalIV(),
         IV->getStartValue(), Step, TruncI ? TruncI->getType() : nullptr);
-
     HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
-    if (Step->getDef())
-      Plan.getEntry()->getEntryBasicBlock()->appendRecipe(
-          cast<VPRecipeBase>(Step->getDef()));
 
-    // If there are no vector users of IV, simply update all users to use Step
-    // instead.
-    if (!IV->needsVectorIV()) {
-      IV->replaceAllUsesWith(Steps);
-      continue;
-    }
-
-    // Otherwise only update scalar users of IV to use Step instead. Use
-    // SetVector to ensure the list of users doesn't contain duplicates.
+    // Update scalar users of IV to use Step instead. Use SetVector to ensure
+    // the list of users doesn't contain duplicates.
     SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
     for (VPUser *U : Users) {
       VPRecipeBase *R = cast<VPRecipeBase>(U);
@@ -459,5 +442,22 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         R->setOperand(I, Steps);
       }
     }
+  }
+}
+
+void VPlanTransforms::removeRedundantExpandSCEVRecipes(VPlan &Plan) {
+  DenseMap<const SCEV *, VPValue *> SCEV2VPV;
+
+  for (VPRecipeBase &R :
+       make_early_inc_range(*Plan.getEntry()->getEntryBasicBlock())) {
+    auto *ExpR = dyn_cast<VPExpandSCEVRecipe>(&R);
+    if (!ExpR)
+      continue;
+
+    auto I = SCEV2VPV.insert({ExpR->getSCEV(), ExpR});
+    if (I.second)
+      continue;
+    ExpR->replaceAllUsesWith(I.first->second);
+    ExpR->eraseFromParent();
   }
 }

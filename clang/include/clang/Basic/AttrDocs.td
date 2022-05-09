@@ -3333,6 +3333,9 @@ If a type is trivial for the purposes of calls, has a non-trivial destructor,
 and is passed as an argument by value, the convention is that the callee will
 destroy the object before returning.
 
+If a type is trivial for the purpose of calls, it is assumed to be trivially
+relocatable for the purpose of ``__is_trivially_relocatable``.
+
 Attribute ``trivial_abi`` has no effect in the following cases:
 
 - The class directly declares a virtual base or virtual methods.
@@ -6377,6 +6380,27 @@ are required. The ``X``, ``Y``, and ``Z`` values provided to the attribute
 dictate the thread id. Total number of threads executed is ``X * Y * Z``.
 
 The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sm5-attributes-numthreads
+  }];
+}
+
+def HLSLSV_ShaderTypeAttrDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``shader`` type attribute applies to HLSL shader entry functions to
+identify the shader type for the entry function.
+The syntax is:
+
+.. code-block:: text
+
+  ``[shader(string-literal)]``
+
+where the string literal is one of: "pixel", "vertex", "geometry", "hull",
+"domain", "compute", "raygeneration", "intersection", "anyhit", "closesthit",
+"miss", "callable", "mesh", "amplification". Normally the shader type is set
+by shader target with the ``-T`` option like ``-Tps_6_1``. When compiling to a
+library target like ``lib_6_3``, the shader type attribute can help the
+compiler to identify the shader type. It is mostly used by Raytracing shaders
+where shaders must be compiled into a library and linked at runtime.
   }];
 }
 

@@ -169,8 +169,10 @@ Attribute Parser::parseAttribute(Type type) {
       const char *curPointer = getToken().getLoc().getPointer();
       consumeToken(Token::colon);
       if (!consumeIf(Token::colon)) {
-        state.lex.resetPointer(curPointer);
-        consumeToken();
+        if (getToken().isNot(Token::eof, Token::error)) {
+          state.lex.resetPointer(curPointer);
+          consumeToken();
+        }
         break;
       }
       // Parse the reference itself.
@@ -204,10 +206,13 @@ Attribute Parser::parseAttribute(Type type) {
     return builder.getUnitAttr();
 
   default:
-    // Parse a type attribute.
-    if (Type type = parseType())
-      return TypeAttr::get(type);
-    return nullptr;
+    // Parse a type attribute. We parse `Optional` here to allow for providing a
+    // better error message.
+    Type type;
+    OptionalParseResult result = parseOptionalType(type);
+    if (!result.hasValue())
+      return emitError("expected attribute value"), Attribute();
+    return failed(*result) ? Attribute() : TypeAttr::get(type);
   }
 }
 
@@ -271,6 +276,10 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
       nameId = builder.getStringAttr(getTokenSpelling());
     else
       return emitError("expected attribute name");
+
+    if (nameId->size() == 0)
+      return emitError("expected valid attribute name");
+
     if (!seenKeys.insert(*nameId).second)
       return emitError("duplicate key '")
              << nameId->getValue() << "' in dictionary attribute";
@@ -295,11 +304,8 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
     return success();
   };
 
-  if (parseCommaSeparatedList(Delimiter::Braces, parseElt,
-                              " in attribute dictionary"))
-    return failure();
-
-  return success();
+  return parseCommaSeparatedList(Delimiter::Braces, parseElt,
+                                 " in attribute dictionary");
 }
 
 /// Parse a float attribute.

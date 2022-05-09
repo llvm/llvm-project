@@ -50,7 +50,7 @@
 //       CFG:   v[[TEST_FUNC]] -> v[[ANCHOR]] [{{.*}}, lhead = [[CLUSTER_MERGE_BLOCKS]]]
 //       CFG:   v[[ANCHOR]] -> v[[TEST_RET]] [{{.*}}, ltail = [[CLUSTER_MERGE_BLOCKS]]]
 
-func @merge_blocks(%arg0: i32, %arg1 : i32) -> () {
+func.func @merge_blocks(%arg0: i32, %arg1 : i32) -> () {
   %0 = arith.constant dense<[[0, 1], [2, 3]]> : tensor<2x2xi32>
   %1 = arith.constant dense<1> : tensor<5xi32>
   %2 = arith.constant dense<[[0, 1]]> : tensor<1x2xi32>

@@ -37,7 +37,7 @@ void LinalgToSPIRVPass::runOnOperation() {
 
   // Allow builtin ops.
   target->addLegalOp<ModuleOp>();
-  target->addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+  target->addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
     return typeConverter.isSignatureLegal(op.getFunctionType()) &&
            typeConverter.isLegal(&op.getBody());
   });

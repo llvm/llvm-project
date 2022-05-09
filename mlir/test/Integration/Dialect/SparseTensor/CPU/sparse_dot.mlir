@@ -10,7 +10,7 @@ module {
   //
   // Sparse kernel.
   //
-  func @sparse_dot(%a: tensor<1024xf32, #SparseVector>,
+  func.func @sparse_dot(%a: tensor<1024xf32, #SparseVector>,
                    %b: tensor<1024xf32, #SparseVector>) -> tensor<f32> {
     %x = linalg.init_tensor [] : tensor<f32>
     %dot = linalg.dot ins(%a, %b: tensor<1024xf32, #SparseVector>,
@@ -22,7 +22,7 @@ module {
   //
   // Main driver.
   //
-  func @entry() {
+  func.func @entry() {
     // Setup two sparse vectors.
     %d1 = arith.constant sparse<
         [ [0], [1], [22], [23], [1022] ], [1.0, 2.0, 3.0, 4.0, 5.0]

@@ -254,7 +254,7 @@ SymbolFile *SymbolFileNativePDB::CreateInstance(ObjectFileSP objfile_sp) {
 }
 
 SymbolFileNativePDB::SymbolFileNativePDB(ObjectFileSP objfile_sp)
-    : SymbolFile(std::move(objfile_sp)) {}
+    : SymbolFileCommon(std::move(objfile_sp)) {}
 
 SymbolFileNativePDB::~SymbolFileNativePDB() = default;
 
@@ -1225,9 +1225,6 @@ bool SymbolFileNativePDB::ParseDebugMacros(CompileUnit &comp_unit) {
 llvm::Expected<uint32_t>
 SymbolFileNativePDB::GetFileIndex(const CompilandIndexItem &cii,
                                   uint32_t file_id) {
-  auto index_iter = m_file_indexes.find(file_id);
-  if (index_iter != m_file_indexes.end())
-    return index_iter->getSecond();
   const auto &checksums = cii.m_strings.checksums().getArray();
   const auto &strings = cii.m_strings.strings();
   // Indices in this structure are actually offsets of records in the
@@ -1244,9 +1241,9 @@ SymbolFileNativePDB::GetFileIndex(const CompilandIndexItem &cii,
 
   // LLDB wants the index of the file in the list of support files.
   auto fn_iter = llvm::find(cii.m_file_list, *efn);
-  lldbassert(fn_iter != cii.m_file_list.end());
-  m_file_indexes[file_id] = std::distance(cii.m_file_list.begin(), fn_iter);
-  return m_file_indexes[file_id];
+  if (fn_iter != cii.m_file_list.end())
+    return std::distance(cii.m_file_list.begin(), fn_iter);
+  return llvm::make_error<RawError>(raw_error_code::no_entry);
 }
 
 bool SymbolFileNativePDB::ParseSupportFiles(CompileUnit &comp_unit,
@@ -1314,8 +1311,8 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   int32_t line_offset = 0;
   llvm::Optional<uint32_t> code_offset_base;
   llvm::Optional<uint32_t> code_offset_end;
-  llvm::Optional<uint32_t> cur_line_offset;
-  llvm::Optional<uint32_t> next_line_offset;
+  llvm::Optional<int32_t> cur_line_offset;
+  llvm::Optional<int32_t> next_line_offset;
   llvm::Optional<uint32_t> next_file_offset;
 
   bool is_terminal_entry = false;
@@ -1387,9 +1384,12 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
       // Set base, end, file offset and line offset for next range.
       if (next_file_offset)
         file_offset = *next_file_offset;
-      cur_line_offset = next_line_offset ? next_line_offset : llvm::None;
+      if (next_line_offset) {
+        cur_line_offset = next_line_offset;
+        next_line_offset = llvm::None;
+      }
       code_offset_base = is_terminal_entry ? llvm::None : code_offset_end;
-      code_offset_end = next_line_offset = next_file_offset = llvm::None;
+      code_offset_end = next_file_offset = llvm::None;
     }
     if (code_offset_base && cur_line_offset) {
       if (is_terminal_entry) {
@@ -1413,7 +1413,6 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   }
 
   inline_site_sp->ranges.Sort();
-  inline_site_sp->ranges.CombineConsecutiveEntriesWithEqualData();
 
   // Get the inlined function callsite info.
   std::unique_ptr<Declaration> callsite_up;
@@ -1939,4 +1938,3 @@ uint64_t SymbolFileNativePDB::GetDebugInfoSize() {
   // PDB files are a separate file that contains all debug info.
   return m_index->pdb().getFileSize();
 }
-

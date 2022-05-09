@@ -9,7 +9,7 @@
 // will produce the sequence of compositions: f, g(f), h(g(f)) and print the
 // AffineMap h(g(f)), which is what FileCheck checks against.
 
-func @simple1() {
+func.func @simple1() {
   // CHECK: Composed map: (d0) -> (d0)
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 - 1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 + 1)> } : () -> ()
@@ -18,7 +18,7 @@ func @simple1() {
 
 // -----
 
-func @simple2() {
+func.func @simple2() {
   // CHECK: Composed map: (d0)[s0, s1] -> (d0 - s0 + s1)
   "test_affine_map"() { affine_map = affine_map<(d0)[s0] -> (d0 + s0 - 1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0)[s0] -> (d0 - s0 + 1)> } : () -> ()
@@ -27,7 +27,7 @@ func @simple2() {
 
 // -----
 
-func @simple3a() {
+func.func @simple3a() {
   // CHECK: Composed map: (d0, d1)[s0, s1, s2, s3] -> ((d0 ceildiv s2) * s0, (d1 ceildiv s3) * s1)
   "test_affine_map"() { affine_map = affine_map<(d0, d1)[s0, s1] -> (d0 ceildiv s0, d1 ceildiv s1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0, d1)[s0, s1] -> (d0 * s0, d1 * s1)> } : () -> ()
@@ -36,7 +36,7 @@ func @simple3a() {
 
 // -----
 
-func @simple3b() {
+func.func @simple3b() {
   // CHECK: Composed map: (d0, d1)[s0, s1] -> (d0 mod s0, d1 mod s1)
   "test_affine_map"() { affine_map = affine_map<(d0, d1)[s0, s1] -> (d0 mod s0, d1 mod s1)> } : () -> ()
   return
@@ -44,7 +44,7 @@ func @simple3b() {
 
 // -----
 
-func @simple3c() {
+func.func @simple3c() {
   // CHECK: Composed map: (d0, d1)[s0, s1, s2, s3, s4, s5] -> ((d0 ceildiv s4) * s4 + d0 mod s2, (d1 ceildiv s5) * s5 + d1 mod s3)
   "test_affine_map"() { affine_map = affine_map<(d0, d1)[s0, s1] -> ((d0 ceildiv s0) * s0, (d1 ceildiv s1) * s1, d0, d1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 + d2 mod s2, d1 + d3 mod s3)> } : () -> ()
@@ -53,7 +53,7 @@ func @simple3c() {
 
 // -----
 
-func @simple4() {
+func.func @simple4() {
   // CHECK: Composed map: (d0, d1)[s0, s1] -> (d1 * s1, d0 ceildiv s0)
   "test_affine_map"() { affine_map = affine_map<(d0, d1) -> (d1, d0)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0, d1)[s0, s1] -> (d0 * s1, d1 ceildiv s0)> } : () -> ()
@@ -62,7 +62,7 @@ func @simple4() {
 
 // -----
 
-func @simple5a() {
+func.func @simple5a() {
   // CHECK: Composed map: (d0) -> (d0 * 3 + 18)
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 - 1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 + 7)> } : () -> ()
@@ -73,7 +73,7 @@ func @simple5a() {
 
 // -----
 
-func @simple5b() {
+func.func @simple5b() {
   // CHECK: Composed map: (d0) -> ((d0 + 6) ceildiv 2)
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 - 1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 + 7)> } : () -> ()
@@ -84,7 +84,7 @@ func @simple5b() {
 
 // -----
 
-func @simple5c() {
+func.func @simple5c() {
   // CHECK: Composed map: (d0) -> (d0 * 8 + 48)
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 - 1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 + 7)> } : () -> ()
@@ -95,7 +95,7 @@ func @simple5c() {
 
 // -----
 
-func @simple5d() {
+func.func @simple5d() {
   // CHECK: Composed map: (d0) -> ((d0 * 4) floordiv 3 + 8)
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 - 1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 + 7)> } : () -> ()
@@ -106,7 +106,7 @@ func @simple5d() {
 
 // -----
 
-func @simple5e() {
+func.func @simple5e() {
   // CHECK: Composed map: (d0) -> ((d0 + 6) ceildiv 8)
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 - 1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 + 7)> } : () -> ()
@@ -116,7 +116,7 @@ func @simple5e() {
 
 // -----
 
-func @simple5f() {
+func.func @simple5f() {
   // CHECK: Composed map: (d0) -> ((d0 * 4 - 4) floordiv 3)
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 - 1)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0) -> (d0 * 4)> } : () -> ()
@@ -126,7 +126,7 @@ func @simple5f() {
 
 // -----
 
-func @perm_and_proj() {
+func.func @perm_and_proj() {
   // CHECK: Composed map: (d0, d1, d2, d3) -> (d1, d3, d0)
   "test_affine_map"() { affine_map = affine_map<(d0, d1, d2, d3) -> (d3, d1, d2, d0)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0, d1, d2, d3) -> (d1, d0, d3)> } : () -> ()
@@ -135,7 +135,7 @@ func @perm_and_proj() {
 
 // -----
 
-func @symbols1() {
+func.func @symbols1() {
   // CHECK: Composed map: (d0)[s0] -> (d0 + s0 + 1, d0 - s0 - 1)
   "test_affine_map"() { affine_map = affine_map<(d0)[s0] -> (d0 + s0, d0 - s0)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0, d1) -> (d0 + 1, d1 - 1)> } : () -> ()
@@ -144,7 +144,7 @@ func @symbols1() {
 
 // -----
 
-func @drop() {
+func.func @drop() {
   // CHECK: Composed map: (d0, d1, d2)[s0, s1] -> (d0 * 2 + d1 + d2 + s1)
   "test_affine_map"() { affine_map = affine_map<(d0, d1, d2)[s0, s1] -> (d0 + s1, d1 + s0, d0 + d1 + d2)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0, d1, d2) -> (d0 + d2)> } : () -> ()
@@ -153,7 +153,7 @@ func @drop() {
 
 // -----
 
-func @multi_symbols() {
+func.func @multi_symbols() {
   // CHECK: Composed map: (d0)[s0, s1, s2] -> (d0 + s1 + s2 + 1, d0 - s0 - s2 - 1)
   "test_affine_map"() { affine_map = affine_map<(d0)[s0] -> (d0 + s0, d0 - s0)> } : () -> ()
   "test_affine_map"() { affine_map = affine_map<(d0, d1)[s0, s1] -> (d0 + 1 + s1, d1 - 1 - s0)> } : () -> ()

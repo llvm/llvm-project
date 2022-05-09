@@ -475,6 +475,7 @@ uint32_t Module::ResolveSymbolContextForAddress(
         resolve_scope & eSymbolContextBlock ||
         resolve_scope & eSymbolContextLineEntry ||
         resolve_scope & eSymbolContextVariable) {
+      symfile->SetLoadDebugInfoEnabled();
       resolved_flags |=
           symfile->ResolveSymbolContext(so_addr, resolve_scope, sc);
     }
@@ -1405,7 +1406,6 @@ void Module::PreloadSymbols() {
   // Now let the symbol file preload its data and the symbol table will be
   // available without needing to take the module lock.
   sym_file->PreloadSymbols();
-
 }
 
 void Module::SetSymbolFileFileSpec(const FileSpec &file) {
@@ -1711,6 +1711,9 @@ DataFileCache *Module::GetIndexCache() {
     return nullptr;
   // NOTE: intentional leak so we don't crash if global destructor chain gets
   // called as other threads still use the result of this function
-  static DataFileCache *g_data_file_cache = new DataFileCache(ModuleList::GetGlobalModuleListProperties().GetLLDBIndexCachePath().GetPath());
+  static DataFileCache *g_data_file_cache =
+      new DataFileCache(ModuleList::GetGlobalModuleListProperties()
+                            .GetLLDBIndexCachePath()
+                            .GetPath());
   return g_data_file_cache;
 }

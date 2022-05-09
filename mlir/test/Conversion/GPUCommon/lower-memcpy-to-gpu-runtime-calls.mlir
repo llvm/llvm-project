@@ -3,7 +3,7 @@
 module attributes {gpu.container_module} {
 
   // CHECK: func @foo
-  func @foo(%dst : memref<7xf32, 1>, %src : memref<7xf32>) {
+  func.func @foo(%dst : memref<7xf32, 1>, %src : memref<7xf32>) {
     // CHECK: %[[t0:.*]] = llvm.call @mgpuStreamCreate
     %t0 = gpu.wait async
     // CHECK: %[[size_bytes:.*]] = llvm.ptrtoint

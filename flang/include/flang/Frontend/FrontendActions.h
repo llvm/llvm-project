@@ -10,10 +10,13 @@
 #define LLVM_FLANG_FRONTEND_FRONTENDACTIONS_H
 
 #include "flang/Frontend/FrontendAction.h"
+#include "flang/Parser/parsing.h"
 #include "flang/Semantics/semantics.h"
 
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Target/TargetMachine.h"
 #include <memory>
 
 namespace Fortran::frontend {
@@ -131,6 +134,17 @@ class ParseSyntaxOnlyAction : public PrescanAndSemaAction {
 
 class PluginParseTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override = 0;
+
+public:
+  Fortran::parser::Parsing &getParsing();
+  /// Creates an output file. This is just a wrapper for calling
+  /// CreateDefaultOutputFile from CompilerInstance. Use it to make sure that
+  /// your plugin respects driver's `-o` flag.
+  /// \param extension  The extension to use for the output file (ignored when
+  ///                   the user decides to print to stdout via `-o -`)
+  /// \return           Null on error, ostream for the output file otherwise
+  std::unique_ptr<llvm::raw_pwrite_stream> createOutputFile(
+      llvm::StringRef extension);
 };
 
 //===----------------------------------------------------------------------===//
@@ -157,17 +171,33 @@ class DebugDumpAllAction : public PrescanAndSemaDebugAction {
 //===----------------------------------------------------------------------===//
 // CodeGen Actions
 //===----------------------------------------------------------------------===//
+/// Represents the type of "backend" action to perform by the corresponding
+/// CodeGenAction. Note that from Flang's perspective, both LLVM and MLIR are
+/// "backends" that are used for generating LLVM IR/BC, assembly files or
+/// machine code. This enum captures "what" exactly one of these backends is to
+/// do. The names are similar to what is used in Clang - this allows us to
+/// maintain some level of consistency/similarity between the drivers.
+enum class BackendActionTy {
+  Backend_EmitAssembly, ///< Emit native assembly files
+  Backend_EmitObj, ///< Emit native object files
+  Backend_EmitBC, ///< Emit LLVM bitcode files
+  Backend_EmitLL, ///< Emit human-readable LLVM assembly
+  Backend_EmitMLIR ///< Emit MLIR files
+};
+
 /// Abstract base class for actions that generate code (MLIR, LLVM IR, assembly
 /// and machine code). Every action that inherits from this class will at
 /// least run the prescanning, parsing, semantic checks and lower the parse
 /// tree to an MLIR module.
 class CodeGenAction : public FrontendAction {
 
-  void ExecuteAction() override = 0;
+  void ExecuteAction() override;
   /// Runs prescan, parsing, sema and lowers to MLIR.
   bool BeginSourceFileAction() override;
+  void SetUpTargetMachine();
 
 protected:
+  CodeGenAction(BackendActionTy act) : action{act} {};
   /// @name MLIR
   /// {
   std::unique_ptr<mlir::ModuleOp> mlirModule;
@@ -181,34 +211,38 @@ protected:
   /// Generates an LLVM IR module from CodeGenAction::mlirModule and saves it
   /// in CodeGenAction::llvmModule.
   void GenerateLLVMIR();
+
+  BackendActionTy action;
+
+  std::unique_ptr<llvm::TargetMachine> TM;
   /// }
+public:
+  ~CodeGenAction() override;
 };
 
 class EmitMLIRAction : public CodeGenAction {
-  void ExecuteAction() override;
+public:
+  EmitMLIRAction() : CodeGenAction(BackendActionTy::Backend_EmitMLIR) {}
 };
 
 class EmitLLVMAction : public CodeGenAction {
-  void ExecuteAction() override;
+public:
+  EmitLLVMAction() : CodeGenAction(BackendActionTy::Backend_EmitLL) {}
 };
 
 class EmitLLVMBitcodeAction : public CodeGenAction {
-  void ExecuteAction() override;
+public:
+  EmitLLVMBitcodeAction() : CodeGenAction(BackendActionTy::Backend_EmitBC) {}
 };
 
-class BackendAction : public CodeGenAction {
+class EmitObjAction : public CodeGenAction {
 public:
-  enum class BackendActionTy {
-    Backend_EmitAssembly, ///< Emit native assembly files
-    Backend_EmitObj ///< Emit native object files
-  };
+  EmitObjAction() : CodeGenAction(BackendActionTy::Backend_EmitObj) {}
+};
 
-  BackendAction(BackendActionTy act) : action{act} {};
-
-private:
-  void ExecuteAction() override;
-
-  BackendActionTy action;
+class EmitAssemblyAction : public CodeGenAction {
+public:
+  EmitAssemblyAction() : CodeGenAction(BackendActionTy::Backend_EmitAssembly) {}
 };
 
 } // namespace Fortran::frontend

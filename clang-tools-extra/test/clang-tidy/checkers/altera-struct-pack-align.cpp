@@ -99,3 +99,22 @@ void no_trigger_on_instantiation() {
   struct bad_align3 instantiated { 'a', 0.001, 'b' };
 }
 
+// Make sure that we don't recommend aligning an empty struct to zero bytes (PR#51620)
+struct StructWithNoFields {};
+
+struct ContainsStructWithNoFields {
+  StructWithNoFields s;
+};
+
+// Make sure that an empty struct is treated like "char" for padding and alignment purposes
+struct ContainsStructWithNoFields2 {
+  StructWithNoFields s;
+  double d;
+  StructWithNoFields t;
+};
+// CHECK-MESSAGES: :[[@LINE-5]]:8: warning: accessing fields in struct 'ContainsStructWithNoFields2' is inefficient due to padding; only needs 10 bytes but is using 24 bytes [altera-struct-pack-align]
+// CHECK-MESSAGES: :[[@LINE-6]]:8: note: use "__attribute__((packed))" to reduce the amount of padding applied to struct 'ContainsStructWithNoFields2'
+// CHECK-MESSAGES: :[[@LINE-7]]:8: warning: accessing fields in struct 'ContainsStructWithNoFields2' is inefficient due to poor alignment; currently aligned to 8 bytes, but recommended alignment is 16 bytes [altera-struct-pack-align]
+// CHECK-MESSAGES: :[[@LINE-8]]:8: note: use "__attribute__((aligned(16)))" to align struct 'ContainsStructWithNoFields2' to 16 bytes
+// CHECK-FIXES: __attribute__((packed))
+// CHECK-FIXES: __attribute__((aligned(16)));

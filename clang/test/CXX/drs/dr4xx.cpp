@@ -1054,7 +1054,7 @@ namespace dr484 { // dr484: yes
   struct N::DT {}; // expected-error {{conflicts with typedef}}
 
   typedef struct {
-    S(); // expected-error {{requires a type}}
+    S(); // expected-error {{a type specifier is required}}
   } S;
 }
 

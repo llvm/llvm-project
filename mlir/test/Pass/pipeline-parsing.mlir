@@ -11,12 +11,12 @@
 // CHECK_ERROR_3: expected ',' after parsing pipeline
 // CHECK_ERROR_4: does not refer to a registered pass or pass pipeline
 // CHECK_ERROR_5:  Can't add pass '{{.*}}TestModulePass' restricted to 'builtin.module' on a PassManager intended to run on 'func.func', did you intend to nest?
-func @foo() {
+func.func @foo() {
   return
 }
 
 module {
-  func @foo() {
+  func.func @foo() {
     return
   }
 }

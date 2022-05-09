@@ -1121,16 +1121,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue V0 = CurDAG->getRegister(RISCV::V0, VT);
 
       // Otherwise use
-      // vmslt{u}.vx vd, va, x, v0.t; if mask policy is agnostic.
+      // vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
+      // The result is mask undisturbed.
+      // We use the same instructions to emulate mask agnostic behavior, because
+      // the agnostic result can be either undisturbed or all 1.
       SDValue Cmp = SDValue(
           CurDAG->getMachineNode(VMSLTMaskOpcode, DL, VT,
                                  {MaskedOff, Src1, Src2, V0, VL, SEW, Glue}),
           0);
-      if (MaskedOff.isUndef()) {
-        ReplaceNode(Node, Cmp.getNode());
-        return;
-      }
-      // Need vmxor.mm vd, vd, v0 to assign inactive value.
+      // vmxor.mm vd, vd, v0 is used to update active value.
       ReplaceNode(Node, CurDAG->getMachineNode(VMXOROpcode, DL, VT,
                                                {Cmp, Mask, VL, MaskSEW}));
       return;
@@ -2053,6 +2052,10 @@ bool RISCVDAGToDAGISel::selectRVVSimm5(SDValue N, unsigned Width,
 // Merge an ADDI into the offset of a load/store instruction where possible.
 // (load (addi base, off1), off2) -> (load base, off1+off2)
 // (store val, (addi base, off1), off2) -> (store val, base, off1+off2)
+// (load (add base, (addi src, off1)), off2)
+//    -> (load (add base, src), off1+off2)
+// (store val, (add base, (addi src, off1)), off2)
+//    -> (store val, (add base, src), off1+off2)
 // This is possible when off1+off2 fits a 12-bit immediate.
 bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
   int OffsetOpIdx;
@@ -2092,8 +2095,35 @@ bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
 
   SDValue Base = N->getOperand(BaseOpIdx);
 
+  if (!Base.isMachineOpcode())
+    return false;
+
+  // There is a ADD between ADDI and load/store. We can only fold ADDI that
+  // do not have a FrameIndex operand.
+  SDValue Add;
+  int AddBaseIdx;
+  if (Base.getMachineOpcode() == RISCV::ADD) {
+    if (!Base.hasOneUse())
+      return false;
+    Add = Base;
+    SDValue Op0 = Base.getOperand(0);
+    SDValue Op1 = Base.getOperand(1);
+    if (Op0.isMachineOpcode() && Op0.getMachineOpcode() == RISCV::ADDI &&
+        !isa<FrameIndexSDNode>(Op0.getOperand(0)) &&
+        isa<ConstantSDNode>(Op0.getOperand(1))) {
+      AddBaseIdx = 1;
+      Base = Op0;
+    } else if (Op1.isMachineOpcode() && Op1.getMachineOpcode() == RISCV::ADDI &&
+               !isa<FrameIndexSDNode>(Op1.getOperand(0)) &&
+               isa<ConstantSDNode>(Op1.getOperand(1))) {
+      AddBaseIdx = 0;
+      Base = Op1;
+    } else
+      return false;
+  }
+
   // If the base is an ADDI, we can merge it in to the load/store.
-  if (!Base.isMachineOpcode() || Base.getMachineOpcode() != RISCV::ADDI)
+  if (Base.getMachineOpcode() != RISCV::ADDI)
     return false;
 
   SDValue ImmOperand = Base.getOperand(1);
@@ -2140,13 +2170,27 @@ bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
   LLVM_DEBUG(N->dump(CurDAG));
   LLVM_DEBUG(dbgs() << "\n");
 
+  if (Add)
+    Add = SDValue(CurDAG->UpdateNodeOperands(Add.getNode(),
+                                             Add.getOperand(AddBaseIdx),
+                                             Base.getOperand(0)),
+                  0);
+
   // Modify the offset operand of the load/store.
-  if (BaseOpIdx == 0) // Load
-    CurDAG->UpdateNodeOperands(N, Base.getOperand(0), ImmOperand,
-                               N->getOperand(2));
-  else // Store
-    CurDAG->UpdateNodeOperands(N, N->getOperand(0), Base.getOperand(0),
-                               ImmOperand, N->getOperand(3));
+  if (BaseOpIdx == 0) { // Load
+    if (Add)
+      N = CurDAG->UpdateNodeOperands(N, Add, ImmOperand, N->getOperand(2));
+    else
+      N = CurDAG->UpdateNodeOperands(N, Base.getOperand(0), ImmOperand,
+                                     N->getOperand(2));
+  } else { // Store
+    if (Add)
+      N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), Add, ImmOperand,
+                                     N->getOperand(3));
+    else
+      N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), Base.getOperand(0),
+                                     ImmOperand, N->getOperand(3));
+  }
 
   return true;
 }
@@ -2265,33 +2309,52 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
   const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
 
+  bool IsTA = true;
   if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
-    // The last operand of the pseudo is the policy op, but we're expecting a
-    // Glue operand last. We may also have a chain.
+    // The last operand of the pseudo is the policy op, but we might have a
+    // Glue operand last. We might also have a chain.
     TailPolicyOpIdx = N->getNumOperands() - 1;
     if (N->getOperand(*TailPolicyOpIdx).getValueType() == MVT::Glue)
       (*TailPolicyOpIdx)--;
     if (N->getOperand(*TailPolicyOpIdx).getValueType() == MVT::Other)
       (*TailPolicyOpIdx)--;
 
-    // If the policy isn't TAIL_AGNOSTIC we can't perform this optimization.
-    if (N->getConstantOperandVal(*TailPolicyOpIdx) != RISCVII::TAIL_AGNOSTIC)
-      return false;
+    if (!(N->getConstantOperandVal(*TailPolicyOpIdx) &
+          RISCVII::TAIL_AGNOSTIC)) {
+      // Keep the true-masked instruction when there is no unmasked TU
+      // instruction
+      if (I->UnmaskedTUPseudo == I->MaskedPseudo && !N->getOperand(0).isUndef())
+        return false;
+      // We can't use TA if the tie-operand is not IMPLICIT_DEF
+      if (!N->getOperand(0).isUndef())
+        IsTA = false;
+    }
   }
 
-  const MCInstrDesc &UnmaskedMCID = TII->get(I->UnmaskedPseudo);
+  if (IsTA) {
+    uint64_t TSFlags = TII->get(I->UnmaskedPseudo).TSFlags;
 
-  // Check that we're dropping the merge operand, the mask operand, and any
-  // policy operand when we transform to this unmasked pseudo.
-  assert(!RISCVII::hasMergeOp(UnmaskedMCID.TSFlags) &&
-         RISCVII::hasDummyMaskOp(UnmaskedMCID.TSFlags) &&
-         !RISCVII::hasVecPolicyOp(UnmaskedMCID.TSFlags) &&
-         "Unexpected pseudo to transform to");
-  (void)UnmaskedMCID;
+    // Check that we're dropping the merge operand, the mask operand, and any
+    // policy operand when we transform to this unmasked pseudo.
+    assert(!RISCVII::hasMergeOp(TSFlags) && RISCVII::hasDummyMaskOp(TSFlags) &&
+           !RISCVII::hasVecPolicyOp(TSFlags) &&
+           "Unexpected pseudo to transform to");
+    (void)TSFlags;
+  } else {
+    uint64_t TSFlags = TII->get(I->UnmaskedTUPseudo).TSFlags;
 
+    // Check that we're dropping the mask operand, and any policy operand
+    // when we transform to this unmasked tu pseudo.
+    assert(RISCVII::hasMergeOp(TSFlags) && RISCVII::hasDummyMaskOp(TSFlags) &&
+           !RISCVII::hasVecPolicyOp(TSFlags) &&
+           "Unexpected pseudo to transform to");
+    (void)TSFlags;
+  }
+
+  unsigned Opc = IsTA ? I->UnmaskedPseudo : I->UnmaskedTUPseudo;
   SmallVector<SDValue, 8> Ops;
-  // Skip the merge operand at index 0.
-  for (unsigned I = 1, E = N->getNumOperands(); I != E; I++) {
+  // Skip the merge operand at index 0 if IsTA
+  for (unsigned I = IsTA, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, the policy, and the Glue.
     SDValue Op = N->getOperand(I);
     if (I == MaskOpIdx || I == TailPolicyOpIdx ||
@@ -2304,8 +2367,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   if (auto *TGlued = Glued->getGluedNode())
     Ops.push_back(SDValue(TGlued, TGlued->getNumValues() - 1));
 
-  SDNode *Result =
-      CurDAG->getMachineNode(I->UnmaskedPseudo, SDLoc(N), N->getVTList(), Ops);
+  SDNode *Result = CurDAG->getMachineNode(Opc, SDLoc(N), N->getVTList(), Ops);
   ReplaceUses(N, Result);
 
   return true;

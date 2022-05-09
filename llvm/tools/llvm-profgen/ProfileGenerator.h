@@ -42,10 +42,10 @@ public:
   virtual ~ProfileGeneratorBase() = default;
   static std::unique_ptr<ProfileGeneratorBase>
   create(ProfiledBinary *Binary, const ContextSampleCounterMap *Counters,
-         bool ProfileIsCSFlat);
+         bool profileIsCS);
   static std::unique_ptr<ProfileGeneratorBase>
   create(ProfiledBinary *Binary, const SampleProfileMap &&ProfileMap,
-         bool ProfileIsCSFlat);
+         bool profileIsCS);
   virtual void generateProfile() = 0;
   void write();
 
@@ -301,7 +301,7 @@ private:
   void populateBodySamplesForFunction(FunctionSamples &FunctionProfile,
                                       const RangeSample &RangeCounters);
   void populateBoundarySamplesForFunction(SampleContextFrames ContextId,
-                                          FunctionSamples &FunctionProfile,
+                                          FunctionSamples *CallerProfile,
                                           const BranchSample &BranchCounters);
   void populateInferredFunctionSamples();
 

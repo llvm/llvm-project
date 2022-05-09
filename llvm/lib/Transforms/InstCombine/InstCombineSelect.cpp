@@ -1312,6 +1312,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
                    ICmpInst::Predicate::ICMP_NE,
                    APInt::getAllOnes(C0->getType()->getScalarSizeInBits()))))
       return nullptr; // Can't do, have all-ones element[s].
+    Pred0 = ICmpInst::getFlippedStrictnessPredicate(Pred0);
     C0 = InstCombiner::AddOne(C0);
     break;
   default:
@@ -1377,15 +1378,22 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   case ICmpInst::Predicate::ICMP_SGE:
     // Also non-canonical, but here we don't need to change C2,
     // so we don't have any restrictions on C2, so we can just handle it.
+    Pred1 = ICmpInst::Predicate::ICMP_SLT;
     std::swap(ReplacementLow, ReplacementHigh);
     break;
   default:
     return nullptr; // Unknown predicate.
   }
+  assert(Pred1 == ICmpInst::Predicate::ICMP_SLT &&
+         "Unexpected predicate type.");
 
   // The thresholds of this clamp-like pattern.
   auto *ThresholdLowIncl = ConstantExpr::getNeg(C1);
   auto *ThresholdHighExcl = ConstantExpr::getSub(C0, C1);
+
+  assert((Pred0 == ICmpInst::Predicate::ICMP_ULT ||
+          Pred0 == ICmpInst::Predicate::ICMP_UGE) &&
+         "Unexpected predicate type.");
   if (Pred0 == ICmpInst::Predicate::ICMP_UGE)
     std::swap(ThresholdLowIncl, ThresholdHighExcl);
 
@@ -2499,27 +2507,142 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
   }
 }
 
+// Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
+// fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work.
+static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
+                                             InstCombinerImpl &IC) {
+  Value *CondVal = SI.getCondition();
+
+  for (bool Swap : {false, true}) {
+    Value *TrueVal = SI.getTrueValue();
+    Value *X = SI.getFalseValue();
+    CmpInst::Predicate Pred;
+
+    if (Swap)
+      std::swap(TrueVal, X);
+
+    if (!match(CondVal, m_FCmp(Pred, m_Specific(X), m_AnyZeroFP())))
+      continue;
+
+    // fold (X <= +/-0.0) ? (0.0 - X) : X to fabs(X), when 'Swap' is false
+    // fold (X >  +/-0.0) ? X : (0.0 - X) to fabs(X), when 'Swap' is true
+    if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X)))) {
+      if (!Swap && (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
+        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        return IC.replaceInstUsesWith(SI, Fabs);
+      }
+      if (Swap && (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
+        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        return IC.replaceInstUsesWith(SI, Fabs);
+      }
+    }
+
+    // With nsz, when 'Swap' is false:
+    // fold (X < +/-0.0) ? -X : X or (X <= +/-0.0) ? -X : X to fabs(X)
+    // fold (X > +/-0.0) ? -X : X or (X >= +/-0.0) ? -X : X to -fabs(x)
+    // when 'Swap' is true:
+    // fold (X > +/-0.0) ? X : -X or (X >= +/-0.0) ? X : -X to fabs(X)
+    // fold (X < +/-0.0) ? X : -X or (X <= +/-0.0) ? X : -X to -fabs(X)
+    if (!match(TrueVal, m_FNeg(m_Specific(X))) || !SI.hasNoSignedZeros())
+      return nullptr;
+
+    if (Swap)
+      Pred = FCmpInst::getSwappedPredicate(Pred);
+
+    bool IsLTOrLE = Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE ||
+                    Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE;
+    bool IsGTOrGE = Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE ||
+                    Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE;
+
+    if (IsLTOrLE) {
+      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      return IC.replaceInstUsesWith(SI, Fabs);
+    }
+    if (IsGTOrGE) {
+      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      Instruction *NewFNeg = UnaryOperator::CreateFNeg(Fabs);
+      NewFNeg->setFastMathFlags(SI.getFastMathFlags());
+      return NewFNeg;
+    }
+  }
+
+  return nullptr;
+}
+
+// Match the following IR pattern:
+//   %x.lowbits = and i8 %x, %lowbitmask
+//   %x.lowbits.are.zero = icmp eq i8 %x.lowbits, 0
+//   %x.biased = add i8 %x, %bias
+//   %x.biased.highbits = and i8 %x.biased, %highbitmask
+//   %x.roundedup = select i1 %x.lowbits.are.zero, i8 %x, i8 %x.biased.highbits
+// Define:
+//   %alignment = add i8 %lowbitmask, 1
+// Iff 1. an %alignment is a power-of-two (aka, %lowbitmask is a low bit mask)
+// and 2. %bias is equal to either %lowbitmask or %alignment,
+// and 3. %highbitmask is equal to ~%lowbitmask (aka, to -%alignment)
+// then this pattern can be transformed into:
+//   %x.offset = add i8 %x, %lowbitmask
+//   %x.roundedup = and i8 %x.offset, %highbitmask
+static Value *
+foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *Cond = SI.getCondition();
+  Value *X = SI.getTrueValue();
+  Value *XBiasedHighBits = SI.getFalseValue();
+
+  ICmpInst::Predicate Pred;
+  Value *XLowBits;
+  if (!match(Cond, m_ICmp(Pred, m_Value(XLowBits), m_ZeroInt())) ||
+      !ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  if (Pred == ICmpInst::Predicate::ICMP_NE)
+    std::swap(X, XBiasedHighBits);
+
+  // FIXME: we could support non non-splats here.
+
+  const APInt *LowBitMaskCst;
+  if (!match(XLowBits, m_And(m_Specific(X), m_APIntAllowUndef(LowBitMaskCst))))
+    return nullptr;
+
+  const APInt *BiasCst, *HighBitMaskCst;
+  if (!match(XBiasedHighBits,
+             m_And(m_Add(m_Specific(X), m_APIntAllowUndef(BiasCst)),
+                   m_APIntAllowUndef(HighBitMaskCst))))
+    return nullptr;
+
+  if (!LowBitMaskCst->isMask())
+    return nullptr;
+
+  APInt InvertedLowBitMaskCst = ~*LowBitMaskCst;
+  if (InvertedLowBitMaskCst != *HighBitMaskCst)
+    return nullptr;
+
+  APInt AlignmentCst = *LowBitMaskCst + 1;
+
+  if (*BiasCst != AlignmentCst && *BiasCst != *LowBitMaskCst)
+    return nullptr;
+
+  if (!XBiasedHighBits->hasOneUse()) {
+    if (*BiasCst == *LowBitMaskCst)
+      return XBiasedHighBits;
+    return nullptr;
+  }
+
+  // FIXME: could we preserve undef's here?
+  Type *Ty = X->getType();
+  Value *XOffset = Builder.CreateAdd(X, ConstantInt::get(Ty, *LowBitMaskCst),
+                                     X->getName() + ".biased");
+  Value *R = Builder.CreateAnd(XOffset, ConstantInt::get(Ty, *HighBitMaskCst));
+  R->takeName(&SI);
+  return R;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
   Type *SelType = SI.getType();
-
-  // FIXME: Remove this workaround when freeze related patches are done.
-  // For select with undef operand which feeds into an equality comparison,
-  // don't simplify it so loop unswitch can know the equality comparison
-  // may have an undef operand. This is a workaround for PR31652 caused by
-  // descrepancy about branch on undef between LoopUnswitch and GVN.
-  if (match(TrueVal, m_Undef()) || match(FalseVal, m_Undef())) {
-    if (llvm::any_of(SI.users(), [&](User *U) {
-          ICmpInst *CI = dyn_cast<ICmpInst>(U);
-          if (CI && CI->isEquality())
-            return true;
-          return false;
-        })) {
-      return nullptr;
-    }
-  }
 
   if (Value *V = SimplifySelectInst(CondVal, TrueVal, FalseVal,
                                     SQ.getWithInstruction(&SI)))
@@ -2530,8 +2653,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
-
-  CmpInst::Predicate Pred;
 
   // Avoid potential infinite loops by checking for non-constant condition.
   // TODO: Can we assert instead by improving canonicalizeSelectToShuffle()?
@@ -2668,6 +2789,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
           if (auto *V = foldEqOfParts(ICmp0, ICmp1, IsAnd))
             return replaceInstUsesWith(SI, V);
+
+          // This pattern would usually be converted into a bitwise and/or based
+          // on "implies poison" reasoning. However, this may fail if adds with
+          // nowrap flags are involved.
+          if (auto *V = foldAndOrOfICmpsUsingRanges(ICmp0, ICmp1, IsAnd))
+            return replaceInstUsesWith(SI, V);
         }
       }
     }
@@ -2773,42 +2900,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
-  // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
-  // fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work.
-  // (X <= +/-0.0) ? (0.0 - X) : X --> fabs(X)
-  if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
-      match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(FalseVal))) &&
-      (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, &SI);
-    return replaceInstUsesWith(SI, Fabs);
-  }
-  // (X >  +/-0.0) ? X : (0.0 - X) --> fabs(X)
-  if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
-      match(FalseVal, m_FSub(m_PosZeroFP(), m_Specific(TrueVal))) &&
-      (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, &SI);
-    return replaceInstUsesWith(SI, Fabs);
-  }
-  // With nnan and nsz:
-  // (X <  +/-0.0) ? -X : X --> fabs(X)
-  // (X <= +/-0.0) ? -X : X --> fabs(X)
-  if (match(CondVal, m_FCmp(Pred, m_Specific(FalseVal), m_AnyZeroFP())) &&
-      match(TrueVal, m_FNeg(m_Specific(FalseVal))) && SI.hasNoSignedZeros() &&
-      (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE ||
-       Pred == FCmpInst::FCMP_ULT || Pred == FCmpInst::FCMP_ULE)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FalseVal, &SI);
-    return replaceInstUsesWith(SI, Fabs);
-  }
-  // With nnan and nsz:
-  // (X >  +/-0.0) ? X : -X --> fabs(X)
-  // (X >= +/-0.0) ? X : -X --> fabs(X)
-  if (match(CondVal, m_FCmp(Pred, m_Specific(TrueVal), m_AnyZeroFP())) &&
-      match(FalseVal, m_FNeg(m_Specific(TrueVal))) && SI.hasNoSignedZeros() &&
-      (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE ||
-       Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE)) {
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, TrueVal, &SI);
-    return replaceInstUsesWith(SI, Fabs);
-  }
+  // Fold selecting to fabs.
+  if (Instruction *Fabs = foldSelectWithFCmpToFabs(SI, *this))
+    return Fabs;
 
   // See if we are selecting two values based on a comparison of the two values.
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(CondVal))
@@ -3078,6 +3172,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Value *Fr = foldSelectWithFrozenICmp(SI, Builder))
     return replaceInstUsesWith(SI, Fr);
+
+  if (Value *V = foldRoundUpIntegerWithPow2Alignment(SI, Builder))
+    return replaceInstUsesWith(SI, V);
 
   // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)
   // Load inst is intentionally not checked for hasOneUse()

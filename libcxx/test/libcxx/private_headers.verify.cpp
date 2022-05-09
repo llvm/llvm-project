@@ -112,6 +112,9 @@ END-SCRIPT
 #include <__algorithm/ranges_find.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find.h'}}
 #include <__algorithm/ranges_find_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find_if.h'}}
 #include <__algorithm/ranges_find_if_not.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_find_if_not.h'}}
+#include <__algorithm/ranges_for_each.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_for_each.h'}}
+#include <__algorithm/ranges_for_each_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_for_each_n.h'}}
+#include <__algorithm/ranges_is_partitioned.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_partitioned.h'}}
 #include <__algorithm/ranges_max.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max.h'}}
 #include <__algorithm/ranges_max_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_max_element.h'}}
 #include <__algorithm/ranges_min.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_min.h'}}
@@ -283,6 +286,8 @@ END-SCRIPT
 #include <__functional/unary_negate.h> // expected-error@*:* {{use of private header from outside its module: '__functional/unary_negate.h'}}
 #include <__functional/unwrap_ref.h> // expected-error@*:* {{use of private header from outside its module: '__functional/unwrap_ref.h'}}
 #include <__functional/weak_result_type.h> // expected-error@*:* {{use of private header from outside its module: '__functional/weak_result_type.h'}}
+#include <__fwd/span.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/span.h'}}
+#include <__fwd/string_view.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/string_view.h'}}
 #include <__ios/fpos.h> // expected-error@*:* {{use of private header from outside its module: '__ios/fpos.h'}}
 #include <__iterator/access.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/access.h'}}
 #include <__iterator/advance.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/advance.h'}}
@@ -427,6 +432,7 @@ END-SCRIPT
 #include <__ranges/transform_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/transform_view.h'}}
 #include <__ranges/view_interface.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/view_interface.h'}}
 #include <__ranges/views.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/views.h'}}
+#include <__ranges/zip_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/zip_view.h'}}
 #include <__split_buffer> // expected-error@*:* {{use of private header from outside its module: '__split_buffer'}}
 #include <__std_stream> // expected-error@*:* {{use of private header from outside its module: '__std_stream'}}
 #include <__string> // expected-error@*:* {{use of private header from outside its module: '__string'}}

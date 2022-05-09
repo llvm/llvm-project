@@ -6,6 +6,7 @@ static_library("GSYM") {
   ]
   sources = [
     "DwarfTransformer.cpp",
+    "ExtractRanges.cpp",
     "FileWriter.cpp",
     "FunctionInfo.cpp",
     "GsymCreator.cpp",
@@ -15,6 +16,5 @@ static_library("GSYM") {
     "LineTable.cpp",
     "LookupResult.cpp",
     "ObjectFileTransformer.cpp",
-    "Range.cpp",
   ]
 }

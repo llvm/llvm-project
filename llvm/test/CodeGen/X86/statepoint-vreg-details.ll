@@ -322,14 +322,14 @@ define i8 addrspace(1)* @test_isel_sched(i8 addrspace(1)* %0, i8 addrspace(1)* %
 ;CHECK-VREG:        %1:gr64 = COPY $rsi
 ;CHECK-VREG:        %0:gr64 = COPY $rdi
 ;CHECK-VREG:        TEST32rr %2, %2, implicit-def $eflags
-;CHECK-VREG:        %5:gr64 = CMOV64rr %1, %0, 4, implicit $eflags
-;CHECK-VREG:        %6:gr32 = MOV32r0 implicit-def dead $eflags
-;CHECK-VREG:        %7:gr64 = SUBREG_TO_REG 0, killed %6, %subreg.sub_32bit
-;CHECK-VREG:        $rdi = COPY %7
-;CHECK-VREG:        $rsi = COPY %5
-;CHECK-VREG:        %3:gr64, %4:gr64 = STATEPOINT 10, 0, 2, @bar, $rdi, $rsi, 2, 0, 2, 0, 2, 0, 2, 2, %1(tied-def 0), %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
+;CHECK-VREG:        %3:gr64 = CMOV64rr %1, %0, 4, implicit $eflags
+;CHECK-VREG:        %4:gr32 = MOV32r0 implicit-def dead $eflags
+;CHECK-VREG:        %5:gr64 = SUBREG_TO_REG 0, killed %4, %subreg.sub_32bit
+;CHECK-VREG:        $rdi = COPY %5
+;CHECK-VREG:        $rsi = COPY %3
+;CHECK-VREG:        %6:gr64, %7:gr64 = STATEPOINT 10, 0, 2, @bar, $rdi, $rsi, 2, 0, 2, 0, 2, 0, 2, 2, %1(tied-def 0), %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
 ;CHECK-VREG:        TEST32rr %2, %2, implicit-def $eflags
-;CHECK-VREG:        %8:gr64 = CMOV64rr %3, %4, 4, implicit $eflags
+;CHECK-VREG:        %8:gr64 = CMOV64rr %6, killed %7, 4, implicit $eflags
 ;CHECK-VREG:        $rax = COPY %8
 ;CHECK-VREG:        RET 0, $rax
 entry:
@@ -340,6 +340,32 @@ entry:
   %rel1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 1, i32 1)
   %res = select i1 %cmp, i8 addrspace(1)* %rel0, i8 addrspace(1)* %rel1
   ret i8 addrspace(1)* %res
+}
+
+; Check that ISEL of gc.relocate used in other BB does not generate extra COPY instruction.
+define i1 @test_cross_bb_reloc(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
+; CHECK-VREG_LABEL: test_cross_bb_reloc:
+; CHECK-VREG:    bb.0.entry:
+; CHECK-VREG:      [[VREG:%[^ ]+]]:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, %2(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
+; CHECK-VREG-NOT:  COPY [[VREG]]
+; CHECK-VREG:    bb.1.left:
+; CHECK-VREG:      $rdi = COPY [[VREG]]
+; CHECK-VREG:      CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+; CHECK-VREG:      $al = COPY %1
+; CHECK-VREG:      RET 0, $al
+
+entry:
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
+  %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
+  %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+  br i1 %external_cond, label %left, label %right
+
+left:
+  call void @consume(i32 addrspace(1)* %call1)
+  ret i1 %call2
+
+right:
+  ret i1 true
 }
 
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)

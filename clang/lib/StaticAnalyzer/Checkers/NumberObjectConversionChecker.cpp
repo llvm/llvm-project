@@ -143,7 +143,7 @@ void Callback::run(const MatchFinder::MatchResult &Result) {
   else
     OS << "Converting ";
 
-  OS << "a pointer value of type '" << ObjT.getAsString() << "' to a ";
+  OS << "a pointer value of type '" << ObjT << "' to a ";
 
   std::string EuphemismForPlain = "primitive";
   std::string SuggestedApi = IsObjC ? (IsInteger ? "" : "-boolValue")

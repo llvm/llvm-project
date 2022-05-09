@@ -215,6 +215,19 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdio.h entrypoints
+    libc.src.stdio.fclose
+    libc.src.stdio.flockfile
+    libc.src.stdio.fflush
+    libc.src.stdio.fopen
+    libc.src.stdio.fopencookie
+    libc.src.stdio.fread
+    libc.src.stdio.fread_unlocked
+    libc.src.stdio.fseek
+    libc.src.stdio.funlockfile
+    libc.src.stdio.fwrite
+    libc.src.stdio.fwrite_unlocked
+
     # threads.h entrypoints
     libc.src.threads.call_once
     libc.src.threads.cnd_broadcast

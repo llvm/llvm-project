@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple thumbv7-windows -fms-extensions -emit-llvm -o - %s \
 // RUN:     | FileCheck %s -check-prefix CHECK-MSVC
-// RUN: %clang_cc1 -triple armv7-eabi -emit-llvm %s -o /dev/null 2>&1 \
+// RUN: not %clang_cc1 -triple armv7-eabi -emit-llvm %s -o /dev/null 2>&1 \
 // RUN:     | FileCheck %s -check-prefix CHECK-EABI
 // REQUIRES: arm-registered-target
 
@@ -9,7 +9,7 @@ void emit() {
 }
 
 // CHECK-MSVC: call void asm sideeffect ".inst.n 0xDEFE", ""()
-// CHECK-EABI: warning: implicit declaration of function '__emit' is invalid in C99
+// CHECK-EABI: error: call to undeclared function '__emit'
 
 void emit_truncated() {
   __emit(0x11110000); // movs r0, r0

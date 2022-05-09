@@ -11,7 +11,7 @@
 // UJAM-FOUR-DAG: [[$MAP_PLUS_3:#map[0-9]+]] = affine_map<(d0) -> (d0 + 3)>
 
 // CHECK-LABEL: func @unroll_jam_imperfect_nest() {
-func @unroll_jam_imperfect_nest() {
+func.func @unroll_jam_imperfect_nest() {
   affine.for %i = 0 to 101 {
     %x = "addi32"(%i, %i) : (index, index) -> i32
     affine.for %j = 0 to 17 {
@@ -48,7 +48,7 @@ func @unroll_jam_imperfect_nest() {
 
 // CHECK-LABEL: func @loop_nest_unknown_count_1
 // CHECK-SAME: [[N:arg[0-9]+]]: index
-func @loop_nest_unknown_count_1(%N : index) {
+func.func @loop_nest_unknown_count_1(%N : index) {
   // CHECK-NEXT: affine.for %{{.*}} = 1 to [[$MAP_DIV_OFFSET]]()[%[[N]]] step 2 {
   // CHECK-NEXT:   affine.for %{{.*}} = 1 to 100 {
   // CHECK-NEXT:     "foo"() : () -> i32
@@ -71,7 +71,7 @@ func @loop_nest_unknown_count_1(%N : index) {
 
 // UJAM-FOUR-LABEL: func @loop_nest_unknown_count_2
 // UJAM-FOUR-SAME: %[[N:arg[0-9]+]]: index
-func @loop_nest_unknown_count_2(%N : index) {
+func.func @loop_nest_unknown_count_2(%N : index) {
   // UJAM-FOUR-NEXT: affine.for [[IV0:%arg[0-9]+]] = %[[N]] to  [[$UBMAP]]()[%[[N]]] step 4 {
   // UJAM-FOUR-NEXT:   affine.for [[IV1:%arg[0-9]+]] = 1 to 100 {
   // UJAM-FOUR-NEXT:     "foo"([[IV0]])
@@ -100,7 +100,7 @@ func @loop_nest_unknown_count_2(%N : index) {
 // CHECK-SAME: [[M:arg[0-9]+]]: index
 // CHECK-SAME: [[N:arg[0-9]+]]: index
 // CHECK-SAME: [[K:arg[0-9]+]]: index
-func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index) {
+func.func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index) {
   affine.for %i = 0 to min affine_map<()[s0, s1] -> (s0, s1, 1024)>()[%M, %N] {
     affine.for %j = 0 to %K {
       "test.foo"(%i, %j) : (index, index) -> ()
@@ -120,7 +120,7 @@ func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index)
 // The inner loop trip count changes each iteration of outer loop.
 // Do no unroll-and-jam.
 // CHECK-LABEL: func @no_unroll_jam_dependent_ubound
-func @no_unroll_jam_dependent_ubound(%in0: memref<?xf32, 1>) {
+func.func @no_unroll_jam_dependent_ubound(%in0: memref<?xf32, 1>) {
   affine.for %i = 0 to 100 {
     affine.for %k = 0 to affine_map<(d0) -> (d0 + 1)>(%i) {
       %y = "addi32"(%k, %k) : (index, index) -> i32
@@ -137,7 +137,7 @@ func @no_unroll_jam_dependent_ubound(%in0: memref<?xf32, 1>) {
 
 // Inner loop with one iter_arg.
 // CHECK-LABEL: func @unroll_jam_one_iter_arg
-func @unroll_jam_one_iter_arg() {
+func.func @unroll_jam_one_iter_arg() {
   affine.for %i = 0 to 101 {
     %cst = arith.constant 1 : i32
     %x = "addi32"(%i, %i) : (index, index) -> i32
@@ -177,7 +177,7 @@ func @unroll_jam_one_iter_arg() {
 
 // Inner loop with multiple iter_args.
 // CHECK-LABEL: func @unroll_jam_iter_args
-func @unroll_jam_iter_args() {
+func.func @unroll_jam_iter_args() {
   affine.for %i = 0 to 101 {
     %cst = arith.constant 0 : i32
     %cst1 = arith.constant 1 : i32
@@ -228,7 +228,7 @@ func @unroll_jam_iter_args() {
 // operand .
 // CHECK-LABEL: func @unroll_jam_iter_args_func_arg
 // CHECK-SAME:  [[INIT:%arg[0-9]+]]: i32
-func @unroll_jam_iter_args_func_arg(%in: i32) {
+func.func @unroll_jam_iter_args_func_arg(%in: i32) {
   affine.for %i = 0 to 101 {
     %x = "addi32"(%i, %i) : (index, index) -> i32
     %red = affine.for %j = 0 to 17 iter_args(%acc = %in) -> (i32) {
@@ -265,7 +265,7 @@ func @unroll_jam_iter_args_func_arg(%in: i32) {
 // Nested inner loops, each with one iter_arg. The inner most loop uses its
 // outer loop's iter_arg as its iter operand.
 // CHECK-LABEL: func @unroll_jam_iter_args_nested
-func @unroll_jam_iter_args_nested() {
+func.func @unroll_jam_iter_args_nested() {
   affine.for %i = 0 to 101 {
     %cst = arith.constant 1 : i32
     %x = "addi32"(%i, %i) : (index, index) -> i32
@@ -315,7 +315,7 @@ func @unroll_jam_iter_args_nested() {
 // Nested inner loops, each with one iter_arg. One loop uses its sibling loop's
 // result as its iter operand.
 // CHECK-LABEL: func @unroll_jam_iter_args_nested_affine_for_result
-func @unroll_jam_iter_args_nested_affine_for_result() {
+func.func @unroll_jam_iter_args_nested_affine_for_result() {
   affine.for %i = 0 to 101 {
     %cst = arith.constant 1 : i32
     %x = "addi32"(%i, %i) : (index, index) -> i32
@@ -379,7 +379,7 @@ func @unroll_jam_iter_args_nested_affine_for_result() {
 // Nested inner loops, each with one or more iter_args. Yeild the same value
 // multiple times.
 // CHECK-LABEL: func @unroll_jam_iter_args_nested_yield
-func @unroll_jam_iter_args_nested_yield() {
+func.func @unroll_jam_iter_args_nested_yield() {
   affine.for %i = 0 to 101 {
     %cst = arith.constant 1 : i32
     %x = "addi32"(%i, %i) : (index, index) -> i32
@@ -444,7 +444,7 @@ func @unroll_jam_iter_args_nested_yield() {
 
 // CHECK-LABEL: func @unroll_jam_nested_iter_args_mulf
 // CHECK-SAME:  [[INIT0:%arg[0-9]+]]: f32, [[INIT1:%arg[0-9]+]]: f32
-func @unroll_jam_nested_iter_args_mulf(%arg0: memref<21x30xf32, 1>, %init : f32, %init1 : f32) {
+func.func @unroll_jam_nested_iter_args_mulf(%arg0: memref<21x30xf32, 1>, %init : f32, %init1 : f32) {
   %0 = affine.for %arg3 = 0 to 21 iter_args(%arg4 = %init) -> (f32) {
     %1 = affine.for %arg5 = 0 to 30 iter_args(%arg6 = %init1) -> (f32) {
       %3 = affine.load %arg0[%arg3, %arg5] : memref<21x30xf32, 1>
@@ -485,7 +485,7 @@ func @unroll_jam_nested_iter_args_mulf(%arg0: memref<21x30xf32, 1>, %init : f32,
 
 // CHECK-LABEL: func @unroll_jam_iter_args_addi
 // CHECK-SAME:  [[INIT0:%arg[0-9]+]]: i32
-func @unroll_jam_iter_args_addi(%arg0: memref<21xi32, 1>, %init : i32) {
+func.func @unroll_jam_iter_args_addi(%arg0: memref<21xi32, 1>, %init : i32) {
   %0 = affine.for %arg3 = 0 to 21 iter_args(%arg4 = %init) -> (i32) {
     %1 = affine.load %arg0[%arg3] : memref<21xi32, 1>
     %2 = arith.addi %arg4, %1 : i32

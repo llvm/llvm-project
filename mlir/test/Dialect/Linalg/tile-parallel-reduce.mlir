@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -linalg-tile="tile-sizes=2 loop-type=parallel" -split-input-file | FileCheck %s -check-prefix=TILE1
 // RUN: mlir-opt %s -linalg-tile="tile-sizes=2,4 loop-type=parallel" -split-input-file | FileCheck %s -check-prefix=TILE2
 
-func @gemm(%arg0 : memref<?x?xf32>,
+func.func @gemm(%arg0 : memref<?x?xf32>,
            %arg1 : memref<?x?xf32>,
            %arg2 : memref<?x?xf32>)
 {
@@ -55,7 +55,7 @@ func @gemm(%arg0 : memref<?x?xf32>,
   indexing_maps = #accesses
 }
 
-func @reduction(%arg0 : memref<?x?x?xf32>,
+func.func @reduction(%arg0 : memref<?x?x?xf32>,
                 %arg1 : memref<?x?xf32>,
                 %arg2 : memref<?xf32>)
 {

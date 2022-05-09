@@ -245,6 +245,36 @@ void ReplaceableMetadataImpl::moveRef(void *Ref, void *New,
          "Reference without owner must be direct");
 }
 
+void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
+  if (!C.isUsedByMetadata()) {
+    return;
+  }
+
+  LLVMContext &Context = C.getType()->getContext();
+  auto &Store = Context.pImpl->ValuesAsMetadata;
+  auto I = Store.find(&C);
+  ValueAsMetadata *MD = I->second;
+  using UseTy =
+      std::pair<void *, std::pair<MetadataTracking::OwnerTy, uint64_t>>;
+  // Copy out uses and update value of Constant used by debug info metadata with undef below
+  SmallVector<UseTy, 8> Uses(MD->UseMap.begin(), MD->UseMap.end());
+
+  for (const auto &Pair : Uses) {
+    MetadataTracking::OwnerTy Owner = Pair.second.first;
+    if (!Owner)
+      continue;
+    if (!Owner.is<Metadata *>())
+      continue;
+    auto *OwnerMD = dyn_cast<MDNode>(Owner.get<Metadata *>());
+    if (!OwnerMD)
+      continue;
+    if (isa<DINode>(OwnerMD)) {
+      OwnerMD->handleChangedOperand(
+          Pair.first, ValueAsMetadata::get(UndefValue::get(C.getType())));
+    }
+  }
+}
+
 void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
   if (UseMap.empty())
     return;

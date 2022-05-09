@@ -34,12 +34,13 @@ namespace {
 /// non-normalizable as well. We assume external functions to be normalizable.
 struct NormalizeMemRefs : public NormalizeMemRefsBase<NormalizeMemRefs> {
   void runOnOperation() override;
-  void normalizeFuncOpMemRefs(FuncOp funcOp, ModuleOp moduleOp);
-  bool areMemRefsNormalizable(FuncOp funcOp);
-  void updateFunctionSignature(FuncOp funcOp, ModuleOp moduleOp);
-  void setCalleesAndCallersNonNormalizable(FuncOp funcOp, ModuleOp moduleOp,
-                                           DenseSet<FuncOp> &normalizableFuncs);
-  Operation *createOpResultsNormalized(FuncOp funcOp, Operation *oldOp);
+  void normalizeFuncOpMemRefs(func::FuncOp funcOp, ModuleOp moduleOp);
+  bool areMemRefsNormalizable(func::FuncOp funcOp);
+  void updateFunctionSignature(func::FuncOp funcOp, ModuleOp moduleOp);
+  void setCalleesAndCallersNonNormalizable(
+      func::FuncOp funcOp, ModuleOp moduleOp,
+      DenseSet<func::FuncOp> &normalizableFuncs);
+  Operation *createOpResultsNormalized(func::FuncOp funcOp, Operation *oldOp);
 };
 
 } // namespace
@@ -57,9 +58,9 @@ void NormalizeMemRefs::runOnOperation() {
   // normalizable are removed from this set.
   // TODO: Change this to work on FuncLikeOp once there is an operation
   // interface for it.
-  DenseSet<FuncOp> normalizableFuncs;
+  DenseSet<func::FuncOp> normalizableFuncs;
   // Initialize `normalizableFuncs` with all the functions within a module.
-  moduleOp.walk([&](FuncOp funcOp) { normalizableFuncs.insert(funcOp); });
+  moduleOp.walk([&](func::FuncOp funcOp) { normalizableFuncs.insert(funcOp); });
 
   // Traverse through all the functions applying a filter which determines
   // whether that function is normalizable or not. All callers/callees of
@@ -67,7 +68,7 @@ void NormalizeMemRefs::runOnOperation() {
   // they aren't passing any or specific non-normalizable memrefs. So,
   // functions which calls or get called by a non-normalizable becomes non-
   // normalizable functions themselves.
-  moduleOp.walk([&](FuncOp funcOp) {
+  moduleOp.walk([&](func::FuncOp funcOp) {
     if (normalizableFuncs.contains(funcOp)) {
       if (!areMemRefsNormalizable(funcOp)) {
         LLVM_DEBUG(llvm::dbgs()
@@ -85,7 +86,7 @@ void NormalizeMemRefs::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "Normalizing " << normalizableFuncs.size()
                           << " functions\n");
   // Those functions which can be normalized are subjected to normalization.
-  for (FuncOp &funcOp : normalizableFuncs)
+  for (func::FuncOp &funcOp : normalizableFuncs)
     normalizeFuncOpMemRefs(funcOp, moduleOp);
 }
 
@@ -102,7 +103,8 @@ static bool isMemRefNormalizable(Value::user_range opUsers) {
 /// Set all the calling functions and the callees of the function as not
 /// normalizable.
 void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
-    FuncOp funcOp, ModuleOp moduleOp, DenseSet<FuncOp> &normalizableFuncs) {
+    func::FuncOp funcOp, ModuleOp moduleOp,
+    DenseSet<func::FuncOp> &normalizableFuncs) {
   if (!normalizableFuncs.contains(funcOp))
     return;
 
@@ -115,8 +117,9 @@ void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
   for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
     // TODO: Extend this for ops that are FunctionOpInterface. This would
     // require creating an OpInterface for FunctionOpInterface ops.
-    FuncOp parentFuncOp = symbolUse.getUser()->getParentOfType<FuncOp>();
-    for (FuncOp &funcOp : normalizableFuncs) {
+    func::FuncOp parentFuncOp =
+        symbolUse.getUser()->getParentOfType<func::FuncOp>();
+    for (func::FuncOp &funcOp : normalizableFuncs) {
       if (parentFuncOp == funcOp) {
         setCalleesAndCallersNonNormalizable(funcOp, moduleOp,
                                             normalizableFuncs);
@@ -128,8 +131,8 @@ void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
   // Functions called by this function.
   funcOp.walk([&](func::CallOp callOp) {
     StringAttr callee = callOp.getCalleeAttr().getAttr();
-    for (FuncOp &funcOp : normalizableFuncs) {
-      // We compare FuncOp and callee's name.
+    for (func::FuncOp &funcOp : normalizableFuncs) {
+      // We compare func::FuncOp and callee's name.
       if (callee == funcOp.getNameAttr()) {
         setCalleesAndCallersNonNormalizable(funcOp, moduleOp,
                                             normalizableFuncs);
@@ -146,7 +149,7 @@ void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
 /// wherein even if the non-normalizable memref is not a part of the function's
 /// argument or return type, we still label the entire function as
 /// non-normalizable. We assume external functions to be normalizable.
-bool NormalizeMemRefs::areMemRefsNormalizable(FuncOp funcOp) {
+bool NormalizeMemRefs::areMemRefsNormalizable(func::FuncOp funcOp) {
   // We assume external functions to be normalizable.
   if (funcOp.isExternal())
     return true;
@@ -191,7 +194,7 @@ bool NormalizeMemRefs::areMemRefsNormalizable(FuncOp funcOp) {
 /// the calling function's signature.
 /// TODO: An update to the calling function signature is required only if the
 /// returned value is in turn used in ReturnOp of the calling function.
-void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
+void NormalizeMemRefs::updateFunctionSignature(func::FuncOp funcOp,
                                                ModuleOp moduleOp) {
   FunctionType functionType = funcOp.getFunctionType();
   SmallVector<Type, 4> resultTypes;
@@ -239,7 +242,7 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
   // function in ReturnOps, the caller function's signature will also change.
   // Hence we record the caller function in 'funcOpsToUpdate' to update their
   // signature as well.
-  llvm::SmallDenseSet<FuncOp, 8> funcOpsToUpdate;
+  llvm::SmallDenseSet<func::FuncOp, 8> funcOpsToUpdate;
   // We iterate over all symbolic uses of the function and update the return
   // type at the caller site.
   Optional<SymbolTable::UseRange> symbolUses = funcOp.getSymbolUses(moduleOp);
@@ -301,7 +304,7 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
       // required.
       // TODO: Extend this for ops that are FunctionOpInterface. This would
       // require creating an OpInterface for FunctionOpInterface ops.
-      FuncOp parentFuncOp = newCallOp->getParentOfType<FuncOp>();
+      func::FuncOp parentFuncOp = newCallOp->getParentOfType<func::FuncOp>();
       funcOpsToUpdate.insert(parentFuncOp);
     }
   }
@@ -313,14 +316,14 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
   // Updating the signature type of those functions which call the current
   // function. Only if the return type of the current function has a normalized
   // memref will the caller function become a candidate for signature update.
-  for (FuncOp parentFuncOp : funcOpsToUpdate)
+  for (func::FuncOp parentFuncOp : funcOpsToUpdate)
     updateFunctionSignature(parentFuncOp, moduleOp);
 }
 
 /// Normalizes the memrefs within a function which includes those arising as a
 /// result of AllocOps, CallOps and function's argument. The ModuleOp argument
 /// is used to help update function's signature after normalization.
-void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
+void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
                                               ModuleOp moduleOp) {
   // Turn memrefs' non-identity layouts maps into ones with identity. Collect
   // alloc ops first and then process since normalizeMemRef replaces/erases ops
@@ -477,7 +480,7 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
 /// normalized, and new operation containing them in the operation results is
 /// returned. If all of the results of `oldOp` have no memrefs or memrefs
 /// without affine map, `oldOp` is returned without modification.
-Operation *NormalizeMemRefs::createOpResultsNormalized(FuncOp funcOp,
+Operation *NormalizeMemRefs::createOpResultsNormalized(func::FuncOp funcOp,
                                                        Operation *oldOp) {
   // Prepare OperationState to create newOp containing normalized memref in
   // the operation results.

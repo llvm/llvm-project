@@ -127,6 +127,9 @@ Token Lexer::lexToken() {
     case '?':
       return formToken(Token::question, tokStart);
 
+    case '|':
+      return formToken(Token::vertical_bar, tokStart);
+
     case '/':
       if (*curPtr == '/') {
         skipComment();

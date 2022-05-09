@@ -357,6 +357,14 @@ LegalizeMutation changeElementTo(unsigned TypeIdx, unsigned FromTypeIdx);
 /// Keep the same scalar or element type as the given type.
 LegalizeMutation changeElementTo(unsigned TypeIdx, LLT Ty);
 
+/// Keep the same scalar or element type as \p TypeIdx, but take the number of
+/// elements from \p FromTypeIdx.
+LegalizeMutation changeElementCountTo(unsigned TypeIdx, unsigned FromTypeIdx);
+
+/// Keep the same scalar or element type as \p TypeIdx, but take the number of
+/// elements from \p Ty.
+LegalizeMutation changeElementCountTo(unsigned TypeIdx, LLT Ty);
+
 /// Change the scalar size or element size to have the same scalar size as type
 /// index \p FromIndex. Unlike changeElementTo, this discards pointer types and
 /// only changes the size.

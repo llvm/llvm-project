@@ -131,6 +131,52 @@ define <8 x i1> @bitcast_i8_8i1(i8 zeroext %a0) {
   ret <8 x i1> %1
 }
 
+; PR54911
+define <8 x i1> @bitcast_i8_8i1_freeze(i8 zeroext %a0) {
+; SSE2-SSSE3-LABEL: bitcast_i8_8i1_freeze:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    movzbl %dil, %eax
+; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
+; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    pcmpeqw %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    psrlw $15, %xmm0
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX1-LABEL: bitcast_i8_8i1_freeze:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movzbl %dil, %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: bitcast_i8_8i1_freeze:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: bitcast_i8_8i1_freeze:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    kmovd %edi, %k0
+; AVX512-NEXT:    vpmovm2w %k0, %xmm0
+; AVX512-NEXT:    retq
+  %1 = bitcast i8 %a0 to <8 x i1>
+  %2 = freeze <8 x i1> %1
+  ret <8 x i1> %2
+}
+
 define <16 x i1> @bitcast_i16_16i1(i16 zeroext %a0) {
 ; SSE2-LABEL: bitcast_i16_16i1:
 ; SSE2:       # %bb.0:

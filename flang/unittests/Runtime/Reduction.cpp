@@ -158,12 +158,84 @@ TEST(Reductions, DoubleMaxMinNorm2) {
   EXPECT_EQ(scalarResult.rank(), 0);
   EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int16_t>(0), 23);
   scalarResult.Destroy();
+
+  // Test .FALSE. scalar MASK argument
+  auto falseMask{MakeArray<TypeCategory::Logical, 4>(
+      std::vector<int>{}, std::vector<std::int32_t>{0})};
+  RTNAME(MaxlocDim)
+  (loc, *array, /*KIND=*/4, /*DIM=*/2, __FILE__, __LINE__,
+      /*MASK=*/&*falseMask, /*BACK=*/false);
+  EXPECT_EQ(loc.rank(), 2);
+  EXPECT_EQ(loc.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
+  EXPECT_EQ(loc.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(loc.GetDimension(0).Extent(), 3);
+  EXPECT_EQ(loc.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(loc.GetDimension(1).Extent(), 2);
+  for (int i{0}; i < 6; ++i) {
+    EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(0), 0);
+  }
+  loc.Destroy();
+
+  // Test .TRUE. scalar MASK argument
+  auto trueMask{MakeArray<TypeCategory::Logical, 4>(
+      std::vector<int>{}, std::vector<std::int32_t>{1})};
+  RTNAME(MaxlocDim)
+  (loc, *array, /*KIND=*/4, /*DIM=*/2, __FILE__, __LINE__,
+      /*MASK=*/&*trueMask, /*BACK=*/false);
+  EXPECT_EQ(loc.rank(), 2);
+  EXPECT_EQ(loc.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
+  EXPECT_EQ(loc.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(loc.GetDimension(0).Extent(), 3);
+  EXPECT_EQ(loc.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(loc.GetDimension(1).Extent(), 2);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(0), 3);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(1), 4);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(2), 3);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(3), 3);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(4), 4);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(5), 4);
+  loc.Destroy();
+
   RTNAME(MinlocDim)
   (scalarResult, *array1, /*KIND=*/2, /*DIM=*/1, __FILE__, __LINE__,
       /*MASK=*/nullptr, /*BACK=*/true);
   EXPECT_EQ(scalarResult.rank(), 0);
   EXPECT_EQ(*scalarResult.ZeroBasedIndexedElement<std::int16_t>(0), 22);
   scalarResult.Destroy();
+
+  // Test .FALSE. scalar MASK argument
+  RTNAME(MinlocDim)
+  (loc, *array, /*KIND=*/4, /*DIM=*/2, __FILE__, __LINE__,
+      /*MASK=*/&*falseMask, /*BACK=*/false);
+  EXPECT_EQ(loc.rank(), 2);
+  EXPECT_EQ(loc.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
+  EXPECT_EQ(loc.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(loc.GetDimension(0).Extent(), 3);
+  EXPECT_EQ(loc.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(loc.GetDimension(1).Extent(), 2);
+  for (int i{0}; i < 6; ++i) {
+    EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(0), 0);
+  }
+  loc.Destroy();
+
+  // Test .TRUE. scalar MASK argument
+  RTNAME(MinlocDim)
+  (loc, *array, /*KIND=*/4, /*DIM=*/2, __FILE__, __LINE__,
+      /*MASK=*/&*trueMask, /*BACK=*/false);
+  EXPECT_EQ(loc.rank(), 2);
+  EXPECT_EQ(loc.type().raw(), (TypeCode{TypeCategory::Integer, 4}.raw()));
+  EXPECT_EQ(loc.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(loc.GetDimension(0).Extent(), 3);
+  EXPECT_EQ(loc.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(loc.GetDimension(1).Extent(), 2);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(0), 4);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(1), 3);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(2), 4);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(3), 4);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(4), 3);
+  EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int32_t>(5), 2);
+  loc.Destroy();
+
   RTNAME(MaxvalDim)
   (scalarResult, *array1, /*DIM=*/1, __FILE__, __LINE__, /*MASK=*/nullptr);
   EXPECT_EQ(scalarResult.rank(), 0);

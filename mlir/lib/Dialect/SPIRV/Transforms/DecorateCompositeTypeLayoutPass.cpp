@@ -111,7 +111,7 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   populateSPIRVLayoutInfoPatterns(patterns);
   ConversionTarget target(*(module.getContext()));
   target.addLegalDialect<spirv::SPIRVDialect>();
-  target.addLegalOp<FuncOp>();
+  target.addLegalOp<func::FuncOp>();
   target.addDynamicallyLegalOp<spirv::GlobalVariableOp>(
       [](spirv::GlobalVariableOp op) {
         return VulkanLayoutUtils::isLegalType(op.type());

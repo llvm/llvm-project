@@ -5,7 +5,7 @@
   "uri":"test:///foo.mlir",
   "languageId":"mlir",
   "version":1,
-  "text":"module {\nfunc private @foo()\n}"
+  "text":"module {\nfunc.func private @foo()\n}"
 }}}
 // -----
 {"jsonrpc":"2.0","id":1,"method":"textDocument/documentSymbol","params":{
@@ -31,7 +31,7 @@
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "selectionRange": {
 // CHECK-NEXT:            "end": {
-// CHECK-NEXT:              "character": 4,
+// CHECK-NEXT:              "character": 9,
 // CHECK-NEXT:              "line": {{.*}}
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "start": {

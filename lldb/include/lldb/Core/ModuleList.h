@@ -68,6 +68,8 @@ public:
   FileSpec GetLLDBIndexCachePath() const;
   bool SetLLDBIndexCachePath(const FileSpec &path);
 
+  bool GetLoadSymbolOnDemand();
+
   PathMappingList GetSymlinkMappings() const;
 };
 

@@ -23,6 +23,52 @@
 namespace llvm {
 class CanonicalLoopInfo;
 
+/// Move the instruction after an InsertPoint to the beginning of another
+/// BasicBlock.
+///
+/// The instructions after \p IP are moved to the beginning of \p New which must
+/// not have any PHINodes. If \p CreateBranch is true, a branch instruction to
+/// \p New will be added such that there is no semantic change. Otherwise, the
+/// \p IP insert block remains degenerate and it is up to the caller to insert a
+/// terminator.
+void spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
+              bool CreateBranch);
+
+/// Splice a BasicBlock at an IRBuilder's current insertion point. Its new
+/// insert location will stick to after the instruction before the insertion
+/// point (instead of moving with the instruction the InsertPoint stores
+/// internally).
+void spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch);
+
+/// Split a BasicBlock at an InsertPoint, even if the block is degenerate
+/// (missing the terminator).
+///
+/// llvm::SplitBasicBlock and BasicBlock::splitBasicBlock require a well-formed
+/// BasicBlock. \p Name is used for the new successor block. If \p CreateBranch
+/// is true, a branch to the new successor will new created such that
+/// semantically there is no change; otherwise the block of the insertion point
+/// remains degenerate and it is the caller's responsibility to insert a
+/// terminator. Returns the new successor block.
+BasicBlock *splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
+                    llvm::Twine Name = {});
+
+/// Split a BasicBlock at \p Builder's insertion point, even if the block is
+/// degenerate (missing the terminator).  Its new insert location will stick to
+/// after the instruction before the insertion point (instead of moving with the
+/// instruction the InsertPoint stores internally).
+BasicBlock *splitBB(IRBuilderBase &Builder, bool CreateBranch,
+                    llvm::Twine Name = {});
+
+/// Split a BasicBlock at \p Builder's insertion point, even if the block is
+/// degenerate (missing the terminator).  Its new insert location will stick to
+/// after the instruction before the insertion point (instead of moving with the
+/// instruction the InsertPoint stores internally).
+BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch, llvm::Twine Name);
+
+/// Like splitBB, but reuses the current block's name for the new name.
+BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
+                              llvm::Twine Suffix = ".split");
+
 /// An interface to create LLVM-IR for OpenMP directives.
 ///
 /// Each OpenMP directive has a corresponding public generator method.
@@ -87,27 +133,36 @@ public:
   /// Callback type for body (=inner region) code generation
   ///
   /// The callback takes code locations as arguments, each describing a
-  /// location at which code might need to be generated or a location that is
-  /// the target of control transfer.
+  /// location where additional instructions can be inserted.
+  ///
+  /// The CodeGenIP may be in the middle of a basic block or point to the end of
+  /// it. The basic block may have a terminator or be degenerate. The callback
+  /// function may just insert instructions at that position, but also split the
+  /// block (without the Before argument of BasicBlock::splitBasicBlock such
+  /// that the identify of the split predecessor block is preserved) and insert
+  /// additional control flow, including branches that do not lead back to what
+  /// follows the CodeGenIP. Note that since the callback is allowed to split
+  /// the block, callers must assume that InsertPoints to positions in the
+  /// BasicBlock after CodeGenIP including CodeGenIP itself are invalidated. If
+  /// such InsertPoints need to be preserved, it can split the block itself
+  /// before calling the callback.
+  ///
+  /// AllocaIP and CodeGenIP must not point to the same position.
   ///
   /// \param AllocaIP is the insertion point at which new alloca instructions
-  ///                 should be placed.
+  ///                 should be placed. The BasicBlock it is pointing to must
+  ///                 not be split.
   /// \param CodeGenIP is the insertion point at which the body code should be
   ///                  placed.
-  /// \param ContinuationBB is the basic block target to leave the body.
-  ///
-  /// Note that all blocks pointed to by the arguments have terminators.
   using BodyGenCallbackTy =
-      function_ref<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                        BasicBlock &ContinuationBB)>;
+      function_ref<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
   // This is created primarily for sections construct as llvm::function_ref
   // (BodyGenCallbackTy) is not storable (as described in the comments of
   // function_ref class - function_ref contains non-ownable reference
   // to the callable.
   using StorableBodyGenCallbackTy =
-      std::function<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                         BasicBlock &ContinuationBB)>;
+      std::function<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
   /// Callback type for loop body code generation.
   ///
@@ -344,6 +399,7 @@ public:
                                    ArrayRef<CanonicalLoopInfo *> Loops,
                                    InsertPointTy ComputeIP);
 
+private:
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
   /// This takes a \p LoopInfo representing a canonical loop, such as the one
@@ -403,17 +459,15 @@ public:
   ///                     the loop.
   /// \param Chunk    The size of loop chunk considered as a unit when
   ///                 scheduling. If \p nullptr, defaults to 1.
-  /// \param Ordered  Indicates whether the ordered clause is specified without
-  ///                 parameter.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
                                           InsertPointTy AllocaIP,
                                           omp::OMPScheduleType SchedType,
                                           bool NeedsBarrier,
-                                          Value *Chunk = nullptr,
-                                          bool Ordered = false);
+                                          Value *Chunk = nullptr);
 
+public:
   /// Modifies the canonical loop to be a workshare loop.
   ///
   /// This takes a \p LoopInfo representing a canonical loop, such as the one
@@ -436,13 +490,23 @@ public:
   ///                     the loop.
   /// \param SchedKind Scheduling algorithm to use.
   /// \param ChunkSize The chunk size for the inner loop.
+  /// \param HasSimdModifier Whether the simd modifier is present in the
+  ///                        schedule clause.
+  /// \param HasMonotonicModifier Whether the monotonic modifier is present in
+  ///                             the schedule clause.
+  /// \param HasNonmonotonicModifier Whether the nonmonotonic modifier is
+  ///                                present in the schedule clause.
+  /// \param HasOrderedClause Whether the (parameterless) ordered clause is
+  ///                         present.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyWorkshareLoop(
       DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
       bool NeedsBarrier,
       llvm::omp::ScheduleKind SchedKind = llvm::omp::OMP_SCHEDULE_Default,
-      Value *ChunkSize = nullptr);
+      Value *ChunkSize = nullptr, bool HasSimdModifier = false,
+      bool HasMonotonicModifier = false, bool HasNonmonotonicModifier = false,
+      bool HasOrderedClause = false);
 
   /// Tile a loop nest.
   ///
@@ -714,6 +778,27 @@ public:
   /// Create a hidden global flag \p Name in the module with initial value \p
   /// Value.
   GlobalValue *createGlobalFlag(unsigned Value, StringRef Name);
+
+  /// Create an offloading section struct used to register this global at
+  /// runtime.
+  ///
+  /// Type struct __tgt_offload_entry{
+  ///   void    *addr;      // Pointer to the offload entry info.
+  ///                       // (function or global)
+  ///   char    *name;      // Name of the function or global.
+  ///   size_t  size;       // Size of the entry info (0 if it a function).
+  ///   int32_t flags;
+  ///   int32_t reserved;
+  /// };
+  ///
+  /// \param Addr The pointer to the global being registered.
+  /// \param Name The symbol name associated with the global.
+  /// \param Size The size in bytes of the global (0 for functions).
+  /// \param Flags Flags associated with the entry.
+  /// \param SectionName The section this entry will be placed at.
+  void emitOffloadingEntry(Constant *Addr, StringRef Name, uint64_t Size,
+                           int32_t Flags,
+                           StringRef SectionName = "omp_offloading_entries");
 
   /// Generate control flow and cleanup for cancellation.
   ///

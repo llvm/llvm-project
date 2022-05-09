@@ -61,6 +61,7 @@ static_library("Utils") {
     "MemoryOpRemark.cpp",
     "MemoryTaggingSupport.cpp",
     "MetaRenamer.cpp",
+    "MisExpect.cpp",
     "ModuleUtils.cpp",
     "NameAnonGlobals.cpp",
     "PredicateInfo.cpp",

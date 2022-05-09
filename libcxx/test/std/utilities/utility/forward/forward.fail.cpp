@@ -22,7 +22,7 @@ const A csource() {return A();}
 int main(int, char**)
 {
     {
-        std::forward<A&>(source());  // expected-note {{requested here}}
+        (void)std::forward<A&>(source());  // expected-note {{requested here}}
         // expected-error-re@*:* 1 {{static_assert failed{{.*}} "cannot forward an rvalue as an lvalue"}}
     }
     {

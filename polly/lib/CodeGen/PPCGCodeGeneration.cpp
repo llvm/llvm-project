@@ -486,12 +486,13 @@ private:
   /// Store a specific kernel launch parameter in the array of kernel launch
   /// parameters.
   ///
+  /// @param ArrayTy    Array type of \p Parameters.
   /// @param Parameters The list of parameters in which to store.
   /// @param Param      The kernel launch parameter to store.
   /// @param Index      The index in the parameter list, at which to store the
   ///                   parameter.
-  void insertStoreParameter(Instruction *Parameters, Instruction *Param,
-                            int Index);
+  void insertStoreParameter(Type *ArrayTy, Instruction *Parameters,
+                            Instruction *Param, int Index);
 
   /// Create kernel launch parameters.
   ///
@@ -1313,19 +1314,18 @@ void GPUNodeBuilder::createFor(__isl_take isl_ast_node *Node) {
 
 void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {
   isl_ast_expr *LocalIndex = isl_ast_expr_copy(KernelStmt->u.c.local_index);
-  LocalIndex = isl_ast_expr_address_of(LocalIndex);
-  Value *LocalAddr = ExprBuilder.create(LocalIndex);
+  auto LocalAddr = ExprBuilder.createAccessAddress(LocalIndex);
   isl_ast_expr *Index = isl_ast_expr_copy(KernelStmt->u.c.index);
-  Index = isl_ast_expr_address_of(Index);
-  Value *GlobalAddr = ExprBuilder.create(Index);
-  Type *IndexTy = GlobalAddr->getType()->getPointerElementType();
+  auto GlobalAddr = ExprBuilder.createAccessAddress(Index);
 
   if (KernelStmt->u.c.read) {
-    LoadInst *Load = Builder.CreateLoad(IndexTy, GlobalAddr, "shared.read");
-    Builder.CreateStore(Load, LocalAddr);
+    LoadInst *Load =
+        Builder.CreateLoad(GlobalAddr.second, GlobalAddr.first, "shared.read");
+    Builder.CreateStore(Load, LocalAddr.first);
   } else {
-    LoadInst *Load = Builder.CreateLoad(IndexTy, LocalAddr, "shared.write");
-    Builder.CreateStore(Load, GlobalAddr);
+    LoadInst *Load =
+        Builder.CreateLoad(LocalAddr.second, LocalAddr.first, "shared.write");
+    Builder.CreateStore(Load, GlobalAddr.first);
   }
 }
 
@@ -1625,11 +1625,11 @@ GPUNodeBuilder::getBlockSizes(ppcg_kernel *Kernel) {
   return std::make_tuple(Sizes[0], Sizes[1], Sizes[2]);
 }
 
-void GPUNodeBuilder::insertStoreParameter(Instruction *Parameters,
+void GPUNodeBuilder::insertStoreParameter(Type *ArrayTy,
+                                          Instruction *Parameters,
                                           Instruction *Param, int Index) {
   Value *Slot = Builder.CreateGEP(
-      Parameters->getType()->getPointerElementType(), Parameters,
-      {Builder.getInt64(0), Builder.getInt64(Index)});
+      ArrayTy, Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
   Value *ParamTyped = Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
   Builder.CreateStore(ParamTyped, Slot);
 }
@@ -1730,7 +1730,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
+    insertStoreParameter(ArrayTy, Parameters, Param, Index);
     Index++;
   }
 
@@ -1751,7 +1751,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
+    insertStoreParameter(ArrayTy, Parameters, Param, Index);
     Index++;
   }
 
@@ -1764,7 +1764,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
+    insertStoreParameter(ArrayTy, Parameters, Param, Index);
     Index++;
   }
 
@@ -1776,7 +1776,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                          Launch + "_param_size_" + std::to_string(i),
                          EntryBlock->getTerminator());
       Builder.CreateStore(Val, Param);
-      insertStoreParameter(Parameters, Param, Index);
+      insertStoreParameter(ArrayTy, Parameters, Param, Index);
       Index++;
     }
   }
@@ -3443,13 +3443,11 @@ public:
         continue;
 
       for (Value *Op : Inst.operands())
-        // Look for (<func-type>*) among operands of Inst
-        if (auto PtrTy = dyn_cast<PointerType>(Op->getType())) {
-          if (isa<FunctionType>(PtrTy->getPointerElementType())) {
-            LLVM_DEBUG(dbgs()
-                       << Inst << " has illegal use of function in kernel.\n");
-            return true;
-          }
+        // Look for functions among operands of Inst.
+        if (isa<Function>(Op->stripPointerCasts())) {
+          LLVM_DEBUG(dbgs()
+                     << Inst << " has illegal use of function in kernel.\n");
+          return true;
         }
     }
     return false;

@@ -1075,9 +1075,9 @@ ParseResult AffineDmaStartOp::parse(OpAsmParser &parser,
     return failure();
 
   // Parse optional stride and elements per stride.
-  if (parser.parseTrailingOperandList(strideInfo)) {
+  if (parser.parseTrailingOperandList(strideInfo))
     return failure();
-  }
+
   if (!strideInfo.empty() && strideInfo.size() != 2) {
     return parser.emitError(parser.getNameLoc(),
                             "expected two stride related operands");
@@ -1431,9 +1431,10 @@ static ParseResult parseBound(bool isLower, OperationState &result,
 
 ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
-  OpAsmParser::UnresolvedOperand inductionVariable;
+  OpAsmParser::Argument inductionVariable;
+  inductionVariable.type = builder.getIndexType();
   // Parse the induction variable followed by '='.
-  if (parser.parseRegionArgument(inductionVariable) || parser.parseEqual())
+  if (parser.parseArgument(inductionVariable) || parser.parseEqual())
     return failure();
 
   // Parse loop bounds.
@@ -1462,8 +1463,10 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   // Parse the optional initial iteration arguments.
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> regionArgs, operands;
-  SmallVector<Type, 4> argTypes;
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
+
+  // Induction variable.
   regionArgs.push_back(inductionVariable);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
@@ -1472,23 +1475,23 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
         parser.parseArrowTypeList(result.types))
       return failure();
     // Resolve input operands.
-    for (auto operandType : llvm::zip(operands, result.types))
-      if (parser.resolveOperand(std::get<0>(operandType),
-                                std::get<1>(operandType), result.operands))
+    for (auto argOperandType :
+         llvm::zip(llvm::drop_begin(regionArgs), operands, result.types)) {
+      Type type = std::get<2>(argOperandType);
+      std::get<0>(argOperandType).type = type;
+      if (parser.resolveOperand(std::get<1>(argOperandType), type,
+                                result.operands))
         return failure();
+    }
   }
-  // Induction variable.
-  Type indexType = builder.getIndexType();
-  argTypes.push_back(indexType);
-  // Loop carried variables.
-  argTypes.append(result.types.begin(), result.types.end());
+
   // Parse the body region.
   Region *body = result.addRegion();
-  if (regionArgs.size() != argTypes.size())
+  if (regionArgs.size() != result.types.size() + 1)
     return parser.emitError(
         parser.getNameLoc(),
         "mismatch between the number of loop-carried values and results");
-  if (parser.parseRegion(*body, regionArgs, argTypes))
+  if (parser.parseRegion(*body, regionArgs))
     return failure();
 
   AffineForOp::ensureTerminator(*body, builder, result.location);
@@ -1547,7 +1550,8 @@ unsigned AffineForOp::getNumIterOperands() {
 
 void AffineForOp::print(OpAsmPrinter &p) {
   p << ' ';
-  p.printOperand(getBody()->getArgument(0));
+  p.printRegionArgument(getBody()->getArgument(0), /*argAttrs=*/{},
+                        /*omitType=*/true);
   p << " = ";
   printBound(getLowerBoundMapAttr(), getLowerBoundOperands(), "max", p);
   p << " to ";
@@ -1723,6 +1727,57 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<AffineForEmptyLoopFolder>(context);
 }
 
+/// Return operands used when entering the region at 'index'. These operands
+/// correspond to the loop iterator operands, i.e., those excluding the
+/// induction variable. AffineForOp only has one region, so zero is the only
+/// valid value for `index`.
+OperandRange AffineForOp::getSuccessorEntryOperands(unsigned index) {
+  assert(index == 0 && "invalid region index");
+
+  // The initial operands map to the loop arguments after the induction
+  // variable.
+  return getIterOperands();
+}
+
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void AffineForOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  assert((!index.hasValue() || index.getValue() == 0) &&
+         "expected loop region");
+  // The loop may typically branch back to its body or to the parent operation.
+  // If the predecessor is the parent op and the trip count is known to be at
+  // least one, branch into the body using the iterator arguments. And in cases
+  // we know the trip count is zero, it can only branch back to its parent.
+  Optional<uint64_t> tripCount = getTrivialConstantTripCount(*this);
+  if (!index.hasValue() && tripCount.hasValue()) {
+    if (tripCount.getValue() > 0) {
+      regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
+      return;
+    }
+    if (tripCount.getValue() == 0) {
+      regions.push_back(RegionSuccessor(getResults()));
+      return;
+    }
+  }
+
+  // From the loop body, if the trip count is one, we can only branch back to
+  // the parent.
+  if (index.hasValue() && tripCount.hasValue() && tripCount.getValue() == 1) {
+    regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  // In all other cases, the loop may branch back to itself or the parent
+  // operation.
+  regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
+  regions.push_back(RegionSuccessor(getResults()));
+}
+
 /// Returns true if the affine.for has zero iterations in trivial cases.
 static bool hasTrivialZeroTripCount(AffineForOp op) {
   Optional<uint64_t> tripCount = getTrivialConstantTripCount(op);
@@ -1871,6 +1926,13 @@ Optional<OpFoldResult> AffineForOp::getSingleLowerBound() {
 Optional<OpFoldResult> AffineForOp::getSingleStep() {
   OpBuilder b(getContext());
   return OpFoldResult(b.getI64IntegerAttr(getStep()));
+}
+
+Optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
+  if (!hasConstantUpperBound())
+    return llvm::None;
+  OpBuilder b(getContext());
+  return OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()));
 }
 
 /// Returns true if the provided value is the induction variable of a
@@ -3468,9 +3530,8 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
                                     OperationState &result) {
   auto &builder = parser.getBuilder();
   auto indexType = builder.getIndexType();
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> ivs;
-  if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
-                                     OpAsmParser::Delimiter::Paren) ||
+  SmallVector<OpAsmParser::Argument, 4> ivs;
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
       parser.parseEqual() ||
       parseAffineMapWithMinMax(parser, result, MinMaxKind::Max) ||
       parser.parseKeyword("to") ||
@@ -3541,8 +3602,9 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
 
   // Now parse the body.
   Region *body = result.addRegion();
-  SmallVector<Type, 4> types(ivs.size(), indexType);
-  if (parser.parseRegion(*body, ivs, types) ||
+  for (auto &iv : ivs)
+    iv.type = indexType;
+  if (parser.parseRegion(*body, ivs) ||
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
 

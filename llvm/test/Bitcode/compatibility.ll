@@ -562,6 +562,8 @@ declare void @f.param.swifterror(i8** swifterror)
 ; CHECK: declare void @f.param.swifterror(i8** swifterror)
 declare void @f.param.allocalign(i32 allocalign)
 ; CHECK: declare void @f.param.allocalign(i32 allocalign)
+declare void @f.param.allocptr(i32* allocptr)
+; CHECK: declare void @f.param.allocptr(i32* allocptr)
 
 ; Functions -- unnamed_addr and local_unnamed_addr
 declare void @f.unnamed_addr() unnamed_addr

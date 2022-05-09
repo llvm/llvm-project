@@ -2324,15 +2324,6 @@ public:
     return CreateShuffleVector(V1, V2, IntMask, Name);
   }
 
-  LLVM_ATTRIBUTE_DEPRECATED(Value *CreateShuffleVector(Value *V1, Value *V2,
-                                                       ArrayRef<uint32_t> Mask,
-                                                       const Twine &Name = ""),
-                            "Pass indices as 'int' instead") {
-    SmallVector<int, 16> IntMask;
-    IntMask.assign(Mask.begin(), Mask.end());
-    return CreateShuffleVector(V1, V2, IntMask, Name);
-  }
-
   /// See class ShuffleVectorInst for a description of the mask representation.
   Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<int> Mask,
                              const Twine &Name = "") {

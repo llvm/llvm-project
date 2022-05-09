@@ -420,6 +420,42 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
   ret i64 %1
 }
 
+define signext i32 @not_shl_one_i32(i32 signext %x) {
+; RV64I-LABEL: not_shl_one_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    sllw a0, a1, a0
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBP-ZBKB-LABEL: not_shl_one_i32:
+; RV64ZBB-ZBP-ZBKB:       # %bb.0:
+; RV64ZBB-ZBP-ZBKB-NEXT:    li a1, -2
+; RV64ZBB-ZBP-ZBKB-NEXT:    rolw a0, a1, a0
+; RV64ZBB-ZBP-ZBKB-NEXT:    ret
+  %1 = shl i32 1, %x
+  %2 = xor i32 %1, -1
+  ret i32 %2
+}
+
+define i64 @not_shl_one_i64(i64 %x) {
+; RV64I-LABEL: not_shl_one_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    sll a0, a1, a0
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBP-ZBKB-LABEL: not_shl_one_i64:
+; RV64ZBB-ZBP-ZBKB:       # %bb.0:
+; RV64ZBB-ZBP-ZBKB-NEXT:    li a1, -2
+; RV64ZBB-ZBP-ZBKB-NEXT:    rol a0, a1, a0
+; RV64ZBB-ZBP-ZBKB-NEXT:    ret
+  %1 = shl i64 1, %x
+  %2 = xor i64 %1, -1
+  ret i64 %2
+}
+
 define i8 @srli_i8(i8 %a) nounwind {
 ; RV64I-LABEL: srli_i8:
 ; RV64I:       # %bb.0:

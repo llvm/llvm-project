@@ -530,7 +530,6 @@ clang/lib/StaticAnalyzer/Checkers/StdLibraryFunctionsChecker.cpp
 clang/lib/StaticAnalyzer/Checkers/StreamChecker.cpp
 clang/lib/StaticAnalyzer/Checkers/StringChecker.cpp
 clang/lib/StaticAnalyzer/Checkers/Taint.cpp
-clang/lib/StaticAnalyzer/Checkers/Taint.h
 clang/lib/StaticAnalyzer/Checkers/VLASizeChecker.cpp
 clang/lib/StaticAnalyzer/Checkers/Yaml.h
 clang/lib/StaticAnalyzer/Checkers/cert/InvalidPtrChecker.cpp

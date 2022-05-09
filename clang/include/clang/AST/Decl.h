@@ -1633,6 +1633,9 @@ public:
     /// Parameter for captured context
     CapturedContext,
 
+    /// Parameter for Thread private variable
+    ThreadPrivateVar,
+
     /// Other implicit parameter
     Other,
   };
@@ -4069,7 +4072,7 @@ public:
 
   void setIsRandomized(bool V) { RecordDeclBits.IsRandomized = V; }
 
-  void reorderFields(const SmallVectorImpl<Decl *> &Fields);
+  void reorderDecls(const SmallVectorImpl<Decl *> &Decls);
 
   /// Determines whether this declaration represents the
   /// injected class name.

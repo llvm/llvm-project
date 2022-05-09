@@ -445,6 +445,7 @@ struct FreeFnsTy {
 // clang-format off
 static const std::pair<LibFunc, FreeFnsTy> FreeFnData[] = {
     {LibFunc_free,                               {1, MallocFamily::Malloc}},
+    {LibFunc_vec_free,                           {1, MallocFamily::VecMalloc}},
     {LibFunc_ZdlPv,                              {1, MallocFamily::CPPNew}},             // operator delete(void*)
     {LibFunc_ZdaPv,                              {1, MallocFamily::CPPNewArray}},        // operator delete[](void*)
     {LibFunc_msvc_delete_ptr32,                  {1, MallocFamily::MSVCNew}},            // operator delete(void*)

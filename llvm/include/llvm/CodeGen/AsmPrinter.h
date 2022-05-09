@@ -30,6 +30,7 @@
 
 namespace llvm {
 
+class AddrLabelMap;
 class BasicBlock;
 class BlockAddress;
 class Constant;
@@ -174,6 +175,10 @@ private:
   // function. This is used to calculate the size of the BB section.
   MCSymbol *CurrentSectionBeginSym = nullptr;
 
+  /// This map keeps track of which symbol is being used for the specified basic
+  /// block's address of label.
+  std::unique_ptr<AddrLabelMap> AddrLabelSymbols;
+
   // The garbage collection metadata printer table.
   void *GCMetadataPrinters = nullptr; // Really a DenseMap.
 
@@ -209,6 +214,16 @@ private:
 
   /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
   CFISection ModuleCFISection = CFISection::None;
+
+  /// True if the module contains split-stack functions. This is used to
+  /// emit .note.GNU-split-stack section as required by the linker for
+  /// special handling split-stack function calling no-split-stack function.
+  bool HasSplitStack = false;
+
+  /// True if the module contains no-split-stack functions. This is used to emit
+  /// .note.GNU-no-split-stack section when it also contains functions without a
+  /// split stack prologue.
+  bool HasNoSplitStack = false;
 
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
@@ -251,6 +266,25 @@ public:
   // Return the exception symbol associated with the MBB section containing a
   // given basic block.
   MCSymbol *getMBBExceptionSym(const MachineBasicBlock &MBB);
+
+  /// Return the symbol to be used for the specified basic block when its
+  /// address is taken.  This cannot be its normal LBB label because the block
+  /// may be accessed outside its containing function.
+  MCSymbol *getAddrLabelSymbol(const BasicBlock *BB) {
+    return getAddrLabelSymbolToEmit(BB).front();
+  }
+
+  /// Return the symbol to be used for the specified basic block when its
+  /// address is taken.  If other blocks were RAUW'd to this one, we may have
+  /// to emit them as well, return the whole set.
+  ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
+
+  /// If the specified function has had any references to address-taken blocks
+  /// generated, but the block got deleted, return the symbol now so we can
+  /// emit it.  This prevents emitting a reference to a symbol that has no
+  /// definition.
+  void takeDeletedSymbolsForFunction(const Function *F,
+                                     std::vector<MCSymbol *> &Result);
 
   /// Return information about object file lowering.
   const TargetLoweringObjectFile &getObjFileLowering() const;

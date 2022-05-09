@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-strict-prototypes -verify %s
 
 void f() {
-  int *ptr = malloc(sizeof(int) * 10); // expected-warning{{implicitly declaring library function 'malloc' with type}} \
+  int *ptr = malloc(sizeof(int) * 10); // expected-error{{call to undeclared library function 'malloc' with type}} \
   // expected-note{{include the header <stdlib.h> or explicitly provide a declaration for 'malloc'}} \
   // expected-note{{'malloc' is a builtin with type 'void *}}
 }
@@ -24,7 +24,7 @@ void h() {
 
 void f2() {
   fprintf(0, "foo"); // expected-warning{{declaration of built-in function 'fprintf' requires inclusion of the header <stdio.h>}} \
-   expected-warning {{implicit declaration of function 'fprintf' is invalid in C99}}
+   expected-error {{call to undeclared function 'fprintf'; ISO C99 and later do not support implicit function declarations}}
 }
 
 // PR2892

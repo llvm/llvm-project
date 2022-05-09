@@ -15,6 +15,7 @@ static int block(int x) {
 	return (^(int x){return x+1;})(x);
 }
 
+extern int printf(const char *, ...);
 static void print(int result) {
     printf("%d\n", result);
 }

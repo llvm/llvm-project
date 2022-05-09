@@ -69,8 +69,15 @@ else()
 endif()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "No build type selected, default to Debug")
-  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (default Debug)" FORCE)
+  message(FATAL_ERROR "
+No build type selected. You need to pass -DCMAKE_BUILD_TYPE=<type> in order to configure LLVM.
+Available options are:
+  * -DCMAKE_BUILD_TYPE=Release - For an optimized build with no assertions or debug info.
+  * -DCMAKE_BUILD_TYPE=Debug - For an unoptimized build with assertions and debug info.
+  * -DCMAKE_BUILD_TYPE=RelWithDebInfo - For an optimized build with no assertions but with debug info.
+  * -DCMAKE_BUILD_TYPE=MinSizeRel - For a build optimized for size instead of speed.
+Learn more about these options in our documentation at https://llvm.org/docs/CMake.html#cmake-build-type
+")
 endif()
 
 # Side-by-side subprojects layout: automatically set the
@@ -1066,6 +1073,10 @@ if( MINGW AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELEASE "-O3" "-O2")
 endif()
 
+if(LLVM_INCLUDE_TESTS)
+  umbrella_lit_testsuite_begin(check-all)
+endif()
+
 # Put this before tblgen. Else we have a circular dependence.
 add_subdirectory(lib/Demangle)
 add_subdirectory(lib/Support)
@@ -1137,25 +1148,12 @@ if( LLVM_INCLUDE_TESTS )
     add_subdirectory(utils/KillTheDoctor)
   endif()
 
-  # Add a global check rule now that all subdirectories have been traversed
-  # and we know the total set of lit testsuites.
-  get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
-  get_property(LLVM_LIT_PARAMS GLOBAL PROPERTY LLVM_LIT_PARAMS)
-  get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  get_property(LLVM_LIT_EXTRA_ARGS GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
-  get_property(LLVM_ADDITIONAL_TEST_TARGETS
-               GLOBAL PROPERTY LLVM_ADDITIONAL_TEST_TARGETS)
-  get_property(LLVM_ADDITIONAL_TEST_DEPENDS
-               GLOBAL PROPERTY LLVM_ADDITIONAL_TEST_DEPENDS)
-  add_lit_target(check-all
-    "Running all regression tests"
-    ${LLVM_LIT_TESTSUITES}
-    PARAMS ${LLVM_LIT_PARAMS}
-    DEPENDS ${LLVM_LIT_DEPENDS} ${LLVM_ADDITIONAL_TEST_TARGETS}
-    ARGS ${LLVM_LIT_EXTRA_ARGS}
-    )
+  umbrella_lit_testsuite_end(check-all)
+  get_property(LLVM_ALL_LIT_DEPENDS GLOBAL PROPERTY LLVM_ALL_LIT_DEPENDS)
+  get_property(LLVM_ALL_ADDITIONAL_TEST_DEPENDS
+      GLOBAL PROPERTY LLVM_ALL_ADDITIONAL_TEST_DEPENDS)
   add_custom_target(test-depends
-                    DEPENDS ${LLVM_LIT_DEPENDS} ${LLVM_ADDITIONAL_TEST_DEPENDS})
+      DEPENDS ${LLVM_ALL_LIT_DEPENDS} ${LLVM_ALL_ADDITIONAL_TEST_DEPENDS})
   set_target_properties(test-depends PROPERTIES FOLDER "Tests")
 endif()
 
@@ -1262,11 +1260,11 @@ if (LLVM_INCLUDE_BENCHMARKS)
   set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Don't install benchmark" FORCE)
   set(BENCHMARK_DOWNLOAD_DEPENDENCIES OFF CACHE BOOL "Don't download dependencies" FORCE)
   set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable Google Test in benchmark" FORCE)
-  set(BENCHMARK_ENABLE_WERROR ${LLVM_ENABLE_WERROR} CACHE BOOL 
+  set(BENCHMARK_ENABLE_WERROR ${LLVM_ENABLE_WERROR} CACHE BOOL
     "Handle -Werror for Google Benchmark based on LLVM_ENABLE_WERROR" FORCE)
   # Since LLVM requires C++11 it is safe to assume that std::regex is available.
   set(HAVE_STD_REGEX ON CACHE BOOL "OK" FORCE)
-  add_subdirectory(${LLVM_THIRD_PARTY_DIR}/benchmark 
+  add_subdirectory(${LLVM_THIRD_PARTY_DIR}/benchmark
     ${CMAKE_CURRENT_BINARY_DIR}/third-party/benchmark)
   add_subdirectory(benchmarks)
 endif()

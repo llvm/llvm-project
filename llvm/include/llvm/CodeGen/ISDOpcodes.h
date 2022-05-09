@@ -485,6 +485,13 @@ enum NodeType {
   /// Returns platform specific canonical encoding of a floating point number.
   FCANONICALIZE,
 
+  /// Performs a check of floating point class property, defined by IEEE-754.
+  /// The first operand is the floating point value to check. The second operand
+  /// specifies the checked property and is a TargetConstant which specifies
+  /// test in the same way as intrinsic 'is_fpclass'.
+  /// Returns boolean value.
+  IS_FPCLASS,
+
   /// BUILD_VECTOR(ELT0, ELT1, ELT2, ELT3,...) - Return a fixed-width vector
   /// with the specified, possibly variable, elements. The types of the
   /// operands must match the vector element type, except that integer types
@@ -1350,6 +1357,26 @@ enum MemIndexType {
 };
 
 static const int LAST_MEM_INDEX_TYPE = UNSIGNED_UNSCALED + 1;
+
+inline bool isIndexTypeScaled(MemIndexType IndexType) {
+  return IndexType == SIGNED_SCALED || IndexType == UNSIGNED_SCALED;
+}
+
+inline bool isIndexTypeSigned(MemIndexType IndexType) {
+  return IndexType == SIGNED_SCALED || IndexType == SIGNED_UNSCALED;
+}
+
+inline MemIndexType getSignedIndexType(MemIndexType IndexType) {
+  return isIndexTypeScaled(IndexType) ? SIGNED_SCALED : SIGNED_UNSCALED;
+}
+
+inline MemIndexType getUnsignedIndexType(MemIndexType IndexType) {
+  return isIndexTypeScaled(IndexType) ? UNSIGNED_SCALED : UNSIGNED_UNSCALED;
+}
+
+inline MemIndexType getUnscaledIndexType(MemIndexType IndexType) {
+  return isIndexTypeSigned(IndexType) ? SIGNED_UNSCALED : UNSIGNED_UNSCALED;
+}
 
 //===--------------------------------------------------------------------===//
 /// LoadExtType enum - This enum defines the three variants of LOADEXT

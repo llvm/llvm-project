@@ -16,9 +16,7 @@
 
 namespace __llvm_libc {
 
-size_t File::write(const void *data, size_t len) {
-  FileLock lock(this);
-
+size_t File::write_unlocked(const void *data, size_t len) {
   if (!write_allowed()) {
     errno = EBADF;
     err = true;
@@ -76,9 +74,7 @@ size_t File::write(const void *data, size_t len) {
   return len;
 }
 
-size_t File::read(void *data, size_t len) {
-  FileLock lock(this);
-
+size_t File::read_unlocked(void *data, size_t len) {
   if (!read_allowed()) {
     errno = EBADF;
     err = true;
@@ -169,6 +165,7 @@ int File::flush() {
     pos = 0;
     return platform_flush(this);
   }
+  // TODO: Add POSIX behavior for input streams.
   return 0;
 }
 

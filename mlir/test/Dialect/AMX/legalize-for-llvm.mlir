@@ -12,7 +12,7 @@
 // CHECK: amx.tilestored64
 // CHECK: amx.tdpbsud
 // CHECK: amx.tilestored64
-func @muli(%arg0: memref<?x?xi8>, %arg1: memref<?x?xi32>) {
+func.func @muli(%arg0: memref<?x?xi8>, %arg1: memref<?x?xi32>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_zero : vector<16x64xi8>
   %2 = amx.tile_load %arg0[%0, %0] : memref<?x?xi8> into vector<16x64xi8>
@@ -34,7 +34,7 @@ func @muli(%arg0: memref<?x?xi8>, %arg1: memref<?x?xi32>) {
 // CHECK: amx.tileloadd64
 // CHECK: amx.tdpbf16ps
 // CHECK: amx.tilestored64
-func @mulf(%arg0: memref<?x?xbf16>, %arg1: memref<?x?xf32>) {
+func.func @mulf(%arg0: memref<?x?xbf16>, %arg1: memref<?x?xf32>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_zero : vector<16x32xbf16>
   %2 = amx.tile_load %arg0[%0, %0] : memref<?x?xbf16> into vector<16x32xbf16>

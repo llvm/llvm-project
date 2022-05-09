@@ -2501,6 +2501,11 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
                          bool Virtual, AccessSpecifier Access,
                          TypeSourceInfo *TInfo,
                          SourceLocation EllipsisLoc) {
+  // In HLSL, unspecified class access is public rather than private.
+  if (getLangOpts().HLSL && Class->getTagKind() == TTK_Class &&
+      Access == AS_none)
+    Access = AS_public;
+
   QualType BaseType = TInfo->getType();
   if (BaseType->containsErrors()) {
     // Already emitted a diagnostic when parsing the error type.
@@ -4299,6 +4304,15 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
 
           R.clear();
           R.setLookupName(MemberOrBase);
+        }
+      }
+
+      if (getLangOpts().MSVCCompat && !getLangOpts().CPlusPlus20) {
+        auto UnqualifiedBase = R.getAsSingle<ClassTemplateDecl>();
+        if (UnqualifiedBase) {
+          Diag(IdLoc, diag::ext_unqualified_base_class)
+              << SourceRange(IdLoc, Init->getSourceRange().getEnd());
+          BaseType = UnqualifiedBase->getInjectedClassNameSpecialization();
         }
       }
 

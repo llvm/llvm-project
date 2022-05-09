@@ -41,12 +41,23 @@ class MemoryFindTestCase(TestBase):
 
         # Test the memory find commands.
 
+        # Empty search string should be handled.
+        self.expect('memory find -s "" `stringdata` `stringdata+16`',
+                error=True,
+                substrs=["error: search string must have non-zero length."])
+
         self.expect(
             'memory find -s "in const" `stringdata` `stringdata+(int)strlen(stringdata)`',
             substrs=[
                 'data found at location: 0x',
                 '69 6e 20 63',
                 'in const'])
+
+        # Invalid expr is an error.
+        self.expect(
+            'memory find -e "not_a_symbol" `&bytedata[0]` `&bytedata[15]`',
+            error=True,
+            substrs=["error: expression evaluation failed. pass a string instead"])
 
         self.expect(
             'memory find -e "(uint8_t)0x22" `&bytedata[0]` `&bytedata[15]`',

@@ -1014,8 +1014,6 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
   def SETB8 : XForm_44<31, 128, (outs g8rc:$RT), (ins crrc:$BFA),
                        "setb $RT, $BFA", IIC_IntGeneral>, isPPC64;
 }
-def DARN : XForm_45<31, 755, (outs g8rc:$RT), (ins u2imm:$L),
-                     "darn $RT, $L", IIC_LdStLD>, isPPC64;
 def ADDPCIS : DXForm<19, 2, (outs g8rc:$RT), (ins i32imm:$D),
                      "addpcis $RT, $D", IIC_BrB, []>, isPPC64;
 def MODSD : XForm_8<31, 777, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
@@ -1038,6 +1036,11 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def MULLI8 : DForm_2<7, (outs g8rc:$rD), (ins g8rc:$rA, s16imm64:$imm),
                        "mulli $rD, $rA, $imm", IIC_IntMulLI,
                        [(set i64:$rD, (mul i64:$rA, imm64SExt16:$imm))]>;
+}
+
+let hasSideEffects = 1 in {
+def DARN : XForm_45<31, 755, (outs g8rc:$RT), (ins u2imm:$L),
+                    "darn $RT, $L", IIC_LdStLD>, isPPC64;
 }
 
 let hasSideEffects = 0 in {

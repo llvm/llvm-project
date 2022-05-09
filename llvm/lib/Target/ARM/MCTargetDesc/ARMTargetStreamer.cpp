@@ -122,7 +122,9 @@ static ARMBuildAttrs::CPUArch getArchForCPU(const MCSubtargetInfo &STI) {
   if (STI.getCPU() == "xscale")
     return ARMBuildAttrs::v5TEJ;
 
-  if (STI.hasFeature(ARM::HasV8Ops)) {
+  if (STI.hasFeature(ARM::HasV9_0aOps))
+    return ARMBuildAttrs::v9_A;
+  else if (STI.hasFeature(ARM::HasV8Ops)) {
     if (STI.hasFeature(ARM::FeatureRClass))
       return ARMBuildAttrs::v8_R;
     return ARMBuildAttrs::v8_A;

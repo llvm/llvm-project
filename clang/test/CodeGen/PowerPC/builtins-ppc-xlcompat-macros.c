@@ -12,6 +12,19 @@
 // Required for size_t. Usually found in stddef.h.
 typedef __SIZE_TYPE__ size_t;
 
+// BOTH-LABEL: @testabs(
+// BOTH-NEXT:  entry:
+// BOTH-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// BOTH-NEXT:    store i32 [[A:%.*]], i32* [[A_ADDR]], align 4
+// BOTH-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_ADDR]], align 4
+// BOTH-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[TMP0]]
+// BOTH-NEXT:    [[ABSCOND:%.*]] = icmp slt i32 [[TMP0]], 0
+// BOTH-NEXT:    [[ABS:%.*]] = select i1 [[ABSCOND]], i32 [[NEG]], i32 [[TMP0]]
+// BOTH-NEXT:    ret i32 [[ABS]]
+signed int testabs(signed int a) {
+  return __abs(a);
+}
+
 // 64BIT-LABEL: @testlabs(
 // 64BIT-NEXT:  entry:
 // 64BIT-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8

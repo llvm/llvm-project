@@ -1,7 +1,7 @@
 // RUN: mlir-opt -test-generic-ir-visitors-interrupt -allow-unregistered-dialect -split-input-file %s | FileCheck %s
 
 // Walk is interrupted before visiting "foo"
-func @main(%arg0: f32) -> f32 {
+func.func @main(%arg0: f32) -> f32 {
   %v1 = "foo"() {interrupt_before_all = true} : () -> f32
   %v2 = arith.addf %v1, %arg0 : f32
   return %v2 : f32
@@ -14,7 +14,7 @@ func @main(%arg0: f32) -> f32 {
 // -----
 
 // Walk is interrupted after visiting "foo" (which has a single empty region)
-func @main(%arg0: f32) -> f32 {
+func.func @main(%arg0: f32) -> f32 {
   %v1 = "foo"() ({ "bar"() : ()-> () }) {interrupt_after_all = true} : () -> f32
   %v2 = arith.addf %v1, %arg0 : f32
   return %v2 : f32
@@ -29,7 +29,7 @@ func @main(%arg0: f32) -> f32 {
 // -----
 
 // Walk is interrupted after visiting "foo"'s 1st region.
-func @main(%arg0: f32) -> f32 {
+func.func @main(%arg0: f32) -> f32 {
   %v1 = "foo"() ({
     "bar0"() : () -> ()
   }, {
@@ -49,7 +49,7 @@ func @main(%arg0: f32) -> f32 {
 // -----
 
 // Test static filtering.
-func @main() {
+func.func @main() {
   "foo"() : () -> ()
   "test.two_region_op"()(
     {"work"() : () -> ()},
@@ -73,7 +73,7 @@ func @main() {
 // -----
 
 // Test static filtering.
-func @main() {
+func.func @main() {
   "foo"() : () -> ()
   "test.two_region_op"()(
     {"work"() : () -> ()},
@@ -95,7 +95,7 @@ func @main() {
 // Test skipping.
 
 // Walk is skipped before visiting "foo".
-func @main(%arg0: f32) -> f32 {
+func.func @main(%arg0: f32) -> f32 {
   %v1 = "foo"() ({
     "bar0"() : () -> ()
   }, {
@@ -114,7 +114,7 @@ func @main(%arg0: f32) -> f32 {
 
 // -----
 // Walk is skipped after visiting all regions of "foo".
-func @main(%arg0: f32) -> f32 {
+func.func @main(%arg0: f32) -> f32 {
   %v1 = "foo"() ({
     "bar0"() : () -> ()
   }, {
@@ -137,7 +137,7 @@ func @main(%arg0: f32) -> f32 {
 
 // -----
 // Walk is skipped after visiting first region of "foo".
-func @main(%arg0: f32) -> f32 {
+func.func @main(%arg0: f32) -> f32 {
   %v1 = "foo"() ({
     "bar0"() : () -> ()
   }, {

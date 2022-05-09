@@ -51,12 +51,12 @@
 // RUN: | FileCheck %s --dump-input=always
 
 // Suppress constant folding by introducing "dynamic" zero value at runtime.
-func private @zero() -> index {
+func.func private @zero() -> index {
   %0 = arith.constant 0 : index
   return %0 : index
 }
 
-func @entry() {
+func.func @entry() {
   %c0 = arith.constant 0.0 : f32
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -83,7 +83,7 @@ func @entry() {
     memref.store %3, %A[%i] : memref<9xf32>
   }
   // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 8]
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   scf.parallel (%i) = (%lb) to (%ub) step (%c1) {
     memref.store %c0, %A[%i] : memref<9xf32>
@@ -98,7 +98,7 @@ func @entry() {
     memref.store %3, %A[%i] : memref<9xf32>
   }
   // CHECK:  [0, 0, 2, 0, 4, 0, 6, 0, 8]
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   scf.parallel (%i) = (%lb) to (%ub) step (%c1) {
     memref.store %c0, %A[%i] : memref<9xf32>
@@ -117,7 +117,7 @@ func @entry() {
     memref.store %5, %A[%3] : memref<9xf32>
   }
   // CHECK: [-20, 0, 0, -17, 0, 0, -14, 0, 0]
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   // 4. Check that loop with zero iterations doesn't crash at runtime.
   %lb1 = call @zero(): () -> (index)
@@ -132,4 +132,4 @@ func @entry() {
   return
 }
 
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }

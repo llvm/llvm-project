@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -affine-loop-invariant-code-motion -split-input-file | FileCheck %s
 
-func @nested_loops_both_having_invariant_code() {
+func.func @nested_loops_both_having_invariant_code() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %cf8 = arith.constant 8.0 : f32
@@ -29,7 +29,7 @@ func @nested_loops_both_having_invariant_code() {
 // The store-load forwarding can see through affine apply's since it relies on
 // dependence information.
 // CHECK-LABEL: func @store_affine_apply
-func @store_affine_apply() -> memref<10xf32> {
+func.func @store_affine_apply() -> memref<10xf32> {
   %cf7 = arith.constant 7.0 : f32
   %m = memref.alloc() : memref<10xf32>
   affine.for %arg0 = 0 to 10 {
@@ -48,7 +48,7 @@ func @store_affine_apply() -> memref<10xf32> {
 
 // -----
 
-func @nested_loops_code_invariant_to_both() {
+func.func @nested_loops_code_invariant_to_both() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %cf8 = arith.constant 8.0 : f32
@@ -70,7 +70,7 @@ func @nested_loops_code_invariant_to_both() {
 // -----
 
 // CHECK-LABEL: func @nested_loops_inner_loops_invariant_to_outermost_loop
-func @nested_loops_inner_loops_invariant_to_outermost_loop(%m : memref<10xindex>) {
+func.func @nested_loops_inner_loops_invariant_to_outermost_loop(%m : memref<10xindex>) {
   affine.for %arg0 = 0 to 20 {
     affine.for %arg1 = 0 to 30 {
       %v0 = affine.for %arg2 = 0 to 10 iter_args (%prevAccum = %arg1) -> index {
@@ -96,7 +96,7 @@ func @nested_loops_inner_loops_invariant_to_outermost_loop(%m : memref<10xindex>
 
 // -----
 
-func @single_loop_nothing_invariant() {
+func.func @single_loop_nothing_invariant() {
   %m1 = memref.alloc() : memref<10xf32>
   %m2 = memref.alloc() : memref<10xf32>
   affine.for %arg0 = 0 to 10 {
@@ -119,7 +119,7 @@ func @single_loop_nothing_invariant() {
 
 // -----
 
-func @invariant_code_inside_affine_if() {
+func.func @invariant_code_inside_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
 
@@ -147,7 +147,7 @@ func @invariant_code_inside_affine_if() {
 
 // -----
 
-func @dependent_stores() {
+func.func @dependent_stores() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %cf8 = arith.constant 8.0 : f32
@@ -177,7 +177,7 @@ func @dependent_stores() {
 
 // -----
 
-func @independent_stores() {
+func.func @independent_stores() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %cf8 = arith.constant 8.0 : f32
@@ -207,7 +207,7 @@ func @independent_stores() {
 
 // -----
 
-func @load_dependent_store() {
+func.func @load_dependent_store() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %cf8 = arith.constant 8.0 : f32
@@ -236,7 +236,7 @@ func @load_dependent_store() {
 
 // -----
 
-func @load_after_load() {
+func.func @load_after_load() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %cf8 = arith.constant 8.0 : f32
@@ -266,7 +266,7 @@ func @load_after_load() {
 
 // -----
 
-func @invariant_affine_if() {
+func.func @invariant_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -295,7 +295,7 @@ func @invariant_affine_if() {
 
 // -----
 
-func @invariant_affine_if2() {
+func.func @invariant_affine_if2() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -324,7 +324,7 @@ func @invariant_affine_if2() {
 
 // -----
 
-func @invariant_affine_nested_if() {
+func.func @invariant_affine_nested_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -358,7 +358,7 @@ func @invariant_affine_nested_if() {
 
 // -----
 
-func @invariant_affine_nested_if_else() {
+func.func @invariant_affine_nested_if_else() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -396,7 +396,7 @@ func @invariant_affine_nested_if_else() {
 
 // -----
 
-func @invariant_affine_nested_if_else2() {
+func.func @invariant_affine_nested_if_else2() {
   %m = memref.alloc() : memref<10xf32>
   %m2 = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
@@ -436,7 +436,7 @@ func @invariant_affine_nested_if_else2() {
 
 // -----
 
-func @invariant_affine_nested_if2() {
+func.func @invariant_affine_nested_if2() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -470,7 +470,7 @@ func @invariant_affine_nested_if2() {
 
 // -----
 
-func @invariant_affine_for_inside_affine_if() {
+func.func @invariant_affine_for_inside_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
@@ -504,7 +504,7 @@ func @invariant_affine_for_inside_affine_if() {
 
 // -----
 
-func @invariant_constant_and_load() {
+func.func @invariant_constant_and_load() {
   %m = memref.alloc() : memref<100xf32>
   %m2 = memref.alloc() : memref<100xf32>
   affine.for %arg0 = 0 to 5 {
@@ -526,7 +526,7 @@ func @invariant_constant_and_load() {
 
 // -----
 
-func @nested_load_store_same_memref() {
+func.func @nested_load_store_same_memref() {
   %m = memref.alloc() : memref<10xf32>
   %cst = arith.constant 8.0 : f32
   %c0 = arith.constant 0 : index
@@ -551,7 +551,7 @@ func @nested_load_store_same_memref() {
 
 // -----
 
-func @nested_load_store_same_memref2() {
+func.func @nested_load_store_same_memref2() {
   %m = memref.alloc() : memref<10xf32>
   %cst = arith.constant 8.0 : f32
   %c0 = arith.constant 0 : index
@@ -578,7 +578,7 @@ func @nested_load_store_same_memref2() {
 // -----
 
 // CHECK-LABEL:   func @do_not_hoist_dependent_side_effect_free_op
-func @do_not_hoist_dependent_side_effect_free_op(%arg0: memref<10x512xf32>) {
+func.func @do_not_hoist_dependent_side_effect_free_op(%arg0: memref<10x512xf32>) {
   %0 = memref.alloca() : memref<1xf32>
   %cst = arith.constant 8.0 : f32
   affine.for %i = 0 to 512 {
@@ -608,7 +608,7 @@ func @do_not_hoist_dependent_side_effect_free_op(%arg0: memref<10x512xf32>) {
 // -----
 
 // CHECK-LABEL: func @vector_loop_nothing_invariant
-func @vector_loop_nothing_invariant() {
+func.func @vector_loop_nothing_invariant() {
   %m1 = memref.alloc() : memref<40xf32>
   %m2 = memref.alloc() : memref<40xf32>
   affine.for %arg0 = 0 to 10 {
@@ -630,7 +630,7 @@ func @vector_loop_nothing_invariant() {
 // -----
 
 // CHECK-LABEL: func @vector_loop_all_invariant
-func @vector_loop_all_invariant() {
+func.func @vector_loop_all_invariant() {
   %m1 = memref.alloc() : memref<4xf32>
   %m2 = memref.alloc() : memref<4xf32>
   %m3 = memref.alloc() : memref<4xf32>
@@ -656,7 +656,7 @@ func @vector_loop_all_invariant() {
 
 #set = affine_set<(d0): (d0 - 10 >= 0)>
 // CHECK-LABEL:   func @affine_if_not_invariant(
-func @affine_if_not_invariant(%buffer: memref<1024xf32>) -> f32 {
+func.func @affine_if_not_invariant(%buffer: memref<1024xf32>) -> f32 {
   %sum_init_0 = arith.constant 0.0 : f32
   %sum_init_1 = arith.constant 1.0 : f32
   %res = affine.for %i = 0 to 10 step 2 iter_args(%sum_iter = %sum_init_0) -> f32 {
@@ -690,7 +690,7 @@ func @affine_if_not_invariant(%buffer: memref<1024xf32>) -> f32 {
 // -----
 
 // CHECK-LABEL:   func @affine_for_not_invariant(
-func @affine_for_not_invariant(%in : memref<30x512xf32, 1>,
+func.func @affine_for_not_invariant(%in : memref<30x512xf32, 1>,
                                %out : memref<30x1xf32, 1>) {
   %sum_0 = arith.constant 0.0 : f32
   %cst_0 = arith.constant 1.1 : f32
@@ -720,7 +720,7 @@ func @affine_for_not_invariant(%in : memref<30x512xf32, 1>,
 // -----
 
 // CHECK-LABEL: func @use_of_iter_operands_invariant
-func @use_of_iter_operands_invariant(%m : memref<10xindex>) {
+func.func @use_of_iter_operands_invariant(%m : memref<10xindex>) {
   %sum_1 = arith.constant 0 : index
   %v0 = affine.for %arg1 = 0 to 11 iter_args (%prevAccum = %sum_1) -> index {
     %prod = arith.muli %sum_1, %sum_1 : index
@@ -739,7 +739,7 @@ func @use_of_iter_operands_invariant(%m : memref<10xindex>) {
 // -----
 
 // CHECK-LABEL: func @use_of_iter_args_not_invariant
-func @use_of_iter_args_not_invariant(%m : memref<10xindex>) {
+func.func @use_of_iter_args_not_invariant(%m : memref<10xindex>) {
   %sum_1 = arith.constant 0 : index
   %v0 = affine.for %arg1 = 0 to 11 iter_args (%prevAccum = %sum_1) -> index {
     %newAccum = arith.addi %prevAccum, %sum_1 : index

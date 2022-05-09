@@ -2,11 +2,11 @@
 ; Generic code is covered by ../kernel.ll, only the x86_64 specific code is
 ; tested here.
 ;
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -S | FileCheck %s --allow-empty --check-prefixes=INIT
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -S | FileCheck %s
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-mapping-offset=12345678 -S | FileCheck %s
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT
-; RUN: opt < %s -hwasan -hwasan-kernel=1 -hwasan-recover=1 -S | FileCheck %s --check-prefixes=CHECK,RECOVER
+; RUN: opt < %s -passes=hwasan -hwasan-kernel=1 -S | FileCheck %s --allow-empty --check-prefixes=INIT
+; RUN: opt < %s -passes=hwasan -hwasan-kernel=1 -S | FileCheck %s
+; RUN: opt < %s -passes=hwasan -hwasan-kernel=1 -hwasan-mapping-offset=12345678 -S | FileCheck %s
+; RUN: opt < %s -passes=hwasan -hwasan-kernel=1 -hwasan-recover=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT
+; RUN: opt < %s -passes=hwasan -hwasan-kernel=1 -hwasan-recover=1 -S | FileCheck %s --check-prefixes=CHECK,RECOVER
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

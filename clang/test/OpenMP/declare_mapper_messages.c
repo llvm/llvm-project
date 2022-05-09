@@ -42,9 +42,9 @@ int fun(int arg) {
       {}
 #pragma omp target map(mapper:vv)                                       // expected-error {{expected '(' after 'mapper'}}
       {}
-#pragma omp target map(mapper( :vv)                                     // expected-error {{expected expression}} expected-error {{expected ')'}} expected-warning {{implicit declaration of function 'mapper' is invalid in C99}} expected-note {{to match this '('}}
+#pragma omp target map(mapper( :vv)                                     // expected-error {{expected expression}} expected-error {{expected ')'}} expected-error {{call to undeclared function 'mapper'}} expected-note {{to match this '('}}
       {}
-#pragma omp target map(mapper(aa :vv)                                   // expected-error {{use of undeclared identifier 'aa'}} expected-error {{expected ')'}} expected-warning {{implicit declaration of function 'mapper' is invalid in C99}} expected-note {{to match this '('}}
+#pragma omp target map(mapper(aa :vv)                                   // expected-error {{use of undeclared identifier 'aa'}} expected-error {{expected ')'}} expected-error {{call to undeclared function 'mapper'}} expected-note {{to match this '('}}
       {}
 #pragma omp target map(mapper(ab) :vv)                                  // expected-error {{missing map type}} expected-error {{cannot find a valid user-defined mapper for type 'struct vec' with name 'ab'}}
       {}

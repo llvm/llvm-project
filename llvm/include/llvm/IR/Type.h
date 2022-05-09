@@ -68,13 +68,14 @@ public:
     TokenTyID,     ///< Tokens
 
     // Derived types... see DerivedTypes.h file.
-    IntegerTyID,       ///< Arbitrary bit width integers
-    FunctionTyID,      ///< Functions
-    PointerTyID,       ///< Pointers
-    StructTyID,        ///< Structures
-    ArrayTyID,         ///< Arrays
-    FixedVectorTyID,   ///< Fixed width SIMD vector type
-    ScalableVectorTyID ///< Scalable SIMD vector type
+    IntegerTyID,        ///< Arbitrary bit width integers
+    FunctionTyID,       ///< Functions
+    PointerTyID,        ///< Pointers
+    StructTyID,         ///< Structures
+    ArrayTyID,          ///< Arrays
+    FixedVectorTyID,    ///< Fixed width SIMD vector type
+    ScalableVectorTyID, ///< Scalable SIMD vector type
+    DXILPointerTyID,    ///< DXIL typed pointer used by DirectX target
   };
 
 private:
@@ -368,6 +369,9 @@ public:
 
   /// This method is deprecated without replacement. Pointer element types are
   /// not available with opaque pointers.
+  [[deprecated("Deprecated without replacement, see "
+               "https://llvm.org/docs/OpaquePointers.html for context and "
+               "migration instructions")]]
   Type *getPointerElementType() const {
     return getNonOpaquePointerElementType();
   }

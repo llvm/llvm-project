@@ -98,8 +98,9 @@ static GlobalVariable *findGlobalCtors(Module &M) {
     if (isa<ConstantPointerNull>(CS->getOperand(1)))
       continue;
 
-    // Must have a function or null ptr.
-    if (!isa<Function>(CS->getOperand(1)))
+    // Can only handle global constructors with no arguments.
+    Function *F = dyn_cast<Function>(CS->getOperand(1));
+    if (!F || F->arg_size() != 0)
       return nullptr;
 
     // Init priority must be standard.

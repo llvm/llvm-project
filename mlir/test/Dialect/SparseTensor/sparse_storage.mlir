@@ -37,7 +37,7 @@
 // CHECK:   %[[MUL:.*]] = arith.mulf %[[VAL0]], %[[VAL1]] : f64
 // CHECK:   store %[[MUL]], %{{.*}}[%[[INDC]]] : memref<32xf64>
 // CHECK: }
-func @mul64(%arga: tensor<32xf64, #SparseVector64>, %argb: tensor<32xf64>, %argx: tensor<32xf64>) -> tensor<32xf64> {
+func.func @mul64(%arga: tensor<32xf64, #SparseVector64>, %argb: tensor<32xf64>, %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait_mul
      ins(%arga, %argb: tensor<32xf64, #SparseVector64>, tensor<32xf64>)
     outs(%argx: tensor<32xf64>) {
@@ -66,7 +66,7 @@ func @mul64(%arga: tensor<32xf64, #SparseVector64>, %argb: tensor<32xf64>, %argx
 // CHECK:   %[[MUL:.*]] = arith.mulf %[[VAL0]], %[[VAL1]] : f64
 // CHECK:   store %[[MUL]], %{{.*}}[%[[INDC]]] : memref<32xf64>
 // CHECK: }
-func @mul32(%arga: tensor<32xf64, #SparseVector32>, %argb: tensor<32xf64>, %argx: tensor<32xf64>) -> tensor<32xf64> {
+func.func @mul32(%arga: tensor<32xf64, #SparseVector32>, %argb: tensor<32xf64>, %argx: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait_mul
      ins(%arga, %argb: tensor<32xf64, #SparseVector32>, tensor<32xf64>)
     outs(%argx: tensor<32xf64>) {

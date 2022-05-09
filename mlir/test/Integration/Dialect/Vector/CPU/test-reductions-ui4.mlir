@@ -3,7 +3,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @entry() {
+func.func @entry() {
   %v0 = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi4>
   %v = vector.bitcast %v0 : vector<16xi4> to vector<16xui4>
   vector.print %v : vector<16xui4>

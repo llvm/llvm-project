@@ -621,8 +621,7 @@ void PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(
   std::stable_sort(Results, Results + NumResults);
 
   if (!Context.getPreferredType().isNull())
-    OS << "PREFERRED-TYPE: " << Context.getPreferredType().getAsString()
-       << "\n";
+    OS << "PREFERRED-TYPE: " << Context.getPreferredType() << '\n';
 
   StringRef Filter = SemaRef.getPreprocessor().getCodeCompletionFilter();
   // Print the completions.

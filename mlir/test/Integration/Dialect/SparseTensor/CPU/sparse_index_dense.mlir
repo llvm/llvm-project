@@ -44,7 +44,7 @@ module {
   //
   // Kernel that uses index in the index notation (conjunction).
   //
-  func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
+  func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
     %init = linalg.init_tensor [8] : tensor<8xi64>
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
@@ -61,7 +61,7 @@ module {
   //
   // Kernel that uses index in the index notation (disjunction).
   //
-  func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
+  func.func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8xi64> {
     %init = linalg.init_tensor [8] : tensor<8xi64>
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
@@ -78,7 +78,7 @@ module {
   //
   // Kernel that uses indices in the index notation (conjunction).
   //
-  func @sparse_index_2d_conj(%arga: tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64> {
+  func.func @sparse_index_2d_conj(%arga: tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64> {
     %init = linalg.init_tensor [3,4] : tensor<3x4xi64>
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
@@ -98,7 +98,7 @@ module {
   //
   // Kernel that uses indices in the index notation (disjunction).
   //
-  func @sparse_index_2d_disj(%arga: tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64> {
+  func.func @sparse_index_2d_disj(%arga: tensor<3x4xi64, #SparseMatrix>) -> tensor<3x4xi64> {
     %init = linalg.init_tensor [3,4] : tensor<3x4xi64>
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
@@ -118,7 +118,7 @@ module {
   //
   // Main driver.
   //
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %du = arith.constant -1 : i64
 

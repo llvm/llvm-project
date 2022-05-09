@@ -5,7 +5,7 @@
 #set0 = affine_set<(d0) : (1 == 0)>
 
 // CHECK-LABEL: func @store_may_execute_before_load() {
-func @store_may_execute_before_load() {
+func.func @store_may_execute_before_load() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
   %c0 = arith.constant 4 : index
@@ -32,7 +32,7 @@ func @store_may_execute_before_load() {
 // -----
 
 // CHECK-LABEL: func @dependent_loops() {
-func @dependent_loops() {
+func.func @dependent_loops() {
   %0 = memref.alloc() : memref<10xf32>
   %cst = arith.constant 7.000000e+00 : f32
   // There is a dependence from 0 to 1 at depth 1 (common surrounding loops 0)
@@ -54,7 +54,7 @@ func @dependent_loops() {
 
 // -----
 // CHECK-LABEL: func @different_memrefs() {
-func @different_memrefs() {
+func.func @different_memrefs() {
   %m.a = memref.alloc() : memref<100xf32>
   %m.b = memref.alloc() : memref<100xf32>
   %c0 = arith.constant 0 : index
@@ -70,7 +70,7 @@ func @different_memrefs() {
 
 // -----
 // CHECK-LABEL: func @store_load_different_elements() {
-func @store_load_different_elements() {
+func.func @store_load_different_elements() {
   %m = memref.alloc() : memref<100xf32>
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -86,7 +86,7 @@ func @store_load_different_elements() {
 
 // -----
 // CHECK-LABEL: func @load_store_different_elements() {
-func @load_store_different_elements() {
+func.func @load_store_different_elements() {
   %m = memref.alloc() : memref<100xf32>
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -102,7 +102,7 @@ func @load_store_different_elements() {
 
 // -----
 // CHECK-LABEL: func @store_load_same_element() {
-func @store_load_same_element() {
+func.func @store_load_same_element() {
   %m = memref.alloc() : memref<100xf32>
   %c11 = arith.constant 11 : index
   %c7 = arith.constant 7.0 : f32
@@ -117,7 +117,7 @@ func @store_load_same_element() {
 
 // -----
 // CHECK-LABEL: func @load_load_same_element() {
-func @load_load_same_element() {
+func.func @load_load_same_element() {
   %m = memref.alloc() : memref<100xf32>
   %c11 = arith.constant 11 : index
   %c7 = arith.constant 7.0 : f32
@@ -132,7 +132,7 @@ func @load_load_same_element() {
 
 // -----
 // CHECK-LABEL: func @store_load_same_symbol(%arg0: index) {
-func @store_load_same_symbol(%arg0: index) {
+func.func @store_load_same_symbol(%arg0: index) {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   affine.store %c7, %m[%arg0] : memref<100xf32>
@@ -146,7 +146,7 @@ func @store_load_same_symbol(%arg0: index) {
 
 // -----
 // CHECK-LABEL: func @store_load_different_symbols(%arg0: index, %arg1: index) {
-func @store_load_different_symbols(%arg0: index, %arg1: index) {
+func.func @store_load_different_symbols(%arg0: index, %arg1: index) {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   affine.store %c7, %m[%arg0] : memref<100xf32>
@@ -160,7 +160,7 @@ func @store_load_different_symbols(%arg0: index, %arg1: index) {
 
 // -----
 // CHECK-LABEL: func @store_load_diff_element_affine_apply_const() {
-func @store_load_diff_element_affine_apply_const() {
+func.func @store_load_diff_element_affine_apply_const() {
   %m = memref.alloc() : memref<100xf32>
   %c1 = arith.constant 1 : index
   %c8 = arith.constant 8.0 : f32
@@ -177,7 +177,7 @@ func @store_load_diff_element_affine_apply_const() {
 
 // -----
 // CHECK-LABEL: func @store_load_same_element_affine_apply_const() {
-func @store_load_same_element_affine_apply_const() {
+func.func @store_load_same_element_affine_apply_const() {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   %c9 = arith.constant 9 : index
@@ -195,7 +195,7 @@ func @store_load_same_element_affine_apply_const() {
 
 // -----
 // CHECK-LABEL: func @store_load_affine_apply_symbol(%arg0: index) {
-func @store_load_affine_apply_symbol(%arg0: index) {
+func.func @store_load_affine_apply_symbol(%arg0: index) {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   %a0 = affine.apply affine_map<(d0) -> (d0)> (%arg0)
@@ -211,7 +211,7 @@ func @store_load_affine_apply_symbol(%arg0: index) {
 
 // -----
 // CHECK-LABEL: func @store_load_affine_apply_symbol_offset(%arg0: index) {
-func @store_load_affine_apply_symbol_offset(%arg0: index) {
+func.func @store_load_affine_apply_symbol_offset(%arg0: index) {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   %a0 = affine.apply affine_map<(d0) -> (d0)> (%arg0)
@@ -227,7 +227,7 @@ func @store_load_affine_apply_symbol_offset(%arg0: index) {
 
 // -----
 // CHECK-LABEL: func @store_range_load_after_range() {
-func @store_range_load_after_range() {
+func.func @store_range_load_after_range() {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   %c10 = arith.constant 10 : index
@@ -250,7 +250,7 @@ func @store_range_load_after_range() {
 
 // -----
 // CHECK-LABEL: func @store_load_func_symbol(%arg0: index, %arg1: index) {
-func @store_load_func_symbol(%arg0: index, %arg1: index) {
+func.func @store_load_func_symbol(%arg0: index, %arg1: index) {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   %c10 = arith.constant 10 : index
@@ -273,7 +273,7 @@ func @store_load_func_symbol(%arg0: index, %arg1: index) {
 
 // -----
 // CHECK-LABEL: func @store_range_load_last_in_range() {
-func @store_range_load_last_in_range() {
+func.func @store_range_load_last_in_range() {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   %c10 = arith.constant 10 : index
@@ -301,7 +301,7 @@ func @store_range_load_last_in_range() {
 
 // -----
 // CHECK-LABEL: func @store_range_load_before_range() {
-func @store_range_load_before_range() {
+func.func @store_range_load_before_range() {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   %c0 = arith.constant 0 : index
@@ -324,7 +324,7 @@ func @store_range_load_before_range() {
 
 // -----
 // CHECK-LABEL: func @store_range_load_first_in_range() {
-func @store_range_load_first_in_range() {
+func.func @store_range_load_first_in_range() {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   %c0 = arith.constant 0 : index
@@ -350,7 +350,7 @@ func @store_range_load_first_in_range() {
 
 // -----
 // CHECK-LABEL: func @store_plus_3() {
-func @store_plus_3() {
+func.func @store_plus_3() {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   affine.for %i0 = 1 to 11 {
@@ -372,7 +372,7 @@ func @store_plus_3() {
 
 // -----
 // CHECK-LABEL: func @load_minus_2() {
-func @load_minus_2() {
+func.func @load_minus_2() {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   affine.for %i0 = 2 to 11 {
@@ -394,7 +394,7 @@ func @load_minus_2() {
 
 // -----
 // CHECK-LABEL: func @perfectly_nested_loops_loop_independent() {
-func @perfectly_nested_loops_loop_independent() {
+func.func @perfectly_nested_loops_loop_independent() {
   %m = memref.alloc() : memref<10x10xf32>
   %c7 = arith.constant 7.0 : f32
   affine.for %i0 = 0 to 11 {
@@ -425,7 +425,7 @@ func @perfectly_nested_loops_loop_independent() {
 
 // -----
 // CHECK-LABEL: func @perfectly_nested_loops_loop_carried_at_depth1() {
-func @perfectly_nested_loops_loop_carried_at_depth1() {
+func.func @perfectly_nested_loops_loop_carried_at_depth1() {
   %m = memref.alloc() : memref<10x10xf32>
   %c7 = arith.constant 7.0 : f32
   affine.for %i0 = 0 to 9 {
@@ -456,7 +456,7 @@ func @perfectly_nested_loops_loop_carried_at_depth1() {
 
 // -----
 // CHECK-LABEL: func @perfectly_nested_loops_loop_carried_at_depth2() {
-func @perfectly_nested_loops_loop_carried_at_depth2() {
+func.func @perfectly_nested_loops_loop_carried_at_depth2() {
   %m = memref.alloc() : memref<10x10xf32>
   %c7 = arith.constant 7.0 : f32
   affine.for %i0 = 0 to 10 {
@@ -487,7 +487,7 @@ func @perfectly_nested_loops_loop_carried_at_depth2() {
 
 // -----
 // CHECK-LABEL: func @one_common_loop() {
-func @one_common_loop() {
+func.func @one_common_loop() {
   %m = memref.alloc() : memref<10x10xf32>
   %c7 = arith.constant 7.0 : f32
   // There is a loop-independent dependence from access 0 to 1 at depth 2.
@@ -518,7 +518,7 @@ func @one_common_loop() {
 
 // -----
 // CHECK-LABEL: func @dependence_cycle() {
-func @dependence_cycle() {
+func.func @dependence_cycle() {
   %m.a = memref.alloc() : memref<100xf32>
   %m.b = memref.alloc() : memref<100xf32>
 
@@ -572,7 +572,7 @@ func @dependence_cycle() {
 
 // -----
 // CHECK-LABEL: func @negative_and_positive_direction_vectors(%arg0: index, %arg1: index) {
-func @negative_and_positive_direction_vectors(%arg0: index, %arg1: index) {
+func.func @negative_and_positive_direction_vectors(%arg0: index, %arg1: index) {
   %m = memref.alloc() : memref<10x10xf32>
   %c7 = arith.constant 7.0 : f32
   affine.for %i0 = 0 to %arg0 {
@@ -602,7 +602,7 @@ func @negative_and_positive_direction_vectors(%arg0: index, %arg1: index) {
 
 // -----
 // CHECK-LABEL: func @war_raw_waw_deps() {
-func @war_raw_waw_deps() {
+func.func @war_raw_waw_deps() {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   affine.for %i0 = 0 to 10 {
@@ -630,7 +630,7 @@ func @war_raw_waw_deps() {
 
 // -----
 // CHECK-LABEL: func @mod_deps() {
-func @mod_deps() {
+func.func @mod_deps() {
   %m = memref.alloc() : memref<100xf32>
   %c7 = arith.constant 7.0 : f32
   affine.for %i0 = 0 to 10 {
@@ -654,7 +654,7 @@ func @mod_deps() {
 
 // -----
 // CHECK-LABEL: func @loop_nest_depth() {
-func @loop_nest_depth() {
+func.func @loop_nest_depth() {
   %0 = memref.alloc() : memref<100x100xf32>
   %c7 = arith.constant 7.0 : f32
 
@@ -690,7 +690,7 @@ func @loop_nest_depth() {
 // Test case to exercise sanity when flattening multiple expressions involving
 // mod/div's successively.
 // CHECK-LABEL: func @mod_div_3d() {
-func @mod_div_3d() {
+func.func @mod_div_3d() {
   %M = memref.alloc() : memref<2x2x2xi32>
   %c0 = arith.constant 0 : i32
   affine.for %i0 = 0 to 8 {
@@ -713,7 +713,7 @@ func @mod_div_3d() {
 // -----
 // This test case arises in the context of a 6-d to 2-d reshape.
 // CHECK-LABEL: func @delinearize_mod_floordiv
-func @delinearize_mod_floordiv() {
+func.func @delinearize_mod_floordiv() {
   %c0 = arith.constant 0 : index
   %val = arith.constant 0 : i32
   %in = memref.alloc() : memref<2x2x3x3x16x1xi32>
@@ -787,7 +787,7 @@ func @delinearize_mod_floordiv() {
 
 // Load and store ops access the same elements in strided scf.
 // CHECK-LABEL: func @strided_loop_with_dependence_at_depth2
-func @strided_loop_with_dependence_at_depth2() {
+func.func @strided_loop_with_dependence_at_depth2() {
   %0 = memref.alloc() : memref<10xf32>
   %cf0 = arith.constant 0.0 : f32
   affine.for %i0 = 0 to 8 step 2 {
@@ -809,7 +809,7 @@ func @strided_loop_with_dependence_at_depth2() {
 
 // Load and store ops access alternating memref elements: no dependence.
 // CHECK-LABEL: func @strided_loop_with_no_dependence
-func @strided_loop_with_no_dependence() {
+func.func @strided_loop_with_no_dependence() {
   %0 = memref.alloc() : memref<10xf32>
   %cf0 = arith.constant 0.0 : f32
   affine.for %i0 = 0 to 8 step 2 {
@@ -832,7 +832,7 @@ func @strided_loop_with_no_dependence() {
 
 // Affine.Store op accesses memref elements at offset causing loop-carried dependence.
 // CHECK-LABEL: func @strided_loop_with_loop_carried_dependence_at_depth1
-func @strided_loop_with_loop_carried_dependence_at_depth1() {
+func.func @strided_loop_with_loop_carried_dependence_at_depth1() {
   %0 = memref.alloc() : memref<10xf32>
   %cf0 = arith.constant 0.0 : f32
   affine.for %i0 = 0 to 8 step 2 {
@@ -856,7 +856,7 @@ func @strided_loop_with_loop_carried_dependence_at_depth1() {
 // Test that the loop carried dependence from load to store on '%i0' is
 // properly computed when the load and store are at different loop depths.
 // CHECK-LABEL: func @test_dep_store_depth1_load_depth2
-func @test_dep_store_depth1_load_depth2() {
+func.func @test_dep_store_depth1_load_depth2() {
   %0 = memref.alloc() : memref<100xf32>
   %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 10 {
@@ -883,7 +883,7 @@ func @test_dep_store_depth1_load_depth2() {
 // Test that the loop carried dependence from store to load on '%i0' is
 // properly computed when the load and store are at different loop depths.
 // CHECK-LABEL: func @test_dep_store_depth2_load_depth1
-func @test_dep_store_depth2_load_depth1() {
+func.func @test_dep_store_depth2_load_depth1() {
   %0 = memref.alloc() : memref<100xf32>
   %cst = arith.constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 10 {
@@ -911,7 +911,7 @@ func @test_dep_store_depth2_load_depth1() {
 #set = affine_set<(d0): (d0 - 50 >= 0)>
 
 // CHECK-LABEL: func @test_affine_for_if_same_block() {
-func @test_affine_for_if_same_block() {
+func.func @test_affine_for_if_same_block() {
   %0 = memref.alloc() : memref<100xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -939,7 +939,7 @@ func @test_affine_for_if_same_block() {
 #set = affine_set<(d0): (d0 - 50 >= 0)>
 
 // CHECK-LABEL: func @test_affine_for_if_separated() {
-func @test_affine_for_if_separated() {
+func.func @test_affine_for_if_separated() {
   %0 = memref.alloc() : memref<100xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -969,7 +969,7 @@ func @test_affine_for_if_separated() {
 #set2 = affine_set<(d0): (- d0 + 75 >= 0)>
 
 // CHECK-LABEL: func @test_affine_for_if_partially_joined() {
-func @test_affine_for_if_partially_joined() {
+func.func @test_affine_for_if_partially_joined() {
   %0 = memref.alloc() : memref<100xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -1000,7 +1000,7 @@ func @test_affine_for_if_partially_joined() {
 #set2 = affine_set<(d0, d1): (d0 - 75 >= 0, d1 - 50 >= 0)>
 
 // CHECK-LABEL: func @test_interleaved_affine_for_if() {
-func @test_interleaved_affine_for_if() {
+func.func @test_interleaved_affine_for_if() {
   %0 = memref.alloc() : memref<100x100xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -1038,7 +1038,7 @@ func @test_interleaved_affine_for_if() {
 #set2 = affine_set<(d0):     (- d0 +            51 >= 0)>
 
 // CHECK-LABEL: func @test_interleaved_affine_for_if() {
-func @test_interleaved_affine_for_if() {
+func.func @test_interleaved_affine_for_if() {
   %0 = memref.alloc() : memref<101xf32>
   %c0 = arith.constant 0 : index
   %N = memref.dim %0, %c0 : memref<101xf32>

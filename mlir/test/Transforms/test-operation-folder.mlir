@@ -1,6 +1,6 @@
 // RUN: mlir-opt -test-patterns -test-patterns %s | FileCheck %s
 
-func @foo() -> i32 {
+func.func @foo() -> i32 {
   %c42 = arith.constant 42 : i32
 
   // The new operation should be present in the output and contain an attribute
@@ -11,7 +11,7 @@ func @foo() -> i32 {
   return %0 : i32
 }
 
-func @test_fold_before_previously_folded_op() -> (i32, i32) {
+func.func @test_fold_before_previously_folded_op() -> (i32, i32) {
   // When folding two constants will be generated and uniqued. Check that the
   // uniqued constant properly dominates both uses.
   // CHECK: %[[CST:.+]] = arith.constant true
@@ -23,7 +23,7 @@ func @test_fold_before_previously_folded_op() -> (i32, i32) {
   return %0, %1 : i32, i32
 }
 
-func @test_dont_reorder_constants() -> (i32, i32, i32) {
+func.func @test_dont_reorder_constants() -> (i32, i32, i32) {
   // Test that we don't reorder existing constants during folding if it isn't necessary.
   // CHECK: %[[CST:.+]] = arith.constant 1
   // CHECK-NEXT: %[[CST:.+]] = arith.constant 2

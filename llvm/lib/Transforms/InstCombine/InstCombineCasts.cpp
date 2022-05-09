@@ -1503,10 +1503,8 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   unsigned SrcBitSize = SrcTy->getScalarSizeInBits();
   unsigned DestBitSize = DestTy->getScalarSizeInBits();
 
-  // If we know that the value being extended is positive, we can use a zext
-  // instead.
-  KnownBits Known = computeKnownBits(Src, 0, &CI);
-  if (Known.isNonNegative())
+  // If the value being extended is zero or positive, use a zext instead.
+  if (isKnownNonNegative(Src, DL, 0, &AC, &CI, &DT))
     return CastInst::Create(Instruction::ZExt, Src, DestTy);
 
   // Try to extend the entire expression tree to the wide destination type.
@@ -1594,14 +1592,20 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
 
   // Splatting a bit of constant-index across a value:
   // sext (ashr (trunc iN X to iM), M-1) to iN --> ashr (shl X, N-M), N-1
-  // TODO: If the dest type is different, use a cast (adjust use check).
+  // If the dest type is different, use a cast (adjust use check).
   if (match(Src, m_OneUse(m_AShr(m_Trunc(m_Value(X)),
-                                 m_SpecificInt(SrcBitSize - 1)))) &&
-      X->getType() == DestTy) {
-    Constant *ShlAmtC = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
-    Constant *AshrAmtC = ConstantInt::get(DestTy, DestBitSize - 1);
-    Value *Shl = Builder.CreateShl(X, ShlAmtC);
-    return BinaryOperator::CreateAShr(Shl, AshrAmtC);
+                                 m_SpecificInt(SrcBitSize - 1))))) {
+    Type *XTy = X->getType();
+    unsigned XBitSize = XTy->getScalarSizeInBits();
+    Constant *ShlAmtC = ConstantInt::get(XTy, XBitSize - SrcBitSize);
+    Constant *AshrAmtC = ConstantInt::get(XTy, XBitSize - 1);
+    if (XTy == DestTy)
+      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShlAmtC),
+                                        AshrAmtC);
+    if (cast<BinaryOperator>(Src)->getOperand(0)->hasOneUse()) {
+      Value *Ashr = Builder.CreateAShr(Builder.CreateShl(X, ShlAmtC), AshrAmtC);
+      return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
+    }
   }
 
   if (match(Src, m_VScale(DL))) {
@@ -1973,7 +1977,7 @@ Instruction *InstCombinerImpl::foldItoFPtoI(CastInst &FI) {
     // If the destination type is narrow, that means the intermediate FP value
     // must be large enough to hold the source value exactly.
     // For example, (uint8_t)((float)(uint32_t 16777217) is undefined behavior.
-    int OutputSize = (int)DestType->getScalarSizeInBits() - IsOutputSigned;
+    int OutputSize = (int)DestType->getScalarSizeInBits();
     if (OutputSize > OpI->getType()->getFPMantissaWidth())
       return nullptr;
   }
@@ -2271,6 +2275,8 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
   switch (I->getOpcode()) {
   default: return false; // Unhandled case.
   case Instruction::BitCast:
+    if (I->getOperand(0)->getType()->isVectorTy())
+      return false;
     return collectInsertionElements(I->getOperand(0), Shift, Elements, VecEltTy,
                                     isBigEndian);
   case Instruction::ZExt:

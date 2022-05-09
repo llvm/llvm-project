@@ -7,6 +7,7 @@ class LLVMFlag<string name> : Flag<["--", "-"], name>;
 class LLVMJoined<string name> : Joined<["--", "-"], name>;
 class LLVMJoinedOrSeparate<string name> : JoinedOrSeparate<["--", "-"], name>;
 class LLVMSeparate<string name> : Separate<["--", "-"], name>;
+class LLVMCommaJoined<string name> : CommaJoined<["--", "-"], name>;
 
 def ml_Group : OptionGroup<"<ml options>">,
                HelpText<"ML.EXE COMPATIBILITY OPTIONS">;
@@ -31,6 +32,11 @@ def bitness : LLVMJoined<"m">, Values<"32,64">,
               HelpText<"Target platform (x86 or x86-64)">;
 def as_lex : LLVMFlag<"as-lex">,
              HelpText<"Lex tokens from a .asm file without assembling">;
+def debug : LLVMFlag<"debug">, Flags<[HelpHidden]>,
+            HelpText<"Enable debug output">;
+def debug_only : LLVMCommaJoined<"debug-only=">, Flags<[HelpHidden]>,
+                 HelpText<"Enable a specific type of debug output (comma "
+                          "separated list of types)">;
 def fatal_warnings : LLVMFlag<"fatal-warnings">,
                      HelpText<"Treat warnings as errors">;
 def filetype : LLVMJoined<"filetype=">, Values<"obj,s,null">,

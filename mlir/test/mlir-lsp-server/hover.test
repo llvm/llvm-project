@@ -5,7 +5,7 @@
   "uri":"test:///foo.mlir",
   "languageId":"mlir",
   "version":1,
-  "text":"func @foo(%arg: i1) {\n%value = arith.constant true\ncf.br ^bb2\n^bb2:\nreturn\n}"
+  "text":"func.func @foo(%arg: i1) {\n%value = arith.constant true\ncf.br ^bb2\n^bb2:\nreturn\n}"
 }}}
 // -----
 // Hover on an operation.
@@ -83,7 +83,7 @@
 // Hover on a Block argument.
 {"jsonrpc":"2.0","id":4,"method":"textDocument/hover","params":{
   "textDocument":{"uri":"test:///foo.mlir"},
-  "position":{"line":0,"character":12}
+  "position":{"line":0,"character":17}
 }}
 //      CHECK:  "id": 4,
 // CHECK-NEXT:  "jsonrpc": "2.0",
@@ -94,11 +94,11 @@
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {
-// CHECK-NEXT:        "character": 14,
+// CHECK-NEXT:        "character": 19,
 // CHECK-NEXT:        "line": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "start": {
-// CHECK-NEXT:        "character": 10,
+// CHECK-NEXT:        "character": 15,
 // CHECK-NEXT:        "line": 0
 // CHECK-NEXT:      }
 // CHECK-NEXT:    }
@@ -118,7 +118,7 @@
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {
-// CHECK-NEXT:        "character": 4,
+// CHECK-NEXT:        "character": 9,
 // CHECK-NEXT:        "line": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "start": {
@@ -131,7 +131,7 @@
 // Hover on a symbol reference.
 {"jsonrpc":"2.0","id":6,"method":"textDocument/hover","params":{
   "textDocument":{"uri":"test:///foo.mlir"},
-  "position":{"line":0,"character":8}
+  "position":{"line":0,"character":13}
 }}
 //      CHECK:  "id": 6,
 // CHECK-NEXT:  "jsonrpc": "2.0",
@@ -142,11 +142,11 @@
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {
-// CHECK-NEXT:        "character": 9,
+// CHECK-NEXT:        "character": 14,
 // CHECK-NEXT:        "line": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "start": {
-// CHECK-NEXT:        "character": 5,
+// CHECK-NEXT:        "character": 10,
 // CHECK-NEXT:        "line": 0
 // CHECK-NEXT:      }
 // CHECK-NEXT:    }

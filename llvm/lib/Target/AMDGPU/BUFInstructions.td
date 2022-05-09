@@ -320,7 +320,7 @@ class MUBUF_Pseudo <string opName, dag outs, dag ins,
   bits<1> idxen       = 0;
   bits<1> addr64      = 0;
   bits<1> lds         = 0;
-  bits<1> has_vdata   = 1;
+  bits<1> has_vdata   = !not(lds);
   bits<1> has_vaddr   = 1;
   bits<1> has_glc     = 1;
   bits<1> has_dlc     = 1;
@@ -360,6 +360,8 @@ class MUBUF_Real <MUBUF_Pseudo ps> :
   let mayStore             = ps.mayStore;
   let IsAtomicRet          = ps.IsAtomicRet;
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
+  let VALU                 = ps.VALU;
+  let LGKM_CNT             = ps.LGKM_CNT;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -371,7 +373,7 @@ class MUBUF_Real <MUBUF_Pseudo ps> :
 
   // GFX90A+ only: instruction uses AccVGPR for data
   // Bit supersedes tfe.
-  bits<1> acc = !if(ps.has_vdata, vdata{9}, 0);
+  bits<1> acc = !if(ps.has_vdata, vdata{9}, !if(ps.lds, ?, 0));
 }
 
 
@@ -492,10 +494,10 @@ class MUBUF_Load_Pseudo <string opName,
                          RegisterClass vdata_rc = getVregSrcForVT<vdata_vt>.ret,
                          RegisterOperand vdata_op = getLdStRegisterOperand<vdata_rc>.ret>
   : MUBUF_Pseudo<opName,
-                 (outs vdata_op:$vdata),
+                 !if(isLds, (outs), (outs vdata_op:$vdata)),
                  !con(getMUBUFIns<addrKindCopy, [], isLds>.ret,
                       !if(HasTiedDest, (ins vdata_op:$vdata_in), (ins))),
-                 " $vdata, " # getMUBUFAsmOps<addrKindCopy>.ret # "$cpol" #
+                 !if(isLds, " ", " $vdata, ") # getMUBUFAsmOps<addrKindCopy>.ret # "$cpol" #
                    !if(isLds, " lds", "$tfe") # "$swz",
                  pattern>,
     MUBUF_SetupAddr<addrKindCopy> {
@@ -504,13 +506,15 @@ class MUBUF_Load_Pseudo <string opName,
   let AsmMatchConverter = !if(isLds, "cvtMubufLds", "cvtMubuf");
 
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
+  let LGKM_CNT = isLds;
   let mayLoad = 1;
-  let mayStore = 0;
+  let mayStore = isLds;
   let maybeAtomic = 1;
   let Uses = !if(isLds, [EXEC, M0], [EXEC]);
   let has_tfe = !not(isLds);
   let lds = isLds;
   let elements = getMUBUFElements<vdata_vt>.ret;
+  let VALU = isLds;
 }
 
 class MUBUF_Offset_Load_Pat <Instruction inst, ValueType load_vt = i32, SDPatternOperator ld = null_frag> : Pat <
@@ -615,7 +619,8 @@ class MUBUF_Pseudo_Store_Lds<string opName>
                  (outs),
                  (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, CPol:$cpol, SWZ:$swz),
                  " $srsrc, $soffset$offset lds$cpol$swz"> {
-  let mayLoad = 0;
+  let LGKM_CNT = 1;
+  let mayLoad = 1;
   let mayStore = 1;
   let maybeAtomic = 1;
 
@@ -623,6 +628,7 @@ class MUBUF_Pseudo_Store_Lds<string opName>
   let has_vaddr = 0;
   let has_tfe = 0;
   let lds = 1;
+  let VALU = 1;
 
   let Uses = [EXEC, M0];
   let AsmMatchConverter = "cvtMubufLds";
@@ -1113,23 +1119,25 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 def BUFFER_WBINVL1 : MUBUF_Invalidate <"buffer_wbinvl1",
                                        int_amdgcn_buffer_wbinvl1>;
 
-let SubtargetPredicate = HasAtomicFaddInsts in {
-defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN <
+let SubtargetPredicate = HasAtomicFaddNoRtnInsts in
+defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN<
   "buffer_atomic_add_f32", VGPR_32, f32
 >;
+
+let SubtargetPredicate = HasAtomicPkFaddNoRtnInsts in
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_NO_RTN <
   "buffer_atomic_pk_add_f16", VGPR_32, v2f16
 >;
 
-let OtherPredicates = [isGFX90APlus] in {
-defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_RTN <
+let OtherPredicates = [HasAtomicFaddRtnInsts] in
+defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_RTN<
   "buffer_atomic_add_f32", VGPR_32, f32, atomic_load_fadd_global_32
 >;
+
+let OtherPredicates = [isGFX90APlus] in
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_RTN <
   "buffer_atomic_pk_add_f16", VGPR_32, v2f16, atomic_load_fadd_v2f16_global_32
 >;
-}
-} // End SubtargetPredicate = HasAtomicFaddInsts
 
 //===----------------------------------------------------------------------===//
 // MTBUF Instructions
@@ -1188,9 +1196,9 @@ let SubtargetPredicate = isGFX90APlus in {
     let SubtargetPredicate = isGFX90AOnly;
   }
 
-  defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_add_f64", VReg_64, f64, int_amdgcn_global_atomic_fadd>;
-  defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_min_f64", VReg_64, f64, int_amdgcn_global_atomic_fmin>;
-  defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_max_f64", VReg_64, f64, int_amdgcn_global_atomic_fmax>;
+  defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_add_f64", VReg_64, f64>;
+  defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_min_f64", VReg_64, f64>;
+  defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_max_f64", VReg_64, f64>;
 } // End SubtargetPredicate = isGFX90APlus
 
 def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
@@ -1381,10 +1389,11 @@ defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_short, i32, "BUFFER_STORE_SHORT">;
 // buffer_atomic patterns
 //===----------------------------------------------------------------------===//
 
-multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst> {
+multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst, bit isIntr = 0> {
   foreach RtnMode = ["ret", "noret"] in {
 
-  defvar Op = !cast<SDPatternOperator>(OpPrefix # "_" # RtnMode # "_" # vt.Size);
+  defvar Op = !cast<SDPatternOperator>(OpPrefix # "_" # RtnMode
+                                       # !if(isIntr, "", "_" # vt.Size));
   defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
 
   def : GCNPat<
@@ -1401,6 +1410,10 @@ multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst> {
   >;
 
   } // end foreach RtnMode
+}
+
+multiclass BufferAtomicIntrPat<string OpPrefix, ValueType vt, string Inst> {
+  defm : BufferAtomicPat<OpPrefix, vt, Inst, /* isIntr */ 1>;
 }
 
 multiclass BufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst> {
@@ -1586,12 +1599,19 @@ multiclass BufferAtomicPatterns_NO_RTN<SDPatternOperator name, ValueType vt,
   >;
 }
 
-let SubtargetPredicate = HasAtomicFaddInsts in {
+let SubtargetPredicate = HasAtomicFaddNoRtnInsts in
 defm : BufferAtomicPatterns_NO_RTN<SIbuffer_atomic_fadd, f32, "BUFFER_ATOMIC_ADD_F32">;
+
+let SubtargetPredicate = HasAtomicPkFaddNoRtnInsts in
 defm : BufferAtomicPatterns_NO_RTN<SIbuffer_atomic_fadd, v2f16, "BUFFER_ATOMIC_PK_ADD_F16">;
-}
+
+let SubtargetPredicate = HasAtomicFaddRtnInsts in
+ defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32,   "BUFFER_ATOMIC_ADD_F32">;
 
 let SubtargetPredicate = isGFX90APlus in {
+  defm : BufferAtomicIntrPat<"int_amdgcn_global_atomic_fadd", f64, "BUFFER_ATOMIC_ADD_F64">;
+  defm : BufferAtomicIntrPat<"int_amdgcn_global_atomic_fmin", f64, "BUFFER_ATOMIC_MIN_F64">;
+  defm : BufferAtomicIntrPat<"int_amdgcn_global_atomic_fmax", f64, "BUFFER_ATOMIC_MAX_F64">;
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32,   "BUFFER_ATOMIC_ADD_F32">;
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", v2f16, "BUFFER_ATOMIC_PK_ADD_F16">;
 
@@ -1798,12 +1818,12 @@ multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo In
   >;
 }
 let SubtargetPredicate = isGFX6GFX7 in {
-defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_BYTE_ADDR64, BUFFER_STORE_BYTE_OFFSET, i32, atomic_store_global_8>;
-defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_BYTE_ADDR64, BUFFER_STORE_BYTE_OFFSET, i16, atomic_store_global_8>;
-defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_SHORT_ADDR64, BUFFER_STORE_SHORT_OFFSET, i32, atomic_store_global_16>;
-defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_SHORT_ADDR64, BUFFER_STORE_SHORT_OFFSET, i16, atomic_store_global_16>;
-defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_DWORD_ADDR64, BUFFER_STORE_DWORD_OFFSET, i32, atomic_store_global_32>;
-defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_DWORDX2_ADDR64, BUFFER_STORE_DWORDX2_OFFSET, i64, atomic_store_global_64>;
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_BYTE_ADDR64, BUFFER_STORE_BYTE_OFFSET, i32, atomic_store_8_global>;
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_BYTE_ADDR64, BUFFER_STORE_BYTE_OFFSET, i16, atomic_store_8_global>;
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_SHORT_ADDR64, BUFFER_STORE_SHORT_OFFSET, i32, atomic_store_16_global>;
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_SHORT_ADDR64, BUFFER_STORE_SHORT_OFFSET, i16, atomic_store_16_global>;
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_DWORD_ADDR64, BUFFER_STORE_DWORD_OFFSET, i32, atomic_store_32_global>;
+defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_DWORDX2_ADDR64, BUFFER_STORE_DWORDX2_OFFSET, i64, atomic_store_64_global>;
 } // End Predicates = isGFX6GFX7
 
 
@@ -1851,7 +1871,7 @@ defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX3_OFFEN, BUFFER_STORE_DWORDX3_OF
 defm : MUBUFScratchStorePat <BUFFER_STORE_DWORDX4_OFFEN, BUFFER_STORE_DWORDX4_OFFSET, v4i32, store_private, VReg_128>;
 
 
-let OtherPredicates = [D16PreservesUnusedBits, DisableFlatScratch] in {
+let OtherPredicates = [HasD16LoadStore, DisableFlatScratch] in {
  // Hiding the extract high pattern in the PatFrag seems to not
  // automatically increase the complexity.
 let AddedComplexity = 1 in {
@@ -2620,12 +2640,12 @@ def BUFFER_WBINVL1_vi           : MUBUF_Real_vi <0x3e, BUFFER_WBINVL1>;
 def BUFFER_WBINVL1_VOL_vi       : MUBUF_Real_vi <0x3f, BUFFER_WBINVL1_VOL>;
 } // End AssemblerPredicate = isGFX8GFX9
 
-let SubtargetPredicate = HasAtomicFaddInsts in {
+let SubtargetPredicate = HasAtomicFaddNoRtnInsts in {
 
 defm BUFFER_ATOMIC_ADD_F32    : MUBUF_Real_Atomic_vi <0x4d>;
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Real_Atomic_vi <0x4e>;
 
-} // End SubtargetPredicate = HasAtomicFaddInsts
+} // End SubtargetPredicate = HasAtomicFaddNoRtnInsts
 
 let SubtargetPredicate = isGFX90APlus in {
   defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Real_Atomic_vi<0x4f>;

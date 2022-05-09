@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -emit-llvm %s  -o /dev/null
+// RUN: %clang_cc1 -Wno-implicit-function-declaration -w -emit-llvm %s  -o /dev/null
 
 void *malloc(unsigned);
 int puts(const char *s);

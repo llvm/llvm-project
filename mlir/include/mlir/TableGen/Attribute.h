@@ -206,6 +206,7 @@ public:
   bool genSpecializedAttr() const;
   llvm::Record *getBaseAttrClass() const;
   StringRef getSpecializedAttrClassName() const;
+  bool printBitEnumPrimaryGroups() const;
 };
 
 class StructFieldAttr {

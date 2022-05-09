@@ -41,7 +41,7 @@
 // CHECK:           %[[VAL_18:.*]] = bufferization.to_tensor %[[VAL_9]] : memref<20x30x10xf32>
 // CHECK:           return %[[VAL_18]] : tensor<20x30x10xf32>
 // CHECK:         }
-func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
+func.func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
                          %argx: tensor<20x30x10xf32>) -> tensor<20x30x10xf32> {
   %0 = linalg.generic #trait
     ins(%arga: tensor<10x20x30xf32, #X>)
@@ -80,7 +80,7 @@ func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK:           %[[VAL_19:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<?x?x?xf32>
 // CHECK:           return %[[VAL_19]] : tensor<?x?x?xf32>
 // CHECK:         }
-func @sparse_dynamic_dims(%arga: tensor<?x?x?xf32, #X>,
+func.func @sparse_dynamic_dims(%arga: tensor<?x?x?xf32, #X>,
                           %argx: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
   %0 = linalg.generic #trait
     ins(%arga: tensor<?x?x?xf32, #X>)

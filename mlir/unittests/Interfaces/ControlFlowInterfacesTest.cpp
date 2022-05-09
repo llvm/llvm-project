@@ -42,6 +42,50 @@ struct MutuallyExclusiveRegionsOp
                            SmallVectorImpl<RegionSuccessor> &regions) {}
 };
 
+/// All regions of this op call each other in a large circle.
+struct LoopRegionsOp
+    : public Op<LoopRegionsOp, RegionBranchOpInterface::Trait> {
+  using Op::Op;
+  static const unsigned kNumRegions = 3;
+
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
+
+  static StringRef getOperationName() { return "cftest.loop_regions_op"; }
+
+  void getSuccessorRegions(Optional<unsigned> index,
+                           ArrayRef<Attribute> operands,
+                           SmallVectorImpl<RegionSuccessor> &regions) {
+    if (index) {
+      if (*index == 1)
+        // This region also branches back to the parent.
+        regions.push_back(RegionSuccessor());
+      regions.push_back(
+          RegionSuccessor(&getOperation()->getRegion(*index % kNumRegions)));
+    }
+  }
+};
+
+/// Each region branches back it itself or the parent.
+struct DoubleLoopRegionsOp
+    : public Op<DoubleLoopRegionsOp, RegionBranchOpInterface::Trait> {
+  using Op::Op;
+
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
+
+  static StringRef getOperationName() {
+    return "cftest.double_loop_regions_op";
+  }
+
+  void getSuccessorRegions(Optional<unsigned> index,
+                           ArrayRef<Attribute> operands,
+                           SmallVectorImpl<RegionSuccessor> &regions) {
+    if (index.hasValue()) {
+      regions.push_back(RegionSuccessor());
+      regions.push_back(RegionSuccessor(&getOperation()->getRegion(*index)));
+    }
+  }
+};
+
 /// Regions are executed sequentially.
 struct SequentialRegionsOp
     : public Op<SequentialRegionsOp, RegionBranchOpInterface::Trait> {
@@ -65,7 +109,8 @@ struct SequentialRegionsOp
 struct CFTestDialect : Dialect {
   explicit CFTestDialect(MLIRContext *ctx)
       : Dialect(getDialectNamespace(), ctx, TypeID::get<CFTestDialect>()) {
-    addOperations<DummyOp, MutuallyExclusiveRegionsOp, SequentialRegionsOp>();
+    addOperations<DummyOp, MutuallyExclusiveRegionsOp, LoopRegionsOp,
+                  DoubleLoopRegionsOp, SequentialRegionsOp>();
   }
   static StringRef getDialectNamespace() { return "cftest"; }
 };
@@ -73,6 +118,27 @@ struct CFTestDialect : Dialect {
 TEST(RegionBranchOpInterface, MutuallyExclusiveOps) {
   const char *ir = R"MLIR(
 "cftest.mutually_exclusive_regions_op"() (
+      {"cftest.dummy_op"() : () -> ()},  // op1
+      {"cftest.dummy_op"() : () -> ()}   // op2
+  ) : () -> ()
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<CFTestDialect>();
+  MLIRContext ctx(registry);
+
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
+  Operation *testOp = &module->getBody()->getOperations().front();
+  Operation *op1 = &testOp->getRegion(0).front().front();
+  Operation *op2 = &testOp->getRegion(1).front().front();
+
+  EXPECT_TRUE(insideMutuallyExclusiveRegions(op1, op2));
+  EXPECT_TRUE(insideMutuallyExclusiveRegions(op2, op1));
+}
+
+TEST(RegionBranchOpInterface, MutuallyExclusiveOps2) {
+  const char *ir = R"MLIR(
+"cftest.double_loop_regions_op"() (
       {"cftest.dummy_op"() : () -> ()},  // op1
       {"cftest.dummy_op"() : () -> ()}   // op2
   ) : () -> ()
@@ -141,4 +207,53 @@ TEST(RegionBranchOpInterface, NestedMutuallyExclusiveOps) {
   EXPECT_TRUE(insideMutuallyExclusiveRegions(op1, op2));
   EXPECT_TRUE(insideMutuallyExclusiveRegions(op3, op2));
   EXPECT_FALSE(insideMutuallyExclusiveRegions(op1, op3));
+}
+
+TEST(RegionBranchOpInterface, RecursiveRegions) {
+  const char *ir = R"MLIR(
+"cftest.loop_regions_op"() (
+      {"cftest.dummy_op"() : () -> ()},  // op1
+      {"cftest.dummy_op"() : () -> ()},  // op2
+      {"cftest.dummy_op"() : () -> ()}   // op3
+  ) : () -> ()
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<CFTestDialect>();
+  MLIRContext ctx(registry);
+
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
+  Operation *testOp = &module->getBody()->getOperations().front();
+  auto regionOp = cast<RegionBranchOpInterface>(testOp);
+  Operation *op1 = &testOp->getRegion(0).front().front();
+  Operation *op2 = &testOp->getRegion(1).front().front();
+  Operation *op3 = &testOp->getRegion(2).front().front();
+
+  EXPECT_TRUE(regionOp.isRepetitiveRegion(0));
+  EXPECT_TRUE(regionOp.isRepetitiveRegion(1));
+  EXPECT_TRUE(regionOp.isRepetitiveRegion(2));
+  EXPECT_NE(getEnclosingRepetitiveRegion(op1), nullptr);
+  EXPECT_NE(getEnclosingRepetitiveRegion(op2), nullptr);
+  EXPECT_NE(getEnclosingRepetitiveRegion(op3), nullptr);
+}
+
+TEST(RegionBranchOpInterface, NotRecursiveRegions) {
+  const char *ir = R"MLIR(
+"cftest.sequential_regions_op"() (
+      {"cftest.dummy_op"() : () -> ()},  // op1
+      {"cftest.dummy_op"() : () -> ()}   // op2
+  ) : () -> ()
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<CFTestDialect>();
+  MLIRContext ctx(registry);
+
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
+  Operation *testOp = &module->getBody()->getOperations().front();
+  Operation *op1 = &testOp->getRegion(0).front().front();
+  Operation *op2 = &testOp->getRegion(1).front().front();
+
+  EXPECT_EQ(getEnclosingRepetitiveRegion(op1), nullptr);
+  EXPECT_EQ(getEnclosingRepetitiveRegion(op2), nullptr);
 }

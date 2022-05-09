@@ -36,6 +36,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
 #include <numeric>
+#include <utility>
 
 using namespace mlir;
 using llvm::Error;
@@ -242,7 +243,8 @@ static Error compileAndExecuteVoidFunction(Options &options, ModuleOp module,
   if (!mainFunction || mainFunction.empty())
     return makeStringError("entry point not found");
   void *empty = nullptr;
-  return compileAndExecute(options, module, entryPoint, config, &empty);
+  return compileAndExecute(options, module, entryPoint, std::move(config),
+                           &empty);
 }
 
 template <typename Type>
@@ -297,8 +299,8 @@ Error compileAndExecuteSingleReturnFunction(Options &options, ModuleOp module,
     void *data;
   } data;
   data.data = &res;
-  if (auto error = compileAndExecute(options, module, entryPoint, config,
-                                     (void **)&data))
+  if (auto error = compileAndExecute(options, module, entryPoint,
+                                     std::move(config), (void **)&data))
     return error;
 
   // Intentional printing of the output so we can test.

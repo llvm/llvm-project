@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   assign(basic_string<charT,traits>&& str);
+//   assign(basic_string<charT,traits>&& str); // constexpr since C++20
 
 #include <string>
 #include <utility>
@@ -27,7 +29,7 @@ test(S s, S str, S expected)
     assert(s == expected);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S(), S(), S());
@@ -84,7 +86,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

@@ -23,7 +23,7 @@ declare void @llvm.riscv.vse.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>*
 define <vscale x 1 x double> @test1(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    beqz a1, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
@@ -54,7 +54,7 @@ if.end:                                           ; preds = %if.else, %if.then
 define <vscale x 1 x double> @test2(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    beqz a1, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    vfadd.vv v9, v8, v9
@@ -180,7 +180,7 @@ define <vscale x 1 x double> @test5(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a2, a1, 1
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    bnez a2, .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %if.else
 ; CHECK-NEXT:    vfsub.vv v9, v8, v9
@@ -244,7 +244,7 @@ define <vscale x 1 x double> @test6(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    beqz a1, .LBB5_4
 ; CHECK-NEXT:  .LBB5_2: # %if.then4
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    lui a0, %hi(.LCPI5_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_0)
 ; CHECK-NEXT:    vlse64.v v9, (a0), zero
@@ -261,7 +261,7 @@ define <vscale x 1 x double> @test6(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    bnez a1, .LBB5_2
 ; CHECK-NEXT:  .LBB5_4: # %if.else5
-; CHECK-NEXT:    vsetvli a0, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    lui a0, %hi(.LCPI5_2)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_2)
 ; CHECK-NEXT:    vlse32.v v9, (a0), zero
@@ -582,3 +582,58 @@ if2.end:
   ret <vscale x 2 x i32> %h
 }
 declare <vscale x 2 x i32> @llvm.riscv.vwadd.w.nxv2i32.nxv2i16(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i16>, i64)
+
+; We should only need 1 vsetvli for this code.
+define void @vlmax(i64 %N, double* %c, double* %a, double* %b) {
+; CHECK-LABEL: vlmax:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a6, zero, e64, m1, ta, mu
+; CHECK-NEXT:    blez a0, .LBB11_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    li a5, 0
+; CHECK-NEXT:    li t1, 0
+; CHECK-NEXT:    slli a7, a6, 3
+; CHECK-NEXT:  .LBB11_2: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add t0, a2, a5
+; CHECK-NEXT:    vsetvli zero, a6, e64, m1, ta, mu
+; CHECK-NEXT:    vle64.v v8, (t0)
+; CHECK-NEXT:    add a4, a3, a5
+; CHECK-NEXT:    vle64.v v9, (a4)
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    add a4, a1, a5
+; CHECK-NEXT:    vse64.v v8, (a4)
+; CHECK-NEXT:    add t1, t1, a6
+; CHECK-NEXT:    add a5, a5, a7
+; CHECK-NEXT:    blt t1, a0, .LBB11_2
+; CHECK-NEXT:  .LBB11_3: # %for.end
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.riscv.vsetvlimax.i64(i64 3, i64 0)
+  %cmp13 = icmp sgt i64 %N, 0
+  br i1 %cmp13, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.014 = phi i64 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds double, double* %a, i64 %i.014
+  %1 = bitcast double* %arrayidx to <vscale x 1 x double>*
+  %2 = tail call <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double>* %1, i64 %0)
+  %arrayidx1 = getelementptr inbounds double, double* %b, i64 %i.014
+  %3 = bitcast double* %arrayidx1 to <vscale x 1 x double>*
+  %4 = tail call <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double>* %3, i64 %0)
+  %5 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double> %2, <vscale x 1 x double> %4, i64 %0)
+  %arrayidx2 = getelementptr inbounds double, double* %c, i64 %i.014
+  %6 = bitcast double* %arrayidx2 to <vscale x 1 x double>*
+  tail call void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double> %5, <vscale x 1 x double>* %6, i64 %0)
+  %add = add nuw nsw i64 %i.014, %0
+  %cmp = icmp slt i64 %add, %N
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)
+declare <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>* nocapture, i64)
+declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64)
+declare void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>* nocapture, i64)

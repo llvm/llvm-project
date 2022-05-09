@@ -1,7 +1,7 @@
 // RUN: mlir-opt -verify-diagnostics -convert-bufferization-to-memref -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @conversion_static
-func @conversion_static(%arg0 : memref<2xf32>) -> memref<2xf32> {
+func.func @conversion_static(%arg0 : memref<2xf32>) -> memref<2xf32> {
   %0 = bufferization.clone %arg0 : memref<2xf32> to memref<2xf32>
   memref.dealloc %arg0 : memref<2xf32>
   return %0 : memref<2xf32>
@@ -15,7 +15,7 @@ func @conversion_static(%arg0 : memref<2xf32>) -> memref<2xf32> {
 // -----
 
 // CHECK-LABEL: @conversion_dynamic
-func @conversion_dynamic(%arg0 : memref<?xf32>) -> memref<?xf32> {
+func.func @conversion_dynamic(%arg0 : memref<?xf32>) -> memref<?xf32> {
   %1 = bufferization.clone %arg0 : memref<?xf32> to memref<?xf32>
   memref.dealloc %arg0 : memref<?xf32>
   return %1 : memref<?xf32>
@@ -30,7 +30,7 @@ func @conversion_dynamic(%arg0 : memref<?xf32>) -> memref<?xf32> {
 
 // -----
 
-func @conversion_unknown(%arg0 : memref<*xf32>) -> memref<*xf32> {
+func.func @conversion_unknown(%arg0 : memref<*xf32>) -> memref<*xf32> {
 // expected-error@+1 {{failed to legalize operation 'bufferization.clone' that was explicitly marked illegal}}
   %1 = bufferization.clone %arg0 : memref<*xf32> to memref<*xf32>
   memref.dealloc %arg0 : memref<*xf32>
@@ -50,7 +50,7 @@ func @conversion_unknown(%arg0 : memref<*xf32>) -> memref<*xf32> {
 //       CHECK:   memref.copy
 //       CHECK:   memref.dealloc
 //       CHECK:   return %[[CASTED]]
-func @conversion_with_layout_map(%arg0 : memref<?xf32, #map>) -> memref<?xf32, #map> {
+func.func @conversion_with_layout_map(%arg0 : memref<?xf32, #map>) -> memref<?xf32, #map> {
   %1 = bufferization.clone %arg0 : memref<?xf32, #map> to memref<?xf32, #map>
   memref.dealloc %arg0 : memref<?xf32, #map>
   return %1 : memref<?xf32, #map>
@@ -62,7 +62,7 @@ func @conversion_with_layout_map(%arg0 : memref<?xf32, #map>) -> memref<?xf32, #
 // map cannot be allocated (or casted to).
 
 #map2 = affine_map<(d0)[s0] -> (d0 * 10 + s0)>
-func @conversion_with_invalid_layout_map(%arg0 : memref<?xf32, #map2>)
+func.func @conversion_with_invalid_layout_map(%arg0 : memref<?xf32, #map2>)
     -> memref<?xf32, #map2> {
 // expected-error@+1 {{failed to legalize operation 'bufferization.clone' that was explicitly marked illegal}}
   %1 = bufferization.clone %arg0 : memref<?xf32, #map2> to memref<?xf32, #map2>

@@ -471,6 +471,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FREM, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
 
+      // Special treatment.
+      setOperationAction(ISD::IS_FPCLASS, VT, Custom);
+
       // Handle constrained floating-point operations.
       setOperationAction(ISD::STRICT_FADD, VT, Legal);
       setOperationAction(ISD::STRICT_FSUB, VT, Legal);
@@ -1033,6 +1036,17 @@ SystemZTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'L': // Signed 20-bit displacement (on all targets we support)
     case 'M': // 0x7fffffff
       return C_Immediate;
+
+    default:
+      break;
+    }
+  } else if (Constraint.size() == 2 && Constraint[0] == 'Z') {
+    switch (Constraint[1]) {
+    case 'Q': // Address with base and unsigned 12-bit displacement
+    case 'R': // Likewise, plus an index
+    case 'S': // Address with base and signed 20-bit displacement
+    case 'T': // Likewise, plus an index
+      return C_Address;
 
     default:
       break;
@@ -5604,6 +5618,41 @@ SDValue SystemZTargetLowering::lowerShift(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT ResultVT = Op.getSimpleValueType();
+  SDValue Arg = Op.getOperand(0);
+  auto CNode = cast<ConstantSDNode>(Op.getOperand(1));
+  unsigned Check = CNode->getZExtValue();
+
+  unsigned TDCMask = 0;
+  if (Check & fcSNan)
+    TDCMask |= SystemZ::TDCMASK_SNAN_PLUS | SystemZ::TDCMASK_SNAN_MINUS;
+  if (Check & fcQNan)
+    TDCMask |= SystemZ::TDCMASK_QNAN_PLUS | SystemZ::TDCMASK_QNAN_MINUS;
+  if (Check & fcPosInf)
+    TDCMask |= SystemZ::TDCMASK_INFINITY_PLUS;
+  if (Check & fcNegInf)
+    TDCMask |= SystemZ::TDCMASK_INFINITY_MINUS;
+  if (Check & fcPosNormal)
+    TDCMask |= SystemZ::TDCMASK_NORMAL_PLUS;
+  if (Check & fcNegNormal)
+    TDCMask |= SystemZ::TDCMASK_NORMAL_MINUS;
+  if (Check & fcPosSubnormal)
+    TDCMask |= SystemZ::TDCMASK_SUBNORMAL_PLUS;
+  if (Check & fcNegSubnormal)
+    TDCMask |= SystemZ::TDCMASK_SUBNORMAL_MINUS;
+  if (Check & fcPosZero)
+    TDCMask |= SystemZ::TDCMASK_ZERO_PLUS;
+  if (Check & fcNegZero)
+    TDCMask |= SystemZ::TDCMASK_ZERO_MINUS;
+  SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, MVT::i32);
+
+  SDValue Intr = DAG.getNode(SystemZISD::TDC, DL, ResultVT, Arg, TDCMaskV);
+  return getCCResult(DAG, Intr);
+}
+
 SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -5721,6 +5770,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerShift(Op, DAG, SystemZISD::VSRL_BY_SCALAR);
   case ISD::SRA:
     return lowerShift(Op, DAG, SystemZISD::VSRA_BY_SCALAR);
+  case ISD::IS_FPCLASS:
+    return lowerIS_FPCLASS(Op, DAG);
   default:
     llvm_unreachable("Unexpected node to lower");
   }

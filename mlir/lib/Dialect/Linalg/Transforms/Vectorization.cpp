@@ -12,6 +12,7 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
@@ -676,7 +677,6 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
   Operation *writeValue = rewriter.create<vector::TransferWriteOp>(
       loc, readValue, copyOp.target(), indices,
       rewriter.getMultiDimIdentityMap(srcType.getRank()));
-  copyOp->getParentOfType<FuncOp>().dump();
   rewriter.replaceOp(copyOp, writeValue->getResults());
   return success();
 }

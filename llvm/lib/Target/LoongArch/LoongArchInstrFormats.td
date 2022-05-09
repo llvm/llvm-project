@@ -10,9 +10,9 @@
 //  Describe LoongArch instructions format
 //
 //  opcode       - operation code.
-//  {r/f}d       - destination operand.
-//  {r/f}{j/k/a} - source operand.
-//  immN         - immediate data.
+//  rd           - destination register operand.
+//  r{j/k}       - source register operand.
+//  immN         - immediate data operand.
 //
 //===----------------------------------------------------------------------===//
 
@@ -57,7 +57,6 @@ class Fmt2R<bits<22> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 3R-type
 // <opcode | rk | rj | rd>
-// <opcode | fk | fj | fd>
 class Fmt3R<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
             list<dag> pattern = []>
     : LAInst<outs, ins, opcstr, opnstr, pattern> {
@@ -66,36 +65,6 @@ class Fmt3R<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
   bits<5> rd;
 
   let Inst{31-15} = op;
-  let Inst{14-10} = rk;
-  let Inst{9-5} = rj;
-  let Inst{4-0} = rd;
-}
-
-class Fmt3FR<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
-             list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
-  bits<5> fk;
-  bits<5> fj;
-  bits<5> fd;
-
-  let Inst{31-15} = op;
-  let Inst{14-10} = fk;
-  let Inst{9-5} = fj;
-  let Inst{4-0} = fd;
-}
-
-// 4R-type
-// <opcode | ra | rk | rj | rd>
-class Fmt4R<bits<12> op, dag outs, dag ins, string opcstr, string opnstr,
-            list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
-  bits<5> ra;
-  bits<5> rk;
-  bits<5> rj;
-  bits<5> rd;
-
-  let Inst{31-20} = op;
-  let Inst{19-15} = ra;
   let Inst{14-10} = rk;
   let Inst{9-5} = rj;
   let Inst{4-0} = rd;

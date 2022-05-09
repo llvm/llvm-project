@@ -1,6 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Support
-  FuzzMutate
+  FuzzerCLI
 )
 
 add_llvm_fuzzer(llvm-special-case-list-fuzzer

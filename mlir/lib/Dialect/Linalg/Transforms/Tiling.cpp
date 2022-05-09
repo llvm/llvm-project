@@ -441,7 +441,7 @@ void mlir::linalg::populatePadTensorTilingPatterns(
   patterns.add<PadOpTilingPattern>(ctx, options);
 }
 
-static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {
+static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
   MLIRContext *ctx = funcOp.getContext();
   RewritePatternSet patterns(ctx);
   patterns.add<ExtractSliceOfPadTensorSwapPattern>(patterns.getContext());
@@ -460,7 +460,7 @@ struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
   }
 
   void runOnOperation() override {
-    FuncOp funcOp = getOperation();
+    func::FuncOp funcOp = getOperation();
     LinalgTilingLoopType type =
         llvm::StringSwitch<LinalgTilingLoopType>(loopType)
             .Case("for", LinalgTilingLoopType::Loops)
@@ -491,7 +491,7 @@ struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
 
 } // namespace
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes,
                              linalg::LinalgTilingLoopType loopType) {
   return std::make_unique<LinalgTilingPass>(tileSizes, loopType);

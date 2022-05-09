@@ -6,7 +6,7 @@
 // Note: To run this test, your CPU must support AMX.
 
 // Multiply into zeroed destination.
-func @kernel1(%arg0: memref<2x4xbf16>,
+func.func @kernel1(%arg0: memref<2x4xbf16>,
               %arg1: memref<2x4xbf16>,
               %arg2: memref<2x2xf32>) {
   %0 = arith.constant 0 : index
@@ -19,7 +19,7 @@ func @kernel1(%arg0: memref<2x4xbf16>,
 }
 
 // Multiply and update into destination.
-func @kernel2(%arg0: memref<2x4xbf16>,
+func.func @kernel2(%arg0: memref<2x4xbf16>,
               %arg1: memref<2x4xbf16>,
               %arg2: memref<2x2xf32>) {
   %0 = arith.constant 0 : index
@@ -31,7 +31,7 @@ func @kernel2(%arg0: memref<2x4xbf16>,
   return
 }
 
-func @entry() -> i32 {
+func.func @entry() -> i32 {
   %f0 = arith.constant 0.0: f32
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index

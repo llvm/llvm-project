@@ -5,7 +5,7 @@
 // Here we only check the structure of the sequential dispatch loop.
 
 // CHECK-LABEL: @loop_1d
-func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
+func.func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
   // CHECK: %[[GROUP:.*]] = async.create_group
   // CHECK: scf.for
   // CHECK:   %[[TOKEN:.*]] = async.execute
@@ -28,7 +28,7 @@ func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
 // -----
 
 // CHECK-LABEL: @loop_2d
-func @loop_2d(%arg0: index, %arg1: index, %arg2: index, // lb, ub, step
+func.func @loop_2d(%arg0: index, %arg1: index, %arg2: index, // lb, ub, step
               %arg3: index, %arg4: index, %arg5: index, // lb, ub, step
               %arg6: memref<?x?xf32>) {
   // CHECK: %[[GROUP:.*]] = async.create_group

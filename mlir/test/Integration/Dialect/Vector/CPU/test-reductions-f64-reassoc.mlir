@@ -5,7 +5,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @entry() {
+func.func @entry() {
   // Construct test vector, numerically very stable.
   %f1 = arith.constant 1.0: f64
   %f2 = arith.constant 2.0: f64

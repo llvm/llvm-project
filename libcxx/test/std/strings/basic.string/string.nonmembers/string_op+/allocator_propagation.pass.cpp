@@ -46,7 +46,7 @@ public:
 };
 
 template <class CharT>
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   using S = std::basic_string<CharT, std::char_traits<CharT>, soccc_allocator<CharT>>;
   {
     int soccc_lhs = 0;
@@ -190,9 +190,9 @@ int main(int, char**) {
   test<wchar_t>();
 #endif
 #if TEST_STD_VER > 17
-  // static_assert(test<char>());
+  static_assert(test<char>());
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  // static_assert(test<wchar_t>());
+  static_assert(test<wchar_t>());
 #endif
 #endif
 

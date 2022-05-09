@@ -9,7 +9,7 @@
 //  CHECK-NEXT:    %[[ADD:.*]] = arith.addf %[[EXA]], %[[EXB]] : vector<1xf32>
 //  CHECK-NEXT:    %[[INS:.*]] = vector.insert_map %[[ADD]], %[[ADDV]][%[[ID]]] : vector<1xf32> into vector<32xf32>
 //  CHECK-NEXT:    return %[[INS]] : vector<32xf32>
-func @distribute_vector_add(%id : index, %A: vector<32xf32>, %B: vector<32xf32>) -> vector<32xf32> {
+func.func @distribute_vector_add(%id : index, %A: vector<32xf32>, %B: vector<32xf32>) -> vector<32xf32> {
   %0 = arith.addf %A, %B : vector<32xf32>
   return %0: vector<32xf32>
 }
@@ -26,7 +26,7 @@ func @distribute_vector_add(%id : index, %A: vector<32xf32>, %B: vector<32xf32>)
 //  CHECK-NEXT:    %[[ADD:.*]] = arith.addf %[[EXC]], %[[EXB]] : vector<1xf32>
 //  CHECK-NEXT:    %[[INS:.*]] = vector.insert_map %[[ADD]], %[[ADDV]][%[[ID]]] : vector<1xf32> into vector<32xf32>
 //  CHECK-NEXT:    return %[[INS]] : vector<32xf32>
-func @distribute_vector_add_exp(%id : index, %A: vector<32xf32>, %B: vector<32xf32>) -> vector<32xf32> {
+func.func @distribute_vector_add_exp(%id : index, %A: vector<32xf32>, %B: vector<32xf32>) -> vector<32xf32> {
   %C = math.exp %A : vector<32xf32>
   %0 = arith.addf %C, %B : vector<32xf32>
   return %0: vector<32xf32>
@@ -43,7 +43,7 @@ func @distribute_vector_add_exp(%id : index, %A: vector<32xf32>, %B: vector<32xf
 //  CHECK-NEXT:    %[[ADD2:.*]] = arith.addf %[[ADD1]], %[[EXC]] : vector<1xf32>
 //  CHECK-NEXT:    vector.transfer_write %[[ADD2]], %{{.*}}[%[[ID]]] {{.*}} : vector<1xf32>, memref<32xf32>
 //  CHECK-NEXT:    return
-func @vector_add_read_write(%id : index, %A: memref<32xf32>, %B: memref<32xf32>, %C: memref<32xf32>, %D: memref<32xf32>) {
+func.func @vector_add_read_write(%id : index, %A: memref<32xf32>, %B: memref<32xf32>, %C: memref<32xf32>, %D: memref<32xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
   %a = vector.transfer_read %A[%c0], %cf0: memref<32xf32>, vector<32xf32>
@@ -69,7 +69,7 @@ func @vector_add_read_write(%id : index, %A: memref<32xf32>, %B: memref<32xf32>,
 //  CHECK-NEXT:    %[[ID3:.*]] = affine.apply #[[MAP0]]()[%[[ID]]]
 //  CHECK-NEXT:    vector.transfer_write %[[ADD]], %{{.*}}[%[[ID3]]] {{.*}} : vector<2xf32>, memref<64xf32>
 //  CHECK-NEXT:    return
-func @vector_add_cycle(%id : index, %A: memref<64xf32>, %B: memref<64xf32>, %C: memref<64xf32>) {
+func.func @vector_add_cycle(%id : index, %A: memref<64xf32>, %B: memref<64xf32>, %C: memref<64xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
   %a = vector.transfer_read %A[%c0], %cf0: memref<64xf32>, vector<64xf32>
@@ -90,7 +90,7 @@ func @vector_add_cycle(%id : index, %A: memref<64xf32>, %B: memref<64xf32>, %C: 
 //  CHECK-NEXT:    %[[ADD:.*]] = arith.addf %[[EXA]], %[[EXB]] : vector<16xf32>
 //  CHECK-NEXT:    vector.transfer_write %[[ADD]], %{{.*}}[%[[C0]]] {{.*}} : vector<16xf32>, memref<64xf32>
 //  CHECK-NEXT:    return
-func @vector_negative_test(%id : index, %A: memref<64xf32>, %B: memref<64xf32>, %C: memref<64xf32>) {
+func.func @vector_negative_test(%id : index, %A: memref<64xf32>, %B: memref<64xf32>, %C: memref<64xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
   %a = vector.transfer_read %A[%c0], %cf0: memref<64xf32>, vector<16xf32>
@@ -110,7 +110,7 @@ func @vector_negative_test(%id : index, %A: memref<64xf32>, %B: memref<64xf32>, 
 //  CHECK-NEXT:    %[[ADD:.*]] = arith.addf %[[EXA]], %[[EXB]] : vector<2x4x1xf32>
 //  CHECK-NEXT:    %[[INS:.*]] = vector.insert_map %[[ADD]], %[[ADDV]][%[[ID0]], %[[ID1]]] : vector<2x4x1xf32> into vector<64x4x32xf32>
 //  CHECK-NEXT:    return %[[INS]] : vector<64x4x32xf32>
-func @distribute_vector_add_3d(%id0 : index, %id1 : index,
+func.func @distribute_vector_add_3d(%id0 : index, %id1 : index,
   %A: vector<64x4x32xf32>, %B: vector<64x4x32xf32>) -> vector<64x4x32xf32> {
   %0 = arith.addf %A, %B : vector<64x4x32xf32>
   return %0: vector<64x4x32xf32>
@@ -131,7 +131,7 @@ func @distribute_vector_add_3d(%id0 : index, %id1 : index,
 //  CHECK-NEXT:    %[[ID3:.*]] = affine.apply #[[MAP0]]()[%[[ID_0]]]
 //  CHECK-NEXT:    vector.transfer_write %[[ADD]], %{{.*}}[%[[ID3]], %[[C0]], %[[ID_1]]] {{.*}} : vector<2x4x1xf32>, memref<64x64x64xf32>
 //  CHECK-NEXT:    return
-func @vector_add_transfer_3d(%id0 : index, %id1 : index, %A: memref<64x64x64xf32>,
+func.func @vector_add_transfer_3d(%id0 : index, %id1 : index, %A: memref<64x64x64xf32>,
   %B: memref<64x64x64xf32>, %C: memref<64x64x64xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
@@ -163,7 +163,7 @@ func @vector_add_transfer_3d(%id0 : index, %id1 : index, %A: memref<64x64x64xf32
 //  CHECK-NEXT:    %[[ID3:.*]] = affine.apply #[[MAP0]]()[%[[ID_0]]]
 //  CHECK-NEXT:    vector.transfer_write %[[ADD]], %{{.*}}[%[[C0]], %[[ID_1]], %[[C0]], %[[ID3]]] {permutation_map = #[[MAP3]]} : vector<2x4x1xf32>, memref<?x?x?x?xf32>
 //  CHECK-NEXT:    return
-func @vector_add_transfer_permutation(%id0 : index, %id1 : index, %A: memref<?x?x?x?xf32>,
+func.func @vector_add_transfer_permutation(%id0 : index, %id1 : index, %A: memref<?x?x?x?xf32>,
   %B: memref<?x?x?x?xf32>, %C: memref<?x?x?x?xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
@@ -184,7 +184,7 @@ func @vector_add_transfer_permutation(%id0 : index, %id1 : index, %A: memref<?x?
 //       CHECK2D:   %[[D:.+]] = vector.contract {{.*}} %[[A]], %[[B]], %[[C]] : vector<2x4xf32>, vector<16x4xf32> into vector<2x16xf32>
 //       CHECK2D:   %[[R:.+]] = arith.addf %[[D]], %[[E]] : vector<2x16xf32>
 //       CHECK2D:   vector.transfer_write %[[R]], {{.*}} : vector<2x16xf32>, memref<?x?xf32>
-func @vector_add_contract(%id0 : index, %id1 : index, %A: memref<?x?xf32>,
+func.func @vector_add_contract(%id0 : index, %id1 : index, %A: memref<?x?xf32>,
   %B: memref<?x?xf32>, %C: memref<?x?xf32>, %D: memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32

@@ -133,6 +133,10 @@ TEST(getLinuxHostCPUName, AArch64) {
                                               "CPU part        : 0xc01"),
             "saphira");
 
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
+                                              "CPU part        : 0xac3"),
+            "ampere1");
+
   // MSM8992/4 weirdness
   StringRef MSM8992ProcCpuInfo = R"(
 Processor       : AArch64 Processor rev 3 (aarch64)
@@ -326,7 +330,7 @@ TEST(getLinuxHostCPUName, s390x) {
 
   // Model Id: 3931
   ExpectedCPUs.push_back("zEC12");
-  ExpectedCPUs.push_back("arch14");
+  ExpectedCPUs.push_back("z16");
 
   // Model Id: 8561
   ExpectedCPUs.push_back("zEC12");

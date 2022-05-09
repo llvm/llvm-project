@@ -7,7 +7,7 @@
 // CHECK-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + d1)>
 
 // CHECK-LABEL: func @normalize_parallel()
-func @normalize_parallel() {
+func.func @normalize_parallel() {
   %cst = arith.constant 1.0 : f32
   %0 = memref.alloc() : memref<2x4xf32>
   // CHECK: affine.parallel (%[[i0:.*]], %[[j0:.*]]) = (0, 0) to (4, 2)
@@ -27,7 +27,7 @@ func @normalize_parallel() {
 // -----
 
 // CHECK-LABEL: func @relative_bounds
-func @relative_bounds(%arg: index) {
+func.func @relative_bounds(%arg: index) {
   // CHECK: affine.for %{{.*}} = 0 to 4
   affine.for %i = affine_map<(d0) -> (d0)>(%arg) to affine_map<(d0) -> (d0 + 4)>(%arg) {
   }
@@ -40,7 +40,7 @@ func @relative_bounds(%arg: index) {
 // parent block.
 
 // CHECK-LABEL: func @single_iteration_loop
-func @single_iteration_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
+func.func @single_iteration_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
   affine.for %i = 0 to 1 {
     %1 = affine.load %in[%i] : memref<1xf32>
     affine.store %1, %out[%i] : memref<1xf32>
@@ -68,7 +68,7 @@ func @single_iteration_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @simple_loop_nest(){
+func.func @simple_loop_nest(){
   affine.for %i0 = 2 to 32 step 2 {
     affine.for %i1 =  0 to 32 step 3 {
       "test.foo"(%i0, %i1) : (index, index) -> ()
@@ -97,7 +97,7 @@ func @simple_loop_nest(){
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @loop_with_unknown_upper_bound(%arg0: memref<?x?xf32>, %arg1: index) {
+func.func @loop_with_unknown_upper_bound(%arg0: memref<?x?xf32>, %arg1: index) {
   %c0 = arith.constant 0 : index
   %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
   affine.for %i0 = 2 to %0 step 32 {
@@ -128,7 +128,7 @@ func @loop_with_unknown_upper_bound(%arg0: memref<?x?xf32>, %arg1: index) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func @loop_with_multiple_upper_bounds(%arg0: memref<?x?xf32>, %arg1 : index) {
+func.func @loop_with_multiple_upper_bounds(%arg0: memref<?x?xf32>, %arg1 : index) {
   %c0 = arith.constant 0 : index
   %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
   affine.for %i0 = 2 to %0 step 32{
@@ -185,7 +185,7 @@ func @loop_with_multiple_upper_bounds(%arg0: memref<?x?xf32>, %arg1 : index) {
 #map3 = affine_map<() -> (0)>
 #map4 = affine_map<()[s0] -> (s0)>
 
-func @tiled_matmul(%0: memref<1024x1024xf32>, %1: memref<1024x1024xf32>, %2: memref<1024x1024xf32>) {
+func.func @tiled_matmul(%0: memref<1024x1024xf32>, %1: memref<1024x1024xf32>, %2: memref<1024x1024xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %3 = memref.dim %0, %c0 : memref<1024x1024xf32>

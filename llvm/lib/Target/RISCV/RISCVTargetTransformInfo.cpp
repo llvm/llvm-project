@@ -176,9 +176,14 @@ InstructionCost RISCVTTIImpl::getSpliceCost(VectorType *Tp, int Index) {
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              int Index, VectorType *SubTp,
-                                             ArrayRef<Value *> Args) {
+                                             ArrayRef<const Value *> Args) {
   if (Kind == TTI::SK_Splice && isa<ScalableVectorType>(Tp))
     return getSpliceCost(Tp, Index);
+
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+  if (Kind == TTI::SK_Broadcast && isa<ScalableVectorType>(Tp))
+    return LT.first * 1;
+
   return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }
 

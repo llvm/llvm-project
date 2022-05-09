@@ -7,9 +7,14 @@
 # RUN: ln -s llvm-ar %t/ar.exe
 # RUN: ln -s llvm-ar %t/arm-pokymllib32-linux-gnueabi-llvm-ar-9
 
-# RUN: llvm-ar h | FileCheck %s
-# RUN: %t/llvm-ar-9 h | FileCheck %s
-# RUN: %t/ar.exe h | FileCheck %s
-# RUN: %t/arm-pokymllib32-linux-gnueabi-llvm-ar-9 h | FileCheck %s
+# RUN: llvm-ar h | FileCheck %s --check-prefix=DEFAULT
+# RUN: %t/llvm-ar-9 h | FileCheck %s --check-prefix=VERSION
+# RUN: %t/ar.exe h | FileCheck %s --check-prefix=SUFFIX
+## Ensure that the "lib" substring does not result in misidentification as the
+## llvm-lib tool.
+# RUN: %t/arm-pokymllib32-linux-gnueabi-llvm-ar-9 h | FileCheck %s --check-prefix=ARM
 
-# CHECK: USAGE: llvm-ar
+# DEFAULT: USAGE: llvm-ar{{ }}
+# VERSION: USAGE: llvm-ar-9{{ }}
+# SUFFIX: USAGE: ar{{ }}
+# ARM: USAGE: arm-pokymllib32-linux-gnueabi-llvm-ar-9{{ }}

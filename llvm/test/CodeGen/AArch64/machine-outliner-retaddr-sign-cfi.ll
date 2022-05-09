@@ -28,7 +28,8 @@ define void @a() "sign-return-address"="all" "sign-return-address-key"="b_key" {
 ; CHECK-NOT:          bl OUTLINED_FUNCTION_{{[0-9]+}}
 ; V8A:                hint #31
 ; V83A:               autibsp
-; CHECK-NEXT:         ret
+; V8A-NEXT, V83A-NEXT: .cfi_negate_ra_state
+; V8A-NEXT, V83A-NEXT: ret
   ret void
 }
 

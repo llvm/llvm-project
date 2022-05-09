@@ -16,6 +16,7 @@
 namespace Fortran {
 namespace parser {
 struct OpenMPConstruct;
+struct OpenMPDeclarativeConstruct;
 } // namespace parser
 
 namespace lower {
@@ -28,6 +29,8 @@ struct Evaluation;
 
 void genOpenMPConstruct(AbstractConverter &, pft::Evaluation &,
                         const parser::OpenMPConstruct &);
+void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
+                                   const parser::OpenMPDeclarativeConstruct &);
 
 } // namespace lower
 } // namespace Fortran

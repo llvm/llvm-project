@@ -9,7 +9,7 @@
 // RUN: | FileCheck %s
 
 // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-func @main() {
+func.func @main() {
   %arg = memref.alloc() : memref<13xi32>
   %dst = memref.cast %arg : memref<13xi32> to memref<?xi32>
   %one = arith.constant 1 : index
@@ -29,8 +29,8 @@ func @main() {
     memref.store %t0, %dst[%tx] : memref<?xi32>
     gpu.terminator
   }
-  call @print_memref_i32(%cast_dst) : (memref<*xi32>) -> ()
+  call @printMemrefI32(%cast_dst) : (memref<*xi32>) -> ()
   return
 }
 
-func private @print_memref_i32(%memref : memref<*xi32>)
+func.func private @printMemrefI32(%memref : memref<*xi32>)

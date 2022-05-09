@@ -32,6 +32,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
 namespace dataflow {
@@ -45,7 +46,7 @@ public:
       : CFCtx(CFCtx), BlockToState(BlockToState) {}
 
   const Environment *getEnvironment(const Stmt &S) const override {
-    auto BlockIT = CFCtx.getStmtToBlock().find(&S);
+    auto BlockIT = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
     assert(BlockIT != CFCtx.getStmtToBlock().end());
     const auto &State = BlockToState[BlockIT->getSecond()->getBlockID()];
     assert(State.hasValue());
@@ -76,26 +77,26 @@ public:
       : StmtToEnv(StmtToEnv), Env(Env), BlockSuccIdx(BlockSuccIdx) {}
 
   void VisitIfStmt(const IfStmt *S) {
-    auto *Cond = S->getCond()->IgnoreParenImpCasts();
+    auto *Cond = S->getCond();
     assert(Cond != nullptr);
     extendFlowCondition(*Cond);
   }
 
   void VisitWhileStmt(const WhileStmt *S) {
-    auto *Cond = S->getCond()->IgnoreParenImpCasts();
+    auto *Cond = S->getCond();
     assert(Cond != nullptr);
     extendFlowCondition(*Cond);
   }
 
   void VisitBinaryOperator(const BinaryOperator *S) {
     assert(S->getOpcode() == BO_LAnd || S->getOpcode() == BO_LOr);
-    auto *LHS = S->getLHS()->IgnoreParenImpCasts();
+    auto *LHS = S->getLHS();
     assert(LHS != nullptr);
     extendFlowCondition(*LHS);
   }
 
   void VisitConditionalOperator(const ConditionalOperator *S) {
-    auto *Cond = S->getCond()->IgnoreParenImpCasts();
+    auto *Cond = S->getCond();
     assert(Cond != nullptr);
     extendFlowCondition(*Cond);
   }
@@ -106,10 +107,24 @@ private:
     if (Env.getValue(Cond, SkipPast::None) == nullptr)
       transfer(StmtToEnv, Cond, Env);
 
+    // FIXME: The flow condition must be an r-value, so `SkipPast::None` should
+    // suffice.
     auto *Val =
         cast_or_null<BoolValue>(Env.getValue(Cond, SkipPast::Reference));
-    if (Val == nullptr)
-      return;
+    // Value merging depends on flow conditions from different environments
+    // being mutually exclusive -- that is, they cannot both be true in their
+    // entirety (even if they may share some clauses). So, we need *some* value
+    // for the condition expression, even if just an atom.
+    if (Val == nullptr) {
+      // FIXME: Consider introducing a helper for this get-or-create pattern.
+      auto *Loc = Env.getStorageLocation(Cond, SkipPast::None);
+      if (Loc == nullptr) {
+        Loc = &Env.createStorageLocation(Cond);
+        Env.setStorageLocation(Cond, *Loc);
+      }
+      Val = &Env.makeAtomicBoolValue();
+      Env.setValue(*Loc, *Val);
+    }
 
     // The condition must be inverted for the successor that encompasses the
     // "else" branch, if such exists.

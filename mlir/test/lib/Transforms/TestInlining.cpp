@@ -24,7 +24,7 @@ using namespace mlir;
 using namespace test;
 
 namespace {
-struct Inliner : public PassWrapper<Inliner, OperationPass<FuncOp>> {
+struct Inliner : public PassWrapper<Inliner, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(Inliner)
 
   StringRef getArgument() const final { return "test-inline"; }

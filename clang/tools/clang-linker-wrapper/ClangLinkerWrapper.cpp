@@ -92,6 +92,16 @@ static cl::opt<bool> EmbedBitcode(
     cl::desc("Embed linked bitcode instead of an executable device image"),
     cl::init(false), cl::cat(ClangLinkerWrapperCategory));
 
+static cl::opt<bool> DryRun(
+    "dry-run", cl::ZeroOrMore,
+    cl::desc("List the linker commands to be run without executing them"),
+    cl::init(false), cl::cat(ClangLinkerWrapperCategory));
+
+static cl::opt<bool>
+    PrintWrappedModule("print-wrapped-module", cl::ZeroOrMore,
+                       cl::desc("Print the wrapped module's IR for testing"),
+                       cl::init(false), cl::cat(ClangLinkerWrapperCategory));
+
 static cl::opt<std::string>
     HostTriple("host-triple", cl::ZeroOrMore,
                cl::desc("Triple to use for the host compilation"),
@@ -150,20 +160,29 @@ static codegen::RegisterCodeGenFlags CodeGenFlags;
 /// section will contain one or more offloading binaries stored contiguously.
 #define OFFLOAD_SECTION_MAGIC_STR ".llvm.offloading"
 
+/// The magic offset for the first object inside CUDA's fatbinary. This can be
+/// different but it should work for what is passed here.
+static constexpr unsigned FatbinaryOffset = 0x50;
+
 /// Information for a device offloading file extracted from the host.
 struct DeviceFile {
   DeviceFile(StringRef Kind, StringRef TheTriple, StringRef Arch,
-             StringRef Filename)
-      : Kind(Kind), TheTriple(TheTriple), Arch(Arch), Filename(Filename) {}
+             StringRef Filename, bool IsLibrary = false)
+      : Kind(Kind), TheTriple(TheTriple), Arch(Arch), Filename(Filename),
+        IsLibrary(IsLibrary) {}
 
   std::string Kind;
   std::string TheTriple;
   std::string Arch;
   std::string Filename;
+  bool IsLibrary;
 };
 
 namespace llvm {
-/// Helper that allows DeviceFile to be used as a key in a DenseMap.
+/// Helper that allows DeviceFile to be used as a key in a DenseMap. For now we
+/// assume device files with matching architectures and triples but different
+/// offloading kinds should be handlded together, this may not be true in the
+/// future.
 template <> struct DenseMapInfo<DeviceFile> {
   static DeviceFile getEmptyKey() {
     return {DenseMapInfo<StringRef>::getEmptyKey(),
@@ -191,7 +210,8 @@ namespace {
 
 Expected<Optional<std::string>>
 extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                  SmallVectorImpl<DeviceFile> &DeviceFiles);
+                  SmallVectorImpl<DeviceFile> &DeviceFiles,
+                  bool IsLibrary = false);
 
 void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
@@ -233,17 +253,40 @@ Error createOutputFile(const Twine &Prefix, StringRef Extension,
   return Error::success();
 }
 
+/// Execute the command \p ExecutablePath with the arguments \p Args.
+Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
+  if (Verbose || DryRun)
+    printCommands(Args);
+
+  if (!DryRun)
+    if (sys::ExecuteAndWait(ExecutablePath, Args))
+      return createStringError(inconvertibleErrorCode(),
+                               "'" + sys::path::filename(ExecutablePath) + "'" +
+                                   " failed");
+  return Error::success();
+}
+
+Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
+
+  ErrorOr<std::string> Path = sys::findProgramByName(Name, Paths);
+  if (!Path)
+    Path = sys::findProgramByName(Name);
+  if (!Path && DryRun)
+    return Name.str();
+  if (!Path)
+    return createStringError(Path.getError(),
+                             "Unable to find '" + Name + "' in path");
+  return *Path;
+}
+
 Error runLinker(std::string &LinkerPath, SmallVectorImpl<std::string> &Args) {
   std::vector<StringRef> LinkerArgs;
   LinkerArgs.push_back(LinkerPath);
   for (auto &Arg : Args)
     LinkerArgs.push_back(Arg);
 
-  if (Verbose)
-    printCommands(LinkerArgs);
-
-  if (sys::ExecuteAndWait(LinkerPath, LinkerArgs))
-    return createStringError(inconvertibleErrorCode(), "'linker' failed");
+  if (Error Err = executeCommands(LinkerPath, LinkerArgs))
+    return Err;
   return Error::success();
 }
 
@@ -284,7 +327,8 @@ void removeFromCompilerUsed(Module &M, GlobalValue &Value) {
 /// buffer \p Contents. The buffer is expected to contain a valid offloading
 /// binary format.
 Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
-                          SmallVectorImpl<DeviceFile> &DeviceFiles) {
+                          SmallVectorImpl<DeviceFile> &DeviceFiles,
+                          bool IsLibrary = false) {
   uint64_t Offset = 0;
   // There could be multiple offloading binaries stored at this section.
   while (Offset < Contents.size()) {
@@ -321,7 +365,7 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
       return E;
 
     DeviceFiles.emplace_back(Kind, Binary.getTriple(), Binary.getArch(),
-                             TempFile);
+                             TempFile, IsLibrary);
 
     Offset += Binary.getSize();
   }
@@ -331,7 +375,8 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
 
 Expected<Optional<std::string>>
 extractFromBinary(const ObjectFile &Obj,
-                  SmallVectorImpl<DeviceFile> &DeviceFiles) {
+                  SmallVectorImpl<DeviceFile> &DeviceFiles,
+                  bool IsLibrary = false) {
   StringRef Extension = sys::path::extension(Obj.getFileName()).drop_front();
   StringRef Prefix = sys::path::stem(Obj.getFileName());
   SmallVector<StringRef, 4> ToBeStripped;
@@ -346,7 +391,8 @@ extractFromBinary(const ObjectFile &Obj,
     if (!Contents)
       return Contents.takeError();
 
-    if (Error Err = extractOffloadFiles(*Contents, Prefix, DeviceFiles))
+    if (Error Err =
+            extractOffloadFiles(*Contents, Prefix, DeviceFiles, IsLibrary))
       return std::move(Err);
 
     ToBeStripped.push_back(*Name);
@@ -379,12 +425,10 @@ extractFromBinary(const ObjectFile &Obj,
 
   // We will use llvm-strip to remove the now unneeded section containing the
   // offloading code.
-  ErrorOr<std::string> StripPath =
-      sys::findProgramByName("llvm-strip", {getMainExecutable("llvm-strip")});
+  Expected<std::string> StripPath =
+      findProgram("llvm-strip", {getMainExecutable("llvm-strip")});
   if (!StripPath)
-    StripPath = sys::findProgramByName("llvm-strip");
-  if (!StripPath)
-    return None;
+    return StripPath.takeError();
 
   SmallString<128> TempFile;
   if (Error Err = createOutputFile(Prefix + "-host", Extension, TempFile))
@@ -401,18 +445,16 @@ extractFromBinary(const ObjectFile &Obj,
   StripArgs.push_back("-o");
   StripArgs.push_back(TempFile);
 
-  if (Verbose)
-    printCommands(StripArgs);
-
-  if (sys::ExecuteAndWait(*StripPath, StripArgs))
-    return createStringError(inconvertibleErrorCode(), "'llvm-strip' failed");
+  if (Error Err = executeCommands(*StripPath, StripArgs))
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
 
 Expected<Optional<std::string>>
 extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
-                   SmallVectorImpl<DeviceFile> &DeviceFiles) {
+                   SmallVectorImpl<DeviceFile> &DeviceFiles,
+                   bool IsLibrary = false) {
   LLVMContext Context;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = getLazyIRModule(std::move(Buffer), Err, Context);
@@ -438,7 +480,8 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
 
     StringRef Contents = CDS->getAsString();
 
-    if (Error Err = extractOffloadFiles(Contents, Prefix, DeviceFiles))
+    if (Error Err =
+            extractOffloadFiles(Contents, Prefix, DeviceFiles, IsLibrary))
       return std::move(Err);
 
     ToBeDeleted.push_back(&GV);
@@ -486,7 +529,8 @@ extractFromArchive(const Archive &Library,
     std::unique_ptr<MemoryBuffer> ChildBuffer =
         MemoryBuffer::getMemBuffer(*ChildBufferRefOrErr, false);
 
-    auto FileOrErr = extractFromBuffer(std::move(ChildBuffer), DeviceFiles);
+    auto FileOrErr = extractFromBuffer(std::move(ChildBuffer), DeviceFiles,
+                                       /*IsLibrary*/ true);
     if (!FileOrErr)
       return FileOrErr.takeError();
 
@@ -538,11 +582,11 @@ extractFromArchive(const Archive &Library,
 /// device code stripped from the buffer will be returned.
 Expected<Optional<std::string>>
 extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                  SmallVectorImpl<DeviceFile> &DeviceFiles) {
+                  SmallVectorImpl<DeviceFile> &DeviceFiles, bool IsLibrary) {
   file_magic Type = identify_magic(Buffer->getBuffer());
   switch (Type) {
   case file_magic::bitcode:
-    return extractFromBitcode(std::move(Buffer), DeviceFiles);
+    return extractFromBitcode(std::move(Buffer), DeviceFiles, IsLibrary);
   case file_magic::elf_relocatable:
   case file_magic::macho_object:
   case file_magic::coff_object: {
@@ -550,7 +594,7 @@ extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
         ObjectFile::createObjectFile(*Buffer, Type);
     if (!ObjFile)
       return ObjFile.takeError();
-    return extractFromBinary(*ObjFile->get(), DeviceFiles);
+    return extractFromBinary(*ObjFile->get(), DeviceFiles, IsLibrary);
   }
   case file_magic::archive: {
     Expected<std::unique_ptr<llvm::object::Archive>> LibFile =
@@ -567,15 +611,11 @@ extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
 // TODO: Move these to a separate file.
 namespace nvptx {
 Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
-                               StringRef Arch) {
+                               StringRef Arch, bool RDC = true) {
   // NVPTX uses the ptxas binary to create device object files.
-  ErrorOr<std::string> PtxasPath =
-      sys::findProgramByName("ptxas", {CudaBinaryPath});
+  Expected<std::string> PtxasPath = findProgram("ptxas", {CudaBinaryPath});
   if (!PtxasPath)
-    PtxasPath = sys::findProgramByName("ptxas");
-  if (!PtxasPath)
-    return createStringError(PtxasPath.getError(),
-                             "Unable to find 'ptxas' in path");
+    return PtxasPath.takeError();
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
@@ -602,15 +642,13 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
   CmdArgs.push_back(Opt);
   CmdArgs.push_back("--gpu-name");
   CmdArgs.push_back(Arch);
-  CmdArgs.push_back("-c");
+  if (RDC)
+    CmdArgs.push_back("-c");
 
   CmdArgs.push_back(InputFile);
 
-  if (Verbose)
-    printCommands(CmdArgs);
-
-  if (sys::ExecuteAndWait(*PtxasPath, CmdArgs))
-    return createStringError(inconvertibleErrorCode(), "'ptxas' failed");
+  if (Error Err = executeCommands(*PtxasPath, CmdArgs))
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
@@ -618,13 +656,9 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
 Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
                            StringRef Arch) {
   // NVPTX uses the nvlink binary to link device object files.
-  ErrorOr<std::string> NvlinkPath =
-      sys::findProgramByName("nvlink", {CudaBinaryPath});
+  Expected<std::string> NvlinkPath = findProgram("nvlink", {CudaBinaryPath});
   if (!NvlinkPath)
-    NvlinkPath = sys::findProgramByName("nvlink");
-  if (!NvlinkPath)
-    return createStringError(NvlinkPath.getError(),
-                             "Unable to find 'nvlink' in path");
+    return NvlinkPath.takeError();
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
@@ -650,11 +684,8 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
 
-  if (Verbose)
-    printCommands(CmdArgs);
-
-  if (sys::ExecuteAndWait(*NvlinkPath, CmdArgs))
-    return createStringError(inconvertibleErrorCode(), "'nvlink' failed");
+  if (Error Err = executeCommands(*NvlinkPath, CmdArgs))
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
@@ -663,13 +694,10 @@ namespace amdgcn {
 Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
                            StringRef Arch) {
   // AMDGPU uses lld to link device object files.
-  ErrorOr<std::string> LLDPath =
-      sys::findProgramByName("lld", {getMainExecutable("lld")});
+  Expected<std::string> LLDPath =
+      findProgram("lld", {getMainExecutable("lld")});
   if (!LLDPath)
-    LLDPath = sys::findProgramByName("lld");
-  if (!LLDPath)
-    return createStringError(LLDPath.getError(),
-                             "Unable to find 'lld' in path");
+    return LLDPath.takeError();
 
   // Create a new file to write the linked device image to.
   SmallString<128> TempFile;
@@ -691,11 +719,8 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
 
-  if (Verbose)
-    printCommands(CmdArgs);
-
-  if (sys::ExecuteAndWait(*LLDPath, CmdArgs))
-    return createStringError(inconvertibleErrorCode(), "'lld' failed");
+  if (Error Err = executeCommands(*LLDPath, CmdArgs))
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
@@ -771,11 +796,8 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
 
-  if (Verbose)
-    printCommands(CmdArgs);
-
-  if (sys::ExecuteAndWait(LinkerUserPath, CmdArgs))
-    return createStringError(inconvertibleErrorCode(), "'linker' failed");
+  if (Error Err = executeCommands(LinkerUserPath, CmdArgs))
+    return std::move(Err);
 
   return static_cast<std::string>(TempFile);
 }
@@ -917,7 +939,8 @@ bool isValidCIdentifier(StringRef S) {
 }
 
 Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
-                       const Triple &TheTriple, StringRef Arch) {
+                       const Triple &TheTriple, StringRef Arch,
+                       bool &WholeProgram) {
   SmallVector<std::unique_ptr<MemoryBuffer>, 4> SavedBuffers;
   SmallVector<std::unique_ptr<lto::InputFile>, 4> BitcodeFiles;
   SmallVector<std::string, 4> NewInputFiles;
@@ -934,13 +957,37 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
         MemoryBuffer::getFileOrSTDIN(File);
     if (std::error_code EC = BufferOrErr.getError())
       return createFileError(File, EC);
+    MemoryBufferRef Buffer = **BufferOrErr;
 
     file_magic Type = identify_magic((*BufferOrErr)->getBuffer());
-    if (Type != file_magic::bitcode) {
+    switch (Type) {
+    case file_magic::bitcode: {
+      Expected<std::unique_ptr<lto::InputFile>> InputFileOrErr =
+          llvm::lto::InputFile::create(Buffer);
+      if (!InputFileOrErr)
+        return InputFileOrErr.takeError();
+
+      // Save the input file and the buffer associated with its memory.
+      BitcodeFiles.push_back(std::move(*InputFileOrErr));
+      SavedBuffers.push_back(std::move(*BufferOrErr));
+      continue;
+    }
+    case file_magic::cuda_fatbinary: {
+      // Cuda fatbinaries made by Clang almost almost have an object eighty
+      // bytes from the beginning. This should be sufficient to identify the
+      // symbols.
+      Buffer = MemoryBufferRef(
+          (*BufferOrErr)->getBuffer().drop_front(FatbinaryOffset), "FatBinary");
+      LLVM_FALLTHROUGH;
+    }
+    case file_magic::elf_relocatable:
+    case file_magic::elf_shared_object:
+    case file_magic::macho_object:
+    case file_magic::coff_object: {
       Expected<std::unique_ptr<ObjectFile>> ObjFile =
-          ObjectFile::createObjectFile(**BufferOrErr, Type);
+          ObjectFile::createObjectFile(Buffer);
       if (!ObjFile)
-        return ObjFile.takeError();
+        continue;
 
       NewInputFiles.push_back(File.str());
       for (auto &Sym : (*ObjFile)->symbols()) {
@@ -954,15 +1001,10 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
         else
           UsedInSharedLib.insert(Saver.save(*Name));
       }
-    } else {
-      Expected<std::unique_ptr<lto::InputFile>> InputFileOrErr =
-          llvm::lto::InputFile::create(**BufferOrErr);
-      if (!InputFileOrErr)
-        return InputFileOrErr.takeError();
-
-      // Save the input file and the buffer associated with its memory.
-      BitcodeFiles.push_back(std::move(*InputFileOrErr));
-      SavedBuffers.push_back(std::move(*BufferOrErr));
+      continue;
+    }
+    default:
+      continue;
     }
   }
 
@@ -993,7 +1035,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   };
 
   // We assume visibility of the whole program if every input file was bitcode.
-  bool WholeProgram = BitcodeFiles.size() == InputFiles.size();
+  WholeProgram = BitcodeFiles.size() == InputFiles.size();
   auto LTOBackend =
       (EmbedBitcode) ? createLTO(TheTriple, Arch, WholeProgram, OutputBitcode)
                      : createLTO(TheTriple, Arch, WholeProgram);
@@ -1073,7 +1115,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   // Is we are compiling for NVPTX we need to run the assembler first.
   if (TheTriple.isNVPTX() && !EmbedBitcode) {
     for (auto &File : Files) {
-      auto FileOrErr = nvptx::assemble(File, TheTriple, Arch);
+      auto FileOrErr = nvptx::assemble(File, TheTriple, Arch, !WholeProgram);
       if (!FileOrErr)
         return FileOrErr.takeError();
       File = *FileOrErr;
@@ -1094,22 +1136,45 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
                       SmallVectorImpl<std::string> &LinkedImages) {
   // Get the list of inputs for a specific device.
   DenseMap<DeviceFile, SmallVector<std::string, 4>> LinkerInputMap;
-  for (auto &File : DeviceFiles)
-    LinkerInputMap[File].push_back(File.Filename);
+  SmallVector<DeviceFile, 4> LibraryFiles;
+  for (auto &File : DeviceFiles) {
+    if (File.IsLibrary)
+      LibraryFiles.push_back(File);
+    else
+      LinkerInputMap[File].push_back(File.Filename);
+  }
+
+  // Static libraries are loaded lazily as-needed, only add them if other files
+  // are present.
+  // TODO: We need to check the symbols as well, static libraries are only
+  //       loaded if they contain symbols that are currently undefined or common
+  //       in the symbol table.
+  for (auto &File : LibraryFiles)
+    if (LinkerInputMap.count(File))
+      LinkerInputMap[File].push_back(File.Filename);
 
   // Try to link each device toolchain.
   for (auto &LinkerInput : LinkerInputMap) {
     DeviceFile &File = LinkerInput.getFirst();
     Triple TheTriple = Triple(File.TheTriple);
+    bool WholeProgram = false;
 
     // Run LTO on any bitcode files and replace the input with the result.
-    if (Error Err =
-            linkBitcodeFiles(LinkerInput.getSecond(), TheTriple, File.Arch))
+    if (Error Err = linkBitcodeFiles(LinkerInput.getSecond(), TheTriple,
+                                     File.Arch, WholeProgram))
       return Err;
 
     // If we are embedding bitcode for JIT, skip the final device linking.
     if (EmbedBitcode) {
       assert(!LinkerInput.getSecond().empty() && "No bitcode image to embed");
+      LinkedImages.push_back(LinkerInput.getSecond().front());
+      continue;
+    }
+
+    // If we performed LTO on NVPTX and had whole program visibility, we can use
+    // CUDA in non-RDC mode.
+    if (WholeProgram && TheTriple.isNVPTX()) {
+      assert(!LinkerInput.getSecond().empty() && "No non-RDC image to embed");
       LinkedImages.push_back(LinkerInput.getSecond().front());
       continue;
     }
@@ -1143,9 +1208,8 @@ Expected<std::string> compileModule(Module &M) {
 
   SmallString<128> ObjectFile;
   int FD = -1;
-  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
-                                       "offload-wrapper",
-                                   "o", ObjectFile))
+  if (Error Err = createOutputFile(
+          sys::path::filename(ExecutableName) + "-wrapper", "o", ObjectFile))
     return std::move(Err);
   if (std::error_code EC = sys::fs::openFileForWrite(ObjectFile, FD))
     return errorCodeToError(EC);
@@ -1184,6 +1248,9 @@ Expected<std::string> wrapDeviceImages(ArrayRef<std::string> Images) {
   M.setTargetTriple(HostTriple);
   if (Error Err = wrapBinaries(M, ImagesToWrap))
     return std::move(Err);
+
+  if (PrintWrappedModule)
+    llvm::errs() << M;
 
   return compileModule(M);
 }

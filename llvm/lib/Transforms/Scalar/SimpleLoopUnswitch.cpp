@@ -112,7 +112,7 @@ static cl::opt<unsigned>
                            "partial unswitching analysis"),
                   cl::init(100), cl::Hidden);
 static cl::opt<bool> FreezeLoopUnswitchCond(
-    "freeze-loop-unswitch-cond", cl::init(false), cl::Hidden,
+    "freeze-loop-unswitch-cond", cl::init(true), cl::Hidden,
     cl::desc("If enabled, the freeze instruction will be added to condition "
              "of loop unswitch to prevent miscompilation."));
 
@@ -204,13 +204,19 @@ static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
 /// branch on a single value.
 static void buildPartialUnswitchConditionalBranch(
     BasicBlock &BB, ArrayRef<Value *> Invariants, bool Direction,
-    BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze) {
+    BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
+    Instruction *I, AssumptionCache *AC, DominatorTree &DT) {
   IRBuilder<> IRB(&BB);
 
-  Value *Cond = Direction ? IRB.CreateOr(Invariants) :
-    IRB.CreateAnd(Invariants);
-  if (InsertFreeze)
-    Cond = IRB.CreateFreeze(Cond, Cond->getName() + ".fr");
+  SmallVector<Value *> FrozenInvariants;
+  for (Value *Inv : Invariants) {
+    if (InsertFreeze && !isGuaranteedNotToBeUndefOrPoison(Inv, AC, I, &DT))
+      Inv = IRB.CreateFreeze(Inv, Inv->getName() + ".fr");
+    FrozenInvariants.push_back(Inv);
+  }
+
+  Value *Cond = Direction ? IRB.CreateOr(FrozenInvariants)
+                          : IRB.CreateAnd(FrozenInvariants);
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                    Direction ? &NormalSucc : &UnswitchedSucc);
 }
@@ -570,8 +576,9 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
       assert(match(BI.getCondition(), m_LogicalAnd()) &&
              "Must have an `and` of `i1`s or `select i1 X, Y, false`s for the"
              " condition!");
-    buildPartialUnswitchConditionalBranch(*OldPH, Invariants, ExitDirection,
-                                          *UnswitchedBB, *NewPH, false);
+    buildPartialUnswitchConditionalBranch(
+        *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
+        FreezeLoopUnswitchCond, OldPH->getTerminator(), nullptr, DT);
   }
 
   // Update the dominator tree with the added edge.
@@ -2313,9 +2320,11 @@ static void unswitchNontrivialInvariants(
     if (PartiallyInvariant)
       buildPartialInvariantUnswitchConditionalBranch(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH, L, MSSAU);
-    else
-      buildPartialUnswitchConditionalBranch(*SplitBB, Invariants, Direction,
-                                            *ClonedPH, *LoopPH, InsertFreeze);
+    else {
+      buildPartialUnswitchConditionalBranch(
+          *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH,
+          FreezeLoopUnswitchCond, BI, &AC, DT);
+    }
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 
     if (MSSAU) {

@@ -113,6 +113,12 @@ New checks
 
   Finds initializations of C++ shared pointers to non-array type that are initialized with an array.
 
+- New :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone-unchecked-optional-access>` check.
+
+   Warns when the code is unwrapping a `std::optional<T>`, `absl::optional<T>`,
+   or `base::Optional<T>` object without assuring that it contains a value.
+
 - New :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize-macro-to-enum>` check.
 
@@ -136,31 +142,48 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`performance-inefficient-vector-operation 
-  <clang-tidy/checks/performance-inefficient-vector-operation>` to work when
-  the vector is a member of a structure.
+- Fixed nonsensical suggestion of :doc:`altera-struct-pack-align
+  <clang-tidy/checks/altera-struct-pack-align>` check for empty structs.
 
-- Fixed a false positive in :doc:`readability-non-const-parameter
-  <clang-tidy/checks/readability-non-const-parameter>` when the parameter is referenced by an lvalue.
+- Fixed some false positives in :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone-infinite-loop>` involving dependent expressions.
 
-- Fixed a crash in :doc:`readability-const-return-type
-  <clang-tidy/checks/readability-const-return-type>` when a pure virtual function
-  overrided has a const return type. Removed the fix for a virtual function.
+- Fixed a crash in :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone-sizeof-expression>` when `sizeof(...)` is
+  compared against a `__int128_t`.
 
-- Fixed a false positive in :doc:`misc-redundant-expression <clang-tidy/checks/misc-redundant-expression>`
-  involving overloaded comparison operators.
-
-- Fixed a crash in :doc:`bugprone-sizeof-expression <clang-tidy/checks/bugprone-sizeof-expression>` when
-  `sizeof(...)` is compared agains a `__int128_t`.
-  
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
 
   Fixed an issue when there was already an initializer in the constructor and
   the check would try to create another initializer for the same member.
 
-- Fixed a false positive in :doc:`misc-redundant-expression <clang-tidy/checks/misc-redundant-expression>`
-  involving assignments in conditions. This fixes `Issue 35853 <https://github.com/llvm/llvm-project/issues/35853>`_.
+- Fixed a crash in :doc:`llvmlibc-callee-namespace
+  <clang-tidy/checks/llvmlibc-callee-namespace>` when executing for C++ code
+  that contain calls to advanced constructs, e.g. overloaded operators.
+
+- Fixed a false positive in :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc-redundant-expression>` involving overloaded
+  comparison operators.
+
+- Fixed a false positive in :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc-redundant-expression>` involving assignments in
+  conditions. This fixes `Issue 35853 <https://github.com/llvm/llvm-project/issues/35853>`_.
+
+- Improved :doc:`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance-inefficient-vector-operation>` to work when
+  the vector is a member of a structure.
+
+- Fixed a crash in :doc:`readability-const-return-type
+  <clang-tidy/checks/readability-const-return-type>` when a pure virtual function
+  overrided has a const return type. Removed the fix for a virtual function.
+
+- Fixed incorrect suggestions for :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability-container-size-empty>` when smart pointers are involved.
+
+- Fixed a false positive in :doc:`readability-non-const-parameter
+  <clang-tidy/checks/readability-non-const-parameter>` when the parameter is
+  referenced by an lvalue.
 
 Removed checks
 ^^^^^^^^^^^^^^

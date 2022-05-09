@@ -46,7 +46,7 @@
 // CHECK:           %[[VAL_18:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_18]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
+func.func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
   %c = arith.constant 2.0 : f32
   %0 = linalg.generic #trait_scale_inpl
     outs(%argx: tensor<32x16xf32, #DCSR>) {
@@ -80,7 +80,7 @@ func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable
 // CHECK:           %[[VAL_16:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_16]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
+func.func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
   %0 = linalg.generic #trait_scale_inpl
     outs(%argx: tensor<32x16xf32, #DCSR>) {
       ^bb(%x: f32):
@@ -128,7 +128,7 @@ func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable
 // CHECK:           %[[VAL_20:.*]] = sparse_tensor.load %[[VAL_7]] hasInserts : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_20]] : tensor<10x20xf32, #sparse_tensor.encoding<{
 // CHECK:         }
-func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20xf32, #DCSR> {
+func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20xf32, #DCSR> {
   %s = arith.constant 2.0 : f32
   %d10 = arith.constant 10 : index
   %d20 = arith.constant 20 : index
@@ -282,7 +282,7 @@ func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20xf32, 
 // CHECK:           %[[VAL_112:.*]] = sparse_tensor.load %[[VAL_8]] hasInserts : tensor<?x?xi32, #{{.*}}>
 // CHECK:           return %[[VAL_112]] : tensor<?x?xi32, #{{.*}}>
 // CHECK:         }
-func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
+func.func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
              %argb: tensor<?x?x?xi32, #SparseTensor>) -> tensor<?x?xi32, #DCSR> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -399,7 +399,7 @@ func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
 // CHECK:           %[[VAL_78:.*]] = sparse_tensor.load %[[VAL_9]] hasInserts : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           return %[[VAL_78]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:         }
-func @matmat(%arga: tensor<?x?xf32, #DCSR>,
+func.func @matmat(%arga: tensor<?x?xf32, #DCSR>,
              %argb: tensor<?x?xf32, #DCSR>) -> tensor<?x?xf32, #DCSR> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

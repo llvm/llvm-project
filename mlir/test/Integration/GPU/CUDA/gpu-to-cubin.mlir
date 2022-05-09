@@ -9,7 +9,7 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
-func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
+func.func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
   %cst = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %cst2 = memref.dim %arg1, %c0 : memref<?xf32>
@@ -23,7 +23,7 @@ func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
 
 // CHECK: [1, 1, 1, 1, 1]
 // CHECK: ( 1, 1 )
-func @main() {
+func.func @main() {
   %v0 = arith.constant 0.0 : f32
   %c0 = arith.constant 0: index
   %arg0 = memref.alloc() : memref<5xf32>
@@ -31,13 +31,13 @@ func @main() {
   %22 = memref.cast %arg0 : memref<5xf32> to memref<?xf32>
   %23 = memref.cast %22 : memref<?xf32> to memref<*xf32>
   gpu.host_register %23 : memref<*xf32>
-  call @print_memref_f32(%23) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%23) : (memref<*xf32>) -> ()
   %24 = arith.constant 1.0 : f32
   call @other_func(%24, %22) : (f32, memref<?xf32>) -> ()
-  call @print_memref_f32(%23) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%23) : (memref<*xf32>) -> ()
   %val1 = vector.transfer_read %arg0[%c0], %v0: memref<5xf32>, vector<2xf32>
   vector.print %val1: vector<2xf32>
   return
 }
 
-func private @print_memref_f32(%ptr : memref<*xf32>)
+func.func private @printMemrefF32(%ptr : memref<*xf32>)

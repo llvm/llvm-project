@@ -2,7 +2,7 @@
 // RUN: fir-opt %s --array-value-copy | FileCheck %s
 
 // Test user_defined_assignment(arg0(:), arg1(:))
-func @no_overlap(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
+func.func @no_overlap(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {
   %c100 = arith.constant 100 : index
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
@@ -49,7 +49,7 @@ func @no_overlap(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.arra
 
 
 // Test user_defined_assignment(arg0(:), arg0(100:1:-1))
-func @overlap(%arg0: !fir.ref<!fir.array<100xf32>>) {
+func.func @overlap(%arg0: !fir.ref<!fir.array<100xf32>>) {
   %c100 = arith.constant 100 : index
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
@@ -127,4 +127,4 @@ func @overlap(%arg0: !fir.ref<!fir.array<100xf32>>) {
 // CHECK:           return
 // CHECK:         }
 
-func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
+func.func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)

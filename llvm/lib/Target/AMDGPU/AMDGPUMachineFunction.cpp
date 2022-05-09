@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMachineFunction.h"
+#include "AMDGPU.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -32,6 +33,15 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
   Attribute WaveLimitAttr = F.getFnAttribute("amdgpu-wave-limiter");
   WaveLimiter = WaveLimitAttr.getValueAsBool();
 
+  // FIXME: How is this attribute supposed to interact with statically known
+  // global sizes?
+  StringRef S = F.getFnAttribute("amdgpu-gds-size").getValueAsString();
+  if (!S.empty())
+    S.consumeInteger(0, GDSSize);
+
+  // Assume the attribute allocates before any known GDS globals.
+  StaticGDSSize = GDSSize;
+
   CallingConv::ID CC = F.getCallingConv();
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL)
     ExplicitKernArgSize = ST.getExplicitKernArgSize(F, MaxKernArgAlign);
@@ -46,25 +56,43 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   Align Alignment =
       DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
 
-  /// TODO: We should sort these to minimize wasted space due to alignment
-  /// padding. Currently the padding is decided by the first encountered use
-  /// during lowering.
-  unsigned Offset = StaticLDSSize = alignTo(StaticLDSSize, Alignment);
+  unsigned Offset;
+  if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    /// TODO: We should sort these to minimize wasted space due to alignment
+    /// padding. Currently the padding is decided by the first encountered use
+    /// during lowering.
+    Offset = StaticLDSSize = alignTo(StaticLDSSize, Alignment);
+
+    StaticLDSSize += DL.getTypeAllocSize(GV.getValueType());
+
+    // Update the LDS size considering the padding to align the dynamic shared
+    // memory.
+    LDSSize = alignTo(StaticLDSSize, DynLDSAlign);
+  } else {
+    assert(GV.getAddressSpace() == AMDGPUAS::REGION_ADDRESS &&
+           "expected region address space");
+
+    Offset = StaticGDSSize = alignTo(StaticGDSSize, Alignment);
+    StaticGDSSize += DL.getTypeAllocSize(GV.getValueType());
+
+    // FIXME: Apply alignment of dynamic GDS
+    GDSSize = StaticGDSSize;
+  }
 
   Entry.first->second = Offset;
-  StaticLDSSize += DL.getTypeAllocSize(GV.getValueType());
-
-  // Update the LDS size considering the padding to align the dynamic shared
-  // memory.
-  LDSSize = alignTo(StaticLDSSize, DynLDSAlign);
-
   return Offset;
 }
 
-void AMDGPUMachineFunction::allocateModuleLDSGlobal(const Module *M) {
+// This kernel calls no functions that require the module lds struct
+static bool canElideModuleLDS(const Function &F) {
+  return F.hasFnAttribute("amdgpu-elide-module-lds");
+}
+
+void AMDGPUMachineFunction::allocateModuleLDSGlobal(const Function &F) {
+  const Module *M = F.getParent();
   if (isModuleEntryFunction()) {
     const GlobalVariable *GV = M->getNamedGlobal("llvm.amdgcn.module.lds");
-    if (GV) {
+    if (GV && !canElideModuleLDS(F)) {
       unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *GV);
       (void)Offset;
       assert(Offset == 0 &&

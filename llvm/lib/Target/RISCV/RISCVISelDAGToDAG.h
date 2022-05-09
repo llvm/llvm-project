@@ -191,6 +191,7 @@ struct VLX_VSXPseudo {
 struct RISCVMaskedPseudoInfo {
   uint16_t MaskedPseudo;
   uint16_t UnmaskedPseudo;
+  uint16_t UnmaskedTUPseudo;
   uint8_t MaskOpIdx;
 };
 

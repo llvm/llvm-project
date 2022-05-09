@@ -1,6 +1,6 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
-func @test_fill_op_not_linalg_op(%arg0 : f32, %arg1 : tensor<?xf32>)
+func.func @test_fill_op_not_linalg_op(%arg0 : f32, %arg1 : tensor<?xf32>)
      -> tensor<?xf32> {
   // expected-error @+1 {{expected a LinalgOp}}
   %0 = "test.fill_op_not_linalg_op"(%arg0, %arg1)
@@ -12,7 +12,7 @@ func @test_fill_op_not_linalg_op(%arg0 : f32, %arg1 : tensor<?xf32>)
 
 #map0 = affine_map<(d0) -> ()>
 #map1 = affine_map<(d0) -> (d0)>
-func @test_fill_op_wrong_num_operands(%arg0 : f32, %arg1 : tensor<?xf32>)
+func.func @test_fill_op_wrong_num_operands(%arg0 : f32, %arg1 : tensor<?xf32>)
      -> tensor<?xf32> {
   // expected-error @+1 {{expected op with 1 input and 1 output}}
   %0 = test.linalg_fill_op {
@@ -28,7 +28,7 @@ func @test_fill_op_wrong_num_operands(%arg0 : f32, %arg1 : tensor<?xf32>)
 // -----
 
 #map1 = affine_map<(d0) -> (d0)>
-func @test_fill_op_non_scalar_input(%arg0 : tensor<?xf32>,
+func.func @test_fill_op_non_scalar_input(%arg0 : tensor<?xf32>,
     %arg1 : tensor<?xf32>) -> tensor<?xf32> {
   // expected-error @+1 {{expected op with scalar input}}
   %0 = test.linalg_fill_op {

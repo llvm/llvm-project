@@ -66,6 +66,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -669,9 +670,9 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
     CommandReturnObject result(debugger_sp->GetUseColor());
     cmd_interpreter.SaveTranscript(result);
     if (result.Succeeded())
-      debugger_sp->GetOutputStream() << result.GetOutputData() << '\n';
+      (*debugger_sp->GetAsyncOutputStream()) << result.GetOutputData() << '\n';
     else
-      debugger_sp->GetErrorStream() << result.GetErrorData() << '\n';
+      (*debugger_sp->GetAsyncErrorStream()) << result.GetErrorData() << '\n';
   }
 
   debugger_sp->Clear();
@@ -1969,4 +1970,14 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
   repl_sp->RunLoop();
 
   return err;
+}
+
+llvm::ThreadPool &Debugger::GetThreadPool() {
+  // NOTE: intentional leak to avoid issues with C++ destructor chain
+  static llvm::ThreadPool *g_thread_pool = nullptr;
+  static llvm::once_flag g_once_flag;
+  llvm::call_once(g_once_flag, []() {
+    g_thread_pool = new llvm::ThreadPool(llvm::optimal_concurrency());
+  });
+  return *g_thread_pool;
 }

@@ -3,7 +3,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @entry() {
+func.func @entry() {
   %0 = vector.constant_mask [4] : vector<8xi1>
   vector.print %0 : vector<8xi1>
   // CHECK: ( 1, 1, 1, 1, 0, 0, 0, 0 )

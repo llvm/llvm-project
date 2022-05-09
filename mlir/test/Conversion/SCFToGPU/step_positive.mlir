@@ -1,7 +1,7 @@
 // RUN: mlir-opt -pass-pipeline="func.func(convert-affine-for-to-gpu{gpu-block-dims=1 gpu-thread-dims=1})" %s | FileCheck %s
 
 // CHECK-LABEL: @step_var
-func @step_var(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
+func.func @step_var(%A : memref<?x?xf32>, %B : memref<?x?xf32>) {
   // Check that we divide by step.
   // CHECK:  %[[range_i:.*]] = arith.divsi {{.*}}, %{{.*}}
   // CHECK:  %[[range_j:.*]] = arith.divsi {{.*}}, %{{.*}}

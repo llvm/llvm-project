@@ -1160,6 +1160,11 @@ public:
                     Type *Ty     ///< The type to trunc or bitcast C to
   );
 
+  /// Create either an sext, trunc or nothing, depending on whether Ty is
+  /// wider, narrower or the same as C->getType(). This only works with
+  /// integer or vector of integer types.
+  static Constant *getSExtOrTrunc(Constant *C, Type *Ty);
+
   /// Create a BitCast, AddrSpaceCast, or a PtrToInt cast constant
   /// expression.
   static Constant *

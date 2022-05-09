@@ -9,7 +9,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: func @simple_loop
-func @simple_loop(%begin: i32, %end: i32, %step: i32) {
+func.func @simple_loop(%begin: i32, %end: i32, %step: i32) {
 // CHECK-NEXT:  spv.Branch ^bb1
   cf.br ^bb1
 

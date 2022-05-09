@@ -23,7 +23,7 @@
 
 // CHECK-LABEL: func @matmul
 // FILTER-LABEL: func @matmul
-func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<4096x4096xf32>) -> memref<4096x4096xf32> {
+func.func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<4096x4096xf32>) -> memref<4096x4096xf32> {
   affine.for %i = 0 to 4096 step 128 {
     affine.for %j = 0 to 4096 step 128 {
       affine.for %k = 0 to 4096 step 128 {
@@ -130,7 +130,7 @@ func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<40
 // CHECK-SMALL-LABEL: func @single_elt_buffers
 // FILTER-LABEL: func @single_elt_buffers
 // MEMREF_REGION-LABEL: func @single_elt_buffers
-func @single_elt_buffers(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32>, %arg2: memref<1024x1024xf32>) -> memref<1024x1024xf32> {
+func.func @single_elt_buffers(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32>, %arg2: memref<1024x1024xf32>) -> memref<1024x1024xf32> {
   affine.for %i = 0 to 1024 {
     affine.for %j = 0 to 1024 {
       affine.for %k = 0 to 1024 {
@@ -205,7 +205,7 @@ func @single_elt_buffers(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf
 // CHECK-DAG: [[$MAP_MIN_UB2:map[0-9]+]] = affine_map<(d0) -> (4096, d0 + 100)>
 
 // CHECK-LABEL: func @min_upper_bound
-func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
+func.func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
   affine.for %i = 0 to 4096 step 100 {
     affine.for %ii = affine_map<(d0) -> (d0)>(%i) to min #map_ub(%i) {
       %5 = affine.load %A[%ii] : memref<4096xf32>
@@ -248,7 +248,7 @@ func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {
 // CHECK-LABEL: max_lower_bound(%{{.*}}: memref<2048x516xf64>,
 // CHECK-SAME: [[i:arg[0-9]+]]
 // CHECK-SAME: [[j:arg[0-9]+]]
-func @max_lower_bound(%M: memref<2048x516xf64>, %i : index, %j : index) {
+func.func @max_lower_bound(%M: memref<2048x516xf64>, %i : index, %j : index) {
   affine.for %ii = 0 to 2048 {
     affine.for %jj = max #lb()[%i, %j] to min #ub()[%i, %j] {
       affine.load %M[%ii, %jj] : memref<2048x516xf64>
@@ -274,7 +274,7 @@ func @max_lower_bound(%M: memref<2048x516xf64>, %i : index, %j : index) {
 // -----
 
 // CHECK-LABEL: func @empty_loops
-func @empty_loops(%arg0: memref<1024x1024xf64>) {
+func.func @empty_loops(%arg0: memref<1024x1024xf64>) {
   // Empty loops - so no copy generation happens.
   affine.for %i = 0 to 0 {
     affine.load %arg0[0, %i] : memref<1024x1024xf64>

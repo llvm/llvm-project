@@ -119,7 +119,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
 
   Optional<int> SwiftAsyncContextFrameIdx;
 
-  ValueMap<const Value *, size_t> PreallocatedIds;
+  // Preallocated fields are only used during isel.
+  // FIXME: Can we find somewhere else to store these?
+  DenseMap<const Value *, size_t> PreallocatedIds;
   SmallVector<size_t, 0> PreallocatedStackSizes;
   SmallVector<SmallVector<size_t, 4>, 0> PreallocatedArgOffsets;
 

@@ -29,7 +29,7 @@ module {
   // the iteration graph. This can be avoided by converting the incoming
   // matrix into a sparse column-wise matrix first.
   //
-  func @sparse_transpose(%arga: tensor<3x4xf64, #DCSR>) -> tensor<4x3xf64, #DCSR> {
+  func.func @sparse_transpose(%arga: tensor<3x4xf64, #DCSR>) -> tensor<4x3xf64, #DCSR> {
     %t = sparse_tensor.convert %arga : tensor<3x4xf64, #DCSR> to tensor<3x4xf64, #DCSC>
 
     %c3 = arith.constant 3 : index
@@ -51,7 +51,7 @@ module {
   //
   // Main driver.
   //
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %c4 = arith.constant 4 : index

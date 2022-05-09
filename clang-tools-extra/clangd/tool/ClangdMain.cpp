@@ -61,8 +61,7 @@ namespace clang {
 namespace clangd {
 
 // Implemented in Check.cpp.
-bool check(const llvm::StringRef File,
-           llvm::function_ref<bool(const Position &)> ShouldCheckLine,
+bool check(const llvm::StringRef File, llvm::Optional<Range> LineRange,
            const ThreadsafeFS &TFS, const ClangdLSPServer::Options &Opts,
            bool EnableCodeCompletion);
 
@@ -955,8 +954,9 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       return 1;
     }
     log("Entering check mode (no LSP server)");
-    uint32_t Begin = 0, End = std::numeric_limits<uint32_t>::max();
+    llvm::Optional<Range> CheckLineRange;
     if (!CheckFileLines.empty()) {
+      uint32_t Begin = 0, End = std::numeric_limits<uint32_t>::max();
       StringRef RangeStr(CheckFileLines);
       bool ParseError = RangeStr.consumeInteger(0, Begin);
       if (RangeStr.empty()) {
@@ -965,19 +965,18 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
         ParseError |= !RangeStr.consume_front("-");
         ParseError |= RangeStr.consumeInteger(0, End);
       }
-      if (ParseError || !RangeStr.empty()) {
-        elog("Invalid --check-line specified. Use Begin-End format, e.g. 3-17");
+      if (ParseError || !RangeStr.empty() || Begin <= 0 || End < Begin) {
+        elog(
+            "Invalid --check-lines specified. Use Begin-End format, e.g. 3-17");
         return 1;
       }
+      CheckLineRange = Range{Position{static_cast<int>(Begin - 1), 0},
+                             Position{static_cast<int>(End), 0}};
     }
-    auto ShouldCheckLine = [&](const Position &Pos) {
-      uint32_t Line = Pos.line + 1; // Position::line is 0-based.
-      return Line >= Begin && Line <= End;
-    };
     // For now code completion is enabled any time the range is limited via
     // --check-lines. If it turns out to be to slow, we can introduce a
     // dedicated flag for that instead.
-    return check(Path, ShouldCheckLine, TFS, Opts,
+    return check(Path, CheckLineRange, TFS, Opts,
                  /*EnableCodeCompletion=*/!CheckFileLines.empty())
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);

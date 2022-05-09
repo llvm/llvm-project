@@ -31,11 +31,11 @@ clang_target_link_libraries(ClangAnalysisFlowSensitiveTests
   clangFrontend
   clangLex
   clangSerialization
-  clangTesting
   clangTooling
   )
 
 target_link_libraries(ClangAnalysisFlowSensitiveTests
   PRIVATE
+  clangTesting
   LLVMTestingSupport
   )

@@ -261,6 +261,7 @@ TARGET_BUILTIN(__builtin_ia32_packsswb128, "V16cV8sV8s", "ncV:128:", "sse2")
 TARGET_BUILTIN(__builtin_ia32_packssdw128, "V8sV4iV4i", "ncV:128:", "sse2")
 TARGET_BUILTIN(__builtin_ia32_packuswb128, "V16cV8sV8s", "ncV:128:", "sse2")
 TARGET_BUILTIN(__builtin_ia32_pmulhuw128, "V8sV8sV8s", "ncV:128:", "sse2")
+TARGET_BUILTIN(__builtin_ia32_vec_ext_v2di, "OiV2OiIi", "ncV:128:", "sse2")
 TARGET_BUILTIN(__builtin_ia32_vec_ext_v4si, "iV4iIi", "ncV:128:", "sse2")
 TARGET_BUILTIN(__builtin_ia32_vec_ext_v4sf, "fV4fIi", "ncV:128:", "sse2")
 TARGET_BUILTIN(__builtin_ia32_vec_ext_v8hi, "sV8sIi", "ncV:128:", "sse2")
@@ -1989,8 +1990,6 @@ TARGET_BUILTIN(__builtin_ia32_selectss_128, "V4fUcV4fV4f", "ncV:128:", "avx512f"
 TARGET_BUILTIN(__builtin_ia32_selectsd_128, "V2dUcV2dV2d", "ncV:128:", "avx512f")
 
 // generic reduction intrinsics
-TARGET_BUILTIN(__builtin_ia32_reduce_add_d512, "iV16i", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_add_q512, "OiV8Oi", "ncV:512:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_reduce_fadd_pd512, "ddV8d", "ncV:512:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_reduce_fadd_ps512, "ffV16f", "ncV:512:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_reduce_fadd_ph512, "xxV32x", "ncV:512:", "avx512fp16")

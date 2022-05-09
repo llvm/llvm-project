@@ -2182,7 +2182,7 @@ public:
 
   TemplateName getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                         bool TemplateKeyword,
-                                        TemplateDecl *Template) const;
+                                        TemplateName Template) const;
 
   TemplateName getDependentTemplateName(NestedNameSpecifier *NNS,
                                         const IdentifierInfo *Name) const;
@@ -3041,7 +3041,8 @@ public:
   DeclaratorDecl *getDeclaratorForUnnamedTagDecl(const TagDecl *TD);
 
   void setManglingNumber(const NamedDecl *ND, unsigned Number);
-  unsigned getManglingNumber(const NamedDecl *ND) const;
+  unsigned getManglingNumber(const NamedDecl *ND,
+                             bool ForAuxTarget = false) const;
 
   void setStaticLocalNumber(const VarDecl *VD, unsigned Number);
   unsigned getStaticLocalNumber(const VarDecl *VD) const;

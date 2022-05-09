@@ -94,6 +94,9 @@ class Dialect {
   // UpperCamel) and prefixed with `get` or `set` depending on if it is a getter
   // or setter.
   int emitAccessorPrefix = kEmitAccessorPrefix_Raw;
+
+  // If this dialect can be extended at runtime with new operations or types.
+  bit isExtensible = 0;
 }
 
 #endif // DIALECTBASE_TD

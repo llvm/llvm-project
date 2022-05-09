@@ -238,6 +238,22 @@ Flush denormal floating point values to zero in CUDA/HIP device mode.
 
 Specify comma-separated list of triples OpenMP offloading targets to be supported
 
+.. option:: -fopenmp-new-driver, -fno-openmp-new-driver
+
+Use the new driver for OpenMP offloading.
+
+.. option:: --offload-new-driver, --no-offload-new-driver
+
+Use the new driver for offloading compilation.
+
+.. option:: --offload-host-only
+
+Only compile for the host when offloading.
+
+.. option:: --offload-device-only
+
+Only compile for the device when offloading.
+
 .. option:: -force\_cpusubtype\_ALL
 
 .. program:: clang1
@@ -801,10 +817,6 @@ Generate Interface Stub Files, emit merged text not binary.
 
 Extract API information
 
-.. option:: -fopenmp-new-driver
-
-Use the new driver for OpenMP offloading.
-
 .. option:: -fsyntax-only
 
 .. option:: -module-file-info
@@ -1175,6 +1187,14 @@ Validate the system headers that a module depends on when loading the module
 .. option:: -fprebuilt-module-path=<directory>
 
 Specify the prebuilt module path
+
+.. option:: -fmodule-header
+
+Build a C++20 header unit from a header specified.
+
+.. option:: -fmodule-header=\[user,system\]
+
+Build a C++20 header unit, but search for the header in the user or system header search paths respectively.
 
 .. option:: --hip-path=<arg>
 
@@ -3554,6 +3574,8 @@ PowerPC
 .. option:: -mcmpb, -mno-cmpb
 
 .. option:: -mcrbits, -mno-crbits
+
+Control the CR-bit tracking feature on PowerPC. ``-mcrbits`` (the enablement of CR-bit tracking support) is the default for POWER8 and above, as well as for all other CPUs when optimization is applied (-O2 and above).
 
 .. option:: -mcrypto, -mno-crypto
 

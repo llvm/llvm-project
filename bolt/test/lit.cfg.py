@@ -90,6 +90,7 @@ tools = [
     ToolSubst('llvm-readelf', unresolved='fatal'),
     ToolSubst('link_fdata', command=link_fdata_cmd, unresolved='fatal'),
     ToolSubst('merge-fdata', unresolved='fatal'),
+    ToolSubst('llvm-readobj', unresolved='fatal'),
 ]
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 

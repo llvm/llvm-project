@@ -44,7 +44,7 @@ module {
   //
   // A kernel that flattens a rank 8 tensor into a dense matrix.
   //
-  func @kernel_flatten(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>,
+  func.func @kernel_flatten(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>,
                        %argx: tensor<7x3xf64> {linalg.inplaceable = true})
 		       -> tensor<7x3xf64> {
     %0 = linalg.generic #trait_flatten
@@ -57,12 +57,12 @@ module {
     return %0 : tensor<7x3xf64>
   }
 
-  func private @getTensorFilename(index) -> (!Filename)
+  func.func private @getTensorFilename(index) -> (!Filename)
 
   //
   // Main driver that reads tensor from file and calls the sparse kernel.
   //
-  func @entry() {
+  func.func @entry() {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index

@@ -2,13 +2,13 @@
 // RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: @assert
-func @assert(%arg : i1) {
+func.func @assert(%arg : i1) {
   cf.assert %arg, "Some message in case this assertion fails."
   return
 }
 
 // CHECK-LABEL: func @switch(
-func @switch(%flag : i32, %caseOperand : i32) {
+func.func @switch(%flag : i32, %caseOperand : i32) {
   cf.switch %flag : i32, [
     default: ^bb1(%caseOperand : i32),
     42: ^bb2(%caseOperand : i32),
@@ -24,7 +24,7 @@ func @switch(%flag : i32, %caseOperand : i32) {
 }
 
 // CHECK-LABEL: func @switch_i64(
-func @switch_i64(%flag : i64, %caseOperand : i32) {
+func.func @switch_i64(%flag : i64, %caseOperand : i32) {
   cf.switch %flag : i64, [
     default: ^bb1(%caseOperand : i32),
     42: ^bb2(%caseOperand : i32),

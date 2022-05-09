@@ -46,8 +46,3 @@ external populate_function_pass_manager
 external populate_module_pass_manager
   : [ `Module ] Llvm.PassManager.t -> t -> unit
   = "llvm_pmbuilder_populate_module_pass_manager"
-
-(** See the [llvm::PassManagerBuilder::populateLTOPassManager] function. *)
-external populate_lto_pass_manager
-  : [ `Module ] Llvm.PassManager.t -> internalize:bool -> run_inliner:bool -> t -> unit
-  = "llvm_pmbuilder_populate_lto_pass_manager"

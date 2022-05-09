@@ -497,6 +497,19 @@ public:
       case 'T':
         return InlineAsm::Constraint_T;
       }
+    } else if (ConstraintCode.size() == 2 && ConstraintCode[0] == 'Z') {
+      switch (ConstraintCode[1]) {
+      default:
+        break;
+      case 'Q':
+        return InlineAsm::Constraint_ZQ;
+      case 'R':
+        return InlineAsm::Constraint_ZR;
+      case 'S':
+        return InlineAsm::Constraint_ZS;
+      case 'T':
+        return InlineAsm::Constraint_ZT;
+      }
     }
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
   }
@@ -667,6 +680,7 @@ private:
   SDValue lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
+  SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
 
   bool canTreatAsByteVector(EVT VT) const;
   SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,

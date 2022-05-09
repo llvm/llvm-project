@@ -48,9 +48,6 @@ void initializeInstrumentation(PassRegistry&);
 /// Initialize all passes linked into the Analysis library.
 void initializeAnalysis(PassRegistry&);
 
-/// Initialize all passes linked into the Coroutines library.
-void initializeCoroutines(PassRegistry&);
-
 /// Initialize all passes linked into the CodeGen library.
 void initializeCodeGen(PassRegistry&);
 
@@ -65,9 +62,6 @@ void initializeAAResultsWrapperPassPass(PassRegistry&);
 void initializeADCELegacyPassPass(PassRegistry&);
 void initializeAddDiscriminatorsLegacyPassPass(PassRegistry&);
 void initializeAddFSDiscriminatorsPass(PassRegistry &);
-void initializeModuleAddressSanitizerLegacyPassPass(PassRegistry &);
-void initializeASanGlobalsMetadataWrapperPassPass(PassRegistry &);
-void initializeAddressSanitizerLegacyPassPass(PassRegistry &);
 void initializeAggressiveInstCombinerLegacyPassPass(PassRegistry&);
 void initializeAliasSetPrinterPass(PassRegistry&);
 void initializeAlignmentFromAssumptionsPass(PassRegistry&);
@@ -175,7 +169,6 @@ void initializeFunctionImportLegacyPassPass(PassRegistry&);
 void initializeFunctionSpecializationLegacyPassPass(PassRegistry &);
 void initializeGCMachineCodeAnalysisPass(PassRegistry&);
 void initializeGCModuleInfoPass(PassRegistry&);
-void initializeGCOVProfilerLegacyPassPass(PassRegistry&);
 void initializeGVNHoistLegacyPassPass(PassRegistry&);
 void initializeGVNLegacyPassPass(PassRegistry&);
 void initializeGVNSinkLegacyPassPass(PassRegistry&);
@@ -189,7 +182,6 @@ void initializeHardwareLoopsPass(PassRegistry&);
 void initializeMIRProfileLoaderPassPass(PassRegistry &);
 void initializeMemProfilerLegacyPassPass(PassRegistry &);
 void initializeHotColdSplittingLegacyPassPass(PassRegistry&);
-void initializeHWAddressSanitizerLegacyPassPass(PassRegistry &);
 void initializeIPSCCPLegacyPassPass(PassRegistry&);
 void initializeIRCELegacyPassPass(PassRegistry&);
 void initializeIROutlinerLegacyPassPass(PassRegistry&);
@@ -319,7 +311,6 @@ void initializeMemDerefPrinterPass(PassRegistry&);
 void initializeMemoryDependenceWrapperPassPass(PassRegistry&);
 void initializeMemorySSAPrinterLegacyPassPass(PassRegistry&);
 void initializeMemorySSAWrapperPassPass(PassRegistry&);
-void initializeMemorySanitizerLegacyPassPass(PassRegistry&);
 void initializeMergeFunctionsLegacyPassPass(PassRegistry&);
 void initializeMergeICmpsLegacyPassPass(PassRegistry &);
 void initializeMergedLoadStoreMotionLegacyPassPass(PassRegistry&);
@@ -441,7 +432,6 @@ void initializeTailDuplicatePass(PassRegistry&);
 void initializeTargetLibraryInfoWrapperPassPass(PassRegistry&);
 void initializeTargetPassConfigPass(PassRegistry&);
 void initializeTargetTransformInfoWrapperPassPass(PassRegistry&);
-void initializeThreadSanitizerLegacyPassPass(PassRegistry&);
 void initializeTLSVariableHoistLegacyPassPass(PassRegistry &);
 void initializeTwoAddressInstructionPassPass(PassRegistry&);
 void initializeTypeBasedAAWrapperPassPass(PassRegistry&);

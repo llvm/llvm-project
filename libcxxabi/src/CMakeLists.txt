@@ -116,7 +116,7 @@ if (NOT LIBCXXABI_USE_COMPILER_RT)
 endif ()
 
 # Setup flags.
-if (LIBCXXABI_SUPPORTS_NOSTDLIBXX_FLAG)
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   add_link_flags_if_supported(-nostdlib++)
 else()
   add_link_flags_if_supported(-nodefaultlibs)

@@ -38,6 +38,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <queue>
 
 using namespace llvm;
 
@@ -754,7 +755,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   LLVMContext Context;
   sampleprof::ProfileSymbolList WriterList;
   Optional<bool> ProfileIsProbeBased;
-  Optional<bool> ProfileIsCSFlat;
+  Optional<bool> ProfileIsCS;
   for (const auto &Input : Inputs) {
     auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context,
                                                    FSDiscriminatorPassOption);
@@ -781,10 +782,9 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
       exitWithError(
           "cannot merge probe-based profile with non-probe-based profile");
     ProfileIsProbeBased = FunctionSamples::ProfileIsProbeBased;
-    if (ProfileIsCSFlat.hasValue() &&
-        ProfileIsCSFlat != FunctionSamples::ProfileIsCSFlat)
+    if (ProfileIsCS.hasValue() && ProfileIsCS != FunctionSamples::ProfileIsCS)
       exitWithError("cannot merge CS profile with non-CS profile");
-    ProfileIsCSFlat = FunctionSamples::ProfileIsCSFlat;
+    ProfileIsCS = FunctionSamples::ProfileIsCS;
     for (SampleProfileMap::iterator I = Profiles.begin(), E = Profiles.end();
          I != E; ++I) {
       sampleprof_error Result = sampleprof_error::success;
@@ -807,7 +807,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
       WriterList.merge(*ReaderList);
   }
 
-  if (ProfileIsCSFlat && (SampleMergeColdContext || SampleTrimColdContext)) {
+  if (ProfileIsCS && (SampleMergeColdContext || SampleTrimColdContext)) {
     // Use threshold calculated from profile summary unless specified.
     SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
     auto Summary = Builder.computeSummaryForProfiles(ProfileMap);
@@ -822,10 +822,10 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
             SampleMergeColdContext, SampleColdContextFrameDepth, false);
   }
 
-  if (ProfileIsCSFlat && GenCSNestedProfile) {
+  if (ProfileIsCS && GenCSNestedProfile) {
     CSProfileConverter CSConverter(ProfileMap);
     CSConverter.convertProfiles();
-    ProfileIsCSFlat = FunctionSamples::ProfileIsCSFlat = false;
+    ProfileIsCS = FunctionSamples::ProfileIsCS = false;
   }
 
   auto WriterOrErr =
@@ -995,7 +995,7 @@ static int merge_main(int argc, const char *argv[]) {
       "zero-counter-threshold", cl::init(0.7), cl::Hidden,
       cl::desc("For the function which is cold in instr profile but hot in "
                "sample profile, if the ratio of the number of zero counters "
-               "divided by the the total number of counters is above the "
+               "divided by the total number of counters is above the "
                "threshold, the profile of the function will be regarded as "
                "being harmful for performance and will be dropped."));
   cl::opt<unsigned> SupplMinSizeThreshold(
@@ -1985,7 +1985,7 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   if (BaseReader->profileIsProbeBased() != TestReader->profileIsProbeBased())
     exitWithError(
         "cannot compare probe-based profile with non-probe-based profile");
-  if (BaseReader->profileIsCSFlat() != TestReader->profileIsCSFlat())
+  if (BaseReader->profileIsCS() != TestReader->profileIsCS())
     exitWithError("cannot compare CS profile with non-CS profile");
 
   // Load BaseHotThreshold and TestHotThreshold as 99-percentile threshold in

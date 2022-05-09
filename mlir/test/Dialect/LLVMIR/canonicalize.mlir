@@ -106,7 +106,7 @@ llvm.func @fold_gep(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
 // resulting constant is created in the arith dialect because the last folded
 // operation belongs to it.
 // CHECK-LABEL: llvm_constant
-func @llvm_constant() -> i32 {
+func.func @llvm_constant() -> i32 {
   // CHECK-NOT: llvm.mlir.constant
   %0 = llvm.mlir.constant(40 : i32) : i32
   %1 = llvm.mlir.constant(42 : i32) : i32

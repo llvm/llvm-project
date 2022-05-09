@@ -270,6 +270,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FCOPYSIGN:                  return "fcopysign";
   case ISD::FGETSIGN:                   return "fgetsign";
   case ISD::FCANONICALIZE:              return "fcanonicalize";
+  case ISD::IS_FPCLASS:                 return "is_fpclass";
   case ISD::FPOW:                       return "fpow";
   case ISD::STRICT_FPOW:                return "strict_fpow";
   case ISD::SMIN:                       return "smin";

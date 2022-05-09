@@ -9,7 +9,7 @@
 //       CHECK: }
 //       CHECK: %[[LOADED:.*]] = memref.load %[[ALLOC]][] : memref<vector<4x9xf32>>
 //       CHECK: return %[[LOADED]] : vector<4x9xf32>
-func @transfer_read_2d(%A : tensor<?x?xf32>, %base1 : index, %base2 : index)
+func.func @transfer_read_2d(%A : tensor<?x?xf32>, %base1 : index, %base2 : index)
     -> (vector<4x9xf32>){
   %p = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %p {in_bounds = [true, true]}
@@ -29,7 +29,7 @@ func @transfer_read_2d(%A : tensor<?x?xf32>, %base1 : index, %base2 : index)
 //       CHECK:   scf.yield %[[WRITE]] : tensor<?x?xf32>
 //       CHECK: }
 //       CHECK: return %[[RESULT]] : tensor<?x?xf32>
-func @transfer_write_2d(%A : tensor<?x?xf32>, %vec : vector<2x3xf32>,
+func.func @transfer_write_2d(%A : tensor<?x?xf32>, %vec : vector<2x3xf32>,
                         %base1 : index, %base2 : index) -> (tensor<?x?xf32>) {
   %t = vector.transfer_write %vec, %A[%base1, %base2] {in_bounds = [true, true]}
       : vector<2x3xf32>, tensor<?x?xf32>

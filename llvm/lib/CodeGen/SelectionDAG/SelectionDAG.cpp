@@ -4684,26 +4684,54 @@ bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
   return false;
 }
 
+// Only bits set in Mask must be negated, other bits may be arbitrary.
+SDValue llvm::getBitwiseNotOperand(SDValue V, SDValue Mask, bool AllowUndefs) {
+  if (isBitwiseNot(V, AllowUndefs))
+    return V.getOperand(0);
+
+  // Handle any_extend (not (truncate X)) pattern, where Mask only sets
+  // bits in the non-extended part.
+  ConstantSDNode *MaskC = isConstOrConstSplat(Mask);
+  if (!MaskC || V.getOpcode() != ISD::ANY_EXTEND)
+    return SDValue();
+  SDValue ExtArg = V.getOperand(0);
+  if (ExtArg.getScalarValueSizeInBits() >=
+          MaskC->getAPIntValue().getActiveBits() &&
+      isBitwiseNot(ExtArg, AllowUndefs) &&
+      ExtArg.getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      ExtArg.getOperand(0).getOperand(0).getValueType() == V.getValueType())
+    return ExtArg.getOperand(0).getOperand(0);
+  return SDValue();
+}
+
+static bool haveNoCommonBitsSetCommutative(SDValue A, SDValue B) {
+  // Match masked merge pattern (X & ~M) op (Y & M)
+  // Including degenerate case (X & ~M) op M
+  auto MatchNoCommonBitsPattern = [&](SDValue Not, SDValue Mask,
+                                      SDValue Other) {
+    if (SDValue NotOperand =
+            getBitwiseNotOperand(Not, Mask, /* AllowUndefs */ true)) {
+      if (Other == NotOperand)
+        return true;
+      if (Other->getOpcode() == ISD::AND)
+        return NotOperand == Other->getOperand(0) ||
+               NotOperand == Other->getOperand(1);
+    }
+    return false;
+  };
+  if (A->getOpcode() == ISD::AND)
+    return MatchNoCommonBitsPattern(A->getOperand(0), A->getOperand(1), B) ||
+           MatchNoCommonBitsPattern(A->getOperand(1), A->getOperand(0), B);
+  return false;
+}
+
 // FIXME: unify with llvm::haveNoCommonBitsSet.
 bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
   assert(A.getValueType() == B.getValueType() &&
          "Values must have the same type");
-  // Match masked merge pattern (X & ~M) op (Y & M)
-  if (A->getOpcode() == ISD::AND && B->getOpcode() == ISD::AND) {
-    auto MatchNoCommonBitsPattern = [&](SDValue NotM, SDValue And) {
-      if (isBitwiseNot(NotM, true)) {
-        SDValue NotOperand = NotM->getOperand(0);
-        return NotOperand == And->getOperand(0) ||
-               NotOperand == And->getOperand(1);
-      }
-      return false;
-    };
-    if (MatchNoCommonBitsPattern(A->getOperand(0), B) ||
-        MatchNoCommonBitsPattern(A->getOperand(1), B) ||
-        MatchNoCommonBitsPattern(B->getOperand(0), A) ||
-        MatchNoCommonBitsPattern(B->getOperand(1), A))
-      return true;
-  }
+  if (haveNoCommonBitsSetCommutative(A, B) ||
+      haveNoCommonBitsSetCommutative(B, A))
+    return true;
   return KnownBits::haveNoCommonBitsSet(computeKnownBits(A),
                                         computeKnownBits(B));
 }
@@ -5580,9 +5608,14 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       !llvm::all_of(Ops, IsScalarOrSameVectorSize))
     return SDValue();
 
-  // If we are comparing vectors, then the result needs to be a i1 boolean
-  // that is then sign-extended back to the legal result type.
+  // If we are comparing vectors, then the result needs to be a i1 boolean that
+  // is then extended back to the legal result type depending on how booleans
+  // are represented.
   EVT SVT = (Opcode == ISD::SETCC ? MVT::i1 : VT.getScalarType());
+  ISD::NodeType ExtendCode =
+      (Opcode == ISD::SETCC && SVT != VT.getScalarType())
+          ? TargetLowering::getExtendForContent(TLI->getBooleanContents(VT))
+          : ISD::SIGN_EXTEND;
 
   // Find legal integer scalar type for constant promotion and
   // ensure that its scalar size is at least as large as source.
@@ -5640,7 +5673,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
     // Legalize the (integer) scalar constant if necessary.
     if (LegalSVT != SVT)
-      ScalarResult = getNode(ISD::SIGN_EXTEND, DL, LegalSVT, ScalarResult);
+      ScalarResult = getNode(ExtendCode, DL, LegalSVT, ScalarResult);
 
     // Scalar folding only succeeded if the result is a constant or UNDEF.
     if (!ScalarResult.isUndef() && ScalarResult.getOpcode() != ISD::Constant &&
@@ -6192,9 +6225,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       std::swap(N1, N2);
     } else {
       switch (Opcode) {
-      case ISD::SIGN_EXTEND_INREG:
       case ISD::SUB:
         return getUNDEF(VT);     // fold op(undef, arg2) -> undef
+      case ISD::SIGN_EXTEND_INREG:
       case ISD::UDIV:
       case ISD::SDIV:
       case ISD::UREM:
@@ -8817,6 +8850,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(NumOps == 5 && "BR_CC takes 5 operands!");
     assert(Ops[2].getValueType() == Ops[3].getValueType() &&
            "LHS/RHS of comparison should match types!");
+    break;
+  case ISD::VP_ADD:
+  case ISD::VP_SUB:
+    // If it is VP_ADD/VP_SUB mask operation then turn it to VP_XOR
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+      Opcode = ISD::VP_XOR;
+    break;
+  case ISD::VP_MUL:
+    // If it is VP_MUL mask operation then turn it to VP_AND
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
+      Opcode = ISD::VP_AND;
+    break;
+  case ISD::VP_REDUCE_ADD:
+    // If it is VP_REDUCE_ADD mask operation then turn it to VP_REDUCE_XOR
+    if (VT == MVT::i1)
+      Opcode = ISD::VP_REDUCE_XOR;
     break;
   }
 

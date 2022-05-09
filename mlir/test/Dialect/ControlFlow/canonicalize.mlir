@@ -3,7 +3,7 @@
 /// Test the folding of BranchOp.
 
 // CHECK-LABEL: func @br_folding(
-func @br_folding() -> i32 {
+func.func @br_folding() -> i32 {
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 0 : i32
   // CHECK-NEXT: return %[[CST]] : i32
   %c0_i32 = arith.constant 0 : i32
@@ -16,7 +16,7 @@ func @br_folding() -> i32 {
 
 // CHECK-LABEL: func @br_passthrough(
 // CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
-func @br_passthrough(%arg0 : i32, %arg1 : i32) -> (i32, i32) {
+func.func @br_passthrough(%arg0 : i32, %arg1 : i32) -> (i32, i32) {
   "foo.switch"() [^bb1, ^bb2, ^bb3] : () -> ()
 
 ^bb1:
@@ -35,7 +35,7 @@ func @br_passthrough(%arg0 : i32, %arg1 : i32) -> (i32, i32) {
 /// Test the folding of CondBranchOp with a constant condition.
 
 // CHECK-LABEL: func @cond_br_folding(
-func @cond_br_folding(%cond : i1, %a : i32) {
+func.func @cond_br_folding(%cond : i1, %a : i32) {
   // CHECK-NEXT: return
 
   %false_cond = arith.constant false
@@ -55,7 +55,7 @@ func @cond_br_folding(%cond : i1, %a : i32) {
 /// Test the folding of CondBranchOp when the successors are identical.
 
 // CHECK-LABEL: func @cond_br_same_successor(
-func @cond_br_same_successor(%cond : i1, %a : i32) {
+func.func @cond_br_same_successor(%cond : i1, %a : i32) {
   // CHECK-NEXT: return
 
   cf.cond_br %cond, ^bb1(%a : i32), ^bb1(%a : i32)
@@ -70,7 +70,7 @@ func @cond_br_same_successor(%cond : i1, %a : i32) {
 // CHECK-LABEL: func @cond_br_same_successor_insert_select(
 // CHECK-SAME: %[[COND:.*]]: i1, %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32
 // CHECK-SAME: %[[ARG2:.*]]: tensor<2xi32>, %[[ARG3:.*]]: tensor<2xi32>
-func @cond_br_same_successor_insert_select(
+func.func @cond_br_same_successor_insert_select(
       %cond : i1, %a : i32, %b : i32, %c : tensor<2xi32>, %d : tensor<2xi32>
     ) -> (i32, tensor<2xi32>)  {
   // CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG1]]
@@ -86,7 +86,7 @@ func @cond_br_same_successor_insert_select(
 /// Test the compound folding of BranchOp and CondBranchOp.
 
 // CHECK-LABEL: func @cond_br_and_br_folding(
-func @cond_br_and_br_folding(%a : i32) {
+func.func @cond_br_and_br_folding(%a : i32) {
   // CHECK-NEXT: return
 
   %false_cond = arith.constant false
@@ -104,7 +104,7 @@ func @cond_br_and_br_folding(%a : i32) {
 
 // CHECK-LABEL: func @cond_br_passthrough(
 // CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32, %[[COND:.*]]: i1
-func @cond_br_passthrough(%arg0 : i32, %arg1 : i32, %arg2 : i32, %cond : i1) -> (i32, i32) {
+func.func @cond_br_passthrough(%arg0 : i32, %arg1 : i32, %arg2 : i32, %cond : i1) -> (i32, i32) {
   // CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[ARG0]], %[[ARG2]]
   // CHECK: %[[RES2:.*]] = arith.select %[[COND]], %[[ARG1]], %[[ARG2]]
   // CHECK: return %[[RES]], %[[RES2]]
@@ -121,7 +121,7 @@ func @cond_br_passthrough(%arg0 : i32, %arg1 : i32, %arg2 : i32, %cond : i1) -> 
 /// Test the failure modes of collapsing CondBranchOp pass-throughs successors.
 
 // CHECK-LABEL: func @cond_br_pass_through_fail(
-func @cond_br_pass_through_fail(%cond : i1) {
+func.func @cond_br_pass_through_fail(%cond : i1) {
   // CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 
   cf.cond_br %cond, ^bb1, ^bb2
@@ -145,7 +145,7 @@ func @cond_br_pass_through_fail(%cond : i1) {
 // CHECK-LABEL: func @switch_only_default(
 // CHECK-SAME: %[[FLAG:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
-func @switch_only_default(%flag : i32, %caseOperand0 : f32) {
+func.func @switch_only_default(%flag : i32, %caseOperand0 : f32) {
   // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2] : () -> ()
   ^bb1:
@@ -165,7 +165,7 @@ func @switch_only_default(%flag : i32, %caseOperand0 : f32) {
 // CHECK-SAME: %[[FLAG:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
-func @switch_case_matching_default(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32) {
+func.func @switch_case_matching_default(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32) {
   // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3] : () -> ()
   ^bb1:
@@ -190,7 +190,7 @@ func @switch_case_matching_default(%flag : i32, %caseOperand0 : f32, %caseOperan
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
-func @switch_on_const_no_match(%caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
+func.func @switch_on_const_no_match(%caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
   // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3, ^bb4] : () -> ()
   ^bb1:
@@ -216,7 +216,7 @@ func @switch_on_const_no_match(%caseOperand0 : f32, %caseOperand1 : f32, %caseOp
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
-func @switch_on_const_with_match(%caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
+func.func @switch_on_const_with_match(%caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
   // add predecessors for all blocks to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb3, ^bb4] : () -> ()
   ^bb1:
@@ -244,7 +244,7 @@ func @switch_on_const_with_match(%caseOperand0 : f32, %caseOperand1 : f32, %case
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_3:[a-zA-Z0-9_]+]]
-func @switch_passthrough(%flag : i32,
+func.func @switch_passthrough(%flag : i32,
                          %caseOperand0 : f32,
                          %caseOperand1 : f32,
                          %caseOperand2 : f32,
@@ -285,7 +285,7 @@ func @switch_passthrough(%flag : i32,
 // CHECK-SAME: %[[FLAG:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
-func @switch_from_switch_with_same_value_with_match(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32) {
+func.func @switch_from_switch_with_same_value_with_match(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32) {
   // add predecessors for all blocks except ^bb3 to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb4, ^bb5] : () -> ()
 
@@ -322,7 +322,7 @@ func @switch_from_switch_with_same_value_with_match(%flag : i32, %caseOperand0 :
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
-func @switch_from_switch_with_same_value_no_match(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
+func.func @switch_from_switch_with_same_value_no_match(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
   // add predecessors for all blocks except ^bb3 to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb4, ^bb5, ^bb6] : () -> ()
 
@@ -362,7 +362,7 @@ func @switch_from_switch_with_same_value_no_match(%flag : i32, %caseOperand0 : f
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
-func @switch_from_switch_default_with_same_value(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
+func.func @switch_from_switch_default_with_same_value(%flag : i32, %caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
   // add predecessors for all blocks except ^bb3 to avoid other canonicalizations.
   "foo.pred"() [^bb1, ^bb2, ^bb4, ^bb5, ^bb6] : () -> ()
 
@@ -405,7 +405,7 @@ func @switch_from_switch_default_with_same_value(%flag : i32, %caseOperand0 : f3
 /// branches with the same condition.
 
 // CHECK-LABEL: func @cond_br_from_cond_br_with_same_condition
-func @cond_br_from_cond_br_with_same_condition(%cond : i1) {
+func.func @cond_br_from_cond_br_with_same_condition(%cond : i1) {
   // CHECK:   cf.cond_br %{{.*}}, ^bb1, ^bb2
   // CHECK: ^bb1:
   // CHECK:   return
@@ -426,7 +426,7 @@ func @cond_br_from_cond_br_with_same_condition(%cond : i1) {
 
 // Erase assertion if condition is known to be true at compile time.
 // CHECK-LABEL: @assert_true
-func @assert_true() {
+func.func @assert_true() {
   // CHECK-NOT: cf.assert
   %true = arith.constant true
   cf.assert %true, "Computer says no"
@@ -438,7 +438,7 @@ func @assert_true() {
 // Keep assertion if condition unknown at compile time.
 // CHECK-LABEL: @cf.assert
 // CHECK-SAME:  (%[[ARG:.*]]: i1)
-func @cf.assert(%arg : i1) {
+func.func @cf.assert(%arg : i1) {
   // CHECK: cf.assert %[[ARG]], "Computer says no"
   cf.assert %arg, "Computer says no"
   return
@@ -451,7 +451,7 @@ func @cf.assert(%arg : i1) {
 //       CHECK:       %[[falseval:.+]] = arith.constant false
 //       CHECK:       "test.consumer1"(%[[trueval]]) : (i1) -> ()
 //       CHECK:       "test.consumer2"(%[[falseval]]) : (i1) -> ()
-func @branchCondProp(%arg0: i1) {
+func.func @branchCondProp(%arg0: i1) {
   cf.cond_br %arg0, ^trueB, ^falseB
 
 ^trueB:

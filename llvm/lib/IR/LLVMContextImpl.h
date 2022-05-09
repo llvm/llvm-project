@@ -17,6 +17,7 @@
 #include "ConstantsContext.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Any.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -1384,6 +1385,11 @@ public:
   /// If threshold option is not specified, it is disabled (0) by default.
   Optional<uint64_t> DiagnosticsHotnessThreshold = 0;
 
+  /// The percentage of difference between profiling branch weights and
+  // llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
+  Optional<uint64_t> DiagnosticsMisExpectTolerance = 0;
+  bool MisExpectWarningRequested = false;
+
   /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
   std::unique_ptr<LLVMRemarkStreamer> LLVMRS;
 
@@ -1454,13 +1460,13 @@ public:
   ConstantInt *TheTrueVal = nullptr;
   ConstantInt *TheFalseVal = nullptr;
 
-  std::unique_ptr<ConstantTokenNone> TheNoneToken;
-
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
       TokenTy;
   Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_MMXTy, X86_AMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
+
+  std::unique_ptr<ConstantTokenNone> TheNoneToken;
 
   BumpPtrAllocator Alloc;
   UniqueStringSaver Saver{Alloc};
@@ -1561,6 +1567,8 @@ public:
   bool getOpaquePointers();
   bool hasOpaquePointersValue();
   void setOpaquePointers(bool OP);
+
+  llvm::Any TargetDataStorage;
 
 private:
   Optional<bool> OpaquePointers;

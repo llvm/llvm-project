@@ -37,6 +37,11 @@ namespace {
 cl::opt<bool> Quiet("debugify-quiet",
                     cl::desc("Suppress verbose debugify output"));
 
+cl::opt<uint64_t> DebugifyFunctionsLimit(
+    "debugify-func-limit",
+    cl::desc("Set max number of processed functions per pass."),
+    cl::init(UINT_MAX));
+
 enum class Level {
   Locations,
   LocationsAndVariables
@@ -292,6 +297,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
     return false;
   }
 
+  uint64_t FunctionsCnt = DebugInfoBeforePass.DIFunctions.size();
   // Visit each instruction.
   for (Function &F : Functions) {
     // Use DI collected after previous Pass (when -debugify-each is used).
@@ -301,6 +307,9 @@ bool llvm::collectDebugInfoMetadata(Module &M,
     if (isFunctionSkipped(F))
       continue;
 
+    // Stop collecting DI if the Functions number reached the limit.
+    if (++FunctionsCnt >= DebugifyFunctionsLimit)
+      break;
     // Collect the DISubprogram.
     auto *SP = F.getSubprogram();
     DebugInfoBeforePass.DIFunctions.insert({&F, SP});
@@ -535,6 +544,9 @@ bool llvm::checkDebugInfoMetadata(Module &M,
     if (isFunctionSkipped(F))
       continue;
 
+    // Don't process functions without DI collected before the Pass.
+    if (!DebugInfoBeforePass.DIFunctions.count(&F))
+      continue;
     // TODO: Collect metadata other than DISubprograms.
     // Collect the DISubprogram.
     auto *SP = F.getSubprogram();

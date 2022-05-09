@@ -16,7 +16,7 @@
 // dummy cast to be dead.
 
 // CHECK-LABEL: @foo
-func @foo() {
+func.func @foo() {
   %0 = "test.type_producer"() : () -> i32
   // CHECK: test.cast
   // CHECK-NOT: test.type_changer

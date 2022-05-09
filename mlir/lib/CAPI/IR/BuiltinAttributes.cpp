@@ -474,6 +474,13 @@ MlirAttribute mlirDenseElementsAttrDoubleGet(MlirType shapedType,
                                              const double *elements) {
   return getDenseAttribute(shapedType, numElements, elements);
 }
+MlirAttribute mlirDenseElementsAttrBFloat16Get(MlirType shapedType,
+                                               intptr_t numElements,
+                                               const uint16_t *elements) {
+  size_t bufferSize = numElements * 2;
+  const void *buffer = static_cast<const void *>(elements);
+  return mlirDenseElementsAttrRawBufferGet(shapedType, bufferSize, buffer);
+}
 
 MlirAttribute mlirDenseElementsAttrStringGet(MlirType shapedType,
                                              intptr_t numElements,

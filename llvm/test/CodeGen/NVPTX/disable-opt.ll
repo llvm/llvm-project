@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 -O0 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 -O0 | %ptxas-verify %}
 
 define void @foo(i32* %output) {
 ; CHECK-LABEL: .visible .func foo(
