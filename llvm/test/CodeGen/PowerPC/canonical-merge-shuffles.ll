@@ -14,6 +14,12 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:     -mcpu=pwr7 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN: FileCheck %s --check-prefix=CHECK-P7
+; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr \
+; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc64-ibm-aix-xcoff < %s | \
+; RUN: FileCheck %s --check-prefixes=P8-AIX,P8-AIX-64
+; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr \
+; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc-ibm-aix-xcoff < %s | \
+; RUN: FileCheck %s --check-prefixes=P8-AIX,P8-AIX-32
 
 define dso_local <16 x i8> @testmrghb(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: testmrghb:
@@ -40,6 +46,11 @@ define dso_local <16 x i8> @testmrghb(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    vmrghb v2, v3, v2
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrghb:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    vmrglb v2, v2, v3
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
   ret <16 x i8> %shuffle
@@ -75,6 +86,11 @@ define dso_local <16 x i8> @testmrghb2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7-NEXT:    lvx v4, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrghb2:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    vmrglb v2, v3, v2
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 24, i32 8, i32 25, i32 9, i32 26, i32 10, i32 27, i32 11, i32 28, i32 12, i32 29, i32 13, i32 30, i32 14, i32 31, i32 15>
   ret <16 x i8> %shuffle
@@ -104,6 +120,11 @@ define dso_local <16 x i8> @testmrghh(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    vmrghh v2, v3, v2
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrghh:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    vmrglh v2, v2, v3
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 9, i32 24, i32 25, i32 10, i32 11, i32 26, i32 27, i32 12, i32 13, i32 28, i32 29, i32 14, i32 15, i32 30, i32 31>
   ret <16 x i8> %shuffle
@@ -139,6 +160,11 @@ define dso_local <16 x i8> @testmrghh2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7-NEXT:    lvx v4, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrghh2:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    vmrglh v2, v3, v2
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 24, i32 25, i32 8, i32 9, i32 26, i32 27, i32 10, i32 11, i32 28, i32 29, i32 12, i32 13, i32 30, i32 31, i32 14, i32 15>
   ret <16 x i8> %shuffle
@@ -168,6 +194,11 @@ define dso_local <16 x i8> @testmrglb(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    vmrglb v2, v3, v2
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrglb:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    vmrghb v2, v2, v3
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
   ret <16 x i8> %shuffle
@@ -203,6 +234,11 @@ define dso_local <16 x i8> @testmrglb2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7-NEXT:    lvx v4, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrglb2:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    vmrghb v2, v3, v2
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 0, i32 17, i32 1, i32 18, i32 2, i32 19, i32 3, i32 20, i32 4, i32 21, i32 5, i32 22, i32 6, i32 23, i32 7>
   ret <16 x i8> %shuffle
@@ -232,6 +268,11 @@ define dso_local <16 x i8> @testmrglh(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    vmrglh v2, v3, v2
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrglh:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    vmrghh v2, v2, v3
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 2, i32 3, i32 18, i32 19, i32 4, i32 5, i32 20, i32 21, i32 6, i32 7, i32 22, i32 23>
   ret <16 x i8> %shuffle
@@ -267,6 +308,11 @@ define dso_local <16 x i8> @testmrglh2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7-NEXT:    lvx v4, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrglh2:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    vmrghh v2, v3, v2
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 0, i32 1, i32 18, i32 19, i32 2, i32 3, i32 20, i32 21, i32 4, i32 5, i32 22, i32 23, i32 6, i32 7>
   ret <16 x i8> %shuffle
@@ -296,6 +342,11 @@ define dso_local <16 x i8> @testmrghw(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    xxmrghw v2, v3, v2
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrghw:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    xxmrglw v2, v2, v3
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 12, i32 13, i32 14, i32 15, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %shuffle
@@ -331,6 +382,11 @@ define dso_local <16 x i8> @testmrghw2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7-NEXT:    lvx v4, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrghw2:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    xxmrglw v2, v3, v2
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 24, i32 25, i32 26, i32 27, i32 8, i32 9, i32 10, i32 11, i32 28, i32 29, i32 30, i32 31, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i8> %shuffle
@@ -360,6 +416,11 @@ define dso_local <16 x i8> @testmrglw(<16 x i8> %a, <16 x i8> %b) local_unnamed_
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    xxmrglw v2, v3, v2
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrglw:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    xxmrghw v2, v2, v3
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23>
   ret <16 x i8> %shuffle
@@ -395,6 +456,11 @@ define dso_local <16 x i8> @testmrglw2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7-NEXT:    lvx v4, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testmrglw2:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    xxmrghw v2, v3, v2
+; P8-AIX-NEXT:    blr
 entry:
   %shuffle = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 4, i32 5, i32 6, i32 7>
   ret <16 x i8> %shuffle
@@ -451,6 +517,32 @@ define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_un
 ; CHECK-P7-NEXT:    xxswapd v2, vs0
 ; CHECK-P7-NEXT:    vperm v2, v2, v4, v3
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-64-LABEL: testmrglb3:
+; P8-AIX-64:       # %bb.0: # %entry
+; P8-AIX-64-NEXT:    ld r4, L..C0(r2) # %const.0
+; P8-AIX-64-NEXT:    lxsdx v2, 0, r3
+; P8-AIX-64-NEXT:    xxlxor v4, v4, v4
+; P8-AIX-64-NEXT:    lxvw4x v3, 0, r4
+; P8-AIX-64-NEXT:    vperm v2, v4, v2, v3
+; P8-AIX-64-NEXT:    blr
+;
+; P8-AIX-32-LABEL: testmrglb3:
+; P8-AIX-32:       # %bb.0: # %entry
+; P8-AIX-32-NEXT:    lwz r5, 4(r3)
+; P8-AIX-32-NEXT:    lwz r4, L..C0(r2) # %const.0
+; P8-AIX-32-NEXT:    stw r5, -32(r1)
+; P8-AIX-32-NEXT:    lwz r3, 0(r3)
+; P8-AIX-32-NEXT:    lxvw4x v2, 0, r4
+; P8-AIX-32-NEXT:    addi r4, r1, -16
+; P8-AIX-32-NEXT:    stw r3, -16(r1)
+; P8-AIX-32-NEXT:    addi r3, r1, -32
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
+; P8-AIX-32-NEXT:    lxvw4x v4, 0, r4
+; P8-AIX-32-NEXT:    vperm v2, v4, v3, v2
+; P8-AIX-32-NEXT:    xxlxor v3, v3, v3
+; P8-AIX-32-NEXT:    vmrghb v2, v3, v2
+; P8-AIX-32-NEXT:    blr
 entry:
   %0 = load <8 x i8>, <8 x i8>* %a, align 8
   %1 = zext <8 x i8> %0 to <8 x i16>
@@ -528,6 +620,34 @@ define dso_local void @no_crash_elt0_from_RHS(<2 x double>* noalias nocapture de
 ; CHECK-P7-NEXT:    xxmrghd vs0, vs1, vs0
 ; CHECK-P7-NEXT:    xxswapd vs0, vs0
 ; CHECK-P7-NEXT:    stxvd2x vs0, 0, r30
+;
+; P8-AIX-64-LABEL: no_crash_elt0_from_RHS:
+; P8-AIX-64:       # %bb.0: # %test_entry
+; P8-AIX-64-NEXT:    mflr r0
+; P8-AIX-64-NEXT:    std r0, 16(r1)
+; P8-AIX-64-NEXT:    stdu r1, -128(r1)
+; P8-AIX-64-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
+; P8-AIX-64-NEXT:    mr r31, r3
+; P8-AIX-64-NEXT:    bl .dummy[PR]
+; P8-AIX-64-NEXT:    nop
+; P8-AIX-64-NEXT:    xxlxor f0, f0, f0
+; P8-AIX-64-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; P8-AIX-64-NEXT:    xxmrghd vs0, vs0, vs1
+; P8-AIX-64-NEXT:    stxvd2x vs0, 0, r31
+;
+; P8-AIX-32-LABEL: no_crash_elt0_from_RHS:
+; P8-AIX-32:       # %bb.0: # %test_entry
+; P8-AIX-32-NEXT:    mflr r0
+; P8-AIX-32-NEXT:    stw r0, 8(r1)
+; P8-AIX-32-NEXT:    stwu r1, -64(r1)
+; P8-AIX-32-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
+; P8-AIX-32-NEXT:    mr r31, r3
+; P8-AIX-32-NEXT:    bl .dummy[PR]
+; P8-AIX-32-NEXT:    nop
+; P8-AIX-32-NEXT:    xxlxor f0, f0, f0
+; P8-AIX-32-NEXT:    # kill: def $f1 killed $f1 def $vsl1
+; P8-AIX-32-NEXT:    xxmrghd vs0, vs0, vs1
+; P8-AIX-32-NEXT:    stxvd2x vs0, 0, r31
 test_entry:
   %_div_result = tail call double @dummy()
   %oldret = insertvalue { double, double } undef, double %_div_result, 0
@@ -577,6 +697,22 @@ define dso_local <16 x i8> @no_crash_bitcast(i32 %a) {
 ; CHECK-P7-NEXT:    lvx v2, 0, r4
 ; CHECK-P7-NEXT:    vperm v2, v3, v3, v2
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-64-LABEL: no_crash_bitcast:
+; P8-AIX-64:       # %bb.0: # %entry
+; P8-AIX-64-NEXT:    mtfprwz f0, r3
+; P8-AIX-64-NEXT:    xxmrghw v2, vs0, vs0
+; P8-AIX-64-NEXT:    blr
+;
+; P8-AIX-32-LABEL: no_crash_bitcast:
+; P8-AIX-32:       # %bb.0: # %entry
+; P8-AIX-32-NEXT:    lwz r4, L..C1(r2) # %const.0
+; P8-AIX-32-NEXT:    stw r3, -16(r1)
+; P8-AIX-32-NEXT:    addi r3, r1, -16
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
+; P8-AIX-32-NEXT:    lxvw4x v2, 0, r4
+; P8-AIX-32-NEXT:    vperm v2, v3, v3, v2
+; P8-AIX-32-NEXT:    blr
 entry:
   %cast = bitcast i32 %a to <4 x i8>
   %ret = shufflevector <4 x i8> %cast, <4 x i8> undef, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -632,6 +768,24 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P7-NEXT:    lvx v4, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-64-LABEL: replace_undefs_in_splat:
+; P8-AIX-64:       # %bb.0: # %entry
+; P8-AIX-64-NEXT:    ld r3, L..C1(r2) # %const.0
+; P8-AIX-64-NEXT:    ld r4, L..C2(r2) # %const.1
+; P8-AIX-64-NEXT:    lxvw4x v3, 0, r3
+; P8-AIX-64-NEXT:    lxvw4x v4, 0, r4
+; P8-AIX-64-NEXT:    vperm v2, v2, v4, v3
+; P8-AIX-64-NEXT:    blr
+;
+; P8-AIX-32-LABEL: replace_undefs_in_splat:
+; P8-AIX-32:       # %bb.0: # %entry
+; P8-AIX-32-NEXT:    lwz r3, L..C2(r2) # %const.0
+; P8-AIX-32-NEXT:    lwz r4, L..C3(r2) # %const.1
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
+; P8-AIX-32-NEXT:    lxvw4x v4, 0, r4
+; P8-AIX-32-NEXT:    vperm v2, v2, v4, v3
+; P8-AIX-32-NEXT:    blr
 entry:
   %vecins1 = shufflevector <4 x i32> %a, <4 x i32> <i32 undef, i32 566, i32 undef, i32 566>, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x i32> %vecins1
@@ -683,6 +837,30 @@ define dso_local <16 x i8> @no_RAUW_in_combine_during_legalize(i32* nocapture re
 ; CHECK-P7-NEXT:    xxspltd v2, f0, 0
 ; CHECK-P7-NEXT:    vmrglb v2, v3, v2
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-64-LABEL: no_RAUW_in_combine_during_legalize:
+; P8-AIX-64:       # %bb.0: # %entry
+; P8-AIX-64-NEXT:    sldi r4, r4, 2
+; P8-AIX-64-NEXT:    xxlxor v3, v3, v3
+; P8-AIX-64-NEXT:    lxsiwzx v2, r3, r4
+; P8-AIX-64-NEXT:    vmrghb v2, v2, v3
+; P8-AIX-64-NEXT:    blr
+;
+; P8-AIX-32-LABEL: no_RAUW_in_combine_during_legalize:
+; P8-AIX-32:       # %bb.0: # %entry
+; P8-AIX-32-NEXT:    slwi r4, r4, 2
+; P8-AIX-32-NEXT:    xxlxor v3, v3, v3
+; P8-AIX-32-NEXT:    lwzx r3, r3, r4
+; P8-AIX-32-NEXT:    li r4, 0
+; P8-AIX-32-NEXT:    stw r4, -32(r1)
+; P8-AIX-32-NEXT:    addi r4, r1, -16
+; P8-AIX-32-NEXT:    stw r3, -16(r1)
+; P8-AIX-32-NEXT:    addi r3, r1, -32
+; P8-AIX-32-NEXT:    lxvw4x vs0, 0, r3
+; P8-AIX-32-NEXT:    lxvw4x vs1, 0, r4
+; P8-AIX-32-NEXT:    xxmrghw v2, vs0, vs1
+; P8-AIX-32-NEXT:    vmrghb v2, v2, v3
+; P8-AIX-32-NEXT:    blr
 entry:
   %idx.ext = sext i32 %offset to i64
   %add.ptr = getelementptr inbounds i32, i32* %ptr, i64 %idx.ext
@@ -731,6 +909,19 @@ define dso_local <4 x i32> @testSplat4Low(<8 x i8>* nocapture readonly %ptr) loc
 ; CHECK-P7-NEXT:    xxswapd v2, vs0
 ; CHECK-P7-NEXT:    xxspltw v2, v2, 2
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-64-LABEL: testSplat4Low:
+; P8-AIX-64:       # %bb.0: # %entry
+; P8-AIX-64-NEXT:    lfdx f0, 0, r3
+; P8-AIX-64-NEXT:    xxspltw v2, vs0, 1
+; P8-AIX-64-NEXT:    blr
+;
+; P8-AIX-32-LABEL: testSplat4Low:
+; P8-AIX-32:       # %bb.0: # %entry
+; P8-AIX-32-NEXT:    addi r3, r3, 4
+; P8-AIX-32-NEXT:    lfiwzx f0, 0, r3
+; P8-AIX-32-NEXT:    xxspltw v2, vs0, 1
+; P8-AIX-32-NEXT:    blr
 entry:
   %0 = load <8 x i8>, <8 x i8>* %ptr, align 8
   %vecinit18 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -774,6 +965,19 @@ define dso_local <4 x i32> @testSplat4hi(<8 x i8>* nocapture readonly %ptr) loca
 ; CHECK-P7-NEXT:    xxswapd v2, vs0
 ; CHECK-P7-NEXT:    xxspltw v2, v2, 3
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-64-LABEL: testSplat4hi:
+; P8-AIX-64:       # %bb.0: # %entry
+; P8-AIX-64-NEXT:    lfdx f0, 0, r3
+; P8-AIX-64-NEXT:    xxspltw v2, vs0, 0
+; P8-AIX-64-NEXT:    blr
+;
+; P8-AIX-32-LABEL: testSplat4hi:
+; P8-AIX-32:       # %bb.0: # %entry
+; P8-AIX-32-NEXT:    lwz r3, 0(r3)
+; P8-AIX-32-NEXT:    mtfprwz f0, r3
+; P8-AIX-32-NEXT:    xxspltw v2, vs0, 1
+; P8-AIX-32-NEXT:    blr
 entry:
   %0 = load <8 x i8>, <8 x i8>* %ptr, align 8
   %vecinit22 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -814,6 +1018,27 @@ define dso_local <2 x i64> @testSplat8(<8 x i8>* nocapture readonly %ptr) local_
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    lxvdsx v2, 0, r3
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-64-LABEL: testSplat8:
+; P8-AIX-64:       # %bb.0: # %entry
+; P8-AIX-64-NEXT:    lxvdsx v2, 0, r3
+; P8-AIX-64-NEXT:    blr
+;
+; P8-AIX-32-LABEL: testSplat8:
+; P8-AIX-32:       # %bb.0: # %entry
+; P8-AIX-32-NEXT:    lwz r5, 4(r3)
+; P8-AIX-32-NEXT:    lwz r4, L..C4(r2) # %const.0
+; P8-AIX-32-NEXT:    stw r5, -32(r1)
+; P8-AIX-32-NEXT:    lwz r3, 0(r3)
+; P8-AIX-32-NEXT:    lxvw4x v2, 0, r4
+; P8-AIX-32-NEXT:    addi r4, r1, -16
+; P8-AIX-32-NEXT:    stw r3, -16(r1)
+; P8-AIX-32-NEXT:    addi r3, r1, -32
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
+; P8-AIX-32-NEXT:    lxvw4x v4, 0, r4
+; P8-AIX-32-NEXT:    vperm v2, v4, v3, v2
+; P8-AIX-32-NEXT:    xxmrghd v2, v2, v2
+; P8-AIX-32-NEXT:    blr
 entry:
   %0 = load <8 x i8>, <8 x i8>* %ptr, align 8
   %vecinit30 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -850,6 +1075,26 @@ define <2 x i64> @testSplati64_0(<1 x i64>* nocapture readonly %ptr) #0 {
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    lxvdsx v2, 0, r3
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-64-LABEL: testSplati64_0:
+; P8-AIX-64:       # %bb.0: # %entry
+; P8-AIX-64-NEXT:    lxvdsx v2, 0, r3
+; P8-AIX-64-NEXT:    blr
+;
+; P8-AIX-32-LABEL: testSplati64_0:
+; P8-AIX-32:       # %bb.0: # %entry
+; P8-AIX-32-NEXT:    lwz r4, L..C5(r2) # %const.0
+; P8-AIX-32-NEXT:    lwz r5, 4(r3)
+; P8-AIX-32-NEXT:    lwz r3, 0(r3)
+; P8-AIX-32-NEXT:    stw r5, -16(r1)
+; P8-AIX-32-NEXT:    stw r3, -32(r1)
+; P8-AIX-32-NEXT:    addi r3, r1, -16
+; P8-AIX-32-NEXT:    lxvw4x v2, 0, r4
+; P8-AIX-32-NEXT:    addi r4, r1, -32
+; P8-AIX-32-NEXT:    lxvw4x v3, 0, r3
+; P8-AIX-32-NEXT:    lxvw4x v4, 0, r4
+; P8-AIX-32-NEXT:    vperm v2, v4, v3, v2
+; P8-AIX-32-NEXT:    blr
 entry:
   %0 = load <1 x i64>, <1 x i64>* %ptr, align 8
   %1 = shufflevector <1 x i64> %0, <1 x i64> undef, <2 x i32> <i32 0, i32 0>
@@ -894,6 +1139,12 @@ define <2 x i64> @testSplati64_1(<2 x i64>* nocapture readonly %ptr) #0 {
 ; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P7-NEXT:    xxspltd v2, vs0, 1
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testSplati64_1:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    addi r3, r3, 8
+; P8-AIX-NEXT:    lxvdsx v2, 0, r3
+; P8-AIX-NEXT:    blr
 entry:
   %0 = load <2 x i64>, <2 x i64>* %ptr, align 8
   %1 = shufflevector <2 x i64> %0, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
@@ -941,6 +1192,14 @@ define dso_local void @testByteSplat() #0 {
 ; CHECK-P7-NEXT:    vspltb v2, v2, 15
 ; CHECK-P7-NEXT:    stvx v2, 0, r3
 ; CHECK-P7-NEXT:    blr
+;
+; P8-AIX-LABEL: testByteSplat:
+; P8-AIX:       # %bb.0: # %entry
+; P8-AIX-NEXT:    lbzx r3, 0, r3
+; P8-AIX-NEXT:    mtvsrwz v2, r3
+; P8-AIX-NEXT:    vspltb v2, v2, 7
+; P8-AIX-NEXT:    stxvw4x v2, 0, r3
+; P8-AIX-NEXT:    blr
 entry:
   %0 = load i8, i8* undef, align 1
   %splat.splatinsert.i = insertelement <16 x i8> poison, i8 %0, i32 0

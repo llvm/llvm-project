@@ -10,6 +10,10 @@
 ; RUN:     -mtriple=powerpc64-ibm-aix-xcoff -vec-extabi \
 ; RUN:     < %s | FileCheck %s --check-prefix=P9BE
 
+; RUN: llc -mcpu=pwr9 -O3 -verify-machineinstrs -ppc-vsr-nums-as-vr \
+; RUN:     -mtriple=powerpc-ibm-aix-xcoff -vec-extabi \
+; RUN:     < %s | FileCheck %s --check-prefix=P9BE-32
+
 define void @test64(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
 ; CHECK-LABEL: test64:
 ; CHECK-NOT: ldux
@@ -21,6 +25,11 @@ define void @test64(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-NOT: mtvsrd
 ; P9BE: lxsdx [[REG:[0-9]+]]
 ; P9BE: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; P9BE-32-LABEL: test64:
+; P9BE-32: lwzux [[REG1:[0-9]+]]
+; P9BE-32: mtfprwz [[REG2:[0-9]+]], [[REG1]]
+; P9BE-32: xxinsertw [[REG3:[0-9]+]], [[REG2]]
+; P9BE-32: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG3]]
 entry:
   %idx.ext63 = sext i32 %i_pix2 to i64
   %add.ptr64 = getelementptr inbounds i8, i8* %pix2, i64 %idx.ext63
@@ -56,6 +65,10 @@ define void @test32(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-NOT: mtvsrwz
 ; P9BE: lxsiwzx [[REG:[0-9]+]]
 ; P9BE: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; P9BE-32-LABEL: test32:
+; P9BE-32: lwzx [[REG1:[0-9]+]]
+; P9BE-32: mtvsrwz [[REG2:[0-9]+]], [[REG1]]
+; P9BE-32: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG2]]
 entry:
   %idx.ext63 = sext i32 %i_pix2 to i64
   %add.ptr64 = getelementptr inbounds i8, i8* %pix2, i64 %idx.ext63
@@ -89,6 +102,9 @@ define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signe
 ; P9BE-NOT: lhzux
 ; P9BE: lxsihzx [[REG:[0-9]+]]
 ; P9BE: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; P9BE-32-LABEL: test16:
+; P9BE-32: lhzux [[REG1:[0-9]+]]
+; P9BE-32: vmrghh {{[0-9]+}}, {{[0-9]+}}, [[REG1]]
 entry:
   %idxprom = sext i32 %delta to i64
   %add14 = add nsw i32 %delta, 8
@@ -130,6 +146,9 @@ define void @test8(i8* nocapture readonly %sums, i32 signext %delta, i32 signext
 ; P9BE-NOT: lbzux
 ; P9BE: lxsibzx [[REG:[0-9]+]]
 ; P9BE: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; P9BE-32-LABEL: test8:
+; P9BE-32: lxsibzx [[REG:[0-9]+]]
+; P9BE-32: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG]]
 entry:
   %idxprom = sext i32 %delta to i64
   %add14 = add nsw i32 %delta, 8
