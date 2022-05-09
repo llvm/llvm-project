@@ -10,17 +10,16 @@ RUN: llvm-profdata merge --sample --text -output=%t3.proftext %S/Inputs/cs-sampl
 RUN: FileCheck %s < %t3.proftext --match-full-lines --strict-whitespace -check-prefix=RECOUNT
 RUN: llvm-profdata merge --sample --extbinary -output=%t2.profbin %S/Inputs/cs-sample-preinline.proftext --gen-cs-nested-profile=1 -generate-merged-base-profiles=1
 RUN: llvm-profdata show -sample -detailed-summary %S/Inputs/cs-sample-preinline.proftext | FileCheck %s -check-prefix=SUMMARY
-RUN: llvm-profdata show -sample -detailed-summary %t2.profbin | FileCheck %s -check-prefix=SUMMARY
-RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -check-prefix=SUMMARY
+RUN: llvm-profdata show -sample -detailed-summary %t2.profbin | FileCheck %s -check-prefix=SUMMARY-NEST
+RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -check-prefix=SUMMARY-NEST
 
 
-; CHECK:main:1968679:12
+; CHECK:main:1968621:12
 ; CHECK-NEXT: 2: 24
-; CHECK-NEXT: 3: 28 _Z5funcAi:18
-; CHECK-NEXT: 3.1: 28 _Z5funcBi:30
-; CHECK-NEXT: 3: _Z5funcAi:1467398
+; CHECK-NEXT: 3: 17 _Z5funcAi:7
+; CHECK-NEXT: 3.1: 10 _Z5funcBi:11
+; CHECK-NEXT: 3: _Z5funcAi:1467388
 ; CHECK-NEXT:  0: 10
-; CHECK-NEXT:  1: 10 _Z8funcLeafi:11
 ; CHECK-NEXT:  3: 24
 ; CHECK-NEXT:  1: _Z8funcLeafi:1467299
 ; CHECK-NEXT:   0: 6
@@ -30,9 +29,8 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 ; CHECK-NEXT:   15: 23
 ; CHECK-NEXT:   !Attributes: 2
 ; CHECK-NEXT:  !Attributes: 2
-; CHECK-NEXT: 3.1: _Z5funcBi:500973
+; CHECK-NEXT: 3.1: _Z5funcBi:500954
 ; CHECK-NEXT:  0: 19
-; CHECK-NEXT:  1: 19 _Z8funcLeafi:20
 ; CHECK-NEXT:  3: 12
 ; CHECK-NEXT:  1: _Z8funcLeafi:500853
 ; CHECK-NEXT:   0: 15
@@ -49,14 +47,12 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 ; CHECK-NEXT: 1: 13
 
 
-
-; RECOUNT:main:1968679:12
+; RECOUNT:main:1968621:12
 ; RECOUNT-NEXT: 2: 24
-; RECOUNT-NEXT: 3: 28 _Z5funcAi:18
-; RECOUNT-NEXT: 3.1: 28 _Z5funcBi:30
-; RECOUNT-NEXT: 3: _Z5funcAi:1467398
+; RECOUNT-NEXT: 3: 17 _Z5funcAi:7
+; RECOUNT-NEXT: 3.1: 10 _Z5funcBi:11
+; RECOUNT-NEXT: 3: _Z5funcAi:1467388
 ; RECOUNT-NEXT:  0: 10
-; RECOUNT-NEXT:  1: 10 _Z8funcLeafi:11
 ; RECOUNT-NEXT:  3: 24
 ; RECOUNT-NEXT:  1: _Z8funcLeafi:1467299
 ; RECOUNT-NEXT:   0: 6
@@ -66,9 +62,8 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 ; RECOUNT-NEXT:   15: 23
 ; RECOUNT-NEXT:   !Attributes: 6
 ; RECOUNT-NEXT:  !Attributes: 6
-; RECOUNT-NEXT: 3.1: _Z5funcBi:500973
+; RECOUNT-NEXT: 3.1: _Z5funcBi:500954
 ; RECOUNT-NEXT:  0: 19
-; RECOUNT-NEXT:  1: 19 _Z8funcLeafi:20
 ; RECOUNT-NEXT:  3: 12
 ; RECOUNT-NEXT:  1: _Z8funcLeafi:500853
 ; RECOUNT-NEXT:   0: 15
@@ -89,9 +84,8 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 ; RECOUNT-NEXT: 11: 23327 _Z3fibi:25228
 ; RECOUNT-NEXT: 15: 34
 ; RECOUNT-NEXT: !Attributes: 2
-; RECOUNT-NEXT:_Z5funcAi:1467398:11
+; RECOUNT-NEXT:_Z5funcAi:1467388:11
 ; RECOUNT-NEXT: 0: 10
-; RECOUNT-NEXT: 1: 10 _Z8funcLeafi:11
 ; RECOUNT-NEXT: 3: 24
 ; RECOUNT-NEXT: 1: _Z8funcLeafi:1467299
 ; RECOUNT-NEXT:  0: 6
@@ -101,9 +95,9 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 ; RECOUNT-NEXT:  15: 23
 ; RECOUNT-NEXT:  !Attributes: 6
 ; RECOUNT-NEXT: !Attributes: 2
-; RECOUNT-NEXT:_Z5funcBi:501213:32
+; RECOUNT-NEXT:_Z5funcBi:501194:32
 ; RECOUNT-NEXT: 0: 32
-; RECOUNT-NEXT: 1: 32 _Z8funcLeafi:20
+; RECOUNT-NEXT: 1: 13
 ; RECOUNT-NEXT: 3: 12
 ; RECOUNT-NEXT: 1: _Z8funcLeafi:500853
 ; RECOUNT-NEXT:  0: 15
@@ -115,13 +109,12 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 ; RECOUNT-NEXT:  15: 11
 ; RECOUNT-NEXT:  !Attributes: 6
 
-; PROBE:main:1968679:12
+; PROBE:main:1968621:12
 ; PROBE-NEXT: 2: 24
-; PROBE-NEXT: 3: 28 _Z5funcAi:18
-; PROBE-NEXT: 3.1: 28 _Z5funcBi:30
-; PROBE-NEXT: 3: _Z5funcAi:1467398
+; PROBE-NEXT: 3: 17 _Z5funcAi:7
+; PROBE-NEXT: 3.1: 10 _Z5funcBi:11
+; PROBE-NEXT: 3: _Z5funcAi:1467388
 ; PROBE-NEXT:  0: 10
-; PROBE-NEXT:  1: 10 _Z8funcLeafi:11
 ; PROBE-NEXT:  3: 24
 ; PROBE-NEXT:  1: _Z8funcLeafi:1467299
 ; PROBE-NEXT:   0: 6
@@ -133,9 +126,8 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 ; PROBE-NEXT:   !Attributes: 2
 ; PROBE-NEXT:  !CFGChecksum: 844530426352218
 ; PROBE-NEXT:  !Attributes: 2
-; PROBE-NEXT: 3.1: _Z5funcBi:500973
+; PROBE-NEXT: 3.1: _Z5funcBi:500954
 ; PROBE-NEXT:  0: 19
-; PROBE-NEXT:  1: 19 _Z8funcLeafi:20
 ; PROBE-NEXT:  3: 12
 ; PROBE-NEXT:  1: _Z8funcLeafi:500853
 ; PROBE-NEXT:   0: 15
@@ -181,3 +173,27 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 ; SUMMARY-NEXT: 11 blocks with count >= 24 account for 99.99 percentage of the total counts.
 ; SUMMARY-NEXT: 16 blocks with count >= 10 account for 99.999 percentage of the total counts.
 ; SUMMARY-NEXT: 16 blocks with count >= 10 account for 99.9999 percentage of the total counts.
+
+
+; SUMMARY-NEST:      Total functions: 4
+; SUMMARY-NEST-NEXT: Maximum function count: 32
+; SUMMARY-NEST-NEXT: Maximum block count: 362830
+; SUMMARY-NEST-NEXT: Total number of blocks: 15
+; SUMMARY-NEST-NEXT: Total count: 772504
+; SUMMARY-NEST-NEXT: Detailed summary:
+; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 1 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 10 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 20 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 30 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 40 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 50 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 60 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 70 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 80 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 90 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 3 blocks with count >= 23327 account for 95 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 4 blocks with count >= 23324 account for 99 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 4 blocks with count >= 23324 account for 99.9 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 10 blocks with count >= 21 account for 99.99 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 15 blocks with count >= 10 account for 99.999 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 15 blocks with count >= 10 account for 99.9999 percentage of the total counts.
