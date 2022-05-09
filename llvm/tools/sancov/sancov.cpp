@@ -103,16 +103,24 @@ static cl::opt<std::string> ClStripPathPrefix(
     cl::desc("Strip this prefix from file paths in reports."));
 
 static cl::opt<std::string>
-    ClBlacklist("blacklist", cl::init(""),
-                cl::desc("Blacklist file (sanitizer blacklist format)."));
+    ClIgnorelist("ignorelist", cl::init(""),
+                 cl::desc("Ignorelist file (sanitizer ignorelist format)."));
+
+static cl::opt<std::string>
+    ClBlacklist("blacklist", cl::init(""), cl::Hidden,
+                cl::desc("ignorelist file (sanitizer ignorelist format)."));
 
 static cl::opt<bool> ClUseDefaultBlacklist(
     "use_default_blacklist", cl::init(true), cl::Hidden,
-    cl::desc("Controls if default blacklist should be used."));
+    cl::desc("Controls if default ignorelist should be used."));
 
-static const char *const DefaultBlacklistStr = "fun:__sanitizer_.*\n"
-                                               "src:/usr/include/.*\n"
-                                               "src:.*/libc\\+\\+/.*\n";
+static cl::opt<bool> ClUseDefaultIgnorelist(
+    "use_default_ignorelist", cl::init(true), cl::Hidden,
+    cl::desc("Controls if default ignorelist should be used."));
+
+static const char *const DefaultIgnorelistStr = "fun:__sanitizer_.*\n"
+                                                "src:/usr/include/.*\n"
+                                                "src:.*/libc\\+\\+/.*\n";
 
 // --------- FORMAT SPECIFICATION ---------
 
@@ -473,48 +481,53 @@ static std::string normalizeFilename(const std::string &FileName) {
   return stripPathPrefix(sys::path::convert_to_slash(std::string(S)));
 }
 
-class Blacklists {
+class Ignorelists {
 public:
-  Blacklists()
-      : DefaultBlacklist(createDefaultBlacklist()),
-        UserBlacklist(createUserBlacklist()) {}
+  Ignorelists()
+      : DefaultIgnorelist(createDefaultIgnorelist()),
+        UserIgnorelist(createUserIgnorelist()) {}
 
-  bool isBlacklisted(const DILineInfo &I) {
-    if (DefaultBlacklist &&
-        DefaultBlacklist->inSection("sancov", "fun", I.FunctionName))
+  bool isIgnorelisted(const DILineInfo &I) {
+    if (DefaultIgnorelist &&
+        DefaultIgnorelist->inSection("sancov", "fun", I.FunctionName))
       return true;
-    if (DefaultBlacklist &&
-        DefaultBlacklist->inSection("sancov", "src", I.FileName))
+    if (DefaultIgnorelist &&
+        DefaultIgnorelist->inSection("sancov", "src", I.FileName))
       return true;
-    if (UserBlacklist &&
-        UserBlacklist->inSection("sancov", "fun", I.FunctionName))
+    if (UserIgnorelist &&
+        UserIgnorelist->inSection("sancov", "fun", I.FunctionName))
       return true;
-    if (UserBlacklist && UserBlacklist->inSection("sancov", "src", I.FileName))
+    if (UserIgnorelist &&
+        UserIgnorelist->inSection("sancov", "src", I.FileName))
       return true;
     return false;
   }
 
 private:
-  static std::unique_ptr<SpecialCaseList> createDefaultBlacklist() {
-    if (!ClUseDefaultBlacklist)
+  static std::unique_ptr<SpecialCaseList> createDefaultIgnorelist() {
+    if ((!ClUseDefaultIgnorelist) && (!ClUseDefaultBlacklist))
       return std::unique_ptr<SpecialCaseList>();
     std::unique_ptr<MemoryBuffer> MB =
-        MemoryBuffer::getMemBuffer(DefaultBlacklistStr);
+        MemoryBuffer::getMemBuffer(DefaultIgnorelistStr);
     std::string Error;
-    auto Blacklist = SpecialCaseList::create(MB.get(), Error);
+    auto Ignorelist = SpecialCaseList::create(MB.get(), Error);
     failIfNotEmpty(Error);
-    return Blacklist;
+    return Ignorelist;
   }
 
-  static std::unique_ptr<SpecialCaseList> createUserBlacklist() {
-    if (ClBlacklist.empty())
+  static std::unique_ptr<SpecialCaseList> createUserIgnorelist() {
+    if ((ClBlacklist.empty()) && ClIgnorelist.empty())
       return std::unique_ptr<SpecialCaseList>();
 
-    return SpecialCaseList::createOrDie({{ClBlacklist}},
+    if (!ClBlacklist.empty())
+      return SpecialCaseList::createOrDie({{ClBlacklist}},
+                                          *vfs::getRealFileSystem());
+
+    return SpecialCaseList::createOrDie({{ClIgnorelist}},
                                         *vfs::getRealFileSystem());
   }
-  std::unique_ptr<SpecialCaseList> DefaultBlacklist;
-  std::unique_ptr<SpecialCaseList> UserBlacklist;
+  std::unique_ptr<SpecialCaseList> DefaultIgnorelist;
+  std::unique_ptr<SpecialCaseList> UserIgnorelist;
 };
 
 static std::vector<CoveragePoint>
@@ -523,7 +536,7 @@ getCoveragePoints(const std::string &ObjectFile,
                   const std::set<uint64_t> &CoveredAddrs) {
   std::vector<CoveragePoint> Result;
   auto Symbolizer(createSymbolizer());
-  Blacklists B;
+  Ignorelists Ig;
 
   std::set<std::string> CoveredFiles;
   if (ClSkipDeadFiles) {
@@ -561,7 +574,7 @@ getCoveragePoints(const std::string &ObjectFile,
         CoveredFiles.find(LineInfo->FileName) == CoveredFiles.end())
       continue;
     LineInfo->FileName = normalizeFilename(LineInfo->FileName);
-    if (B.isBlacklisted(*LineInfo))
+    if (Ig.isIgnorelisted(*LineInfo))
       continue;
 
     auto Id = utohexstr(Addr, true);
@@ -578,7 +591,7 @@ getCoveragePoints(const std::string &ObjectFile,
           CoveredFiles.find(FrameInfo.FileName) == CoveredFiles.end())
         continue;
       FrameInfo.FileName = normalizeFilename(FrameInfo.FileName);
-      if (B.isBlacklisted(FrameInfo))
+      if (Ig.isIgnorelisted(FrameInfo))
         continue;
       if (Infos.find(FrameInfo) == Infos.end()) {
         Infos.insert(FrameInfo);
@@ -878,7 +891,7 @@ symbolize(const RawCoverage &Data, const std::string ObjectFile) {
   Hasher.update((*BufOrErr)->getBuffer());
   Coverage->BinaryHash = toHex(Hasher.final());
 
-  Blacklists B;
+  Ignorelists Ig;
   auto Symbolizer(createSymbolizer());
 
   for (uint64_t Addr : *Data.Addrs) {
@@ -887,7 +900,7 @@ symbolize(const RawCoverage &Data, const std::string ObjectFile) {
     auto LineInfo = Symbolizer->symbolizeCode(
         ObjectFile, {Addr, object::SectionedAddress::UndefSection});
     failIfError(LineInfo);
-    if (B.isBlacklisted(*LineInfo))
+    if (Ig.isIgnorelisted(*LineInfo))
       continue;
 
     Coverage->CoveredIds.insert(utohexstr(Addr, true));
