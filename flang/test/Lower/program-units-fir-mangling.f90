@@ -151,4 +151,38 @@ function alpha() bind(c, name =" bEtA ")
 ! CHECK: }
 end function
 
+! CHECK-LABEL: func @bc1() attributes {fir.sym_name = "_QPbind_c_s"} {
+subroutine bind_c_s() Bind(C,Name='bc1')
+  ! CHECK: return
+end subroutine bind_c_s
+
+! CHECK-LABEL: func @_QPbind_c_s() {
+subroutine bind_c_s()
+  ! CHECK: fir.call @_QPbind_c_q() : () -> ()
+  ! CHECK: return
+  call bind_c_q
+end
+
+! CHECK-LABEL: func @_QPbind_c_q() {
+subroutine bind_c_q()
+  interface
+    subroutine bind_c_s() Bind(C, name='bc1')
+    end
+  end interface
+  ! CHECK: fir.call @bc1() : () -> ()
+  ! CHECK: return
+  call bind_c_s
+end
+
+! Test that BIND(C) label is taken into account for ENTRY symbols.
+! CHECK-LABEL: func @_QPsub_with_entries() {
+subroutine sub_with_entries
+! CHECK-LABEL: func @bar() attributes {fir.sym_name = "_QPsome_entry"} {
+ entry some_entry() bind(c, name="bar")
+! CHECK-LABEL: func @_QPnormal_entry() {
+ entry normal_entry()
+! CHECK-LABEL: func @some_other_entry() attributes {fir.sym_name = "_QPsome_other_entry"} {
+ entry some_other_entry() bind(c)
+end subroutine
+
 ! CHECK-LABEL: fir.global internal @_QFfooEpi : f32 {
