@@ -198,10 +198,11 @@ struct DOTGraphTraits<ScopDetectionWrapperPass *>
 } // end namespace llvm
 
 struct ScopViewer
-    : public DOTGraphTraitsViewer<ScopDetectionWrapperPass, false> {
+    : public DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false> {
   static char ID;
   ScopViewer()
-      : DOTGraphTraitsViewer<ScopDetectionWrapperPass, false>("scops", ID) {}
+      : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false>(
+            "scops", ID) {}
   bool processFunction(Function &F, ScopDetectionWrapperPass &SD) override {
     if (ViewFilter != "" && !F.getName().count(ViewFilter))
       return false;
@@ -216,27 +217,29 @@ struct ScopViewer
 char ScopViewer::ID = 0;
 
 struct ScopOnlyViewer
-    : public DOTGraphTraitsViewer<ScopDetectionWrapperPass, true> {
+    : public DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, true> {
   static char ID;
   ScopOnlyViewer()
-      : DOTGraphTraitsViewer<ScopDetectionWrapperPass, true>("scopsonly", ID) {}
+      : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, true>(
+            "scopsonly", ID) {}
 };
 char ScopOnlyViewer::ID = 0;
 
 struct ScopPrinter
-    : public DOTGraphTraitsPrinter<ScopDetectionWrapperPass, false> {
+    : public DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, false> {
   static char ID;
   ScopPrinter()
-      : DOTGraphTraitsPrinter<ScopDetectionWrapperPass, false>("scops", ID) {}
+      : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, false>(
+            "scops", ID) {}
 };
 char ScopPrinter::ID = 0;
 
 struct ScopOnlyPrinter
-    : public DOTGraphTraitsPrinter<ScopDetectionWrapperPass, true> {
+    : public DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, true> {
   static char ID;
   ScopOnlyPrinter()
-      : DOTGraphTraitsPrinter<ScopDetectionWrapperPass, true>("scopsonly", ID) {
-  }
+      : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, true>(
+            "scopsonly", ID) {}
 };
 char ScopOnlyPrinter::ID = 0;
 
