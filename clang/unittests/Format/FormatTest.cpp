@@ -15082,6 +15082,9 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   // verifyFormat("X A::operator++ (T);", Space);
   verifyFormat("auto lambda = [] () { return 0; };", Space);
   verifyFormat("int x = int (y);", Space);
+  verifyFormat("#define F(...) __VA_OPT__ (__VA_ARGS__)", Space);
+  verifyFormat("__builtin_LINE ()", Space);
+  verifyFormat("__builtin_UNKNOWN ()", Space);
 
   FormatStyle SomeSpace = getLLVMStyle();
   SomeSpace.SpaceBeforeParens = FormatStyle::SBPO_NonEmptyParentheses;
