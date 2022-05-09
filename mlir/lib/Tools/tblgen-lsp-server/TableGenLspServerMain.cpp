@@ -51,6 +51,13 @@ LogicalResult mlir::TableGenLspServerMain(int argc, char **argv) {
       llvm::cl::desc("Pretty-print JSON output"),
       llvm::cl::init(false),
   };
+  llvm::cl::list<std::string> extraIncludeDirs(
+      "tablegen-extra-dir", llvm::cl::desc("Extra directory of include files"),
+      llvm::cl::value_desc("directory"), llvm::cl::Prefix);
+  llvm::cl::list<std::string> compilationDatabases(
+      "tablegen-compilation-database",
+      llvm::cl::desc("Compilation YAML databases containing additional "
+                     "compilation information for .td files"));
 
   llvm::cl::ParseCommandLineOptions(argc, argv, "TableGen LSP Language Server");
 
@@ -68,6 +75,7 @@ LogicalResult mlir::TableGenLspServerMain(int argc, char **argv) {
   JSONTransport transport(stdin, llvm::outs(), inputStyle, prettyPrint);
 
   // Configure the servers and start the main language server.
-  TableGenServer server;
+  TableGenServer::Options options(compilationDatabases, extraIncludeDirs);
+  TableGenServer server(options);
   return runTableGenLSPServer(server, transport);
 }

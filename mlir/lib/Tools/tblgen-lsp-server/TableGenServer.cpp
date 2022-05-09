@@ -8,6 +8,7 @@
 
 #include "TableGenServer.h"
 
+#include "../lsp-server-support/CompilationDatabase.h"
 #include "../lsp-server-support/Logging.h"
 #include "../lsp-server-support/Protocol.h"
 #include "../lsp-server-support/SourceMgrUtils.h"
@@ -95,7 +96,9 @@ namespace {
 class TableGenTextFile {
 public:
   TableGenTextFile(const lsp::URIForFile &uri, StringRef fileContents,
-                   int64_t version, std::vector<lsp::Diagnostic> &diagnostics);
+                   int64_t version,
+                   const std::vector<std::string> &extraIncludeDirs,
+                   std::vector<lsp::Diagnostic> &diagnostics);
 
   /// Return the current version of this text file.
   int64_t getVersion() const { return version; }
@@ -118,9 +121,10 @@ private:
 };
 } // namespace
 
-TableGenTextFile::TableGenTextFile(const lsp::URIForFile &uri,
-                                   StringRef fileContents, int64_t version,
-                                   std::vector<lsp::Diagnostic> &diagnostics)
+TableGenTextFile::TableGenTextFile(
+    const lsp::URIForFile &uri, StringRef fileContents, int64_t version,
+    const std::vector<std::string> &extraIncludeDirs,
+    std::vector<lsp::Diagnostic> &diagnostics)
     : contents(fileContents.str()), version(version) {
   auto memBuffer = llvm::MemoryBuffer::getMemBufferCopy(contents, uri.file());
   if (!memBuffer) {
@@ -129,10 +133,11 @@ TableGenTextFile::TableGenTextFile(const lsp::URIForFile &uri,
   }
 
   // Build the set of include directories for this file.
-  // TODO: Setup external include directories.
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
   includeDirs.push_back(uriDirectory.str().str());
+  includeDirs.insert(includeDirs.end(), extraIncludeDirs.begin(),
+                     extraIncludeDirs.end());
 
   sourceMgr.setIncludeDirs(includeDirs);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
@@ -161,6 +166,16 @@ TableGenTextFile::TableGenTextFile(const lsp::URIForFile &uri,
 //===----------------------------------------------------------------------===//
 
 struct lsp::TableGenServer::Impl {
+  explicit Impl(const Options &options)
+      : options(options), compilationDatabase(options.compilationDatabases) {}
+
+  /// TableGen LSP options.
+  const Options &options;
+
+  /// The compilation database containing additional information for files
+  /// passed to the server.
+  lsp::CompilationDatabase compilationDatabase;
+
   /// The files held by the server, mapped by their URI file name.
   llvm::StringMap<std::unique_ptr<TableGenTextFile>> files;
 };
@@ -169,14 +184,20 @@ struct lsp::TableGenServer::Impl {
 // TableGenServer
 //===----------------------------------------------------------------------===//
 
-lsp::TableGenServer::TableGenServer() : impl(std::make_unique<Impl>()) {}
+lsp::TableGenServer::TableGenServer(const Options &options)
+    : impl(std::make_unique<Impl>(options)) {}
 lsp::TableGenServer::~TableGenServer() = default;
 
 void lsp::TableGenServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
     std::vector<Diagnostic> &diagnostics) {
-  impl->files[uri.file()] =
-      std::make_unique<TableGenTextFile>(uri, contents, version, diagnostics);
+  // Build the set of additional include directories.
+  std::vector<std::string> additionalIncludeDirs = impl->options.extraDirs;
+  const auto &fileInfo = impl->compilationDatabase.getFileInfo(uri.file());
+  llvm::append_range(additionalIncludeDirs, fileInfo.includeDirs);
+
+  impl->files[uri.file()] = std::make_unique<TableGenTextFile>(
+      uri, contents, version, additionalIncludeDirs, diagnostics);
 }
 
 Optional<int64_t> lsp::TableGenServer::removeDocument(const URIForFile &uri) {
