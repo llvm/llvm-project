@@ -2128,6 +2128,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/NVGPU/NVGPUDialect.h"],
     includes = ["include"],
     deps = [
+        ":GPUDialect",
         ":IR",
         ":NVGPUIncGen",
         ":SideEffectInterfaces",
@@ -3715,6 +3716,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ConversionPassIncGen",
+        ":GPUDialect",
         ":IR",
         ":LLVMCommonConversion",
         ":NVGPU",

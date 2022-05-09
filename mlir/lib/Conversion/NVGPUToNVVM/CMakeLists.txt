@@ -11,6 +11,7 @@ add_mlir_conversion_library(MLIRNVGPUToNVVM
   Core
 
   LINK_LIBS PUBLIC
+  MLIRGPUOps
   MLIRLLVMCommonConversion
   MLIRLLVMIR
   MLIRNVVMIR

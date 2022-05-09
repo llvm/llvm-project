@@ -10,6 +10,7 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/NVGPU/NVGPUDialect.h"
 
@@ -327,6 +328,11 @@ struct ConvertNVGPUToNVVMPass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext());
+    /// device-side async tokens cannot be materialized in nvvm. We just convert
+    /// them to a dummy i32 type in order to easily drop them during conversion.
+    converter.addConversion([&](nvgpu::DeviceAsyncTokenType type) -> Type {
+      return converter.convertType(IntegerType::get(type.getContext(), 32));
+    });
     populateNVGPUToNVVMConversionPatterns(converter, patterns);
     LLVMConversionTarget target(getContext());
     target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
@@ -337,10 +343,94 @@ struct ConvertNVGPUToNVVMPass
   }
 };
 
+struct NVGPUAsyncCopyLowering
+    : public ConvertOpToLLVMPattern<nvgpu::DeviceAsyncCopyOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::DeviceAsyncCopyOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::DeviceAsyncCopyOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto dstMemrefType = op.dst().getType().cast<MemRefType>();
+    Value dstPtr = getStridedElementPtr(loc, dstMemrefType, adaptor.dst(),
+                                        adaptor.dstIndices(), rewriter);
+    auto i8Ty = IntegerType::get(op.getContext(), 8);
+    auto dstPointerType =
+        LLVM::LLVMPointerType::get(i8Ty, dstMemrefType.getMemorySpaceAsInt());
+    dstPtr = rewriter.create<LLVM::BitcastOp>(loc, dstPointerType, dstPtr);
+
+    auto srcMemrefType = op.src().getType().cast<MemRefType>();
+
+    Value scrPtr = getStridedElementPtr(loc, srcMemrefType, adaptor.src(),
+                                        adaptor.srcIndices(), rewriter);
+    auto srcPointerType =
+        LLVM::LLVMPointerType::get(i8Ty, srcMemrefType.getMemorySpaceAsInt());
+    scrPtr = rewriter.create<LLVM::BitcastOp>(loc, srcPointerType, scrPtr);
+    // Intrinsics takes a global pointer so we need an address space cast.
+    auto srcPointerGlobalType = LLVM::LLVMPointerType::get(
+        i8Ty, NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+    scrPtr = rewriter.create<LLVM::AddrSpaceCastOp>(loc, srcPointerGlobalType,
+                                                    scrPtr);
+    int64_t numElements = adaptor.numElements().getZExtValue();
+    int64_t sizeInBytes =
+        (dstMemrefType.getElementTypeBitWidth() / 8) * numElements;
+    // bypass L1 is only supported for byte sizes of 16, we drop the hint
+    // otherwise.
+    UnitAttr bypassL1 = sizeInBytes == 16 ? adaptor.bypassL1Attr() : UnitAttr();
+    rewriter.create<NVVM::CpAsyncOp>(
+        loc, dstPtr, scrPtr, rewriter.getI32IntegerAttr(sizeInBytes), bypassL1);
+
+    // Drop the result token.
+    Value zero = rewriter.create<LLVM::ConstantOp>(
+        op->getLoc(), IntegerType::get(op.getContext(), 32),
+        rewriter.getI32IntegerAttr(0));
+    rewriter.replaceOp(op, zero);
+    return success();
+  }
+};
+
+struct NVGPUAsyncCreateGroupLowering
+    : public ConvertOpToLLVMPattern<nvgpu::DeviceAsyncCreateGroupOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::DeviceAsyncCreateGroupOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::DeviceAsyncCreateGroupOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.create<NVVM::CpAsyncCommitGroupOp>(op.getLoc());
+    // Drop the result token.
+    Value zero = rewriter.create<LLVM::ConstantOp>(
+        op->getLoc(), IntegerType::get(op.getContext(), 32),
+        rewriter.getI32IntegerAttr(0));
+    rewriter.replaceOp(op, zero);
+    return success();
+  }
+};
+
+struct NVGPUAsyncWaitLowering
+    : public ConvertOpToLLVMPattern<nvgpu::DeviceAsyncWaitOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::DeviceAsyncWaitOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::DeviceAsyncWaitOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // If numGroup is not present pick 0 as a conservative correct value.
+    int32_t numGroups = adaptor.numGroups() ? *adaptor.numGroups() : 0;
+    rewriter.create<NVVM::CpAsyncWaitGroupOp>(op.getLoc(), numGroups);
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 } // namespace
+
 void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                                  RewritePatternSet &patterns) {
-  patterns.add<MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM>(converter);
+  patterns.add<MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
+               NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering>(
+      converter);
 }
 
 std::unique_ptr<Pass> mlir::createConvertNVGPUToNVVMPass() {

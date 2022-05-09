@@ -117,7 +117,6 @@ struct GPUInlinerInterface : public DialectInlinerInterface {
 
 void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
-  addTypes<DeviceAsyncTokenType>();
   addTypes<MMAMatrixType>();
   addOperations<
 #define GET_OP_LIST
@@ -140,9 +139,6 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
   // Handle 'async token' types.
   if (keyword == "async.token")
     return AsyncTokenType::get(context);
-  // Handle 'device async token' types.
-  if (keyword == "device.async.token")
-    return DeviceAsyncTokenType::get(context);
 
   if (keyword == "mma_matrix") {
     SMLoc beginLoc = parser.getNameLoc();
@@ -183,7 +179,6 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
 void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
-      .Case<DeviceAsyncTokenType>([&](Type) { os << "device.async.token"; })
       .Case<MMAMatrixType>([&](MMAMatrixType fragTy) {
         os << "mma_matrix<";
         auto shape = fragTy.getShape();
@@ -1364,32 +1359,6 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
 void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.add<SimplifyDimOfAllocOp>(context);
-}
-
-//===----------------------------------------------------------------------===//
-// GPU_DeviceAsyncCopyOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult DeviceAsyncCopyOp::verify() {
-  auto srcMemref = src().getType().cast<MemRefType>();
-  auto dstMemref = dst().getType().cast<MemRefType>();
-  unsigned workgroupAddressSpace = GPUDialect::getWorkgroupAddressSpace();
-  if (!isLastMemrefDimUnitStride(srcMemref))
-    return emitError("source memref most minor dim must have unit stride");
-  if (!isLastMemrefDimUnitStride(dstMemref))
-    return emitError("destination memref most minor dim must have unit stride");
-  if (dstMemref.getMemorySpaceAsInt() != workgroupAddressSpace)
-    return emitError("destination memref must have memory space ")
-           << workgroupAddressSpace;
-  if (dstMemref.getElementType() != srcMemref.getElementType())
-    return emitError("source and destination must have the same element type");
-  if (size_t(srcMemref.getRank()) != srcIndices().size())
-    return emitOpError() << "expected " << srcMemref.getRank()
-                         << " source indices, got " << srcIndices().size();
-  if (size_t(dstMemref.getRank()) != dstIndices().size())
-    return emitOpError() << "expected " << dstMemref.getRank()
-                         << " destination indices, got " << dstIndices().size();
-  return success();
 }
 
 #include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"
