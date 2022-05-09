@@ -219,7 +219,9 @@ namespace Unevaluated {
       static int n;
     };
     template<const int *N> struct B {};
-    template<int N> constexpr int A<N>::k = *(int[N]){N}; // expected-error 1+{{negative}}
+    template <int N> constexpr int A<N>::k = *(int[N]){N}; // expected-error 1+{{negative}} expected-note 1+{{not valid in a constant expression}} expected-note 1+{{declared here}}
+    // expected-error@-1 1+{{must be initialized by a constant expression}}
+
     template<int N> int A<N>::n = *(int[N]){0};
 
     template <typename> void f() {
@@ -230,9 +232,9 @@ namespace Unevaluated {
     };
 
     decltype(A<-3>::k) d1 = 0; // ok
-    decltype(char{A<-4>::k}) d2 = 0; // expected-note {{instantiation of }} expected-error {{narrow}} expected-note {{cast}}
-    decltype(char{A<1>::k}) d3 = 0; // ok
-    decltype(char{A<1 + (unsigned char)-1>::k}) d4 = 0; // expected-error {{narrow}} expected-note {{cast}}
+    decltype(char{A<-4>::k}) d2 = 0;                    // expected-note 1+{{instantiation of }} expected-error {{narrow}} expected-note {{cast}}
+    decltype(char{A<1>::k}) d3 = 0;                     // expected-note 1+{{instantiation of }} expected-error {{narrow}} expected-note {{cast}}
+    decltype(char{A<1 + (unsigned char)-1>::k}) d4 = 0; // expected-error {{narrow}} expected-note {{cast}}  expected-note {{instantiation of}}
   }
 }
 
