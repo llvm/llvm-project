@@ -6592,7 +6592,16 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           SmallVectorImpl<int> &Mask = ShuffleMasks[VecId][ScalarTE];
           if (Mask.empty())
             Mask.assign(FTy->getNumElements(), UndefMaskElem);
-          assert(Mask[InIdx] == UndefMaskElem &&
+          // InsertElement should not be used already or the scalar is part of
+          // TreeEntry, which is operand of the root insertelement instructions.
+          assert((Mask[InIdx] == UndefMaskElem ||
+                  any_of(ScalarTE->UserTreeIndices,
+                         [](const EdgeInfo &EI) {
+                           return EI.EdgeIdx == 1 &&
+                                  EI.UserTE->getOpcode() ==
+                                      Instruction::InsertElement &&
+                                  !EI.UserTE->isAltShuffle();
+                         })) &&
                  "InsertElementInstruction used already.");
           Mask[InIdx] = EU.Lane;
           DemandedElts[VecId].setBit(InIdx);
