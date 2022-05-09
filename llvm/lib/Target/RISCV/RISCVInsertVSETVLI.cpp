@@ -1124,9 +1124,16 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         // use the predecessor information.
         assert(BlockInfo[MBB.getNumber()].Pred.isValid() &&
                "Expected a valid predecessor state.");
-        if (needVSETVLI(NewInfo, BlockInfo[MBB.getNumber()].Pred) &&
-            needVSETVLIPHI(NewInfo, MBB)) {
-          insertVSETVLI(MBB, MI, NewInfo, BlockInfo[MBB.getNumber()].Pred);
+        if (needVSETVLI(NewInfo, BlockInfo[MBB.getNumber()].Pred)) {
+          // If this is the first implicit state change, and the state change
+          // requested can be proven to produce the same register contents, we
+          // can skip emitting the actual state change and continue as if we
+          // had since we know the GPR result of the implicit state change
+          // wouldn't be used and VL/VTYPE registers are correct.  Note that
+          // we *do* need to model the state as if it changed as while the
+          // register contents are unchanged, the abstract model can change.
+          if (needVSETVLIPHI(NewInfo, MBB))
+            insertVSETVLI(MBB, MI, NewInfo, BlockInfo[MBB.getNumber()].Pred);
           CurInfo = NewInfo;
         }
       } else {
