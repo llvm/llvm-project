@@ -37,7 +37,7 @@ private:
       const ast_matchers::internal::Matcher<clang::QualType> &IntegerType,
       const std::string &CastBindName) const;
 
-  const std::string CharTypdefsToIgnoreList;
+  const StringRef CharTypdefsToIgnoreList;
   const bool DiagnoseSignedUnsignedCharComparisons;
 };
 

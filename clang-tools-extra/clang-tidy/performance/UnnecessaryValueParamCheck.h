@@ -42,7 +42,7 @@ private:
   llvm::DenseMap<const FunctionDecl *, FunctionParmMutationAnalyzer>
       MutationAnalyzers;
   utils::IncludeInserter Inserter;
-  const std::vector<std::string> AllowedTypes;
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace performance

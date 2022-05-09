@@ -265,7 +265,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
     StyleString.resize(StyleSize);
 
     StyleString.append("IgnoredRegexp");
-    std::string IgnoredRegexpStr = Options.get(StyleString, "");
+    StringRef IgnoredRegexpStr = Options.get(StyleString, "");
     StyleString.resize(StyleSize);
     StyleString.append("Prefix");
     std::string Prefix(Options.get(StyleString, ""));
@@ -281,7 +281,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
     if (CaseOptional || !Prefix.empty() || !Postfix.empty() ||
         !IgnoredRegexpStr.empty() || HPTOpt)
       Styles[I].emplace(std::move(CaseOptional), std::move(Prefix),
-                        std::move(Postfix), std::move(IgnoredRegexpStr),
+                        std::move(Postfix), IgnoredRegexpStr.str(),
                         HPTOpt.getValueOr(IdentifierNamingCheck::HPT_Off));
   }
   bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
@@ -445,16 +445,16 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
   SmallString<128> Buffer;
   for (const auto &Opt : HNOpts) {
     Buffer.assign({Section, "General.", Opt});
-    std::string Val = Options.get(Buffer, "");
+    StringRef Val = Options.get(Buffer, "");
     if (!Val.empty())
-      HNOption.General[Opt] = std::move(Val);
+      HNOption.General[Opt] = Val.str();
   }
 
   for (const auto &Type : HNDerivedTypes) {
     Buffer.assign({Section, "DerivedType.", Type});
-    std::string Val = Options.get(Buffer, "");
+    StringRef Val = Options.get(Buffer, "");
     if (!Val.empty())
-      HNOption.DerivedType[Type] = std::move(Val);
+      HNOption.DerivedType[Type] = Val.str();
   }
 
   static constexpr std::pair<StringRef, StringRef> HNCStrings[] = {
@@ -465,26 +465,26 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
 
   for (const auto &CStr : HNCStrings) {
     Buffer.assign({Section, "CString.", CStr.first});
-    std::string Val = Options.get(Buffer, "");
+    StringRef Val = Options.get(Buffer, "");
     if (!Val.empty())
-      HNOption.CString[CStr.first] = std::move(Val);
+      HNOption.CString[CStr.first] = Val.str();
   }
 
   for (const auto &PrimType : HungarainNotationPrimitiveTypes) {
     Buffer.assign({Section, "PrimitiveType.", PrimType});
-    std::string Val = Options.get(Buffer, "");
+    StringRef Val = Options.get(Buffer, "");
     if (!Val.empty()) {
       std::string Type = PrimType.str();
       std::replace(Type.begin(), Type.end(), '-', ' ');
-      HNOption.PrimitiveType[Type] = std::move(Val);
+      HNOption.PrimitiveType[Type] = Val.str();
     }
   }
 
   for (const auto &Type : HungarainNotationUserDefinedTypes) {
     Buffer.assign({Section, "UserDefinedType.", Type});
-    std::string Val = Options.get(Buffer, "");
+    StringRef Val = Options.get(Buffer, "");
     if (!Val.empty())
-      HNOption.UserDefinedType[Type] = std::move(Val);
+      HNOption.UserDefinedType[Type] = Val.str();
   }
 }
 

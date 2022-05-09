@@ -33,7 +33,7 @@ public:
   }
 
 private:
-  const std::vector<std::string> Types;
+  const std::vector<StringRef> Types;
 };
 
 } // namespace readability

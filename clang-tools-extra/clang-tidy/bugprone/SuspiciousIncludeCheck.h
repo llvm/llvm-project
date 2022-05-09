@@ -46,8 +46,8 @@ public:
   utils::FileExtensionsSet ImplementationFileExtensions;
 
 private:
-  const std::string RawStringHeaderFileExtensions;
-  const std::string RawStringImplementationFileExtensions;
+  const StringRef RawStringHeaderFileExtensions;
+  const StringRef RawStringImplementationFileExtensions;
 };
 
 } // namespace bugprone

@@ -33,11 +33,11 @@ public:
   const std::size_t MinimumLength;
 
   /// The parameter names (as written in the source text) to be ignored.
-  const std::vector<std::string> IgnoredParameterNames;
+  const std::vector<StringRef> IgnoredParameterNames;
 
   /// The parameter typename suffixes (as written in the source code) to be
   /// ignored.
-  const std::vector<std::string> IgnoredParameterTypeSuffixes;
+  const std::vector<StringRef> IgnoredParameterTypeSuffixes;
 
   /// Whether to consider differently qualified versions of the same type
   /// mixable.

@@ -33,7 +33,7 @@ private:
   const bool IsStringviewNullptrCheckEnabled;
   const bool WarnOnLargeLength;
   const unsigned int LargeLengthThreshold;
-  std::vector<std::string> StringNames;
+  std::vector<StringRef> StringNames;
 };
 
 } // namespace bugprone

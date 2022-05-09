@@ -177,7 +177,7 @@ private:
 class DeclFinderASTVisitor
     : public clang::RecursiveASTVisitor<DeclFinderASTVisitor> {
 public:
-  DeclFinderASTVisitor(const std::string &Name,
+  DeclFinderASTVisitor(const StringRef &Name,
                        const StmtGeneratedVarNameMap *GeneratedDecls)
       : Name(Name), GeneratedDecls(GeneratedDecls), Found(false) {}
 

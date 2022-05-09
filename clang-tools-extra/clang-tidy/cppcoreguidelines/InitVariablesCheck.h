@@ -32,7 +32,7 @@ public:
 
 private:
   utils::IncludeInserter IncludeInserter;
-  const std::string MathHeader;
+  const StringRef MathHeader;
 };
 
 } // namespace cppcoreguidelines

@@ -78,8 +78,8 @@ AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       CheckFunctionCalls(Options.get("CheckFunctionCalls", false)),
       RawAssertList(Options.get("AssertMacros", "assert,NSAssert,NSCAssert")),
-      IgnoredFunctions(utils::options::parseStringList(
-          "__builtin_expect;" + Options.get("IgnoredFunctions", ""))) {
+      IgnoredFunctions(utils::options::parseListPair(
+          "__builtin_expect;", Options.get("IgnoredFunctions", ""))) {
   StringRef(RawAssertList).split(AssertMacros, ",", -1, false);
 }
 

@@ -50,15 +50,14 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // + match for emplace calls that should be replaced with insertion
   auto CallPushBack = cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName("push_back"))),
-      on(hasType(cxxRecordDecl(hasAnyName(SmallVector<StringRef, 5>(
-          ContainersWithPushBack.begin(), ContainersWithPushBack.end()))))));
+      on(hasType(cxxRecordDecl(hasAnyName(ContainersWithPushBack)))));
 
   // We can't replace push_backs of smart pointer because
   // if emplacement fails (f.e. bad_alloc in vector) we will have leak of
   // passed pointer because smart pointer won't be constructed
   // (and destructed) as in push_back case.
-  auto IsCtorOfSmartPtr = hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(
-      SmallVector<StringRef, 5>(SmartPointers.begin(), SmartPointers.end())))));
+  auto IsCtorOfSmartPtr =
+      hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(SmartPointers))));
 
   // Bitfields binds only to consts and emplace_back take it by universal ref.
   auto BitFieldAsArgument = hasAnyArgument(
@@ -91,19 +90,16 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
 
   auto MakeTuple = ignoringImplicit(
-      callExpr(
-          callee(expr(ignoringImplicit(declRefExpr(
-              unless(hasExplicitTemplateArgs()),
-              to(functionDecl(hasAnyName(SmallVector<StringRef, 2>(
-                  TupleMakeFunctions.begin(), TupleMakeFunctions.end())))))))))
+      callExpr(callee(expr(ignoringImplicit(declRefExpr(
+                   unless(hasExplicitTemplateArgs()),
+                   to(functionDecl(hasAnyName(TupleMakeFunctions))))))))
           .bind("make"));
 
   // make_something can return type convertible to container's element type.
   // Allow the conversion only on containers of pairs.
   auto MakeTupleCtor = ignoringImplicit(cxxConstructExpr(
       has(materializeTemporaryExpr(MakeTuple)),
-      hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(
-          SmallVector<StringRef, 2>(TupleTypes.begin(), TupleTypes.end())))))));
+      hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(TupleTypes))))));
 
   auto SoughtParam = materializeTemporaryExpr(
       anyOf(has(MakeTuple), has(MakeTupleCtor),

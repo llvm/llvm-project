@@ -73,7 +73,7 @@ SuspiciousMissingCommaCheck::SuspiciousMissingCommaCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       SizeThreshold(Options.get("SizeThreshold", 5U)),
-      RatioThreshold(std::stod(Options.get("RatioThreshold", ".2"))),
+      RatioThreshold(std::stod(Options.get("RatioThreshold", ".2").str())),
       MaxConcatenatedTokens(Options.get("MaxConcatenatedTokens", 5U)) {}
 
 void SuspiciousMissingCommaCheck::storeOptions(

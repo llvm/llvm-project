@@ -35,9 +35,9 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  const std::vector<std::string> StringLikeClasses;
+  const std::vector<StringRef> StringLikeClasses;
   utils::IncludeInserter IncludeInserter;
-  const std::string AbseilStringsMatchHeader;
+  const StringRef AbseilStringsMatchHeader;
 };
 
 } // namespace abseil

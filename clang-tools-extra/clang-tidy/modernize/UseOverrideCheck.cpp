@@ -141,7 +141,7 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   // Add 'override' on inline declarations that don't already have it.
   if (!HasFinal && !HasOverride) {
     SourceLocation InsertLoc;
-    std::string ReplacementText = OverrideSpelling + " ";
+    std::string ReplacementText = (OverrideSpelling + " ").str();
     SourceLocation MethodLoc = Method->getLocation();
 
     for (Token T : Tokens) {
@@ -171,7 +171,7 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
       // end of the declaration of the function, but prefer to put it on the
       // same line as the declaration if the beginning brace for the start of
       // the body falls on the next line.
-      ReplacementText = " " + OverrideSpelling;
+      ReplacementText = (" " + OverrideSpelling).str();
       auto *LastTokenIter = std::prev(Tokens.end());
       // When try statement is used instead of compound statement as
       // method body - insert override keyword before it.
@@ -192,14 +192,14 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
         InsertLoc = Tokens[Tokens.size() - 2].getLocation();
         // Check if we need to insert a space.
         if ((Tokens[Tokens.size() - 2].getFlags() & Token::LeadingSpace) == 0)
-          ReplacementText = " " + OverrideSpelling + " ";
+          ReplacementText = (" " + OverrideSpelling + " ").str();
       } else if (getText(Tokens.back(), Sources) == "ABSTRACT")
         InsertLoc = Tokens.back().getLocation();
     }
 
     if (!InsertLoc.isValid()) {
       InsertLoc = FileRange.getEnd();
-      ReplacementText = " " + OverrideSpelling;
+      ReplacementText = (" " + OverrideSpelling).str();
     }
 
     // If the override macro has been specified just ensure it exists,

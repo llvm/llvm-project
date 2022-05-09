@@ -51,14 +51,9 @@ ForbiddenSubclassingCheck::ForbiddenSubclassingCheck(
 void ForbiddenSubclassingCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       objcInterfaceDecl(
-          isDerivedFrom(
-              objcInterfaceDecl(
-                  hasAnyName(
-                      std::vector<StringRef>(
-                          ForbiddenSuperClassNames.begin(),
-                          ForbiddenSuperClassNames.end())))
-              .bind("superclass")))
-      .bind("subclass"),
+          isDerivedFrom(objcInterfaceDecl(hasAnyName(ForbiddenSuperClassNames))
+                            .bind("superclass")))
+          .bind("subclass"),
       this);
 }
 
