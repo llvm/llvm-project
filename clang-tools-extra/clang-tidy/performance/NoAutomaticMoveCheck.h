@@ -29,7 +29,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  const std::vector<std::string> AllowedTypes;
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace performance

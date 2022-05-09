@@ -28,7 +28,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const std::string NullMacrosStr;
+  const StringRef NullMacrosStr;
   SmallVector<StringRef, 1> NullMacros;
 };
 

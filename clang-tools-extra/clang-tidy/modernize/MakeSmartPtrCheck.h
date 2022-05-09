@@ -47,8 +47,8 @@ protected:
 
 private:
   utils::IncludeInserter Inserter;
-  const std::string MakeSmartPtrFunctionHeader;
-  const std::string MakeSmartPtrFunctionName;
+  const StringRef MakeSmartPtrFunctionHeader;
+  const StringRef MakeSmartPtrFunctionName;
   const bool IgnoreMacros;
   const bool IgnoreDefaultInitialization;
 

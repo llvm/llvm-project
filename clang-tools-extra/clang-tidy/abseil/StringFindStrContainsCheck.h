@@ -28,8 +28,8 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  const std::vector<std::string> StringLikeClassesOption;
-  const std::string AbseilStringsMatchHeaderOption;
+  const std::vector<StringRef> StringLikeClassesOption;
+  const StringRef AbseilStringsMatchHeaderOption;
 };
 
 } // namespace abseil

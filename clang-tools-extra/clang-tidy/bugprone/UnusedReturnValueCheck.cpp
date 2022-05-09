@@ -138,8 +138,7 @@ void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
       callExpr(callee(functionDecl(
                    // Don't match void overloads of checked functions.
                    unless(returns(voidType())),
-                   isInstantiatedFrom(hasAnyName(
-                       std::vector<StringRef>(FunVec.begin(), FunVec.end()))))))
+                   isInstantiatedFrom(hasAnyName(FunVec)))))
           .bind("match"))));
 
   auto UnusedInCompoundStmt =

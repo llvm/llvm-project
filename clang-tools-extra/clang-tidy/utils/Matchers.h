@@ -55,7 +55,7 @@ AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isPointerToConst) {
 class MatchesAnyListedNameMatcher
     : public ast_matchers::internal::MatcherInterface<NamedDecl> {
 public:
-  explicit MatchesAnyListedNameMatcher(llvm::ArrayRef<std::string> NameList) {
+  explicit MatchesAnyListedNameMatcher(llvm::ArrayRef<StringRef> NameList) {
     std::transform(
         NameList.begin(), NameList.end(), std::back_inserter(NameMatchers),
         [](const llvm::StringRef Name) { return NameMatcher(Name); });
@@ -116,7 +116,7 @@ private:
 // expressions. If a regular expression contains starts ':' the NamedDecl's
 // qualified name will be used for matching, otherwise its name will be used.
 inline ::clang::ast_matchers::internal::Matcher<NamedDecl>
-matchesAnyListedName(llvm::ArrayRef<std::string> NameList) {
+matchesAnyListedName(llvm::ArrayRef<StringRef> NameList) {
   return ::clang::ast_matchers::internal::makeMatcher(
       new MatchesAnyListedNameMatcher(NameList));
 }

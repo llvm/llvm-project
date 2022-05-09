@@ -42,7 +42,7 @@ private:
                                        ASTContext &Context);
 
   const bool WarnOnAllAutoCopies;
-  const std::vector<std::string> AllowedTypes;
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace performance
