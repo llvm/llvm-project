@@ -275,7 +275,7 @@ ifeq "$(MAKE_GMODULES)" "YES"
 endif
 
 CFLAGS += $(CFLAGS_EXTRAS)
-CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS) $(CXXFLAGS_EXTRAS)
+CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
@@ -410,6 +410,8 @@ ifeq (1,$(USE_LIBDL))
 		LDFLAGS += -ldl
 	endif
 endif
+
+CXXFLAGS += $(CXXFLAGS_EXTRAS)
 
 #----------------------------------------------------------------------
 # dylib settings
