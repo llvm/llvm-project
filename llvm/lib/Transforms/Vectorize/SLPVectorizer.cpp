@@ -6559,6 +6559,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           int VecId = -1;
           if (It == FirstUsers.end()) {
             (void)ShuffleMasks.emplace_back();
+            SmallVectorImpl<int> &Mask = ShuffleMasks.back()[ScalarTE];
+            if (Mask.empty())
+              Mask.assign(FTy->getNumElements(), UndefMaskElem);
             // Find the insertvector, vectorized in tree, if any.
             Value *Base = VU;
             while (auto *IEBase = dyn_cast<InsertElementInst>(Base)) {
@@ -6566,12 +6569,12 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
               if (const TreeEntry *E = getTreeEntry(IEBase)) {
                 VU = IEBase;
                 do {
-                  int Idx = E->findLaneForValue(Base);
-                  SmallVectorImpl<int> &Mask = ShuffleMasks.back()[ScalarTE];
-                  if (Mask.empty())
-                    Mask.assign(FTy->getNumElements(), UndefMaskElem);
+                  IEBase = cast<InsertElementInst>(Base);
+                  int Idx = *getInsertIndex(IEBase);
+                  assert(Mask[Idx] == UndefMaskElem &&
+                         "InsertElementInstruction used already.");
                   Mask[Idx] = Idx;
-                  Base = cast<InsertElementInst>(Base)->getOperand(0);
+                  Base = IEBase->getOperand(0);
                 } while (E == getTreeEntry(Base));
                 break;
               }
