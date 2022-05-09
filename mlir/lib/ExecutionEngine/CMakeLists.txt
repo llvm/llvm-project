@@ -23,9 +23,33 @@ if(LLVM_USE_PERF)
       PerfJITEvents)
 endif(LLVM_USE_PERF)
 
+# Use a separate library for OptUtils, to avoid pulling in the entire JIT and
+# codegen infrastructure. Unlike MLIRExecutionEngine, this is part of
+# libMLIR.so.
+add_mlir_library(MLIRExecutionEngineUtils
+  OptUtils.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/ExecutionEngine
+
+  DEPENDS
+  intrinsics_gen
+
+  LINK_COMPONENTS
+  Analysis
+  Core
+  Coroutines
+  AggressiveInstCombine
+  InstCombine
+  ScalarOpts
+  Vectorize
+  TransformUtils
+  IPO
+  Passes
+  )
+
 add_mlir_library(MLIRExecutionEngine
   ExecutionEngine.cpp
-  OptUtils.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
@@ -56,6 +80,7 @@ add_mlir_library(MLIRExecutionEngine
   ${LLVM_JIT_LISTENER_LIB}
 
   LINK_LIBS PUBLIC
+  MLIRExecutionEngineUtils
   MLIRLLVMIR
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
