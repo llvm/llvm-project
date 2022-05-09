@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly "-passes=polly-scop-printer" -disable-output < %s
+; RUN: opt %loadNPMPolly "-passes=polly-scop-printer" -disable-output < %s
 ; RUN: FileCheck %s -input-file=scops.func.dot
 ;
 ; Check that the ScopPrinter does not crash.
