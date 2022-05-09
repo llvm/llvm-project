@@ -22043,6 +22043,12 @@ static SDValue combineShuffleOfBitcast(ShuffleVectorSDNode *SVN,
       (!Op1.isUndef() && (Op1.getOpcode() != ISD::BITCAST ||
                           Op1.getOperand(0).getValueType() != InVT)))
     return SDValue();
+  if ((ISD::isBuildVectorOfConstantSDNodes(Op0.getOperand(0).getNode()) ||
+       ISD::isBuildVectorOfConstantFPSDNodes(Op0.getOperand(0).getNode())) &&
+      (Op1.isUndef() ||
+       ISD::isBuildVectorOfConstantSDNodes(Op1.getOperand(0).getNode()) ||
+       ISD::isBuildVectorOfConstantFPSDNodes(Op1.getOperand(0).getNode())))
+    return SDValue();
 
   int VTLanes = VT.getVectorNumElements();
   int InLanes = InVT.getVectorNumElements();
