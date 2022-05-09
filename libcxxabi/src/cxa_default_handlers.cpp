@@ -63,17 +63,17 @@ static void demangling_terminate_handler()
                 {
                     // Include the what() message from the exception
                     const std::exception* e = static_cast<const std::exception*>(thrown_object);
-                    abort_message("terminating with %s exception of type %s: %s",
+                    abort_message("terminating due to %s exception of type %s: %s",
                                   cause, name, e->what());
                 }
                 else
-                    // Else just note that we're terminating with an exception
-                    abort_message("terminating with %s exception of type %s",
+                    // Else just note that we're terminating due to an exception
+                    abort_message("terminating due to %s exception of type %s",
                                    cause, name);
             }
             else
-                // Else we're terminating with a foreign exception
-                abort_message("terminating with %s foreign exception", cause);
+                // Else we're terminating due to a foreign exception
+                abort_message("terminating due to %s foreign exception", cause);
         }
     }
 #endif
