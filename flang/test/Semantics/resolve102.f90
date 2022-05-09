@@ -26,7 +26,7 @@ function foo() result(r)
   procedure(foo), pointer :: r 
 end function foo
 
-program iface
+subroutine iface
   !ERROR: Procedure 'p' is recursively defined.  Procedures in the cycle: 'p', 'sub', 'p2'
   procedure(sub) :: p
   interface
@@ -36,9 +36,9 @@ program iface
     end subroutine
   end interface
   call p(sub)
-end program
+end subroutine
 
-Program mutual
+subroutine mutual
   Procedure(sub1) :: p
 
   Call p(sub)
@@ -52,9 +52,9 @@ Program mutual
     Subroutine sub(p2)
       Procedure(sub1) :: p2
     End Subroutine
-End Program
+End subroutine
 
-Program mutual1
+subroutine mutual1
   Procedure(sub1) :: p
 
   Call p(sub)
@@ -68,18 +68,18 @@ Program mutual1
     Subroutine sub(p2)
       Procedure(sub1) :: p2
     End Subroutine
-End Program
+End subroutine
 
-program twoCycle
+subroutine twoCycle
   !ERROR: The interface for procedure 'p1' is recursively defined
   !ERROR: The interface for procedure 'p2' is recursively defined
   procedure(p1) p2
   procedure(p2) p1
   call p1
   call p2
-end program
+end subroutine
 
-program threeCycle
+subroutine threeCycle
   !ERROR: The interface for procedure 'p1' is recursively defined
   !ERROR: The interface for procedure 'p2' is recursively defined
   procedure(p1) p2
@@ -89,7 +89,7 @@ program threeCycle
   call p1
   call p2
   call p3
-end program
+end subroutine
 
 module mutualSpecExprs
 contains

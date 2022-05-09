@@ -110,7 +110,7 @@ contains
   end
 end
 
-program p04
+subroutine p04
   implicit none
   !ERROR: No explicit type declared for 'index'
   call s1(index)

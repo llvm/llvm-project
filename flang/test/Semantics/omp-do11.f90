@@ -21,8 +21,8 @@ program omp_do
   !$omp end do
 end program omp_do
 
-!DEF: /omp_do2 MainProgram
-program omp_do2
+!DEF: /omp_do2 (Subroutine)Subprogram
+subroutine omp_do2
   !DEF: /omp_do2/i ObjectEntity INTEGER(4)
   !DEF: /omp_do2/k ObjectEntity INTEGER(4)
   integer :: i = 0, k
@@ -33,4 +33,4 @@ program omp_do2
     print *, "it", i
   end do
   !$omp end do
-end program omp_do2
+end subroutine omp_do2

@@ -4,7 +4,7 @@
 ! The loop iteration variable may not appear in a threadprivate directive.
 
 
-program omp_do
+subroutine omp_do
   integer, save:: i, j, k,n
   !$omp  threadprivate(k,j,i)
   !$omp  do collapse(2)
@@ -16,9 +16,10 @@ program omp_do
     end do
   end do
   !$omp end do
-end program omp_do
+end subroutine omp_do
 
-program omp_do1
+subroutine omp_do1
+  integer, save :: i, j, k
   !$omp  threadprivate(k,j,i)
   !$omp  do
   !ERROR: Loop iteration variable i is not allowed in THREADPRIVATE.
@@ -29,9 +30,10 @@ program omp_do1
   end do
   !$omp end do
 
-end program omp_do1
+end subroutine omp_do1
 
-program omp_do2
+subroutine omp_do2
+  integer, save :: k, j
   !$omp threadprivate(k)
   !$omp threadprivate(j)
   call compute()
@@ -47,9 +49,10 @@ program omp_do2
   !$omp end do
   end subroutine
 
-end program omp_do2
+end subroutine omp_do2
 
-program omp_do3
+subroutine omp_do3
+  integer, save :: i
   !$omp  threadprivate(i)
   !$omp parallel
   print *, "parallel"
@@ -63,7 +66,7 @@ program omp_do3
   end do
   !$omp end do
 
-end program omp_do3
+end subroutine omp_do3
 
 module tp
   !integer i,j
@@ -76,7 +79,7 @@ module usetp
   use tp
 end module usetp
 
-program main
+subroutine main
   use usetp
   !$omp  do
   !ERROR: Loop iteration variable i is not allowed in THREADPRIVATE.
@@ -86,9 +89,9 @@ program main
     end do
   end do
   !$omp end do
-end program
+end subroutine
 
-program main1
+subroutine main1
   use tp
   !$omp  do
   !ERROR: Loop iteration variable j is not allowed in THREADPRIVATE.
@@ -98,4 +101,4 @@ program main1
     end do
   end do
   !$omp end do
-end program
+end subroutine
