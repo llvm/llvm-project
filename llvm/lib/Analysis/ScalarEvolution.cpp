@@ -4129,10 +4129,22 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
       return getSequentialMinMaxExpr(Kind, Ops);
   }
 
-  // In %x umin_seq %y, if %y being poison implies %x is also poison, we can
-  // use a non-sequential umin instead.
+  const SCEV *SaturationPoint;
+  switch (Kind) {
+  case scSequentialUMinExpr:
+    SaturationPoint = getZero(Ops[0]->getType());
+    break;
+  default:
+    llvm_unreachable("Not a sequential min/max type.");
+  }
+
+  // We can replace %x umin_seq %y with %x umin %y if either:
+  //  * %y being poison implies %x is also poison.
+  //  * %x cannot be the saturating value (e.g. zero for umin).
   for (unsigned i = 1, e = Ops.size(); i != e; ++i) {
-    if (::impliesPoison(Ops[i], Ops[i - 1])) {
+    if (::impliesPoison(Ops[i], Ops[i - 1]) ||
+        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_NE, Ops[i - 1],
+                                        SaturationPoint)) {
       SmallVector<const SCEV *> SeqOps = {Ops[i - 1], Ops[i]};
       Ops[i - 1] = getMinMaxExpr(
           SCEVSequentialMinMaxExpr::getEquivalentNonSequentialSCEVType(Kind),
