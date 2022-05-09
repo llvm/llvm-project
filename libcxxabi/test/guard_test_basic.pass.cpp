@@ -8,6 +8,13 @@
 //
 // UNSUPPORTED: c++03
 
+// Necessary because we include a private header of libc++abi, which
+// only understands _LIBCXXABI_HAS_NO_THREADS.
+#include "test_macros.h"
+#ifdef TEST_HAS_NO_THREADS
+# define _LIBCXXABI_HAS_NO_THREADS
+#endif
+
 #define TESTING_CXA_GUARD
 #include "../src/cxa_guard_impl.h"
 #include <cassert>
@@ -117,7 +124,7 @@ uint32_t MockGetThreadID() { return 0; }
 
 int main(int, char**) {
   {
-#if defined(_LIBCXXABI_HAS_NO_THREADS)
+#if defined(TEST_HAS_NO_THREADS)
     static_assert(CurrentImplementation == Implementation::NoThreads, "");
     static_assert(std::is_same<SelectedImplementation, NoThreadsGuard>::value, "");
 #else
@@ -129,7 +136,7 @@ int main(int, char**) {
 #endif
   }
   {
-#if (defined(__APPLE__) || defined(__linux__))  && !defined(_LIBCXXABI_HAS_NO_THREADS)
+#if (defined(__APPLE__) || defined(__linux__))  && !defined(TEST_HAS_NO_THREADS)
     assert(PlatformThreadID);
 #endif
     if (PlatformThreadID != nullptr) {

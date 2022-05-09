@@ -11,6 +11,15 @@
 
 #include <__threading_support>
 
+// UNSUPPORTED: modules-build && libcpp-has-no-threads
+
+// Necessary because we include a private source file of libc++abi, which
+// only understands _LIBCXXABI_HAS_NO_THREADS.
+#include "test_macros.h"
+#ifdef TEST_HAS_NO_THREADS
+# define _LIBCXXABI_HAS_NO_THREADS
+#endif
+
 typedef std::deque<void *> container;
 
 // #define  DEBUG_FALLBACK_MALLOC
