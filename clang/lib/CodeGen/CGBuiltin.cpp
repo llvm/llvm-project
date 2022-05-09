@@ -14409,12 +14409,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Builder.getFastMathFlags().setNoNaNs();
     return Builder.CreateCall(F, {Ops[0]});
   }
-  case X86::BI__builtin_ia32_reduce_mul_d512:
-  case X86::BI__builtin_ia32_reduce_mul_q512: {
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::vector_reduce_mul, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0]});
-  }
 
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:
