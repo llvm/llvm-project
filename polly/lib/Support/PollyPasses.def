@@ -11,6 +11,10 @@ FUNCTION_ANALYSIS("polly-function-scops", ScopInfoAnalysis())
 FUNCTION_PASS("polly-prepare", CodePreparationPass())
 FUNCTION_PASS("print<polly-detect>", ScopAnalysisPrinterPass(llvm::errs()))
 FUNCTION_PASS("print<polly-function-scops>", ScopInfoPrinterPass(llvm::errs()))
+FUNCTION_PASS("polly-scop-viewer", ScopViewer())
+FUNCTION_PASS("polly-scop-only-viewer", ScopOnlyViewer())
+FUNCTION_PASS("polly-scop-printer", ScopPrinter())
+FUNCTION_PASS("polly-scop-only-printer", ScopOnlyPrinter())
 #undef FUNCTION_PASS
 
 #ifndef SCOP_ANALYSIS

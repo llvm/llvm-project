@@ -31,28 +31,20 @@ onlySimpleRegions("only-simple-regions",
                   cl::init(false));
 
 namespace llvm {
-template<>
-struct DOTGraphTraits<RegionNode*> : public DefaultDOTGraphTraits {
 
-  DOTGraphTraits (bool isSimple=false)
-    : DefaultDOTGraphTraits(isSimple) {}
+std::string DOTGraphTraits<RegionNode *>::getNodeLabel(RegionNode *Node,
+                                                       RegionNode *Graph) {
+  if (!Node->isSubRegion()) {
+    BasicBlock *BB = Node->getNodeAs<BasicBlock>();
 
-  std::string getNodeLabel(RegionNode *Node, RegionNode *Graph) {
-
-    if (!Node->isSubRegion()) {
-      BasicBlock *BB = Node->getNodeAs<BasicBlock>();
-
-      if (isSimple())
-        return DOTGraphTraits<DOTFuncInfo *>
-          ::getSimpleNodeLabel(BB, nullptr);
-      else
-        return DOTGraphTraits<DOTFuncInfo *>
-          ::getCompleteNodeLabel(BB, nullptr);
-    }
-
-    return "Not implemented";
+    if (isSimple())
+      return DOTGraphTraits<DOTFuncInfo *>::getSimpleNodeLabel(BB, nullptr);
+    else
+      return DOTGraphTraits<DOTFuncInfo *>::getCompleteNodeLabel(BB, nullptr);
   }
-};
+
+  return "Not implemented";
+}
 
 template <>
 struct DOTGraphTraits<RegionInfo *> : public DOTGraphTraits<RegionNode *> {
@@ -134,7 +126,7 @@ struct DOTGraphTraits<RegionInfo *> : public DOTGraphTraits<RegionNode *> {
     printRegionCluster(*G->getTopLevelRegion(), GW, 4);
   }
 };
-} //end namespace llvm
+} // end namespace llvm
 
 namespace {
 
