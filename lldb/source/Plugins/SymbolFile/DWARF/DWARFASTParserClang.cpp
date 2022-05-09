@@ -2408,8 +2408,6 @@ struct MemberAttributes {
   /// structure.
   uint32_t member_byte_offset;
   bool is_artificial = false;
-  /// On DW_TAG_members, this means the member is static.
-  bool is_external = false;
 };
 
 /// Parsed form of all attributes that are relevant for parsing Objective-C
@@ -2484,9 +2482,6 @@ MemberAttributes::MemberAttributes(const DWARFDIE &die,
         break;
       case DW_AT_artificial:
         is_artificial = form_value.Boolean();
-        break;
-      case DW_AT_external:
-        is_external = form_value.Boolean();
         break;
       default:
         break;
@@ -2632,8 +2627,10 @@ void DWARFASTParserClang::ParseSingleMember(
   if (class_is_objc_object_or_interface)
     attrs.accessibility = eAccessNone;
 
-  // Handle static members
-  if (attrs.is_external && attrs.member_byte_offset == UINT32_MAX) {
+  // Handle static members, which is any member that doesn't have a bit or a
+  // byte member offset.
+  if (attrs.member_byte_offset == UINT32_MAX &&
+      attrs.data_bit_offset == UINT64_MAX) {
     Type *var_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
 
     if (var_type) {
