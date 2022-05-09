@@ -170,6 +170,17 @@ define i1 @whilelt_first(i64 %next, i64 %end) {
   ret i1 %bit
 }
 
+define i1 @lane_mask_first(i64 %next, i64 %end) {
+; CHECK-LABEL: lane_mask_first:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    whilelo p0.s, x0, x1
+; CHECK-NEXT:    cset w0, mi
+; CHECK-NEXT:    ret
+  %predicate = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %next, i64 %end)
+  %bit = extractelement <vscale x 4 x i1> %predicate, i64 0
+  ret i1 %bit
+}
+
 declare i64 @llvm.vscale.i64()
 declare <vscale x 4 x i1> @llvm.aarch64.sve.whilege.nxv4i1.i64(i64, i64)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.whilegt.nxv4i1.i64(i64, i64)
@@ -179,3 +190,4 @@ declare <vscale x 4 x i1> @llvm.aarch64.sve.whilele.nxv4i1.i64(i64, i64)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.whilelo.nxv4i1.i64(i64, i64)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.whilels.nxv4i1.i64(i64, i64)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i64(i64, i64)
+declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64, i64)
