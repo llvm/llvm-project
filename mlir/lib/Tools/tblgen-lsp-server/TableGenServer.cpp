@@ -103,6 +103,20 @@ public:
   /// Return the current version of this text file.
   int64_t getVersion() const { return version; }
 
+  //===--------------------------------------------------------------------===//
+  // Document Links
+  //===--------------------------------------------------------------------===//
+
+  void getDocumentLinks(const lsp::URIForFile &uri,
+                        std::vector<lsp::DocumentLink> &links);
+
+  //===--------------------------------------------------------------------===//
+  // Hover
+  //===--------------------------------------------------------------------===//
+
+  Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
+                                 const lsp::Position &hoverPos);
+
 private:
   /// The full string contents of the file.
   std::string contents;
@@ -118,6 +132,9 @@ private:
 
   /// The record keeper containing the parsed tablegen constructs.
   llvm::RecordKeeper recordKeeper;
+
+  /// The set of includes of the parsed file.
+  SmallVector<lsp::SourceMgrInclude> parsedIncludes;
 };
 } // namespace
 
@@ -157,8 +174,36 @@ TableGenTextFile::TableGenTextFile(
           ctx->diagnostics.push_back(*lspDiag);
       },
       &handlerContext);
-  if (llvm::TableGenParseFile(sourceMgr, recordKeeper))
+  bool failedToParse = llvm::TableGenParseFile(sourceMgr, recordKeeper);
+
+  // Process all of the include files.
+  lsp::gatherIncludeFiles(sourceMgr, parsedIncludes);
+  if (failedToParse)
     return;
+}
+
+//===--------------------------------------------------------------------===//
+// TableGenTextFile: Document Links
+//===--------------------------------------------------------------------===//
+
+void TableGenTextFile::getDocumentLinks(const lsp::URIForFile &uri,
+                                        std::vector<lsp::DocumentLink> &links) {
+  for (const lsp::SourceMgrInclude &include : parsedIncludes)
+    links.emplace_back(include.range, include.uri);
+}
+
+//===----------------------------------------------------------------------===//
+// TableGenTextFile: Hover
+//===----------------------------------------------------------------------===//
+
+Optional<lsp::Hover>
+TableGenTextFile::findHover(const lsp::URIForFile &uri,
+                            const lsp::Position &hoverPos) {
+  // Check for a reference to an include.
+  for (const lsp::SourceMgrInclude &include : parsedIncludes)
+    if (include.range.contains(hoverPos))
+      return include.buildHover();
+  return llvm::None;
 }
 
 //===----------------------------------------------------------------------===//
@@ -208,4 +253,19 @@ Optional<int64_t> lsp::TableGenServer::removeDocument(const URIForFile &uri) {
   int64_t version = it->second->getVersion();
   impl->files.erase(it);
   return version;
+}
+
+void lsp::TableGenServer::getDocumentLinks(
+    const URIForFile &uri, std::vector<DocumentLink> &documentLinks) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    return fileIt->second->getDocumentLinks(uri, documentLinks);
+}
+
+Optional<lsp::Hover> lsp::TableGenServer::findHover(const URIForFile &uri,
+                                                    const Position &hoverPos) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    return fileIt->second->findHover(uri, hoverPos);
+  return llvm::None;
 }

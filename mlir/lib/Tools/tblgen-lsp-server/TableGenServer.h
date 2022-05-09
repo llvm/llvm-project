@@ -17,6 +17,9 @@
 namespace mlir {
 namespace lsp {
 struct Diagnostic;
+struct DocumentLink;
+struct Hover;
+struct Position;
 class URIForFile;
 
 /// This class implements all of the TableGen related functionality necessary
@@ -51,6 +54,14 @@ public:
   /// document, or None if the uri did not have a corresponding document within
   /// the server.
   Optional<int64_t> removeDocument(const URIForFile &uri);
+
+  /// Return the document links referenced by the given file.
+  void getDocumentLinks(const URIForFile &uri,
+                        std::vector<DocumentLink> &documentLinks);
+
+  /// Find a hover description for the given hover position, or None if one
+  /// couldn't be found.
+  Optional<Hover> findHover(const URIForFile &uri, const Position &hoverPos);
 
 private:
   struct Impl;

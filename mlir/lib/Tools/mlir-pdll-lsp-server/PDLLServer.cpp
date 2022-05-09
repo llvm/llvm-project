@@ -11,6 +11,7 @@
 #include "../lsp-server-support/CompilationDatabase.h"
 #include "../lsp-server-support/Logging.h"
 #include "../lsp-server-support/Protocol.h"
+#include "../lsp-server-support/SourceMgrUtils.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Types.h"
@@ -105,24 +106,6 @@ getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr, const ast::Diagnostic &diag,
 
   return lspDiag;
 }
-
-//===----------------------------------------------------------------------===//
-// PDLLInclude
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// This class represents a single include within a root file.
-struct PDLLInclude {
-  PDLLInclude(const lsp::URIForFile &uri, const lsp::Range &range)
-      : uri(uri), range(range) {}
-
-  /// The URI of the file that is included.
-  lsp::URIForFile uri;
-
-  /// The range of the include directive.
-  lsp::Range range;
-};
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // PDLIndex
@@ -288,7 +271,6 @@ struct PDLDocument {
                                  const lsp::Position &hoverPos);
   Optional<lsp::Hover> findHover(const ast::Decl *decl,
                                  const SMRange &hoverRange);
-  lsp::Hover buildHoverForInclude(const PDLLInclude &include);
   lsp::Hover buildHoverForOpName(const ods::Operation *op,
                                  const SMRange &hoverRange);
   lsp::Hover buildHoverForVariable(const ast::VariableDecl *varDecl,
@@ -343,7 +325,7 @@ struct PDLDocument {
   PDLIndex index;
 
   /// The set of includes of the parsed module.
-  std::vector<PDLLInclude> parsedIncludes;
+  SmallVector<lsp::SourceMgrInclude> parsedIncludes;
 };
 } // namespace
 
@@ -373,33 +355,7 @@ PDLDocument::PDLDocument(const lsp::URIForFile &uri, StringRef contents,
   astModule = parsePDLAST(astContext, sourceMgr);
 
   // Initialize the set of parsed includes.
-  for (unsigned i = 1, e = sourceMgr.getNumBuffers(); i < e; ++i) {
-    // Check to see if this file was included by the main file.
-    SMLoc includeLoc = sourceMgr.getBufferInfo(i + 1).IncludeLoc;
-    if (!includeLoc.isValid() || sourceMgr.FindBufferContainingLoc(
-                                     includeLoc) != sourceMgr.getMainFileID())
-      continue;
-
-    // Try to build a URI for this file path.
-    auto *buffer = sourceMgr.getMemoryBuffer(i + 1);
-    llvm::SmallString<256> path(buffer->getBufferIdentifier());
-    llvm::sys::path::remove_dots(path, /*remove_dot_dot=*/true);
-
-    llvm::Expected<lsp::URIForFile> includedFileURI =
-        lsp::URIForFile::fromFile(path);
-    if (!includedFileURI)
-      continue;
-
-    // Find the end of the include token.
-    const char *includeStart = includeLoc.getPointer() - 2;
-    while (*(--includeStart) != '\"')
-      continue;
-
-    // Push this include.
-    SMRange includeRange(SMLoc::getFromPointer(includeStart), includeLoc);
-    parsedIncludes.emplace_back(*includedFileURI,
-                                lsp::Range(sourceMgr, includeRange));
-  }
+  lsp::gatherIncludeFiles(sourceMgr, parsedIncludes);
 
   // If we failed to parse the module, there is nothing left to initialize.
   if (failed(astModule))
@@ -443,7 +399,7 @@ void PDLDocument::findReferencesOf(const lsp::URIForFile &uri,
 
 void PDLDocument::getDocumentLinks(const lsp::URIForFile &uri,
                                    std::vector<lsp::DocumentLink> &links) {
-  for (const PDLLInclude &include : parsedIncludes)
+  for (const lsp::SourceMgrInclude &include : parsedIncludes)
     links.emplace_back(include.range, include.uri);
 }
 
@@ -456,10 +412,9 @@ Optional<lsp::Hover> PDLDocument::findHover(const lsp::URIForFile &uri,
   SMLoc posLoc = hoverPos.getAsSMLoc(sourceMgr);
 
   // Check for a reference to an include.
-  for (const PDLLInclude &include : parsedIncludes) {
+  for (const lsp::SourceMgrInclude &include : parsedIncludes)
     if (include.range.contains(hoverPos))
-      return buildHoverForInclude(include);
-  }
+      return include.buildHover();
 
   // Find the symbol at the given location.
   SMRange hoverRange;
@@ -497,17 +452,6 @@ Optional<lsp::Hover> PDLDocument::findHover(const ast::Decl *decl,
     return buildHoverForUserConstraintOrRewrite("Rewrite", rewrite, hoverRange);
 
   return llvm::None;
-}
-
-lsp::Hover PDLDocument::buildHoverForInclude(const PDLLInclude &include) {
-  lsp::Hover hover(include.range);
-  {
-    llvm::raw_string_ostream hoverOS(hover.contents.value);
-    hoverOS << "`" << llvm::sys::path::filename(include.uri.file())
-            << "`\n***\n"
-            << include.uri.file();
-  }
-  return hover;
 }
 
 lsp::Hover PDLDocument::buildHoverForOpName(const ods::Operation *op,

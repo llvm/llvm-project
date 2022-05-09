@@ -42,6 +42,18 @@ struct LSPServer {
   void onDocumentDidClose(const DidCloseTextDocumentParams &params);
   void onDocumentDidChange(const DidChangeTextDocumentParams &params);
 
+  //===----------------------------------------------------------------------===//
+  // DocumentLink
+
+  void onDocumentLink(const DocumentLinkParams &params,
+                      Callback<std::vector<DocumentLink>> reply);
+
+  //===--------------------------------------------------------------------===//
+  // Hover
+
+  void onHover(const TextDocumentPositionParams &params,
+               Callback<Optional<Hover>> reply);
+
   //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
@@ -72,6 +84,11 @@ void LSPServer::onInitialize(const InitializeParams &params,
            {"change", (int)TextDocumentSyncKind::Full},
            {"save", true},
        }},
+      {"documentLinkProvider",
+       llvm::json::Object{
+           {"resolveProvider", false},
+       }},
+      {"hoverProvider", true},
   };
 
   llvm::json::Object result{
@@ -126,6 +143,24 @@ void LSPServer::onDocumentDidChange(const DidChangeTextDocumentParams &params) {
 }
 
 //===----------------------------------------------------------------------===//
+// DocumentLink
+
+void LSPServer::onDocumentLink(const DocumentLinkParams &params,
+                               Callback<std::vector<DocumentLink>> reply) {
+  std::vector<DocumentLink> links;
+  server.getDocumentLinks(params.textDocument.uri, links);
+  reply(std::move(links));
+}
+
+//===----------------------------------------------------------------------===//
+// Hover
+
+void LSPServer::onHover(const TextDocumentPositionParams &params,
+                        Callback<Optional<Hover>> reply) {
+  reply(server.findHover(params.textDocument.uri, params.position));
+}
+
+//===----------------------------------------------------------------------===//
 // Entry Point
 //===----------------------------------------------------------------------===//
 
@@ -147,6 +182,13 @@ LogicalResult mlir::lsp::runTableGenLSPServer(TableGenServer &server,
                               &LSPServer::onDocumentDidClose);
   messageHandler.notification("textDocument/didChange", &lspServer,
                               &LSPServer::onDocumentDidChange);
+
+  // Document Link
+  messageHandler.method("textDocument/documentLink", &lspServer,
+                        &LSPServer::onDocumentLink);
+
+  // Hover
+  messageHandler.method("textDocument/hover", &lspServer, &LSPServer::onHover);
 
   // Diagnostics
   lspServer.publishDiagnostics =

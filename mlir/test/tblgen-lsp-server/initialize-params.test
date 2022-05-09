@@ -5,6 +5,10 @@
 // CHECK-NEXT:  "jsonrpc": "2.0",
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "capabilities": {
+// CHECK-NEXT:    "documentLinkProvider": {
+// CHECK-NEXT:      "resolveProvider": false
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "hoverProvider": true,
 // CHECK-NEXT:      "textDocumentSync": {
 // CHECK-NEXT:        "change": 1,
 // CHECK-NEXT:        "openClose": true,
