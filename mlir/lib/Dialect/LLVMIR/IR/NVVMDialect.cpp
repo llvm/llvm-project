@@ -67,6 +67,8 @@ void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 LogicalResult CpAsyncOp::verify() {
   if (size() != 4 && size() != 8 && size() != 16)
     return emitError("expected byte size to be either 4, 8 or 16.");
+  if (bypass_l1() && size() != 16)
+    return emitError("bypass l1 is only support for 16 bytes copy.");
   return success();
 }
 
