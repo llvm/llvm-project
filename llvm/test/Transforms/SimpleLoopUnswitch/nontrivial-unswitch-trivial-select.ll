@@ -16,7 +16,7 @@ define void @foo() {
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[VAL:%.*]] = select i1 true, i1 true, i1 false
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[HEADER]]
+; CHECK-NEXT:    br i1 [[VAL]], label [[EXIT:%.*]], label [[HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
