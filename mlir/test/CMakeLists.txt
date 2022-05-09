@@ -97,6 +97,7 @@ set(MLIR_TEST_DEPENDS
   mlir-reduce
   mlir-tblgen
   mlir-translate
+  tblgen-lsp-server
   )
 
 # The native target may not be enabled, in this case we won't
