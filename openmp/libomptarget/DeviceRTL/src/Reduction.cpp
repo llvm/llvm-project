@@ -22,7 +22,7 @@ using namespace _OMP;
 
 namespace {
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {

@@ -18,7 +18,7 @@
 
 using namespace _OMP;
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 extern "C" {
 void __assert_assume(bool condition) { __builtin_assume(condition); }
@@ -28,6 +28,10 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
   PRINTF("%s:%u: %s: Assertion `%s' failed.\n", file, line, function,
          assertion);
   __builtin_trap();
+}
+
+namespace impl {
+int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t);
 }
 
 #pragma omp begin declare variant match(                                       \
@@ -55,8 +59,7 @@ int32_t __llvm_omp_vprintf(const char *Format, void *Arguments, uint32_t Size) {
 }
 
 /// Current indentation level for the function trace. Only accessed by thread 0.
-__attribute__((loader_uninitialized))
-static uint32_t Level;
+__attribute__((loader_uninitialized)) static uint32_t Level;
 #pragma omp allocate(Level) allocator(omp_pteam_mem_alloc)
 
 DebugEntryRAII::DebugEntryRAII(const char *File, const unsigned Line,
