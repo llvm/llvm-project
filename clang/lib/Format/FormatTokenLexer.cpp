@@ -1027,7 +1027,10 @@ FormatToken *FormatTokenLexer::getNextToken() {
           Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
               tok::pp_define) &&
         it != Macros.end()) {
-      FormatTok->setType(it->second);
+      if (it->second == TT_UntouchableMacroFunc)
+        FormatTok->setFinalizedType(TT_UntouchableMacroFunc);
+      else
+        FormatTok->setType(it->second);
       if (it->second == TT_IfMacro) {
         // The lexer token currently has type tok::kw_unknown. However, for this
         // substitution to be treated correctly in the TokenAnnotator, faking
