@@ -1,8 +1,7 @@
 // Test for on-demand leak checking.
-// RUN: LSAN_BASE="use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE %run %t foo 2>&1 | FileCheck %s
-// RUN: %env_lsan_opts=$LSAN_BASE %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0 %run %t foo 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0 %run %t 2>&1 | FileCheck %s
 //
 // UNSUPPORTED: darwin
 
