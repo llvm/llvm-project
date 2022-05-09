@@ -19,6 +19,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -232,12 +233,10 @@ private:
   /// A mapping from value numbers to lists of Value*'s that
   /// have that value number.  Use findLeader to query it.
   struct LeaderTableEntry {
-    Value *Val;
-    const BasicBlock *BB;
-    LeaderTableEntry *Next;
+    TinyPtrVector<Value *> Val;
+    TinyPtrVector<const BasicBlock *> BB;
   };
   DenseMap<uint32_t, LeaderTableEntry> LeaderTable;
-  BumpPtrAllocator TableAllocator;
 
   // Block-local map of equivalent values to their leader, does not
   // propagate to any successors. Entries added mid-block are applied
@@ -266,44 +265,31 @@ private:
   /// Push a new Value to the LeaderTable onto the list for its value number.
   void addToLeaderTable(uint32_t N, Value *V, const BasicBlock *BB) {
     LeaderTableEntry &Curr = LeaderTable[N];
-    if (!Curr.Val) {
-      Curr.Val = V;
-      Curr.BB = BB;
-      return;
+    if (Curr.Val.size() == 0) {
+      Curr.Val.push_back(V);
+      Curr.BB.push_back(BB);
+    } else {
+      Curr.Val.insert(Curr.Val.begin()+1, V);
+      Curr.BB.insert(Curr.BB.begin()+1, BB);
     }
-
-    LeaderTableEntry *Node = TableAllocator.Allocate<LeaderTableEntry>();
-    Node->Val = V;
-    Node->BB = BB;
-    Node->Next = Curr.Next;
-    Curr.Next = Node;
   }
 
   /// Scan the list of values corresponding to a given
   /// value number, and remove the given instruction if encountered.
   void removeFromLeaderTable(uint32_t N, Instruction *I, BasicBlock *BB) {
-    LeaderTableEntry *Prev = nullptr;
-    LeaderTableEntry *Curr = &LeaderTable[N];
-
-    while (Curr && (Curr->Val != I || Curr->BB != BB)) {
-      Prev = Curr;
-      Curr = Curr->Next;
-    }
-
-    if (!Curr)
-      return;
-
-    if (Prev) {
-      Prev->Next = Curr->Next;
-    } else {
-      if (!Curr->Next) {
-        Curr->Val = nullptr;
-        Curr->BB = nullptr;
+    LeaderTableEntry &entry = LeaderTable[N];
+    assert(entry.BB.size() == entry.Val.size());
+    auto VI = entry.Val.begin();
+    auto VE = entry.Val.end();
+    auto BI = entry.BB.begin();
+    while (VI != VE) {
+      if (*VI == I && *BI == BB) {
+        VI = entry.Val.erase(VI);
+        BI = entry.BB.erase(BI);
+        VE = entry.Val.end();
       } else {
-        LeaderTableEntry *Next = Curr->Next;
-        Curr->Val = Next->Val;
-        Curr->BB = Next->BB;
-        Curr->Next = Next->Next;
+        ++VI;
+        ++BI;
       }
     }
   }

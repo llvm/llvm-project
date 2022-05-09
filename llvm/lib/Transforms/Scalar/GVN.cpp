@@ -2105,10 +2105,9 @@ GVNPass::ValueTable::assignExpNewValueNum(Expression &Exp) {
 /// defined in \p BB.
 bool GVNPass::ValueTable::areAllValsInBB(uint32_t Num, const BasicBlock *BB,
                                          GVNPass &Gvn) {
-  LeaderTableEntry *Vals = &Gvn.LeaderTable[Num];
-  while (Vals && Vals->BB == BB)
-    Vals = Vals->Next;
-  return !Vals;
+  const LeaderTableEntry &Entry = Gvn.LeaderTable[Num];
+  return all_of(Entry.BB,
+                [BB](const BasicBlock *EntryBB) { return EntryBB == BB; });
 }
 
 /// Wrap phiTranslateImpl to provide caching functionality.
@@ -2130,12 +2129,11 @@ bool GVNPass::ValueTable::areCallValsEqual(uint32_t Num, uint32_t NewNum,
                                            const BasicBlock *PhiBlock,
                                            GVNPass &Gvn) {
   CallInst *Call = nullptr;
-  LeaderTableEntry *Vals = &Gvn.LeaderTable[Num];
-  while (Vals) {
-    Call = dyn_cast<CallInst>(Vals->Val);
+  const LeaderTableEntry &Entry = Gvn.LeaderTable[Num];
+  for (Value *Val : Entry.Val) {
+    Call = dyn_cast<CallInst>(Val);
     if (Call && Call->getParent() == PhiBlock)
       break;
-    Vals = Vals->Next;
   }
 
   if (AA->doesNotAccessMemory(Call))
@@ -2228,23 +2226,18 @@ void GVNPass::ValueTable::eraseTranslateCacheEntry(
 // question.  This is fast because dominator tree queries consist of only
 // a few comparisons of DFS numbers.
 Value *GVNPass::findLeader(const BasicBlock *BB, uint32_t num) {
-  LeaderTableEntry Vals = LeaderTable[num];
-  if (!Vals.Val) return nullptr;
+  const LeaderTableEntry &Entry = LeaderTable[num];
+  if (Entry.Val.empty())
+    return nullptr;
 
   Value *Val = nullptr;
-  if (DT->dominates(Vals.BB, BB)) {
-    Val = Vals.Val;
-    if (isa<Constant>(Val)) return Val;
-  }
-
-  LeaderTableEntry* Next = Vals.Next;
-  while (Next) {
-    if (DT->dominates(Next->BB, BB)) {
-      if (isa<Constant>(Next->Val)) return Next->Val;
-      if (!Val) Val = Next->Val;
+  for (size_t i = 0, e = Entry.Val.size(); i != e; ++i) {
+    if (DT->dominates(Entry.BB[i], BB)) {
+      if (isa<Constant>(Entry.Val[i]))
+        return Entry.Val[i];
+      if (!Val)
+        Val = Entry.Val[i];
     }
-
-    Next = Next->Next;
   }
 
   return Val;
@@ -3033,7 +3026,6 @@ void GVNPass::cleanupGlobalSets() {
   VN.clear();
   LeaderTable.clear();
   BlockRPONumber.clear();
-  TableAllocator.Reset();
   ICF->clear();
   InvalidBlockRPONumbers = true;
 }
@@ -3046,12 +3038,10 @@ void GVNPass::verifyRemoved(const Instruction *Inst) const {
   // Walk through the value number scope to make sure the instruction isn't
   // ferreted away in it.
   for (const auto &I : LeaderTable) {
-    const LeaderTableEntry *Node = &I.second;
-    assert(Node->Val != Inst && "Inst still in value numbering scope!");
-
-    while (Node->Next) {
-      Node = Node->Next;
-      assert(Node->Val != Inst && "Inst still in value numbering scope!");
+    const LeaderTableEntry &Entry = I.second;
+    for (Value *Val : Entry.Val) {
+      (void)Val;
+      assert(Val != Inst && "Inst still in value numbering scope!");
     }
   }
 }
