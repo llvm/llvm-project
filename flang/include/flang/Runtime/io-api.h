@@ -123,11 +123,9 @@ Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
 enum Iostat IONAME(CheckUnitNumberInRange64)(std::int64_t unit,
     bool handleError, char *ioMsg = nullptr, std::size_t ioMsgLength = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
-#ifdef __SIZEOF_INT128__
 enum Iostat IONAME(CheckUnitNumberInRange128)(common::int128_t unit,
     bool handleError, char *ioMsg = nullptr, std::size_t ioMsgLength = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
-#endif
 
 // External synchronous I/O initiation
 Cookie IONAME(BeginExternalListOutput)(ExternalUnit = DefaultUnit,
