@@ -748,6 +748,42 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
          ? Args.MakeArgString(AltPath.c_str())
          : Args.MakeArgString(ToolChain.GetLinkerPath());
 
+  // Check if linker has a corresponding LLVM IR assembler. If so, disassemble
+  // bitcode using current disassembler and then use assembler from linker's
+  // release to mask potential bitcode incompatibilities from different LLVM
+  // versions or releases. This fixes things like differences in number of
+  // integer attributes or anything where bitcodes may not match.
+  if (D.isUsingLTO() || ProprietaryToolChain) {
+    StringRef execSR(Exec);
+    std::string as_fn =
+        execSR.substr(0, execSR.find_last_of("/") + 1).str() + "llvm-as";
+    for (auto i : Inputs) {
+      if (llvm::sys::fs::exists(as_fn) && i.isFilename() &&
+          (i.getType() == clang::driver::types::TY_LTO_BC)) {
+        ArgStringList dis_args;
+        dis_args.push_back(C.getArgs().MakeArgString(i.getFilename()));
+        dis_args.push_back("-o");
+        std::string TmpNameDisOutput =
+            C.getDriver().GetTemporaryPath("disassembled", "ll");
+        C.addTempFile(C.getArgs().MakeArgString(TmpNameDisOutput));
+        const char *DisOutputFn = C.getArgs().MakeArgString(TmpNameDisOutput);
+        dis_args.push_back(DisOutputFn);
+        InputInfo DisII(&JA, DisOutputFn);
+        C.addCommand(std::make_unique<Command>(
+            JA, *this, ResponseFileSupport::None(),
+            C.getArgs().MakeArgString(
+                getToolChain().GetProgramPath("llvm-dis")),
+            dis_args, i, DisII));
+        ArgStringList as_args;
+        as_args.push_back(DisOutputFn);
+        as_args.push_back("-o");
+        as_args.push_back(C.getArgs().MakeArgString(i.getFilename()));
+        C.addCommand(std::make_unique<Command>(
+            JA, *this, ResponseFileSupport::None(),
+            C.getArgs().MakeArgString(as_fn), as_args, DisII, i));
+      }
+    }
+  }
 
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileCurCP(),
