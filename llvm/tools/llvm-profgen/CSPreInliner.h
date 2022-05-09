@@ -68,7 +68,7 @@ using ProfiledCandidateQueue =
 class CSPreInliner {
 public:
   CSPreInliner(SampleProfileMap &Profiles, ProfiledBinary &Binary,
-               uint64_t HotThreshold, uint64_t ColdThreshold);
+               ProfileSummary *Summary);
   void run();
 
 private:
@@ -82,11 +82,7 @@ private:
   SampleContextTracker ContextTracker;
   SampleProfileMap &ProfileMap;
   ProfiledBinary &Binary;
-
-  // Count thresholds to answer isHotCount and isColdCount queries.
-  // Mirrors the threshold in ProfileSummaryInfo.
-  uint64_t HotCountThreshold;
-  uint64_t ColdCountThreshold;
+  ProfileSummary *Summary;
 };
 
 } // end namespace sampleprof

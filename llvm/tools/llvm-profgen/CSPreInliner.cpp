@@ -56,13 +56,13 @@ static cl::opt<bool> SamplePreInlineReplay(
         "Replay previous inlining and adjust context profile accordingly"));
 
 CSPreInliner::CSPreInliner(SampleProfileMap &Profiles, ProfiledBinary &Binary,
-                           uint64_t HotThreshold, uint64_t ColdThreshold)
+                           ProfileSummary *Summary)
     : UseContextCost(UseContextCostForPreInliner),
       // TODO: Pass in a guid-to-name map in order for
       // ContextTracker.getFuncNameFor to work, if `Profiles` can have md5 codes
       // as their profile context.
       ContextTracker(Profiles, nullptr), ProfileMap(Profiles), Binary(Binary),
-      HotCountThreshold(HotThreshold), ColdCountThreshold(ColdThreshold) {
+      Summary(Summary) {
   // Set default preinliner hot/cold call site threshold tuned with CSSPGO.
   // for good performance with reasonable profile size.
   if (!SampleHotCallSiteThreshold.getNumOccurrences())
@@ -152,16 +152,32 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
     return Candidate.CalleeSamples->getContext().hasAttribute(
         ContextWasInlined);
 
-  // Adjust threshold based on call site hotness, only do this for callsite
-  // prioritized inliner because otherwise cost-benefit check is done earlier.
   unsigned int SampleThreshold = SampleColdCallSiteThreshold;
-  if (Candidate.CallsiteCount > HotCountThreshold)
-    SampleThreshold = SampleHotCallSiteThreshold;
+  uint64_t ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
+      (Summary->getDetailedSummary()));
 
-  // TODO: for small cold functions, we may inlined them and we need to keep
-  // context profile accordingly.
-  if (Candidate.CallsiteCount < ColdCountThreshold)
+  if (Candidate.CallsiteCount <= ColdCountThreshold)
     SampleThreshold = SampleColdCallSiteThreshold;
+  else {
+    // Linearly adjust threshold based on normalized hotness, i.e, a value in
+    // [0,1]. Use 10% cutoff instead of the max count as the normalization
+    // upperbound for stability.
+    double NormalizationUpperBound =
+        ProfileSummaryBuilder::getEntryForPercentile(
+            Summary->getDetailedSummary(), 100000 /* 10% */)
+            .MinCount;
+    double NormalizationLowerBound = ColdCountThreshold;
+    double NormalizedHotness =
+        (Candidate.CallsiteCount - NormalizationLowerBound) /
+        (NormalizationUpperBound - NormalizationLowerBound);
+    if (NormalizedHotness > 1.0)
+      NormalizedHotness = 1.0;
+    // Add 1 to to ensure hot callsites get a non-zero threshold, which could
+    // happen when SampleColdCallSiteThreshold is 0. This is when we do not
+    // want any inlining for cold callsites.
+    SampleThreshold = SampleHotCallSiteThreshold * NormalizedHotness * 100 +
+                      SampleColdCallSiteThreshold + 1;
+  }
 
   return (Candidate.SizeCost < SampleThreshold);
 }
