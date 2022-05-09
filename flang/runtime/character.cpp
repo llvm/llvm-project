@@ -253,7 +253,7 @@ static void LenTrimKind(Descriptor &result, const Descriptor &string, int kind,
         result, string, terminator);
     break;
   default:
-    terminator.Crash("LEN_TRIM: bad KIND=%d", kind);
+    terminator.Crash("not yet implemented: LEN_TRIM: KIND=%d", kind);
   }
 }
 
@@ -454,7 +454,7 @@ static void GeneralCharFuncKind(Descriptor &result, const Descriptor &string,
         result, string, arg, back, terminator);
     break;
   default:
-    terminator.Crash("INDEX/SCAN/VERIFY: bad KIND=%d", kind);
+    terminator.Crash("not yet implemented: INDEX/SCAN/VERIFY: KIND=%d", kind);
   }
 }
 

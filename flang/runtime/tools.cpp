@@ -106,7 +106,8 @@ void CheckConformability(const Descriptor &to, const Descriptor &x,
 
 void CheckIntegerKind(Terminator &terminator, int kind, const char *intrinsic) {
   if (kind < 1 || kind > 16 || (kind & (kind - 1)) != 0) {
-    terminator.Crash("%s: bad KIND=%d argument", intrinsic, kind);
+    terminator.Crash(
+        "not yet implemented: %s: KIND=%d argument", intrinsic, kind);
   }
 }
 } // namespace Fortran::runtime

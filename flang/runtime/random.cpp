@@ -108,7 +108,8 @@ void RTNAME(RandomNumber)(
     break;
 #endif
   default:
-    terminator.Crash("RANDOM_NUMBER(): bad REAL kind %d", kind);
+    terminator.Crash(
+        "not yet implemented: RANDOM_NUMBER(): REAL kind %d", kind);
   }
 }
 
@@ -127,7 +128,8 @@ void RTNAME(RandomSeedSize)(
     *size.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = 1;
     break;
   default:
-    terminator.Crash("RANDOM_SEED(SIZE=): bad kind %d\n", kind);
+    terminator.Crash(
+        "not yet implemented: RANDOM_SEED(SIZE=): kind %d\n", kind);
   }
 }
 
@@ -148,7 +150,7 @@ void RTNAME(RandomSeedPut)(
     seed = *put.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>();
     break;
   default:
-    terminator.Crash("RANDOM_SEED(PUT=): bad kind %d\n", kind);
+    terminator.Crash("not yet implemented: RANDOM_SEED(PUT=): kind %d\n", kind);
   }
   {
     CriticalSection critical{lock};
@@ -186,7 +188,7 @@ void RTNAME(RandomSeedGet)(
     *got.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = seed;
     break;
   default:
-    terminator.Crash("RANDOM_SEED(GET=): bad kind %d\n", kind);
+    terminator.Crash("not yet implemented: RANDOM_SEED(GET=): kind %d\n", kind);
   }
 }
 } // extern "C"
