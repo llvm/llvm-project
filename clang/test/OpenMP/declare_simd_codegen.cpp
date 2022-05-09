@@ -117,6 +117,33 @@ double foo(double x) { return 0; }
 #pragma omp declare simd notinbranch linear(i)
 double constlinear(const int i) { return 0.0; }
 
+// Test linear modifiers
+// linear(x) cases
+#pragma omp declare simd simdlen(4) linear(a:2) linear(b:4) linear(c:8) \
+                                    linear(d,e,f)
+double One(int &a, int *b, int c, int &d, int *e, int f) {
+  return a + *b + c;
+}
+
+// linear(val(x)) cases
+#pragma omp declare simd simdlen(4) linear(val(a):2) linear(val(b):4) \
+                                    linear(val(c):8) linear(val(d,e,f))
+double Two(int &a, int *b, int c, int &d, int *e, int f) {
+  return a + *b + c;
+}
+
+// linear(uval(x) case
+#pragma omp declare simd simdlen(4) linear(uval(a):2) linear(uval(b))
+double Three(int &a, int &b) {
+  return a;
+}
+
+// linear(ref(x) case
+#pragma omp declare simd simdlen(4) linear(ref(a):2) linear(ref(b))
+double Four(int& a, int &b) {
+  return a;
+}
+
 // CHECK-DAG: define {{.+}}@_Z5add_1Pf(
 // CHECK-DAG: define {{.+}}@_Z1hIiEvPT_S1_S1_S1_(
 // CHECK-DAG: define {{.+}}@_Z1hIfEvPT_S1_S1_S1_(
@@ -188,32 +215,32 @@ double constlinear(const int i) { return 0.0; }
 // CHECK-DAG: "_ZGVeM8va16va16vv__Z1hIfEvPT_S1_S1_S1_"
 // CHECK-DAG: "_ZGVeN8va16va16vv__Z1hIfEvPT_S1_S1_S1_"
 
-// CHECK-DAG: "_ZGVbM4uus1__ZN2VV3addEii"
-// CHECK-DAG: "_ZGVbN4uus1__ZN2VV3addEii"
-// CHECK-DAG: "_ZGVcM8uus1__ZN2VV3addEii"
-// CHECK-DAG: "_ZGVcN8uus1__ZN2VV3addEii"
-// CHECK-DAG: "_ZGVdM8uus1__ZN2VV3addEii"
-// CHECK-DAG: "_ZGVdN8uus1__ZN2VV3addEii"
-// CHECK-DAG: "_ZGVeM16uus1__ZN2VV3addEii"
-// CHECK-DAG: "_ZGVeN16uus1__ZN2VV3addEii"
+// CHECK-DAG: "_ZGVbM4uuls1__ZN2VV3addEii"
+// CHECK-DAG: "_ZGVbN4uuls1__ZN2VV3addEii"
+// CHECK-DAG: "_ZGVcM8uuls1__ZN2VV3addEii"
+// CHECK-DAG: "_ZGVcN8uuls1__ZN2VV3addEii"
+// CHECK-DAG: "_ZGVdM8uuls1__ZN2VV3addEii"
+// CHECK-DAG: "_ZGVdN8uuls1__ZN2VV3addEii"
+// CHECK-DAG: "_ZGVeM16uuls1__ZN2VV3addEii"
+// CHECK-DAG: "_ZGVeN16uuls1__ZN2VV3addEii"
 
-// CHECK-DAG: "_ZGVbM4ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVbN4ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVcM8ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVcN8ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVdM8ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVdN8ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVeM16ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVeN16ll4a16l4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVbM4l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVbN4l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVcM8l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVcN8l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVdM8l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVdN8l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVeM16l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVeN16l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
 
-// CHECK-DAG: "_ZGVbM4vvl8__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVbN4vvl8__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVcM8vvl8__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVcN8vvl8__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVdM8vvl8__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVdN8vvl8__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVeM16vvl8__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVeN16vvl8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVbM4vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVbN4vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVcM8vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVcN8vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVdM8vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVdN8vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVeM16vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVeN16vvU8__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVbM4vva8v__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVbN4vva8v__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVcM8vva8v__ZN2VV4taddERA_iRi"
@@ -223,14 +250,14 @@ double constlinear(const int i) { return 0.0; }
 // CHECK-DAG: "_ZGVeM16vva8v__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVeN16vva8v__ZN2VV4taddERA_iRi"
 
-// CHECK-DAG: "_ZGVbM4vva32l16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVbN4vva32l16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVcM8vva32l16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVcN8vva32l16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVdM8vva32l16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVdN8vva32l16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVeM16vva32l16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVeN16vva32l16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVbM4vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVbN4vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVcM8vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVcN8vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVdM8vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVdN8vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVeM16vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVeN16vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
 
 // CHECK-DAG: "_ZGVbM4uu__ZN3TVVILi16EfE4taddEi"
 // CHECK-DAG: "_ZGVbN4uu__ZN3TVVILi16EfE4taddEi"
@@ -249,14 +276,14 @@ double constlinear(const int i) { return 0.0; }
 // CHECK-DAG: "_ZGVeM16vv__ZN3TVVILi16EfE4taddEi"
 // CHECK-DAG: "_ZGVeN16vv__ZN3TVVILi16EfE4taddEi"
 
-// CHECK-DAG: "_ZGVbM64va128l64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVbN64va128l64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVcM64va128l64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVcN64va128l64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVdM64va128l64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVdN64va128l64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVeM64va128l64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVeN64va128l64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVbM64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVbN64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVcM64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVcN64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVdM64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVdN64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVeM64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVeN64va128U64__Z3fooILi64EEvRAT__iRPf"
 
 // CHECK-DAG: "_ZGVbM4vv__Z3bar2VVPf"
 // CHECK-DAG: "_ZGVbN4vv__Z3bar2VVPf"
@@ -297,10 +324,10 @@ double constlinear(const int i) { return 0.0; }
 // CHECK-DAG: "_ZGVdN4vva16__Z3bay2VVRPd"
 // CHECK-DAG: "_ZGVeN8vva16__Z3bay2VVRPd"
 
-// CHECK-DAG: "_ZGVbM4us2u__Z3bax2VVPdi"
-// CHECK-DAG: "_ZGVcM8us2u__Z3bax2VVPdi"
-// CHECK-DAG: "_ZGVdM8us2u__Z3bax2VVPdi"
-// CHECK-DAG: "_ZGVeM16us2u__Z3bax2VVPdi"
+// CHECK-DAG: "_ZGVbM4uls2u__Z3bax2VVPdi"
+// CHECK-DAG: "_ZGVcM8uls2u__Z3bax2VVPdi"
+// CHECK-DAG: "_ZGVdM8uls2u__Z3bax2VVPdi"
+// CHECK-DAG: "_ZGVeM16uls2u__Z3bax2VVPdi"
 // CHECK-DAG: "_ZGVbM4vvv__Z3bax2VVPdi"
 // CHECK-DAG: "_ZGVbN4vvv__Z3bax2VVPdi"
 // CHECK-DAG: "_ZGVcM8vvv__Z3bax2VVPdi"
@@ -345,6 +372,15 @@ double constlinear(const int i) { return 0.0; }
 // CHECK-DAG: "_ZGVcN4l__Z11constlineari"
 // CHECK-DAG: "_ZGVdN4l__Z11constlineari"
 // CHECK-DAG: "_ZGVeN8l__Z11constlineari"
+
+// CHECK-DAG: "_ZGVbM4L2l16l8Ll4l__Z3OneRiPiiS_S0_i"
+// CHECK-DAG: "_ZGVbN4L2l16l8Ll4l__Z3OneRiPiiS_S0_i"
+// CHECK-DAG: "_ZGVbM4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i"
+// CHECK-DAG: "_ZGVbN4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i"
+// CHECK-DAG: "_ZGVbM4U2U__Z5ThreeRiS_"
+// CHECK-DAG: "_ZGVbN4U2U__Z5ThreeRiS_"
+// CHECK-DAG: "_ZGVbM4R8R4__Z4FourRiS_"
+// CHECK-DAG: "_ZGVbN4R8R4__Z4FourRiS_"
 
 // CHECK-NOT: "_ZGV{{.+}}__Z1fRA_i
 
