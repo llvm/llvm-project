@@ -204,6 +204,9 @@ Improvements to Clang's diagnostics
   ``-Wimplicit-int``.
 - ``-Wmisexpect`` warns when the branch weights collected during profiling
   conflict with those added by ``llvm.expect``.
+- ``-Wthread-safety-analysis`` now considers overloaded compound assignment and
+  increment/decrement operators as writing to their first argument, thus
+  requiring an exclusive lock if the argument is guarded.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
