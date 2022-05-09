@@ -207,6 +207,9 @@ Improvements to Clang's diagnostics
 - ``-Wthread-safety-analysis`` now considers overloaded compound assignment and
   increment/decrement operators as writing to their first argument, thus
   requiring an exclusive lock if the argument is guarded.
+- ``-Wenum-conversion`` now warns on converting a signed enum of one type to an
+  unsigned enum of a different type (or vice versa) rather than
+  ``-Wsign-conversion``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
