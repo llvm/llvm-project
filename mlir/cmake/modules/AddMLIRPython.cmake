@@ -229,12 +229,20 @@ function(add_mlir_python_modules name)
         get_filename_component(_install_path "${ARG_INSTALL_PREFIX}/${_dest_relative_path}" DIRECTORY)
 
         file(MAKE_DIRECTORY "${_dest_dir}")
+
+        # On Windows create_symlink requires special permissions. Use copy_if_different instead.
+        if(CMAKE_HOST_WIN32)
+          set(_link_or_copy copy_if_different)
+        else()
+          set(_link_or_copy create_symlink)
+        endif()
+
         add_custom_command(
           TARGET ${modules_target} PRE_BUILD
           COMMENT "Copying python source ${_src_path} -> ${_dest_path}"
           DEPENDS "${_src_path}"
           BYPRODUCTS "${_dest_path}"
-          COMMAND "${CMAKE_COMMAND}" -E create_symlink
+          COMMAND "${CMAKE_COMMAND}" -E ${_link_or_copy}
               "${_src_path}" "${_dest_path}"
         )
         install(
@@ -285,7 +293,7 @@ function(add_mlir_python_modules name)
   endforeach()
 
   # Create an install target.
-  if (NOT LLVM_ENABLE_IDE)
+  if(NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(
       install-${name}
       DEPENDS ${name}
@@ -483,10 +491,10 @@ function(add_mlir_python_extension libname extname)
   "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY"
   "SOURCES;LINK_LIBS"
   ${ARGN})
-  if (ARG_UNPARSED_ARGUMENTS)
+  if(ARG_UNPARSED_ARGUMENTS)
     message(FATAL_ERROR " Unhandled arguments to add_mlir_python_extension(${libname}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
-  if ("${ARG_SOURCES}" STREQUAL "")
+  if("${ARG_SOURCES}" STREQUAL "")
     message(FATAL_ERROR " Missing SOURCES argument to add_mlir_python_extension(${libname}, ...")
   endif()
 
@@ -527,12 +535,9 @@ function(add_mlir_python_extension libname extname)
     )
   endif()
 
-  # Python extensions depends *only* on the public API and LLVMSupport unless
-  # if further dependencies are added explicitly.
   target_link_libraries(${libname}
     PRIVATE
     ${ARG_LINK_LIBS}
-    ${PYEXT_LIBADD}
   )
 
   target_link_options(${libname}
@@ -545,7 +550,7 @@ function(add_mlir_python_extension libname extname)
   ################################################################################
   # Install
   ################################################################################
-  if (ARG_INSTALL_DIR)
+  if(ARG_INSTALL_DIR)
     install(TARGETS ${libname}
       COMPONENT ${ARG_INSTALL_COMPONENT}
       LIBRARY DESTINATION ${ARG_INSTALL_DIR}

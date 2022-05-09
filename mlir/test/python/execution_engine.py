@@ -345,13 +345,21 @@ def testSharedLibLoad():
     arg0_memref_ptr = ctypes.pointer(
         ctypes.pointer(get_ranked_memref_descriptor(arg0)))
 
+    if sys.platform == 'win32':
+        shared_libs = [
+            "../../../../bin/mlir_runner_utils.dll",
+            "../../../../bin/mlir_c_runner_utils.dll"
+        ]
+    else:
+        shared_libs = [
+            "../../../../lib/libmlir_runner_utils.so",
+            "../../../../lib/libmlir_c_runner_utils.so"
+        ]
+
     execution_engine = ExecutionEngine(
         lowerToLLVM(module),
         opt_level=3,
-        shared_libs=[
-            "../../../../lib/libmlir_runner_utils.so",
-            "../../../../lib/libmlir_c_runner_utils.so"
-        ])
+        shared_libs=shared_libs)
     execution_engine.invoke("main", arg0_memref_ptr)
     # CHECK: Unranked Memref
     # CHECK-NEXT: [42]
@@ -379,13 +387,21 @@ def testNanoTime():
       func.func private @printMemrefI64(memref<*xi64>) attributes { llvm.emit_c_interface }
     }""")
 
+    if sys.platform == 'win32':
+        shared_libs = [
+            "../../../../bin/mlir_runner_utils.dll",
+            "../../../../bin/mlir_c_runner_utils.dll"
+        ]
+    else:
+        shared_libs = [
+            "../../../../lib/libmlir_runner_utils.so",
+            "../../../../lib/libmlir_c_runner_utils.so"
+        ]
+
     execution_engine = ExecutionEngine(
         lowerToLLVM(module),
         opt_level=3,
-        shared_libs=[
-            "../../../../lib/libmlir_runner_utils.so",
-            "../../../../lib/libmlir_c_runner_utils.so"
-        ])
+        shared_libs=shared_libs)
     execution_engine.invoke("main")
     # CHECK: Unranked Memref
     # CHECK: [{{.*}}]
