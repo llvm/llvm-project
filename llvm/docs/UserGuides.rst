@@ -38,6 +38,7 @@ intermediate LLVM representation.
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
+   InstrRefDebugInfo
    LinkTimeOptimization
    LoopTerminology
    MarkdownQuickstartTemplate
@@ -159,6 +160,15 @@ Optimizations
 :doc:`Source Level Debugging with LLVM <SourceLevelDebugging>`
    This document describes the design and philosophy behind the LLVM
    source-level debugger.
+
+:doc:`How to Update Debug Info <HowToUpdateDebugInfo>`
+   This document specifies how to correctly update debug info in various kinds
+   of code transformations.
+
+:doc:`InstrRefDebugInfo`
+   This document explains how LLVM uses value tracking, or instruction
+   referencing, to determine variable locations for debug info in the final
+   stages of compilation.
 
 Code Generation
 ---------------
