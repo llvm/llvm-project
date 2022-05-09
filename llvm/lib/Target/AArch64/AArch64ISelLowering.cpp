@@ -4181,9 +4181,25 @@ static SDValue lowerConvertToSVBool(SDValue Op, SelectionDAG &DAG) {
   case AArch64ISD::SETCC_MERGE_ZERO:
     return Reinterpret;
   case ISD::INTRINSIC_WO_CHAIN:
-    if (InOp.getConstantOperandVal(0) == Intrinsic::aarch64_sve_ptrue)
+    switch (InOp.getConstantOperandVal(0)) {
+    case Intrinsic::aarch64_sve_ptrue:
+    case Intrinsic::aarch64_sve_cmpeq_wide:
+    case Intrinsic::aarch64_sve_cmpne_wide:
+    case Intrinsic::aarch64_sve_cmpge_wide:
+    case Intrinsic::aarch64_sve_cmpgt_wide:
+    case Intrinsic::aarch64_sve_cmplt_wide:
+    case Intrinsic::aarch64_sve_cmple_wide:
+    case Intrinsic::aarch64_sve_cmphs_wide:
+    case Intrinsic::aarch64_sve_cmphi_wide:
+    case Intrinsic::aarch64_sve_cmplo_wide:
+    case Intrinsic::aarch64_sve_cmpls_wide:
       return Reinterpret;
+    }
   }
+
+  // Splat vectors of 1 will generate ptrue instructions
+  if (ISD::isConstantSplatVectorAllOnes(InOp.getNode()))
+    return Reinterpret;
 
   // Otherwise, zero the newly introduced lanes.
   SDValue Mask = getPTrue(DAG, DL, InVT, AArch64SVEPredPattern::all);
