@@ -519,6 +519,49 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    call void @__kmpc_omp_task_complete_if0(%struct.ident_t* @[[GLOB1]], i32 [[TMP11]], i8* [[TMP12]])
 // CHECK1-NEXT:    ret void
 //
+// CHECK1-LABEL: define {{[^@]+}}@__omp_offloading_{{.*}}_main_l32
+// CHECK1-SAME: (i32* nonnull align 4 dereferenceable(4) [[A:%.*]], i64 [[VLA:%.*]], i16* nonnull align 2 dereferenceable(2) [[D:%.*]], i8* [[DOTTASK_RED_:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK1-NEXT:  entry:
+// CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8
+// CHECK1-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[D_ADDR:%.*]] = alloca i16*, align 8
+// CHECK1-NEXT:    [[DOTTASK_RED__ADDR:%.*]] = alloca i8*, align 8
+// CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
+// CHECK1-NEXT:    store i64 [[VLA]], i64* [[VLA_ADDR]], align 8
+// CHECK1-NEXT:    store i16* [[D]], i16** [[D_ADDR]], align 8
+// CHECK1-NEXT:    store i8* [[DOTTASK_RED_]], i8** [[DOTTASK_RED__ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i64, i64* [[VLA_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i16*, i16** [[D_ADDR]], align 8
+// CHECK1-NEXT:    store i32 0, i32* [[I]], align 4
+// CHECK1-NEXT:    br label [[FOR_COND:%.*]]
+//
+// CHECK1:       for.cond:
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[I]], align 4
+// CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP3]], 5
+// CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+//
+// CHECK1:       for.body:
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP0]], align 4
+// CHECK1-NEXT:    [[IDXPROM_I:%.*]] = sext i32 [[TMP4]] to i64
+// CHECK1-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds i16, i16* [[TMP2]], i64 [[IDXPROM_I]]
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[ARRAYIDX_I]], align 2
+// CHECK1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP5]] to i32
+// CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP0]], align 4
+// CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], [[CONV]]
+// CHECK1-NEXT:    store i32 [[ADD]], i32* [[TMP0]], align 4
+// CHECK1-NEXT:    br label [[FOR_INC:%.*]]
+//
+// CHECK1:       for.inc:
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[I]], align 4
+// CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP7]], 1
+// CHECK1-NEXT:    store i32 [[INC]], i32* [[I]], align 4
+// CHECK1-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
+//
+// CHECK1:       for.end
+// CHECK1-NEXT:    ret void
+//
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_privates_map.
 // CHECK1-SAME: (%struct..kmp_privates.t* noalias [[TMP0:%.*]], i8*** noalias [[TMP1:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK1-NEXT:  entry:
