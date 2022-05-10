@@ -10,9 +10,9 @@
 #include "CoroInternal.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 
 using namespace llvm;
 
@@ -23,17 +23,8 @@ namespace {
 struct Lowerer : coro::LowererBase {
   IRBuilder<> Builder;
   Lowerer(Module &M) : LowererBase(M), Builder(Context) {}
-  void lower(Function &F);
+  bool lower(Function &F);
 };
-}
-
-static void simplifyCFG(Function &F) {
-  llvm::legacy::FunctionPassManager FPM(F.getParent());
-  FPM.add(createCFGSimplificationPass());
-
-  FPM.doInitialization();
-  FPM.run(F);
-  FPM.doFinalization();
 }
 
 static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
@@ -53,9 +44,10 @@ static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   SubFn->replaceAllUsesWith(Load);
 }
 
-void Lowerer::lower(Function &F) {
+bool Lowerer::lower(Function &F) {
   bool IsPrivateAndUnprocessed =
       F.hasFnAttribute(CORO_PRESPLIT_ATTR) && F.hasLocalLinkage();
+  bool Changed = false;
 
   for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
@@ -110,11 +102,11 @@ void Lowerer::lower(Function &F) {
         break;
       }
       II->eraseFromParent();
+      Changed = true;
     }
   }
 
-  // After replacement were made we can cleanup the function body a little.
-  simplifyCFG(F);
+  return Changed;
 }
 
 static bool declaresCoroCleanupIntrinsics(const Module &M) {
@@ -130,9 +122,16 @@ PreservedAnalyses CoroCleanupPass::run(Module &M,
   if (!declaresCoroCleanupIntrinsics(M))
     return PreservedAnalyses::all();
 
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  FunctionPassManager FPM;
+  FPM.addPass(SimplifyCFGPass());
+
   Lowerer L(M);
   for (auto &F : M)
-    L.lower(F);
+    if (L.lower(F))
+      FPM.run(F, FAM);
 
   return PreservedAnalyses::none();
 }
