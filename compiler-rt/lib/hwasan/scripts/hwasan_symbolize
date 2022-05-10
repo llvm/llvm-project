@@ -267,6 +267,9 @@ class Symbolizer:
             bid = get_buildid(filename)
           except FileNotFoundError:
             continue
+          except Exception as e:
+            print("Failed to parse {}: {}".format(filename, e))
+            continue
           if bid is not None:
             self.__index[bid] = filename
 
