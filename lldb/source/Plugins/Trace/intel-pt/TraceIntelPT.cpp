@@ -271,101 +271,79 @@ bool TraceIntelPT::IsTraced(lldb::tid_t tid) {
 // documentation file. Similarly, it should match the CLI help messages of the
 // TraceIntelPTOptions.td file.
 const char *TraceIntelPT::GetStartConfigurationHelp() {
-  return R"(Parameters:
+  static Optional<std::string> message;
+  if (!message) {
+    message.emplace(formatv(R"(Parameters:
 
-  Note: If a parameter is not specified, a default value will be used.
+  See the jLLDBTraceStart section in lldb/docs/lldb-gdb-remote.txt for a
+  description of each parameter below.
 
-  - int threadBufferSize (defaults to 4096 bytes):
+  - int traceBufferSize (defaults to {0} bytes):
     [process and thread tracing]
-    Trace size in bytes per thread. It must be a power of 2 greater
-    than or equal to 4096 (2^12). The trace is circular keeping the
-    the most recent data.
 
-  - boolean enableTsc (default to false):
+  - boolean enableTsc (default to {1}):
     [process and thread tracing]
-    Whether to use enable TSC timestamps or not. This is supported on
-    all devices that support intel-pt.
 
-  - psbPeriod (defaults to null):
+  - int psbPeriod (defaults to {2}):
     [process and thread tracing]
-    This value defines the period in which PSB packets will be generated.
-    A PSB packet is a synchronization packet that contains a TSC
-    timestamp and the current absolute instruction pointer.
 
-    This parameter can only be used if
-
-        /sys/bus/event_source/devices/intel_pt/caps/psb_cyc
-
-    is 1. Otherwise, the PSB period will be defined by the processor.
-
-    If supported, valid values for this period can be found in
-
-        /sys/bus/event_source/devices/intel_pt/caps/psb_periods
-
-    which contains a hexadecimal number, whose bits represent
-    valid values e.g. if bit 2 is set, then value 2 is valid.
-
-    The psb_period value is converted to the approximate number of
-    raw trace bytes between PSB packets as:
-
-        2 ^ (value + 11)
-
-    e.g. value 3 means 16KiB between PSB packets. Defaults to 0 if
-    supported.
-
-  - int processBufferSizeLimit (defaults to 500 MB):
+  - boolean perCoreTracing (default to {3}):
     [process tracing only]
-    Maximum total trace size per process in bytes. This limit applies
-    to the sum of the sizes of all thread traces of this process,
-    excluding the ones created explicitly with "thread tracing".
-    Whenever a thread is attempted to be traced due to this command
-    and the limit would be reached, the process is stopped with a
-    "processor trace" reason, so that the user can retrace the process
-    if needed.)";
+
+  - int processBufferSizeLimit (defaults to {4} MiB):
+    [process tracing only])",
+                            kDefaultTraceBufferSize, kDefaultEnableTscValue,
+                            kDefaultPsbPeriod, kDefaultPerCoreTracing,
+                            kDefaultProcessBufferSizeLimit / 1024 / 1024));
+  }
+  return message->c_str();
 }
 
-Error TraceIntelPT::Start(size_t thread_buffer_size,
+Error TraceIntelPT::Start(size_t trace_buffer_size,
                           size_t total_buffer_size_limit, bool enable_tsc,
-                          Optional<size_t> psb_period) {
+                          Optional<size_t> psb_period, bool per_core_tracing) {
   TraceIntelPTStartRequest request;
-  request.threadBufferSize = thread_buffer_size;
-  request.processBufferSizeLimit = total_buffer_size_limit;
-  request.enableTsc = enable_tsc;
-  request.psbPeriod = psb_period.map([](size_t val) { return (int64_t)val; });
+  request.trace_buffer_size = trace_buffer_size;
+  request.process_buffer_size_limit = total_buffer_size_limit;
+  request.enable_tsc = enable_tsc;
+  request.psb_period = psb_period.map([](size_t val) { return (int64_t)val; });
   request.type = GetPluginName().str();
+  request.per_core_tracing = per_core_tracing;
   return Trace::Start(toJSON(request));
 }
 
 Error TraceIntelPT::Start(StructuredData::ObjectSP configuration) {
-  size_t thread_buffer_size = kDefaultThreadBufferSize;
+  size_t trace_buffer_size = kDefaultTraceBufferSize;
   size_t process_buffer_size_limit = kDefaultProcessBufferSizeLimit;
   bool enable_tsc = kDefaultEnableTscValue;
   Optional<size_t> psb_period = kDefaultPsbPeriod;
+  bool per_core_tracing = kDefaultPerCoreTracing;
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
-      dict->GetValueForKeyAsInteger("threadBufferSize", thread_buffer_size);
+      dict->GetValueForKeyAsInteger("traceBufferSize", trace_buffer_size);
       dict->GetValueForKeyAsInteger("processBufferSizeLimit",
                                     process_buffer_size_limit);
       dict->GetValueForKeyAsBoolean("enableTsc", enable_tsc);
       dict->GetValueForKeyAsInteger("psbPeriod", psb_period);
+      dict->GetValueForKeyAsBoolean("perCoreTracing", per_core_tracing);
     } else {
       return createStringError(inconvertibleErrorCode(),
                                "configuration object is not a dictionary");
     }
   }
 
-  return Start(thread_buffer_size, process_buffer_size_limit, enable_tsc,
-               psb_period);
+  return Start(trace_buffer_size, process_buffer_size_limit, enable_tsc,
+               psb_period, per_core_tracing);
 }
 
 llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
-                                size_t thread_buffer_size, bool enable_tsc,
+                                size_t trace_buffer_size, bool enable_tsc,
                                 Optional<size_t> psb_period) {
   TraceIntelPTStartRequest request;
-  request.threadBufferSize = thread_buffer_size;
-  request.enableTsc = enable_tsc;
-  request.psbPeriod = psb_period.map([](size_t val) { return (int64_t)val; });
+  request.trace_buffer_size = trace_buffer_size;
+  request.enable_tsc = enable_tsc;
+  request.psb_period = psb_period.map([](size_t val) { return (int64_t)val; });
   request.type = GetPluginName().str();
   request.tids.emplace();
   for (lldb::tid_t tid : tids)
@@ -375,13 +353,13 @@ llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
 
 Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
                           StructuredData::ObjectSP configuration) {
-  size_t thread_buffer_size = kDefaultThreadBufferSize;
+  size_t trace_buffer_size = kDefaultTraceBufferSize;
   bool enable_tsc = kDefaultEnableTscValue;
   Optional<size_t> psb_period = kDefaultPsbPeriod;
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
-      dict->GetValueForKeyAsInteger("threadBufferSize", thread_buffer_size);
+      dict->GetValueForKeyAsInteger("traceBufferSize", trace_buffer_size);
       dict->GetValueForKeyAsBoolean("enableTsc", enable_tsc);
       dict->GetValueForKeyAsInteger("psbPeriod", psb_period);
     } else {
@@ -390,7 +368,7 @@ Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
     }
   }
 
-  return Start(tids, thread_buffer_size, enable_tsc, psb_period);
+  return Start(tids, trace_buffer_size, enable_tsc, psb_period);
 }
 
 Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,

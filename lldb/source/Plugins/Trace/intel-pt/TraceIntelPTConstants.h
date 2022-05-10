@@ -16,10 +16,11 @@
 namespace lldb_private {
 namespace trace_intel_pt {
 
-const size_t kDefaultThreadBufferSize = 4 * 1024;              // 4KB
+const size_t kDefaultTraceBufferSize = 4 * 1024;               // 4KB
 const size_t kDefaultProcessBufferSizeLimit = 5 * 1024 * 1024; // 500MB
 const bool kDefaultEnableTscValue = false;
 const llvm::Optional<size_t> kDefaultPsbPeriod = llvm::None;
+const bool kDefaultPerCoreTracing = false;
 
 } // namespace trace_intel_pt
 } // namespace lldb_private
