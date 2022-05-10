@@ -3379,6 +3379,23 @@ SwiftASTContext::CreateModule(const SourceModule &module, Status &error,
     return nullptr;
   }
 
+  // FIXME: the correct thing to do would be to get the modules by calling
+  // CompilerInstance::getImplicitImportInfo, instead of explicitly loading this
+  // module. However, we currently don't have  access to a CompilerInstance,
+  // which is why this function is needed.
+  auto pushImportIfAvailable = [&](StringRef moduleStr) {
+    swift::ImportPath path =
+        swift::ImportPath::Builder(ast->getIdentifier(moduleStr)).copyTo(*ast);
+    if (!ast->canImportModule(path.getModulePath(swift::ImportKind::Module)))
+      return;
+    swift::UnloadedImportedModule import(path, /*isScoped=*/false);
+    importInfo.AdditionalUnloadedImports.emplace_back(
+        import, swift::SourceLoc(), swift::ImportOptions());
+  };
+  // Implicitly import additional "stdlib-like" modules.
+  pushImportIfAvailable(swift::SWIFT_CONCURRENCY_NAME);
+  pushImportIfAvailable(swift::SWIFT_STRING_PROCESSING_NAME);
+
   swift::Identifier module_id(
       ast->getIdentifier(module.path.front().GetCString()));
   auto *module_decl = swift::ModuleDecl::create(module_id, *ast, importInfo);
