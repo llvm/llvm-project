@@ -30,8 +30,8 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                 verify_value = verify[key]
                 actual_value = actual[key]
                 self.assertEqual(verify_value, actual_value,
-                                '"%s" keys don\'t match (%s != %s)' % (
-                                    key, actual_value, verify_value))
+                                '"%s" keys don\'t match (%s != %s) from:\n%s' % (
+                                    key, actual_value, verify_value, actual))
         if 'startswith' in verify_dict:
             verify = verify_dict['startswith']
             for key in verify:
@@ -43,6 +43,11 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                                  ' "%s")') % (
                                     key, actual_value,
                                     verify_value))
+        if 'missing' in verify_dict:
+            missing = verify_dict['missing']
+            for key in missing:
+                self.assertTrue(key not in actual,
+                                'key "%s" is not expected in %s' % (key, actual))
         hasVariablesReference = 'variablesReference' in actual
         varRef = None
         if hasVariablesReference:
@@ -310,22 +315,39 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         locals = self.vscode.get_local_variables()
         buffer_children = make_buffer_verify_dict(0, 32)
         verify_locals = {
-            "argc": {"equals": {"type": "int", "value": "1"}},
+            "argc": {
+                "equals": {"type": "int", "value": "1"},
+                "missing": ["indexedVariables"],
+            },
             "argv": {
                 "equals": {"type": "const char **"},
                 "startswith": {"value": "0x"},
                 "hasVariablesReference": True,
+                "missing": ["indexedVariables"],
             },
             "pt": {
                 "equals": {"type": "PointType"},
                 "hasVariablesReference": True,
+                "missing": ["indexedVariables"],
                 "children": {
-                    "x": {"equals": {"type": "int", "value": "11"}},
-                    "y": {"equals": {"type": "int", "value": "22"}},
-                    "buffer": {"children": buffer_children},
+                    "x": {
+                        "equals": {"type": "int", "value": "11"},
+                        "missing": ["indexedVariables"],
+                    },
+                    "y": {
+                        "equals": {"type": "int", "value": "22"},
+                        "missing": ["indexedVariables"],
+                    },
+                    "buffer": {
+                        "children": buffer_children,
+                        "equals": {"indexedVariables": 32}
+                    },
                 },
             },
-            "x": {"equals": {"type": "int"}},
+            "x": {
+                "equals": {"type": "int"},
+                "missing": ["indexedVariables"],
+            },
         }
         self.verify_variables(verify_locals, locals)
 
@@ -336,6 +358,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "response": {
                 "equals": {"type": "PointType"},
                 "startswith": {"result": "PointType @ 0x"},
+                "missing": ["indexedVariables"],
                 "hasVariablesReference": True,
             },
             "children": {
@@ -408,3 +431,36 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                 self.assertEquals(scope.get("presentationHint"), "locals")
             if scope["name"] == "Registers":
                 self.assertEquals(scope.get("presentationHint"), "registers")
+
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_indexedVariables(self):
+        """
+        Tests that arrays and lldb.SBValue objects that have synthetic child
+        providers have "indexedVariables" key/value pairs. This helps the IDE
+        not to fetch too many children all at once.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 4")
+        lines = [breakpoint1_line]
+        # Set breakpoint in the thread function so we can step the threads
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        # Verify locals
+        locals = self.vscode.get_local_variables()
+        buffer_children = make_buffer_verify_dict(0, 32)
+        verify_locals = {
+            "small_array": {"equals": {"indexedVariables": 5}},
+            "large_array": {"equals": {"indexedVariables": 200}},
+            "small_vector": {"equals": {"indexedVariables": 5}},
+            "large_vector": {"equals": {"indexedVariables": 200}},
+            "pt": {"missing": ["indexedVariables"]},
+        }
+        self.verify_variables(verify_locals, locals)
