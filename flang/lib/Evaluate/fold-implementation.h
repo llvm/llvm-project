@@ -890,9 +890,9 @@ template <typename T> Expr<T> Folder<T>::SPREAD(FunctionRef<T> &&funcRef) {
     Constant<T> spread{source->Reshape(std::move(shape))};
     std::vector<int> dimOrder;
     for (int j{0}; j < sourceRank; ++j) {
-      dimOrder.push_back(j);
+      dimOrder.push_back(j < *dim - 1 ? j : j + 1);
     }
-    dimOrder.insert(dimOrder.begin() + *dim - 1, sourceRank);
+    dimOrder.push_back(*dim - 1);
     ConstantSubscripts at{spread.lbounds()}; // all 1
     spread.CopyFrom(*source, TotalElementCount(spread.shape()), at, &dimOrder);
     return Expr<T>{std::move(spread)};
