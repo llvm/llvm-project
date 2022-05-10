@@ -6,7 +6,8 @@
 
 // expected-no-diagnostics
 
-void *memmove(void *, const void *, unsigned long);
+typedef typeof(sizeof(int)) size_t;
+void *memmove(void *, const void *, size_t);
 
 typedef struct {
   char a[1024];
