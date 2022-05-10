@@ -1,7 +1,0 @@
-## Test that CHECK lines are generated before the definion and not the declaration
-
-# RUN: cp %S/Inputs/tbaa-struct-id.c %t.c && %update_cc_test_checks %t.c
-# RUN: diff -u %S/Inputs/tbaa-struct-id.expected %t.c
-## Check that re-running update_cc_test_checks doesn't change the output
-# RUN: %update_cc_test_checks %t.c
-# RUN: diff -u %S/Inputs/tbaa-struct-id.expected %t.c
