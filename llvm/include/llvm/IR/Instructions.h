@@ -2137,6 +2137,12 @@ public:
   static bool isIdentityMask(ArrayRef<int> Mask);
   static bool isIdentityMask(const Constant *Mask) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
+
+    // Not possible to express a shuffle mask for a scalable vector for this
+    // case.
+    if (isa<ScalableVectorType>(Mask->getType()))
+      return false;
+
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
     return isIdentityMask(MaskAsInts);
@@ -2147,6 +2153,11 @@ public:
   /// from its input vectors.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <4,undef,6,undef>
   bool isIdentity() const {
+    // Not possible to express a shuffle mask for a scalable vector for this
+    // case.
+    if (isa<ScalableVectorType>(getType()))
+      return false;
+
     return !changesLength() && isIdentityMask(ShuffleMask);
   }
 
