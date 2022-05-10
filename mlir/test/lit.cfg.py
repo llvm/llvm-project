@@ -94,6 +94,10 @@ python_executable = config.python_executable
 # TODO: detect Darwin/Windows situation (or mark these tests as unsupported on these platforms).
 if "asan" in config.available_features and "Linux" in config.host_os:
   python_executable = f"LD_PRELOAD=$({config.host_cxx} -print-file-name=libclang_rt.asan-{config.host_arch}.so) {config.python_executable}"
+# On Windows the path to python could contains spaces in which case it needs to be provided in quotes.
+# This is the equivalent of how %python is setup in llvm/utils/lit/lit/llvm/config.py.
+elif "Windows" in config.host_os:
+  python_executable = '"%s"' % (python_executable)
 tools.extend([
   ToolSubst('%PYTHON', python_executable, unresolved='ignore'),
 ])
