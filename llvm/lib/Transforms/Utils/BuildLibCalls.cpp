@@ -15,12 +15,15 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/TypeSize.h"
 
 using namespace llvm;
 
@@ -1224,6 +1227,41 @@ static void setArgExtAttr(Function &F, unsigned ArgNo,
     F.addParamAttr(ArgNo, ExtAttr);
 }
 
+// Modeled after X86TargetLowering::markLibCallAttributes.
+static void markRegisterParameterAttributes(Function *F) {
+  if (!F->arg_size() || F->isVarArg())
+    return;
+
+  const CallingConv::ID CC = F->getCallingConv();
+  if (CC != CallingConv::C && CC != CallingConv::X86_StdCall)
+    return;
+
+  const Module *M = F->getParent();
+  unsigned N = M->getNumberRegisterParameters();
+  if (!N)
+    return;
+
+  const DataLayout &DL = M->getDataLayout();
+
+  for (Argument &A : F->args()) {
+    Type *T = A.getType();
+    if (!T->isIntOrPtrTy())
+      continue;
+
+    const TypeSize &TS = DL.getTypeAllocSize(T);
+    if (TS > 8)
+      continue;
+
+    assert(TS <= 4 && "Need to account for parameters larger than word size");
+    const unsigned NumRegs = TS > 4 ? 2 : 1;
+    if (N < NumRegs)
+      return;
+
+    N -= NumRegs;
+    F->addParamAttr(A.getArgNo(), Attribute::InReg);
+  }
+}
+
 FunctionCallee llvm::getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
                                         LibFunc TheLibFunc, FunctionType *T,
                                         AttributeList AttributeList) {
@@ -1288,6 +1326,8 @@ FunctionCallee llvm::getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
 #endif
     break;
   }
+
+  markRegisterParameterAttributes(F);
 
   return C;
 }
