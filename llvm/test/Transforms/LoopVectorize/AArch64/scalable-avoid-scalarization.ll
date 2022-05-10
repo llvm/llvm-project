@@ -11,7 +11,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test_no_scalarization(i64* %a, i32 %idx, i32 %n) #0 {
 ; CHECK-LABEL: @test_no_scalarization(
 ; CHECK-NEXT:  L.entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[IDX:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[IDX:%.*]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
