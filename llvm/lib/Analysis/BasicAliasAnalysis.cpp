@@ -1391,15 +1391,15 @@ BasicAAResult::aliasSelect(const SelectInst *SI, LocationSize SISize,
 
   // If both arms of the Select node NoAlias or MustAlias V2, then returns
   // NoAlias / MustAlias. Otherwise, returns MayAlias.
-  AliasResult Alias = getBestAAResults().alias(
-      MemoryLocation(V2, V2Size),
-      MemoryLocation(SI->getTrueValue(), SISize), AAQI);
+  AliasResult Alias =
+      getBestAAResults().alias(MemoryLocation(SI->getTrueValue(), SISize),
+                               MemoryLocation(V2, V2Size), AAQI);
   if (Alias == AliasResult::MayAlias)
     return AliasResult::MayAlias;
 
-  AliasResult ThisAlias = getBestAAResults().alias(
-      MemoryLocation(V2, V2Size),
-      MemoryLocation(SI->getFalseValue(), SISize), AAQI);
+  AliasResult ThisAlias =
+      getBestAAResults().alias(MemoryLocation(SI->getFalseValue(), SISize),
+                               MemoryLocation(V2, V2Size), AAQI);
   return MergeAliasResults(ThisAlias, Alias);
 }
 
@@ -1521,8 +1521,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   AAQueryInfo *UseAAQI = BlockInserted ? &NewAAQI : &AAQI;
 
   AliasResult Alias = getBestAAResults().alias(
-      MemoryLocation(V2, V2Size),
-      MemoryLocation(V1Srcs[0], PNSize), *UseAAQI);
+      MemoryLocation(V1Srcs[0], PNSize), MemoryLocation(V2, V2Size), *UseAAQI);
 
   // Early exit if the check of the first PHI source against V2 is MayAlias.
   // Other results are not possible.
@@ -1539,7 +1538,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     Value *V = V1Srcs[i];
 
     AliasResult ThisAlias = getBestAAResults().alias(
-        MemoryLocation(V2, V2Size), MemoryLocation(V, PNSize), *UseAAQI);
+        MemoryLocation(V, PNSize), MemoryLocation(V2, V2Size), *UseAAQI);
     Alias = MergeAliasResults(ThisAlias, Alias);
     if (Alias == AliasResult::MayAlias)
       break;
