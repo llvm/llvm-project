@@ -33,56 +33,57 @@ static std::unique_ptr<char const, void (*)(char const*)> demangle(char const* s
 #endif
     return {str, [](char const*) { /* nothing to free */ }};
 }
-#endif
 
 __attribute__((noreturn))
 static void demangling_terminate_handler()
 {
-#ifndef _LIBCXXABI_NO_EXCEPTIONS
-    // If there might be an uncaught exception
     using namespace __cxxabiv1;
     __cxa_eh_globals* globals = __cxa_get_globals_fast();
-    if (globals)
+
+    // If there is no uncaught exception, just note that we're terminating
+    if (!globals)
+        abort_message("terminating");
+
+    __cxa_exception* exception_header = globals->caughtExceptions;
+    if (!exception_header)
+        abort_message("terminating");
+
+    _Unwind_Exception* unwind_exception =
+        reinterpret_cast<_Unwind_Exception*>(exception_header + 1) - 1;
+
+    // If we're terminating due to a foreign exception
+    if (!__isOurExceptionClass(unwind_exception))
+        abort_message("terminating due to %s foreign exception", cause);
+
+    void* thrown_object =
+        __getExceptionClass(unwind_exception) == kOurDependentExceptionClass ?
+            ((__cxa_dependent_exception*)exception_header)->primaryException :
+            exception_header + 1;
+    const __shim_type_info* thrown_type =
+        static_cast<const __shim_type_info*>(exception_header->exceptionType);
+    auto name = demangle(thrown_type->name());
+    // If the uncaught exception can be caught with std::exception&
+    const __shim_type_info* catch_type =
+        static_cast<const __shim_type_info*>(&typeid(std::exception));
+    if (catch_type->can_catch(thrown_type, thrown_object))
     {
-        __cxa_exception* exception_header = globals->caughtExceptions;
-        // If there is an uncaught exception
-        if (exception_header)
-        {
-            _Unwind_Exception* unwind_exception =
-                reinterpret_cast<_Unwind_Exception*>(exception_header + 1) - 1;
-            if (__isOurExceptionClass(unwind_exception))
-            {
-                void* thrown_object =
-                    __getExceptionClass(unwind_exception) == kOurDependentExceptionClass ?
-                        ((__cxa_dependent_exception*)exception_header)->primaryException :
-                        exception_header + 1;
-                const __shim_type_info* thrown_type =
-                    static_cast<const __shim_type_info*>(exception_header->exceptionType);
-                auto name = demangle(thrown_type->name());
-                // If the uncaught exception can be caught with std::exception&
-                const __shim_type_info* catch_type =
-                    static_cast<const __shim_type_info*>(&typeid(std::exception));
-                if (catch_type->can_catch(thrown_type, thrown_object))
-                {
-                    // Include the what() message from the exception
-                    const std::exception* e = static_cast<const std::exception*>(thrown_object);
-                    abort_message("terminating due to %s exception of type %s: %s",
-                                  cause, name.get(), e->what());
-                }
-                else
-                    // Else just note that we're terminating due to an exception
-                    abort_message("terminating due to %s exception of type %s",
-                                   cause, name.get());
-            }
-            else
-                // Else we're terminating due to a foreign exception
-                abort_message("terminating due to %s foreign exception", cause);
-        }
+        // Include the what() message from the exception
+        const std::exception* e = static_cast<const std::exception*>(thrown_object);
+        abort_message("terminating due to %s exception of type %s: %s", cause, name.get(), e->what());
     }
-#endif
-    // Else just note that we're terminating
+    else
+    {
+        // Else just note that we're terminating due to an exception
+        abort_message("terminating due to %s exception of type %s", cause, name.get());
+    }
+}
+#else // !_LIBCXXABI_NO_EXCEPTIONS
+__attribute__((noreturn))
+static void demangling_terminate_handler()
+{
     abort_message("terminating");
 }
+#endif // !_LIBCXXABI_NO_EXCEPTIONS
 
 __attribute__((noreturn))
 static void demangling_unexpected_handler()
