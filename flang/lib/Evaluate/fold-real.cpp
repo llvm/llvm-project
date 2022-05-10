@@ -190,6 +190,10 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     if (auto *expr{args[0].value().UnwrapExpr()}) {
       return ToReal<KIND>(context, std::move(*expr));
     }
+  } else if (name == "rrspacing") {
+    return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T>(
+            [](const Scalar<T> &x) -> Scalar<T> { return x.RRSPACING(); }));
   } else if (name == "scale") {
     if (const auto *byExpr{UnwrapExpr<Expr<SomeInteger>>(args[1])}) {
       return common::visit(
@@ -218,6 +222,10 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "sign") {
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), &Scalar<T>::SIGN);
+  } else if (name == "spacing") {
+    return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T>(
+            [](const Scalar<T> &x) -> Scalar<T> { return x.SPACING(); }));
   } else if (name == "sqrt") {
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>(
@@ -277,8 +285,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
         }));
   }
   // TODO: dim, dot_product, fraction, matmul,
-  // modulo, norm2, rrspacing,
-  // set_exponent, spacing, transfer,
+  // modulo, norm2, set_exponent, transfer,
   return Expr<T>{std::move(funcRef)};
 }
 
