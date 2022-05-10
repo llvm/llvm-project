@@ -298,7 +298,7 @@ public:
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE);
 
-  bool emitGetActiveLaneMask() const;
+  PredicationStyle emitGetActiveLaneMask() const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);

@@ -334,8 +334,10 @@ public:
     return 2;
   }
 
-  bool emitGetActiveLaneMask() const {
-    return ST->hasSVE();
+  PredicationStyle emitGetActiveLaneMask() const {
+    if (ST->hasSVE())
+      return PredicationStyle::DataAndControlFlow;
+    return PredicationStyle::None;
   }
 
   bool supportsScalableVectors() const { return ST->hasSVE(); }
