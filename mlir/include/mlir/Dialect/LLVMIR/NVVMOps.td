@@ -153,7 +153,8 @@ def NVVM_VoteBallotOp :
 def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
   Arguments<(ins LLVM_i8Ptr_shared:$dst,
                  LLVM_i8Ptr_global:$src,
-                 I32Attr:$size)> {
+                 I32Attr:$size,
+                 OptionalAttr<UnitAttr>:$bypass_l1)> {
   string llvmBuilder = [{
       llvm::Intrinsic::ID id;
       switch ($size) {
@@ -164,7 +165,10 @@ def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
           id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_8;
           break;
         case 16:
-          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_16;
+          if(static_cast<bool>($bypass_l1))
+            id = llvm::Intrinsic::nvvm_cp_async_cg_shared_global_16;
+          else
+            id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_16;
           break;
         default:
           llvm_unreachable("unsupported async copy size");

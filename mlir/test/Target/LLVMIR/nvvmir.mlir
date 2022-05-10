@@ -287,6 +287,8 @@ llvm.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
   nvvm.cp.async.shared.global %arg0, %arg1, 8
 // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(i8 addrspace(3)* %{{.*}}, i8 addrspace(1)* %{{.*}})
   nvvm.cp.async.shared.global %arg0, %arg1, 16
+// CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16(i8 addrspace(3)* %{{.*}}, i8 addrspace(1)* %{{.*}})
+  nvvm.cp.async.shared.global %arg0, %arg1, 16 {bypass_l1}
 // CHECK: call void @llvm.nvvm.cp.async.commit.group()
   nvvm.cp.async.commit.group
 // CHECK: call void @llvm.nvvm.cp.async.wait.group(i32 0)
