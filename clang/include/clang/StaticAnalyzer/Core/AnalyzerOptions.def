@@ -128,7 +128,8 @@ ANALYZER_OPTION(bool, MayInlineCXXStandardLibrary, "c++-stdlib-inlining",
                 true)
 
 ANALYZER_OPTION(bool, MayInlineCXXAllocator, "c++-allocator-inlining",
-                "Whether or not allocator call may be considered for inlining.",
+                "Whether or not allocator and deallocator calls may be "
+                "considered for inlining.",
                 true)
 
 ANALYZER_OPTION(
