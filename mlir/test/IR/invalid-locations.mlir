@@ -11,7 +11,7 @@ func.func @location_missing_l_paren() {
 
 func.func @location_missing_r_paren() {
 ^bb:
-  return loc(unknown // expected-error@+1 {{expected ')' in location}}
+  return loc(unknown // expected-error {{expected ')' in location}}
 }
 
 // -----
@@ -60,7 +60,7 @@ func.func @location_callsite_missing_caller() {
 
 func.func @location_callsite_missing_r_paren() {
 ^bb:
-  return loc(callsite( unknown at unknown  // expected-error@+1 {{expected ')' in callsite location}}
+  return loc(callsite( unknown at unknown  // expected-error {{expected ')' in callsite location}}
 }
 
 // -----

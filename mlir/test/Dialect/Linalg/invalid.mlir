@@ -60,7 +60,7 @@ func.func @index_dim_negative(%arg0: memref<f32>) {
 // -----
 
 func.func @generic_no_region(%arg0: memref<f32>) {
-  // expected-error @+5 {{expected '{' to begin a region}}
+  // expected-error @+4 {{expected '{' to begin a region}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []

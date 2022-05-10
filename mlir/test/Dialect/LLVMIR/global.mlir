@@ -144,7 +144,7 @@ llvm.mlir.global internal @more_than_one_type(0) : i64, i32
 llvm.mlir.global internal @foo(0: i32) : i32
 
 func.func @bar() {
-  // expected-error @+2{{expected ':'}}
+  // expected-error @+1{{expected ':'}}
   llvm.mlir.addressof @foo
 }
 

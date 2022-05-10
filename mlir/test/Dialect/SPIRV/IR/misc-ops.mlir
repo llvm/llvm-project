@@ -23,7 +23,7 @@ func.func @undef() -> () {
 // -----
 
 func.func @undef() -> () {
-  // expected-error @+2{{expected ':'}}
+  // expected-error @+1{{expected ':'}}
   %0 = spv.Undef
   spv.Return
 }

@@ -24,7 +24,7 @@ func.func @branch_argument() -> () {
 // -----
 
 func.func @missing_accessor() -> () {
-  // expected-error @+2 {{expected block name}}
+  // expected-error @+1 {{expected block name}}
   spv.Branch
 }
 
