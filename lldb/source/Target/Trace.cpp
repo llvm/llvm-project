@@ -154,8 +154,9 @@ Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
         "Tracing data \"%s\" is not available for thread %" PRIu64 ".",
         kind.data(), tid);
 
-  TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(), tid, 0,
-                                    *size};
+  TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(),
+                                    static_cast<int64_t>(tid), 0,
+                                    static_cast<int64_t>(*size)};
   return m_live_process->TraceGetBinaryData(request);
 }
 
@@ -171,7 +172,7 @@ Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
         "Tracing data \"%s\" is not available for the process.", kind.data());
 
   TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(), None, 0,
-                                    *size};
+                                    static_cast<int64_t>(*size)};
   return m_live_process->TraceGetBinaryData(request);
 }
 

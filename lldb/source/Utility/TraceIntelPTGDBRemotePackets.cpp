@@ -56,9 +56,9 @@ LinuxPerfZeroTscConversion::Convert(uint64_t raw_counter_value) {
 json::Value LinuxPerfZeroTscConversion::toJSON() {
   return json::Value(json::Object{
       {"kind", "tsc-perf-zero-conversion"},
-      {"time_mult", m_time_mult},
-      {"time_shift", m_time_shift},
-      {"time_zero", m_time_zero},
+      {"time_mult", static_cast<int64_t>(m_time_mult)},
+      {"time_shift", static_cast<int64_t>(m_time_shift)},
+      {"time_zero", static_cast<int64_t>(m_time_zero)},
   });
 }
 
@@ -66,14 +66,14 @@ bool fromJSON(const json::Value &value, TraceTscConversionUP &tsc_conversion,
               json::Path path) {
   ObjectMapper o(value, path);
 
-  uint64_t time_mult, time_shift, time_zero;
+  int64_t time_mult, time_shift, time_zero;
   if (!o || !o.map("time_mult", time_mult) ||
       !o.map("time_shift", time_shift) || !o.map("time_zero", time_zero))
     return false;
 
   tsc_conversion = std::make_unique<LinuxPerfZeroTscConversion>(
       static_cast<uint32_t>(time_mult), static_cast<uint16_t>(time_shift),
-      time_zero);
+      static_cast<uint64_t>(time_zero));
 
   return true;
 }

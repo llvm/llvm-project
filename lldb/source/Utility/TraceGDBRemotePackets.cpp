@@ -48,7 +48,7 @@ TraceStopRequest::TraceStopRequest(llvm::StringRef type,
     : type(type) {
   tids.emplace();
   for (lldb::tid_t tid : tids_)
-    tids->push_back(tid);
+    tids->push_back(static_cast<int64_t>(tid));
 }
 
 bool TraceStopRequest::IsProcessTracing() const { return !(bool)tids; }
