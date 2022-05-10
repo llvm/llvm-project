@@ -3,8 +3,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -29,8 +27,6 @@
 //
 svint8_t test_svtbx_s8(svint8_t fallback, svint8_t data, svuint8_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_s8'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_s8,,)(fallback, data, indices);
 }
 
@@ -46,8 +42,6 @@ svint8_t test_svtbx_s8(svint8_t fallback, svint8_t data, svuint8_t indices)
 //
 svint16_t test_svtbx_s16(svint16_t fallback, svint16_t data, svuint16_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_s16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_s16,,)(fallback, data, indices);
 }
 
@@ -63,8 +57,6 @@ svint16_t test_svtbx_s16(svint16_t fallback, svint16_t data, svuint16_t indices)
 //
 svint32_t test_svtbx_s32(svint32_t fallback, svint32_t data, svuint32_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_s32,,)(fallback, data, indices);
 }
 
@@ -80,8 +72,6 @@ svint32_t test_svtbx_s32(svint32_t fallback, svint32_t data, svuint32_t indices)
 //
 svint64_t test_svtbx_s64(svint64_t fallback, svint64_t data, svuint64_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_s64,,)(fallback, data, indices);
 }
 
@@ -97,8 +87,6 @@ svint64_t test_svtbx_s64(svint64_t fallback, svint64_t data, svuint64_t indices)
 //
 svuint8_t test_svtbx_u8(svuint8_t fallback, svuint8_t data, svuint8_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_u8'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_u8,,)(fallback, data, indices);
 }
 
@@ -114,8 +102,6 @@ svuint8_t test_svtbx_u8(svuint8_t fallback, svuint8_t data, svuint8_t indices)
 //
 svuint16_t test_svtbx_u16(svuint16_t fallback, svuint16_t data, svuint16_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_u16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_u16,,)(fallback, data, indices);
 }
 
@@ -131,8 +117,6 @@ svuint16_t test_svtbx_u16(svuint16_t fallback, svuint16_t data, svuint16_t indic
 //
 svuint32_t test_svtbx_u32(svuint32_t fallback, svuint32_t data, svuint32_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_u32,,)(fallback, data, indices);
 }
 
@@ -148,8 +132,6 @@ svuint32_t test_svtbx_u32(svuint32_t fallback, svuint32_t data, svuint32_t indic
 //
 svuint64_t test_svtbx_u64(svuint64_t fallback, svuint64_t data, svuint64_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_u64,,)(fallback, data, indices);
 }
 
@@ -165,8 +147,6 @@ svuint64_t test_svtbx_u64(svuint64_t fallback, svuint64_t data, svuint64_t indic
 //
 svfloat16_t test_svtbx_f16(svfloat16_t fallback, svfloat16_t data, svuint16_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_f16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_f16,,)(fallback, data, indices);
 }
 
@@ -182,8 +162,6 @@ svfloat16_t test_svtbx_f16(svfloat16_t fallback, svfloat16_t data, svuint16_t in
 //
 svfloat32_t test_svtbx_f32(svfloat32_t fallback, svfloat32_t data, svuint32_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_f32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_f32,,)(fallback, data, indices);
 }
 
@@ -199,7 +177,5 @@ svfloat32_t test_svtbx_f32(svfloat32_t fallback, svfloat32_t data, svuint32_t in
 //
 svfloat64_t test_svtbx_f64(svfloat64_t fallback, svfloat64_t data, svuint64_t indices)
 {
-  // overload-warning@+2 {{call to undeclared function 'svtbx'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svtbx_f64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svtbx,_f64,,)(fallback, data, indices);
 }

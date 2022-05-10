@@ -3,8 +3,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -31,8 +29,6 @@
 //
 svfloat16_t test_svminnmp_f16_m(svbool_t pg, svfloat16_t op1, svfloat16_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svminnmp_m'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svminnmp_f16_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svminnmp,_f16,_m,)(pg, op1, op2);
 }
 
@@ -50,8 +46,6 @@ svfloat16_t test_svminnmp_f16_m(svbool_t pg, svfloat16_t op1, svfloat16_t op2)
 //
 svfloat32_t test_svminnmp_f32_m(svbool_t pg, svfloat32_t op1, svfloat32_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svminnmp_m'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svminnmp_f32_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svminnmp,_f32,_m,)(pg, op1, op2);
 }
 
@@ -69,8 +63,6 @@ svfloat32_t test_svminnmp_f32_m(svbool_t pg, svfloat32_t op1, svfloat32_t op2)
 //
 svfloat64_t test_svminnmp_f64_m(svbool_t pg, svfloat64_t op1, svfloat64_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svminnmp_m'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svminnmp_f64_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svminnmp,_f64,_m,)(pg, op1, op2);
 }
 
@@ -88,8 +80,6 @@ svfloat64_t test_svminnmp_f64_m(svbool_t pg, svfloat64_t op1, svfloat64_t op2)
 //
 svfloat16_t test_svminnmp_f16_x(svbool_t pg, svfloat16_t op1, svfloat16_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svminnmp_x'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svminnmp_f16_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svminnmp,_f16,_x,)(pg, op1, op2);
 }
 
@@ -107,8 +97,6 @@ svfloat16_t test_svminnmp_f16_x(svbool_t pg, svfloat16_t op1, svfloat16_t op2)
 //
 svfloat32_t test_svminnmp_f32_x(svbool_t pg, svfloat32_t op1, svfloat32_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svminnmp_x'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svminnmp_f32_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svminnmp,_f32,_x,)(pg, op1, op2);
 }
 
@@ -126,7 +114,5 @@ svfloat32_t test_svminnmp_f32_x(svbool_t pg, svfloat32_t op1, svfloat32_t op2)
 //
 svfloat64_t test_svminnmp_f64_x(svbool_t pg, svfloat64_t op1, svfloat64_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svminnmp_x'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svminnmp_f64_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svminnmp,_f64,_x,)(pg, op1, op2);
 }
