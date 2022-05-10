@@ -965,7 +965,8 @@ FlatAffineValueConstraints::getLowerAndUpperBound(
 /// this process if needed.
 void FlatAffineValueConstraints::getSliceBounds(
     unsigned offset, unsigned num, MLIRContext *context,
-    SmallVectorImpl<AffineMap> *lbMaps, SmallVectorImpl<AffineMap> *ubMaps) {
+    SmallVectorImpl<AffineMap> *lbMaps, SmallVectorImpl<AffineMap> *ubMaps,
+    bool getClosedUB) {
   assert(num < getNumDimIds() && "invalid range");
 
   // Basic simplification.
@@ -1065,6 +1066,8 @@ void FlatAffineValueConstraints::getSliceBounds(
     // again.
   } while (changed);
 
+  int64_t ubAdjustment = getClosedUB ? 0 : 1;
+
   // Set the lower and upper bound maps for all the identifiers that were
   // computed as affine expressions of the rest as the "detected expr" and
   // "detected expr + 1" respectively; set the undetected ones to null.
@@ -1081,7 +1084,7 @@ void FlatAffineValueConstraints::getSliceBounds(
 
     if (expr) {
       lbMap = AffineMap::get(numMapDims, numMapSymbols, expr);
-      ubMap = AffineMap::get(numMapDims, numMapSymbols, expr + 1);
+      ubMap = AffineMap::get(numMapDims, numMapSymbols, expr + ubAdjustment);
     } else {
       // TODO: Whenever there are local identifiers in the dependence
       // constraints, we'll conservatively over-approximate, since we don't
@@ -1118,9 +1121,10 @@ void FlatAffineValueConstraints::getSliceBounds(
                    << "WARNING: Potentially over-approximating slice ub\n");
         auto ubConst = getConstantBound(BoundType::UB, pos + offset);
         if (ubConst.hasValue()) {
-          (ubMap) = AffineMap::get(
-              numMapDims, numMapSymbols,
-              getAffineConstantExpr(ubConst.getValue() + 1, context));
+          ubMap =
+              AffineMap::get(numMapDims, numMapSymbols,
+                             getAffineConstantExpr(
+                                 ubConst.getValue() + ubAdjustment, context));
         }
       }
     }
@@ -1158,10 +1162,13 @@ LogicalResult FlatAffineValueConstraints::flattenAlignedMapAndMergeLocals(
 }
 
 LogicalResult FlatAffineValueConstraints::addBound(BoundType type, unsigned pos,
-                                                   AffineMap boundMap) {
+                                                   AffineMap boundMap,
+                                                   bool isClosedBound) {
   assert(boundMap.getNumDims() == getNumDimIds() && "dim mismatch");
   assert(boundMap.getNumSymbols() == getNumSymbolIds() && "symbol mismatch");
   assert(pos < getNumDimAndSymbolIds() && "invalid position");
+  assert((type != BoundType::EQ || isClosedBound) &&
+         "EQ bound must be closed.");
 
   // Equality follows the logic of lower bound except that we add an equality
   // instead of an inequality.
@@ -1193,15 +1200,22 @@ LogicalResult FlatAffineValueConstraints::addBound(BoundType type, unsigned pos,
     for (unsigned i = boundMap.getNumInputs(); i < end; i++, j++) {
       ineq[j] = lower ? -flatExpr[i] : flatExpr[i];
     }
+    // Make the bound closed in if flatExpr is open. The inequality is always
+    // created in the upper bound form, so the adjustment is -1.
+    int64_t boundAdjustment = (isClosedBound || type == BoundType::EQ) ? 0 : -1;
     // Constant term.
-    ineq[getNumCols() - 1] =
-        lower ? -flatExpr[flatExpr.size() - 1]
-              // Upper bound in flattenedExpr is an exclusive one.
-              : flatExpr[flatExpr.size() - 1] - 1;
+    ineq[getNumCols() - 1] = (lower ? -flatExpr[flatExpr.size() - 1]
+                                    : flatExpr[flatExpr.size() - 1]) +
+                             boundAdjustment;
     type == BoundType::EQ ? addEquality(ineq) : addInequality(ineq);
   }
 
   return success();
+}
+
+LogicalResult FlatAffineValueConstraints::addBound(BoundType type, unsigned pos,
+                                                   AffineMap boundMap) {
+  return addBound(type, pos, boundMap, /*isClosedBound=*/type != BoundType::UB);
 }
 
 AffineMap
