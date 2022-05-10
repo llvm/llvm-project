@@ -45,7 +45,7 @@ struct TraceStartRequest {
 
   /// If \a llvm::None, then this starts tracing the whole process. Otherwise,
   /// only tracing for the specified threads is enabled.
-  llvm::Optional<std::vector<lldb::tid_t>> tids;
+  llvm::Optional<std::vector<int64_t>> tids;
 
   /// \return
   ///     \b true if \a tids is \a None, i.e. whole process tracing.
@@ -73,7 +73,7 @@ struct TraceStopRequest {
   std::string type;
   /// If \a llvm::None, then this stops tracing the whole process. Otherwise,
   /// only tracing for the specified threads is stopped.
-  llvm::Optional<std::vector<lldb::tid_t>> tids;
+  llvm::Optional<std::vector<int64_t>> tids;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceStopRequest &packet,
@@ -98,7 +98,7 @@ struct TraceBinaryData {
   /// Identifier of data to fetch with jLLDBTraceGetBinaryData.
   std::string kind;
   /// Size in bytes for this data.
-  uint64_t size;
+  int64_t size;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceBinaryData &packet,
@@ -107,7 +107,7 @@ bool fromJSON(const llvm::json::Value &value, TraceBinaryData &packet,
 llvm::json::Value toJSON(const TraceBinaryData &packet);
 
 struct TraceThreadState {
-  lldb::tid_t tid;
+  int64_t tid;
   /// List of binary data objects for this thread.
   std::vector<TraceBinaryData> binaryData;
 };
@@ -161,11 +161,11 @@ struct TraceGetBinaryDataRequest {
   /// Identifier for the data.
   std::string kind;
   /// Optional tid if the data is related to a thread.
-  llvm::Optional<lldb::tid_t> tid;
+  llvm::Optional<int64_t> tid;
   /// Offset in bytes from where to start reading the data.
-  uint64_t offset;
+  int64_t offset;
   /// Number of bytes to read.
-  uint64_t size;
+  int64_t size;
 };
 
 bool fromJSON(const llvm::json::Value &value,

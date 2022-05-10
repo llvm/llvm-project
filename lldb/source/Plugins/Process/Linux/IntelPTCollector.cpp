@@ -72,9 +72,10 @@ std::vector<TraceThreadState>
 IntelPTThreadTraceCollection::GetThreadStates() const {
   std::vector<TraceThreadState> states;
   for (const auto &it : m_thread_traces)
-    states.push_back({it.first,
+    states.push_back({static_cast<int64_t>(it.first),
                       {TraceBinaryData{IntelPTDataKinds::kTraceBuffer,
-                                       it.second->GetTraceBufferSize()}}});
+                                       static_cast<int64_t>(
+                                           it.second->GetTraceBufferSize())}}});
   return states;
 }
 
@@ -200,8 +201,8 @@ Expected<json::Value> IntelPTCollector::GetState() const {
     return cpu_info.takeError();
 
   TraceGetStateResponse state;
-  state.processBinaryData.push_back(
-      {IntelPTDataKinds::kProcFsCpuInfo, cpu_info->size()});
+  state.processBinaryData.push_back({IntelPTDataKinds::kProcFsCpuInfo,
+                                     static_cast<int64_t>(cpu_info->size())});
 
   std::vector<TraceThreadState> thread_states =
       m_thread_traces.GetThreadStates();
