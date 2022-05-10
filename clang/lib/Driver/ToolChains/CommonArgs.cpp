@@ -736,6 +736,9 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   if (IsOffloadingHost)
     CmdArgs.push_back("-lomptarget");
 
+  if (IsOffloadingHost && TC.getDriver().isUsingLTO(/* IsOffload */ true))
+    CmdArgs.push_back("-lomptarget.devicertl");
+
   addArchSpecificRPath(TC, Args, CmdArgs);
 
   if (RTKind == Driver::OMPRT_OMP)
