@@ -1048,4 +1048,291 @@ guard.fail:
   ret i32 -1
 }
 
+define i32 @logical_and_known_smaller(i16 %n, i16 %m) {
+; CHECK-LABEL: 'logical_and_known_smaller'
+; CHECK-NEXT:  Classifying expressions for: @logical_and_known_smaller
+; CHECK-NEXT:    %n.ext = zext i16 %n to i32
+; CHECK-NEXT:    --> (zext i16 %n to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.ext = zext i16 %m to i32
+; CHECK-NEXT:    --> (zext i16 %m to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.add = add i32 %m.ext, 65536
+; CHECK-NEXT:    --> (65536 + (zext i16 %m to i32))<nuw><nsw> U: [65536,131072) S: [65536,131072)
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin_seq (65536 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin_seq (65536 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_smaller
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((zext i16 %n to i32) umin_seq (65536 + (zext i16 %m to i32))<nuw><nsw>)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((zext i16 %n to i32) umin_seq (65536 + (zext i16 %m to i32))<nuw><nsw>)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %n.ext = zext i16 %n to i32
+  %m.ext = zext i16 %m to i32
+  %m.add = add i32 %m.ext, 65536
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %cond_p0 = icmp ult i32 %i, %n.ext
+  %cond_p1 = icmp ult i32 %i, %m.add
+  %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret i32 %i
+}
+
+define i32 @logical_and_known_smaller_equal(i16 %n, i16 %m) {
+; CHECK-LABEL: 'logical_and_known_smaller_equal'
+; CHECK-NEXT:  Classifying expressions for: @logical_and_known_smaller_equal
+; CHECK-NEXT:    %n.ext = zext i16 %n to i32
+; CHECK-NEXT:    --> (zext i16 %n to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.ext = zext i16 %m to i32
+; CHECK-NEXT:    --> (zext i16 %m to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.add = add i32 %m.ext, 65535
+; CHECK-NEXT:    --> (65535 + (zext i16 %m to i32))<nuw><nsw> U: [65535,131071) S: [65535,131071)
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin_seq (65535 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin_seq (65535 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_smaller_equal
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((zext i16 %n to i32) umin_seq (65535 + (zext i16 %m to i32))<nuw><nsw>)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((zext i16 %n to i32) umin_seq (65535 + (zext i16 %m to i32))<nuw><nsw>)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %n.ext = zext i16 %n to i32
+  %m.ext = zext i16 %m to i32
+  %m.add = add i32 %m.ext, 65535
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %cond_p0 = icmp ult i32 %i, %n.ext
+  %cond_p1 = icmp ult i32 %i, %m.add
+  %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret i32 %i
+}
+
+define i32 @logical_and_not_known_smaller_equal(i16 %n, i16 %m) {
+; CHECK-LABEL: 'logical_and_not_known_smaller_equal'
+; CHECK-NEXT:  Classifying expressions for: @logical_and_not_known_smaller_equal
+; CHECK-NEXT:    %n.ext = zext i16 %n to i32
+; CHECK-NEXT:    --> (zext i16 %n to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.ext = zext i16 %m to i32
+; CHECK-NEXT:    --> (zext i16 %m to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.add = add i32 %m.ext, 65534
+; CHECK-NEXT:    --> (65534 + (zext i16 %m to i32))<nuw><nsw> U: [65534,131070) S: [65534,131070)
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_known_smaller_equal
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %n.ext = zext i16 %n to i32
+  %m.ext = zext i16 %m to i32
+  %m.add = add i32 %m.ext, 65534
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %cond_p0 = icmp ult i32 %i, %n.ext
+  %cond_p1 = icmp ult i32 %i, %m.add
+  %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret i32 %i
+}
+
+define i32 @logical_and_known_greater(i16 %n, i16 %m) {
+; CHECK-LABEL: 'logical_and_known_greater'
+; CHECK-NEXT:  Classifying expressions for: @logical_and_known_greater
+; CHECK-NEXT:    %n.ext = zext i16 %n to i32
+; CHECK-NEXT:    --> (zext i16 %n to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.ext = zext i16 %m to i32
+; CHECK-NEXT:    --> (zext i16 %m to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.add = add i32 %m.ext, 65536
+; CHECK-NEXT:    --> (65536 + (zext i16 %m to i32))<nuw><nsw> U: [65536,131072) S: [65536,131072)
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_greater
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i16 %n to i32)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i16 %n to i32)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %n.ext = zext i16 %n to i32
+  %m.ext = zext i16 %m to i32
+  %m.add = add i32 %m.ext, 65536
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %cond_p0 = icmp ult i32 %i, %m.add
+  %cond_p1 = icmp ult i32 %i, %n.ext
+  %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret i32 %i
+}
+
+define i32 @logical_and_known_greater_equal(i16 %n, i16 %m) {
+; CHECK-LABEL: 'logical_and_known_greater_equal'
+; CHECK-NEXT:  Classifying expressions for: @logical_and_known_greater_equal
+; CHECK-NEXT:    %n.ext = zext i16 %n to i32
+; CHECK-NEXT:    --> (zext i16 %n to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.ext = zext i16 %m to i32
+; CHECK-NEXT:    --> (zext i16 %m to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.add = add i32 %m.ext, 65535
+; CHECK-NEXT:    --> (65535 + (zext i16 %m to i32))<nuw><nsw> U: [65535,131071) S: [65535,131071)
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_greater_equal
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i16 %n to i32)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (zext i16 %n to i32)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %n.ext = zext i16 %n to i32
+  %m.ext = zext i16 %m to i32
+  %m.add = add i32 %m.ext, 65535
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %cond_p0 = icmp ult i32 %i, %m.add
+  %cond_p1 = icmp ult i32 %i, %n.ext
+  %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret i32 %i
+}
+
+define i32 @logical_and_not_known_greater_equal(i16 %n, i16 %m) {
+; CHECK-LABEL: 'logical_and_not_known_greater_equal'
+; CHECK-NEXT:  Classifying expressions for: @logical_and_not_known_greater_equal
+; CHECK-NEXT:    %n.ext = zext i16 %n to i32
+; CHECK-NEXT:    --> (zext i16 %n to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.ext = zext i16 %m to i32
+; CHECK-NEXT:    --> (zext i16 %m to i32) U: [0,65536) S: [0,65536)
+; CHECK-NEXT:    %m.add = add i32 %m.ext, 65534
+; CHECK-NEXT:    --> (65534 + (zext i16 %m to i32))<nuw><nsw> U: [65534,131070) S: [65534,131070)
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_known_greater_equal
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 65535
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %n.ext = zext i16 %n to i32
+  %m.ext = zext i16 %m to i32
+  %m.add = add i32 %m.ext, 65534
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %cond_p0 = icmp ult i32 %i, %m.add
+  %cond_p1 = icmp ult i32 %i, %n.ext
+  %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret i32 %i
+}
+
+define i32 @logical_and_zero_arg1(i32 %n) {
+; CHECK-LABEL: 'logical_and_zero_arg1'
+; CHECK-NEXT:  Classifying expressions for: @logical_and_zero_arg1
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero_arg1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %cond_p0 = icmp ult i32 %i, 0
+  %cond_p1 = icmp ult i32 %i, %n
+  %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret i32 %i
+}
+
+define i32 @logical_and_zero_arg2(i32 %n) {
+; CHECK-LABEL: 'logical_and_zero_arg2'
+; CHECK-NEXT:  Classifying expressions for: @logical_and_zero_arg2
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero_arg2
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 0
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %cond_p0 = icmp ult i32 %i, %n
+  %cond_p1 = icmp ult i32 %i, 0
+  %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret i32 %i
+}
+
+
 declare i32 @llvm.umin.i32(i32, i32)
