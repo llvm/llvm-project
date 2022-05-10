@@ -215,9 +215,9 @@ public:
            MaskAgnostic == Other.MaskAgnostic;
   }
 
-  bool hasCompatibleVTYPE(const VSETVLIInfo &InstrInfo, bool Strict) const {
+  bool hasCompatibleVTYPE(const VSETVLIInfo &Require, bool Strict) const {
     // Simple case, see if full VTYPE matches.
-    if (hasSameVTYPE(InstrInfo))
+    if (hasSameVTYPE(Require))
       return true;
 
     if (Strict)
@@ -225,26 +225,26 @@ public:
 
     // If this is a mask reg operation, it only cares about VLMAX.
     // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
-    // than "InstrInfo".
+    // than "Require".
     // FIXME: The policy bits can probably be ignored for mask reg operations.
-    if (InstrInfo.MaskRegOp && hasSameVLMAX(InstrInfo) &&
-        TailAgnostic == InstrInfo.TailAgnostic &&
-        MaskAgnostic == InstrInfo.MaskAgnostic)
+    if (Require.MaskRegOp && hasSameVLMAX(Require) &&
+        TailAgnostic == Require.TailAgnostic &&
+        MaskAgnostic == Require.MaskAgnostic)
       return true;
 
     return false;
   }
 
   // Determine whether the vector instructions requirements represented by
-  // InstrInfo are compatible with the previous vsetvli instruction represented
+  // Require are compatible with the previous vsetvli instruction represented
   // by this.
-  bool isCompatible(const VSETVLIInfo &InstrInfo, bool Strict) const {
-    assert(isValid() && InstrInfo.isValid() &&
+  bool isCompatible(const VSETVLIInfo &Require, bool Strict) const {
+    assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
-    assert(!InstrInfo.SEWLMULRatioOnly &&
+    assert(!Require.SEWLMULRatioOnly &&
            "Expected a valid VTYPE for instruction!");
     // Nothing is compatible with Unknown.
-    if (isUnknown() || InstrInfo.isUnknown())
+    if (isUnknown() || Require.isUnknown())
       return false;
 
     // If only our VLMAX ratio is valid, then this isn't compatible.
@@ -253,26 +253,26 @@ public:
 
     // If the instruction doesn't need an AVLReg and the SEW matches, consider
     // it compatible.
-    if (!Strict && InstrInfo.hasAVLReg() &&
-        InstrInfo.AVLReg == RISCV::NoRegister) {
-      if (SEW == InstrInfo.SEW)
+    if (!Strict && Require.hasAVLReg() &&
+        Require.AVLReg == RISCV::NoRegister) {
+      if (SEW == Require.SEW)
         return true;
     }
 
     // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
     // So it's compatible when we could make sure that both VL be the same
     // situation.
-    if (!Strict && InstrInfo.ScalarMovOp && InstrInfo.hasAVLImm() &&
-        ((hasNonZeroAVL() && InstrInfo.hasNonZeroAVL()) ||
-         (hasZeroAVL() && InstrInfo.hasZeroAVL())) &&
-        hasSameSEW(InstrInfo) && hasSamePolicy(InstrInfo))
+    if (!Strict && Require.ScalarMovOp && Require.hasAVLImm() &&
+        ((hasNonZeroAVL() && Require.hasNonZeroAVL()) ||
+         (hasZeroAVL() && Require.hasZeroAVL())) &&
+        hasSameSEW(Require) && hasSamePolicy(Require))
       return true;
 
     // The AVL must match.
-    if (!hasSameAVL(InstrInfo))
+    if (!hasSameAVL(Require))
       return false;
 
-    if (hasCompatibleVTYPE(InstrInfo, Strict))
+    if (hasCompatibleVTYPE(Require, Strict))
       return true;
 
     // Strict matches must ensure a full VTYPE match.
@@ -281,7 +281,7 @@ public:
 
     // Store instructions don't use the policy fields.
     // TODO: Move into hasCompatibleVTYPE?
-    if (InstrInfo.StoreOp && VLMul == InstrInfo.VLMul && SEW == InstrInfo.SEW)
+    if (Require.StoreOp && VLMul == Require.VLMul && SEW == Require.SEW)
       return true;
 
     // Anything else is not compatible.
@@ -289,25 +289,25 @@ public:
   }
 
   bool isCompatibleWithLoadStoreEEW(unsigned EEW,
-                                    const VSETVLIInfo &InstrInfo) const {
-    assert(isValid() && InstrInfo.isValid() &&
+                                    const VSETVLIInfo &Require) const {
+    assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
-    assert(!InstrInfo.SEWLMULRatioOnly &&
+    assert(!Require.SEWLMULRatioOnly &&
            "Expected a valid VTYPE for instruction!");
-    assert(EEW == InstrInfo.SEW && "Mismatched EEW/SEW for store");
+    assert(EEW == Require.SEW && "Mismatched EEW/SEW for store");
 
     if (isUnknown() || hasSEWLMULRatioOnly())
       return false;
 
-    if (!hasSameAVL(InstrInfo))
+    if (!hasSameAVL(Require))
       return false;
 
     // Stores can ignore the tail and mask policies.
-    if (!InstrInfo.StoreOp && (TailAgnostic != InstrInfo.TailAgnostic ||
-                               MaskAgnostic != InstrInfo.MaskAgnostic))
+    if (!Require.StoreOp && (TailAgnostic != Require.TailAgnostic ||
+                               MaskAgnostic != Require.MaskAgnostic))
       return false;
 
-    return getSEWLMULRatio() == getSEWLMULRatio(EEW, InstrInfo.VLMul);
+    return getSEWLMULRatio() == getSEWLMULRatio(EEW, Require.VLMul);
   }
 
   bool operator==(const VSETVLIInfo &Other) const {
