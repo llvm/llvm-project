@@ -843,9 +843,11 @@ def ReservedIdentifier : DiagGroup<"reserved-identifier",
 //
 def UnreachableCodeLoopIncrement : DiagGroup<"unreachable-code-loop-increment">;
 def UnreachableCodeFallthrough : DiagGroup<"unreachable-code-fallthrough">;
+def UnreachableCodeGenericAssoc : DiagGroup<"unreachable-code-generic-assoc">;
 def UnreachableCode : DiagGroup<"unreachable-code",
                                 [UnreachableCodeLoopIncrement,
-                                 UnreachableCodeFallthrough]>;
+                                 UnreachableCodeFallthrough,
+                                 UnreachableCodeGenericAssoc]>;
 def UnreachableCodeBreak : DiagGroup<"unreachable-code-break">;
 def UnreachableCodeReturn : DiagGroup<"unreachable-code-return">;
 def UnreachableCodeAggressive : DiagGroup<"unreachable-code-aggressive",

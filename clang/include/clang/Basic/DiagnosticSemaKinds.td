@@ -693,6 +693,10 @@ def warn_unreachable_fallthrough_attr : Warning<
   InGroup<UnreachableCodeFallthrough>, DefaultIgnore;
 def note_unreachable_silence : Note<
   "silence by adding parentheses to mark code as explicitly dead">;
+def warn_unreachable_association : Warning<
+  "due to lvalue conversion of the controlling expression, association of type "
+  "%0 will never be selected because it is %select{of array type|qualified}1">,
+  InGroup<UnreachableCodeGenericAssoc>;
 
 /// Built-in functions.
 def ext_implicit_lib_function_decl : ExtWarn<

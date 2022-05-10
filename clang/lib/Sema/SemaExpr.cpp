@@ -1685,6 +1685,25 @@ Sema::CreateGenericSelectionExpr(SourceLocation KeyLoc,
           D = diag::err_assoc_type_nonobject;
         else if (Types[i]->getType()->isVariablyModifiedType())
           D = diag::err_assoc_type_variably_modified;
+        else {
+          // Because the controlling expression undergoes lvalue conversion,
+          // array conversion, and function conversion, an association which is
+          // of array type, function type, or is qualified can never be
+          // reached. We will warn about this so users are less surprised by
+          // the unreachable association. However, we don't have to handle
+          // function types; that's not an object type, so it's handled above.
+          unsigned Reason = 0;
+          QualType QT = Types[i]->getType();
+          if (QT->isArrayType())
+            Reason = 1;
+          else if (QT.hasQualifiers())
+            Reason = 2;
+
+          if (Reason)
+            Diag(Types[i]->getTypeLoc().getBeginLoc(),
+                 diag::warn_unreachable_association)
+                << QT << (Reason - 1);
+        }
 
         if (D != 0) {
           Diag(Types[i]->getTypeLoc().getBeginLoc(), D)
