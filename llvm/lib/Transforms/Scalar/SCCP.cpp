@@ -164,6 +164,7 @@ static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
         continue;
       if (IV.getConstantRange().isAllNonNegative()) {
         auto *ZExt = new ZExtInst(ExtOp, Inst.getType(), "", &Inst);
+        ZExt->takeName(&Inst);
         InsertedValues.insert(ZExt);
         Inst.replaceAllUsesWith(ZExt);
         Solver.removeLatticeValueFor(&Inst);
