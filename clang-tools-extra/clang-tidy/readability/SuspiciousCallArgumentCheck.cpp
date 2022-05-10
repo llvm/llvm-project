@@ -529,7 +529,6 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
   for (StringRef Abbreviation : optutils::parseStringList(
            Options.get("Abbreviations", DefaultAbbreviations))) {
     auto KeyAndValue = Abbreviation.split("=");
-    llvm::errs() << "'" << Abbreviation << "'\n";
     assert(!KeyAndValue.first.empty() && !KeyAndValue.second.empty());
     AbbreviationDictionary.insert(
         std::make_pair(KeyAndValue.first, KeyAndValue.second.str()));
