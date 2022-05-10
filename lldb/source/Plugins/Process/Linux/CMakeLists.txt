@@ -1,5 +1,6 @@
 add_lldb_library(lldbPluginProcessLinux
   IntelPTCollector.cpp
+  IntelPTSingleBufferTrace.cpp
   NativeProcessLinux.cpp
   NativeRegisterContextLinux.cpp
   NativeRegisterContextLinux_arm.cpp

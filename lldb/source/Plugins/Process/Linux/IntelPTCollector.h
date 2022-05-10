@@ -11,6 +11,8 @@
 
 #include "Perf.h"
 
+#include "IntelPTSingleBufferTrace.h"
+
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
@@ -23,120 +25,10 @@ namespace lldb_private {
 
 namespace process_linux {
 
-/// This class keeps track of one tracing instance of
-/// Intel(R) Processor Trace on Linux OS at thread level.
-///
-/// The kernel interface for us is the perf_event_open.
-class IntelPTThreadTrace;
-typedef std::unique_ptr<IntelPTThreadTrace> IntelPTThreadTraceUP;
-
-class IntelPTThreadTrace {
-public:
-  /// Create a new \a IntelPTThreadTrace and start tracing the thread.
-  ///
-  /// \param[in] pid
-  ///     The pid of the process whose thread will be traced.
-  ///
-  /// \param[in] tid
-  ///     The tid of the thread to be traced.
-  ///
-  /// \param[in] buffer_size
-  ///     Size of the thread buffer in bytes.
-  ///
-  /// \param[in] enable_tsc
-  ///     Whether to use enable TSC timestamps or not.
-  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
-  ///
-  /// \param[in] psb_period
-  ///     This value defines the period in which PSB packets will be generated.
-  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
-  ///
-  /// \return
-  ///   A \a IntelPTThreadTrace instance if tracing was successful, or
-  ///   an \a llvm::Error otherwise.
-  static llvm::Expected<IntelPTThreadTraceUP>
-  Create(lldb::pid_t pid, lldb::tid_t tid, size_t buffer_size, bool enable_tsc,
-         llvm::Optional<size_t> psb_period);
-
-  /// Create a \a perf_event_attr configured for
-  /// an IntelPT event.
-  ///
-  /// \return
-  ///   A \a perf_event_attr if successful,
-  ///   or an \a llvm::Error otherwise.
-  static llvm::Expected<perf_event_attr>
-  CreateIntelPTPerfEventConfiguration(bool enable_tsc,
-                                      llvm::Optional<size_t> psb_period);
-
-  /// Read the trace buffer of the currently traced thread.
-  ///
-  /// \param[in] offset
-  ///     Offset of the data to read.
-  ///
-  /// \param[in] size
-  ///     Number of bytes to read.
-  ///
-  /// \return
-  ///     A vector with the requested binary data. The vector will have the
-  ///     size of the requested \a size. Non-available positions will be
-  ///     filled with zeroes.
-  llvm::Expected<std::vector<uint8_t>> GetIntelPTBuffer(size_t offset,
-                                                        size_t size) const;
-
-  Status ReadPerfTraceAux(llvm::MutableArrayRef<uint8_t> &buffer,
-                          size_t offset = 0) const;
-
-  Status ReadPerfTraceData(llvm::MutableArrayRef<uint8_t> &buffer,
-                           size_t offset = 0) const;
-
-  /// Get the size in bytes of the aux section of the thread or process traced
-  /// by this object.
-  size_t GetTraceBufferSize() const;
-
-  /// Read data from a cyclic buffer
-  ///
-  /// \param[in] [out] buf
-  ///     Destination buffer, the buffer will be truncated to written size.
-  ///
-  /// \param[in] src
-  ///     Source buffer which must be a cyclic buffer.
-  ///
-  /// \param[in] src_cyc_index
-  ///     The index pointer (start of the valid data in the cyclic
-  ///     buffer).
-  ///
-  /// \param[in] offset
-  ///     The offset to begin reading the data in the cyclic buffer.
-  static void ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
-                               llvm::ArrayRef<uint8_t> src,
-                               size_t src_cyc_index, size_t offset);
-
-  /// Return the thread-specific part of the jLLDBTraceGetState packet.
-  TraceThreadState GetState() const;
-
-private:
-  /// Construct new \a IntelPTThreadTrace. Users are supposed to create
-  /// instances of this class via the \a Create() method and not invoke this one
-  /// directly.
-  ///
-  /// \param[in] perf_event
-  ///   perf event configured for IntelPT.
-  ///
-  /// \param[in] tid
-  ///   The thread being traced.
-  IntelPTThreadTrace(PerfEvent &&perf_event, lldb::tid_t tid)
-      : m_perf_event(std::move(perf_event)), m_tid(tid) {}
-
-  /// perf event configured for IntelPT.
-  PerfEvent m_perf_event;
-  /// The thread being traced.
-  lldb::tid_t m_tid;
-};
-
 /// Manages a list of thread traces.
 class IntelPTThreadTraceCollection {
 public:
-  IntelPTThreadTraceCollection(lldb::pid_t pid) : m_pid(pid) {}
+  IntelPTThreadTraceCollection() {}
 
   /// Dispose of all traces
   void Clear();
@@ -147,7 +39,7 @@ public:
 
   std::vector<TraceThreadState> GetThreadStates() const;
 
-  llvm::Expected<const IntelPTThreadTrace &>
+  llvm::Expected<const IntelPTSingleBufferTrace &>
   GetTracedThread(lldb::tid_t tid) const;
 
   llvm::Error TraceStart(lldb::tid_t tid,
@@ -156,8 +48,7 @@ public:
   llvm::Error TraceStop(lldb::tid_t tid);
 
 private:
-  lldb::pid_t m_pid;
-  llvm::DenseMap<lldb::tid_t, IntelPTThreadTraceUP> m_thread_traces;
+  llvm::DenseMap<lldb::tid_t, IntelPTSingleBufferTraceUP> m_thread_traces;
   /// Total actual thread buffer size in bytes
   size_t m_total_buffer_size = 0;
 };
@@ -165,8 +56,8 @@ private:
 /// Manages a "process trace" instance.
 class IntelPTProcessTrace {
 public:
-  IntelPTProcessTrace(lldb::pid_t pid, const TraceIntelPTStartRequest &request)
-      : m_thread_traces(pid), m_tracing_params(request) {}
+  IntelPTProcessTrace(const TraceIntelPTStartRequest &request)
+      : m_tracing_params(request) {}
 
   bool TracesThread(lldb::tid_t tid) const;
 
@@ -185,7 +76,7 @@ private:
 /// Main class that manages intel-pt process and thread tracing.
 class IntelPTCollector {
 public:
-  IntelPTCollector(lldb::pid_t pid);
+  IntelPTCollector();
 
   static bool IsSupported();
 
@@ -222,14 +113,13 @@ private:
   llvm::Error TraceStart(lldb::tid_t tid,
                          const TraceIntelPTStartRequest &request);
 
-  llvm::Expected<const IntelPTThreadTrace &>
+  llvm::Expected<const IntelPTSingleBufferTrace &>
   GetTracedThread(lldb::tid_t tid) const;
 
   bool IsProcessTracingEnabled() const;
 
   void ClearProcessTracing();
 
-  lldb::pid_t m_pid;
   /// Threads traced due to "thread tracing"
   IntelPTThreadTraceCollection m_thread_traces;
   /// Threads traced due to "process tracing". Only one active "process tracing"

@@ -495,7 +495,7 @@ read packet: OK/E<error code>;AAAAAAAAA
 // INTEL PT
 //
 //  Binary data kinds:
-//    - threadTraceBuffer: trace buffer for a thread.
+//    - traceBuffer: trace buffer for a thread or a core.
 //    - procfsCpuInfo: contents of the /proc/cpuinfo file.
 //
 //  Counter info kinds:
@@ -550,7 +550,7 @@ read packet: {...object}/E<error code>;AAAAAAAAA
 // INTEL PT
 //
 //  Binary data kinds:
-//    - threadTraceBuffer: trace buffer for a thread.
+//    - traceBuffer: trace buffer for a thread or a core.
 //    - procfsCpuInfo: contents of the /proc/cpuinfo file.
 //----------------------------------------------------------------------
 

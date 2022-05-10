@@ -21,7 +21,7 @@ namespace lldb_private {
 // List of data kinds used by jLLDBGetState and jLLDBGetBinaryData.
 struct IntelPTDataKinds {
   static const char *kProcFsCpuInfo;
-  static const char *kThreadTraceBuffer;
+  static const char *kTraceBuffer;
 };
 
 /// jLLDBTraceStart gdb-remote packet
