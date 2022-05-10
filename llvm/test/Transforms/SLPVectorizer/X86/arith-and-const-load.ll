@@ -81,86 +81,16 @@ entry:
 define void @and8(ptr noalias nocapture noundef writeonly %dst, ptr noalias nocapture noundef readonly %src) {
 ; SSE-LABEL: @and8(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = load i8, ptr [[SRC:%.*]], align 1
-; SSE-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], -64
-; SSE-NEXT:    store i8 [[TMP1]], ptr [[DST:%.*]], align 1
-; SSE-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
-; SSE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
-; SSE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -64
-; SSE-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
-; SSE-NEXT:    store i8 [[TMP3]], ptr [[ARRAYIDX3_1]], align 1
-; SSE-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 2
-; SSE-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
-; SSE-NEXT:    [[TMP5:%.*]] = and i8 [[TMP4]], -64
-; SSE-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
-; SSE-NEXT:    store i8 [[TMP5]], ptr [[ARRAYIDX3_2]], align 1
-; SSE-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
-; SSE-NEXT:    [[TMP6:%.*]] = load i8, ptr [[ARRAYIDX_3]], align 1
-; SSE-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -64
-; SSE-NEXT:    [[ARRAYIDX3_3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 3
-; SSE-NEXT:    store i8 [[TMP7]], ptr [[ARRAYIDX3_3]], align 1
-; SSE-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
-; SSE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX_4]], align 1
-; SSE-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], -64
-; SSE-NEXT:    [[ARRAYIDX3_4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
-; SSE-NEXT:    store i8 [[TMP9]], ptr [[ARRAYIDX3_4]], align 1
-; SSE-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 5
-; SSE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[ARRAYIDX_5]], align 1
-; SSE-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], -64
-; SSE-NEXT:    [[ARRAYIDX3_5:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 5
-; SSE-NEXT:    store i8 [[TMP11]], ptr [[ARRAYIDX3_5]], align 1
-; SSE-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 6
-; SSE-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX_6]], align 1
-; SSE-NEXT:    [[TMP13:%.*]] = and i8 [[TMP12]], -64
-; SSE-NEXT:    [[ARRAYIDX3_6:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 6
-; SSE-NEXT:    store i8 [[TMP13]], ptr [[ARRAYIDX3_6]], align 1
-; SSE-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 7
-; SSE-NEXT:    [[TMP14:%.*]] = load i8, ptr [[ARRAYIDX_7]], align 1
-; SSE-NEXT:    [[TMP15:%.*]] = and i8 [[TMP14]], -64
-; SSE-NEXT:    [[ARRAYIDX3_7:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 7
-; SSE-NEXT:    store i8 [[TMP15]], ptr [[ARRAYIDX3_7]], align 1
+; SSE-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
+; SSE-NEXT:    [[TMP1:%.*]] = and <8 x i8> [[TMP0]], <i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64>
+; SSE-NEXT:    store <8 x i8> [[TMP1]], ptr [[DST:%.*]], align 1
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @and8(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP0:%.*]] = load i8, ptr [[SRC:%.*]], align 1
-; AVX-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], -64
-; AVX-NEXT:    store i8 [[TMP1]], ptr [[DST:%.*]], align 1
-; AVX-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
-; AVX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
-; AVX-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -64
-; AVX-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
-; AVX-NEXT:    store i8 [[TMP3]], ptr [[ARRAYIDX3_1]], align 1
-; AVX-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 2
-; AVX-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX_2]], align 1
-; AVX-NEXT:    [[TMP5:%.*]] = and i8 [[TMP4]], -64
-; AVX-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
-; AVX-NEXT:    store i8 [[TMP5]], ptr [[ARRAYIDX3_2]], align 1
-; AVX-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
-; AVX-NEXT:    [[TMP6:%.*]] = load i8, ptr [[ARRAYIDX_3]], align 1
-; AVX-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -64
-; AVX-NEXT:    [[ARRAYIDX3_3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 3
-; AVX-NEXT:    store i8 [[TMP7]], ptr [[ARRAYIDX3_3]], align 1
-; AVX-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
-; AVX-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX_4]], align 1
-; AVX-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], -64
-; AVX-NEXT:    [[ARRAYIDX3_4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
-; AVX-NEXT:    store i8 [[TMP9]], ptr [[ARRAYIDX3_4]], align 1
-; AVX-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 5
-; AVX-NEXT:    [[TMP10:%.*]] = load i8, ptr [[ARRAYIDX_5]], align 1
-; AVX-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], -64
-; AVX-NEXT:    [[ARRAYIDX3_5:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 5
-; AVX-NEXT:    store i8 [[TMP11]], ptr [[ARRAYIDX3_5]], align 1
-; AVX-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 6
-; AVX-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX_6]], align 1
-; AVX-NEXT:    [[TMP13:%.*]] = and i8 [[TMP12]], -64
-; AVX-NEXT:    [[ARRAYIDX3_6:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 6
-; AVX-NEXT:    store i8 [[TMP13]], ptr [[ARRAYIDX3_6]], align 1
-; AVX-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 7
-; AVX-NEXT:    [[TMP14:%.*]] = load i8, ptr [[ARRAYIDX_7]], align 1
-; AVX-NEXT:    [[TMP15:%.*]] = and i8 [[TMP14]], -64
-; AVX-NEXT:    [[ARRAYIDX3_7:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 7
-; AVX-NEXT:    store i8 [[TMP15]], ptr [[ARRAYIDX3_7]], align 1
+; AVX-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
+; AVX-NEXT:    [[TMP1:%.*]] = and <8 x i8> [[TMP0]], <i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64>
+; AVX-NEXT:    store <8 x i8> [[TMP1]], ptr [[DST:%.*]], align 1
 ; AVX-NEXT:    ret void
 ;
 entry:

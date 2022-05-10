@@ -312,6 +312,26 @@ public:
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
+                             Type *ScalarValTy) const {
+    auto &&IsSupportedByTarget = [this, ScalarMemTy, ScalarValTy](unsigned VF) {
+      auto *SrcTy = FixedVectorType::get(ScalarMemTy, VF / 2);
+      EVT VT = getTLI()->getValueType(DL, SrcTy);
+      if (getTLI()->isOperationLegal(ISD::STORE, VT) ||
+          getTLI()->isOperationCustom(ISD::STORE, VT))
+        return true;
+
+      EVT ValVT =
+          getTLI()->getValueType(DL, FixedVectorType::get(ScalarValTy, VF / 2));
+      EVT LegalizedVT =
+          getTLI()->getTypeToTransformTo(ScalarMemTy->getContext(), VT);
+      return getTLI()->isTruncStoreLegal(LegalizedVT, ValVT);
+    };
+    while (VF > 2 && IsSupportedByTarget(VF))
+      VF /= 2;
+    return VF;
+  }
+
   bool isIndexedLoadLegal(TTI::MemIndexedMode M, Type *Ty,
                           const DataLayout &DL) const {
     EVT VT = getTLI()->getValueType(DL, Ty);

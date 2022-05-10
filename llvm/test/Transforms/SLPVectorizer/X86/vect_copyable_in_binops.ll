@@ -40,18 +40,15 @@ define void @add1(i32* noalias %dst, i32* noalias %src) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[SRC]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP0]], i32* [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 2
-; CHECK-NEXT:    store i32 [[ADD3]], i32* [[INCDEC_PTR1]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[TMP2]], 2
 ; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 3
-; CHECK-NEXT:    store i32 [[ADD6]], i32* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[INCDEC_PTR]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[INCDEC_PTR1]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], <2 x i32>* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[INCDEC_PTR5]], align 4
+; CHECK-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP5]], 3
 ; CHECK-NEXT:    store i32 [[ADD9]], i32* [[INCDEC_PTR7]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -88,14 +85,11 @@ define void @sub0(i32* noalias %dst, i32* noalias %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[INCDEC_PTR1]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[SUB5:%.*]] = add nsw i32 [[TMP2]], -2
-; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 3
-; CHECK-NEXT:    store i32 [[SUB5]], i32* [[INCDEC_PTR3]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[SUB8:%.*]] = add nsw i32 [[TMP3]], -3
-; CHECK-NEXT:    store i32 [[SUB8]], i32* [[INCDEC_PTR6]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[INCDEC_PTR2]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, <2 x i32>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <2 x i32> [[TMP3]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[INCDEC_PTR3]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], <2 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -195,14 +189,13 @@ define void @addsub0(i32* noalias %dst, i32* noalias %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[INCDEC_PTR1]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[SUB5:%.*]] = add nsw i32 [[TMP2]], -2
-; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 3
-; CHECK-NEXT:    store i32 [[SUB5]], i32* [[INCDEC_PTR3]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[SUB8:%.*]] = sub nsw i32 [[TMP3]], -3
-; CHECK-NEXT:    store i32 [[SUB8]], i32* [[INCDEC_PTR6]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[INCDEC_PTR2]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, <2 x i32>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <2 x i32> [[TMP3]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <2 x i32> [[TMP3]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[INCDEC_PTR3]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], <2 x i32>* [[TMP7]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -229,22 +222,21 @@ entry:
 define void @addsub1(i32* noalias %dst, i32* noalias %src) {
 ; CHECK-LABEL: @addsub1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, i32* [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[SRC]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[TMP0]], -1
-; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 1
-; CHECK-NEXT:    store i32 [[SUB]], i32* [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[TMP1]], -1
-; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 2
-; CHECK-NEXT:    store i32 [[SUB1]], i32* [[INCDEC_PTR1]], align 4
+; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, i32* [[SRC:%.*]], i64 2
+; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[SRC]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[DST]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], <2 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[INCDEC_PTR2]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[INCDEC_PTR2]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 3
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[INCDEC_PTR3]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[SUB8:%.*]] = sub nsw i32 [[TMP3]], -3
+; CHECK-NEXT:    store i32 [[TMP6]], i32* [[INCDEC_PTR3]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[INCDEC_PTR4]], align 4
+; CHECK-NEXT:    [[SUB8:%.*]] = sub nsw i32 [[TMP7]], -3
 ; CHECK-NEXT:    store i32 [[SUB8]], i32* [[INCDEC_PTR6]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -272,22 +264,19 @@ entry:
 define void @mul(i32* noalias %dst, i32* noalias %src) {
 ; CHECK-LABEL: @mul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, i32* [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[SRC]], align 4
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP0]], 257
-; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 1
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[MUL3:%.*]] = mul nsw i32 [[TMP1]], -3
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 2
-; CHECK-NEXT:    store i32 [[MUL3]], i32* [[INCDEC_PTR1]], align 4
+; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, i32* [[SRC:%.*]], i64 2
+; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[SRC]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <2 x i32> [[TMP1]], <i32 257, i32 -3>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[DST]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], <2 x i32>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[INCDEC_PTR2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[INCDEC_PTR2]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 3
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[TMP3]], -9
+; CHECK-NEXT:    store i32 [[TMP4]], i32* [[INCDEC_PTR4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[INCDEC_PTR5]], align 4
+; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[TMP5]], -9
 ; CHECK-NEXT:    store i32 [[MUL9]], i32* [[INCDEC_PTR7]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -319,18 +308,15 @@ define void @shl0(i32* noalias %dst, i32* noalias %src) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[SRC]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP0]], i32* [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 1
-; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 2
-; CHECK-NEXT:    store i32 [[SHL]], i32* [[INCDEC_PTR1]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[SHL5:%.*]] = shl i32 [[TMP2]], 2
 ; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 3
-; CHECK-NEXT:    store i32 [[SHL5]], i32* [[INCDEC_PTR3]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[SHL8:%.*]] = shl i32 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[INCDEC_PTR]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i32> [[TMP2]], <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[INCDEC_PTR1]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], <2 x i32>* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[INCDEC_PTR4]], align 4
+; CHECK-NEXT:    [[SHL8:%.*]] = shl i32 [[TMP5]], 3
 ; CHECK-NEXT:    store i32 [[SHL8]], i32* [[INCDEC_PTR6]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -426,18 +412,15 @@ define void @add1f(float* noalias %dst, float* noalias %src) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 1
 ; CHECK-NEXT:    store float [[TMP0]], float* [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[ADD3:%.*]] = fadd fast float [[TMP1]], 1.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[DST]], i64 2
-; CHECK-NEXT:    store float [[ADD3]], float* [[INCDEC_PTR1]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[ADD6:%.*]] = fadd fast float [[TMP2]], 2.000000e+00
 ; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds float, float* [[DST]], i64 3
-; CHECK-NEXT:    store float [[ADD6]], float* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[ADD9:%.*]] = fadd fast float [[TMP3]], 3.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[INCDEC_PTR]] to <2 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x float> [[TMP2]], <float 1.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[INCDEC_PTR1]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP3]], <2 x float>* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
+; CHECK-NEXT:    [[ADD9:%.*]] = fadd fast float [[TMP5]], 3.000000e+00
 ; CHECK-NEXT:    store float [[ADD9]], float* [[INCDEC_PTR7]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -474,14 +457,11 @@ define void @sub0f(float* noalias %dst, float* noalias %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[DST]], i64 2
 ; CHECK-NEXT:    store float [[TMP1]], float* [[INCDEC_PTR1]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[ADD6:%.*]] = fadd fast float [[TMP2]], -2.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds float, float* [[DST]], i64 3
-; CHECK-NEXT:    store float [[ADD6]], float* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[ADD9:%.*]] = fadd fast float [[TMP3]], -3.000000e+00
-; CHECK-NEXT:    store float [[ADD9]], float* [[INCDEC_PTR7]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[INCDEC_PTR2]] to <2 x float>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x float> [[TMP3]], <float -2.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[INCDEC_PTR4]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP4]], <2 x float>* [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -581,14 +561,13 @@ define void @addsub0f(float* noalias %dst, float* noalias %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, float* [[DST]], i64 2
 ; CHECK-NEXT:    store float [[TMP1]], float* [[INCDEC_PTR1]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[SUB5:%.*]] = fadd fast float [[TMP2]], -2.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds float, float* [[DST]], i64 3
-; CHECK-NEXT:    store float [[SUB5]], float* [[INCDEC_PTR3]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[SUB8:%.*]] = fsub fast float [[TMP3]], -3.000000e+00
-; CHECK-NEXT:    store float [[SUB8]], float* [[INCDEC_PTR6]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[INCDEC_PTR2]] to <2 x float>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x float> [[TMP3]], <float -2.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x float> [[TMP3]], <float -2.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast float* [[INCDEC_PTR3]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP6]], <2 x float>* [[TMP7]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -615,22 +594,21 @@ entry:
 define void @addsub1f(float* noalias %dst, float* noalias %src) {
 ; CHECK-LABEL: @addsub1f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, float* [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = fadd fast float [[TMP0]], -1.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 1
-; CHECK-NEXT:    store float [[SUB]], float* [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[SUB1:%.*]] = fsub fast float [[TMP1]], -1.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, float* [[DST]], i64 2
-; CHECK-NEXT:    store float [[SUB1]], float* [[INCDEC_PTR1]], align 4
+; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, float* [[SRC:%.*]], i64 2
+; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[SRC]] to <2 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x float> [[TMP1]], <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x float> [[TMP1]], <float -1.000000e+00, float -1.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> [[TMP3]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[DST]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP4]], <2 x float>* [[TMP5]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds float, float* [[DST]], i64 3
-; CHECK-NEXT:    store float [[TMP2]], float* [[INCDEC_PTR3]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[SUB8:%.*]] = fsub fast float [[TMP3]], -3.000000e+00
+; CHECK-NEXT:    store float [[TMP6]], float* [[INCDEC_PTR3]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[INCDEC_PTR4]], align 4
+; CHECK-NEXT:    [[SUB8:%.*]] = fsub fast float [[TMP7]], -3.000000e+00
 ; CHECK-NEXT:    store float [[SUB8]], float* [[INCDEC_PTR6]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -658,22 +636,19 @@ entry:
 define void @mulf(float* noalias %dst, float* noalias %src) {
 ; CHECK-LABEL: @mulf(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, float* [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = fmul fast float [[TMP0]], 2.570000e+02
-; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 1
-; CHECK-NEXT:    store float [[SUB]], float* [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[SUB3:%.*]] = fmul fast float [[TMP1]], -3.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[DST]], i64 2
-; CHECK-NEXT:    store float [[SUB3]], float* [[INCDEC_PTR1]], align 4
+; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, float* [[SRC:%.*]], i64 2
+; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[SRC]] to <2 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP1]], <float 2.570000e+02, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[DST]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP2]], <2 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds float, float* [[DST]], i64 3
-; CHECK-NEXT:    store float [[TMP2]], float* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[SUB9:%.*]] = fmul fast float [[TMP3]], -9.000000e+00
+; CHECK-NEXT:    store float [[TMP4]], float* [[INCDEC_PTR4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
+; CHECK-NEXT:    [[SUB9:%.*]] = fmul fast float [[TMP5]], -9.000000e+00
 ; CHECK-NEXT:    store float [[SUB9]], float* [[INCDEC_PTR7]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -737,18 +712,15 @@ define void @add1fn(float* noalias %dst, float* noalias %src) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 1
 ; CHECK-NEXT:    store float [[TMP0]], float* [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[TMP1]], 1.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[DST]], i64 2
-; CHECK-NEXT:    store float [[ADD3]], float* [[INCDEC_PTR1]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[ADD6:%.*]] = fadd float [[TMP2]], 2.000000e+00
 ; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds float, float* [[DST]], i64 3
-; CHECK-NEXT:    store float [[ADD6]], float* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[ADD9:%.*]] = fadd float [[TMP3]], 3.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[INCDEC_PTR]] to <2 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP2]], <float 1.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[INCDEC_PTR1]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP3]], <2 x float>* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
+; CHECK-NEXT:    [[ADD9:%.*]] = fadd float [[TMP5]], 3.000000e+00
 ; CHECK-NEXT:    store float [[ADD9]], float* [[INCDEC_PTR7]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -785,14 +757,11 @@ define void @sub0fn(float* noalias %dst, float* noalias %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[DST]], i64 2
 ; CHECK-NEXT:    store float [[TMP1]], float* [[INCDEC_PTR1]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[ADD6:%.*]] = fadd float [[TMP2]], -2.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds float, float* [[DST]], i64 3
-; CHECK-NEXT:    store float [[ADD6]], float* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[ADD9:%.*]] = fadd float [[TMP3]], -3.000000e+00
-; CHECK-NEXT:    store float [[ADD9]], float* [[INCDEC_PTR7]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[INCDEC_PTR2]] to <2 x float>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP3]], <float -2.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[INCDEC_PTR4]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP4]], <2 x float>* [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -883,22 +852,19 @@ entry:
 define void @mulfn(float* noalias %dst, float* noalias %src) {
 ; CHECK-LABEL: @mulfn(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, float* [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[SRC]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = fmul float [[TMP0]], 2.570000e+02
-; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 1
-; CHECK-NEXT:    store float [[SUB]], float* [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[INCDEC_PTR]], align 4
-; CHECK-NEXT:    [[SUB3:%.*]] = fmul float [[TMP1]], -3.000000e+00
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[DST]], i64 2
-; CHECK-NEXT:    store float [[SUB3]], float* [[INCDEC_PTR1]], align 4
+; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, float* [[SRC:%.*]], i64 2
+; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds float, float* [[DST:%.*]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[SRC]] to <2 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 2.570000e+02, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[DST]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP2]], <2 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds float, float* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* [[INCDEC_PTR2]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds float, float* [[DST]], i64 3
-; CHECK-NEXT:    store float [[TMP2]], float* [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[SUB9:%.*]] = fmul fast float [[TMP3]], -9.000000e+00
+; CHECK-NEXT:    store float [[TMP4]], float* [[INCDEC_PTR4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[INCDEC_PTR5]], align 4
+; CHECK-NEXT:    [[SUB9:%.*]] = fmul fast float [[TMP5]], -9.000000e+00
 ; CHECK-NEXT:    store float [[SUB9]], float* [[INCDEC_PTR7]], align 4
 ; CHECK-NEXT:    ret void
 ;

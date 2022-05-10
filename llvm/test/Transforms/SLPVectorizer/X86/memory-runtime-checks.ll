@@ -78,9 +78,8 @@ define void @delete_pointer_bound(float* %a, float* %b, i1 %c) #0 {
 ; CHECK-NEXT:    [[A_5:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
 ; CHECK-NEXT:    store float [[L6]], float* [[A_5]], align 4
 ; CHECK-NEXT:    [[A_6:%.*]] = getelementptr inbounds float, float* [[A]], i64 6
-; CHECK-NEXT:    store float 0.000000e+00, float* [[A_6]], align 4
-; CHECK-NEXT:    [[A_7:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
-; CHECK-NEXT:    store float 0.000000e+00, float* [[A_7]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[A_6]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> zeroinitializer, <2 x float>* [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -219,30 +218,27 @@ define void @gather_sequence_crash(<2 x float> %arg, float* %arg1, float %arg2, 
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr float, float* [[TMP23]], i64 6
 ; CHECK-NEXT:    store float 0.000000e+00, float* [[TMP24]], align 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = load float, float* [[ARG5:%.*]], align 4
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr float, float* [[TMP23]], i64 5
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    store float 0.000000e+00, float* [[TMP26]], align 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr float, float* [[TMP23]], i64 4
-; CHECK-NEXT:    store float 0.000000e+00, float* [[TMP28]], align 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = fadd float 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    store float 0.000000e+00, float* [[TMP30]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[TMP30]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> zeroinitializer, <2 x float>* [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, float* [[ARG4]], i32 0
 ; CHECK-NEXT:    br label [[BB33:%.*]]
 ; CHECK:       bb33:
 ; CHECK-NEXT:    br label [[BB34:%.*]]
 ; CHECK:       bb34:
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr float, float* [[TMP32]], i64 3
-; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr float, float* [[TMP32]], i64 2
 ; CHECK-NEXT:    [[TMP37:%.*]] = load float, float* [[TMP35]], align 4
 ; CHECK-NEXT:    [[TMP38:%.*]] = fadd float 0.000000e+00, [[TMP37]]
 ; CHECK-NEXT:    store float [[TMP38]], float* [[TMP35]], align 4
 ; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr float, float* [[TMP32]], i64 1
-; CHECK-NEXT:    [[TMP40:%.*]] = load float, float* [[TMP36]], align 4
-; CHECK-NEXT:    [[TMP41:%.*]] = fadd float 0.000000e+00, [[TMP40]]
-; CHECK-NEXT:    store float [[TMP41]], float* [[TMP36]], align 4
-; CHECK-NEXT:    [[TMP42:%.*]] = load float, float* [[TMP39]], align 4
-; CHECK-NEXT:    [[TMP43:%.*]] = fadd float 0.000000e+00, [[TMP42]]
-; CHECK-NEXT:    store float [[TMP43]], float* [[TMP39]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[TMP39]] to <2 x float>*
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x float>, <2 x float>* [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x float> zeroinitializer, [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[TMP39]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP8]], <2 x float>* [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP44:%.*]] = load float, float* [[ARG3:%.*]], align 4
 ; CHECK-NEXT:    [[TMP45:%.*]] = load float, float* [[TMP32]], align 4
 ; CHECK-NEXT:    [[TMP46:%.*]] = fadd float 0.000000e+00, [[TMP45]]

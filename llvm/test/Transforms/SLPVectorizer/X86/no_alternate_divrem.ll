@@ -5,27 +5,25 @@ define void @test_add_sdiv(i32 *%arr1, i32 *%arr2, i32 %a0, i32 %a1, i32 %a2, i3
 ; CHECK-LABEL: @test_add_sdiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP1_0:%.*]] = getelementptr i32, i32* [[ARR1:%.*]], i32 0
-; CHECK-NEXT:    [[GEP1_1:%.*]] = getelementptr i32, i32* [[ARR1]], i32 1
 ; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr i32, i32* [[ARR1]], i32 2
 ; CHECK-NEXT:    [[GEP1_3:%.*]] = getelementptr i32, i32* [[ARR1]], i32 3
 ; CHECK-NEXT:    [[GEP2_0:%.*]] = getelementptr i32, i32* [[ARR2:%.*]], i32 0
-; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr i32, i32* [[ARR2]], i32 1
 ; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr i32, i32* [[ARR2]], i32 2
 ; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr i32, i32* [[ARR2]], i32 3
-; CHECK-NEXT:    [[V0:%.*]] = load i32, i32* [[GEP1_0]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[GEP1_1]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[GEP1_2]], align 4
 ; CHECK-NEXT:    [[V3:%.*]] = load i32, i32* [[GEP1_3]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = add nsw i32 [[A0:%.*]], 1146
-; CHECK-NEXT:    [[Y1:%.*]] = add nsw i32 [[A1:%.*]], 146
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[A1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1146, i32 146>
 ; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
 ; CHECK-NEXT:    [[Y3:%.*]] = add nsw i32 [[A3:%.*]], 0
-; CHECK-NEXT:    [[RES0:%.*]] = add nsw i32 [[V0]], [[Y0]]
-; CHECK-NEXT:    [[RES1:%.*]] = add nsw i32 [[V1]], [[Y1]]
 ; CHECK-NEXT:    [[RES2:%.*]] = sdiv i32 [[V2]], [[Y2]]
 ; CHECK-NEXT:    [[RES3:%.*]] = add nsw i32 [[V3]], [[Y3]]
-; CHECK-NEXT:    store i32 [[RES0]], i32* [[GEP2_0]], align 4
-; CHECK-NEXT:    store i32 [[RES1]], i32* [[GEP2_1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[GEP1_0]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, <2 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[GEP2_0]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    store i32 [[RES2]], i32* [[GEP2_2]], align 4
 ; CHECK-NEXT:    store i32 [[RES3]], i32* [[GEP2_3]], align 4
 ; CHECK-NEXT:    ret void
