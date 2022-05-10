@@ -256,3 +256,447 @@ C auto **j1 = g();   // expected-error {{deduced type 'int' does not satisfy 'C'
 C auto **&j2 = g();  // expected-error {{deduced type 'int' does not satisfy 'C'}}
 C auto **&&j3 = g(); // expected-error {{deduced type 'int' does not satisfy 'C'}}
 }
+
+namespace DeferredInstantiationInstScope {
+template <typename T>
+struct remove_ref {
+  using type = T;
+};
+template <typename T>
+struct remove_ref<T &> {
+  using type = T;
+};
+template <typename T>
+struct remove_ref<T &&> {
+  using type = T;
+};
+
+template <typename T>
+constexpr bool IsInt = PR54443::is_same<typename remove_ref<T>::type,
+                                        int>::value;
+
+template <typename U>
+void SingleDepthReferencesTop(U &&u) {
+  struct lc {
+    void operator()()             // #SDRT_OP
+      requires IsInt<decltype(u)> // #SDRT_REQ
+    {}
+  };
+  lc lv;
+  lv(); // #SDRT_CALL
+}
+
+template <typename U>
+void SingleDepthReferencesTopNotCalled(U &&u) {
+  struct lc {
+    void operator()()
+      requires IsInt<typename decltype(u)::FOO>
+    {}
+  };
+  lc lv;
+}
+
+template <typename U>
+void SingleDepthReferencesTopCalled(U &&u) {
+  struct lc {
+    void operator()()                           // #CALLOP
+      requires IsInt<typename decltype(u)::FOO> // #CONSTR
+    {}
+  };
+  lc lv;
+  lv();
+  // expected-error@-1{{no matching function for call to object of type 'lc'}}
+  // expected-note@#SDRTC{{in instantiation of function template}}
+  // expected-note@#CALLOP{{constraints not satisfied}}
+  // expected-note@#CONSTR{{substituted constraint expression is ill-formed}}
+}
+
+template <typename U>
+void SingleDepthReferencesTopLambda(U &&u) {
+  []()
+    requires IsInt<decltype(u)>
+  {}();
+}
+
+template <typename U>
+void DoubleDepthReferencesTop(U &&u) {
+  struct lc { // #DDRT_STRCT
+    void operator()() {
+      struct lc2 {
+        void operator()()             // #DDRT_OP
+          requires IsInt<decltype(u)> // #DDRT_REQ
+        {}
+      };
+      lc2 lv2;
+      lv2(); // #DDRT_CALL
+    }
+  };
+  lc lv;
+  lv();
+}
+
+template <typename U>
+void DoubleDepthReferencesTopLambda(U &&u) {
+  []() { []()
+           requires IsInt<decltype(u)>
+         {}(); }();
+}
+
+template <typename U>
+void DoubleDepthReferencesAll(U &&u) {
+  struct lc { // #DDRA_STRCT
+    void operator()(U &&u2) {
+      struct lc2 {
+        void operator()(U &&u3)          // #DDRA_OP
+          requires IsInt<decltype(u)> && // #DDRA_REQ
+                   IsInt<decltype(u2)> && IsInt<decltype(u3)>
+        {}
+      };
+      lc2 lv2;
+      lv2(u2); // #DDRA_CALL
+    }
+  };
+  lc lv;
+  lv(u);
+}
+
+template <typename U>
+void DoubleDepthReferencesAllLambda(U &&u) {
+  [](U &&u2) {
+    [](U && u3)
+      requires IsInt<decltype(u)> &&
+               IsInt<decltype(u2)> && IsInt<decltype(u3)>
+    {}(u2);
+  }(u);
+}
+
+template <typename U>
+void HasInnerFunc(U &&u) {
+  void InnerFunc(U && u2)
+    requires IsInt<decltype(u)> && // #INNERFUNC_REQ
+             IsInt<decltype(u2)>;
+  InnerFunc(u); // #INNERFUNC_CALL
+}
+
+template <typename U>
+struct CausesFriendConstraint {
+  template <typename V>
+  friend void FriendFunc(CausesFriendConstraint, V) // #FF_DECL
+    requires IsInt<U> &&
+             IsInt<V> // #FF_REQ
+  {}
+};
+// FIXME: Re-enable this test when constraints are allowed to refer to captures.
+// template<typename T>
+// void ChecksCapture(T x) {
+//   [y = x]() requires(IsInt<decltype(y)>){}();
+// }
+
+template <typename T>
+void ChecksLocalVar(T x) {
+  T Local;
+  []()
+    requires(IsInt<decltype(Local)>)
+  {}();
+}
+
+template <typename T>
+void LocalStructMemberVar(T x) {
+  struct S {
+    T local;
+    void foo()
+      requires(IsInt<decltype(local)>) // #LSMV_REQ
+    {}
+  } s;
+  s.foo(); // #LSMV_CALL
+};
+
+template <typename T>
+struct ChecksMemberVar {
+  T t;
+  void foo()
+    requires(IsInt<decltype(t)>) // #CMV_FOO
+  {}
+  template <typename U>
+  void foo2()                    // #CMV_FOO2
+    requires(IsInt<decltype(t)>) // #CMV_FOO2_REQ
+  {}
+};
+
+void test_dependent() {
+  int v = 0;
+  float will_fail;
+  SingleDepthReferencesTop(v);
+  SingleDepthReferencesTop(will_fail);
+  // expected-error@#SDRT_CALL{{no matching function for call to object of type 'lc'}}
+  // expected-note@-2{{in instantiation of function template specialization}}
+  // expected-note@#SDRT_OP{{candidate function not viable}}
+  // expected-note@#SDRT_REQ{{'IsInt<decltype(u)>' evaluated to false}}
+
+  SingleDepthReferencesTopNotCalled(v);
+  // Won't error unless we try to call it.
+  SingleDepthReferencesTopNotCalled(will_fail);
+  SingleDepthReferencesTopCalled(v); // #SDRTC
+  SingleDepthReferencesTopLambda(v);
+  // FIXME: This should error on constraint failure! (Lambda!)
+  SingleDepthReferencesTopLambda(will_fail);
+  DoubleDepthReferencesTop(v);
+  DoubleDepthReferencesTop(will_fail);
+  // expected-error@#DDRT_CALL{{no matching function for call to object of type 'lc2'}}
+  // expected-note@-2{{in instantiation of function template specialization}}
+  // expected-note@#DDRT_STRCT{{in instantiation of member function}}
+  // expected-note@#DDRT_OP{{candidate function not viable}}
+  // expected-note@#DDRT_REQ{{'IsInt<decltype(u)>' evaluated to false}}
+
+  DoubleDepthReferencesTopLambda(v);
+  // FIXME: This should error on constraint failure! (Lambda!)
+  DoubleDepthReferencesTopLambda(will_fail);
+  DoubleDepthReferencesAll(v);
+  DoubleDepthReferencesAll(will_fail);
+  // expected-error@#DDRA_CALL{{no matching function for call to object of type 'lc2'}}
+  // expected-note@-2{{in instantiation of function template specialization}}
+  // expected-note@#DDRA_STRCT{{in instantiation of member function}}
+  // expected-note@#DDRA_OP{{candidate function not viable}}
+  // expected-note@#DDRA_REQ{{'IsInt<decltype(u)>' evaluated to false}}
+
+  DoubleDepthReferencesAllLambda(v);
+  // FIXME: This should error on constraint failure! (Lambda!)
+  DoubleDepthReferencesAllLambda(will_fail);
+  HasInnerFunc(v);
+  HasInnerFunc(will_fail);
+  // expected-error@#INNERFUNC_CALL{{invalid reference to function 'InnerFunc': constraints not satisfied}}
+  // expected-note@-2{{in instantiation of function template specialization}}
+  // expected-note@#INNERFUNC_REQ{{'IsInt<decltype(u)>' evaluated to false}}
+
+  CausesFriendConstraint<int> CFC;
+  FriendFunc(CFC, 1);
+  FriendFunc(CFC, 1.0);
+  // expected-error@-1{{no matching function for call to 'FriendFunc'}}
+  // expected-note@#FF_DECL{{constraints not satisfied}}
+  // expected-note@#FF_REQ{{because 'IsInt<double>' evaluated to false}}
+
+  // FIXME: Re-enable this test when constraints are allowed to refer to captures.
+  // ChecksCapture(v);
+
+  ChecksLocalVar(v);
+  // FIXME: This should error on constraint failure! (Lambda!)
+  ChecksLocalVar(will_fail);
+
+  LocalStructMemberVar(v);
+  LocalStructMemberVar(will_fail);
+  // expected-error@#LSMV_CALL{{invalid reference to function 'foo'}}
+  // expected-note@-2{{in instantiation of function template specialization}}
+  // expected-note@#LSMV_REQ{{because 'IsInt<decltype(this->local)>' evaluated to false}}
+
+  ChecksMemberVar<int> CMV;
+  CMV.foo();
+  CMV.foo2<int>();
+
+  ChecksMemberVar<float> CMV2;
+  CMV2.foo();
+  // expected-error@-1{{invalid reference to function 'foo'}}
+  // expected-note@#CMV_FOO{{because 'IsInt<decltype(this->t)>' evaluated to false}}
+  CMV2.foo2<float>();
+  // expected-error@-1{{no matching member function for call to 'foo2'}}
+  // expected-note@#CMV_FOO2{{constraints not satisfied}}
+  // expected-note@#CMV_FOO2_REQ{{because 'IsInt<decltype(this->t)>' evaluated to false}}
+}
+} // namespace DeferredInstantiationInstScope
+
+namespace LibCXXOperatorRedef {
+template <typename T, typename U> struct is_same {
+  static constexpr bool value = false;
+};
+template <typename T> struct is_same<T, T> {
+  static constexpr bool value = false;
+};
+
+template <typename T, typename U>
+concept same_as = is_same<T, U>::value;
+
+// An issue found from libcxx when trying to commit the deferred concepts patch.
+// This caused an error of 'redefinition of funcN'.
+template <class _Tp> struct __range_adaptor_closure {
+  template <typename _View, typename _Closure>
+    requires same_as<_Tp, _Closure>
+  friend constexpr decltype(auto) R1func1(_View &&__view,
+                                        _Closure &&__closure){};
+  template <typename _View, typename _Closure>
+  friend constexpr decltype(auto) R1func2(_View &&__view,
+                                        _Closure &&__closure)
+    requires same_as<_Tp, _Closure>
+  {};
+  template <same_as<_Tp> _View, typename _Closure>
+  friend constexpr decltype(auto) R1func3(_View &&__view,
+                                        _Closure &&__closure)
+  {};
+};
+
+struct A : __range_adaptor_closure<A> {};
+struct B : __range_adaptor_closure<B> {};
+
+// These three fail because after the 1st pass of instantiation, they are still
+// identical.
+template <class _Tp> struct __range_adaptor_closure2 {
+  template <typename _View, typename _Closure>
+    requires same_as<_View, _Closure>
+  friend constexpr decltype(auto) R2func1(_View &&__view, // #FUNC1
+                                        _Closure &&__closure){};
+  template <typename _View, typename _Closure>
+  friend constexpr decltype(auto) R2func2(_View &&__view, // #FUNC2
+                                        _Closure &&__closure)
+    requires same_as<_View, _Closure>
+  {};
+  template <typename _View, same_as<_View> _Closure>
+  friend constexpr decltype(auto) R2func3(_View &&__view, // #FUNC3
+                                        _Closure &&__closure){};
+};
+
+struct A2 : __range_adaptor_closure2<A2> {};
+struct B2 : __range_adaptor_closure2<B2> {};
+// expected-error@#FUNC1{{redefinition of 'R2func1'}}
+// expected-note@-2{{in instantiation of template class}}
+// expected-note@#FUNC1{{previous definition is here}}
+// expected-error@#FUNC2{{redefinition of 'R2func2'}}
+// expected-note@#FUNC2{{previous definition is here}}
+// expected-error@#FUNC3{{redefinition of 'R2func3'}}
+// expected-note@#FUNC3{{previous definition is here}}
+
+// These three are fine, they all depend on the parent template parameter, so
+// are different despite ::type not being valid.
+template <class _Tp> struct __range_adaptor_closure3 {
+  template <typename _View, typename _Closure>
+    requires same_as<typename _Tp::type, _Closure>
+  friend constexpr decltype(auto) R3func1(_View &&__view,
+                                        _Closure &&__closure){};
+  template <typename _View, typename _Closure>
+  friend constexpr decltype(auto) R3func2(_View &&__view,
+                                        _Closure &&__closure)
+    requires same_as<typename _Tp::type, _Closure>
+  {};
+  template <same_as<typename _Tp::type> _View, typename _Closure>
+  friend constexpr decltype(auto) R3func3(_View &&__view,
+                                        _Closure &&__closure)
+  {};
+};
+
+struct A3 : __range_adaptor_closure3<A3> {};
+struct B3 : __range_adaptor_closure3<B3> {};
+
+template <class _Tp> struct __range_adaptor_closure4 {
+  template <typename _View, typename _Closure>
+    requires same_as<_Tp, _View>
+  // expected-note@+1{{previous definition is here}}
+  void foo1(_View &&, _Closure &&) {}
+  template <typename _View, typename _Closure>
+    requires same_as<_Tp, _View>
+  // expected-error@+1{{class member cannot be redeclared}}
+  void foo1(_View &&, _Closure &&) {}
+
+  template <typename _View, typename _Closure>
+  // expected-note@+1{{previous definition is here}}
+  void foo2(_View &&, _Closure &&)
+    requires same_as<_Tp, _View>
+  {}
+  template <typename _View, typename _Closure>
+  // expected-error@+1{{class member cannot be redeclared}}
+  void foo2(_View &&, _Closure &&)
+    requires same_as<_Tp, _View>
+  {}
+
+  template <same_as<_Tp> _View, typename _Closure>
+  // expected-note@+1{{previous definition is here}}
+  void foo3(_View &&, _Closure &&)
+  {}
+  template <same_as<_Tp> _View, typename _Closure>
+  // expected-error@+1{{class member cannot be redeclared}}
+  void foo3(_View &&, _Closure &&)
+  {}
+};
+
+// Requires instantiation to fail, so no errors here.
+template<class _Tp> struct __range_adaptor_closure5 {
+  template<same_as<_Tp> U>
+  friend void foo(){}
+  template<same_as<_Tp> U>
+  friend void foo(){}
+};
+
+template<class _Tp> struct __range_adaptor_closure6 {
+  template<same_as<_Tp> U>
+  friend void foo(){} // #RAC6FOO1
+  template<same_as<_Tp> U>
+  friend void foo(){} // #RAC6FOO2
+};
+struct A6 : __range_adaptor_closure6<A6> {};
+//expected-error@#RAC6FOO2{{redefinition of 'foo'}}
+//expected-note@-2{{in instantiation of template class}}
+//expected-note@#RAC6FOO1{{previous definition is here}}
+
+template<class T> struct S1 {
+  template<typename U>
+  friend void dupe(){} // #S1DUPE
+
+  template<typename U>
+  requires same_as<U, U>
+  friend void dupe2(){} // #S1DUPE2
+};
+template<class T> struct S2 {
+  template<typename U>
+  friend void dupe(){} // #S2DUPE
+
+  template<typename U>
+  requires same_as<U, U>
+  friend void dupe2(){} // #S2DUPE2
+};
+
+template<class T> struct S3 {
+  template<typename U>
+  requires same_as<T, U>
+  friend void dupe(){} // #S3DUPE
+};
+template<class T> struct S4 {
+  template<typename U>
+  requires same_as<T, U>
+  friend void dupe(){} // #S4DUPE
+};
+
+// Same as S3 and S4, but aren't instantiated with the same T.
+template<class T> struct S5 {
+  template<typename U>
+  requires same_as<T, U>
+  friend void not_dupe(){}
+};
+template<class T> struct S6 {
+  template<typename U>
+  requires same_as<T, U>
+  friend void not_dupe(){}
+};
+
+template<class T> struct S7 {
+  void not_dupe() requires same_as<T, T>{}
+};
+
+void useS() {
+  S1<int> s1;
+  S2<double> s2;
+  // expected-error@#S2DUPE{{redefinition}}
+  // expected-note@-2{{in instantiation of template class}}
+  // expected-note@#S1DUPE{{previous definition is here}}
+  // expected-error@#S2DUPE2{{redefinition}}
+  // expected-note@#S1DUPE2{{previous definition is here}}
+
+  S3<int> s3;
+  S4<int> s4;
+  // expected-error@#S4DUPE{{redefinition}}
+  // expected-note@-2{{in instantiation of template class}}
+  // expected-note@#S3DUPE{{previous definition is here}}
+
+  // OK, because only instantiated with different T.
+  S5<int> s5;
+  S6<double> s6;
+
+  S7<int> s7;
+}
+
+} // namespace LibCXXOperatorRedef
