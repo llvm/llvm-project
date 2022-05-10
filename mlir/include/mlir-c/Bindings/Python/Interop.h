@@ -21,7 +21,17 @@
 #ifndef MLIR_C_BINDINGS_PYTHON_INTEROP_H
 #define MLIR_C_BINDINGS_PYTHON_INTEROP_H
 
+// We *should*, in theory, include Python.h here in order to import the correct
+// definitions for what we need below, however, importing Python.h directly on
+// Windows results in the enforcement of either pythonX.lib or pythonX_d.lib
+// depending on the build flavor. Instead, we rely on the fact that this file
+// (Interop.h) is always included AFTER pybind11 and will therefore have access
+// to the definitions from Python.h in addition to having a workaround applied
+// through the pybind11 headers that allows us to control which python library
+// is used.
+#if !defined(_MSC_VER)
 #include <Python.h>
+#endif
 
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"

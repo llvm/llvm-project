@@ -19,7 +19,6 @@
 #include "mlir-c/Registration.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include <pybind11/stl.h>
 
 #include <utility>
 
