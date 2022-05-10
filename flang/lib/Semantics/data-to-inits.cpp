@@ -375,8 +375,16 @@ bool DataInitializationCompiler<DSV>::InitElement(
     } else if (isProcPointer) {
       if (evaluate::IsProcedure(*expr)) {
         if (CheckPointerAssignment(context, designator, *expr)) {
-          GetImage().AddPointer(offsetSymbol.offset(), *expr);
-          return true;
+          if (lastSymbol->has<ProcEntityDetails>()) {
+            GetImage().AddPointer(offsetSymbol.offset(), *expr);
+            return true;
+          } else {
+            evaluate::AttachDeclaration(
+                exprAnalyzer_.context().Say(
+                    "DATA statement initialization of procedure pointer '%s' declared using a POINTER statement and an INTERFACE instead of a PROCEDURE statement"_todo_en_US,
+                    DescribeElement()),
+                *lastSymbol);
+          }
         }
       } else {
         exprAnalyzer_.Say(

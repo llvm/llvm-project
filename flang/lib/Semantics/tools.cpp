@@ -250,11 +250,6 @@ bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
 }
 
-// proc-name
-bool IsProcName(const Symbol &symbol) {
-  return symbol.GetUltimate().has<ProcEntityDetails>();
-}
-
 bool IsBindCProcedure(const Symbol &symbol) {
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
     if (const Symbol * procInterface{procDetails->interface().symbol()}) {

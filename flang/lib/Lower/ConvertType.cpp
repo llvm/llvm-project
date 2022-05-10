@@ -301,7 +301,7 @@ struct TypeBuilder {
       if (componentHasNonDefaultLowerBounds(field))
         TODO(converter.genLocation(field.name()),
              "lowering derived type components with non default lower bounds");
-      if (IsProcName(field))
+      if (IsProcedure(field))
         TODO(converter.genLocation(field.name()), "procedure components");
       mlir::Type ty = genSymbolType(field);
       // Do not add the parent component (component of the parents are
