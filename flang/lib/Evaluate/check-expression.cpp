@@ -114,7 +114,8 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
   // been rewritten into DescriptorInquiry operations.
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&call.proc().u)}) {
     if (intrinsic->name == "kind" ||
-        intrinsic->name == IntrinsicProcTable::InvalidName) {
+        intrinsic->name == IntrinsicProcTable::InvalidName ||
+        call.arguments().empty() || !call.arguments()[0]) {
       // kind is always a constant, and we avoid cascading errors by considering
       // invalid calls to intrinsics to be constant
       return true;
@@ -539,7 +540,11 @@ public:
         return std::nullopt;
       }
     }
-    return "reference to local entity '"s + ultimate.name().ToString() + "'";
+    if (inInquiry_) {
+      return std::nullopt;
+    } else {
+      return "reference to local entity '"s + ultimate.name().ToString() + "'";
+    }
   }
 
   Result operator()(const Component &x) const {
