@@ -68,7 +68,9 @@ export class MLIRContext implements vscode.Disposable {
       }
     };
     // Process any existing documents.
-    vscode.workspace.textDocuments.forEach(startClientOnOpenDocument);
+    for (const textDoc of vscode.workspace.textDocuments) {
+      await startClientOnOpenDocument(textDoc);
+    }
 
     // Watch any new documents to spawn servers when necessary.
     this.subscriptions.push(
