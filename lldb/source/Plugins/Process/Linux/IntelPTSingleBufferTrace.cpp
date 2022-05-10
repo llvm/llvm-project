@@ -179,9 +179,7 @@ GeneratePerfEventConfigValue(bool enable_tsc, Optional<size_t> psb_period) {
 ///   or an \a llvm::Error otherwise.
 static Expected<perf_event_attr>
 CreateIntelPTPerfEventConfiguration(bool enable_tsc,
-                                    llvm::Optional<size_t> psb_period) {
-  return createStringError(inconvertibleErrorCode(),
-                           "Intel PT Linux perf event not supported");
+                                    llvm::Optional<uint64_t> psb_period) {
   perf_event_attr attr;
   memset(&attr, 0, sizeof(attr));
   attr.size = sizeof(attr);
