@@ -3807,13 +3807,40 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   return OrigOp;
 }
 
-bool InstCombinerImpl::freezeDominatedUses(FreezeInst &FI) {
+bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   Value *Op = FI.getOperand(0);
 
-  if (isa<Constant>(Op))
+  if (isa<Constant>(Op) || Op->hasOneUse())
     return false;
 
+  // Move the freeze directly after the definition of its operand, so that
+  // it dominates the maximum number of uses. Note that it may not dominate
+  // *all* uses if the operand is an invoke/callbr and the use is in a phi on
+  // the normal/default destination. This is why the domination check in the
+  // replacement below is still necessary.
+  Instruction *MoveBefore = nullptr;
+  if (isa<Argument>(Op)) {
+    MoveBefore = &FI.getFunction()->getEntryBlock().front();
+    while (isa<AllocaInst>(MoveBefore))
+      MoveBefore = MoveBefore->getNextNode();
+  } else if (auto *PN = dyn_cast<PHINode>(Op)) {
+    MoveBefore = PN->getParent()->getFirstNonPHI();
+  } else if (auto *II = dyn_cast<InvokeInst>(Op)) {
+    MoveBefore = II->getNormalDest()->getFirstNonPHI();
+  } else if (auto *CB = dyn_cast<CallBrInst>(Op)) {
+    MoveBefore = CB->getDefaultDest()->getFirstNonPHI();
+  } else {
+    auto *I = cast<Instruction>(Op);
+    assert(!I->isTerminator() && "Cannot be a terminator");
+    MoveBefore = I->getNextNode();
+  }
+
   bool Changed = false;
+  if (&FI != MoveBefore) {
+    FI.moveBefore(MoveBefore);
+    Changed = true;
+  }
+
   Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
     bool Dominates = DT.dominates(&FI, U);
     Changed |= Dominates;
@@ -3879,8 +3906,8 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     return replaceInstUsesWith(I, Constant::replaceUndefsWith(C, ReplaceC));
   }
 
-  // Replace all dominated uses of Op to freeze(Op).
-  if (freezeDominatedUses(I))
+  // Replace uses of Op with freeze(Op).
+  if (freezeOtherUses(I))
     return &I;
 
   return nullptr;
