@@ -422,6 +422,32 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::HYPOT(
   return result;
 }
 
+// MOD(x,y) = x - AINT(x/y)*y
+template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::MOD(
+    const Real &y, Rounding rounding) const {
+  ValueWithRealFlags<Real> result;
+  Real quotient{Divide(y, rounding).AccumulateFlags(result.flags)};
+  Real toInt{quotient.ToWholeNumber(common::RoundingMode::ToZero)
+                 .AccumulateFlags(result.flags)};
+  Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
+  result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
+  return result;
+}
+
+// MODULO(x,y) = x - FLOOR(x/y)*y
+template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::MODULO(
+    const Real &y, Rounding rounding) const {
+  ValueWithRealFlags<Real> result;
+  Real quotient{Divide(y, rounding).AccumulateFlags(result.flags)};
+  Real toInt{quotient.ToWholeNumber(common::RoundingMode::Down)
+                 .AccumulateFlags(result.flags)};
+  Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
+  result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
+  return result;
+}
+
 template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::DIM(
     const Real &y, Rounding rounding) const {
