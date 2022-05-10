@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split),function(sroa)' --reuse-storage-in-coroutine-frame -S | FileCheck %s
+; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split<reuse-storage>),function(sroa)' -S | FileCheck %s
 
 ; Checks whether the dbg.declare for `__promise` remains valid under O2.
 

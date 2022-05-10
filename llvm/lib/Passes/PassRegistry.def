@@ -171,7 +171,6 @@ CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 CGSCC_PASS("function-attrs", PostOrderFunctionAttrsPass())
 CGSCC_PASS("attributor-cgscc", AttributorCGSCCPass())
 CGSCC_PASS("openmp-opt-cgscc", OpenMPOptCGSCCPass())
-CGSCC_PASS("coro-split", CoroSplitPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 #undef CGSCC_PASS
 
@@ -185,6 +184,13 @@ CGSCC_PASS_WITH_PARAMS("inline",
                        },
                        parseInlinerPassOptions,
                        "only-mandatory")
+CGSCC_PASS_WITH_PARAMS("coro-split",
+                       "CoroSplitPass",
+                       [](bool OptimizeFrame) {
+                         return CoroSplitPass(OptimizeFrame);
+                       },
+                       parseCoroSplitPassOptions,
+                       "reuse-storage")
 #undef CGSCC_PASS_WITH_PARAMS
 
 #ifndef FUNCTION_ANALYSIS
