@@ -830,8 +830,12 @@ static void writeUnitData(const CompilerInstance &CI,
     return nullptr;
   };
   PathRemapper Remapper;
-  for (const auto &KV : CI.getCodeGenOpts().DebugPrefixMap)
-    Remapper.addMapping(KV.first, KV.second);
+  auto &PrefixMap = CI.getCodeGenOpts().DebugPrefixMap;
+  // We need to add in reverse order since the `DebugPrefixMap` currently sorts
+  // ascending instead of descending, but we want `foo/subpath/` to come before
+  // `foo/`.
+  for (auto It = PrefixMap.rbegin(); It != PrefixMap.rend(); ++It)
+    Remapper.addMapping(It->first, It->second);
 
   IndexUnitWriter UnitWriter(
       CI.getFileManager(), DataPath, "clang", getClangVersion(), OutputFile,
