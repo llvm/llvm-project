@@ -34,7 +34,7 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
     // in the beginning of the struct, rather than before unwindHeader.
     void *reserve;
 
-    // This is a new field to support C++ 0x exception_ptr.
+    // This is a new field to support C++11 exception_ptr.
     // For binary compatibility it is at the start of this
     // struct which is prepended to the object thrown in
     // __cxa_allocate_exception.
@@ -63,9 +63,9 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
 #endif
 
 #if !defined(__LP64__) && !defined(_WIN64) && !defined(_LIBCXXABI_ARM_EHABI)
-    // This is a new field to support C++ 0x exception_ptr.
+    // This is a new field to support C++11 exception_ptr.
     // For binary compatibility it is placed where the compiler
-    // previously adding padded to 64-bit align unwindHeader.
+    // previously added padding to 64-bit align unwindHeader.
     size_t referenceCount;
 #endif
     _Unwind_Exception unwindHeader;
