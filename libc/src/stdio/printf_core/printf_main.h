@@ -23,12 +23,11 @@ namespace printf_core {
 int printf_main(Writer *writer, const char *__restrict str,
                 internal::ArgList args) {
   Parser parser(str, args);
-  Converter converter(writer);
 
   for (FormatSection cur_section = parser.get_next_section();
        cur_section.raw_len > 0; cur_section = parser.get_next_section()) {
     if (cur_section.has_conv)
-      converter.convert(cur_section);
+      convert(writer, cur_section);
     else
       writer->write(cur_section.raw_string, cur_section.raw_len);
   }

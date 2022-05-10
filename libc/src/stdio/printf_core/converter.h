@@ -17,17 +17,10 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-class Converter {
-  Writer *writer;
-
-public:
-  Converter(Writer *writer);
-
-  // convert will call a conversion function to convert the FormatSection into
-  // its string representation, and then that will write the result to the
-  // writer.
-  void convert(FormatSection to_conv);
-};
+// convert will call a conversion function to convert the FormatSection into
+// its string representation, and then that will write the result to the
+// writer.
+void convert(Writer *writer, FormatSection to_conv);
 
 } // namespace printf_core
 } // namespace __llvm_libc
