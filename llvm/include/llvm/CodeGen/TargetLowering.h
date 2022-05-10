@@ -1222,6 +1222,10 @@ public:
                                       uint64_t Range, ProfileSummaryInfo *PSI,
                                       BlockFrequencyInfo *BFI) const;
 
+  /// Returns preferred type for switch condition.
+  virtual MVT getPreferredSwitchConditionType(LLVMContext &Context,
+                                              EVT ConditionVT) const;
+
   /// Return true if lowering to a bit test is suitable for a set of case
   /// clusters which contains \p NumDests unique destinations, \p Low and
   /// \p High as its lowest and highest case values, and expects \p NumCmps
