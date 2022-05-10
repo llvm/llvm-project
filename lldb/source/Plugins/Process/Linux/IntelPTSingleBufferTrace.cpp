@@ -148,7 +148,7 @@ static Error CheckPsbPeriod(size_t psb_period) {
 
 #ifdef PERF_ATTR_SIZE_VER5
 static Expected<uint64_t>
-GeneratePerfEventConfigValue(bool enable_tsc, Optional<size_t> psb_period) {
+GeneratePerfEventConfigValue(bool enable_tsc, Optional<uint64_t> psb_period) {
   uint64_t config = 0;
   // tsc is always supported
   if (enable_tsc) {
