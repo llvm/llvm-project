@@ -15,10 +15,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -47,6 +51,36 @@ public:
     AU.setPreservesAll();
   }
 };
+
+class EmbedDXILPass : public llvm::ModulePass {
+public:
+  static char ID; // Pass identification, replacement for typeid
+  EmbedDXILPass() : ModulePass(ID) {
+    initializeEmbedDXILPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  StringRef getPassName() const override { return "DXIL Embedder"; }
+
+  bool runOnModule(Module &M) override {
+    std::string Data;
+    llvm::raw_string_ostream OS(Data);
+    WriteDXILToFile(M, OS);
+
+    Constant *ModuleConstant =
+        ConstantDataArray::get(M.getContext(), arrayRefFromStringRef(Data));
+    auto *GV = new llvm::GlobalVariable(M, ModuleConstant->getType(), true,
+                                        GlobalValue::PrivateLinkage,
+                                        ModuleConstant, "dx.dxil");
+    GV->setSection("DXIL");
+    GV->setAlignment(Align(4));
+    appendToCompilerUsed(M, {GV});
+    return true;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+};
 } // namespace
 
 char WriteDXILPass::ID = 0;
@@ -59,3 +93,8 @@ INITIALIZE_PASS_END(WriteDXILPass, "write-bitcode", "Write Bitcode", false,
 ModulePass *llvm::createDXILWriterPass(raw_ostream &Str) {
   return new WriteDXILPass(Str);
 }
+
+char EmbedDXILPass::ID = 0;
+INITIALIZE_PASS(EmbedDXILPass, "dxil-embed", "Embed DXIL", false, true)
+
+ModulePass *llvm::createDXILEmbedderPass() { return new EmbedDXILPass(); }
