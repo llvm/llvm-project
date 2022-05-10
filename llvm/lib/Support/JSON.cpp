@@ -509,12 +509,24 @@ bool Parser::parseNumber(char First, Value &Out) {
     S.push_back(next());
   char *End;
   // Try first to parse as integer, and if so preserve full 64 bits.
-  // strtoll returns long long >= 64 bits, so check it's in range too.
-  auto I = std::strtoll(S.c_str(), &End, 10);
-  if (End == S.end() && I >= std::numeric_limits<int64_t>::min() &&
-      I <= std::numeric_limits<int64_t>::max()) {
+  // We check for errno for out of bounds errors and for End == S.end()
+  // to make sure that the numeric string is not malformed.
+  errno = 0;
+  int64_t I = std::strtoll(S.c_str(), &End, 10);
+  if (End == S.end() && errno != ERANGE) {
     Out = int64_t(I);
     return true;
+  }
+  // strtroull has a special handling for negative numbers, but in this
+  // case we don't want to do that because negative numbers were already
+  // handled in the previous block.
+  if (First != '-') {
+    errno = 0;
+    uint64_t UI = std::strtoull(S.c_str(), &End, 10);
+    if (End == S.end() && errno != ERANGE) {
+      Out = UI;
+      return true;
+    }
   }
   // If it's not an integer
   Out = std::strtod(S.c_str(), &End);
