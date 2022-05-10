@@ -3910,8 +3910,8 @@ def nogpuinc : Flag<["-"], "nogpuinc">, HelpText<"Do not add include paths for C
 def nohipwrapperinc : Flag<["-"], "nohipwrapperinc">,
   HelpText<"Do not include the default HIP wrapper headers and include paths">;
 def : Flag<["-"], "nocudainc">, Alias<nogpuinc>;
-def nogpulib : Flag<["-"], "nogpulib">,
-  HelpText<"Do not link device library for CUDA/HIP device compilation">;
+def nogpulib : Flag<["-"], "nogpulib">, MarshallingInfoFlag<LangOpts<"NoGPULib">>,
+  Flags<[CC1Option]>, HelpText<"Do not link device library for CUDA/HIP device compilation">;
 def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
 def nodefaultlibs : Flag<["-"], "nodefaultlibs">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;

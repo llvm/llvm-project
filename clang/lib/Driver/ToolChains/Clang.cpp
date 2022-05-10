@@ -6281,6 +6281,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Forward -nogpulib to -cc1.
+  if (Args.hasArg(options::OPT_nogpulib))
+    CmdArgs.push_back("-nogpulib");
+
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));
