@@ -210,6 +210,10 @@ Improvements to Clang's diagnostics
 - ``-Wenum-conversion`` now warns on converting a signed enum of one type to an
   unsigned enum of a different type (or vice versa) rather than
   ``-Wsign-conversion``.
+- Added the ``-Wunreachable-code-generic-assoc`` diagnostic flag (grouped under
+  the ``-Wunreachable-code`` flag) which is enabled by default and warns the
+  user about ``_Generic`` selection associations which are unreachable because
+  the type specified is an array type or a qualified type.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
