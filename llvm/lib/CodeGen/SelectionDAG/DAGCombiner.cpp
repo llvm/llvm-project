@@ -6164,7 +6164,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     // This can be a pure constant or a vector splat, in which case we treat the
     // vector as a scalar and use the splat value.
     APInt Constant = APInt::getZero(1);
-    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N1)) {
+    if (const ConstantSDNode *C = isConstOrConstSplat(N1)) {
       Constant = C->getAPIntValue();
     } else if (BuildVectorSDNode *Vector = dyn_cast<BuildVectorSDNode>(N1)) {
       APInt SplatValue, SplatUndef;
