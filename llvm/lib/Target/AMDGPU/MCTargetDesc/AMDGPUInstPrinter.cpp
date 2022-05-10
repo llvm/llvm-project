@@ -191,6 +191,13 @@ void AMDGPUInstPrinter::printSMEMOffset(const MCInst *MI, unsigned OpNo,
   O << formatHex(MI->getOperand(OpNo).getImm());
 }
 
+void AMDGPUInstPrinter::printSMEMOffsetMod(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  O << " offset:";
+  printSMEMOffset(MI, OpNo, STI, O);
+}
+
 void AMDGPUInstPrinter::printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
                                                const MCSubtargetInfo &STI,
                                                raw_ostream &O) {

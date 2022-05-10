@@ -64,6 +64,8 @@ private:
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMEMOffset(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSMEMOffsetMod(const MCInst *MI, unsigned OpNo,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printGDS(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

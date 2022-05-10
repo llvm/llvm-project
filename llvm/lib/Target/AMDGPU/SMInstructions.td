@@ -11,11 +11,17 @@ def smrd_offset_8 : NamedOperandU32<"SMRDOffset8",
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def smem_offset : NamedOperandU32<"SMEMOffset",
-                                  NamedMatchClass<"SMEMOffset">> {
+class SMEMOffset : NamedOperandU32<"SMEMOffset",
+                                   NamedMatchClass<"SMEMOffset">> {
   let OperandType = "OPERAND_IMMEDIATE";
   let EncoderMethod = "getSMEMOffsetEncoding";
   let DecoderMethod = "decodeSMEMOffset";
+}
+
+def smem_offset : SMEMOffset;
+
+def smem_offset_mod : SMEMOffset {
+  let PrintMethod = "printSMEMOffsetMod";
 }
 
 //===----------------------------------------------------------------------===//
@@ -43,8 +49,8 @@ class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   bits<1> has_sdst = 1;
   bit has_glc = 0;
   bit has_dlc = 0;
-  bits<1> has_offset = 1;
-  bits<1> offset_is_imm = 0;
+  bit has_offset = 0;
+  bit has_soffset = 0;
   bit is_buffer = 0;
 }
 
@@ -77,19 +83,21 @@ class SM_Real <SM_Pseudo ps>
   bits<7>  sbase;
   bits<7>  sdst;
   bits<32> offset;
-  bits<1> imm = !if(ps.has_offset, ps.offset_is_imm, 0);
+  bits<8>  soffset;
   bits<5> cpol;
 }
 
 class SM_Probe_Pseudo <string opName, dag ins, bit isImm>
-  : SM_Pseudo<opName, (outs), ins, " $sdata, $sbase, $offset"> {
+  : SM_Pseudo<opName, (outs), ins,
+              " $sdata, $sbase, " # !if(isImm, "$offset", "$soffset")> {
   let mayLoad = 0;
   let mayStore = 0;
   let has_glc = 0;
   let LGKM_CNT = 0;
   let ScalarStore = 0;
   let hasSideEffects = 1;
-  let offset_is_imm = isImm;
+  let has_offset = isImm;
+  let has_soffset = !not(isImm);
   let PseudoInstr = opName # !if(isImm, "_IMM", "_SGPR");
 }
 
@@ -114,14 +122,16 @@ class SM_Store_Pseudo <string opName, dag ins, string asmOps, list<dag> pattern 
 }
 
 class SM_Discard_Pseudo <string opName, dag ins, bit isImm>
-  : SM_Pseudo<opName, (outs), ins, " $sbase, $offset"> {
+  : SM_Pseudo<opName, (outs), ins,
+              " $sbase, " # !if(isImm, "$offset", "$soffset")> {
   let mayLoad = 0;
   let mayStore = 0;
   let has_glc = 0;
   let has_sdst = 0;
   let ScalarStore = 0;
   let hasSideEffects = 1;
-  let offset_is_imm = isImm;
+  let has_offset = isImm;
+  let has_soffset = !not(isImm);
   let PseudoInstr = opName # !if(isImm, "_IMM", "_SGPR");
 }
 
@@ -132,7 +142,7 @@ multiclass SM_Pseudo_Loads<string opName,
                               (outs dstClass:$sdst),
                               (ins baseClass:$sbase, i32imm:$offset, CPol:$cpol),
                               " $sdst, $sbase, $offset$cpol", []> {
-    let offset_is_imm = 1;
+    let has_offset = 1;
     let BaseClass = baseClass;
     let PseudoInstr = opName # "_IMM";
     let has_glc = 1;
@@ -141,10 +151,24 @@ multiclass SM_Pseudo_Loads<string opName,
 
   def _SGPR  : SM_Load_Pseudo <opName,
                               (outs dstClass:$sdst),
-                              (ins baseClass:$sbase, SReg_32:$soff, CPol:$cpol),
-                              " $sdst, $sbase, $offset$cpol", []> {
+                              (ins baseClass:$sbase, SReg_32:$soffset, CPol:$cpol),
+                              " $sdst, $sbase, $soffset$cpol", []> {
+    let has_soffset = 1;
     let BaseClass = baseClass;
     let PseudoInstr = opName # "_SGPR";
+    let has_glc = 1;
+    let has_dlc = 1;
+  }
+
+  def _SGPR_IMM  : SM_Load_Pseudo <opName,
+                                   (outs dstClass:$sdst),
+                                   (ins baseClass:$sbase, SReg_32:$soffset,
+                                        i32imm:$offset, CPol:$cpol),
+                                   " $sdst, $sbase, $soffset$offset$cpol", []> {
+    let has_offset = 1;
+    let has_soffset = 1;
+    let BaseClass = baseClass;
+    let PseudoInstr = opName # "_SGPR_IMM";
     let has_glc = 1;
     let has_dlc = 1;
   }
@@ -156,15 +180,16 @@ multiclass SM_Pseudo_Stores<string opName,
   def _IMM  : SM_Store_Pseudo <opName,
     (ins srcClass:$sdata, baseClass:$sbase, i32imm:$offset, CPol:$cpol),
     " $sdata, $sbase, $offset$cpol", []> {
-    let offset_is_imm = 1;
+    let has_offset = 1;
     let BaseClass = baseClass;
     let SrcClass = srcClass;
     let PseudoInstr = opName # "_IMM";
   }
 
   def _SGPR  : SM_Store_Pseudo <opName,
-    (ins srcClass:$sdata, baseClass:$sbase, SReg_32:$soff, CPol:$cpol),
-    " $sdata, $sbase, $offset$cpol", []> {
+    (ins srcClass:$sdata, baseClass:$sbase, SReg_32:$soffset, CPol:$cpol),
+    " $sdata, $sbase, $soffset$cpol", []> {
+    let has_soffset = 1;
     let BaseClass = baseClass;
     let SrcClass = srcClass;
     let PseudoInstr = opName # "_SGPR";
@@ -173,7 +198,7 @@ multiclass SM_Pseudo_Stores<string opName,
 
 multiclass SM_Pseudo_Discards<string opName> {
   def _IMM  : SM_Discard_Pseudo <opName, (ins SReg_64:$sbase, smem_offset:$offset), 1>;
-  def _SGPR : SM_Discard_Pseudo <opName, (ins SReg_64:$sbase, SReg_32:$offset), 0>;
+  def _SGPR : SM_Discard_Pseudo <opName, (ins SReg_64:$sbase, SReg_32:$soffset), 0>;
 }
 
 class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pseudo<
@@ -184,7 +209,6 @@ class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pse
   let mayStore = 0;
   let mayLoad = 0;
   let has_sbase = 0;
-  let has_offset = 0;
 }
 
 class SM_Inval_Pseudo <string opName, SDPatternOperator node = null_frag> : SM_Pseudo<
@@ -193,12 +217,11 @@ class SM_Inval_Pseudo <string opName, SDPatternOperator node = null_frag> : SM_P
   let mayStore = 0;
   let has_sdst = 0;
   let has_sbase = 0;
-  let has_offset = 0;
 }
 
 multiclass SM_Pseudo_Probe<string opName, RegisterClass baseClass> {
   def _IMM  : SM_Probe_Pseudo <opName, (ins i8imm:$sdata, baseClass:$sbase, smem_offset:$offset), 1>;
-  def _SGPR : SM_Probe_Pseudo <opName, (ins i8imm:$sdata, baseClass:$sbase, SReg_32:$offset), 0>;
+  def _SGPR : SM_Probe_Pseudo <opName, (ins i8imm:$sdata, baseClass:$sbase, SReg_32:$soffset), 0>;
 }
 
 class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
@@ -208,7 +231,6 @@ class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
   let mayStore = 0;
   let mayLoad = 1;
   let has_sbase = 0;
-  let has_offset = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -225,6 +247,7 @@ class SM_Atomic_Pseudo <string opName,
   let mayStore = 1;
   let has_glc = 1;
   let has_dlc = 1;
+  let has_soffset = 1;
 
   // Should these be set?
   let ScalarStore = 1;
@@ -250,11 +273,13 @@ class SM_Pseudo_Atomic<string opName,
                    !if(isRet, (outs dataClass:$sdst), (outs)),
                    !if(isImm,
                        (ins dataClass:$sdata, baseClass:$sbase, smem_offset:$offset, CPolTy:$cpol),
-                       (ins dataClass:$sdata, baseClass:$sbase, SReg_32:$offset, CPolTy:$cpol)),
-                   !if(isRet, " $sdst", " $sdata") # ", $sbase, $offset$cpol",
+                       (ins dataClass:$sdata, baseClass:$sbase, SReg_32:$soffset, CPolTy:$cpol)),
+                   !if(isRet, " $sdst", " $sdata") # ", $sbase, " #
+                     !if(isImm, "$offset", "$soffset") # "$cpol",
                    isRet>,
   AtomicNoRet <opNameWithSuffix, isRet> {
-  let offset_is_imm = isImm;
+  let has_offset = isImm;
+  let has_soffset = !not(isImm);
   let PseudoInstr = opNameWithSuffix;
 
   let Constraints = !if(isRet, "$sdst = $sdata", "");
@@ -452,8 +477,8 @@ class SMRD_Real_si <bits<5> op, SM_Pseudo ps>
   let AssemblerPredicate = isGFX6GFX7;
   let DecoderNamespace = "GFX6GFX7";
 
-  let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, ?);
-  let Inst{8}     = imm;
+  let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, !if(ps.has_soffset, soffset, ?));
+  let Inst{8}     = ps.has_offset;
   let Inst{14-9}  = !if(ps.has_sbase, sbase{6-1}, ?);
   let Inst{21-15} = !if(ps.has_sdst, sdst{6-0}, ?);
   let Inst{26-22} = op;
@@ -470,10 +495,8 @@ multiclass SM_Real_Loads_si<bits<5> op, string ps,
     let InOperandList = (ins immPs.BaseClass:$sbase, smrd_offset_8:$offset, CPol:$cpol);
   }
 
-  // FIXME: The operand name $offset is inconsistent with $soff used
-  // in the pseudo
   def _SGPR_si : SMRD_Real_si <op, sgprPs> {
-    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$offset, CPol:$cpol);
+    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
   }
 
 }
@@ -508,14 +531,14 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
   let Inst{12-6}  = !if(ps.has_sdst, sdst{6-0}, ?);
 
   let Inst{16} = !if(ps.has_glc, cpol{CPolBit.GLC}, ?);
-  let Inst{17} = imm;
+  let Inst{17} = ps.has_offset;
   let Inst{25-18} = op;
   let Inst{31-26} = 0x30; //encoding
 
   // VI supports 20-bit unsigned offsets while GFX9+ supports 21-bit signed.
   // Offset value is corrected accordingly when offset is encoded/decoded.
-  let Inst{38-32} = !if(ps.has_offset, offset{6-0}, ?);
-  let Inst{52-39} = !if(ps.has_offset, !if(imm, offset{20-7}, ?), ?);
+  let Inst{38-32} = !if(ps.has_offset, offset{6-0}, !if(ps.has_soffset, soffset{6-0}, ?));
+  let Inst{52-39} = !if(ps.has_offset, offset{20-7}, ?);
 }
 
 multiclass SM_Real_Loads_vi<bits<8> op, string ps,
@@ -525,7 +548,7 @@ multiclass SM_Real_Loads_vi<bits<8> op, string ps,
     let InOperandList = (ins immPs.BaseClass:$sbase, smem_offset:$offset, CPol:$cpol);
   }
   def _SGPR_vi : SMEM_Real_vi <op, sgprPs> {
-    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$offset, CPol:$cpol);
+    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
   }
 }
 
@@ -540,14 +563,12 @@ class SMEM_Real_Store_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps> {
 multiclass SM_Real_Stores_vi<bits<8> op, string ps,
                             SM_Store_Pseudo immPs = !cast<SM_Store_Pseudo>(ps#_IMM),
                             SM_Store_Pseudo sgprPs = !cast<SM_Store_Pseudo>(ps#_SGPR)> {
-  // FIXME: The operand name $offset is inconsistent with $soff used
-  // in the pseudo
   def _IMM_vi : SMEM_Real_Store_vi <op, immPs> {
     let InOperandList = (ins immPs.SrcClass:$sdata, immPs.BaseClass:$sbase, smem_offset:$offset, CPol:$cpol);
   }
 
   def _SGPR_vi : SMEM_Real_Store_vi <op, sgprPs> {
-    let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase, SReg_32:$offset, CPol:$cpol);
+    let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
   }
 }
 
@@ -727,8 +748,8 @@ class SMRD_Real_ci <bits<5> op, SM_Pseudo ps>
   let AssemblerPredicate = isGFX7Only;
   let DecoderNamespace = "GFX7";
 
-  let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, ?);
-  let Inst{8}     = imm;
+  let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, !if(ps.has_soffset, soffset, ?));
+  let Inst{8}     = ps.has_offset;
   let Inst{14-9}  = !if(ps.has_sbase, sbase{6-1}, ?);
   let Inst{21-15} = !if(ps.has_sdst, sdst{6-0}, ?);
   let Inst{26-22} = op;
@@ -887,9 +908,12 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps> :
   let Inst{16}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ?);
   let Inst{25-18} = op;
   let Inst{31-26} = 0x3d;
-  let Inst{52-32} = !if(ps.offset_is_imm, !if(ps.has_offset, offset{20-0}, ?), ?);
-  let Inst{63-57} = !if(ps.offset_is_imm, !cast<int>(SGPR_NULL.HWEncoding),
-                                          !if(ps.has_offset, offset{6-0}, ?));
+
+  // There are SMEM instructions that do not employ any of the offset
+  // fields, in which case we need them to remain undefined.
+  let Inst{52-32} = !if(ps.has_offset, offset{20-0}, !if(ps.has_soffset, 0, ?));
+  let Inst{63-57} = !if(ps.has_soffset, soffset{6-0},
+                        !if(ps.has_offset, !cast<int>(SGPR_NULL.HWEncoding), ?));
 }
 
 multiclass SM_Real_Loads_gfx10<bits<8> op, string ps,
@@ -899,7 +923,11 @@ multiclass SM_Real_Loads_gfx10<bits<8> op, string ps,
     let InOperandList = (ins immPs.BaseClass:$sbase, smem_offset:$offset, CPol:$cpol);
   }
   def _SGPR_gfx10 : SMEM_Real_gfx10<op, sgprPs> {
-    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$offset, CPol:$cpol);
+    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
+  }
+  def _SGPR_IMM_gfx10 : SMEM_Real_gfx10<op, !cast<SM_Load_Pseudo>(ps#_SGPR_IMM)> {
+    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset,
+                             smem_offset_mod:$offset, CPol:$cpol);
   }
 }
 
@@ -913,14 +941,12 @@ class SMEM_Real_Store_gfx10<bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx10<op, ps> 
 multiclass SM_Real_Stores_gfx10<bits<8> op, string ps,
                                 SM_Store_Pseudo immPs = !cast<SM_Store_Pseudo>(ps#_IMM),
                                 SM_Store_Pseudo sgprPs = !cast<SM_Store_Pseudo>(ps#_SGPR)> {
-  // FIXME: The operand name $offset is inconsistent with $soff used
-  // in the pseudo
   def _IMM_gfx10 : SMEM_Real_Store_gfx10 <op, immPs> {
     let InOperandList = (ins immPs.SrcClass:$sdata, immPs.BaseClass:$sbase, smem_offset:$offset, CPol:$cpol);
   }
 
   def _SGPR_gfx10 : SMEM_Real_Store_gfx10 <op, sgprPs> {
-    let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase, SReg_32:$offset, CPol:$cpol);
+    let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
   }
 }
 
