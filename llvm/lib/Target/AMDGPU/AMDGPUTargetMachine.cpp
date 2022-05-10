@@ -968,7 +968,7 @@ void AMDGPUPassConfig::addIRPasses() {
   addPass(createAlwaysInlinerLegacyPass());
   // We need to add the barrier noop pass, otherwise adding the function
   // inlining pass will cause all of the PassConfigs passes to be run
-  // one function at a time, which means if we have a nodule with two
+  // one function at a time, which means if we have a module with two
   // functions, then we will generate code for the first function
   // without ever running any passes on the second.
   addPass(createBarrierNoopPass());
