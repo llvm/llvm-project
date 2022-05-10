@@ -5311,6 +5311,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (Operand.getValueType().getScalarType() == MVT::i1)
       return getNOT(DL, Operand, Operand.getValueType());
     break;
+  case ISD::VECREDUCE_ADD:
+    // If it is VECREDUCE_ADD mask operation then turn it to VECREDUCE_XOR
+    if (Operand.getValueType().getScalarType() == MVT::i1)
+      return getNode(ISD::VECREDUCE_XOR, DL, VT, Operand);
+    break;
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_UMAX:
     if (Operand.getValueType().getScalarType() == MVT::i1)
