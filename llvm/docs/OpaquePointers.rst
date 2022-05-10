@@ -195,10 +195,18 @@ Transition State
 ================
 
 As of April 2022 both LLVM and Clang have complete support for opaque pointers,
-and opaque pointers are enabled by default in Clang. It is possible to
-temporarily restore the old default using the
-``-DCLANG_ENABLE_OPAQUE_POINTERS=OFF`` cmake option. Opaque pointers can be
-disabled for a single Clang invocation using ``-Xclang -no-opaque-pointers``.
+and opaque pointers are enabled by default in Clang.
 
-The MLIR and Polly monorepo projects are not fully compatible with opaque
-pointers yet.
+For users of the clang driver interface, it is possible to temporarily restore
+the old default using the ``-DCLANG_ENABLE_OPAQUE_POINTERS=OFF`` cmake option,
+or by passing ``-Xclang -no-opaque-pointers`` to a single clang invocation.
+
+For users of the clang cc1 interface, ``-no-opaque-pointers`` can be passed.
+Note that the ``CLANG_ENABLE_OPAQUE_POINTERS`` cmake option has no effect on
+the cc1 interface.
+
+The next steps for the opaque pointer migration are:
+
+* Migrate Clang/LLVM tests to use opaque pointers.
+* Enable opaque pointers by default in LLVM.
+* Remove support for typed pointers after the LLVM 15 branch has been created.
