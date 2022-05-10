@@ -1,6 +1,13 @@
 ; RUN: llvm-ml -m64 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK-64,CHECK
 ; RUN: llvm-ml -m32 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK-32,CHECK
 
+ifdef rax
+  extern fn_ref_extern : qword
+else
+  extern fn_ref_extern : dword
+endif
+extern fn_ref_extern_word : word
+
 .data
 
 ifdef rax
@@ -186,3 +193,58 @@ t16:
 je [t16];
 ; CHECK-LABEL: t16:
 ; CHECK: je t16
+
+t17:
+call fn_ref_extern
+jmp fn_ref_extern
+; CHECK-LABEL: t17:
+; CHECK-64: call qword ptr [rip + fn_ref_extern]
+; CHECK-64: jmp qword ptr [rip + fn_ref_extern]
+; CHECK-32: call dword ptr [fn_ref_extern]
+; CHECK-32: jmp dword ptr [fn_ref_extern]
+
+t18:
+call [fn_ref_extern]
+jmp [fn_ref_extern]
+; CHECK-LABEL: t18:
+; CHECK-64: call qword ptr [rip + fn_ref_extern]
+; CHECK-64: jmp qword ptr [rip + fn_ref_extern]
+; CHECK-32: call dword ptr [fn_ref_extern]
+; CHECK-32: jmp dword ptr [fn_ref_extern]
+
+ifdef rax
+  t19:
+  call qword ptr [fn_ref_extern]
+  jmp qword ptr [fn_ref_extern]
+  ; CHECK-64-LABEL: t19:
+  ; CHECK-64: call qword ptr [rip + fn_ref_extern]
+  ; CHECK-64: jmp qword ptr [rip + fn_ref_extern]
+else
+  t19:
+  call dword ptr [fn_ref_extern]
+  jmp dword ptr [fn_ref_extern]
+  ; CHECK-32-LABEL: t19:
+  ; CHECK-32: call dword ptr [fn_ref_extern]
+  ; CHECK-32: jmp dword ptr [fn_ref_extern]
+
+  t20:
+  call fn_ref_extern_word
+  jmp fn_ref_extern_word
+  ; CHECK-32-LABEL: t20:
+  ; CHECK-32: call word ptr [fn_ref_extern_word]
+  ; CHECK-32-NEXT: jmp word ptr [fn_ref_extern_word]
+
+  t21:
+  call [fn_ref_extern_word]
+  jmp [fn_ref_extern_word]
+  ; CHECK-32-LABEL: t21:
+  ; CHECK-32: call word ptr [fn_ref_extern_word]
+  ; CHECK-32-NEXT: jmp word ptr [fn_ref_extern_word]
+
+  t22:
+  call word ptr [fn_ref_extern_word]
+  jmp word ptr [fn_ref_extern_word]
+  ; CHECK-32-LABEL: t22:
+  ; CHECK-32: call word ptr [fn_ref_extern_word]
+  ; CHECK-32-NEXT: jmp word ptr [fn_ref_extern_word]
+endif
