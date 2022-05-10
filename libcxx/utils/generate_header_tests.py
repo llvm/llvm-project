@@ -39,18 +39,25 @@ header_restrictions = {
     "cwchar": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
     "wchar.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
 
-    "experimental/coroutine": "!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)",
-
-    "experimental/regex": "!defined(_LIBCPP_HAS_NO_LOCALIZATION) && __cplusplus >= 201103L",
+    "experimental/algorithm": "__cplusplus >= 201103L",
+    "experimental/coroutine": "__cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)",
     "experimental/deque": "__cplusplus >= 201103L",
+    "experimental/forward_list": "__cplusplus >= 201103L",
+    "experimental/functional": "__cplusplus >= 201103L",
+    "experimental/iterator": "__cplusplus >= 201103L",
+    "experimental/list": "__cplusplus >= 201103L",
     "experimental/map": "__cplusplus >= 201103L",
     "experimental/memory_resource": "__cplusplus >= 201103L",
-    "experimental/forward_list": "__cplusplus >= 201103L",
-    "experimental/list": "__cplusplus >= 201103L",
+    "experimental/propagate_const": "__cplusplus >= 201103L",
+    "experimental/regex": "!defined(_LIBCPP_HAS_NO_LOCALIZATION) && __cplusplus >= 201103L",
     "experimental/set": "__cplusplus >= 201103L",
+    "experimental/simd": "__cplusplus >= 201103L",
+    "experimental/span": "__cplusplus >= 201103L",
     "experimental/string": "__cplusplus >= 201103L",
+    "experimental/type_traits": "__cplusplus >= 201103L",
     "experimental/unordered_map": "__cplusplus >= 201103L",
     "experimental/unordered_set": "__cplusplus >= 201103L",
+    "experimental/utility": "__cplusplus >= 201103L",
     "experimental/vector": "__cplusplus >= 201103L",
 }
 
@@ -133,6 +140,7 @@ def main():
     produce(test.joinpath('libcxx/clang_tidy.sh.cpp'), variables)
     produce(test.joinpath('libcxx/double_include.sh.cpp'), variables)
     produce(test.joinpath('libcxx/min_max_macros.compile.pass.cpp'), variables)
+    produce(test.joinpath('libcxx/modules_include.sh.cpp'), variables)
     produce(test.joinpath('libcxx/nasty_macros.compile.pass.cpp'), variables)
     produce(test.joinpath('libcxx/no_assert_include.compile.pass.cpp'), variables)
     produce(test.joinpath('libcxx/private_headers.verify.cpp'), variables)

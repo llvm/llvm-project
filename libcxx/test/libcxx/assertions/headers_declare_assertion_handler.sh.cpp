@@ -641,13 +641,13 @@ int main(int, char**) { return 0; }
 #endif
 
 // RUN: %{build} -DTEST_119
-#if defined(TEST_119)
+#if defined(TEST_119) && __cplusplus >= 201103L
 #   include <experimental/algorithm>
     using HandlerType = decltype(std::__libcpp_assertion_handler);
 #endif
 
 // RUN: %{build} -DTEST_120
-#if defined(TEST_120) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
+#if defined(TEST_120) && __cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
 #   include <experimental/coroutine>
     using HandlerType = decltype(std::__libcpp_assertion_handler);
 #endif
@@ -665,13 +665,13 @@ int main(int, char**) { return 0; }
 #endif
 
 // RUN: %{build} -DTEST_123
-#if defined(TEST_123)
+#if defined(TEST_123) && __cplusplus >= 201103L
 #   include <experimental/functional>
     using HandlerType = decltype(std::__libcpp_assertion_handler);
 #endif
 
 // RUN: %{build} -DTEST_124
-#if defined(TEST_124)
+#if defined(TEST_124) && __cplusplus >= 201103L
 #   include <experimental/iterator>
     using HandlerType = decltype(std::__libcpp_assertion_handler);
 #endif
@@ -695,7 +695,7 @@ int main(int, char**) { return 0; }
 #endif
 
 // RUN: %{build} -DTEST_128
-#if defined(TEST_128)
+#if defined(TEST_128) && __cplusplus >= 201103L
 #   include <experimental/propagate_const>
     using HandlerType = decltype(std::__libcpp_assertion_handler);
 #endif
@@ -713,7 +713,7 @@ int main(int, char**) { return 0; }
 #endif
 
 // RUN: %{build} -DTEST_131
-#if defined(TEST_131)
+#if defined(TEST_131) && __cplusplus >= 201103L
 #   include <experimental/simd>
     using HandlerType = decltype(std::__libcpp_assertion_handler);
 #endif
@@ -725,7 +725,7 @@ int main(int, char**) { return 0; }
 #endif
 
 // RUN: %{build} -DTEST_133
-#if defined(TEST_133)
+#if defined(TEST_133) && __cplusplus >= 201103L
 #   include <experimental/type_traits>
     using HandlerType = decltype(std::__libcpp_assertion_handler);
 #endif
@@ -743,7 +743,7 @@ int main(int, char**) { return 0; }
 #endif
 
 // RUN: %{build} -DTEST_136
-#if defined(TEST_136)
+#if defined(TEST_136) && __cplusplus >= 201103L
 #   include <experimental/utility>
     using HandlerType = decltype(std::__libcpp_assertion_handler);
 #endif
