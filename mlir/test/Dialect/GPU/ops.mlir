@@ -277,18 +277,6 @@ module attributes {gpu.container_module} {
     return
   }
 
-  func.func @async_cp(%dst : memref<2x7x5xf32, 3>, %src : memref<4x5xf32>){
-    // CHECK-LABEL: func @async_cp
-    %c0 = arith.constant 0 : index
-    // CHECK: gpu.device_async_copy %{{.*}}[{{.*}}, {{.*}}], %{{.*}}[{{.*}}, {{.*}}, {{.*}}], 4 : memref<4x5xf32> to memref<2x7x5xf32, 3>
-    %0 = gpu.device_async_copy %src[%c0, %c0], %dst[%c0, %c0, %c0], 4 : memref<4x5xf32> to memref<2x7x5xf32, 3>
-    // CHECK: %{{.*}} = gpu.device_async_create_group
-    %token = gpu.device_async_create_group %0
-    // CHECK: gpu.device_async_wait %{{.*}} {numGroups = 1 : i32}
-    gpu.device_async_wait %token {numGroups = 1 : i32}
-    return
-  }
-
   // CHECK-LABEL: func @set_default_device
   func.func @set_default_device(%arg0: i32) {
     // CHECK: gpu.set_default_device

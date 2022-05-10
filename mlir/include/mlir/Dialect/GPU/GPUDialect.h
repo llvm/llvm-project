@@ -43,14 +43,6 @@ public:
   using Base::Base;
 };
 
-/// Device-side token storage type. There is only one type of device-side token.
-class DeviceAsyncTokenType
-    : public Type::TypeBase<DeviceAsyncTokenType, Type, TypeStorage> {
-public:
-  // Used for generic hooks in TypeBase.
-  using Base::Base;
-};
-
 /// MMAMatrixType storage and uniquing. Array is uniqued based on its shape
 /// and type.
 struct MMAMatrixStorageType : public TypeStorage {
