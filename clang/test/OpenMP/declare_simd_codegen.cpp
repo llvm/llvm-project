@@ -144,6 +144,17 @@ double Four(int& a, int &b) {
   return a;
 }
 
+// Test reference parameters with variable stride.
+#pragma omp declare simd simdlen(4) uniform(a)               \
+                         linear(b:2) linear(c:a)             \
+                         linear(val(d):4) linear(val(e):a)   \
+                         linear(uval(f):8) linear(uval(g):a) \
+                         linear(ref(h):16) linear(ref(i):a)
+double Five(int a, short &b, short &c, short &d, short &e, short &f, short &g,
+            short &h, short &i) {
+  return a + int(b);
+}
+
 // CHECK-DAG: define {{.+}}@_Z5add_1Pf(
 // CHECK-DAG: define {{.+}}@_Z1hIiEvPT_S1_S1_S1_(
 // CHECK-DAG: define {{.+}}@_Z1hIfEvPT_S1_S1_S1_(
@@ -162,6 +173,11 @@ double Four(int& a, int &b) {
 // CHECK-DAG: define {{.+}}@_Z3food(
 // CHECK-DAG: declare {{.+}}@_Z5add_2Pf(
 // CHECK-DAG: define {{.+}}@_Z11constlineari(
+// CHECK-DAG: define {{.+}}@_Z3OneRiPiiS_S0_i
+// CHECK-DAG: define {{.+}}@_Z3TwoRiPiiS_S0_i
+// CHECK-DAG: define {{.+}}@_Z5ThreeRiS_
+// CHECK-DAG: define {{.+}}@_Z4FourRiS_
+// CHECK-DAG: define {{.+}}@_Z4FiveiRsS_S_S_S_S_S_S_
 
 // CHECK-DAG: "_ZGVbM4l32__Z5add_1Pf"
 // CHECK-DAG: "_ZGVbN4l32__Z5add_1Pf"
@@ -381,6 +397,8 @@ double Four(int& a, int &b) {
 // CHECK-DAG: "_ZGVbN4U2U__Z5ThreeRiS_"
 // CHECK-DAG: "_ZGVbM4R8R4__Z4FourRiS_"
 // CHECK-DAG: "_ZGVbN4R8R4__Z4FourRiS_"
+// CHECK-DAG: "_ZGVbM4uL2Ls0L4Ls0U8Us0R32Rs0__Z4FiveiRsS_S_S_S_S_S_S_"
+// CHECK-DAG: "_ZGVbN4uL2Ls0L4Ls0U8Us0R32Rs0__Z4FiveiRsS_S_S_S_S_S_S_"
 
 // CHECK-NOT: "_ZGV{{.+}}__Z1fRA_i
 

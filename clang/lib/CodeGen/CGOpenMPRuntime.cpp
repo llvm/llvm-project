@@ -11405,7 +11405,6 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
 namespace {
   /// Kind of parameter in a function with 'declare simd' directive.
 enum ParamKindTy {
-  LinearWithVarStride,
   Linear,
   LinearRef,
   LinearUVal,
@@ -11418,6 +11417,7 @@ struct ParamAttrTy {
   ParamKindTy Kind = Vector;
   llvm::APSInt StrideOrArg;
   llvm::APSInt Alignment;
+  bool HasVarStride = false;
 };
 } // namespace
 
@@ -11481,9 +11481,6 @@ static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
   llvm::raw_svector_ostream Out(Buffer);
   for (const auto &ParamAttr : ParamAttrs) {
     switch (ParamAttr.Kind) {
-    case LinearWithVarStride:
-      Out << "ls" << ParamAttr.StrideOrArg;
-      break;
     case Linear:
       Out << 'l';
       break;
@@ -11503,8 +11500,10 @@ static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
       Out << 'v';
       break;
     }
-    if (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef ||
-        ParamAttr.Kind == LinearUVal || ParamAttr.Kind == LinearVal) {
+    if (ParamAttr.HasVarStride)
+      Out << "s" << ParamAttr.StrideOrArg;
+    else if (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef ||
+             ParamAttr.Kind == LinearUVal || ParamAttr.Kind == LinearVal) {
       // Don't print the step value if it is not present or if it is
       // equal to 1.
       if (ParamAttr.StrideOrArg != 1)
@@ -11579,11 +11578,7 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
 // available at
 // https://developer.arm.com/products/software-development-tools/hpc/arm-compiler-for-hpc/vector-function-abi.
 
-/// Maps To Vector (MTV), as defined in 3.1.1 of the AAVFABI.
-///
-/// TODO: Need to implement the behavior for reference marked with a
-/// var or no linear modifiers (1.b in the section). For this, we
-/// need to extend ParamKindTy to support the linear modifiers.
+/// Maps To Vector (MTV), as defined in 4.1.1 of the AAVFABI (2021Q1).
 static bool getAArch64MTV(QualType QT, ParamKindTy Kind) {
   QT = QT.getCanonicalType();
 
@@ -11593,12 +11588,11 @@ static bool getAArch64MTV(QualType QT, ParamKindTy Kind) {
   if (Kind == ParamKindTy::Uniform)
     return false;
 
-  if (Kind == ParamKindTy::Linear)
+  if (Kind == ParamKindTy::LinearUVal || ParamKindTy::LinearRef)
     return false;
 
-  // TODO: Handle linear references with modifiers
-
-  if (Kind == ParamKindTy::LinearWithVarStride)
+  if ((Kind == ParamKindTy::Linear || Kind == ParamKindTy::LinearVal) &&
+      !QT->isReferenceType())
     return false;
 
   return true;
@@ -11949,7 +11943,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
                     cast<DeclRefExpr>((*SI)->IgnoreParenImpCasts())) {
               if (const auto *StridePVD =
                       dyn_cast<ParmVarDecl>(DRE->getDecl())) {
-                ParamAttr.Kind = LinearWithVarStride;
+                ParamAttr.HasVarStride = true;
                 auto It = ParamPositions.find(StridePVD->getCanonicalDecl());
                 assert(It != ParamPositions.end() &&
                        "Function parameter not found");
@@ -11963,7 +11957,8 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         // If we are using a linear clause on a pointer, we need to
         // rescale the value of linear_step with the byte size of the
         // pointee type.
-        if (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef)
+        if (!ParamAttr.HasVarStride &&
+            (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef))
           ParamAttr.StrideOrArg = ParamAttr.StrideOrArg * PtrRescalingFactor;
         ++SI;
         ++MI;
