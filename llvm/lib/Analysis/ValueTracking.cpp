@@ -2128,6 +2128,25 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
     }
   }
 
+  // A PHI node is power of two if all incoming values are power of two.
+  if (const PHINode *PN = dyn_cast<PHINode>(V)) {
+    Query RecQ = Q;
+
+    // Recursively check all incoming values. Limit recursion to 2 levels, so
+    // that search complexity is limited to number of operands^2.
+    unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
+    return llvm::all_of(PN->operands(), [&](const Use &U) {
+      // Value is power of 2 if it is coming from PHI node itself by induction.
+      if (U.get() == PN)
+        return true;
+
+      // Change the context instruction to the incoming block where it is
+      // evaluated.
+      RecQ.CxtI = PN->getIncomingBlock(U)->getTerminator();
+      return isKnownToBeAPowerOfTwo(U.get(), OrZero, NewDepth, RecQ);
+    });
+  }
+
   // An exact divide or right shift can only shift off zero bits, so the result
   // is a power of two only if the first operand is a power of two and not
   // copying a sign bit (sdiv int_min, 2).
