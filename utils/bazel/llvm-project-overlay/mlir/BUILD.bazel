@@ -3798,6 +3798,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticToLLVM",
+        ":AMDGPUToROCDL",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
         ":FuncDialect",
