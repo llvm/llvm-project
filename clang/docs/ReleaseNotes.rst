@@ -355,7 +355,7 @@ CUDA/HIP Language Changes in Clang
 ----------------------------------
 
 - Added `__noinline__` as a keyword to avoid diagnostics due to usage of
- `__attribute__((__noinline__))` in CUDA/HIP programs.
+  `__attribute__((__noinline__))` in CUDA/HIP programs.
 
 Objective-C Language Changes in Clang
 -------------------------------------
