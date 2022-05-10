@@ -350,6 +350,14 @@ public:
     PerThread,
   };
 
+  enum class DefaultVisiblityExportMapping {
+    None,
+    /// map only explicit default visibilities to exported
+    Explicit,
+    /// map all default visibilities to exported
+    All,
+  };
+
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;
@@ -580,6 +588,16 @@ public:
   }
 
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
+
+  bool isExplicitDefaultVisibilityExportMapping() const {
+    return getDefaultVisibilityExportMapping() ==
+           DefaultVisiblityExportMapping::Explicit;
+  }
+
+  bool isAllDefaultVisibilityExportMapping() const {
+    return getDefaultVisibilityExportMapping() ==
+           DefaultVisiblityExportMapping::All;
+  }
 
   /// Remap path prefix according to -fmacro-prefix-path option.
   void remapPathPrefix(SmallVectorImpl<char> &Path) const;
