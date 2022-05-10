@@ -128,6 +128,10 @@ public:
   ValueWithRealFlags<Real> HYPOT(
       const Real &, Rounding rounding = defaultRounding) const;
 
+  // DIM(X,Y) = MAX(X-Y, 0)
+  ValueWithRealFlags<Real> DIM(
+      const Real &, Rounding rounding = defaultRounding) const;
+
   template <typename INT> constexpr INT EXPONENT() const {
     if (Exponent() == maxExponent) {
       return INT::HUGE();
