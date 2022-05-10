@@ -53,11 +53,11 @@
 ! CHECK:             %[[VAL_50:.*]] = arith.divsi %[[VAL_49]], %[[VAL_43]] : index
 ! CHECK:             %[[VAL_51:.*]] = arith.cmpi sgt, %[[VAL_50]], %[[VAL_47]] : index
 ! CHECK:             %[[VAL_52:.*]] = arith.select %[[VAL_51]], %[[VAL_50]], %[[VAL_47]] : index
+! CHECK:             %[[VAL_59:.*]] = fir.call @_QPf(%[[VAL_3]]) : (!fir.ref<i32>) -> i32
 ! CHECK:             %[[VAL_53:.*]] = arith.constant 1 : index
 ! CHECK:             %[[VAL_54:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_55:.*]] = arith.subi %[[VAL_52]], %[[VAL_53]] : index
 ! CHECK:             %[[VAL_56:.*]] = fir.do_loop %[[VAL_57:.*]] = %[[VAL_54]] to %[[VAL_55]] step %[[VAL_53]] unordered iter_args(%[[VAL_58:.*]] = %[[VAL_25]]) -> (!fir.array<10x10x!fir.type<_QFtest_forall_with_sliceTt{arr:!fir.array<11xi32>}>>) {
-! CHECK:               %[[VAL_59:.*]] = fir.call @_QPf(%[[VAL_3]]) : (!fir.ref<i32>) -> i32
 ! CHECK:               %[[VAL_60:.*]] = arith.subi %[[VAL_40]], %[[VAL_37]] : index
 ! CHECK:               %[[VAL_61:.*]] = arith.muli %[[VAL_57]], %[[VAL_43]] : index
 ! CHECK:               %[[VAL_62:.*]] = arith.addi %[[VAL_60]], %[[VAL_61]] : index

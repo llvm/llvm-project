@@ -131,13 +131,13 @@ end subroutine forall_pointer_assign
 ! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i32) -> i64
 ! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i64) -> index
 ! CHECK:           %[[VAL_32:.*]] = arith.subi %[[VAL_31]], %[[VAL_15]] : index
+! CHECK:           %[[VAL_39:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
+! CHECK:           %[[VAL_40:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_41:.*]] = arith.subi %[[VAL_40]], %[[VAL_39]] : i32
 ! CHECK:           %[[VAL_33:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_34:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_35:.*]] = arith.subi %[[VAL_28]], %[[VAL_33]] : index
 ! CHECK:           %[[VAL_36:.*]] = fir.do_loop %[[VAL_37:.*]] = %[[VAL_34]] to %[[VAL_35]] step %[[VAL_33]] unordered iter_args(%[[VAL_38:.*]] = %[[VAL_13]]) -> (!fir.array<10x10xi32>) {
-! CHECK:             %[[VAL_39:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
-! CHECK:             %[[VAL_40:.*]] = arith.constant 0 : i32
-! CHECK:             %[[VAL_41:.*]] = arith.subi %[[VAL_40]], %[[VAL_39]] : i32
 ! CHECK:             %[[VAL_42:.*]] = arith.subi %[[VAL_17]], %[[VAL_15]] : index
 ! CHECK:             %[[VAL_43:.*]] = arith.muli %[[VAL_37]], %[[VAL_19]] : index
 ! CHECK:             %[[VAL_44:.*]] = arith.addi %[[VAL_42]], %[[VAL_43]] : index
@@ -174,9 +174,8 @@ end subroutine slice_with_explicit_iters
 ! CHECK:         %[[VAL_13:.*]] = fir.do_loop %[[VAL_14:.*]] = %[[VAL_7]] to %[[VAL_9]] step %[[VAL_10]] unordered iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (!fir.array<1xi32>) {
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_14]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_16]] to %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_18:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_19:.*]] = arith.constant 1 : i64
+! CHECK-DAG:       %[[VAL_18:.*]] = arith.constant 1 : index
+! CHECK-DAG:       %[[VAL_19:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i64) -> index
 ! CHECK:           %[[VAL_21:.*]] = arith.addi %[[VAL_18]], %[[VAL_4]] : index
 ! CHECK:           %[[VAL_22:.*]] = arith.subi %[[VAL_21]], %[[VAL_18]] : index
@@ -187,6 +186,7 @@ end subroutine slice_with_explicit_iters
 ! CHECK:           %[[VAL_27:.*]] = fir.slice %[[VAL_18]], %[[VAL_22]], %[[VAL_20]], %[[VAL_24]], %[[VAL_25]], %[[VAL_25]] : (index, index, index, i64, index, index) -> !fir.slice<2>
 ! CHECK:           %[[VAL_28:.*]] = fir.embox %[[VAL_1]](%[[VAL_26]]) {{\[}}%[[VAL_27]]] : (!fir.ref<!fir.array<2x2xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_29:.*]] = fir.call @_QPe(%[[VAL_28]]) : (!fir.box<!fir.array<?xi32>>) -> i32
+! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_30:.*]] = arith.addi %[[VAL_29]], %[[VAL_17]] : i32
 ! CHECK:           %[[VAL_31:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_32:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
