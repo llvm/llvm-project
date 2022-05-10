@@ -192,7 +192,7 @@ macro(add_c_compile_flags_if_supported)
   foreach(flag ${ARGN})
       mangle_name("${flag}" flagname)
       check_c_compiler_flag("${flag}" "C_SUPPORTS_${flagname}_FLAG")
-      add_compile_flags_if(CXX_SUPPORTS_${flagname}_FLAG ${flag})
+      add_compile_flags_if(C_SUPPORTS_${flagname}_FLAG ${flag})
   endforeach()
 endmacro()
 
