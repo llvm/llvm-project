@@ -65,7 +65,7 @@ for.body:
   %tmp1 = getelementptr inbounds i32, i32* %a, i64 %i
   %tmp2 = load i32, i32* %tmp1, align 8
   %tmp3 = add i32 %tmp0, %tmp2
-  %i.next = add nuw nsw i64 %i, -1
+  %i.next = add nsw i64 %i, -1
   %cond = icmp sgt i64 %i.next, 0
   br i1 %cond, label %for.body, label %for.end
 
@@ -181,7 +181,7 @@ for.body:
   %tmp4 = load i32, i32* %tmp2, align 8
   %tmp5 = add i32 %tmp3, %tmp4
   %tmp6 = add i32 %tmp0, %tmp5
-  %i.next = add nuw nsw i64 %i, -1
+  %i.next = add nsw i64 %i, -1
   %cond = icmp sgt i64 %i.next, 0
   br i1 %cond, label %for.body, label %for.end
 
