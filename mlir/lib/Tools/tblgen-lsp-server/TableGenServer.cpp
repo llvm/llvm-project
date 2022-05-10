@@ -13,6 +13,7 @@
 #include "../lsp-server-support/Protocol.h"
 #include "../lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -40,10 +41,14 @@ static lsp::URIForFile getURIFromLoc(const llvm::SourceMgr &mgr, SMLoc loc,
 }
 
 /// Returns a language server location from the given source range.
+static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMRange loc,
+                                        const lsp::URIForFile &uri) {
+  return lsp::Location(getURIFromLoc(mgr, loc.Start, uri),
+                       lsp::Range(mgr, loc));
+}
 static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMLoc loc,
                                         const lsp::URIForFile &uri) {
-  return lsp::Location(getURIFromLoc(mgr, loc, uri),
-                       lsp::Range(mgr, lsp::convertTokenLocToRange(loc)));
+  return getLocationFromLoc(mgr, lsp::convertTokenLocToRange(loc), uri);
 }
 
 /// Convert the given TableGen diagnostic to the LSP form.
@@ -88,6 +93,142 @@ getLspDiagnoticFromDiag(const llvm::SMDiagnostic &diag,
 }
 
 //===----------------------------------------------------------------------===//
+// TableGenIndex
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This class represents a single symbol definition within a TableGen index. It
+/// contains the definition of the symbol, the location of the symbol, and any
+/// recorded references.
+struct TableGenIndexSymbol {
+  TableGenIndexSymbol(const llvm::Record *record)
+      : definition(record),
+        defLoc(lsp::convertTokenLocToRange(record->getLoc().front())) {}
+  TableGenIndexSymbol(const llvm::RecordVal *value)
+      : definition(value),
+        defLoc(lsp::convertTokenLocToRange(value->getLoc())) {}
+
+  /// The main definition of the symbol.
+  PointerUnion<const llvm::Record *, const llvm::RecordVal *> definition;
+
+  /// The source location of the definition.
+  SMRange defLoc;
+
+  /// The source location of the references of the definition.
+  SmallVector<SMRange> references;
+};
+
+/// This class provides an index for definitions/uses within a TableGen
+/// document. It provides efficient lookup of a definition given an input source
+/// range.
+class TableGenIndex {
+public:
+  TableGenIndex() : intervalMap(allocator) {}
+
+  /// Initialize the index with the given RecordKeeper.
+  void initialize(const llvm::RecordKeeper &records);
+
+  /// Lookup a symbol for the given location. Returns nullptr if no symbol could
+  /// be found. If provided, `overlappedRange` is set to the range that the
+  /// provided `loc` overlapped with.
+  const TableGenIndexSymbol *lookup(SMLoc loc,
+                                    SMRange *overlappedRange = nullptr) const;
+
+private:
+  /// The type of interval map used to store source references. SMRange is
+  /// half-open, so we also need to use a half-open interval map.
+  using MapT = llvm::IntervalMap<
+      const char *, const TableGenIndexSymbol *,
+      llvm::IntervalMapImpl::NodeSizer<const char *,
+                                       const TableGenIndexSymbol *>::LeafSize,
+      llvm::IntervalMapHalfOpenInfo<const char *>>;
+
+  /// An allocator for the interval map.
+  MapT::Allocator allocator;
+
+  /// An interval map containing a corresponding definition mapped to a source
+  /// interval.
+  MapT intervalMap;
+
+  /// A mapping between definitions and their corresponding symbol.
+  DenseMap<const void *, std::unique_ptr<TableGenIndexSymbol>> defToSymbol;
+};
+} // namespace
+
+void TableGenIndex::initialize(const llvm::RecordKeeper &records) {
+  auto getOrInsertDef = [&](const auto *def) -> TableGenIndexSymbol * {
+    auto it = defToSymbol.try_emplace(def, nullptr);
+    if (it.second)
+      it.first->second = std::make_unique<TableGenIndexSymbol>(def);
+    return &*it.first->second;
+  };
+  auto insertRef = [&](TableGenIndexSymbol *sym, SMRange refLoc,
+                       bool isDef = false) {
+    const char *startLoc = refLoc.Start.getPointer();
+    const char *endLoc = refLoc.End.getPointer();
+
+    // If the location we got was empty, try to lex a token from the start
+    // location.
+    if (startLoc == endLoc) {
+      refLoc = lsp::convertTokenLocToRange(SMLoc::getFromPointer(startLoc));
+      startLoc = refLoc.Start.getPointer();
+      endLoc = refLoc.End.getPointer();
+
+      // If the location is still empty, bail on trying to use this reference
+      // location.
+      if (startLoc == endLoc)
+        return;
+    }
+
+    // Check to see if a symbol is already attached to this location.
+    // IntervalMap doesn't allow overlapping inserts, and we don't really
+    // want multiple symbols attached to a source location anyways. This
+    // shouldn't really happen in practice, but we should handle it gracefully.
+    if (!intervalMap.overlaps(startLoc, endLoc))
+      intervalMap.insert(startLoc, endLoc, sym);
+
+    if (!isDef)
+      sym->references.push_back(refLoc);
+  };
+  auto classes =
+      llvm::make_pointee_range(llvm::make_second_range(records.getClasses()));
+  auto defs =
+      llvm::make_pointee_range(llvm::make_second_range(records.getDefs()));
+  for (const llvm::Record &def : llvm::concat<llvm::Record>(classes, defs)) {
+    auto *sym = getOrInsertDef(&def);
+    insertRef(sym, sym->defLoc, /*isDef=*/true);
+
+    // Add references to the definition.
+    for (SMLoc loc : def.getLoc().drop_front())
+      insertRef(sym, lsp::convertTokenLocToRange(loc));
+
+    // Add references to any super classes.
+    for (auto &it : def.getSuperClasses())
+      insertRef(getOrInsertDef(it.first),
+                lsp::convertTokenLocToRange(it.second.Start));
+
+    // Add definitions for any values.
+    for (const llvm::RecordVal &value : def.getValues()) {
+      auto *sym = getOrInsertDef(&value);
+      insertRef(sym, sym->defLoc, /*isDef=*/true);
+    }
+  }
+}
+
+const TableGenIndexSymbol *
+TableGenIndex::lookup(SMLoc loc, SMRange *overlappedRange) const {
+  auto it = intervalMap.find(loc.getPointer());
+  if (!it.valid() || loc.getPointer() < it.start())
+    return nullptr;
+
+  if (overlappedRange) {
+    *overlappedRange = SMRange(SMLoc::getFromPointer(it.start()),
+                               SMLoc::getFromPointer(it.stop()));
+  }
+  return it.value();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGenTextFile
 //===----------------------------------------------------------------------===//
 
@@ -102,6 +243,15 @@ public:
 
   /// Return the current version of this text file.
   int64_t getVersion() const { return version; }
+
+  //===--------------------------------------------------------------------===//
+  // Definitions and References
+  //===--------------------------------------------------------------------===//
+
+  void getLocationsOf(const lsp::URIForFile &uri, const lsp::Position &defPos,
+                      std::vector<lsp::Location> &locations);
+  void findReferencesOf(const lsp::URIForFile &uri, const lsp::Position &pos,
+                        std::vector<lsp::Location> &references);
 
   //===--------------------------------------------------------------------===//
   // Document Links
@@ -132,6 +282,9 @@ private:
 
   /// The record keeper containing the parsed tablegen constructs.
   llvm::RecordKeeper recordKeeper;
+
+  /// The index of the parsed file.
+  TableGenIndex index;
 
   /// The set of includes of the parsed file.
   SmallVector<lsp::SourceMgrInclude> parsedIncludes;
@@ -180,6 +333,37 @@ TableGenTextFile::TableGenTextFile(
   lsp::gatherIncludeFiles(sourceMgr, parsedIncludes);
   if (failedToParse)
     return;
+
+  // If we successfully parsed the file, we can now build the index.
+  index.initialize(recordKeeper);
+}
+
+//===----------------------------------------------------------------------===//
+// TableGenTextFile: Definitions and References
+//===----------------------------------------------------------------------===//
+
+void TableGenTextFile::getLocationsOf(const lsp::URIForFile &uri,
+                                      const lsp::Position &defPos,
+                                      std::vector<lsp::Location> &locations) {
+  SMLoc posLoc = defPos.getAsSMLoc(sourceMgr);
+  const TableGenIndexSymbol *symbol = index.lookup(posLoc);
+  if (!symbol)
+    return;
+
+  locations.push_back(getLocationFromLoc(sourceMgr, symbol->defLoc, uri));
+}
+
+void TableGenTextFile::findReferencesOf(
+    const lsp::URIForFile &uri, const lsp::Position &pos,
+    std::vector<lsp::Location> &references) {
+  SMLoc posLoc = pos.getAsSMLoc(sourceMgr);
+  const TableGenIndexSymbol *symbol = index.lookup(posLoc);
+  if (!symbol)
+    return;
+
+  references.push_back(getLocationFromLoc(sourceMgr, symbol->defLoc, uri));
+  for (SMRange refLoc : symbol->references)
+    references.push_back(getLocationFromLoc(sourceMgr, refLoc, uri));
 }
 
 //===--------------------------------------------------------------------===//
@@ -253,6 +437,22 @@ Optional<int64_t> lsp::TableGenServer::removeDocument(const URIForFile &uri) {
   int64_t version = it->second->getVersion();
   impl->files.erase(it);
   return version;
+}
+
+void lsp::TableGenServer::getLocationsOf(const URIForFile &uri,
+                                         const Position &defPos,
+                                         std::vector<Location> &locations) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    fileIt->second->getLocationsOf(uri, defPos, locations);
+}
+
+void lsp::TableGenServer::findReferencesOf(const URIForFile &uri,
+                                           const Position &pos,
+                                           std::vector<Location> &references) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    fileIt->second->findReferencesOf(uri, pos, references);
 }
 
 void lsp::TableGenServer::getDocumentLinks(
