@@ -261,10 +261,11 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   Fortran::lower::StatementContext stmtCtx;
   llvm::ArrayRef<mlir::Type> argTy;
-  mlir::Value ifClauseOperand, numThreadsClauseOperand;
+  mlir::Value ifClauseOperand, numThreadsClauseOperand, finalClauseOperand,
+      priorityClauseOperand;
   mlir::omp::ClauseProcBindKindAttr procBindKindAttr;
   SmallVector<Value> allocateOperands, allocatorOperands;
-  mlir::UnitAttr nowaitAttr;
+  mlir::UnitAttr nowaitAttr, untiedAttr, mergeableAttr;
 
   const auto &opClauseList =
       std::get<Fortran::parser::OmpClauseList>(beginBlockDirective.t);
@@ -315,6 +316,21 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     } else if (std::get_if<Fortran::parser::OmpClause::Threads>(&clause.u)) {
       // Nothing needs to be done for threads clause.
       continue;
+    } else if (const auto &finalClause =
+                   std::get_if<Fortran::parser::OmpClause::Final>(&clause.u)) {
+      mlir::Value finalVal = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(finalClause->v), stmtCtx));
+      finalClauseOperand = firOpBuilder.createConvert(
+          currentLocation, firOpBuilder.getI1Type(), finalVal);
+    } else if (std::get_if<Fortran::parser::OmpClause::Untied>(&clause.u)) {
+      untiedAttr = firOpBuilder.getUnitAttr();
+    } else if (std::get_if<Fortran::parser::OmpClause::Mergeable>(&clause.u)) {
+      mergeableAttr = firOpBuilder.getUnitAttr();
+    } else if (const auto &priorityClause =
+                   std::get_if<Fortran::parser::OmpClause::Priority>(
+                       &clause.u)) {
+      priorityClauseOperand = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(priorityClause->v), stmtCtx));
     } else {
       TODO(currentLocation, "OpenMP Block construct clauses");
     }
@@ -346,6 +362,13 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     auto orderedOp = firOpBuilder.create<mlir::omp::OrderedRegionOp>(
         currentLocation, /*simd=*/nullptr);
     createBodyOfOp<omp::OrderedRegionOp>(orderedOp, converter, currentLocation);
+  } else if (blockDirective.v == llvm::omp::OMPD_task) {
+    auto taskOp = firOpBuilder.create<mlir::omp::TaskOp>(
+        currentLocation, ifClauseOperand, finalClauseOperand, untiedAttr,
+        mergeableAttr, /*in_reduction_vars=*/ValueRange(),
+        /*in_reductions=*/nullptr, priorityClauseOperand, allocateOperands,
+        allocatorOperands);
+    createBodyOfOp(taskOp, converter, currentLocation, &opClauseList);
   } else {
     TODO(converter.getCurrentLocation(), "Unhandled block directive");
   }
