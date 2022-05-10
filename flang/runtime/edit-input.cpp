@@ -679,11 +679,10 @@ bool EditCharacterInput(
     remaining = *edit.width;
   }
   // When the field is wider than the variable, we drop the leading
-  // characters.  When the variable is wider than the field, there's
+  // characters.  When the variable is wider than the field, there can be
   // trailing padding.
   const char *input{nullptr};
   std::size_t ready{0};
-  bool hitEnd{false};
   // Skip leading bytes.
   // These bytes don't count towards INQUIRE(IOLENGTH=).
   std::size_t skip{remaining > length ? remaining - length : 0};
@@ -692,8 +691,10 @@ bool EditCharacterInput(
     if (ready == 0) {
       ready = io.GetNextInputBytes(input);
       if (ready == 0) {
-        hitEnd = true;
-        break;
+        if (io.CheckForEndOfRecord()) {
+          std::fill_n(x, length, ' '); // PAD='YES'
+        }
+        return !io.GetIoErrorHandler().InError();
       }
     }
     std::size_t chunk;
@@ -731,9 +732,6 @@ bool EditCharacterInput(
   }
   // Pad the remainder of the input variable, if any.
   std::fill_n(x, length, ' ');
-  if (hitEnd) {
-    io.CheckForEndOfRecord(); // signal any needed error
-  }
   return true;
 }
 
