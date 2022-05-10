@@ -648,7 +648,6 @@ protected:
   std::optional<SourceName> HadForwardRef(const Symbol &) const;
   bool CheckPossibleBadForwardRef(const Symbol &);
 
-  bool inExecutionPart_{false};
   bool inSpecificationPart_{false};
   bool inEquivalenceStmt_{false};
 
@@ -3389,7 +3388,7 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
                 context().SetError(*resultSymbol);
               }},
           resultSymbol->details());
-    } else if (inExecutionPart_) {
+    } else if (!inSpecificationPart_) {
       ObjectEntityDetails entity;
       entity.set_funcResult(true);
       resultSymbol = &MakeSymbol(effectiveResultName, std::move(entity));
@@ -3422,7 +3421,7 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
             dummy->details());
       } else {
         dummy = &MakeSymbol(*dummyName, EntityDetails{true});
-        if (inExecutionPart_) {
+        if (!inSpecificationPart_) {
           ApplyImplicitRules(*dummy);
         }
       }
@@ -5859,6 +5858,12 @@ bool ConstructVisitor::Pre(const parser::DataIDoObject &x) {
 }
 
 bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
+  // Subtle: DATA statements may appear in both the specification and
+  // execution parts, but should be treated as if in the execution part
+  // for purposes of implicit variable declaration vs. host association.
+  // When a name first appears as an object in a DATA statement, it should
+  // be implicitly declared locally as if it had been assigned.
+  auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
   common::visit(common::visitors{
                     [&](const Indirection<parser::Variable> &y) {
                       Walk(y.value());
@@ -6415,7 +6420,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
 // be wrong we report an error later in CheckDeclarations().
 bool DeclarationVisitor::CheckForHostAssociatedImplicit(
     const parser::Name &name) {
-  if (inExecutionPart_) {
+  if (!inSpecificationPart_) {
     return false;
   }
   if (name.symbol) {
@@ -7228,9 +7233,7 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
   SetScope(topScope_);
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
-  inExecutionPart_ = true;
   ResolveExecutionParts(root);
-  inExecutionPart_ = false;
   ResolveAccParts(context(), x);
   ResolveOmpParts(context(), x);
   return false;
