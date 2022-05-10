@@ -223,6 +223,7 @@ Imported         ((module name)|(null))                               const Modu
 Example:::
 
   - Callback: InclusionDirective
+    HashLoc: "D:/Clang/llvmnewmod/clang-tools-extra/test/pp-trace/pp-trace-include.cpp:4:1"
     IncludeTok: include
     FileName: "Input/Level1B.h"
     IsAngled: false
