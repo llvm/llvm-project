@@ -28,7 +28,6 @@
 using Outer::Inner::ConvertToEnum;
 using Outer::Inner::ConvertToString;
 using Outer::Inner::FooEnum;
-using Outer::Inner::FooEnumAttr;
 
 TEST(EnumsGenTest, GeneratedStrEnumDefinition) {
   EXPECT_EQ(0u, static_cast<uint64_t>(FooEnum::CaseA));
