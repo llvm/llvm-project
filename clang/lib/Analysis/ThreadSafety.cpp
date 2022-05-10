@@ -1988,16 +1988,27 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
 
     examineArguments(CE->getDirectCallee(), CE->arg_begin(), CE->arg_end());
   } else if (const auto *OE = dyn_cast<CXXOperatorCallExpr>(Exp)) {
-    auto OEop = OE->getOperator();
+    OverloadedOperatorKind OEop = OE->getOperator();
     switch (OEop) {
-      case OO_Equal: {
-        const Expr *Target = OE->getArg(0);
-        const Expr *Source = OE->getArg(1);
-        checkAccess(Target, AK_Written);
-        checkAccess(Source, AK_Read);
+      case OO_Equal:
+      case OO_PlusEqual:
+      case OO_MinusEqual:
+      case OO_StarEqual:
+      case OO_SlashEqual:
+      case OO_PercentEqual:
+      case OO_CaretEqual:
+      case OO_AmpEqual:
+      case OO_PipeEqual:
+      case OO_LessLessEqual:
+      case OO_GreaterGreaterEqual:
+        checkAccess(OE->getArg(1), AK_Read);
+        LLVM_FALLTHROUGH;
+      case OO_PlusPlus:
+      case OO_MinusMinus:
+        checkAccess(OE->getArg(0), AK_Written);
         break;
-      }
       case OO_Star:
+      case OO_ArrowStar:
       case OO_Arrow:
       case OO_Subscript:
         if (!(OEop == OO_Star && OE->getNumArgs() > 1)) {
