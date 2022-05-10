@@ -542,11 +542,29 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
+static unsigned getVLOpNum(const MachineInstr &MI) {
+  const uint64_t TSFlags = MI.getDesc().TSFlags;
+  // This method is only called if we expect to have a VL operand, and all
+  // instructions with VL also have SEW.
+  assert(RISCVII::hasSEWOp(TSFlags) && RISCVII::hasVLOp(TSFlags));
+  unsigned Offset = 2;
+  if (RISCVII::hasVecPolicyOp(TSFlags))
+    Offset = 3;
+  return MI.getNumExplicitOperands() - Offset;
+}
+
+static unsigned getSEWOpNum(const MachineInstr &MI) {
+  const uint64_t TSFlags = MI.getDesc().TSFlags;
+  assert(RISCVII::hasSEWOp(TSFlags));
+  unsigned Offset = 1;
+  if (RISCVII::hasVecPolicyOp(TSFlags))
+    Offset = 2;
+  return MI.getNumExplicitOperands() - Offset;
+}
+
 static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
                                        const MachineRegisterInfo *MRI) {
   VSETVLIInfo InstrInfo;
-  unsigned NumOperands = MI.getNumExplicitOperands();
-  bool HasPolicy = RISCVII::hasVecPolicyOp(TSFlags);
 
   // If the instruction has policy argument, use the argument.
   // If there is no policy argument, default to tail agnostic unless the
@@ -561,7 +579,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   // vsetvli between mask and nomasked instruction sequence.
   bool MaskAgnostic = UsesMaskPolicy;
   unsigned UseOpIdx;
-  if (HasPolicy) {
+  if (RISCVII::hasVecPolicyOp(TSFlags)) {
     const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
     uint64_t Policy = Op.getImm();
     assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
@@ -593,13 +611,9 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
       TailAgnostic = true;
   }
 
-  // Remove the tail policy so we can find the SEW and VL.
-  if (HasPolicy)
-    --NumOperands;
-
   RISCVII::VLMUL VLMul = RISCVII::getLMul(TSFlags);
 
-  unsigned Log2SEW = MI.getOperand(NumOperands - 1).getImm();
+  unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
   // A Log2SEW of 0 is an operation on mask registers only.
   bool MaskRegOp = Log2SEW == 0;
   unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
@@ -611,7 +625,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   bool ScalarMovOp = isScalarMoveInstr(MI);
 
   if (RISCVII::hasVLOp(TSFlags)) {
-    const MachineOperand &VLOp = MI.getOperand(NumOperands - 2);
+    const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
     if (VLOp.isImm()) {
       int64_t Imm = VLOp.getImm();
       // Conver the VLMax sentintel to X0 register.
@@ -1103,11 +1117,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     if (RISCVII::hasSEWOp(TSFlags)) {
       VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
       if (RISCVII::hasVLOp(TSFlags)) {
-        unsigned Offset = 2;
-        if (RISCVII::hasVecPolicyOp(TSFlags))
-          Offset = 3;
-        MachineOperand &VLOp =
-            MI.getOperand(MI.getNumExplicitOperands() - Offset);
+        MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
         if (VLOp.isReg()) {
           // Erase the AVL operand from the instruction.
           VLOp.setReg(RISCV::NoRegister);
