@@ -798,6 +798,14 @@ public:
 
   void setDSOLocal(llvm::GlobalValue *GV) const;
 
+  bool shouldMapVisibilityToDLLExport(const NamedDecl *D) const {
+    return getLangOpts().hasDefaultVisibilityExportMapping() && D &&
+           (D->getLinkageAndVisibility().getVisibility() ==
+            DefaultVisibility) &&
+           (getLangOpts().isAllDefaultVisibilityExportMapping() ||
+            (getLangOpts().isExplicitDefaultVisibilityExportMapping() &&
+             D->getLinkageAndVisibility().isVisibilityExplicit()));
+  }
   void setDLLImportDLLExport(llvm::GlobalValue *GV, GlobalDecl D) const;
   void setDLLImportDLLExport(llvm::GlobalValue *GV, const NamedDecl *D) const;
   /// Set visibility, dllimport/dllexport and dso_local.
