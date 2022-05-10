@@ -2,6 +2,7 @@
 // CHECK: Available Dialects:
 // CHECK-NEXT: acc
 // CHECK-NEXT: affine
+// CHECK-NEXT: amdgpu
 // CHECK-NEXT: amx
 // CHECK-NEXT: arith
 // CHECK-NEXT: arm_neon
