@@ -76,7 +76,7 @@ static ParseResult parseAllocateAndAllocator(
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operandsAllocator,
     SmallVectorImpl<Type> &typesAllocator) {
 
-  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+  return parser.parseCommaSeparatedList([&]() {
     OpAsmParser::UnresolvedOperand operand;
     Type type;
     if (parser.parseOperand(operand) || parser.parseColonType(type))
@@ -142,7 +142,7 @@ parseLinearClause(OpAsmParser &parser,
                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &vars,
                   SmallVectorImpl<Type> &types,
                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &stepVars) {
-  do {
+  return parser.parseCommaSeparatedList([&]() {
     OpAsmParser::UnresolvedOperand var;
     Type type;
     OpAsmParser::UnresolvedOperand stepVar;
@@ -153,8 +153,8 @@ parseLinearClause(OpAsmParser &parser,
     vars.push_back(var);
     types.push_back(type);
     stepVars.push_back(stepVar);
-  } while (succeeded(parser.parseOptionalComma()));
-  return success();
+    return success();
+  });
 }
 
 /// Print Linear Clause
@@ -304,12 +304,15 @@ parseReductionVarList(OpAsmParser &parser,
                       SmallVectorImpl<Type> &types,
                       ArrayAttr &redcuctionSymbols) {
   SmallVector<SymbolRefAttr> reductionVec;
-  do {
-    if (parser.parseAttribute(reductionVec.emplace_back()) ||
-        parser.parseArrow() || parser.parseOperand(operands.emplace_back()) ||
-        parser.parseColonType(types.emplace_back()))
-      return failure();
-  } while (succeeded(parser.parseOptionalComma()));
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseAttribute(reductionVec.emplace_back()) ||
+            parser.parseArrow() ||
+            parser.parseOperand(operands.emplace_back()) ||
+            parser.parseColonType(types.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
   SmallVector<Attribute> reductions(reductionVec.begin(), reductionVec.end());
   redcuctionSymbols = ArrayAttr::get(parser.getContext(), reductions);
   return success();
@@ -386,7 +389,7 @@ static ParseResult parseSynchronizationHint(OpAsmParser &parser,
     hintAttr = IntegerAttr::get(parser.getBuilder().getI64Type(), 0);
     return success();
   }
-  do {
+  auto parseKeyword = [&]() -> ParseResult {
     if (failed(parser.parseKeyword(&hintKeyword)))
       return failure();
     if (hintKeyword == "uncontended")
@@ -400,7 +403,10 @@ static ParseResult parseSynchronizationHint(OpAsmParser &parser,
     else
       return parser.emitError(parser.getCurrentLocation())
              << hintKeyword << " is not a valid hint";
-  } while (succeeded(parser.parseOptionalComma()));
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(parseKeyword))
+    return failure();
   hintAttr = IntegerAttr::get(parser.getBuilder().getI64Type(), hint);
   return success();
 }

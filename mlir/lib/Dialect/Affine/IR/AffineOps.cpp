@@ -3454,7 +3454,7 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
   SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> flatSymOperands;
   SmallVector<int32_t> numMapsPerGroup;
   SmallVector<OpAsmParser::UnresolvedOperand> mapOperands;
-  do {
+  auto parseOperands = [&]() {
     if (succeeded(parser.parseOptionalKeyword(
             kind == MinMaxKind::Min ? "min" : "max"))) {
       mapOperands.clear();
@@ -3482,9 +3482,9 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
         return failure();
       numMapsPerGroup.push_back(1);
     }
-  } while (succeeded(parser.parseOptionalComma()));
-
-  if (failed(parser.parseRParen()))
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(parseOperands) || parser.parseRParen())
     return failure();
 
   unsigned totalNumDims = 0;
@@ -3572,7 +3572,7 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalKeyword("reduce"))) {
     if (parser.parseLParen())
       return failure();
-    do {
+    auto parseAttributes = [&]() -> ParseResult {
       // Parse a single quoted string via the attribute parsing, and then
       // verify it is a member of the enum and convert to it's integer
       // representation.
@@ -3589,8 +3589,9 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
       reductions.push_back(builder.getI64IntegerAttr(
           static_cast<int64_t>(reduction.getValue())));
       // While we keep getting commas, keep parsing.
-    } while (succeeded(parser.parseOptionalComma()));
-    if (parser.parseRParen())
+      return success();
+    };
+    if (parser.parseCommaSeparatedList(parseAttributes) || parser.parseRParen())
       return failure();
   }
   result.addAttribute(AffineParallelOp::getReductionsAttrName(),
