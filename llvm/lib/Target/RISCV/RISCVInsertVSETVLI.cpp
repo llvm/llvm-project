@@ -1156,8 +1156,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
                  NewInfo.getAVLReg() == PrevVSETVLIMI->getOperand(0).getReg());
             // If these two VSETVLI have the same AVL and the same VLMAX,
             // we could merge these two VSETVLI.
-            if (HasSameAVL &&
-                CurInfo.getSEWLMULRatio() == NewInfo.getSEWLMULRatio()) {
+            if (HasSameAVL && CurInfo.hasSameVLMAX(NewInfo)) {
               PrevVSETVLIMI->getOperand(2).setImm(NewInfo.encodeVTYPE());
               NeedInsertVSETVLI = false;
             }
