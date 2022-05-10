@@ -263,7 +263,10 @@ class Symbolizer:
       for dname, _, fnames in os.walk(p):
         for fn in fnames:
           filename = os.path.join(dname, fn)
-          bid = get_buildid(filename)
+          try:
+            bid = get_buildid(filename)
+          except FileNotFoundError:
+            continue
           if bid is not None:
             self.__index[bid] = filename
 
