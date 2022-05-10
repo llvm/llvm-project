@@ -2198,7 +2198,7 @@ Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 }
 
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed) {
-  // Address offset is 12-bit signed for GFX10, 13-bit for GFX9.
+  // Address offset is 12-bit signed for GFX10, 13-bit for GFX9 and GFX11+.
   if (AMDGPU::isGFX10(ST))
     return Signed ? 12 : 11;
 
