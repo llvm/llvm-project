@@ -1674,13 +1674,6 @@ Value *SCEVExpander::expandSMaxExpr(const SCEVNAryExpr *S) {
   Value *LHS = expand(S->getOperand(S->getNumOperands()-1));
   Type *Ty = LHS->getType();
   for (int i = S->getNumOperands()-2; i >= 0; --i) {
-    // In the case of mixed integer and pointer types, do the
-    // rest of the comparisons as integer.
-    Type *OpTy = S->getOperand(i)->getType();
-    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
-      Ty = SE.getEffectiveSCEVType(Ty);
-      LHS = InsertNoopCastOfTo(LHS, Ty);
-    }
     Value *RHS = expandCodeForImpl(S->getOperand(i), Ty, false);
     Value *Sel;
     if (Ty->isIntegerTy())
@@ -1692,10 +1685,6 @@ Value *SCEVExpander::expandSMaxExpr(const SCEVNAryExpr *S) {
     }
     LHS = Sel;
   }
-  // In the case of mixed integer and pointer types, cast the
-  // final result back to the pointer type.
-  if (LHS->getType() != S->getType())
-    LHS = InsertNoopCastOfTo(LHS, S->getType());
   return LHS;
 }
 
@@ -1703,13 +1692,6 @@ Value *SCEVExpander::expandUMaxExpr(const SCEVNAryExpr *S) {
   Value *LHS = expand(S->getOperand(S->getNumOperands()-1));
   Type *Ty = LHS->getType();
   for (int i = S->getNumOperands()-2; i >= 0; --i) {
-    // In the case of mixed integer and pointer types, do the
-    // rest of the comparisons as integer.
-    Type *OpTy = S->getOperand(i)->getType();
-    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
-      Ty = SE.getEffectiveSCEVType(Ty);
-      LHS = InsertNoopCastOfTo(LHS, Ty);
-    }
     Value *RHS = expandCodeForImpl(S->getOperand(i), Ty, false);
     Value *Sel;
     if (Ty->isIntegerTy())
@@ -1721,10 +1703,6 @@ Value *SCEVExpander::expandUMaxExpr(const SCEVNAryExpr *S) {
     }
     LHS = Sel;
   }
-  // In the case of mixed integer and pointer types, cast the
-  // final result back to the pointer type.
-  if (LHS->getType() != S->getType())
-    LHS = InsertNoopCastOfTo(LHS, S->getType());
   return LHS;
 }
 
@@ -1732,13 +1710,6 @@ Value *SCEVExpander::expandSMinExpr(const SCEVNAryExpr *S) {
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
-    // In the case of mixed integer and pointer types, do the
-    // rest of the comparisons as integer.
-    Type *OpTy = S->getOperand(i)->getType();
-    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
-      Ty = SE.getEffectiveSCEVType(Ty);
-      LHS = InsertNoopCastOfTo(LHS, Ty);
-    }
     Value *RHS = expandCodeForImpl(S->getOperand(i), Ty, false);
     Value *Sel;
     if (Ty->isIntegerTy())
@@ -1750,10 +1721,6 @@ Value *SCEVExpander::expandSMinExpr(const SCEVNAryExpr *S) {
     }
     LHS = Sel;
   }
-  // In the case of mixed integer and pointer types, cast the
-  // final result back to the pointer type.
-  if (LHS->getType() != S->getType())
-    LHS = InsertNoopCastOfTo(LHS, S->getType());
   return LHS;
 }
 
@@ -1761,13 +1728,6 @@ Value *SCEVExpander::expandUMinExpr(const SCEVNAryExpr *S) {
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
-    // In the case of mixed integer and pointer types, do the
-    // rest of the comparisons as integer.
-    Type *OpTy = S->getOperand(i)->getType();
-    if (OpTy->isIntegerTy() != Ty->isIntegerTy()) {
-      Ty = SE.getEffectiveSCEVType(Ty);
-      LHS = InsertNoopCastOfTo(LHS, Ty);
-    }
     Value *RHS = expandCodeForImpl(S->getOperand(i), Ty, false);
     Value *Sel;
     if (Ty->isIntegerTy())
@@ -1779,10 +1739,6 @@ Value *SCEVExpander::expandUMinExpr(const SCEVNAryExpr *S) {
     }
     LHS = Sel;
   }
-  // In the case of mixed integer and pointer types, cast the
-  // final result back to the pointer type.
-  if (LHS->getType() != S->getType())
-    LHS = InsertNoopCastOfTo(LHS, S->getType());
   return LHS;
 }
 
