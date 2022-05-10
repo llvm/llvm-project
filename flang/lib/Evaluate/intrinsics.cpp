@@ -1016,7 +1016,7 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
          TypePattern{IntType, KindCode::exactKind, 8}},
         "abs"},
     {{"len", {{"string", DefaultChar, Rank::anyOrAssumedRank}}, DefaultInt,
-        Rank::scalar}},
+        Rank::scalar, IntrinsicClass::inquiryFunction}},
     {{"lge", {{"string_a", DefaultChar}, {"string_b", DefaultChar}},
          DefaultLogical},
         "lge", true},
