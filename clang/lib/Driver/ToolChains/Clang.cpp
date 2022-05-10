@@ -4405,8 +4405,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       (JA.isHostOffloading(Action::OFK_OpenMP) &&
        Args.hasFlag(options::OPT_fopenmp_new_driver,
                     options::OPT_no_offload_new_driver, true)) ||
-      Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver, false);
+      (JA.isHostOffloading(C.getActiveOffloadKinds()) &&
+       Args.hasFlag(options::OPT_offload_new_driver,
+                    options::OPT_no_offload_new_driver, false));
+
   bool IsUsingLTO = D.isUsingLTO(IsDeviceOffloadAction);
   auto LTOMode = D.getLTOMode(IsDeviceOffloadAction);
 
